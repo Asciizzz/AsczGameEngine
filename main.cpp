@@ -1,16 +1,19 @@
 #define SDL_MAIN_HANDLED
 
+#include <AzVulk/Instance.h>
 #include <AzVulk/Pipeline.h>
-#include <AzPlatform/Window.h>
+
+#include <AzVulk/Window.h>
 
 #include <SDL2/SDL_Keyboard.h>
 
 int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
 
-    AzPlatform::Window window(800, 600, "AzPlatform Vulkan Window");
+    AzVulk::Instance vk_instance;
+    AzVulk::Pipeline vk_pipeline("Shaders/simple.vert.spv", "Shaders/simple.frag.spv");
 
-    AzVulk::Pipeline pipeline("Shaders/simple.vert.spv", "Shaders/simple.frag.spv");
+    AzVulk::Window vk_window(800, 600, "SDL Window");
 
     int q_count = 0;
     bool q_down = false;
