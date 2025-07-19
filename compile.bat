@@ -1,4 +1,4 @@
 @echo off
-glslc Shaders/simple.vert -o Shaders/simple.vert.spv
-glslc Shaders/simple.frag -o Shaders/simple.frag.spv
+glslc Shaders/hello.vert -o Shaders/hello.vert.spv
+glslc Shaders/hello.frag -o Shaders/hello.frag.spv
 pause

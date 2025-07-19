@@ -16,11 +16,10 @@ include_directories(
 )
 
 file(GLOB_RECURSE SRC_FILES
-    src/AzVulk/Instance.cpp
     src/AzVulk/Pipeline.cpp
     src/AzVulk/Window.cpp
-
-    src/AzPlatform/Window.cpp
+    src/AzVulk/Device.cpp
+    src/AzVulk/SwapChain.cpp
 
     main.cpp
 )

@@ -1,7 +1,6 @@
 #include "AzVulk/Window.h"
 
 #include <stdexcept>
-#include <vulkan/vulkan.h>
 
 namespace AzVulk {
 
@@ -13,6 +12,10 @@ Window::Window(int w, int h, const char* title)
         title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN
     );
+
+    if (!window) {
+        throw std::runtime_error("Failed to create SDL window: " + std::string(SDL_GetError()));
+    }
 }
 
 Window::~Window() {
@@ -35,15 +38,14 @@ std::vector<const char*> Window::getRequiredVulkanExtensions() {
     return extensions;
 }
 
-void Window::createVkSurface(VkInstance instance) {
-    if (!SDL_Vulkan_CreateSurface(window, instance, &surface))
+void Window::createWindowSurface(VkInstance instance, VkSurfaceKHR* surface) {
+    if (SDL_Vulkan_CreateSurface(window, instance, surface) != SDL_TRUE) {
         throw std::runtime_error("Failed to create Vulkan surface: " + std::string(SDL_GetError()));
-}
-void Window::destroyVkSurface(VkInstance instance) {
-    if (surface != VK_NULL_HANDLE) {
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-        surface = VK_NULL_HANDLE;
     }
+}
+
+VkExtent2D Window::getExtent() {
+    return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 }
 
 } // namespace AzVulk
