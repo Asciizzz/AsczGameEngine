@@ -34,6 +34,8 @@ public:
     AzVulk(int w, int h);
     ~AzVulk();
 
+    void drawFrame();
+
 private: // No particular group, just split for clarity
     SDL_Window* window;
 
@@ -55,7 +57,16 @@ private: // No particular group, just split for clarity
 
     VkRenderPass renderPass;
     VkPipelineLayout pipelineLayout;
+    VkPipeline graphicsPipeline;
 
+    std::vector<VkFramebuffer> swapChainFramebuffers;
+
+    VkCommandPool commandPool;
+    VkCommandBuffer commandBuffer;
+
+    VkSemaphore imageAvailableSemaphore;
+    VkSemaphore renderFinishedSemaphore;
+    VkFence inFlightFence;
 
     void init();
     void cleanup();
@@ -71,6 +82,10 @@ private: // No particular group, just split for clarity
     void createImageViews();
     void createRenderPass();
     void createGraphicsPipeline();
+    void createFramebuffers();
+    void createCommandPool();
+    void createCommandBuffer();
+    void createSyncObjects();
 
 
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
@@ -78,4 +93,5 @@ private: // No particular group, just split for clarity
     bool isDeviceSuitable(VkPhysicalDevice device);
 
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 };
