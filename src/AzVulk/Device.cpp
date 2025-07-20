@@ -23,7 +23,6 @@ void Device::init() {
     createImageViews();
 
     createRenderPass();
-    createGraphicsPipeline();
 
     createFramebuffers();
 
@@ -43,8 +42,6 @@ void Device::cleanup() {
 
     vkDestroyCommandPool(device, commandPool, nullptr);
 
-    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
 
 
@@ -442,7 +439,7 @@ void Device::createSyncObjects() {
 
 // ========================== DRAW FRAME, FINALLY!!! ==========================
 
-void Device::drawFrame() {
+void Device::drawFrame(VkPipeline graphicsPipeline) {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
@@ -458,7 +455,7 @@ void Device::drawFrame() {
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
     vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-    recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+    recordCommandBuffer(commandBuffers[currentFrame], imageIndex, graphicsPipeline);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -589,7 +586,7 @@ SwapChainSupportDetails Device::querySwapChainSupport(VkPhysicalDevice device) {
 
 
 
-void Device::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+void Device::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkPipeline graphicsPipeline) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 

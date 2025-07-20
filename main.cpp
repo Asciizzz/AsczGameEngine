@@ -1,6 +1,8 @@
 #define SDL_MAIN_HANDLED
 
 #include <AzVulk/Device.h>
+#include <AzVulk/Pipeline.h>
+
 #include <glm/glm.hpp>
 
 #include <SDL2/SDL_keyboard.h>
@@ -12,6 +14,7 @@ struct Vertex {
 
 int main() {
     AzVulk::Device app(800, 600);
+    AzVulk::Pipeline pipeline(app, "Shaders/hello.vert.spv", "Shaders/hello.frag.spv");
 
     const std::vector<Vertex> vertices = {
         {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -28,7 +31,7 @@ int main() {
             }
         }
 
-        app.drawFrame();
+        app.drawFrame(pipeline.getGraphicsPipeline());
 
         // Press Q to print a message 
         const Uint8* state = SDL_GetKeyboardState(nullptr);

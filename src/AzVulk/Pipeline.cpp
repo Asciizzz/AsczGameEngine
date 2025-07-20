@@ -1,13 +1,25 @@
-#include "AzVulk/Device.h"
+#include "AzVulk/Pipeline.h"
 
 namespace AzVulk {
 
-void Device::createGraphicsPipeline() {
-    auto vertShaderCode = Helper::ReadFile("Shaders/hello.vert.spv");
-    auto fragShaderCode = Helper::ReadFile("Shaders/hello.frag.spv");
+Pipeline::Pipeline(Device& device, const char* vsPath, const char* fsPath)
+    : device(device), graphicsPipeline(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE) {
+    createGraphicsPipeline(vsPath, fsPath);
+}
+Pipeline::~Pipeline() {
+    cleanup();
+}
+void Pipeline::cleanup() {
+    vkDestroyPipeline(device.getDevice(), graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(device.getDevice(), pipelineLayout, nullptr);
+}
 
-    VkShaderModule vertShaderModule = Helper::CreateShaderModule(device, vertShaderCode);
-    VkShaderModule fragShaderModule = Helper::CreateShaderModule(device, fragShaderCode);
+void Pipeline::createGraphicsPipeline(const char* vertShaderPath, const char* fragShaderPath) {
+    auto vertShaderCode = Helper::ReadFile(vertShaderPath);
+    auto fragShaderCode = Helper::ReadFile(fragShaderPath);
+
+    VkShaderModule vertShaderModule = Helper::CreateShaderModule(device.getDevice(), vertShaderCode);
+    VkShaderModule fragShaderModule = Helper::CreateShaderModule(device.getDevice(), fragShaderCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -83,7 +95,7 @@ void Device::createGraphicsPipeline() {
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -101,17 +113,17 @@ void Device::createGraphicsPipeline() {
     pipelineInfo.pDynamicState = &dynamicState;
 
     pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.renderPass = device.getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(device.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
 
 
-    vkDestroyShaderModule(device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(device, vertShaderModule, nullptr);
+    vkDestroyShaderModule(device.getDevice(), fragShaderModule, nullptr);
+    vkDestroyShaderModule(device.getDevice(), vertShaderModule, nullptr);
 }
 
 } // namespace AzVulk

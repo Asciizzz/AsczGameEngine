@@ -140,9 +140,9 @@ public:
     }
 
 // Shader and shit idk
-    static std::vector<char> ReadFile(const std::string& filename) {
+    static std::vector<char> ReadFile(const char* filename) {
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
-        if (!file.is_open()) throw std::runtime_error("failed to open file: " + filename);
+        if (!file.is_open()) throw std::runtime_error("failed to open file: " + std::string(filename));
 
         size_t fileSize = static_cast<size_t>(file.tellg());
         std::vector<char> buffer(fileSize);

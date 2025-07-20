@@ -21,9 +21,17 @@ public:
     Device(int w, int h);
     ~Device();
 
-    void drawFrame();
+    // Delete copy constructor and copy assignment
+    Device(const Device&) = delete;
+    Device& operator=(const Device&) = delete;
+    // Allow move constructor and move assignment
+    Device(Device&&) = default;
+    Device& operator=(Device&&) = default;
+
+    void drawFrame(VkPipeline graphicsPipeline);
 
     VkDevice getDevice() const { return device; }
+    VkRenderPass getRenderPass() const { return renderPass; }
 
 private: // No particular group, just split for clarity
     SDL_Window* window;
@@ -45,9 +53,6 @@ private: // No particular group, just split for clarity
     std::vector<VkImageView> swapChainImageViews;
 
     VkRenderPass renderPass;
-
-    VkPipelineLayout pipelineLayout;
-    VkPipeline graphicsPipeline;
 
     std::vector<VkFramebuffer> swapChainFramebuffers;
 
@@ -75,10 +80,10 @@ private: // No particular group, just split for clarity
     void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
+
     void createSwapChain();
     void createImageViews();
     void createRenderPass();
-    void createGraphicsPipeline();
     void createFramebuffers();
     void createCommandPool();
     void createCommandBuffers();
@@ -90,7 +95,7 @@ private: // No particular group, just split for clarity
     bool isDeviceSuitable(VkPhysicalDevice device);
 
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkPipeline graphicsPipeline);
 };
 
 } // namespace AzVulk
