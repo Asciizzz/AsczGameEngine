@@ -1,7 +1,12 @@
 #include "AzVulk.h"
 
+#include <set>
+
 const std::vector<const char*> AzVulk::validationLayers = {
     "VK_LAYER_KHRONOS_validation"
+};
+const std::vector<const char*> AzVulk::deviceExtensions = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 AzVulk::AzVulk(int w, int h) : width(w), height(h) { init(); }
@@ -11,6 +16,8 @@ void AzVulk::init() {
     createWindow();
     createInstance();
     setupDebugMessenger();
+    createSurface();
+
     pickPhysicalDevice();
     createLogicalDevice();
 }
@@ -26,7 +33,6 @@ void AzVulk::cleanup() {
 
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyInstance(instance, nullptr);
-    instance = VK_NULL_HANDLE;
 }
 
 
@@ -104,6 +110,15 @@ void AzVulk::setupDebugMessenger() {
 }
 
 
+
+void AzVulk::createSurface() {
+    if (!SDL_Vulkan_CreateSurface(window, instance, &surface)) {
+        throw std::runtime_error("Failed to create Vulkan surface");
+    }
+}
+
+
+
 void AzVulk::pickPhysicalDevice() {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -116,7 +131,7 @@ void AzVulk::pickPhysicalDevice() {
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
     for (const auto& device : devices) {
-        if (IsDeviceSuitable(device)) {
+        if (isDeviceSuitable(device)) {
             physicalDevice = device;
             break;
         }
@@ -130,23 +145,28 @@ void AzVulk::pickPhysicalDevice() {
 
 
 void AzVulk::createLogicalDevice() {
-    QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
-    VkDeviceQueueCreateInfo queueCreateInfo{};
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
-    queueCreateInfo.queueCount = 1;
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
     float queuePriority = 1.0f;
-    queueCreateInfo.pQueuePriorities = &queuePriority;
+    for (uint32_t queueFamily : uniqueQueueFamilies) {
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex = queueFamily;
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
 
     VkPhysicalDeviceFeatures deviceFeatures{};
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-    createInfo.pQueueCreateInfos = &queueCreateInfo;
-    createInfo.queueCreateInfoCount = 1;
+    createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+    createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
     createInfo.pEnabledFeatures = &deviceFeatures;
 
@@ -164,10 +184,15 @@ void AzVulk::createLogicalDevice() {
     }
 
     vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+    vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
 
 
-QueueFamilyIndices AzVulk::FindQueueFamilies(VkPhysicalDevice device) {
+
+
+
+
+QueueFamilyIndices AzVulk::findQueueFamilies(VkPhysicalDevice device) {
     QueueFamilyIndices indices;
 
     uint32_t queueFamilyCount = 0;
@@ -185,21 +210,35 @@ QueueFamilyIndices AzVulk::FindQueueFamilies(VkPhysicalDevice device) {
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
 
-        if (presentSupport) {
-            indices.presentFamily = i;
-        }
+        if (presentSupport) indices.presentFamily = i;
 
-        if (indices.isComplete()) {
-            break;
-        }
+        if (indices.isComplete()) break;
 
         i++;
     }
 
     return indices;
 }
-bool AzVulk::IsDeviceSuitable(VkPhysicalDevice device) {
-    QueueFamilyIndices indices = FindQueueFamilies(device);
 
-    return indices.isComplete();
+bool AzVulk::checkExtensionSupport(VkPhysicalDevice device) {
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+    for (const auto& extension : availableExtensions) {
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
+}
+
+bool AzVulk::isDeviceSuitable(VkPhysicalDevice device) {
+    QueueFamilyIndices indices = findQueueFamilies(device);
+    bool extensionsSupported = checkExtensionSupport(device);
+
+    return indices.isComplete() && extensionsSupported;
 }

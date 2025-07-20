@@ -2,6 +2,22 @@
 
 #include <AzVulkHelper.hpp>
 
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+    std::optional<uint32_t> presentFamily;
+
+    bool isComplete() {
+        return graphicsFamily.has_value() && presentFamily.has_value();
+    }
+};
+
+struct SwapChainSupportDetails {
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+};
+
+
 class AzVulk {
 public:
 #ifdef NDEBUG
@@ -11,6 +27,7 @@ public:
 #endif
 
     static const std::vector<const char*> validationLayers;
+    static const std::vector<const char*> deviceExtensions;
 
     int width, height;
 
@@ -32,12 +49,19 @@ private: // No particular group, just split for clarity
     void init();
     void cleanup();
 
+
     void createWindow();
     void createInstance();
     void setupDebugMessenger();
+    void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
 
-    QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
-    bool IsDeviceSuitable(VkPhysicalDevice device);
+    void createSwapChain();
+    void createImageViews();
+
+
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    bool checkExtensionSupport(VkPhysicalDevice device);
+    bool isDeviceSuitable(VkPhysicalDevice device);
 };
