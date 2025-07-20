@@ -1,9 +1,9 @@
 #define SDL_MAIN_HANDLED
 
 #include <AzVulk.h>
+#include <glm/glm.hpp>
 
 #include <SDL2/SDL_keyboard.h>
-
 
 int main() {
     AzVulk app(800, 600);

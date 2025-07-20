@@ -2,12 +2,8 @@
 
 #include <set>
 
-const std::vector<const char*> AzVulk::validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-};
-const std::vector<const char*> AzVulk::deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
+const std::vector<const char*> AzVulk::validationLayers = { "VK_LAYER_KHRONOS_validation" };
+const std::vector<const char*> AzVulk::deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 AzVulk::AzVulk(int w, int h) : width(w), height(h) { init(); }
 AzVulk::~AzVulk()                               { cleanup(); }
@@ -97,14 +93,6 @@ void AzVulk::createWindow() {
         throw std::runtime_error("Failed to initialize SDL");
     }
 
-    // window = SDL_CreateWindow(
-    //     "AzVulk Application",
-    //     SDL_WINDOWPOS_UNDEFINED,
-    //     SDL_WINDOWPOS_UNDEFINED,
-    //     width, height,
-    //     SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN
-    // );
-    // Allow resizable
     window = SDL_CreateWindow(
         "AzVulk Application",
         SDL_WINDOWPOS_UNDEFINED,
