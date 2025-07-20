@@ -36,6 +36,8 @@ public:
 
     void drawFrame();
 
+    VkDevice getDevice() const { return device; }
+
 private: // No particular group, just split for clarity
     SDL_Window* window;
 
@@ -62,11 +64,13 @@ private: // No particular group, just split for clarity
     std::vector<VkFramebuffer> swapChainFramebuffers;
 
     VkCommandPool commandPool;
-    VkCommandBuffer commandBuffer;
+    std::vector<VkCommandBuffer> commandBuffers;
 
-    VkSemaphore imageAvailableSemaphore;
-    VkSemaphore renderFinishedSemaphore;
-    VkFence inFlightFence;
+    std::vector<VkSemaphore> imageAvailableSemaphores;
+    std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkFence> inFlightFences;
+    uint32_t currentFrame = 0;
+    int MAX_FRAMES_IN_FLIGHT = 2;
 
     void init();
     void cleanup();
@@ -84,7 +88,7 @@ private: // No particular group, just split for clarity
     void createGraphicsPipeline();
     void createFramebuffers();
     void createCommandPool();
-    void createCommandBuffer();
+    void createCommandBuffers();
     void createSyncObjects();
 
 

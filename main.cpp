@@ -16,7 +16,7 @@ int main() {
             }
         }
 
-        SDL_Delay(16); // Approx 60 FPS
+        app.drawFrame();
 
         // Press Q to print a message 
         const Uint8* state = SDL_GetKeyboardState(nullptr);
@@ -24,6 +24,8 @@ int main() {
             std::cout << "Q key pressed!" << std::endl;
         }
     }
+
+    vkDeviceWaitIdle(app.getDevice());
 
     return EXIT_SUCCESS;
 }
