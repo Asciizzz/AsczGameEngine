@@ -19,7 +19,7 @@ add_executable(AsczGame ${SRC_FILES})
 
 target_include_directories(AsczGame PRIVATE
     ${SDL2_INCLUDE_DIR}
-    ${CMAKE_SOURCE_DIR}/include/External/glm
+    ${CMAKE_SOURCE_DIR}/include/glm
 
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/AzPlatform

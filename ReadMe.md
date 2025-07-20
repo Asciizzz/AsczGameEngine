@@ -4,6 +4,7 @@
 
 - Vulkan SDK
 - SDL2 ("I DON'T HAVE FUCKING SDL2" "YOU HAVE SDL2 IT CAME WITH YOUR VULKAN")
+- glm (for math and shit)
 
 ## What I learned
 
