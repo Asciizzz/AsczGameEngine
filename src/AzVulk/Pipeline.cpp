@@ -6,9 +6,7 @@ Pipeline::Pipeline(Device& device, const char* vsPath, const char* fsPath)
     : device(device), graphicsPipeline(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE) {
     createGraphicsPipeline(vsPath, fsPath);
 }
-Pipeline::~Pipeline() {
-    cleanup();
-}
+Pipeline::~Pipeline() { cleanup(); }
 void Pipeline::cleanup() {
     vkDestroyPipeline(device.getDevice(), graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device.getDevice(), pipelineLayout, nullptr);

@@ -21,12 +21,11 @@ public:
     Device(int w, int h);
     ~Device();
 
-    // Delete copy constructor and copy assignment
+    // Not copyable or movable
     Device(const Device&) = delete;
     Device& operator=(const Device&) = delete;
-    // Allow move constructor and move assignment
-    Device(Device&&) = default;
-    Device& operator=(Device&&) = default;
+    Device(Device&&) = delete;
+    Device& operator=(Device&&) = delete;
 
     void drawFrame(VkPipeline graphicsPipeline);
 
