@@ -15,9 +15,9 @@ struct Vertex {
 
 int main() {
     AzVulk::Device device(800, 600);
-    AzVulk::SwapChain swapChain(device);
+    AzVulk::SwapChain swapchain(device);
     AzVulk::Pipeline pipeline(
-        device, swapChain, 
+        device, swapchain, 
         "Shaders/hello.vert.spv", "Shaders/hello.frag.spv"
     );
 
@@ -37,7 +37,7 @@ int main() {
         }
 
         // app.drawFrame(pipeline.getGraphicsPipeline());
-        swapChain.drawFrame(pipeline.getGraphicsPipeline());
+        swapchain.drawFrame(pipeline.getGraphicsPipeline());
 
         // Press Q to print a message 
         const Uint8* state = SDL_GetKeyboardState(nullptr);
@@ -48,8 +48,8 @@ int main() {
 
     vkDeviceWaitIdle(device.getDevice());
 
-    // pipeline.cleanup();
-    // swapchain.cleanup();
+    pipeline.cleanup();
+    swapchain.cleanup();
     device.cleanup();
 
     return EXIT_SUCCESS;
