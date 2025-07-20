@@ -1,6 +1,8 @@
 #pragma once
 
 #include <AzVulk/Device.h>
+#include <AzVulk/Model.h>
+
 
 namespace AzVulk {
 

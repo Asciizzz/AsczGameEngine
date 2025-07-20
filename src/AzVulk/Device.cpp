@@ -21,12 +21,10 @@ void Device::init() {
 
     createSwapChain();
     createImageViews();
-
     createRenderPass();
-
     createFramebuffers();
-
     createCommandPool();
+
     createCommandBuffers();
     createSyncObjects();
 }
@@ -393,6 +391,7 @@ void Device::createCommandPool() {
         throw std::runtime_error("failed to create command pool!");
     }
 }
+
 
 
 

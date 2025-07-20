@@ -12,6 +12,7 @@ set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Device.cpp
     src/AzVulk/Pipeline.cpp
+    src/AzVulk/Model.cpp
 
     main.cpp
 )

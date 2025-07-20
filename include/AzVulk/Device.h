@@ -32,6 +32,21 @@ public:
 
     VkDevice getDevice() const { return device; }
     VkRenderPass getRenderPass() const { return renderPass; }
+    VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
+    VkQueue getGraphicsQueue() const { return graphicsQueue; }
+    VkQueue getPresentQueue() const { return presentQueue; }
+    VkSurfaceKHR getSurface() const { return surface; }
+    VkSwapchainKHR getSwapChain() const { return swapChain; }
+    VkExtent2D getSwapChainExtent() const { return swapChainExtent; }
+    const std::vector<VkImageView>& getSwapChainImageViews() const { return swapChainImageViews; }
+    const std::vector<VkFramebuffer>& getSwapChainFramebuffers() const { return swapChainFramebuffers; }
+    VkCommandPool getCommandPool() const { return commandPool; }
+    const std::vector<VkCommandBuffer>& getCommandBuffers() const { return commandBuffers; }
+    const std::vector<VkSemaphore>& getImageAvailableSemaphores() const { return imageAvailableSemaphores; }
+    const std::vector<VkSemaphore>& getRenderFinishedSemaphores() const { return renderFinishedSemaphores; }
+    const std::vector<VkFence>& getInFlightFences() const { return inFlightFences; }
+    uint32_t getCurrentFrame() const { return currentFrame; }
+    bool isFramebufferResized() const { return framebufferResized; }
 
 private: // No particular group, just split for clarity
     SDL_Window* window;
@@ -51,10 +66,9 @@ private: // No particular group, just split for clarity
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
     std::vector<VkImageView> swapChainImageViews;
+    std::vector<VkFramebuffer> swapChainFramebuffers;
 
     VkRenderPass renderPass;
-
-    std::vector<VkFramebuffer> swapChainFramebuffers;
 
     VkCommandPool commandPool;
     std::vector<VkCommandBuffer> commandBuffers;
@@ -86,6 +100,7 @@ private: // No particular group, just split for clarity
     void createRenderPass();
     void createFramebuffers();
     void createCommandPool();
+
     void createCommandBuffers();
     void createSyncObjects();
 
