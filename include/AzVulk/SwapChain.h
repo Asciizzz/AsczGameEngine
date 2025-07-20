@@ -8,8 +8,8 @@ class SwapChain {
 public:
     static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
-    SwapChain(Device& device); void init();
-    ~SwapChain(); void cleanup();
+    SwapChain(Device& device);
+    void init(); void cleanup();
 
     // Not copyable or movable
     SwapChain(const SwapChain&) = delete;
@@ -17,7 +17,11 @@ public:
     SwapChain(SwapChain&&) = delete;
     SwapChain& operator=(SwapChain&&) = delete;
 
-    void drawFrame(VkPipeline graphicsPipeline);
+    void drawFrame(
+        VkPipeline graphicsPipeline,
+        VkBuffer vertexBuffer, const std::vector<Vertex>& vertices,
+        VkBuffer indexBuffer, const std::vector<uint32_t>& indices
+    );
 
     // Getters
     VkSwapchainKHR getSwapChain() const { return swapChain; }
@@ -66,7 +70,12 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
 
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkPipeline graphicsPipeline);
+    void recordCommandBuffer(
+        VkCommandBuffer commandBuffer, VkPipeline graphicsPipeline,
+        VkBuffer vertexBuffer, const std::vector<Vertex>& vertices,
+        VkBuffer indexBuffer, const std::vector<uint32_t>& indices,
+        uint32_t imageIndex
+    );
 };
 
 } // namespace AzVulk

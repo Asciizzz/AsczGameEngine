@@ -14,7 +14,7 @@ public:
     int width, height;
 
     Device(int w, int h);
-    ~Device(); void cleanup();
+    void cleanup();
 
     // Not copyable or movable
     Device(const Device&) = delete;
@@ -48,8 +48,6 @@ private:
     VkQueue presentQueue;
 
     VkCommandPool commandPool;
-
-    void init();
 
     void createWindow();
     void createInstance();

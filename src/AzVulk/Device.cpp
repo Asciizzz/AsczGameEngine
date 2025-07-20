@@ -2,10 +2,7 @@
 
 namespace AzVulk {
 
-Device::Device(int w, int h) : width(w), height(h) { init(); }
-Device::~Device()                               { cleanup(); }
-
-void Device::init() {
+Device::Device(int w, int h) : width(w), height(h) {
     createWindow();
     createInstance();
     setupDebugMessenger();

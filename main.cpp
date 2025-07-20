@@ -25,32 +25,42 @@ int main() {
         "Shaders/hi.frag.spv"
     );
 
-    const std::vector<Vertex> vertices = {
-        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    const std::vector<AzVulk::Vertex> vertices = {
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
+    const std::vector<uint32_t> indices = {
+        0, 1, 2
     };
 
-    AzVulk::Model model(device, {
-        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-    });
+    AzVulk::Model model(device, vertices, indices);
 
     bool holdQ = false;
 
     bool usePipeline1 = true;
-    while (true) {
+
+    bool running = true;
+    while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                return 0;
-            }
+            running = event.type != SDL_QUIT;
         }
+        if (!running) break;
 
         // swapchain.drawFrame(pipeline1.getGraphicsPipeline());
-        if (usePipeline1) swapchain.drawFrame(pipeline1.getGraphicsPipeline());
-        else              swapchain.drawFrame(pipeline2.getGraphicsPipeline());
+        if (usePipeline1)
+            swapchain.drawFrame(
+                pipeline1.getGraphicsPipeline(),
+                model.getVertexBuffer(), vertices,
+                model.getIndexBuffer(), indices
+            );
+        else
+            swapchain.drawFrame(
+                pipeline2.getGraphicsPipeline(),
+                model.getVertexBuffer(), vertices,
+                model.getIndexBuffer(), indices
+            );
 
         // Press Q to print a message
         const Uint8* state = SDL_GetKeyboardState(nullptr);
@@ -66,12 +76,16 @@ int main() {
 
     vkDeviceWaitIdle(device.getDevice());
 
-    // pipeline.cleanup();
+    swapchain.cleanup();
+
     pipeline1.cleanup();
     pipeline2.cleanup();
 
-    swapchain.cleanup();
+    model.cleanup();
+
     device.cleanup();
+
+    printf("\n\n\n\033[1;32mBye, Vulkan!\033[0m\n\n\n");
 
     return EXIT_SUCCESS;
 }

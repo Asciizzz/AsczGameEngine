@@ -6,7 +6,6 @@ Pipeline::Pipeline(Device& device, SwapChain& swapChain, const char* vsPath, con
     : device(device), swapChain(swapChain) {
     createGraphicsPipeline(vsPath, fsPath);
 }
-Pipeline::~Pipeline() { cleanup(); }
 void Pipeline::cleanup() {
     vkDestroyPipeline(device.getDevice(), graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device.getDevice(), pipelineLayout, nullptr);

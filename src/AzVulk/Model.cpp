@@ -29,25 +29,91 @@ std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescription
 
 
 
-Model::Model(Device& device, const std::vector<Vertex>& vertices) : device(device) {
+Model::Model(
+    Device& device,
+    const std::vector<Vertex>& vertices,
+    const std::vector<uint32_t>& indices
+) : device(device) {
     createVertexBuffer(vertices);
+    createIndexBuffer(indices);
 }
-Model::~Model() { cleanup(); }
 void Model::cleanup() {
     vkDestroyBuffer(device.getDevice(), vertexBuffer, nullptr);
     vkFreeMemory(device.getDevice(), vertexBufferMemory, nullptr);
+
+    vkDestroyBuffer(device.getDevice(), indexBuffer, nullptr);
+    vkFreeMemory(device.getDevice(), indexBufferMemory, nullptr);
 }
 
-void Model::createVertexBuffer(const std::vector<Vertex>& vertices) {
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(device.getDevice(), &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create vertex buffer!");
-    }
+void Model::createVertexBuffer(const std::vector<Vertex>& vertices) {
+    vertexCount = static_cast<uint32_t>(vertices.size());
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    Helper::CreateBuffer(
+        device.getDevice(), device.getPhysicalDevice(),
+        bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer, stagingBufferMemory
+    );
+
+    void* data;
+    vkMapMemory(device.getDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t)bufferSize);
+    vkUnmapMemory(device.getDevice(), stagingBufferMemory);
+
+    Helper::CreateBuffer(
+        device.getDevice(), device.getPhysicalDevice(),
+        bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        vertexBuffer, vertexBufferMemory
+    );
+
+    Helper::CopyBuffer(
+        device.getDevice(), device.getCommandPool(), device.getGraphicsQueue(),
+        stagingBuffer, vertexBuffer, bufferSize
+    );
+
+    vkDestroyBuffer(device.getDevice(), stagingBuffer, nullptr);
+    vkFreeMemory(device.getDevice(), stagingBufferMemory, nullptr);
+}
+
+void Model::createIndexBuffer(const std::vector<uint32_t>& indices) {
+    indexCount = static_cast<uint32_t>(indices.size());
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indexCount;
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    Helper::CreateBuffer(
+        device.getDevice(), device.getPhysicalDevice(),
+        bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer, stagingBufferMemory
+    );
+
+    void* data;
+    vkMapMemory(device.getDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, indices.data(), (size_t)bufferSize);
+    vkUnmapMemory(device.getDevice(), stagingBufferMemory);
+
+    Helper::CreateBuffer(
+        device.getDevice(), device.getPhysicalDevice(),
+        bufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        indexBuffer, indexBufferMemory
+    );
+
+    Helper::CopyBuffer(
+        device.getDevice(), device.getCommandPool(), device.getGraphicsQueue(),
+        stagingBuffer, indexBuffer, bufferSize
+    );
+
+    vkDestroyBuffer(device.getDevice(), stagingBuffer, nullptr);
+    vkFreeMemory(device.getDevice(), stagingBufferMemory, nullptr);
 }
 
 } // namespace AzVulk

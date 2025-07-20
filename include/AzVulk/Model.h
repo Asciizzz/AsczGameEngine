@@ -10,18 +10,14 @@
 
 namespace AzVulk {
 
-struct Vertex {
-    glm::vec2 pos;
-    glm::vec3 color;
-
-    static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
-};
-
 class Model {
 public:
-    Model(Device& device, const std::vector<Vertex>& vertices);
-    ~Model(); void cleanup();
+    Model(
+        Device& device,
+        const std::vector<Vertex>& vertices,
+        const std::vector<uint32_t>& indices
+    );
+    void cleanup();
 
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;
@@ -31,13 +27,21 @@ public:
     // void bind(VkCommandBuffer commandBuffer);
     // void draw(VkCommandBuffer commandBuffer);
 
-private:
-    void createVertexBuffer(const std::vector<Vertex>& vertices);
+    VkBuffer getVertexBuffer() const { return vertexBuffer; }
+    VkBuffer getIndexBuffer() const { return indexBuffer; }
 
+private:
     Device& device;
+
+    uint32_t vertexCount;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
-    uint32_t vertexCount;
+    void createVertexBuffer(const std::vector<Vertex>& vertices);
+
+    uint32_t indexCount;
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
+    void createIndexBuffer(const std::vector<uint32_t>& indices);
 };
 
 } // namespace AzVulk

@@ -10,7 +10,7 @@ namespace AzVulk {
 class Pipeline {
 public:
     Pipeline(Device& device, SwapChain& swapChain, const char* vsPath, const char* fsPath);
-    ~Pipeline(); void cleanup();
+    void cleanup();
 
     Pipeline(const Pipeline&) = delete;
     Pipeline& operator=(const Pipeline&) = delete;
