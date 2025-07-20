@@ -35,6 +35,7 @@ void AzVulk::init() {
 }
 void AzVulk::cleanup() {
     // Kill Vulkan in cold blood
+    cleanupSwapChain();
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -44,15 +45,10 @@ void AzVulk::cleanup() {
 
     vkDestroyCommandPool(device, commandPool, nullptr);
 
-    for (auto framebuffer : swapChainFramebuffers)
-        vkDestroyFramebuffer(device, framebuffer, nullptr);
-
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
 
-    for (auto imageView : swapChainImageViews)
-        vkDestroyImageView(device, imageView, nullptr);
 
     vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroyDevice(device, nullptr);
@@ -68,6 +64,32 @@ void AzVulk::cleanup() {
     SDL_Quit();
 }
 
+void AzVulk::cleanupSwapChain() {
+    for (auto framebuffer : swapChainFramebuffers)
+        vkDestroyFramebuffer(device, framebuffer, nullptr);
+
+    for (auto imageView : swapChainImageViews)
+        vkDestroyImageView(device, imageView, nullptr);
+
+    vkDestroySwapchainKHR(device, swapChain, nullptr);
+}
+
+void AzVulk::recreateSwapChain() {
+    int width = 0, height = 0;
+    SDL_GetWindowSize(window, &width, &height);
+    while (width == 0 || height == 0) {
+        SDL_GetWindowSize(window, &width, &height);
+        SDL_Delay(100);
+    }
+
+    vkDeviceWaitIdle(device);
+
+    cleanupSwapChain();
+
+    createSwapChain();
+    createImageViews();
+    createFramebuffers();
+}
 
 
 void AzVulk::createWindow() {
@@ -75,12 +97,20 @@ void AzVulk::createWindow() {
         throw std::runtime_error("Failed to initialize SDL");
     }
 
+    // window = SDL_CreateWindow(
+    //     "AzVulk Application",
+    //     SDL_WINDOWPOS_UNDEFINED,
+    //     SDL_WINDOWPOS_UNDEFINED,
+    //     width, height,
+    //     SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN
+    // );
+    // Allow resizable
     window = SDL_CreateWindow(
         "AzVulk Application",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         width, height,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN
+        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
     );
 
     if (!window) {
@@ -495,13 +525,13 @@ void AzVulk::createCommandPool() {
 
 
 void AzVulk::createCommandBuffers() {
-    commandBuffers.resize(swapChainFramebuffers.size());
+    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
     if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
@@ -509,9 +539,9 @@ void AzVulk::createCommandBuffers() {
 }
 
 void AzVulk::createSyncObjects() {
-    imageAvailableSemaphores.resize(swapChainImages.size());
-    renderFinishedSemaphores.resize(swapChainImages.size());
-    inFlightFences.resize(swapChainImages.size());
+    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -539,10 +569,18 @@ void AzVulk::createSyncObjects() {
 
 void AzVulk::drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-    vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreateSwapChain();
+        return;
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
     vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
@@ -579,7 +617,14 @@ void AzVulk::drawFrame() {
 
     presentInfo.pImageIndices = &imageIndex;
 
-    vkQueuePresentKHR(presentQueue, &presentInfo);
+    result = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+        framebufferResized = false;
+        recreateSwapChain();
+    } else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }

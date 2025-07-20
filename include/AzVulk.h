@@ -28,6 +28,7 @@ public:
 
     static const std::vector<const char*> validationLayers;
     static const std::vector<const char*> deviceExtensions;
+    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
     int width, height;
 
@@ -70,10 +71,15 @@ private: // No particular group, just split for clarity
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
-    int MAX_FRAMES_IN_FLIGHT = 2;
+
+    bool framebufferResized = false;
+
 
     void init();
     void cleanup();
+
+    void cleanupSwapChain();
+    void recreateSwapChain();
 
 
     void createWindow();
