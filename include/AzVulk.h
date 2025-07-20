@@ -36,14 +36,25 @@ public:
 
 private: // No particular group, just split for clarity
     SDL_Window* window;
+
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
     VkSurfaceKHR surface;
 
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    VkDevice device = VK_NULL_HANDLE; // Logical device
+    VkDevice device;
+
     VkQueue graphicsQueue;
     VkQueue presentQueue;
+
+    VkSwapchainKHR swapChain;
+    std::vector<VkImage> swapChainImages;
+    VkFormat swapChainImageFormat;
+    VkExtent2D swapChainExtent;
+    std::vector<VkImageView> swapChainImageViews;
+
+    VkRenderPass renderPass;
+    VkPipelineLayout pipelineLayout;
 
 
     void init();
@@ -56,12 +67,15 @@ private: // No particular group, just split for clarity
     void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
-
     void createSwapChain();
     void createImageViews();
+    void createRenderPass();
+    void createGraphicsPipeline();
 
 
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
     bool checkExtensionSupport(VkPhysicalDevice device);
     bool isDeviceSuitable(VkPhysicalDevice device);
+
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 };
