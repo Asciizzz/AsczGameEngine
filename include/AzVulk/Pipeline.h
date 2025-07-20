@@ -1,6 +1,7 @@
 #pragma once
 
 #include <AzVulk/Device.h>
+#include <AzVulk/SwapChain.h>
 #include <AzVulk/Model.h>
 
 
@@ -8,14 +9,13 @@ namespace AzVulk {
 
 class Pipeline {
 public:
-    Pipeline(Device& device, const char* vsPath, const char* fsPath);
+    Pipeline(Device& device, SwapChain& swapChain, const char* vsPath, const char* fsPath);
     ~Pipeline(); void cleanup();
 
     Pipeline(const Pipeline&) = delete;
     Pipeline& operator=(const Pipeline&) = delete;
-    Pipeline(Pipeline&&) = default;
-    Pipeline& operator=(Pipeline&&) = default;
-
+    Pipeline(Pipeline&&) = delete;
+    Pipeline& operator=(Pipeline&&) = delete;
 
 
     void createGraphicsPipeline(const char* vertShaderPath = "Shaders/hello.vert.spv",
@@ -26,6 +26,7 @@ public:
 
 private:
     Device& device;
+    SwapChain& swapChain;
     VkPipeline graphicsPipeline;
     VkPipelineLayout pipelineLayout;
 };

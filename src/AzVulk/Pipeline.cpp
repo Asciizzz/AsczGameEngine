@@ -2,8 +2,8 @@
 
 namespace AzVulk {
 
-Pipeline::Pipeline(Device& device, const char* vsPath, const char* fsPath)
-    : device(device), graphicsPipeline(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE) {
+Pipeline::Pipeline(Device& device, SwapChain& swapChain, const char* vsPath, const char* fsPath)
+    : device(device), swapChain(swapChain) {
     createGraphicsPipeline(vsPath, fsPath);
 }
 Pipeline::~Pipeline() { cleanup(); }
@@ -117,7 +117,7 @@ void Pipeline::createGraphicsPipeline(const char* vertShaderPath, const char* fr
     pipelineInfo.pDynamicState = &dynamicState;
 
     pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = device.getRenderPass();
+    pipelineInfo.renderPass = swapChain.getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
