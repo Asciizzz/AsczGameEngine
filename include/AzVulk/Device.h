@@ -1,24 +1,10 @@
 #pragma once
 
-#include <AzVulkHelper.hpp>
+#include <AzVulk/Helper.hpp>
 
-struct QueueFamilyIndices {
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
+namespace AzVulk {
 
-    bool isComplete() {
-        return graphicsFamily.has_value() && presentFamily.has_value();
-    }
-};
-
-struct SwapChainSupportDetails {
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
-
-
-class AzVulk {
+class Device {
 public:
 #ifdef NDEBUG
     static constexpr bool enableValidationLayers = false;
@@ -32,8 +18,8 @@ public:
 
     int width, height;
 
-    AzVulk(int w, int h);
-    ~AzVulk();
+    Device(int w, int h);
+    ~Device();
 
     void drawFrame();
 
@@ -59,6 +45,7 @@ private: // No particular group, just split for clarity
     std::vector<VkImageView> swapChainImageViews;
 
     VkRenderPass renderPass;
+
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
 
@@ -105,3 +92,5 @@ private: // No particular group, just split for clarity
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 };
+
+} // namespace AzVulk

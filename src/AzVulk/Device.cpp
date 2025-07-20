@@ -1,14 +1,16 @@
-#include "AzVulk.h"
+#include "AzVulk/Device.h"
 
 #include <set>
 
-const std::vector<const char*> AzVulk::validationLayers = { "VK_LAYER_KHRONOS_validation" };
-const std::vector<const char*> AzVulk::deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+namespace AzVulk {
 
-AzVulk::AzVulk(int w, int h) : width(w), height(h) { init(); }
-AzVulk::~AzVulk()                               { cleanup(); }
+const std::vector<const char*> Device::validationLayers = { "VK_LAYER_KHRONOS_validation" };
+const std::vector<const char*> Device::deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-void AzVulk::init() {
+Device::Device(int w, int h) : width(w), height(h) { init(); }
+Device::~Device()                               { cleanup(); }
+
+void Device::init() {
     createWindow();
     createInstance();
     setupDebugMessenger();
@@ -29,7 +31,7 @@ void AzVulk::init() {
     createCommandBuffers();
     createSyncObjects();
 }
-void AzVulk::cleanup() {
+void Device::cleanup() {
     // Kill Vulkan in cold blood
     cleanupSwapChain();
 
@@ -50,7 +52,7 @@ void AzVulk::cleanup() {
     vkDestroyDevice(device, nullptr);
 
     if (enableValidationLayers)
-        AzVulkHelper::DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+        Helper::DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
 
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyInstance(instance, nullptr);
@@ -60,7 +62,7 @@ void AzVulk::cleanup() {
     SDL_Quit();
 }
 
-void AzVulk::cleanupSwapChain() {
+void Device::cleanupSwapChain() {
     for (auto framebuffer : swapChainFramebuffers)
         vkDestroyFramebuffer(device, framebuffer, nullptr);
 
@@ -70,7 +72,7 @@ void AzVulk::cleanupSwapChain() {
     vkDestroySwapchainKHR(device, swapChain, nullptr);
 }
 
-void AzVulk::recreateSwapChain() {
+void Device::recreateSwapChain() {
     int width = 0, height = 0;
     SDL_GetWindowSize(window, &width, &height);
     while (width == 0 || height == 0) {
@@ -88,13 +90,13 @@ void AzVulk::recreateSwapChain() {
 }
 
 
-void AzVulk::createWindow() {
+void Device::createWindow() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         throw std::runtime_error("Failed to initialize SDL");
     }
 
     window = SDL_CreateWindow(
-        "AzVulk Application",
+        "Device Application",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         width, height,
@@ -108,8 +110,8 @@ void AzVulk::createWindow() {
 
 
 
-void AzVulk::createInstance() {
-    if (enableValidationLayers && !AzVulkHelper::CheckValidationLayerSupport(validationLayers)) {
+void Device::createInstance() {
+    if (enableValidationLayers && !Helper::CheckValidationLayerSupport(validationLayers)) {
         throw std::runtime_error("validation layers requested, but not available!");
     }
 
@@ -125,7 +127,7 @@ void AzVulk::createInstance() {
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
-    auto extensions = AzVulkHelper::GetSDLRequiredExtensions();
+    auto extensions = Helper::GetSDLRequiredExtensions();
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -134,7 +136,7 @@ void AzVulk::createInstance() {
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
 
-        AzVulkHelper::PopulateDebugMessengerCreateInfo(debugCreateInfo);
+        Helper::PopulateDebugMessengerCreateInfo(debugCreateInfo);
         createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
     } else {
         createInfo.enabledLayerCount = 0;
@@ -149,20 +151,20 @@ void AzVulk::createInstance() {
 
 
 
-void AzVulk::setupDebugMessenger() {
+void Device::setupDebugMessenger() {
     if (!enableValidationLayers) return;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo;
-    AzVulkHelper::PopulateDebugMessengerCreateInfo(createInfo);
+    Helper::PopulateDebugMessengerCreateInfo(createInfo);
 
-    if (AzVulkHelper::CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+    if (Helper::CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
         throw std::runtime_error("failed to set up debug messenger!");
     }
 }
 
 
 
-void AzVulk::createSurface() {
+void Device::createSurface() {
     if (!SDL_Vulkan_CreateSurface(window, instance, &surface)) {
         throw std::runtime_error("Failed to create Vulkan surface");
     }
@@ -170,7 +172,7 @@ void AzVulk::createSurface() {
 
 
 
-void AzVulk::pickPhysicalDevice() {
+void Device::pickPhysicalDevice() {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -195,7 +197,7 @@ void AzVulk::pickPhysicalDevice() {
 
 
 
-void AzVulk::createLogicalDevice() {
+void Device::createLogicalDevice() {
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -241,12 +243,12 @@ void AzVulk::createLogicalDevice() {
 
 
 
-void AzVulk::createSwapChain() {
+void Device::createSwapChain() {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
 
-    VkSurfaceFormatKHR surfaceFormat = AzVulkHelper::ChooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode = AzVulkHelper::ChooseSwapPresentMode(swapChainSupport.presentModes);
-    VkExtent2D extent = AzVulkHelper::ChooseSwapExtent(swapChainSupport.capabilities, width, height);
+    VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(swapChainSupport.formats);
+    VkPresentModeKHR presentMode = Helper::ChooseSwapPresentMode(swapChainSupport.presentModes);
+    VkExtent2D extent = Helper::ChooseSwapExtent(swapChainSupport.capabilities, width, height);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     // In case exceeds max image count
@@ -297,7 +299,7 @@ void AzVulk::createSwapChain() {
 
 
 
-void AzVulk::createImageViews() {
+void Device::createImageViews() {
     swapChainImageViews.resize(swapChainImages.size());
 
     for (size_t i = 0; i < swapChainImages.size(); i++) {
@@ -324,7 +326,7 @@ void AzVulk::createImageViews() {
 
 
 
-void AzVulk::createRenderPass() {
+void Device::createRenderPass() {
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = swapChainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -357,122 +359,7 @@ void AzVulk::createRenderPass() {
 }
 
 
-
-void AzVulk::createGraphicsPipeline() {
-    auto vertShaderCode = AzVulkHelper::ReadFile("Shaders/hello.vert.spv");
-    auto fragShaderCode = AzVulkHelper::ReadFile("Shaders/hello.frag.spv");
-
-    VkShaderModule vertShaderModule = AzVulkHelper::CreateShaderModule(device, vertShaderCode);
-    VkShaderModule fragShaderModule = AzVulkHelper::CreateShaderModule(device, fragShaderCode);
-
-    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertShaderStageInfo.module = vertShaderModule;
-    vertShaderStageInfo.pName = "main";
-
-    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragShaderStageInfo.module = fragShaderModule;
-    fragShaderStageInfo.pName = "main";
-
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
-
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-    VkPipelineViewportStateCreateInfo viewportState{};
-    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportState.viewportCount = 1;
-    viewportState.scissorCount = 1;
-
-    VkPipelineRasterizationStateCreateInfo rasterizer{};
-    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
-
-    VkPipelineMultisampleStateCreateInfo multisampling{};
-    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
-
-    VkPipelineColorBlendStateCreateInfo colorBlending{};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
-    colorBlending.blendConstants[0] = 0.0f;
-    colorBlending.blendConstants[1] = 0.0f;
-    colorBlending.blendConstants[2] = 0.0f;
-    colorBlending.blendConstants[3] = 0.0f;
-
-    std::vector<VkDynamicState> dynamicStates = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
-    VkPipelineDynamicStateCreateInfo dynamicState{};
-    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    dynamicState.pDynamicStates = dynamicStates.data();
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create pipeline layout!");
-    }
-
-
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pDynamicState = &dynamicState;
-
-    pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = renderPass;
-    pipelineInfo.subpass = 0;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create graphics pipeline!");
-    }
-
-
-    vkDestroyShaderModule(device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(device, vertShaderModule, nullptr);
-}
-
-
-
-void AzVulk::createFramebuffers() {
+void Device::createFramebuffers() {
     swapChainFramebuffers.resize(swapChainImageViews.size());
 
     for (size_t i = 0; i < swapChainImageViews.size(); i++) {
@@ -497,7 +384,7 @@ void AzVulk::createFramebuffers() {
 
 
 
-void AzVulk::createCommandPool() {
+void Device::createCommandPool() {
     QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
 
     VkCommandPoolCreateInfo poolInfo{};
@@ -512,7 +399,7 @@ void AzVulk::createCommandPool() {
 
 
 
-void AzVulk::createCommandBuffers() {
+void Device::createCommandBuffers() {
     commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
@@ -526,7 +413,7 @@ void AzVulk::createCommandBuffers() {
     }
 }
 
-void AzVulk::createSyncObjects() {
+void Device::createSyncObjects() {
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -555,7 +442,7 @@ void AzVulk::createSyncObjects() {
 
 // ========================== DRAW FRAME, FINALLY!!! ==========================
 
-void AzVulk::drawFrame() {
+void Device::drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
@@ -623,7 +510,7 @@ void AzVulk::drawFrame() {
 
 
 
-QueueFamilyIndices AzVulk::findQueueFamilies(VkPhysicalDevice device) {
+QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice device) {
     QueueFamilyIndices indices;
 
     uint32_t queueFamilyCount = 0;
@@ -650,7 +537,7 @@ QueueFamilyIndices AzVulk::findQueueFamilies(VkPhysicalDevice device) {
 
     return indices;
 }
-bool AzVulk::checkExtensionSupport(VkPhysicalDevice device) {
+bool Device::checkExtensionSupport(VkPhysicalDevice device) {
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -665,7 +552,7 @@ bool AzVulk::checkExtensionSupport(VkPhysicalDevice device) {
 
     return requiredExtensions.empty();
 }
-bool AzVulk::isDeviceSuitable(VkPhysicalDevice device) {
+bool Device::isDeviceSuitable(VkPhysicalDevice device) {
     QueueFamilyIndices indices = findQueueFamilies(device);
     bool extensionsSupported = checkExtensionSupport(device);
     bool swapChainAdequate = false;
@@ -678,7 +565,7 @@ bool AzVulk::isDeviceSuitable(VkPhysicalDevice device) {
 }
 
 
-SwapChainSupportDetails AzVulk::querySwapChainSupport(VkPhysicalDevice device) {
+SwapChainSupportDetails Device::querySwapChainSupport(VkPhysicalDevice device) {
     SwapChainSupportDetails details;
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -702,7 +589,7 @@ SwapChainSupportDetails AzVulk::querySwapChainSupport(VkPhysicalDevice device) {
 
 
 
-void AzVulk::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+void Device::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -747,3 +634,7 @@ void AzVulk::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIn
         throw std::runtime_error("failed to record command buffer!");
     }
 }
+
+
+
+} // namespace AzVulk

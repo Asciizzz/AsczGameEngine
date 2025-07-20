@@ -1,12 +1,24 @@
 #define SDL_MAIN_HANDLED
 
-#include <AzVulk.h>
+#include <AzVulk/Device.h>
 #include <glm/glm.hpp>
 
 #include <SDL2/SDL_keyboard.h>
 
+struct Vertex {
+    glm::vec2 pos;
+    glm::vec3 color;
+};
+
 int main() {
-    AzVulk app(800, 600);
+    AzVulk::Device app(800, 600);
+
+    const std::vector<Vertex> vertices = {
+        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
+
 
     while (true) {
         SDL_Event event;
