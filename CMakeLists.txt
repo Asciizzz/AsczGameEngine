@@ -11,15 +11,11 @@ set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 include_directories(
     ${SDL2_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/AzVulk
     ${CMAKE_SOURCE_DIR}/include/AzPlatform
 )
 
 file(GLOB_RECURSE SRC_FILES
-    src/AzVulk/Pipeline.cpp
-    src/AzVulk/Window.cpp
-    src/AzVulk/Device.cpp
-    src/AzVulk/SwapChain.cpp
+    src/AzVulk.cpp
 
     main.cpp
 )
