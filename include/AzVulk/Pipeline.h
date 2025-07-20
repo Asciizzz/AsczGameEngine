@@ -1,7 +1,7 @@
 #pragma once
 
-#include <AzVulk/Device.h>
 #include <AzVulk/SwapChain.h>
+
 #include <AzVulk/Model.h>
 
 

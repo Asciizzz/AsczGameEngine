@@ -13,6 +13,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Device.cpp
     src/AzVulk/Pipeline.cpp
     src/AzVulk/SwapChain.cpp
+
     src/AzVulk/Model.cpp
 
     main.cpp
