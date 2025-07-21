@@ -5,12 +5,14 @@
 #include <array>
 
 namespace AzVulk {
-    GraphicsPipeline::GraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat)
-        : device(device), swapChainExtent(swapChainExtent), swapChainImageFormat(swapChainImageFormat) {
-        
+    GraphicsPipeline::GraphicsPipeline( VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
+                                        const char* vertexShaderPath, const char* fragmentShaderPath)
+        : device(device), swapChainExtent(swapChainExtent), swapChainImageFormat(swapChainImageFormat),
+          vertexShaderPath(vertexShaderPath), fragmentShaderPath(fragmentShaderPath) {
+
         createRenderPass();
         createDescriptorSetLayout();
-        createGraphicsPipeline();
+        createGraphicsPipeline(vertexShaderPath, fragmentShaderPath);
     }
 
     GraphicsPipeline::~GraphicsPipeline() {
@@ -24,7 +26,7 @@ namespace AzVulk {
         cleanup();
         createRenderPass();
         createDescriptorSetLayout();
-        createGraphicsPipeline();
+        createGraphicsPipeline(vertexShaderPath, fragmentShaderPath);
     }
 
     void GraphicsPipeline::createRenderPass() {
@@ -112,9 +114,9 @@ namespace AzVulk {
         }
     }
 
-    void GraphicsPipeline::createGraphicsPipeline() {
-        auto vertShaderCode = ShaderManager::readFile("Shaders/hello.vert.spv");
-        auto fragShaderCode = ShaderManager::readFile("Shaders/hello.frag.spv");
+    void GraphicsPipeline::createGraphicsPipeline(const char* vertexShaderPath, const char* fragmentShaderPath) {
+        auto vertShaderCode = ShaderManager::readFile(vertexShaderPath);
+        auto fragShaderCode = ShaderManager::readFile(fragmentShaderPath);
 
         VkShaderModuleCreateInfo vertCreateInfo{};
         vertCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

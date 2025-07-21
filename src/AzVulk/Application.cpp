@@ -38,7 +38,9 @@ namespace AzVulk {
         graphicsPipeline = std::make_unique<GraphicsPipeline>(
             vulkanDevice->getLogicalDevice(), 
             swapChain->getExtent(), 
-            swapChain->getImageFormat()
+            swapChain->getImageFormat(),
+            "Shaders/hello.vert.spv",
+            "Shaders/hello.frag.spv"
         );
         
         shaderManager = std::make_unique<ShaderManager>(vulkanDevice->getLogicalDevice());
@@ -55,26 +57,23 @@ namespace AzVulk {
         
         // Create buffer with simple hardcoded geometry
         buffer = std::make_unique<Buffer>(*vulkanDevice);
-        
-        // Simple two quad setup for depth testing
-        const std::vector<Vertex> vertices = {
-            // Front quad (z = 0.0) - smaller size
-            {{-0.3f, -0.3f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-            {{ 0.3f, -0.3f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-            {{ 0.3f,  0.3f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-            {{-0.3f,  0.3f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
 
-            // Back quad (z = -0.5) - larger size
-            {{-0.7f, -0.7f, -0.5f}, {1.0f, 0.5f, 0.0f}, {0.0f, 0.0f}},
-            {{ 0.7f, -0.7f, -0.5f}, {0.5f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-            {{ 0.7f,  0.7f, -0.5f}, {0.0f, 0.5f, 1.0f}, {1.0f, 1.0f}},
-            {{-0.7f,  0.7f, -0.5f}, {0.8f, 0.8f, 0.8f}, {0.0f, 1.0f}}
+
+
+        const std::vector<Vertex> vertices = {
+            {{-0.3f, -0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{ 0.3f, -0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            {{ 0.3f,  0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+            {{-0.3f,  0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+
+            {{-0.7f, -0.7f, -0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{ 0.7f, -0.7f, -0.5f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            {{ 0.7f,  0.7f, -0.5f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+            {{-0.7f,  0.7f, -0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}
         };
-        
+
         const std::vector<uint16_t> indices = {
-            // Front quad indices
             0, 1, 2, 2, 3, 0,
-            // Back quad indices
             4, 5, 6, 6, 7, 4
         };
 

@@ -32,7 +32,9 @@ namespace AzVulk {
         std::unique_ptr<VulkanInstance> vulkanInstance;
         std::unique_ptr<VulkanDevice> vulkanDevice;
         std::unique_ptr<SwapChain> swapChain;
+
         std::unique_ptr<GraphicsPipeline> graphicsPipeline;
+
         std::unique_ptr<ShaderManager> shaderManager;
         std::unique_ptr<Buffer> buffer;
         std::unique_ptr<TextureManager> textureManager;
