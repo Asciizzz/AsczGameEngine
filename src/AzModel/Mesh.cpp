@@ -10,8 +10,8 @@ namespace AzModel {
 
     Mesh::~Mesh() = default;
 
-    void Mesh::setGeometry(const std::vector<AzGame::Vertex>& vertices, 
-                          const std::vector<uint16_t>& indices) {
+    void Mesh::setGeometry( const std::vector<AzGame::Vertex>& vertices, 
+                            const std::vector<uint16_t>& indices) {
         if (vertices.empty() || indices.empty()) {
             throw std::invalid_argument("Vertices and indices cannot be empty");
         }
