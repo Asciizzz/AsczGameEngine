@@ -29,8 +29,8 @@ namespace AzGame {
         const std::vector<VkFramebuffer>& getFramebuffers() const { return swapChainFramebuffers; }
         size_t getImageCount() const { return swapChainImages.size(); }
 
-        void recreate(SDL_Window* window);
-        void createFramebuffers(VkRenderPass renderPass);
+        void recreate(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView);
+        void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
 
     private:
         const VulkanDevice& vulkanDevice;

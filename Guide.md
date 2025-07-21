@@ -1,196 +1,369 @@
-Combined image sampler
 Introduction
+The geometry we've worked with so far is projected into 3D, but it's still completely flat. In this chapter we're going to add a Z coordinate to the position to prepare for 3D meshes. We'll use this third coordinate to place a square over the current square to see a problem that arises when geometry is not sorted by depth.
 
-Updating the descriptors
-
-Texture coordinates
-
-Shaders
-
-Introduction
-We looked at descriptors for the first time in the uniform buffers part of the tutorial. In this chapter we will look at a new type of descriptor: combined image sampler. This descriptor makes it possible for shaders to access an image resource through a sampler object like the one we created in the previous chapter.
-
-We'll start by modifying the descriptor layout, descriptor pool and descriptor set to include such a combined image sampler descriptor. After that, we're going to add texture coordinates to Vertex and modify the fragment shader to read colors from the texture instead of just interpolating the vertex colors.
-
-Updating the descriptors
-Browse to the createDescriptorSetLayout function and add a VkDescriptorSetLayoutBinding for a combined image sampler descriptor. We'll simply put it in the binding after the uniform buffer:
-
-VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-samplerLayoutBinding.binding = 1;
-samplerLayoutBinding.descriptorCount = 1;
-samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-samplerLayoutBinding.pImmutableSamplers = nullptr;
-samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
-VkDescriptorSetLayoutCreateInfo layoutInfo{};
-layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-layoutInfo.pBindings = bindings.data();
-Make sure to set the stageFlags to indicate that we intend to use the combined image sampler descriptor in the fragment shader. That's where the color of the fragment is going to be determined. It is possible to use texture sampling in the vertex shader, for example to dynamically deform a grid of vertices by a heightmap.
-
-We must also create a larger descriptor pool to make room for the allocation of the combined image sampler by adding another VkPoolSize of type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER to the VkDescriptorPoolCreateInfo. Go to the createDescriptorPool function and modify it to include a VkDescriptorPoolSize for this descriptor:
-
-std::array<VkDescriptorPoolSize, 2> poolSizes{};
-poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-
-VkDescriptorPoolCreateInfo poolInfo{};
-poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-poolInfo.pPoolSizes = poolSizes.data();
-poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-Inadequate descriptor pools are a good example of a problem that the validation layers will not catch: As of Vulkan 1.1, vkAllocateDescriptorSets may fail with the error code VK_ERROR_POOL_OUT_OF_MEMORY if the pool is not sufficiently large, but the driver may also try to solve the problem internally. This means that sometimes (depending on hardware, pool size and allocation size) the driver will let us get away with an allocation that exceeds the limits of our descriptor pool. Other times, vkAllocateDescriptorSets will fail and return VK_ERROR_POOL_OUT_OF_MEMORY. This can be particularly frustrating if the allocation succeeds on some machines, but fails on others.
-
-Since Vulkan shifts the responsiblity for the allocation to the driver, it is no longer a strict requirement to only allocate as many descriptors of a certain type (VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, etc.) as specified by the corresponding descriptorCount members for the creation of the descriptor pool. However, it remains best practise to do so, and in the future, VK_LAYER_KHRONOS_validation will warn about this type of problem if you enable Best Practice Validation.
-
-The final step is to bind the actual image and sampler resources to the descriptors in the descriptor set. Go to the createDescriptorSets function.
-
-for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = uniformBuffers[i];
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(UniformBufferObject);
-
-    VkDescriptorImageInfo imageInfo{};
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo.imageView = textureImageView;
-    imageInfo.sampler = textureSampler;
-
-    ...
-}
-The resources for a combined image sampler structure must be specified in a VkDescriptorImageInfo struct, just like the buffer resource for a uniform buffer descriptor is specified in a VkDescriptorBufferInfo struct. This is where the objects from the previous chapter come together.
-
-std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-descriptorWrites[0].dstSet = descriptorSets[i];
-descriptorWrites[0].dstBinding = 0;
-descriptorWrites[0].dstArrayElement = 0;
-descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-descriptorWrites[0].descriptorCount = 1;
-descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-descriptorWrites[1].dstSet = descriptorSets[i];
-descriptorWrites[1].dstBinding = 1;
-descriptorWrites[1].dstArrayElement = 0;
-descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-descriptorWrites[1].descriptorCount = 1;
-descriptorWrites[1].pImageInfo = &imageInfo;
-
-vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-The descriptors must be updated with this image info, just like the buffer. This time we're using the pImageInfo array instead of pBufferInfo. The descriptors are now ready to be used by the shaders!
-
-Texture coordinates
-There is one important ingredient for texture mapping that is still missing, and that's the actual coordinates for each vertex. The coordinates determine how the image is actually mapped to the geometry.
+3D geometry
+Change the Vertex struct to use a 3D vector for the position, and update the format in the corresponding VkVertexInputAttributeDescription:
 
 struct Vertex {
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec3 color;
     glm::vec2 texCoord;
 
-    static VkVertexInputBindingDescription getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(Vertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        return bindingDescription;
-    }
+    ...
 
     static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
         std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-        return attributeDescriptions;
+        ...
     }
 };
-Modify the Vertex struct to include a vec2 for texture coordinates. Make sure to also add a VkVertexInputAttributeDescription so that we can use access texture coordinates as input in the vertex shader. That is necessary to be able to pass them to the fragment shader for interpolation across the surface of the square.
+Next, update the vertex shader to accept and transform 3D coordinates as input. Don't forget to recompile it afterwards!
 
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-};
-In this tutorial, I will simply fill the square with the texture by using coordinates from 0, 0 in the top-left corner to 1, 1 in the bottom-right corner. Feel free to experiment with different coordinates. Try using coordinates below 0 or above 1 to see the addressing modes in action!
+layout(location = 0) in vec3 inPosition;
 
-Shaders
-The final step is modifying the shaders to sample colors from the texture. We first need to modify the vertex shader to pass through the texture coordinates to the fragment shader:
-
-layout(location = 0) in vec2 inPosition;
-layout(location = 1) in vec3 inColor;
-layout(location = 2) in vec2 inTexCoord;
-
-layout(location = 0) out vec3 fragColor;
-layout(location = 1) out vec2 fragTexCoord;
+...
 
 void main() {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 0.0, 1.0);
+    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 }
-Just like the per vertex colors, the fragTexCoord values will be smoothly interpolated across the area of the square by the rasterizer. We can visualize this by having the fragment shader output the texture coordinates as colors:
+Lastly, update the vertices container to include Z coordinates:
 
-#version 450
+const std::vector<Vertex> vertices = {
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+};
+If you run your application now, then you should see exactly the same result as before. It's time to add some extra geometry to make the scene more interesting, and to demonstrate the problem that we're going to tackle in this chapter. Duplicate the vertices to define positions for a square right under the current one like this:
 
-layout(location = 0) in vec3 fragColor;
-layout(location = 1) in vec2 fragTexCoord;
 
-layout(location = 0) out vec4 outColor;
 
-void main() {
-    outColor = vec4(fragTexCoord, 0.0, 1.0);
+Use Z coordinates of -0.5f and add the appropriate indices for the extra square:
+
+const std::vector<Vertex> vertices = {
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> indices = {
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4
+};
+Run your program now and you'll see something resembling an Escher illustration:
+
+
+
+The problem is that the fragments of the lower square are drawn over the fragments of the upper square, simply because it comes later in the index array. There are two ways to solve this:
+
+Sort all of the draw calls by depth from back to front
+Use depth testing with a depth buffer
+The first approach is commonly used for drawing transparent objects, because order-independent transparency is a difficult challenge to solve. However, the problem of ordering fragments by depth is much more commonly solved using a depth buffer. A depth buffer is an additional attachment that stores the depth for every position, just like the color attachment stores the color of every position. Every time the rasterizer produces a fragment, the depth test will check if the new fragment is closer than the previous one. If it isn't, then the new fragment is discarded. A fragment that passes the depth test writes its own depth to the depth buffer. It is possible to manipulate this value from the fragment shader, just like you can manipulate the color output.
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+The perspective projection matrix generated by GLM will use the OpenGL depth range of -1.0 to 1.0 by default. We need to configure it to use the Vulkan range of 0.0 to 1.0 using the GLM_FORCE_DEPTH_ZERO_TO_ONE definition.
+
+Depth image and view
+A depth attachment is based on an image, just like the color attachment. The difference is that the swap chain will not automatically create depth images for us. We only need a single depth image, because only one draw operation is running at once. The depth image will again require the trifecta of resources: image, memory and image view.
+
+VkImage depthImage;
+VkDeviceMemory depthImageMemory;
+VkImageView depthImageView;
+Create a new function createDepthResources to set up these resources:
+
+void initVulkan() {
+    ...
+    createCommandPool();
+    createDepthResources();
+    createTextureImage();
+    ...
 }
-You should see something like the image below. Don't forget to recompile the shaders!
 
+...
 
+void createDepthResources() {
 
-The green channel represents the horizontal coordinates and the red channel the vertical coordinates. The black and yellow corners confirm that the texture coordinates are correctly interpolated from 0, 0 to 1, 1 across the square. Visualizing data using colors is the shader programming equivalent of printf debugging, for lack of a better option!
-
-A combined image sampler descriptor is represented in GLSL by a sampler uniform. Add a reference to it in the fragment shader:
-
-layout(binding = 1) uniform sampler2D texSampler;
-There are equivalent sampler1D and sampler3D types for other types of images. Make sure to use the correct binding here.
-
-void main() {
-    outColor = texture(texSampler, fragTexCoord);
 }
-Textures are sampled using the built-in texture function. It takes a sampler and coordinate as arguments. The sampler automatically takes care of the filtering and transformations in the background. You should now see the texture on the square when you run the application:
+Creating a depth image is fairly straightforward. It should have the same resolution as the color attachment, defined by the swap chain extent, an image usage appropriate for a depth attachment, optimal tiling and device local memory. The only question is: what is the right format for a depth image? The format must contain a depth component, indicated by _D??_ in the VK_FORMAT_.
 
+Unlike the texture image, we don't necessarily need a specific format, because we won't be directly accessing the texels from the program. It just needs to have a reasonable accuracy, at least 24 bits is common in real-world applications. There are several formats that fit this requirement:
 
+VK_FORMAT_D32_SFLOAT: 32-bit float for depth
+VK_FORMAT_D32_SFLOAT_S8_UINT: 32-bit signed float for depth and 8 bit stencil component
+VK_FORMAT_D24_UNORM_S8_UINT: 24-bit float for depth and 8 bit stencil component
+The stencil component is used for stencil tests, which is an additional test that can be combined with depth testing. We'll look at this in a future chapter.
 
-Try experimenting with the addressing modes by scaling the texture coordinates to values higher than 1. For example, the following fragment shader produces the result in the image below when using VK_SAMPLER_ADDRESS_MODE_REPEAT:
+We could simply go for the VK_FORMAT_D32_SFLOAT format, because support for it is extremely common (see the hardware database), but it's nice to add some extra flexibility to our application where possible. We're going to write a function findSupportedFormat that takes a list of candidate formats in order from most desirable to least desirable, and checks which is the first one that is supported:
 
-void main() {
-    outColor = texture(texSampler, fragTexCoord * 2.0);
+VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+
 }
+The support of a format depends on the tiling mode and usage, so we must also include these as parameters. The support of a format can be queried using the vkGetPhysicalDeviceFormatProperties function:
 
-
-You can also manipulate the texture colors using the vertex colors:
-
-void main() {
-    outColor = vec4(fragColor * texture(texSampler, fragTexCoord).rgb, 1.0);
+for (VkFormat format : candidates) {
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
 }
-I've separated the RGB and alpha channels here to not scale the alpha channel.
+The VkFormatProperties struct contains three fields:
+
+linearTilingFeatures: Use cases that are supported with linear tiling
+optimalTilingFeatures: Use cases that are supported with optimal tiling
+bufferFeatures: Use cases that are supported for buffers
+Only the first two are relevant here, and the one we check depends on the tiling parameter of the function:
+
+if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+    return format;
+} else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+    return format;
+}
+If none of the candidate formats support the desired usage, then we can either return a special value or simply throw an exception:
+
+VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+    for (VkFormat format : candidates) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+            return format;
+        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("failed to find supported format!");
+}
+We'll use this function now to create a findDepthFormat helper function to select a format with a depth component that supports usage as depth attachment:
+
+VkFormat findDepthFormat() {
+    return findSupportedFormat(
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    );
+}
+Make sure to use the VK_FORMAT_FEATURE_ flag instead of VK_IMAGE_USAGE_ in this case. All of these candidate formats contain a depth component, but the latter two also contain a stencil component. We won't be using that yet, but we do need to take that into account when performing layout transitions on images with these formats. Add a simple helper function that tells us if the chosen depth format contains a stencil component:
+
+bool hasStencilComponent(VkFormat format) {
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+Call the function to find a depth format from createDepthResources:
+
+VkFormat depthFormat = findDepthFormat();
+We now have all the required information to invoke our createImage and createImageView helper functions:
+
+createImage(swapChainExtent.width, swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+depthImageView = createImageView(depthImage, depthFormat);
+However, the createImageView function currently assumes that the subresource is always the VK_IMAGE_ASPECT_COLOR_BIT, so we will need to turn that field into a parameter:
+
+VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
+    ...
+    viewInfo.subresourceRange.aspectMask = aspectFlags;
+    ...
+}
+Update all calls to this function to use the right aspect:
+
+swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+...
+depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+...
+textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+That's it for creating the depth image. We don't need to map it or copy another image to it, because we're going to clear it at the start of the render pass like the color attachment.
+
+Explicitly transitioning the depth image
+We don't need to explicitly transition the layout of the image to a depth attachment because we'll take care of this in the render pass. However, for completeness I'll still describe the process in this section. You may skip it if you like.
+
+Make a call to transitionImageLayout at the end of the createDepthResources function like so:
+
+transitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+The undefined layout can be used as initial layout, because there are no existing depth image contents that matter. We need to update some of the logic in transitionImageLayout to use the right subresource aspect:
+
+if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    if (hasStencilComponent(format)) {
+        barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+} else {
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+}
+Although we're not using the stencil component, we do need to include it in the layout transitions of the depth image.
+
+Finally, add the correct access masks and pipeline stages:
+
+if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+} else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+} else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+} else {
+    throw std::invalid_argument("unsupported layout transition!");
+}
+The depth buffer will be read from to perform depth tests to see if a fragment is visible, and will be written to when a new fragment is drawn. The reading happens in the VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT stage and the writing in the VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT. You should pick the earliest pipeline stage that matches the specified operations, so that it is ready for usage as depth attachment when it needs to be.
+
+Render pass
+We're now going to modify createRenderPass to include a depth attachment. First specify the VkAttachmentDescription:
+
+VkAttachmentDescription depthAttachment{};
+depthAttachment.format = findDepthFormat();
+depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+The format should be the same as the depth image itself. This time we don't care about storing the depth data (storeOp), because it will not be used after drawing has finished. This may allow the hardware to perform additional optimizations. Just like the color buffer, we don't care about the previous depth contents, so we can use VK_IMAGE_LAYOUT_UNDEFINED as initialLayout.
+
+VkAttachmentReference depthAttachmentRef{};
+depthAttachmentRef.attachment = 1;
+depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+Add a reference to the attachment for the first (and only) subpass:
+
+VkSubpassDescription subpass{};
+subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+subpass.colorAttachmentCount = 1;
+subpass.pColorAttachments = &colorAttachmentRef;
+subpass.pDepthStencilAttachment = &depthAttachmentRef;
+Unlike color attachments, a subpass can only use a single depth (+stencil) attachment. It wouldn't really make any sense to do depth tests on multiple buffers.
+
+std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+VkRenderPassCreateInfo renderPassInfo{};
+renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+renderPassInfo.pAttachments = attachments.data();
+renderPassInfo.subpassCount = 1;
+renderPassInfo.pSubpasses = &subpass;
+renderPassInfo.dependencyCount = 1;
+renderPassInfo.pDependencies = &dependency;
+Next, update the VkSubpassDependency struct to refer to both attachments.
+
+dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+Finally, we need to extend our subpass dependencies to make sure that there is no conflict between the transitioning of the depth image and it being cleared as part of its load operation. The depth image is first accessed in the early fragment test pipeline stage and because we have a load operation that clears, we should specify the access mask for writes.
+
+Framebuffer
+The next step is to modify the framebuffer creation to bind the depth image to the depth attachment. Go to createFramebuffers and specify the depth image view as second attachment:
+
+std::array<VkImageView, 2> attachments = {
+    swapChainImageViews[i],
+    depthImageView
+};
+
+VkFramebufferCreateInfo framebufferInfo{};
+framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+framebufferInfo.renderPass = renderPass;
+framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+framebufferInfo.pAttachments = attachments.data();
+framebufferInfo.width = swapChainExtent.width;
+framebufferInfo.height = swapChainExtent.height;
+framebufferInfo.layers = 1;
+The color attachment differs for every swap chain image, but the same depth image can be used by all of them because only a single subpass is running at the same time due to our semaphores.
+
+You'll also need to move the call to createFramebuffers to make sure that it is called after the depth image view has actually been created:
+
+void initVulkan() {
+    ...
+    createDepthResources();
+    createFramebuffers();
+    ...
+}
+Clear values
+Because we now have multiple attachments with VK_ATTACHMENT_LOAD_OP_CLEAR, we also need to specify multiple clear values. Go to recordCommandBuffer and create an array of VkClearValue structs:
+
+std::array<VkClearValue, 2> clearValues{};
+clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+clearValues[1].depthStencil = {1.0f, 0};
+
+renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+renderPassInfo.pClearValues = clearValues.data();
+The range of depths in the depth buffer is 0.0 to 1.0 in Vulkan, where 1.0 lies at the far view plane and 0.0 at the near view plane. The initial value at each point in the depth buffer should be the furthest possible depth, which is 1.0.
+
+Note that the order of clearValues should be identical to the order of your attachments.
+
+Depth and stencil state
+The depth attachment is ready to be used now, but depth testing still needs to be enabled in the graphics pipeline. It is configured through the VkPipelineDepthStencilStateCreateInfo struct:
+
+VkPipelineDepthStencilStateCreateInfo depthStencil{};
+depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+depthStencil.depthTestEnable = VK_TRUE;
+depthStencil.depthWriteEnable = VK_TRUE;
+The depthTestEnable field specifies if the depth of new fragments should be compared to the depth buffer to see if they should be discarded. The depthWriteEnable field specifies if the new depth of fragments that pass the depth test should actually be written to the depth buffer.
+
+depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+The depthCompareOp field specifies the comparison that is performed to keep or discard fragments. We're sticking to the convention of lower depth = closer, so the depth of new fragments should be less.
+
+depthStencil.depthBoundsTestEnable = VK_FALSE;
+depthStencil.minDepthBounds = 0.0f; // Optional
+depthStencil.maxDepthBounds = 1.0f; // Optional
+The depthBoundsTestEnable, minDepthBounds and maxDepthBounds fields are used for the optional depth bound test. Basically, this allows you to only keep fragments that fall within the specified depth range. We won't be using this functionality.
+
+depthStencil.stencilTestEnable = VK_FALSE;
+depthStencil.front = {}; // Optional
+depthStencil.back = {}; // Optional
+The last three fields configure stencil buffer operations, which we also won't be using in this tutorial. If you want to use these operations, then you will have to make sure that the format of the depth/stencil image contains a stencil component.
+
+pipelineInfo.pDepthStencilState = &depthStencil;
+Update the VkGraphicsPipelineCreateInfo struct to reference the depth stencil state we just filled in. A depth stencil state must always be specified if the render pass contains a depth stencil attachment.
+
+If you run your program now, then you should see that the fragments of the geometry are now correctly ordered:
 
 
 
-You now know how to access images in shaders! This is a very powerful technique when combined with images that are also written to in framebuffers. You can use these images as inputs to implement cool effects like post-processing and camera displays within the 3D world.
+Handling window resize
+The resolution of the depth buffer should change when the window is resized to match the new color attachment resolution. Extend the recreateSwapChain function to recreate the depth resources in that case:
+
+void recreateSwapChain() {
+    int width = 0, height = 0;
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    vkDeviceWaitIdle(device);
+
+    cleanupSwapChain();
+
+    createSwapChain();
+    createImageViews();
+    createDepthResources();
+    createFramebuffers();
+}
+The cleanup operations should happen in the swap chain cleanup function:
+
+void cleanupSwapChain() {
+    vkDestroyImageView(device, depthImageView, nullptr);
+    vkDestroyImage(device, depthImage, nullptr);
+    vkFreeMemory(device, depthImageMemory, nullptr);
+
+    ...
+}

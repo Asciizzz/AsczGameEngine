@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include "WindowManager.hpp"
 #include "VulkanInstance.hpp"
 #include "VulkanDevice.hpp"
@@ -11,6 +12,12 @@
 #include "Renderer.hpp"
 #include "DescriptorManager.hpp"
 #include "TextureManager.hpp"
+#include "DepthManager.hpp"
+
+// Forward declaration for the new model system
+namespace AzModel {
+    class Model3D;
+}
 
 namespace AzGame {
     class Application {
@@ -34,8 +41,13 @@ namespace AzGame {
         std::unique_ptr<ShaderManager> shaderManager;
         std::unique_ptr<Buffer> buffer;
         std::unique_ptr<TextureManager> textureManager;
+        std::unique_ptr<DepthManager> depthManager;
         std::unique_ptr<DescriptorManager> descriptorManager;
         std::unique_ptr<Renderer> renderer;
+
+        // 3D Models
+        std::vector<std::shared_ptr<AzModel::Model3D>> models;
+        VkCommandPool modelCommandPool = VK_NULL_HANDLE;
 
         VkSurfaceKHR surface = VK_NULL_HANDLE;
 
@@ -48,5 +60,6 @@ namespace AzGame {
         void createSurface();
         void mainLoop();
         void cleanup();
+        void createModelCommandPool();
     };
 }

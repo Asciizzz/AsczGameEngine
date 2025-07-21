@@ -18,7 +18,7 @@ namespace AzGame {
         VkPipelineLayout getPipelineLayout() const { return pipelineLayout; }
         VkPipeline getPipeline() const { return graphicsPipeline; }
 
-        void recreate(VkExtent2D newExtent, VkFormat newFormat);
+        void recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat);
 
     private:
         VkDevice device;

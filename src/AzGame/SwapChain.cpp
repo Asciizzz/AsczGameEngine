@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <limits>
+#include <array>
 
 namespace AzGame {
     SwapChain::SwapChain(const VulkanDevice& device, VkSurfaceKHR surface, SDL_Window* window)
@@ -90,18 +91,21 @@ namespace AzGame {
         }
     }
 
-    void SwapChain::createFramebuffers(VkRenderPass renderPass) {
+    void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView) {
         cleanupFramebuffers();
         swapChainFramebuffers.resize(swapChainImageViews.size());
 
         for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-            VkImageView attachments[] = { swapChainImageViews[i] };
+            std::array<VkImageView, 2> attachments = {
+                swapChainImageViews[i],
+                depthImageView
+            };
 
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             framebufferInfo.renderPass = renderPass;
-            framebufferInfo.attachmentCount = 1;
-            framebufferInfo.pAttachments = attachments;
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebufferInfo.pAttachments = attachments.data();
             framebufferInfo.width = swapChainExtent.width;
             framebufferInfo.height = swapChainExtent.height;
             framebufferInfo.layers = 1;
@@ -112,7 +116,7 @@ namespace AzGame {
         }
     }
 
-    void SwapChain::recreate(SDL_Window* window) {
+    void SwapChain::recreate(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView) {
         int width = 0, height = 0;
         SDL_GetWindowSize(window, &width, &height);
         while (width == 0 || height == 0) {
@@ -125,6 +129,7 @@ namespace AzGame {
         cleanup();
         createSwapChain(window);
         createImageViews();
+        createFramebuffers(renderPass, depthImageView);
     }
 
     void SwapChain::cleanup() {

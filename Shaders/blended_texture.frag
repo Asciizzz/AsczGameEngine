@@ -9,9 +9,6 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     // Blend vertex colors with texture (multiply RGB, preserve alpha)
-    // This separates RGB and alpha channels for better control
-    // vec4 texColor = texture(texSampler, fragTexCoord);
-    // outColor = vec4(fragColor * texColor.rgb, 1.0);
-
-    outColor = texture(texSampler, fragTexCoord);
+    vec4 texColor = texture(texSampler, fragTexCoord);
+    outColor = vec4(fragColor * texColor.rgb, 1.0);
 }

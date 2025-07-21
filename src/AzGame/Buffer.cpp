@@ -17,7 +17,7 @@ namespace AzGame {
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
         attributeDescriptions[1].binding = 0;
@@ -73,6 +73,7 @@ namespace AzGame {
 
     void Buffer::createIndexBuffer(const std::vector<uint16_t>& indices) {
         VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+        indexCount = static_cast<uint32_t>(indices.size());
 
         // For simplicity, create buffer directly in host-visible memory
         createBuffer(bufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 

@@ -4,17 +4,6 @@
 #include <cstring>
 
 namespace AzGame {
-    const std::vector<Vertex> Renderer::vertices = {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-    };
-
-    const std::vector<uint16_t> Renderer::indices = {
-        0, 1, 2, 2, 3, 0
-    };
-
     Renderer::Renderer (const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
                         Buffer& buffer, DescriptorManager& descriptorManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
@@ -165,9 +154,12 @@ namespace AzGame {
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain.getExtent();
 
-        VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[1].depthStencil = {1.0f, 0};
+
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -199,7 +191,7 @@ namespace AzGame {
                                 graphicsPipeline.getPipelineLayout(), 0, 1, 
                                 &descriptorSet, 0, nullptr);
 
-        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, buffer.getIndexCount(), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
 

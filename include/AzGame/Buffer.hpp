@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <vector>
@@ -9,7 +10,7 @@
 
 namespace AzGame {
     struct Vertex {
-        glm::vec2 pos;
+        glm::vec3 pos;
         glm::vec3 color;
         glm::vec2 texCoord;
 
@@ -38,6 +39,7 @@ namespace AzGame {
 
         VkBuffer getVertexBuffer() const { return vertexBuffer; }
         VkBuffer getIndexBuffer() const { return indexBuffer; }
+        uint32_t getIndexCount() const { return indexCount; }
         const std::vector<VkBuffer>& getUniformBuffers() const { return uniformBuffers; }
         const std::vector<void*>& getUniformBuffersMapped() const { return uniformBuffersMapped; }
 
@@ -48,6 +50,7 @@ namespace AzGame {
         VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
         VkBuffer indexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
+        uint32_t indexCount = 0;
         
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;

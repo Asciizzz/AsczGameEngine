@@ -32,6 +32,10 @@ namespace AzGame {
 
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
         void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) const;
+        void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const;
+        void destroyBuffer(VkBuffer buffer, VkDeviceMemory bufferMemory) const;
+        VkCommandBuffer beginSingleTimeCommands(VkCommandPool commandPool) const;
+        void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool) const;
 
     private:
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
