@@ -15,8 +15,8 @@ namespace AzGame {
         0, 1, 2, 2, 3, 0
     };
 
-    Renderer::Renderer(const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
-                      Buffer& buffer, DescriptorManager& descriptorManager)
+    Renderer::Renderer (const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
+                        Buffer& buffer, DescriptorManager& descriptorManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
           descriptorManager(descriptorManager), startTime(std::chrono::high_resolution_clock::now()) {
         
