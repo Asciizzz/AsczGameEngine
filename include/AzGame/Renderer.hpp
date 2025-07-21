@@ -23,6 +23,7 @@ namespace AzGame {
         void drawFrame();
         bool isFramebufferResized() const { return framebufferResized; }
         void setFramebufferResized(bool resized) { framebufferResized = resized; }
+        VkCommandPool getCommandPool() const { return commandPool; }
 
     private:
         const VulkanDevice& vulkanDevice;

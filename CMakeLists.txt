@@ -18,6 +18,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzGame/Buffer.cpp
     src/AzGame/GraphicsPipeline.cpp
     src/AzGame/DescriptorManager.cpp
+    src/AzGame/TextureManager.cpp
     src/AzGame/Renderer.cpp
     src/AzGame/Application.cpp
 

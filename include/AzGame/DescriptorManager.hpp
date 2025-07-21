@@ -15,7 +15,8 @@ namespace AzGame {
         DescriptorManager& operator=(const DescriptorManager&) = delete;
 
         void createDescriptorPool(uint32_t maxFramesInFlight);
-        void createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize);
+        void createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize, 
+                                 VkImageView textureImageView, VkSampler textureSampler);
         
         VkDescriptorSet getDescriptorSet(uint32_t frameIndex) const { 
             return descriptorSets[frameIndex]; 

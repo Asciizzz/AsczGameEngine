@@ -10,6 +10,7 @@
 #include "Buffer.hpp"
 #include "Renderer.hpp"
 #include "DescriptorManager.hpp"
+#include "TextureManager.hpp"
 
 namespace AzGame {
     class Application {
@@ -32,6 +33,7 @@ namespace AzGame {
         std::unique_ptr<GraphicsPipeline> graphicsPipeline;
         std::unique_ptr<ShaderManager> shaderManager;
         std::unique_ptr<Buffer> buffer;
+        std::unique_ptr<TextureManager> textureManager;
         std::unique_ptr<DescriptorManager> descriptorManager;
         std::unique_ptr<Renderer> renderer;
 

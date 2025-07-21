@@ -31,6 +31,7 @@ namespace AzGame {
         QueueFamilyIndices getQueueFamilyIndices() const { return queueFamilyIndices; }
 
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
+        void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) const;
 
     private:
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
