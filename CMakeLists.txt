@@ -10,12 +10,16 @@ set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
 set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
 file(GLOB_RECURSE SRC_FILES
-    src/AzVulk/Device.cpp
-    src/AzVulk/Buffer.cpp
-    src/AzVulk/Pipeline.cpp
-    src/AzVulk/SwapChain.cpp
-
-    src/AzVulk/Model.cpp
+    src/AzGame/WindowManager.cpp
+    src/AzGame/VulkanInstance.cpp
+    src/AzGame/VulkanDevice.cpp
+    src/AzGame/SwapChain.cpp
+    src/AzGame/ShaderManager.cpp
+    src/AzGame/Buffer.cpp
+    src/AzGame/GraphicsPipeline.cpp
+    src/AzGame/DescriptorManager.cpp
+    src/AzGame/Renderer.cpp
+    src/AzGame/Application.cpp
 
     main.cpp
 )
@@ -27,8 +31,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/glm
 
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/AzVulk
-    ${CMAKE_SOURCE_DIR}/include/AzPlatform
+    ${CMAKE_SOURCE_DIR}/include/AzGame
 )
 
 target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY})
