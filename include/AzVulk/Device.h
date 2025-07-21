@@ -11,9 +11,7 @@ public:
 #else
     static constexpr bool enableValidationLayers = true;
 #endif
-    int width, height;
-
-    Device(int w, int h);
+    Device(const char* name, int w, int h);
     void cleanup();
 
     // Not copyable or movable
@@ -21,8 +19,6 @@ public:
     Device& operator=(const Device&) = delete;
     Device(Device&&) = delete;
     Device& operator=(Device&&) = delete;
-
-    void drawFrame(VkPipeline graphicsPipeline);
 
     // Getters
     VkDevice getDevice() const { return device; }
@@ -49,7 +45,7 @@ private:
 
     VkCommandPool commandPool;
 
-    void createWindow();
+    void createWindow(int width, int height, const char* name);
     void createInstance();
     void setupDebugMessenger();
     void createSurface();

@@ -2,11 +2,9 @@
 
 namespace AzVulk {
 
-SwapChain::SwapChain(Device& device) : device(device) {
-    init();
-}
-
-void SwapChain::init() {
+SwapChain::SwapChain(Device& device, VkExtent2D windowExtent)
+    : device(device), windowExtent(windowExtent)
+{
     createSwapChain();
     createImageViews();
     createRenderPass();
@@ -15,6 +13,7 @@ void SwapChain::init() {
 
     createCommandBuffers();
 }
+
 void SwapChain::cleanup() {
     cleanupSwapChain();
 
@@ -61,7 +60,7 @@ void SwapChain::createSwapChain() {
 
     VkSurfaceFormatKHR surfaceFormat = Helper::ChooseSwapSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR presentMode = Helper::ChooseSwapPresentMode(swapChainSupport.presentModes);
-    VkExtent2D extent = Helper::ChooseSwapExtent(swapChainSupport.capabilities, device.width, device.height);
+    VkExtent2D extent = Helper::ChooseSwapExtent(swapChainSupport.capabilities, windowExtent);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     // In case exceeds max image count

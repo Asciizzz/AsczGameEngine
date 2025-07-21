@@ -28,10 +28,14 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/AzVulk
     ${CMAKE_SOURCE_DIR}/include/AzPlatform
-
 )
 
 target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY})
+
+target_compile_options(AsczGame PRIVATE 
+    $<$<CONFIG:Release>:-O3>
+)
+
 
 # Copy executable to project root after build
 add_custom_command(TARGET AsczGame POST_BUILD

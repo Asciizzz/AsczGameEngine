@@ -8,8 +8,8 @@ class SwapChain {
 public:
     static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
-    SwapChain(Device& device);
-    void init(); void cleanup();
+    SwapChain(Device& device, VkExtent2D windowExtent);
+    void cleanup();
 
     // Not copyable or movable
     SwapChain(const SwapChain&) = delete;
@@ -40,6 +40,7 @@ public:
 
 private:
     Device& device;
+    VkExtent2D windowExtent;
 
     VkSwapchainKHR swapChain;
     std::vector<VkImage> swapChainImages;

@@ -2,8 +2,8 @@
 
 namespace AzVulk {
 
-Device::Device(int w, int h) : width(w), height(h) {
-    createWindow();
+Device::Device(const char* name, int w, int h) {
+    createWindow(w, h, name);
     createInstance();
     setupDebugMessenger();
     createSurface();
@@ -29,16 +29,13 @@ void Device::cleanup() {
 }
 
 
-void Device::createWindow() {
+void Device::createWindow(int width, int height, const char* name) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         throw std::runtime_error("Failed to initialize SDL");
     }
 
     window = SDL_CreateWindow(
-        "Device Application",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        width, height,
+        name, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height,
         SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
     );
 

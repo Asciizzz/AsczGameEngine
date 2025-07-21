@@ -11,8 +11,8 @@ struct Vertex {
 };
 
 int main() {
-    AzVulk::Device device(800, 600);
-    AzVulk::SwapChain swapchain(device);
+    AzVulk::Device device("Hi", 800, 600);
+    AzVulk::SwapChain swapchain(device, {800, 600});
     AzVulk::Pipeline pipeline1(
         device, swapchain, 
         "Shaders/hello.vert.spv",
