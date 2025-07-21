@@ -23,10 +23,6 @@ file(GLOB_RECURSE SRC_FILES
     src/AzGame/Renderer.cpp
     src/AzGame/Application.cpp
 
-    src/AzModel/Material.cpp
-    src/AzModel/Mesh.cpp
-    src/AzModel/Model3D.cpp
-
     main.cpp
 )
 
@@ -38,7 +34,6 @@ target_include_directories(AsczGame PRIVATE
 
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/AzGame
-    ${CMAKE_SOURCE_DIR}/include/AzModel
 )
 
 target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY})

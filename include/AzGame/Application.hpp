@@ -14,11 +14,6 @@
 #include "TextureManager.hpp"
 #include "DepthManager.hpp"
 
-// Forward declaration for the new model system
-namespace AzModel {
-    class Model3D;
-}
-
 namespace AzGame {
     class Application {
     public:
@@ -45,10 +40,7 @@ namespace AzGame {
         std::unique_ptr<DescriptorManager> descriptorManager;
         std::unique_ptr<Renderer> renderer;
 
-        // 3D Models
-        std::vector<std::shared_ptr<AzModel::Model3D>> models;
-        VkCommandPool modelCommandPool = VK_NULL_HANDLE;
-
+        VkCommandPool commandPool = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
 
         // Application settings
@@ -60,6 +52,5 @@ namespace AzGame {
         void createSurface();
         void mainLoop();
         void cleanup();
-        void createModelCommandPool();
     };
 }
