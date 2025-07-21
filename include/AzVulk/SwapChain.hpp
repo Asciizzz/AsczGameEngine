@@ -5,7 +5,7 @@
 #include <vector>
 #include "VulkanDevice.hpp"
 
-namespace AzGame {
+namespace AzVulk {
     struct SwapChainSupportDetails {
         VkSurfaceCapabilitiesKHR capabilities;
         std::vector<VkSurfaceFormatKHR> formats;

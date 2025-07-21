@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include "Buffer.hpp"
 
-namespace AzGame {
+namespace AzVulk {
     class GraphicsPipeline {
     public:
         GraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat);

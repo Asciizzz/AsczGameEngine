@@ -1,9 +1,9 @@
-#include "AzGame/DepthManager.hpp"
-#include "AzGame/VulkanDevice.hpp"
+#include "AzVulk/DepthManager.hpp"
+#include "AzVulk/VulkanDevice.hpp"
 #include <stdexcept>
 #include <algorithm>
 
-namespace AzGame {
+namespace AzVulk {
     DepthManager::DepthManager(const VulkanDevice& device) : vulkanDevice(device) {}
 
     DepthManager::~DepthManager() {

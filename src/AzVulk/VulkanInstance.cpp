@@ -1,8 +1,8 @@
-#include "AzGame/VulkanInstance.hpp"
+#include "AzVulk/VulkanInstance.hpp"
 #include <iostream>
 #include <cstring>
 
-namespace AzGame {
+namespace AzVulk {
     const std::vector<const char*> VulkanInstance::validationLayers = {
         "VK_LAYER_KHRONOS_validation"
     };
@@ -53,7 +53,7 @@ namespace AzGame {
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "Vulkan Application";
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.pEngineName = "AzGame Engine";
+        appInfo.pEngineName = "AzVulk Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.apiVersion = VK_API_VERSION_1_0;
 

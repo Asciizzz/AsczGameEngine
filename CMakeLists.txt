@@ -10,18 +10,18 @@ set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
 set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
 file(GLOB_RECURSE SRC_FILES
-    src/AzGame/WindowManager.cpp
-    src/AzGame/VulkanInstance.cpp
-    src/AzGame/VulkanDevice.cpp
-    src/AzGame/SwapChain.cpp
-    src/AzGame/ShaderManager.cpp
-    src/AzGame/Buffer.cpp
-    src/AzGame/GraphicsPipeline.cpp
-    src/AzGame/DescriptorManager.cpp
-    src/AzGame/TextureManager.cpp
-    src/AzGame/DepthManager.cpp
-    src/AzGame/Renderer.cpp
-    src/AzGame/Application.cpp
+    src/AzVulk/WindowManager.cpp
+    src/AzVulk/VulkanInstance.cpp
+    src/AzVulk/VulkanDevice.cpp
+    src/AzVulk/SwapChain.cpp
+    src/AzVulk/ShaderManager.cpp
+    src/AzVulk/Buffer.cpp
+    src/AzVulk/GraphicsPipeline.cpp
+    src/AzVulk/DescriptorManager.cpp
+    src/AzVulk/TextureManager.cpp
+    src/AzVulk/DepthManager.cpp
+    src/AzVulk/Renderer.cpp
+    src/AzVulk/Application.cpp
 
     main.cpp
 )
@@ -33,7 +33,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/glm
 
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/AzGame
+    ${CMAKE_SOURCE_DIR}/include/AzVulk
 )
 
 target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY})

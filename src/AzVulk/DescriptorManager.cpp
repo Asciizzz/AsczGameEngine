@@ -1,8 +1,8 @@
-#include "AzGame/DescriptorManager.hpp"
+#include "AzVulk/DescriptorManager.hpp"
 #include <stdexcept>
 #include <array>
 
-namespace AzGame {
+namespace AzVulk {
     DescriptorManager::DescriptorManager(const VulkanDevice& device, VkDescriptorSetLayout descriptorSetLayout)
         : vulkanDevice(device), descriptorSetLayout(descriptorSetLayout) {
     }

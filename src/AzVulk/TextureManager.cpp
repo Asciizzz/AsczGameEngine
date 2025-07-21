@@ -1,12 +1,12 @@
-#include "AzGame/TextureManager.hpp"
-#include "AzGame/VulkanDevice.hpp"
+#include "AzVulk/TextureManager.hpp"
+#include "AzVulk/VulkanDevice.hpp"
 #include <stdexcept>
 #include <cstring>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-namespace AzGame {
+namespace AzVulk {
     TextureManager::TextureManager(const VulkanDevice& device, VkCommandPool commandPool) 
         : vulkanDevice(device), commandPool(commandPool) {}
 

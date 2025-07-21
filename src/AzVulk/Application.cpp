@@ -1,4 +1,4 @@
-#include "AzGame/Application.hpp"
+#include "AzVulk/Application.hpp"
 #include <SDL2/SDL_vulkan.h>
 #include <stdexcept>
 #include <iostream>
@@ -9,10 +9,10 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-namespace AzGame {
+namespace AzVulk {
     Application::Application(const char* title, uint32_t width, uint32_t height)
         : appTitle(title), appWidth(width), appHeight(height) {
-        
+
         windowManager = std::make_unique<WindowManager>(title, width, height);
         initVulkan();
     }
@@ -77,7 +77,7 @@ namespace AzGame {
             // Back quad indices
             4, 5, 6, 6, 7, 4
         };
-        
+
         buffer->createVertexBuffer(vertices);
         buffer->createIndexBuffer(indices);
         buffer->createUniformBuffers(2); // MAX_FRAMES_IN_FLIGHT

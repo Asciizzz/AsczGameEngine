@@ -5,7 +5,7 @@
 #include <optional>
 #include <set>
 
-namespace AzGame {
+namespace AzVulk {
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentFamily;

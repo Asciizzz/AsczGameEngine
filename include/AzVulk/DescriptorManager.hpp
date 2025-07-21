@@ -4,7 +4,7 @@
 #include <vector>
 #include "VulkanDevice.hpp"
 
-namespace AzGame {
+namespace AzVulk {
     class DescriptorManager {
     public:
         DescriptorManager(const VulkanDevice& device, VkDescriptorSetLayout descriptorSetLayout);

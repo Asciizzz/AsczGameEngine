@@ -1,11 +1,11 @@
-#include "AzGame/SwapChain.hpp"
+#include "AzVulk/SwapChain.hpp"
 #include <SDL2/SDL_vulkan.h>
 #include <stdexcept>
 #include <algorithm>
 #include <limits>
 #include <array>
 
-namespace AzGame {
+namespace AzVulk {
     SwapChain::SwapChain(const VulkanDevice& device, VkSurfaceKHR surface, SDL_Window* window)
         : vulkanDevice(device), surface(surface) {
         createSwapChain(window);

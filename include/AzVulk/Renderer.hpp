@@ -9,7 +9,7 @@
 #include "Buffer.hpp"
 #include "DescriptorManager.hpp"
 
-namespace AzGame {
+namespace AzVulk {
     class Renderer {
     public:
         Renderer(const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 

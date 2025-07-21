@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <string>
 
-namespace AzGame {
+namespace AzVulk {
     class TextureManager {
     public:
         TextureManager(const class VulkanDevice& device, VkCommandPool commandPool);

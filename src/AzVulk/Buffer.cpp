@@ -1,9 +1,9 @@
-#include "AzGame/Buffer.hpp"
-#include "AzGame/VulkanDevice.hpp"
+#include "AzVulk/Buffer.hpp"
+#include "AzVulk/VulkanDevice.hpp"
 #include <stdexcept>
 #include <cstring>
 
-namespace AzGame {
+namespace AzVulk {
     VkVertexInputBindingDescription Vertex::getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 0;

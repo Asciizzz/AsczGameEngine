@@ -1,10 +1,10 @@
-#include "AzGame/GraphicsPipeline.hpp"
-#include "AzGame/ShaderManager.hpp"
+#include "AzVulk/GraphicsPipeline.hpp"
+#include "AzVulk/ShaderManager.hpp"
 #include <stdexcept>
 #include <vector>
 #include <array>
 
-namespace AzGame {
+namespace AzVulk {
     GraphicsPipeline::GraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat)
         : device(device), swapChainExtent(swapChainExtent), swapChainImageFormat(swapChainImageFormat) {
         

@@ -6,7 +6,7 @@
 #include <vector>
 #include <stdexcept>
 
-namespace AzGame {
+namespace AzVulk {
     class WindowManager {
     public:
         WindowManager(const char* title, uint32_t width, uint32_t height);

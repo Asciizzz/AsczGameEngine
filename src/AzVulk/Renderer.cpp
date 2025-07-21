@@ -1,9 +1,9 @@
-#include "AzGame/Renderer.hpp"
+#include "AzVulk/Renderer.hpp"
 #include <stdexcept>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
 
-namespace AzGame {
+namespace AzVulk {
     Renderer::Renderer (const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
                         Buffer& buffer, DescriptorManager& descriptorManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),

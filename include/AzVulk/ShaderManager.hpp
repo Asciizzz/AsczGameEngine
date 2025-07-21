@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-namespace AzGame {
+namespace AzVulk {
     class ShaderManager {
     public:
         ShaderManager(VkDevice device);

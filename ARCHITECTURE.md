@@ -8,47 +8,47 @@ The Vulkan application has been completely refactored from a monolithic class in
 
 ### Core Components
 
-#### 1. **Application** (`src/AzGame/Application.cpp`)
+#### 1. **Application** (`src/AzVulk/Application.cpp`)
 - Main application class that orchestrates all engine components
 - Handles the main loop and high-level initialization
 - Manages component lifetimes and interactions
 
-#### 2. **WindowManager** (`src/AzGame/WindowManager.cpp`)
+#### 2. **WindowManager** (`src/AzVulk/WindowManager.cpp`)
 - Manages SDL2 window creation and events
 - Handles window resizing and input events
 - Provides Vulkan surface extension requirements
 
-#### 3. **VulkanInstance** (`src/AzGame/VulkanInstance.cpp`)
+#### 3. **VulkanInstance** (`src/AzVulk/VulkanInstance.cpp`)
 - Manages Vulkan instance creation and debug layers
 - Handles validation layer setup and debug callbacks
 - Encapsulates instance-level Vulkan operations
 
-#### 4. **VulkanDevice** (`src/AzGame/VulkanDevice.cpp`)
+#### 4. **VulkanDevice** (`src/AzVulk/VulkanDevice.cpp`)
 - Manages physical and logical device selection
 - Handles queue family discovery and creation
 - Provides device-level Vulkan operations
 
-#### 5. **SwapChain** (`src/AzGame/SwapChain.cpp`)
+#### 5. **SwapChain** (`src/AzVulk/SwapChain.cpp`)
 - Manages swap chain creation and recreation
 - Handles surface format and present mode selection
 - Creates and manages framebuffers
 
-#### 6. **GraphicsPipeline** (`src/AzGame/GraphicsPipeline.cpp`)
+#### 6. **GraphicsPipeline** (`src/AzVulk/GraphicsPipeline.cpp`)
 - Creates and manages the Vulkan graphics pipeline
 - Handles render pass creation
 - Manages descriptor set layouts and pipeline layouts
 
-#### 7. **ShaderManager** (`src/AzGame/ShaderManager.cpp`)
+#### 7. **ShaderManager** (`src/AzVulk/ShaderManager.cpp`)
 - Handles shader loading and compilation
 - Manages shader module lifecycles
 - Provides utility functions for shader operations
 
-#### 8. **Buffer** (`src/AzGame/Buffer.cpp`)
+#### 8. **Buffer** (`src/AzVulk/Buffer.cpp`)
 - Manages Vulkan buffer creation (vertex, index, uniform)
 - Handles memory allocation and mapping
 - Provides buffer utility functions
 
-#### 9. **Renderer** (`src/AzGame/Renderer.cpp`)
+#### 9. **Renderer** (`src/AzVulk/Renderer.cpp`)
 - Manages command buffer recording and submission
 - Handles the rendering loop and synchronization
 - Manages frame-in-flight synchronization objects
@@ -80,11 +80,11 @@ Individual components can be unit tested in isolation.
 The new architecture is much simpler to use:
 
 ```cpp
-#include "AzGame/Application.hpp"
+#include "AzVulk/Application.hpp"
 
 int main() {
     try {
-        AzGame::Application app("My Game", 800, 600);
+        AzVulk::Application app("My Game", 800, 600);
         app.run();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
@@ -97,7 +97,7 @@ int main() {
 ## File Structure
 
 ```
-include/AzGame/           # Header files
+include/AzVulk/           # Header files
 ├── Application.hpp
 ├── WindowManager.hpp
 ├── VulkanInstance.hpp
@@ -108,7 +108,7 @@ include/AzGame/           # Header files
 ├── Buffer.hpp
 └── Renderer.hpp
 
-src/AzGame/              # Implementation files
+src/AzVulk/              # Implementation files
 ├── Application.cpp
 ├── WindowManager.cpp
 ├── VulkanInstance.cpp

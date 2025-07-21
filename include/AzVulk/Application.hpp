@@ -14,7 +14,7 @@
 #include "TextureManager.hpp"
 #include "DepthManager.hpp"
 
-namespace AzGame {
+namespace AzVulk {
     class Application {
     public:
         Application(const char* title = "Vulkan Application", uint32_t width = 800, uint32_t height = 600);

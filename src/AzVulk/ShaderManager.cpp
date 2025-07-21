@@ -1,9 +1,9 @@
-#include "AzGame/ShaderManager.hpp"
+#include "AzVulk/ShaderManager.hpp"
 #include <fstream>
 #include <stdexcept>
 #include <algorithm>
 
-namespace AzGame {
+namespace AzVulk {
     ShaderManager::ShaderManager(VkDevice device) : device(device) {}
 
     ShaderManager::~ShaderManager() {

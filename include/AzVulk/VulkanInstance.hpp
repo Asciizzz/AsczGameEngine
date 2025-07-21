@@ -4,7 +4,7 @@
 #include <vector>
 #include <optional>
 
-namespace AzGame {
+namespace AzVulk {
     class VulkanInstance {
     public:
         VulkanInstance(const std::vector<const char*>& requiredExtensions, bool enableValidation = false);

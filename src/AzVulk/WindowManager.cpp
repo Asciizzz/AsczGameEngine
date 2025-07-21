@@ -1,7 +1,7 @@
-#include "AzGame/WindowManager.hpp"
+#include "AzVulk/WindowManager.hpp"
 #include <iostream>
 
-namespace AzGame {
+namespace AzVulk {
     WindowManager::WindowManager(const char* title, uint32_t width, uint32_t height)
         : window(nullptr), shouldCloseFlag(false), resizedFlag(false), 
           windowWidth(width), windowHeight(height) {

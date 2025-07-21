@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-namespace AzGame {
+namespace AzVulk {
     class VulkanDevice;
 
     class DepthManager {

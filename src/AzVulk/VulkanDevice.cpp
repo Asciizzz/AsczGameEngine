@@ -1,9 +1,9 @@
-#include "AzGame/VulkanDevice.hpp"
-#include "AzGame/SwapChain.hpp"
+#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/SwapChain.hpp"
 #include <stdexcept>
 #include <set>
 
-namespace AzGame {
+namespace AzVulk {
     const std::vector<const char*> VulkanDevice::deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
