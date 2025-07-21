@@ -1,4 +1,4 @@
-#include <AzVulk/Model.h>
+#include <AzVulk/Model.hpp>
 
 namespace AzVulk {
 

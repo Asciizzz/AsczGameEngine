@@ -1,17 +1,17 @@
-#include "AzVulk/Pipeline.h"
+#include "AzVulk/Pipeline.hpp"
 
 namespace AzVulk {
 
-Pipeline::Pipeline(Device& device, SwapChain& swapChain, const char* vsPath, const char* fsPath)
-    : device(device), swapChain(swapChain) {
-    createGraphicsPipeline(vsPath, fsPath);
+Pipeline::Pipeline(Device& device, const char* vsPath, const char* fsPath, VkRenderPass renderPass)
+    : device(device) {
+    createGraphicsPipeline(vsPath, fsPath, renderPass);
 }
 void Pipeline::cleanup() {
     vkDestroyPipeline(device.getDevice(), graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device.getDevice(), pipelineLayout, nullptr);
 }
 
-void Pipeline::createGraphicsPipeline(const char* vertShaderPath, const char* fragShaderPath) {
+void Pipeline::createGraphicsPipeline(const char* vertShaderPath, const char* fragShaderPath, VkRenderPass renderPass) {
     auto vertShaderCode = Helper::ReadFile(vertShaderPath);
     auto fragShaderCode = Helper::ReadFile(fragShaderPath);
 
@@ -121,7 +121,7 @@ void Pipeline::createGraphicsPipeline(const char* vertShaderPath, const char* fr
     pipelineInfo.pDynamicState = &dynamicState;
 
     pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = swapChain.getRenderPass();
+    pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 

@@ -1,7 +1,7 @@
 #define SDL_MAIN_HANDLED
 
-#include <AzVulk/Pipeline.h>
-#include <AzVulk/SwapChain.h>
+#include <AzVulk/Pipeline.hpp>
+#include <AzVulk/SwapChain.hpp>
 
 #include <SDL2/SDL_keyboard.h>
 
@@ -13,16 +13,11 @@ struct Vertex {
 int main() {
     AzVulk::Device device("Hi", 800, 600);
     AzVulk::SwapChain swapchain(device, {800, 600});
-    AzVulk::Pipeline pipeline1(
-        device, swapchain, 
+    AzVulk::Pipeline pipeline(
+        device,
         "Shaders/hello.vert.spv",
-        "Shaders/hello.frag.spv"
-    );
-
-    AzVulk::Pipeline pipeline2(
-        device, swapchain, 
-        "Shaders/hi.vert.spv",
-        "Shaders/hi.frag.spv"
+        "Shaders/hello.frag.spv",
+        swapchain.getRenderPass()
     );
 
     const std::vector<AzVulk::Vertex> vertices = {
@@ -38,8 +33,6 @@ int main() {
 
     bool holdQ = false;
 
-    bool usePipeline1 = true;
-
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -48,26 +41,17 @@ int main() {
         }
         if (!running) break;
 
-        // swapchain.drawFrame(pipeline1.getGraphicsPipeline());
-        if (usePipeline1)
-            swapchain.drawFrame(
-                pipeline1.getGraphicsPipeline(),
-                model.getVertexBuffer(), vertices,
-                model.getIndexBuffer(), indices
-            );
-        else
-            swapchain.drawFrame(
-                pipeline2.getGraphicsPipeline(),
-                model.getVertexBuffer(), vertices,
-                model.getIndexBuffer(), indices
-            );
+        swapchain.drawFrame(
+            pipeline.getGraphicsPipeline(),
+            model.getVertexBuffer(), vertices,
+            model.getIndexBuffer(), indices
+        );
 
         // Press Q to print a message
         const Uint8* state = SDL_GetKeyboardState(nullptr);
         if (state[SDL_SCANCODE_Q] && !holdQ) {
             holdQ = true;
-
-            usePipeline1 = !usePipeline1;
+            printf("\033[1;32mHello, Vulkan!\033[0m\n");
         }
         if (!state[SDL_SCANCODE_Q]) {
             holdQ = false;
@@ -78,8 +62,7 @@ int main() {
 
     swapchain.cleanup();
 
-    pipeline1.cleanup();
-    pipeline2.cleanup();
+    pipeline.cleanup();
 
     model.cleanup();
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <AzVulk/Device.h>
+#include <AzVulk/Buffer.hpp>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE // as opposed to -1 to 1

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <AzVulk/Pipeline.h>
+#include <AzVulk/Pipeline.hpp>
 
 namespace AzVulk {
 

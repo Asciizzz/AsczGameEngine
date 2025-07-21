@@ -1,4 +1,4 @@
-#include "AzVulk/SwapChain.h"
+#include "AzVulk/SwapChain.hpp"
 
 namespace AzVulk {
 

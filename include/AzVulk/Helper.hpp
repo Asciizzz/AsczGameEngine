@@ -366,6 +366,13 @@ public:
 
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
+
+    static VkDeviceSize GetBufferAlignment(VkDeviceSize instanceSize, VkDeviceSize minOffsetAlignment) {
+        if (minOffsetAlignment > 0) {
+            return (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
+        }
+        return instanceSize;
+    }
 };
 
 } // namespace AzVulk

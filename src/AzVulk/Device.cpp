@@ -1,4 +1,4 @@
-#include "AzVulk/Device.h"
+#include "AzVulk/Device.hpp"
 
 namespace AzVulk {
 
