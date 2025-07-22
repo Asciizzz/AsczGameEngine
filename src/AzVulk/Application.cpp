@@ -198,9 +198,9 @@ namespace AzVulk {
                 break;
             }
             
-            // Toggle mouse lock with TAB key
-            static bool tabPressed = false;
-            if (k_state[SDL_SCANCODE_TAB] && !tabPressed) {
+            // Toggle mouse lock with F1 key
+            static bool f1Pressed = false;
+            if (k_state[SDL_SCANCODE_F1] && !f1Pressed) {
                 mouseLocked = !mouseLocked;
                 if (mouseLocked) {
                     SDL_SetRelativeMouseMode(SDL_TRUE);
@@ -208,9 +208,9 @@ namespace AzVulk {
                 } else {
                     SDL_SetRelativeMouseMode(SDL_FALSE);
                 }
-                tabPressed = true;
-            } else if (!k_state[SDL_SCANCODE_TAB]) {
-                tabPressed = false;
+                f1Pressed = true;
+            } else if (!k_state[SDL_SCANCODE_F1]) {
+                f1Pressed = false;
             }
 
             // Handle mouse look when locked
