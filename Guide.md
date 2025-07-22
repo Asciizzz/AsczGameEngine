@@ -1,369 +1,200 @@
 Introduction
-The geometry we've worked with so far is projected into 3D, but it's still completely flat. In this chapter we're going to add a Z coordinate to the position to prepare for 3D meshes. We'll use this third coordinate to place a square over the current square to see a problem that arises when geometry is not sorted by depth.
+Our program can now load multiple levels of detail for textures which fixes artifacts when rendering objects far away from the viewer. The image is now a lot smoother, however on closer inspection you will notice jagged saw-like patterns along the edges of drawn geometric shapes. This is especially visible in one of our early programs when we rendered a quad:
 
-3D geometry
-Change the Vertex struct to use a 3D vector for the position, and update the format in the corresponding VkVertexInputAttributeDescription:
 
-struct Vertex {
-    glm::vec3 pos;
-    glm::vec3 color;
-    glm::vec2 texCoord;
 
-    ...
+This undesired effect is called "aliasing" and it's a result of a limited numbers of pixels that are available for rendering. Since there are no displays out there with unlimited resolution, it will be always visible to some extent. There's a number of ways to fix this and in this chapter we'll focus on one of the more popular ones: Multisample anti-aliasing (MSAA).
 
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+In ordinary rendering, the pixel color is determined based on a single sample point which in most cases is the center of the target pixel on screen. If part of the drawn line passes through a certain pixel but doesn't cover the sample point, that pixel will be left blank, leading to the jagged "staircase" effect.
 
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
-        ...
-    }
-};
-Next, update the vertex shader to accept and transform 3D coordinates as input. Don't forget to recompile it afterwards!
 
-layout(location = 0) in vec3 inPosition;
+What MSAA does is it uses multiple sample points per pixel (hence the name) to determine its final color. As one might expect, more samples lead to better results, however it is also more computationally expensive.
+
+
+
+In our implementation, we will focus on using the maximum available sample count. Depending on your application this may not always be the best approach and it might be better to use less samples for the sake of higher performance if the final result meets your quality demands.
+
+Getting available sample count
+Let's start off by determining how many samples our hardware can use. Most modern GPUs support at least 8 samples but this number is not guaranteed to be the same everywhere. We'll keep track of it by adding a new class member:
 
 ...
-
-void main() {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
-    fragColor = inColor;
-    fragTexCoord = inTexCoord;
-}
-Lastly, update the vertices container to include Z coordinates:
-
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-If you run your application now, then you should see exactly the same result as before. It's time to add some extra geometry to make the scene more interesting, and to demonstrate the problem that we're going to tackle in this chapter. Duplicate the vertices to define positions for a square right under the current one like this:
-
-
-
-Use Z coordinates of -0.5f and add the appropriate indices for the extra square:
-
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
-Run your program now and you'll see something resembling an Escher illustration:
-
-
-
-The problem is that the fragments of the lower square are drawn over the fragments of the upper square, simply because it comes later in the index array. There are two ways to solve this:
-
-Sort all of the draw calls by depth from back to front
-Use depth testing with a depth buffer
-The first approach is commonly used for drawing transparent objects, because order-independent transparency is a difficult challenge to solve. However, the problem of ordering fragments by depth is much more commonly solved using a depth buffer. A depth buffer is an additional attachment that stores the depth for every position, just like the color attachment stores the color of every position. Every time the rasterizer produces a fragment, the depth test will check if the new fragment is closer than the previous one. If it isn't, then the new fragment is discarded. A fragment that passes the depth test writes its own depth to the depth buffer. It is possible to manipulate this value from the fragment shader, just like you can manipulate the color output.
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-The perspective projection matrix generated by GLM will use the OpenGL depth range of -1.0 to 1.0 by default. We need to configure it to use the Vulkan range of 0.0 to 1.0 using the GLM_FORCE_DEPTH_ZERO_TO_ONE definition.
-
-Depth image and view
-A depth attachment is based on an image, just like the color attachment. The difference is that the swap chain will not automatically create depth images for us. We only need a single depth image, because only one draw operation is running at once. The depth image will again require the trifecta of resources: image, memory and image view.
-
-VkImage depthImage;
-VkDeviceMemory depthImageMemory;
-VkImageView depthImageView;
-Create a new function createDepthResources to set up these resources:
-
-void initVulkan() {
-    ...
-    createCommandPool();
-    createDepthResources();
-    createTextureImage();
-    ...
-}
-
+VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 ...
+By default we'll be using only one sample per pixel which is equivalent to no multisampling, in which case the final image will remain unchanged. The exact maximum number of samples can be extracted from VkPhysicalDeviceProperties associated with our selected physical device. We're using a depth buffer, so we have to take into account the sample count for both color and depth. The highest sample count that is supported by both (&) will be the maximum we can support. Add a function that will fetch this information for us:
 
-void createDepthResources() {
+VkSampleCountFlagBits getMaxUsableSampleCount() {
+    VkPhysicalDeviceProperties physicalDeviceProperties;
+    vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
+    VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+    if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+    if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+    if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+    if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+    if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+    if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+    return VK_SAMPLE_COUNT_1_BIT;
 }
-Creating a depth image is fairly straightforward. It should have the same resolution as the color attachment, defined by the swap chain extent, an image usage appropriate for a depth attachment, optimal tiling and device local memory. The only question is: what is the right format for a depth image? The format must contain a depth component, indicated by _D??_ in the VK_FORMAT_.
+We will now use this function to set the msaaSamples variable during the physical device selection process. For this, we have to slightly modify the pickPhysicalDevice function:
 
-Unlike the texture image, we don't necessarily need a specific format, because we won't be directly accessing the texels from the program. It just needs to have a reasonable accuracy, at least 24 bits is common in real-world applications. There are several formats that fit this requirement:
-
-VK_FORMAT_D32_SFLOAT: 32-bit float for depth
-VK_FORMAT_D32_SFLOAT_S8_UINT: 32-bit signed float for depth and 8 bit stencil component
-VK_FORMAT_D24_UNORM_S8_UINT: 24-bit float for depth and 8 bit stencil component
-The stencil component is used for stencil tests, which is an additional test that can be combined with depth testing. We'll look at this in a future chapter.
-
-We could simply go for the VK_FORMAT_D32_SFLOAT format, because support for it is extremely common (see the hardware database), but it's nice to add some extra flexibility to our application where possible. We're going to write a function findSupportedFormat that takes a list of candidate formats in order from most desirable to least desirable, and checks which is the first one that is supported:
-
-VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
-
-}
-The support of a format depends on the tiling mode and usage, so we must also include these as parameters. The support of a format can be queried using the vkGetPhysicalDeviceFormatProperties function:
-
-for (VkFormat format : candidates) {
-    VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
-}
-The VkFormatProperties struct contains three fields:
-
-linearTilingFeatures: Use cases that are supported with linear tiling
-optimalTilingFeatures: Use cases that are supported with optimal tiling
-bufferFeatures: Use cases that are supported for buffers
-Only the first two are relevant here, and the one we check depends on the tiling parameter of the function:
-
-if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-    return format;
-} else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-    return format;
-}
-If none of the candidate formats support the desired usage, then we can either return a special value or simply throw an exception:
-
-VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
-    for (VkFormat format : candidates) {
-        VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
-
-        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-            return format;
-        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-            return format;
+void pickPhysicalDevice() {
+    ...
+    for (const auto& device : devices) {
+        if (isDeviceSuitable(device)) {
+            physicalDevice = device;
+            msaaSamples = getMaxUsableSampleCount();
+            break;
         }
     }
-
-    throw std::runtime_error("failed to find supported format!");
-}
-We'll use this function now to create a findDepthFormat helper function to select a format with a depth component that supports usage as depth attachment:
-
-VkFormat findDepthFormat() {
-    return findSupportedFormat(
-        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-    );
-}
-Make sure to use the VK_FORMAT_FEATURE_ flag instead of VK_IMAGE_USAGE_ in this case. All of these candidate formats contain a depth component, but the latter two also contain a stencil component. We won't be using that yet, but we do need to take that into account when performing layout transitions on images with these formats. Add a simple helper function that tells us if the chosen depth format contains a stencil component:
-
-bool hasStencilComponent(VkFormat format) {
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
-Call the function to find a depth format from createDepthResources:
-
-VkFormat depthFormat = findDepthFormat();
-We now have all the required information to invoke our createImage and createImageView helper functions:
-
-createImage(swapChainExtent.width, swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
-depthImageView = createImageView(depthImage, depthFormat);
-However, the createImageView function currently assumes that the subresource is always the VK_IMAGE_ASPECT_COLOR_BIT, so we will need to turn that field into a parameter:
-
-VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
-    ...
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
     ...
 }
-Update all calls to this function to use the right aspect:
+Setting up a render target
+In MSAA, each pixel is sampled in an offscreen buffer which is then rendered to the screen. This new buffer is slightly different from regular images we've been rendering to - they have to be able to store more than one sample per pixel. Once a multisampled buffer is created, it has to be resolved to the default framebuffer (which stores only a single sample per pixel). This is why we have to create an additional render target and modify our current drawing process. We only need one render target since only one drawing operation is active at a time, just like with the depth buffer. Add the following class members:
 
-swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 ...
-depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+VkImage colorImage;
+VkDeviceMemory colorImageMemory;
+VkImageView colorImageView;
 ...
-textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-That's it for creating the depth image. We don't need to map it or copy another image to it, because we're going to clear it at the start of the render pass like the color attachment.
+This new image will have to store the desired number of samples per pixel, so we need to pass this number to VkImageCreateInfo during the image creation process. Modify the createImage function by adding a numSamples parameter:
 
-Explicitly transitioning the depth image
-We don't need to explicitly transition the layout of the image to a depth attachment because we'll take care of this in the render pass. However, for completeness I'll still describe the process in this section. You may skip it if you like.
+void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
+    ...
+    imageInfo.samples = numSamples;
+    ...
+For now, update all calls to this function using VK_SAMPLE_COUNT_1_BIT - we will be replacing this with proper values as we progress with implementation:
 
-Make a call to transitionImageLayout at the end of the createDepthResources function like so:
+createImage(swapChainExtent.width, swapChainExtent.height, 1, VK_SAMPLE_COUNT_1_BIT, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+...
+createImage(texWidth, texHeight, mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+We will now create a multisampled color buffer. Add a createColorResources function and note that we're using msaaSamples here as a function parameter to createImage. We're also using only one mip level, since this is enforced by the Vulkan specification in case of images with more than one sample per pixel. Also, this color buffer doesn't need mipmaps since it's not going to be used as a texture:
 
-transitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-The undefined layout can be used as initial layout, because there are no existing depth image contents that matter. We need to update some of the logic in transitionImageLayout to use the right subresource aspect:
+void createColorResources() {
+    VkFormat colorFormat = swapChainImageFormat;
 
-if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-    if (hasStencilComponent(format)) {
-        barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-} else {
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    createImage(swapChainExtent.width, swapChainExtent.height, 1, msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, colorImage, colorImageMemory);
+    colorImageView = createImageView(colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
-Although we're not using the stencil component, we do need to include it in the layout transitions of the depth image.
-
-Finally, add the correct access masks and pipeline stages:
-
-if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-} else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-} else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-} else {
-    throw std::invalid_argument("unsupported layout transition!");
-}
-The depth buffer will be read from to perform depth tests to see if a fragment is visible, and will be written to when a new fragment is drawn. The reading happens in the VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT stage and the writing in the VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT. You should pick the earliest pipeline stage that matches the specified operations, so that it is ready for usage as depth attachment when it needs to be.
-
-Render pass
-We're now going to modify createRenderPass to include a depth attachment. First specify the VkAttachmentDescription:
-
-VkAttachmentDescription depthAttachment{};
-depthAttachment.format = findDepthFormat();
-depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-The format should be the same as the depth image itself. This time we don't care about storing the depth data (storeOp), because it will not be used after drawing has finished. This may allow the hardware to perform additional optimizations. Just like the color buffer, we don't care about the previous depth contents, so we can use VK_IMAGE_LAYOUT_UNDEFINED as initialLayout.
-
-VkAttachmentReference depthAttachmentRef{};
-depthAttachmentRef.attachment = 1;
-depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-Add a reference to the attachment for the first (and only) subpass:
-
-VkSubpassDescription subpass{};
-subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-subpass.colorAttachmentCount = 1;
-subpass.pColorAttachments = &colorAttachmentRef;
-subpass.pDepthStencilAttachment = &depthAttachmentRef;
-Unlike color attachments, a subpass can only use a single depth (+stencil) attachment. It wouldn't really make any sense to do depth tests on multiple buffers.
-
-std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
-VkRenderPassCreateInfo renderPassInfo{};
-renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-renderPassInfo.pAttachments = attachments.data();
-renderPassInfo.subpassCount = 1;
-renderPassInfo.pSubpasses = &subpass;
-renderPassInfo.dependencyCount = 1;
-renderPassInfo.pDependencies = &dependency;
-Next, update the VkSubpassDependency struct to refer to both attachments.
-
-dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-Finally, we need to extend our subpass dependencies to make sure that there is no conflict between the transitioning of the depth image and it being cleared as part of its load operation. The depth image is first accessed in the early fragment test pipeline stage and because we have a load operation that clears, we should specify the access mask for writes.
-
-Framebuffer
-The next step is to modify the framebuffer creation to bind the depth image to the depth attachment. Go to createFramebuffers and specify the depth image view as second attachment:
-
-std::array<VkImageView, 2> attachments = {
-    swapChainImageViews[i],
-    depthImageView
-};
-
-VkFramebufferCreateInfo framebufferInfo{};
-framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-framebufferInfo.renderPass = renderPass;
-framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-framebufferInfo.pAttachments = attachments.data();
-framebufferInfo.width = swapChainExtent.width;
-framebufferInfo.height = swapChainExtent.height;
-framebufferInfo.layers = 1;
-The color attachment differs for every swap chain image, but the same depth image can be used by all of them because only a single subpass is running at the same time due to our semaphores.
-
-You'll also need to move the call to createFramebuffers to make sure that it is called after the depth image view has actually been created:
+For consistency, call the function right before createDepthResources:
 
 void initVulkan() {
     ...
+    createColorResources();
     createDepthResources();
-    createFramebuffers();
     ...
 }
-Clear values
-Because we now have multiple attachments with VK_ATTACHMENT_LOAD_OP_CLEAR, we also need to specify multiple clear values. Go to recordCommandBuffer and create an array of VkClearValue structs:
+Now that we have a multisampled color buffer in place it's time to take care of depth. Modify createDepthResources and update the number of samples used by the depth buffer:
 
-std::array<VkClearValue, 2> clearValues{};
-clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-clearValues[1].depthStencil = {1.0f, 0};
-
-renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-renderPassInfo.pClearValues = clearValues.data();
-The range of depths in the depth buffer is 0.0 to 1.0 in Vulkan, where 1.0 lies at the far view plane and 0.0 at the near view plane. The initial value at each point in the depth buffer should be the furthest possible depth, which is 1.0.
-
-Note that the order of clearValues should be identical to the order of your attachments.
-
-Depth and stencil state
-The depth attachment is ready to be used now, but depth testing still needs to be enabled in the graphics pipeline. It is configured through the VkPipelineDepthStencilStateCreateInfo struct:
-
-VkPipelineDepthStencilStateCreateInfo depthStencil{};
-depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-depthStencil.depthTestEnable = VK_TRUE;
-depthStencil.depthWriteEnable = VK_TRUE;
-The depthTestEnable field specifies if the depth of new fragments should be compared to the depth buffer to see if they should be discarded. The depthWriteEnable field specifies if the new depth of fragments that pass the depth test should actually be written to the depth buffer.
-
-depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-The depthCompareOp field specifies the comparison that is performed to keep or discard fragments. We're sticking to the convention of lower depth = closer, so the depth of new fragments should be less.
-
-depthStencil.depthBoundsTestEnable = VK_FALSE;
-depthStencil.minDepthBounds = 0.0f; // Optional
-depthStencil.maxDepthBounds = 1.0f; // Optional
-The depthBoundsTestEnable, minDepthBounds and maxDepthBounds fields are used for the optional depth bound test. Basically, this allows you to only keep fragments that fall within the specified depth range. We won't be using this functionality.
-
-depthStencil.stencilTestEnable = VK_FALSE;
-depthStencil.front = {}; // Optional
-depthStencil.back = {}; // Optional
-The last three fields configure stencil buffer operations, which we also won't be using in this tutorial. If you want to use these operations, then you will have to make sure that the format of the depth/stencil image contains a stencil component.
-
-pipelineInfo.pDepthStencilState = &depthStencil;
-Update the VkGraphicsPipelineCreateInfo struct to reference the depth stencil state we just filled in. A depth stencil state must always be specified if the render pass contains a depth stencil attachment.
-
-If you run your program now, then you should see that the fragments of the geometry are now correctly ordered:
-
-
-
-Handling window resize
-The resolution of the depth buffer should change when the window is resized to match the new color attachment resolution. Extend the recreateSwapChain function to recreate the depth resources in that case:
-
-void recreateSwapChain() {
-    int width = 0, height = 0;
-    while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(window, &width, &height);
-        glfwWaitEvents();
-    }
-
-    vkDeviceWaitIdle(device);
-
-    cleanupSwapChain();
-
-    createSwapChain();
-    createImageViews();
-    createDepthResources();
-    createFramebuffers();
+void createDepthResources() {
+    ...
+    createImage(swapChainExtent.width, swapChainExtent.height, 1, msaaSamples, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+    ...
 }
-The cleanup operations should happen in the swap chain cleanup function:
+We have now created a couple of new Vulkan resources, so let's not forget to release them when necessary:
 
 void cleanupSwapChain() {
-    vkDestroyImageView(device, depthImageView, nullptr);
-    vkDestroyImage(device, depthImage, nullptr);
-    vkFreeMemory(device, depthImageMemory, nullptr);
-
+    vkDestroyImageView(device, colorImageView, nullptr);
+    vkDestroyImage(device, colorImage, nullptr);
+    vkFreeMemory(device, colorImageMemory, nullptr);
     ...
 }
+And update the recreateSwapChain so that the new color image can be recreated in the correct resolution when the window is resized:
+
+void recreateSwapChain() {
+    ...
+    createImageViews();
+    createColorResources();
+    createDepthResources();
+    ...
+}
+We made it past the initial MSAA setup, now we need to start using this new resource in our graphics pipeline, framebuffer, render pass and see the results!
+
+Adding new attachments
+Let's take care of the render pass first. Modify createRenderPass and update color and depth attachment creation info structs:
+
+void createRenderPass() {
+    ...
+    colorAttachment.samples = msaaSamples;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    ...
+    depthAttachment.samples = msaaSamples;
+    ...
+You'll notice that we have changed the finalLayout from VK_IMAGE_LAYOUT_PRESENT_SRC_KHR to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL. That's because multisampled images cannot be presented directly. We first need to resolve them to a regular image. This requirement does not apply to the depth buffer, since it won't be presented at any point. Therefore we will have to add only one new attachment for color which is a so-called resolve attachment:
+
+    ...
+    VkAttachmentDescription colorAttachmentResolve{};
+    colorAttachmentResolve.format = swapChainImageFormat;
+    colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    ...
+The render pass now has to be instructed to resolve multisampled color image into regular attachment. Create a new attachment reference that will point to the color buffer which will serve as the resolve target:
+
+    ...
+    VkAttachmentReference colorAttachmentResolveRef{};
+    colorAttachmentResolveRef.attachment = 2;
+    colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    ...
+Set the pResolveAttachments subpass struct member to point to the newly created attachment reference. This is enough to let the render pass define a multisample resolve operation which will let us render the image to screen:
+
+    ...
+    subpass.pResolveAttachments = &colorAttachmentResolveRef;
+    ...
+Now update render pass info struct with the new color attachment:
+
+    ...
+    std::array<VkAttachmentDescription, 3> attachments = {colorAttachment, depthAttachment, colorAttachmentResolve};
+    ...
+With the render pass in place, modify createFramebuffers and add the new image view to the list:
+
+void createFramebuffers() {
+        ...
+        std::array<VkImageView, 3> attachments = {
+            colorImageView,
+            depthImageView,
+            swapChainImageViews[i]
+        };
+        ...
+}
+Finally, tell the newly created pipeline to use more than one sample by modifying createGraphicsPipeline:
+
+void createGraphicsPipeline() {
+    ...
+    multisampling.rasterizationSamples = msaaSamples;
+    ...
+}
+Now run your program and you should see the following:
+
+
+
+Just like with mipmapping, the difference may not be apparent straight away. On a closer look you'll notice that the edges are not as jagged anymore and the whole image seems a bit smoother compared to the original.
+
+
+
+The difference is more noticable when looking up close at one of the edges:
+
+
+
+Quality improvements
+There are certain limitations of our current MSAA implementation which may impact the quality of the output image in more detailed scenes. For example, we're currently not solving potential problems caused by shader aliasing, i.e. MSAA only smoothens out the edges of geometry but not the interior filling. This may lead to a situation when you get a smooth polygon rendered on screen but the applied texture will still look aliased if it contains high contrasting colors. One way to approach this problem is to enable Sample Shading which will improve the image quality even further, though at an additional performance cost:
+
+
+void createLogicalDevice() {
+    ...
+    deviceFeatures.sampleRateShading = VK_TRUE; // enable sample shading feature for the device
+    ...
+}
+
+void createGraphicsPipeline() {
+    ...
+    multisampling.sampleShadingEnable = VK_TRUE; // enable sample shading in the pipeline
+    multisampling.minSampleShading = .2f; // min fraction for sample shading; closer to one is smoother
+    ...
+}
+In this example we'll leave sample shading disabled but in certain scenarios the quality improvement may be noticeable

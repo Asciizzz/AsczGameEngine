@@ -29,8 +29,8 @@ namespace AzVulk {
         const std::vector<VkFramebuffer>& getFramebuffers() const { return swapChainFramebuffers; }
         size_t getImageCount() const { return swapChainImages.size(); }
 
-        void recreate(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView);
-        void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
+        void recreate(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView = VK_NULL_HANDLE);
+        void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView = VK_NULL_HANDLE);
 
     private:
         const VulkanDevice& vulkanDevice;

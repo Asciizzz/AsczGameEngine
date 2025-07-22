@@ -15,7 +15,7 @@ namespace AzVulk {
         DepthManager(const DepthManager&) = delete;
         DepthManager& operator=(const DepthManager&) = delete;
 
-        void createDepthResources(uint32_t width, uint32_t height);
+        void createDepthResources(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
         void cleanup();
 
         VkImageView getDepthImageView() const { return depthImageView; }
@@ -35,7 +35,7 @@ namespace AzVulk {
         bool hasStencilComponent(VkFormat format);
         void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
                         VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                        VkImage& image, VkDeviceMemory& imageMemory);
+                        VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
         VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     };
 }

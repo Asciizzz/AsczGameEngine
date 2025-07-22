@@ -7,7 +7,7 @@ namespace AzVulk {
     class GraphicsPipeline {
     public:
         GraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
-                        const char* vertexShaderPath, const char* fragmentShaderPath);
+                        const char* vertexShaderPath, const char* fragmentShaderPath, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
         ~GraphicsPipeline();
 
         // Delete copy constructor and assignment operator
@@ -19,7 +19,7 @@ namespace AzVulk {
         VkPipelineLayout getPipelineLayout() const { return pipelineLayout; }
         VkPipeline getPipeline() const { return graphicsPipeline; }
 
-        void recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat);
+        void recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
 
         const char* vertexShaderPath;
         const char* fragmentShaderPath;
@@ -28,6 +28,7 @@ namespace AzVulk {
         VkDevice device;
         VkExtent2D swapChainExtent;
         VkFormat swapChainImageFormat;
+        VkSampleCountFlagBits msaaSamples;
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;

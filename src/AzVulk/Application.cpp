@@ -39,6 +39,9 @@ namespace AzVulk {
         
         vulkanDevice = std::make_unique<VulkanDevice>(vulkanInstance->getInstance(), surface);
         
+        // Create MSAA manager first to get sample count
+        msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
+        
         swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->getWindow());
         
         graphicsPipeline = std::make_unique<GraphicsPipeline>(
@@ -46,7 +49,8 @@ namespace AzVulk {
             swapChain->getExtent(), 
             swapChain->getImageFormat(),
             "Shaders/hello.vert.spv",
-            "Shaders/hello.frag.spv"
+            "Shaders/hello.frag.spv",
+            msaaManager->getMSAASamples()
         );
         
         shaderManager = std::make_unique<ShaderManager>(vulkanDevice->getLogicalDevice());
@@ -61,29 +65,68 @@ namespace AzVulk {
             throw std::runtime_error("failed to create command pool!");
         }
         
-        // Create buffer with simple hardcoded geometry
+        // Create buffer with procedurally generated grid geometry for benchmarking
         buffer = std::make_unique<Buffer>(*vulkanDevice);
 
+        // Generate a grid of vertices expanding from origin (0,0,0)
+        std::vector<Vertex> vertices;
+        std::vector<uint16_t> indices;
+        
+        const int gridSize = 50; // 50x50 grid = 2500 vertices
+        const float spacing = 0.01f; // Distance between grid points
+        const float halfGrid = (gridSize - 1) * spacing * 0.5f; // Center the grid
+        
+        // Generate vertices in a grid pattern
+        for (int z = 0; z < gridSize; z++) {
+            for (int x = 0; x < gridSize; x++) {
+                float worldX = (x * spacing) - halfGrid; // Range from -halfGrid to +halfGrid
+                float worldZ = (z * spacing) - halfGrid; // Range from -halfGrid to +halfGrid
+                float worldY = 0.0f; // Keep all points on the same plane for now
+                
+                // Calculate texture coordinates (0 to 1)
+                float texU = static_cast<float>(x) / (gridSize - 1);
+                float texV = static_cast<float>(z) / (gridSize - 1);
 
+                vertices.push_back({
+                    {worldX, worldY, worldZ},           // Position
+                    {0.0f, 1.0f, 0.0f},                 // Normal (upward)
+                    {texU, texV}                        // Texture coordinates
+                });
+            }
+        }
+        
+        // Generate indices to create triangles (two triangles per grid square)
+        for (int z = 0; z < gridSize - 1; z++) {
+            for (int x = 0; x < gridSize - 1; x++) {
+                // Calculate vertex indices for the current grid square
+                uint16_t topLeft = z * gridSize + x;
+                uint16_t topRight = z * gridSize + (x + 1);
+                uint16_t bottomLeft = (z + 1) * gridSize + x;
+                uint16_t bottomRight = (z + 1) * gridSize + (x + 1);
+                
 
-        const std::vector<Vertex> vertices = {
-            {{-0.3f, -0.3f, 0.3f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-            {{ 0.3f, -0.3f, 0.3f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-            {{ 0.3f,  0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
-            {{-0.3f,  0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+                // Add Counter-clockwise order to avoid backface culling
 
-            {{-4.7f, -4.7f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            {{ 4.7f, -4.7f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-            {{ 4.7f,  4.7f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-            {{-4.7f,  4.7f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
-        };
-
-        const std::vector<uint16_t> indices = {
-            0, 1, 2, 2, 3, 0,
-            3, 2, 1, 1, 0, 3,
-
-            4, 5, 6, 6, 7, 4
-        };
+                // First triangle (top-left, bottom-left, top-right and reverse)
+                indices.push_back(topLeft);
+                indices.push_back(bottomLeft);
+                indices.push_back(topRight);
+                indices.push_back(topRight);
+                indices.push_back(bottomLeft);
+                indices.push_back(bottomRight);
+                
+                // Second triangle (top-right, bottom-left, bottom-right and reverse)
+                indices.push_back(topRight);
+                indices.push_back(bottomLeft);
+                indices.push_back(bottomRight);
+                indices.push_back(bottomRight);
+                indices.push_back(bottomLeft);
+                indices.push_back(topRight);
+            }
+        }
+        
+        std::cout << "Generated grid with " << vertices.size() << " vertices and " 
+                  << indices.size() / 3 << " triangles for MSAA benchmarking" << std::endl;
 
         buffer->createVertexBuffer(vertices);
         buffer->createIndexBuffer(indices);
@@ -103,9 +146,12 @@ namespace AzVulk {
             textureManager->createTextureSampler();
         }
         
+        // Create MSAA color resources
+        msaaManager->createColorResources(swapChain->getExtent().width, swapChain->getExtent().height, swapChain->getImageFormat());
+        
         // Create depth manager and depth resources
         depthManager = std::make_unique<DepthManager>(*vulkanDevice);
-        depthManager->createDepthResources(swapChain->getExtent().width, swapChain->getExtent().height);
+        depthManager->createDepthResources(swapChain->getExtent().width, swapChain->getExtent().height, msaaManager->getMSAASamples());
         
         // Create descriptor manager with texture support
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipeline->getDescriptorSetLayout());
@@ -113,8 +159,8 @@ namespace AzVulk {
         descriptorManager->createDescriptorSets(buffer->getUniformBuffers(), sizeof(UniformBufferObject),
                                                 textureManager->getTextureImageView(), textureManager->getTextureSampler());
         
-        // Create framebuffers with depth buffer support
-        swapChain->createFramebuffers(graphicsPipeline->getRenderPass(), depthManager->getDepthImageView());
+        // Create framebuffers with depth buffer and MSAA support
+        swapChain->createFramebuffers(graphicsPipeline->getRenderPass(), depthManager->getDepthImageView(), msaaManager->getColorImageView());
         
         // Create final renderer
         renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipeline, *buffer, *descriptorManager);
@@ -147,14 +193,17 @@ namespace AzVulk {
                 int newWidth, newHeight;
                 SDL_GetWindowSize(windowManager->getWindow(), &newWidth, &newHeight);
                 
+                // Recreate MSAA color resources for new window size
+                msaaManager->createColorResources(newWidth, newHeight, swapChain->getImageFormat());
+                
                 // Recreate depth resources for new window size FIRST
-                depthManager->createDepthResources(newWidth, newHeight);
+                depthManager->createDepthResources(newWidth, newHeight, msaaManager->getMSAASamples());
                 
-                // Recreate swap chain with depth support
-                swapChain->recreate(windowManager->getWindow(), graphicsPipeline->getRenderPass(), depthManager->getDepthImageView());
+                // Recreate swap chain with depth and MSAA support
+                swapChain->recreate(windowManager->getWindow(), graphicsPipeline->getRenderPass(), depthManager->getDepthImageView(), msaaManager->getColorImageView());
                 
-                // Recreate graphics pipeline with new extent, format, and depth format
-                graphicsPipeline->recreate(swapChain->getExtent(), swapChain->getImageFormat(), depthManager->getDepthFormat());
+                // Recreate graphics pipeline with new extent, format, depth format, and MSAA samples
+                graphicsPipeline->recreate(swapChain->getExtent(), swapChain->getImageFormat(), depthManager->getDepthFormat(), msaaManager->getMSAASamples());
             }
             
             renderer->drawFrame();

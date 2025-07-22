@@ -15,6 +15,7 @@
 #include "DescriptorManager.hpp"
 #include "TextureManager.hpp"
 #include "DepthManager.hpp"
+#include "MSAAManager.hpp"
 
 namespace AzVulk {
     class Application {
@@ -42,6 +43,7 @@ namespace AzVulk {
         std::unique_ptr<Buffer> buffer;
         std::unique_ptr<TextureManager> textureManager;
         std::unique_ptr<DepthManager> depthManager;
+        std::unique_ptr<MSAAManager> msaaManager;
         std::unique_ptr<DescriptorManager> descriptorManager;
         std::unique_ptr<Renderer> renderer;
 

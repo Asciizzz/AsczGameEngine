@@ -29,7 +29,7 @@ namespace AzVulk {
         }
     }
 
-    void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
+    void DepthManager::createDepthResources(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSamples) {
         // Clean up existing resources first
         cleanup();
 
@@ -37,7 +37,7 @@ namespace AzVulk {
 
         createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                   depthImage, depthImageMemory);
+                   depthImage, depthImageMemory, msaaSamples);
 
         depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
@@ -72,7 +72,7 @@ namespace AzVulk {
 
     void DepthManager::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
                                   VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                                  VkImage& image, VkDeviceMemory& imageMemory) {
+                                  VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples) {
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -85,7 +85,7 @@ namespace AzVulk {
         imageInfo.tiling = tiling;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.usage = usage;
-        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.samples = numSamples;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         if (vkCreateImage(vulkanDevice.getLogicalDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS) {

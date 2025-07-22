@@ -21,6 +21,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/DescriptorManager.cpp
     src/AzVulk/TextureManager.cpp
     src/AzVulk/DepthManager.cpp
+    src/AzVulk/MSAAManager.cpp
     src/AzVulk/Renderer.cpp
     src/AzVulk/Application.cpp
 

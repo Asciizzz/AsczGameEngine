@@ -91,15 +91,27 @@ namespace AzVulk {
         }
     }
 
-    void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView) {
+    void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
         cleanupFramebuffers();
         swapChainFramebuffers.resize(swapChainImageViews.size());
 
         for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-            std::array<VkImageView, 2> attachments = {
-                swapChainImageViews[i],
-                depthImageView
-            };
+            std::vector<VkImageView> attachments;
+            
+            if (colorImageView != VK_NULL_HANDLE) {
+                // MSAA case: colorImageView, depthImageView, swapChainImageView (resolve target)
+                attachments = {
+                    colorImageView,
+                    depthImageView,
+                    swapChainImageViews[i]
+                };
+            } else {
+                // Non-MSAA case: swapChainImageView, depthImageView
+                attachments = {
+                    swapChainImageViews[i],
+                    depthImageView
+                };
+            }
 
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -116,7 +128,7 @@ namespace AzVulk {
         }
     }
 
-    void SwapChain::recreate(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView) {
+    void SwapChain::recreate(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
         int width = 0, height = 0;
         SDL_GetWindowSize(window, &width, &height);
         while (width == 0 || height == 0) {
@@ -129,7 +141,7 @@ namespace AzVulk {
         cleanup();
         createSwapChain(window);
         createImageViews();
-        createFramebuffers(renderPass, depthImageView);
+        createFramebuffers(renderPass, depthImageView, colorImageView);
     }
 
     void SwapChain::cleanup() {
