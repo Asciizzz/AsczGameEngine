@@ -74,6 +74,23 @@ namespace AzVulk {
     void Buffer::createIndexBuffer(const std::vector<uint16_t>& indices) {
         VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
         indexCount = static_cast<uint32_t>(indices.size());
+        indexType = VK_INDEX_TYPE_UINT16;
+
+        // For simplicity, create buffer directly in host-visible memory
+        createBuffer(bufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                    indexBuffer, indexBufferMemory);
+
+        void* data;
+        vkMapMemory(vulkanDevice.getLogicalDevice(), indexBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, indices.data(), (size_t) bufferSize);
+        vkUnmapMemory(vulkanDevice.getLogicalDevice(), indexBufferMemory);
+    }
+
+    void Buffer::createIndexBuffer(const std::vector<uint32_t>& indices) {
+        VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+        indexCount = static_cast<uint32_t>(indices.size());
+        indexType = VK_INDEX_TYPE_UINT32;
 
         // For simplicity, create buffer directly in host-visible memory
         createBuffer(bufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
@@ -102,8 +119,8 @@ namespace AzVulk {
         }
     }
 
-    void Buffer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
-                             VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+    void Buffer::createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
+                                VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = size;

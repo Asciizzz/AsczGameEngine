@@ -35,11 +35,13 @@ namespace AzVulk {
 
         void createVertexBuffer(const std::vector<Vertex>& vertices);
         void createIndexBuffer(const std::vector<uint16_t>& indices);
+        void createIndexBuffer(const std::vector<uint32_t>& indices);
         void createUniformBuffers(size_t count);
 
         VkBuffer getVertexBuffer() const { return vertexBuffer; }
         VkBuffer getIndexBuffer() const { return indexBuffer; }
         uint32_t getIndexCount() const { return indexCount; }
+        VkIndexType getIndexType() const { return indexType; }
         const std::vector<VkBuffer>& getUniformBuffers() const { return uniformBuffers; }
         const std::vector<void*>& getUniformBuffersMapped() const { return uniformBuffersMapped; }
 
@@ -48,16 +50,18 @@ namespace AzVulk {
         
         VkBuffer vertexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
+
         VkBuffer indexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
         uint32_t indexCount = 0;
+        VkIndexType indexType = VK_INDEX_TYPE_UINT16;
         
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;
         std::vector<void*> uniformBuffersMapped;
 
-        void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
-                         VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+        void createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
+                            VkBuffer& buffer, VkDeviceMemory& bufferMemory);
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool);
     };
 }

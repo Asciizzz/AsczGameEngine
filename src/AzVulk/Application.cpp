@@ -70,10 +70,10 @@ namespace AzVulk {
 
         // Generate a grid of vertices expanding from origin (0,0,0)
         std::vector<Vertex> vertices;
-        std::vector<uint16_t> indices;
+        std::vector<uint32_t> indices; // Changed from uint16_t to uint32_t for large grids
         
-        const int gridSize = 50; // 50x50 grid = 2500 vertices
-        const float spacing = 0.01f; // Distance between grid points
+        const int gridSize = 500; // 50x50 grid = 2500 vertices
+        const float spacing = 0.005f; // Distance between grid points
         const float halfGrid = (gridSize - 1) * spacing * 0.5f; // Center the grid
         
         // Generate vertices in a grid pattern
@@ -99,11 +99,10 @@ namespace AzVulk {
         for (int z = 0; z < gridSize - 1; z++) {
             for (int x = 0; x < gridSize - 1; x++) {
                 // Calculate vertex indices for the current grid square
-                uint16_t topLeft = z * gridSize + x;
-                uint16_t topRight = z * gridSize + (x + 1);
-                uint16_t bottomLeft = (z + 1) * gridSize + x;
-                uint16_t bottomRight = (z + 1) * gridSize + (x + 1);
-                
+                uint32_t topLeft = z * gridSize + x;
+                uint32_t topRight = z * gridSize + (x + 1);
+                uint32_t bottomLeft = (z + 1) * gridSize + x;
+                uint32_t bottomRight = (z + 1) * gridSize + (x + 1);
 
                 // Add Counter-clockwise order to avoid backface culling
 
@@ -111,17 +110,11 @@ namespace AzVulk {
                 indices.push_back(topLeft);
                 indices.push_back(bottomLeft);
                 indices.push_back(topRight);
-                indices.push_back(topRight);
-                indices.push_back(bottomLeft);
-                indices.push_back(bottomRight);
                 
                 // Second triangle (top-right, bottom-left, bottom-right and reverse)
                 indices.push_back(topRight);
                 indices.push_back(bottomLeft);
                 indices.push_back(bottomRight);
-                indices.push_back(bottomRight);
-                indices.push_back(bottomLeft);
-                indices.push_back(topRight);
             }
         }
         
@@ -165,7 +158,9 @@ namespace AzVulk {
         // Create final renderer
         renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipeline, *buffer, *descriptorManager);
         
-        std::cout << "Application initialized with simple hardcoded geometry and depth testing." << std::endl;
+
+        printf("Vertices count: %zu\n", vertices.size());
+        printf("Faces count: %zu\n", indices.size() / 3);
     }
 
     void Application::createSurface() {
@@ -175,10 +170,12 @@ namespace AzVulk {
     }
 
     void Application::mainLoop() {
+
+        bool q_hold = false;
+
         while (!windowManager->shouldClose()) {
             // Update FPS manager for timing
             fpsManager->update();
-            
             windowManager->pollEvents();
             
             // Check if window was resized or renderer needs to be updated
@@ -205,10 +202,17 @@ namespace AzVulk {
                 // Recreate graphics pipeline with new extent, format, depth format, and MSAA samples
                 graphicsPipeline->recreate(swapChain->getExtent(), swapChain->getImageFormat(), depthManager->getDepthFormat(), msaaManager->getMSAASamples());
             }
-            
+
+            const Uint8* k_state = SDL_GetKeyboardState(nullptr);
+            if (k_state[SDL_SCANCODE_Q] && !q_hold) {
+                q_hold = true;
+                printf("Q pressed!");
+            }
+            if (!k_state[SDL_SCANCODE_Q]) {
+                q_hold = false; // Reset hold state when key is released
+            }
+
             renderer->drawFrame();
-            
-            // Render FPS overlay on top of Vulkan rendering
             renderFpsOverlay();
         }
 
@@ -296,21 +300,21 @@ namespace AzVulk {
         SDL_SetRenderDrawColor(fpsRenderer, 255, 255, 0, 255);
 
         // Current FPS bar
-        int barWidth1 = (currentFPS * 180) / 10000;
+        int barWidth1 = (currentFPS * 180) / 1000;
         if (barWidth1 > 180) barWidth1 = 180;
         SDL_Rect fpsBar1 = {10, 8, barWidth1, 12};
         SDL_RenderFillRect(fpsRenderer, &fpsBar1);
 
         // Average FPS bar
         SDL_SetRenderDrawColor(fpsRenderer, 0, 255, 255, 255); // Cyan
-        int barWidth2 = (avgFPS * 180) / 10000;
+        int barWidth2 = (avgFPS * 180) / 1000;
         if (barWidth2 > 180) barWidth2 = 180;
         SDL_Rect fpsBar2 = {10, 28, barWidth2, 12};
         SDL_RenderFillRect(fpsRenderer, &fpsBar2);
 
         // Frame time bar
         SDL_SetRenderDrawColor(fpsRenderer, 255, 128, 0, 255); // Orange
-        int barWidth3 = (frameTimeTenths * 180) / 200; // Max 20ms (200 tenths)
+        int barWidth3 = (frameTimeTenths * 180) / 200;
         if (barWidth3 > 180) barWidth3 = 180;
         SDL_Rect frameTimeBar = {10, 48, barWidth3, 12};
         SDL_RenderFillRect(fpsRenderer, &frameTimeBar);
