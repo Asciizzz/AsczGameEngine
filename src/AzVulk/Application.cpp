@@ -61,19 +61,21 @@ namespace AzVulk {
 
 
         const std::vector<Vertex> vertices = {
-            {{-0.3f, -0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-            {{ 0.3f, -0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            {{-0.3f, -0.3f, 0.3f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{ 0.3f, -0.3f, 0.3f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
             {{ 0.3f,  0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
             {{-0.3f,  0.3f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
 
-            {{-0.7f, -0.7f, -0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-            {{ 0.7f, -0.7f, -0.5f}, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-            {{ 0.7f,  0.7f, -0.5f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
-            {{-0.7f,  0.7f, -0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}
+            {{-4.7f, -4.7f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            {{ 4.7f, -4.7f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+            {{ 4.7f,  4.7f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+            {{-4.7f,  4.7f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
         };
 
         const std::vector<uint16_t> indices = {
             0, 1, 2, 2, 3, 0,
+            3, 2, 1, 1, 0, 3,
+
             4, 5, 6, 6, 7, 4
         };
 
@@ -103,7 +105,7 @@ namespace AzVulk {
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipeline->getDescriptorSetLayout());
         descriptorManager->createDescriptorPool(2); // MAX_FRAMES_IN_FLIGHT
         descriptorManager->createDescriptorSets(buffer->getUniformBuffers(), sizeof(UniformBufferObject),
-                                               textureManager->getTextureImageView(), textureManager->getTextureSampler());
+                                                textureManager->getTextureImageView(), textureManager->getTextureSampler());
         
         // Create framebuffers with depth buffer support
         swapChain->createFramebuffers(graphicsPipeline->getRenderPass(), depthManager->getDepthImageView());
