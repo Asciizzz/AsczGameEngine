@@ -147,7 +147,7 @@ namespace AzVulk {
         
         // Create MSAA color resources
         msaaManager->createColorResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, swapChain->swapChainImageFormat);
-        
+
         // Create depth manager and depth resources
         depthManager = std::make_unique<DepthManager>(*vulkanDevice);
         depthManager->createDepthResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, msaaManager->msaaSamples);
@@ -163,10 +163,6 @@ namespace AzVulk {
         
         // Create final renderer
         renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipeline, *buffer, *descriptorManager, *camera);
-        
-
-        printf("Vertices count: %zu\n", vertices.size());
-        printf("Faces count: %zu\n", indices.size() / 3);
     }
 
     void Application::createSurface() {
@@ -188,36 +184,33 @@ namespace AzVulk {
             if (windowManager->resizedFlag || renderer->framebufferResized) {
                 windowManager->resizedFlag = false;
                 renderer->framebufferResized = false;
-                
-                // Wait for device to be idle before recreating resources
+
                 vkDeviceWaitIdle(vulkanDevice->device);
-                
-                // Get the new window size
+
                 int newWidth, newHeight;
                 SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
-                
-                // Update camera aspect ratio for new window size
+
                 camera->updateAspectRatio(newWidth, newHeight);
-                
-                // Recreate MSAA color resources for new window size
+
                 msaaManager->createColorResources(newWidth, newHeight, swapChain->swapChainImageFormat);
-                
-                // Recreate depth resources for new window size FIRST
+
                 depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-                
-                // Recreate swap chain with depth and MSAA support
+
                 swapChain->recreate(windowManager->window, graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
-                
-                // Recreate graphics pipeline with new extent, format, depth format, and MSAA samples
+
                 graphicsPipeline->recreate(swapChain->swapChainExtent, swapChain->swapChainImageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
             }
 
             const Uint8* k_state = SDL_GetKeyboardState(nullptr);
-            if (k_state[SDL_SCANCODE_W]) {
-                // Move forward using the camera's forward vector and delta time
-                float speed = 5.0f; // Movement speed units per second
+            float speed = k_state[SDL_SCANCODE_LSHIFT] ? 15.0f : 5.0f; // Speed up with shift
+            if (k_state[SDL_SCANCODE_W])
                 camera->translate(camera->forward * speed * fpsManager->deltaTime);
-            }
+            if (k_state[SDL_SCANCODE_S])
+                camera->translate(-camera->forward * speed * fpsManager->deltaTime);
+            if (k_state[SDL_SCANCODE_A])
+                camera->translate(-camera->right * speed * fpsManager->deltaTime);
+            if (k_state[SDL_SCANCODE_D])
+                camera->translate(camera->right * speed * fpsManager->deltaTime);
 
             renderer->drawFrame();
             renderFpsOverlay();
