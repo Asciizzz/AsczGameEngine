@@ -71,8 +71,8 @@ namespace AzVulk {
         // Generate a grid of vertices expanding from origin (0,0,0)
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices; // Changed from uint16_t to uint32_t for large grids
-        
-        const int gridSize = 500; // 50x50 grid = 2500 vertices
+
+        const int gridSize = 1000; // 1000x1000 grid = 1000000 vertices
         const float spacing = 0.005f; // Distance between grid points
         const float halfGrid = (gridSize - 1) * spacing * 0.5f; // Center the grid
         
