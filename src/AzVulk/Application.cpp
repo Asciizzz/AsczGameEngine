@@ -337,9 +337,9 @@ namespace AzVulk {
     void Application::drawSimpleNumber(int x, int y, int number) {
         // Simple 7-segment style display using rectangles - thicker for better readability
         std::string numStr = std::to_string(number);
-        
+
         SDL_SetRenderDrawColor(fpsRenderer, 255, 255, 255, 255); // White
-        
+
         for (size_t i = 0; i < numStr.length() && i < 4; ++i) {
             char digit = numStr[i];
             int digitX = x + (i * 10); // More spacing between digits
