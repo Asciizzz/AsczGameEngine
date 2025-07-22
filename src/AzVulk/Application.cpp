@@ -23,7 +23,7 @@ namespace AzVulk {
         float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
         camera = std::make_unique<AzCore::Camera>(glm::vec3(0.0f, 2.0f, 5.0f), 45.0f, 0.1f, 100.0f);
         camera->setAspectRatio(aspectRatio);
-        
+
         initFpsOverlay();
         initVulkan();
     }
@@ -40,16 +40,11 @@ namespace AzVulk {
     void Application::initVulkan() {
         auto extensions = windowManager->getRequiredVulkanExtensions();
         vulkanInstance = std::make_unique<VulkanInstance>(extensions, enableValidationLayers);
-        
         createSurface();
-        
+
         vulkanDevice = std::make_unique<VulkanDevice>(vulkanInstance->instance, surface);
-        
-        // Create MSAA manager first to get sample count
         msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
-        
         swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
-        
         graphicsPipeline = std::make_unique<GraphicsPipeline>(
             vulkanDevice->device, 
             swapChain->swapChainExtent, 
@@ -58,10 +53,8 @@ namespace AzVulk {
             "Shaders/hello.frag.spv",
             msaaManager->msaaSamples
         );
-        
         shaderManager = std::make_unique<ShaderManager>(vulkanDevice->device);
-        
-        // Create command pool for operations
+
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -70,15 +63,20 @@ namespace AzVulk {
         if (vkCreateCommandPool(vulkanDevice->device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create command pool!");
         }
-        
-        // Create buffer with procedurally generated grid geometry for benchmarking
+
+        msaaManager->createColorResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, swapChain->swapChainImageFormat);
+        depthManager = std::make_unique<DepthManager>(*vulkanDevice);
+        depthManager->createDepthResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, msaaManager->msaaSamples);
+        swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+
+    // Playground
+
         buffer = std::make_unique<Buffer>(*vulkanDevice);
 
-        // Generate a grid of vertices expanding from origin (0,0,0)
         std::vector<Vertex> vertices;
-        std::vector<uint32_t> indices; // Changed from uint16_t to uint32_t for large grids
+        std::vector<uint32_t> indices;
 
-        const int gridSize = 1000; // 1000x1000 grid = 1000000 vertices
+        const int gridSize = 100; // 1000x1000 grid = 1000000 vertices
         const float spacing = 0.005f; // Distance between grid points
         const float halfGrid = (gridSize - 1) * spacing * 0.5f; // Center the grid
         
@@ -87,7 +85,7 @@ namespace AzVulk {
             for (int x = 0; x < gridSize; x++) {
                 float worldX = (x * spacing) - halfGrid; // Range from -halfGrid to +halfGrid
                 float worldZ = (z * spacing) - halfGrid; // Range from -halfGrid to +halfGrid
-                float worldY = 0.0f; // Keep all points on the same plane for now
+                float worldY = glm::sin(glm::length(glm::vec2(worldX, worldZ)) * 0.1f); // Simple wave function
                 
                 // Calculate texture coordinates (0 to 1)
                 float texU = static_cast<float>(x) / (gridSize - 1);
@@ -123,15 +121,11 @@ namespace AzVulk {
                 indices.push_back(bottomRight);
             }
         }
-        
-        std::cout << "Generated grid with " << vertices.size() << " vertices and " 
-                  << indices.size() / 3 << " triangles for MSAA benchmarking" << std::endl;
 
         buffer->createVertexBuffer(vertices);
         buffer->createIndexBuffer(indices);
-        buffer->createUniformBuffers(2); // MAX_FRAMES_IN_FLIGHT
-        
-        // Create texture manager with simple texture loading
+        buffer->createUniformBuffers(2);
+
         textureManager = std::make_unique<TextureManager>(*vulkanDevice, commandPool);
         try {
             textureManager->createTextureImage("textures/texture1.png");
@@ -145,21 +139,12 @@ namespace AzVulk {
             textureManager->createTextureSampler();
         }
         
-        // Create MSAA color resources
-        msaaManager->createColorResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, swapChain->swapChainImageFormat);
-
-        // Create depth manager and depth resources
-        depthManager = std::make_unique<DepthManager>(*vulkanDevice);
-        depthManager->createDepthResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, msaaManager->msaaSamples);
-        
         // Create descriptor manager with texture support
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipeline->descriptorSetLayout);
         descriptorManager->createDescriptorPool(2); // MAX_FRAMES_IN_FLIGHT
         descriptorManager->createDescriptorSets(buffer->uniformBuffers, sizeof(UniformBufferObject),
                                                 textureManager->textureImageView, textureManager->textureSampler);
-        
-        // Create framebuffers with depth buffer and MSAA support
-        swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+
         
         // Create final renderer
         renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipeline, *buffer, *descriptorManager, *camera);
@@ -232,17 +217,17 @@ namespace AzVulk {
             if (mouseLocked) {
                 int mouseX, mouseY;
                 SDL_GetRelativeMouseState(&mouseX, &mouseY);
-                
-                if (mouseX != 0 || mouseY != 0) {
-                    float sensitivity = 0.02f;
-                    float yawDelta = mouseX * sensitivity;
-                    float pitchDelta = -mouseY * sensitivity;
 
-                    camera->rotate(pitchDelta, yawDelta, 0.0f);
-                }
+                float sensitivity = 0.02f;
+                float yawDelta = mouseX * sensitivity;
+                float pitchDelta = -mouseY * sensitivity;
+
+                camera->rotate(pitchDelta, yawDelta, 0.0f);
             }
 
-            float speed = k_state[SDL_SCANCODE_LSHIFT] ? 15.0f : 5.0f; // Speed up with shift
+            bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
+            bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
+            float speed = fast ? 15.0f : (slow ? 2.0f : 8.0f);
             if (k_state[SDL_SCANCODE_W])
                 camera->translate(camera->forward * speed * fpsManager->deltaTime);
             if (k_state[SDL_SCANCODE_S])
