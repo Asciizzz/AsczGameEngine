@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
 #include <vector>
-#include "VulkanDevice.hpp"
+#include "AzVulk/VulkanDevice.hpp"
 
 namespace AzVulk {
     struct SwapChainSupportDetails {
@@ -21,18 +21,10 @@ namespace AzVulk {
         SwapChain(const SwapChain&) = delete;
         SwapChain& operator=(const SwapChain&) = delete;
 
-        VkSwapchainKHR getSwapChain() const { return swapChain; }
-        VkFormat getImageFormat() const { return swapChainImageFormat; }
-        VkExtent2D getExtent() const { return swapChainExtent; }
-        const std::vector<VkImage>& getImages() const { return swapChainImages; }
-        const std::vector<VkImageView>& getImageViews() const { return swapChainImageViews; }
-        const std::vector<VkFramebuffer>& getFramebuffers() const { return swapChainFramebuffers; }
-        size_t getImageCount() const { return swapChainImages.size(); }
-
         void recreate(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView = VK_NULL_HANDLE);
         void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView = VK_NULL_HANDLE);
 
-    private:
+        
         const VulkanDevice& vulkanDevice;
         VkSurfaceKHR surface;
         
@@ -43,6 +35,7 @@ namespace AzVulk {
         std::vector<VkImageView> swapChainImageViews;
         std::vector<VkFramebuffer> swapChainFramebuffers;
 
+        // Helper methods (now public for direct access)
         void createSwapChain(SDL_Window* window);
         void createImageViews();
         void cleanup();

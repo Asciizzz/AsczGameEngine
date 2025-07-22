@@ -18,6 +18,12 @@ namespace AzVulk {
 
         windowManager = std::make_unique<AzCore::WindowManager>(title, width, height);
         fpsManager = std::make_unique<AzCore::FpsManager>();
+        
+        // Initialize camera with appropriate aspect ratio and positioned to view the grid
+        float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+        camera = std::make_unique<AzCore::Camera>(glm::vec3(0.0f, 2.0f, 5.0f), 45.0f, 0.1f, 100.0f);
+        camera->setAspectRatio(aspectRatio);
+        
         initFpsOverlay();
         initVulkan();
     }
@@ -37,31 +43,31 @@ namespace AzVulk {
         
         createSurface();
         
-        vulkanDevice = std::make_unique<VulkanDevice>(vulkanInstance->getInstance(), surface);
+        vulkanDevice = std::make_unique<VulkanDevice>(vulkanInstance->instance, surface);
         
         // Create MSAA manager first to get sample count
         msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
         
-        swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->getWindow());
+        swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
         
         graphicsPipeline = std::make_unique<GraphicsPipeline>(
-            vulkanDevice->getLogicalDevice(), 
-            swapChain->getExtent(), 
-            swapChain->getImageFormat(),
+            vulkanDevice->device, 
+            swapChain->swapChainExtent, 
+            swapChain->swapChainImageFormat,
             "Shaders/hello.vert.spv",
             "Shaders/hello.frag.spv",
-            msaaManager->getMSAASamples()
+            msaaManager->msaaSamples
         );
         
-        shaderManager = std::make_unique<ShaderManager>(vulkanDevice->getLogicalDevice());
+        shaderManager = std::make_unique<ShaderManager>(vulkanDevice->device);
         
         // Create command pool for operations
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = vulkanDevice->getQueueFamilyIndices().graphicsFamily.value();
+        poolInfo.queueFamilyIndex = vulkanDevice->queueFamilyIndices.graphicsFamily.value();
         
-        if (vkCreateCommandPool(vulkanDevice->getLogicalDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+        if (vkCreateCommandPool(vulkanDevice->device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create command pool!");
         }
         
@@ -140,23 +146,23 @@ namespace AzVulk {
         }
         
         // Create MSAA color resources
-        msaaManager->createColorResources(swapChain->getExtent().width, swapChain->getExtent().height, swapChain->getImageFormat());
+        msaaManager->createColorResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, swapChain->swapChainImageFormat);
         
         // Create depth manager and depth resources
         depthManager = std::make_unique<DepthManager>(*vulkanDevice);
-        depthManager->createDepthResources(swapChain->getExtent().width, swapChain->getExtent().height, msaaManager->getMSAASamples());
+        depthManager->createDepthResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, msaaManager->msaaSamples);
         
         // Create descriptor manager with texture support
-        descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipeline->getDescriptorSetLayout());
+        descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipeline->descriptorSetLayout);
         descriptorManager->createDescriptorPool(2); // MAX_FRAMES_IN_FLIGHT
-        descriptorManager->createDescriptorSets(buffer->getUniformBuffers(), sizeof(UniformBufferObject),
-                                                textureManager->getTextureImageView(), textureManager->getTextureSampler());
+        descriptorManager->createDescriptorSets(buffer->uniformBuffers, sizeof(UniformBufferObject),
+                                                textureManager->textureImageView, textureManager->textureSampler);
         
         // Create framebuffers with depth buffer and MSAA support
-        swapChain->createFramebuffers(graphicsPipeline->getRenderPass(), depthManager->getDepthImageView(), msaaManager->getColorImageView());
+        swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
         
         // Create final renderer
-        renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipeline, *buffer, *descriptorManager);
+        renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipeline, *buffer, *descriptorManager, *camera);
         
 
         printf("Vertices count: %zu\n", vertices.size());
@@ -164,7 +170,7 @@ namespace AzVulk {
     }
 
     void Application::createSurface() {
-        if (!SDL_Vulkan_CreateSurface(windowManager->getWindow(), vulkanInstance->getInstance(), &surface)) {
+        if (!SDL_Vulkan_CreateSurface(windowManager->window, vulkanInstance->instance, &surface)) {
             throw std::runtime_error("failed to create window surface!");
         }
     }
@@ -173,59 +179,60 @@ namespace AzVulk {
 
         bool q_hold = false;
 
-        while (!windowManager->shouldClose()) {
+        while (!windowManager->shouldCloseFlag) {
             // Update FPS manager for timing
             fpsManager->update();
             windowManager->pollEvents();
             
             // Check if window was resized or renderer needs to be updated
-            if (windowManager->wasResized() || renderer->isFramebufferResized()) {
-                windowManager->resetResizedFlag();
-                renderer->setFramebufferResized(false);
+            if (windowManager->resizedFlag || renderer->framebufferResized) {
+                windowManager->resizedFlag = false;
+                renderer->framebufferResized = false;
                 
                 // Wait for device to be idle before recreating resources
-                vkDeviceWaitIdle(vulkanDevice->getLogicalDevice());
+                vkDeviceWaitIdle(vulkanDevice->device);
                 
                 // Get the new window size
                 int newWidth, newHeight;
-                SDL_GetWindowSize(windowManager->getWindow(), &newWidth, &newHeight);
+                SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
+                
+                // Update camera aspect ratio for new window size
+                camera->updateAspectRatio(newWidth, newHeight);
                 
                 // Recreate MSAA color resources for new window size
-                msaaManager->createColorResources(newWidth, newHeight, swapChain->getImageFormat());
+                msaaManager->createColorResources(newWidth, newHeight, swapChain->swapChainImageFormat);
                 
                 // Recreate depth resources for new window size FIRST
-                depthManager->createDepthResources(newWidth, newHeight, msaaManager->getMSAASamples());
+                depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
                 
                 // Recreate swap chain with depth and MSAA support
-                swapChain->recreate(windowManager->getWindow(), graphicsPipeline->getRenderPass(), depthManager->getDepthImageView(), msaaManager->getColorImageView());
+                swapChain->recreate(windowManager->window, graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
                 
                 // Recreate graphics pipeline with new extent, format, depth format, and MSAA samples
-                graphicsPipeline->recreate(swapChain->getExtent(), swapChain->getImageFormat(), depthManager->getDepthFormat(), msaaManager->getMSAASamples());
+                graphicsPipeline->recreate(swapChain->swapChainExtent, swapChain->swapChainImageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
             }
 
             const Uint8* k_state = SDL_GetKeyboardState(nullptr);
-            if (k_state[SDL_SCANCODE_Q] && !q_hold) {
-                q_hold = true;
-                printf("Q pressed!");
-            }
-            if (!k_state[SDL_SCANCODE_Q]) {
-                q_hold = false; // Reset hold state when key is released
+            if (k_state[SDL_SCANCODE_W]) {
+                // Move forward using the camera's forward vector and delta time
+                float speed = 5.0f; // Movement speed units per second
+                camera->translate(camera->forward * speed * fpsManager->deltaTime);
             }
 
             renderer->drawFrame();
             renderFpsOverlay();
         }
 
-        vkDeviceWaitIdle(vulkanDevice->getLogicalDevice());
+        vkDeviceWaitIdle(vulkanDevice->device);
     }
 
     void Application::cleanup() {
         if (commandPool != VK_NULL_HANDLE) {
-            vkDestroyCommandPool(vulkanDevice->getLogicalDevice(), commandPool, nullptr);
+            vkDestroyCommandPool(vulkanDevice->device, commandPool, nullptr);
         }
         
         if (surface != VK_NULL_HANDLE && vulkanInstance) {
-            vkDestroySurfaceKHR(vulkanInstance->getInstance(), surface, nullptr);
+            vkDestroySurfaceKHR(vulkanInstance->instance, surface, nullptr);
         }
     }
 
@@ -242,7 +249,7 @@ namespace AzVulk {
 
         SDL_SetWindowOpacity(fpsWindow, 0.9f);
         SDL_RaiseWindow(fpsWindow);
-        SDL_RaiseWindow(windowManager->getWindow());
+        SDL_RaiseWindow(windowManager->window);
 
         fpsRenderer = SDL_CreateRenderer(fpsWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
         if (!fpsRenderer) {
@@ -291,9 +298,9 @@ namespace AzVulk {
         SDL_RenderClear(fpsRenderer);
 
         // Get FPS values
-        int currentFPS = static_cast<int>(fpsManager->getFPS());
+        int currentFPS = static_cast<int>(fpsManager->currentFPS);
         int avgFPS = static_cast<int>(fpsManager->getAverageFPS());
-        float frameTimeMs = fpsManager->getFrameTimeMs();
+        float frameTimeMs = fpsManager->frameTimeMs;
         int frameTimeTenths = static_cast<int>(frameTimeMs * 10);
 
         // Draw simple bar graphs for FPS

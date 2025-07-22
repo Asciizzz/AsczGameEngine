@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
-#include "VulkanDevice.hpp"
+#include "AzVulk/VulkanDevice.hpp"
 
 namespace AzVulk {
     class DescriptorManager {
@@ -18,14 +18,7 @@ namespace AzVulk {
         void createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize, 
                                  VkImageView textureImageView, VkSampler textureSampler);
         
-        VkDescriptorSet getDescriptorSet(uint32_t frameIndex) const { 
-            return descriptorSets[frameIndex]; 
-        }
         
-        VkDescriptorPool getDescriptorPool() const { return descriptorPool; }
-        const std::vector<VkDescriptorSet>& getDescriptorSets() const { return descriptorSets; }
-
-    private:
         const VulkanDevice& vulkanDevice;
         VkDescriptorSetLayout descriptorSetLayout;
         

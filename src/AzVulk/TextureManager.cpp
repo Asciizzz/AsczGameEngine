@@ -11,7 +11,7 @@ namespace AzVulk {
         : vulkanDevice(device), commandPool(commandPool) {}
 
     TextureManager::~TextureManager() {
-        VkDevice logicalDevice = vulkanDevice.getLogicalDevice();
+        VkDevice logicalDevice = vulkanDevice.device;
 
         if (textureSampler != VK_NULL_HANDLE) {
             vkDestroySampler(logicalDevice, textureSampler, nullptr);
@@ -46,9 +46,9 @@ namespace AzVulk {
                                  stagingBuffer, stagingBufferMemory);
 
         void* data;
-        vkMapMemory(vulkanDevice.getLogicalDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
+        vkMapMemory(vulkanDevice.device, stagingBufferMemory, 0, imageSize, 0, &data);
         memcpy(data, pixels, static_cast<size_t>(imageSize));
-        vkUnmapMemory(vulkanDevice.getLogicalDevice(), stagingBufferMemory);
+        vkUnmapMemory(vulkanDevice.device, stagingBufferMemory);
 
         stbi_image_free(pixels);
 
@@ -75,17 +75,17 @@ namespace AzVulk {
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(vulkanDevice.getLogicalDevice(), &viewInfo, nullptr, &textureImageView) != VK_SUCCESS) {
+        if (vkCreateImageView(vulkanDevice.device, &viewInfo, nullptr, &textureImageView) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture image view!");
         }
     }
 
     void TextureManager::createTextureSampler() {
         VkPhysicalDeviceProperties properties{};
-        vkGetPhysicalDeviceProperties(vulkanDevice.getPhysicalDevice(), &properties);
+        vkGetPhysicalDeviceProperties(vulkanDevice.physicalDevice, &properties);
 
         VkPhysicalDeviceFeatures deviceFeatures{};
-        vkGetPhysicalDeviceFeatures(vulkanDevice.getPhysicalDevice(), &deviceFeatures);
+        vkGetPhysicalDeviceFeatures(vulkanDevice.physicalDevice, &deviceFeatures);
 
         VkSamplerCreateInfo samplerInfo{};
         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -110,7 +110,7 @@ namespace AzVulk {
         samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
-        if (vkCreateSampler(vulkanDevice.getLogicalDevice(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+        if (vkCreateSampler(vulkanDevice.device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture sampler!");
         }
     }
@@ -133,23 +133,23 @@ namespace AzVulk {
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateImage(vulkanDevice.getLogicalDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS) {
+        if (vkCreateImage(vulkanDevice.device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
             throw std::runtime_error("failed to create image!");
         }
 
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(vulkanDevice.getLogicalDevice(), image, &memRequirements);
+        vkGetImageMemoryRequirements(vulkanDevice.device, image, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(memRequirements.memoryTypeBits, properties);
 
-        if (vkAllocateMemory(vulkanDevice.getLogicalDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate image memory!");
         }
 
-        vkBindImageMemory(vulkanDevice.getLogicalDevice(), image, imageMemory, 0);
+        vkBindImageMemory(vulkanDevice.device, image, imageMemory, 0);
     }
 
     void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -226,7 +226,7 @@ namespace AzVulk {
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(vulkanDevice.getLogicalDevice(), &allocInfo, &commandBuffer);
+        vkAllocateCommandBuffers(vulkanDevice.device, &allocInfo, &commandBuffer);
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -245,9 +245,9 @@ namespace AzVulk {
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
 
-        vkQueueSubmit(vulkanDevice.getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(vulkanDevice.getGraphicsQueue());
+        vkQueueSubmit(vulkanDevice.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(vulkanDevice.graphicsQueue);
 
-        vkFreeCommandBuffers(vulkanDevice.getLogicalDevice(), commandPool, 1, &commandBuffer);
+        vkFreeCommandBuffers(vulkanDevice.device, commandPool, 1, &commandBuffer);
     }
 }

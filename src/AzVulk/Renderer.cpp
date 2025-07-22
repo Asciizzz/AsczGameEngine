@@ -1,13 +1,14 @@
 #include "AzVulk/Renderer.hpp"
+#include "AzCore/Camera.hpp"
 #include <stdexcept>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
 
 namespace AzVulk {
     Renderer::Renderer (const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
-                        Buffer& buffer, DescriptorManager& descriptorManager)
+                        Buffer& buffer, DescriptorManager& descriptorManager, AzCore::Camera& camera)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
-          descriptorManager(descriptorManager), startTime(std::chrono::high_resolution_clock::now()) {
+          descriptorManager(descriptorManager), camera(camera), startTime(std::chrono::high_resolution_clock::now()) {
         
         createCommandPool();
         createCommandBuffers();
@@ -15,7 +16,7 @@ namespace AzVulk {
     }
 
     Renderer::~Renderer() {
-        VkDevice device = vulkanDevice.getLogicalDevice();
+        VkDevice device = vulkanDevice.device;
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -29,14 +30,14 @@ namespace AzVulk {
     }
 
     void Renderer::createCommandPool() {
-        QueueFamilyIndices queueFamilyIndices = vulkanDevice.getQueueFamilyIndices();
+        QueueFamilyIndices queueFamilyIndices = vulkanDevice.queueFamilyIndices;
 
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-        if (vkCreateCommandPool(vulkanDevice.getLogicalDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+        if (vkCreateCommandPool(vulkanDevice.device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create graphics command pool!");
         }
     }
@@ -50,7 +51,7 @@ namespace AzVulk {
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(vulkanDevice.getLogicalDevice(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(vulkanDevice.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
     }
@@ -68,19 +69,19 @@ namespace AzVulk {
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            if (vkCreateSemaphore(vulkanDevice.getLogicalDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(vulkanDevice.getLogicalDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(vulkanDevice.getLogicalDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+            if (vkCreateSemaphore(vulkanDevice.device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+                vkCreateSemaphore(vulkanDevice.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(vulkanDevice.device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create synchronization objects for a frame!");
             }
         }
     }
 
     void Renderer::drawFrame() {
-        vkWaitForFences(vulkanDevice.getLogicalDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(vulkanDevice.getLogicalDevice(), swapChain.getSwapChain(), 
+        VkResult result = vkAcquireNextImageKHR(vulkanDevice.device, swapChain.swapChain, 
                                                 UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -93,7 +94,7 @@ namespace AzVulk {
 
         updateUniformBuffer(currentFrame);
 
-        vkResetFences(vulkanDevice.getLogicalDevice(), 1, &inFlightFences[currentFrame]);
+        vkResetFences(vulkanDevice.device, 1, &inFlightFences[currentFrame]);
 
         vkResetCommandBuffer(commandBuffers[currentFrame], 0);
         recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
@@ -114,7 +115,7 @@ namespace AzVulk {
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        if (vkQueueSubmit(vulkanDevice.getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+        if (vkQueueSubmit(vulkanDevice.graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to submit draw command buffer!");
         }
 
@@ -123,12 +124,12 @@ namespace AzVulk {
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = signalSemaphores;
 
-        VkSwapchainKHR swapChains[] = {swapChain.getSwapChain()};
+        VkSwapchainKHR swapChains[] = {swapChain.swapChain};
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapChains;
         presentInfo.pImageIndices = &imageIndex;
 
-        result = vkQueuePresentKHR(vulkanDevice.getPresentQueue(), &presentInfo);
+        result = vkQueuePresentKHR(vulkanDevice.presentQueue, &presentInfo);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
             framebufferResized = true;
@@ -149,10 +150,10 @@ namespace AzVulk {
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = graphicsPipeline.getRenderPass();
-        renderPassInfo.framebuffer = swapChain.getFramebuffers()[imageIndex];
+        renderPassInfo.renderPass = graphicsPipeline.renderPass;
+        renderPassInfo.framebuffer = swapChain.swapChainFramebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = swapChain.getExtent();
+        renderPassInfo.renderArea.extent = swapChain.swapChainExtent;
 
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -163,35 +164,35 @@ namespace AzVulk {
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.getPipeline());
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.graphicsPipeline);
 
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float) swapChain.getExtent().width;
-        viewport.height = (float) swapChain.getExtent().height;
+        viewport.width = (float) swapChain.swapChainExtent.width;
+        viewport.height = (float) swapChain.swapChainExtent.height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
         VkRect2D scissor{};
         scissor.offset = {0, 0};
-        scissor.extent = swapChain.getExtent();
+        scissor.extent = swapChain.swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        VkBuffer vertexBuffers[] = {buffer.getVertexBuffer()};
+        VkBuffer vertexBuffers[] = {buffer.vertexBuffer};
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(commandBuffer, buffer.getIndexBuffer(), 0, buffer.getIndexType());
+        vkCmdBindIndexBuffer(commandBuffer, buffer.indexBuffer, 0, buffer.indexType);
 
         // Bind descriptor sets
-        VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame);
+        VkDescriptorSet descriptorSet = descriptorManager.descriptorSets[currentFrame];
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                                graphicsPipeline.getPipelineLayout(), 0, 1, 
+                                graphicsPipeline.pipelineLayout, 0, 1, 
                                 &descriptorSet, 0, nullptr);
 
-        vkCmdDrawIndexed(commandBuffer, buffer.getIndexCount(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, buffer.indexCount, 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -205,12 +206,13 @@ namespace AzVulk {
         float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
         UniformBufferObject ubo{};
+        // Rotate the model around Y-axis for animation
         ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.proj = glm::perspective(glm::radians(45.0f), 
-                                    swapChain.getExtent().width / (float) swapChain.getExtent().height, 0.1f, 10.0f);
-        ubo.proj[1][1] *= -1;
+        
+        // Use camera matrices directly (now public members)
+        ubo.view = camera.viewMatrix;
+        ubo.proj = camera.projectionMatrix;
 
-        memcpy(buffer.getUniformBuffersMapped()[currentImage], &ubo, sizeof(ubo));
+        memcpy(buffer.uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
 }

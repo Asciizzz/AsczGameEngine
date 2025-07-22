@@ -38,14 +38,7 @@ namespace AzVulk {
         void createIndexBuffer(const std::vector<uint32_t>& indices);
         void createUniformBuffers(size_t count);
 
-        VkBuffer getVertexBuffer() const { return vertexBuffer; }
-        VkBuffer getIndexBuffer() const { return indexBuffer; }
-        uint32_t getIndexCount() const { return indexCount; }
-        VkIndexType getIndexType() const { return indexType; }
-        const std::vector<VkBuffer>& getUniformBuffers() const { return uniformBuffers; }
-        const std::vector<void*>& getUniformBuffersMapped() const { return uniformBuffersMapped; }
-
-    private:
+        
         const VulkanDevice& vulkanDevice;
         
         VkBuffer vertexBuffer = VK_NULL_HANDLE;
@@ -60,6 +53,7 @@ namespace AzVulk {
         std::vector<VkDeviceMemory> uniformBuffersMemory;
         std::vector<void*> uniformBuffersMapped;
 
+        // Helper methods (now public for direct access)
         void createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
                             VkBuffer& buffer, VkDeviceMemory& bufferMemory);
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool);

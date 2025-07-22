@@ -11,7 +11,7 @@ namespace AzVulk {
     }
 
     void DepthManager::cleanup() {
-        VkDevice logicalDevice = vulkanDevice.getLogicalDevice();
+        VkDevice logicalDevice = vulkanDevice.device;
 
         if (depthImageView != VK_NULL_HANDLE) {
             vkDestroyImageView(logicalDevice, depthImageView, nullptr);
@@ -54,7 +54,7 @@ namespace AzVulk {
                                              VkImageTiling tiling, VkFormatFeatureFlags features) {
         for (VkFormat format : candidates) {
             VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(vulkanDevice.getPhysicalDevice(), format, &props);
+            vkGetPhysicalDeviceFormatProperties(vulkanDevice.physicalDevice, format, &props);
 
             if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
                 return format;
@@ -88,23 +88,23 @@ namespace AzVulk {
         imageInfo.samples = numSamples;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateImage(vulkanDevice.getLogicalDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS) {
+        if (vkCreateImage(vulkanDevice.device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
             throw std::runtime_error("failed to create depth image!");
         }
 
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(vulkanDevice.getLogicalDevice(), image, &memRequirements);
+        vkGetImageMemoryRequirements(vulkanDevice.device, image, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(memRequirements.memoryTypeBits, properties);
 
-        if (vkAllocateMemory(vulkanDevice.getLogicalDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate depth image memory!");
         }
 
-        vkBindImageMemory(vulkanDevice.getLogicalDevice(), image, imageMemory, 0);
+        vkBindImageMemory(vulkanDevice.device, image, imageMemory, 0);
     }
 
     VkImageView DepthManager::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
@@ -120,7 +120,7 @@ namespace AzVulk {
         viewInfo.subresourceRange.layerCount = 1;
 
         VkImageView imageView;
-        if (vkCreateImageView(vulkanDevice.getLogicalDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+        if (vkCreateImageView(vulkanDevice.device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
             throw std::runtime_error("failed to create depth image view!");
         }
 

@@ -14,14 +14,10 @@ namespace AzVulk {
         MSAAManager(const MSAAManager&) = delete;
         MSAAManager& operator=(const MSAAManager&) = delete;
 
-        VkSampleCountFlagBits getMSAASamples() const { return msaaSamples; }
-        VkImage getColorImage() const { return colorImage; }
-        VkImageView getColorImageView() const { return colorImageView; }
-
         void createColorResources(uint32_t width, uint32_t height, VkFormat colorFormat);
         void cleanup();
 
-    private:
+        
         const VulkanDevice& vulkanDevice;
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -29,6 +25,7 @@ namespace AzVulk {
         VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;
         VkImageView colorImageView = VK_NULL_HANDLE;
 
+        // Helper methods (now public for direct access)
         VkSampleCountFlagBits getMaxUsableSampleCount();
         void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, 
                         VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, 

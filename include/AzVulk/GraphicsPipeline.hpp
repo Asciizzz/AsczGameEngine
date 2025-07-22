@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include "Buffer.hpp"
+#include "AzVulk/Buffer.hpp"
 
 namespace AzVulk {
     class GraphicsPipeline {
@@ -14,17 +14,12 @@ namespace AzVulk {
         GraphicsPipeline(const GraphicsPipeline&) = delete;
         GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
 
-        VkRenderPass getRenderPass() const { return renderPass; }
-        VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
-        VkPipelineLayout getPipelineLayout() const { return pipelineLayout; }
-        VkPipeline getPipeline() const { return graphicsPipeline; }
-
         void recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
 
+        
         const char* vertexShaderPath;
         const char* fragmentShaderPath;
-
-    private:
+        
         VkDevice device;
         VkExtent2D swapChainExtent;
         VkFormat swapChainImageFormat;
@@ -35,6 +30,7 @@ namespace AzVulk {
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
+        // Helper methods (now public for direct access)
         void createRenderPass();
         void createDescriptorSetLayout();
         void createGraphicsPipeline(const char* vertexShaderPath, const char* fragmentShaderPath);

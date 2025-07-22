@@ -17,7 +17,7 @@ namespace AzVulk {
     }
 
     void SwapChain::createSwapChain(SDL_Window* window) {
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanDevice.getPhysicalDevice());
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanDevice.physicalDevice);
 
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -38,7 +38,7 @@ namespace AzVulk {
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        QueueFamilyIndices indices = vulkanDevice.getQueueFamilyIndices();
+        QueueFamilyIndices indices = vulkanDevice.queueFamilyIndices;
         uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
         if (indices.graphicsFamily != indices.presentFamily) {
@@ -54,13 +54,13 @@ namespace AzVulk {
         createInfo.presentMode = presentMode;
         createInfo.clipped = VK_TRUE;
 
-        if (vkCreateSwapchainKHR(vulkanDevice.getLogicalDevice(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+        if (vkCreateSwapchainKHR(vulkanDevice.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
             throw std::runtime_error("failed to create swap chain!");
         }
 
-        vkGetSwapchainImagesKHR(vulkanDevice.getLogicalDevice(), swapChain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(vulkanDevice.device, swapChain, &imageCount, nullptr);
         swapChainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(vulkanDevice.getLogicalDevice(), swapChain, &imageCount, swapChainImages.data());
+        vkGetSwapchainImagesKHR(vulkanDevice.device, swapChain, &imageCount, swapChainImages.data());
 
         swapChainImageFormat = surfaceFormat.format;
         swapChainExtent = extent;
@@ -85,7 +85,7 @@ namespace AzVulk {
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount = 1;
 
-            if (vkCreateImageView(vulkanDevice.getLogicalDevice(), &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
+            if (vkCreateImageView(vulkanDevice.device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create image views!");
             }
         }
@@ -122,7 +122,7 @@ namespace AzVulk {
             framebufferInfo.height = swapChainExtent.height;
             framebufferInfo.layers = 1;
 
-            if (vkCreateFramebuffer(vulkanDevice.getLogicalDevice(), &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+            if (vkCreateFramebuffer(vulkanDevice.device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create framebuffer!");
             }
         }
@@ -136,7 +136,7 @@ namespace AzVulk {
             SDL_WaitEvent(nullptr);
         }
 
-        vkDeviceWaitIdle(vulkanDevice.getLogicalDevice());
+        vkDeviceWaitIdle(vulkanDevice.device);
 
         cleanup();
         createSwapChain(window);
@@ -148,19 +148,19 @@ namespace AzVulk {
         cleanupFramebuffers();
 
         for (auto imageView : swapChainImageViews) {
-            vkDestroyImageView(vulkanDevice.getLogicalDevice(), imageView, nullptr);
+            vkDestroyImageView(vulkanDevice.device, imageView, nullptr);
         }
         swapChainImageViews.clear();
 
         if (swapChain != VK_NULL_HANDLE) {
-            vkDestroySwapchainKHR(vulkanDevice.getLogicalDevice(), swapChain, nullptr);
+            vkDestroySwapchainKHR(vulkanDevice.device, swapChain, nullptr);
             swapChain = VK_NULL_HANDLE;
         }
     }
 
     void SwapChain::cleanupFramebuffers() {
         for (auto framebuffer : swapChainFramebuffers) {
-            vkDestroyFramebuffer(vulkanDevice.getLogicalDevice(), framebuffer, nullptr);
+            vkDestroyFramebuffer(vulkanDevice.device, framebuffer, nullptr);
         }
         swapChainFramebuffers.clear();
     }

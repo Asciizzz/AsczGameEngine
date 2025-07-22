@@ -19,7 +19,7 @@ namespace AzVulk {
 
         static std::vector<char> readFile(const std::string& filename);
 
-    private:
+        
         VkDevice device;
         std::vector<VkShaderModule> shaderModules;
     };

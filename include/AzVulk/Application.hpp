@@ -5,17 +5,18 @@
 #include <SDL2/SDL.h>
 #include "AzCore/WindowManager.hpp"
 #include "AzCore/FpsManager.hpp"
-#include "VulkanInstance.hpp"
-#include "VulkanDevice.hpp"
-#include "SwapChain.hpp"
-#include "GraphicsPipeline.hpp"
-#include "ShaderManager.hpp"
-#include "Buffer.hpp"
-#include "Renderer.hpp"
-#include "DescriptorManager.hpp"
-#include "TextureManager.hpp"
-#include "DepthManager.hpp"
-#include "MSAAManager.hpp"
+#include "AzCore/Camera.hpp"
+#include "AzVulk/VulkanInstance.hpp"
+#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/SwapChain.hpp"
+#include "AzVulk/GraphicsPipeline.hpp"
+#include "AzVulk/ShaderManager.hpp"
+#include "AzVulk/Buffer.hpp"
+#include "AzVulk/Renderer.hpp"
+#include "AzVulk/DescriptorManager.hpp"
+#include "AzVulk/TextureManager.hpp"
+#include "AzVulk/DepthManager.hpp"
+#include "AzVulk/MSAAManager.hpp"
 
 namespace AzVulk {
     class Application {
@@ -33,6 +34,8 @@ namespace AzVulk {
         // Core components
         std::unique_ptr<AzCore::WindowManager> windowManager;
         std::unique_ptr<AzCore::FpsManager> fpsManager;
+        std::unique_ptr<AzCore::Camera> camera;
+
         std::unique_ptr<VulkanInstance> vulkanInstance;
         std::unique_ptr<VulkanDevice> vulkanDevice;
         std::unique_ptr<SwapChain> swapChain;

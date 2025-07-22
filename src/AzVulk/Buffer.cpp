@@ -36,7 +36,7 @@ namespace AzVulk {
     Buffer::Buffer(const VulkanDevice& device) : vulkanDevice(device) {}
 
     Buffer::~Buffer() {
-        VkDevice logicalDevice = vulkanDevice.getLogicalDevice();
+        VkDevice logicalDevice = vulkanDevice.device;
 
         // Cleanup uniform buffers
         for (size_t i = 0; i < uniformBuffers.size(); i++) {
@@ -66,9 +66,9 @@ namespace AzVulk {
                     vertexBuffer, vertexBufferMemory);
 
         void* data;
-        vkMapMemory(vulkanDevice.getLogicalDevice(), vertexBufferMemory, 0, bufferSize, 0, &data);
+        vkMapMemory(vulkanDevice.device, vertexBufferMemory, 0, bufferSize, 0, &data);
         memcpy(data, vertices.data(), (size_t) bufferSize);
-        vkUnmapMemory(vulkanDevice.getLogicalDevice(), vertexBufferMemory);
+        vkUnmapMemory(vulkanDevice.device, vertexBufferMemory);
     }
 
     void Buffer::createIndexBuffer(const std::vector<uint16_t>& indices) {
@@ -82,9 +82,9 @@ namespace AzVulk {
                     indexBuffer, indexBufferMemory);
 
         void* data;
-        vkMapMemory(vulkanDevice.getLogicalDevice(), indexBufferMemory, 0, bufferSize, 0, &data);
+        vkMapMemory(vulkanDevice.device, indexBufferMemory, 0, bufferSize, 0, &data);
         memcpy(data, indices.data(), (size_t) bufferSize);
-        vkUnmapMemory(vulkanDevice.getLogicalDevice(), indexBufferMemory);
+        vkUnmapMemory(vulkanDevice.device, indexBufferMemory);
     }
 
     void Buffer::createIndexBuffer(const std::vector<uint32_t>& indices) {
@@ -98,9 +98,9 @@ namespace AzVulk {
                     indexBuffer, indexBufferMemory);
 
         void* data;
-        vkMapMemory(vulkanDevice.getLogicalDevice(), indexBufferMemory, 0, bufferSize, 0, &data);
+        vkMapMemory(vulkanDevice.device, indexBufferMemory, 0, bufferSize, 0, &data);
         memcpy(data, indices.data(), (size_t) bufferSize);
-        vkUnmapMemory(vulkanDevice.getLogicalDevice(), indexBufferMemory);
+        vkUnmapMemory(vulkanDevice.device, indexBufferMemory);
     }
 
     void Buffer::createUniformBuffers(size_t count) {
@@ -115,7 +115,7 @@ namespace AzVulk {
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                         uniformBuffers[i], uniformBuffersMemory[i]);
             
-            vkMapMemory(vulkanDevice.getLogicalDevice(), uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+            vkMapMemory(vulkanDevice.device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
         }
     }
 
@@ -127,23 +127,23 @@ namespace AzVulk {
         bufferInfo.usage = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateBuffer(vulkanDevice.getLogicalDevice(), &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+        if (vkCreateBuffer(vulkanDevice.device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to create buffer!");
         }
 
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(vulkanDevice.getLogicalDevice(), buffer, &memRequirements);
+        vkGetBufferMemoryRequirements(vulkanDevice.device, buffer, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(memRequirements.memoryTypeBits, properties);
 
-        if (vkAllocateMemory(vulkanDevice.getLogicalDevice(), &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate buffer memory!");
         }
 
-        vkBindBufferMemory(vulkanDevice.getLogicalDevice(), buffer, bufferMemory, 0);
+        vkBindBufferMemory(vulkanDevice.device, buffer, bufferMemory, 0);
     }
 
     void Buffer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool) {
@@ -154,7 +154,7 @@ namespace AzVulk {
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(vulkanDevice.getLogicalDevice(), &allocInfo, &commandBuffer);
+        vkAllocateCommandBuffers(vulkanDevice.device, &allocInfo, &commandBuffer);
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -173,9 +173,9 @@ namespace AzVulk {
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
 
-        vkQueueSubmit(vulkanDevice.getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(vulkanDevice.getGraphicsQueue());
+        vkQueueSubmit(vulkanDevice.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(vulkanDevice.graphicsQueue);
 
-        vkFreeCommandBuffers(vulkanDevice.getLogicalDevice(), commandPool, 1, &commandBuffer);
+        vkFreeCommandBuffers(vulkanDevice.device, commandPool, 1, &commandBuffer);
     }
 }

@@ -14,14 +14,12 @@ namespace AzVulk {
         VulkanInstance(const VulkanInstance&) = delete;
         VulkanInstance& operator=(const VulkanInstance&) = delete;
 
-        VkInstance getInstance() const { return instance; }
-        VkDebugUtilsMessengerEXT getDebugMessenger() const { return debugMessenger; }
-
-    private:
+        
         VkInstance instance = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
         bool validationLayersEnabled;
 
+        // Helper methods (now public for direct access)
         void createInstance(const std::vector<const char*>& requiredExtensions);
         void setupDebugMessenger();
         bool checkValidationLayerSupport();

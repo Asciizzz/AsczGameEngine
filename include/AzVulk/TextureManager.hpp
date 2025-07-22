@@ -17,10 +17,7 @@ namespace AzVulk {
         void createTextureImageView();
         void createTextureSampler();
 
-        VkImageView getTextureImageView() const { return textureImageView; }
-        VkSampler getTextureSampler() const { return textureSampler; }
-
-    private:
+        
         const VulkanDevice& vulkanDevice;
         VkCommandPool commandPool;
         
@@ -29,6 +26,7 @@ namespace AzVulk {
         VkImageView textureImageView = VK_NULL_HANDLE;
         VkSampler textureSampler = VK_NULL_HANDLE;
 
+        // Helper methods (now public for direct access)
         void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, 
                         VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
                         VkImage& image, VkDeviceMemory& imageMemory);

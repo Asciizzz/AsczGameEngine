@@ -9,7 +9,7 @@ namespace AzVulk {
 
     DescriptorManager::~DescriptorManager() {
         if (descriptorPool != VK_NULL_HANDLE) {
-            vkDestroyDescriptorPool(vulkanDevice.getLogicalDevice(), descriptorPool, nullptr);
+            vkDestroyDescriptorPool(vulkanDevice.device, descriptorPool, nullptr);
         }
     }
 
@@ -29,7 +29,7 @@ namespace AzVulk {
         poolInfo.maxSets = maxFramesInFlight;
         poolInfo.flags = 0; // Default behavior
 
-        if (vkCreateDescriptorPool(vulkanDevice.getLogicalDevice(), &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+        if (vkCreateDescriptorPool(vulkanDevice.device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor pool!");
         }
     }
@@ -45,7 +45,7 @@ namespace AzVulk {
         allocInfo.pSetLayouts = layouts.data();
 
         descriptorSets.resize(uniformBuffers.size());
-        if (vkAllocateDescriptorSets(vulkanDevice.getLogicalDevice(), &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+        if (vkAllocateDescriptorSets(vulkanDevice.device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate descriptor sets!");
         }
 
@@ -79,7 +79,7 @@ namespace AzVulk {
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfo;
 
-            vkUpdateDescriptorSets(vulkanDevice.getLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            vkUpdateDescriptorSets(vulkanDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
     }
 }

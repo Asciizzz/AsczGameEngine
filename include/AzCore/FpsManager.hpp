@@ -11,15 +11,6 @@ namespace AzCore {
         // Call this once per frame
         void update();
 
-        // Get current FPS
-        float getFPS() const { return currentFPS; }
-        
-        // Get frame time in milliseconds
-        float getFrameTimeMs() const { return frameTimeMs; }
-        
-        // Get delta time in seconds (time since last frame)
-        float getDeltaTime() const { return deltaTime; }
-        
         // Get average FPS over the sample window
         float getAverageFPS() const;
         
@@ -34,7 +25,7 @@ namespace AzCore {
         // Reset statistics
         void reset();
 
-    private:
+        
         using Clock = std::chrono::high_resolution_clock;
         using TimePoint = Clock::time_point;
         
@@ -51,6 +42,7 @@ namespace AzCore {
         static constexpr size_t SAMPLE_COUNT = 60;
         std::deque<float> frameTimeHistory;
         
+        // Helper methods (now public for direct access)
         void updateFrameTimeHistory(float frameTime);
         void limitFrameRate();
     };
