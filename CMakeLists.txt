@@ -10,7 +10,8 @@ set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
 set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
 file(GLOB_RECURSE SRC_FILES
-    src/AzVulk/WindowManager.cpp
+    src/AzCore/WindowManager.cpp
+    src/AzCore/FpsManager.cpp
     src/AzVulk/VulkanInstance.cpp
     src/AzVulk/VulkanDevice.cpp
     src/AzVulk/SwapChain.cpp

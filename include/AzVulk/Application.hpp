@@ -2,7 +2,9 @@
 
 #include <memory>
 #include <vector>
-#include "WindowManager.hpp"
+#include <SDL2/SDL.h>
+#include "AzCore/WindowManager.hpp"
+#include "AzCore/FpsManager.hpp"
 #include "VulkanInstance.hpp"
 #include "VulkanDevice.hpp"
 #include "SwapChain.hpp"
@@ -28,7 +30,8 @@ namespace AzVulk {
 
     private:
         // Core components
-        std::unique_ptr<WindowManager> windowManager;
+        std::unique_ptr<AzCore::WindowManager> windowManager;
+        std::unique_ptr<AzCore::FpsManager> fpsManager;
         std::unique_ptr<VulkanInstance> vulkanInstance;
         std::unique_ptr<VulkanDevice> vulkanDevice;
         std::unique_ptr<SwapChain> swapChain;
@@ -44,7 +47,7 @@ namespace AzVulk {
 
         VkCommandPool commandPool = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
-
+        
         // Application settings
         const char* appTitle;
         uint32_t appWidth;
@@ -54,5 +57,21 @@ namespace AzVulk {
         void createSurface();
         void mainLoop();
         void cleanup();
+
+    // TESTING GROUND
+
+        // FPS overlay components
+        SDL_Window* fpsWindow = nullptr;
+        SDL_Renderer* fpsRenderer = nullptr;
+        SDL_Texture* fpsTexture = nullptr;
+        std::chrono::steady_clock::time_point lastFpsUpdate;
+
+        // FPS overlay methods
+        void initFpsOverlay();
+        void renderFpsOverlay();
+        void cleanupFpsOverlay();
+        void drawSimpleNumber(int x, int y, int number);
+        void drawDecimalNumber(int x, int y, int tenths); // For drawing numbers like "1.3"
+        void drawSingleDigit(int x, int y, char digit); // Helper for drawing individual digits
     };
 }
