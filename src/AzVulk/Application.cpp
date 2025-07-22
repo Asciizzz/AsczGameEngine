@@ -172,8 +172,14 @@ namespace AzVulk {
     }
 
     void Application::mainLoop() {
-
-        bool q_hold = false;
+        bool m1_hold = false; // Track m1 hold state
+        bool mouseLocked = false; // Track mouse lock state
+        
+        // Get window center for mouse locking
+        int windowWidth, windowHeight;
+        SDL_GetWindowSize(windowManager->window, &windowWidth, &windowHeight);
+        int centerX = windowWidth / 2;
+        int centerY = windowHeight / 2;
 
         while (!windowManager->shouldCloseFlag) {
             // Update FPS manager for timing
@@ -202,6 +208,40 @@ namespace AzVulk {
             }
 
             const Uint8* k_state = SDL_GetKeyboardState(nullptr);
+            if (k_state[SDL_SCANCODE_ESCAPE]) {
+                windowManager->shouldCloseFlag = true;
+                break;
+            }
+            
+            // Toggle mouse lock with TAB key
+            static bool tabPressed = false;
+            if (k_state[SDL_SCANCODE_TAB] && !tabPressed) {
+                mouseLocked = !mouseLocked;
+                if (mouseLocked) {
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                    SDL_WarpMouseInWindow(windowManager->window, centerX, centerY);
+                } else {
+                    SDL_SetRelativeMouseMode(SDL_FALSE);
+                }
+                tabPressed = true;
+            } else if (!k_state[SDL_SCANCODE_TAB]) {
+                tabPressed = false;
+            }
+
+            // Handle mouse look when locked
+            if (mouseLocked) {
+                int mouseX, mouseY;
+                SDL_GetRelativeMouseState(&mouseX, &mouseY);
+                
+                if (mouseX != 0 || mouseY != 0) {
+                    float sensitivity = 0.02f;
+                    float yawDelta = mouseX * sensitivity;
+                    float pitchDelta = -mouseY * sensitivity;
+
+                    camera->rotate(pitchDelta, yawDelta, 0.0f);
+                }
+            }
+
             float speed = k_state[SDL_SCANCODE_LSHIFT] ? 15.0f : 5.0f; // Speed up with shift
             if (k_state[SDL_SCANCODE_W])
                 camera->translate(camera->forward * speed * fpsManager->deltaTime);
@@ -211,6 +251,12 @@ namespace AzVulk {
                 camera->translate(-camera->right * speed * fpsManager->deltaTime);
             if (k_state[SDL_SCANCODE_D])
                 camera->translate(camera->right * speed * fpsManager->deltaTime);
+            
+            // Add vertical movement (Q/E for up/down)
+            if (k_state[SDL_SCANCODE_Q])
+                camera->translate(-camera->up * speed * fpsManager->deltaTime);
+            if (k_state[SDL_SCANCODE_E])
+                camera->translate(camera->up * speed * fpsManager->deltaTime);
 
             renderer->drawFrame();
             renderFpsOverlay();
