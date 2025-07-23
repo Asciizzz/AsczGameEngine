@@ -25,12 +25,14 @@ namespace Az3D {
         // Convenience transformation methods (with additional logic)
         void translate(const glm::vec3& translation);
         void rotate(const glm::quat& rotation); // Quaternion rotation
-        void rotate(const glm::vec3& eulerAngles); // Euler angles helper (radians)
         void rotateX(float radians);
         void rotateY(float radians);  
         void rotateZ(float radians);
         void scale(const glm::vec3& scaling);
         void scale(float uniformScale);
+
+        // Legacy methods for compatibility
+        void rotate(const glm::vec3& eulerAngles); // Euler angles (not recommended because of gimbal lock)
         
         // Matrix calculation
         glm::mat4 getModelMatrix() const;
