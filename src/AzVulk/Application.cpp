@@ -48,7 +48,7 @@ namespace AzVulk {
         graphicsPipeline = std::make_unique<GraphicsPipeline>(
             vulkanDevice->device, 
             swapChain->swapChainExtent, 
-            swapChain->swapChainImageFormat,
+            swapChain->imageFormat,
             "Shaders/hello.vert.spv",
             "Shaders/hello.frag.spv",
             msaaManager->msaaSamples
@@ -64,7 +64,7 @@ namespace AzVulk {
             throw std::runtime_error("failed to create command pool!");
         }
 
-        msaaManager->createColorResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, swapChain->swapChainImageFormat);
+        msaaManager->createColorResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, swapChain->imageFormat);
         depthManager = std::make_unique<DepthManager>(*vulkanDevice);
         depthManager->createDepthResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, msaaManager->msaaSamples);
         swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
@@ -183,13 +183,13 @@ namespace AzVulk {
 
                 camera->updateAspectRatio(newWidth, newHeight);
 
-                msaaManager->createColorResources(newWidth, newHeight, swapChain->swapChainImageFormat);
+                msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
 
                 depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
 
                 swapChain->recreate(windowManager->window, graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
-                graphicsPipeline->recreate(swapChain->swapChainExtent, swapChain->swapChainImageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
+                graphicsPipeline->recreate(swapChain->swapChainExtent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
             }
 
             const Uint8* k_state = SDL_GetKeyboardState(nullptr);

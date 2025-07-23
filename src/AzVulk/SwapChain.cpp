@@ -19,9 +19,9 @@ namespace AzVulk {
     void SwapChain::createSwapChain(SDL_Window* window) {
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanDevice.physicalDevice);
 
-        VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-        VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-        VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
+        VkSurfaceFormatKHR sc_surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+        VkPresentModeKHR sc_presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+        VkExtent2D sc_extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
         uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
         if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -32,9 +32,9 @@ namespace AzVulk {
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.surface = surface;
         createInfo.minImageCount = imageCount;
-        createInfo.imageFormat = surfaceFormat.format;
-        createInfo.imageColorSpace = surfaceFormat.colorSpace;
-        createInfo.imageExtent = extent;
+        createInfo.imageFormat = sc_surfaceFormat.format;
+        createInfo.imageColorSpace = sc_surfaceFormat.colorSpace;
+        createInfo.imageExtent = sc_extent;
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -51,7 +51,7 @@ namespace AzVulk {
 
         createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode = presentMode;
+        createInfo.presentMode = sc_presentMode;
         createInfo.clipped = VK_TRUE;
 
         if (vkCreateSwapchainKHR(vulkanDevice.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
@@ -62,19 +62,19 @@ namespace AzVulk {
         swapChainImages.resize(imageCount);
         vkGetSwapchainImagesKHR(vulkanDevice.device, swapChain, &imageCount, swapChainImages.data());
 
-        swapChainImageFormat = surfaceFormat.format;
-        swapChainExtent = extent;
+        imageFormat = sc_surfaceFormat.format;
+        swapChainExtent = sc_extent;
     }
 
     void SwapChain::createImageViews() {
-        swapChainImageViews.resize(swapChainImages.size());
+        imageViews.resize(swapChainImages.size());
 
         for (size_t i = 0; i < swapChainImages.size(); i++) {
             VkImageViewCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             createInfo.image = swapChainImages[i];
             createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = swapChainImageFormat;
+            createInfo.format = imageFormat;
             createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
             createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -85,7 +85,7 @@ namespace AzVulk {
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount = 1;
 
-            if (vkCreateImageView(vulkanDevice.device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
+            if (vkCreateImageView(vulkanDevice.device, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create image views!");
             }
         }
@@ -93,9 +93,9 @@ namespace AzVulk {
 
     void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
         cleanupFramebuffers();
-        swapChainFramebuffers.resize(swapChainImageViews.size());
+        framebuffers.resize(imageViews.size());
 
-        for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+        for (size_t i = 0; i < imageViews.size(); i++) {
             std::vector<VkImageView> attachments;
             
             if (colorImageView != VK_NULL_HANDLE) {
@@ -103,12 +103,12 @@ namespace AzVulk {
                 attachments = {
                     colorImageView,
                     depthImageView,
-                    swapChainImageViews[i]
+                    imageViews[i]
                 };
             } else {
                 // Non-MSAA case: swapChainImageView, depthImageView
                 attachments = {
-                    swapChainImageViews[i],
+                    imageViews[i],
                     depthImageView
                 };
             }
@@ -122,7 +122,7 @@ namespace AzVulk {
             framebufferInfo.height = swapChainExtent.height;
             framebufferInfo.layers = 1;
 
-            if (vkCreateFramebuffer(vulkanDevice.device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+            if (vkCreateFramebuffer(vulkanDevice.device, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create framebuffer!");
             }
         }
@@ -147,10 +147,10 @@ namespace AzVulk {
     void SwapChain::cleanup() {
         cleanupFramebuffers();
 
-        for (auto imageView : swapChainImageViews) {
+        for (auto imageView : imageViews) {
             vkDestroyImageView(vulkanDevice.device, imageView, nullptr);
         }
-        swapChainImageViews.clear();
+        imageViews.clear();
 
         if (swapChain != VK_NULL_HANDLE) {
             vkDestroySwapchainKHR(vulkanDevice.device, swapChain, nullptr);
@@ -159,10 +159,10 @@ namespace AzVulk {
     }
 
     void SwapChain::cleanupFramebuffers() {
-        for (auto framebuffer : swapChainFramebuffers) {
+        for (auto framebuffer : framebuffers) {
             vkDestroyFramebuffer(vulkanDevice.device, framebuffer, nullptr);
         }
-        swapChainFramebuffers.clear();
+        framebuffers.clear();
     }
 
     SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice device) {

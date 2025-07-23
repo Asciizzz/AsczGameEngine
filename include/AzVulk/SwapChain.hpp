@@ -30,10 +30,10 @@ namespace AzVulk {
         
         VkSwapchainKHR swapChain = VK_NULL_HANDLE;
         std::vector<VkImage> swapChainImages;
-        VkFormat swapChainImageFormat;
+        VkFormat imageFormat;
         VkExtent2D swapChainExtent;
-        std::vector<VkImageView> swapChainImageViews;
-        std::vector<VkFramebuffer> swapChainFramebuffers;
+        std::vector<VkImageView> imageViews;
+        std::vector<VkFramebuffer> framebuffers;
 
         // Helper methods (now public for direct access)
         void createSwapChain(SDL_Window* window);
