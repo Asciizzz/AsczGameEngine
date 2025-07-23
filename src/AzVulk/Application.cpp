@@ -102,7 +102,7 @@ namespace AzVulk {
         for (int i = 0; i < numModels; i++) {
             models[i].setMesh(quadMesh);
             // Stack them vertically with some spacing
-            models[i].setPosition(glm::vec3(0.0f, i * 0.01f, 0.0f));
+            models[i].position = glm::vec3(0.0f, i * 0.01f, 0.0f);
         }
 
         // Create instance buffer with initial model matrices
@@ -239,7 +239,7 @@ namespace AzVulk {
                 // Each quad rotates at speed: i * 10 degrees per second
                 // So quad 36 will complete 1 full revolution per second (360 degrees)
                 float rotationSpeed = glm::radians(i * 10.0f * deltaTime);
-                models[i].rotate(glm::vec3(0.0f, rotationSpeed, 0.0f));
+                models[i].rotateY(rotationSpeed);
             }
 
             // Update instance buffer with new model matrices

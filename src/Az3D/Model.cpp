@@ -1,4 +1,5 @@
 #include "Az3D/Model.hpp"
+#include <glm/gtc/quaternion.hpp>
 
 namespace Az3D {
     Model::Model(std::shared_ptr<Mesh> mesh) : mesh(mesh) {
@@ -8,28 +9,33 @@ namespace Az3D {
         this->mesh = mesh;
     }
 
-    void Model::setPosition(const glm::vec3& position) {
-        this->position = position;
-    }
-
-    void Model::setRotation(const glm::vec3& rotation) {
-        this->rotation = rotation;
-    }
-
-    void Model::setScale(const glm::vec3& scale) {
-        this->scaleVec = scale;
-    }
-
-    void Model::setScale(float uniformScale) {
-        this->scaleVec = glm::vec3(uniformScale);
-    }
-
     void Model::translate(const glm::vec3& translation) {
         this->position += translation;
     }
 
-    void Model::rotate(const glm::vec3& rotation) {
-        this->rotation += rotation;
+    void Model::rotate(const glm::quat& quaternion) {
+        this->rotation = quaternion * this->rotation; // Multiply quaternion rotations
+    }
+
+    void Model::rotate(const glm::vec3& eulerAngles) {
+        // Convert Euler angles to quaternion and apply
+        glm::quat eulerQuat = glm::quat(eulerAngles);
+        this->rotation = eulerQuat * this->rotation;
+    }
+
+    void Model::rotateX(float radians) {
+        glm::quat xRotation = glm::angleAxis(radians, glm::vec3(1.0f, 0.0f, 0.0f));
+        this->rotation = xRotation * this->rotation;
+    }
+
+    void Model::rotateY(float radians) {
+        glm::quat yRotation = glm::angleAxis(radians, glm::vec3(0.0f, 1.0f, 0.0f));
+        this->rotation = yRotation * this->rotation;
+    }
+
+    void Model::rotateZ(float radians) {
+        glm::quat zRotation = glm::angleAxis(radians, glm::vec3(0.0f, 0.0f, 1.0f));
+        this->rotation = zRotation * this->rotation;
     }
 
     void Model::scale(const glm::vec3& scaling) {
@@ -46,10 +52,8 @@ namespace Az3D {
         // Apply transformations in order: Scale -> Rotate -> Translate
         transform = glm::translate(transform, position);
         
-        // Apply rotations in order: Y (yaw) -> X (pitch) -> Z (roll)
-        transform = glm::rotate(transform, rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-        transform = glm::rotate(transform, rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-        transform = glm::rotate(transform, rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        // Convert quaternion to rotation matrix and apply
+        transform = transform * glm::mat4_cast(rotation);
         
         transform = glm::scale(transform, scaleVec);
         
@@ -58,7 +62,7 @@ namespace Az3D {
 
     void Model::resetTransform() {
         position = glm::vec3(0.0f);
-        rotation = glm::vec3(0.0f);
+        rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
         scaleVec = glm::vec3(1.0f);
     }
 
