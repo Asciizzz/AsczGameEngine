@@ -1,4 +1,5 @@
 #include "AzVulk/Application.hpp"
+#include "Az3D/Az3D.hpp"
 #include <SDL2/SDL_vulkan.h>
 #include <stdexcept>
 #include <iostream>
@@ -19,9 +20,9 @@ namespace AzVulk {
         windowManager = std::make_unique<AzCore::WindowManager>(title, width, height);
         fpsManager = std::make_unique<AzCore::FpsManager>();
         
-        // Initialize camera with appropriate aspect ratio and positioned to view the grid
+        // Initialize camera with appropriate aspect ratio and positioned to view the models
         float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-        camera = std::make_unique<AzCore::Camera>(glm::vec3(0.0f, 2.0f, 5.0f), 45.0f, 0.1f, 100.0f);
+        camera = std::make_unique<AzCore::Camera>(glm::vec3(0.0f, 25.0f, 35.0f), 45.0f, 0.1f, 200.0f);
         camera->setAspectRatio(aspectRatio);
 
         initFpsOverlay();
@@ -69,62 +70,50 @@ namespace AzVulk {
         depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
         swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
-    // Playground
+    // Playground - Create Az3D mesh and models
 
         buffer = std::make_unique<Buffer>(*vulkanDevice);
-
-        std::vector<Vertex> vertices;
-        std::vector<uint32_t> indices;
-
-        const int gridSize = 100; // 1000x1000 grid = 1000000 vertices
-        const float spacing = 0.005f; // Distance between grid points
-        const float halfGrid = (gridSize - 1) * spacing * 0.5f; // Center the grid
-        
-        // Generate vertices in a grid pattern
-        for (int z = 0; z < gridSize; z++) {
-            for (int x = 0; x < gridSize; x++) {
-                float worldX = (x * spacing) - halfGrid; // Range from -halfGrid to +halfGrid
-                float worldZ = (z * spacing) - halfGrid; // Range from -halfGrid to +halfGrid
-                float worldY = glm::sin(glm::length(glm::vec2(worldX, worldZ)) * 0.1f); // Simple wave function
-                
-                // Calculate texture coordinates (0 to 1)
-                float texU = static_cast<float>(x) / (gridSize - 1);
-                float texV = static_cast<float>(z) / (gridSize - 1);
-
-                vertices.push_back({
-                    {worldX, worldY, worldZ},           // Position
-                    {0.0f, 1.0f, 0.0f},                 // Normal (upward)
-                    {texU, texV}                        // Texture coordinates
-                });
-            }
-        }
-        
-        // Generate indices to create triangles (two triangles per grid square)
-        for (int z = 0; z < gridSize - 1; z++) {
-            for (int x = 0; x < gridSize - 1; x++) {
-                // Calculate vertex indices for the current grid square
-                uint32_t topLeft = z * gridSize + x;
-                uint32_t topRight = z * gridSize + (x + 1);
-                uint32_t bottomLeft = (z + 1) * gridSize + x;
-                uint32_t bottomRight = (z + 1) * gridSize + (x + 1);
-
-                // Add Counter-clockwise order to avoid backface culling
-
-                // First triangle (top-left, bottom-left, top-right and reverse)
-                indices.push_back(topLeft);
-                indices.push_back(bottomLeft);
-                indices.push_back(topRight);
-                
-                // Second triangle (top-right, bottom-left, bottom-right and reverse)
-                indices.push_back(topRight);
-                indices.push_back(bottomLeft);
-                indices.push_back(bottomRight);
-            }
-        }
-
-        buffer->createVertexBuffer(vertices);
-        buffer->createIndexBuffer(indices);
         buffer->createUniformBuffers(2);
+
+        // Create mesh from the existing vertices and indices (converted to Az3D format)
+        std::vector<Az3D::Vertex> az3dVertices = {
+            {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+            {{ 1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+            {{-1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
+        };
+        std::vector<uint32_t> indices = {
+            // Clockwise
+            0, 3, 2, 2, 1, 0,
+            // Counter-clockwise
+            0, 1, 2, 2, 3, 0
+        };
+
+        // Create shared mesh
+        quadMesh = std::make_shared<Az3D::Mesh>(std::move(az3dVertices), std::move(indices));
+        
+        // Load mesh into buffer for rendering
+        buffer->loadMesh(*quadMesh);
+
+        // Create 100 models stacked vertically for benchmarking
+        const int numModels = 1000;
+        models.resize(numModels);
+        
+        for (int i = 0; i < numModels; i++) {
+            models[i].setMesh(quadMesh);
+            // Stack them vertically with some spacing
+            models[i].setPosition(glm::vec3(0.0f, i * 0.01f, 0.0f));
+        }
+
+        // Create instance buffer with initial model matrices
+        std::vector<InstanceData> instances;
+        instances.reserve(models.size());
+        for (const auto& model : models) {
+            InstanceData instanceData{};
+            instanceData.modelMatrix = model.getModelMatrix();
+            instances.push_back(instanceData);
+        }
+        buffer->createInstanceBuffer(instances);
 
         textureManager = std::make_unique<TextureManager>(*vulkanDevice, commandPool);
         try {
@@ -243,7 +232,27 @@ namespace AzVulk {
             if (k_state[SDL_SCANCODE_E])
                 camera->translate(camera->up * speed * fpsManager->deltaTime);
 
-            renderer->drawFrame();
+            // Update model rotations with different speeds for each quad
+            float deltaTime = fpsManager->deltaTime;
+            
+            for (int i = 0; i < static_cast<int>(models.size()); i++) {
+                // Each quad rotates at speed: i * 10 degrees per second
+                // So quad 36 will complete 1 full revolution per second (360 degrees)
+                float rotationSpeed = glm::radians(i * 10.0f * deltaTime);
+                models[i].rotate(glm::vec3(0.0f, rotationSpeed, 0.0f));
+            }
+
+            // Update instance buffer with new model matrices
+            std::vector<InstanceData> instances;
+            instances.reserve(models.size());
+            for (const auto& model : models) {
+                InstanceData instanceData{};
+                instanceData.modelMatrix = model.getModelMatrix();
+                instances.push_back(instanceData);
+            }
+            buffer->updateInstanceBuffer(instances);
+
+            renderer->drawFrameWithModels(models);
             renderFpsOverlay();
         }
 

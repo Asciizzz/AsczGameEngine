@@ -2,6 +2,7 @@
 #include "AzVulk/VulkanDevice.hpp"
 #include <stdexcept>
 #include <cstring>
+#include <iostream>
 
 namespace AzVulk {
     VkVertexInputBindingDescription Vertex::getBindingDescription() {
@@ -33,6 +34,26 @@ namespace AzVulk {
         return attributeDescriptions;
     }
 
+    // Conversion methods from Az3D::Vertex to AzVulk::Vertex
+    Vertex Vertex::fromAz3D(const Az3D::Vertex& az3dVertex) {
+        return Vertex{
+            az3dVertex.position,
+            az3dVertex.normal,
+            az3dVertex.texCoord
+        };
+    }
+
+    std::vector<Vertex> Vertex::fromAz3D(const std::vector<Az3D::Vertex>& az3dVertices) {
+        std::vector<Vertex> result;
+        result.reserve(az3dVertices.size());
+        
+        for (const auto& az3dVertex : az3dVertices) {
+            result.push_back(fromAz3D(az3dVertex));
+        }
+        
+        return result;
+    }
+
     Buffer::Buffer(const VulkanDevice& device) : vulkanDevice(device) {}
 
     Buffer::~Buffer() {
@@ -42,6 +63,15 @@ namespace AzVulk {
         for (size_t i = 0; i < uniformBuffers.size(); i++) {
             vkDestroyBuffer(logicalDevice, uniformBuffers[i], nullptr);
             vkFreeMemory(logicalDevice, uniformBuffersMemory[i], nullptr);
+        }
+
+        // Cleanup instance buffer
+        if (instanceBuffer != VK_NULL_HANDLE) {
+            if (instanceBufferMapped) {
+                vkUnmapMemory(logicalDevice, instanceBufferMemory);
+            }
+            vkDestroyBuffer(logicalDevice, instanceBuffer, nullptr);
+            vkFreeMemory(logicalDevice, instanceBufferMemory, nullptr);
         }
 
         // Cleanup index buffer
@@ -119,6 +149,22 @@ namespace AzVulk {
         }
     }
 
+    // New Az3D integration methods
+    void Buffer::loadMesh(const Az3D::Mesh& mesh) {
+        std::cout << "Loading mesh with " << mesh.getVertices().size() << " vertices and " 
+                  << mesh.getIndices().size() << " indices" << std::endl;
+        
+        // Convert Az3D vertices to AzVulk vertices and create buffers
+        auto vulkVertices = Vertex::fromAz3D(mesh.getVertices());
+        createVertexBuffer(vulkVertices);
+        createIndexBuffer(mesh.getIndices());
+    }
+
+    void Buffer::createVertexBuffer(const Az3D::Mesh& mesh) {
+        auto vulkVertices = Vertex::fromAz3D(mesh.getVertices());
+        createVertexBuffer(vulkVertices);
+    }
+
     void Buffer::createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
                                 VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
@@ -177,5 +223,58 @@ namespace AzVulk {
         vkQueueWaitIdle(vulkanDevice.graphicsQueue);
 
         vkFreeCommandBuffers(vulkanDevice.device, commandPool, 1, &commandBuffer);
+    }
+
+    // InstanceData methods for instanced rendering
+    VkVertexInputBindingDescription InstanceData::getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 1; // Binding 1 for instance data
+        bindingDescription.stride = sizeof(InstanceData);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+        return bindingDescription;
+    }
+
+    std::array<VkVertexInputAttributeDescription, 4> InstanceData::getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
+
+        // Model matrix is 4x4, so we need 4 attribute locations (3, 4, 5, 6)
+        // Each vec4 takes one attribute location
+        for (int i = 0; i < 4; i++) {
+            attributeDescriptions[i].binding = 1;
+            attributeDescriptions[i].location = 3 + i; // Locations 3, 4, 5, 6
+            attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+            attributeDescriptions[i].offset = offsetof(InstanceData, modelMatrix) + sizeof(glm::vec4) * i;
+        }
+
+        return attributeDescriptions;
+    }
+
+    void Buffer::createInstanceBuffer(const std::vector<InstanceData>& instances) {
+        VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+        instanceCount = static_cast<uint32_t>(instances.size());
+
+        // Clean up existing buffer if it exists
+        if (instanceBuffer != VK_NULL_HANDLE) {
+            vkDestroyBuffer(vulkanDevice.device, instanceBuffer, nullptr);
+            vkFreeMemory(vulkanDevice.device, instanceBufferMemory, nullptr);
+        }
+
+        createBuffer(bufferSize, 
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                    instanceBuffer, instanceBufferMemory);
+
+        // Map the buffer for updates
+        vkMapMemory(vulkanDevice.device, instanceBufferMemory, 0, bufferSize, 0, &instanceBufferMapped);
+        
+        // Copy initial data
+        memcpy(instanceBufferMapped, instances.data(), bufferSize);
+    }
+
+    void Buffer::updateInstanceBuffer(const std::vector<InstanceData>& instances) {
+        if (instanceBufferMapped && instances.size() <= instanceCount) {
+            VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+            memcpy(instanceBufferMapped, instances.data(), bufferSize);
+        }
     }
 }

@@ -13,6 +13,8 @@ file(GLOB_RECURSE SRC_FILES
     src/AzCore/WindowManager.cpp
     src/AzCore/FpsManager.cpp
     src/AzCore/Camera.cpp
+    src/Az3D/Mesh.cpp
+    src/Az3D/Model.cpp
     src/AzVulk/VulkanInstance.cpp
     src/AzVulk/VulkanDevice.cpp
     src/AzVulk/SwapChain.cpp

@@ -1,5 +1,7 @@
 #include "AzVulk/GraphicsPipeline.hpp"
 #include "AzVulk/ShaderManager.hpp"
+#include "AzVulk/Buffer.hpp"
+#include "Az3D/Az3D.hpp"
 #include <stdexcept>
 #include <vector>
 #include <array>
@@ -171,12 +173,29 @@ namespace AzVulk {
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        auto bindingDescription = Vertex::getBindingDescription();
-        auto attributeDescriptions = Vertex::getAttributeDescriptions();
+        // Get vertex binding and attributes
+        auto vertexBindingDescription = Az3D::Vertex::getBindingDescription();
+        auto vertexAttributeDescriptions = Az3D::Vertex::getAttributeDescriptions();
+        
+        // Get instance binding and attributes
+        auto instanceBindingDescription = InstanceData::getBindingDescription();
+        auto instanceAttributeDescriptions = InstanceData::getAttributeDescriptions();
 
-        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        // Combine binding descriptions
+        std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = {
+            vertexBindingDescription, instanceBindingDescription
+        };
+
+        // Combine attribute descriptions
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+        attributeDescriptions.insert(attributeDescriptions.end(), 
+                                    vertexAttributeDescriptions.begin(), vertexAttributeDescriptions.end());
+        attributeDescriptions.insert(attributeDescriptions.end(), 
+                                    instanceAttributeDescriptions.begin(), instanceAttributeDescriptions.end());
+
+        vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size());
         vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+        vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -246,6 +265,8 @@ namespace AzVulk {
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 1;
         pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+        pipelineLayoutInfo.pushConstantRangeCount = 0;
+        pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
         if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create pipeline layout!");

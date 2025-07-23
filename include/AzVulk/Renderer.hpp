@@ -8,6 +8,7 @@
 #include "AzVulk/GraphicsPipeline.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
+#include "Az3D/Az3D.hpp"
 
 namespace AzCore {
     class Camera;
@@ -25,6 +26,7 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         void drawFrame();
+        void drawFrameWithModels(const std::vector<Az3D::Model>& models);
         
         
         const VulkanDevice& vulkanDevice;
@@ -46,8 +48,6 @@ namespace AzVulk {
         std::chrono::high_resolution_clock::time_point startTime;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
-        static const std::vector<Vertex> vertices;
-        static const std::vector<uint16_t> indices;
 
         // Helper methods (now public for direct access)
         void createCommandPool();
@@ -55,5 +55,6 @@ namespace AzVulk {
         void createSyncObjects();
         void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
         void updateUniformBuffer(uint32_t currentImage);
+        void updateUniformBuffer(uint32_t currentImage, const glm::mat4& modelMatrix);
     };
 }

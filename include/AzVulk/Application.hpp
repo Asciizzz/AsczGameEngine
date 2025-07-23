@@ -17,6 +17,7 @@
 #include "AzVulk/TextureManager.hpp"
 #include "AzVulk/DepthManager.hpp"
 #include "AzVulk/MSAAManager.hpp"
+#include "Az3D/Az3D.hpp"
 
 namespace AzVulk {
     class Application {
@@ -52,6 +53,10 @@ namespace AzVulk {
 
         VkCommandPool commandPool = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
+        
+        // Az3D scene objects
+        std::shared_ptr<Az3D::Mesh> quadMesh;
+        std::vector<Az3D::Model> models;
         
         // Application settings
         const char* appTitle;
