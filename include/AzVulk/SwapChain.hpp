@@ -29,9 +29,9 @@ namespace AzVulk {
         VkSurfaceKHR surface;
         
         VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-        std::vector<VkImage> swapChainImages;
+        std::vector<VkImage> images;
         VkFormat imageFormat;
-        VkExtent2D swapChainExtent;
+        VkExtent2D extent;
         std::vector<VkImageView> imageViews;
         std::vector<VkFramebuffer> framebuffers;
 

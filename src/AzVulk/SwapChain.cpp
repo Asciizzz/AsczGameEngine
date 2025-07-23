@@ -59,20 +59,20 @@ namespace AzVulk {
         }
 
         vkGetSwapchainImagesKHR(vulkanDevice.device, swapChain, &imageCount, nullptr);
-        swapChainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(vulkanDevice.device, swapChain, &imageCount, swapChainImages.data());
+        images.resize(imageCount);
+        vkGetSwapchainImagesKHR(vulkanDevice.device, swapChain, &imageCount, images.data());
 
         imageFormat = sc_surfaceFormat.format;
-        swapChainExtent = sc_extent;
+        extent = sc_extent;
     }
 
     void SwapChain::createImageViews() {
-        imageViews.resize(swapChainImages.size());
+        imageViews.resize(images.size());
 
-        for (size_t i = 0; i < swapChainImages.size(); i++) {
+        for (size_t i = 0; i < images.size(); i++) {
             VkImageViewCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = swapChainImages[i];
+            createInfo.image = images[i];
             createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
             createInfo.format = imageFormat;
             createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -118,8 +118,8 @@ namespace AzVulk {
             framebufferInfo.renderPass = renderPass;
             framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
             framebufferInfo.pAttachments = attachments.data();
-            framebufferInfo.width = swapChainExtent.width;
-            framebufferInfo.height = swapChainExtent.height;
+            framebufferInfo.width = extent.width;
+            framebufferInfo.height = extent.height;
             framebufferInfo.layers = 1;
 
             if (vkCreateFramebuffer(vulkanDevice.device, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {

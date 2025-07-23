@@ -153,7 +153,7 @@ namespace AzVulk {
         renderPassInfo.renderPass = graphicsPipeline.renderPass;
         renderPassInfo.framebuffer = swapChain.framebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = swapChain.swapChainExtent;
+        renderPassInfo.renderArea.extent = swapChain.extent;
 
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -169,15 +169,15 @@ namespace AzVulk {
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = (float) swapChain.swapChainExtent.width;
-        viewport.height = (float) swapChain.swapChainExtent.height;
+        viewport.width = (float) swapChain.extent.width;
+        viewport.height = (float) swapChain.extent.height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
         VkRect2D scissor{};
         scissor.offset = {0, 0};
-        scissor.extent = swapChain.swapChainExtent;
+        scissor.extent = swapChain.extent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         VkBuffer vertexBuffers[] = {buffer.vertexBuffer};

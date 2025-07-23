@@ -47,7 +47,7 @@ namespace AzVulk {
         swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
         graphicsPipeline = std::make_unique<GraphicsPipeline>(
             vulkanDevice->device, 
-            swapChain->swapChainExtent, 
+            swapChain->extent, 
             swapChain->imageFormat,
             "Shaders/hello.vert.spv",
             "Shaders/hello.frag.spv",
@@ -64,9 +64,9 @@ namespace AzVulk {
             throw std::runtime_error("failed to create command pool!");
         }
 
-        msaaManager->createColorResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, swapChain->imageFormat);
+        msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
         depthManager = std::make_unique<DepthManager>(*vulkanDevice);
-        depthManager->createDepthResources(swapChain->swapChainExtent.width, swapChain->swapChainExtent.height, msaaManager->msaaSamples);
+        depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
         swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     // Playground
@@ -189,7 +189,7 @@ namespace AzVulk {
 
                 swapChain->recreate(windowManager->window, graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
-                graphicsPipeline->recreate(swapChain->swapChainExtent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
+                graphicsPipeline->recreate(swapChain->extent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
             }
 
             const Uint8* k_state = SDL_GetKeyboardState(nullptr);
