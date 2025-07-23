@@ -95,14 +95,14 @@ namespace AzVulk {
         // Load mesh into buffer for rendering
         buffer->loadMesh(*quadMesh);
 
-        // Create 100 models stacked vertically for benchmarking
-        const int numModels = 1000;
+        // Create n models stacked vertically for benchmarking
+        const int numModels = 10000;
         models.resize(numModels);
         
         for (int i = 0; i < numModels; i++) {
             models[i].setMesh(quadMesh);
             // Stack them vertically with some spacing
-            models[i].position = glm::vec3(0.0f, i * 0.01f, 0.0f);
+            models[i].position = glm::vec3(0.0f, i * 0.0005f, 0.0f);
         }
 
         // Create instance buffer with initial model matrices
