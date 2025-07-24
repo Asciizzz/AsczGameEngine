@@ -89,17 +89,17 @@ namespace AzVulk {
 // PLAYGROUND FROM HERE!
 
         // Load textures and get their indices
-        size_t vikingTextureIndex = resourceManager->addTexture("Model/viking_room.png");
+        size_t dust2TextureIndex = resourceManager->addTexture("Model/de_dust2.png");
         size_t shirokoTextureIndex = resourceManager->addTexture("Model/Shiroko.jpg");
         size_t cubeTextureIndex = resourceManager->addTexture("textures/texture1.png");
 
         // Create materials with texture indices
-        Az3D::Material vikingMaterial;
-        vikingMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-        vikingMaterial.roughness = 0.7f;
-        vikingMaterial.metallic = 0.1f;
-        vikingMaterial.diffTxtr = vikingTextureIndex;
-        size_t vikingMaterialIndex = resourceManager->addMaterial(vikingMaterial);
+        Az3D::Material dust2Material;
+        dust2Material.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+        dust2Material.roughness = 0.7f;
+        dust2Material.metallic = 0.1f;
+        dust2Material.diffTxtr = dust2TextureIndex;
+        size_t dust2MaterialIndex = resourceManager->addMaterial(dust2Material);
 
         Az3D::Material shirokoMaterial;
         shirokoMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -116,17 +116,17 @@ namespace AzVulk {
         size_t cubeMaterialIndex = resourceManager->addMaterial(cubeMaterial);
 
         // Load meshes and get their indices
-        size_t vikingMeshIndex = resourceManager->meshManager->loadMeshFromOBJ("Model/viking_room.obj");
+        size_t dust2MeshIndex = resourceManager->meshManager->loadMeshFromOBJ("Model/de_dust2.obj");
         size_t shirokoMeshIndex = resourceManager->meshManager->loadMeshFromOBJ("Model/shiroko.obj");
         size_t cubeMeshIndex = resourceManager->meshManager->createCubeMesh();;
 
         // Load meshes into GPU buffer
         std::cout << "\n[GPU BUFFER LOADING] Loading meshes to GPU..." << std::endl;
-        auto vikingMesh = resourceManager->meshManager->getMesh(vikingMeshIndex);
+        auto dust2Mesh = resourceManager->meshManager->getMesh(dust2MeshIndex);
         auto shirokoMesh = resourceManager->meshManager->getMesh(shirokoMeshIndex);
         auto cubeMesh = resourceManager->meshManager->getMesh(cubeMeshIndex);
 
-        size_t vikingBufferIndex = buffer->loadMeshToBuffer(*vikingMesh);
+        size_t dust2BufferIndex = buffer->loadMeshToBuffer(*dust2Mesh);
         size_t shirokoBufferIndex = buffer->loadMeshToBuffer(*shirokoMesh);
         size_t cubeBufferIndex = buffer->loadMeshToBuffer(*cubeMesh);
 
@@ -134,13 +134,13 @@ namespace AzVulk {
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
         descriptorManager->createDescriptorPool(2, resourceManager->textureManager->getTextureCount());
 
-        auto vikingTexture = resourceManager->textureManager->getTexture(vikingTextureIndex);
+        auto dust2Texture = resourceManager->textureManager->getTexture(dust2TextureIndex);
         auto shirokoTexture = resourceManager->textureManager->getTexture(shirokoTextureIndex);
         auto cubeTexture = resourceManager->textureManager->getTexture(cubeTextureIndex);
         
-        if (vikingTexture) {
-            descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), vikingTexture, vikingMaterialIndex);
-            std::cout << "  ✓ Created descriptor set for viking material (index " << vikingMaterialIndex << ")" << std::endl;
+        if (dust2Texture) {
+            descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), dust2Texture, dust2MaterialIndex);
+            std::cout << "  ✓ Created descriptor set for dust2 material (index " << dust2MaterialIndex << ")" << std::endl;
         }
         if (shirokoTexture) {
             descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), shirokoTexture, shirokoMaterialIndex);
@@ -154,9 +154,8 @@ namespace AzVulk {
         // Create models using indices
         models.resize(2);
 
-        models[0] = Az3D::Model(vikingMeshIndex, vikingMaterialIndex);
+        models[0] = Az3D::Model(dust2MeshIndex, dust2MaterialIndex);
         models[0].trform.pos = glm::vec3(0.0f, .0f, 0.0f);
-        models[0].trform.rot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         models[1] = Az3D::Model(shirokoMeshIndex, shirokoMaterialIndex);
         models[1].trform.scale(0.2f);
@@ -269,19 +268,21 @@ namespace AzVulk {
     // ======== PLAYGROUND HERE! ========
 
 
-            // bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
-            // bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
-            // float shiro_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
+            //*
+            bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
+            bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
+            float shiro_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
 
-            // // Move the camer normally
-            // if (k_state[SDL_SCANCODE_W]) camPos += camera->forward * shiro_speed;
-            // if (k_state[SDL_SCANCODE_S]) camPos -= camera->forward * shiro_speed;
-            // if (k_state[SDL_SCANCODE_A]) camPos -= camera->right * shiro_speed;
-            // if (k_state[SDL_SCANCODE_D]) camPos += camera->right * shiro_speed;
+            // Move the camer normally
+            if (k_state[SDL_SCANCODE_W]) camPos += camera->forward * shiro_speed;
+            if (k_state[SDL_SCANCODE_S]) camPos -= camera->forward * shiro_speed;
+            if (k_state[SDL_SCANCODE_A]) camPos -= camera->right * shiro_speed;
+            if (k_state[SDL_SCANCODE_D]) camPos += camera->right * shiro_speed;
 
-            // camera->position = camPos;
+            camera->position = camPos;
+            //*/
 
-
+            /*
             auto& shiro_model = models[1];
             static float shiro_vy = 0.0f;
 
@@ -323,12 +324,13 @@ namespace AzVulk {
                 // Simple jump logic
                 shiro_vy = 3.0f; // Jump height
             }
+            //*/
 
             // Update instance buffers dynamically by mesh type - optimized with caching + frustum culling
-            std::vector<InstanceData> vikingInstances, shirokoInstances, cubeInstances;
+            std::vector<InstanceData> dust2Instances, shirokoInstances, cubeInstances;
             
             // Reserve memory to avoid reallocations during rapid spawning
-            vikingInstances.reserve(models.size());
+            dust2Instances.reserve(models.size());
             shirokoInstances.reserve(models.size());
             cubeInstances.reserve(models.size());
 
@@ -337,7 +339,7 @@ namespace AzVulk {
                 instanceData.modelMatrix = model.trform.modelMatrix();
                 
                 if (model.meshIndex == 0) {
-                    vikingInstances.push_back(instanceData);
+                    dust2Instances.push_back(instanceData);
                 } else if (model.meshIndex == 1) {
                     shirokoInstances.push_back(instanceData);
                 } else if (model.meshIndex == 2) {
@@ -346,19 +348,19 @@ namespace AzVulk {
             }
 
             // Track previous counts to avoid unnecessary buffer recreation
-            static size_t prevVikingCount = 0;
+            static size_t prevdust2Count = 0;
             static size_t prevShirokoCount = 0;
             static size_t prevCubeCount = 0;
 
             // Update buffers only when count changes or just update data if count is same
-            if (!vikingInstances.empty()) {
-                if (vikingInstances.size() != prevVikingCount) {
+            if (!dust2Instances.empty()) {
+                if (dust2Instances.size() != prevdust2Count) {
                     // Only wait for GPU if we're actually recreating buffers
-                    if (prevVikingCount > 0) vkDeviceWaitIdle(vulkanDevice->device);
-                    buffer->createInstanceBufferForMesh(0, vikingInstances);
-                    prevVikingCount = vikingInstances.size();
+                    if (prevdust2Count > 0) vkDeviceWaitIdle(vulkanDevice->device);
+                    buffer->createInstanceBufferForMesh(0, dust2Instances);
+                    prevdust2Count = dust2Instances.size();
                 } else {
-                    buffer->updateInstanceBufferForMesh(0, vikingInstances);
+                    buffer->updateInstanceBufferForMesh(0, dust2Instances);
                 }
             }
             if (!shirokoInstances.empty()) {
