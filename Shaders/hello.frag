@@ -8,7 +8,7 @@ layout(location = 1) in vec3 fragNrml;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    vec3 lightDir = normalize(vec3(0.0, -1.0, 0.0));
+    vec3 lightDir = normalize(vec3(-1.0, -1.0, 0.0));
     vec3 normal = normalize(fragNrml);
 
     float nlength = length(fragNrml); // Check original normal length before normalization
