@@ -25,8 +25,6 @@ void main() {
 
     gl_Position = ubo.proj * ubo.view * modelMatrix * vec4(inPos, 1.0);
 
-    // Transform normal to world space (assuming uniform scaling)
     fragNrml = mat3(modelMatrix) * inNrml;
-
     fragTxtr = inTxtr;
 }

@@ -69,10 +69,10 @@ namespace AzVulk {
         depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
         swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
-    // Playground - Load Az3D meshes from OBJ files! 🚀
-
         buffer = std::make_unique<Buffer>(*vulkanDevice);
         buffer->createUniformBuffers(2);
+
+    // Playground - Load Az3D meshes from OBJ files!
         
         auto vikingRoomMesh = Az3D::Mesh::loadFromOBJ("Model/viking_room.obj");
         meshes.push_back(vikingRoomMesh);
@@ -83,10 +83,8 @@ namespace AzVulk {
         // Create single model at origin
         models.resize(1);
         models[0].setMesh(meshes[0]);
-        models[0].position = glm::vec3(0.0f, 0.0f, 0.0f);  // Centered at origin
-        
-        // Fix the 90-degree rotation issue! Many OBJ files use different coordinate systems
-        models[0].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Rotate around X-axis
+        models[0].position = glm::vec3(0.0f, 0.0f, 0.0f);
+        models[0].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         // Create instance buffer for single model
         std::vector<InstanceData> instances;
