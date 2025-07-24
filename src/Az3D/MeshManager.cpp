@@ -36,6 +36,15 @@ namespace Az3D {
         return nullptr;
     }
 
+    Mesh* MeshManager::loadMesh(const std::string& meshId,
+                                std::vector<Vertex>& vertices,
+                                std::vector<uint32_t>& indices) {
+        auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
+        if (addMesh(meshId, mesh)) {
+            return mesh.get();
+        }
+        return nullptr;
+    }
     Mesh* MeshManager::loadMeshFromOBJ(const std::string& meshId, const std::string& filePath) {
         try {
             auto mesh = Mesh::loadFromOBJ(filePath);

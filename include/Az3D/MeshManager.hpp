@@ -24,9 +24,11 @@ namespace Az3D {
         bool hasMesh(const std::string& meshId) const;
         Mesh* getMesh(const std::string& meshId) const;
         
-        // Load mesh from file
+        // Load mesh
+        Mesh* loadMesh(const std::string& meshId, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
         Mesh* loadMeshFromOBJ(const std::string& meshId, const std::string& filePath);
         
+
         // Create simple meshes
         Mesh* createQuadMesh(const std::string& meshId);
         Mesh* createCubeMesh(const std::string& meshId);
