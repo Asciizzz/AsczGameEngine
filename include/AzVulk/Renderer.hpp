@@ -26,7 +26,7 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         void drawFrame();
-        void drawFrameWithModels(const std::vector<Az3D::Model>& models);
+        void drawFrameWithModels(const std::vector<Az3D::Model>& models, GraphicsPipeline& pipeline);
         
         
         const VulkanDevice& vulkanDevice;

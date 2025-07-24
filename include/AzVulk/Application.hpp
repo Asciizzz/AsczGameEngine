@@ -41,7 +41,10 @@ namespace AzVulk {
         std::unique_ptr<VulkanDevice> vulkanDevice;
         std::unique_ptr<SwapChain> swapChain;
 
-        std::unique_ptr<GraphicsPipeline> graphicsPipeline;
+        std::vector<
+            std::unique_ptr<GraphicsPipeline>
+        > graphicsPipelines;
+        int pipelineIndex = 0;
 
         std::unique_ptr<ShaderManager> shaderManager;
         std::unique_ptr<Buffer> buffer;
@@ -53,14 +56,11 @@ namespace AzVulk {
 
         VkCommandPool commandPool = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
-        
+
         // Az3D scene objects
         std::vector<std::shared_ptr<Az3D::Mesh>> meshes;  // Array of different mesh types
         std::vector<Az3D::Model> models;
 
-        // TODO: Remove this please
-        int modelsPerPillar = 1000;  // Number of models per pillar
-        
         // Application settings
         const char* appTitle;
         uint32_t appWidth;

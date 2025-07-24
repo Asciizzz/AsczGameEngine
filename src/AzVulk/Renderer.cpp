@@ -140,7 +140,7 @@ namespace AzVulk {
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
-    void Renderer::drawFrameWithModels(const std::vector<Az3D::Model>& models) {
+    void Renderer::drawFrameWithModels(const std::vector<Az3D::Model>& models, GraphicsPipeline& pipeline) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -168,7 +168,7 @@ namespace AzVulk {
         // Begin render pass
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = graphicsPipeline.renderPass;
+        renderPassInfo.renderPass = pipeline.renderPass;
         renderPassInfo.framebuffer = swapChain.framebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain.extent;
@@ -181,7 +181,7 @@ namespace AzVulk {
         renderPassInfo.pClearValues = clearValues.data();
 
         vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.graphicsPipeline);
+        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
 
         // Set viewport and scissor (required for dynamic state)
         VkViewport viewport{};

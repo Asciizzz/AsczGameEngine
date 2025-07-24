@@ -46,14 +46,24 @@ namespace AzVulk {
         msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
         swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
 
-        graphicsPipeline = std::make_unique<GraphicsPipeline>(
+        // Create multiple graphics pipelines for different rendering modes
+        graphicsPipelines.push_back(std::make_unique<GraphicsPipeline>(
             vulkanDevice->device, 
             swapChain->extent, 
             swapChain->imageFormat,
             "Shaders/hello.vert.spv",
             "Shaders/hello.frag.spv",
             msaaManager->msaaSamples
-        );
+        ));
+        
+        graphicsPipelines.push_back(std::make_unique<GraphicsPipeline>(
+            vulkanDevice->device, 
+            swapChain->extent, 
+            swapChain->imageFormat,
+            "Shaders/hello.vert.spv",
+            "Shaders/hello1.frag.spv",
+            msaaManager->msaaSamples
+        ));
 
         shaderManager = std::make_unique<ShaderManager>(vulkanDevice->device);
 
@@ -69,7 +79,7 @@ namespace AzVulk {
         msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
         depthManager = std::make_unique<DepthManager>(*vulkanDevice);
         depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-        swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+        swapChain->createFramebuffers(graphicsPipelines[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
         buffer = std::make_unique<Buffer>(*vulkanDevice);
         buffer->createUniformBuffers(2);
@@ -103,14 +113,14 @@ namespace AzVulk {
         textureManager->createTextureSampler();
         
         // Create descriptor manager with texture support
-        descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipeline->descriptorSetLayout);
+        descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
         descriptorManager->createDescriptorPool(2); // MAX_FRAMES_IN_FLIGHT
         descriptorManager->createDescriptorSets(buffer->uniformBuffers, sizeof(UniformBufferObject),
                                                 textureManager->textureImageView, textureManager->textureSampler);
 
         
         // Create final renderer
-        renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipeline, *buffer, *descriptorManager, *camera);
+        renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipelines[pipelineIndex], *buffer, *descriptorManager, *camera);
     }
 
     void Application::createSurface() {
@@ -146,15 +156,12 @@ namespace AzVulk {
                 int newWidth, newHeight;
                 SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
 
+                // Reset like literally everything
                 camera->updateAspectRatio(newWidth, newHeight);
-
                 msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
-
                 depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-
-                swapChain->recreate(windowManager->window, graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
-
-                graphicsPipeline->recreate(swapChain->extent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
+                swapChain->recreate(windowManager->window, graphicsPipelines[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+                graphicsPipelines[pipelineIndex]->recreate(swapChain->extent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
             }
 
             const Uint8* k_state = SDL_GetKeyboardState(nullptr);
@@ -176,6 +183,16 @@ namespace AzVulk {
                 f1Pressed = true;
             } else if (!k_state[SDL_SCANCODE_F1]) {
                 f1Pressed = false;
+            }
+            
+            // Switch graphics pipelines with Tab key
+            static bool tabPressed = false;
+            if (k_state[SDL_SCANCODE_TAB] && !tabPressed) {
+                pipelineIndex = (pipelineIndex + 1) % graphicsPipelines.size();
+                std::cout << "Switched to pipeline " << pipelineIndex << std::endl;
+                tabPressed = true;
+            } else if (!k_state[SDL_SCANCODE_TAB]) {
+                tabPressed = false;
             }
 
             // Handle mouse look when locked
@@ -218,7 +235,7 @@ namespace AzVulk {
             instances.push_back(instanceData);
             buffer->updateInstanceBufferForMesh(0, instances);
 
-            renderer->drawFrameWithModels(models);
+            renderer->drawFrameWithModels(models, *graphicsPipelines[pipelineIndex]);
             renderFpsOverlay();
         }
 
