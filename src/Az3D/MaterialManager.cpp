@@ -9,19 +9,13 @@ namespace Az3D {
             return false;
         }
         
-        if (materials.find(materialId) != materials.end()) {
-            std::cout << "Warning: Material '" << materialId << "' already exists, replacing." << std::endl;
-        }
-        
         materials[materialId] = material;
-        std::cout << "Added material '" << materialId << "' (name: '" << material->getName() << "')" << std::endl;
         return true;
     }
 
     bool MaterialManager::removeMaterial(const std::string& materialId) {
         auto it = materials.find(materialId);
         if (it != materials.end()) {
-            std::cout << "Removed material '" << materialId << "'" << std::endl;
             materials.erase(it);
             return true;
         }
@@ -38,7 +32,6 @@ namespace Az3D {
             return it->second.get();
         }
         
-        std::cout << "Warning: Material '" << materialId << "' not found, using default material." << std::endl;
         return getDefaultMaterial();
     }
 
@@ -75,8 +68,6 @@ namespace Az3D {
         defaultMaterial->getProperties().roughness = 0.5f;
         defaultMaterial->getProperties().metallic = 0.0f;
         defaultMaterial->getProperties().specular = 0.5f;
-        
-        std::cout << "Created default material" << std::endl;
     }
     
 } // namespace Az3D

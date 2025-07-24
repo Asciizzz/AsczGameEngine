@@ -81,9 +81,10 @@ namespace AzVulk {
 
         buffer = std::make_unique<Buffer>(*vulkanDevice);
         buffer->createUniformBuffers(2);
-
-        // Initialize Az3D resource management system
+    
         resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
+
+// PLAYGROUND FROM HERE!
 
         // Load meshes using the new system
         resourceManager->loadMesh("viking_room", "Model/viking_room.obj");
@@ -127,16 +128,6 @@ namespace AzVulk {
         models[1].position = glm::vec3(5.0f, 0.0f, 0.0f);
         models[1].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        std::cout << "Created material '" << (vikingMaterial ? vikingMaterial->getName() : "null")
-                  << "' with roughness=" << (vikingMaterial ? vikingMaterial->getProperties().roughness : 0.0f)
-                  << ", metallic=" << (vikingMaterial ? vikingMaterial->getProperties().metallic : 0.0f)
-                  << ", diffuse texture='" << (vikingMaterial ? vikingMaterial->getDiffuseTexture() : "") << "'" << std::endl;
-                  
-        std::cout << "Created material '" << (shirokoMaterial ? shirokoMaterial->getName() : "null")
-                  << "' with roughness=" << (shirokoMaterial ? shirokoMaterial->getProperties().roughness : 0.0f)
-                  << ", metallic=" << (shirokoMaterial ? shirokoMaterial->getProperties().metallic : 0.0f)
-                  << ", diffuse texture='" << (shirokoMaterial ? shirokoMaterial->getDiffuseTexture() : "") << "'" << std::endl;
-
         // Create instance buffers for both models
         std::vector<InstanceData> instances0, instances1;
         
@@ -155,16 +146,86 @@ namespace AzVulk {
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
         descriptorManager->createDescriptorPool(2); // MAX_FRAMES_IN_FLIGHT
         
-        // Use Az3D texture system instead of legacy
-        auto texture = resourceManager->getTextureManager().getTexture("shiroko_diffuse");
+        // Use Az3D texture system with ResourceManager's string-based interface
+        auto texture = resourceManager->getTexture("shiroko_diffuse");
         if (texture && texture->getData()) {
             descriptorManager->createDescriptorSets(buffer->uniformBuffers, sizeof(UniformBufferObject),
                                                     texture->getData()->view, texture->getData()->sampler);
         }
 
-        
-        // Create final renderer
+        // Final Renderer setup
         renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipelines[pipelineIndex], *buffer, *descriptorManager, *camera);
+        // Print comprehensive resource summary
+        printResourceSummary();
+    }
+    
+    void Application::printResourceSummary() {
+        std::cout << "\n" << std::string(60, '=') << std::endl;
+        std::cout << "             AZ3D RESOURCE INITIALIZATION COMPLETE" << std::endl;
+        std::cout << std::string(60, '=') << std::endl;
+        
+        // Texture summary
+        std::cout << "\n[TEXTURE RESOURCES]" << std::endl;
+        std::cout << "  Total textures loaded: " << resourceManager->getTextureManager().getTextureCount() << std::endl;
+        
+        const auto& allTextures = resourceManager->getTextureManager().getAllTextures();
+        for (size_t i = 0; i < allTextures.size(); ++i) {
+            if (allTextures[i]) {
+                const auto* tex = allTextures[i].get();
+                std::cout << "  [" << i << "] " << tex->getId() 
+                          << " (" << tex->getWidth() << "x" << tex->getHeight() 
+                          << ", " << tex->getMipLevels() << " mips)";
+                if (i == 0) std::cout << " [DEFAULT]";
+                std::cout << std::endl;
+                if (!tex->getFilePath().empty()) {
+                    std::cout << "      Path: " << tex->getFilePath() << std::endl;
+                }
+            } else {
+                std::cout << "  [" << i << "] <deleted>" << std::endl;
+            }
+        }
+        
+        // Material summary
+        std::cout << "\n[MATERIAL RESOURCES]" << std::endl;
+        auto materialIds = resourceManager->getMaterialManager().getMaterialIds();
+        std::cout << "  Total materials loaded: " << materialIds.size() << std::endl;
+        for (const auto& id : materialIds) {
+            auto* mat = resourceManager->getMaterialManager().getMaterial(id);
+            if (mat) {
+                std::cout << "  * " << id << " (\"" << mat->getName() << "\")" << std::endl;
+                std::cout << "    Roughness: " << mat->getProperties().roughness 
+                          << ", Metallic: " << mat->getProperties().metallic << std::endl;
+                if (!mat->getDiffuseTexture().empty()) {
+                    std::cout << "    Diffuse: " << mat->getDiffuseTexture() 
+                              << " -> Index " << resourceManager->getTextureIndex(mat->getDiffuseTexture()) << std::endl;
+                }
+            }
+        }
+        
+        // Mesh summary
+        std::cout << "\n[MESH RESOURCES]" << std::endl;
+        auto meshIds = resourceManager->getMeshManager().getMeshIds();
+        std::cout << "  Total meshes loaded: " << meshIds.size() << std::endl;
+        for (const auto& id : meshIds) {
+            auto* mesh = resourceManager->getMeshManager().getMesh(id);
+            if (mesh) {
+                std::cout << "  * " << id << " (" << mesh->getVertices().size() 
+                          << " vertices, " << mesh->getIndices().size() << " indices)" << std::endl;
+            }
+        }
+        
+        // Model summary
+        std::cout << "\n[SCENE MODELS]" << std::endl;
+        std::cout << "  Total models: " << models.size() << std::endl;
+        for (size_t i = 0; i < models.size(); ++i) {
+            std::cout << "  [" << i << "] Mesh: " << models[i].getMeshId() 
+                      << ", Material: " << models[i].getMaterialId() << std::endl;
+            auto pos = models[i].position;
+            std::cout << "      Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
+        }
+        
+        std::cout << "\n[READY] Use WASD + mouse to navigate, Tab to switch shaders, F1 to toggle mouse, F2 for FPS." << std::endl;
+        std::cout << std::string(60, '=') << std::endl;
     }
 
     void Application::createSurface() {
@@ -234,7 +295,6 @@ namespace AzVulk {
             static bool tabPressed = false;
             if (k_state[SDL_SCANCODE_TAB] && !tabPressed) {
                 pipelineIndex = (pipelineIndex + 1) % graphicsPipelines.size();
-                std::cout << "Switched to pipeline " << pipelineIndex << std::endl;
                 tabPressed = true;
             } else if (!k_state[SDL_SCANCODE_TAB]) {
                 tabPressed = false;

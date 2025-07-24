@@ -154,9 +154,6 @@ namespace AzVulk {
 
     // New Az3D integration methods
     void Buffer::loadMesh(const Az3D::Mesh& mesh) {
-        std::cout << "Loading mesh with " << mesh.getVertices().size() << " vertices and " 
-                  << mesh.getIndices().size() << " indices" << std::endl;
-        
         // Convert Az3D vertices to AzVulk vertices and create buffers
         auto vulkVertices = Vertex::fromAz3D(mesh.getVertices());
         createVertexBuffer(vulkVertices);
@@ -283,9 +280,6 @@ namespace AzVulk {
 
     // New multi-mesh methods implementation
     size_t Buffer::loadMeshToBuffer(const Az3D::Mesh& mesh) {
-        std::cout << "Loading mesh " << meshBuffers.size() << " with " << mesh.getVertices().size() 
-                  << " vertices and " << mesh.getIndices().size() << " indices" << std::endl;
-        
         MeshBufferData meshBuffer;
         
         // Convert Az3D vertices to AzVulk vertices
@@ -350,8 +344,6 @@ namespace AzVulk {
         
         // Copy initial data
         memcpy(meshBuffer.instanceBufferMapped, instances.data(), bufferSize);
-        
-        std::cout << "Created instance buffer for mesh " << meshIndex << " with " << instances.size() << " instances" << std::endl;
     }
 
     void Buffer::updateInstanceBufferForMesh(size_t meshIndex, const std::vector<InstanceData>& instances) {

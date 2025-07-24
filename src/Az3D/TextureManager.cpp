@@ -16,84 +16,82 @@ namespace Az3D {
     }
 
     TextureManager::~TextureManager() {
-        // Clean up all textures
-        for (auto& pair : textures) {
-            if (pair.second && pair.second->getData()) {
-                destroyTextureData(const_cast<TextureData*>(pair.second->getData()));
+        // Clean up all textures in the vector
+        for (auto& texture : textures) {
+            if (texture && texture->getData()) {
+                destroyTextureData(const_cast<TextureData*>(texture->getData()));
             }
         }
         textures.clear();
-        
-        // Clean up default texture
-        if (defaultTexture && defaultTexture->getData()) {
-            destroyTextureData(const_cast<TextureData*>(defaultTexture->getData()));
-        }
     }
 
-    bool TextureManager::loadTexture(const std::string& textureId, const std::string& imagePath) {
-        // Check if texture already exists
-        if (textures.find(textureId) != textures.end()) {
-            std::cout << "Texture '" << textureId << "' already loaded, skipping." << std::endl;
-            return true;
-        }
-        
+    size_t TextureManager::loadTexture(const std::string& imagePath) {
         try {
             auto textureData = createTextureDataFromFile(imagePath);
             if (textureData && textureData->isValid()) {
-                auto texture = std::make_unique<Texture>(textureId, imagePath);
+                auto texture = std::make_unique<Texture>("texture_" + std::to_string(textures.size()), imagePath);
                 texture->setData(std::move(textureData));
-                
-                std::cout << "Loaded texture '" << textureId << "' from '" << imagePath << "' (" 
-                          << texture->getWidth() << "x" << texture->getHeight() 
-                          << " with " << texture->getMipLevels() << " mip levels)" << std::endl;
                           
-                textures[textureId] = std::move(texture);
-                return true;
+                textures.push_back(std::move(texture));
+                return textures.size() - 1; // Return the index
             }
         } catch (const std::exception& e) {
-            std::cerr << "Failed to load texture '" << textureId << "' from '" << imagePath << "': " << e.what() << std::endl;
+            // Silent fail, return default texture index
         }
         
-        return false;
+        return 0; // Return default texture index on failure
     }
 
-    bool TextureManager::hasTexture(const std::string& textureId) const {
-        return textures.find(textureId) != textures.end();
+    bool TextureManager::hasTexture(size_t index) const {
+        return index < textures.size() && textures[index] != nullptr;
     }
 
-    const Texture* TextureManager::getTexture(const std::string& textureId) const {
-        auto it = textures.find(textureId);
-        if (it != textures.end()) {
-            return it->second.get();
+    const Texture* TextureManager::getTexture(size_t index) const {
+        if (index < textures.size() && textures[index]) {
+            return textures[index].get();
         }
         
-        std::cout << "Warning: Texture '" << textureId << "' not found, using default texture." << std::endl;
-        return getDefaultTexture();
+        // Return default texture (index 0) on invalid index
+        if (!textures.empty() && textures[0]) {
+            return textures[0].get();
+        }
+        
+        return nullptr;
     }
 
-    bool TextureManager::unloadTexture(const std::string& textureId) {
-        auto it = textures.find(textureId);
-        if (it != textures.end()) {
-            if (it->second->getData()) {
-                destroyTextureData(const_cast<TextureData*>(it->second->getData()));
+    Texture* TextureManager::getTexture(size_t index) {
+        if (index < textures.size() && textures[index]) {
+            return textures[index].get();
+        }
+        
+        // Return default texture (index 0) on invalid index
+        if (!textures.empty() && textures[0]) {
+            return textures[0].get();
+        }
+        
+        return nullptr;
+    }
+
+    bool TextureManager::unloadTexture(size_t index) {
+        if (index == 0) {
+            return false;
+        }
+        
+        if (index < textures.size() && textures[index]) {
+            if (textures[index]->getData()) {
+                destroyTextureData(const_cast<TextureData*>(textures[index]->getData()));
             }
-            textures.erase(it);
-            std::cout << "Unloaded texture '" << textureId << "'" << std::endl;
+            textures[index].reset();
             return true;
         }
         return false;
     }
 
     const Texture* TextureManager::getDefaultTexture() const {
-        return defaultTexture.get();
-    }
-
-    std::vector<std::string> TextureManager::getTextureIds() const {
-        std::vector<std::string> ids;
-        for (const auto& pair : textures) {
-            ids.push_back(pair.first);
+        if (!textures.empty() && textures[0]) {
+            return textures[0].get();
         }
-        return ids;
+        return nullptr;
     }
 
     std::unique_ptr<TextureData> TextureManager::createTextureDataFromFile(const std::string& imagePath) {
@@ -145,10 +143,10 @@ namespace Az3D {
     }
 
     void TextureManager::createDefaultTexture() {
-        // Create a simple 1x1 white texture as default
+        // Create a simple 1x1 white texture as default at index 0
         const uint32_t white = 0xFFFFFFFF;
         
-        defaultTexture = std::make_unique<Texture>("__default__", "");
+        auto defaultTexture = std::make_unique<Texture>("__default__", "");
         auto textureData = std::make_unique<TextureData>();
         textureData->width = 1;
         textureData->height = 1;
@@ -183,7 +181,8 @@ namespace Az3D {
         defaultTexture->setData(std::move(textureData));
         vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
         
-        std::cout << "Created default white texture (1x1)" << std::endl;
+        // Add default texture at index 0
+        textures.push_back(std::move(defaultTexture));
     }
 
     void TextureManager::destroyTextureData(TextureData* textureData) {

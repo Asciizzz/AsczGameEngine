@@ -71,5 +71,6 @@ namespace AzVulk {
         void createSurface();
         void mainLoop();
         void cleanup();
+        void printResourceSummary();
     };
 }

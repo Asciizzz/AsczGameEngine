@@ -9,21 +9,13 @@ namespace Az3D {
             return false;
         }
         
-        if (meshes.find(meshId) != meshes.end()) {
-            std::cout << "Warning: Mesh '" << meshId << "' already exists, replacing." << std::endl;
-        }
-        
         meshes[meshId] = mesh;
-        std::cout << "Added mesh '" << meshId << "' (" 
-                  << mesh->getVertices().size() << " vertices, " 
-                  << mesh->getIndices().size() << " indices)" << std::endl;
         return true;
     }
 
     bool MeshManager::removeMesh(const std::string& meshId) {
         auto it = meshes.find(meshId);
         if (it != meshes.end()) {
-            std::cout << "Removed mesh '" << meshId << "'" << std::endl;
             meshes.erase(it);
             return true;
         }

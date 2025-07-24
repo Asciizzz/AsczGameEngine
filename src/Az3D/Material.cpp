@@ -89,12 +89,6 @@ namespace Az3D {
             material->setNormalTexture(objMaterial.bump_texname);
         }
         
-        std::cout << "Created material '" << material->getName() << "' with " 
-                  << (material->hasDiffuseTexture() ? "diffuse " : "")
-                  << (material->hasNormalTexture() ? "normal " : "") 
-                  << (material->hasSpecularTexture() ? "specular " : "")
-                  << "textures" << std::endl;
-        
         return material;
     }
     

@@ -99,10 +99,6 @@ namespace Az3D {
             return nullptr;
         }
 
-        if (!warn.empty()) {
-            std::cout << "OBJ Loader Warning: " << warn << std::endl;
-        }
-
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
         std::unordered_map<size_t, uint32_t> uniqueVertices{};
@@ -164,9 +160,6 @@ namespace Az3D {
                 }
             }
         }
-
-        std::cout << "Loaded OBJ: " << filePath << " with " << vertices.size() 
-                  << " vertices and " << indices.size() << " indices" << std::endl;
 
         return std::make_shared<Mesh>(std::move(vertices), std::move(indices));
     }

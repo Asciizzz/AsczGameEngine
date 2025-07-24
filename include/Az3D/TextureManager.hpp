@@ -23,28 +23,29 @@ namespace Az3D {
         TextureManager(const TextureManager&) = delete;
         TextureManager& operator=(const TextureManager&) = delete;
 
-        // Texture management
-        bool loadTexture(const std::string& textureId, const std::string& imagePath);
-        bool hasTexture(const std::string& textureId) const;
-        const Texture* getTexture(const std::string& textureId) const;
+        // Index-based texture management
+        size_t loadTexture(const std::string& imagePath);  // Returns index
+        bool hasTexture(size_t index) const;
+        const Texture* getTexture(size_t index) const;
+        Texture* getTexture(size_t index);  // Non-const version
         
-        // Remove texture from memory
-        bool unloadTexture(const std::string& textureId);
+        // Remove texture from memory (marks as deleted, doesn't shrink vector)
+        bool unloadTexture(size_t index);
         
-        // Get default texture for fallback
+        // Get default texture index (always 0)
+        size_t getDefaultTextureIndex() const { return 0; }
         const Texture* getDefaultTexture() const;
         
         // Statistics
         size_t getTextureCount() const { return textures.size(); }
-        std::vector<std::string> getTextureIds() const;
+        const std::vector<std::unique_ptr<Texture>>& getAllTextures() const { return textures; }
 
     private:
         const AzVulk::VulkanDevice& vulkanDevice;
         VkCommandPool commandPool;
         
-        // Texture storage
-        std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
-        std::unique_ptr<Texture> defaultTexture;
+        // Index-based texture storage (index 0 is always default texture)
+        std::vector<std::unique_ptr<Texture>> textures;
         
         // Helper methods
         std::unique_ptr<TextureData> createTextureDataFromFile(const std::string& imagePath);
