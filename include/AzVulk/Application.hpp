@@ -70,21 +70,5 @@ namespace AzVulk {
         void createSurface();
         void mainLoop();
         void cleanup();
-
-    // TESTING GROUND
-
-        // FPS overlay components
-        SDL_Window* fpsWindow = nullptr;
-        SDL_Renderer* fpsRenderer = nullptr;
-        SDL_Texture* fpsTexture = nullptr;
-        std::chrono::steady_clock::time_point lastFpsUpdate;
-
-        // FPS overlay methods
-        void initFpsOverlay();
-        void renderFpsOverlay();
-        void cleanupFpsOverlay();
-        void drawSimpleNumber(int x, int y, int number);
-        void drawDecimalNumber(int x, int y, int tenths); // For drawing numbers like "1.3"
-        void drawSingleDigit(int x, int y, char digit); // Helper for drawing individual digits
     };
 }
