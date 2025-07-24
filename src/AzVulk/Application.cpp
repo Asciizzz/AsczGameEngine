@@ -377,15 +377,24 @@ namespace AzVulk {
                 onePressed = false;
             }
 
-            // Apply rotation and update instance buffer
-            float rspeed = fast ? 180.0f : (slow ? 10.0f : 30.0f);
-            if (k_state[SDL_SCANCODE_LEFT]) {
-                for (auto& model : models)
-                    model.rotateY(glm::radians(-rspeed * dTime));
-            }
-            if (k_state[SDL_SCANCODE_RIGHT]) {
-                for (auto& model : models)
-                    model.rotateY(glm::radians(rspeed * dTime));
+            // Move the shiroko plush using arrow keys and ins, delete for up/down
+            bool shiro_l = k_state[SDL_SCANCODE_LEFT];
+            bool shiro_r = k_state[SDL_SCANCODE_RIGHT];
+            bool shiro_u = k_state[SDL_SCANCODE_UP];
+            bool shiro_d = k_state[SDL_SCANCODE_DOWN];
+            bool shiro_ins = k_state[SDL_SCANCODE_INSERT];
+            bool shiro_del = k_state[SDL_SCANCODE_DELETE];
+
+            if (shiro_l || shiro_r || shiro_u || shiro_d || shiro_ins || shiro_del) {
+                auto& shirokoModel = models[1]; // Assuming shiroko is always at index 1
+                float moveSpeed = 0.5f; // Adjust speed as needed
+
+                if (shiro_l) shirokoModel.position.x -= moveSpeed;
+                if (shiro_r) shirokoModel.position.x += moveSpeed;
+                if (shiro_u) shirokoModel.position.z -= moveSpeed; // Forward/backward in Z
+                if (shiro_d) shirokoModel.position.z += moveSpeed;
+                if (shiro_ins) shirokoModel.position.y += moveSpeed; // Up
+                if (shiro_del) shirokoModel.position.y -= moveSpeed; // Down
             }
 
             // Update instance buffers dynamically by mesh type - optimized with caching + frustum culling
