@@ -46,8 +46,8 @@ namespace AzVulk {
 
         // Create multiple graphics pipelines for different rendering modes
         graphicsPipelines.push_back(std::make_unique<GraphicsPipeline>(
-            vulkanDevice->device, 
-            swapChain->extent, 
+            vulkanDevice->device,
+            swapChain->extent,
             swapChain->imageFormat,
             "Shaders/hello.vert.spv",
             "Shaders/hello.frag.spv",
@@ -55,8 +55,8 @@ namespace AzVulk {
         ));
         
         graphicsPipelines.push_back(std::make_unique<GraphicsPipeline>(
-            vulkanDevice->device, 
-            swapChain->extent, 
+            vulkanDevice->device,
+            swapChain->extent,
             swapChain->imageFormat,
             "Shaders/hello.vert.spv",
             "Shaders/hello1.frag.spv",
