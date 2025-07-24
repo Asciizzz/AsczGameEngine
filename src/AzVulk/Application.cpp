@@ -235,7 +235,11 @@ namespace AzVulk {
                 camera->translate(camera->up * speed * dTime);
 
             // Apply rotation and update instance buffer
-            models[0].rotateY(glm::radians(30.0f * dTime));
+            float rspeed = fast ? 180.0f : (slow ? 10.0f : 30.0f);
+            if (k_state[SDL_SCANCODE_LEFT])
+                models[0].rotateY(glm::radians(-rspeed * dTime));
+            if (k_state[SDL_SCANCODE_RIGHT])
+                models[0].rotateY(glm::radians(rspeed * dTime));
 
             // Update instance buffer with new rotation
             std::vector<InstanceData> instances;
