@@ -12,10 +12,10 @@ set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 file(GLOB_RECURSE SRC_FILES
     src/AzCore/WindowManager.cpp
     src/AzCore/FpsManager.cpp
-    src/AzCore/Camera.cpp
 
-    src/Az3D/Mesh.cpp
+    src/Az3D/Camera.cpp
     src/Az3D/Model.cpp
+    src/Az3D/Mesh.cpp
     src/Az3D/Material.cpp
     src/Az3D/Texture.cpp
     src/Az3D/TextureManager.cpp

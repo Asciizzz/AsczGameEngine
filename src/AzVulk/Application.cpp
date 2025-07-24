@@ -21,7 +21,7 @@ namespace AzVulk {
         fpsManager = std::make_unique<AzCore::FpsManager>();
 
         float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-        camera = std::make_unique<AzCore::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 200.0f);
+        camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 200.0f);
         camera->setAspectRatio(aspectRatio);
 
         initVulkan();
@@ -130,9 +130,8 @@ namespace AzVulk {
         models[0].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         models[1] = Az3D::Model("shiroko", "shiroko_material");
-        models[1].scale(0.5f);
+        models[1].scale(0.2f);
         models[1].position = glm::vec3(0.0f, 0.0f, 0.0f);
-        models[1].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         // Create instance buffers for both models
         std::vector<InstanceData> instances0, instances1;
@@ -387,7 +386,7 @@ namespace AzVulk {
 
             if (shiro_l || shiro_r || shiro_u || shiro_d || shiro_ins || shiro_del) {
                 auto& shirokoModel = models[1]; // Assuming shiroko is always at index 1
-                float moveSpeed = 0.5f; // Adjust speed as needed
+                float moveSpeed = 0.5f * dTime * (fast ? 2.0f : (slow ? 0.25f : 1.0f));
 
                 if (shiro_l) shirokoModel.position.x -= moveSpeed;
                 if (shiro_r) shirokoModel.position.x += moveSpeed;

@@ -19,7 +19,7 @@ namespace AzVulk {
     class Renderer {
     public:
         Renderer(const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
-                Buffer& buffer, DescriptorManager& descriptorManager, AzCore::Camera& camera,
+                Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
                 Az3D::ResourceManager& resourceManager);
         ~Renderer();
 
@@ -36,7 +36,7 @@ namespace AzVulk {
         GraphicsPipeline& graphicsPipeline;
         Buffer& buffer;
         DescriptorManager& descriptorManager;
-        AzCore::Camera& camera;
+        Az3D::Camera& camera;
         Az3D::ResourceManager& resourceManager;
 
         VkCommandPool commandPool = VK_NULL_HANDLE;

@@ -1,5 +1,5 @@
 #include "AzVulk/Renderer.hpp"
-#include "AzCore/Camera.hpp"
+#include "Az3D/Az3D.hpp"
 #include <stdexcept>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
@@ -7,7 +7,7 @@
 
 namespace AzVulk {
     Renderer::Renderer (const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
-                        Buffer& buffer, DescriptorManager& descriptorManager, AzCore::Camera& camera,
+                        Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
                         Az3D::ResourceManager& resourceManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
           descriptorManager(descriptorManager), camera(camera), resourceManager(resourceManager), 
