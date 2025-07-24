@@ -284,7 +284,7 @@ namespace AzVulk {
                 }
             }
 
-            // Update instance buffers PER MESH TYPE! 🔥
+            // Update instance buffers PER MESH TYPE!
             for (size_t meshIdx = 0; meshIdx < meshes.size(); meshIdx++) {
                 std::vector<InstanceData> instances;
                 
@@ -304,7 +304,7 @@ namespace AzVulk {
                         instances.push_back(instanceData);
                     }
                 }
-                
+
                 if (!instances.empty()) {
                     buffer->updateInstanceBufferForMesh(meshIdx, instances);
                 }
