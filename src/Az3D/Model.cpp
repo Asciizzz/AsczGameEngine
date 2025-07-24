@@ -10,56 +10,56 @@ namespace Az3D {
     // Transformation
 
     void Transform::translate(const glm::vec3& translation) {
-        this->position += translation;
+        this->pos += translation;
     }
 
     void Transform::rotate(const glm::quat& quaternion) {
-        this->rotation = quaternion * this->rotation; // Multiply quaternion rotations
+        this->rot = quaternion * this->rot; // Multiply quaternion rots
     }
 
     void Transform::rotateX(float radians) {
-        glm::quat xRotation = glm::angleAxis(radians, glm::vec3(1.0f, 0.0f, 0.0f));
-        this->rotation = xRotation * this->rotation;
+        glm::quat xrot = glm::angleAxis(radians, glm::vec3(1.0f, 0.0f, 0.0f));
+        this->rot = xrot * this->rot;
     }
 
     void Transform::rotateY(float radians) {
-        glm::quat yRotation = glm::angleAxis(radians, glm::vec3(0.0f, 1.0f, 0.0f));
-        this->rotation = yRotation * this->rotation;
+        glm::quat yrot = glm::angleAxis(radians, glm::vec3(0.0f, 1.0f, 0.0f));
+        this->rot = yrot * this->rot;
     }
 
     void Transform::rotateZ(float radians) {
-        glm::quat zRotation = glm::angleAxis(radians, glm::vec3(0.0f, 0.0f, 1.0f));
-        this->rotation = zRotation * this->rotation;
+        glm::quat zrot = glm::angleAxis(radians, glm::vec3(0.0f, 0.0f, 1.0f));
+        this->rot = zrot * this->rot;
     }
 
     void Transform::scale(const glm::vec3& scaling) {
-        this->scalevec *= scaling;
+        this->scl *= scaling;
     }
 
     void Transform::scale(float uniformScale) {
-        this->scalevec *= uniformScale;
+        this->scl *= uniformScale;
     }
 
     void Transform::rotate(const glm::vec3& eulerAngles) {
         // Convert Euler angles to quaternion and apply
         glm::quat eulerQuat = glm::quat(eulerAngles);
-        this->rotation = eulerQuat * this->rotation;
+        this->rot = eulerQuat * this->rot;
     }
 
 
     glm::mat4 Transform::modelMatrix() const {
-        glm::mat4 translation = glm::translate(glm::mat4(1.0f), position);
-        glm::mat4 rotationMat = glm::mat4_cast(rotation);
-        glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scalevec);
+        glm::mat4 translation = glm::translate(glm::mat4(1.0f), pos);
+        glm::mat4 rotMat = glm::mat4_cast(rot);
+        glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scl);
 
-        return translation * rotationMat * scaleMat;
+        return translation * rotMat * scaleMat;
     }
 
 
     void Transform::reset() {
-        position = glm::vec3(0.0f);
-        rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-        scalevec = glm::vec3(1.0f);
+        pos = glm::vec3(0.0f);
+        rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        scl = glm::vec3(1.0f);
     }
 
 }

@@ -1,6 +1,8 @@
 #include "Az3D/Mesh.hpp"
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <unordered_map>
 
@@ -92,50 +94,69 @@ namespace Az3D {
             return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4);
         };
 
+        bool hasNormals = !attrib.normals.empty();
+
         // Process all shapes in the OBJ file
         for (const auto& shape : shapes) {
-            for (const auto& index : shape.mesh.indices) {
-                Vertex vertex{};
+            for (size_t f = 0; f < shape.mesh.indices.size(); f += 3) {
+                // Process triangle (3 vertices)
+                std::array<Vertex, 3> triangle;
+                
+                for (int v = 0; v < 3; v++) {
+                    const auto& index = shape.mesh.indices[f + v];
+                    Vertex& vertex = triangle[v];
 
-                // Position (required)
-                if (index.vertex_index >= 0) {
-                    vertex.position = {
-                        attrib.vertices[3 * index.vertex_index + 0],
-                        attrib.vertices[3 * index.vertex_index + 1],
-                        attrib.vertices[3 * index.vertex_index + 2]
-                    };
+                    // Position (required)
+                    if (index.vertex_index >= 0) {
+                        vertex.position = {
+                            attrib.vertices[3 * index.vertex_index + 0],
+                            attrib.vertices[3 * index.vertex_index + 1],
+                            attrib.vertices[3 * index.vertex_index + 2]
+                        };
+                    }
+
+                    // Texture coordinates (optional)
+                    if (index.texcoord_index >= 0) {
+                        vertex.texCoord = {
+                            attrib.texcoords[2 * index.texcoord_index + 0],
+                            1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V coordinate
+                        };
+                    } else {
+                        vertex.texCoord = {0.0f, 0.0f}; // Default UV
+                    }
+
+                    // Normals (optional)
+                    if (hasNormals && index.normal_index >= 0) {
+                        vertex.normal = {
+                            attrib.normals[3 * index.normal_index + 0],
+                            attrib.normals[3 * index.normal_index + 1],
+                            attrib.normals[3 * index.normal_index + 2]
+                        };
+                    }
+                }
+                
+                // Calculate face normal if no normals provided
+                if (!hasNormals) {
+                    glm::vec3 v0 = triangle[1].position - triangle[0].position;
+                    glm::vec3 v1 = triangle[2].position - triangle[0].position;
+                    glm::vec3 faceNormal = glm::normalize(glm::cross(v0, v1));
+                    
+                    triangle[0].normal = faceNormal;
+                    triangle[1].normal = faceNormal;
+                    triangle[2].normal = faceNormal;
                 }
 
-                // Texture coordinates (optional)
-                if (index.texcoord_index >= 0) {
-                    vertex.texCoord = {
-                        attrib.texcoords[2 * index.texcoord_index + 0],
-                        1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V coordinate
-                    };
-                } else {
-                    vertex.texCoord = {0.0f, 0.0f}; // Default UV
-                }
-
-                // Normals (optional)
-                if (index.normal_index >= 0) {
-                    vertex.normal = {
-                        attrib.normals[3 * index.normal_index + 0],
-                        attrib.normals[3 * index.normal_index + 1],
-                        attrib.normals[3 * index.normal_index + 2]
-                    };
-                } else {
-                    vertex.normal = {0.0f, 1.0f, 0.0f}; // Default normal (up)
-                }
-
-                // Check for duplicate vertices to optimize the mesh
-                size_t vertexHash = hashVertex(vertex);
-                auto it = uniqueVertices.find(vertexHash);
-                if (it == uniqueVertices.end()) {
-                    uniqueVertices[vertexHash] = static_cast<uint32_t>(vertices.size());
-                    vertices.push_back(vertex);
-                    indices.push_back(static_cast<uint32_t>(vertices.size() - 1));
-                } else {
-                    indices.push_back(it->second);
+                // Add vertices with deduplication
+                for (const auto& vertex : triangle) {
+                    size_t vertexHash = hashVertex(vertex);
+                    auto it = uniqueVertices.find(vertexHash);
+                    if (it == uniqueVertices.end()) {
+                        uniqueVertices[vertexHash] = static_cast<uint32_t>(vertices.size());
+                        vertices.push_back(vertex);
+                        indices.push_back(static_cast<uint32_t>(vertices.size() - 1));
+                    } else {
+                        indices.push_back(it->second);
+                    }
                 }
             }
         }

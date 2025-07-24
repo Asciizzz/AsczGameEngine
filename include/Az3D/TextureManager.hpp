@@ -13,7 +13,7 @@ namespace AzVulk {
 
 namespace Az3D {
     
-    // TextureManager - manages all textures in the Az3D system
+    // TextureManager - manages all textures in the Az3D system with public access
     class TextureManager {
     public:
         TextureManager(const AzVulk::VulkanDevice& device, VkCommandPool commandPool);
@@ -25,28 +25,21 @@ namespace Az3D {
 
         // Index-based texture management
         size_t loadTexture(const std::string& imagePath);  // Returns index
-        bool hasTexture(size_t index) const;
-        const Texture* getTexture(size_t index) const;
-        Texture* getTexture(size_t index);  // Non-const version
         
-        // Remove texture from memory (marks as deleted, doesn't shrink vector)
-        bool unloadTexture(size_t index);
-        
-        // Get default texture index (always 0)
-        size_t getDefaultTextureIndex() const { return 0; }
-        const Texture* getDefaultTexture() const;
-        
-        // Statistics
-        size_t getTextureCount() const { return textures.size(); }
-        const std::vector<std::unique_ptr<Texture>>& getAllTextures() const { return textures; }
-
-    private:
+        // Public data members for direct access
         const AzVulk::VulkanDevice& vulkanDevice;
         VkCommandPool commandPool;
         
         // Index-based texture storage (index 0 is always default texture)
         std::vector<std::unique_ptr<Texture>> textures;
         
+        // Simple inline getters for compatibility
+        bool hasTexture(size_t index) const { return index < textures.size() && textures[index] != nullptr; }
+        const Texture* getTexture(size_t index) const { return index < textures.size() ? textures[index].get() : nullptr; }
+        Texture* getTexture(size_t index) { return index < textures.size() ? textures[index].get() : nullptr; }
+        size_t getTextureCount() const { return textures.size(); }
+        
+    private:
         // Helper methods
         std::unique_ptr<TextureData> createTextureDataFromFile(const std::string& imagePath);
         void createDefaultTexture();
@@ -58,8 +51,8 @@ namespace Az3D {
                         VkImage& image, VkDeviceMemory& imageMemory);
         void createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView);
         void createSampler(uint32_t mipLevels, VkSampler& sampler);
-        void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, 
-                                  VkImageLayout newLayout, uint32_t mipLevels = 1);
+        void transitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, 
+                                    VkImageLayout newLayout, uint32_t mipLevels = 1);
         void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
         void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
         VkCommandBuffer beginSingleTimeCommands();

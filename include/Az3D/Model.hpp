@@ -15,9 +15,9 @@ namespace Az3D {
     class ResourceManager;
     
     struct Transform {
-        glm::vec3 position{0.0f};
-        glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
-        glm::vec3 scalevec{1.0f};
+        glm::vec3 pos{0.0f};
+        glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
+        glm::vec3 scl{1.0f};
 
         void translate(const glm::vec3& translation);
         void rotate(const glm::quat& rotation);

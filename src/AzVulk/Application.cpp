@@ -133,8 +133,7 @@ namespace AzVulk {
         // Create descriptor sets for materials
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
         descriptorManager->createDescriptorPool(2, resourceManager->textureManager->getTextureCount());
-        
-        std::cout << "\n[DESCRIPTOR CREATION] Creating descriptor sets..." << std::endl;
+
         auto vikingTexture = resourceManager->textureManager->getTexture(vikingTextureIndex);
         auto shirokoTexture = resourceManager->textureManager->getTexture(shirokoTextureIndex);
         auto cubeTexture = resourceManager->textureManager->getTexture(cubeTextureIndex);
@@ -156,12 +155,12 @@ namespace AzVulk {
         models.resize(2);
 
         models[0] = Az3D::Model(vikingMeshIndex, vikingMaterialIndex);
-        models[0].trform.position = glm::vec3(0.0f, .0f, 0.0f);
-        models[0].trform.rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        models[0].trform.pos = glm::vec3(0.0f, .0f, 0.0f);
+        models[0].trform.rot = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         models[1] = Az3D::Model(shirokoMeshIndex, shirokoMaterialIndex);
         models[1].trform.scale(0.2f);
-        models[1].trform.position = glm::vec3(0.0f, 0.0f, 0.0f);
+        models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
         // Final Renderer setup with ResourceManager
         renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipelines[pipelineIndex], 
@@ -308,7 +307,7 @@ namespace AzVulk {
             static size_t prevVikingCount = 0;
             static size_t prevShirokoCount = 0;
             static size_t prevCubeCount = 0;
-            
+
             // Update buffers only when count changes or just update data if count is same
             if (!vikingInstances.empty()) {
                 if (vikingInstances.size() != prevVikingCount) {

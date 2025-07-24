@@ -42,58 +42,6 @@ namespace Az3D {
         return 0; // Return default texture index on failure
     }
 
-    bool TextureManager::hasTexture(size_t index) const {
-        return index < textures.size() && textures[index] != nullptr;
-    }
-
-    const Texture* TextureManager::getTexture(size_t index) const {
-        if (index < textures.size() && textures[index]) {
-            return textures[index].get();
-        }
-        
-        // Return default texture (index 0) on invalid index
-        if (!textures.empty() && textures[0]) {
-            return textures[0].get();
-        }
-        
-        return nullptr;
-    }
-
-    Texture* TextureManager::getTexture(size_t index) {
-        if (index < textures.size() && textures[index]) {
-            return textures[index].get();
-        }
-        
-        // Return default texture (index 0) on invalid index
-        if (!textures.empty() && textures[0]) {
-            return textures[0].get();
-        }
-        
-        return nullptr;
-    }
-
-    bool TextureManager::unloadTexture(size_t index) {
-        if (index == 0) {
-            return false;
-        }
-        
-        if (index < textures.size() && textures[index]) {
-            if (textures[index]->getData()) {
-                destroyTextureData(const_cast<TextureData*>(textures[index]->getData()));
-            }
-            textures[index].reset();
-            return true;
-        }
-        return false;
-    }
-
-    const Texture* TextureManager::getDefaultTexture() const {
-        if (!textures.empty() && textures[0]) {
-            return textures[0].get();
-        }
-        return nullptr;
-    }
-
     std::unique_ptr<TextureData> TextureManager::createTextureDataFromFile(const std::string& imagePath) {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load(imagePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
