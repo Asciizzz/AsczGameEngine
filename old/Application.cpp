@@ -88,17 +88,16 @@ namespace AzVulk {
 
 // PLAYGROUND FROM HERE!
 
-        // Load meshes
+        // Load meshes using the new system
         resourceManager->loadMesh("viking_room", "Model/viking_room.obj");
         resourceManager->loadMesh("shiroko", "Model/shiroko.obj");
         resourceManager->getMeshManager().createCubeMesh("cube");
 
-        // Load textures
+        // Load textures using the new system
         resourceManager->loadTexture("viking_room_diffuse", "Model/viking_room.png");
         resourceManager->loadTexture("shiroko_diffuse", "Model/Shiroko.jpg");
-        resourceManager->loadTexture("texture1", "Old/texture1.png");
 
-        // Create materials
+        // Create materials using the new system
         auto vikingMaterial = resourceManager->createMaterial("viking_material", "VikingRoom");
         vikingMaterial->setDiffuseTexture("viking_room_diffuse");
         vikingMaterial->getProperties().roughness = 0.7f;
@@ -112,7 +111,6 @@ namespace AzVulk {
         shirokoMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
         auto cubeMaterial = resourceManager->createMaterial("cube_material", "Cube");
-        cubeMaterial->setDiffuseTexture("texture1");
         cubeMaterial->getProperties().roughness = 0.3f;
         cubeMaterial->getProperties().metallic = 0.2f;
         cubeMaterial->getProperties().albedoColor = glm::vec3(0.8f, 0.9f, 1.0f);
@@ -137,20 +135,24 @@ namespace AzVulk {
         models[1].scale(0.2f);
         models[1].position = glm::vec3(0.0f, 0.0f, 0.0f);
 
-        /* Template for creating instance buffers
-        // std::vector<InstanceData> instances;
+        // Create instance buffers for both models
+        std::vector<InstanceData> instances0, instances1;
         
-        // InstanceData instanceData{};
-        // instanceData.modelMatrix = models[0].getModelMatrix();
-        // instances.push_back(instanceData);
+        InstanceData instanceData0{};
+        instanceData0.modelMatrix = models[0].getModelMatrix();
+        instances0.push_back(instanceData0);
 
-        // buffer->createInstanceBufferForMesh(meshId, instances);
-        */
+        InstanceData instanceData1{};
+        instanceData1.modelMatrix = models[1].getModelMatrix();
+        instances1.push_back(instanceData1);
+
+        buffer->createInstanceBufferForMesh(vikingMeshIndex, instances0);
+        buffer->createInstanceBufferForMesh(shirokoMeshIndex, instances1);
 
         // Create descriptor sets for each material with its specific texture
         auto vikingTexture = resourceManager->getTexture("viking_room_diffuse");
         auto shirokoTexture = resourceManager->getTexture("shiroko_diffuse");
-        auto defaultTexture = resourceManager->getTexture("texture1");
+        auto defaultTexture = resourceManager->getTexture("__default__");
 
         // Create descriptor manager with Az3D texture system
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);

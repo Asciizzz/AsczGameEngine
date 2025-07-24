@@ -1,5 +1,7 @@
 #version 450
 
+layout(binding = 1) uniform sampler2D txtrSmplr;
+
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragNrml;
 
@@ -17,5 +19,8 @@ void main() {
     float g = fract(fragTxtr.y * 10.0);
     float b = 0.5 + 0.5 * sin(fragTxtr.x * 10.0 + fragTxtr.y * 10.0);
 
-    outColor = vec4(vec3(lightIntensity) * vec3(r, g, b), 1.0);
+    // Get texture color
+    vec4 texColor = texture(txtrSmplr, fragTxtr);
+
+    outColor = vec4(vec3(lightIntensity) * vec3(r, g, b) * texColor.rgb, 1.0);
 }
