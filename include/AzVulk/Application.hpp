@@ -55,12 +55,11 @@ namespace AzVulk {
         
         // Az3D resource management
         std::unique_ptr<Az3D::ResourceManager> resourceManager;
+        // Az3D scene objects
+        std::vector<Az3D::Model> models;
 
         VkCommandPool commandPool = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
-
-        // Az3D scene objects
-        std::vector<Az3D::Model> models;
 
         // Application settings
         const char* appTitle;
