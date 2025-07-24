@@ -33,6 +33,8 @@ namespace AzVulk {
 
     void Application::run() {
         mainLoop();
+
+        std::cout << "Application exited successfully. See you next time!" << std::endl;
     }
 
     void Application::initVulkan() {

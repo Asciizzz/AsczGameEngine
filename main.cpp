@@ -12,7 +12,5 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    std::cout << "Application exited successfully. See you next time!" << std::endl;
-
     return EXIT_SUCCESS;
 }
