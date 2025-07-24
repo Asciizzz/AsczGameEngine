@@ -264,6 +264,9 @@ namespace AzVulk {
 
         int cubeCount = 0;
 
+        float camDist = 1.0f;
+        glm::vec3 camPos = camera->position;
+
         while (!windowManager->shouldCloseFlag) {
             // Update FPS manager for timing
             fpsManager->update();
@@ -340,24 +343,6 @@ namespace AzVulk {
 
                 camera->rotate(pitchDelta, yawDelta, 0.0f);
             }
-
-            bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
-            bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
-            float speed = fast ? 15.0f : (slow ? 2.0f : 8.0f);
-            if (k_state[SDL_SCANCODE_W])
-                camera->translate(camera->forward * speed * dTime);
-            if (k_state[SDL_SCANCODE_S])
-                camera->translate(-camera->forward * speed * dTime);
-            if (k_state[SDL_SCANCODE_A])
-                camera->translate(-camera->right * speed * dTime);
-            if (k_state[SDL_SCANCODE_D])
-                camera->translate(camera->right * speed * dTime);
-            
-            // Add vertical movement (Q/E for up/down)
-            if (k_state[SDL_SCANCODE_Q])
-                camera->translate(-camera->up * speed * dTime);
-            if (k_state[SDL_SCANCODE_E])
-                camera->translate(camera->up * speed * dTime);
         
     // ======== PLAYGROUND HERE! ========
 
@@ -378,25 +363,34 @@ namespace AzVulk {
                 onePressed = false;
             }
 
-            // Move the shiroko plush using arrow keys and ins, delete for up/down
-            bool shiro_l = k_state[SDL_SCANCODE_LEFT];
-            bool shiro_r = k_state[SDL_SCANCODE_RIGHT];
-            bool shiro_u = k_state[SDL_SCANCODE_UP];
-            bool shiro_d = k_state[SDL_SCANCODE_DOWN];
-            bool shiro_ins = k_state[SDL_SCANCODE_INSERT];
-            bool shiro_del = k_state[SDL_SCANCODE_DELETE];
+            auto& shiro_model = models[1];
 
-            if (shiro_l || shiro_r || shiro_u || shiro_d || shiro_ins || shiro_del) {
-                auto& shirokoModel = models[1]; // Assuming shiroko is always at index 1
-                float moveSpeed = 0.5f * dTime * (fast ? 2.0f : (slow ? 0.25f : 1.0f));
+            // Rotate shiroko plush based on the camera's direction
+            glm::vec3 s_right = glm::normalize(camera->right);
+            glm::vec3 s_up = glm::vec3(0.0f, 1.0f, 0.0f);
+            glm::vec3 s_backward = glm::normalize(glm::cross(s_right, s_up));
+            glm::quat s_rotation = glm::quatLookAt(s_backward, s_up);
+            shiro_model.rotation = s_rotation;
 
-                if (shiro_l) shirokoModel.position.x -= moveSpeed;
-                if (shiro_r) shirokoModel.position.x += moveSpeed;
-                if (shiro_u) shirokoModel.position.z -= moveSpeed; // Forward/backward in Z
-                if (shiro_d) shirokoModel.position.z += moveSpeed;
-                if (shiro_ins) shirokoModel.position.y += moveSpeed; // Up
-                if (shiro_del) shirokoModel.position.y -= moveSpeed; // Down
-            }
+            // 3rd person camera positioning
+
+            // // Scroll to adjust camera distance
+            if (k_state[SDL_SCANCODE_UP]) camDist -= 1.0f * dTime;
+            if (k_state[SDL_SCANCODE_DOWN]) camDist += 1.0f * dTime;
+
+            camera->position = shiro_model.position - camera->forward * camDist;
+
+            // Move the shiroko plush based on WASD keys
+
+            bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
+            bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
+            float shiro_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
+            if (k_state[SDL_SCANCODE_W]) shiro_model.position -= s_backward * shiro_speed;
+            if (k_state[SDL_SCANCODE_S]) shiro_model.position += s_backward * shiro_speed;
+            if (k_state[SDL_SCANCODE_A]) shiro_model.position -= s_right * shiro_speed;
+            if (k_state[SDL_SCANCODE_D]) shiro_model.position += s_right * shiro_speed;
+            if (k_state[SDL_SCANCODE_Q]) shiro_model.position += s_up * shiro_speed;
+            if (k_state[SDL_SCANCODE_E]) shiro_model.position -= s_up * shiro_speed;
 
             // Update instance buffers dynamically by mesh type - optimized with caching + frustum culling
             std::vector<InstanceData> vikingInstances, shirokoInstances, cubeInstances;
