@@ -24,12 +24,10 @@ namespace AzVulk {
         camera = std::make_unique<AzCore::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 200.0f);
         camera->setAspectRatio(aspectRatio);
 
-        initFpsOverlay();
         initVulkan();
     }
 
     Application::~Application() {
-        cleanupFpsOverlay();
         cleanup();
     }
 
@@ -132,6 +130,7 @@ namespace AzVulk {
     void Application::mainLoop() {
         bool mouseLocked = true; // Track mouse lock state
         SDL_SetRelativeMouseMode(SDL_TRUE); // Start with mouse locked
+        bool showFPS = true; // FPS display toggle state
 
         // Get window center for mouse locking
         int windowWidth, windowHeight;
@@ -194,6 +193,16 @@ namespace AzVulk {
             } else if (!k_state[SDL_SCANCODE_TAB]) {
                 tabPressed = false;
             }
+            
+            // Toggle FPS display with F2 key
+            static bool f2Pressed = false;
+            if (k_state[SDL_SCANCODE_F2] && !f2Pressed) {
+                showFPS = !showFPS;
+                std::cout << "FPS display: " << (showFPS ? "ON" : "OFF") << std::endl;
+                f2Pressed = true;
+            } else if (!k_state[SDL_SCANCODE_F2]) {
+                f2Pressed = false;
+            }
 
             // Handle mouse look when locked
             if (mouseLocked) {
@@ -236,7 +245,25 @@ namespace AzVulk {
             buffer->updateInstanceBufferForMesh(0, instances);
 
             renderer->drawFrameWithModels(models, *graphicsPipelines[pipelineIndex]);
-            renderFpsOverlay();
+            
+            // On-screen FPS display (toggleable with F2) - using window title for now
+            static auto lastFpsOutput = std::chrono::steady_clock::now();
+            static bool lastShowFPS = showFPS;
+            auto now = std::chrono::steady_clock::now();
+            
+            if (showFPS && std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsOutput).count() >= 500) {
+                // Update FPS text every 500ms for smooth display
+                std::string fpsText = "Az3D Engine | FPS: " + std::to_string(static_cast<int>(fpsManager->currentFPS)) +
+                                     " | Avg: " + std::to_string(static_cast<int>(fpsManager->getAverageFPS())) +
+                                     " | " + std::to_string(static_cast<int>(fpsManager->frameTimeMs * 10) / 10.0f) + "ms" +
+                                     " | Pipeline: " + std::to_string(pipelineIndex);
+                SDL_SetWindowTitle(windowManager->window, fpsText.c_str());
+                lastFpsOutput = now;
+            } else if (!showFPS && lastShowFPS) {
+                // Reset to default title when FPS display is turned off
+                SDL_SetWindowTitle(windowManager->window, "Az3D Engine");
+            }
+            lastShowFPS = showFPS;
         }
 
         vkDeviceWaitIdle(vulkanDevice->device);
@@ -249,405 +276,6 @@ namespace AzVulk {
         
         if (surface != VK_NULL_HANDLE && vulkanInstance) {
             vkDestroySurfaceKHR(vulkanInstance->instance, surface, nullptr);
-        }
-    }
-
-    void Application::initFpsOverlay() {
-        fpsWindow = SDL_CreateWindow("FPS Monitor", 
-                                    50, 50, 240, 80,
-                                    SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_BORDERLESS | 
-                                    SDL_WINDOW_SKIP_TASKBAR | SDL_WINDOW_UTILITY);
-        
-        if (!fpsWindow) {
-            std::cerr << "Warning: Could not create FPS overlay window: " << SDL_GetError() << std::endl;
-            return;
-        }
-
-        SDL_SetWindowOpacity(fpsWindow, 0.9f);
-        SDL_RaiseWindow(fpsWindow);
-        SDL_RaiseWindow(windowManager->window);
-
-        fpsRenderer = SDL_CreateRenderer(fpsWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
-        if (!fpsRenderer) {
-            std::cerr << "Warning: Could not create FPS overlay renderer: " << SDL_GetError() << std::endl;
-            SDL_DestroyWindow(fpsWindow);
-            fpsWindow = nullptr;
-            return;
-        }
-
-        fpsTexture = SDL_CreateTexture(fpsRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 240, 80);
-        if (!fpsTexture) {
-            std::cerr << "Warning: Could not create FPS texture: " << SDL_GetError() << std::endl;
-            SDL_DestroyRenderer(fpsRenderer);
-            SDL_DestroyWindow(fpsWindow);
-            fpsRenderer = nullptr;
-            fpsWindow = nullptr;
-            return;
-        }
-
-        SDL_SetTextureBlendMode(fpsTexture, SDL_BLENDMODE_BLEND);
-
-        lastFpsUpdate = std::chrono::steady_clock::now();
-    }
-
-    void Application::renderFpsOverlay() {
-        if (!fpsRenderer || !fpsTexture) return;
-
-        auto now = std::chrono::steady_clock::now();
-        auto timeSinceUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsUpdate);
-
-        if (timeSinceUpdate.count() < 1000) return;
-
-        lastFpsUpdate = now;
-
-        static int raiseCounter = 0;
-        if (++raiseCounter % 5 == 0) {
-            SDL_RaiseWindow(fpsWindow);
-        }
-
-        // Set render target to our FPS texture
-        SDL_SetRenderTarget(fpsRenderer, fpsTexture);
-        
-        SDL_SetRenderDrawColor(fpsRenderer, 0, 0, 0, 255);
-        SDL_RenderClear(fpsRenderer);
-
-        // Get FPS values
-        int currentFPS = static_cast<int>(fpsManager->currentFPS);
-        int avgFPS = static_cast<int>(fpsManager->getAverageFPS());
-        float frameTimeMs = fpsManager->frameTimeMs;
-        int frameTimeTenths = static_cast<int>(frameTimeMs * 10);
-
-        // Draw simple bar graphs for FPS
-        SDL_SetRenderDrawColor(fpsRenderer, 255, 255, 0, 255);
-
-        // Current FPS bar
-        int barWidth1 = (currentFPS * 180) / 1000;
-        if (barWidth1 > 180) barWidth1 = 180;
-        SDL_Rect fpsBar1 = {10, 8, barWidth1, 12};
-        SDL_RenderFillRect(fpsRenderer, &fpsBar1);
-
-        // Average FPS bar
-        SDL_SetRenderDrawColor(fpsRenderer, 0, 255, 255, 255); // Cyan
-        int barWidth2 = (avgFPS * 180) / 1000;
-        if (barWidth2 > 180) barWidth2 = 180;
-        SDL_Rect fpsBar2 = {10, 28, barWidth2, 12};
-        SDL_RenderFillRect(fpsRenderer, &fpsBar2);
-
-        // Frame time bar
-        SDL_SetRenderDrawColor(fpsRenderer, 255, 128, 0, 255); // Orange
-        int barWidth3 = (frameTimeTenths * 180) / 200;
-        if (barWidth3 > 180) barWidth3 = 180;
-        SDL_Rect frameTimeBar = {10, 48, barWidth3, 12};
-        SDL_RenderFillRect(fpsRenderer, &frameTimeBar);
-
-        drawSimpleNumber(195, 8, currentFPS);
-        drawSimpleNumber(195, 28, avgFPS);
-        drawDecimalNumber(195, 48, frameTimeTenths); // Display frame time in tenths of milliseconds with decimal
-
-        SDL_SetRenderTarget(fpsRenderer, nullptr);
-
-        SDL_SetRenderDrawColor(fpsRenderer, 0, 0, 0, 255);
-        SDL_RenderClear(fpsRenderer);
-
-        SDL_Rect dstRect = {0, 0, 240, 80};
-        SDL_RenderCopy(fpsRenderer, fpsTexture, nullptr, &dstRect);
-
-        SDL_RenderPresent(fpsRenderer);
-    }
-
-    void Application::drawSimpleNumber(int x, int y, int number) {
-        // Simple 7-segment style display using rectangles - thicker for better readability
-        std::string numStr = std::to_string(number);
-
-        SDL_SetRenderDrawColor(fpsRenderer, 255, 255, 255, 255); // White
-
-        for (size_t i = 0; i < numStr.length() && i < 4; ++i) {
-            char digit = numStr[i];
-            int digitX = x + (i * 10); // More spacing between digits
-            
-            // Draw simple digit representation using thicker rectangles/lines
-            switch (digit) {
-                case '0': {
-                    SDL_Rect rect = {digitX, y, 8, 12}; // Bigger digits
-                    SDL_RenderDrawRect(fpsRenderer, &rect);
-                    // Add thickness with another rectangle inside
-                    SDL_Rect rect2 = {digitX + 1, y + 1, 6, 10};
-                    SDL_RenderDrawRect(fpsRenderer, &rect2);
-                    break;
-                }
-                case '1': {
-                    // Draw thicker vertical line
-                    SDL_Rect rect = {digitX + 3, y, 2, 12};
-                    SDL_RenderFillRect(fpsRenderer, &rect);
-                    break;
-                }
-                case '2': {
-                    // Horizontal lines - thicker
-                    SDL_Rect top = {digitX, y, 8, 2};
-                    SDL_Rect mid = {digitX, y + 5, 8, 2};
-                    SDL_Rect bot = {digitX, y + 10, 8, 2};
-                    SDL_RenderFillRect(fpsRenderer, &top);
-                    SDL_RenderFillRect(fpsRenderer, &mid);
-                    SDL_RenderFillRect(fpsRenderer, &bot);
-                    // Right vertical segment
-                    SDL_Rect right1 = {digitX + 6, y, 2, 5};
-                    SDL_RenderFillRect(fpsRenderer, &right1);
-                    // Left vertical segment
-                    SDL_Rect left2 = {digitX, y + 7, 2, 5};
-                    SDL_RenderFillRect(fpsRenderer, &left2);
-                    break;
-                }
-                case '3': {
-                    // Horizontal lines
-                    SDL_Rect top = {digitX, y, 8, 2};
-                    SDL_Rect mid = {digitX, y + 5, 8, 2};
-                    SDL_Rect bot = {digitX, y + 10, 8, 2};
-                    SDL_RenderFillRect(fpsRenderer, &top);
-                    SDL_RenderFillRect(fpsRenderer, &mid);
-                    SDL_RenderFillRect(fpsRenderer, &bot);
-                    // Right vertical line
-                    SDL_Rect right = {digitX + 6, y, 2, 12};
-                    SDL_RenderFillRect(fpsRenderer, &right);
-                    break;
-                }
-                case '4': {
-                    // Left vertical top half
-                    SDL_Rect left = {digitX, y, 2, 6};
-                    SDL_RenderFillRect(fpsRenderer, &left);
-                    // Middle horizontal
-                    SDL_Rect mid = {digitX, y + 5, 8, 2};
-                    SDL_RenderFillRect(fpsRenderer, &mid);
-                    // Right vertical full
-                    SDL_Rect right = {digitX + 6, y, 2, 12};
-                    SDL_RenderFillRect(fpsRenderer, &right);
-                    break;
-                }
-                case '5': {
-                    // Horizontal lines
-                    SDL_Rect top = {digitX, y, 8, 2};
-                    SDL_Rect mid = {digitX, y + 5, 8, 2};
-                    SDL_Rect bot = {digitX, y + 10, 8, 2};
-                    SDL_RenderFillRect(fpsRenderer, &top);
-                    SDL_RenderFillRect(fpsRenderer, &mid);
-                    SDL_RenderFillRect(fpsRenderer, &bot);
-                    // Left vertical top half
-                    SDL_Rect left1 = {digitX, y, 2, 6};
-                    SDL_RenderFillRect(fpsRenderer, &left1);
-                    // Right vertical bottom half
-                    SDL_Rect right2 = {digitX + 6, y + 6, 2, 6};
-                    SDL_RenderFillRect(fpsRenderer, &right2);
-                    break;
-                }
-                case '6': {
-                    SDL_Rect rect = {digitX, y, 8, 12};
-                    SDL_RenderDrawRect(fpsRenderer, &rect);
-                    SDL_Rect rect2 = {digitX + 1, y + 1, 6, 10};
-                    SDL_RenderDrawRect(fpsRenderer, &rect2);
-                    // Middle horizontal
-                    SDL_Rect mid = {digitX, y + 5, 8, 2};
-                    SDL_RenderFillRect(fpsRenderer, &mid);
-                    break;
-                }
-                case '7': {
-                    // Top horizontal
-                    SDL_Rect top = {digitX, y, 8, 2};
-                    SDL_RenderFillRect(fpsRenderer, &top);
-                    // Right vertical
-                    SDL_Rect right = {digitX + 6, y, 2, 12};
-                    SDL_RenderFillRect(fpsRenderer, &right);
-                    break;
-                }
-                case '8': {
-                    SDL_Rect rect = {digitX, y, 8, 12};
-                    SDL_RenderDrawRect(fpsRenderer, &rect);
-                    SDL_Rect rect2 = {digitX + 1, y + 1, 6, 10};
-                    SDL_RenderDrawRect(fpsRenderer, &rect2);
-                    // Middle horizontal
-                    SDL_Rect mid = {digitX, y + 5, 8, 2};
-                    SDL_RenderFillRect(fpsRenderer, &mid);
-                    break;
-                }
-                case '9': {
-                    SDL_Rect rect = {digitX, y, 8, 7};
-                    SDL_RenderDrawRect(fpsRenderer, &rect);
-                    SDL_Rect rect2 = {digitX + 1, y + 1, 6, 5};
-                    SDL_RenderDrawRect(fpsRenderer, &rect2);
-                    // Right vertical full
-                    SDL_Rect right = {digitX + 6, y, 2, 12};
-                    SDL_RenderFillRect(fpsRenderer, &right);
-                    // Bottom horizontal
-                    SDL_Rect bot = {digitX, y + 10, 8, 2};
-                    SDL_RenderFillRect(fpsRenderer, &bot);
-                    break;
-                }
-            }
-        }
-    }
-
-    void Application::drawDecimalNumber(int x, int y, int tenths) {
-        // Draw decimal number like "1.3" from input like 13 (representing 1.3)
-        // Extract integer and decimal parts
-        int integerPart = tenths / 10;
-        int decimalPart = tenths % 10;
-        
-        SDL_SetRenderDrawColor(fpsRenderer, 255, 255, 255, 255); // White
-        
-        int currentX = x;
-        
-        // Draw integer part (can be multiple digits)
-        std::string intStr = std::to_string(integerPart);
-        for (size_t i = 0; i < intStr.length() && i < 3; ++i) { // Max 3 digits for integer part
-            char digit = intStr[i];
-            drawSingleDigit(currentX, y, digit);
-            currentX += 10; // Move to next position
-        }
-        
-        // Draw decimal point
-        SDL_Rect dot = {currentX + 2, y + 9, 2, 2}; // Small dot near bottom
-        SDL_RenderFillRect(fpsRenderer, &dot);
-        currentX += 6; // Move past the dot
-        
-        // Draw decimal part (single digit)
-        char decimalDigit = '0' + decimalPart;
-        drawSingleDigit(currentX, y, decimalDigit);
-    }
-
-    void Application::drawSingleDigit(int x, int y, char digit) {
-        // Helper function to draw a single digit - same logic as in drawSimpleNumber
-        int digitX = x;
-        
-        // Draw simple digit representation using thicker rectangles/lines
-        switch (digit) {
-            case '0': {
-                SDL_Rect rect = {digitX, y, 8, 12}; // Bigger digits
-                SDL_RenderDrawRect(fpsRenderer, &rect);
-                // Add thickness with another rectangle inside
-                SDL_Rect rect2 = {digitX + 1, y + 1, 6, 10};
-                SDL_RenderDrawRect(fpsRenderer, &rect2);
-                break;
-            }
-            case '1': {
-                // Draw thicker vertical line
-                SDL_Rect rect = {digitX + 3, y, 2, 12};
-                SDL_RenderFillRect(fpsRenderer, &rect);
-                break;
-            }
-            case '2': {
-                // Horizontal lines - thicker
-                SDL_Rect top = {digitX, y, 8, 2};
-                SDL_Rect mid = {digitX, y + 5, 8, 2};
-                SDL_Rect bot = {digitX, y + 10, 8, 2};
-                SDL_RenderFillRect(fpsRenderer, &top);
-                SDL_RenderFillRect(fpsRenderer, &mid);
-                SDL_RenderFillRect(fpsRenderer, &bot);
-                // Right vertical segment
-                SDL_Rect right1 = {digitX + 6, y, 2, 5};
-                SDL_RenderFillRect(fpsRenderer, &right1);
-                // Left vertical segment
-                SDL_Rect left2 = {digitX, y + 7, 2, 5};
-                SDL_RenderFillRect(fpsRenderer, &left2);
-                break;
-            }
-            case '3': {
-                // Horizontal lines
-                SDL_Rect top = {digitX, y, 8, 2};
-                SDL_Rect mid = {digitX, y + 5, 8, 2};
-                SDL_Rect bot = {digitX, y + 10, 8, 2};
-                SDL_RenderFillRect(fpsRenderer, &top);
-                SDL_RenderFillRect(fpsRenderer, &mid);
-                SDL_RenderFillRect(fpsRenderer, &bot);
-                // Right vertical line
-                SDL_Rect right = {digitX + 6, y, 2, 12};
-                SDL_RenderFillRect(fpsRenderer, &right);
-                break;
-            }
-            case '4': {
-                // Left vertical top half
-                SDL_Rect left = {digitX, y, 2, 6};
-                SDL_RenderFillRect(fpsRenderer, &left);
-                // Middle horizontal
-                SDL_Rect mid = {digitX, y + 5, 8, 2};
-                SDL_RenderFillRect(fpsRenderer, &mid);
-                // Right vertical full
-                SDL_Rect right = {digitX + 6, y, 2, 12};
-                SDL_RenderFillRect(fpsRenderer, &right);
-                break;
-            }
-            case '5': {
-                // Horizontal lines
-                SDL_Rect top = {digitX, y, 8, 2};
-                SDL_Rect mid = {digitX, y + 5, 8, 2};
-                SDL_Rect bot = {digitX, y + 10, 8, 2};
-                SDL_RenderFillRect(fpsRenderer, &top);
-                SDL_RenderFillRect(fpsRenderer, &mid);
-                SDL_RenderFillRect(fpsRenderer, &bot);
-                // Left vertical top half
-                SDL_Rect left1 = {digitX, y, 2, 6};
-                SDL_RenderFillRect(fpsRenderer, &left1);
-                // Right vertical bottom half
-                SDL_Rect right2 = {digitX + 6, y + 6, 2, 6};
-                SDL_RenderFillRect(fpsRenderer, &right2);
-                break;
-            }
-            case '6': {
-                SDL_Rect rect = {digitX, y, 8, 12};
-                SDL_RenderDrawRect(fpsRenderer, &rect);
-                SDL_Rect rect2 = {digitX + 1, y + 1, 6, 10};
-                SDL_RenderDrawRect(fpsRenderer, &rect2);
-                // Middle horizontal
-                SDL_Rect mid = {digitX, y + 5, 8, 2};
-                SDL_RenderFillRect(fpsRenderer, &mid);
-                break;
-            }
-            case '7': {
-                // Top horizontal
-                SDL_Rect top = {digitX, y, 8, 2};
-                SDL_RenderFillRect(fpsRenderer, &top);
-                // Right vertical
-                SDL_Rect right = {digitX + 6, y, 2, 12};
-                SDL_RenderFillRect(fpsRenderer, &right);
-                break;
-            }
-            case '8': {
-                SDL_Rect rect = {digitX, y, 8, 12};
-                SDL_RenderDrawRect(fpsRenderer, &rect);
-                SDL_Rect rect2 = {digitX + 1, y + 1, 6, 10};
-                SDL_RenderDrawRect(fpsRenderer, &rect2);
-                // Middle horizontal
-                SDL_Rect mid = {digitX, y + 5, 8, 2};
-                SDL_RenderFillRect(fpsRenderer, &mid);
-                break;
-            }
-            case '9': {
-                SDL_Rect rect = {digitX, y, 8, 7};
-                SDL_RenderDrawRect(fpsRenderer, &rect);
-                SDL_Rect rect2 = {digitX + 1, y + 1, 6, 5};
-                SDL_RenderDrawRect(fpsRenderer, &rect2);
-                // Right vertical full
-                SDL_Rect right = {digitX + 6, y, 2, 12};
-                SDL_RenderFillRect(fpsRenderer, &right);
-                // Bottom horizontal
-                SDL_Rect bot = {digitX, y + 10, 8, 2};
-                SDL_RenderFillRect(fpsRenderer, &bot);
-                break;
-            }
-        }
-    }
-
-    void Application::cleanupFpsOverlay() {
-        if (fpsTexture) {
-            SDL_DestroyTexture(fpsTexture);
-            fpsTexture = nullptr;
-        }
-        
-        if (fpsRenderer) {
-            SDL_DestroyRenderer(fpsRenderer);
-            fpsRenderer = nullptr;
-        }
-        
-        if (fpsWindow) {
-            SDL_DestroyWindow(fpsWindow);
-            fpsWindow = nullptr;
         }
     }
 }
