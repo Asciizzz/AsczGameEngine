@@ -1,4 +1,8 @@
 #include "Az3D/Mesh.hpp"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+#include <iostream>
+#include <unordered_map>
 
 namespace Az3D {
     // Vertex static methods for Vulkan compatibility
@@ -78,5 +82,92 @@ namespace Az3D {
 
     bool Mesh::isEmpty() const {
         return vertices.empty() || indices.empty();
+    }
+
+    // OBJ loader implementation using tiny_obj_loader
+    std::shared_ptr<Mesh> Mesh::loadFromOBJ(const std::string& filePath) {
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string warn, err;
+
+        // Load the OBJ file
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
+            std::cerr << "Failed to load OBJ file: " << filePath << std::endl;
+            if (!warn.empty()) std::cerr << "Warning: " << warn << std::endl;
+            if (!err.empty()) std::cerr << "Error: " << err << std::endl;
+            return nullptr;
+        }
+
+        if (!warn.empty()) {
+            std::cout << "OBJ Loader Warning: " << warn << std::endl;
+        }
+
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+        std::unordered_map<size_t, uint32_t> uniqueVertices{};
+
+        // Simple hash function for vertex deduplication
+        auto hashVertex = [](const Vertex& v) -> size_t {
+            size_t h1 = std::hash<float>{}(v.position.x);
+            size_t h2 = std::hash<float>{}(v.position.y);
+            size_t h3 = std::hash<float>{}(v.position.z);
+            size_t h4 = std::hash<float>{}(v.texCoord.x);
+            size_t h5 = std::hash<float>{}(v.texCoord.y);
+            return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4);
+        };
+
+        // Process all shapes in the OBJ file
+        for (const auto& shape : shapes) {
+            for (const auto& index : shape.mesh.indices) {
+                Vertex vertex{};
+
+                // Position (required)
+                if (index.vertex_index >= 0) {
+                    vertex.position = {
+                        attrib.vertices[3 * index.vertex_index + 0],
+                        attrib.vertices[3 * index.vertex_index + 1],
+                        attrib.vertices[3 * index.vertex_index + 2]
+                    };
+                }
+
+                // Texture coordinates (optional)
+                if (index.texcoord_index >= 0) {
+                    vertex.texCoord = {
+                        attrib.texcoords[2 * index.texcoord_index + 0],
+                        1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V coordinate
+                    };
+                } else {
+                    vertex.texCoord = {0.0f, 0.0f}; // Default UV
+                }
+
+                // Normals (optional)
+                if (index.normal_index >= 0) {
+                    vertex.normal = {
+                        attrib.normals[3 * index.normal_index + 0],
+                        attrib.normals[3 * index.normal_index + 1],
+                        attrib.normals[3 * index.normal_index + 2]
+                    };
+                } else {
+                    vertex.normal = {0.0f, 1.0f, 0.0f}; // Default normal (up)
+                }
+
+                // Check for duplicate vertices to optimize the mesh
+                size_t vertexHash = hashVertex(vertex);
+                auto it = uniqueVertices.find(vertexHash);
+                if (it == uniqueVertices.end()) {
+                    uniqueVertices[vertexHash] = static_cast<uint32_t>(vertices.size());
+                    vertices.push_back(vertex);
+                    indices.push_back(static_cast<uint32_t>(vertices.size() - 1));
+                } else {
+                    indices.push_back(it->second);
+                }
+            }
+        }
+
+        std::cout << "Loaded OBJ: " << filePath << " with " << vertices.size() 
+                  << " vertices and " << indices.size() << " indices" << std::endl;
+
+        return std::make_shared<Mesh>(std::move(vertices), std::move(indices));
     }
 }

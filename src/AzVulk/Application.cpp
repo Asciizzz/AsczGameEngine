@@ -70,99 +70,37 @@ namespace AzVulk {
         depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
         swapChain->createFramebuffers(graphicsPipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
-    // Playground - Create Az3D mesh and models
+    // Playground - Load Az3D meshes from OBJ files! 🚀
 
         buffer = std::make_unique<Buffer>(*vulkanDevice);
         buffer->createUniformBuffers(2);
+        
+        auto vikingRoomMesh = Az3D::Mesh::loadFromOBJ("Model/viking_room.obj");
+        meshes.push_back(vikingRoomMesh);
 
-        // Create quad mesh (existing vertices and indices)
-        std::vector<Az3D::Vertex> az3dVertices = {
-            {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-            {{ 1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-            {{-1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
-        };
-        std::vector<uint32_t> quadIndices = {
-            0, 3, 2, 2, 1, 0,
-            0, 1, 2, 2, 3, 0
-        };
+        // Load mesh to buffer
+        buffer->loadMeshToBuffer(*meshes[0]);
 
-        // Create triangle mesh 
-        std::vector<Az3D::Vertex> triangleVertices = {
-            {{ 0.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 1.0f}},  // Top
-            {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},  // Bottom left
-            {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}   // Bottom right
-        };
-        std::vector<uint32_t> triangleIndices = {
-            0, 2, 1, 0, 1, 2
-        };
+        // Create single model at origin
+        models.resize(1);
+        models[0].setMesh(meshes[0]);
+        models[0].position = glm::vec3(0.0f, 0.0f, 0.0f);  // Centered at origin
+        
+        // Fix the 90-degree rotation issue! Many OBJ files use different coordinate systems
+        models[0].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // Rotate around X-axis
 
-        // Create shared meshes and add to array
-        auto quadMesh = std::make_shared<Az3D::Mesh>(std::move(az3dVertices), std::move(quadIndices));
-        auto triangleMesh = std::make_shared<Az3D::Mesh>(std::move(triangleVertices), std::move(triangleIndices));
-
-        meshes.push_back(quadMesh);
-        meshes.push_back(triangleMesh);
-
-        for (size_t i = 0; i < meshes.size(); i++) {
-            size_t bufferIndex = buffer->loadMeshToBuffer(*meshes[i]);
-            std::cout << "Mesh " << i << " loaded to buffer index " << bufferIndex << std::endl;
-        }
-
-        // Create two pillars - one for quads, one for triangles
-        const int totalModels = modelsPerPillar * 2;
-        models.resize(totalModels);
-
-        for (int i = 0; i < modelsPerPillar; i++) {
-            models[i].setMesh(meshes[0]);  // Quad mesh (index 0)
-            models[i].position = glm::vec3(-2.0f, i * 0.1f, 0.0f);
-        }
-
-        for (int i = 0; i < modelsPerPillar; i++) {
-            int modelIndex = modelsPerPillar + i;
-            models[modelIndex].setMesh(meshes[1]);  // Triangle mesh (index 1)
-            models[modelIndex].position = glm::vec3(2.0f, i * 0.1f, 0.0f);
-        }
-
-        // Create instance buffers PER MESH TYPE! This is where the magic happens!
-        for (size_t meshIdx = 0; meshIdx < meshes.size(); meshIdx++) {
-            std::vector<InstanceData> instances;
-            
-            // Collect all models that use this mesh type
-            for (int i = 0; i < totalModels; i++) {
-                // Check if this model uses the current mesh type
-                bool usesMesh = false;
-                if (meshIdx == 0 && i < modelsPerPillar) {
-                    usesMesh = true;  // First pillar uses quad mesh
-                } else if (meshIdx == 1 && i >= modelsPerPillar) {
-                    usesMesh = true;  // Second pillar uses triangle mesh
-                }
-                
-                if (usesMesh) {
-                    InstanceData instanceData{};
-                    instanceData.modelMatrix = models[i].getModelMatrix();
-                    instances.push_back(instanceData);
-                }
-            }
-            
-            if (!instances.empty()) {
-                buffer->createInstanceBufferForMesh(meshIdx, instances);
-                std::cout << "Created " << instances.size() << " instances for mesh " << meshIdx << std::endl;
-            }
-        }
+        // Create instance buffer for single model
+        std::vector<InstanceData> instances;
+        InstanceData instanceData{};
+        instanceData.modelMatrix = models[0].getModelMatrix();
+        instances.push_back(instanceData);
+        
+        buffer->createInstanceBufferForMesh(0, instances);
 
         textureManager = std::make_unique<TextureManager>(*vulkanDevice, commandPool);
-        try {
-            textureManager->createTextureImage("textures/texture1.png");
-            textureManager->createTextureImageView();
-            textureManager->createTextureSampler();
-        } catch (const std::runtime_error& e) {
-            std::cerr << "Warning: Could not load texture1.png, using fallback" << std::endl;
-            // TextureManager should handle fallback automatically
-            textureManager->createTextureImage("");
-            textureManager->createTextureImageView();
-            textureManager->createTextureSampler();
-        }
+        textureManager->createTextureImage("Model/viking_room.png");
+        textureManager->createTextureImageView();
+        textureManager->createTextureSampler();
         
         // Create descriptor manager with texture support
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipeline->descriptorSetLayout);
@@ -268,47 +206,7 @@ namespace AzVulk {
             if (k_state[SDL_SCANCODE_E])
                 camera->translate(camera->up * speed * fpsManager->deltaTime);
 
-            // Update model rotations - different rotation directions for each pillar! 🌪️
-            float deltaTime = fpsManager->deltaTime;
-            
-            for (int i = 0; i < static_cast<int>(models.size()); i++) {
-                // Base rotation speed: 45 degrees per second (quarter revolution)
-                float rotationSpeed = glm::radians(45.0f * deltaTime);
-                
-                if (i < modelsPerPillar) {
-                    // First pillar (quads) - clockwise rotation
-                    models[i].rotateY(rotationSpeed);
-                } else {
-                    // Second pillar (triangles) - counter-clockwise rotation
-                    models[i].rotateY(-rotationSpeed);
-                }
-            }
-
-            // Update instance buffers PER MESH TYPE!
-            for (size_t meshIdx = 0; meshIdx < meshes.size(); meshIdx++) {
-                std::vector<InstanceData> instances;
-                
-                // Collect updated matrices for models using this mesh type
-                for (int i = 0; i < static_cast<int>(models.size()); i++) {
-                    // Check if this model uses the current mesh type
-                    bool usesMesh = false;
-                    if (meshIdx == 0 && i < modelsPerPillar) {
-                        usesMesh = true;  // First pillar uses quad mesh
-                    } else if (meshIdx == 1 && i >= modelsPerPillar) {
-                        usesMesh = true;  // Second pillar uses triangle mesh
-                    }
-                    
-                    if (usesMesh) {
-                        InstanceData instanceData{};
-                        instanceData.modelMatrix = models[i].getModelMatrix();
-                        instances.push_back(instanceData);
-                    }
-                }
-
-                if (!instances.empty()) {
-                    buffer->updateInstanceBufferForMesh(meshIdx, instances);
-                }
-            }
+            // Static model - no updates needed! 🗿
 
             renderer->drawFrameWithModels(models);
             renderFpsOverlay();
@@ -363,8 +261,6 @@ namespace AzVulk {
         SDL_SetTextureBlendMode(fpsTexture, SDL_BLENDMODE_BLEND);
 
         lastFpsUpdate = std::chrono::steady_clock::now();
-        
-        std::cout << "FPS overlay initialized (separate window mode)" << std::endl;
     }
 
     void Application::renderFpsOverlay() {

@@ -7,6 +7,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <array>
+#include <memory>
+#include <string>
 
 namespace Az3D {
     // Vertex structure moved from AzVulk to Az3D
@@ -50,6 +52,9 @@ namespace Az3D {
         
         // Check if mesh has data
         bool isEmpty() const;
+        
+        // Static factory method for loading OBJ files
+        static std::shared_ptr<Mesh> loadFromOBJ(const std::string& filePath);
 
     private:
         std::vector<Vertex> vertices;
