@@ -4,3 +4,8 @@
 #include "Az3D/Mesh.hpp"
 #include "Az3D/Material.hpp"
 #include "Az3D/Model.hpp"
+#include "Az3D/Texture.hpp"
+#include "Az3D/TextureManager.hpp"
+#include "Az3D/MaterialManager.hpp"
+#include "Az3D/MeshManager.hpp"
+#include "Az3D/ResourceManager.hpp"

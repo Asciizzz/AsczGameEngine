@@ -82,53 +82,60 @@ namespace AzVulk {
         buffer = std::make_unique<Buffer>(*vulkanDevice);
         buffer->createUniformBuffers(2);
 
-    // Playground - Load Az3D meshes from OBJ files!
-        
-        auto vikingRoomMesh = Az3D::Mesh::loadFromOBJ("Model/viking_room.obj");
-        auto shirokoMesh = Az3D::Mesh::loadFromOBJ("Model/shiroko.obj");
+        // Initialize Az3D resource management system
+        resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
 
-        meshes.push_back(vikingRoomMesh);
-        meshes.push_back(shirokoMesh);
+        // Load meshes using the new system
+        resourceManager->loadMesh("viking_room", "Model/viking_room.obj");
+        resourceManager->loadMesh("shiroko", "Model/shiroko.obj");
 
-        for (const auto& mesh : meshes)
-            buffer->loadMeshToBuffer(*mesh);
+        // Load textures using the new system
+        resourceManager->loadTexture("viking_room_diffuse", "Model/viking_room.png");
+        resourceManager->loadTexture("shiroko_diffuse", "Model/Shiroko.jpg");
 
+        // Create materials using the new system
+        auto vikingMaterial = resourceManager->createMaterial("viking_material", "VikingRoom");
+        if (vikingMaterial) {
+            vikingMaterial->setDiffuseTexture("viking_room_diffuse");
+            vikingMaterial->getProperties().roughness = 0.7f;
+            vikingMaterial->getProperties().metallic = 0.1f;
+            vikingMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+        }
 
+        auto shirokoMaterial = resourceManager->createMaterial("shiroko_material", "Shiroko");
+        if (shirokoMaterial) {
+            shirokoMaterial->setDiffuseTexture("shiroko_diffuse");
+            shirokoMaterial->getProperties().roughness = 0.4f;
+            shirokoMaterial->getProperties().metallic = 0.0f;
+            shirokoMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+        }
+
+        // Load meshes into buffer (using the resource manager)
+        auto vikingMesh = resourceManager->getMeshManager().getMesh("viking_room");
+        auto shirokoMesh = resourceManager->getMeshManager().getMesh("shiroko");
+        if (vikingMesh) buffer->loadMeshToBuffer(*vikingMesh);
+        if (shirokoMesh) buffer->loadMeshToBuffer(*shirokoMesh);
+
+        // Create models using the new ID-based system
         models.resize(2);
 
-        models[0].setMesh(meshes[0]);
+        models[0] = Az3D::Model("viking_room", "viking_material");
         models[0].position = glm::vec3(0.0f, 0.0f, 0.0f);
         models[0].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        auto vikingMaterial = std::make_shared<Az3D::Material>("VikingRoom");
-        vikingMaterial->setDiffuseTexture("viking_room_diffuse");
-        vikingMaterial->getProperties().roughness = 0.7f;
-        vikingMaterial->getProperties().metallic = 0.1f;
-        vikingMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f); // No tint
-        models[0].setMaterial(vikingMaterial);
-
-
-        
-        models[1].setMesh(meshes[1]);
+        models[1] = Az3D::Model("shiroko", "shiroko_material");
         models[1].position = glm::vec3(5.0f, 0.0f, 0.0f);
         models[1].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        auto shirokoMaterial = std::make_shared<Az3D::Material>("Shiroko");
-        shirokoMaterial->setDiffuseTexture("shiroko_diffuse");
-        shirokoMaterial->getProperties().roughness = 0.4f;
-        shirokoMaterial->getProperties().metallic = 0.0f;
-        shirokoMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-        models[1].setMaterial(shirokoMaterial);
-
-        std::cout << "Created material '" << vikingMaterial->getName() 
-                  << "' with roughness=" << vikingMaterial->getProperties().roughness
-                  << ", metallic=" << vikingMaterial->getProperties().metallic
-                  << ", diffuse texture='" << vikingMaterial->getDiffuseTexture() << "'" << std::endl;
+        std::cout << "Created material '" << (vikingMaterial ? vikingMaterial->getName() : "null")
+                  << "' with roughness=" << (vikingMaterial ? vikingMaterial->getProperties().roughness : 0.0f)
+                  << ", metallic=" << (vikingMaterial ? vikingMaterial->getProperties().metallic : 0.0f)
+                  << ", diffuse texture='" << (vikingMaterial ? vikingMaterial->getDiffuseTexture() : "") << "'" << std::endl;
                   
-        std::cout << "Created material '" << shirokoMaterial->getName() 
-                  << "' with roughness=" << shirokoMaterial->getProperties().roughness
-                  << ", metallic=" << shirokoMaterial->getProperties().metallic
-                  << ", diffuse texture='" << shirokoMaterial->getDiffuseTexture() << "'" << std::endl;
+        std::cout << "Created material '" << (shirokoMaterial ? shirokoMaterial->getName() : "null")
+                  << "' with roughness=" << (shirokoMaterial ? shirokoMaterial->getProperties().roughness : 0.0f)
+                  << ", metallic=" << (shirokoMaterial ? shirokoMaterial->getProperties().metallic : 0.0f)
+                  << ", diffuse texture='" << (shirokoMaterial ? shirokoMaterial->getDiffuseTexture() : "") << "'" << std::endl;
 
         // Create instance buffers for both models
         std::vector<InstanceData> instances0, instances1;
@@ -144,19 +151,16 @@ namespace AzVulk {
         buffer->createInstanceBufferForMesh(0, instances0);
         buffer->createInstanceBufferForMesh(1, instances1);
 
-        textureManager = std::make_unique<TextureManager>(*vulkanDevice, commandPool);
-        
-        // For now, we'll use the same texture for both models since we only have one TextureManager
-        // TODO: Implement multi-texture system later
-        textureManager->createTextureImage("Model/Shiroko.jpg");  // Using Shiroko texture for testing
-        textureManager->createTextureImageView();
-        textureManager->createTextureSampler();
-        
-        // Create descriptor manager with texture support
+        // Create descriptor manager with Az3D texture system
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
         descriptorManager->createDescriptorPool(2); // MAX_FRAMES_IN_FLIGHT
-        descriptorManager->createDescriptorSets(buffer->uniformBuffers, sizeof(UniformBufferObject),
-                                                textureManager->textureImageView, textureManager->textureSampler);
+        
+        // Use Az3D texture system instead of legacy
+        auto texture = resourceManager->getTextureManager().getTexture("shiroko_diffuse");
+        if (texture && texture->getData()) {
+            descriptorManager->createDescriptorSets(buffer->uniformBuffers, sizeof(UniformBufferObject),
+                                                    texture->getData()->view, texture->getData()->sampler);
+        }
 
         
         // Create final renderer

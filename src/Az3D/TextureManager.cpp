@@ -1,4 +1,4 @@
-#include "AzVulk/MultiTextureManager.hpp"
+#include "Az3D/TextureManager.hpp"
 #include "AzVulk/VulkanDevice.hpp"
 #include <stdexcept>
 #include <cstring>
@@ -8,41 +8,25 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-namespace AzVulk {
+namespace Az3D {
     
-    TextureManager::TextureManager(const VulkanDevice& device, VkCommandPool commandPool) 
+    TextureManager::TextureManager(const AzVulk::VulkanDevice& device, VkCommandPool commandPool) 
         : vulkanDevice(device), commandPool(commandPool) {
         createDefaultTexture();
     }
 
     TextureManager::~TextureManager() {
-        VkDevice logicalDevice = vulkanDevice.device;
-
-        // Clean up all textures in the pool
+        // Clean up all textures
         for (auto& pair : textures) {
-            if (pair.second) {
-                destroyTextureResource(pair.second.get());
+            if (pair.second && pair.second->getData()) {
+                destroyTextureData(const_cast<TextureData*>(pair.second->getData()));
             }
         }
         textures.clear();
         
         // Clean up default texture
-        if (defaultTexture) {
-            destroyTextureResource(defaultTexture.get());
-        }
-
-        // Legacy cleanup for backward compatibility
-        if (textureSampler != VK_NULL_HANDLE) {
-            vkDestroySampler(logicalDevice, textureSampler, nullptr);
-        }
-        if (textureImageView != VK_NULL_HANDLE) {
-            vkDestroyImageView(logicalDevice, textureImageView, nullptr);
-        }
-        if (textureImage != VK_NULL_HANDLE) {
-            vkDestroyImage(logicalDevice, textureImage, nullptr);
-        }
-        if (textureImageMemory != VK_NULL_HANDLE) {
-            vkFreeMemory(logicalDevice, textureImageMemory, nullptr);
+        if (defaultTexture && defaultTexture->getData()) {
+            destroyTextureData(const_cast<TextureData*>(defaultTexture->getData()));
         }
     }
 
@@ -54,12 +38,16 @@ namespace AzVulk {
         }
         
         try {
-            auto texture = createTextureFromFile(imagePath);
-            if (texture && texture->isValid()) {
-                textures[textureId] = std::move(texture);
+            auto textureData = createTextureDataFromFile(imagePath);
+            if (textureData && textureData->isValid()) {
+                auto texture = std::make_unique<Texture>(textureId, imagePath);
+                texture->setData(std::move(textureData));
+                
                 std::cout << "Loaded texture '" << textureId << "' from '" << imagePath << "' (" 
-                          << textures[textureId]->width << "x" << textures[textureId]->height 
-                          << " with " << textures[textureId]->mipLevels << " mip levels)" << std::endl;
+                          << texture->getWidth() << "x" << texture->getHeight() 
+                          << " with " << texture->getMipLevels() << " mip levels)" << std::endl;
+                          
+                textures[textureId] = std::move(texture);
                 return true;
             }
         } catch (const std::exception& e) {
@@ -73,7 +61,7 @@ namespace AzVulk {
         return textures.find(textureId) != textures.end();
     }
 
-    const TextureResource* TextureManager::getTexture(const std::string& textureId) const {
+    const Texture* TextureManager::getTexture(const std::string& textureId) const {
         auto it = textures.find(textureId);
         if (it != textures.end()) {
             return it->second.get();
@@ -83,11 +71,32 @@ namespace AzVulk {
         return getDefaultTexture();
     }
 
-    const TextureResource* TextureManager::getDefaultTexture() const {
+    bool TextureManager::unloadTexture(const std::string& textureId) {
+        auto it = textures.find(textureId);
+        if (it != textures.end()) {
+            if (it->second->getData()) {
+                destroyTextureData(const_cast<TextureData*>(it->second->getData()));
+            }
+            textures.erase(it);
+            std::cout << "Unloaded texture '" << textureId << "'" << std::endl;
+            return true;
+        }
+        return false;
+    }
+
+    const Texture* TextureManager::getDefaultTexture() const {
         return defaultTexture.get();
     }
 
-    std::unique_ptr<TextureResource> TextureManager::createTextureFromFile(const std::string& imagePath) {
+    std::vector<std::string> TextureManager::getTextureIds() const {
+        std::vector<std::string> ids;
+        for (const auto& pair : textures) {
+            ids.push_back(pair.first);
+        }
+        return ids;
+    }
+
+    std::unique_ptr<TextureData> TextureManager::createTextureDataFromFile(const std::string& imagePath) {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load(imagePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
@@ -96,10 +105,10 @@ namespace AzVulk {
             throw std::runtime_error("failed to load texture image: " + imagePath);
         }
 
-        auto texture = std::make_unique<TextureResource>();
-        texture->width = texWidth;
-        texture->height = texHeight;
-        texture->mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+        auto textureData = std::make_unique<TextureData>();
+        textureData->width = texWidth;
+        textureData->height = texHeight;
+        textureData->mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
         // Create staging buffer
         VkBuffer stagingBuffer;
@@ -116,33 +125,34 @@ namespace AzVulk {
         stbi_image_free(pixels);
 
         // Create texture image
-        createImage(texWidth, texHeight, texture->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, 
+        createImage(texWidth, texHeight, textureData->mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, 
                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
-                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, texture->image, texture->memory);
+                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureData->image, textureData->memory);
 
         // Transfer data and generate mipmaps
-        transitionImageLayout(texture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture->mipLevels);
-        copyBufferToImage(stagingBuffer, texture->image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-        generateMipmaps(texture->image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, texture->mipLevels);
+        transitionImageLayout(textureData->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, textureData->mipLevels);
+        copyBufferToImage(stagingBuffer, textureData->image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        generateMipmaps(textureData->image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, textureData->mipLevels);
 
         // Create image view and sampler
-        createImageView(texture->image, VK_FORMAT_R8G8B8A8_SRGB, texture->mipLevels, texture->view);
-        createSampler(texture->mipLevels, texture->sampler);
+        createImageView(textureData->image, VK_FORMAT_R8G8B8A8_SRGB, textureData->mipLevels, textureData->view);
+        createSampler(textureData->mipLevels, textureData->sampler);
 
         vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
 
-        return texture;
+        return textureData;
     }
 
     void TextureManager::createDefaultTexture() {
         // Create a simple 1x1 white texture as default
         const uint32_t white = 0xFFFFFFFF;
         
-        defaultTexture = std::make_unique<TextureResource>();
-        defaultTexture->width = 1;
-        defaultTexture->height = 1;
-        defaultTexture->mipLevels = 1;
+        defaultTexture = std::make_unique<Texture>("__default__", "");
+        auto textureData = std::make_unique<TextureData>();
+        textureData->width = 1;
+        textureData->height = 1;
+        textureData->mipLevels = 1;
 
         VkDeviceSize imageSize = 4; // 1 pixel * 4 bytes (RGBA)
 
@@ -159,67 +169,42 @@ namespace AzVulk {
 
         createImage(1, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, 
                    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
-                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, defaultTexture->image, defaultTexture->memory);
+                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureData->image, textureData->memory);
 
-        transitionImageLayout(defaultTexture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
+        transitionImageLayout(textureData->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
-        copyBufferToImage(stagingBuffer, defaultTexture->image, 1, 1);
-        transitionImageLayout(defaultTexture->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+        copyBufferToImage(stagingBuffer, textureData->image, 1, 1);
+        transitionImageLayout(textureData->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
 
-        createImageView(defaultTexture->image, VK_FORMAT_R8G8B8A8_SRGB, 1, defaultTexture->view);
-        createSampler(1, defaultTexture->sampler);
+        createImageView(textureData->image, VK_FORMAT_R8G8B8A8_SRGB, 1, textureData->view);
+        createSampler(1, textureData->sampler);
 
+        defaultTexture->setData(std::move(textureData));
         vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
         
         std::cout << "Created default white texture (1x1)" << std::endl;
     }
 
-    void TextureManager::destroyTextureResource(TextureResource* texture) {
-        if (!texture) return;
+    void TextureManager::destroyTextureData(TextureData* textureData) {
+        if (!textureData) return;
         
         VkDevice device = vulkanDevice.device;
-        if (texture->sampler != VK_NULL_HANDLE) {
-            vkDestroySampler(device, texture->sampler, nullptr);
+        if (textureData->sampler != VK_NULL_HANDLE) {
+            vkDestroySampler(device, textureData->sampler, nullptr);
         }
-        if (texture->view != VK_NULL_HANDLE) {
-            vkDestroyImageView(device, texture->view, nullptr);
+        if (textureData->view != VK_NULL_HANDLE) {
+            vkDestroyImageView(device, textureData->view, nullptr);
         }
-        if (texture->image != VK_NULL_HANDLE) {
-            vkDestroyImage(device, texture->image, nullptr);
+        if (textureData->image != VK_NULL_HANDLE) {
+            vkDestroyImage(device, textureData->image, nullptr);
         }
-        if (texture->memory != VK_NULL_HANDLE) {
-            vkFreeMemory(device, texture->memory, nullptr);
-        }
-    }
-
-    // Legacy methods for backward compatibility
-    void TextureManager::createTextureImage(const std::string& imagePath) {
-        // Use the new system but maintain legacy interface
-        loadTexture("legacy_texture", imagePath);
-        auto legacyTexture = getTexture("legacy_texture");
-        if (legacyTexture) {
-            textureImage = legacyTexture->image;
-            textureImageMemory = legacyTexture->memory;
-            mipLevels = legacyTexture->mipLevels;
+        if (textureData->memory != VK_NULL_HANDLE) {
+            vkFreeMemory(device, textureData->memory, nullptr);
         }
     }
 
-    void TextureManager::createTextureImageView() {
-        auto legacyTexture = getTexture("legacy_texture");
-        if (legacyTexture) {
-            textureImageView = legacyTexture->view;
-        }
-    }
-
-    void TextureManager::createTextureSampler() {
-        auto legacyTexture = getTexture("legacy_texture");
-        if (legacyTexture) {
-            textureSampler = legacyTexture->sampler;
-        }
-    }
-
-    // Helper methods implementation...
+    // Vulkan helper methods implementation (same as existing TextureManager)
     void TextureManager::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
                                     VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
                                     VkImage& image, VkDeviceMemory& imageMemory) {
@@ -311,8 +296,6 @@ namespace AzVulk {
         }
     }
 
-    // Implement other helper methods (transitionImageLayout, copyBufferToImage, generateMipmaps, etc.)
-    // These are similar to the existing TextureManager implementations...
     void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -470,4 +453,4 @@ namespace AzVulk {
         vkFreeCommandBuffers(vulkanDevice.device, commandPool, 1, &commandBuffer);
     }
     
-} // namespace AzVulk
+} // namespace Az3D

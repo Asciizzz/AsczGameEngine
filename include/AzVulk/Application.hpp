@@ -1,5 +1,6 @@
 #pragma once
 
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <memory>
 #include <vector>
 #include <SDL2/SDL.h>
@@ -14,7 +15,6 @@
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Renderer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
-#include "AzVulk/TextureManager.hpp"
 #include "AzVulk/DepthManager.hpp"
 #include "AzVulk/MSAAManager.hpp"
 #include "Az3D/Az3D.hpp"
@@ -48,17 +48,18 @@ namespace AzVulk {
 
         std::unique_ptr<ShaderManager> shaderManager;
         std::unique_ptr<Buffer> buffer;
-        std::unique_ptr<TextureManager> textureManager;
         std::unique_ptr<DepthManager> depthManager;
         std::unique_ptr<MSAAManager> msaaManager;
         std::unique_ptr<DescriptorManager> descriptorManager;
         std::unique_ptr<Renderer> renderer;
+        
+        // Az3D resource management
+        std::unique_ptr<Az3D::ResourceManager> resourceManager;
 
         VkCommandPool commandPool = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
 
         // Az3D scene objects
-        std::vector<std::shared_ptr<Az3D::Mesh>> meshes;  // Array of different mesh types
         std::vector<Az3D::Model> models;
 
         // Application settings

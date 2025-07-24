@@ -1,28 +1,38 @@
 #pragma once
 
-#include "Az3D/Mesh.hpp"
-#include "Az3D/Material.hpp"
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <memory>
+#include <string>
 
 namespace Az3D {
-    // Model class contains mesh, material, and transformation
+    // Forward declarations
+    class Mesh;
+    class Material;
+    class MeshManager;
+    class MaterialManager;
+    
+    // Model class contains mesh ID, material ID, and transformation
     class Model {
     public:
         Model() = default;
-        Model(std::shared_ptr<Mesh> mesh);
-        Model(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material);
+        Model(const std::string& meshId);
+        Model(const std::string& meshId, const std::string& materialId);
         
-        // Mesh management
-        void setMesh(std::shared_ptr<Mesh> mesh);
-        std::shared_ptr<Mesh> getMesh() const { return mesh; }
+        // Mesh management (ID-based)
+        void setMeshId(const std::string& meshId) { this->meshId = meshId; }
+        const std::string& getMeshId() const { return meshId; }
+        bool hasMesh() const { return !meshId.empty(); }
         
-        // Material management
-        void setMaterial(std::shared_ptr<Material> material);
-        std::shared_ptr<Material> getMaterial() const { return material; }
-        bool hasMaterial() const { return material != nullptr; }
+        // Material management (ID-based)
+        void setMaterialId(const std::string& materialId) { this->materialId = materialId; }
+        const std::string& getMaterialId() const { return materialId; }
+        bool hasMaterial() const { return !materialId.empty(); }
+        
+        // Resource access (requires managers)
+        Mesh* getMesh(const MeshManager& meshManager) const;
+        Material* getMaterial(const MaterialManager& materialManager) const;
         
         // Transform components - direct access for performance
         glm::vec3 position{0.0f};
@@ -48,8 +58,8 @@ namespace Az3D {
         void resetTransform();
 
     private:
-        std::shared_ptr<Mesh> mesh;
-        std::shared_ptr<Material> material;
+        std::string meshId;
+        std::string materialId;
         
         // Helper to update internal state if needed
         void updateTransform();

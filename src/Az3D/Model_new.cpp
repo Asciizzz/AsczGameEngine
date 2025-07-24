@@ -4,8 +4,6 @@
 #include "Az3D/MeshManager.hpp"
 #include "Az3D/MaterialManager.hpp"
 
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-
 namespace Az3D {
     Model::Model(const std::string& meshId) : meshId(meshId) {
     }

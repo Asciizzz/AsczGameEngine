@@ -13,9 +13,16 @@ file(GLOB_RECURSE SRC_FILES
     src/AzCore/WindowManager.cpp
     src/AzCore/FpsManager.cpp
     src/AzCore/Camera.cpp
+
     src/Az3D/Mesh.cpp
     src/Az3D/Model.cpp
     src/Az3D/Material.cpp
+    src/Az3D/Texture.cpp
+    src/Az3D/TextureManager.cpp
+    src/Az3D/MaterialManager.cpp
+    src/Az3D/MeshManager.cpp
+    src/Az3D/ResourceManager.cpp
+
     src/AzVulk/VulkanInstance.cpp
     src/AzVulk/VulkanDevice.cpp
     src/AzVulk/SwapChain.cpp
@@ -23,7 +30,6 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Buffer.cpp
     src/AzVulk/GraphicsPipeline.cpp
     src/AzVulk/DescriptorManager.cpp
-    src/AzVulk/TextureManager.cpp
     src/AzVulk/DepthManager.cpp
     src/AzVulk/MSAAManager.cpp
     src/AzVulk/Renderer.cpp
