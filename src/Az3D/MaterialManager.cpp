@@ -3,71 +3,71 @@
 
 namespace Az3D {
     
-    bool MaterialManager::addMaterial(const std::string& materialId, std::shared_ptr<Material> material) {
+    size_t MaterialManager::addMaterial(std::shared_ptr<Material> material) {
         if (!material) {
-            std::cerr << "Cannot add null material with ID '" << materialId << "'" << std::endl;
+            std::cerr << "Cannot add null material" << std::endl;
+            return SIZE_MAX; // Invalid index
+        }
+        
+        materials.push_back(material);
+        return materials.size() - 1;
+    }
+
+    bool MaterialManager::removeMaterial(size_t index) {
+        if (index >= materials.size()) {
             return false;
         }
         
-        materials[materialId] = material;
+        // Mark as deleted (don't shrink vector to preserve indices)
+        materials[index] = nullptr;
         return true;
     }
 
-    bool MaterialManager::removeMaterial(const std::string& materialId) {
-        auto it = materials.find(materialId);
-        if (it != materials.end()) {
-            materials.erase(it);
-            return true;
-        }
-        return false;
+    bool MaterialManager::hasMaterial(size_t index) const {
+        return index < materials.size() && materials[index] != nullptr;
     }
 
-    bool MaterialManager::hasMaterial(const std::string& materialId) const {
-        return materials.find(materialId) != materials.end();
-    }
-
-    Material* MaterialManager::getMaterial(const std::string& materialId) const {
-        auto it = materials.find(materialId);
-        if (it != materials.end()) {
-            return it->second.get();
+    Material* MaterialManager::getMaterial(size_t index) const {
+        if (index < materials.size() && materials[index]) {
+            return materials[index].get();
         }
         
         return getDefaultMaterial();
     }
 
-    Material* MaterialManager::createMaterial(const std::string& materialId, const std::string& materialName) {
-        std::string name = materialName.empty() ? materialId : materialName;
+    size_t MaterialManager::createMaterial(const std::string& materialName) {
+        std::string name = materialName.empty() ? "Material_" + std::to_string(materials.size()) : materialName;
         auto material = std::make_shared<Material>(name);
         
-        if (addMaterial(materialId, material)) {
-            return material.get();
+        // Ensure default material exists at index 0
+        if (materials.empty()) {
+            createDefaultMaterial();
         }
-        return nullptr;
+        
+        return addMaterial(material);
     }
 
     Material* MaterialManager::getDefaultMaterial() const {
-        if (!defaultMaterial) {
+        if (materials.empty() || !materials[0]) {
             const_cast<MaterialManager*>(this)->createDefaultMaterial();
         }
-        return defaultMaterial.get();
-    }
-
-    std::vector<std::string> MaterialManager::getMaterialIds() const {
-        std::vector<std::string> ids;
-        for (const auto& pair : materials) {
-            ids.push_back(pair.first);
-        }
-        return ids;
+        return materials[0].get();
     }
 
     void MaterialManager::createDefaultMaterial() {
-        defaultMaterial = std::make_shared<Material>("DefaultMaterial");
+        auto defaultMat = std::make_shared<Material>("DefaultMaterial");
         
         // Set default material properties
-        defaultMaterial->getProperties().albedoColor = glm::vec3(0.8f, 0.8f, 0.8f);
-        defaultMaterial->getProperties().roughness = 0.5f;
-        defaultMaterial->getProperties().metallic = 0.0f;
-        defaultMaterial->getProperties().specular = 0.5f;
+        defaultMat->getProperties().albedoColor = glm::vec3(0.8f, 0.8f, 0.8f);
+        defaultMat->getProperties().roughness = 0.5f;
+        defaultMat->getProperties().metallic = 0.0f;
+        defaultMat->getProperties().specular = 0.5f;
+        
+        if (materials.empty()) {
+            materials.push_back(defaultMat);
+        } else {
+            materials[0] = defaultMat;
+        }
     }
     
 } // namespace Az3D

@@ -3,6 +3,7 @@
 #include "Az3D/Material.hpp"
 #include "Az3D/MeshManager.hpp"
 #include "Az3D/MaterialManager.hpp"
+#include "Az3D/ResourceManager.hpp"
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
@@ -16,12 +17,27 @@ namespace Az3D {
 
     Mesh* Model::getMesh(const MeshManager& meshManager) const {
         if (meshId.empty()) return nullptr;
-        return meshManager.getMesh(meshId);
+        // Now MeshManager uses indices, so Model needs a different approach
+        // This method is deprecated - use ResourceManager instead
+        return nullptr;
     }
     
     Material* Model::getMaterial(const MaterialManager& materialManager) const {
         if (materialId.empty()) return nullptr;
-        return materialManager.getMaterial(materialId);
+        // Now MaterialManager uses indices, so Model needs a different approach
+        // This method is deprecated - use ResourceManager instead
+        return nullptr;
+    }
+
+    // NEW: ResourceManager-based access (preferred method)
+    Mesh* Model::getMesh(const ResourceManager& resourceManager) const {
+        if (meshId.empty()) return nullptr;
+        return resourceManager.getMesh(meshId);
+    }
+    
+    Material* Model::getMaterial(const ResourceManager& resourceManager) const {
+        if (materialId.empty()) return nullptr;
+        return resourceManager.getMaterial(materialId);
     }
 
     void Model::translate(const glm::vec3& translation) {

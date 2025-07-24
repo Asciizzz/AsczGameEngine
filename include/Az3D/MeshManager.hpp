@@ -1,14 +1,12 @@
 #pragma once
 
 #include "Az3D/Mesh.hpp"
-#include <string>
-#include <unordered_map>
 #include <memory>
 #include <vector>
 
 namespace Az3D {
     
-    // MeshManager - manages all meshes in the Az3D system
+    // MeshManager - manages meshes using index-based access
     class MeshManager {
     public:
         MeshManager() = default;
@@ -18,28 +16,28 @@ namespace Az3D {
         MeshManager(const MeshManager&) = delete;
         MeshManager& operator=(const MeshManager&) = delete;
 
-        // Mesh management
-        bool addMesh(const std::string& meshId, std::shared_ptr<Mesh> mesh);
-        bool removeMesh(const std::string& meshId);
-        bool hasMesh(const std::string& meshId) const;
-        Mesh* getMesh(const std::string& meshId) const;
+        // Index-based mesh management
+        size_t addMesh(std::shared_ptr<Mesh> mesh);
+        bool removeMesh(size_t index);
+        bool hasMesh(size_t index) const;
+        Mesh* getMesh(size_t index) const;
         
-        // Load mesh
-        Mesh* loadMesh(const std::string& meshId, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
-        Mesh* loadMeshFromOBJ(const std::string& meshId, const std::string& filePath);
+        // Load mesh and return index
+        size_t loadMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+        size_t loadMeshFromOBJ(const std::string& filePath);
         
-
-        // Create simple meshes
-        Mesh* createQuadMesh(const std::string& meshId);
-        Mesh* createCubeMesh(const std::string& meshId);
+        // Create simple meshes and return index
+        size_t createQuadMesh();
+        size_t createCubeMesh();
+        
+        // Direct access to all meshes
+        const std::vector<std::shared_ptr<Mesh>>& getAllMeshes() const { return meshes; }
         
         // Statistics
         size_t getMeshCount() const { return meshes.size(); }
-        std::vector<std::string> getMeshIds() const;
 
-    private:
-        // Mesh storage
-        std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;
+        // Index-based mesh storage
+        std::vector<std::shared_ptr<Mesh>> meshes;
     };
     
 } // namespace Az3D

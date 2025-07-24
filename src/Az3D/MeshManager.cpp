@@ -3,65 +3,59 @@
 
 namespace Az3D {
     
-    bool MeshManager::addMesh(const std::string& meshId, std::shared_ptr<Mesh> mesh) {
+    size_t MeshManager::addMesh(std::shared_ptr<Mesh> mesh) {
         if (!mesh) {
-            std::cerr << "Cannot add null mesh with ID '" << meshId << "'" << std::endl;
+            std::cerr << "Cannot add null mesh" << std::endl;
+            return SIZE_MAX; // Invalid index
+        }
+        
+        meshes.push_back(mesh);
+        return meshes.size() - 1;
+    }
+
+    bool MeshManager::removeMesh(size_t index) {
+        if (index >= meshes.size()) {
             return false;
         }
         
-        meshes[meshId] = mesh;
+        // Mark as deleted (don't shrink vector to preserve indices)
+        meshes[index] = nullptr;
         return true;
     }
 
-    bool MeshManager::removeMesh(const std::string& meshId) {
-        auto it = meshes.find(meshId);
-        if (it != meshes.end()) {
-            meshes.erase(it);
-            return true;
-        }
-        return false;
+    bool MeshManager::hasMesh(size_t index) const {
+        return index < meshes.size() && meshes[index] != nullptr;
     }
 
-    bool MeshManager::hasMesh(const std::string& meshId) const {
-        return meshes.find(meshId) != meshes.end();
-    }
-
-    Mesh* MeshManager::getMesh(const std::string& meshId) const {
-        auto it = meshes.find(meshId);
-        if (it != meshes.end()) {
-            return it->second.get();
+    Mesh* MeshManager::getMesh(size_t index) const {
+        if (index < meshes.size() && meshes[index]) {
+            return meshes[index].get();
         }
         
-        std::cerr << "Error: Mesh '" << meshId << "' not found!" << std::endl;
+        std::cerr << "Error: Mesh at index " << index << " not found!" << std::endl;
         return nullptr;
     }
 
-    Mesh* MeshManager::loadMesh(const std::string& meshId,
-                                std::vector<Vertex>& vertices,
-                                std::vector<uint32_t>& indices) {
+    size_t MeshManager::loadMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
-        if (addMesh(meshId, mesh)) {
-            return mesh.get();
-        }
-        return nullptr;
+        return addMesh(mesh);
     }
-    Mesh* MeshManager::loadMeshFromOBJ(const std::string& meshId, const std::string& filePath) {
+    
+    size_t MeshManager::loadMeshFromOBJ(const std::string& filePath) {
         try {
             auto mesh = Mesh::loadFromOBJ(filePath);
             if (mesh && !mesh->isEmpty()) {
-                if (addMesh(meshId, mesh)) {
-                    return mesh.get();
-                }
+                return addMesh(mesh);
             } else {
                 std::cerr << "Failed to load mesh from '" << filePath << "' - mesh is empty or invalid" << std::endl;
             }
         } catch (const std::exception& e) {
-            std::cerr << "Failed to load mesh '" << meshId << "' from '" << filePath << "': " << e.what() << std::endl;
+            std::cerr << "Failed to load mesh from '" << filePath << "': " << e.what() << std::endl;
         }
-        return nullptr;
+        return SIZE_MAX; // Invalid index
     }
 
-    Mesh* MeshManager::createQuadMesh(const std::string& meshId) {
+    size_t MeshManager::createQuadMesh() {
         // Create a simple quad mesh (2 triangles)
         std::vector<Vertex> vertices = {
             {{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Bottom-left
@@ -76,13 +70,10 @@ namespace Az3D {
         };
         
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
-        if (addMesh(meshId, mesh)) {
-            return mesh.get();
-        }
-        return nullptr;
+        return addMesh(mesh);
     }
 
-    Mesh* MeshManager::createCubeMesh(const std::string& meshId) {
+    size_t MeshManager::createCubeMesh() {
         // Create a simple cube mesh
         std::vector<Vertex> vertices = {
             // Front face
@@ -114,18 +105,7 @@ namespace Az3D {
         };
         
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
-        if (addMesh(meshId, mesh)) {
-            return mesh.get();
-        }
-        return nullptr;
-    }
-
-    std::vector<std::string> MeshManager::getMeshIds() const {
-        std::vector<std::string> ids;
-        for (const auto& pair : meshes) {
-            ids.push_back(pair.first);
-        }
-        return ids;
+        return addMesh(mesh);
     }
     
 } // namespace Az3D

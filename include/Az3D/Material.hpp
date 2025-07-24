@@ -80,8 +80,7 @@ namespace Az3D {
         
         // Create material from OBJ material data (tiny_obj_loader integration)
         static std::shared_ptr<Material> createFromOBJ(const tinyobj::material_t& objMaterial);
-        
-    private:
+
         std::string name;
         MaterialProperties properties;
         

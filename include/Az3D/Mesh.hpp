@@ -56,7 +56,6 @@ namespace Az3D {
         // Static factory method for loading OBJ files
         static std::shared_ptr<Mesh> loadFromOBJ(const std::string& filePath);
 
-    private:
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
     };

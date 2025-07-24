@@ -1,14 +1,12 @@
 #pragma once
 
 #include "Az3D/Material.hpp"
-#include <string>
-#include <unordered_map>
 #include <memory>
 #include <vector>
 
 namespace Az3D {
     
-    // MaterialManager - manages all materials in the Az3D system
+    // MaterialManager - manages materials using index-based access
     class MaterialManager {
     public:
         MaterialManager() = default;
@@ -18,26 +16,27 @@ namespace Az3D {
         MaterialManager(const MaterialManager&) = delete;
         MaterialManager& operator=(const MaterialManager&) = delete;
 
-        // Material management
-        bool addMaterial(const std::string& materialId, std::shared_ptr<Material> material);
-        bool removeMaterial(const std::string& materialId);
-        bool hasMaterial(const std::string& materialId) const;
-        Material* getMaterial(const std::string& materialId) const;
+        // Index-based material management
+        size_t addMaterial(std::shared_ptr<Material> material);
+        bool removeMaterial(size_t index);
+        bool hasMaterial(size_t index) const;
+        Material* getMaterial(size_t index) const;
         
-        // Create material with ID
-        Material* createMaterial(const std::string& materialId, const std::string& materialName = "");
+        // Create material and return index
+        size_t createMaterial(const std::string& materialName = "");
         
-        // Get default material for fallback
+        // Get default material (always at index 0)
         Material* getDefaultMaterial() const;
+        size_t getDefaultMaterialIndex() const { return 0; }
+        
+        // Direct access to all materials
+        const std::vector<std::shared_ptr<Material>>& getAllMaterials() const { return materials; }
         
         // Statistics
         size_t getMaterialCount() const { return materials.size(); }
-        std::vector<std::string> getMaterialIds() const;
 
-    private:
-        // Material storage
-        std::unordered_map<std::string, std::shared_ptr<Material>> materials;
-        std::shared_ptr<Material> defaultMaterial;
+        // Material storage - index-based
+        std::vector<std::shared_ptr<Material>> materials;
         
         // Initialize default material
         void createDefaultMaterial();

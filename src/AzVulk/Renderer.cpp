@@ -216,7 +216,7 @@ namespace AzVulk {
         // Multi-material rendering! Render each material group
         for (const auto& [materialId, materialModels] : modelsByMaterial) {
             // Get material and its diffuse texture
-            auto* material = resourceManager.getMaterialManager().getMaterial(materialId);
+            auto* material = resourceManager.getMaterial(materialId);
             const Az3D::Texture* diffuseTexture = nullptr;
             
             if (material && !material->getDiffuseTexture().empty()) {
@@ -236,8 +236,8 @@ namespace AzVulk {
 
                 // Render all models with this material
                 for (const Az3D::Model* model : materialModels) {
-                    // Find mesh index for this model's mesh
-                    const auto* mesh = resourceManager.getMeshManager().getMesh(model->getMeshId());
+                    // Find mesh index for this model's mesh  
+                    const auto* mesh = resourceManager.getMesh(model->getMeshId());
                     if (!mesh) continue;
 
                     // Find the mesh index in buffer - we need to track this mapping

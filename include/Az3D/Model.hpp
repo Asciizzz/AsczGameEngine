@@ -12,6 +12,7 @@ namespace Az3D {
     class Material;
     class MeshManager;
     class MaterialManager;
+    class ResourceManager;
     
     // Model class contains mesh ID, material ID, and transformation
     class Model {
@@ -33,6 +34,10 @@ namespace Az3D {
         // Resource access (requires managers)
         Mesh* getMesh(const MeshManager& meshManager) const;
         Material* getMaterial(const MaterialManager& materialManager) const;
+        
+        // Resource access (NEW - use ResourceManager)
+        Mesh* getMesh(const ResourceManager& resourceManager) const;
+        Material* getMaterial(const ResourceManager& resourceManager) const;
         
         // Transform components - direct access for performance
         glm::vec3 position{0.0f};
@@ -57,7 +62,6 @@ namespace Az3D {
         // Reset transform to identity
         void resetTransform();
 
-    private:
         std::string meshId;
         std::string materialId;
         
