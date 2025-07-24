@@ -78,7 +78,8 @@ namespace AzVulk {
         meshes.push_back(vikingRoomMesh);
 
         // Load mesh to buffer
-        buffer->loadMeshToBuffer(*meshes[0]);
+        for (const auto& mesh : meshes)
+            buffer->loadMeshToBuffer(*mesh);
 
         // Create single model at origin
         models.resize(1);
@@ -91,7 +92,7 @@ namespace AzVulk {
         InstanceData instanceData{};
         instanceData.modelMatrix = models[0].getModelMatrix();
         instances.push_back(instanceData);
-        
+
         buffer->createInstanceBufferForMesh(0, instances);
 
         textureManager = std::make_unique<TextureManager>(*vulkanDevice, commandPool);
