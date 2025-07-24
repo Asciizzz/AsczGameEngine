@@ -45,6 +45,7 @@ namespace AzVulk {
         vulkanDevice = std::make_unique<VulkanDevice>(vulkanInstance->instance, surface);
         msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
         swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
+
         graphicsPipeline = std::make_unique<GraphicsPipeline>(
             vulkanDevice->device, 
             swapChain->extent, 
@@ -53,6 +54,7 @@ namespace AzVulk {
             "Shaders/hello.frag.spv",
             msaaManager->msaaSamples
         );
+
         shaderManager = std::make_unique<ShaderManager>(vulkanDevice->device);
 
         VkCommandPoolCreateInfo poolInfo{};
