@@ -85,28 +85,70 @@ namespace AzVulk {
     // Playground - Load Az3D meshes from OBJ files!
         
         auto vikingRoomMesh = Az3D::Mesh::loadFromOBJ("Model/viking_room.obj");
-        meshes.push_back(vikingRoomMesh);
+        auto shirokoMesh = Az3D::Mesh::loadFromOBJ("Model/shiroko.obj");
 
-        // Load mesh to buffer
+        meshes.push_back(vikingRoomMesh);
+        meshes.push_back(shirokoMesh);
+
         for (const auto& mesh : meshes)
             buffer->loadMeshToBuffer(*mesh);
 
-        // Create single model at origin
-        models.resize(1);
+
+        models.resize(2);
+
         models[0].setMesh(meshes[0]);
         models[0].position = glm::vec3(0.0f, 0.0f, 0.0f);
         models[0].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        // Create instance buffer for single model
-        std::vector<InstanceData> instances;
-        InstanceData instanceData{};
-        instanceData.modelMatrix = models[0].getModelMatrix();
-        instances.push_back(instanceData);
+        auto vikingMaterial = std::make_shared<Az3D::Material>("VikingRoom");
+        vikingMaterial->setDiffuseTexture("viking_room_diffuse");
+        vikingMaterial->getProperties().roughness = 0.7f;
+        vikingMaterial->getProperties().metallic = 0.1f;
+        vikingMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f); // No tint
+        models[0].setMaterial(vikingMaterial);
 
-        buffer->createInstanceBufferForMesh(0, instances);
+
+        
+        models[1].setMesh(meshes[1]);
+        models[1].position = glm::vec3(5.0f, 0.0f, 0.0f);
+        models[1].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+        auto shirokoMaterial = std::make_shared<Az3D::Material>("Shiroko");
+        shirokoMaterial->setDiffuseTexture("shiroko_diffuse");
+        shirokoMaterial->getProperties().roughness = 0.4f;
+        shirokoMaterial->getProperties().metallic = 0.0f;
+        shirokoMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+        models[1].setMaterial(shirokoMaterial);
+
+        std::cout << "Created material '" << vikingMaterial->getName() 
+                  << "' with roughness=" << vikingMaterial->getProperties().roughness
+                  << ", metallic=" << vikingMaterial->getProperties().metallic
+                  << ", diffuse texture='" << vikingMaterial->getDiffuseTexture() << "'" << std::endl;
+                  
+        std::cout << "Created material '" << shirokoMaterial->getName() 
+                  << "' with roughness=" << shirokoMaterial->getProperties().roughness
+                  << ", metallic=" << shirokoMaterial->getProperties().metallic
+                  << ", diffuse texture='" << shirokoMaterial->getDiffuseTexture() << "'" << std::endl;
+
+        // Create instance buffers for both models
+        std::vector<InstanceData> instances0, instances1;
+        
+        InstanceData instanceData0{};
+        instanceData0.modelMatrix = models[0].getModelMatrix();
+        instances0.push_back(instanceData0);
+        
+        InstanceData instanceData1{};
+        instanceData1.modelMatrix = models[1].getModelMatrix();
+        instances1.push_back(instanceData1);
+
+        buffer->createInstanceBufferForMesh(0, instances0);
+        buffer->createInstanceBufferForMesh(1, instances1);
 
         textureManager = std::make_unique<TextureManager>(*vulkanDevice, commandPool);
-        textureManager->createTextureImage("Model/viking_room.png");
+        
+        // For now, we'll use the same texture for both models since we only have one TextureManager
+        // TODO: Implement multi-texture system later
+        textureManager->createTextureImage("Model/Shiroko.jpg");  // Using Shiroko texture for testing
         textureManager->createTextureImageView();
         textureManager->createTextureSampler();
         
@@ -236,17 +278,27 @@ namespace AzVulk {
 
             // Apply rotation and update instance buffer
             float rspeed = fast ? 180.0f : (slow ? 10.0f : 30.0f);
-            if (k_state[SDL_SCANCODE_LEFT])
+            if (k_state[SDL_SCANCODE_LEFT]) {
                 models[0].rotateY(glm::radians(-rspeed * dTime));
-            if (k_state[SDL_SCANCODE_RIGHT])
+                models[1].rotateY(glm::radians(-rspeed * dTime));
+            }
+            if (k_state[SDL_SCANCODE_RIGHT]) {
                 models[0].rotateY(glm::radians(rspeed * dTime));
+                models[1].rotateY(glm::radians(rspeed * dTime));
+            }
 
-            // Update instance buffer with new rotation
-            std::vector<InstanceData> instances;
-            InstanceData instanceData{};
-            instanceData.modelMatrix = models[0].getModelMatrix();
-            instances.push_back(instanceData);
-            buffer->updateInstanceBufferForMesh(0, instances);
+            // Update instance buffers for both models
+            std::vector<InstanceData> instances0, instances1;
+            
+            InstanceData instanceData0{};
+            instanceData0.modelMatrix = models[0].getModelMatrix();
+            instances0.push_back(instanceData0);
+            buffer->updateInstanceBufferForMesh(0, instances0);
+            
+            InstanceData instanceData1{};
+            instanceData1.modelMatrix = models[1].getModelMatrix();
+            instances1.push_back(instanceData1);
+            buffer->updateInstanceBufferForMesh(1, instances1);
 
             renderer->drawFrameWithModels(models, *graphicsPipelines[pipelineIndex]);
             

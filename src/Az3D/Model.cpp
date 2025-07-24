@@ -4,9 +4,17 @@
 namespace Az3D {
     Model::Model(std::shared_ptr<Mesh> mesh) : mesh(mesh) {
     }
+    
+    Model::Model(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material) 
+        : mesh(mesh), material(material) {
+    }
 
     void Model::setMesh(std::shared_ptr<Mesh> mesh) {
         this->mesh = mesh;
+    }
+    
+    void Model::setMaterial(std::shared_ptr<Material> material) {
+        this->material = material;
     }
 
     void Model::translate(const glm::vec3& translation) {

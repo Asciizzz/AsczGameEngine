@@ -15,6 +15,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzCore/Camera.cpp
     src/Az3D/Mesh.cpp
     src/Az3D/Model.cpp
+    src/Az3D/Material.cpp
     src/AzVulk/VulkanInstance.cpp
     src/AzVulk/VulkanDevice.cpp
     src/AzVulk/SwapChain.cpp
