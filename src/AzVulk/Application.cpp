@@ -75,45 +75,81 @@ namespace AzVulk {
         buffer = std::make_unique<Buffer>(*vulkanDevice);
         buffer->createUniformBuffers(2);
 
-        // Create mesh from the existing vertices and indices (converted to Az3D format)
+        // Create quad mesh (existing vertices and indices)
         std::vector<Az3D::Vertex> az3dVertices = {
             {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
             {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
             {{ 1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
             {{-1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
         };
-        std::vector<uint32_t> indices = {
-            // Clockwise
+        std::vector<uint32_t> quadIndices = {
             0, 3, 2, 2, 1, 0,
-            // Counter-clockwise
             0, 1, 2, 2, 3, 0
         };
 
-        // Create shared mesh
-        quadMesh = std::make_shared<Az3D::Mesh>(std::move(az3dVertices), std::move(indices));
-        
-        // Load mesh into buffer for rendering
-        buffer->loadMesh(*quadMesh);
+        // Create triangle mesh 
+        std::vector<Az3D::Vertex> triangleVertices = {
+            {{ 0.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 1.0f}},  // Top
+            {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},  // Bottom left
+            {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}   // Bottom right
+        };
+        std::vector<uint32_t> triangleIndices = {
+            0, 2, 1, 0, 1, 2
+        };
 
-        // Create n models stacked vertically for benchmarking
-        const int numModels = 10000;
-        models.resize(numModels);
-        
-        for (int i = 0; i < numModels; i++) {
-            models[i].setMesh(quadMesh);
-            // Stack them vertically with some spacing
-            models[i].position = glm::vec3(0.0f, i * 0.0005f, 0.0f);
+        // Create shared meshes and add to array
+        auto quadMesh = std::make_shared<Az3D::Mesh>(std::move(az3dVertices), std::move(quadIndices));
+        auto triangleMesh = std::make_shared<Az3D::Mesh>(std::move(triangleVertices), std::move(triangleIndices));
+
+        meshes.push_back(quadMesh);
+        meshes.push_back(triangleMesh);
+
+        for (size_t i = 0; i < meshes.size(); i++) {
+            size_t bufferIndex = buffer->loadMeshToBuffer(*meshes[i]);
+            std::cout << "Mesh " << i << " loaded to buffer index " << bufferIndex << std::endl;
         }
 
-        // Create instance buffer with initial model matrices
-        std::vector<InstanceData> instances;
-        instances.reserve(models.size());
-        for (const auto& model : models) {
-            InstanceData instanceData{};
-            instanceData.modelMatrix = model.getModelMatrix();
-            instances.push_back(instanceData);
+        // Create two pillars - one for quads, one for triangles
+        const int totalModels = modelsPerPillar * 2;
+        models.resize(totalModels);
+
+        for (int i = 0; i < modelsPerPillar; i++) {
+            models[i].setMesh(meshes[0]);  // Quad mesh (index 0)
+            models[i].position = glm::vec3(-2.0f, i * 0.1f, 0.0f);
         }
-        buffer->createInstanceBuffer(instances);
+
+        for (int i = 0; i < modelsPerPillar; i++) {
+            int modelIndex = modelsPerPillar + i;
+            models[modelIndex].setMesh(meshes[1]);  // Triangle mesh (index 1)
+            models[modelIndex].position = glm::vec3(2.0f, i * 0.1f, 0.0f);
+        }
+
+        // Create instance buffers PER MESH TYPE! This is where the magic happens!
+        for (size_t meshIdx = 0; meshIdx < meshes.size(); meshIdx++) {
+            std::vector<InstanceData> instances;
+            
+            // Collect all models that use this mesh type
+            for (int i = 0; i < totalModels; i++) {
+                // Check if this model uses the current mesh type
+                bool usesMesh = false;
+                if (meshIdx == 0 && i < modelsPerPillar) {
+                    usesMesh = true;  // First pillar uses quad mesh
+                } else if (meshIdx == 1 && i >= modelsPerPillar) {
+                    usesMesh = true;  // Second pillar uses triangle mesh
+                }
+                
+                if (usesMesh) {
+                    InstanceData instanceData{};
+                    instanceData.modelMatrix = models[i].getModelMatrix();
+                    instances.push_back(instanceData);
+                }
+            }
+            
+            if (!instances.empty()) {
+                buffer->createInstanceBufferForMesh(meshIdx, instances);
+                std::cout << "Created " << instances.size() << " instances for mesh " << meshIdx << std::endl;
+            }
+        }
 
         textureManager = std::make_unique<TextureManager>(*vulkanDevice, commandPool);
         try {
@@ -232,25 +268,47 @@ namespace AzVulk {
             if (k_state[SDL_SCANCODE_E])
                 camera->translate(camera->up * speed * fpsManager->deltaTime);
 
-            // Update model rotations with different speeds for each quad
+            // Update model rotations - different rotation directions for each pillar! 🌪️
             float deltaTime = fpsManager->deltaTime;
             
             for (int i = 0; i < static_cast<int>(models.size()); i++) {
-                // Each quad rotates at speed: i * 10 degrees per second
-                // So quad 36 will complete 1 full revolution per second (360 degrees)
-                float rotationSpeed = glm::radians(i * 10.0f * deltaTime);
-                models[i].rotateY(rotationSpeed);
+                // Base rotation speed: 45 degrees per second (quarter revolution)
+                float rotationSpeed = glm::radians(45.0f * deltaTime);
+                
+                if (i < modelsPerPillar) {
+                    // First pillar (quads) - clockwise rotation
+                    models[i].rotateY(rotationSpeed);
+                } else {
+                    // Second pillar (triangles) - counter-clockwise rotation
+                    models[i].rotateY(-rotationSpeed);
+                }
             }
 
-            // Update instance buffer with new model matrices
-            std::vector<InstanceData> instances;
-            instances.reserve(models.size());
-            for (const auto& model : models) {
-                InstanceData instanceData{};
-                instanceData.modelMatrix = model.getModelMatrix();
-                instances.push_back(instanceData);
+            // Update instance buffers PER MESH TYPE! 🔥
+            for (size_t meshIdx = 0; meshIdx < meshes.size(); meshIdx++) {
+                std::vector<InstanceData> instances;
+                
+                // Collect updated matrices for models using this mesh type
+                for (int i = 0; i < static_cast<int>(models.size()); i++) {
+                    // Check if this model uses the current mesh type
+                    bool usesMesh = false;
+                    if (meshIdx == 0 && i < modelsPerPillar) {
+                        usesMesh = true;  // First pillar uses quad mesh
+                    } else if (meshIdx == 1 && i >= modelsPerPillar) {
+                        usesMesh = true;  // Second pillar uses triangle mesh
+                    }
+                    
+                    if (usesMesh) {
+                        InstanceData instanceData{};
+                        instanceData.modelMatrix = models[i].getModelMatrix();
+                        instances.push_back(instanceData);
+                    }
+                }
+                
+                if (!instances.empty()) {
+                    buffer->updateInstanceBufferForMesh(meshIdx, instances);
+                }
             }
-            buffer->updateInstanceBuffer(instances);
 
             renderer->drawFrameWithModels(models);
             renderFpsOverlay();

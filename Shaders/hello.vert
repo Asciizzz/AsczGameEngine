@@ -9,11 +9,12 @@ layout(location = 0) in vec3 inP;
 layout(location = 1) in vec3 inN;
 layout(location = 2) in vec2 inT;
 
-// Instance data - model matrix from instance buffer
-layout(location = 3) in vec4 instanceMatrix0;
-layout(location = 4) in vec4 instanceMatrix1;
-layout(location = 5) in vec4 instanceMatrix2;
-layout(location = 6) in vec4 instanceMatrix3;
+// 4x4 is too large for a single instance, so we use 4 vec4s
+// Each vec4 represents a row of the 4x4 model matrix
+layout(location = 3) in vec4 instanceMatrix0;  // Row 0: [m00, m01, m02, m03]
+layout(location = 4) in vec4 instanceMatrix1;  // Row 1: [m10, m11, m12, m13]
+layout(location = 5) in vec4 instanceMatrix2;  // Row 2: [m20, m21, m22, m23]
+layout(location = 6) in vec4 instanceMatrix3;  // Row 3: [m30, m31, m32, m33]
 
 layout(location = 0) out vec2 fragT;
 

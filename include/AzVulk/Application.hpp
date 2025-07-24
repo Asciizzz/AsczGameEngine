@@ -55,8 +55,11 @@ namespace AzVulk {
         VkSurfaceKHR surface = VK_NULL_HANDLE;
         
         // Az3D scene objects
-        std::shared_ptr<Az3D::Mesh> quadMesh;
+        std::vector<std::shared_ptr<Az3D::Mesh>> meshes;  // Array of different mesh types
         std::vector<Az3D::Model> models;
+
+        // TODO: Remove this please
+        int modelsPerPillar = 1000;  // Number of models per pillar
         
         // Application settings
         const char* appTitle;

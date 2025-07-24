@@ -59,13 +59,18 @@ namespace AzVulk {
     Buffer::~Buffer() {
         VkDevice logicalDevice = vulkanDevice.device;
 
+        // Cleanup multi-mesh buffers
+        for (auto& meshBuffer : meshBuffers) {
+            meshBuffer.cleanup(logicalDevice);
+        }
+
         // Cleanup uniform buffers
         for (size_t i = 0; i < uniformBuffers.size(); i++) {
             vkDestroyBuffer(logicalDevice, uniformBuffers[i], nullptr);
             vkFreeMemory(logicalDevice, uniformBuffersMemory[i], nullptr);
         }
 
-        // Cleanup instance buffer
+        // Cleanup legacy single-mesh buffers
         if (instanceBuffer != VK_NULL_HANDLE) {
             if (instanceBufferMapped) {
                 vkUnmapMemory(logicalDevice, instanceBufferMemory);
@@ -74,13 +79,11 @@ namespace AzVulk {
             vkFreeMemory(logicalDevice, instanceBufferMemory, nullptr);
         }
 
-        // Cleanup index buffer
         if (indexBuffer != VK_NULL_HANDLE) {
             vkDestroyBuffer(logicalDevice, indexBuffer, nullptr);
             vkFreeMemory(logicalDevice, indexBufferMemory, nullptr);
         }
 
-        // Cleanup vertex buffer
         if (vertexBuffer != VK_NULL_HANDLE) {
             vkDestroyBuffer(logicalDevice, vertexBuffer, nullptr);
             vkFreeMemory(logicalDevice, vertexBufferMemory, nullptr);
@@ -275,6 +278,91 @@ namespace AzVulk {
         if (instanceBufferMapped && instances.size() <= instanceCount) {
             VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
             memcpy(instanceBufferMapped, instances.data(), bufferSize);
+        }
+    }
+
+    // New multi-mesh methods implementation
+    size_t Buffer::loadMeshToBuffer(const Az3D::Mesh& mesh) {
+        std::cout << "Loading mesh " << meshBuffers.size() << " with " << mesh.getVertices().size() 
+                  << " vertices and " << mesh.getIndices().size() << " indices" << std::endl;
+        
+        MeshBufferData meshBuffer;
+        
+        // Convert Az3D vertices to AzVulk vertices
+        auto vulkVertices = Vertex::fromAz3D(mesh.getVertices());
+        
+        // Create vertex buffer for this mesh
+        VkDeviceSize vertexBufferSize = sizeof(vulkVertices[0]) * vulkVertices.size();
+        createBuffer(vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                    meshBuffer.vertexBuffer, meshBuffer.vertexBufferMemory);
+
+        void* vertexData;
+        vkMapMemory(vulkanDevice.device, meshBuffer.vertexBufferMemory, 0, vertexBufferSize, 0, &vertexData);
+        memcpy(vertexData, vulkVertices.data(), (size_t)vertexBufferSize);
+        vkUnmapMemory(vulkanDevice.device, meshBuffer.vertexBufferMemory);
+        
+        // Create index buffer for this mesh
+        const auto& indices = mesh.getIndices();
+        VkDeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
+        meshBuffer.indexCount = static_cast<uint32_t>(indices.size());
+        meshBuffer.indexType = VK_INDEX_TYPE_UINT32;
+
+        createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                    meshBuffer.indexBuffer, meshBuffer.indexBufferMemory);
+
+        void* indexData;
+        vkMapMemory(vulkanDevice.device, meshBuffer.indexBufferMemory, 0, indexBufferSize, 0, &indexData);
+        memcpy(indexData, indices.data(), (size_t)indexBufferSize);
+        vkUnmapMemory(vulkanDevice.device, meshBuffer.indexBufferMemory);
+        
+        // Add to meshBuffers vector and return index
+        meshBuffers.push_back(meshBuffer);
+        return meshBuffers.size() - 1;
+    }
+
+    void Buffer::createInstanceBufferForMesh(size_t meshIndex, const std::vector<InstanceData>& instances) {
+        if (meshIndex >= meshBuffers.size()) {
+            throw std::runtime_error("Invalid mesh index for instance buffer creation!");
+        }
+        
+        auto& meshBuffer = meshBuffers[meshIndex];
+        VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+        meshBuffer.instanceCount = static_cast<uint32_t>(instances.size());
+
+        // Clean up existing buffer if it exists
+        if (meshBuffer.instanceBuffer != VK_NULL_HANDLE) {
+            if (meshBuffer.instanceBufferMapped) {
+                vkUnmapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory);
+            }
+            vkDestroyBuffer(vulkanDevice.device, meshBuffer.instanceBuffer, nullptr);
+            vkFreeMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, nullptr);
+        }
+
+        createBuffer(bufferSize, 
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                    meshBuffer.instanceBuffer, meshBuffer.instanceBufferMemory);
+
+        // Map the buffer for updates
+        vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);
+        
+        // Copy initial data
+        memcpy(meshBuffer.instanceBufferMapped, instances.data(), bufferSize);
+        
+        std::cout << "Created instance buffer for mesh " << meshIndex << " with " << instances.size() << " instances" << std::endl;
+    }
+
+    void Buffer::updateInstanceBufferForMesh(size_t meshIndex, const std::vector<InstanceData>& instances) {
+        if (meshIndex >= meshBuffers.size()) {
+            return; // Silently fail for invalid mesh index
+        }
+        
+        auto& meshBuffer = meshBuffers[meshIndex];
+        if (meshBuffer.instanceBufferMapped && instances.size() <= meshBuffer.instanceCount) {
+            VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+            memcpy(meshBuffer.instanceBufferMapped, instances.data(), bufferSize);
         }
     }
 }

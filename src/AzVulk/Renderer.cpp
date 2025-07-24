@@ -198,24 +198,32 @@ namespace AzVulk {
         scissor.extent = swapChain.extent;
         vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
-        VkBuffer vertexBuffers[] = {buffer.vertexBuffer, buffer.instanceBuffer};
-        VkDeviceSize offsets[] = {0, 0};
-        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(commandBuffers[currentFrame], buffer.indexBuffer, 0, buffer.indexType);
-
         // Update uniform buffer with view and projection matrices (once per frame)
         UniformBufferObject ubo{};
         ubo.view = camera.viewMatrix;
         ubo.proj = camera.projectionMatrix;
         memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
-        // Bind descriptor sets once for all instances
+        // Bind descriptor sets once for all mesh types
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
                                graphicsPipeline.pipelineLayout, 0, 1, &descriptorManager.descriptorSets[currentFrame], 0, nullptr);
 
-        // Single instanced draw call for all models
-        if (buffer.instanceCount > 0) {
-            vkCmdDrawIndexed(commandBuffers[currentFrame], buffer.indexCount, buffer.instanceCount, 0, 0, 0);
+        // Multi-mesh rendering! Draw each mesh type with its own instances 🚀
+        const auto& meshBuffers = buffer.getMeshBuffers();
+        for (size_t meshIndex = 0; meshIndex < meshBuffers.size(); meshIndex++) {
+            const auto& meshData = meshBuffers[meshIndex];
+            
+            // Only draw if this mesh has instances
+            if (meshData.instanceCount > 0) {
+                // Bind vertex and instance buffers for this mesh
+                VkBuffer vertexBuffers[] = {meshData.vertexBuffer, meshData.instanceBuffer};
+                VkDeviceSize offsets[] = {0, 0};
+                vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, vertexBuffers, offsets);
+                vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshData.indexBuffer, 0, meshData.indexType);
+                
+                // Draw all instances of this mesh type
+                vkCmdDrawIndexed(commandBuffers[currentFrame], meshData.indexCount, meshData.instanceCount, 0, 0, 0);
+            }
         }
 
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
