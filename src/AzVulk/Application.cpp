@@ -19,8 +19,7 @@ namespace AzVulk {
 
         windowManager = std::make_unique<AzCore::WindowManager>(title, width, height);
         fpsManager = std::make_unique<AzCore::FpsManager>();
-        
-        // Initialize camera with appropriate aspect ratio and positioned to view the models
+
         float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
         camera = std::make_unique<AzCore::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 200.0f);
         camera->setAspectRatio(aspectRatio);
