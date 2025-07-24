@@ -130,9 +130,9 @@ namespace AzVulk {
     }
 
     void Application::mainLoop() {
-        bool m1_hold = false; // Track m1 hold state
-        bool mouseLocked = false; // Track mouse lock state
-        
+        bool mouseLocked = true; // Track mouse lock state
+        SDL_SetRelativeMouseMode(SDL_TRUE); // Start with mouse locked
+
         // Get window center for mouse locking
         int windowWidth, windowHeight;
         SDL_GetWindowSize(windowManager->window, &windowWidth, &windowHeight);
