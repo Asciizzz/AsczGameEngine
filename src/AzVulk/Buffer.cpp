@@ -155,13 +155,13 @@ namespace AzVulk {
     // New Az3D integration methods
     void Buffer::loadMesh(const Az3D::Mesh& mesh) {
         // Convert Az3D vertices to AzVulk vertices and create buffers
-        auto vulkVertices = Vertex::fromAz3D(mesh.getVertices());
+        auto vulkVertices = Vertex::fromAz3D(mesh.vertices);
         createVertexBuffer(vulkVertices);
-        createIndexBuffer(mesh.getIndices());
+        createIndexBuffer(mesh.indices);
     }
 
     void Buffer::createVertexBuffer(const Az3D::Mesh& mesh) {
-        auto vulkVertices = Vertex::fromAz3D(mesh.getVertices());
+        auto vulkVertices = Vertex::fromAz3D(mesh.vertices);
         createVertexBuffer(vulkVertices);
     }
 
@@ -283,7 +283,7 @@ namespace AzVulk {
         MeshBufferData meshBuffer;
         
         // Convert Az3D vertices to AzVulk vertices
-        auto vulkVertices = Vertex::fromAz3D(mesh.getVertices());
+        auto vulkVertices = Vertex::fromAz3D(mesh.vertices);
         
         // Create vertex buffer for this mesh
         VkDeviceSize vertexBufferSize = sizeof(vulkVertices[0]) * vulkVertices.size();
@@ -297,7 +297,7 @@ namespace AzVulk {
         vkUnmapMemory(vulkanDevice.device, meshBuffer.vertexBufferMemory);
         
         // Create index buffer for this mesh
-        const auto& indices = mesh.getIndices();
+        const auto& indices = mesh.indices;
         VkDeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
         meshBuffer.indexCount = static_cast<uint32_t>(indices.size());
         meshBuffer.indexType = VK_INDEX_TYPE_UINT32;

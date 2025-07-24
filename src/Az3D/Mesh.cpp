@@ -59,28 +59,7 @@ namespace Az3D {
         return *this;
     }
 
-    void Mesh::setVertices(const std::vector<Vertex>& vertices) {
-        this->vertices = vertices;
-    }
-
-    void Mesh::setVertices(std::vector<Vertex>&& vertices) {
-        this->vertices = std::move(vertices);
-    }
-
-    void Mesh::setIndices(const std::vector<uint32_t>& indices) {
-        this->indices = indices;
-    }
-
-    void Mesh::setIndices(std::vector<uint32_t>&& indices) {
-        this->indices = std::move(indices);
-    }
-
-    void Mesh::clear() {
-        vertices.clear();
-        indices.clear();
-    }
-
-    bool Mesh::isEmpty() const {
+    bool Mesh::isEmpty() {
         return vertices.empty() || indices.empty();
     }
 

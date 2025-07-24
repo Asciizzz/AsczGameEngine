@@ -28,31 +28,14 @@ namespace Az3D {
         Mesh() = default;
         Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         Mesh(std::vector<Vertex>&& vertices, std::vector<uint32_t>&& indices);
-        
-        // Move constructor and assignment
+
         Mesh(Mesh&& other) noexcept;
         Mesh& operator=(Mesh&& other) noexcept;
-        
-        // Delete copy constructor and assignment (use shared_ptr for sharing)
         Mesh(const Mesh&) = delete;
         Mesh& operator=(const Mesh&) = delete;
 
-        // Getters
-        const std::vector<Vertex>& getVertices() const { return vertices; }
-        const std::vector<uint32_t>& getIndices() const { return indices; }
-        
-        // Setters
-        void setVertices(const std::vector<Vertex>& vertices);
-        void setVertices(std::vector<Vertex>&& vertices);
-        void setIndices(const std::vector<uint32_t>& indices);
-        void setIndices(std::vector<uint32_t>&& indices);
-        
-        // Clear data
-        void clear();
-        
-        // Check if mesh has data
-        bool isEmpty() const;
-        
+        bool isEmpty();
+
         // Static factory method for loading OBJ files
         static std::shared_ptr<Mesh> loadFromOBJ(const std::string& filePath);
 
