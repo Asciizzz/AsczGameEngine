@@ -41,9 +41,9 @@ namespace AzVulk {
     }
 
     void DescriptorManager::createDescriptorSetsForMaterial(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize, 
-                                                           const Az3D::Texture* texture, const std::string& materialId) {
+                                                           const Az3D::Texture* texture, size_t materialIndex) {
         // Check if material already has descriptor sets
-        if (materialDescriptorSets.find(materialId) != materialDescriptorSets.end()) {
+        if (materialDescriptorSets.find(materialIndex) != materialDescriptorSets.end()) {
             return; // Already created
         }
 
@@ -57,7 +57,7 @@ namespace AzVulk {
 
         std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
         if (vkAllocateDescriptorSets(vulkanDevice.device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate descriptor sets for material: " + materialId);
+            throw std::runtime_error("failed to allocate descriptor sets for material index: " + std::to_string(materialIndex));
         }
 
         // Configure each descriptor set for this material
@@ -103,15 +103,15 @@ namespace AzVulk {
         }
 
         // Store the descriptor sets for this material
-        materialDescriptorSets[materialId] = std::move(descriptorSets);
+        materialDescriptorSets[materialIndex] = std::move(descriptorSets);
     }
 
-    VkDescriptorSet DescriptorManager::getDescriptorSet(uint32_t frameIndex, const std::string& materialId) {
-        auto it = materialDescriptorSets.find(materialId);
+    VkDescriptorSet DescriptorManager::getDescriptorSet(uint32_t frameIndex, size_t materialIndex) {
+        auto it = materialDescriptorSets.find(materialIndex);
         if (it != materialDescriptorSets.end() && frameIndex < it->second.size()) {
             return it->second[frameIndex];
         }
         
-        throw std::runtime_error("Descriptor set not found for material: " + materialId + " frame: " + std::to_string(frameIndex));
+        throw std::runtime_error("Descriptor set not found for material index: " + std::to_string(materialIndex) + " frame: " + std::to_string(frameIndex));
     }
 }

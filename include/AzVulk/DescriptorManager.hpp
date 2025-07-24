@@ -22,9 +22,9 @@ namespace AzVulk {
 
         void createDescriptorPool(uint32_t maxFramesInFlight, uint32_t maxMaterials = 10);
         void createDescriptorSetsForMaterial(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize, 
-                                           const Az3D::Texture* texture, const std::string& materialId);
+                                           const Az3D::Texture* texture, size_t materialIndex);
         
-        VkDescriptorSet getDescriptorSet(uint32_t frameIndex, const std::string& materialId);
+        VkDescriptorSet getDescriptorSet(uint32_t frameIndex, size_t materialIndex);
         
         const VulkanDevice& vulkanDevice;
         VkDescriptorSetLayout descriptorSetLayout;
@@ -32,8 +32,8 @@ namespace AzVulk {
         VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
         
     private:
-        // Material ID -> frame descriptor sets (one per frame in flight)
-        std::unordered_map<std::string, std::vector<VkDescriptorSet>> materialDescriptorSets;
+        // Material Index -> frame descriptor sets (one per frame in flight)
+        std::unordered_map<size_t, std::vector<VkDescriptorSet>> materialDescriptorSets;
         uint32_t maxFramesInFlight = 2;
         uint32_t maxMaterials = 10;
     };

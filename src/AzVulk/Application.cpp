@@ -88,215 +88,84 @@ namespace AzVulk {
 
 // PLAYGROUND FROM HERE!
 
-        // Load meshes
-        resourceManager->loadMesh("viking_room", "Model/viking_room.obj");
-        resourceManager->loadMesh("shiroko", "Model/shiroko.obj");
-        resourceManager->createCubeMesh("cube");
+        // Load textures and get their indices
+        size_t vikingTextureIndex = resourceManager->addTexture("Model/viking_room.png");
+        size_t shirokoTextureIndex = resourceManager->addTexture("Model/Shiroko.jpg");
+        size_t cubeTextureIndex = resourceManager->addTexture("textures/texture1.png");
 
-        // Load textures FIRST!
-        std::cout << "\n[TEXTURE LOADING] Loading textures..." << std::endl;
-        resourceManager->loadTexture("viking_room_diffuse", "Model/viking_room.png");
-        std::cout << "  ✓ Loaded viking_room_diffuse" << std::endl;
-        resourceManager->loadTexture("shiroko_diffuse", "Model/Shiroko.jpg");
-        std::cout << "  ✓ Loaded shiroko_diffuse" << std::endl;
-        resourceManager->loadTexture("texture1", "textures/texture1.png");
-        std::cout << "  ✓ Loaded texture1" << std::endl;
+        // Create materials with texture indices
+        Az3D::Material vikingMaterial;
+        vikingMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+        vikingMaterial.roughness = 0.7f;
+        vikingMaterial.metallic = 0.1f;
+        vikingMaterial.diffTxtr = vikingTextureIndex;
+        size_t vikingMaterialIndex = resourceManager->addMaterial(vikingMaterial);
 
-        // Verify textures exist before creating materials
-        std::cout << "\n[TEXTURE VERIFICATION]" << std::endl;
-        auto viking_tex = resourceManager->getTexture("viking_room_diffuse");
-        auto shiroko_tex = resourceManager->getTexture("shiroko_diffuse");
-        auto cube_tex = resourceManager->getTexture("texture1");
-        std::cout << "  Viking texture exists: " << (viking_tex ? "YES" : "NO") << std::endl;
-        std::cout << "  Shiroko texture exists: " << (shiroko_tex ? "YES" : "NO") << std::endl;
-        std::cout << "  Cube texture exists: " << (cube_tex ? "YES" : "NO") << std::endl;
+        Az3D::Material shirokoMaterial;
+        shirokoMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+        shirokoMaterial.roughness = 0.4f;
+        shirokoMaterial.metallic = 0.0f;
+        shirokoMaterial.diffTxtr = shirokoTextureIndex;
+        size_t shirokoMaterialIndex = resourceManager->addMaterial(shirokoMaterial);
+
+        Az3D::Material cubeMaterial;
+        cubeMaterial.albedoColor = glm::vec3(0.8f, 0.9f, 1.0f);
+        cubeMaterial.roughness = 0.3f;
+        cubeMaterial.metallic = 0.2f;
+        cubeMaterial.diffTxtr = cubeTextureIndex;
+        size_t cubeMaterialIndex = resourceManager->addMaterial(cubeMaterial);
+
+        // Load meshes and get their indices
+        size_t vikingMeshIndex = resourceManager->meshManager->loadMeshFromOBJ("Model/viking_room.obj");
+        size_t shirokoMeshIndex = resourceManager->meshManager->loadMeshFromOBJ("Model/shiroko.obj");
+        size_t cubeMeshIndex = resourceManager->meshManager->createCubeMesh();;
+
+        // Load meshes into GPU buffer
+        std::cout << "\n[GPU BUFFER LOADING] Loading meshes to GPU..." << std::endl;
+        auto vikingMesh = resourceManager->meshManager->getMesh(vikingMeshIndex);
+        auto shirokoMesh = resourceManager->meshManager->getMesh(shirokoMeshIndex);
+        auto cubeMesh = resourceManager->meshManager->getMesh(cubeMeshIndex);
+
+        size_t vikingBufferIndex = buffer->loadMeshToBuffer(*vikingMesh);
+        size_t shirokoBufferIndex = buffer->loadMeshToBuffer(*shirokoMesh);
+        size_t cubeBufferIndex = buffer->loadMeshToBuffer(*cubeMesh);
+
+        // Create descriptor sets for materials
+        descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
+        descriptorManager->createDescriptorPool(2, resourceManager->textureManager->getTextureCount());
         
-        // Also check if textures exist by auto-generated IDs
-        auto tex1 = resourceManager->getTexture("texture_1");
-        auto tex2 = resourceManager->getTexture("texture_2");
-        auto tex3 = resourceManager->getTexture("texture_3");
-        std::cout << "  texture_1 exists: " << (tex1 ? "YES" : "NO") << std::endl;
-        std::cout << "  texture_2 exists: " << (tex2 ? "YES" : "NO") << std::endl;
-        std::cout << "  texture_3 exists: " << (tex3 ? "YES" : "NO") << std::endl;
+        std::cout << "\n[DESCRIPTOR CREATION] Creating descriptor sets..." << std::endl;
+        auto vikingTexture = resourceManager->textureManager->getTexture(vikingTextureIndex);
+        auto shirokoTexture = resourceManager->textureManager->getTexture(shirokoTextureIndex);
+        auto cubeTexture = resourceManager->textureManager->getTexture(cubeTextureIndex);
+        
+        if (vikingTexture) {
+            descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), vikingTexture, vikingMaterialIndex);
+            std::cout << "  ✓ Created descriptor set for viking material (index " << vikingMaterialIndex << ")" << std::endl;
+        }
+        if (shirokoTexture) {
+            descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), shirokoTexture, shirokoMaterialIndex);
+            std::cout << "  ✓ Created descriptor set for shiroko material (index " << shirokoMaterialIndex << ")" << std::endl;
+        }
+        if (cubeTexture) {
+            descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), cubeTexture, cubeMaterialIndex);
+            std::cout << "  ✓ Created descriptor set for cube material (index " << cubeMaterialIndex << ")" << std::endl;
+        }
 
-        // Create materials AFTER textures are loaded
-        std::cout << "\n[MATERIAL CREATION] Creating materials..." << std::endl;
-        size_t vikingMaterialIndex = resourceManager->createMaterial("viking_material", "VikingRoom");
-        auto vikingMaterial = resourceManager->getMaterial("viking_material");
-        vikingMaterial->setDiffuseTexture("viking_room_diffuse");
-        std::cout << "DEBUG: Viking material diffuse texture: '" << vikingMaterial->getDiffuseTexture() << "'" << std::endl;
-        vikingMaterial->getProperties().roughness = 0.7f;
-        vikingMaterial->getProperties().metallic = 0.1f;
-        vikingMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-
-        size_t shirokoMaterialIndex = resourceManager->createMaterial("shiroko_material", "Shiroko");
-        auto shirokoMaterial = resourceManager->getMaterial("shiroko_material");
-        shirokoMaterial->setDiffuseTexture("shiroko_diffuse");
-        std::cout << "DEBUG: Shiroko material diffuse texture: '" << shirokoMaterial->getDiffuseTexture() << "'" << std::endl;
-        shirokoMaterial->getProperties().roughness = 0.4f;
-        shirokoMaterial->getProperties().metallic = 0.0f;
-        shirokoMaterial->getProperties().albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-
-        size_t cubeMaterialIndex = resourceManager->createMaterial("cube_material", "Cube");
-        auto cubeMaterial = resourceManager->getMaterial("cube_material");
-        cubeMaterial->setDiffuseTexture("texture1");
-        std::cout << "DEBUG: Cube material diffuse texture: '" << cubeMaterial->getDiffuseTexture() << "'" << std::endl;
-        cubeMaterial->getProperties().roughness = 0.3f;
-        cubeMaterial->getProperties().metallic = 0.2f;
-        cubeMaterial->getProperties().albedoColor = glm::vec3(0.8f, 0.9f, 1.0f);
-
-        // Load meshes into buffer (using the resource manager)
-        auto vikingMesh = resourceManager->getMesh("viking_room");
-        auto shirokoMesh = resourceManager->getMesh("shiroko");
-        auto cubeMesh = resourceManager->getMesh("cube");
-
-        size_t vikingMeshIndex = buffer->loadMeshToBuffer(*vikingMesh);
-        size_t shirokoMeshIndex = buffer->loadMeshToBuffer(*shirokoMesh);
-        size_t cubeMeshIndex = buffer->loadMeshToBuffer(*cubeMesh);
-
-        // Create models using the new ID-based system
+        // Create models using indices
         models.resize(2);
 
-        models[0] = Az3D::Model("viking_room", "viking_material");
-        models[0].position = glm::vec3(0.0f, 0.0f, 0.0f);
-        models[0].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        models[0] = Az3D::Model(vikingMeshIndex, vikingMaterialIndex);
+        models[0].trform.position = glm::vec3(0.0f, .0f, 0.0f);
+        models[0].trform.rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        models[1] = Az3D::Model("shiroko", "shiroko_material");
-        models[1].scale(0.2f);
-        models[1].position = glm::vec3(0.0f, 0.0f, 0.0f);
-
-        /* Template for creating instance buffers
-        // std::vector<InstanceData> instances;
-        
-        // InstanceData instanceData{};
-        // instanceData.modelMatrix = models[0].getModelMatrix();
-        // instances.push_back(instanceData);
-
-        // buffer->createInstanceBufferForMesh(meshId, instances);
-        */
-
-        // Dynamic descriptor creation for ALL materials and textures!
-        descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
-        descriptorManager->createDescriptorPool(2, resourceManager->getTextureManager().getTextureCount()); // MAX_FRAMES_IN_FLIGHT, max materials
-        
-        // Create descriptor sets for the 3 specific materials (hardcoded)
-        std::cout << "\n[DESCRIPTOR CREATION] Creating descriptor sets for materials..." << std::endl;
-        
-        // Viking material with viking_room_diffuse texture
-        auto vikingTexture = resourceManager->getTexture("viking_room_diffuse");
-        if (vikingTexture) {
-            descriptorManager->createDescriptorSetsForMaterial(
-                buffer->uniformBuffers, sizeof(UniformBufferObject),
-                vikingTexture, "viking_material"
-            );
-            std::cout << "  ✓ Created descriptor set for viking_material with viking_room_diffuse" << std::endl;
-        } else {
-            std::cout << "  ✗ Failed to find viking_room_diffuse texture!" << std::endl;
-        }
-        
-        // Shiroko material with shiroko_diffuse texture  
-        auto shirokoTexture = resourceManager->getTexture("shiroko_diffuse");
-        if (shirokoTexture) {
-            descriptorManager->createDescriptorSetsForMaterial(
-                buffer->uniformBuffers, sizeof(UniformBufferObject),
-                shirokoTexture, "shiroko_material"
-            );
-            std::cout << "  ✓ Created descriptor set for shiroko_material with shiroko_diffuse" << std::endl;
-        } else {
-            std::cout << "  ✗ Failed to find shiroko_diffuse texture!" << std::endl;
-        }
-        
-        // Cube material with texture1
-        auto cubeTexture = resourceManager->getTexture("texture1");
-        if (cubeTexture) {
-            descriptorManager->createDescriptorSetsForMaterial(
-                buffer->uniformBuffers, sizeof(UniformBufferObject),
-                cubeTexture, "cube_material"
-            );
-            std::cout << "  ✓ Created descriptor set for cube_material with texture1" << std::endl;
-        } else {
-            std::cout << "  ✗ Failed to find texture1!" << std::endl;
-        }
+        models[1] = Az3D::Model(shirokoMeshIndex, shirokoMaterialIndex);
+        models[1].trform.scale(0.2f);
+        models[1].trform.position = glm::vec3(0.0f, 0.0f, 0.0f);
 
         // Final Renderer setup with ResourceManager
         renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipelines[pipelineIndex], 
                                             *buffer, *descriptorManager, *camera, *resourceManager);
-        
-        // Register mesh ID to buffer index mappings
-        renderer->registerMeshMapping("viking_room", vikingMeshIndex);
-        renderer->registerMeshMapping("shiroko", shirokoMeshIndex);
-        renderer->registerMeshMapping("cube", cubeMeshIndex);
-        // Print comprehensive resource summary
-        printResourceSummary();
-    }
-    
-    void Application::printResourceSummary() {
-        std::cout << "\n" << std::string(60, '=') << std::endl;
-        std::cout << "             AZ3D RESOURCE INITIALIZATION COMPLETE" << std::endl;
-        std::cout << std::string(60, '=') << std::endl;
-        
-        // Texture summary
-        std::cout << "\n[TEXTURE RESOURCES]" << std::endl;
-        std::cout << "  Total textures loaded: " << resourceManager->getTextureManager().getTextureCount() << std::endl;
-        
-        const auto& allTextures = resourceManager->getTextureManager().getAllTextures();
-        for (size_t i = 0; i < allTextures.size(); ++i) {
-            if (allTextures[i]) {
-                const auto* tex = allTextures[i].get();
-                std::cout << "  [" << i << "] " << tex->getId() 
-                          << " (" << tex->getWidth() << "x" << tex->getHeight() 
-                          << ", " << tex->getMipLevels() << " mips)";
-                if (i == 0) std::cout << " [DEFAULT]";
-                std::cout << std::endl;
-                if (!tex->getFilePath().empty()) {
-                    std::cout << "      Path: " << tex->getFilePath() << std::endl;
-                }
-            } else {
-                std::cout << "  [" << i << "] <deleted>" << std::endl;
-            }
-        }
-        
-        // Material summary
-        std::cout << "\n[MATERIAL RESOURCES]" << std::endl;
-        auto materialIds = resourceManager->getMaterialIds();
-        std::cout << "  Total materials loaded: " << materialIds.size() << std::endl;
-        for (const auto& id : materialIds) {
-            auto* mat = resourceManager->getMaterial(id);
-            if (mat) {
-                std::cout << "  * " << id << " (\"" << mat->getName() << "\")" << std::endl;
-                std::cout << "    Roughness: " << mat->getProperties().roughness 
-                          << ", Metallic: " << mat->getProperties().metallic << std::endl;
-                if (!mat->getDiffuseTexture().empty()) {
-                    std::cout << "    Diffuse: " << mat->getDiffuseTexture() 
-                              << " -> Index " << resourceManager->getTextureIndex(mat->getDiffuseTexture()) << std::endl;
-                }
-            }
-        }
-        
-        // Mesh summary
-        std::cout << "\n[MESH RESOURCES]" << std::endl;
-        auto meshIds = resourceManager->getMeshIds();
-        std::cout << "  Total meshes loaded: " << meshIds.size() << std::endl;
-        for (const auto& id : meshIds) {
-            auto* mesh = resourceManager->getMesh(id);
-            if (mesh) {
-                std::cout << "  * " << id << " (" << mesh->getVertices().size() 
-                          << " vertices, " << mesh->getIndices().size() << " indices)" << std::endl;
-            }
-        }
-        
-        // Model summary
-        std::cout << "\n[SCENE MODELS]" << std::endl;
-        std::cout << "  Total models: " << models.size() << std::endl;
-        for (size_t i = 0; i < models.size(); ++i) {
-            std::cout << "  [" << i << "] Mesh: " << models[i].getMeshId() 
-                      << ", Material: " << models[i].getMaterialId() << std::endl;
-            auto pos = models[i].position;
-            std::cout << "      Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
-        }
-        
-        std::cout << "\n[READY] Use WASD + mouse to navigate, Tab to switch shaders, F1 to toggle mouse, F2 for FPS." << std::endl;
-        std::cout << std::string(60, '=') << std::endl;
     }
 
     void Application::createSurface() {
@@ -400,51 +269,19 @@ namespace AzVulk {
         
     // ======== PLAYGROUND HERE! ========
 
-            // Spawn new cube model at camera position when pressing '1'
-            static bool onePressed = false;
-            if (k_state[SDL_SCANCODE_1] && (!onePressed || false)) {
-                Az3D::Model newCube("cube", "cube_material");
-                newCube.position = camera->position;
-                newCube.scale(0.5f);
-                newCube.rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-                models.push_back(newCube);
-
-                std::cout << "Spawned new Cube model at camera position ("
-                          << camera->position.x << ", " << camera->position.y << ", " << camera->position.z 
-                          << "). Total models: " << models.size() << std::endl;
-                onePressed = true;
-            } else if (!k_state[SDL_SCANCODE_1]) {
-                onePressed = false;
-            }
-
-            auto& shiro_model = models[1];
-
-            // Rotate shiroko plush based on the camera's direction
-            glm::vec3 s_right = glm::normalize(camera->right);
-            glm::vec3 s_up = glm::vec3(0.0f, 1.0f, 0.0f);
-            glm::vec3 s_backward = glm::normalize(glm::cross(s_right, s_up));
-            glm::quat s_rotation = glm::quatLookAt(s_backward, s_up);
-            shiro_model.rotation = s_rotation;
-
-            // 3rd person camera positioning
-
-            // // Scroll to adjust camera distance
-            if (k_state[SDL_SCANCODE_UP]) camDist -= 1.0f * dTime;
-            if (k_state[SDL_SCANCODE_DOWN]) camDist += 1.0f * dTime;
-
-            camera->position = shiro_model.position - camera->forward * camDist;
-
-            // Move the shiroko plush based on WASD keys
 
             bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
             bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
             float shiro_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
-            if (k_state[SDL_SCANCODE_W]) shiro_model.position -= s_backward * shiro_speed;
-            if (k_state[SDL_SCANCODE_S]) shiro_model.position += s_backward * shiro_speed;
-            if (k_state[SDL_SCANCODE_A]) shiro_model.position -= s_right * shiro_speed;
-            if (k_state[SDL_SCANCODE_D]) shiro_model.position += s_right * shiro_speed;
-            if (k_state[SDL_SCANCODE_Q]) shiro_model.position += s_up * shiro_speed;
-            if (k_state[SDL_SCANCODE_E]) shiro_model.position -= s_up * shiro_speed;
+
+            // Move the camer normally
+            if (k_state[SDL_SCANCODE_W]) camPos += camera->forward * shiro_speed;
+            if (k_state[SDL_SCANCODE_S]) camPos -= camera->forward * shiro_speed;
+            if (k_state[SDL_SCANCODE_A]) camPos -= camera->right * shiro_speed;
+            if (k_state[SDL_SCANCODE_D]) camPos += camera->right * shiro_speed;
+
+            camera->position = camPos;
+
 
             // Update instance buffers dynamically by mesh type - optimized with caching + frustum culling
             std::vector<InstanceData> vikingInstances, shirokoInstances, cubeInstances;
@@ -456,13 +293,13 @@ namespace AzVulk {
 
             for (const auto& model : models) {
                 InstanceData instanceData{};
-                instanceData.modelMatrix = model.getModelMatrix();
+                instanceData.modelMatrix = model.trform.modelMatrix();
                 
-                if (model.getMeshId() == "viking_room") {
+                if (model.meshIndex == 0) {
                     vikingInstances.push_back(instanceData);
-                } else if (model.getMeshId() == "shiroko") {
+                } else if (model.meshIndex == 1) {
                     shirokoInstances.push_back(instanceData);
-                } else if (model.getMeshId() == "cube") {
+                } else if (model.meshIndex == 2) {
                     cubeInstances.push_back(instanceData);
                 }
             }
@@ -477,28 +314,28 @@ namespace AzVulk {
                 if (vikingInstances.size() != prevVikingCount) {
                     // Only wait for GPU if we're actually recreating buffers
                     if (prevVikingCount > 0) vkDeviceWaitIdle(vulkanDevice->device);
-                    buffer->createInstanceBufferForMesh(renderer->findMeshIndexInBuffer("viking_room"), vikingInstances);
+                    buffer->createInstanceBufferForMesh(0, vikingInstances);
                     prevVikingCount = vikingInstances.size();
                 } else {
-                    buffer->updateInstanceBufferForMesh(renderer->findMeshIndexInBuffer("viking_room"), vikingInstances);
+                    buffer->updateInstanceBufferForMesh(0, vikingInstances);
                 }
             }
             if (!shirokoInstances.empty()) {
                 if (shirokoInstances.size() != prevShirokoCount) {
                     if (prevShirokoCount > 0) vkDeviceWaitIdle(vulkanDevice->device);
-                    buffer->createInstanceBufferForMesh(renderer->findMeshIndexInBuffer("shiroko"), shirokoInstances);
+                    buffer->createInstanceBufferForMesh(1, shirokoInstances);
                     prevShirokoCount = shirokoInstances.size();
                 } else {
-                    buffer->updateInstanceBufferForMesh(renderer->findMeshIndexInBuffer("shiroko"), shirokoInstances);
+                    buffer->updateInstanceBufferForMesh(1, shirokoInstances);
                 }
             }
             if (!cubeInstances.empty()) {
                 if (cubeInstances.size() != prevCubeCount) {
                     if (prevCubeCount > 0) vkDeviceWaitIdle(vulkanDevice->device);
-                    buffer->createInstanceBufferForMesh(renderer->findMeshIndexInBuffer("cube"), cubeInstances);
+                    buffer->createInstanceBufferForMesh(2, cubeInstances);
                     prevCubeCount = cubeInstances.size();
                 } else {
-                    buffer->updateInstanceBufferForMesh(renderer->findMeshIndexInBuffer("cube"), cubeInstances);
+                    buffer->updateInstanceBufferForMesh(2, cubeInstances);
                 }
             }
 

@@ -208,42 +208,41 @@ namespace AzVulk {
         memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
         // Group models by material for efficient rendering
-        std::unordered_map<std::string, std::vector<const Az3D::Model*>> modelsByMaterial;
+        std::unordered_map<size_t, std::vector<const Az3D::Model*>> modelsByMaterial;
         for (const auto& model : models) {
-            modelsByMaterial[model.getMaterialId()].push_back(&model);
+            modelsByMaterial[model.materialIndex].push_back(&model);
         }
 
         // Multi-material rendering! Render each material group
-        for (const auto& [materialId, materialModels] : modelsByMaterial) {
+        for (const auto& [materialIndex, materialModels] : modelsByMaterial) {
             // Get material and its diffuse texture
-            auto* material = resourceManager.getMaterial(materialId);
+            auto* material = resourceManager.materialManager->materials[materialIndex].get();
             const Az3D::Texture* diffuseTexture = nullptr;
             
-            if (material && !material->getDiffuseTexture().empty()) {
-                diffuseTexture = resourceManager.getTexture(material->getDiffuseTexture());
+            if (material && material->diffTxtr > 0) {
+                diffuseTexture = resourceManager.textureManager->getTexture(material->diffTxtr);
             }
             
             // If no texture, use default texture (index 0)
             if (!diffuseTexture) {
-                diffuseTexture = resourceManager.getTextureManager().getTexture(0);
+                diffuseTexture = resourceManager.textureManager->getTexture(0);
             }
 
             // Bind material-specific descriptor set (includes uniform buffer + texture)
             try {
-                VkDescriptorSet materialDescriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialId);
+                VkDescriptorSet materialDescriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
                 vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
                                        graphicsPipeline.pipelineLayout, 0, 1, &materialDescriptorSet, 0, nullptr);
 
                 // Render all models with this material
                 for (const Az3D::Model* model : materialModels) {
-                    // Find mesh index for this model's mesh  
-                    const auto* mesh = resourceManager.getMesh(model->getMeshId());
+                    // Get mesh using index 
+                    const auto* mesh = resourceManager.meshManager->getMesh(model->meshIndex);
                     if (!mesh) continue;
 
-                    // Find the mesh index in buffer - we need to track this mapping
-                    size_t meshIndex = findMeshIndexInBuffer(model->getMeshId());
-                    if (meshIndex == SIZE_MAX) continue; // Mesh not found in buffer
-
+                    // Use the mesh index directly since we're using index-based system
+                    size_t meshIndex = model->meshIndex;
+                    
                     const auto& meshBuffers = buffer.getMeshBuffers();
                     if (meshIndex >= meshBuffers.size()) continue;
 

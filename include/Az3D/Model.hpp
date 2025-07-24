@@ -14,39 +14,13 @@ namespace Az3D {
     class MaterialManager;
     class ResourceManager;
     
-    // Model class contains mesh ID, material ID, and transformation
-    class Model {
-    public:
-        Model() = default;
-        Model(const std::string& meshId);
-        Model(const std::string& meshId, const std::string& materialId);
-        
-        // Mesh management (ID-based)
-        void setMeshId(const std::string& meshId) { this->meshId = meshId; }
-        const std::string& getMeshId() const { return meshId; }
-        bool hasMesh() const { return !meshId.empty(); }
-        
-        // Material management (ID-based)
-        void setMaterialId(const std::string& materialId) { this->materialId = materialId; }
-        const std::string& getMaterialId() const { return materialId; }
-        bool hasMaterial() const { return !materialId.empty(); }
-        
-        // Resource access (requires managers)
-        Mesh* getMesh(const MeshManager& meshManager) const;
-        Material* getMaterial(const MaterialManager& materialManager) const;
-        
-        // Resource access (NEW - use ResourceManager)
-        Mesh* getMesh(const ResourceManager& resourceManager) const;
-        Material* getMaterial(const ResourceManager& resourceManager) const;
-        
-        // Transform components - direct access for performance
+    struct Transform {
         glm::vec3 position{0.0f};
         glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
         glm::vec3 scalevec{1.0f};
-        
-        // Convenience transformation methods (with additional logic)
+
         void translate(const glm::vec3& translation);
-        void rotate(const glm::quat& rotation); // Quaternion rotation
+        void rotate(const glm::quat& rotation);
         void rotateX(float radians);
         void rotateY(float radians);  
         void rotateZ(float radians);
@@ -54,18 +28,25 @@ namespace Az3D {
         void scale(float uniformScale);
 
         // Legacy methods for compatibility
-        void rotate(const glm::vec3& eulerAngles); // Euler angles (not recommended because of gimbal lock)
-        
-        // Matrix calculation
-        glm::mat4 getModelMatrix() const;
-        
-        // Reset transform to identity
-        void resetTransform();
+        void rotate(const glm::vec3& eulerAngles);
 
-        std::string meshId;
-        std::string materialId;
-        
-        // Helper to update internal state if needed
-        void updateTransform();
+        // Matrix calculation
+        glm::mat4 modelMatrix() const;
+
+        // Reset transform to identity
+        void reset();
+    };
+
+    // Model class contains mesh ID, material ID, and transformation
+    class Model {
+    public:
+        Model() = default;
+        Model(size_t meshIndex, size_t materialIndex);
+
+        size_t meshIndex = 0;
+        size_t materialIndex = 0;
+
+        // Transform component
+        Transform trform;
     };
 }

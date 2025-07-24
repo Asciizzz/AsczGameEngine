@@ -31,7 +31,7 @@ namespace Az3D {
             if (textureData && textureData->isValid()) {
                 auto texture = std::make_unique<Texture>("texture_" + std::to_string(textures.size()), imagePath);
                 texture->setData(std::move(textureData));
-                          
+
                 textures.push_back(std::move(texture));
                 return textures.size() - 1; // Return the index
             }
