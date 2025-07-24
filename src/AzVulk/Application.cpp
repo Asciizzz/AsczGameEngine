@@ -132,7 +132,9 @@ namespace AzVulk {
             // Update FPS manager for timing
             fpsManager->update();
             windowManager->pollEvents();
-            
+
+            float dTime = fpsManager->deltaTime;
+
             // Check if window was resized or renderer needs to be updated
             if (windowManager->resizedFlag || renderer->framebufferResized) {
                 windowManager->resizedFlag = false;
@@ -191,21 +193,29 @@ namespace AzVulk {
             bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
             float speed = fast ? 15.0f : (slow ? 2.0f : 8.0f);
             if (k_state[SDL_SCANCODE_W])
-                camera->translate(camera->forward * speed * fpsManager->deltaTime);
+                camera->translate(camera->forward * speed * dTime);
             if (k_state[SDL_SCANCODE_S])
-                camera->translate(-camera->forward * speed * fpsManager->deltaTime);
+                camera->translate(-camera->forward * speed * dTime);
             if (k_state[SDL_SCANCODE_A])
-                camera->translate(-camera->right * speed * fpsManager->deltaTime);
+                camera->translate(-camera->right * speed * dTime);
             if (k_state[SDL_SCANCODE_D])
-                camera->translate(camera->right * speed * fpsManager->deltaTime);
+                camera->translate(camera->right * speed * dTime);
             
             // Add vertical movement (Q/E for up/down)
             if (k_state[SDL_SCANCODE_Q])
-                camera->translate(-camera->up * speed * fpsManager->deltaTime);
+                camera->translate(-camera->up * speed * dTime);
             if (k_state[SDL_SCANCODE_E])
-                camera->translate(camera->up * speed * fpsManager->deltaTime);
+                camera->translate(camera->up * speed * dTime);
 
-            // Static model - no updates needed! 🗿
+            // Apply rotation and update instance buffer
+            models[0].rotateY(glm::radians(30.0f * dTime));
+
+            // Update instance buffer with new rotation
+            std::vector<InstanceData> instances;
+            InstanceData instanceData{};
+            instanceData.modelMatrix = models[0].getModelMatrix();
+            instances.push_back(instanceData);
+            buffer->updateInstanceBufferForMesh(0, instances);
 
             renderer->drawFrameWithModels(models);
             renderFpsOverlay();

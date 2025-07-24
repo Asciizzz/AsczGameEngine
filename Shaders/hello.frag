@@ -10,7 +10,7 @@ layout(location = 0) out vec4 outColor;
 void main() {
     vec4 texColor = texture(texSampler, fragTxtr);
 
-    vec3 lightDir = normalize(vec3(0.0, -1.0, 0.0));
+    vec3 lightDir = normalize(vec3(-1.0, -1.0, -1.0));
     vec3 normal = normalize(fragNrml);
 
     float lightIntensity = clamp(dot(normal, -lightDir), 0.1, 1.0);

@@ -48,13 +48,9 @@ namespace Az3D {
 
     glm::mat4 Model::getModelMatrix() const {
         glm::mat4 transform = glm::mat4(1.0f);
-        
-        // Apply transformations in order: Scale -> Rotate -> Translate
+
         transform = glm::translate(transform, position);
-        
-        // Convert quaternion to rotation matrix and apply
         transform = transform * glm::mat4_cast(rotation);
-        
         transform = glm::scale(transform, scaleVec);
         
         return transform;
@@ -62,7 +58,7 @@ namespace Az3D {
 
     void Model::resetTransform() {
         position = glm::vec3(0.0f);
-        rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
+        rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
         scaleVec = glm::vec3(1.0f);
     }
 
