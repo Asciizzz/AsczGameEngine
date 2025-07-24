@@ -114,8 +114,13 @@ namespace AzVulk {
         // Load meshes into buffer (using the resource manager)
         auto vikingMesh = resourceManager->getMeshManager().getMesh("viking_room");
         auto shirokoMesh = resourceManager->getMeshManager().getMesh("shiroko");
-        if (vikingMesh) buffer->loadMeshToBuffer(*vikingMesh);
-        if (shirokoMesh) buffer->loadMeshToBuffer(*shirokoMesh);
+        size_t vikingMeshIndex = 0, shirokoMeshIndex = 1;
+        if (vikingMesh) {
+            vikingMeshIndex = buffer->loadMeshToBuffer(*vikingMesh);
+        }
+        if (shirokoMesh) {
+            shirokoMeshIndex = buffer->loadMeshToBuffer(*shirokoMesh);
+        }
 
         // Create models using the new ID-based system
         models.resize(2);
@@ -125,7 +130,8 @@ namespace AzVulk {
         models[0].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         models[1] = Az3D::Model("shiroko", "shiroko_material");
-        models[1].position = glm::vec3(5.0f, 0.0f, 0.0f);
+        models[1].scale(0.5f);
+        models[1].position = glm::vec3(0.0f, 0.0f, 0.0f);
         models[1].rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         // Create instance buffers for both models
@@ -134,27 +140,33 @@ namespace AzVulk {
         InstanceData instanceData0{};
         instanceData0.modelMatrix = models[0].getModelMatrix();
         instances0.push_back(instanceData0);
-        
+
         InstanceData instanceData1{};
         instanceData1.modelMatrix = models[1].getModelMatrix();
         instances1.push_back(instanceData1);
 
-        buffer->createInstanceBufferForMesh(0, instances0);
-        buffer->createInstanceBufferForMesh(1, instances1);
+        buffer->createInstanceBufferForMesh(vikingMeshIndex, instances0);
+        buffer->createInstanceBufferForMesh(shirokoMeshIndex, instances1);
+
+        // Create descriptor sets for each material with its specific texture
+        auto vikingTexture = resourceManager->getTexture("viking_room_diffuse");
+        auto shirokoTexture = resourceManager->getTexture("shiroko_diffuse");
 
         // Create descriptor manager with Az3D texture system
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
-        descriptorManager->createDescriptorPool(2); // MAX_FRAMES_IN_FLIGHT
-        
-        // Use Az3D texture system with ResourceManager's string-based interface
-        auto texture = resourceManager->getTexture("shiroko_diffuse");
-        if (texture && texture->getData()) {
-            descriptorManager->createDescriptorSets(buffer->uniformBuffers, sizeof(UniformBufferObject),
-                                                    texture->getData()->view, texture->getData()->sampler);
-        }
+        descriptorManager->createDescriptorPool(2, 10); // MAX_FRAMES_IN_FLIGHT, max materials
+        descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject),
+                                                          vikingTexture, "viking_material");
+        descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject),
+                                                          shirokoTexture, "shiroko_material");
 
-        // Final Renderer setup
-        renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipelines[pipelineIndex], *buffer, *descriptorManager, *camera);
+        // Final Renderer setup with ResourceManager
+        renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipelines[pipelineIndex], 
+                                            *buffer, *descriptorManager, *camera, *resourceManager);
+        
+        // Register mesh ID to buffer index mappings
+        renderer->registerMeshMapping("viking_room", vikingMeshIndex);
+        renderer->registerMeshMapping("shiroko", shirokoMeshIndex);
         // Print comprehensive resource summary
         printResourceSummary();
     }
@@ -244,6 +256,8 @@ namespace AzVulk {
         SDL_GetWindowSize(windowManager->window, &windowWidth, &windowHeight);
         int centerX = windowWidth / 2;
         int centerY = windowHeight / 2;
+
+        int shirokoCount = 1;
 
         while (!windowManager->shouldCloseFlag) {
             // Update FPS manager for timing
@@ -339,31 +353,78 @@ namespace AzVulk {
                 camera->translate(-camera->up * speed * dTime);
             if (k_state[SDL_SCANCODE_E])
                 camera->translate(camera->up * speed * dTime);
+        
+    // ======== PLAYGROUND HERE! ========
+
+            // Spawn new shiroko model at camera position when pressing '1'
+            static bool onePressed = false;
+            if (k_state[SDL_SCANCODE_1] && !onePressed) {
+                Az3D::Model newShiroko("shiroko", "shiroko_material");
+                newShiroko.position = camera->position;
+                newShiroko.scale(0.5f);
+                newShiroko.rotation = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+                models.push_back(newShiroko);
+                
+                std::cout << "Spawned new Shiroko model at camera position (" 
+                          << camera->position.x << ", " << camera->position.y << ", " << camera->position.z 
+                          << "). Total models: " << models.size() << std::endl;
+                onePressed = true;
+            } else if (!k_state[SDL_SCANCODE_1]) {
+                onePressed = false;
+            }
 
             // Apply rotation and update instance buffer
             float rspeed = fast ? 180.0f : (slow ? 10.0f : 30.0f);
             if (k_state[SDL_SCANCODE_LEFT]) {
-                models[0].rotateY(glm::radians(-rspeed * dTime));
-                models[1].rotateY(glm::radians(-rspeed * dTime));
+                for (auto& model : models) {
+                    model.rotateY(glm::radians(-rspeed * dTime));
+                }
             }
             if (k_state[SDL_SCANCODE_RIGHT]) {
-                models[0].rotateY(glm::radians(rspeed * dTime));
-                models[1].rotateY(glm::radians(rspeed * dTime));
+                for (auto& model : models) {
+                    model.rotateY(glm::radians(rspeed * dTime));
+                }
             }
 
-            // Update instance buffers for both models
-            std::vector<InstanceData> instances0, instances1;
+            // Update instance buffers dynamically by mesh type
+            std::vector<InstanceData> vikingInstances, shirokoInstances;
             
-            InstanceData instanceData0{};
-            instanceData0.modelMatrix = models[0].getModelMatrix();
-            instances0.push_back(instanceData0);
-            buffer->updateInstanceBufferForMesh(0, instances0);
+            for (const auto& model : models) {
+                InstanceData instanceData{};
+                instanceData.modelMatrix = model.getModelMatrix();
+                
+                if (model.getMeshId() == "viking_room") {
+                    vikingInstances.push_back(instanceData);
+                } else if (model.getMeshId() == "shiroko") {
+                    shirokoInstances.push_back(instanceData);
+                }
+            }
             
-            InstanceData instanceData1{};
-            instanceData1.modelMatrix = models[1].getModelMatrix();
-            instances1.push_back(instanceData1);
-            buffer->updateInstanceBufferForMesh(1, instances1);
+            // Track previous counts to avoid unnecessary buffer recreation
+            static size_t prevVikingCount = 0;
+            static size_t prevShirokoCount = 0;
+            
+            // Update buffers only when count changes or just update data if count is same
+            if (!vikingInstances.empty()) {
+                if (vikingInstances.size() != prevVikingCount) {
+                    vkDeviceWaitIdle(vulkanDevice->device); // Wait for GPU to finish using old buffer
+                    buffer->createInstanceBufferForMesh(renderer->findMeshIndexInBuffer("viking_room"), vikingInstances);
+                    prevVikingCount = vikingInstances.size();
+                } else {
+                    buffer->updateInstanceBufferForMesh(renderer->findMeshIndexInBuffer("viking_room"), vikingInstances);
+                }
+            }
+            if (!shirokoInstances.empty()) {
+                if (shirokoInstances.size() != prevShirokoCount) {
+                    vkDeviceWaitIdle(vulkanDevice->device); // Wait for GPU to finish using old buffer
+                    buffer->createInstanceBufferForMesh(renderer->findMeshIndexInBuffer("shiroko"), shirokoInstances);
+                    prevShirokoCount = shirokoInstances.size();
+                } else {
+                    buffer->updateInstanceBufferForMesh(renderer->findMeshIndexInBuffer("shiroko"), shirokoInstances);
+                }
+            }
 
+    // =================================
             renderer->drawFrameWithModels(models, *graphicsPipelines[pipelineIndex]);
             
             // On-screen FPS display (toggleable with F2) - using window title for now

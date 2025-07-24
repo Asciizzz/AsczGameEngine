@@ -3,12 +3,15 @@
 #include <stdexcept>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
+#include <unordered_map>
 
 namespace AzVulk {
     Renderer::Renderer (const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
-                        Buffer& buffer, DescriptorManager& descriptorManager, AzCore::Camera& camera)
+                        Buffer& buffer, DescriptorManager& descriptorManager, AzCore::Camera& camera,
+                        Az3D::ResourceManager& resourceManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
-          descriptorManager(descriptorManager), camera(camera), startTime(std::chrono::high_resolution_clock::now()) {
+          descriptorManager(descriptorManager), camera(camera), resourceManager(resourceManager), 
+          startTime(std::chrono::high_resolution_clock::now()) {
         
         createCommandPool();
         createCommandBuffers();
@@ -204,25 +207,63 @@ namespace AzVulk {
         ubo.proj = camera.projectionMatrix;
         memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
-        // Bind descriptor sets once for all mesh types
-        vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                               graphicsPipeline.pipelineLayout, 0, 1, &descriptorManager.descriptorSets[currentFrame], 0, nullptr);
+        // Group models by material for efficient rendering
+        std::unordered_map<std::string, std::vector<const Az3D::Model*>> modelsByMaterial;
+        for (const auto& model : models) {
+            modelsByMaterial[model.getMaterialId()].push_back(&model);
+        }
 
-        // Multi-mesh rendering! Draw each mesh type with its own instances 🚀
-        const auto& meshBuffers = buffer.getMeshBuffers();
-        for (size_t meshIndex = 0; meshIndex < meshBuffers.size(); meshIndex++) {
-            const auto& meshData = meshBuffers[meshIndex];
+        // Multi-material rendering! Render each material group
+        for (const auto& [materialId, materialModels] : modelsByMaterial) {
+            // Get material and its diffuse texture
+            auto* material = resourceManager.getMaterialManager().getMaterial(materialId);
+            const Az3D::Texture* diffuseTexture = nullptr;
             
-            // Only draw if this mesh has instances
-            if (meshData.instanceCount > 0) {
-                // Bind vertex and instance buffers for this mesh
-                VkBuffer vertexBuffers[] = {meshData.vertexBuffer, meshData.instanceBuffer};
-                VkDeviceSize offsets[] = {0, 0};
-                vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, vertexBuffers, offsets);
-                vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshData.indexBuffer, 0, meshData.indexType);
-                
-                // Draw all instances of this mesh type
-                vkCmdDrawIndexed(commandBuffers[currentFrame], meshData.indexCount, meshData.instanceCount, 0, 0, 0);
+            if (material && !material->getDiffuseTexture().empty()) {
+                diffuseTexture = resourceManager.getTexture(material->getDiffuseTexture());
+            }
+            
+            // If no texture, use default texture (index 0)
+            if (!diffuseTexture) {
+                diffuseTexture = resourceManager.getTextureManager().getTexture(0);
+            }
+
+            // Bind material-specific descriptor set (includes uniform buffer + texture)
+            try {
+                VkDescriptorSet materialDescriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialId);
+                vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                                       graphicsPipeline.pipelineLayout, 0, 1, &materialDescriptorSet, 0, nullptr);
+
+                // Render all models with this material
+                for (const Az3D::Model* model : materialModels) {
+                    // Find mesh index for this model's mesh
+                    const auto* mesh = resourceManager.getMeshManager().getMesh(model->getMeshId());
+                    if (!mesh) continue;
+
+                    // Find the mesh index in buffer - we need to track this mapping
+                    size_t meshIndex = findMeshIndexInBuffer(model->getMeshId());
+                    if (meshIndex == SIZE_MAX) continue; // Mesh not found in buffer
+
+                    const auto& meshBuffers = buffer.getMeshBuffers();
+                    if (meshIndex >= meshBuffers.size()) continue;
+
+                    const auto& meshData = meshBuffers[meshIndex];
+                    
+                    // Only draw if this mesh has instances
+                    if (meshData.instanceCount > 0) {
+                        // Bind vertex and instance buffers for this mesh
+                        VkBuffer vertexBuffers[] = {meshData.vertexBuffer, meshData.instanceBuffer};
+                        VkDeviceSize offsets[] = {0, 0};
+                        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, vertexBuffers, offsets);
+                        vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshData.indexBuffer, 0, meshData.indexType);
+                        
+                        // Draw all instances of this mesh type
+                        vkCmdDrawIndexed(commandBuffers[currentFrame], meshData.indexCount, meshData.instanceCount, 0, 0, 0);
+                    }
+                }
+            } catch (const std::exception& e) {
+                // Fallback: skip this material if descriptor set not found
+                continue;
             }
         }
 
@@ -320,11 +361,11 @@ namespace AzVulk {
 
         vkCmdBindIndexBuffer(commandBuffer, buffer.indexBuffer, 0, buffer.indexType);
 
-        // Bind descriptor sets
-        VkDescriptorSet descriptorSet = descriptorManager.descriptorSets[currentFrame];
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                                graphicsPipeline.pipelineLayout, 0, 1, 
-                                &descriptorSet, 0, nullptr);
+        // Bind descriptor sets (old method - not used in multi-material rendering)
+        // VkDescriptorSet descriptorSet = descriptorManager.descriptorSets[currentFrame];
+        // vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+        //                         graphicsPipeline.pipelineLayout, 0, 1, 
+        //                         &descriptorSet, 0, nullptr);
 
         vkCmdDrawIndexed(commandBuffer, buffer.indexCount, 1, 0, 0, 0);
 
@@ -355,5 +396,17 @@ namespace AzVulk {
         ubo.proj = camera.projectionMatrix;
 
         memcpy(buffer.uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    }
+    
+    size_t Renderer::findMeshIndexInBuffer(const std::string& meshId) {
+        auto it = meshIdToBufferIndex.find(meshId);
+        if (it != meshIdToBufferIndex.end()) {
+            return it->second;
+        }
+        return SIZE_MAX; // Not found
+    }
+    
+    void Renderer::registerMeshMapping(const std::string& meshId, size_t bufferIndex) {
+        meshIdToBufferIndex[meshId] = bufferIndex;
     }
 }

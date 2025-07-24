@@ -54,11 +54,11 @@ namespace Az3D {
     }
 
     void Model::scale(const glm::vec3& scaling) {
-        this->scaleVec *= scaling;
+        this->scalevec *= scaling;
     }
 
     void Model::scale(float uniformScale) {
-        this->scaleVec *= uniformScale;
+        this->scalevec *= uniformScale;
     }
 
     glm::mat4 Model::getModelMatrix() const {
@@ -66,7 +66,7 @@ namespace Az3D {
 
         transform = glm::translate(transform, position);
         transform = transform * glm::mat4_cast(rotation);
-        transform = glm::scale(transform, scaleVec);
+        transform = glm::scale(transform, scalevec);
         
         return transform;
     }
@@ -74,7 +74,7 @@ namespace Az3D {
     void Model::resetTransform() {
         position = glm::vec3(0.0f);
         rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-        scaleVec = glm::vec3(1.0f);
+        scalevec = glm::vec3(1.0f);
     }
 
     void Model::updateTransform() {

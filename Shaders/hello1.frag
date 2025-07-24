@@ -12,6 +12,7 @@ void main() {
     vec3 normal = normalize(fragNrml);
 
     float lightIntensity = clamp(dot(normal, -lightDir), 0.1, 1.0);
+    lightIntensity = normal == vec3(0.0) ? 1.0 : lightIntensity;
 
     // Apply lighting to texture color
     outColor = vec4(vec3(lightIntensity), 1.0);

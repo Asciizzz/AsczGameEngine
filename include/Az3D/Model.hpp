@@ -37,7 +37,7 @@ namespace Az3D {
         // Transform components - direct access for performance
         glm::vec3 position{0.0f};
         glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
-        glm::vec3 scaleVec{1.0f};
+        glm::vec3 scalevec{1.0f};
         
         // Convenience transformation methods (with additional logic)
         void translate(const glm::vec3& translation);
