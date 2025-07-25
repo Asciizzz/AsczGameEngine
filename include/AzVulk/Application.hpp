@@ -1,9 +1,7 @@
 #pragma once
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-#include <memory>
-#include <vector>
-#include <SDL2/SDL.h>
+
 #include "AzCore/WindowManager.hpp"
 #include "AzCore/FpsManager.hpp"
 #include "AzVulk/Instance.hpp"

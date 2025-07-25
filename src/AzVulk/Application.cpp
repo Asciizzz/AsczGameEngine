@@ -1,11 +1,6 @@
 #include "AzVulk/Application.hpp"
-#include "Az3D/Az3D.hpp"
-#include <SDL2/SDL_vulkan.h>
-#include <stdexcept>
+
 #include <iostream>
-#include <chrono>
-#include <sstream>
-#include <iomanip>
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -88,6 +83,11 @@ namespace AzVulk {
 
 // PLAYGROUND FROM HERE!
 
+        // Create convenient references to avoid arrow spam
+        auto& texManager = *resourceManager->textureManager;
+        auto& meshManager = *resourceManager->meshManager;
+        auto& bufferRef = *buffer;
+
         // Load textures and get their indices
         size_t dust2TextureIndex = resourceManager->addTexture("Model/de_dust2.png");
         size_t shirokoTextureIndex = resourceManager->addTexture("Model/Shiroko.jpg");
@@ -116,40 +116,32 @@ namespace AzVulk {
         size_t cubeMaterialIndex = resourceManager->addMaterial(cubeMaterial);
 
         // Load meshes and get their indices
-        size_t dust2MeshIndex = resourceManager->meshManager->loadMeshFromOBJ("Model/de_dust2.obj");
-        size_t shirokoMeshIndex = resourceManager->meshManager->loadMeshFromOBJ("Model/shiroko.obj");
-        size_t cubeMeshIndex = resourceManager->meshManager->createCubeMesh();;
+        size_t dust2MeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
+        size_t shirokoMeshIndex = meshManager.loadMeshFromOBJ("Model/shiroko.obj");
+        size_t cubeMeshIndex = meshManager.createCubeMesh();
 
         // Load meshes into GPU buffer
-        std::cout << "\n[GPU BUFFER LOADING] Loading meshes to GPU..." << std::endl;
-        auto dust2Mesh = resourceManager->meshManager->getMesh(dust2MeshIndex);
-        auto shirokoMesh = resourceManager->meshManager->getMesh(shirokoMeshIndex);
-        auto cubeMesh = resourceManager->meshManager->getMesh(cubeMeshIndex);
+        auto dust2Mesh = meshManager.getMesh(dust2MeshIndex);
+        auto shirokoMesh = meshManager.getMesh(shirokoMeshIndex);
+        auto cubeMesh = meshManager.getMesh(cubeMeshIndex);
 
-        size_t dust2BufferIndex = buffer->loadMeshToBuffer(*dust2Mesh);
-        size_t shirokoBufferIndex = buffer->loadMeshToBuffer(*shirokoMesh);
-        size_t cubeBufferIndex = buffer->loadMeshToBuffer(*cubeMesh);
+        size_t dust2BufferIndex = bufferRef.loadMeshToBuffer(*dust2Mesh);
+        size_t shirokoBufferIndex = bufferRef.loadMeshToBuffer(*shirokoMesh);
+        size_t cubeBufferIndex = bufferRef.loadMeshToBuffer(*cubeMesh);
 
         // Create descriptor sets for materials
         descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
-        descriptorManager->createDescriptorPool(2, resourceManager->textureManager->getTextureCount());
+        descriptorManager->createDescriptorPool(2, texManager.getTextureCount());
 
-        auto dust2Texture = resourceManager->textureManager->getTexture(dust2TextureIndex);
-        auto shirokoTexture = resourceManager->textureManager->getTexture(shirokoTextureIndex);
-        auto cubeTexture = resourceManager->textureManager->getTexture(cubeTextureIndex);
-        
-        if (dust2Texture) {
-            descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), dust2Texture, dust2MaterialIndex);
-            std::cout << "  ✓ Created descriptor set for dust2 material (index " << dust2MaterialIndex << ")" << std::endl;
-        }
-        if (shirokoTexture) {
-            descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), shirokoTexture, shirokoMaterialIndex);
-            std::cout << "  ✓ Created descriptor set for shiroko material (index " << shirokoMaterialIndex << ")" << std::endl;
-        }
-        if (cubeTexture) {
-            descriptorManager->createDescriptorSetsForMaterial(buffer->uniformBuffers, sizeof(UniformBufferObject), cubeTexture, cubeMaterialIndex);
-            std::cout << "  ✓ Created descriptor set for cube material (index " << cubeMaterialIndex << ")" << std::endl;
-        }
+        auto dust2Texture = texManager.getTexture(dust2TextureIndex);
+        auto shirokoTexture = texManager.getTexture(shirokoTextureIndex);
+        auto cubeTexture = texManager.getTexture(cubeTextureIndex);
+
+        auto& descManager = *descriptorManager;
+        descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), dust2Texture, dust2MaterialIndex);
+        descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), shirokoTexture, shirokoMaterialIndex);
+        descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), cubeTexture, cubeMaterialIndex);
+
 
         // Create models using indices
         models.resize(2);
@@ -177,45 +169,52 @@ namespace AzVulk {
         SDL_SetRelativeMouseMode(SDL_TRUE); // Start with mouse locked
         bool showFPS = true; // FPS display toggle state
 
+        // Create references to avoid arrow spam
+        auto& winManager = *windowManager;
+        auto& fpsRef = *fpsManager;
+        auto& camRef = *camera;
+        auto& rendererRef = *renderer;
+        auto& deviceRef = *vulkanDevice;
+
         // Get window center for mouse locking
         int windowWidth, windowHeight;
-        SDL_GetWindowSize(windowManager->window, &windowWidth, &windowHeight);
+        SDL_GetWindowSize(winManager.window, &windowWidth, &windowHeight);
         int centerX = windowWidth / 2;
         int centerY = windowHeight / 2;
 
         int cubeCount = 0;
 
         float camDist = 1.0f;
-        glm::vec3 camPos = camera->position;
+        glm::vec3 camPos = camRef.position;
 
-        while (!windowManager->shouldCloseFlag) {
+        while (!winManager.shouldCloseFlag) {
             // Update FPS manager for timing
-            fpsManager->update();
-            windowManager->pollEvents();
+            fpsRef.update();
+            winManager.pollEvents();
 
-            float dTime = fpsManager->deltaTime;
+            float dTime = fpsRef.deltaTime;
 
             // Check if window was resized or renderer needs to be updated
-            if (windowManager->resizedFlag || renderer->framebufferResized) {
-                windowManager->resizedFlag = false;
-                renderer->framebufferResized = false;
+            if (winManager.resizedFlag || rendererRef.framebufferResized) {
+                winManager.resizedFlag = false;
+                rendererRef.framebufferResized = false;
 
-                vkDeviceWaitIdle(vulkanDevice->device);
+                vkDeviceWaitIdle(deviceRef.device);
 
                 int newWidth, newHeight;
-                SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
+                SDL_GetWindowSize(winManager.window, &newWidth, &newHeight);
 
                 // Reset like literally everything
-                camera->updateAspectRatio(newWidth, newHeight);
+                camRef.updateAspectRatio(newWidth, newHeight);
                 msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
                 depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-                swapChain->recreate(windowManager->window, graphicsPipelines[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+                swapChain->recreate(winManager.window, graphicsPipelines[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
                 graphicsPipelines[pipelineIndex]->recreate(swapChain->extent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
             }
 
             const Uint8* k_state = SDL_GetKeyboardState(nullptr);
             if (k_state[SDL_SCANCODE_ESCAPE]) {
-                windowManager->shouldCloseFlag = true;
+                winManager.shouldCloseFlag = true;
                 break;
             }
             
@@ -225,7 +224,7 @@ namespace AzVulk {
                 mouseLocked = !mouseLocked;
                 if (mouseLocked) {
                     SDL_SetRelativeMouseMode(SDL_TRUE);
-                    SDL_WarpMouseInWindow(windowManager->window, centerX, centerY);
+                    SDL_WarpMouseInWindow(winManager.window, centerX, centerY);
                 } else {
                     SDL_SetRelativeMouseMode(SDL_FALSE);
                 }
@@ -262,7 +261,7 @@ namespace AzVulk {
                 float yawDelta = mouseX * sensitivity;
                 float pitchDelta = -mouseY * sensitivity;
 
-                camera->rotate(pitchDelta, yawDelta, 0.0f);
+                camRef.rotate(pitchDelta, yawDelta, 0.0f);
             }
         
     // ======== PLAYGROUND HERE! ========
@@ -273,13 +272,13 @@ namespace AzVulk {
             bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
             float shiro_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
 
-            // Move the camer normally
-            if (k_state[SDL_SCANCODE_W]) camPos += camera->forward * shiro_speed;
-            if (k_state[SDL_SCANCODE_S]) camPos -= camera->forward * shiro_speed;
-            if (k_state[SDL_SCANCODE_A]) camPos -= camera->right * shiro_speed;
-            if (k_state[SDL_SCANCODE_D]) camPos += camera->right * shiro_speed;
+            // Move the camera normally
+            if (k_state[SDL_SCANCODE_W]) camPos += camRef.forward * shiro_speed;
+            if (k_state[SDL_SCANCODE_S]) camPos -= camRef.forward * shiro_speed;
+            if (k_state[SDL_SCANCODE_A]) camPos -= camRef.right * shiro_speed;
+            if (k_state[SDL_SCANCODE_D]) camPos += camRef.right * shiro_speed;
 
-            camera->position = camPos;
+            camRef.position = camPos;
             //*/
 
             /*
@@ -352,38 +351,42 @@ namespace AzVulk {
             static size_t prevShirokoCount = 0;
             static size_t prevCubeCount = 0;
 
+            // Create reference to buffer to avoid arrow spam
+            auto& bufferRef = *buffer;
+            auto& deviceRef = *vulkanDevice;
+
             // Update buffers only when count changes or just update data if count is same
             if (!dust2Instances.empty()) {
                 if (dust2Instances.size() != prevdust2Count) {
                     // Only wait for GPU if we're actually recreating buffers
-                    if (prevdust2Count > 0) vkDeviceWaitIdle(vulkanDevice->device);
-                    buffer->createInstanceBufferForMesh(0, dust2Instances);
+                    if (prevdust2Count > 0) vkDeviceWaitIdle(deviceRef.device);
+                    bufferRef.createInstanceBufferForMesh(0, dust2Instances);
                     prevdust2Count = dust2Instances.size();
                 } else {
-                    buffer->updateInstanceBufferForMesh(0, dust2Instances);
+                    bufferRef.updateInstanceBufferForMesh(0, dust2Instances);
                 }
             }
             if (!shirokoInstances.empty()) {
                 if (shirokoInstances.size() != prevShirokoCount) {
-                    if (prevShirokoCount > 0) vkDeviceWaitIdle(vulkanDevice->device);
-                    buffer->createInstanceBufferForMesh(1, shirokoInstances);
+                    if (prevShirokoCount > 0) vkDeviceWaitIdle(deviceRef.device);
+                    bufferRef.createInstanceBufferForMesh(1, shirokoInstances);
                     prevShirokoCount = shirokoInstances.size();
                 } else {
-                    buffer->updateInstanceBufferForMesh(1, shirokoInstances);
+                    bufferRef.updateInstanceBufferForMesh(1, shirokoInstances);
                 }
             }
             if (!cubeInstances.empty()) {
                 if (cubeInstances.size() != prevCubeCount) {
-                    if (prevCubeCount > 0) vkDeviceWaitIdle(vulkanDevice->device);
-                    buffer->createInstanceBufferForMesh(2, cubeInstances);
+                    if (prevCubeCount > 0) vkDeviceWaitIdle(deviceRef.device);
+                    bufferRef.createInstanceBufferForMesh(2, cubeInstances);
                     prevCubeCount = cubeInstances.size();
                 } else {
-                    buffer->updateInstanceBufferForMesh(2, cubeInstances);
+                    bufferRef.updateInstanceBufferForMesh(2, cubeInstances);
                 }
             }
 
     // =================================
-            renderer->drawFrameWithModels(models, *graphicsPipelines[pipelineIndex]);
+            rendererRef.drawFrameWithModels(models, *graphicsPipelines[pipelineIndex]);
             
             // On-screen FPS display (toggleable with F2) - using window title for now
             static auto lastFpsOutput = std::chrono::steady_clock::now();
@@ -392,20 +395,20 @@ namespace AzVulk {
             
             if (showFPS && std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsOutput).count() >= 500) {
                 // Update FPS text every 500ms for smooth display
-                std::string fpsText = "Az3D Engine | FPS: " + std::to_string(static_cast<int>(fpsManager->currentFPS)) +
-                                     " | Avg: " + std::to_string(static_cast<int>(fpsManager->getAverageFPS())) +
-                                     " | " + std::to_string(static_cast<int>(fpsManager->frameTimeMs * 10) / 10.0f) + "ms" +
+                std::string fpsText = "Az3D Engine | FPS: " + std::to_string(static_cast<int>(fpsRef.currentFPS)) +
+                                     " | Avg: " + std::to_string(static_cast<int>(fpsRef.getAverageFPS())) +
+                                     " | " + std::to_string(static_cast<int>(fpsRef.frameTimeMs * 10) / 10.0f) + "ms" +
                                      " | Pipeline: " + std::to_string(pipelineIndex);
-                SDL_SetWindowTitle(windowManager->window, fpsText.c_str());
+                SDL_SetWindowTitle(winManager.window, fpsText.c_str());
                 lastFpsOutput = now;
             } else if (!showFPS && lastShowFPS) {
                 // Reset to default title when FPS display is turned off
-                SDL_SetWindowTitle(windowManager->window, "Az3D Engine");
+                SDL_SetWindowTitle(winManager.window, "Az3D Engine");
             }
             lastShowFPS = showFPS;
         }
 
-        vkDeviceWaitIdle(vulkanDevice->device);
+        vkDeviceWaitIdle(deviceRef.device);
     }
 
     void Application::cleanup() {
