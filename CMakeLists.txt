@@ -10,8 +10,6 @@ set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
 set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
 file(GLOB_RECURSE SRC_FILES
-    src/AzCore/WindowManager.cpp
-    src/AzCore/FpsManager.cpp
 
     src/Az3D/Camera.cpp
     src/Az3D/Model.cpp
@@ -30,7 +28,10 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/DepthManager.cpp
     src/AzVulk/MSAAManager.cpp
     src/AzVulk/Renderer.cpp
-    src/AzVulk/Application.cpp
+
+    src/AzCore/WindowManager.cpp
+    src/AzCore/FpsManager.cpp
+    src/AzCore/Application.cpp
 
     main.cpp
 )
@@ -42,7 +43,9 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/glm
 
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/AzCore
     ${CMAKE_SOURCE_DIR}/include/AzVulk
+    ${CMAKE_SOURCE_DIR}/include/Az3D
 )
 
 target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY})
