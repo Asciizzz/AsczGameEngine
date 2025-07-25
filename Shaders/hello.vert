@@ -18,12 +18,17 @@ layout(location = 6) in vec4 modelRow3;  // Row 3: [m30, m31, m32, m33]
 
 layout(location = 0) out vec2 fragTxtr;
 layout(location = 1) out vec3 fragNrml;
+layout(location = 2) out vec3 fragWorldPos;  // World position for fragment shader
 
 void main() {
     // Reconstruct model matrix from instance data
     mat4 modelMatrix = mat4(modelRow0, modelRow1, modelRow2, modelRow3);
 
-    gl_Position = ubo.proj * ubo.view * modelMatrix * vec4(inPos, 1.0);
+    // Calculate world position
+    vec4 worldPos = modelMatrix * vec4(inPos, 1.0);
+    fragWorldPos = worldPos.xyz;
+
+    gl_Position = ubo.proj * ubo.view * worldPos;
 
     fragNrml = mat3(modelMatrix) * inNrml;
     fragTxtr = inTxtr;

@@ -90,16 +90,27 @@ void Application::initVulkan() {
     auto& bufferRef = *buffer;
 
     // Load textures and get their indices
-    size_t dust2TextureIndex = resourceManager->addTexture("Model/de_dust2.png");
+    size_t mapTextureIndex = resourceManager->addTexture("Model/de_dust2.png");
     size_t shirokoTextureIndex = resourceManager->addTexture("Model/Shiroko.jpg");
 
+    // Load meshes and get their indices
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
+    size_t shirokoMeshIndex = meshManager.loadMeshFromOBJ("Model/shiroko.obj");
+    // Load meshes into GPU buffer
+    auto mapMesh = meshManager.meshes[mapMeshIndex];
+    auto shirokoMesh = meshManager.meshes[shirokoMeshIndex];
+
+    size_t mapBufferIndex = bufferRef.loadMeshToBuffer(*mapMesh);
+    size_t shirokoBufferIndex = bufferRef.loadMeshToBuffer(*shirokoMesh);
+
+
     // Create materials with texture indices
-    Az3D::Material dust2Material;
-    dust2Material.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    dust2Material.roughness = 0.7f;
-    dust2Material.metallic = 0.1f;
-    dust2Material.diffTxtr = dust2TextureIndex;
-    size_t dust2MaterialIndex = resourceManager->addMaterial(dust2Material);
+    Az3D::Material mapMaterial;
+    mapMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    mapMaterial.roughness = 0.7f;
+    mapMaterial.metallic = 0.1f;
+    mapMaterial.diffTxtr = mapTextureIndex;
+    size_t mapMaterialIndex = resourceManager->addMaterial(mapMaterial);
 
     Az3D::Material shirokoMaterial;
     shirokoMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -108,26 +119,18 @@ void Application::initVulkan() {
     shirokoMaterial.diffTxtr = shirokoTextureIndex;
     size_t shirokoMaterialIndex = resourceManager->addMaterial(shirokoMaterial);
 
-    // Load meshes and get their indices
-    size_t dust2MeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
-    size_t shirokoMeshIndex = meshManager.loadMeshFromOBJ("Model/shiroko.obj");
 
-    // Load meshes into GPU buffer
-    auto dust2Mesh = meshManager.meshes[dust2MeshIndex];
-    auto shirokoMesh = meshManager.meshes[shirokoMeshIndex];
 
-    size_t dust2BufferIndex = bufferRef.loadMeshToBuffer(*dust2Mesh);
-    size_t shirokoBufferIndex = bufferRef.loadMeshToBuffer(*shirokoMesh);
 
     // Create descriptor sets for materials
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
     descriptorManager->createDescriptorPool(2, texManager.textures.size());
 
-    auto dust2Texture = texManager.textures[dust2TextureIndex];
+    auto mapTexture = texManager.textures[mapTextureIndex];
     auto shirokoTexture = texManager.textures[shirokoTextureIndex];
 
     auto& descManager = *descriptorManager;
-    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), &dust2Texture, dust2MaterialIndex);
+    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), &mapTexture, mapMaterialIndex);
     descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), &shirokoTexture, shirokoMaterialIndex);
 
 
@@ -135,8 +138,10 @@ void Application::initVulkan() {
     // Create models using indices
     models.resize(2);
 
-    models[0] = Az3D::Model(dust2MeshIndex, dust2MaterialIndex);
+    models[0] = Az3D::Model(mapMeshIndex, mapMaterialIndex);
     models[0].trform.pos = glm::vec3(0.0f, .0f, 0.0f);
+    // Rotate 90
+    // models[0].trform.rotateX(glm::radians(-90.0f));
 
     models[1] = Az3D::Model(shirokoMeshIndex, shirokoMaterialIndex);
     models[1].trform.scale(0.2f);
@@ -267,7 +272,7 @@ void Application::mainLoop() {
         //*
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
-        float shiro_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
+        float shiro_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
 
         // Move the camera normally
         if (k_state[SDL_SCANCODE_W]) camPos += camRef.forward * shiro_speed;
@@ -323,10 +328,10 @@ void Application::mainLoop() {
         //*/
 
         // Update instance buffers dynamically by mesh type - optimized with caching + frustum culling
-        std::vector<InstanceData> dust2Instances, shirokoInstances, cubeInstances;
+        std::vector<InstanceData> mapInstances, shirokoInstances, cubeInstances;
         
         // Reserve memory to avoid reallocations during rapid spawning
-        dust2Instances.reserve(models.size());
+        mapInstances.reserve(models.size());
         shirokoInstances.reserve(models.size());
         cubeInstances.reserve(models.size());
 
@@ -335,7 +340,7 @@ void Application::mainLoop() {
             instanceData.modelMatrix = model.trform.modelMatrix();
             
             if (model.meshIndex == 0) {
-                dust2Instances.push_back(instanceData);
+                mapInstances.push_back(instanceData);
             } else if (model.meshIndex == 1) {
                 shirokoInstances.push_back(instanceData);
             } else if (model.meshIndex == 2) {
@@ -344,7 +349,7 @@ void Application::mainLoop() {
         }
 
         // Track previous counts to avoid unnecessary buffer recreation
-        static size_t prevdust2Count = 0;
+        static size_t prevmapCount = 0;
         static size_t prevShirokoCount = 0;
         static size_t prevCubeCount = 0;
 
@@ -353,14 +358,14 @@ void Application::mainLoop() {
         auto& deviceRef = *vulkanDevice;
 
         // Update buffers only when count changes or just update data if count is same
-        if (!dust2Instances.empty()) {
-            if (dust2Instances.size() != prevdust2Count) {
+        if (!mapInstances.empty()) {
+            if (mapInstances.size() != prevmapCount) {
                 // Only wait for GPU if we're actually recreating buffers
-                if (prevdust2Count > 0) vkDeviceWaitIdle(deviceRef.device);
-                bufferRef.createInstanceBufferForMesh(0, dust2Instances);
-                prevdust2Count = dust2Instances.size();
+                if (prevmapCount > 0) vkDeviceWaitIdle(deviceRef.device);
+                bufferRef.createInstanceBufferForMesh(0, mapInstances);
+                prevmapCount = mapInstances.size();
             } else {
-                bufferRef.updateInstanceBufferForMesh(0, dust2Instances);
+                bufferRef.updateInstanceBufferForMesh(0, mapInstances);
             }
         }
         if (!shirokoInstances.empty()) {

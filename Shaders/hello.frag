@@ -4,20 +4,28 @@ layout(binding = 1) uniform sampler2D txtrSmplr;
 
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragNrml;
+layout(location = 2) in vec3 fragWorldPos;  // World position from vertex shader
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    vec3 lightDir = normalize(vec3(-1.0, -1.0, 0.0));
+    vec3 lightPos = vec3(0.0, 40.0, 0.0); // Example light position
+
+    vec3 lightDir = normalize(lightPos - fragWorldPos);
     vec3 normal = normalize(fragNrml);
 
-    float nlength = length(fragNrml); // Check original normal length before normalization
+    float lightIntensity = abs(dot(normal, lightDir));
+    lightIntensity = length(fragNrml) > 0.001 ? lightIntensity : 1.0;
 
-    float lightIntensity = clamp(dot(normal, -lightDir), 0.1, 1.0);
-    // If normal length is too small (invalid normal), use ambient lighting
-    lightIntensity = nlength > 0.001 ? lightIntensity : 0.5;
+    // For toon shading effect
+    float diffFactor = ceil(lightIntensity * 4.0) * 0.25;
+    diffFactor = 0.1 + diffFactor * 0.9;
 
-    // Apply lighting to texture color
     vec4 texColor = texture(txtrSmplr, fragTxtr);
-    outColor = vec4(texColor.rgb * lightIntensity, texColor.a);
+    outColor = vec4(texColor.rgb * diffFactor, 1.0);
+
+    // Mix original color with position-based effect (uncomment to see effect)
+    // texColor.rgb = mix(texColor.rgb, positionColor, 0.3);
+    
+    // outColor = vec4(texColor.rgb, 1.0);
 }
