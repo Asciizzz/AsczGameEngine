@@ -2,62 +2,52 @@
 
 #include <vulkan/vulkan.h>
 #include <string>
-#include <memory>
+#include <vector>
+
+namespace AzVulk {
+    class Device;
+}
 
 namespace Az3D {
-    
-    // Texture resource data - contains Vulkan objects
-    struct TextureData {
+    // Barebone Vulkan texture resource
+    struct Texture {
+        std::string path;
         VkImage image = VK_NULL_HANDLE;
-        VkDeviceMemory memory = VK_NULL_HANDLE;
         VkImageView view = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
         VkSampler sampler = VK_NULL_HANDLE;
-        uint32_t mipLevels = 1;
-        uint32_t width = 0;
-        uint32_t height = 0;
-        
-        bool isValid() const {
-            return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE && 
-                   view != VK_NULL_HANDLE && sampler != VK_NULL_HANDLE;
-        }
     };
-    
-    // Texture class - represents a single texture with metadata
-    class Texture {
+
+    // Barebone manager for textures
+    class TextureManager {
     public:
-        Texture(const std::string& id, const std::string& filePath = "");
-        ~Texture() = default;
+        const AzVulk::Device& vulkanDevice;
+        VkCommandPool commandPool;
+        std::vector<Texture> textures;
+
+        TextureManager(const AzVulk::Device& device, VkCommandPool pool);
+        ~TextureManager();
         
-        // Delete copy constructor and assignment operator
-        Texture(const Texture&) = delete;
-        Texture& operator=(const Texture&) = delete;
+        size_t loadTexture(const std::string& imagePath);
+        void createDefaultTexture();
         
-        // Move constructor and assignment
-        Texture(Texture&& other) noexcept;
-        Texture& operator=(Texture&& other) noexcept;
-        
-        // Texture identification
-        const std::string& getId() const { return id; }
-        const std::string& getFilePath() const { return filePath; }
-        void setFilePath(const std::string& path) { filePath = path; }
-        
-        // Texture properties
-        uint32_t getWidth() const { return data ? data->width : 0; }
-        uint32_t getHeight() const { return data ? data->height : 0; }
-        uint32_t getMipLevels() const { return data ? data->mipLevels : 0; }
-        
-        // Resource access
-        const TextureData* getData() const { return data.get(); }
-        void setData(std::unique_ptr<TextureData> textureData) { data = std::move(textureData); }
-        
-        // State checks
-        bool isLoaded() const { return data && data->isValid(); }
-        bool isEmpty() const { return !data; }
+        // Direct access methods (no getters/setters boilerplate)
+        Texture* getTexture(size_t index);
+        const Texture* getTexture(size_t index) const { return index < textures.size() ? &textures[index] : nullptr; }
+        size_t getTextureCount() const;
         
     private:
-        std::string id;
-        std::string filePath;
-        std::unique_ptr<TextureData> data;
+        // Vulkan helper methods
+        void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
+                        VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
+                        VkImage& image, VkDeviceMemory& imageMemory);
+        void createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView);
+        void createSampler(uint32_t mipLevels, VkSampler& sampler);
+        void transitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, 
+                                    VkImageLayout newLayout, uint32_t mipLevels);
+        void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+        void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+        VkCommandBuffer beginSingleTimeCommands();
+        void endSingleTimeCommands(VkCommandBuffer commandBuffer);
     };
-    
-} // namespace Az3D
+}

@@ -16,7 +16,6 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/Camera.cpp
     src/Az3D/Model.cpp
     src/Az3D/Texture.cpp
-    src/Az3D/TextureManager.cpp
     src/Az3D/Mesh.cpp
     src/Az3D/Material.cpp
     src/Az3D/ResourceManager.cpp

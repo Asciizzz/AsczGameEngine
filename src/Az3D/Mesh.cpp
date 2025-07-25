@@ -42,27 +42,6 @@ namespace Az3D {
     }
 
 
-
-    Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
-        : vertices(vertices), indices(indices) {
-    }
-
-    Mesh::Mesh(std::vector<Vertex>&& vertices, std::vector<uint32_t>&& indices)
-        : vertices(std::move(vertices)), indices(std::move(indices)) {
-    }
-
-    Mesh::Mesh(Mesh&& other) noexcept
-        : vertices(std::move(other.vertices)), indices(std::move(other.indices)) {
-    }
-
-    Mesh& Mesh::operator=(Mesh&& other) noexcept {
-        if (this != &other) {
-            vertices = std::move(other.vertices);
-            indices = std::move(other.indices);
-        }
-        return *this;
-    }
-
     bool Mesh::isEmpty() {
         return vertices.empty() || indices.empty();
     }

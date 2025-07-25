@@ -7,7 +7,7 @@
 #include "AzVulk/Device.hpp"
 
 namespace Az3D {
-    class Texture;
+    struct Texture;
 }
 
 namespace AzVulk {
@@ -22,7 +22,7 @@ namespace AzVulk {
 
         void createDescriptorPool(uint32_t maxFramesInFlight, uint32_t maxMaterials = 10);
         void createDescriptorSetsForMaterial(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize, 
-                                           const Az3D::Texture* texture, size_t materialIndex);
+                                            const Az3D::Texture* texture, size_t materialIndex);
         
         VkDescriptorSet getDescriptorSet(uint32_t frameIndex, size_t materialIndex);
         

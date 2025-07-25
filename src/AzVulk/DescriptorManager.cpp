@@ -41,7 +41,7 @@ namespace AzVulk {
     }
 
     void DescriptorManager::createDescriptorSetsForMaterial(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize, 
-                                                           const Az3D::Texture* texture, size_t materialIndex) {
+                                                            const Az3D::Texture* texture, size_t materialIndex) {
         // Check if material already has descriptor sets
         if (materialDescriptorSets.find(materialIndex) != materialDescriptorSets.end()) {
             return; // Already created
@@ -82,10 +82,10 @@ namespace AzVulk {
             VkDescriptorImageInfo imageInfo{};
             bool hasValidTexture = false;
             
-            if (texture && texture->getData()) {
+            if (texture && texture->view != VK_NULL_HANDLE && texture->sampler != VK_NULL_HANDLE) {
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                imageInfo.imageView = texture->getData()->view;
-                imageInfo.sampler = texture->getData()->sampler;
+                imageInfo.imageView = texture->view;
+                imageInfo.sampler = texture->sampler;
                 hasValidTexture = true;
             }
 

@@ -91,7 +91,7 @@ namespace AzVulk {
         // Load textures and get their indices
         size_t dust2TextureIndex = resourceManager->addTexture("Model/de_dust2.png");
         size_t shirokoTextureIndex = resourceManager->addTexture("Model/Shiroko.jpg");
-        size_t cubeTextureIndex = resourceManager->addTexture("textures/texture1.png");
+        size_t cubeTextureIndex = resourceManager->addTexture("old/texture1.png");
 
         // Create materials with texture indices
         Az3D::Material dust2Material;
