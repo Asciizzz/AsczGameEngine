@@ -42,10 +42,6 @@ namespace Az3D {
     }
 
 
-    bool Mesh::isEmpty() {
-        return vertices.empty() || indices.empty();
-    }
-
     // OBJ loader implementation using tiny_obj_loader
     std::shared_ptr<Mesh> Mesh::loadFromOBJ(const char* filePath) {
         tinyobj::attrib_t attrib;

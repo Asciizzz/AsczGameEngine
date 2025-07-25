@@ -25,14 +25,14 @@ namespace Az3D {
 
     struct Mesh {
         Mesh() = default;
-        Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
+        Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool hasBVH = false)
             : vertices(std::move(vertices)), indices(std::move(indices)) {}
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
-        bool isEmpty();
         static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath);
+
     };
 
 
