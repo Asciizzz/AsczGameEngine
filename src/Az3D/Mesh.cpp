@@ -152,12 +152,10 @@ namespace Az3D {
         meshes.push_back(mesh);
         return meshes.size() - 1;
     }
-
     size_t MeshManager::addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
         return addMesh(mesh);
     }
-    
     size_t MeshManager::loadMeshFromOBJ(const char* filePath) {
         auto mesh = Mesh::loadFromOBJ(filePath);
         return addMesh(mesh);
