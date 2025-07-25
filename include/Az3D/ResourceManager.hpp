@@ -30,10 +30,6 @@ namespace Az3D {
         size_t addMaterial(const Material& material);
         size_t addMesh(const Mesh& mesh);
 
-        // Get resource by index
-        Mesh* getMesh(size_t index) const;
-        Material* getMaterial(size_t index) const;
-
         // ============ UTILITY METHODS ============
 
         std::unique_ptr<TextureManager> textureManager;
