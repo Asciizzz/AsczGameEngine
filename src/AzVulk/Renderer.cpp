@@ -232,7 +232,7 @@ namespace AzVulk {
             try {
                 VkDescriptorSet materialDescriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
                 vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                                       graphicsPipeline.pipelineLayout, 0, 1, &materialDescriptorSet, 0, nullptr);
+                                        graphicsPipeline.pipelineLayout, 0, 1, &materialDescriptorSet, 0, nullptr);
 
                 // Render all models with this material
                 for (const Az3D::Model* model : materialModels) {
