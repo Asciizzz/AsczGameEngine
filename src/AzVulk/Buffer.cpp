@@ -5,54 +5,6 @@
 #include <iostream>
 
 namespace AzVulk {
-    VkVertexInputBindingDescription Vertex::getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(Vertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        return bindingDescription;
-    }
-
-    std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, p);
-
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, n);
-
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[2].offset = offsetof(Vertex, t);
-
-        return attributeDescriptions;
-    }
-
-    // Conversion methods from Az3D::Vertex to AzVulk::Vertex
-    Vertex Vertex::fromAz3D(const Az3D::Vertex& az3dVertex) {
-        return Vertex{
-            az3dVertex.pos,
-            az3dVertex.nrml,
-            az3dVertex.txtr
-        };
-    }
-
-    std::vector<Vertex> Vertex::fromAz3D(const std::vector<Az3D::Vertex>& az3dVertices) {
-        std::vector<Vertex> result;
-        result.reserve(az3dVertices.size());
-        
-        for (const auto& az3dVertex : az3dVertices) {
-            result.push_back(fromAz3D(az3dVertex));
-        }
-        
-        return result;
-    }
 
     Buffer::Buffer(const Device& device) : vulkanDevice(device) {}
 
@@ -90,7 +42,7 @@ namespace AzVulk {
         }
     }
 
-    void Buffer::createVertexBuffer(const std::vector<Vertex>& vertices) {
+    void Buffer::createVertexBuffer(const std::vector<Az3D::Vertex>& vertices) {
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
         // For simplicity, create buffer directly in host-visible memory
@@ -154,15 +106,13 @@ namespace AzVulk {
 
     // New Az3D integration methods
     void Buffer::loadMesh(const Az3D::Mesh& mesh) {
-        // Convert Az3D vertices to AzVulk vertices and create buffers
-        auto vulkVertices = Vertex::fromAz3D(mesh.vertices);
-        createVertexBuffer(vulkVertices);
+        // Use Az3D vertices directly
+        createVertexBuffer(mesh.vertices);
         createIndexBuffer(mesh.indices);
     }
 
     void Buffer::createVertexBuffer(const Az3D::Mesh& mesh) {
-        auto vulkVertices = Vertex::fromAz3D(mesh.vertices);
-        createVertexBuffer(vulkVertices);
+        createVertexBuffer(mesh.vertices);
     }
 
     void Buffer::createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
@@ -225,16 +175,16 @@ namespace AzVulk {
         vkFreeCommandBuffers(vulkanDevice.device, commandPool, 1, &commandBuffer);
     }
 
-    // InstanceData methods for instanced rendering
-    VkVertexInputBindingDescription InstanceData::getBindingDescription() {
+    // ModelInstance methods for instanced rendering
+    VkVertexInputBindingDescription ModelInstance::getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 1; // Binding 1 for instance data
-        bindingDescription.stride = sizeof(InstanceData);
+        bindingDescription.stride = sizeof(ModelInstance);
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
         return bindingDescription;
     }
 
-    std::array<VkVertexInputAttributeDescription, 4> InstanceData::getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, 4> ModelInstance::getAttributeDescriptions() {
         std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
 
         // Model matrix is 4x4, so we need 4 attribute locations (3, 4, 5, 6)
@@ -243,14 +193,14 @@ namespace AzVulk {
             attributeDescriptions[i].binding = 1;
             attributeDescriptions[i].location = 3 + i; // Locations 3, 4, 5, 6
             attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescriptions[i].offset = offsetof(InstanceData, modelMatrix) + sizeof(glm::vec4) * i;
+            attributeDescriptions[i].offset = offsetof(ModelInstance, modelMatrix) + sizeof(glm::vec4) * i;
         }
 
         return attributeDescriptions;
     }
 
-    void Buffer::createInstanceBuffer(const std::vector<InstanceData>& instances) {
-        VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+    void Buffer::createInstanceBuffer(const std::vector<ModelInstance>& instances) {
+        VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
         instanceCount = static_cast<uint32_t>(instances.size());
 
         // Clean up existing buffer if it exists
@@ -271,9 +221,9 @@ namespace AzVulk {
         memcpy(instanceBufferMapped, instances.data(), bufferSize);
     }
 
-    void Buffer::updateInstanceBuffer(const std::vector<InstanceData>& instances) {
+    void Buffer::updateInstanceBuffer(const std::vector<ModelInstance>& instances) {
         if (instanceBufferMapped && instances.size() <= instanceCount) {
-            VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+            VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
             memcpy(instanceBufferMapped, instances.data(), bufferSize);
         }
     }
@@ -282,18 +232,18 @@ namespace AzVulk {
     size_t Buffer::loadMeshToBuffer(const Az3D::Mesh& mesh) {
         MeshBufferData meshBuffer;
         
-        // Convert Az3D vertices to AzVulk vertices
-        auto vulkVertices = Vertex::fromAz3D(mesh.vertices);
+        // Use Az3D vertices directly
+        const auto& vertices = mesh.vertices;
         
         // Create vertex buffer for this mesh
-        VkDeviceSize vertexBufferSize = sizeof(vulkVertices[0]) * vulkVertices.size();
+        VkDeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
         createBuffer(vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                     meshBuffer.vertexBuffer, meshBuffer.vertexBufferMemory);
 
         void* vertexData;
         vkMapMemory(vulkanDevice.device, meshBuffer.vertexBufferMemory, 0, vertexBufferSize, 0, &vertexData);
-        memcpy(vertexData, vulkVertices.data(), (size_t)vertexBufferSize);
+        memcpy(vertexData, vertices.data(), (size_t)vertexBufferSize);
         vkUnmapMemory(vulkanDevice.device, meshBuffer.vertexBufferMemory);
         
         // Create index buffer for this mesh
@@ -316,13 +266,13 @@ namespace AzVulk {
         return meshBuffers.size() - 1;
     }
 
-    void Buffer::createInstanceBufferForMesh(size_t meshIndex, const std::vector<InstanceData>& instances) {
+    void Buffer::createInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances) {
         if (meshIndex >= meshBuffers.size()) {
             throw std::runtime_error("Invalid mesh index for instance buffer creation!");
         }
         
         auto& meshBuffer = meshBuffers[meshIndex];
-        VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+        VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
         meshBuffer.instanceCount = static_cast<uint32_t>(instances.size());
 
         // Clean up existing buffer if it exists
@@ -346,14 +296,14 @@ namespace AzVulk {
         memcpy(meshBuffer.instanceBufferMapped, instances.data(), bufferSize);
     }
 
-    void Buffer::updateInstanceBufferForMesh(size_t meshIndex, const std::vector<InstanceData>& instances) {
+    void Buffer::updateInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances) {
         if (meshIndex >= meshBuffers.size()) {
             return; // Silently fail for invalid mesh index
         }
         
         auto& meshBuffer = meshBuffers[meshIndex];
         if (meshBuffer.instanceBufferMapped && instances.size() <= meshBuffer.instanceCount) {
-            VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+            VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
             memcpy(meshBuffer.instanceBufferMapped, instances.data(), bufferSize);
         }
     }

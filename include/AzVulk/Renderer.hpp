@@ -27,10 +27,8 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        void drawFrame();
         void drawFrameWithModels(const std::vector<Az3D::Model>& models, GraphicsPipeline& pipeline);
-        
-        
+
         const Device& vulkanDevice;
         SwapChain& swapChain;
         GraphicsPipeline& graphicsPipeline;
@@ -51,11 +49,7 @@ namespace AzVulk {
         std::chrono::high_resolution_clock::time_point startTime;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
-        
-        // Helper methods (public for direct access)
-        void updateUniformBuffer(uint32_t currentImage);
-        void updateUniformBuffer(uint32_t currentImage, const glm::mat4& modelMatrix);
-        
+
     private:
         void createCommandPool();
         void createCommandBuffers();

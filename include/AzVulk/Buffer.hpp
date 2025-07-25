@@ -10,27 +10,37 @@
 #include "Az3D/Az3D.hpp"
 
 namespace AzVulk {
-    // Legacy Vertex struct for compatibility - will be converted from Az3D::Vertex
-    struct Vertex {
-        glm::vec3 p;
-        glm::vec3 n;
-        glm::vec2 t;
-
-        static VkVertexInputBindingDescription getBindingDescription();
-        static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
-        
-        // Conversion from Az3D::Vertex
-        static Vertex fromAz3D(const Az3D::Vertex& az3dVertex);
-        static std::vector<Vertex> fromAz3D(const std::vector<Az3D::Vertex>& az3dVertices);
-    };
-
     struct UniformBufferObject {
+        // Camera matrices
         alignas(16) glm::mat4 view;
         alignas(16) glm::mat4 proj;
+        
+        // Lighting data
+        alignas(16) glm::vec3 lightDirection;     // Main directional light
+        alignas(16) glm::vec3 lightColor;         // Light color and intensity
+        alignas(16) glm::vec3 ambientLight;       // Ambient lighting
+        alignas(16) glm::vec3 cameraPosition;     // For view direction calculations
+        
+        // Time and animation
+        alignas(4) float time;                    // Current time for animations
+        alignas(4) float deltaTime;               // Frame delta time
+        
+        // Material properties (global overrides)
+        alignas(16) glm::vec3 fogColor;           // Fog color
+        alignas(4) float fogDensity;              // Fog density
+        alignas(4) float fogStart;                // Fog start distance
+        alignas(4) float fogEnd;                  // Fog end distance
+        
+        // Screen/viewport info
+        alignas(8) glm::vec2 screenResolution;    // Screen width/height
+        alignas(4) float aspectRatio;             // Screen aspect ratio
+        
+        // Custom shader parameters
+        alignas(16) glm::vec4 customParams;       // Generic parameters for effects
     };
 
     // Instance data structure for instanced rendering
-    struct InstanceData {
+    struct ModelInstance {
         alignas(16) glm::mat4 modelMatrix;
         
         static VkVertexInputBindingDescription getBindingDescription();
@@ -83,19 +93,19 @@ namespace AzVulk {
         Buffer& operator=(const Buffer&) = delete;
 
         // Legacy single-mesh methods (for backwards compatibility)
-        void createVertexBuffer(const std::vector<Vertex>& vertices);
+        void createVertexBuffer(const std::vector<Az3D::Vertex>& vertices);
         void createIndexBuffer(const std::vector<uint16_t>& indices);
         void createIndexBuffer(const std::vector<uint32_t>& indices);
         void createUniformBuffers(size_t count);
         void loadMesh(const Az3D::Mesh& mesh);
         void createVertexBuffer(const Az3D::Mesh& mesh);
-        void createInstanceBuffer(const std::vector<InstanceData>& instances);
-        void updateInstanceBuffer(const std::vector<InstanceData>& instances);
+        void createInstanceBuffer(const std::vector<ModelInstance>& instances);
+        void updateInstanceBuffer(const std::vector<ModelInstance>& instances);
         
         // New multi-mesh methods
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
-        void createInstanceBufferForMesh(size_t meshIndex, const std::vector<InstanceData>& instances);
-        void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<InstanceData>& instances);
+        void createInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances);
+        void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances);
         
         // Getters for multi-mesh data
         const std::vector<MeshBufferData>& getMeshBuffers() const { return meshBuffers; }

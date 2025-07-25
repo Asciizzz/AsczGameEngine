@@ -326,7 +326,7 @@ void Application::mainLoop() {
         //*/
 
         // Update instance buffers dynamically by mesh type - optimized with caching + frustum culling
-        std::vector<InstanceData> mapInstances, shirokoInstances, cubeInstances;
+        std::vector<ModelInstance> mapInstances, shirokoInstances, cubeInstances;
         
         // Reserve memory to avoid reallocations during rapid spawning
         mapInstances.reserve(models.size());
@@ -334,7 +334,7 @@ void Application::mainLoop() {
         cubeInstances.reserve(models.size());
 
         for (const auto& model : models) {
-            InstanceData instanceData{};
+            ModelInstance instanceData{};
             instanceData.modelMatrix = model.trform.modelMatrix();
             
             if (model.meshIndex == 0) {
