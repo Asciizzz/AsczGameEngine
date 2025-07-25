@@ -15,7 +15,7 @@ namespace Az3D {
     }
     
     size_t ResourceManager::addMaterial(const Material& material) {
-        return materialManager->addMaterial(new Material(material));
+        return materialManager->addMaterial(material);
     }
     
     size_t ResourceManager::addMesh(const Mesh& mesh) {

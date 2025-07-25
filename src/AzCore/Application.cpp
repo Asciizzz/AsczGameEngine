@@ -81,27 +81,22 @@ void Application::initVulkan() {
     buffer->createUniformBuffers(2);
 
     resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
-
-// PLAYGROUND FROM HERE!
+    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
     auto& texManager = *resourceManager->textureManager;
     auto& meshManager = *resourceManager->meshManager;
-    auto& bufferRef = *buffer;
+    auto& matManager = *resourceManager->materialManager;
+
+// PLAYGROUND FROM HERE!
 
     // Load textures and get their indices
-    size_t mapTextureIndex = resourceManager->addTexture("Model/de_dust2.png");
-    size_t shirokoTextureIndex = resourceManager->addTexture("Model/Shiroko.jpg");
+    size_t mapTextureIndex = texManager.addTexture("Model/de_dust2.png");
+    size_t shirokoTextureIndex = texManager.addTexture("Model/Shiroko.jpg");
 
     // Load meshes and get their indices
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
     size_t shirokoMeshIndex = meshManager.loadMeshFromOBJ("Model/shiroko.obj");
-    // Load meshes into GPU buffer
-    auto mapMesh = meshManager.meshes[mapMeshIndex];
-    auto shirokoMesh = meshManager.meshes[shirokoMeshIndex];
-
-    size_t mapBufferIndex = bufferRef.loadMeshToBuffer(*mapMesh);
-    size_t shirokoBufferIndex = bufferRef.loadMeshToBuffer(*shirokoMesh);
 
 
     // Create materials with texture indices
@@ -110,7 +105,7 @@ void Application::initVulkan() {
     mapMaterial.roughness = 0.7f;
     mapMaterial.metallic = 0.1f;
     mapMaterial.diffTxtr = mapTextureIndex;
-    size_t mapMaterialIndex = resourceManager->addMaterial(mapMaterial);
+    size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
     Az3D::Material shirokoMaterial;
     shirokoMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -118,21 +113,6 @@ void Application::initVulkan() {
     shirokoMaterial.metallic = 0.0f;
     shirokoMaterial.diffTxtr = shirokoTextureIndex;
     size_t shirokoMaterialIndex = resourceManager->addMaterial(shirokoMaterial);
-
-
-
-
-    // Create descriptor sets for materials
-    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
-    descriptorManager->createDescriptorPool(2, texManager.textures.size());
-
-    auto mapTexture = texManager.textures[mapTextureIndex];
-    auto shirokoTexture = texManager.textures[shirokoTextureIndex];
-
-    auto& descManager = *descriptorManager;
-    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), &mapTexture, mapMaterialIndex);
-    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), &shirokoTexture, shirokoMaterialIndex);
-
 
 
     // Create models using indices
@@ -146,6 +126,24 @@ void Application::initVulkan() {
     models[1] = Az3D::Model(shirokoMeshIndex, shirokoMaterialIndex);
     models[1].trform.scale(0.2f);
     models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
+
+// PLAYGROUND END HERE 
+
+    auto& bufferRef = *buffer;
+    auto& descManager = *descriptorManager;
+
+    // Create descriptor sets for materials
+    descManager.createDescriptorPool(2, matManager.materials.size());
+
+    for (size_t i = 0; i < matManager.materials.size(); ++i) {
+        descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), 
+                                                    &texManager.textures[i], i);
+    }
+
+    // Load meshes into GPU buffer
+    for (size_t i = 0; i < meshManager.meshes.size(); ++i) {
+        bufferRef.loadMeshToBuffer(*meshManager.meshes[i]);
+    }
 
     // Final Renderer setup with ResourceManager
     renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipelines[pipelineIndex], 
@@ -269,7 +267,7 @@ void Application::mainLoop() {
 // ======== PLAYGROUND HERE! ========
 
 
-        //*
+        /*
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
         float shiro_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
@@ -283,7 +281,7 @@ void Application::mainLoop() {
         camRef.pos = camPos;
         //*/
 
-        /*
+        //*
         auto& shiro_model = models[1];
         static float shiro_vy = 0.0f;
 
@@ -300,7 +298,7 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_UP]) camDist -= 1.0f * dTime;
         if (k_state[SDL_SCANCODE_DOWN]) camDist += 1.0f * dTime;
 
-        camera->position = shiro_model.trform.pos - camera->forward * camDist;
+        camera->pos = shiro_model.trform.pos - camera->forward * camDist;
 
         // Move the shiroko plush based on WASD keys
 

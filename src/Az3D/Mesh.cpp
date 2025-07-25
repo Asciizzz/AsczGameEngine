@@ -43,7 +43,7 @@ namespace Az3D {
 
 
 
-        size_t MeshManager::addMesh(std::shared_ptr<Mesh> mesh) {
+    size_t MeshManager::addMesh(std::shared_ptr<Mesh> mesh) {
         meshes.push_back(mesh);
         return meshes.size() - 1;
     }

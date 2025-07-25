@@ -2,10 +2,8 @@
 
 namespace Az3D {
     
-    size_t MaterialManager::addMaterial(Material* material) {
-        if (!material) return 0; // Default material index
-
-        materials.push_back(std::shared_ptr<Material>(material));
+    size_t MaterialManager::addMaterial(const Material& material) {
+        materials.push_back(std::make_shared<Material>(material));
         return materials.size() - 1;
     }
 

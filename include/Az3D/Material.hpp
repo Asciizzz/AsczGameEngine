@@ -41,7 +41,7 @@ namespace Az3D {
         MaterialManager(const MaterialManager&) = delete;
         MaterialManager& operator=(const MaterialManager&) = delete;
 
-        size_t addMaterial(Material* material);
+        size_t addMaterial(const Material& material);
 
         // Material storage - index-based
         std::vector<std::shared_ptr<Material>> materials = { 
