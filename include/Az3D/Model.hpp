@@ -7,13 +7,7 @@
 #include <string>
 
 namespace Az3D {
-    // Forward declarations
-    class Mesh;
-    class Material;
-    class MeshManager;
-    class MaterialManager;
-    class ResourceManager;
-    
+
     struct Transform {
         glm::vec3 pos{0.0f};
         glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
