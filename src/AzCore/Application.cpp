@@ -92,7 +92,6 @@ void Application::initVulkan() {
     // Load textures and get their indices
     size_t dust2TextureIndex = resourceManager->addTexture("Model/de_dust2.png");
     size_t shirokoTextureIndex = resourceManager->addTexture("Model/Shiroko.jpg");
-    size_t cubeTextureIndex = resourceManager->addTexture("old/texture1.png");
 
     // Create materials with texture indices
     Az3D::Material dust2Material;
@@ -109,39 +108,28 @@ void Application::initVulkan() {
     shirokoMaterial.diffTxtr = shirokoTextureIndex;
     size_t shirokoMaterialIndex = resourceManager->addMaterial(shirokoMaterial);
 
-    Az3D::Material cubeMaterial;
-    cubeMaterial.albedoColor = glm::vec3(0.8f, 0.9f, 1.0f);
-    cubeMaterial.roughness = 0.3f;
-    cubeMaterial.metallic = 0.2f;
-    cubeMaterial.diffTxtr = cubeTextureIndex;
-    size_t cubeMaterialIndex = resourceManager->addMaterial(cubeMaterial);
-
     // Load meshes and get their indices
     size_t dust2MeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
     size_t shirokoMeshIndex = meshManager.loadMeshFromOBJ("Model/shiroko.obj");
-    size_t cubeMeshIndex = meshManager.createCubeMesh();
 
     // Load meshes into GPU buffer
     auto dust2Mesh = meshManager.meshes[dust2MeshIndex];
     auto shirokoMesh = meshManager.meshes[shirokoMeshIndex];
-    auto cubeMesh = meshManager.meshes[cubeMeshIndex];
 
     size_t dust2BufferIndex = bufferRef.loadMeshToBuffer(*dust2Mesh);
     size_t shirokoBufferIndex = bufferRef.loadMeshToBuffer(*shirokoMesh);
-    size_t cubeBufferIndex = bufferRef.loadMeshToBuffer(*cubeMesh);
 
     // Create descriptor sets for materials
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
-    descriptorManager->createDescriptorPool(2, texManager.getTextureCount());
+    descriptorManager->createDescriptorPool(2, texManager.textures.size());
 
-    auto dust2Texture = texManager.getTexture(dust2TextureIndex);
-    auto shirokoTexture = texManager.getTexture(shirokoTextureIndex);
-    auto cubeTexture = texManager.getTexture(cubeTextureIndex);
+    auto dust2Texture = texManager.textures[dust2TextureIndex];
+    auto shirokoTexture = texManager.textures[shirokoTextureIndex];
 
     auto& descManager = *descriptorManager;
-    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), dust2Texture, dust2MaterialIndex);
-    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), shirokoTexture, shirokoMaterialIndex);
-    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), cubeTexture, cubeMaterialIndex);
+    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), &dust2Texture, dust2MaterialIndex);
+    descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), &shirokoTexture, shirokoMaterialIndex);
+
 
 
     // Create models using indices

@@ -217,15 +217,17 @@ namespace AzVulk {
         for (const auto& [materialIndex, materialModels] : modelsByMaterial) {
             // Get material and its diffuse texture
             auto* material = resourceManager.materialManager->materials[materialIndex].get();
+            auto& txtrManager = *resourceManager.textureManager;
+
             const Az3D::Texture* diffuseTexture = nullptr;
             
             if (material && material->diffTxtr > 0) {
-                diffuseTexture = resourceManager.textureManager->getTexture(material->diffTxtr);
+                diffuseTexture = &txtrManager.textures[material->diffTxtr];
             }
             
             // If no texture, use default texture (index 0)
             if (!diffuseTexture) {
-                diffuseTexture = resourceManager.textureManager->getTexture(0);
+                diffuseTexture = &txtrManager.textures[0];
             }
 
             // Bind material-specific descriptor set (includes uniform buffer + texture)
@@ -240,9 +242,8 @@ namespace AzVulk {
                     const auto* mesh = resourceManager.meshManager->meshes[model->meshIndex].get();
                     if (!mesh) continue;
 
-                    // Use the mesh index directly since we're using index-based system
                     size_t meshIndex = model->meshIndex;
-                    
+
                     const auto& meshBuffers = buffer.getMeshBuffers();
                     if (meshIndex >= meshBuffers.size()) continue;
 

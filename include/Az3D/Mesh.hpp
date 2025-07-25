@@ -31,7 +31,7 @@ namespace Az3D {
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
-        static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath);
+        static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath, bool hasBVH = false);
 
     };
 
@@ -39,7 +39,7 @@ namespace Az3D {
     class MeshManager {
     public:
         MeshManager() = default;
-        
+
         // Delete copy constructor and assignment operator
         MeshManager(const MeshManager&) = delete;
         MeshManager& operator=(const MeshManager&) = delete;
@@ -47,10 +47,6 @@ namespace Az3D {
         size_t addMesh(std::shared_ptr<Mesh> mesh);
         size_t addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
         size_t loadMeshFromOBJ(const char* filePath);
-        
-        // Create simple meshes and return index
-        size_t createQuadMesh();
-        size_t createCubeMesh();
 
         // Index-based mesh storage
         std::vector<std::shared_ptr<Mesh>> meshes;

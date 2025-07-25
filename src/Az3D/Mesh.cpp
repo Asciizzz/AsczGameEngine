@@ -42,8 +42,26 @@ namespace Az3D {
     }
 
 
+
+        size_t MeshManager::addMesh(std::shared_ptr<Mesh> mesh) {
+        meshes.push_back(mesh);
+        return meshes.size() - 1;
+    }
+    size_t MeshManager::addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
+        auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
+        return addMesh(mesh);
+    }
+    size_t MeshManager::loadMeshFromOBJ(const char* filePath) {
+        auto mesh = Mesh::loadFromOBJ(filePath);
+        return addMesh(mesh);
+    }
+
+
+    // MESHES AND BOUNDING VOLUMES
+
+
     // OBJ loader implementation using tiny_obj_loader
-    std::shared_ptr<Mesh> Mesh::loadFromOBJ(const char* filePath) {
+    std::shared_ptr<Mesh> Mesh::loadFromOBJ(const char* filePath, bool hasBVH) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
@@ -138,75 +156,7 @@ namespace Az3D {
             }
         }
 
-        return std::make_shared<Mesh>(std::move(vertices), std::move(indices));
+        return std::make_shared<Mesh>(std::move(vertices), std::move(indices), hasBVH);
     }
 
-
-
-
-    size_t MeshManager::addMesh(std::shared_ptr<Mesh> mesh) {
-        meshes.push_back(mesh);
-        return meshes.size() - 1;
-    }
-    size_t MeshManager::addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
-        auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
-        return addMesh(mesh);
-    }
-    size_t MeshManager::loadMeshFromOBJ(const char* filePath) {
-        auto mesh = Mesh::loadFromOBJ(filePath);
-        return addMesh(mesh);
-    }
-
-    size_t MeshManager::createQuadMesh() {
-        // Create a simple quad mesh (2 triangles)
-        std::vector<Vertex> vertices = {
-            {{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Bottom-left
-            {{ 1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}}, // Bottom-right
-            {{ 1.0f,  1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}}, // Top-right
-            {{-1.0f,  1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}}  // Top-left
-        };
-        
-        std::vector<uint32_t> indices = {
-            0, 1, 2,  // First triangle
-            2, 3, 0   // Second triangle
-        };
-        
-        auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
-        return addMesh(mesh);
-    }
-
-    size_t MeshManager::createCubeMesh() {
-        // Create a simple cube mesh
-        std::vector<Vertex> vertices = {
-            // Front face
-            {{-1.0f, -1.0f,  1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-            {{ 1.0f, -1.0f,  1.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-            {{ 1.0f,  1.0f,  1.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-            {{-1.0f,  1.0f,  1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-            
-            // Back face
-            {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
-            {{ 1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
-            {{ 1.0f,  1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
-            {{-1.0f,  1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
-        };
-        
-        std::vector<uint32_t> indices = {
-            // Front face
-            0, 1, 2,  2, 3, 0,
-            // Back face
-            4, 6, 5,  6, 4, 7,
-            // Left face
-            4, 0, 3,  3, 7, 4,
-            // Right face
-            1, 5, 6,  6, 2, 1,
-            // Top face
-            3, 2, 6,  6, 7, 3,
-            // Bottom face
-            4, 5, 1,  1, 0, 4
-        };
-        
-        auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
-        return addMesh(mesh);
-    }
 }

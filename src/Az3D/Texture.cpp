@@ -34,7 +34,7 @@ namespace Az3D {
         textures.clear();
     }
 
-    size_t TextureManager::loadTexture(const char* imagePath) {
+    size_t TextureManager::addTexture(const char* imagePath) {
         try {
             Texture texture;
             texture.path = imagePath; // Convert to std::string for storage
@@ -113,15 +113,15 @@ namespace Az3D {
 
         // Create texture image
         createImage(1, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, 
-                   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
-                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, defaultTexture.image, defaultTexture.memory);
+                    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, defaultTexture.image, defaultTexture.memory);
 
         // Transfer data
-        transitionImageLayout(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
+        transitionImageLayout(  defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
         copyBufferToImage(stagingBuffer, defaultTexture.image, 1, 1);
-        transitionImageLayout(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
+        transitionImageLayout(  defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
 
         // Create image view and sampler
         createImageView(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, 1, defaultTexture.view);
@@ -132,16 +132,6 @@ namespace Az3D {
         textures.push_back(defaultTexture);
     }
 
-    Texture* TextureManager::getTexture(size_t index) {
-        if (index < textures.size()) {
-            return &textures[index];
-        }
-        return &textures[0]; // Return default texture
-    }
-
-    size_t TextureManager::getTextureCount() const {
-        return textures.size();
-    }
 
     // Vulkan helper methods implementation
     void TextureManager::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 

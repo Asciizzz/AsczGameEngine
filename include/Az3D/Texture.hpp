@@ -28,14 +28,9 @@ namespace Az3D {
         TextureManager(const AzVulk::Device& device, VkCommandPool pool);
         ~TextureManager();
         
-        size_t loadTexture(const char* imagePath);
+        size_t addTexture(const char* imagePath);
         void createDefaultTexture();
-        
-        // Direct access methods (no getters/setters boilerplate)
-        Texture* getTexture(size_t index);
-        const Texture* getTexture(size_t index) const { return index < textures.size() ? &textures[index] : nullptr; }
-        size_t getTextureCount() const;
-        
+
     private:
         // Vulkan helper methods
         void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 

@@ -11,8 +11,7 @@ namespace Az3D {
     }
 
     size_t ResourceManager::addTexture(const char* imagePath) {
-        // Load texture and get index
-        return textureManager->loadTexture(imagePath);
+        return textureManager->addTexture(imagePath);
     }
     
     size_t ResourceManager::addMaterial(const Material& material) {
@@ -20,9 +19,7 @@ namespace Az3D {
     }
     
     size_t ResourceManager::addMesh(const Mesh& mesh) {
-        // Instead of copying, create a new mesh with same data
-        auto newMesh = std::make_shared<Mesh>();
-        // Copy mesh data manually if needed, or better - pass shared_ptr directly
+        auto newMesh = std::make_shared<Mesh>(mesh);
         return meshManager->addMesh(newMesh);
     }
 
