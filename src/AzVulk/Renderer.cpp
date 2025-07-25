@@ -396,16 +396,4 @@ namespace AzVulk {
 
         memcpy(buffer.uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
-    
-    size_t Renderer::findMeshIndexInBuffer(const std::string& meshId) {
-        auto it = meshIdToBufferIndex.find(meshId);
-        if (it != meshIdToBufferIndex.end()) {
-            return it->second;
-        }
-        return SIZE_MAX; // Not found
-    }
-    
-    void Renderer::registerMeshMapping(const std::string& meshId, size_t bufferIndex) {
-        meshIdToBufferIndex[meshId] = bufferIndex;
-    }
 }

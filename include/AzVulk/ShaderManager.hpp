@@ -14,10 +14,10 @@ namespace AzVulk {
         ShaderManager(const ShaderManager&) = delete;
         ShaderManager& operator=(const ShaderManager&) = delete;
 
-        VkShaderModule createShaderModule(const std::string& filename);
+        VkShaderModule createShaderModule(const char* filename);
         void destroyShaderModule(VkShaderModule shaderModule);
 
-        static std::vector<char> readFile(const std::string& filename);
+        static std::vector<char> readFile(const char* filename);
 
         
         VkDevice device;

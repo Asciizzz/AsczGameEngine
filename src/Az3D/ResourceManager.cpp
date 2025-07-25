@@ -10,7 +10,7 @@ namespace Az3D {
         meshManager = std::make_unique<MeshManager>();
     }
 
-    size_t ResourceManager::addTexture(const std::string& imagePath) {
+    size_t ResourceManager::addTexture(const char* imagePath) {
         // Load texture and get index
         return textureManager->loadTexture(imagePath);
     }

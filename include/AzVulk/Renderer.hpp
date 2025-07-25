@@ -52,12 +52,6 @@ namespace AzVulk {
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
         
-        // Method to register mesh ID -> buffer index mapping
-        void registerMeshMapping(const std::string& meshId, size_t bufferIndex);
-        
-        // Helper method to find mesh index in buffer
-        size_t findMeshIndexInBuffer(const std::string& meshId);
-        
         // Helper methods (public for direct access)
         void updateUniformBuffer(uint32_t currentImage);
         void updateUniformBuffer(uint32_t currentImage, const glm::mat4& modelMatrix);
@@ -67,8 +61,5 @@ namespace AzVulk {
         void createCommandBuffers();
         void createSyncObjects();
         void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-        
-        // Track mesh ID to buffer index mapping
-        std::unordered_map<std::string, size_t> meshIdToBufferIndex;
     };
 }

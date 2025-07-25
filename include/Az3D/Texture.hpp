@@ -28,7 +28,7 @@ namespace Az3D {
         TextureManager(const AzVulk::Device& device, VkCommandPool pool);
         ~TextureManager();
         
-        size_t loadTexture(const std::string& imagePath);
+        size_t loadTexture(const char* imagePath);
         void createDefaultTexture();
         
         // Direct access methods (no getters/setters boilerplate)

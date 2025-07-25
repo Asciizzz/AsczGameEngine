@@ -32,7 +32,7 @@ namespace Az3D {
         std::vector<uint32_t> indices;
 
         bool isEmpty();
-        static std::shared_ptr<Mesh> loadFromOBJ(const std::string& filePath);
+        static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath);
     };
 
 
@@ -52,7 +52,7 @@ namespace Az3D {
         
         // Load mesh and return index
         size_t loadMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
-        size_t loadMeshFromOBJ(const std::string& filePath);
+        size_t loadMeshFromOBJ(const char* filePath);
         
         // Create simple meshes and return index
         size_t createQuadMesh();

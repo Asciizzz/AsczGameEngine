@@ -34,18 +34,18 @@ namespace Az3D {
         textures.clear();
     }
 
-    size_t TextureManager::loadTexture(const std::string& imagePath) {
+    size_t TextureManager::loadTexture(const char* imagePath) {
         try {
             Texture texture;
-            texture.path = imagePath;
+            texture.path = imagePath; // Convert to std::string for storage
             
             // Load image using STB
             int texWidth, texHeight, texChannels;
-            stbi_uc* pixels = stbi_load(imagePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+            stbi_uc* pixels = stbi_load(imagePath, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
             VkDeviceSize imageSize = texWidth * texHeight * 4;
             
             if (!pixels) {
-                throw std::runtime_error("Failed to load texture: " + imagePath);
+                throw std::runtime_error("Failed to load texture: " + std::string(imagePath));
             }
             
             uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
