@@ -149,32 +149,18 @@ namespace Az3D {
 
 
     size_t MeshManager::addMesh(std::shared_ptr<Mesh> mesh) {
-        if (!mesh) {
-            std::cerr << "Cannot add null mesh" << std::endl;
-            return SIZE_MAX; // Invalid index
-        }
-        
         meshes.push_back(mesh);
         return meshes.size() - 1;
     }
 
-    size_t MeshManager::loadMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
+    size_t MeshManager::addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
         return addMesh(mesh);
     }
     
     size_t MeshManager::loadMeshFromOBJ(const char* filePath) {
-        try {
-            auto mesh = Mesh::loadFromOBJ(filePath);
-            if (mesh && !mesh->isEmpty()) {
-                return addMesh(mesh);
-            } else {
-                std::cerr << "Failed to load mesh from '" << filePath << "' - mesh is empty or invalid" << std::endl;
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Failed to load mesh from '" << filePath << "': " << e.what() << std::endl;
-        }
-        return SIZE_MAX; // Invalid index
+        auto mesh = Mesh::loadFromOBJ(filePath);
+        return addMesh(mesh);
     }
 
     size_t MeshManager::createQuadMesh() {

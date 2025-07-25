@@ -44,12 +44,8 @@ namespace Az3D {
         MeshManager(const MeshManager&) = delete;
         MeshManager& operator=(const MeshManager&) = delete;
 
-        // Index-based mesh management
         size_t addMesh(std::shared_ptr<Mesh> mesh);
         size_t addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
-        
-        // Load mesh and return index
-        size_t loadMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
         size_t loadMeshFromOBJ(const char* filePath);
         
         // Create simple meshes and return index
