@@ -11,7 +11,7 @@
 #include <string>
 
 namespace Az3D {
-    // Vertex structure moved from AzVulk to Az3D
+
     struct Vertex {
         glm::vec3 position;
         glm::vec3 normal;
@@ -22,7 +22,7 @@ namespace Az3D {
         static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
     };
 
-    // Clean mesh class - contains only vertices and indices
+
     class Mesh {
     public:
         Mesh() = default;
@@ -41,5 +41,38 @@ namespace Az3D {
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
+    };
+
+
+    class MeshManager {
+    public:
+        MeshManager() = default;
+        
+        // Delete copy constructor and assignment operator
+        MeshManager(const MeshManager&) = delete;
+        MeshManager& operator=(const MeshManager&) = delete;
+
+        // Index-based mesh management
+        size_t addMesh(std::shared_ptr<Mesh> mesh);
+        bool removeMesh(size_t index);
+        bool hasMesh(size_t index) const;
+        Mesh* getMesh(size_t index) const;
+        
+        // Load mesh and return index
+        size_t loadMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+        size_t loadMeshFromOBJ(const std::string& filePath);
+        
+        // Create simple meshes and return index
+        size_t createQuadMesh();
+        size_t createCubeMesh();
+        
+        // Direct access to all meshes
+        const std::vector<std::shared_ptr<Mesh>>& getAllMeshes() const { return meshes; }
+        
+        // Statistics
+        size_t getMeshCount() const { return meshes.size(); }
+
+        // Index-based mesh storage
+        std::vector<std::shared_ptr<Mesh>> meshes;
     };
 }
