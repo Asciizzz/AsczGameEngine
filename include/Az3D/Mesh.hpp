@@ -46,9 +46,7 @@ namespace Az3D {
 
         // Index-based mesh management
         size_t addMesh(std::shared_ptr<Mesh> mesh);
-        bool removeMesh(size_t index);
-        bool hasMesh(size_t index) const;
-        Mesh* getMesh(size_t index) const;
+        size_t addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
         
         // Load mesh and return index
         size_t loadMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);

@@ -158,29 +158,6 @@ namespace Az3D {
         return meshes.size() - 1;
     }
 
-    bool MeshManager::removeMesh(size_t index) {
-        if (index >= meshes.size()) {
-            return false;
-        }
-        
-        // Mark as deleted (don't shrink vector to preserve indices)
-        meshes[index] = nullptr;
-        return true;
-    }
-
-    bool MeshManager::hasMesh(size_t index) const {
-        return index < meshes.size() && meshes[index] != nullptr;
-    }
-
-    Mesh* MeshManager::getMesh(size_t index) const {
-        if (index < meshes.size() && meshes[index]) {
-            return meshes[index].get();
-        }
-        
-        std::cerr << "Error: Mesh at index " << index << " not found!" << std::endl;
-        return nullptr;
-    }
-
     size_t MeshManager::loadMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
         return addMesh(mesh);

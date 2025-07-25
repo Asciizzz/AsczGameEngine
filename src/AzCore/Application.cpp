@@ -122,9 +122,9 @@ void Application::initVulkan() {
     size_t cubeMeshIndex = meshManager.createCubeMesh();
 
     // Load meshes into GPU buffer
-    auto dust2Mesh = meshManager.getMesh(dust2MeshIndex);
-    auto shirokoMesh = meshManager.getMesh(shirokoMeshIndex);
-    auto cubeMesh = meshManager.getMesh(cubeMeshIndex);
+    auto dust2Mesh = meshManager.meshes[dust2MeshIndex];
+    auto shirokoMesh = meshManager.meshes[shirokoMeshIndex];
+    auto cubeMesh = meshManager.meshes[cubeMeshIndex];
 
     size_t dust2BufferIndex = bufferRef.loadMeshToBuffer(*dust2Mesh);
     size_t shirokoBufferIndex = bufferRef.loadMeshToBuffer(*shirokoMesh);

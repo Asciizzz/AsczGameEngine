@@ -237,7 +237,7 @@ namespace AzVulk {
                 // Render all models with this material
                 for (const Az3D::Model* model : materialModels) {
                     // Get mesh using index 
-                    const auto* mesh = resourceManager.meshManager->getMesh(model->meshIndex);
+                    const auto* mesh = resourceManager.meshManager->meshes[model->meshIndex].get();
                     if (!mesh) continue;
 
                     // Use the mesh index directly since we're using index-based system
