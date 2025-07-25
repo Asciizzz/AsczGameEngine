@@ -35,7 +35,7 @@ namespace Az3D {
     class Model {
     public:
         Model() = default;
-        Model(size_t meshIndex, size_t materialIndex, bool hasBVH = false);
+        Model(size_t meshIndex, size_t materialIndex);
 
         size_t meshIndex = 0;
         size_t materialIndex = 0;
