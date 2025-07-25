@@ -300,7 +300,7 @@ namespace AzVulk {
         if (meshIndex >= meshBuffers.size()) {
             return; // Silently fail for invalid mesh index
         }
-        
+
         auto& meshBuffer = meshBuffers[meshIndex];
         if (meshBuffer.instanceBufferMapped && instances.size() <= meshBuffer.instanceCount) {
             VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();

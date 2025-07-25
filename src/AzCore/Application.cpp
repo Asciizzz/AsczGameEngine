@@ -157,7 +157,6 @@ void Application::createSurface() {
 }
 
 void Application::mainLoop() {
-    bool mouseLocked = true; // Track mouse lock state
     SDL_SetRelativeMouseMode(SDL_TRUE); // Start with mouse locked
 
     // Create references to avoid arrow spam
@@ -167,23 +166,16 @@ void Application::mainLoop() {
     auto& rendererRef = *renderer;
     auto& deviceRef = *vulkanDevice;
 
-    // Get window center for mouse locking
-    int windowWidth, windowHeight;
-    SDL_GetWindowSize(winManager.window, &windowWidth, &windowHeight);
-    int centerX = windowWidth / 2;
-    int centerY = windowHeight / 2;
-
-    int cubeCount = 0;
-
-    float camDist = 1.0f;
-    glm::vec3 camPos = camRef.pos;
-
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
         fpsRef.update();
         winManager.pollEvents();
 
         float dTime = fpsRef.deltaTime;
+
+        static float camDist = 1.0f;
+        static glm::vec3 camPos = camRef.pos;
+        static bool mouseLocked = true;
 
         // Check if window was resized or renderer needs to be updated
         if (winManager.resizedFlag || rendererRef.framebufferResized) {
@@ -234,7 +226,7 @@ void Application::mainLoop() {
             mouseLocked = !mouseLocked;
             if (mouseLocked) {
                 SDL_SetRelativeMouseMode(SDL_TRUE);
-                SDL_WarpMouseInWindow(winManager.window, centerX, centerY);
+                SDL_WarpMouseInWindow(winManager.window, 0, 0);
             } else {
                 SDL_SetRelativeMouseMode(SDL_FALSE);
             }
