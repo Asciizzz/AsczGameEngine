@@ -3,7 +3,7 @@
 
 namespace Az3D {
     Camera::Camera() 
-        : position(0.0f, 0.0f, 3.0f)
+        : pos(0.0f, 0.0f, 0.0f)
         , pitch(0.0f)
         , yaw(-90.0f)  // Start looking down negative Z axis
         , roll(0.0f)
@@ -22,7 +22,7 @@ namespace Az3D {
     }
 
     Camera::Camera(const glm::vec3& position, float fov, float nearPlane, float farPlane)
-        : position(position)
+        : pos(position)
         , pitch(0.0f)
         , yaw(-90.0f)  // Start looking down negative Z axis
         , roll(0.0f)
@@ -40,8 +40,8 @@ namespace Az3D {
         updateMatrices();
     }
 
-    void Camera::setPosition(const glm::vec3& newPosition) {
-        position = newPosition;
+    void Camera::setPosition(const glm::vec3& newPos) {
+        pos = newPos;
         updateViewMatrix();
     }
 
@@ -87,7 +87,7 @@ namespace Az3D {
     }
 
     void Camera::translate(const glm::vec3& offset) {
-        position += offset;
+        pos += offset;
         updateViewMatrix();
     }
 
@@ -138,7 +138,7 @@ namespace Az3D {
 
     void Camera::updateViewMatrix() {
         // Create view matrix using position and direction vectors
-        viewMatrix = glm::lookAt(position, position + forward, up);
+        viewMatrix = glm::lookAt(pos, pos + forward, up);
     }
 
     void Camera::updateProjectionMatrix() {

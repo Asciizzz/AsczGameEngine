@@ -13,9 +13,9 @@
 namespace Az3D {
 
     struct Vertex {
-        glm::vec3 position;
-        glm::vec3 normal;
-        glm::vec2 texCoord;
+        glm::vec3 pos;
+        glm::vec3 nrml;
+        glm::vec2 txtr;
 
         // Vulkan binding description for rendering
         static VkVertexInputBindingDescription getBindingDescription();
@@ -57,12 +57,6 @@ namespace Az3D {
         // Create simple meshes and return index
         size_t createQuadMesh();
         size_t createCubeMesh();
-        
-        // Direct access to all meshes
-        const std::vector<std::shared_ptr<Mesh>>& getAllMeshes() const { return meshes; }
-        
-        // Statistics
-        size_t getMeshCount() const { return meshes.size(); }
 
         // Index-based mesh storage
         std::vector<std::shared_ptr<Mesh>> meshes;

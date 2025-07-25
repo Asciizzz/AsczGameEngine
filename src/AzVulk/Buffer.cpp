@@ -37,9 +37,9 @@ namespace AzVulk {
     // Conversion methods from Az3D::Vertex to AzVulk::Vertex
     Vertex Vertex::fromAz3D(const Az3D::Vertex& az3dVertex) {
         return Vertex{
-            az3dVertex.position,
-            az3dVertex.normal,
-            az3dVertex.texCoord
+            az3dVertex.pos,
+            az3dVertex.nrml,
+            az3dVertex.txtr
         };
     }
 

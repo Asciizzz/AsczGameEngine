@@ -36,7 +36,7 @@ namespace Az3D {
 
         // All data members are now public for direct access
         // Position and orientation
-        glm::vec3 position;
+        glm::vec3 pos;
         float pitch;  // X-axis rotation (up/down)
         float yaw;    // Y-axis rotation (left/right)
         float roll;   // Z-axis rotation (tilt)

@@ -30,20 +30,20 @@ namespace Az3D {
 
             // Get bouding box from the mesh vertices
             for (const auto& vertex : mesh->vertices) {
-                min.x = glm::min(min.x, vertex.position.x);
-                min.y = glm::min(min.y, vertex.position.y);
-                min.z = glm::min(min.z, vertex.position.z);
+                min.x = glm::min(min.x, vertex.pos.x);
+                min.y = glm::min(min.y, vertex.pos.y);
+                min.z = glm::min(min.z, vertex.pos.z);
 
-                max.x = glm::max(max.x, vertex.position.x);
-                max.y = glm::max(max.y, vertex.position.y);
-                max.z = glm::max(max.z, vertex.position.z);
+                max.x = glm::max(max.x, vertex.pos.x);
+                max.y = glm::max(max.y, vertex.pos.y);
+                max.z = glm::max(max.z, vertex.pos.z);
             }
 
             // Get centers of each face
             for (int i = 0; i < mesh->indices.size(); i += 3) {
-                glm::vec3 v0 = mesh->vertices[mesh->indices[i]].position;
-                glm::vec3 v1 = mesh->vertices[mesh->indices[i + 1]].position;
-                glm::vec3 v2 = mesh->vertices[mesh->indices[i + 2]].position;
+                glm::vec3 v0 = mesh->vertices[mesh->indices[i]].pos;
+                glm::vec3 v1 = mesh->vertices[mesh->indices[i + 1]].pos;
+                glm::vec3 v2 = mesh->vertices[mesh->indices[i + 2]].pos;
 
                 glm::vec3 center = (v0 + v1 + v2) / 3.0f;
                 centers.push_back(center);
@@ -237,15 +237,15 @@ namespace Az3D {
                     for (int g = node.ll; g < node.lr; ++g) {
                         const auto& vertex = mesh->vertices[g];
 
-                        float cent = vertex.position[axis];
+                        float cent = vertex.pos[axis];
 
                         if (cent < splitPoint) {
-                            lmin = glm::min(lmin, vertex.position);
-                            lmax = glm::max(lmax, vertex.position);
+                            lmin = glm::min(lmin, vertex.pos);
+                            lmax = glm::max(lmax, vertex.pos);
                             splitIdx++;
                         } else {
-                            rmin = glm::min(rmin, vertex.position);
-                            rmax = glm::max(rmax, vertex.position);
+                            rmin = glm::min(rmin, vertex.pos);
+                            rmax = glm::max(rmax, vertex.pos);
                         }
                     }
 

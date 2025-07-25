@@ -185,7 +185,7 @@ void Application::mainLoop() {
     int cubeCount = 0;
 
     float camDist = 1.0f;
-    glm::vec3 camPos = camRef.position;
+    glm::vec3 camPos = camRef.pos;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
@@ -287,7 +287,7 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_A]) camPos -= camRef.right * shiro_speed;
         if (k_state[SDL_SCANCODE_D]) camPos += camRef.right * shiro_speed;
 
-        camRef.position = camPos;
+        camRef.pos = camPos;
         //*/
 
         /*

@@ -18,7 +18,7 @@ namespace Az3D {
         float opacity = 1.0f;        // Transparency [0.0, 1.0]
         
         // Lighting properties
-        float normalIntensity = 1.0f; // Normal map intensity
+        float nrmlIntensity = 1.0f; // Normal map intensity
         float aoIntensity = 1.0f;     // Ambient occlusion intensity
 
         // Texture references by ID
