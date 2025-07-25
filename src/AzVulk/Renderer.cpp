@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 namespace AzVulk {
-    Renderer::Renderer (const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
+    Renderer::Renderer (const Device& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
                         Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
                         Az3D::ResourceManager& resourceManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),

@@ -1,10 +1,10 @@
 #include "Az3D/ResourceManager.hpp"
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 #include <iostream>
 
 namespace Az3D {
 
-    ResourceManager::ResourceManager(const AzVulk::VulkanDevice& device, VkCommandPool commandPool) {
+    ResourceManager::ResourceManager(const AzVulk::Device& device, VkCommandPool commandPool) {
         textureManager = std::make_unique<TextureManager>(device, commandPool);
         materialManager = std::make_unique<MaterialManager>();
         meshManager = std::make_unique<MeshManager>();

@@ -1,5 +1,5 @@
 #include "AzVulk/Buffer.hpp"
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
@@ -54,7 +54,7 @@ namespace AzVulk {
         return result;
     }
 
-    Buffer::Buffer(const VulkanDevice& device) : vulkanDevice(device) {}
+    Buffer::Buffer(const Device& device) : vulkanDevice(device) {}
 
     Buffer::~Buffer() {
         VkDevice logicalDevice = vulkanDevice.device;

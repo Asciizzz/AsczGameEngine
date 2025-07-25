@@ -1,9 +1,9 @@
-#include "AzVulk/VulkanInstance.hpp"
+#include "AzVulk/Instance.hpp"
 #include <iostream>
 #include <cstring>
 
 namespace AzVulk {
-    const std::vector<const char*> VulkanInstance::validationLayers = {
+    const std::vector<const char*> Instance::validationLayers = {
         "VK_LAYER_KHRONOS_validation"
     };
 
@@ -25,7 +25,7 @@ namespace AzVulk {
         }
     }
 
-    VulkanInstance::VulkanInstance(const std::vector<const char*>& requiredExtensions, bool enableValidation)
+    Instance::Instance(const std::vector<const char*>& requiredExtensions, bool enableValidation)
         : validationLayersEnabled(enableValidation) {
         
         createInstance(requiredExtensions);
@@ -34,7 +34,7 @@ namespace AzVulk {
         }
     }
 
-    VulkanInstance::~VulkanInstance() {
+    Instance::~Instance() {
         if (validationLayersEnabled && debugMessenger != VK_NULL_HANDLE) {
             DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
         }
@@ -44,7 +44,7 @@ namespace AzVulk {
         }
     }
 
-    void VulkanInstance::createInstance(const std::vector<const char*>& requiredExtensions) {
+    void Instance::createInstance(const std::vector<const char*>& requiredExtensions) {
         if (validationLayersEnabled && !checkValidationLayerSupport()) {
             throw std::runtime_error("validation layers requested, but not available!");
         }
@@ -86,7 +86,7 @@ namespace AzVulk {
         }
     }
 
-    void VulkanInstance::setupDebugMessenger() {
+    void Instance::setupDebugMessenger() {
         VkDebugUtilsMessengerCreateInfoEXT createInfo;
         populateDebugMessengerCreateInfo(createInfo);
 
@@ -95,7 +95,7 @@ namespace AzVulk {
         }
     }
 
-    bool VulkanInstance::checkValidationLayerSupport() {
+    bool Instance::checkValidationLayerSupport() {
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -120,7 +120,7 @@ namespace AzVulk {
         return true;
     }
 
-    void VulkanInstance::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+    void Instance::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
         createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
@@ -132,7 +132,7 @@ namespace AzVulk {
         createInfo.pfnUserCallback = debugCallback;
     }
 
-    VKAPI_ATTR VkBool32 VKAPI_CALL VulkanInstance::debugCallback(
+    VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,

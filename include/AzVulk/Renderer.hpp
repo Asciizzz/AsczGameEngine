@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <chrono>
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/GraphicsPipeline.hpp"
 #include "AzVulk/Buffer.hpp"
@@ -18,7 +18,7 @@ namespace AzCore {
 namespace AzVulk {
     class Renderer {
     public:
-        Renderer(const VulkanDevice& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
+        Renderer(const Device& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
                 Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
                 Az3D::ResourceManager& resourceManager);
         ~Renderer();
@@ -31,7 +31,7 @@ namespace AzVulk {
         void drawFrameWithModels(const std::vector<Az3D::Model>& models, GraphicsPipeline& pipeline);
         
         
-        const VulkanDevice& vulkanDevice;
+        const Device& vulkanDevice;
         SwapChain& swapChain;
         GraphicsPipeline& graphicsPipeline;
         Buffer& buffer;

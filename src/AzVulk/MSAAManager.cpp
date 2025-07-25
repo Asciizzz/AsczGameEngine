@@ -1,11 +1,11 @@
 #include "AzVulk/MSAAManager.hpp"
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>
 
 namespace AzVulk {
-    MSAAManager::MSAAManager(const VulkanDevice& device) : vulkanDevice(device) {
+    MSAAManager::MSAAManager(const Device& device) : vulkanDevice(device) {
         msaaSamples = getMaxUsableSampleCount();
     }
 

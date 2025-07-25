@@ -5,14 +5,14 @@
 #include <optional>
 
 namespace AzVulk {
-    class VulkanInstance {
+    class Instance {
     public:
-        VulkanInstance(const std::vector<const char*>& requiredExtensions, bool enableValidation = false);
-        ~VulkanInstance();
+        Instance(const std::vector<const char*>& requiredExtensions, bool enableValidation = false);
+        ~Instance();
 
         // Delete copy constructor and assignment operator
-        VulkanInstance(const VulkanInstance&) = delete;
-        VulkanInstance& operator=(const VulkanInstance&) = delete;
+        Instance(const Instance&) = delete;
+        Instance& operator=(const Instance&) = delete;
 
         
         VkInstance instance = VK_NULL_HANDLE;

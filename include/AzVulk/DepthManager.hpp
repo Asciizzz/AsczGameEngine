@@ -4,11 +4,11 @@
 #include <vector>
 
 namespace AzVulk {
-    class VulkanDevice;
+    class Device;
 
     class DepthManager {
     public:
-        DepthManager(const VulkanDevice& device);
+        DepthManager(const Device& device);
         ~DepthManager();
 
         // Delete copy constructor and assignment operator
@@ -19,7 +19,7 @@ namespace AzVulk {
         void cleanup();
 
         
-        const VulkanDevice& vulkanDevice;
+        const Device& vulkanDevice;
         
         VkImage depthImage = VK_NULL_HANDLE;
         VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;

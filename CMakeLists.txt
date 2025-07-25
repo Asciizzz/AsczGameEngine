@@ -21,8 +21,8 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/Material.cpp
     src/Az3D/ResourceManager.cpp
 
-    src/AzVulk/VulkanInstance.cpp
-    src/AzVulk/VulkanDevice.cpp
+    src/AzVulk/Instance.cpp
+    src/AzVulk/Device.cpp
     src/AzVulk/SwapChain.cpp
     src/AzVulk/ShaderManager.cpp
     src/AzVulk/Buffer.cpp

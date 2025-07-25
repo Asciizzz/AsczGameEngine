@@ -8,7 +8,7 @@
 
 // Forward declaration
 namespace AzVulk {
-    class VulkanDevice;
+    class Device;
 }
 
 namespace Az3D {
@@ -16,7 +16,7 @@ namespace Az3D {
     // TextureManager - manages all textures in the Az3D system with public access
     class TextureManager {
     public:
-        TextureManager(const AzVulk::VulkanDevice& device, VkCommandPool commandPool);
+        TextureManager(const AzVulk::Device& device, VkCommandPool commandPool);
         ~TextureManager();
 
         // Delete copy constructor and assignment operator
@@ -27,7 +27,7 @@ namespace Az3D {
         size_t loadTexture(const std::string& imagePath);  // Returns index
         
         // Public data members for direct access
-        const AzVulk::VulkanDevice& vulkanDevice;
+        const AzVulk::Device& vulkanDevice;
         VkCommandPool commandPool;
         
         // Index-based texture storage (index 0 is always default texture)

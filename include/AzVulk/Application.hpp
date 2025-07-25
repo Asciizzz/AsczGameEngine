@@ -6,8 +6,8 @@
 #include <SDL2/SDL.h>
 #include "AzCore/WindowManager.hpp"
 #include "AzCore/FpsManager.hpp"
-#include "AzVulk/VulkanInstance.hpp"
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Instance.hpp"
+#include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/GraphicsPipeline.hpp"
 #include "AzVulk/ShaderManager.hpp"
@@ -36,8 +36,8 @@ namespace AzVulk {
         std::unique_ptr<AzCore::FpsManager> fpsManager;
         std::unique_ptr<Az3D::Camera> camera;
 
-        std::unique_ptr<VulkanInstance> vulkanInstance;
-        std::unique_ptr<VulkanDevice> vulkanDevice;
+        std::unique_ptr<Instance> vulkanInstance;
+        std::unique_ptr<Device> vulkanDevice;
         std::unique_ptr<SwapChain> swapChain;
 
         std::vector<

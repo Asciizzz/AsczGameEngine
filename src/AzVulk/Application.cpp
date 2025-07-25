@@ -39,10 +39,10 @@ namespace AzVulk {
 
     void Application::initVulkan() {
         auto extensions = windowManager->getRequiredVulkanExtensions();
-        vulkanInstance = std::make_unique<VulkanInstance>(extensions, enableValidationLayers);
+        vulkanInstance = std::make_unique<Instance>(extensions, enableValidationLayers);
         createSurface();
 
-        vulkanDevice = std::make_unique<VulkanDevice>(vulkanInstance->instance, surface);
+        vulkanDevice = std::make_unique<Device>(vulkanInstance->instance, surface);
         msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
         swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
 

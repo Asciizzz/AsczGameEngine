@@ -11,7 +11,7 @@
 
 // Forward declarations
 namespace AzVulk {
-    class VulkanDevice;
+    class Device;
 }
 
 namespace Az3D {
@@ -19,7 +19,7 @@ namespace Az3D {
     // ResourceManager - central manager for all Az3D resources with string-to-index mapping
     class ResourceManager {
     public:
-        ResourceManager(const AzVulk::VulkanDevice& device, VkCommandPool commandPool);
+        ResourceManager(const AzVulk::Device& device, VkCommandPool commandPool);
         ~ResourceManager() = default;
 
         // Delete copy constructor and assignment operator

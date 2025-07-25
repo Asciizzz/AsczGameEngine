@@ -1,10 +1,10 @@
 #include "AzVulk/DepthManager.hpp"
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 #include <stdexcept>
 #include <algorithm>
 
 namespace AzVulk {
-    DepthManager::DepthManager(const VulkanDevice& device) : vulkanDevice(device) {}
+    DepthManager::DepthManager(const Device& device) : vulkanDevice(device) {}
 
     DepthManager::~DepthManager() {
         cleanup();

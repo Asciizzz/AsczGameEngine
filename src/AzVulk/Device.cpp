@@ -1,25 +1,25 @@
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include <stdexcept>
 #include <set>
 
 namespace AzVulk {
-    const std::vector<const char*> VulkanDevice::deviceExtensions = {
+    const std::vector<const char*> Device::deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
 
-    VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface) {
+    Device::Device(VkInstance instance, VkSurfaceKHR surface) {
         pickPhysicalDevice(instance, surface);
         createLogicalDevice();
     }
 
-    VulkanDevice::~VulkanDevice() {
+    Device::~Device() {
         if (device != VK_NULL_HANDLE) {
             vkDestroyDevice(device, nullptr);
         }
     }
 
-    void VulkanDevice::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
+    void Device::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -43,7 +43,7 @@ namespace AzVulk {
         }
     }
 
-    void VulkanDevice::createLogicalDevice() {
+    void Device::createLogicalDevice() {
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         std::set<uint32_t> uniqueQueueFamilies = {
             queueFamilyIndices.graphicsFamily.value(), 
@@ -81,7 +81,7 @@ namespace AzVulk {
         vkGetDeviceQueue(device, queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
     }
 
-    bool VulkanDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+    bool Device::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
         QueueFamilyIndices indices = findQueueFamilies(device, surface);
         bool extensionsSupported = checkDeviceExtensionSupport(device);
 
@@ -111,7 +111,7 @@ namespace AzVulk {
         return indices.isComplete() && extensionsSupported && swapChainAdequate;
     }
 
-    bool VulkanDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+    bool Device::checkDeviceExtensionSupport(VkPhysicalDevice device) {
         uint32_t extensionCount;
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -127,7 +127,7 @@ namespace AzVulk {
         return requiredExtensions.empty();
     }
 
-    QueueFamilyIndices VulkanDevice::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
+    QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
         QueueFamilyIndices indices;
 
         uint32_t queueFamilyCount = 0;
@@ -159,7 +159,7 @@ namespace AzVulk {
         return indices;
     }
 
-    uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const {
+    uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const {
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
@@ -172,7 +172,7 @@ namespace AzVulk {
         throw std::runtime_error("failed to find suitable memory type!");
     }
 
-    void VulkanDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) const {
+    void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) const {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = size;
@@ -198,17 +198,17 @@ namespace AzVulk {
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
     }
 
-    void VulkanDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const {
+    void Device::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const {
         // Note: This method would typically require a command pool parameter
         // For proper implementation, use the single time commands utilities
     }
 
-    void VulkanDevice::destroyBuffer(VkBuffer buffer, VkDeviceMemory bufferMemory) const {
+    void Device::destroyBuffer(VkBuffer buffer, VkDeviceMemory bufferMemory) const {
         vkDestroyBuffer(device, buffer, nullptr);
         vkFreeMemory(device, bufferMemory, nullptr);
     }
 
-    VkCommandBuffer VulkanDevice::beginSingleTimeCommands(VkCommandPool commandPool) const {
+    VkCommandBuffer Device::beginSingleTimeCommands(VkCommandPool commandPool) const {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -227,7 +227,7 @@ namespace AzVulk {
         return commandBuffer;
     }
 
-    void VulkanDevice::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool) const {
+    void Device::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool) const {
         vkEndCommandBuffer(commandBuffer);
 
         VkSubmitInfo submitInfo{};

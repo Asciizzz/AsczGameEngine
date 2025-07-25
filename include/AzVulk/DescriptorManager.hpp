@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 
 namespace Az3D {
     class Texture;
@@ -13,7 +13,7 @@ namespace Az3D {
 namespace AzVulk {
     class DescriptorManager {
     public:
-        DescriptorManager(const VulkanDevice& device, VkDescriptorSetLayout descriptorSetLayout);
+        DescriptorManager(const Device& device, VkDescriptorSetLayout descriptorSetLayout);
         ~DescriptorManager();
 
         // Delete copy constructor and assignment operator
@@ -26,7 +26,7 @@ namespace AzVulk {
         
         VkDescriptorSet getDescriptorSet(uint32_t frameIndex, size_t materialIndex);
         
-        const VulkanDevice& vulkanDevice;
+        const Device& vulkanDevice;
         VkDescriptorSetLayout descriptorSetLayout;
         
         VkDescriptorPool descriptorPool = VK_NULL_HANDLE;

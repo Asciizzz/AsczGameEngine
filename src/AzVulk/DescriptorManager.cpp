@@ -4,7 +4,7 @@
 #include <array>
 
 namespace AzVulk {
-    DescriptorManager::DescriptorManager(const VulkanDevice& device, VkDescriptorSetLayout descriptorSetLayout)
+    DescriptorManager::DescriptorManager(const Device& device, VkDescriptorSetLayout descriptorSetLayout)
         : vulkanDevice(device), descriptorSetLayout(descriptorSetLayout) {
     }
 

@@ -1,5 +1,5 @@
 #include "Az3D/TextureManager.hpp"
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 #include <stdexcept>
 #include <cstring>
 #include <cmath>
@@ -10,7 +10,7 @@
 
 namespace Az3D {
     
-    TextureManager::TextureManager(const AzVulk::VulkanDevice& device, VkCommandPool commandPool) 
+    TextureManager::TextureManager(const AzVulk::Device& device, VkCommandPool commandPool) 
         : vulkanDevice(device), commandPool(commandPool) {
         createDefaultTexture();
     }

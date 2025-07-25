@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
 #include <vector>
-#include "AzVulk/VulkanDevice.hpp"
+#include "AzVulk/Device.hpp"
 
 namespace AzVulk {
     struct SwapChainSupportDetails {
@@ -14,7 +14,7 @@ namespace AzVulk {
 
     class SwapChain {
     public:
-        SwapChain(const VulkanDevice& device, VkSurfaceKHR surface, SDL_Window* window);
+        SwapChain(const Device& device, VkSurfaceKHR surface, SDL_Window* window);
         ~SwapChain();
 
         // Delete copy constructor and assignment operator
@@ -25,7 +25,7 @@ namespace AzVulk {
         void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView = VK_NULL_HANDLE);
 
         
-        const VulkanDevice& vulkanDevice;
+        const Device& vulkanDevice;
         VkSurfaceKHR surface;
         
         VkSwapchainKHR swapChain = VK_NULL_HANDLE;

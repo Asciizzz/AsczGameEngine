@@ -75,7 +75,7 @@ namespace AzVulk {
 
     class Buffer {
     public:
-        Buffer(const class VulkanDevice& device);
+        Buffer(const class Device& device);
         ~Buffer();
 
         // Delete copy constructor and assignment operator
@@ -102,7 +102,7 @@ namespace AzVulk {
         size_t getMeshCount() const { return meshBuffers.size(); }
 
         
-        const VulkanDevice& vulkanDevice;
+        const Device& vulkanDevice;
         
         // Multi-mesh buffers storage
         std::vector<MeshBufferData> meshBuffers;

@@ -6,7 +6,7 @@
 #include <array>
 
 namespace AzVulk {
-    SwapChain::SwapChain(const VulkanDevice& device, VkSurfaceKHR surface, SDL_Window* window)
+    SwapChain::SwapChain(const Device& device, VkSurfaceKHR surface, SDL_Window* window)
         : vulkanDevice(device), surface(surface) {
         createSwapChain(window);
         createImageViews();

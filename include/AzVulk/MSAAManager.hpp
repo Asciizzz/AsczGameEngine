@@ -3,11 +3,11 @@
 #include <vulkan/vulkan.h>
 
 namespace AzVulk {
-    class VulkanDevice;
+    class Device;
 
     class MSAAManager {
     public:
-        MSAAManager(const VulkanDevice& device);
+        MSAAManager(const Device& device);
         ~MSAAManager();
 
         // Delete copy constructor and assignment operator
@@ -18,7 +18,7 @@ namespace AzVulk {
         void cleanup();
 
         
-        const VulkanDevice& vulkanDevice;
+        const Device& vulkanDevice;
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
         VkImage colorImage = VK_NULL_HANDLE;

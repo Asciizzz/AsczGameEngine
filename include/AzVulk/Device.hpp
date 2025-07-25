@@ -15,14 +15,14 @@ namespace AzVulk {
         }
     };
 
-    class VulkanDevice {
+    class Device {
     public:
-        VulkanDevice(VkInstance instance, VkSurfaceKHR surface);
-        ~VulkanDevice();
+        Device(VkInstance instance, VkSurfaceKHR surface);
+        ~Device();
 
         // Delete copy constructor and assignment operator
-        VulkanDevice(const VulkanDevice&) = delete;
-        VulkanDevice& operator=(const VulkanDevice&) = delete;
+        Device(const Device&) = delete;
+        Device& operator=(const Device&) = delete;
 
         // Utility methods
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
