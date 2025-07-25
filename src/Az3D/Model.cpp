@@ -4,8 +4,8 @@
 
 namespace Az3D {
 
-    Model::Model(size_t meshIndex, size_t materialIndex)
-        : meshIndex(meshIndex), materialIndex(materialIndex) {}
+    Model::Model(size_t meshIndex, size_t materialIndex, bool hasBVH)
+    : meshIndex(meshIndex), materialIndex(materialIndex), hasBVH(hasBVH) {}
 
     // Transformation
 

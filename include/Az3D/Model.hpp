@@ -35,12 +35,14 @@ namespace Az3D {
     class Model {
     public:
         Model() = default;
-        Model(size_t meshIndex, size_t materialIndex);
+        Model(size_t meshIndex, size_t materialIndex, bool hasBVH = false);
 
         size_t meshIndex = 0;
         size_t materialIndex = 0;
 
         // Transform component
         Transform trform;
+
+        bool hasBVH = false; // Flag for BVH usage
     };
 }
