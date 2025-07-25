@@ -2,18 +2,8 @@
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
-#include "AzCore/WindowManager.hpp"
-#include "AzCore/FpsManager.hpp"
-#include "AzVulk/Instance.hpp"
-#include "AzVulk/Device.hpp"
-#include "AzVulk/SwapChain.hpp"
-#include "AzVulk/GraphicsPipeline.hpp"
-#include "AzVulk/ShaderManager.hpp"
-#include "AzVulk/Buffer.hpp"
-#include "AzVulk/Renderer.hpp"
-#include "AzVulk/DescriptorManager.hpp"
-#include "AzVulk/DepthManager.hpp"
-#include "AzVulk/MSAAManager.hpp"
+#include "AzCore/AzCore.hpp"
+#include "AzVulk/AzVulk.hpp"
 #include "Az3D/Az3D.hpp"
 
 namespace AzVulk {
