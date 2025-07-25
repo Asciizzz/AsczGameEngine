@@ -168,7 +168,6 @@ void Application::createSurface() {
 void Application::mainLoop() {
     bool mouseLocked = true; // Track mouse lock state
     SDL_SetRelativeMouseMode(SDL_TRUE); // Start with mouse locked
-    bool showFPS = true; // FPS display toggle state
 
     // Create references to avoid arrow spam
     auto& winManager = *windowManager;
@@ -218,6 +217,25 @@ void Application::mainLoop() {
             winManager.shouldCloseFlag = true;
             break;
         }
+
+        // Toggle fullscreen with F11 key
+        static bool f11Pressed = false;
+        if (k_state[SDL_SCANCODE_F11] && !f11Pressed) {
+            // Get current window flags
+            Uint32 flags = SDL_GetWindowFlags(winManager.window);
+            
+            if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+                // Exit fullscreen
+                SDL_SetWindowFullscreen(winManager.window, 0);
+            } else {
+                // Enter fullscreen (borderless windowed)
+                SDL_SetWindowFullscreen(winManager.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+            }
+            f11Pressed = true;
+        } else if (!k_state[SDL_SCANCODE_F11]) {
+            f11Pressed = false;
+        }
+        
         
         // Toggle mouse lock with F1 key
         static bool f1Pressed = false;
@@ -241,16 +259,6 @@ void Application::mainLoop() {
             tabPressed = true;
         } else if (!k_state[SDL_SCANCODE_TAB]) {
             tabPressed = false;
-        }
-        
-        // Toggle FPS display with F2 key
-        static bool f2Pressed = false;
-        if (k_state[SDL_SCANCODE_F2] && !f2Pressed) {
-            showFPS = !showFPS;
-            std::cout << "FPS display: " << (showFPS ? "ON" : "OFF") << std::endl;
-            f2Pressed = true;
-        } else if (!k_state[SDL_SCANCODE_F2]) {
-            f2Pressed = false;
         }
 
         // Handle mouse look when locked
@@ -391,10 +399,9 @@ void Application::mainLoop() {
         
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
-        static bool lastShowFPS = showFPS;
         auto now = std::chrono::steady_clock::now();
         
-        if (showFPS && std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsOutput).count() >= 500) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsOutput).count() >= 500) {
             // Update FPS text every 500ms for smooth display
             std::string fpsText = "Az3D Engine | FPS: " + std::to_string(static_cast<int>(fpsRef.currentFPS)) +
                                     " | Avg: " + std::to_string(static_cast<int>(fpsRef.getAverageFPS())) +
@@ -402,11 +409,7 @@ void Application::mainLoop() {
                                     " | Pipeline: " + std::to_string(pipelineIndex);
             SDL_SetWindowTitle(winManager.window, fpsText.c_str());
             lastFpsOutput = now;
-        } else if (!showFPS && lastShowFPS) {
-            // Reset to default title when FPS display is turned off
-            SDL_SetWindowTitle(winManager.window, "Az3D Engine");
         }
-        lastShowFPS = showFPS;
     }
 
     vkDeviceWaitIdle(deviceRef.device);
