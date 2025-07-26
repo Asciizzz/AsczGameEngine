@@ -22,6 +22,7 @@ private:
     std::unique_ptr<AzCore::WindowManager> windowManager;
     std::unique_ptr<AzCore::FpsManager> fpsManager;
     std::unique_ptr<Az3D::Camera> camera;
+    std::unique_ptr<Az3D::LightManager> lightManager;
 
     std::unique_ptr<AzVulk::Instance> vulkanInstance;
     std::unique_ptr<AzVulk::Device> vulkanDevice;

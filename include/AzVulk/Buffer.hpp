@@ -14,29 +14,6 @@ namespace AzVulk {
         // Camera matrices
         alignas(16) glm::mat4 view;
         alignas(16) glm::mat4 proj;
-        
-        // Lighting data
-        alignas(16) glm::vec3 lightDirection;     // Main directional light
-        alignas(16) glm::vec3 lightColor;         // Light color and intensity
-        alignas(16) glm::vec3 ambientLight;       // Ambient lighting
-        alignas(16) glm::vec3 cameraPosition;     // For view direction calculations
-        
-        // Time and animation
-        alignas(4) float time;                    // Current time for animations
-        alignas(4) float deltaTime;               // Frame delta time
-        
-        // Material properties (global overrides)
-        alignas(16) glm::vec3 fogColor;           // Fog color
-        alignas(4) float fogDensity;              // Fog density
-        alignas(4) float fogStart;                // Fog start distance
-        alignas(4) float fogEnd;                  // Fog end distance
-        
-        // Screen/viewport info
-        alignas(8) glm::vec2 screenResolution;    // Screen width/height
-        alignas(4) float aspectRatio;             // Screen aspect ratio
-        
-        // Custom shader parameters
-        alignas(16) glm::vec4 customParams;       // Generic parameters for effects
     };
 
     // Instance data structure for instanced rendering

@@ -23,9 +23,4 @@ void main() {
 
     vec4 texColor = texture(txtrSmplr, fragTxtr);
     outColor = vec4(texColor.rgb * diffFactor, 1.0);
-
-    // Mix original color with position-based effect (uncomment to see effect)
-    // texColor.rgb = mix(texColor.rgb, positionColor, 0.3);
-    
-    // outColor = vec4(texColor.rgb, 1.0);
 }

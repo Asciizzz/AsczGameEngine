@@ -193,11 +193,10 @@ namespace AzVulk {
         scissor.extent = swapChain.extent;
         vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
-        // Update uniform buffer with view and projection matrices (once per frame)
+        // Update uniform buffer with view, projection matrices (once per frame)
         UniformBufferObject ubo{};
         ubo.view = camera.viewMatrix;
         ubo.proj = camera.projectionMatrix;
-        ubo.time = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - startTime).count();
         memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
         // Group models by material for efficient rendering
