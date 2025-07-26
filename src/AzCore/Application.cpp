@@ -92,11 +92,11 @@ void Application::initVulkan() {
 
     // Load textures and get their indices
     size_t mapTextureIndex = texManager.addTexture("Model/de_dust2.png");
-    size_t shirokoTextureIndex = texManager.addTexture("Model/Shiroko.jpg");
+    size_t playerTextureIndex = texManager.addTexture("Model/Selen.png");
 
     // Load meshes and get their indices
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
-    size_t shirokoMeshIndex = meshManager.loadMeshFromOBJ("Model/shiroko.obj");
+    size_t playerMeshIndex = meshManager.loadMeshFromOBJ("Model/Selen.obj");
 
 
     // Create materials with texture indices
@@ -107,12 +107,12 @@ void Application::initVulkan() {
     mapMaterial.diffTxtr = mapTextureIndex;
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
-    Az3D::Material shirokoMaterial;
-    shirokoMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    shirokoMaterial.roughness = 0.4f;
-    shirokoMaterial.metallic = 0.0f;
-    shirokoMaterial.diffTxtr = shirokoTextureIndex;
-    size_t shirokoMaterialIndex = resourceManager->addMaterial(shirokoMaterial);
+    Az3D::Material playerMaterial;
+    playerMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    playerMaterial.roughness = 0.4f;
+    playerMaterial.metallic = 0.0f;
+    playerMaterial.diffTxtr = playerTextureIndex;
+    size_t playerMaterialIndex = resourceManager->addMaterial(playerMaterial);
 
 
     // Create models using indices
@@ -123,7 +123,7 @@ void Application::initVulkan() {
     // Rotate 90
     // models[0].trform.rotateX(glm::radians(-90.0f));
 
-    models[1] = Az3D::Model(shirokoMeshIndex, shirokoMaterialIndex);
+    models[1] = Az3D::Model(playerMeshIndex, playerMaterialIndex);
     models[1].trform.scale(0.2f);
     models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
@@ -259,7 +259,7 @@ void Application::mainLoop() {
 // ======== PLAYGROUND HERE! ========
 
 
-        /*
+        //*
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
         float shiro_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
@@ -273,11 +273,11 @@ void Application::mainLoop() {
         camRef.pos = camPos;
         //*/
 
-        //*
+        /*
         auto& shiro_model = models[1];
         static float shiro_vy = 0.0f;
 
-        // Rotate shiroko plush based on the camera's direction
+        // Rotate player plush based on the camera's direction
         glm::vec3 s_right = glm::normalize(camera->right);
         glm::vec3 s_up = glm::vec3(0.0f, 1.0f, 0.0f);
         glm::vec3 s_backward = glm::normalize(glm::cross(s_right, s_up));
@@ -292,7 +292,7 @@ void Application::mainLoop() {
 
         camera->pos = shiro_model.trform.pos - camera->forward * camDist;
 
-        // Move the shiroko plush based on WASD keys
+        // Move the player plush based on WASD keys
 
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
@@ -318,11 +318,11 @@ void Application::mainLoop() {
         //*/
 
         // Update instance buffers dynamically by mesh type - optimized with caching + frustum culling
-        std::vector<ModelInstance> mapInstances, shirokoInstances, cubeInstances;
+        std::vector<ModelInstance> mapInstances, playerInstances, cubeInstances;
         
         // Reserve memory to avoid reallocations during rapid spawning
         mapInstances.reserve(models.size());
-        shirokoInstances.reserve(models.size());
+        playerInstances.reserve(models.size());
         cubeInstances.reserve(models.size());
 
         for (const auto& model : models) {
@@ -332,7 +332,7 @@ void Application::mainLoop() {
             if (model.meshIndex == 0) {
                 mapInstances.push_back(instanceData);
             } else if (model.meshIndex == 1) {
-                shirokoInstances.push_back(instanceData);
+                playerInstances.push_back(instanceData);
             } else if (model.meshIndex == 2) {
                 cubeInstances.push_back(instanceData);
             }
@@ -340,7 +340,7 @@ void Application::mainLoop() {
 
         // Track previous counts to avoid unnecessary buffer recreation
         static size_t prevmapCount = 0;
-        static size_t prevShirokoCount = 0;
+        static size_t prevplayerCount = 0;
         static size_t prevCubeCount = 0;
 
         // Create reference to buffer to avoid arrow spam
@@ -358,13 +358,13 @@ void Application::mainLoop() {
                 bufferRef.updateInstanceBufferForMesh(0, mapInstances);
             }
         }
-        if (!shirokoInstances.empty()) {
-            if (shirokoInstances.size() != prevShirokoCount) {
-                if (prevShirokoCount > 0) vkDeviceWaitIdle(deviceRef.device);
-                bufferRef.createInstanceBufferForMesh(1, shirokoInstances);
-                prevShirokoCount = shirokoInstances.size();
+        if (!playerInstances.empty()) {
+            if (playerInstances.size() != prevplayerCount) {
+                if (prevplayerCount > 0) vkDeviceWaitIdle(deviceRef.device);
+                bufferRef.createInstanceBufferForMesh(1, playerInstances);
+                prevplayerCount = playerInstances.size();
             } else {
-                bufferRef.updateInstanceBufferForMesh(1, shirokoInstances);
+                bufferRef.updateInstanceBufferForMesh(1, playerInstances);
             }
         }
         if (!cubeInstances.empty()) {
