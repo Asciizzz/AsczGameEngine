@@ -139,7 +139,7 @@ void Application::initVulkan() {
     descManager.createDescriptorPool(2, matManager.materials.size());
 
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
-        descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(UniformBufferObject), 
+        descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(GlobalUBO), 
                                                     &texManager.textures[i], i);
     }
 

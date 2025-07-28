@@ -1,8 +1,8 @@
 #version 450
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(binding = 0) uniform GlobalUBO {
     mat4 viewProj;
-} ubo;
+} glb;
 
 layout(location = 0) in vec3 inPos;
 layout(location = 1) in vec3 inNrml;
@@ -23,8 +23,13 @@ void main() {
     vec4 worldPos = modelMatrix * vec4(inPos, 1.0);
     fragWorldPos = worldPos.xyz;
 
-    gl_Position = ubo.viewProj * worldPos;
+    gl_Position = glb.viewProj * worldPos;
 
-    fragNrml = mat3(modelMatrix) * inNrml;
+    // Can be computationally expensive, avoid scaling if possible
+    // mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
+    // fragNrml = normalize(nrmlMat * inNrml);
+
+    fragNrml = normalize(mat3(modelMatrix) * inNrml);
+
     fragTxtr = inTxtr;
 }

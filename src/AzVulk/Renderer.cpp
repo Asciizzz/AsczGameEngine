@@ -194,7 +194,7 @@ namespace AzVulk {
         vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
         // Update uniform buffer with view, projection matrices (once per frame)
-        UniformBufferObject ubo{};
+        GlobalUBO ubo{};
         ubo.viewProj = camera.getViewProjectionMatrix();
         memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 

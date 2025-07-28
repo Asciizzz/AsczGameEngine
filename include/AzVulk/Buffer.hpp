@@ -10,7 +10,7 @@
 #include "Az3D/Az3D.hpp"
 
 namespace AzVulk {
-    struct UniformBufferObject {
+    struct GlobalUBO {
         // Camera matrices
         alignas(16) glm::mat4 viewProj;
     };

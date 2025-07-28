@@ -89,7 +89,7 @@ namespace AzVulk {
     }
 
     void Buffer::createUniformBuffers(size_t count) {
-        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+        VkDeviceSize bufferSize = sizeof(GlobalUBO);
 
         uniformBuffers.resize(count);
         uniformBuffersMemory.resize(count);

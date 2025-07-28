@@ -9,7 +9,7 @@ layout(location = 2) in vec3 fragWorldPos;  // World position from vertex shader
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    vec3 lightPos = vec3(0.0, 4.0, 0.0); // Example light position
+    vec3 lightPos = vec3(0.0, 100.0, 0.0); // Example light position
 
     vec3 lightDir = normalize(lightPos - fragWorldPos);
     vec3 normal = normalize(fragNrml);
