@@ -195,8 +195,7 @@ namespace AzVulk {
 
         // Update uniform buffer with view, projection matrices (once per frame)
         UniformBufferObject ubo{};
-        ubo.view = camera.viewMatrix;
-        ubo.proj = camera.projectionMatrix;
+        ubo.viewProj = camera.getViewProjectionMatrix();
         memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
         // Group models by material for efficient rendering

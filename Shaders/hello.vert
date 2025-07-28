@@ -1,8 +1,7 @@
 #version 450
 
 layout(binding = 0) uniform UniformBufferObject {
-    mat4 view;
-    mat4 proj;
+    mat4 viewProj;
 } ubo;
 
 layout(location = 0) in vec3 inPos;
@@ -20,10 +19,11 @@ layout(location = 2) out vec3 fragWorldPos;
 
 void main() {
     mat4 modelMatrix = mat4(modelRow0, modelRow1, modelRow2, modelRow3);
+
     vec4 worldPos = modelMatrix * vec4(inPos, 1.0);
     fragWorldPos = worldPos.xyz;
 
-    gl_Position = ubo.proj * ubo.view * worldPos;
+    gl_Position = ubo.viewProj * worldPos;
 
     fragNrml = mat3(modelMatrix) * inNrml;
     fragTxtr = inTxtr;
