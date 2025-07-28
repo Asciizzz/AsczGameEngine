@@ -24,7 +24,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/SwapChain.cpp
     src/AzVulk/ShaderManager.cpp
     src/AzVulk/Buffer.cpp
-    src/AzVulk/GraphicsPipeline.cpp
+    src/AzVulk/RasterPipeline.cpp
     src/AzVulk/DescriptorManager.cpp
     src/AzVulk/DepthManager.cpp
     src/AzVulk/MSAAManager.cpp

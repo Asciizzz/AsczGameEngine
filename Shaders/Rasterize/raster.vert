@@ -1,7 +1,7 @@
 #version 450
 
 layout(binding = 0) uniform GlobalUBO {
-    mat4 viewProj;
+    mat4 projView;
 } glb;
 
 layout(location = 0) in vec3 inPos;
@@ -14,7 +14,7 @@ layout(location = 5) in vec4 modelRow2;  // Row 2: [m20, m21, m22, m23]
 layout(location = 6) in vec4 modelRow3;  // Row 3: [m30, m31, m32, m33]
 
 layout(location = 0) out vec2 fragTxtr;
-layout(location = 1) out vec3 fragNrml;
+layout(location = 1) out vec3 fragWorldNrml;
 layout(location = 2) out vec3 fragWorldPos;
 
 void main() {
@@ -23,13 +23,13 @@ void main() {
     vec4 worldPos = modelMatrix * vec4(inPos, 1.0);
     fragWorldPos = worldPos.xyz;
 
-    gl_Position = glb.viewProj * worldPos;
+    gl_Position = glb.projView * worldPos;
 
     // Can be computationally expensive, avoid scaling if possible
     // mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
-    // fragNrml = normalize(nrmlMat * inNrml);
+    // fragWorldNrml = normalize(nrmlMat * inNrml);
 
-    fragNrml = normalize(mat3(modelMatrix) * inNrml);
+    fragWorldNrml = normalize(mat3(modelMatrix) * inNrml);
 
     fragTxtr = inTxtr;
 }

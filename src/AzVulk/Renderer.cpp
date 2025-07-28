@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 namespace AzVulk {
-    Renderer::Renderer (const Device& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
+    Renderer::Renderer (const Device& device, SwapChain& swapChain, RasterPipeline& pipeline, 
                         Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
                         Az3D::ResourceManager& resourceManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
@@ -135,7 +135,7 @@ namespace AzVulk {
         }
     }
 
-    void Renderer::drawFrameWithModels(const std::vector<Az3D::Model>& models, GraphicsPipeline& pipeline) {
+    void Renderer::drawFrameWithModels(const std::vector<Az3D::Model>& models, RasterPipeline& pipeline) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -195,7 +195,7 @@ namespace AzVulk {
 
         // Update uniform buffer with view, projection matrices (once per frame)
         GlobalUBO ubo{};
-        ubo.viewProj = camera.getViewProjectionMatrix();
+        ubo.projView = camera.getViewProjectionMatrix();
         memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
         // Group models by material for efficient rendering

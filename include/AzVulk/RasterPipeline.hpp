@@ -4,15 +4,15 @@
 #include "AzVulk/Buffer.hpp"
 
 namespace AzVulk {
-    class GraphicsPipeline {
+    class RasterPipeline {
     public:
-        GraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
+        RasterPipeline(VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
                         const char* vertexShaderPath, const char* fragmentShaderPath, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
-        ~GraphicsPipeline();
+        ~RasterPipeline();
 
         // Delete copy constructor and assignment operator
-        GraphicsPipeline(const GraphicsPipeline&) = delete;
-        GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
+        RasterPipeline(const RasterPipeline&) = delete;
+        RasterPipeline& operator=(const RasterPipeline&) = delete;
 
         void recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
 

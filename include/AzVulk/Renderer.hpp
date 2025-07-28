@@ -6,7 +6,7 @@
 #include <chrono>
 #include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
-#include "AzVulk/GraphicsPipeline.hpp"
+#include "AzVulk/RasterPipeline.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
 #include "Az3D/Az3D.hpp"
@@ -18,7 +18,7 @@ namespace AzCore {
 namespace AzVulk {
     class Renderer {
     public:
-        Renderer(const Device& device, SwapChain& swapChain, GraphicsPipeline& pipeline, 
+        Renderer(const Device& device, SwapChain& swapChain, RasterPipeline& pipeline, 
                 Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
                 Az3D::ResourceManager& resourceManager);
         ~Renderer();
@@ -27,11 +27,11 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        void drawFrameWithModels(const std::vector<Az3D::Model>& models, GraphicsPipeline& pipeline);
+        void drawFrameWithModels(const std::vector<Az3D::Model>& models, RasterPipeline& pipeline);
 
         const Device& vulkanDevice;
         SwapChain& swapChain;
-        GraphicsPipeline& graphicsPipeline;
+        RasterPipeline& graphicsPipeline;
         Buffer& buffer;
         DescriptorManager& descriptorManager;
         Az3D::Camera& camera;

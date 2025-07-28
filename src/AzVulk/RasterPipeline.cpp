@@ -1,4 +1,4 @@
-#include "AzVulk/GraphicsPipeline.hpp"
+#include "AzVulk/RasterPipeline.hpp"
 #include "AzVulk/ShaderManager.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "Az3D/Az3D.hpp"
@@ -7,7 +7,7 @@
 #include <array>
 
 namespace AzVulk {
-    GraphicsPipeline::GraphicsPipeline( VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
+    RasterPipeline::RasterPipeline( VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
                                         const char* vertexShaderPath, const char* fragmentShaderPath, VkSampleCountFlagBits msaaSamples)
         : device(device), swapChainExtent(swapChainExtent), swapChainImageFormat(swapChainImageFormat),
           vertexShaderPath(vertexShaderPath), fragmentShaderPath(fragmentShaderPath), msaaSamples(msaaSamples) {
@@ -17,11 +17,11 @@ namespace AzVulk {
         createGraphicsPipeline(vertexShaderPath, fragmentShaderPath);
     }
 
-    GraphicsPipeline::~GraphicsPipeline() {
+    RasterPipeline::~RasterPipeline() {
         cleanup();
     }
 
-    void GraphicsPipeline::recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat, VkSampleCountFlagBits newMsaaSamples) {
+    void RasterPipeline::recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat, VkSampleCountFlagBits newMsaaSamples) {
         swapChainExtent = newExtent;
         swapChainImageFormat = newFormat;
         msaaSamples = newMsaaSamples;
@@ -32,7 +32,7 @@ namespace AzVulk {
         createGraphicsPipeline(vertexShaderPath, fragmentShaderPath);
     }
 
-    void GraphicsPipeline::createRenderPass() {
+    void RasterPipeline::createRenderPass() {
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = swapChainImageFormat;
         colorAttachment.samples = msaaSamples;
@@ -105,7 +105,7 @@ namespace AzVulk {
         }
     }
 
-    void GraphicsPipeline::createDescriptorSetLayout() {
+    void RasterPipeline::createDescriptorSetLayout() {
         VkDescriptorSetLayoutBinding uboLayoutBinding{};
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorCount = 1;
@@ -132,7 +132,7 @@ namespace AzVulk {
         }
     }
 
-    void GraphicsPipeline::createGraphicsPipeline(const char* vertexShaderPath, const char* fragmentShaderPath) {
+    void RasterPipeline::createGraphicsPipeline(const char* vertexShaderPath, const char* fragmentShaderPath) {
         auto vertShaderCode = ShaderManager::readFile(vertexShaderPath);
         auto fragShaderCode = ShaderManager::readFile(fragmentShaderPath);
 
@@ -297,7 +297,7 @@ namespace AzVulk {
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
     }
 
-    void GraphicsPipeline::cleanup() {
+    void RasterPipeline::cleanup() {
         if (graphicsPipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(device, graphicsPipeline, nullptr);
             graphicsPipeline = VK_NULL_HANDLE;

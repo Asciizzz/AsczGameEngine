@@ -29,7 +29,7 @@ private:
     std::unique_ptr<AzVulk::SwapChain> swapChain;
 
     std::vector<
-        std::unique_ptr<AzVulk::GraphicsPipeline>
+        std::unique_ptr<AzVulk::RasterPipeline>
     > graphicsPipelines;
     int pipelineIndex = 0;
 

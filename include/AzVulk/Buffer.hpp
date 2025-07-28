@@ -12,7 +12,7 @@
 namespace AzVulk {
     struct GlobalUBO {
         // Camera matrices
-        alignas(16) glm::mat4 viewProj;
+        alignas(16) glm::mat4 projView;
     };
 
     // Instance data structure for instanced rendering

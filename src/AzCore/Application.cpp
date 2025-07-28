@@ -46,21 +46,21 @@ void Application::initVulkan() {
     swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
 
     // Create multiple graphics pipelines for different rendering modes
-    graphicsPipelines.push_back(std::make_unique<GraphicsPipeline>(
+    graphicsPipelines.push_back(std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         swapChain->extent,
         swapChain->imageFormat,
-        "Shaders/hello.vert.spv",
-        "Shaders/hello.frag.spv",
+        "Shaders/Rasterize/raster.vert.spv",
+        "Shaders/Rasterize/raster.frag.spv",
         msaaManager->msaaSamples
     ));
     
-    graphicsPipelines.push_back(std::make_unique<GraphicsPipeline>(
+    graphicsPipelines.push_back(std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         swapChain->extent,
         swapChain->imageFormat,
-        "Shaders/hello.vert.spv",
-        "Shaders/hello1.frag.spv",
+        "Shaders/Rasterize/raster.vert.spv",
+        "Shaders/Rasterize/raster1.frag.spv",
         msaaManager->msaaSamples
     ));
 
@@ -94,11 +94,11 @@ void Application::initVulkan() {
 // PLAYGROUND FROM HERE!
 
     // Load textures and get their indices
-    size_t mapTextureIndex = texManager.addTexture("Model/de_dust2.png");
+    size_t mapTextureIndex = texManager.addTexture("Model/viking_room.png");
     size_t playerTextureIndex = texManager.addTexture("Model/Selen.png");
 
     // Load meshes and get their indices
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/viking_room.obj");
     size_t playerMeshIndex = meshManager.loadMeshFromOBJ("Model/Selen.obj");
 
 
@@ -123,8 +123,7 @@ void Application::initVulkan() {
 
     models[0] = Az3D::Model(mapMeshIndex, mapMaterialIndex);
     models[0].trform.pos = glm::vec3(0.0f, .0f, 0.0f);
-    // Rotate 90
-    // models[0].trform.rotateX(glm::radians(-90.0f));
+    models[0].trform.rotateX(glm::radians(-90.0f));
 
     models[1] = Az3D::Model(playerMeshIndex, playerMaterialIndex);
     models[1].trform.scale(0.2f);
