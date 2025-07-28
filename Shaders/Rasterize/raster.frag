@@ -24,7 +24,7 @@ void main() {
     lightIntensity = length(fragWorldNrml) > 0.001 ? lightIntensity : 1.0;
 
     // For toon shading effect
-    float diffFactor = ceil(lightIntensity * 4.0) * 0.25;
+    float diffFactor = ceil(lightIntensity * 2.0) * 0.5;
     float finalFactor = 0.03 + diffFactor * 0.97;
 
     vec4 texColor = texture(txtrSmplr, fragTxtr);
