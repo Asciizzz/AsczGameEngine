@@ -30,7 +30,7 @@ private:
 
     std::vector<
         std::unique_ptr<AzVulk::RasterPipeline>
-    > graphicsPipelines;
+    > rasterPipeline;
     int pipelineIndex = 0;
 
     std::unique_ptr<AzVulk::ShaderManager> shaderManager;

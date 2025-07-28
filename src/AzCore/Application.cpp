@@ -46,7 +46,7 @@ void Application::initVulkan() {
     swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
 
     // Create multiple graphics pipelines for different rendering modes
-    graphicsPipelines.push_back(std::make_unique<RasterPipeline>(
+    rasterPipeline.push_back(std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         swapChain->extent,
         swapChain->imageFormat,
@@ -55,7 +55,7 @@ void Application::initVulkan() {
         msaaManager->msaaSamples
     ));
     
-    graphicsPipelines.push_back(std::make_unique<RasterPipeline>(
+    rasterPipeline.push_back(std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         swapChain->extent,
         swapChain->imageFormat,
@@ -78,13 +78,13 @@ void Application::initVulkan() {
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = std::make_unique<DepthManager>(*vulkanDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(graphicsPipelines[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    swapChain->createFramebuffers(rasterPipeline[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     buffer = std::make_unique<Buffer>(*vulkanDevice);
     buffer->createUniformBuffers(2);
 
     resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
-    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, graphicsPipelines[pipelineIndex]->descriptorSetLayout);
+    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->descriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
     auto& texManager = *resourceManager->textureManager;
@@ -126,7 +126,7 @@ void Application::initVulkan() {
     models[0].trform.rotateX(glm::radians(-90.0f));
 
     models[1] = Az3D::Model(playerMeshIndex, playerMaterialIndex);
-    models[1].trform.scale(0.2f);
+    models[1].trform.scale(0.1f);
     models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 // PLAYGROUND END HERE 
@@ -148,7 +148,7 @@ void Application::initVulkan() {
     }
 
     // Final Renderer setup with ResourceManager
-    renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *graphicsPipelines[pipelineIndex], 
+    renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *rasterPipeline[pipelineIndex], 
                                         *buffer, *descriptorManager, *camera, *resourceManager);
 }
 
@@ -175,7 +175,7 @@ void Application::mainLoop() {
 
         float dTime = fpsRef.deltaTime;
 
-        static float camDist = 1.0f;
+        static float camDist = 1.5f;
         static glm::vec3 camPos = camRef.pos;
         static bool mouseLocked = true;
 
@@ -193,8 +193,8 @@ void Application::mainLoop() {
             camRef.updateAspectRatio(newWidth, newHeight);
             msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
             depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-            swapChain->recreate(winManager.window, graphicsPipelines[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
-            graphicsPipelines[pipelineIndex]->recreate(swapChain->extent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
+            swapChain->recreate(winManager.window, rasterPipeline[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+            rasterPipeline[pipelineIndex]->recreate(swapChain->extent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
         }
 
         const Uint8* k_state = SDL_GetKeyboardState(nullptr);
@@ -240,7 +240,7 @@ void Application::mainLoop() {
         // Switch graphics pipelines with Tab key
         static bool tabPressed = false;
         if (k_state[SDL_SCANCODE_TAB] && !tabPressed) {
-            pipelineIndex = (pipelineIndex + 1) % graphicsPipelines.size();
+            pipelineIndex = (pipelineIndex + 1) % rasterPipeline.size();
             tabPressed = true;
         } else if (!k_state[SDL_SCANCODE_TAB]) {
             tabPressed = false;
@@ -261,30 +261,23 @@ void Application::mainLoop() {
 // ======== PLAYGROUND HERE! ========
 
 
-        //*
+        /*
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
-        float shiro_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
+        float p_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
 
         // Move the camera normally
-        if (k_state[SDL_SCANCODE_W]) camPos += camRef.forward * shiro_speed;
-        if (k_state[SDL_SCANCODE_S]) camPos -= camRef.forward * shiro_speed;
-        if (k_state[SDL_SCANCODE_A]) camPos -= camRef.right * shiro_speed;
-        if (k_state[SDL_SCANCODE_D]) camPos += camRef.right * shiro_speed;
+        if (k_state[SDL_SCANCODE_W]) camPos += camRef.forward * p_speed;
+        if (k_state[SDL_SCANCODE_S]) camPos -= camRef.forward * p_speed;
+        if (k_state[SDL_SCANCODE_A]) camPos -= camRef.right * p_speed;
+        if (k_state[SDL_SCANCODE_D]) camPos += camRef.right * p_speed;
 
         camRef.pos = camPos;
         //*/
 
-        /*
-        auto& shiro_model = models[1];
-        static float shiro_vy = 0.0f;
-
-        // Rotate player plush based on the camera's direction
-        glm::vec3 s_right = glm::normalize(camera->right);
-        glm::vec3 s_up = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 s_backward = glm::normalize(glm::cross(s_right, s_up));
-        glm::quat s_rotation = glm::quatLookAt(s_backward, s_up);
-        shiro_model.trform.rot = s_rotation;
+        //*
+        auto& p_model = models[1];
+        static float p_vy = 0.0f;
 
         // 3rd person camera positioning
 
@@ -292,30 +285,61 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_UP]) camDist -= 1.0f * dTime;
         if (k_state[SDL_SCANCODE_DOWN]) camDist += 1.0f * dTime;
 
-        camera->pos = shiro_model.trform.pos - camera->forward * camDist;
+        camera->pos = p_model.trform.pos - camera->forward * camDist + glm::vec3(0.0f, 0.25f, 0.0f);
 
         // Move the player plush based on WASD keys
 
+        glm::vec3 s_right = glm::normalize(camera->right);
+        glm::vec3 s_up = glm::vec3(0.0f, 1.0f, 0.0f);
+        glm::vec3 s_backward = glm::normalize(glm::cross(s_right, s_up));
+
+        bool k_w = k_state[SDL_SCANCODE_W];
+        bool k_s = k_state[SDL_SCANCODE_S];
+        bool k_a = k_state[SDL_SCANCODE_A];
+        bool k_d = k_state[SDL_SCANCODE_D];
+        bool k_q = k_state[SDL_SCANCODE_Q];
+        bool k_e = k_state[SDL_SCANCODE_E];
+
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
-        float shiro_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
-        if (k_state[SDL_SCANCODE_W]) shiro_model.trform.pos -= s_backward * shiro_speed;
-        if (k_state[SDL_SCANCODE_S]) shiro_model.trform.pos += s_backward * shiro_speed;
-        if (k_state[SDL_SCANCODE_A]) shiro_model.trform.pos -= s_right * shiro_speed;
-        if (k_state[SDL_SCANCODE_D]) shiro_model.trform.pos += s_right * shiro_speed;
-        if (k_state[SDL_SCANCODE_Q]) shiro_model.trform.pos += s_up * shiro_speed;
-        if (k_state[SDL_SCANCODE_E]) shiro_model.trform.pos -= s_up * shiro_speed;
+        float p_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
+
+        static glm::quat desired_rot = glm::quatLookAt(s_backward, s_up);
+        static glm::quat current_rot = p_model.trform.rot;
+
+        if (k_w) {
+            p_model.trform.pos -= s_backward * p_speed;
+            desired_rot = glm::quatLookAt(s_backward, s_up);
+        }
+        if (k_s) {
+            p_model.trform.pos += s_backward * p_speed;
+            desired_rot = glm::quatLookAt(-s_backward, s_up);
+        }
+        if (k_a) {
+            p_model.trform.pos -= s_right * p_speed;
+            desired_rot = glm::quatLookAt(s_right, s_up);
+        }
+        if (k_d) {
+            p_model.trform.pos += s_right * p_speed;
+            desired_rot = glm::quatLookAt(-s_right, s_up);
+        }
+
+        // Interpolate rotation towards desired rotation
+        float rotationSpeed = 20.0f * dTime; // Adjust rotation speed as needed
+        current_rot = glm::slerp(current_rot, desired_rot, rotationSpeed);
+
+        p_model.trform.rot = current_rot;
 
         // Press space to jump, simulating gravity
-        shiro_model.trform.pos.y += shiro_vy * dTime;
-        if (shiro_model.trform.pos.y < 0.0f) {
-            shiro_model.trform.pos.y = 0.0f; // Prevent going below ground
+        p_model.trform.pos.y += p_vy * dTime;
+        if (p_model.trform.pos.y < 0.0f) {
+            p_model.trform.pos.y = 0.0f; // Prevent going below ground
         } else {
-            shiro_vy -= 9.81f * dTime; // Apply gravity
+            p_vy -= 9.81f * dTime; // Apply gravity
         }
-        if (k_state[SDL_SCANCODE_SPACE] && shiro_model.trform.pos.y <= 0.0f) {
+        if (k_state[SDL_SCANCODE_SPACE] && p_model.trform.pos.y <= 0.0f) {
             // Simple jump logic
-            shiro_vy = 3.0f; // Jump height
+            p_vy = 3.0f; // Jump height
         }
         //*/
 
@@ -380,7 +404,7 @@ void Application::mainLoop() {
         }
 
 // =================================
-        rendererRef.drawFrameWithModels(models, *graphicsPipelines[pipelineIndex]);
+        rendererRef.drawFrameWithModels(models, *rasterPipeline[pipelineIndex]);
         
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();

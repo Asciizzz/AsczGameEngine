@@ -14,18 +14,20 @@ layout(location = 2) in vec3 fragWorldPos;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    vec3 lightPos = vec3(0.0, 0.5, 0.5); // Example light position
+    vec3 lightPos = vec3(0.0, 10.5, -10.5);
 
     vec3 lightDir = normalize(lightPos - fragWorldPos);
     vec3 normal = normalize(fragWorldNrml);
 
-    float lightIntensity = max(dot(normal, lightDir), 0.0);
+    float lightFactor = max(dot(normal, lightDir), 0.0);
     // In case there's no normal
-    lightIntensity = length(fragWorldNrml) > 0.001 ? lightIntensity : 1.0;
+    lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
 
     // For toon shading effect
-    float diffFactor = ceil(lightIntensity * 2.0) * 0.5;
-    float finalFactor = 0.03 + diffFactor * 0.97;
+    float toonFactor = ceil(lightFactor * 2.0) * 0.5;
+
+    // Final brightness factor
+    float finalFactor = 0.03 + toonFactor * 0.97;
 
     vec4 texColor = texture(txtrSmplr, fragTxtr);
     outColor = vec4(texColor.rgb * finalFactor, 1.0);
