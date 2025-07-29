@@ -6,6 +6,8 @@
 #include "AzVulk/AzVulk.hpp"
 #include "Az3D/Az3D.hpp"
 
+#include "AzBeta/Armature.hpp"
+
 class Application {
 public:
     Application(const char* title = "Vulkan Application", uint32_t width = 800, uint32_t height = 600);
@@ -44,6 +46,9 @@ private:
     // Az3D scene objects (instances)
     std::vector<Az3D::Model> models;
     std::vector<Az3D::Billboard> billboards;
+
+    // Testing Armature
+    AzBeta::Armature armature;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkSurfaceKHR surface = VK_NULL_HANDLE;

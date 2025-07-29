@@ -45,10 +45,12 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/glm
 
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/AzBeta
     ${CMAKE_SOURCE_DIR}/include/AzCore
     ${CMAKE_SOURCE_DIR}/include/AzVulk
     ${CMAKE_SOURCE_DIR}/include/Az3D
 )
+
 
 target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY})
 

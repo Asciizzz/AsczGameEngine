@@ -28,7 +28,7 @@ void main() {
     float toonFactor = ceil(lightFactor * 2.0) * 0.5;
 
     // Final brightness factor
-    float finalFactor = 0.03 + toonFactor * 0.97;
+    float finalFactor = 0.1 + toonFactor * 0.9;
 
     vec4 texColor = texture(txtrSmplr, fragTxtr);
     outColor = vec4(texColor.rgb * finalFactor, 1.0);

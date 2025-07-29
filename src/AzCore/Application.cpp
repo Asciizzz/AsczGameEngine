@@ -103,6 +103,8 @@ void Application::initVulkan() {
     // Load meshes and get their indices
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/viking_room.obj");
     size_t playerMeshIndex = meshManager.loadMeshFromOBJ("Model/Selen.obj");
+    
+    size_t partMeshIndex = meshManager.loadMeshFromOBJ("Model/Part.obj");
 
 
     // Create materials with texture indices
@@ -291,10 +293,6 @@ void Application::mainLoop() {
 
         // 3rd person camera positioning
 
-        // // Scroll to adjust camera distance
-        if (k_state[SDL_SCANCODE_UP]) camDist -= 1.0f * dTime;
-        if (k_state[SDL_SCANCODE_DOWN]) camDist += 1.0f * dTime;
-
         camera->pos = p_model.trform.pos - camera->forward * camDist + glm::vec3(0.0f, 0.25f, 0.0f);
 
         // Move the player plush based on WASD keys
@@ -380,7 +378,6 @@ void Application::mainLoop() {
             }
         }
 
-
         // Billboard manipulation
 
         static int frame = 0;
@@ -393,23 +390,6 @@ void Application::mainLoop() {
         frame_time -= frame_time * (frame_time > frame_time_max);
 
         switch (frame) {
-            // case 0:
-            //     billboards[0].uvMin = glm::vec2(0.0f, 0.0f);
-            //     billboards[0].uvMax = glm::vec2(0.5f, 0.5f);
-            //     break;
-            // case 1:
-            //     billboards[0].uvMin = glm::vec2(0.5f, 0.0f);
-            //     billboards[0].uvMax = glm::vec2(1.0f, 0.5f);
-            //     break;
-            // case 2:
-            //     billboards[0].uvMin = glm::vec2(0.0f, 0.5f);
-            //     billboards[0].uvMax = glm::vec2(0.5f, 1.0f);
-            //     break;
-            // case 3:
-            //     billboards[0].uvMin = glm::vec2(0.5f, 0.5f);
-            //     billboards[0].uvMax = glm::vec2(1.0f, 1.0f);
-            //     break;
-
             case 0:
                 billboards[0].uvMin = glm::vec2(0.0f, 0.0f);
                 billboards[0].uvMax = glm::vec2(0.5f, 1.0f);
@@ -423,10 +403,12 @@ void Application::mainLoop() {
         billboards[0].pos = p_model.trform.pos
             + glm::vec3(0.0f, 0.35f, 0.0f); // Position above the player
 
+
+
 // =================================
 
         rendererRef.drawFrame(*rasterPipeline[pipelineIndex], models, billboards);
-        
+
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
