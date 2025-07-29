@@ -162,8 +162,10 @@ void Application::mainLoop() {
     auto& winManager = *windowManager;
     auto& fpsRef = *fpsManager;
     auto& camRef = *camera;
+
     auto& rendererRef = *renderer;
     auto& deviceRef = *vulkanDevice;
+    auto& bufferRef = *buffer;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
@@ -340,63 +342,30 @@ void Application::mainLoop() {
         }
         //*/
 
-        // Update instance buffers dynamically by mesh type - optimized with caching + frustum culling
-        std::vector<ModelInstance> mapInstances, playerInstances, cubeInstances;
-        
-        // Reserve memory to avoid reallocations during rapid spawning
-        mapInstances.reserve(models.size());
-        playerInstances.reserve(models.size());
-        cubeInstances.reserve(models.size());
+        // Update instance buffers dynamically by mesh type
+        size_t meshCount = resourceManager->meshManager->meshes.size();
+
+        std::vector<std::vector<ModelInstance>> instances(meshCount);
 
         for (const auto& model : models) {
-            ModelInstance instanceData{};
-            instanceData.modelMatrix = model.trform.modelMatrix();
-            
-            if (model.meshIndex == 0) {
-                mapInstances.push_back(instanceData);
-            } else if (model.meshIndex == 1) {
-                playerInstances.push_back(instanceData);
-            } else if (model.meshIndex == 2) {
-                cubeInstances.push_back(instanceData);
-            }
+            ModelInstance instance{};
+            instance.modelMatrix = model.trform.modelMatrix();
+
+            instances[model.meshIndex].push_back(instance);
         }
 
         // Track previous counts to avoid unnecessary buffer recreation
-        static size_t prevmapCount = 0;
-        static size_t prevplayerCount = 0;
-        static size_t prevCubeCount = 0;
+        static std::vector<size_t> prevCounts(meshCount, 0);
 
-        // Create reference to buffer to avoid arrow spam
-        auto& bufferRef = *buffer;
-        auto& deviceRef = *vulkanDevice;
+        for (size_t i = 0; i < instances.size(); ++i) {
+            if (instances[i].empty()) continue;
 
-        // Update buffers only when count changes or just update data if count is same
-        if (!mapInstances.empty()) {
-            if (mapInstances.size() != prevmapCount) {
-                // Only wait for GPU if we're actually recreating buffers
-                if (prevmapCount > 0) vkDeviceWaitIdle(deviceRef.device);
-                bufferRef.createInstanceBufferForMesh(0, mapInstances);
-                prevmapCount = mapInstances.size();
+            if (instances[i].size() != prevCounts[i]) {
+                if (prevCounts[i] > 0) vkDeviceWaitIdle(deviceRef.device);
+                bufferRef.createInstanceBufferForMesh(i, instances[i]);
+                prevCounts[i] = instances[i].size();
             } else {
-                bufferRef.updateInstanceBufferForMesh(0, mapInstances);
-            }
-        }
-        if (!playerInstances.empty()) {
-            if (playerInstances.size() != prevplayerCount) {
-                if (prevplayerCount > 0) vkDeviceWaitIdle(deviceRef.device);
-                bufferRef.createInstanceBufferForMesh(1, playerInstances);
-                prevplayerCount = playerInstances.size();
-            } else {
-                bufferRef.updateInstanceBufferForMesh(1, playerInstances);
-            }
-        }
-        if (!cubeInstances.empty()) {
-            if (cubeInstances.size() != prevCubeCount) {
-                if (prevCubeCount > 0) vkDeviceWaitIdle(deviceRef.device);
-                bufferRef.createInstanceBufferForMesh(2, cubeInstances);
-                prevCubeCount = cubeInstances.size();
-            } else {
-                bufferRef.updateInstanceBufferForMesh(2, cubeInstances);
+                bufferRef.updateInstanceBufferForMesh(i, instances[i]);
             }
         }
 

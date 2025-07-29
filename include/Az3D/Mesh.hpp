@@ -39,8 +39,6 @@ namespace Az3D {
     class MeshManager {
     public:
         MeshManager() = default;
-
-        // Delete copy constructor and assignment operator
         MeshManager(const MeshManager&) = delete;
         MeshManager& operator=(const MeshManager&) = delete;
 

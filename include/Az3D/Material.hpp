@@ -36,8 +36,6 @@ namespace Az3D {
     class MaterialManager {
     public:
         MaterialManager() = default;
-        
-        // Delete copy constructor and assignment operator
         MaterialManager(const MaterialManager&) = delete;
         MaterialManager& operator=(const MaterialManager&) = delete;
 

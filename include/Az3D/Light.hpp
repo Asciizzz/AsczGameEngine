@@ -18,10 +18,7 @@ namespace Az3D {
 
     class LightManager {
     public:
-        LightManager();
-        ~LightManager() = default;
-
-        // Delete copy constructor and assignment operator
+        LightManager() = default;
         LightManager(const LightManager&) = delete;
         LightManager& operator=(const LightManager&) = delete;
 
