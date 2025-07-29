@@ -12,9 +12,11 @@ layout(location = 5) in float billboardHeight;
 layout(location = 6) in uint textureIndex;
 layout(location = 7) in vec2 uvMin;
 layout(location = 8) in vec2 uvMax;
+layout(location = 9) in float opacity;
 
 layout(location = 0) out vec2 fragUV;
 layout(location = 1) out flat uint fragTextureIndex;
+layout(location = 2) out float fragOpacity;
 
 void main() {
     // Generate quad vertices for billboard (triangle strip)
@@ -51,4 +53,5 @@ void main() {
     
     fragUV = uvCoords[gl_VertexIndex];
     fragTextureIndex = textureIndex;
+    fragOpacity = opacity;
 }

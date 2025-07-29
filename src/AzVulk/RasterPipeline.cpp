@@ -385,7 +385,7 @@ namespace AzVulk {
         instanceBinding.stride = sizeof(BillboardInstance);
         instanceBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-        std::array<VkVertexInputAttributeDescription, 6> instanceAttributes{};
+        std::array<VkVertexInputAttributeDescription, 7> instanceAttributes{};
         instanceAttributes[0].binding = 1;
         instanceAttributes[0].location = 3;
         instanceAttributes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -415,6 +415,11 @@ namespace AzVulk {
         instanceAttributes[5].location = 8;
         instanceAttributes[5].format = VK_FORMAT_R32G32_SFLOAT;
         instanceAttributes[5].offset = offsetof(BillboardInstance, uvMax);
+
+        instanceAttributes[6].binding = 1;
+        instanceAttributes[6].location = 9;
+        instanceAttributes[6].format = VK_FORMAT_R32_SFLOAT;
+        instanceAttributes[6].offset = offsetof(BillboardInstance, opacity);
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

@@ -285,6 +285,7 @@ namespace AzVulk {
                     instance.textureIndex = static_cast<uint32_t>(billboard->textureIndex);
                     instance.uvMin = billboard->uvMin;
                     instance.uvMax = billboard->uvMax;
+                    instance.opacity = billboard->opacity;  // CRITICAL: Copy opacity value!
                     billboardInstances.push_back(instance);
                 }
             }

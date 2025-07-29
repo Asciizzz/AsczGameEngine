@@ -32,9 +32,10 @@ namespace AzVulk {
         alignas(4) uint32_t textureIndex;
         alignas(8) glm::vec2 uvMin;  // AB1 - top-left UV
         alignas(8) glm::vec2 uvMax;  // AB2 - bottom-right UV
+        alignas(4) float opacity;     // Alpha multiplier
         
         static VkVertexInputBindingDescription getBindingDescription();
-        static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions();
+        static std::array<VkVertexInputAttributeDescription, 7> getAttributeDescriptions();
     };
 
     // Multi-mesh data structure for storing multiple mesh types

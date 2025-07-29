@@ -135,8 +135,8 @@ void Application::initVulkan() {
     // Create billboards for testing
     billboards.resize(2);
 
-    billboards[0] = Az3D::Billboard(glm::vec3(2.0f, 0.1f, 0.0f), 0.1f, 0.1f, mapTextureIndex);
-    billboards[1] = Az3D::Billboard(glm::vec3(2.0f, 0.5f, 0.0f), 0.1f, 0.1f, demoTextureIndex);
+    billboards[0] = Az3D::Billboard(glm::vec3(2.0f, 0.1f, 0.0f), 0.1f, 0.1f, mapTextureIndex, 0.5f);  // 50% opacity
+    billboards[1] = Az3D::Billboard(glm::vec3(2.0f, 0.5f, 0.0f), 0.1f, 0.1f, demoTextureIndex, 0.3f); // 30% opacity
 
 // PLAYGROUND END HERE 
 

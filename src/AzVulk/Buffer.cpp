@@ -217,8 +217,8 @@ namespace AzVulk {
         return bindingDescription;
     }
 
-    std::array<VkVertexInputAttributeDescription, 6> BillboardInstance::getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 6> attributeDescriptions{};
+    std::array<VkVertexInputAttributeDescription, 7> BillboardInstance::getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 7> attributeDescriptions{};
 
         // Position attribute (location 3)
         attributeDescriptions[0].binding = 1;
@@ -255,6 +255,12 @@ namespace AzVulk {
         attributeDescriptions[5].location = 8;
         attributeDescriptions[5].format = VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[5].offset = offsetof(BillboardInstance, uvMax);
+
+        // Opacity attribute (location 9)
+        attributeDescriptions[6].binding = 1;
+        attributeDescriptions[6].location = 9;
+        attributeDescriptions[6].format = VK_FORMAT_R32_SFLOAT;
+        attributeDescriptions[6].offset = offsetof(BillboardInstance, opacity);
 
         return attributeDescriptions;
     }
