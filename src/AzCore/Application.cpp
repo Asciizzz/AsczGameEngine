@@ -98,6 +98,8 @@ void Application::initVulkan() {
     size_t mapTextureIndex = texManager.addTexture("Model/viking_room.png");
     size_t playerTextureIndex = texManager.addTexture("Model/Selen.png");
 
+    size_t demoTextureIndex = texManager.addTexture("Model/Pomu.png");
+
     // Load meshes and get their indices
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/viking_room.obj");
     size_t playerMeshIndex = meshManager.loadMeshFromOBJ("Model/Selen.obj");
@@ -132,9 +134,9 @@ void Application::initVulkan() {
 
     // Create billboards for testing
     billboards.resize(2);
-    
+
     billboards[0] = Az3D::Billboard(glm::vec3(2.0f, 0.1f, 0.0f), 0.1f, 0.1f, mapTextureIndex);
-    billboards[1] = Az3D::Billboard(glm::vec3(2.0f, 0.5f, 0.0f), 0.1f, 0.1f, playerTextureIndex);
+    billboards[1] = Az3D::Billboard(glm::vec3(2.0f, 0.5f, 0.0f), 0.1f, 0.1f, demoTextureIndex);
 
 // PLAYGROUND END HERE 
 
