@@ -37,7 +37,6 @@ private:
     std::unique_ptr<AzVulk::DepthManager> depthManager;
     std::unique_ptr<AzVulk::MSAAManager> msaaManager;
     std::unique_ptr<AzVulk::DescriptorManager> descriptorManager;
-    std::unique_ptr<AzVulk::DescriptorManager> billboardDescriptorManager;
     std::unique_ptr<AzVulk::Renderer> renderer;
     
     // Az3D resource management (Mesh - Material - Texture - Light)

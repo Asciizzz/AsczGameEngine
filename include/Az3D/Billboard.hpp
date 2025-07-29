@@ -25,22 +25,4 @@ namespace Az3D {
             : position(pos), width(w), height(h), textureIndex(texIndex) {}
     };
 
-    // BillboardManager - manages billboard instances using texture array like TextureManager
-    class BillboardManager {
-    public:
-        BillboardManager() = default;
-        BillboardManager(const BillboardManager&) = delete;
-        BillboardManager& operator=(const BillboardManager&) = delete;
-
-        size_t addBillboard(const Billboard& billboard);
-        void updateBillboard(size_t index, const Billboard& billboard);
-        void removeBillboard(size_t index);
-        
-        // Billboard storage - index-based access
-        std::vector<Billboard> billboards;
-        
-        // Get all billboards using a specific texture
-        std::vector<size_t> getBillboardsWithTexture(size_t textureIndex) const;
-    };
-
 } // namespace Az3D

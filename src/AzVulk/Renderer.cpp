@@ -10,7 +10,8 @@ namespace AzVulk {
                         Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
                         Az3D::ResourceManager& resourceManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
-          descriptorManager(descriptorManager), camera(camera), resourceManager(resourceManager), 
+          descriptorManager(descriptorManager), billboardDescriptorManager(device, pipeline.billboardDescriptorSetLayout),
+          camera(camera), resourceManager(resourceManager), 
           startTime(std::chrono::high_resolution_clock::now()) {
         
         createCommandPool();
@@ -135,9 +136,9 @@ namespace AzVulk {
         }
     }
 
-    void Renderer::drawFrameWithModels(const std::vector<Az3D::Model>& models, RasterPipeline& pipeline, 
-                                       const std::vector<Az3D::Billboard>& billboards,
-                                       DescriptorManager* billboardDescriptorManager) {
+    void Renderer::drawFrame(RasterPipeline& pipeline,
+                            const std::vector<Az3D::Model>& models, 
+                            const std::vector<Az3D::Billboard>& billboards) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -262,7 +263,7 @@ namespace AzVulk {
         }
 
         // Render billboards after models (if provided) in the same render pass
-        if (!billboards.empty() && billboardDescriptorManager != nullptr) {
+        if (!billboards.empty()) {
             // Create billboard instances from the billboard data
             std::vector<BillboardInstance> billboardInstances;
             billboardInstances.reserve(billboards.size());
@@ -310,7 +311,7 @@ namespace AzVulk {
 
                 // Bind descriptor set with camera uniforms and texture
                 try {
-                    VkDescriptorSet descriptorSet = billboardDescriptorManager->getDescriptorSet(currentFrame, textureIndex);
+                    VkDescriptorSet descriptorSet = billboardDescriptorManager.getDescriptorSet(currentFrame, textureIndex);
                     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
                                            pipeline.billboardPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
@@ -375,6 +376,18 @@ namespace AzVulk {
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    }
+
+    void Renderer::setupBillboardDescriptors() {
+        auto& texManager = *resourceManager.textureManager;
+        
+        // Create billboard descriptor sets for textures
+        billboardDescriptorManager.createDescriptorPool(2, texManager.textures.size());
+
+        for (size_t i = 0; i < texManager.textures.size(); ++i) {
+            billboardDescriptorManager.createDescriptorSetsForMaterial( buffer.uniformBuffers, sizeof(GlobalUBO), 
+                                                                        &texManager.textures[i], i);
+        }
     }
 
 }

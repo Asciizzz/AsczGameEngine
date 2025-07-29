@@ -27,15 +27,18 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        void drawFrameWithModels(const std::vector<Az3D::Model>& models, RasterPipeline& pipeline, 
-                                const std::vector<Az3D::Billboard>& billboards = {}, 
-                                DescriptorManager* billboardDescriptorManager = nullptr);
+        void drawFrame( RasterPipeline& pipeline,
+                        const std::vector<Az3D::Model>& models, 
+                        const std::vector<Az3D::Billboard>& billboards = {});
+
+        void setupBillboardDescriptors();
 
         const Device& vulkanDevice;
         SwapChain& swapChain;
         RasterPipeline& graphicsPipeline;
         Buffer& buffer;
         DescriptorManager& descriptorManager;
+        DescriptorManager billboardDescriptorManager;  // Integrated billboard descriptor manager
         Az3D::Camera& camera;
         Az3D::ResourceManager& resourceManager;
 

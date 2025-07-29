@@ -86,7 +86,6 @@ void Application::initVulkan() {
 
     resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->descriptorSetLayout);
-    billboardDescriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->billboardDescriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
     auto& texManager = *resourceManager->textureManager;
@@ -151,15 +150,6 @@ void Application::initVulkan() {
                                                     &texManager.textures[i], i);
     }
 
-    // Create billboard descriptor sets for textures
-    auto& billboardDescManager = *billboardDescriptorManager;
-    billboardDescManager.createDescriptorPool(2, texManager.textures.size());
-
-    for (size_t i = 0; i < texManager.textures.size(); ++i) {
-        billboardDescManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(GlobalUBO), 
-                                                           &texManager.textures[i], i);
-    }
-
     // Load meshes into GPU buffer
     for (size_t i = 0; i < meshManager.meshes.size(); ++i) {
         bufferRef.loadMeshToBuffer(*meshManager.meshes[i]);
@@ -168,6 +158,7 @@ void Application::initVulkan() {
     // Final Renderer setup with ResourceManager
     renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *rasterPipeline[pipelineIndex], 
                                         *buffer, *descriptorManager, *camera, *resourceManager);
+    renderer->setupBillboardDescriptors();
 }
 
 void Application::createSurface() {
@@ -391,7 +382,7 @@ void Application::mainLoop() {
         }
 
 // =================================
-        rendererRef.drawFrameWithModels(models, *rasterPipeline[pipelineIndex], billboards, billboardDescriptorManager.get());
+        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], models, billboards);
         
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();

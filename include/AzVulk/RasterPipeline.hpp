@@ -30,6 +30,8 @@ namespace AzVulk {
         VkSampleCountFlagBits msaaSamples;
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
+
+        // Descriptor set layout for the main pipeline
         VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
