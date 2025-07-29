@@ -131,11 +131,10 @@ void Application::initVulkan() {
     models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
     // Create billboards for testing
-    billboards.resize(3);
+    billboards.resize(2);
     
-    billboards[0] = Az3D::Billboard(glm::vec3(2.0f, 1.0f, 0.0f), 1.0f, 1.0f, mapTextureIndex);
-    billboards[1] = Az3D::Billboard(glm::vec3(-2.0f, 1.5f, 0.0f), 0.8f, 0.8f, playerTextureIndex);
-    billboards[2] = Az3D::Billboard(glm::vec3(0.0f, 2.0f, -2.0f), 1.2f, 1.2f, mapTextureIndex);
+    billboards[0] = Az3D::Billboard(glm::vec3(2.0f, 0.1f, 0.0f), 0.1f, 0.1f, mapTextureIndex);
+    billboards[1] = Az3D::Billboard(glm::vec3(2.0f, 0.5f, 0.0f), 0.1f, 0.1f, playerTextureIndex);
 
 // PLAYGROUND END HERE 
 
@@ -382,6 +381,7 @@ void Application::mainLoop() {
         }
 
 // =================================
+
         rendererRef.drawFrame(*rasterPipeline[pipelineIndex], models, billboards);
         
         // On-screen FPS display (toggleable with F2) - using window title for now

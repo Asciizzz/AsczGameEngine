@@ -4,6 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
 #include <unordered_map>
+#include <iostream>
 
 namespace AzVulk {
     Renderer::Renderer (const Device& device, SwapChain& swapChain, RasterPipeline& pipeline, 
@@ -264,19 +265,28 @@ namespace AzVulk {
 
         // Render billboards after models (if provided) in the same render pass
         if (!billboards.empty()) {
-            // Create billboard instances from the billboard data
+            // Group billboards by texture first
+            std::unordered_map<size_t, std::vector<const Az3D::Billboard*>> billboardsByTexture;
+            for (const auto& billboard : billboards) {
+                billboardsByTexture[billboard.textureIndex].push_back(&billboard);
+            }
+
+            // Create billboard instances grouped by texture for correct instance buffer ordering
             std::vector<BillboardInstance> billboardInstances;
             billboardInstances.reserve(billboards.size());
 
-            for (const auto& billboard : billboards) {
-                BillboardInstance instance{};
-                instance.position = billboard.position;
-                instance.width = billboard.width;
-                instance.height = billboard.height;
-                instance.textureIndex = static_cast<uint32_t>(billboard.textureIndex);
-                instance.uvMin = billboard.uvMin;
-                instance.uvMax = billboard.uvMax;
-                billboardInstances.push_back(instance);
+            // Add instances in texture group order
+            for (const auto& [textureIndex, textureBillboards] : billboardsByTexture) {
+                for (const auto* billboard : textureBillboards) {
+                    BillboardInstance instance{};
+                    instance.position = billboard->position;
+                    instance.width = billboard->width;
+                    instance.height = billboard->height;
+                    instance.textureIndex = static_cast<uint32_t>(billboard->textureIndex);
+                    instance.uvMin = billboard->uvMin;
+                    instance.uvMax = billboard->uvMax;
+                    billboardInstances.push_back(instance);
+                }
             }
 
             // Update billboard instance buffer
@@ -289,13 +299,8 @@ namespace AzVulk {
             // Bind billboard pipeline (within the same render pass)
             vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.billboardGraphicsPipeline);
 
-            // Group billboards by texture
-            std::unordered_map<size_t, std::vector<const Az3D::Billboard*>> billboardsByTexture;
-            for (const auto& billboard : billboards) {
-                billboardsByTexture[billboard.textureIndex].push_back(&billboard);
-            }
-
             // Render each texture group
+            uint32_t instanceOffset = 0;
             for (const auto& [textureIndex, textureBillboards] : billboardsByTexture) {
                 auto& txtrManager = *resourceManager.textureManager;
                 const Az3D::Texture* texture = nullptr;
@@ -321,7 +326,10 @@ namespace AzVulk {
                     vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, billboardBuffers, offsets);
 
                     // Draw billboards as triangle strip (4 vertices per billboard, instanced)
-                    vkCmdDraw(commandBuffers[currentFrame], 4, static_cast<uint32_t>(textureBillboards.size()), 0, 0);
+                    // Use correct instance offset so each texture group draws the right instances
+                    vkCmdDraw(commandBuffers[currentFrame], 4, static_cast<uint32_t>(textureBillboards.size()), 0, instanceOffset);
+                    
+                    instanceOffset += static_cast<uint32_t>(textureBillboards.size());
 
                 } catch (const std::exception& e) {
                     // Skip this texture group if descriptor set not found
@@ -385,8 +393,8 @@ namespace AzVulk {
         billboardDescriptorManager.createDescriptorPool(2, texManager.textures.size());
 
         for (size_t i = 0; i < texManager.textures.size(); ++i) {
-            billboardDescriptorManager.createDescriptorSetsForMaterial( buffer.uniformBuffers, sizeof(GlobalUBO), 
-                                                                        &texManager.textures[i], i);
+            billboardDescriptorManager.createDescriptorSetsForMaterial(buffer.uniformBuffers, sizeof(GlobalUBO), 
+                                                                       &texManager.textures[i], i);
         }
     }
 
