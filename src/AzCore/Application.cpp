@@ -20,9 +20,6 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
     camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 3.0f), 45.0f, 0.1f, 200.0f);
     camera->setAspectRatio(aspectRatio);
 
-    // Initialize light manager with default directional light
-    lightManager = std::make_unique<Az3D::LightManager>();
-
     initVulkan();
 }
 

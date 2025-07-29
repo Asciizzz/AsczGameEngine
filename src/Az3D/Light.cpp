@@ -1,4 +1,4 @@
-#include "Az3D/LightManager.hpp"
+#include "Az3D/Light.hpp"
 
 namespace Az3D {
     LightManager::LightManager() {
@@ -6,7 +6,7 @@ namespace Az3D {
         setDirectionalLight(
             glm::vec3(0.2f, -1.0f, 0.3f),  // Direction (slightly down and to the side)
             glm::vec3(1.0f, 0.95f, 0.8f),  // Warm sunlight color
-            1.0f                            // Full intensity
+            1.0f                           // Full intensity
         );
     }
 

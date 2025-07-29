@@ -3,6 +3,7 @@
 #include "Az3D/Texture.hpp"
 #include "Az3D/Material.hpp"
 #include "Az3D/Mesh.hpp"
+#include "Az3D/Light.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -32,9 +33,10 @@ namespace Az3D {
 
         // ============ UTILITY METHODS ============
 
+        std::unique_ptr<MeshManager> meshManager;
         std::unique_ptr<TextureManager> textureManager;
         std::unique_ptr<MaterialManager> materialManager;
-        std::unique_ptr<MeshManager> meshManager;
+        std::unique_ptr<LightManager> lightManager;
     };
     
 } // namespace Az3D

@@ -22,7 +22,6 @@ private:
     std::unique_ptr<AzCore::WindowManager> windowManager;
     std::unique_ptr<AzCore::FpsManager> fpsManager;
     std::unique_ptr<Az3D::Camera> camera;
-    std::unique_ptr<Az3D::LightManager> lightManager;
 
     std::unique_ptr<AzVulk::Instance> vulkanInstance;
     std::unique_ptr<AzVulk::Device> vulkanDevice;
@@ -40,9 +39,9 @@ private:
     std::unique_ptr<AzVulk::DescriptorManager> descriptorManager;
     std::unique_ptr<AzVulk::Renderer> renderer;
     
-    // Az3D resource management
+    // Az3D resource management (Mesh - Material - Texture - Light)
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
-    // Az3D scene objects
+    // Az3D scene objects (instances)
     std::vector<Az3D::Model> models;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;

@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Az3D {
+
     struct DirectionalLight {
         alignas(16) glm::vec3 direction;
         float padding1;
@@ -29,14 +30,10 @@ namespace Az3D {
         void updateDirectionalLightDirection(const glm::vec3& direction);
         void updateDirectionalLightColor(const glm::vec3& color);
         void updateDirectionalLightIntensity(float intensity);
-        
-        // Getter for the directional light
-        const DirectionalLight& getDirectionalLight() const { return directionalLight; }
 
         // Future: Shadow mapping support
         void updateLightViewProj(const glm::mat4& lightViewProj);
 
-    private:
         DirectionalLight directionalLight;
     };
 }
