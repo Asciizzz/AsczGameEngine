@@ -2,7 +2,8 @@
 
 // Global uniform buffer for camera matrices
 layout(binding = 0) uniform GlobalUBO {
-    mat4 projView;
+    mat4 proj;
+    mat4 view;
 } glb;
 
 layout(binding = 1) uniform sampler2D txtrSmplr;

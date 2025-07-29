@@ -12,7 +12,8 @@
 namespace AzVulk {
     struct GlobalUBO {
         // Camera matrices
-        alignas(16) glm::mat4 projView;
+        alignas(16) glm::mat4 proj;
+        alignas(16) glm::mat4 view;
     };
 
     // Instance data structure for instanced rendering
@@ -21,6 +22,19 @@ namespace AzVulk {
         
         static VkVertexInputBindingDescription getBindingDescription();
         static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
+    };
+
+    // Billboard instance data structure for billboard rendering
+    struct BillboardInstance {
+        alignas(16) glm::vec3 position;
+        alignas(4) float width;
+        alignas(4) float height;
+        alignas(4) uint32_t textureIndex;
+        alignas(8) glm::vec2 uvMin;  // AB1 - top-left UV
+        alignas(8) glm::vec2 uvMax;  // AB2 - bottom-right UV
+        
+        static VkVertexInputBindingDescription getBindingDescription();
+        static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions();
     };
 
     // Multi-mesh data structure for storing multiple mesh types
@@ -83,6 +97,10 @@ namespace AzVulk {
         void createInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances);
         void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances);
         
+        // Billboard buffer methods
+        void createBillboardInstanceBuffer(const std::vector<BillboardInstance>& instances);
+        void updateBillboardInstanceBuffer(const std::vector<BillboardInstance>& instances);
+        
         // Getters for multi-mesh data
         const std::vector<MeshBufferData>& getMeshBuffers() const { return meshBuffers; }
         size_t getMeshCount() const { return meshBuffers.size(); }
@@ -107,6 +125,12 @@ namespace AzVulk {
         VkDeviceMemory instanceBufferMemory = VK_NULL_HANDLE;
         void* instanceBufferMapped = nullptr;
         uint32_t instanceCount = 0;
+        
+        // Billboard instance buffer
+        VkBuffer billboardInstanceBuffer = VK_NULL_HANDLE;
+        VkDeviceMemory billboardInstanceBufferMemory = VK_NULL_HANDLE;
+        void* billboardInstanceBufferMapped = nullptr;
+        uint32_t billboardInstanceCount = 0;
         
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;

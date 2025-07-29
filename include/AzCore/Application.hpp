@@ -37,12 +37,14 @@ private:
     std::unique_ptr<AzVulk::DepthManager> depthManager;
     std::unique_ptr<AzVulk::MSAAManager> msaaManager;
     std::unique_ptr<AzVulk::DescriptorManager> descriptorManager;
+    std::unique_ptr<AzVulk::DescriptorManager> billboardDescriptorManager;
     std::unique_ptr<AzVulk::Renderer> renderer;
     
     // Az3D resource management (Mesh - Material - Texture - Light)
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
     // Az3D scene objects (instances)
     std::vector<Az3D::Model> models;
+    std::vector<Az3D::Billboard> billboards;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkSurfaceKHR surface = VK_NULL_HANDLE;

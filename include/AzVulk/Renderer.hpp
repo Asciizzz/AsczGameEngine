@@ -27,7 +27,9 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        void drawFrameWithModels(const std::vector<Az3D::Model>& models, RasterPipeline& pipeline);
+        void drawFrameWithModels(const std::vector<Az3D::Model>& models, RasterPipeline& pipeline, 
+                                const std::vector<Az3D::Billboard>& billboards = {}, 
+                                DescriptorManager* billboardDescriptorManager = nullptr);
 
         const Device& vulkanDevice;
         SwapChain& swapChain;

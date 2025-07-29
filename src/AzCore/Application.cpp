@@ -49,6 +49,8 @@ void Application::initVulkan() {
         swapChain->imageFormat,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
+        "Shaders/Billboard/billboard.vert.spv",
+        "Shaders/Billboard/billboard.frag.spv",
         msaaManager->msaaSamples
     ));
     
@@ -58,6 +60,8 @@ void Application::initVulkan() {
         swapChain->imageFormat,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster1.frag.spv",
+        "Shaders/Billboard/billboard.vert.spv",
+        "Shaders/Billboard/billboard.frag.spv",
         msaaManager->msaaSamples
     ));
 
@@ -82,6 +86,7 @@ void Application::initVulkan() {
 
     resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->descriptorSetLayout);
+    billboardDescriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->billboardDescriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
     auto& texManager = *resourceManager->textureManager;
@@ -126,6 +131,13 @@ void Application::initVulkan() {
     models[1].trform.scale(0.1f);
     models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
+    // Create billboards for testing
+    billboards.resize(3);
+    
+    billboards[0] = Az3D::Billboard(glm::vec3(2.0f, 1.0f, 0.0f), 1.0f, 1.0f, mapTextureIndex);
+    billboards[1] = Az3D::Billboard(glm::vec3(-2.0f, 1.5f, 0.0f), 0.8f, 0.8f, playerTextureIndex);
+    billboards[2] = Az3D::Billboard(glm::vec3(0.0f, 2.0f, -2.0f), 1.2f, 1.2f, mapTextureIndex);
+
 // PLAYGROUND END HERE 
 
     auto& bufferRef = *buffer;
@@ -137,6 +149,15 @@ void Application::initVulkan() {
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(GlobalUBO), 
                                                     &texManager.textures[i], i);
+    }
+
+    // Create billboard descriptor sets for textures
+    auto& billboardDescManager = *billboardDescriptorManager;
+    billboardDescManager.createDescriptorPool(2, texManager.textures.size());
+
+    for (size_t i = 0; i < texManager.textures.size(); ++i) {
+        billboardDescManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(GlobalUBO), 
+                                                           &texManager.textures[i], i);
     }
 
     // Load meshes into GPU buffer
@@ -370,7 +391,7 @@ void Application::mainLoop() {
         }
 
 // =================================
-        rendererRef.drawFrameWithModels(models, *rasterPipeline[pipelineIndex]);
+        rendererRef.drawFrameWithModels(models, *rasterPipeline[pipelineIndex], billboards, billboardDescriptorManager.get());
         
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();

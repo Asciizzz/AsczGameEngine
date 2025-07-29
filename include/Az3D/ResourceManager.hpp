@@ -4,6 +4,7 @@
 #include "Az3D/Material.hpp"
 #include "Az3D/Mesh.hpp"
 #include "Az3D/Light.hpp"
+#include "Az3D/Billboard.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -30,6 +31,7 @@ namespace Az3D {
         size_t addTexture(const char* imagePath);
         size_t addMaterial(const Material& material);
         size_t addMesh(const Mesh& mesh);
+        size_t addBillboard(const Billboard& billboard);
 
         // ============ UTILITY METHODS ============
 
@@ -37,6 +39,7 @@ namespace Az3D {
         std::unique_ptr<TextureManager> textureManager;
         std::unique_ptr<MaterialManager> materialManager;
         std::unique_ptr<LightManager> lightManager;
+        std::unique_ptr<BillboardManager> billboardManager;
     };
     
 } // namespace Az3D

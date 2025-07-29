@@ -8,6 +8,7 @@ namespace Az3D {
         textureManager = std::make_unique<TextureManager>(device, commandPool);
         materialManager = std::make_unique<MaterialManager>();
         meshManager = std::make_unique<MeshManager>();
+        billboardManager = std::make_unique<BillboardManager>();
     }
 
     size_t ResourceManager::addTexture(const char* imagePath) {
@@ -21,6 +22,10 @@ namespace Az3D {
     size_t ResourceManager::addMesh(const Mesh& mesh) {
         auto newMesh = std::make_shared<Mesh>(mesh);
         return meshManager->addMesh(newMesh);
+    }
+
+    size_t ResourceManager::addBillboard(const Billboard& billboard) {
+        return billboardManager->addBillboard(billboard);
     }
 
 } // namespace Az3D

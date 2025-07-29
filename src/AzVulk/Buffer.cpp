@@ -31,6 +31,15 @@ namespace AzVulk {
             vkFreeMemory(logicalDevice, instanceBufferMemory, nullptr);
         }
 
+        // Cleanup billboard buffers
+        if (billboardInstanceBuffer != VK_NULL_HANDLE) {
+            if (billboardInstanceBufferMapped) {
+                vkUnmapMemory(logicalDevice, billboardInstanceBufferMemory);
+            }
+            vkDestroyBuffer(logicalDevice, billboardInstanceBuffer, nullptr);
+            vkFreeMemory(logicalDevice, billboardInstanceBufferMemory, nullptr);
+        }
+
         if (indexBuffer != VK_NULL_HANDLE) {
             vkDestroyBuffer(logicalDevice, indexBuffer, nullptr);
             vkFreeMemory(logicalDevice, indexBufferMemory, nullptr);
@@ -199,6 +208,57 @@ namespace AzVulk {
         return attributeDescriptions;
     }
 
+    // BillboardInstance methods for billboard rendering
+    VkVertexInputBindingDescription BillboardInstance::getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 1; // Binding 1 for instance data
+        bindingDescription.stride = sizeof(BillboardInstance);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+        return bindingDescription;
+    }
+
+    std::array<VkVertexInputAttributeDescription, 6> BillboardInstance::getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 6> attributeDescriptions{};
+
+        // Position attribute (location 3)
+        attributeDescriptions[0].binding = 1;
+        attributeDescriptions[0].location = 3;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(BillboardInstance, position);
+
+        // Width attribute (location 4)
+        attributeDescriptions[1].binding = 1;
+        attributeDescriptions[1].location = 4;
+        attributeDescriptions[1].format = VK_FORMAT_R32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(BillboardInstance, width);
+
+        // Height attribute (location 5)
+        attributeDescriptions[2].binding = 1;
+        attributeDescriptions[2].location = 5;
+        attributeDescriptions[2].format = VK_FORMAT_R32_SFLOAT;
+        attributeDescriptions[2].offset = offsetof(BillboardInstance, height);
+
+        // Texture index attribute (location 6)
+        attributeDescriptions[3].binding = 1;
+        attributeDescriptions[3].location = 6;
+        attributeDescriptions[3].format = VK_FORMAT_R32_UINT;
+        attributeDescriptions[3].offset = offsetof(BillboardInstance, textureIndex);
+
+        // UV min attribute (location 7)
+        attributeDescriptions[4].binding = 1;
+        attributeDescriptions[4].location = 7;
+        attributeDescriptions[4].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[4].offset = offsetof(BillboardInstance, uvMin);
+
+        // UV max attribute (location 8)
+        attributeDescriptions[5].binding = 1;
+        attributeDescriptions[5].location = 8;
+        attributeDescriptions[5].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[5].offset = offsetof(BillboardInstance, uvMax);
+
+        return attributeDescriptions;
+    }
+
     void Buffer::createInstanceBuffer(const std::vector<ModelInstance>& instances) {
         VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
         instanceCount = static_cast<uint32_t>(instances.size());
@@ -305,6 +365,38 @@ namespace AzVulk {
         if (meshBuffer.instanceBufferMapped && instances.size() <= meshBuffer.instanceCount) {
             VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
             memcpy(meshBuffer.instanceBufferMapped, instances.data(), bufferSize);
+        }
+    }
+
+    void Buffer::createBillboardInstanceBuffer(const std::vector<BillboardInstance>& instances) {
+        VkDeviceSize bufferSize = sizeof(BillboardInstance) * instances.size();
+        billboardInstanceCount = static_cast<uint32_t>(instances.size());
+
+        // Clean up existing buffer if it exists
+        if (billboardInstanceBuffer != VK_NULL_HANDLE) {
+            if (billboardInstanceBufferMapped) {
+                vkUnmapMemory(vulkanDevice.device, billboardInstanceBufferMemory);
+            }
+            vkDestroyBuffer(vulkanDevice.device, billboardInstanceBuffer, nullptr);
+            vkFreeMemory(vulkanDevice.device, billboardInstanceBufferMemory, nullptr);
+        }
+
+        createBuffer(bufferSize, 
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                    billboardInstanceBuffer, billboardInstanceBufferMemory);
+
+        // Map the buffer for updates
+        vkMapMemory(vulkanDevice.device, billboardInstanceBufferMemory, 0, bufferSize, 0, &billboardInstanceBufferMapped);
+        
+        // Copy initial data
+        memcpy(billboardInstanceBufferMapped, instances.data(), bufferSize);
+    }
+
+    void Buffer::updateBillboardInstanceBuffer(const std::vector<BillboardInstance>& instances) {
+        if (billboardInstanceBufferMapped && instances.size() <= billboardInstanceCount) {
+            VkDeviceSize bufferSize = sizeof(BillboardInstance) * instances.size();
+            memcpy(billboardInstanceBufferMapped, instances.data(), bufferSize);
         }
     }
 }

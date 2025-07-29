@@ -17,6 +17,7 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/Mesh.cpp
     src/Az3D/Material.cpp
     src/Az3D/Light.cpp
+    src/Az3D/Billboard.cpp
     src/Az3D/ResourceManager.cpp
 
     src/AzVulk/Instance.cpp

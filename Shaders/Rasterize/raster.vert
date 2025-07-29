@@ -1,7 +1,8 @@
 #version 450
 
 layout(binding = 0) uniform GlobalUBO {
-    mat4 projView;
+    mat4 proj;
+    mat4 view;
 } glb;
 
 layout(location = 0) in vec3 inPos;
@@ -23,7 +24,7 @@ void main() {
     vec4 worldPos = modelMatrix * vec4(inPos, 1.0);
     fragWorldPos = worldPos.xyz;
 
-    gl_Position = glb.projView * worldPos;
+    gl_Position = glb.proj * glb.view * worldPos;
 
     // Can be computationally expensive, avoid scaling if possible
     // mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
