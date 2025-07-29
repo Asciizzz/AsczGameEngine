@@ -32,12 +32,8 @@ namespace Az3D {
         this->rot = zrot * this->rot;
     }
 
-    void Transform::scale(const glm::vec3& scaling) {
-        this->scl *= scaling;
-    }
-
-    void Transform::scale(float uniformScale) {
-        this->scl *= uniformScale;
+    void Transform::scale(float scale) {
+        this->scl *= scale;
     }
 
     void Transform::rotate(const glm::vec3& eulerAngles) {
@@ -50,7 +46,7 @@ namespace Az3D {
     glm::mat4 Transform::modelMatrix() const {
         glm::mat4 translation = glm::translate(glm::mat4(1.0f), pos);
         glm::mat4 rotMat = glm::mat4_cast(rot);
-        glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scl);
+        glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(scl));
 
         return translation * rotMat * scaleMat;
     }
@@ -59,7 +55,7 @@ namespace Az3D {
     void Transform::reset() {
         pos = glm::vec3(0.0f);
         rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-        scl = glm::vec3(1.0f);
+        scl = 1.0f;
     }
 
 }

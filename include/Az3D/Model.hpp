@@ -11,23 +11,19 @@ namespace Az3D {
     struct Transform {
         glm::vec3 pos{0.0f};
         glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
-        glm::vec3 scl{1.0f};
+        float scl{1.0f};
 
         void translate(const glm::vec3& translation);
         void rotate(const glm::quat& rotation);
         void rotateX(float radians);
-        void rotateY(float radians);  
+        void rotateY(float radians);
         void rotateZ(float radians);
-        void scale(const glm::vec3& scaling);
-        void scale(float uniformScale);
+        void scale(float scale);
 
         // Legacy methods for compatibility
         void rotate(const glm::vec3& eulerAngles);
 
-        // Matrix calculation
         glm::mat4 modelMatrix() const;
-
-        // Reset transform to identity
         void reset();
     };
 
