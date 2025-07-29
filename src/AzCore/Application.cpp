@@ -293,13 +293,21 @@ void Application::mainLoop() {
 
         // 3rd person camera positioning
 
-        camera->pos = p_model.trform.pos - camera->forward * camDist + glm::vec3(0.0f, 0.25f, 0.0f);
-        // If camera.y < 0, push it up with relation to the forward vector
-        if (camera->pos.y < 0.0f) {
-            // Find distance between ground and camera on the forward vector
-            float groundDistance = glm::dot(-camera->forward, glm::vec3(0.0f, 1.0f, 0.0f)) * camDist;
-            camera->pos.y = groundDistance;
+        glm::vec3 player_pos = p_model.trform.pos + glm::vec3(0.0f, 0.25f, 0.0f);
+        glm::vec3 desired_pos = player_pos - camera->forward * camDist;
+
+        float ground_threshold = 0.1f;
+
+        if (desired_pos.y < ground_threshold) {
+            float dist_y = player_pos.y - desired_pos.y;
+
+            float t = (player_pos.y - ground_threshold) / dist_y;
+
+            desired_pos = player_pos - camera->forward * camDist * t;
         }
+
+        // Smoothly ease the camera position towards the desired position
+        camera->pos = glm::mix(camera->pos, desired_pos, 30.0f * dTime);
 
         // Move the player plush based on WASD keys
 
