@@ -26,7 +26,7 @@ namespace AzVulk {
 
     // Billboard instance data structure for billboard rendering
     struct BillboardInstance {
-        alignas(16) glm::vec3 position;
+        alignas(16) glm::vec3 pos;
         alignas(4) float width;
         alignas(4) float height;
         alignas(4) uint32_t textureIndex;

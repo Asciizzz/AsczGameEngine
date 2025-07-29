@@ -279,7 +279,7 @@ namespace AzVulk {
             for (const auto& [textureIndex, textureBillboards] : billboardsByTexture) {
                 for (const auto* billboard : textureBillboards) {
                     BillboardInstance instance{};
-                    instance.position = billboard->position;
+                    instance.pos = billboard->pos;
                     instance.width = billboard->width;
                     instance.height = billboard->height;
                     instance.textureIndex = static_cast<uint32_t>(billboard->textureIndex);

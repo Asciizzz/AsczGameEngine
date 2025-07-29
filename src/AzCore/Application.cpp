@@ -98,7 +98,7 @@ void Application::initVulkan() {
     size_t mapTextureIndex = texManager.addTexture("Model/viking_room.png");
     size_t playerTextureIndex = texManager.addTexture("Model/Selen.png");
 
-    size_t demoTextureIndex = texManager.addTexture("Model/Pomu.png");
+    size_t demoTextureIndex = texManager.addTexture("Model/Untitled.png");
 
     // Load meshes and get their indices
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/viking_room.obj");
@@ -134,7 +134,7 @@ void Application::initVulkan() {
 
     // Create billboards for testing
     billboards.resize(1);
-    billboards[0] = Az3D::Billboard(glm::vec3(2.0f, 0.5f, 0.0f), 0.5f, 0.5f, demoTextureIndex, 0.3f); // 30% opacity
+    billboards[0] = Az3D::Billboard(glm::vec3(0), 0.12f, 0.12f, demoTextureIndex, 0.5f);
 
 // PLAYGROUND END HERE 
 
@@ -379,6 +379,49 @@ void Application::mainLoop() {
                 bufferRef.updateInstanceBufferForMesh(i, instances[i]);
             }
         }
+
+
+        // Billboard manipulation
+
+        static int frame = 0;
+        static int frame_max = 2;
+        static int frame_time = 0;
+        static int frame_time_max = 1000;
+        frame_time++;
+        frame += frame_time > frame_time_max;
+        frame -= frame * (frame > frame_max - 1);
+        frame_time -= frame_time * (frame_time > frame_time_max);
+
+        switch (frame) {
+            // case 0:
+            //     billboards[0].uvMin = glm::vec2(0.0f, 0.0f);
+            //     billboards[0].uvMax = glm::vec2(0.5f, 0.5f);
+            //     break;
+            // case 1:
+            //     billboards[0].uvMin = glm::vec2(0.5f, 0.0f);
+            //     billboards[0].uvMax = glm::vec2(1.0f, 0.5f);
+            //     break;
+            // case 2:
+            //     billboards[0].uvMin = glm::vec2(0.0f, 0.5f);
+            //     billboards[0].uvMax = glm::vec2(0.5f, 1.0f);
+            //     break;
+            // case 3:
+            //     billboards[0].uvMin = glm::vec2(0.5f, 0.5f);
+            //     billboards[0].uvMax = glm::vec2(1.0f, 1.0f);
+            //     break;
+
+            case 0:
+                billboards[0].uvMin = glm::vec2(0.0f, 0.0f);
+                billboards[0].uvMax = glm::vec2(0.5f, 1.0f);
+                break;
+            case 1:
+                billboards[0].uvMin = glm::vec2(0.5f, 0.0f);
+                billboards[0].uvMax = glm::vec2(1.0f, 1.0f);
+                break;
+        }
+
+        billboards[0].pos = p_model.trform.pos
+            + glm::vec3(0.0f, 0.35f, 0.0f); // Position above the player
 
 // =================================
 

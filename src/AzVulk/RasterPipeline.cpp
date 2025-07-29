@@ -389,7 +389,7 @@ namespace AzVulk {
         instanceAttributes[0].binding = 1;
         instanceAttributes[0].location = 3;
         instanceAttributes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        instanceAttributes[0].offset = offsetof(BillboardInstance, position);
+        instanceAttributes[0].offset = offsetof(BillboardInstance, pos);
 
         instanceAttributes[1].binding = 1;
         instanceAttributes[1].location = 4;

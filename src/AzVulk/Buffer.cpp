@@ -224,7 +224,7 @@ namespace AzVulk {
         attributeDescriptions[0].binding = 1;
         attributeDescriptions[0].location = 3;
         attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(BillboardInstance, position);
+        attributeDescriptions[0].offset = offsetof(BillboardInstance, pos);
 
         // Width attribute (location 4)
         attributeDescriptions[1].binding = 1;
