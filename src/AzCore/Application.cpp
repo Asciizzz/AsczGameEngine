@@ -307,7 +307,8 @@ void Application::mainLoop() {
         }
 
         // Smoothly ease the camera position towards the desired position
-        camera->pos = glm::mix(camera->pos, desired_pos, 30.0f * dTime);
+        // camera->pos = glm::mix(camera->pos, desired_pos, 30.0f * dTime);
+        camera->pos = desired_pos;
 
         // Move the player plush based on WASD keys
 
