@@ -46,9 +46,13 @@ private:
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
     // Az3D scene objects (instances)
     std::vector<Az3D::Model> models;
-    std::vector<Az3D::Billboard> billboards;
-    // Beta
+    
+    // Beta features
+
+    std::vector<Az3D::Billboard> particles;
     std::vector<glm::vec3> particles_direction;
+    std::vector<float> particles_velocity;
+
     AzBeta::Map gameMap;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;

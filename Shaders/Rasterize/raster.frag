@@ -15,7 +15,7 @@ layout(location = 2) in vec3 fragWorldPos;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    vec3 lightPos = vec3(0.9, 0.0, 0.0);
+    vec3 lightPos = vec3(0.0, 20.0, 0.0);
 
     vec3 lightDir = normalize(lightPos - fragWorldPos);
     vec3 normal = normalize(fragWorldNrml);
@@ -25,8 +25,8 @@ void main() {
     lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
 
     // For toon shading effect
-    float toonFactor = ceil(lightFactor * 2.0) * 0.5;
-    // float toonFactor = lightFactor; // Ignore toon shading for now
+    // float toonFactor = ceil(lightFactor * 2.0) * 0.5;
+    float toonFactor = lightFactor; // Ignore toon shading for now
 
     // Final brightness factor
     float finalFactor = 0.1 + toonFactor * 0.9;

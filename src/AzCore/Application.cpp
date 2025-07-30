@@ -19,7 +19,7 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
     fpsManager = std::make_unique<AzCore::FpsManager>();
 
     float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 3.0f), 45.0f, 0.1f, 200.0f);
+    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 200.0f);
     camera->setAspectRatio(aspectRatio);
 
     initVulkan();
@@ -98,7 +98,7 @@ void Application::initVulkan() {
 
     // Load all maps
 
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/LivingRoom.obj");
     Az3D::Material mapMaterial;
     mapMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
     mapMaterial.roughness = 0.7f;
@@ -123,7 +123,7 @@ void Application::initVulkan() {
     // Map model
 
     models[0] = Az3D::Model(mapMeshIndex, 0);
-    // models[0].trform.pos = glm::vec3(.0f, .0f, .0f);
+    models[0].trform.pos = glm::vec3(0.0f, -1.0f, .0f);
     // models[0].trform.scale(1.5f);
     // models[0].trform.rotateX(glm::radians(-90.0f));
 
@@ -138,13 +138,23 @@ void Application::initVulkan() {
     models[1].trform.scale(0.1f);
     models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    // Create billboards for testing
+    // Create particles for testing
 
     size_t billBoardTexture = texManager.addTexture("Model/Star.png");
     
     size_t particleCount = 1000;
-    billboards.resize(particleCount);
+    particles.resize(particleCount);
     particles_direction.resize(particleCount);
+    particles_velocity.resize(particleCount);
+
+    // glm::vec2 particle_range_x = glm::vec2(-50.0f, 50.0f);
+    // glm::vec2 particle_range_y = glm::vec2(-20.0f, 20.0f);
+    // glm::vec2 particle_range_z = glm::vec2(-50.0f, 50.0f);
+    glm::vec2 particle_range_x = { 0.0f, 0.0f };
+    glm::vec2 particle_range_y = { 0.0f, 0.0f };
+    glm::vec2 particle_range_z = { 0.0f, 0.0f };
+    glm::vec2 particle_size_range = glm::vec2(0.05f, 0.1f);
+    glm::vec2 particle_velocity_range = glm::vec2(0.5f, 2.0f);
 
     for (size_t i = 0; i < particleCount; ++i) {
         std::random_device rd;
@@ -155,11 +165,21 @@ void Application::initVulkan() {
         glm::vec3 randomDirection(dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f);
         randomDirection = glm::normalize(randomDirection);
 
-        billboards[i] = Az3D::Billboard(
-            glm::vec3(-20.0f, 0.0f, 0.0f), 0.12f, 0.12f, billBoardTexture, randomColor
+        glm::vec3 randomPosition(
+            dis(gen) * (particle_range_x.y - particle_range_x.x) + particle_range_x.x,
+            dis(gen) * (particle_range_y.y - particle_range_y.x) + particle_range_y.x,
+            dis(gen) * (particle_range_z.y - particle_range_z.x) + particle_range_z.x
+        );
+
+        float randomVelocity = dis(gen) * (particle_velocity_range.y - particle_velocity_range.x) + particle_velocity_range.x;
+        float randomSize = dis(gen) * (particle_size_range.y - particle_size_range.x) + particle_size_range.x;
+
+        particles[i] = Az3D::Billboard(
+            randomPosition, randomSize, randomSize, billBoardTexture, randomColor
         );
 
         particles_direction[i] = randomDirection;
+        particles_velocity[i] = randomVelocity;
     }
 
 // PLAYGROUND END HERE 
@@ -469,7 +489,7 @@ void Application::mainLoop() {
         static int frame = 0;
         static int frame_max = 2;
         static int frame_time = 0;
-        static int frame_time_max = 1000;
+        static int frame_time_max = 100 * dTime; // Adjust frame time based on delta time
         frame_time++;
         frame += frame_time > frame_time_max;
         frame -= frame * (frame > frame_max - 1);
@@ -478,27 +498,36 @@ void Application::mainLoop() {
         for (size_t i = 0; i < particles_direction.size(); ++i) {
             switch (frame) {
                 case 0:
-                    billboards[i].uvMin = glm::vec2(0.0f, 0.0f);
-                    billboards[i].uvMax = glm::vec2(0.5f, 1.0f);
+                    particles[i].uvMin = glm::vec2(0.0f, 0.0f);
+                    particles[i].uvMax = glm::vec2(0.5f, 1.0f);
                     break;
                 case 1:
-                    billboards[i].uvMin = glm::vec2(0.5f, 0.0f);
-                    billboards[i].uvMax = glm::vec2(1.0f, 1.0f);
+                    particles[i].uvMin = glm::vec2(0.5f, 0.0f);
+                    particles[i].uvMax = glm::vec2(1.0f, 1.0f);
                     break;
             }
 
 
             RayHit hit = gameMap.closestHit(
                 *meshManager.meshes[gameMap.meshIndex],
-                billboards[i].pos, particles_direction[i], 0.1f);
+                particles[i].pos, particles_direction[i], 0.1f);
 
             if (hit.index != -1) {
                 // Bounce based on the collision normal
                 glm::vec3 collisionNormal = hit.nrml;
                 particles_direction[i] = glm::reflect(particles_direction[i], collisionNormal);
+
+                // Generate new color and velocity
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+                glm::vec4 newColor(dis(gen), dis(gen), dis(gen), 0.7f);
+                particles[i].color = newColor;
+                particles_velocity[i] = dis(gen) * 0.8f + 8.2f;
+
             } else {
                 // Move the billboard in the direction
-                billboards[i].pos += particles_direction[i] * dTime;
+                particles[i].pos += particles_direction[i] * particles_velocity[i] * dTime;
             }
         }
 
@@ -507,7 +536,7 @@ void Application::mainLoop() {
 
 // =================================
 
-        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], models, billboards);
+        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], models, particles);
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
