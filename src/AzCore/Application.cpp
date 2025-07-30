@@ -1,6 +1,7 @@
 #include "AzCore/Application.hpp"
 
 #include <iostream>
+#include <random>
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -97,7 +98,7 @@ void Application::initVulkan() {
 
     // Load all maps
 
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/cube.obj");
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
     Az3D::Material mapMaterial;
     mapMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
     mapMaterial.roughness = 0.7f;
@@ -140,8 +141,26 @@ void Application::initVulkan() {
     // Create billboards for testing
 
     size_t billBoardTexture = texManager.addTexture("Model/Star.png");
-    billboards.resize(1);
-    billboards[0] = Az3D::Billboard(glm::vec3(0), 0.12f, 0.12f, billBoardTexture, glm::vec4(1.0f, 0.0f, 0.0f, 0.9f));
+    
+    size_t particleCount = 1000;
+    billboards.resize(particleCount);
+    particles_direction.resize(particleCount);
+
+    for (size_t i = 0; i < particleCount; ++i) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+
+        glm::vec4 randomColor(dis(gen), dis(gen), dis(gen), 0.7f);
+        glm::vec3 randomDirection(dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f);
+        randomDirection = glm::normalize(randomDirection);
+
+        billboards[i] = Az3D::Billboard(
+            glm::vec3(-20.0f, 0.0f, 0.0f), 0.12f, 0.12f, billBoardTexture, randomColor
+        );
+
+        particles_direction[i] = randomDirection;
+    }
 
 // PLAYGROUND END HERE 
 
@@ -456,31 +475,33 @@ void Application::mainLoop() {
         frame -= frame * (frame > frame_max - 1);
         frame_time -= frame_time * (frame_time > frame_time_max);
 
-        switch (frame) {
-            case 0:
-                billboards[0].uvMin = glm::vec2(0.0f, 0.0f);
-                billboards[0].uvMax = glm::vec2(0.5f, 1.0f);
-                break;
-            case 1:
-                billboards[0].uvMin = glm::vec2(0.5f, 0.0f);
-                billboards[0].uvMax = glm::vec2(1.0f, 1.0f);
-                break;
+        for (size_t i = 0; i < particles_direction.size(); ++i) {
+            switch (frame) {
+                case 0:
+                    billboards[i].uvMin = glm::vec2(0.0f, 0.0f);
+                    billboards[i].uvMax = glm::vec2(0.5f, 1.0f);
+                    break;
+                case 1:
+                    billboards[i].uvMin = glm::vec2(0.5f, 0.0f);
+                    billboards[i].uvMax = glm::vec2(1.0f, 1.0f);
+                    break;
+            }
+
+
+            RayHit hit = gameMap.closestHit(
+                *meshManager.meshes[gameMap.meshIndex],
+                billboards[i].pos, particles_direction[i], 0.1f);
+
+            if (hit.index != -1) {
+                // Bounce based on the collision normal
+                glm::vec3 collisionNormal = hit.nrml;
+                particles_direction[i] = glm::reflect(particles_direction[i], collisionNormal);
+            } else {
+                // Move the billboard in the direction
+                billboards[i].pos += particles_direction[i] * dTime;
+            }
         }
 
-        RayHit cam_hit = gameMap.closestHit(
-            *meshManager.meshes[gameMap.meshIndex],
-            camRef.pos, camRef.forward, 100.0f);
-
-        glm::vec3 point_pos = camRef.pos + camRef.forward * (cam_hit.index == -1 ? 100.0f : cam_hit.prop.z) +
-            cam_hit.nrml * 0.1f; // Offset slightly from the hit point
-
-        // Make billboard size independent of distance
-        float distance = glm::length(point_pos - camRef.pos);
-        billboards[0].width = 0.12f * (1.0f + distance / 10.0f);
-        billboards[0].height = 0.12f * (1.0f + distance / 10.0f);
-
-        billboards[0].pos = point_pos;
-            + glm::vec3(0.0f, 0.35f, 0.0f); // Position above the player
         //*/
 
 

@@ -48,6 +48,7 @@ private:
     std::vector<Az3D::Model> models;
     std::vector<Az3D::Billboard> billboards;
     // Beta
+    std::vector<glm::vec3> particles_direction;
     AzBeta::Map gameMap;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;
