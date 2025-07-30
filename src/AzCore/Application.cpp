@@ -301,13 +301,9 @@ void Application::mainLoop() {
 
         float ground_threshold = 0.1f;
 
-        if (current_pos.y < ground_threshold) {
-            float dist_y = player_pos.y - current_pos.y;
-
-            float t = (player_pos.y - ground_threshold) / dist_y;
-
-            desired_scale *= t;
-        }
+        if (current_pos.y < ground_threshold)
+            desired_scale *= (player_pos.y - ground_threshold) /
+                            (player_pos.y - current_pos.y);
 
         // Smoothly ease the camera scale towards the desired scale
         current_scale += (desired_scale - current_scale) * 10.0f * dTime;
