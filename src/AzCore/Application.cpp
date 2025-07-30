@@ -310,7 +310,7 @@ void Application::mainLoop() {
         }
 
         // Smoothly ease the camera scale towards the desired scale
-        current_scale += (desired_scale - current_scale) * 0.01f;
+        current_scale += (desired_scale - current_scale) * 10.0f * dTime;
 
         camera->pos = player_pos - camera->forward * current_scale;
 
