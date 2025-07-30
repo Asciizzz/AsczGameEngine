@@ -220,7 +220,7 @@ namespace AzBeta {
             const Az3D::Mesh& mesh,
             glm::vec3 origin,
             glm::vec3 direction,
-            float maxDistance) const {
+            float maxDistance) {
             glm::vec3 hit = closestHit(mesh, origin, direction, maxDistance);
             return glm::distance(hit, origin);
         };
@@ -228,20 +228,16 @@ namespace AzBeta {
             const Az3D::Mesh& mesh,
             glm::vec3 origin,
             glm::vec3 direction,
-            float maxDistance)
-        const {
+            float maxDistance) {
             float closestDistance = maxDistance;
 
             // Apply reverse transform to origin and direction based on the map's transform
-            glm::mat4 invTransform = glm::inverse(trform.modelMatrix());
+            glm::mat4 invModel = glm::inverse(trform.modelMatrix());
 
-            glm::vec4 origin4 = invTransform * glm::vec4(origin, 1.0f);
-            glm::vec4 direction4 = invTransform * glm::vec4(direction, 0.0f);
+            glm::vec3 rayOrg = glm::vec3(invModel * glm::vec4(origin, 1.0f));
+            glm::vec3 rayDir = glm::normalize(glm::vec3(invModel * glm::vec4(direction, 0.0f)));
 
-            origin = glm::vec3(origin4);
-            direction = glm::normalize(glm::vec3(direction4));
-
-            int nstack[64] = { 0 };
+            int nstack[MAX_DEPTH] = { 0 };
             int ns_top = 1;
 
             while (ns_top > 0) {
@@ -249,7 +245,7 @@ namespace AzBeta {
                 const BVHNode& node = nodes[nIdx];
 
                 // Check if the ray is outside the bounding box
-                float nodeHit = rayIntersectsBox(origin, direction, node.min, node.max);
+                float nodeHit = rayIntersectsBox(rayOrg, rayDir, node.min, node.max);
 
                 if (nodeHit < 0 || nodeHit > closestDistance) {
                     continue; // Ray misses the node
@@ -258,11 +254,11 @@ namespace AzBeta {
                 if (node.l_child > -1 && node.r_child > -1) {
                     int leftChildIdx = node.l_child;
 
-                    float leftHitDist = rayIntersectsBox(origin, direction,
+                    float leftHitDist = rayIntersectsBox(rayOrg, rayDir,
                         nodes[leftChildIdx].min, nodes[leftChildIdx].max);
 
                     int rightChildIdx = node.r_child;
-                    float rightHitDist = rayIntersectsBox(origin, direction,
+                    float rightHitDist = rayIntersectsBox(rayOrg, rayDir,
                         nodes[rightChildIdx].min, nodes[rightChildIdx].max);
 
                     bool leftHit = leftHitDist >= 0 && leftHitDist < closestDistance;
@@ -292,39 +288,27 @@ namespace AzBeta {
                     const glm::vec3& v1 = mesh.vertices[index1].pos;
                     const glm::vec3& v2 = mesh.vertices[index2].pos;
 
-                    glm::vec3 e1 = v1 - v0;
-                    glm::vec3 e2 = v2 - v0;
+                    float hitDistance = rayIntersectTriangle(rayOrg, rayDir, v0, v1, v2);
 
-                    glm::vec3 h = glm::cross(direction, e2);
-
-                    float a = glm::dot(e1, h);
-
-                    if (a == 0.0f) continue; // Ray is parallel to the triangle
-
-                    float f = 1.0f / a;
-                    glm::vec3 s = origin - v0;
-
-                    float u = f * glm::dot(s, h);
-
-                    if (u < 0.0f || u > 1.0f) continue; // Outside the triangle
-
-                    glm::vec3 q = glm::cross(s, e1);
-
-                    float v = f * glm::dot(direction, q);
-                    if (v < 0.0f || u + v > 1.0f) continue; // Outside the triangle
-
-                    float t = f * glm::dot(e2, q);
-                    if (t <= 0.0f || t >= closestDistance) continue; // Not a valid hit
-
-                    closestDistance = t;
+                    if (hitDistance > 0 && hitDistance < closestDistance) {
+                        closestDistance = hitDistance;
+                    }
                 }
             }
 
             // Return new closest point if found, otherwise return the original point
             // And since by logic if there's no hit, closestDistance will be maxDistance
             // Automatically return the original point
-            return origin + direction * closestDistance;
+            glm::vec3 localPoint = rayOrg + rayDir * closestDistance;
+
+            // Convert back to world coordinates
+            glm::vec3 worldPoint = localPoint * trform.scl + trform.pos;
+            worldPoint = trform.rot * worldPoint;
+
+            return worldPoint;
         }
+
+    // Some helper functions for intersection
 
         // This function will return the closest distance (0 if ray is inside box, -1 if ray misses, anything else is the distance)
         static inline float rayIntersectsBox(glm::vec3 const& rayOrigin, glm::vec3 const& rayDirection,
@@ -356,6 +340,29 @@ namespace AzBeta {
             }
 
             return tMin;
+        }
+
+        static inline float rayIntersectTriangle(glm::vec3 const& rayOrigin, glm::vec3 const& rayDirection,
+                                                glm::vec3 const& v0, glm::vec3 const& v1, glm::vec3 const& v2) {
+            glm::vec3 e1 = v1 - v0;
+            glm::vec3 e2 = v2 - v0;
+            glm::vec3 h = glm::cross(rayDirection, e2);
+            float a = glm::dot(e1, h);
+
+            if (a == 0.0f) return -1.0f; // Ray is parallel to the triangle
+
+            float f = 1.0f / a;
+            glm::vec3 s = rayOrigin - v0;
+            float u = f * glm::dot(s, h);
+
+            if (u < 0.0f || u > 1.0f) return -1.0f; // Outside the triangle
+
+            glm::vec3 q = glm::cross(s, e1);
+            float v = f * glm::dot(rayDirection, q);
+            if (v < 0.0f || u + v > 1.0f) return -1.0f; // Outside the triangle
+
+            float t = f * glm::dot(e2, q);
+            return (t > 0.0f) ? t : -1.0f; // Return the distance or -1 if no hit
         }
     };
 }

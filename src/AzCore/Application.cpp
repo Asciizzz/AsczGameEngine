@@ -96,12 +96,12 @@ void Application::initVulkan() {
 
     // Load all maps
 
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/viking_room.obj");
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
     Az3D::Material mapMaterial;
     mapMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
     mapMaterial.roughness = 0.7f;
     mapMaterial.metallic = 0.1f;
-    mapMaterial.diffTxtr = texManager.addTexture("Model/viking_room.png");
+    mapMaterial.diffTxtr = texManager.addTexture("Model/de_dust2.png");
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
     // Load all entities
@@ -121,22 +121,14 @@ void Application::initVulkan() {
     // Map model
 
     models[0] = Az3D::Model(mapMeshIndex, mapMaterialIndex);
-    models[0].trform.pos = glm::vec3(.0f, .0f, .0f);
+    models[0].trform.pos = glm::vec3(10.0f, .0f, .0f);
+    models[0].trform.scale(1.5f);
     models[0].trform.rotateX(glm::radians(-90.0f));
 
     gameMap.meshIndex = models[0].meshIndex;
     gameMap.trform = models[0].trform;
 
     gameMap.createBVH(*meshManager.meshes[gameMap.meshIndex]);
-
-    for (int i = 0; i < gameMap.nodes.size(); ++i) {
-        printf("Node %d: min(%f, %f, %f), max(%f, %f, %f), l_child: %d, r_child: %d, l_leaf: %zu, r_leaf: %zu\n",
-            i,
-            gameMap.nodes[i].min.x, gameMap.nodes[i].min.y, gameMap.nodes[i].min.z,
-            gameMap.nodes[i].max.x, gameMap.nodes[i].max.y, gameMap.nodes[i].max.z,
-            gameMap.nodes[i].l_child, gameMap.nodes[i].r_child,
-            gameMap.nodes[i].l_leaf, gameMap.nodes[i].r_leaf);
-    }
 
     // Player model
 
@@ -145,8 +137,10 @@ void Application::initVulkan() {
     models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
     // Create billboards for testing
-    // billboards.resize(1);
-    // billboards[0] = Az3D::Billboard(glm::vec3(0), 0.12f, 0.12f, playerMaterial.diffTxtr, 0.5f);
+
+    size_t billBoardTexture = texManager.addTexture("Model/Star.png");
+    billboards.resize(1);
+    billboards[0] = Az3D::Billboard(glm::vec3(0), 0.12f, 0.12f, billBoardTexture, 0.5f);
 
 // PLAYGROUND END HERE 
 
@@ -189,6 +183,10 @@ void Application::mainLoop() {
     auto& rendererRef = *renderer;
     auto& deviceRef = *vulkanDevice;
     auto& bufferRef = *buffer;
+
+    auto& meshManager = *resourceManager->meshManager;
+    auto& texManager = *resourceManager->textureManager;
+    auto& matManager = *resourceManager->materialManager;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
@@ -243,7 +241,6 @@ void Application::mainLoop() {
             f11Pressed = false;
         }
         
-        
         // Toggle mouse lock with F1 key
         static bool f1Pressed = false;
         if (k_state[SDL_SCANCODE_F1] && !f1Pressed) {
@@ -283,7 +280,7 @@ void Application::mainLoop() {
 // ======== PLAYGROUND HERE! ========
 
 
-        /*
+        //*
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
         float p_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
@@ -295,27 +292,30 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_D]) camPos += camRef.right * p_speed;
 
         camRef.pos = camPos;
+
+
+
         //*/
 
-        //*
+        /*
         auto& p_model = models[1];
         static float p_vy = 0.0f;
 
         // 3rd person camera positioning
 
-        glm::vec3 player_pos = p_model.trform.pos;
+        glm::vec3 player_pos = p_model.trform.pos + glm::vec3(0.0f, 0.2f, 0.0f);
 
         static float current_distance = cam_dist;
         float desired_distance = gameMap.closestDistance(
-            *resourceManager->meshManager->meshes[gameMap.meshIndex],
+            *meshManager.meshes[gameMap.meshIndex],
             player_pos, -camera->forward, cam_dist);
 
         // Avoid desired distance being too small
-        desired_distance = std::max(desired_distance, 0.5f);
+        // desired_distance = std::max(desired_distance, 0.5f) * 0.9f;
 
         current_distance += (desired_distance - current_distance) * 10.0f * dTime;
 
-        camera->pos = player_pos - camera->forward * current_distance;
+        camera->pos = player_pos - camera->forward * desired_distance;
 
         // Move the player plush based on WASD keys
         glm::vec3 s_right = glm::normalize(camera->right);
@@ -401,7 +401,7 @@ void Application::mainLoop() {
 
         // Billboard manipulation
 
-        /*
+        //*
         static int frame = 0;
         static int frame_max = 2;
         static int frame_time = 0;
@@ -422,9 +422,13 @@ void Application::mainLoop() {
                 break;
         }
 
-        billboards[0].pos = p_model.trform.pos
+        glm::vec3 point_pos = gameMap.closestHit(
+            *meshManager.meshes[gameMap.meshIndex],
+            camRef.pos, camRef.forward, 100.0f) - camRef.forward * 0.01f;
+
+        billboards[0].pos = point_pos;
             + glm::vec3(0.0f, 0.35f, 0.0f); // Position above the player
-        */
+        //*/
 
 
 // =================================
