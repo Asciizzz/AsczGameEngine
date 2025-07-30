@@ -7,6 +7,7 @@
 #include "Az3D/Az3D.hpp"
 
 #include "AzBeta/Armature.hpp"
+#include "AzBeta/Map.hpp"
 
 class Application {
 public:
@@ -46,9 +47,8 @@ private:
     // Az3D scene objects (instances)
     std::vector<Az3D::Model> models;
     std::vector<Az3D::Billboard> billboards;
-
-    // Testing Armature
-    AzBeta::Armature armature;
+    // Beta
+    AzBeta::Map gameMap;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkSurfaceKHR surface = VK_NULL_HANDLE;

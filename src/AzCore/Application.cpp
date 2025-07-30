@@ -94,49 +94,59 @@ void Application::initVulkan() {
 
 // PLAYGROUND FROM HERE!
 
-    // Load textures and get their indices
-    size_t mapTextureIndex = texManager.addTexture("Model/viking_room.png");
-    size_t playerTextureIndex = texManager.addTexture("Model/Selen.png");
+    // Load all maps
 
-    size_t demoTextureIndex = texManager.addTexture("Model/Untitled.png");
-
-    // Load meshes and get their indices
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/viking_room.obj");
-    size_t playerMeshIndex = meshManager.loadMeshFromOBJ("Model/Selen.obj");
-    
-    size_t partMeshIndex = meshManager.loadMeshFromOBJ("Model/Part.obj");
-
-
-    // Create materials with texture indices
     Az3D::Material mapMaterial;
     mapMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
     mapMaterial.roughness = 0.7f;
     mapMaterial.metallic = 0.1f;
-    mapMaterial.diffTxtr = mapTextureIndex;
+    mapMaterial.diffTxtr = texManager.addTexture("Model/viking_room.png");
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
+    // Load all entities
+
+    size_t playerMeshIndex = meshManager.loadMeshFromOBJ("Model/Selen.obj");
     Az3D::Material playerMaterial;
     playerMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
     playerMaterial.roughness = 0.4f;
     playerMaterial.metallic = 0.0f;
-    playerMaterial.diffTxtr = playerTextureIndex;
-    size_t playerMaterialIndex = resourceManager->addMaterial(playerMaterial);
+    playerMaterial.diffTxtr = texManager.addTexture("Model/Selen.png");
+    size_t playerMaterialIndex = matManager.addMaterial(playerMaterial);
 
 
     // Create models using indices
     models.resize(2);
 
+    // Map model
+
     models[0] = Az3D::Model(mapMeshIndex, mapMaterialIndex);
-    models[0].trform.pos = glm::vec3(0.0f, .0f, 0.0f);
+    models[0].trform.pos = glm::vec3(.0f, .0f, .0f);
     models[0].trform.rotateX(glm::radians(-90.0f));
+
+    gameMap.meshIndex = models[0].meshIndex;
+    gameMap.trform = models[0].trform;
+
+    gameMap.createBVH(*meshManager.meshes[gameMap.meshIndex]);
+
+    for (int i = 0; i < gameMap.nodes.size(); ++i) {
+        printf("Node %d: min(%f, %f, %f), max(%f, %f, %f), l_child: %d, r_child: %d, l_leaf: %zu, r_leaf: %zu\n",
+            i,
+            gameMap.nodes[i].min.x, gameMap.nodes[i].min.y, gameMap.nodes[i].min.z,
+            gameMap.nodes[i].max.x, gameMap.nodes[i].max.y, gameMap.nodes[i].max.z,
+            gameMap.nodes[i].l_child, gameMap.nodes[i].r_child,
+            gameMap.nodes[i].l_leaf, gameMap.nodes[i].r_leaf);
+    }
+
+    // Player model
 
     models[1] = Az3D::Model(playerMeshIndex, playerMaterialIndex);
     models[1].trform.scale(0.1f);
     models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
     // Create billboards for testing
-    billboards.resize(1);
-    billboards[0] = Az3D::Billboard(glm::vec3(0), 0.12f, 0.12f, demoTextureIndex, 0.5f);
+    // billboards.resize(1);
+    // billboards[0] = Az3D::Billboard(glm::vec3(0), 0.12f, 0.12f, playerMaterial.diffTxtr, 0.5f);
 
 // PLAYGROUND END HERE 
 
@@ -293,22 +303,19 @@ void Application::mainLoop() {
 
         // 3rd person camera positioning
 
-        glm::vec3 player_pos = p_model.trform.pos + glm::vec3(0.0f, 0.25f, 0.0f);
-        glm::vec3 current_pos = player_pos - camera->forward * cam_dist;
+        glm::vec3 player_pos = p_model.trform.pos;
 
-        static float current_scale = cam_dist;
-        float desired_scale = cam_dist;
+        static float current_distance = cam_dist;
+        float desired_distance = gameMap.closestDistance(
+            *resourceManager->meshManager->meshes[gameMap.meshIndex],
+            player_pos, -camera->forward, cam_dist);
 
-        float ground_threshold = 0.1f;
+        // Avoid desired distance being too small
+        desired_distance = std::max(desired_distance, 0.5f);
 
-        if (current_pos.y < ground_threshold)
-            desired_scale *= (player_pos.y - ground_threshold) /
-                            (player_pos.y - current_pos.y);
+        current_distance += (desired_distance - current_distance) * 10.0f * dTime;
 
-        // Smoothly ease the camera scale towards the desired scale
-        current_scale += (desired_scale - current_scale) * 10.0f * dTime;
-
-        camera->pos = player_pos - camera->forward * current_scale;
+        camera->pos = player_pos - camera->forward * current_distance;
 
         // Move the player plush based on WASD keys
         glm::vec3 s_right = glm::normalize(camera->right);
@@ -394,6 +401,7 @@ void Application::mainLoop() {
 
         // Billboard manipulation
 
+        /*
         static int frame = 0;
         static int frame_max = 2;
         static int frame_time = 0;
@@ -416,7 +424,7 @@ void Application::mainLoop() {
 
         billboards[0].pos = p_model.trform.pos
             + glm::vec3(0.0f, 0.35f, 0.0f); // Position above the player
-
+        */
 
 
 // =================================
