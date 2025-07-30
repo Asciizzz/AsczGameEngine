@@ -77,31 +77,38 @@ namespace Az3D {
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
-        std::unordered_map<size_t, uint32_t> uniqueVertices{};
+        std::unordered_map<size_t, uint32_t> uniqueVertices;
 
-        // Simple hash function for vertex deduplication
-        auto hashVertex = [](const Vertex& v) -> size_t {
-            size_t h1 = std::hash<float>{}(v.pos.x);
-            size_t h2 = std::hash<float>{}(v.pos.y);
-            size_t h3 = std::hash<float>{}(v.pos.z);
-            size_t h4 = std::hash<float>{}(v.txtr.x);
-            size_t h5 = std::hash<float>{}(v.txtr.y);
-            return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4);
+        // Hash combine utility
+        auto hash_combine = [](std::size_t& seed, std::size_t hash) {
+            seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        };
+
+        // Full-attribute hash (position + normal + texcoord)
+        auto hashVertex = [&](const Vertex& v) -> size_t {
+            size_t seed = 0;
+            hash_combine(seed, std::hash<float>{}(v.pos.x));
+            hash_combine(seed, std::hash<float>{}(v.pos.y));
+            hash_combine(seed, std::hash<float>{}(v.pos.z));
+            hash_combine(seed, std::hash<float>{}(v.nrml.x));
+            hash_combine(seed, std::hash<float>{}(v.nrml.y));
+            hash_combine(seed, std::hash<float>{}(v.nrml.z));
+            hash_combine(seed, std::hash<float>{}(v.txtr.x));
+            hash_combine(seed, std::hash<float>{}(v.txtr.y));
+            return seed;
         };
 
         bool hasNormals = !attrib.normals.empty();
 
-        // Process all shapes in the OBJ file
         for (const auto& shape : shapes) {
             for (size_t f = 0; f < shape.mesh.indices.size(); f += 3) {
-                // Process triangle (3 vertices)
                 std::array<Vertex, 3> triangle;
-                
+
                 for (int v = 0; v < 3; v++) {
                     const auto& index = shape.mesh.indices[f + v];
                     Vertex& vertex = triangle[v];
 
-                    // Position (required)
+                    // Position
                     if (index.vertex_index >= 0) {
                         vertex.pos = {
                             attrib.vertices[3 * index.vertex_index + 0],
@@ -110,17 +117,17 @@ namespace Az3D {
                         };
                     }
 
-                    // Texture coordinates (optional)
+                    // Texture coordinates
                     if (index.texcoord_index >= 0) {
                         vertex.txtr = {
                             attrib.texcoords[2 * index.texcoord_index + 0],
-                            1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V coordinate
+                            1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V
                         };
                     } else {
-                        vertex.txtr = {0.0f, 0.0f}; // Default UV
+                        vertex.txtr = { 0.0f, 0.0f };
                     }
 
-                    // Normals (optional)
+                    // Normals
                     if (hasNormals && index.normal_index >= 0) {
                         vertex.nrml = {
                             attrib.normals[3 * index.normal_index + 0],
@@ -129,19 +136,19 @@ namespace Az3D {
                         };
                     }
                 }
-                
-                // Calculate face normal if no normals provided
+
+                // Generate face normal if needed
                 if (!hasNormals) {
-                    glm::vec3 v0 = triangle[1].pos - triangle[0].pos;
-                    glm::vec3 v1 = triangle[2].pos - triangle[0].pos;
-                    glm::vec3 faceNormal = glm::normalize(glm::cross(v0, v1));
-                    
+                    glm::vec3 edge1 = triangle[1].pos - triangle[0].pos;
+                    glm::vec3 edge2 = triangle[2].pos - triangle[0].pos;
+                    glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
                     triangle[0].nrml = faceNormal;
                     triangle[1].nrml = faceNormal;
                     triangle[2].nrml = faceNormal;
                 }
 
-                // Add vertices with deduplication
+                // Deduplicate and add vertices
                 for (const auto& vertex : triangle) {
                     size_t vertexHash = hashVertex(vertex);
                     auto it = uniqueVertices.find(vertexHash);
@@ -158,5 +165,6 @@ namespace Az3D {
 
         return std::make_shared<Mesh>(std::move(vertices), std::move(indices), hasBVH);
     }
+
 
 }

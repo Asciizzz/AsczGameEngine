@@ -9,6 +9,7 @@ const bool enableValidationLayers = true;
 #endif
 
 using namespace AzVulk;
+using namespace AzBeta;
 
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
@@ -30,7 +31,7 @@ Application::~Application() {
 void Application::run() {
     mainLoop();
 
-    std::cout << "Application exited successfully. See you next time!" << std::endl;
+    printf("Application exited successfully. See you next time! o/\n");
 }
 
 void Application::initVulkan() {
@@ -96,7 +97,7 @@ void Application::initVulkan() {
 
     // Load all maps
 
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/cube.obj");
     Az3D::Material mapMaterial;
     mapMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
     mapMaterial.roughness = 0.7f;
@@ -120,10 +121,10 @@ void Application::initVulkan() {
 
     // Map model
 
-    models[0] = Az3D::Model(mapMeshIndex, mapMaterialIndex);
-    models[0].trform.pos = glm::vec3(10.0f, .0f, .0f);
-    models[0].trform.scale(1.5f);
-    models[0].trform.rotateX(glm::radians(-90.0f));
+    models[0] = Az3D::Model(mapMeshIndex, 0);
+    // models[0].trform.pos = glm::vec3(.0f, .0f, .0f);
+    // models[0].trform.scale(1.5f);
+    // models[0].trform.rotateX(glm::radians(-90.0f));
 
     gameMap.meshIndex = models[0].meshIndex;
     gameMap.trform = models[0].trform;
@@ -140,7 +141,7 @@ void Application::initVulkan() {
 
     size_t billBoardTexture = texManager.addTexture("Model/Star.png");
     billboards.resize(1);
-    billboards[0] = Az3D::Billboard(glm::vec3(0), 0.12f, 0.12f, billBoardTexture, 0.5f);
+    billboards[0] = Az3D::Billboard(glm::vec3(0), 0.12f, 0.12f, billBoardTexture, glm::vec4(1.0f, 0.0f, 0.0f, 0.9f));
 
 // PLAYGROUND END HERE 
 
@@ -293,8 +294,6 @@ void Application::mainLoop() {
 
         camRef.pos = camPos;
 
-
-
         //*/
 
         /*
@@ -306,16 +305,20 @@ void Application::mainLoop() {
         glm::vec3 player_pos = p_model.trform.pos + glm::vec3(0.0f, 0.2f, 0.0f);
 
         static float current_distance = cam_dist;
-        float desired_distance = gameMap.closestDistance(
+        RayHit desired_hit = gameMap.closestHit(
             *meshManager.meshes[gameMap.meshIndex],
             player_pos, -camera->forward, cam_dist);
+
+        if (desired_hit.index == -1) {
+            desired_hit.prop.z = cam_dist; // Default to cam_dist if no hit
+        }
 
         // Avoid desired distance being too small
         // desired_distance = std::max(desired_distance, 0.5f) * 0.9f;
 
-        current_distance += (desired_distance - current_distance) * 10.0f * dTime;
+        current_distance += (desired_hit.prop.z - current_distance) * 10.0f * dTime;
 
-        camera->pos = player_pos - camera->forward * desired_distance;
+        camera->pos = player_pos - camera->forward * desired_hit.prop.z;
 
         // Move the player plush based on WASD keys
         glm::vec3 s_right = glm::normalize(camera->right);
@@ -336,40 +339,82 @@ void Application::mainLoop() {
         static glm::quat desired_rot = glm::quatLookAt(s_backward, s_up);
         static glm::quat current_rot = p_model.trform.rot;
 
+        glm::vec3 horizon_dir = glm::vec3(0.0f);
         if (k_w) {
-            p_model.trform.pos -= s_backward * p_speed;
+            horizon_dir -= s_backward;
             desired_rot = glm::quatLookAt(s_backward, s_up);
         }
         if (k_s) {
-            p_model.trform.pos += s_backward * p_speed;
+            horizon_dir += s_backward;
             desired_rot = glm::quatLookAt(-s_backward, s_up);
         }
         if (k_a) {
-            p_model.trform.pos -= s_right * p_speed;
+            horizon_dir -= s_right;
             desired_rot = glm::quatLookAt(s_right, s_up);
         }
         if (k_d) {
-            p_model.trform.pos += s_right * p_speed;
+            horizon_dir += s_right;
             desired_rot = glm::quatLookAt(-s_right, s_up);
         }
 
         // Interpolate rotation towards desired rotation
         float rotationSpeed = 20.0f * dTime; // Adjust rotation speed as needed
         current_rot = glm::slerp(current_rot, desired_rot, rotationSpeed);
-
         p_model.trform.rot = current_rot;
+        
+        // Uniform scaling
+        if (glm::length(horizon_dir) > 0.0f)
+            horizon_dir = glm::normalize(horizon_dir);
 
-        // Press space to jump, simulating gravity
-        p_model.trform.pos.y += p_vy * dTime;
-        if (p_model.trform.pos.y < 0.0f) {
-            p_model.trform.pos.y = 0.0f; // Prevent going below ground
+        // Horizontal collision detection
+        RayHit collision = gameMap.closestHit(
+            *meshManager.meshes[gameMap.meshIndex],
+            player_pos, horizon_dir, 0.1f);
+
+        if (collision.index == -1) {
+            p_model.trform.pos += horizon_dir * p_speed;
         } else {
-            p_vy -= 9.81f * dTime; // Apply gravity
+            // Shoot the player back based on the collision normal
+            glm::vec3 collisionNormal = collision.nrml;
+
+            p_model.trform.pos -= collisionNormal * glm::dot(horizon_dir, collisionNormal);
         }
-        if (k_state[SDL_SCANCODE_SPACE] && p_model.trform.pos.y <= 0.0f) {
-            // Simple jump logic
-            p_vy = 3.0f; // Jump height
+
+        // // Press space to jump, simulating gravity
+        // p_model.trform.pos.y += p_vy * dTime;
+        // if (p_model.trform.pos.y < 0.0f) {
+        //     p_model.trform.pos.y = 0.0f; // Prevent going below ground
+        // } else {
+        //     p_vy -= 9.81f * dTime; // Apply gravity
+        // }
+
+        glm::vec3 downward_dir = glm::vec3(0.0f, -1.0f, 0.0f);
+        static float velocityY = 0.0f;
+        velocityY -= 9.81f * dTime; // Gravity effect
+        velocityY = std::max(velocityY, -10.0f); // Terminal velocity (kind of)
+
+        if (k_state[SDL_SCANCODE_SPACE]) {
+            velocityY = 3.0f;
         }
+
+        RayHit groundHit = gameMap.closestHit(
+            *meshManager.meshes[gameMap.meshIndex],
+            player_pos, downward_dir, 0.2f);
+        
+        // No collision
+        if (groundHit.index == -1 || velocityY > 0.0f) {
+            p_model.trform.pos.y += velocityY * dTime;
+        } else {
+            velocityY = 0.0f;
+            p_model.trform.pos.y = groundHit.prop.z;
+        }
+
+        if (p_model.trform.pos.y < -10.0f) {
+            p_model.trform.pos.y = 0.0f; // Reset position if too low
+            velocityY = 0.0f; // Reset vertical velocity
+        }
+
+
         //*/
 
         // Update instance buffers dynamically by mesh type
@@ -422,9 +467,17 @@ void Application::mainLoop() {
                 break;
         }
 
-        glm::vec3 point_pos = gameMap.closestHit(
+        RayHit cam_hit = gameMap.closestHit(
             *meshManager.meshes[gameMap.meshIndex],
-            camRef.pos, camRef.forward, 100.0f) - camRef.forward * 0.01f;
+            camRef.pos, camRef.forward, 100.0f);
+
+        glm::vec3 point_pos = camRef.pos + camRef.forward * (cam_hit.index == -1 ? 100.0f : cam_hit.prop.z) +
+            cam_hit.nrml * 0.1f; // Offset slightly from the hit point
+
+        // Make billboard size independent of distance
+        float distance = glm::length(point_pos - camRef.pos);
+        billboards[0].width = 0.12f * (1.0f + distance / 10.0f);
+        billboards[0].height = 0.12f * (1.0f + distance / 10.0f);
 
         billboards[0].pos = point_pos;
             + glm::vec3(0.0f, 0.35f, 0.0f); // Position above the player

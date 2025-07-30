@@ -15,15 +15,13 @@ namespace Az3D {
         float width = 1.0f;
         float height = 1.0f;
         size_t textureIndex = 0;
-        float opacity = 1.0f;  // Alpha multiplier (0.0 = transparent, 1.0 = opaque)
-        
-        // UV coordinates for sprite sheets (AB1 to AB2)
         glm::vec2 uvMin{0.0f, 0.0f};  // AB1 - top-left UV
         glm::vec2 uvMax{1.0f, 1.0f};  // AB2 - bottom-right UV
-        
+        glm::vec4 color{1.0f}; // Color multiplier (RGBA)
+
         Billboard() = default;
-        Billboard(const glm::vec3& pos, float w, float h, size_t texIndex, float alpha = 1.0f)
-            : pos(pos), width(w), height(h), textureIndex(texIndex), opacity(alpha) {}
+        Billboard(const glm::vec3& pos, float w, float h, size_t texIndex, const glm::vec4& color)
+            : pos(pos), width(w), height(h), textureIndex(texIndex), color(color) {}
     };
 
 } // namespace Az3D

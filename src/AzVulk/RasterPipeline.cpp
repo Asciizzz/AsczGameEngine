@@ -418,8 +418,8 @@ namespace AzVulk {
 
         instanceAttributes[6].binding = 1;
         instanceAttributes[6].location = 9;
-        instanceAttributes[6].format = VK_FORMAT_R32_SFLOAT;
-        instanceAttributes[6].offset = offsetof(BillboardInstance, opacity);
+        instanceAttributes[6].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        instanceAttributes[6].offset = offsetof(BillboardInstance, color);
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

@@ -5,6 +5,7 @@
 #include <optional>
 
 namespace AzVulk {
+
     class Instance {
     public:
         Instance(const std::vector<const char*>& requiredExtensions, bool enableValidation = false);

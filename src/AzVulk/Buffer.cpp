@@ -256,11 +256,11 @@ namespace AzVulk {
         attributeDescriptions[5].format = VK_FORMAT_R32G32_SFLOAT;
         attributeDescriptions[5].offset = offsetof(BillboardInstance, uvMax);
 
-        // Opacity attribute (location 9)
+        // Color multiplier attribute (location 9)
         attributeDescriptions[6].binding = 1;
         attributeDescriptions[6].location = 9;
-        attributeDescriptions[6].format = VK_FORMAT_R32_SFLOAT;
-        attributeDescriptions[6].offset = offsetof(BillboardInstance, opacity);
+        attributeDescriptions[6].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        attributeDescriptions[6].offset = offsetof(BillboardInstance, color);
 
         return attributeDescriptions;
     }
