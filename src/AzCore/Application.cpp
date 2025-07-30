@@ -187,7 +187,7 @@ void Application::mainLoop() {
 
         float dTime = fpsRef.deltaTime;
 
-        static float camDist = 1.5f;
+        static float cam_dist = 1.5f;
         static glm::vec3 camPos = camRef.pos;
         static bool mouseLocked = true;
 
@@ -294,24 +294,27 @@ void Application::mainLoop() {
         // 3rd person camera positioning
 
         glm::vec3 player_pos = p_model.trform.pos + glm::vec3(0.0f, 0.25f, 0.0f);
-        glm::vec3 desired_pos = player_pos - camera->forward * camDist;
+        glm::vec3 current_pos = player_pos - camera->forward * cam_dist;
+
+        static float current_scale = cam_dist;
+        float desired_scale = cam_dist;
 
         float ground_threshold = 0.1f;
 
-        if (desired_pos.y < ground_threshold) {
-            float dist_y = player_pos.y - desired_pos.y;
+        if (current_pos.y < ground_threshold) {
+            float dist_y = player_pos.y - current_pos.y;
 
             float t = (player_pos.y - ground_threshold) / dist_y;
 
-            desired_pos = player_pos - camera->forward * camDist * t;
+            desired_scale *= t;
         }
 
-        // Smoothly ease the camera position towards the desired position
-        // camera->pos = glm::mix(camera->pos, desired_pos, 30.0f * dTime);
-        camera->pos = desired_pos;
+        // Smoothly ease the camera scale towards the desired scale
+        current_scale += (desired_scale - current_scale) * 0.01f;
+
+        camera->pos = player_pos - camera->forward * current_scale;
 
         // Move the player plush based on WASD keys
-
         glm::vec3 s_right = glm::normalize(camera->right);
         glm::vec3 s_up = glm::vec3(0.0f, 1.0f, 0.0f);
         glm::vec3 s_backward = glm::normalize(glm::cross(s_right, s_up));
