@@ -83,12 +83,9 @@ namespace AzBeta {
                 );
 
                 if (map_collision.hit) {
-                    // particles_direction[p] = glm::reflect(direction, map_collision.nrml);
+                    particles_direction[p] = glm::reflect(direction, map_collision.nrml);
 
-                    // particles_direction[p].y *= 0.75f * velocity;
-
-                    // Dead stop!
-                    particles_direction[p] = glm::vec3(0.0f); // Stop the particle
+                    particles_direction[p].y *= 0.75f * velocity;
                 } else {
                     particles[p].pos += direction * step;
                 }
