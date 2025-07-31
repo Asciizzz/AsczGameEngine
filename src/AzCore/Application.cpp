@@ -19,7 +19,8 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
     fpsManager = std::make_unique<AzCore::FpsManager>();
 
     float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 200.0f);
+    // 10KM VIEW DISTANCE!!!
+    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 10000.0f);
     camera->setAspectRatio(aspectRatio);
 
     initVulkan();
@@ -98,7 +99,7 @@ void Application::initVulkan() {
 
     // Load all maps
 
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/cube.obj");
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
     Az3D::Material mapMaterial;
     mapMaterial.diffTxtr = texManager.addTexture("Model/de_dust2.png");
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
@@ -110,16 +111,16 @@ void Application::initVulkan() {
     playerMaterial.diffTxtr = texManager.addTexture("Model/Selen.png");
     size_t playerMaterialIndex = matManager.addMaterial(playerMaterial);
 
-
     // Create models using indices
     models.resize(1);
 
     // Map model
 
     models[0] = Az3D::Model(mapMeshIndex, 0);
-    // models[0].trform.pos = glm::vec3(20.0f, 0.0f, 0.0f);
+    models[0].trform.pos = glm::vec3(20.0f, 0.0f, 0.0f);
     // models[0].trform.scale(3.0f);
-    models[0].trform.rotateZ(glm::radians(-45.0f));
+    // models[0].trform.rotateZ(glm::radians(-45.0f));
+    // models[0].trform.rotateX(glm::radians(-45.0f));
 
     gameMap.meshIndex = models[0].meshIndex;
     gameMap.trform = models[0].trform;
@@ -136,7 +137,7 @@ void Application::initVulkan() {
 
     size_t billBoardTexture = texManager.addTexture("Model/Circle.png");
     
-    size_t particleCount = 1;
+    size_t particleCount = 1000;
     particles.resize(particleCount);
     particles_direction.resize(particleCount);
     particles_velocity.resize(particleCount);
@@ -156,18 +157,11 @@ void Application::initVulkan() {
         std::mt19937 gen(rd());
         std::uniform_real_distribution<float> dis(0.0f, 1.0f);
 
-        // // glm::vec4 randomColor(dis(gen), dis(gen), dis(gen), 1.0f);
-        // glm::vec3 randomDirection(dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f);
-        // randomDirection = glm::normalize(randomDirection);
-
         glm::vec3 randomPosition(
             dis(gen) * (particle_range_x.y - particle_range_x.x) + particle_range_x.x,
             dis(gen) * (particle_range_y.y - particle_range_y.x) + particle_range_y.x,
             dis(gen) * (particle_range_z.y - particle_range_z.x) + particle_range_z.x
         );
-
-        // float randomVelocity = dis(gen) * (particle_velocity_range.y - particle_velocity_range.x) + particle_velocity_range.x;
-        // float randomSize = dis(gen) * (particle_size_range.y - particle_size_range.x) + particle_size_range.x;
 
         // particles[i] = Az3D::Billboard(
         //     randomPosition, randomSize, randomSize, billBoardTexture, glm::vec4(1.0f)
@@ -176,19 +170,20 @@ void Application::initVulkan() {
         // particles_direction[i] = randomDirection;
         // particles_velocity[i] = randomVelocity;
 
-        glm::vec3 hardcode_position = glm::vec3(1.11f, -0.03f, 0.0f);
+        glm::vec3 hardcode_position = glm::vec3(0.0f, 0.0f, 0.0f);
 
         particles[i] = Az3D::Billboard(
-            hardcode_position, 0.1f, 0.1f, billBoardTexture, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
+            hardcode_position, 0.1f, 0.1f, billBoardTexture, glm::vec4(0.0f, 1.0f, 1.0f, 0.6f)
         );
 
-        // Generate 2 random numbers between -n and n for the x and z
+        // Generate 2 random numbers between -n and n for the x and z and -m and m for y
         float randomX = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
         float randomZ = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
-        float rangeXZ = 10.0f; // Range for x and z speed
+        float randomY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
+        float rangeN = 10.0f; // Range for x and z speed
+        float rangeM = 10.0f; // Range for y speed
 
-        // particles_direction[i] = glm::vec3(randomX * rangeXZ, 0.0f, randomZ * rangeXZ);
-        particles_direction[i] = glm::vec3(0.0f, 0.0f, 0.0f); // Hardcoded for now
+        particles_direction[i] = glm::vec3(randomX * rangeN, randomY * rangeM, randomZ * rangeN);
     }
 
 // PLAYGROUND END HERE 
@@ -504,6 +499,9 @@ void Application::mainLoop() {
         frame -= frame * (frame > frame_max - 1);
         frame_time -= frame_time * (frame_time > frame_time_max);
 
+        static float particle_radius = 0.05f;
+        static float particle_opacity = 0.4f;
+
         static bool physic_enable = false;
         static bool hold_P = false;
         if (k_state[SDL_SCANCODE_P] && !hold_P) {
@@ -533,15 +531,16 @@ void Application::mainLoop() {
             float velocity = glm::length(particles_direction[i]);
             glm::vec3 direction = glm::normalize(particles_direction[i]);
 
-            // Change color based on velocity (0.0 being blue, 5.0 being red)
-            float colorFactor = glm::clamp(velocity / 5.0f, 0.0f, 1.0f);
-            particles[i].color = glm::vec4(colorFactor, 1.0f, 1.0f - colorFactor, 1.0f);
+            // Change color based on velocity (0.0 being cyan, 5.0 being red)
+            float colorR = glm::clamp(velocity / 5.0f, 0.0f, 1.0f);
+            float colorGB = 1.0f - colorR; // Inverse for green and blue
+            particles[i].color = glm::vec4(colorR, colorGB, colorGB, particle_opacity);
 
 
             HitInfo map_collision = gameMap.closestHit(
                 *meshManager.meshes[gameMap.meshIndex],
                 particles[i].pos + direction * velocity * dTime,
-                0.1f
+                particle_radius
             );
 
             if (map_collision.index == -1) {
@@ -549,8 +548,8 @@ void Application::mainLoop() {
             } else {
                 // Reflect the particle based on the collision normal
                 particles_direction[i] = glm::reflect(direction, map_collision.nrml);
-                particles_direction[i] *= velocity;
-                particles_direction[i].y *= 0.9f; // Dampen the velocity a bit
+
+                particles_direction[i].y *= 0.75f * velocity; // Energy loss
             }
         }
 
