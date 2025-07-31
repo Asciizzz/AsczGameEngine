@@ -134,7 +134,7 @@ void Application::initVulkan() {
     // models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
     size_t particleTexture = texManager.addTexture("Model/Circle.png");
-    particleManager.init(1000, particleTexture, 0.1f, 0.5f);
+    particleManager.initParticles(1000, particleTexture, 0.1f, 0.9f);
 
 // PLAYGROUND END HERE 
 
@@ -451,12 +451,8 @@ void Application::mainLoop() {
                 for (size_t i = 0; i < particleManager.particles.size(); ++i) {
                     particleManager.particles[i].pos = camRef.pos;
 
-                    glm::vec3 rnd_direction = glm::normalize(glm::vec3(
-                        static_cast<float>(rand()) / RAND_MAX - 0.5f,
-                        static_cast<float>(rand()) / RAND_MAX - 0.5f,
-                        static_cast<float>(rand()) / RAND_MAX - 0.5f
-                    ));
-                    glm::vec3 mult_direction = { 10.0f, 10.0f, 10.0f };
+                    glm::vec3 rnd_direction = ParticleManager::randomDirection();
+                    glm::vec3 mult_direction = { 4.0f, 4.0f, 4.0f };
 
                     particleManager.particles_direction[i] = {
                         rnd_direction.x * mult_direction.x,
