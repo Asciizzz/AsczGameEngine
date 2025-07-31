@@ -21,7 +21,7 @@ namespace AzBeta {
 
     };
 
-    struct RayHit {
+    struct HitInfo {
         size_t index = -1;
         glm::vec3 prop = glm::vec3(-1.0f); // {u, v, t} (u, v are for barycentric coordinates, t is distance)
 
@@ -225,13 +225,13 @@ namespace AzBeta {
         }
 
         // Basically the same version but return the distance instead
-        RayHit closestHit(
+        HitInfo closestHit(
             const Az3D::Mesh& mesh,
             glm::vec3 origin,
             glm::vec3 direction,
             float maxDistance) {
 
-            RayHit hit;
+            HitInfo hit;
             if (glm::length(direction) < 0.0001f) return hit;
             hit.prop.z = maxDistance; // Initialize with max distance
 
@@ -249,20 +249,19 @@ namespace AzBeta {
                 const BVHNode& node = nodes[nIdx];
 
                 // Check if the ray is outside the bounding box
-                float nodeHit = rayIntersectsBox(rayOrg, rayDir, node.min, node.max);
+                float nodeHitDist = rayIntersectBox(rayOrg, rayDir, node.min, node.max);
 
-                if (nodeHit < 0 || nodeHit > hit.prop.z) {
+                if (nodeHitDist < 0 || nodeHitDist > hit.prop.z) {
                     continue; // Ray misses the node
                 }
 
                 if (node.l_child > -1 && node.r_child > -1) {
                     int leftChildIdx = node.l_child;
-
-                    float leftHitDist = rayIntersectsBox(rayOrg, rayDir,
+                    float leftHitDist = rayIntersectBox(rayOrg, rayDir,
                         nodes[leftChildIdx].min, nodes[leftChildIdx].max);
 
                     int rightChildIdx = node.r_child;
-                    float rightHitDist = rayIntersectsBox(rayOrg, rayDir,
+                    float rightHitDist = rayIntersectBox(rayOrg, rayDir,
                         nodes[rightChildIdx].min, nodes[rightChildIdx].max);
 
                     bool leftHit = leftHitDist >= 0 && leftHitDist < hit.prop.z;
@@ -284,13 +283,13 @@ namespace AzBeta {
                 for (int i = node.l_leaf; i < node.r_leaf; ++i) {
                     size_t idx = sortedIndices[i];
                     // Retrieve the actual indices
-                    size_t index0 = mesh.indices[idx * 3 + 0];
-                    size_t index1 = mesh.indices[idx * 3 + 1];
-                    size_t index2 = mesh.indices[idx * 3 + 2];
+                    size_t idx0 = mesh.indices[idx * 3 + 0];
+                    size_t idx1 = mesh.indices[idx * 3 + 1];
+                    size_t idx2 = mesh.indices[idx * 3 + 2];
 
-                    const glm::vec3& v0 = mesh.vertices[index0].pos;
-                    const glm::vec3& v1 = mesh.vertices[index1].pos;
-                    const glm::vec3& v2 = mesh.vertices[index2].pos;
+                    const glm::vec3& v0 = mesh.vertices[idx0].pos;
+                    const glm::vec3& v1 = mesh.vertices[idx1].pos;
+                    const glm::vec3& v2 = mesh.vertices[idx2].pos;
 
                     glm::vec3 curHitProp = rayIntersectTriangle(rayOrg, rayDir, v0, v1, v2);
 
@@ -310,15 +309,113 @@ namespace AzBeta {
 
             // Retrieve the hit normal
             size_t hitIdx = hit.index;
-            size_t index0 = mesh.indices[hitIdx * 3 + 0];
-            size_t index1 = mesh.indices[hitIdx * 3 + 1];
-            size_t index2 = mesh.indices[hitIdx * 3 + 2];
-            const glm::vec3& n0 = mesh.vertices[index0].nrml;
-            const glm::vec3& n1 = mesh.vertices[index1].nrml;
-            const glm::vec3& n2 = mesh.vertices[index2].nrml;
+            size_t idx0 = mesh.indices[hitIdx * 3 + 0];
+            size_t idx1 = mesh.indices[hitIdx * 3 + 1];
+            size_t idx2 = mesh.indices[hitIdx * 3 + 2];
+            const glm::vec3& nrml0 = mesh.vertices[idx0].nrml;
+            const glm::vec3& nrml1 = mesh.vertices[idx1].nrml;
+            const glm::vec3& nrml2 = mesh.vertices[idx2].nrml;
 
             // Barycentric interpolation for normal
-            hit.nrml = n0 * hit.prop.x + n1 * hit.prop.y + n2 * hit.prop.z;
+            hit.nrml =  nrml0 * hit.prop.x +
+                        nrml1 * hit.prop.y +
+                        nrml2 * (1.0f - hit.prop.x - hit.prop.y);
+
+            // Convert back to world coordinates
+            glm::vec3 worldVertex = localVertex * trform.scl + trform.pos; // Apply scale and translation
+            worldVertex = trform.rot * worldVertex;
+
+            glm::vec3 worldNormal = glm::normalize(trform.rot * hit.nrml); // Rotate the normal
+            return { hitIdx, hit.prop, worldVertex, worldNormal };
+        }
+
+
+        HitInfo closestHit(
+            const Az3D::Mesh& mesh,
+            glm::vec3 sphere_origin,
+            float sphere_radius
+        ) {
+            HitInfo hit; hit.prop.z = sphere_radius;
+
+            glm::mat4 invModel = glm::inverse(trform.modelMatrix());
+
+            glm::vec3 sphereOrg = glm::vec3(invModel * glm::vec4(sphere_origin, 1.0f));
+            float sphereRad = trform.scl * sphere_radius; // Apply scale to radius
+
+            int nstack[MAX_DEPTH] = { 0 };
+            int ns_top = 1;
+
+            while (ns_top > 0) {
+                int nIdx = nstack[--ns_top];
+                const BVHNode& node = nodes[nIdx];
+
+                float nodeHitDist = sphereIntersectBox(sphereOrg, sphereRad, node.min, node.max);
+
+                if (nodeHitDist < 0 || nodeHitDist > hit.prop.z) {
+                    continue; // Ray misses the node
+                }
+
+                if (node.l_child > -1 && node.r_child > -1) {
+                    int leftChildIdx = node.l_child;
+                    float leftHitDist = sphereIntersectBox(sphereOrg, sphereRad,
+                        nodes[leftChildIdx].min, nodes[leftChildIdx].max);
+
+                    int rightChildIdx = node.r_child;
+                    float rightHitDist = sphereIntersectBox(sphereOrg, sphereRad,
+                        nodes[rightChildIdx].min, nodes[rightChildIdx].max);
+
+                    bool leftHit = leftHitDist >= 0 && leftHitDist < hit.prop.z;
+                    bool rightHit = rightHitDist >= 0 && rightHitDist < hit.prop.z;
+
+                    bool leftCloser = leftHitDist < rightHitDist;
+
+                    nstack[ns_top] = rightChildIdx * leftCloser + leftChildIdx * !leftCloser;
+                    ns_top += rightHit * leftCloser + leftHit * !leftCloser;
+
+                    nstack[ns_top] = leftChildIdx * leftCloser + rightChildIdx * !leftCloser;
+                    ns_top += leftHit * leftCloser + rightHit * !leftCloser;
+
+                    continue;
+                }
+
+                for (int i = node.l_leaf; i < node.r_leaf; ++i) {
+                    size_t idx = sortedIndices[i];
+                    // Retrieve the actual indices
+                    size_t idx0 = mesh.indices[idx * 3 + 0];
+                    size_t idx1 = mesh.indices[idx * 3 + 1];
+                    size_t idx2 = mesh.indices[idx * 3 + 2];
+
+                    const glm::vec3& v0 = mesh.vertices[idx0].pos;
+                    const glm::vec3& v1 = mesh.vertices[idx1].pos;
+                    const glm::vec3& v2 = mesh.vertices[idx2].pos;
+
+                    glm::vec3 curHitProp = sphereIntersectTriangle(sphereOrg, sphereRad, v0, v1, v2);
+
+                    if (curHitProp.z >= 0.0f && curHitProp.z <= hit.prop.z) {
+                        hit.prop = curHitProp;
+                        hit.index = idx;
+                    }
+                }
+            }
+
+            if (hit.index == -1) return hit;
+
+            // Retrieve the hit vertex
+            glm::vec3 localVertex = sphereOrg + hit.prop.z * glm::normalize(sphereOrg - unsortedCenters[hit.index]);
+
+            // Retrieve the hit normal
+            size_t hitIdx = hit.index;
+            size_t idx0 = mesh.indices[hitIdx * 3 + 0];
+            size_t idx1 = mesh.indices[hitIdx * 3 + 1];
+            size_t idx2 = mesh.indices[hitIdx * 3 + 2];
+            const glm::vec3& nrml0 = mesh.vertices[idx0].nrml;
+            const glm::vec3& nrml1 = mesh.vertices[idx1].nrml;
+            const glm::vec3& nrml2 = mesh.vertices[idx2].nrml;
+
+            // Barycentric interpolation for normal
+            hit.nrml =  nrml0 * hit.prop.x +
+                        nrml1 * hit.prop.y +
+                        nrml2 * (1.0f - hit.prop.x - hit.prop.y);
 
             // Convert back to world coordinates
             glm::vec3 worldVertex = localVertex * trform.scl + trform.pos; // Apply scale and translation
@@ -331,7 +428,7 @@ namespace AzBeta {
     // Some helper functions for intersection
 
         // This function will return the closest distance (0 if ray is inside box, -1 if ray misses, anything else is the distance)
-        static inline float rayIntersectsBox(glm::vec3 const& rayOrigin, glm::vec3 const& rayDirection,
+        static inline float rayIntersectBox(glm::vec3 const& rayOrigin, glm::vec3 const& rayDirection,
                                             glm::vec3 const& boxMin, glm::vec3 const& boxMax) {
             glm::vec3 invDir = 1.0f / rayDirection;
             glm::vec3 t0 = (boxMin - rayOrigin) * invDir;
@@ -361,7 +458,7 @@ namespace AzBeta {
             return tMin;
         }
 
-        // {u, v, w, t}
+        // {u, v, t}
         static inline glm::vec3 rayIntersectTriangle(glm::vec3 const& rayOrigin, glm::vec3 const& rayDirection,
                                                     glm::vec3 const& v0, glm::vec3 const& v1, glm::vec3 const& v2) {
             glm::vec3 e1 = v1 - v0;
@@ -384,5 +481,65 @@ namespace AzBeta {
             float t = f * glm::dot(e2, q);
             return t > 0.0f ? glm::vec3(u, v, t) : glm::vec3(-1.0f);
         }
+
+        // Sphere intersection
+        static inline float sphereIntersectBox(
+            glm::vec3 const& sphereOrigin, float sphereRadius,
+            glm::vec3 const& boxMin, glm::vec3 const& boxMax
+        ) {
+            glm::vec3 closestPoint = glm::clamp(sphereOrigin, boxMin, boxMax);
+
+            glm::vec3 delta = closestPoint - sphereOrigin;
+            float distSqr = glm::dot(delta, delta);
+            if (distSqr == 0.0f) return 0.0f;
+
+            bool intersect = distSqr < sphereRadius * sphereRadius;
+            return intersect ? glm::sqrt(distSqr) : -1.0f;
+        }
+
+        static inline glm::vec3 sphereIntersectTriangle(
+            const glm::vec3& sphereOrigin, float sphereRadius,
+            const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2
+        ) {
+            // Compute triangle normal
+            glm::vec3 edge1 = v1 - v0;
+            glm::vec3 edge2 = v2 - v0;
+            glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+            // Compute perpendicular distance from sphere center to triangle plane
+            float distance = glm::dot(sphereOrigin - v0, normal);
+
+            // Distance > Radius = No intersection
+            if (std::abs(distance) > sphereRadius) return glm::vec3(-1.0f);
+
+            // Project sphere origin onto triangle plane
+            glm::vec3 projectedPoint = sphereOrigin - distance * normal;
+
+            // Compute barycentric coordinates
+            glm::vec3 v0v1 = v1 - v0;
+            glm::vec3 v0v2 = v2 - v0;
+            glm::vec3 v0p  = projectedPoint - v0;
+            
+            float d00 = glm::dot(v0v1, v0v1);
+            float d01 = glm::dot(v0v1, v0v2);
+            float d11 = glm::dot(v0v2, v0v2);
+            float d20 = glm::dot(v0p,  v0v1);
+            float d21 = glm::dot(v0p,  v0v2);
+
+            float denom = d00 * d11 - d01 * d01;
+            if (denom == 0.0f) return glm::vec3(-1.0f); // Degenerate triangle
+
+            float v = (d11 * d20 - d01 * d21) / denom;
+            float w = (d00 * d21 - d01 * d20) / denom;
+            float u = 1.0f - v - w;
+
+            // Check if point is inside triangle
+            if (u >= 0 && v >= 0 && w >= 0) {
+                return glm::vec3(u, v, std::abs(distance));
+            }
+
+            return glm::vec3(-1.0f); // Outside triangle
+        }
+    
     };
 }

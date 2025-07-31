@@ -98,11 +98,8 @@ void Application::initVulkan() {
 
     // Load all maps
 
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/LivingRoom.obj");
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/cube.obj");
     Az3D::Material mapMaterial;
-    mapMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    mapMaterial.roughness = 0.7f;
-    mapMaterial.metallic = 0.1f;
     mapMaterial.diffTxtr = texManager.addTexture("Model/de_dust2.png");
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
@@ -110,22 +107,19 @@ void Application::initVulkan() {
 
     size_t playerMeshIndex = meshManager.loadMeshFromOBJ("Model/Selen.obj");
     Az3D::Material playerMaterial;
-    playerMaterial.albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    playerMaterial.roughness = 0.4f;
-    playerMaterial.metallic = 0.0f;
     playerMaterial.diffTxtr = texManager.addTexture("Model/Selen.png");
     size_t playerMaterialIndex = matManager.addMaterial(playerMaterial);
 
 
     // Create models using indices
-    models.resize(2);
+    models.resize(1);
 
     // Map model
 
     models[0] = Az3D::Model(mapMeshIndex, 0);
-    models[0].trform.pos = glm::vec3(0.0f, -1.0f, .0f);
-    // models[0].trform.scale(1.5f);
-    // models[0].trform.rotateX(glm::radians(-90.0f));
+    // models[0].trform.pos = glm::vec3(20.0f, 0.0f, 0.0f);
+    // models[0].trform.scale(3.0f);
+    models[0].trform.rotateZ(glm::radians(-45.0f));
 
     gameMap.meshIndex = models[0].meshIndex;
     gameMap.trform = models[0].trform;
@@ -134,36 +128,37 @@ void Application::initVulkan() {
 
     // Player model
 
-    models[1] = Az3D::Model(playerMeshIndex, playerMaterialIndex);
-    models[1].trform.scale(0.1f);
-    models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
+    // models[1] = Az3D::Model(playerMeshIndex, playerMaterialIndex);
+    // models[1].trform.scale(0.1f);
+    // models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
     // Create particles for testing
 
-    size_t billBoardTexture = texManager.addTexture("Model/Star.png");
+    size_t billBoardTexture = texManager.addTexture("Model/Circle.png");
     
-    size_t particleCount = 1000;
+    size_t particleCount = 1;
     particles.resize(particleCount);
     particles_direction.resize(particleCount);
     particles_velocity.resize(particleCount);
 
-    // glm::vec2 particle_range_x = glm::vec2(-50.0f, 50.0f);
-    // glm::vec2 particle_range_y = glm::vec2(-20.0f, 20.0f);
-    // glm::vec2 particle_range_z = glm::vec2(-50.0f, 50.0f);
-    glm::vec2 particle_range_x = { 0.0f, 0.0f };
-    glm::vec2 particle_range_y = { 0.0f, 0.0f };
-    glm::vec2 particle_range_z = { 0.0f, 0.0f };
+    glm::vec2 particle_range_x = glm::vec2(-20.0f, 20.0f);
+    glm::vec2 particle_range_y = glm::vec2(10.0f, 30.0f);
+    glm::vec2 particle_range_z = glm::vec2(-20.0f, 20.0f);
+
+    // glm::vec2 particle_range_x = { 0.0f, 0.0f };
+    // glm::vec2 particle_range_y = { 0.0f, 0.0f };
+    // glm::vec2 particle_range_z = { 0.0f, 0.0f };
     glm::vec2 particle_size_range = glm::vec2(0.05f, 0.1f);
-    glm::vec2 particle_velocity_range = glm::vec2(0.5f, 2.0f);
+    glm::vec2 particle_velocity_range = glm::vec2(1.5f, 3.0f);
 
     for (size_t i = 0; i < particleCount; ++i) {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<float> dis(0.0f, 1.0f);
 
-        glm::vec4 randomColor(dis(gen), dis(gen), dis(gen), 0.7f);
-        glm::vec3 randomDirection(dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f);
-        randomDirection = glm::normalize(randomDirection);
+        // // glm::vec4 randomColor(dis(gen), dis(gen), dis(gen), 1.0f);
+        // glm::vec3 randomDirection(dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f, dis(gen) * 2.0f - 1.0f);
+        // randomDirection = glm::normalize(randomDirection);
 
         glm::vec3 randomPosition(
             dis(gen) * (particle_range_x.y - particle_range_x.x) + particle_range_x.x,
@@ -171,15 +166,29 @@ void Application::initVulkan() {
             dis(gen) * (particle_range_z.y - particle_range_z.x) + particle_range_z.x
         );
 
-        float randomVelocity = dis(gen) * (particle_velocity_range.y - particle_velocity_range.x) + particle_velocity_range.x;
-        float randomSize = dis(gen) * (particle_size_range.y - particle_size_range.x) + particle_size_range.x;
+        // float randomVelocity = dis(gen) * (particle_velocity_range.y - particle_velocity_range.x) + particle_velocity_range.x;
+        // float randomSize = dis(gen) * (particle_size_range.y - particle_size_range.x) + particle_size_range.x;
+
+        // particles[i] = Az3D::Billboard(
+        //     randomPosition, randomSize, randomSize, billBoardTexture, glm::vec4(1.0f)
+        // );
+
+        // particles_direction[i] = randomDirection;
+        // particles_velocity[i] = randomVelocity;
+
+        glm::vec3 hardcode_position = glm::vec3(1.11f, -0.03f, 0.0f);
 
         particles[i] = Az3D::Billboard(
-            randomPosition, randomSize, randomSize, billBoardTexture, randomColor
+            hardcode_position, 0.1f, 0.1f, billBoardTexture, glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)
         );
 
-        particles_direction[i] = randomDirection;
-        particles_velocity[i] = randomVelocity;
+        // Generate 2 random numbers between -n and n for the x and z
+        float randomX = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
+        float randomZ = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
+        float rangeXZ = 10.0f; // Range for x and z speed
+
+        // particles_direction[i] = glm::vec3(randomX * rangeXZ, 0.0f, randomZ * rangeXZ);
+        particles_direction[i] = glm::vec3(0.0f, 0.0f, 0.0f); // Hardcoded for now
     }
 
 // PLAYGROUND END HERE 
@@ -344,7 +353,7 @@ void Application::mainLoop() {
         glm::vec3 player_pos = p_model.trform.pos + glm::vec3(0.0f, 0.2f, 0.0f);
 
         static float current_distance = cam_dist;
-        RayHit desired_hit = gameMap.closestHit(
+        HitInfo desired_hit = gameMap.closestHit(
             *meshManager.meshes[gameMap.meshIndex],
             player_pos, -camera->forward, cam_dist);
 
@@ -406,7 +415,7 @@ void Application::mainLoop() {
             horizon_dir = glm::normalize(horizon_dir);
 
         // Horizontal collision detection
-        RayHit collision = gameMap.closestHit(
+        HitInfo collision = gameMap.closestHit(
             *meshManager.meshes[gameMap.meshIndex],
             player_pos, horizon_dir, 0.1f);
 
@@ -414,9 +423,9 @@ void Application::mainLoop() {
             p_model.trform.pos += horizon_dir * p_speed;
         } else {
             // Shoot the player back based on the collision normal
-            glm::vec3 collisionNormal = collision.nrml;
+            glm::vec3 collision_normal = collision.nrml;
 
-            p_model.trform.pos -= collisionNormal * glm::dot(horizon_dir, collisionNormal);
+            p_model.trform.pos -= collision_normal * glm::dot(horizon_dir, collision_normal);
         }
 
         // // Press space to jump, simulating gravity
@@ -436,7 +445,7 @@ void Application::mainLoop() {
             velocityY = 3.0f;
         }
 
-        RayHit groundHit = gameMap.closestHit(
+        HitInfo groundHit = gameMap.closestHit(
             *meshManager.meshes[gameMap.meshIndex],
             player_pos, downward_dir, 0.2f);
         
@@ -495,6 +504,15 @@ void Application::mainLoop() {
         frame -= frame * (frame > frame_max - 1);
         frame_time -= frame_time * (frame_time > frame_time_max);
 
+        static bool physic_enable = false;
+        static bool hold_P = false;
+        if (k_state[SDL_SCANCODE_P] && !hold_P) {
+            physic_enable = !physic_enable;
+            hold_P = true;
+        } else if (!k_state[SDL_SCANCODE_P]) {
+            hold_P = false;
+        }
+
         for (size_t i = 0; i < particles_direction.size(); ++i) {
             switch (frame) {
                 case 0:
@@ -507,27 +525,32 @@ void Application::mainLoop() {
                     break;
             }
 
+            if (!physic_enable) break;
 
-            RayHit hit = gameMap.closestHit(
+            // Gravity
+            particles_direction[i] -= glm::vec3(0.0f, 9.81f * dTime, 0.0f); // Simple gravity
+
+            float velocity = glm::length(particles_direction[i]);
+            glm::vec3 direction = glm::normalize(particles_direction[i]);
+
+            // Change color based on velocity (0.0 being blue, 5.0 being red)
+            float colorFactor = glm::clamp(velocity / 5.0f, 0.0f, 1.0f);
+            particles[i].color = glm::vec4(colorFactor, 1.0f, 1.0f - colorFactor, 1.0f);
+
+
+            HitInfo map_collision = gameMap.closestHit(
                 *meshManager.meshes[gameMap.meshIndex],
-                particles[i].pos, particles_direction[i], 0.1f);
+                particles[i].pos + direction * velocity * dTime,
+                0.1f
+            );
 
-            if (hit.index != -1) {
-                // Bounce based on the collision normal
-                glm::vec3 collisionNormal = hit.nrml;
-                particles_direction[i] = glm::reflect(particles_direction[i], collisionNormal);
-
-                // Generate new color and velocity
-                std::random_device rd;
-                std::mt19937 gen(rd());
-                std::uniform_real_distribution<float> dis(0.0f, 1.0f);
-                glm::vec4 newColor(dis(gen), dis(gen), dis(gen), 0.7f);
-                particles[i].color = newColor;
-                particles_velocity[i] = dis(gen) * 0.8f + 8.2f;
-
+            if (map_collision.index == -1) {
+                particles[i].pos += direction * velocity * dTime;
             } else {
-                // Move the billboard in the direction
-                particles[i].pos += particles_direction[i] * particles_velocity[i] * dTime;
+                // Reflect the particle based on the collision normal
+                particles_direction[i] = glm::reflect(direction, map_collision.nrml);
+                particles_direction[i] *= velocity;
+                particles_direction[i].y *= 0.9f; // Dampen the velocity a bit
             }
         }
 

@@ -319,7 +319,7 @@ namespace AzVulk {
                 try {
                     VkDescriptorSet descriptorSet = billboardDescriptorManager.getDescriptorSet(currentFrame, textureIndex);
                     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                                           pipeline.billboardPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                                            pipeline.billboardPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
                     // Bind billboard instance buffer
                     VkBuffer billboardBuffers[] = {buffer.billboardInstanceBuffer};
