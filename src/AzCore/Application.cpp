@@ -20,7 +20,7 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
 
     float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     // 10KM VIEW DISTANCE!!!
-    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.01f, 10000.0f);
+    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
     camera->setAspectRatio(aspectRatio);
 
     initVulkan();
@@ -100,41 +100,27 @@ void Application::initVulkan() {
     // Load all maps
 
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
-    // Az3D::Material mapMaterial;
-    // mapMaterial.diffTxtr = texManager.addTexture("Model/de_dust2.png");
-    // size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
     // Load all entities
 
-    size_t playerMeshIndex = meshManager.loadMeshFromOBJ("Model/Selen.obj");
-    Az3D::Material playerMaterial;
-    playerMaterial.diffTxtr = texManager.addTexture("Model/Selen.png");
-    size_t playerMaterialIndex = matManager.addMaterial(playerMaterial);
-
-    // Create models using indices
-    models.resize(1);
+    size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Model/lowpoly.obj");
+    Az3D::Material sphereMaterial;
+    // sphereMaterial.diffTxtr = texManager.addTexture("Textures/Planet.png");
+    size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
 
     // Map model
 
-    models[0] = Az3D::Model(mapMeshIndex, 0);
-    models[0].trform.pos = glm::vec3(-20.0f, 0.0f, 0.0f);
+    models.push_back(Az3D::Model(mapMeshIndex, 0));
+    models.back().trform.pos = glm::vec3(-20.0f, 0.0f, 0.0f);
     // models[0].trform.scale(0.1f);
     // models[0].trform.rotateZ(glm::radians(-45.0f));
     // models[0].trform.rotateX(glm::radians(-45.0f));
 
     gameMap.meshIndex = models[0].meshIndex;
     gameMap.trform = models[0].trform;
-
     gameMap.createBVH(*meshManager.meshes[gameMap.meshIndex]);
 
-    // Player model
-
-    // models[1] = Az3D::Model(playerMeshIndex, playerMaterialIndex);
-    // models[1].trform.scale(0.1f);
-    // models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
-
-    size_t particleTexture = texManager.addTexture("Model/Circle.png");
-    particleManager.initParticles(1000, particleTexture, 0.1f, 0.9f);
+    particleManager.initParticles(100, sphereMeshIndex, sphereMaterialIndex, 0.1f);
 
 // PLAYGROUND END HERE 
 
@@ -421,6 +407,15 @@ void Application::mainLoop() {
 
             instances[model.meshIndex].push_back(instance);
         }
+        // Update instance buffers for the particle system
+        std::vector<ModelInstance> particleInstances;
+        particleInstances.reserve(particleManager.particleCount);
+        for (const auto& particle : particleManager.particles) {
+            ModelInstance instance{};
+            instance.modelMatrix = particle.trform.modelMatrix();
+
+            particleInstances.push_back(instance);
+        }
 
         // Track previous counts to avoid unnecessary buffer recreation
         static std::vector<size_t> prevCounts(meshCount, 0);
@@ -436,6 +431,17 @@ void Application::mainLoop() {
                 bufferRef.updateInstanceBufferForMesh(i, instances[i]);
             }
         }
+        // Update particle instance buffer
+        static size_t prevParticleCount = 0;
+
+        size_t particleMeshIndex = particleManager.meshIndex;
+        if (particleInstances.size() != prevParticleCount) {
+            if (prevParticleCount > 0) vkDeviceWaitIdle(deviceRef.device);
+            bufferRef.createInstanceBufferForMesh(particleMeshIndex, particleInstances);
+            prevParticleCount = particleInstances.size();
+        } else {
+            bufferRef.updateInstanceBufferForMesh(particleMeshIndex, particleInstances);
+        }
 
         // Billboard manipulation
 
@@ -448,8 +454,8 @@ void Application::mainLoop() {
                 // Reset the particle system to the camera position
                 physic_enable = false; // Disable physics to setup
 
-                for (size_t i = 0; i < particleManager.particles.size(); ++i) {
-                    particleManager.particles[i].pos = camRef.pos;
+                for (size_t i = 0; i < particleManager.particleCount; ++i) {
+                    particleManager.particles[i].trform.pos = camRef.pos;
 
                     glm::vec3 rnd_direction = ParticleManager::randomDirection();
                     glm::vec3 mult_direction = { 4.0f, 4.0f, 4.0f };
@@ -460,6 +466,7 @@ void Application::mainLoop() {
                         rnd_direction.z * mult_direction.z
                     };
                 }
+
             } else {
                 physic_enable = !physic_enable;
             }
@@ -476,12 +483,17 @@ void Application::mainLoop() {
 
 // =================================
 
-        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], models, particleManager.particles);
+        // Combine all models into a single vector for rendering
+        std::vector<Az3D::Model> allModels = models;
+        // Combine particle.particles into the same vector
+        allModels.insert(allModels.end(), particleManager.particles.begin(), particleManager.particles.end());
+
+        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], allModels, {});
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
-        
+
         if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsOutput).count() >= 500) {
             // Update FPS text every 500ms for smooth display
             std::string fpsText = "Az3D Engine | FPS: " + std::to_string(static_cast<int>(fpsRef.currentFPS)) +

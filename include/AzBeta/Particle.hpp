@@ -17,11 +17,14 @@ namespace AzBeta {
             ));
         }
 
-        void initParticles(size_t count, size_t txtrIdx, float radius = 0.05f, float opacity = 0.4f) {
-            textureIndex = txtrIdx;
+        void initParticles(size_t count, size_t meshIdx, size_t matIdx, float radius = 0.05f) {
+            meshIndex = meshIdx;
+            materialIndex = matIdx;
+            printf("Initializing %zu particles with mesh index %zu and material index %zu, radius %.2f\n",
+                   count, meshIndex, materialIndex, radius);
+
             particleCount = count;
             particleRadius = radius;
-            particleOpacity = opacity;
 
             float diameter = radius * 2.0f;
 
@@ -29,28 +32,38 @@ namespace AzBeta {
             particles_direction.resize(count);
             particles_velocity.resize(count);
 
+            // Link up with the models vector
             for (size_t i = 0; i < count; ++i) {
-                particles[i] = Az3D::Billboard(
-                    glm::vec3(0.0f), diameter, txtrIdx,
-                    glm::vec4(0.0f, 1.0f, 1.0f, opacity)
+                particles[i].meshIndex = meshIdx;
+                particles[i].materialIndex = matIdx;
+
+                particles[i].trform.scale(radius); // Scale to diameter
+                particles[i].trform.pos = glm::vec3(
+                    static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f,
+                    static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f,
+                    static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f
                 );
+                particles[i].trform.rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+
+                particles_direction[i] = randomDirection();
             }
         }
 
-        size_t textureIndex = 0;
-        size_t particleCount = 0;
         float particleRadius = 0.05f;
-        float particleOpacity = 0.4f;
+        size_t meshIndex = 0; // Mesh index for the particle model
+        size_t materialIndex = 0; // Material index for the particle model
 
-        std::vector<Az3D::Billboard> particles;
+        size_t particleCount = 0;
+        std::vector<Az3D::Model> particles;
         std::vector<glm::vec3> particles_direction;
         std::vector<float> particles_velocity;
 
         void update(float dTime, Az3D::Mesh& mesh, AzBeta::Map& gameMap) {
             for (size_t p = 0; p < particleCount; ++p) {
-                // If y is below a certain threshold, stop
-                if (particles[p].pos.y < -20.0f) continue;
+                Az3D::Transform& trform = particles[p].trform;
 
+                // If y is below a certain threshold, stop
+                if (trform.pos.y < -20.0f) continue;
 
                 // Gravity
                 // particles_direction[p] -= glm::vec3(0.0f, 9.81f * dTime, 0.0f); // Simple gravity
@@ -59,26 +72,26 @@ namespace AzBeta {
                 float velocity = glm::length(particles_direction[p]);
                 glm::vec3 direction = glm::normalize(particles_direction[p]);
 
-                // Change color based on velocity (0.0 being cyan, 8.0 being red)
-                float colorR = glm::clamp(velocity / 8.0f, 0.0f, 1.0f);
-                float colorGB = 1.0f - colorR; // Inverse
-                particles[p].color = glm::vec4(colorR, 0.0f, colorGB, particleOpacity);
-
                 float step = velocity * dTime;
                 if (step > particleRadius) step = particleRadius;
 
                 HitInfo map_collision = gameMap.closestHit(
                     mesh,
-                    particles[p].pos + direction * step,
+                    trform.pos + direction * step,
                     particleRadius
                 );
 
                 if (map_collision.hit) {
+                    // If distance smaller than radius, that means the particle is already inside, push it out
+                    if (map_collision.prop.z < particleRadius) {
+                        trform.pos = map_collision.vrtx + map_collision.nrml * particleRadius;
+                    }
+
                     particles_direction[p] = glm::reflect(direction, map_collision.nrml);
 
                     particles_direction[p] *= velocity * 0.8f;
                 } else {
-                    particles[p].pos += direction * step;
+                    trform.pos += direction * step;
                 }
             }
         }
