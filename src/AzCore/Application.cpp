@@ -454,7 +454,7 @@ void Application::mainLoop() {
 
                 for (size_t i = 0; i < particleManager.particleCount; ++i) {
                     particleManager.particles[i].trform.pos = camRef.pos +
-                        glm::vec3(0.0f, particleManager.particleRadius, 0.0f);
+                        glm::vec3(0.0f, particleManager.particleRadius * i, 0.0f);
 
                     glm::vec3 rnd_direction = ParticleManager::randomDirection();
                     glm::vec3 mult_direction = { 4.0f, 4.0f, 4.0f };
