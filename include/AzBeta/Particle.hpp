@@ -65,7 +65,7 @@ namespace AzBeta {
                 particles[p].color = glm::vec4(colorR, 0.0f, colorGB, particleOpacity);
 
                 float step = velocity * dTime;
-                if (step > 0.1f) step = 0.1f; // Avoid lagspike causing tunneling
+                if (step > particleRadius) step = particleRadius;
 
                 HitInfo map_collision = gameMap.closestHit(
                     mesh,

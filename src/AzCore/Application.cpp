@@ -20,7 +20,7 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
 
     float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     // 10KM VIEW DISTANCE!!!
-    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 10000.0f);
+    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.01f, 10000.0f);
     camera->setAspectRatio(aspectRatio);
 
     initVulkan();
@@ -100,9 +100,9 @@ void Application::initVulkan() {
     // Load all maps
 
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
-    Az3D::Material mapMaterial;
-    mapMaterial.diffTxtr = texManager.addTexture("Model/de_dust2.png");
-    size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
+    // Az3D::Material mapMaterial;
+    // mapMaterial.diffTxtr = texManager.addTexture("Model/de_dust2.png");
+    // size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
     // Load all entities
 
@@ -117,8 +117,8 @@ void Application::initVulkan() {
     // Map model
 
     models[0] = Az3D::Model(mapMeshIndex, 0);
-    models[0].trform.pos = glm::vec3(20.0f, 0.0f, 0.0f);
-    // models[0].trform.scale(3.0f);
+    models[0].trform.pos = glm::vec3(-20.0f, 0.0f, 0.0f);
+    // models[0].trform.scale(0.1f);
     // models[0].trform.rotateZ(glm::radians(-45.0f));
     // models[0].trform.rotateX(glm::radians(-45.0f));
 
