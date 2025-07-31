@@ -16,13 +16,14 @@ namespace AzBeta {
         */
         int l_child = -1;
         int r_child = -1;
-        size_t l_leaf = -1;
-        size_t r_leaf = -1;
+        size_t l_leaf = 0;
+        size_t r_leaf = 0;
 
     };
 
     struct HitInfo {
-        size_t index = -1;
+        bool hit = false;
+        size_t index = 0;
         glm::vec3 prop = glm::vec3(-1.0f); // {u, v, t} (u, v are for barycentric coordinates, t is distance)
 
         // Get the vertex and normal at the hit point
@@ -296,13 +297,12 @@ namespace AzBeta {
                     if (curHitProp.z >= 0.0f && curHitProp.z < hit.prop.z) {
                         hit.prop = curHitProp;
                         hit.index = idx;
+                        hit.hit = true; // Mark as hit
                     }
                 }
             }
 
-            if (hit.index == -1)
-                return { hit.index, glm::vec4(-1.0f), glm::vec3(0.0f), glm::vec3(0.0f) };
-
+            if (!hit.hit) return hit;
 
             // Retrieve the hit vertex
             glm::vec3 localVertex = rayOrg + rayDir * hit.prop.z;
@@ -326,7 +326,11 @@ namespace AzBeta {
             worldVertex = trform.rot * worldVertex;
 
             glm::vec3 worldNormal = glm::normalize(trform.rot * hit.nrml); // Rotate the normal
-            return { hitIdx, hit.prop, worldVertex, worldNormal };
+
+            hit.vrtx = worldVertex;
+            hit.nrml = worldNormal;
+
+            return hit;
         }
 
 
@@ -394,35 +398,42 @@ namespace AzBeta {
                     if (curHitProp.z >= 0.0f && curHitProp.z <= hit.prop.z) {
                         hit.prop = curHitProp;
                         hit.index = idx;
+                        hit.hit = true; // Mark as hit
                     }
                 }
             }
 
-            if (hit.index == -1) return hit;
+            if (!hit.hit) return hit;
 
-            // Retrieve the hit vertex
-            glm::vec3 localVertex = sphereOrg + hit.prop.z * glm::normalize(sphereOrg - unsortedCenters[hit.index]);
-
-            // Retrieve the hit normal
             size_t hitIdx = hit.index;
             size_t idx0 = mesh.indices[hitIdx * 3 + 0];
             size_t idx1 = mesh.indices[hitIdx * 3 + 1];
             size_t idx2 = mesh.indices[hitIdx * 3 + 2];
-            const glm::vec3& nrml0 = mesh.vertices[idx0].nrml;
-            const glm::vec3& nrml1 = mesh.vertices[idx1].nrml;
-            const glm::vec3& nrml2 = mesh.vertices[idx2].nrml;
+            
+            // Retrieve the hit normal
+            const Az3D::Vertex& vrtx0 = mesh.vertices[idx0];
+            const Az3D::Vertex& vrtx1 = mesh.vertices[idx1];
+            const Az3D::Vertex& vrtx2 = mesh.vertices[idx2];
+            hit.nrml =  vrtx0.nrml * hit.prop.x +
+                        vrtx1.nrml * hit.prop.y +
+                        vrtx2.nrml * (1.0f - hit.prop.x - hit.prop.y);
 
-            // Barycentric interpolation for normal
-            hit.nrml =  nrml0 * hit.prop.x +
-                        nrml1 * hit.prop.y +
-                        nrml2 * (1.0f - hit.prop.x - hit.prop.y);
+            // Retrieve the hit vertex (require barycentric coordinates)
+            hit.vrtx = vrtx0.pos * hit.prop.x +
+                        vrtx1.pos * hit.prop.y +
+                        vrtx2.pos * (1.0f - hit.prop.x - hit.prop.y);
 
             // Convert back to world coordinates
-            glm::vec3 worldVertex = localVertex * trform.scl + trform.pos; // Apply scale and translation
+            glm::vec3 worldVertex = hit.vrtx * trform.scl + trform.pos; // Apply scale and translation
             worldVertex = trform.rot * worldVertex;
 
             glm::vec3 worldNormal = glm::normalize(trform.rot * hit.nrml); // Rotate the normal
-            return { hitIdx, hit.prop, worldVertex, worldNormal };
+
+            hit.vrtx = worldVertex;
+            hit.nrml = worldNormal;
+            hit.hit = true; // Mark as hit
+
+            return hit;
         }
 
     // Some helper functions for intersection

@@ -6,8 +6,7 @@
 #include "AzVulk/AzVulk.hpp"
 #include "Az3D/Az3D.hpp"
 
-#include "AzBeta/Armature.hpp"
-#include "AzBeta/Map.hpp"
+#include "AzBeta/AzBeta.hpp"
 
 class Application {
 public:
@@ -48,11 +47,7 @@ private:
     std::vector<Az3D::Model> models;
     
     // Beta features
-
-    std::vector<Az3D::Billboard> particles;
-    std::vector<glm::vec3> particles_direction;
-    std::vector<float> particles_velocity;
-
+    AzBeta::ParticleManager particleManager;
     AzBeta::Map gameMap;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;

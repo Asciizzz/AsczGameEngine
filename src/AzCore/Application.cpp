@@ -6,7 +6,7 @@
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
-const bool enableValidationLayers = true;
+const bool enableValidationLayers = false;
 #endif
 
 using namespace AzVulk;
@@ -133,58 +133,8 @@ void Application::initVulkan() {
     // models[1].trform.scale(0.1f);
     // models[1].trform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    // Create particles for testing
-
-    size_t billBoardTexture = texManager.addTexture("Model/Circle.png");
-    
-    size_t particleCount = 1000;
-    particles.resize(particleCount);
-    particles_direction.resize(particleCount);
-    particles_velocity.resize(particleCount);
-
-    glm::vec2 particle_range_x = glm::vec2(-20.0f, 20.0f);
-    glm::vec2 particle_range_y = glm::vec2(10.0f, 30.0f);
-    glm::vec2 particle_range_z = glm::vec2(-20.0f, 20.0f);
-
-    // glm::vec2 particle_range_x = { 0.0f, 0.0f };
-    // glm::vec2 particle_range_y = { 0.0f, 0.0f };
-    // glm::vec2 particle_range_z = { 0.0f, 0.0f };
-    glm::vec2 particle_size_range = glm::vec2(0.05f, 0.1f);
-    glm::vec2 particle_velocity_range = glm::vec2(1.5f, 3.0f);
-
-    for (size_t i = 0; i < particleCount; ++i) {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<float> dis(0.0f, 1.0f);
-
-        glm::vec3 randomPosition(
-            dis(gen) * (particle_range_x.y - particle_range_x.x) + particle_range_x.x,
-            dis(gen) * (particle_range_y.y - particle_range_y.x) + particle_range_y.x,
-            dis(gen) * (particle_range_z.y - particle_range_z.x) + particle_range_z.x
-        );
-
-        // particles[i] = Az3D::Billboard(
-        //     randomPosition, randomSize, randomSize, billBoardTexture, glm::vec4(1.0f)
-        // );
-
-        // particles_direction[i] = randomDirection;
-        // particles_velocity[i] = randomVelocity;
-
-        glm::vec3 hardcode_position = glm::vec3(0.0f, 0.0f, 0.0f);
-
-        particles[i] = Az3D::Billboard(
-            hardcode_position, 0.1f, 0.1f, billBoardTexture, glm::vec4(0.0f, 1.0f, 1.0f, 0.6f)
-        );
-
-        // Generate 2 random numbers between -n and n for the x and z and -m and m for y
-        float randomX = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
-        float randomZ = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
-        float randomY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
-        float rangeN = 10.0f; // Range for x and z speed
-        float rangeM = 10.0f; // Range for y speed
-
-        particles_direction[i] = glm::vec3(randomX * rangeN, randomY * rangeM, randomZ * rangeN);
-    }
+    size_t particleTexture = texManager.addTexture("Model/Circle.png");
+    particleManager.init(1000, particleTexture, 0.1f, 0.5f);
 
 // PLAYGROUND END HERE 
 
@@ -489,76 +439,48 @@ void Application::mainLoop() {
 
         // Billboard manipulation
 
-        //*
-        static int frame = 0;
-        static int frame_max = 2;
-        static int frame_time = 0;
-        static int frame_time_max = 100 * dTime; // Adjust frame time based on delta time
-        frame_time++;
-        frame += frame_time > frame_time_max;
-        frame -= frame * (frame > frame_max - 1);
-        frame_time -= frame_time * (frame_time > frame_time_max);
-
-        static float particle_radius = 0.05f;
-        static float particle_opacity = 0.4f;
-
         static bool physic_enable = false;
         static bool hold_P = false;
         if (k_state[SDL_SCANCODE_P] && !hold_P) {
-            physic_enable = !physic_enable;
             hold_P = true;
+
+            if (k_state[SDL_SCANCODE_LSHIFT]) {
+                // Reset the particle system to the camera position
+                physic_enable = false; // Disable physics to setup
+
+                for (size_t i = 0; i < particleManager.particles.size(); ++i) {
+                    particleManager.particles[i].pos = camRef.pos;
+
+                    glm::vec3 rnd_direction = glm::normalize(glm::vec3(
+                        static_cast<float>(rand()) / RAND_MAX - 0.5f,
+                        static_cast<float>(rand()) / RAND_MAX - 0.5f,
+                        static_cast<float>(rand()) / RAND_MAX - 0.5f
+                    ));
+                    glm::vec3 mult_direction = { 10.0f, 10.0f, 10.0f };
+
+                    particleManager.particles_direction[i] = {
+                        rnd_direction.x * mult_direction.x,
+                        rnd_direction.y * mult_direction.y,
+                        rnd_direction.z * mult_direction.z
+                    };
+                }
+            } else {
+                physic_enable = !physic_enable;
+            }
+
         } else if (!k_state[SDL_SCANCODE_P]) {
             hold_P = false;
         }
 
-        for (size_t i = 0; i < particles_direction.size(); ++i) {
-            switch (frame) {
-                case 0:
-                    particles[i].uvMin = glm::vec2(0.0f, 0.0f);
-                    particles[i].uvMax = glm::vec2(0.5f, 1.0f);
-                    break;
-                case 1:
-                    particles[i].uvMin = glm::vec2(0.5f, 0.0f);
-                    particles[i].uvMax = glm::vec2(1.0f, 1.0f);
-                    break;
-            }
-
-            if (!physic_enable) break;
-
-            // Gravity
-            particles_direction[i] -= glm::vec3(0.0f, 9.81f * dTime, 0.0f); // Simple gravity
-
-            float velocity = glm::length(particles_direction[i]);
-            glm::vec3 direction = glm::normalize(particles_direction[i]);
-
-            // Change color based on velocity (0.0 being cyan, 5.0 being red)
-            float colorR = glm::clamp(velocity / 5.0f, 0.0f, 1.0f);
-            float colorGB = 1.0f - colorR; // Inverse for green and blue
-            particles[i].color = glm::vec4(colorR, colorGB, colorGB, particle_opacity);
-
-
-            HitInfo map_collision = gameMap.closestHit(
-                *meshManager.meshes[gameMap.meshIndex],
-                particles[i].pos + direction * velocity * dTime,
-                particle_radius
-            );
-
-            if (map_collision.index == -1) {
-                particles[i].pos += direction * velocity * dTime;
-            } else {
-                // Reflect the particle based on the collision normal
-                particles_direction[i] = glm::reflect(direction, map_collision.nrml);
-
-                particles_direction[i].y *= 0.75f * velocity; // Energy loss
-            }
-        }
+        if (physic_enable)
+            particleManager.update(dTime, *meshManager.meshes[gameMap.meshIndex], gameMap);
 
         //*/
 
 
 // =================================
 
-        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], models, particles);
+        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], models, particleManager.particles);
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
@@ -569,7 +491,10 @@ void Application::mainLoop() {
             std::string fpsText = "Az3D Engine | FPS: " + std::to_string(static_cast<int>(fpsRef.currentFPS)) +
                                     " | Avg: " + std::to_string(static_cast<int>(fpsRef.getAverageFPS())) +
                                     " | " + std::to_string(static_cast<int>(fpsRef.frameTimeMs * 10) / 10.0f) + "ms" +
-                                    " | Pipeline: " + std::to_string(pipelineIndex);
+                                    " | Pipeline: " + std::to_string(pipelineIndex) +
+                                    " | Pos: " + std::to_string(camRef.pos.x) + ", " +
+                                                 std::to_string(camRef.pos.y) + ", " +
+                                                 std::to_string(camRef.pos.z);
             SDL_SetWindowTitle(winManager.window, fpsText.c_str());
             lastFpsOutput = now;
         }

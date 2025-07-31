@@ -15,7 +15,7 @@ layout(location = 2) in vec3 fragWorldPos;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    vec3 lightPos = vec3(0.0, 0.0, 0.0);
+    vec3 lightPos = vec3(0.0, 100.0, 0.0);
 
     vec3 lightDir = normalize(lightPos - fragWorldPos);
     vec3 normal = normalize(fragWorldNrml);

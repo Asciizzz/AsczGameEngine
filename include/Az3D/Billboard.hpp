@@ -22,6 +22,9 @@ namespace Az3D {
         Billboard() = default;
         Billboard(const glm::vec3& pos, float w, float h, size_t texIndex, const glm::vec4& color)
             : pos(pos), width(w), height(h), textureIndex(texIndex), color(color) {}
+        // Same thing but with size for both width and height
+        Billboard(const glm::vec3& pos, float size, size_t texIndex, const glm::vec4& color)
+            : pos(pos), width(size), height(size), textureIndex(texIndex), color(color) {}
     };
 
 } // namespace Az3D
