@@ -20,8 +20,6 @@ namespace AzBeta {
         void initParticles(size_t count, size_t meshIdx, size_t matIdx, float radius = 0.05f) {
             meshIndex = meshIdx;
             materialIndex = matIdx;
-            printf("Initializing %zu particles with mesh index %zu and material index %zu, radius %.2f\n",
-                   count, meshIndex, materialIndex, radius);
 
             particleCount = count;
             particleRadius = radius;

@@ -443,7 +443,7 @@ void Application::mainLoop() {
             bufferRef.updateInstanceBufferForMesh(particleMeshIndex, particleInstances);
         }
 
-        // Billboard manipulation
+        printf("Particle count: %zu\n", particleManager.particleCount);
 
         static bool physic_enable = false;
         static bool hold_P = false;
