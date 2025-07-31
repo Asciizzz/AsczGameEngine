@@ -103,7 +103,7 @@ void Application::initVulkan() {
 
     // Load all entities
 
-    size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Model/lowpoly.obj");
+    size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Model/Icosphere.obj");
     Az3D::Material sphereMaterial;
     sphereMaterial.diffTxtr = texManager.addTexture("Model/Planet.png");
     size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
