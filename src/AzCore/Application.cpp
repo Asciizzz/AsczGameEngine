@@ -105,7 +105,7 @@ void Application::initVulkan() {
 
     size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Model/lowpoly.obj");
     Az3D::Material sphereMaterial;
-    // sphereMaterial.diffTxtr = texManager.addTexture("Textures/Planet.png");
+    sphereMaterial.diffTxtr = texManager.addTexture("Model/Planet.png");
     size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
 
     // Map model
@@ -442,8 +442,6 @@ void Application::mainLoop() {
         } else {
             bufferRef.updateInstanceBufferForMesh(particleMeshIndex, particleInstances);
         }
-
-        printf("Particle count: %zu\n", particleManager.particleCount);
 
         static bool physic_enable = false;
         static bool hold_P = false;
