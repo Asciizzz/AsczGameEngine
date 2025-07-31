@@ -9,6 +9,20 @@ namespace AzBeta {
         ParticleManager() = default;
         ~ParticleManager() = default;
 
+        size_t meshIndex = 0; // Mesh index for the particle model
+        size_t materialIndex = 0; // Material index for the particle model
+
+        size_t particleCount = 0;
+        std::vector<Az3D::Model> particles;
+        std::vector<glm::vec3> particles_velocity;
+        std::vector<glm::vec3> particles_angular_velocity; // For rotation
+
+        float particleRadius = 0.05f;
+        const float mass = 1.0f;          // Mass of the particle
+        const float restitution = 0.6f;   // Bounciness (0=no bounce, 1=perfect bounce)
+        const float friction = 0.4f;      // How much the surface "grabs" the ball
+
+        // Helper function to generate a random direction vector
         static inline glm::vec3 randomDirection() {
             return glm::normalize(glm::vec3(
                 static_cast<float>(rand()) / RAND_MAX - 0.5f,
@@ -24,36 +38,27 @@ namespace AzBeta {
             particleCount = count;
             particleRadius = radius;
 
-            float diameter = radius * 2.0f;
-
             particles.resize(count);
             particles_velocity.resize(count);
+            particles_angular_velocity.resize(count);
 
             // Link up with the models vector
             for (size_t i = 0; i < count; ++i) {
                 particles[i].meshIndex = meshIdx;
                 particles[i].materialIndex = matIdx;
 
-                particles[i].trform.scale(radius); // Scale to diameter
+                particles[i].trform.scale(radius); // Scale to radius
                 particles[i].trform.pos = glm::vec3(
                     static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f,
                     static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f,
                     static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f
                 );
-                particles[i].trform.rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
                 particles_velocity[i] = randomDirection();
             }
         }
 
-        float particleRadius = 0.05f;
-        size_t meshIndex = 0; // Mesh index for the particle model
-        size_t materialIndex = 0; // Material index for the particle model
-
-        size_t particleCount = 0;
-        std::vector<Az3D::Model> particles;
-        std::vector<glm::vec3> particles_velocity;
-
+        /*
         void update(float dTime, Az3D::Mesh& mesh, AzBeta::Map& gameMap) {
             for (size_t p = 0; p < particleCount; ++p) {
                 Az3D::Transform& trform = particles[p].trform;
@@ -62,7 +67,6 @@ namespace AzBeta {
                 if (trform.pos.y < -20.0f) continue;
 
                 // Gravity
-                // particles_direction[p] -= glm::vec3(0.0f, 9.81f * dTime, 0.0f); // Simple gravity
                 particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
 
                 float speed = glm::length(particles_velocity[p]);
@@ -91,6 +95,79 @@ namespace AzBeta {
                 }
             }
         }
+        */
+
+        void update(float dTime, Az3D::Mesh& mesh, AzBeta::Map& gameMap) {
+            if (particles_angular_velocity.size() != particleCount) {
+                particles_angular_velocity.resize(particleCount, glm::vec3(0.0f));
+            }
+
+            for (size_t p = 0; p < particleCount; ++p) {
+                Az3D::Transform& trform = particles[p].trform;
+                glm::vec3& velocity = particles_velocity[p];
+                glm::vec3& angular_velocity = particles_angular_velocity[p];
+
+                if (trform.pos.y < -20.0f) continue;
+
+                // Apply global gravity (for when in the air)
+                velocity.y -= 9.81f * dTime;
+                
+                float step = glm::length(velocity) * dTime;
+                if (step > particleRadius) step = particleRadius;
+
+                HitInfo map_collision = gameMap.closestHit(
+                    mesh,
+                    trform.pos + step * glm::normalize(velocity),
+                    particleRadius
+                );
+
+                if (map_collision.hit) {
+                    if (map_collision.prop.z < particleRadius) {
+                        trform.pos = map_collision.vrtx + map_collision.nrml * particleRadius;
+                    }
+
+                    glm::vec3 n = map_collision.nrml;
+
+                    // FIX #1: Apply gravity force parallel to the slope to make the ball roll down.
+                    glm::vec3 gravity_force = glm::vec3(0.0f, -9.81f * mass, 0.0f);
+                    glm::vec3 slope_gravity = gravity_force - glm::dot(gravity_force, n) * n;
+                    velocity += (slope_gravity / mass) * dTime;
+
+                    // Decompose velocity for response
+                    float v_dot_n = glm::dot(velocity, n);
+                    glm::vec3 v_normal = v_dot_n * n;
+                    glm::vec3 v_tangent = velocity - v_normal;
+
+                    // Linear Response (Bounce + Kinetic Friction)
+                    velocity = (v_tangent * (1.0f - friction)) - (v_normal * restitution);
+
+                    // Angular Response (Torque from Kinetic Friction)
+                    if (glm::length(v_tangent) > 0.0f) {
+                        float inertia = (2.0f / 5.0f) * mass * particleRadius * particleRadius;
+                        glm::vec3 r = -n * particleRadius;
+                        glm::vec3 friction_impulse = v_tangent * friction * mass;
+                        glm::vec3 torque = glm::cross(r, friction_impulse);
+                        angular_velocity += torque / inertia;
+                    }
+
+                    // FIX #2: Apply static friction to stop movement and rolling when at rest.
+                    if (glm::length(velocity) < 0.02f) {
+                        float static_friction_damping = 0.2f; // High damping factor
+                        velocity *= (1.0f - static_friction_damping);
+                        angular_velocity *= (1.0f - static_friction_damping);
+                    }
+                }
+                
+                // --- Integration ---
+                // Update position and rotation
+                trform.pos += velocity * dTime;
+                if (glm::length(angular_velocity) > 0.001f) {
+                    trform.rot = glm::angleAxis(glm::length(angular_velocity) * dTime, glm::normalize(angular_velocity)) * trform.rot;
+                    trform.rot = glm::normalize(trform.rot);
+                }
+            }
+        }
+
     };
 
 }
