@@ -27,7 +27,6 @@ namespace AzBeta {
             float diameter = radius * 2.0f;
 
             particles.resize(count);
-            particles_direction.resize(count);
             particles_velocity.resize(count);
 
             // Link up with the models vector
@@ -43,7 +42,7 @@ namespace AzBeta {
                 );
                 particles[i].trform.rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
-                particles_direction[i] = randomDirection();
+                particles_velocity[i] = randomDirection();
             }
         }
 
@@ -53,8 +52,7 @@ namespace AzBeta {
 
         size_t particleCount = 0;
         std::vector<Az3D::Model> particles;
-        std::vector<glm::vec3> particles_direction;
-        std::vector<float> particles_velocity;
+        std::vector<glm::vec3> particles_velocity;
 
         void update(float dTime, Az3D::Mesh& mesh, AzBeta::Map& gameMap) {
             for (size_t p = 0; p < particleCount; ++p) {
@@ -65,12 +63,12 @@ namespace AzBeta {
 
                 // Gravity
                 // particles_direction[p] -= glm::vec3(0.0f, 9.81f * dTime, 0.0f); // Simple gravity
-                particles_direction[p].y -= 9.81f * dTime; // Simple gravity
+                particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
 
-                float velocity = glm::length(particles_direction[p]);
-                glm::vec3 direction = glm::normalize(particles_direction[p]);
+                float speed = glm::length(particles_velocity[p]);
+                glm::vec3 direction = glm::normalize(particles_velocity[p]);
 
-                float step = velocity * dTime;
+                float step = speed * dTime;
                 if (step > particleRadius) step = particleRadius;
 
                 HitInfo map_collision = gameMap.closestHit(
@@ -85,9 +83,9 @@ namespace AzBeta {
                         trform.pos = map_collision.vrtx + map_collision.nrml * particleRadius;
                     }
 
-                    particles_direction[p] = glm::reflect(direction, map_collision.nrml);
+                    particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
 
-                    particles_direction[p] *= velocity * 0.8f;
+                    particles_velocity[p] *= speed * 0.8f;
                 } else {
                     trform.pos += direction * step;
                 }

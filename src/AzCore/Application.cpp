@@ -99,13 +99,13 @@ void Application::initVulkan() {
 
     // Load all maps
 
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Model/de_dust2.obj");
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj");
 
     // Load all entities
 
-    size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Model/Icosphere.obj");
+    size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/Icosphere.obj");
     Az3D::Material sphereMaterial;
-    sphereMaterial.diffTxtr = texManager.addTexture("Model/Planet.png");
+    sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Planet.png");
     size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
 
     // Map model
@@ -458,7 +458,7 @@ void Application::mainLoop() {
                     glm::vec3 rnd_direction = ParticleManager::randomDirection();
                     glm::vec3 mult_direction = { 4.0f, 4.0f, 4.0f };
 
-                    particleManager.particles_direction[i] = {
+                    particleManager.particles_velocity[i] = {
                         rnd_direction.x * mult_direction.x,
                         rnd_direction.y * mult_direction.y,
                         rnd_direction.z * mult_direction.z
