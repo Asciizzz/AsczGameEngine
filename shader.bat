@@ -6,5 +6,3 @@ glslc Shaders/Rasterize/raster1.frag -o Shaders/Rasterize/raster1.frag.spv
 
 glslc Shaders/Billboard/billboard.vert -o Shaders/Billboard/billboard.vert.spv
 glslc Shaders/Billboard/billboard.frag -o Shaders/Billboard/billboard.frag.spv
-
-pause

@@ -194,4 +194,3 @@ echo To test on another machine:
 echo   1. Copy entire '%RELEASE_DIST_NAME%' folder
 echo   2. Run 'launch.bat' for automatic checking
 echo.
-pause
