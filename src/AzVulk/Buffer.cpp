@@ -403,49 +403,6 @@ namespace AzVulk {
         }
     }
 
-    // New matrix-based methods for better performance
-    void Buffer::createInstanceBufferForMesh(size_t meshIndex, const std::vector<glm::mat4>& matrices) {
-        if (meshIndex >= meshBuffers.size()) {
-            throw std::runtime_error("Invalid mesh index for instance buffer creation!");
-        }
-        
-        auto& meshBuffer = meshBuffers[meshIndex];
-        VkDeviceSize bufferSize = sizeof(glm::mat4) * matrices.size();
-        meshBuffer.instanceCount = static_cast<uint32_t>(matrices.size());
-
-        // Clean up existing buffer if it exists
-        if (meshBuffer.instanceBuffer != VK_NULL_HANDLE) {
-            if (meshBuffer.instanceBufferMapped) {
-                vkUnmapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory);
-            }
-            vkDestroyBuffer(vulkanDevice.device, meshBuffer.instanceBuffer, nullptr);
-            vkFreeMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, nullptr);
-        }
-
-        createBuffer(bufferSize, 
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    meshBuffer.instanceBuffer, meshBuffer.instanceBufferMemory);
-
-        // Map the buffer for updates
-        vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);
-        
-        // Copy initial data
-        memcpy(meshBuffer.instanceBufferMapped, matrices.data(), bufferSize);
-    }
-
-    void Buffer::updateInstanceBufferForMesh(size_t meshIndex, const std::vector<glm::mat4>& matrices) {
-        if (meshIndex >= meshBuffers.size()) {
-            return; // Silently fail for invalid mesh index
-        }
-
-        auto& meshBuffer = meshBuffers[meshIndex];
-        if (meshBuffer.instanceBufferMapped && matrices.size() <= meshBuffer.instanceCount) {
-            VkDeviceSize bufferSize = sizeof(glm::mat4) * matrices.size();
-            memcpy(meshBuffer.instanceBufferMapped, matrices.data(), bufferSize);
-        }
-    }
-
     void Buffer::createBillboardInstanceBuffer(const std::vector<BillboardInstance>& instances) {
         VkDeviceSize bufferSize = sizeof(BillboardInstance) * instances.size();
         billboardInstanceCount = static_cast<uint32_t>(instances.size());

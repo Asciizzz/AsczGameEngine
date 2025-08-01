@@ -96,12 +96,7 @@ namespace AzVulk {
         void createInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances);
         void updateInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances);
         
-        // New multi-mesh methods with matrix arrays for better performance
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
-        void createInstanceBufferForMesh(size_t meshIndex, const std::vector<glm::mat4>& matrices);
-        void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<glm::mat4>& matrices);
-        
-        // Legacy multi-mesh methods (deprecated - use matrix versions)
         void createInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
         void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
         
