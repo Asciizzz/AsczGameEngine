@@ -100,11 +100,14 @@ void Application::initVulkan() {
 
     // Load all maps (with BVH enabled for collision detection)
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
-    // Az3D::Material mapMaterial;
-    // mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
+    Az3D::Material mapMaterial;
+    mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
     // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
-    // size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
-    size_t mapMaterialIndex = 0; // Use default material
+
+    // By logic it should works fine, but we got the vector subscript out of range error
+    mapMaterial.diffTxtr = 0;
+
+    size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
     // Load all entities
     size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/Icosphere.obj");
