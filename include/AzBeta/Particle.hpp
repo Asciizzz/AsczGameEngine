@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Az3D/Az3D.hpp"
-#include "Az3D/RenderingSystem.hpp"
 #include <execution>
 #include <algorithm>
 

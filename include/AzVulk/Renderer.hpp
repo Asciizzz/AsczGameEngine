@@ -10,7 +10,6 @@
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
 #include "Az3D/Az3D.hpp"
-#include "Az3D/RenderingSystem.hpp"
 
 namespace AzCore {
     class Camera;

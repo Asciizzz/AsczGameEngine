@@ -8,4 +8,4 @@
 #include "Az3D/Light.hpp"
 #include "Az3D/Billboard.hpp"
 #include "Az3D/ResourceManager.hpp"
-#include "Az3D/RenderingSystem.hpp"
+#include "Az3D/RenderSystem.hpp"

@@ -1,4 +1,4 @@
-#include "Az3D/RenderingSystem.hpp"
+#include "Az3D/RenderSystem.hpp"
 
 namespace Az3D {
 
