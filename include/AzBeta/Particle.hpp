@@ -21,7 +21,7 @@ namespace AzBeta {
         std::vector<glm::vec3> particles_velocity;
         std::vector<glm::vec3> particles_angular_velocity; // For rotation
 
-        float particleRadius = 0.05f;
+        float radius = 0.05f;
         const float mass = 1.0f;          // Mass of the particle
         const float restitution = 0.6f;   // Bounciness (0=no bounce, 1=perfect bounce)
         const float friction = 0.4f;      // How much the surface "grabs" the ball
@@ -35,11 +35,11 @@ namespace AzBeta {
             ));
         }
 
-        void initParticles(size_t count, size_t modelResIdx, float radius = 0.05f) {
+        void initParticles(size_t count, size_t modelResIdx, float r = 0.05f) {
             modelResourceIndex = modelResIdx;
 
             particleCount = count;
-            particleRadius = radius;
+            radius = r;
 
             particles.resize(count);
             particles_velocity.resize(count);
@@ -99,30 +99,29 @@ namespace AzBeta {
                 particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
 
                 float speed = glm::length(particles_velocity[p]);
-                if (speed > 0.001f) { // Avoid division by zero
-                    glm::vec3 direction = glm::normalize(particles_velocity[p]);
+                glm::vec3 direction = glm::normalize(particles_velocity[p]);
 
-                    float step = speed * dTime;
-                    if (step > particleRadius) step = particleRadius;
+                float step = speed * dTime; // Limit step to diameter
+                if (step > radius * 2.0f) step = radius * 2.0f;
 
-                    Az3D::HitInfo map_collision = mesh.closestHit(
-                        particles[p].pos + direction * step,
-                        particleRadius,
-                        meshTransform
-                    );
+                Az3D::HitInfo map_collision = mesh.closestHit(
+                    particles[p].pos + direction * step,
+                    radius,
+                    meshTransform
+                );
 
-                    if (map_collision.hit) {
-                        // If distance smaller than radius, that means the particle is already inside, push it out
-                        if (map_collision.prop.z < particleRadius) {
-                            particles[p].pos = map_collision.vrtx + map_collision.nrml * particleRadius;
-                        }
-
-                        particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
-                        particles_velocity[p] *= speed * 0.7f; // Physically impossible lol
-                    } else {
-                        particles[p].pos += direction * step;
+                if (map_collision.hit) {
+                    // If distance smaller than radius, that means the particle is already inside, push it out
+                    if (map_collision.prop.z < radius) {
+                        particles[p].pos = map_collision.vrtx + map_collision.nrml * radius;
                     }
+
+                    particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
+                    particles_velocity[p] *= speed * 0.8f;
+                } else {
+                    particles[p].pos += direction * step;
                 }
+
             });
         }
 
