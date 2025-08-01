@@ -10,6 +10,7 @@
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
 #include "Az3D/Az3D.hpp"
+#include "Az3D/RenderingSystem.hpp"
 
 namespace AzCore {
     class Camera;
@@ -27,9 +28,15 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        void drawFrame( RasterPipeline& pipeline,
-                        const std::vector<Az3D::Model>& models, 
-                        const std::vector<Az3D::Billboard>& billboards = {});
+        // New render system-based draw function
+        void drawFrame(RasterPipeline& pipeline,
+                       Az3D::RenderSystem& renderSystem,
+                       const std::vector<Az3D::Billboard>& billboards = {});
+
+        // Legacy draw function (deprecated)
+        void drawFrame(RasterPipeline& pipeline,
+                       const std::vector<Az3D::Model>& models, 
+                       const std::vector<Az3D::Billboard>& billboards = {});
 
         void setupBillboardDescriptors();
 

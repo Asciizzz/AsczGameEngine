@@ -16,6 +16,18 @@ namespace AzVulk {
         alignas(16) glm::mat4 view;
     };
 
+    // Material properties for per-material uniform buffer
+    struct MaterialUBO {
+        alignas(16) glm::vec3 albedoColor;
+        alignas(4) float roughness;
+        alignas(16) glm::vec3 emissiveColor;
+        alignas(4) float metallic;
+        alignas(4) float specular;
+        alignas(4) float opacity;
+        alignas(4) float nrmlIntensity;
+        alignas(4) float aoIntensity;
+    };
+
     // Instance data structure for instanced rendering
     struct ModelInstance {
         alignas(16) glm::mat4 modelMatrix;
@@ -26,13 +38,13 @@ namespace AzVulk {
 
     // Billboard instance data structure for billboard rendering
     struct BillboardInstance {
-        alignas(16) glm::vec3 pos;
+        alignas(16) glm::vec3 position;
         alignas(4) float width;
         alignas(4) float height;
         alignas(4) uint32_t textureIndex;
         alignas(8) glm::vec2 uvMin;  // AB1 - top-left UV
         alignas(8) glm::vec2 uvMax;  // AB2 - bottom-right UV
-        alignas(16) glm::vec4 color; // Color multiplier (RGBA)
+        alignas(16) glm::vec4 color;  // Color multiplier (RGBA)
 
         static VkVertexInputBindingDescription getBindingDescription();
         static std::array<VkVertexInputAttributeDescription, 7> getAttributeDescriptions();
@@ -88,13 +100,23 @@ namespace AzVulk {
         void createIndexBuffer(const std::vector<uint16_t>& indices);
         void createIndexBuffer(const std::vector<uint32_t>& indices);
         void createUniformBuffers(size_t count);
+        
+        // Material uniform buffer methods
+        void createMaterialUniformBuffers(const std::vector<Az3D::Material>& materials);
+        void updateMaterialUniformBuffer(size_t materialIndex, const Az3D::Material& material);
+        VkBuffer getMaterialUniformBuffer(size_t materialIndex) const;
+        
         void loadMesh(const Az3D::Mesh& mesh);
         void createVertexBuffer(const Az3D::Mesh& mesh);
         void createInstanceBuffer(const std::vector<ModelInstance>& instances);
         void updateInstanceBuffer(const std::vector<ModelInstance>& instances);
         
-        // New multi-mesh methods
+        // New multi-mesh methods with matrix arrays for better performance
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
+        void createInstanceBufferForMesh(size_t meshIndex, const std::vector<glm::mat4>& matrices);
+        void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<glm::mat4>& matrices);
+        
+        // Legacy multi-mesh methods (deprecated - use matrix versions)
         void createInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances);
         void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances);
         
@@ -136,6 +158,11 @@ namespace AzVulk {
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;
         std::vector<void*> uniformBuffersMapped;
+        
+        // Material uniform buffers
+        std::vector<VkBuffer> materialUniformBuffers;
+        std::vector<VkDeviceMemory> materialUniformBuffersMemory;
+        std::vector<void*> materialUniformBuffersMapped;
 
         // Helper methods (now public for direct access)
         void createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 

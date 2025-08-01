@@ -88,6 +88,7 @@ void Application::initVulkan() {
     buffer->createUniformBuffers(2);
 
     resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
+    renderSystem = std::make_unique<Az3D::RenderSystem>();
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->descriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
@@ -98,29 +99,35 @@ void Application::initVulkan() {
 // PLAYGROUND FROM HERE!
 
     // Load all maps
-
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj");
+    
+    // Create default material for map (material index 0)
+    Az3D::Material mapMaterial;
+    // Default material properties - no special textures
+    size_t mapMaterialIndex = 0; // Use material index 0 for default
 
     // Load all entities
-
     size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/Icosphere.obj");
     Az3D::Material sphereMaterial;
     sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Planet.png");
     size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
 
-    // Map model
+    // Setup map transform and BVH
+    Az3D::Transform mapTransform;
+    mapTransform.pos = glm::vec3(-20.0f, 0.0f, 0.0f);
+    // mapTransform.scale(0.1f);
+    // mapTransform.rotateZ(glm::radians(-45.0f));
+    // mapTransform.rotateX(glm::radians(-45.0f));
 
-    models.push_back(Az3D::Model(mapMeshIndex, 0));
-    models.back().trform.pos = glm::vec3(-20.0f, 0.0f, 0.0f);
-    // models[0].trform.scale(0.1f);
-    // models[0].trform.rotateZ(glm::radians(-45.0f));
-    // models[0].trform.rotateX(glm::radians(-45.0f));
-
-    gameMap.meshIndex = models[0].meshIndex;
-    gameMap.trform = models[0].trform;
+    gameMap.meshIndex = mapMeshIndex;
+    gameMap.trform = mapTransform;
     gameMap.createBVH(*meshManager.meshes[gameMap.meshIndex]);
 
-    particleManager.initParticles(100, sphereMeshIndex, sphereMaterialIndex, 0.1f);
+    // Create model resources for render system
+    mapModelResourceIndex = renderSystem->addModelResource(mapMeshIndex, mapMaterialIndex);
+    size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
+
+    particleManager.initParticles(1000, sphereModelResourceIndex, 0.1f);
 
 // PLAYGROUND END HERE 
 
@@ -260,7 +267,7 @@ void Application::mainLoop() {
 // ======== PLAYGROUND HERE! ========
 
 
-        //*
+        // Camera movement controls
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
         float p_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
@@ -273,175 +280,14 @@ void Application::mainLoop() {
 
         camRef.pos = camPos;
 
-        //*/
-
-        /*
-        auto& p_model = models[1];
-        static float p_vy = 0.0f;
-
-        // 3rd person camera positioning
-
-        glm::vec3 player_pos = p_model.trform.pos + glm::vec3(0.0f, 0.2f, 0.0f);
-
-        static float current_distance = cam_dist;
-        HitInfo desired_hit = gameMap.closestHit(
-            *meshManager.meshes[gameMap.meshIndex],
-            player_pos, -camera->forward, cam_dist);
-
-        if (desired_hit.index == -1) {
-            desired_hit.prop.z = cam_dist; // Default to cam_dist if no hit
-        }
-
-        // Avoid desired distance being too small
-        // desired_distance = std::max(desired_distance, 0.5f) * 0.9f;
-
-        current_distance += (desired_hit.prop.z - current_distance) * 10.0f * dTime;
-
-        camera->pos = player_pos - camera->forward * desired_hit.prop.z;
-
-        // Move the player plush based on WASD keys
-        glm::vec3 s_right = glm::normalize(camera->right);
-        glm::vec3 s_up = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 s_backward = glm::normalize(glm::cross(s_right, s_up));
-
-        bool k_w = k_state[SDL_SCANCODE_W];
-        bool k_s = k_state[SDL_SCANCODE_S];
-        bool k_a = k_state[SDL_SCANCODE_A];
-        bool k_d = k_state[SDL_SCANCODE_D];
-        bool k_q = k_state[SDL_SCANCODE_Q];
-        bool k_e = k_state[SDL_SCANCODE_E];
-
-        bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
-        bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
-        float p_speed = (fast ? 8.0f : (slow ? 0.5f : 3.0f)) * dTime;
-
-        static glm::quat desired_rot = glm::quatLookAt(s_backward, s_up);
-        static glm::quat current_rot = p_model.trform.rot;
-
-        glm::vec3 horizon_dir = glm::vec3(0.0f);
-        if (k_w) {
-            horizon_dir -= s_backward;
-            desired_rot = glm::quatLookAt(s_backward, s_up);
-        }
-        if (k_s) {
-            horizon_dir += s_backward;
-            desired_rot = glm::quatLookAt(-s_backward, s_up);
-        }
-        if (k_a) {
-            horizon_dir -= s_right;
-            desired_rot = glm::quatLookAt(s_right, s_up);
-        }
-        if (k_d) {
-            horizon_dir += s_right;
-            desired_rot = glm::quatLookAt(-s_right, s_up);
-        }
-
-        // Interpolate rotation towards desired rotation
-        float rotationSpeed = 20.0f * dTime; // Adjust rotation speed as needed
-        current_rot = glm::slerp(current_rot, desired_rot, rotationSpeed);
-        p_model.trform.rot = current_rot;
+        // Clear and populate the render system for this frame
+        renderSystem->clearInstances();
         
-        // Uniform scaling
-        if (glm::length(horizon_dir) > 0.0f)
-            horizon_dir = glm::normalize(horizon_dir);
-
-        // Horizontal collision detection
-        HitInfo collision = gameMap.closestHit(
-            *meshManager.meshes[gameMap.meshIndex],
-            player_pos, horizon_dir, 0.1f);
-
-        if (collision.index == -1) {
-            p_model.trform.pos += horizon_dir * p_speed;
-        } else {
-            // Shoot the player back based on the collision normal
-            glm::vec3 collision_normal = collision.nrml;
-
-            p_model.trform.pos -= collision_normal * glm::dot(horizon_dir, collision_normal);
-        }
-
-        // // Press space to jump, simulating gravity
-        // p_model.trform.pos.y += p_vy * dTime;
-        // if (p_model.trform.pos.y < 0.0f) {
-        //     p_model.trform.pos.y = 0.0f; // Prevent going below ground
-        // } else {
-        //     p_vy -= 9.81f * dTime; // Apply gravity
-        // }
-
-        glm::vec3 downward_dir = glm::vec3(0.0f, -1.0f, 0.0f);
-        static float velocityY = 0.0f;
-        velocityY -= 9.81f * dTime; // Gravity effect
-        velocityY = std::max(velocityY, -10.0f); // Terminal velocity (kind of)
-
-        if (k_state[SDL_SCANCODE_SPACE]) {
-            velocityY = 3.0f;
-        }
-
-        HitInfo groundHit = gameMap.closestHit(
-            *meshManager.meshes[gameMap.meshIndex],
-            player_pos, downward_dir, 0.2f);
+        // Add the map instance 
+        renderSystem->addInstance(gameMap.trform.modelMatrix(), mapModelResourceIndex);
         
-        // No collision
-        if (groundHit.index == -1 || velocityY > 0.0f) {
-            p_model.trform.pos.y += velocityY * dTime;
-        } else {
-            velocityY = 0.0f;
-            p_model.trform.pos.y = groundHit.prop.z;
-        }
-
-        if (p_model.trform.pos.y < -10.0f) {
-            p_model.trform.pos.y = 0.0f; // Reset position if too low
-            velocityY = 0.0f; // Reset vertical velocity
-        }
-
-
-        //*/
-
-        // Update instance buffers dynamically by mesh type
-        size_t meshCount = resourceManager->meshManager->meshes.size();
-
-        std::vector<std::vector<ModelInstance>> instances(meshCount);
-
-        for (const auto& model : models) {
-            ModelInstance instance{};
-            instance.modelMatrix = model.trform.modelMatrix();
-
-            instances[model.meshIndex].push_back(instance);
-        }
-        // Update instance buffers for the particle system
-        std::vector<ModelInstance> particleInstances;
-        particleInstances.reserve(particleManager.particleCount);
-        for (const auto& particle : particleManager.particles) {
-            ModelInstance instance{};
-            instance.modelMatrix = particle.trform.modelMatrix();
-
-            particleInstances.push_back(instance);
-        }
-
-        // Track previous counts to avoid unnecessary buffer recreation
-        static std::vector<size_t> prevCounts(meshCount, 0);
-
-        for (size_t i = 0; i < instances.size(); ++i) {
-            if (instances[i].empty()) continue;
-
-            if (instances[i].size() != prevCounts[i]) {
-                if (prevCounts[i] > 0) vkDeviceWaitIdle(deviceRef.device);
-                bufferRef.createInstanceBufferForMesh(i, instances[i]);
-                prevCounts[i] = instances[i].size();
-            } else {
-                bufferRef.updateInstanceBufferForMesh(i, instances[i]);
-            }
-        }
-        // Update particle instance buffer
-        static size_t prevParticleCount = 0;
-
-        size_t particleMeshIndex = particleManager.meshIndex;
-        if (particleInstances.size() != prevParticleCount) {
-            if (prevParticleCount > 0) vkDeviceWaitIdle(deviceRef.device);
-            bufferRef.createInstanceBufferForMesh(particleMeshIndex, particleInstances);
-            prevParticleCount = particleInstances.size();
-        } else {
-            bufferRef.updateInstanceBufferForMesh(particleMeshIndex, particleInstances);
-        }
+        // Add particles to render system
+        particleManager.addToRenderSystem(*renderSystem);
 
         static bool physic_enable = false;
         static bool hold_P = false;
@@ -453,7 +299,7 @@ void Application::mainLoop() {
                 physic_enable = false; // Disable physics to setup
 
                 for (size_t i = 0; i < particleManager.particleCount; ++i) {
-                    particleManager.particles[i].trform.pos = camRef.pos +
+                    particleManager.particles[i].pos = camRef.pos +
                         glm::vec3(0.0f, particleManager.particleRadius * 2 * i, 0.0f);
 
                     glm::vec3 rnd_direction = ParticleManager::randomDirection();
@@ -477,17 +323,12 @@ void Application::mainLoop() {
         if (physic_enable)
             particleManager.update(dTime, *meshManager.meshes[gameMap.meshIndex], gameMap);
 
-        //*/
-
+        // End of particle system update
 
 // =================================
 
-        // Combine all models into a single vector for rendering
-        std::vector<Az3D::Model> allModels = models;
-        // Combine particle.particles into the same vector
-        allModels.insert(allModels.end(), particleManager.particles.begin(), particleManager.particles.end());
-
-        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], allModels, {});
+        // Use the new render system instead of combining model vectors
+        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], *renderSystem, {});
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();

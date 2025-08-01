@@ -19,6 +19,7 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/Light.cpp
     src/Az3D/Billboard.cpp
     src/Az3D/ResourceManager.cpp
+    src/Az3D/RenderingSystem.cpp
 
     src/AzVulk/Instance.cpp
     src/AzVulk/Device.cpp

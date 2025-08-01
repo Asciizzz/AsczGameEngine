@@ -43,12 +43,15 @@ private:
     
     // Az3D resource management (Mesh - Material - Texture - Light)
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
-    // Az3D scene objects (instances)
-    std::vector<Az3D::Model> models;
+    // Az3D render system for efficient batching
+    std::unique_ptr<Az3D::RenderSystem> renderSystem;
     
     // Beta features
     AzBeta::ParticleManager particleManager;
     AzBeta::Map gameMap;
+    
+    // Model resource indices for the new rendering system
+    size_t mapModelResourceIndex = 0;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkSurfaceKHR surface = VK_NULL_HANDLE;

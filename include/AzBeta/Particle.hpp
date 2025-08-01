@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Az3D/Az3D.hpp"
+#include "Az3D/RenderingSystem.hpp"
 
 namespace AzBeta {
 
@@ -9,11 +10,10 @@ namespace AzBeta {
         ParticleManager() = default;
         ~ParticleManager() = default;
 
-        size_t meshIndex = 0; // Mesh index for the particle model
-        size_t materialIndex = 0; // Material index for the particle model
+        size_t modelResourceIndex = 0; // Index into the global rendering system's model resources
 
         size_t particleCount = 0;
-        std::vector<Az3D::Model> particles;
+        std::vector<Az3D::Transform> particles; // Only store transforms, not full models
         std::vector<glm::vec3> particles_velocity;
         std::vector<glm::vec3> particles_angular_velocity; // For rotation
 
@@ -31,9 +31,8 @@ namespace AzBeta {
             ));
         }
 
-        void initParticles(size_t count, size_t meshIdx, size_t matIdx, float radius = 0.05f) {
-            meshIndex = meshIdx;
-            materialIndex = matIdx;
+        void initParticles(size_t count, size_t modelResIdx, float radius = 0.05f) {
+            modelResourceIndex = modelResIdx;
 
             particleCount = count;
             particleRadius = radius;
@@ -42,19 +41,23 @@ namespace AzBeta {
             particles_velocity.resize(count);
             particles_angular_velocity.resize(count);
 
-            // Link up with the models vector
+            // Initialize particle transforms
             for (size_t i = 0; i < count; ++i) {
-                particles[i].meshIndex = meshIdx;
-                particles[i].materialIndex = matIdx;
-
-                particles[i].trform.scale(radius); // Scale to radius
-                particles[i].trform.pos = glm::vec3(
+                particles[i].scale(radius); // Scale to radius
+                particles[i].pos = glm::vec3(
                     static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f,
                     static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f,
                     static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f
                 );
 
                 particles_velocity[i] = randomDirection();
+            }
+        }
+
+        // Add particles to rendering system
+        void addToRenderSystem(Az3D::RenderSystem& renderSystem) {
+            for (const auto& particle : particles) {
+                renderSystem.addInstance(particle.modelMatrix(), modelResourceIndex);
             }
         }
 
@@ -103,7 +106,7 @@ namespace AzBeta {
             }
 
             for (size_t p = 0; p < particleCount; ++p) {
-                Az3D::Transform& trform = particles[p].trform;
+                Az3D::Transform& trform = particles[p];
                 glm::vec3& velocity = particles_velocity[p];
                 glm::vec3& angular_velocity = particles_angular_velocity[p];
 
