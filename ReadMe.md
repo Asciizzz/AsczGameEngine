@@ -1,30 +1,31 @@
-# AsczGame Engine (Name will probably change and be worse)
+# AsczGame Engine - (*Subject to change for the worse*)
 
-Vulkan-based engine that started as “how tf do I draw a triangle” and is now somehow functional. Mostly focused on performance, and pretty proud of it I guess.
+A Vulkan-based engine that started as “how tf do I draw a triangle” and somehow evolved into something *functional*. Performance-focused and kinda proud of it, actually.
 
 ---
 
-## What Got Done Recently
+## Recent Progress
 
-### Rendering Stuff
+### Rendering
 
-* Rebuilt the entire batching/instancing system because the old one made me physically ill.
-* Went from "barely draws 100k tris" to "2.7 million at 500 FPS".
-* Now supports actual materials. Pretty weird how I didn't realize the lack of it before.
-* Overlapping geometry doesn’t tank framerate anymore, so I guess that’s fixed.
+* **Total instancing/batching rework** — old system made me physically ill.
+* Went from barely rendering **100k triangles** to **2.7 million at 500 FPS**.
+* **Flexible material system** added. Can’t believe I didn’t have one before.
+* Overlapping geometry? **No longer tanks framerate.** We win these.
 
-### Physics Stuff
+### Physics
 
-* Made a BVH system for mesh collision. Works on my old AsczEngineRT_v0, and still holds up now, so that's nice.
-* Spatial grid system for particle-to-particle collisions. No more O(n²) shame.
-* 1000 particles with full collision running at 1000 FPS. No GPU-side physics yet, but the CPU’s not complaining, so a win in my book.
+<!-- * Built a **BVH system** for mesh collision — originally made for *AsczEngineRT\_v0*, still holds up. -->
+* Built a **BVH system** for mesh collision — originally made for ![AsczEngineRT_v0](https://github.com/Asciizzz/AsczEngineRT-v0).
+* Added **spatial grid** for particle-particle collisions. Goodbye O(n²) shame.
+* **1000 particles** with full collision at **1000 FPS** (CPU-side only, GPU chilling for now).
 
 ### Build Config & Runtime
 
-* Turns out I was testing in debug mode like the fcking idiot I am.
-* Switching to release mode reduced the binary size from 2.9MB to 600KB and increased performance by a *completely reasonable* 1000%.
-* Can now run 2.7 million triangles and 1000+ particles while keeping 400–1000 FPS depending on how cursed the scene is.
-* Portable build works. No Vulkan SDK needed. And I swear it's not a virus, just open it and fill in the credit card info, especially the 3 wacky numbers on the back and the expiration date.
+* Discovered I was testing in **Debug mode** like an absolute amateur.
+* Switching to **Release** shrunk the binary from 2.9MB → 600KB and boosted perf by *only* **1000%**.
+* Can now handle **2.7M triangles** and **1000+ particles** while sitting at **400–1000 FPS**, depending on how cursed the scene is.
+* **Portable build works** — no Vulkan SDK needed. And no, it’s not a virus. Just open it and enter your card’s funky little 3 digits.
 
 ---
 
@@ -32,62 +33,61 @@ Vulkan-based engine that started as “how tf do I draw a triangle” and is now
 
 ### Rendering
 
-* Vulkan renderer that doesn't catch fire.
-* Actual instancing and batching, not just copy-pasting draw calls.
+* Vulkan backend that doesn’t catch fire.
+* Instancing and batching that aren’t just for-loop.
 * Material system that isn’t duct-taped to a single texture.
-* Handles a few million triangles without crying.
+* Comfortable with **millions of triangles**.
 
-### Physics (subject to change)
+### Physics
 
-* Particle collision with both map and other particles.
-* BVH for mesh collision — runs fast, probably wrong in edge cases.
-* SoA layout that made things 2x faster and 4x uglier.
-* Collision response is good enough that things bounce and don't phase into the void.
+* Particle ↔ map and particle ↔ particle collisions.
+* **BVH** for meshes — fast, maybe wrong in edge cases (don’t test it too hard).
+* Collision response: objects bounce, don’t disappear into the void.
 
 ### Build System
 
-* CMake builds with proper Debug/Release configs.
-* MSVC `/O2` and GCC `-O3` used because I like my CPU hot and my binaries small.
-* Comes with a batch script that actually makes a portable folder. You’re welcome.
+* CMake-based with proper Debug/Release configs.
+* MSVC `/O2` and GCC `-O3` — hot CPUs, small binaries.
+* `build_portable.bat` script that actually does what it says.
 
 ---
 
 ## Build Instructions
 
-**Debug Build (don’t run this unless you like low FPS):**
+**Debug Build** (don’t):
 
 ```bash
 cmake --build build --config Debug
 # Outputs AsczGame_debug.exe
 ```
 
-**Release Build (you want this one):**
+**Release Build** (yes):
 
 ```bash
 cmake --build build --config Release
 # Outputs AsczGame_release.exe
 ```
 
-**Portable Build (people want this one):**
+**Portable Build** (what people want):
 
 ```bash
 ./build_portable.bat
-# Bundles exe + DLLs into a folder that pretends to be a real product
+# Creates a folder with exe + required DLLs
 ```
 
 ---
 
-## What I Learned
+## Things I Learned
 
-* Vulkan is hell, but I sins so that cancelled out.
-* "Me when the increasing fps optimization, increase fps", who would've thought?
-
----
-
-## Final Notes
-
-* With a good backbone, good optimizations, I could focus on implementing performance intensive features without worrying about the engine collapsing.
-* Add me on CS2, and not I'm not interested in trading skins.
-  * https://steamcommunity.com/profiles/76561199223964635/
+* Vulkan is hell, but I sinned, so it cancels out.
+* FPS go up when you optimize things. Revolutionary.
+* "The hell is a Release build?" - "Oh."
 
 ---
+
+## Final Thoughts
+
+With a solid foundation and real optimizations, I can start implementing heavy features without the engine crumbling like a sandcastle in a tidal wave.
+
+Add me on CS2. No, I’m not trading skins.
+* [https://steamcommunity.com/profiles/76561199223964635/](https://steamcommunity.com/profiles/76561199223964635/)
