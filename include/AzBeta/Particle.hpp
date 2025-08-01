@@ -22,14 +22,21 @@ namespace AzBeta {
         std::vector<glm::vec3> particles_velocity;
         std::vector<glm::vec3> particles_angular_velocity; // For rotation
         std::vector<short> particles_special; // Cool rare 1% drop particles
-        std::vector<float> particles_rainbow; // For rainbow particles
+        std::vector<float> particles_rainbow; // Special scalar value for all special particles (not just rainbow)
+        std::vector<glm::vec4> push_or_pull; // Pretty special, won't go into detail
 
         // 1% drop particles will have the following effects:
         // Index 1 - 33% chance to be red - immovable
         // Index 2 - 33% chance to be blue - perfect energy gain on collision
-        // Index 3 - 33% chance to be green - 1% every frame to teleport to a random position
-        // Index 4 - 1% to be rainbow - immovable + x1.1 energy gain + 2% chance every frame
+        // Index 3 - 33% chance to be green - 1% every frame to push/pull particles
+        // Index 4 - 1% to be rainbow - immovable + x1.1 energy + 2% push
         // This meant a 0.01% chance to be rainbow lol
+        
+        // Indices of all special particles
+        std::vector<size_t> special_1;
+        std::vector<size_t> special_2;
+        std::vector<size_t> special_3;
+        std::vector<size_t> special_4;
 
         // Spatial grid for efficient collision detection
         struct SpatialGrid {
@@ -180,13 +187,15 @@ namespace AzBeta {
                 int randValue = rand() % 10000;
                 // The lucky 1%
                 if (randValue < 100) {
-                    specialEffect = (randValue < 33 ? 1 :
-                                    (randValue < 66 ? 2 :
-                                    (randValue < 99 ? 3 : 4)));
+                    if (randValue < 33) { specialEffect = 1; special_1.push_back(i); } else
+                    if (randValue < 66) { specialEffect = 2; special_2.push_back(i); } else
+                    if (randValue < 99) { specialEffect = 3; special_3.push_back(i); } else
+                    { specialEffect = 4; special_4.push_back(i); particles_rainbow[i] = rand(); }
                 }
 
-                // If rainbow effect, give them a unique starting value
-                particles_rainbow[i] = specialEffect == 4 ? rand() : 0.0f;
+                // // Hard code special effects
+                // specialEffect = 3;
+                // special_3.push_back(i);
 
                 particles_special[i] = specialEffect;
 
@@ -273,6 +282,18 @@ namespace AzBeta {
                 float ny = dy * invDistance;
                 float nz = dz * invDistance;
 
+                // Separation
+                float overlap = radius * 2.0f - distance;
+                float separationHalf = overlap * 0.5f;
+
+                particles[i].pos.x += nx * separationHalf;
+                particles[i].pos.y += ny * separationHalf;
+                particles[i].pos.z += nz * separationHalf;
+                
+                particles[j].pos.x -= nx * separationHalf;
+                particles[j].pos.y -= ny * separationHalf;
+                particles[j].pos.z -= nz * separationHalf;
+
                 // Velocity resolution
                 glm::vec3& vel1 = particles_velocity[i];
                 glm::vec3& vel2 = particles_velocity[j];
@@ -306,13 +327,13 @@ namespace AzBeta {
                     vel2.z -= impulseZ;
                 // If the first particle is special, transfer the entire impulse to the second particle
                 } else if (isSpecial1) {
-                    vel2.x += impulseX * 2.0f;
-                    vel2.y += impulseY * 2.0f;
-                    vel2.z += impulseZ * 2.0f;
+                    vel2.x += impulseX;
+                    vel2.y += impulseY;
+                    vel2.z += impulseZ;
                 } else if (isSpecial2) {
-                    vel1.x += impulseX * 2.0f;
-                    vel1.y += impulseY * 2.0f;
-                    vel1.z += impulseZ * 2.0f;
+                    vel1.x += impulseX;
+                    vel1.y += impulseY;
+                    vel1.z += impulseZ;
                 }
             }
         }
@@ -337,10 +358,17 @@ namespace AzBeta {
                      // Default white
                     case 0: particleColor = glm::vec3(1.0f, 1.0f, 1.0f); break;
                     // 0.33% for unique rgb colors
-                    case 1: particleColor = glm::vec3(1.0f, 0.2f, 0.2f); break;
-                    case 2: particleColor = glm::vec3(0.2f, 0.2f, 1.0f); break;
-                    case 3: particleColor = glm::vec3(0.2f, 1.0f, 0.2f); break;
-                    // 0.01% for rainbow
+                    case 1: particleColor = glm::vec3(1.0f, 0.4f, 0.4f); break;
+                    case 2: particleColor = glm::vec3(0.4f, 0.4f, 1.0f); break;
+                    // If pull active, full green
+                    case 3: 
+                        particleColor = particles_rainbow[p] > 0.0f ? // Push
+                                        glm::vec3(5.0f, 10.0f, 0.0f) :
+                                        particles_rainbow[p] < 0.0f ? // Pull
+                                        glm::vec3(0.0f, 10.0f, 5.0f) :
+                                        glm::vec3(0.4f, 1.0f, 0.4f); // No effect
+                        break;
+                        // 0.01% for rainbow
                     case 4:
                         float speed = glm::length(particles_velocity[p]) + 1.0f; // Ensure the rainbow effect is always present
 
@@ -380,11 +408,49 @@ namespace AzBeta {
             glm::vec3 boundMin = spatialGrid.gridMin;
             glm::vec3 boundMax = spatialGrid.gridMax;
 
+            for (size_t g = 0; g < special_3.size(); ++g) {
+                size_t idx = special_3[g];
+
+                float sign = particles_rainbow[idx] > 0.0f ? 1.0f : -1.0f;
+
+                if (abs(particles_rainbow[idx]) > dTime * 0.5f) {
+                    particles_rainbow[idx] -= dTime * sign; // Decrease the effect over time
+                    continue;
+                } else {
+                    particles_rainbow[idx] = 0.0f; // Reset the effect
+                }
+
+                // 0.1% chance per frame to apply push/pull effect
+                if (rand() % 1000 == 0) {
+                    particles_rainbow[idx] = randomFloat(-2.0f, 2.0f); // Max 2 seconds of effect
+                }
+            }
+
             // Parallel update of all particles
             std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t p) {
                 // Gravity
                 glm::vec3 &pos = particles[p].pos;
                 glm::vec3 &vel = particles_velocity[p];
+
+                for (size_t g = 0; g < special_3.size(); ++g) {
+                    size_t idx = special_3[g];
+                    float rainbow = particles_rainbow[idx];
+                    glm::vec3 pushPos = particles[idx].pos;
+
+                    // Same particle / No effect
+                    if (idx == p || rainbow == 0 || pos == pushPos) continue;
+
+                    // Apply push or pull effect based on the signed of the timer
+                    float sign = rainbow > 0.0f ? 1.0f : -1.0f;
+
+                    glm::vec3 delta = pos - pushPos;
+
+                    float distance = glm::length(delta);
+                    glm::vec3 direction = glm::normalize(delta);
+
+                    float speed = radialPushSpeed(distance);
+                    vel += direction * speed * dTime * sign;
+                }
 
                 vel.y -= 9.81f * dTime; // Simple gravity
 
@@ -463,6 +529,26 @@ namespace AzBeta {
 
             // Handle particle-to-particle collisions after position updates
             handleParticleCollisions();
+        }
+
+
+        static inline float radialPushSpeed(float distance) {
+            const float maxRadius = 25.0f;
+            const float maxSpeed = 2.0f;
+
+            if (distance >= maxRadius) return 0.0f;
+
+            float t = distance / maxRadius;  // t = [0..1]
+            float falloff = 1.0f - t;        // Linear falloff
+
+            return maxSpeed * falloff;
+        }
+
+        static inline float randomFloat(float min, float max) {
+            static std::random_device rd;  // Only used once to seed the generator
+            static std::mt19937 gen(rd()); // Mersenne Twister RNG
+            std::uniform_real_distribution<float> dist(min, max);
+            return dist(gen);
         }
 
     };
