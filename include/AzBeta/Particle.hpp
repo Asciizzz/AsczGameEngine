@@ -2,6 +2,8 @@
 
 #include "Az3D/Az3D.hpp"
 #include "Az3D/RenderingSystem.hpp"
+#include <execution>
+#include <algorithm>
 
 namespace AzBeta {
 
@@ -57,49 +59,52 @@ namespace AzBeta {
             }
         }
 
-        // Add particles to rendering system
+        // Legacy separate functions for compatibility
         void addToRenderSystem(Az3D::RenderSystem& renderSystem) {
             for (const auto& particle : particles) {
                 renderSystem.addInstance(particle.modelMatrix(), modelResourceIndex);
             }
         }
 
-        //*
         void update(float dTime, Az3D::Mesh& mesh, const Az3D::Transform& meshTransform) {
-            for (size_t p = 0; p < particleCount; ++p) {
+            std::vector<size_t> indices(particleCount);
+            std::iota(indices.begin(), indices.end(), 0);
 
-                // If y is below a certain threshold, stop
-                if (particles[p].pos.y < -20.0f) continue;
+            // Parallel update of all particles
+            std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t p) {
+                // If y is below a certain threshold, skip update but still render
+                if (particles[p].pos.y > -20.0f) {
+                    // Gravity
+                    particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
 
-                // Gravity
-                particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
+                    float speed = glm::length(particles_velocity[p]);
+                    if (speed > 0.001f) { // Avoid division by zero
+                        glm::vec3 direction = glm::normalize(particles_velocity[p]);
 
-                float speed = glm::length(particles_velocity[p]);
-                glm::vec3 direction = glm::normalize(particles_velocity[p]);
+                        float step = speed * dTime;
+                        if (step > particleRadius) step = particleRadius;
 
-                float step = speed * dTime;
-                if (step > particleRadius) step = particleRadius;
+                        Az3D::HitInfo map_collision = mesh.closestHit(
+                            particles[p].pos + direction * step,
+                            particleRadius,
+                            meshTransform
+                        );
 
-                Az3D::HitInfo map_collision = mesh.closestHit(
-                    particles[p].pos + direction * step,
-                    particleRadius,
-                    meshTransform
-                );
+                        if (map_collision.hit) {
+                            // If distance smaller than radius, that means the particle is already inside, push it out
+                            if (map_collision.prop.z < particleRadius) {
+                                particles[p].pos = map_collision.vrtx + map_collision.nrml * particleRadius;
+                            }
 
-                if (map_collision.hit) {
-                    // If distance smaller than radius, that means the particle is already inside, push it out
-                    if (map_collision.prop.z < particleRadius) {
-                        particles[p].pos = map_collision.vrtx + map_collision.nrml * particleRadius;
+                            particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
+                            particles_velocity[p] *= speed * 0.8f;
+                        } else {
+                            particles[p].pos += direction * step;
+                        }
                     }
-
-                    particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
-
-                    particles_velocity[p] *= speed * 0.8f;
-                } else {
-                    particles[p].pos += direction * step;
                 }
-            }
-        }//*/
+            });
+        }
 
     };
 

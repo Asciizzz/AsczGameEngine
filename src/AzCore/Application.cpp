@@ -124,7 +124,7 @@ void Application::initVulkan() {
     mapModelResourceIndex = renderSystem->addModelResource(mapMeshIndex, mapMaterialIndex);
     size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
 
-    particleManager.initParticles(1000, sphereModelResourceIndex, 0.1f);
+    particleManager.initParticles(4000, sphereModelResourceIndex, 0.1f);
 
 // PLAYGROUND END HERE 
 
@@ -282,9 +282,6 @@ void Application::mainLoop() {
         
         // Add the map instance 
         renderSystem->addInstance(mapTransform.modelMatrix(), mapModelResourceIndex);
-        
-        // Add particles to render system
-        particleManager.addToRenderSystem(*renderSystem);
 
         static bool physic_enable = false;
         static bool hold_P = false;
@@ -318,8 +315,8 @@ void Application::mainLoop() {
             hold_P = false;
         }
 
-        if (physic_enable)
-            particleManager.update(dTime, *meshManager.meshes[mapMeshIndex], mapTransform);
+        particleManager.addToRenderSystem(*renderSystem);
+        if (physic_enable) particleManager.update(dTime, *meshManager.meshes[mapMeshIndex], mapTransform);
 
         // End of particle system update
 
