@@ -99,13 +99,14 @@ void Application::initVulkan() {
 // PLAYGROUND FROM HERE!
 
     // Load all maps (with BVH enabled for collision detection)
+    // Note: TextureManager constructor already creates default texture at index 0
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
     Az3D::Material mapMaterial;
     mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
     // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
 
-    // By logic it should works fine, but we got the vector subscript out of range error
-    mapMaterial.diffTxtr = 0;
+    // Now this should work fine since we loaded the default texture at index 0
+    mapMaterial.diffTxtr = 0; // Default texture is always at index 0
 
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
@@ -119,7 +120,7 @@ void Application::initVulkan() {
 
     // Setup map transform
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
-    mapTransform.scale(40.0f);
+    mapTransform.scale(1.0f);
     // mapTransform.rotateZ(glm::radians(-45.0f));
     // mapTransform.rotateX(glm::radians(-45.0f));
 
@@ -131,8 +132,9 @@ void Application::initVulkan() {
 
     particleManager.initParticles(
         100, sphereModelResourceIndex, 0.1f,
-        meshManager.meshes[mapMeshIndex]->meshMin * 40.0f,
-        meshManager.meshes[mapMeshIndex]->meshMax * 40.0f
+        // Rotation should be avoided in the first place when it comes to map meshes
+        meshManager.meshes[mapMeshIndex]->meshMin * mapTransform.scl + mapTransform.pos,
+        meshManager.meshes[mapMeshIndex]->meshMax * mapTransform.scl + mapTransform.pos
     );
 
 // PLAYGROUND END HERE 
@@ -152,9 +154,20 @@ void Application::initVulkan() {
 
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
+        
+        // Get the correct texture index from the material
+        size_t textureIndex = matManager.materials[i]->diffTxtr;
+        
+        // Safety check to prevent out of bounds access
+        if (textureIndex >= texManager.textures.size())
+            throw std::runtime_error(
+                "Material references texture index " + std::to_string(textureIndex) + 
+                " but only " + std::to_string(texManager.textures.size()) + " textures are loaded!"
+            );
+        
         descManager.createDescriptorSetsForMaterialWithUBO(
             bufferRef.uniformBuffers, sizeof(GlobalUBO), 
-            &texManager.textures[i], materialUniformBuffer, i
+            &texManager.textures[textureIndex], materialUniformBuffer, i
         );
     }
 
