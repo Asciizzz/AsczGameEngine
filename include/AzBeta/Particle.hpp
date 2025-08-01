@@ -80,9 +80,9 @@ namespace AzBeta {
             ));
         }
 
-        void initParticles(size_t count, size_t modelResIdx, float r = 0.05f, 
-                          const glm::vec3& boundsMin = glm::vec3(-86.0f, -10.0f, -77.0f),
-                          const glm::vec3& boundsMax = glm::vec3(163.0f, 132.0f, 92.0f)) {
+        void initParticles( size_t count, size_t modelResIdx, float r = 0.05f, 
+                            const glm::vec3& boundsMin = glm::vec3(-86.0f, -10.0f, -77.0f),
+                            const glm::vec3& boundsMax = glm::vec3(163.0f, 132.0f, 92.0f)) {
             modelResourceIndex = modelResIdx;
 
             particleCount = count;
@@ -242,19 +242,25 @@ namespace AzBeta {
         void addToRenderSystem(Az3D::RenderSystem& renderSystem) {
             for (size_t p = 0; p < particleCount; ++p) {
 
-                // Get particle color based on direction
-                glm::vec4 particleColor;
+                // Get particle color based on speed
+                // Gradient: Blue 0 -> Yellow 3 -> Red 10
+                
 
-                // vec3 normal = normalize(fragWorldNrml);
-                // vec3 normalColor = (normal + 1.0) * 0.5;
+                float speed = glm::length(particles_velocity[p]);
+                speed = glm::clamp(speed, 0.0f, 10.0f);
 
-                glm::vec3 direction = glm::normalize(particles_velocity[p]);
-                glm::vec3 normalColor = (direction + glm::vec3(1.0f)) * 0.5f; // Convert to [0, 1] range
+                glm::vec3 particleColor;
+
+                if (speed < 3.0f) {
+                    particleColor = glm::mix(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f), speed / 3.0f);
+                } else {
+                    particleColor = glm::mix(glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), (speed - 3.0f) / 7.0f);
+                }
 
                 Az3D::ModelInstance instance;
                 instance.modelMatrix() = particles[p].modelMatrix();
                 instance.modelResourceIndex = modelResourceIndex;
-                instance.multColor() = glm::vec4(normalColor, 1.0f);
+                instance.multColor() = glm::vec4(particleColor, 1.0f);
 
                 renderSystem.addInstance(instance);
             }

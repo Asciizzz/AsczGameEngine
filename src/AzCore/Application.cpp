@@ -99,7 +99,7 @@ void Application::initVulkan() {
 // PLAYGROUND FROM HERE!
 
     // Load all maps (with BVH enabled for collision detection)
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/cube.obj", true);
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
     // Az3D::Material mapMaterial;
     // mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
     // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
@@ -116,7 +116,7 @@ void Application::initVulkan() {
 
     // Setup map transform
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
-    mapTransform.scale(2.0f);
+    mapTransform.scale(1.0f);
     // mapTransform.rotateZ(glm::radians(-45.0f));
     // mapTransform.rotateX(glm::radians(-45.0f));
 
@@ -128,8 +128,8 @@ void Application::initVulkan() {
 
     particleManager.initParticles(
         1000, sphereModelResourceIndex, 0.1f,
-        meshManager.meshes[mapMeshIndex]->meshMin * 2.0f,
-        meshManager.meshes[mapMeshIndex]->meshMax * 2.0f
+        meshManager.meshes[mapMeshIndex]->meshMin,
+        meshManager.meshes[mapMeshIndex]->meshMax
     );
 
 // PLAYGROUND END HERE 
@@ -318,7 +318,7 @@ void Application::mainLoop() {
                         glm::vec3(0.0f, 0.0f, 0.0f);
 
                     glm::vec3 rnd_direction = ParticleManager::randomDirection();
-                    glm::vec3 mult_direction = { 40.0f, 40.0f, 40.0f };
+                    glm::vec3 mult_direction = { 10.0f, 10.0f, 10.0f };
 
                     particleManager.particles_velocity[i] = {
                         rnd_direction.x * mult_direction.x,
