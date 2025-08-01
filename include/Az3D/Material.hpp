@@ -8,8 +8,8 @@ namespace Az3D {
 
     struct Material {
         // Custom material properties exclusive to my game engine
+        glm::vec4 multColor{1.0f, 1.0f, 1.0f, 1.0f};
         int diffTxtr = 0; // Albedo/Diffuse map
-        glm::vec3 multColor{1.0f, 1.0f, 1.0f}; // Color multiplier (RGB)
     };
 
 
