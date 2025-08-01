@@ -5,6 +5,8 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <vector>
 #include <array>
 #include <memory>
@@ -25,9 +27,25 @@ namespace Az3D {
         static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
     };
 
+    // Transform structure - moved from Model.hpp
+    struct Transform {
+        glm::vec3 pos{0.0f};
+        glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
+        float scl{1.0f};
 
-    // Forward declaration for Transform
-    struct Transform;
+        void translate(const glm::vec3& translation);
+        void rotate(const glm::quat& rotation);
+        void rotateX(float radians);
+        void rotateY(float radians);
+        void rotateZ(float radians);
+        void scale(float scale);
+
+        // Legacy methods for compatibility
+        void rotate(const glm::vec3& eulerAngles);
+
+        glm::mat4 modelMatrix() const;
+        void reset();
+    };
 
     // BVH structures
     struct BVHNode {
@@ -73,6 +91,7 @@ namespace Az3D {
             }
         }
 
+        // Mesh data
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
@@ -85,13 +104,13 @@ namespace Az3D {
         std::vector<glm::vec3> unsortedCenters;
         size_t indexCount = 0; // Number of indices in the mesh
 
-        // BVH methods
+        // BVH methods (implemented in Mesh_BVH.cpp)
         void createBVH();
         void buildBVH();
-        HitInfo closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const Transform& trform) const;
-        HitInfo closestHit(const glm::vec3& center, float radius, const Transform& trform) const;
+        HitInfo closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const Transform& transform) const;
+        HitInfo closestHit(const glm::vec3& center, float radius, const Transform& transform) const;
 
-        // Helper methods for BVH
+        // Helper methods for BVH (implemented in Mesh_BVH.cpp)
         static float rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& boxMin, const glm::vec3& boxMax);
         static glm::vec3 rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
         static float sphereIntersectBox(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& boxMin, const glm::vec3& boxMax);

@@ -29,14 +29,9 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         // New render system-based draw function
-        void drawFrame(RasterPipeline& pipeline,
-                       Az3D::RenderSystem& renderSystem,
-                       const std::vector<Az3D::Billboard>& billboards = {});
-
-        // Legacy draw function (deprecated)
-        void drawFrame(RasterPipeline& pipeline,
-                       const std::vector<Az3D::Model>& models, 
-                       const std::vector<Az3D::Billboard>& billboards = {});
+        void drawFrame( RasterPipeline& pipeline,
+                        Az3D::RenderSystem& renderSystem,
+                        const std::vector<Az3D::Billboard>& billboards = {});
 
         void setupBillboardDescriptors();
 
