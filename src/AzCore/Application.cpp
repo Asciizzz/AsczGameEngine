@@ -109,6 +109,7 @@ void Application::initVulkan() {
     // Load all entities
     size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/Icosphere.obj");
     Az3D::Material sphereMaterial;
+    sphereMaterial.multColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f); // Red color
     sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Planet.png");
     size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
 
