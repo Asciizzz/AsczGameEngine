@@ -145,18 +145,16 @@ echo This is a portable release distribution of %DIST_NAME%. >> "%RELEASE_DIST_N
 echo. >> "%RELEASE_DIST_NAME%\README.txt"
 echo To run: >> "%RELEASE_DIST_NAME%\README.txt"
 echo 1. Run launch.bat for automatic compatibility checking >> "%RELEASE_DIST_NAME%\README.txt"
-echo 2. Or run %DIST_NAME%_release.exe directly >> "%RELEASE_DIST_NAME%\README.txt"
+echo 2. Or run %DIST_NAME%_release.exe directly (no virus legit pubg mobile) >> "%RELEASE_DIST_NAME%\README.txt"
 echo. >> "%RELEASE_DIST_NAME%\README.txt"
 echo Requirements: >> "%RELEASE_DIST_NAME%\README.txt"
-echo - Windows 10 or later >> "%RELEASE_DIST_NAME%\README.txt"
+echo - Windows that can open and close >> "%RELEASE_DIST_NAME%\README.txt"
 echo - Vulkan-compatible graphics card and drivers >> "%RELEASE_DIST_NAME%\README.txt"
 echo - Visual C++ runtime ^(included^) >> "%RELEASE_DIST_NAME%\README.txt"
 echo. >> "%RELEASE_DIST_NAME%\README.txt"
-echo Performance: >> "%RELEASE_DIST_NAME%\README.txt"
-echo - This is the RELEASE build with maximum optimizations >> "%RELEASE_DIST_NAME%\README.txt"
-echo - Expected performance: ~1000 FPS ^(10x faster than Debug^) >> "%RELEASE_DIST_NAME%\README.txt"
-echo - Includes Structure of Arrays particle physics optimizations >> "%RELEASE_DIST_NAME%\README.txt"
-echo. >> "%RELEASE_DIST_NAME%\README.txt"
+echo Performance Features: >> "%RELEASE_DIST_NAME%\README.txt"
+echo - Not to brag but it can handle 4000 Kasane Pearto at once >> "%RELEASE_DIST_NAME%\README.txt"
+echo - Oh and de_dust2 as well >> "%RELEASE_DIST_NAME%\README.txt"
 
 :: Build summary
 echo.
@@ -190,11 +188,6 @@ if "%RUNTIME_FOUND%"=="1" (
 
 if exist "%RELEASE_DIST_NAME%\vcomp140.dll" echo   [OK] OpenMP runtime
 
-echo.
-echo Performance Information:
-echo   Build Type: RELEASE ^(/O2 optimizations^)
-echo   Expected FPS: ~1000 ^(10x faster than Debug build^)
-echo   File Size: ~625KB ^(optimized, no debug symbols^)
 echo.
 echo Distribution is ready for deployment!
 echo To test on another machine:
