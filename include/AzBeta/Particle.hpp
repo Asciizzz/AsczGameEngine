@@ -62,30 +62,19 @@ namespace AzBeta {
         void addToRenderSystem(Az3D::RenderSystem& renderSystem) {
             for (size_t p = 0; p < particleCount; ++p) {
 
-                float speed = glm::length(particles_velocity[p]);
-                speed = glm::clamp(speed, 0.0f, 10.0f);
-
+                // Get particle color based on direction
                 glm::vec4 particleColor;
 
-                if (speed <= 5.0f) {
-                    float t = speed / 5.0f;
-                    // Interpolate from Blue to Yellow
-                    particleColor = glm::mix(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), t);
-                } else {
-                    float t = (speed - 5.0f) / 5.0f;
-                    // Interpolate from Yellow to Red
-                    particleColor = glm::mix(glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), t);
-                }
-                // // v = 0 -> cyan, v = 10 -> red
-                // float RFactor = glm::clamp(speed / 10.0f, 0.0f, 1.0f);
-                // float GBFactor = 1.0f - RFactor;
-                // glm::vec4 particleColor = glm::vec4(RFactor, GBFactor, GBFactor, 1.0f);
-                // instance.multColor() = particleColor;
+                // vec3 normal = normalize(fragWorldNrml);
+                // vec3 normalColor = (normal + 1.0) * 0.5;
+
+                glm::vec3 direction = glm::normalize(particles_velocity[p]);
+                glm::vec3 normalColor = (direction + glm::vec3(1.0f)) * 0.5f; // Convert to [0, 1] range
 
                 Az3D::ModelInstance instance;
                 instance.modelMatrix() = particles[p].modelMatrix();
                 instance.modelResourceIndex = modelResourceIndex;
-                instance.multColor() = particleColor; // Set the color based on speed
+                instance.multColor() = glm::vec4(normalColor, 1.0f);
 
                 renderSystem.addInstance(instance);
             }
@@ -95,40 +84,44 @@ namespace AzBeta {
             std::vector<size_t> indices(particleCount);
             std::iota(indices.begin(), indices.end(), 0);
 
+            glm::vec3 boundMin = glm::vec3(-86.0f, -10.0f, -77.0f);
+            glm::vec3 boundMax = glm::vec3(163.0f, 132.0f, 92.0f);
+
             // Parallel update of all particles
             std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t p) {
-                if (particles[p].pos.y > -20.0f) {
-                    // Gravity
-                    particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
+                // Bound: (-86, -10, -77) -> (163, 32, 92)
+                glm::vec3 nextPos = particles[p].pos + particles_velocity[p] * dTime;
+                particles[p].pos.x = nextPos.x < boundMin.x ? boundMax.x : (nextPos.x > boundMax.x ? boundMin.x : particles[p].pos.x);
+                particles[p].pos.y = nextPos.y < boundMin.y ? boundMax.y : (nextPos.y > boundMax.y ? boundMin.y : particles[p].pos.y);
+                particles[p].pos.z = nextPos.z < boundMin.z ? boundMax.z : (nextPos.z > boundMax.z ? boundMin.z : particles[p].pos.z);
 
-                    float speed = glm::length(particles_velocity[p]);
-                    if (speed > 0.001f) { // Avoid division by zero
-                        glm::vec3 direction = glm::normalize(particles_velocity[p]);
+                // Gravity
+                particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
 
-                        float step = speed * dTime;
-                        if (step > particleRadius) step = particleRadius;
+                float speed = glm::length(particles_velocity[p]);
+                if (speed > 0.001f) { // Avoid division by zero
+                    glm::vec3 direction = glm::normalize(particles_velocity[p]);
 
-                        Az3D::HitInfo map_collision = mesh.closestHit(
-                            particles[p].pos + direction * step,
-                            particleRadius,
-                            meshTransform
-                        );
+                    float step = speed * dTime;
+                    if (step > particleRadius) step = particleRadius;
 
-                        if (map_collision.hit) {
-                            // If distance smaller than radius, that means the particle is already inside, push it out
-                            if (map_collision.prop.z < particleRadius) {
-                                particles[p].pos = map_collision.vrtx + map_collision.nrml * particleRadius;
-                            }
+                    Az3D::HitInfo map_collision = mesh.closestHit(
+                        particles[p].pos + direction * step,
+                        particleRadius,
+                        meshTransform
+                    );
 
-                            particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
-                            particles_velocity[p] *= speed * 0.8f;
-                        } else {
-                            particles[p].pos += direction * step;
+                    if (map_collision.hit) {
+                        // If distance smaller than radius, that means the particle is already inside, push it out
+                        if (map_collision.prop.z < particleRadius) {
+                            particles[p].pos = map_collision.vrtx + map_collision.nrml * particleRadius;
                         }
+
+                        particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
+                        particles_velocity[p] *= speed * 0.7f; // Physically impossible lol
+                    } else {
+                        particles[p].pos += direction * step;
                     }
-                } else {
-                    // Flip it back to y = 20, like portals
-                    particles[p].pos.y = 20.0f;
                 }
             });
         }

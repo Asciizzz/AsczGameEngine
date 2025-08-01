@@ -125,7 +125,7 @@ void Application::initVulkan() {
     mapModelResourceIndex = renderSystem->addModelResource(mapMeshIndex, mapMaterialIndex);
     size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
 
-    particleManager.initParticles(4000, sphereModelResourceIndex, 0.1f);
+    particleManager.initParticles(1000, sphereModelResourceIndex, 0.1f);
 
 // PLAYGROUND END HERE 
 
@@ -311,7 +311,7 @@ void Application::mainLoop() {
                         glm::vec3(0.0f, 0.0f, 0.0f);
 
                     glm::vec3 rnd_direction = ParticleManager::randomDirection();
-                    glm::vec3 mult_direction = { 4.0f, 4.0f, 4.0f };
+                    glm::vec3 mult_direction = { 40.0f, 40.0f, 40.0f };
 
                     particleManager.particles_velocity[i] = {
                         rnd_direction.x * mult_direction.x,
@@ -323,7 +323,6 @@ void Application::mainLoop() {
             } else {
                 physic_enable = !physic_enable;
             }
-
         } else if (!k_state[SDL_SCANCODE_P]) {
             hold_P = false;
         }
@@ -348,9 +347,9 @@ void Application::mainLoop() {
                                     " | Avg: " + std::to_string(static_cast<int>(fpsRef.getAverageFPS())) +
                                     " | " + std::to_string(static_cast<int>(fpsRef.frameTimeMs * 10) / 10.0f) + "ms" +
                                     " | Pipeline: " + std::to_string(pipelineIndex) +
-                                    " | Pos: " + std::to_string(camRef.pos.x) + ", " +
-                                                 std::to_string(camRef.pos.y) + ", " +
-                                                 std::to_string(camRef.pos.z);
+                                    " | Pos: "+ std::to_string(camRef.pos.x) + ", " +
+                                                std::to_string(camRef.pos.y) + ", " +
+                                                std::to_string(camRef.pos.z);
             SDL_SetWindowTitle(winManager.window, fpsText.c_str());
             lastFpsOutput = now;
         }
