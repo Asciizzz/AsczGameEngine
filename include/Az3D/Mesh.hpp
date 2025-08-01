@@ -86,9 +86,7 @@ namespace Az3D {
         Mesh() = default;
         Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool hasBVH = false)
             : vertices(std::move(vertices)), indices(std::move(indices)), useBVH(hasBVH) {
-            if (hasBVH) {
-                createBVH();
-            }
+            if (hasBVH) { createBVH(); }
         }
 
         // Mesh data
@@ -96,6 +94,9 @@ namespace Az3D {
         std::vector<uint32_t> indices;
 
         // BVH data structures
+        glm::vec3 meshMin = glm::vec3(FLT_MAX);
+        glm::vec3 meshMax = glm::vec3(-FLT_MAX);
+
         bool useBVH = false;
         std::vector<BVHNode> nodes;
         std::vector<size_t> sortedIndices; // For BVH traversal

@@ -99,11 +99,12 @@ void Application::initVulkan() {
 // PLAYGROUND FROM HERE!
 
     // Load all maps (with BVH enabled for collision detection)
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
-    Az3D::Material mapMaterial;
-    mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
-    mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
-    size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/cube.obj", true);
+    // Az3D::Material mapMaterial;
+    // mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
+    // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
+    // size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
+    size_t mapMaterialIndex = 0; // Use default material
 
     // Load all entities
     size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/Icosphere.obj");
@@ -114,8 +115,8 @@ void Application::initVulkan() {
     size_t sphereMaterialIndex = 0; // Use default material
 
     // Setup map transform
-    mapTransform.pos = glm::vec3(-20.0f, 0.0f, 0.0f);
-    // mapTransform.scale(0.1f);
+    mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
+    mapTransform.scale(2.0f);
     // mapTransform.rotateZ(glm::radians(-45.0f));
     // mapTransform.rotateX(glm::radians(-45.0f));
 
@@ -144,8 +145,10 @@ void Application::initVulkan() {
 
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
-        descManager.createDescriptorSetsForMaterialWithUBO(bufferRef.uniformBuffers, sizeof(GlobalUBO), 
-                                                           &texManager.textures[i], materialUniformBuffer, i);
+        descManager.createDescriptorSetsForMaterialWithUBO(
+            bufferRef.uniformBuffers, sizeof(GlobalUBO), 
+            &texManager.textures[i], materialUniformBuffer, i
+        );
     }
 
     // Load meshes into GPU buffer

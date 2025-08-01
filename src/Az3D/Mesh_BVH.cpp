@@ -46,6 +46,9 @@ namespace Az3D {
             unsortedCenters[i] /= 3.0f;
         }
 
+        meshMin = root.min;
+        meshMax = root.max;
+
         nodes.clear();
         nodes.push_back(root);
 
@@ -301,7 +304,7 @@ namespace Az3D {
         glm::mat4 invModel = glm::inverse(transform.modelMatrix());
 
         glm::vec3 sphereOrg = glm::vec3(invModel * glm::vec4(sphere_origin, 1.0f));
-        float sphereRad = transform.scl * sphere_radius; // Apply scale to radius
+        float sphereRad = sphere_radius / transform.scl; // Apply scale to radius
 
         int nstack[MAX_DEPTH] = { 0 };
         int ns_top = 1;
