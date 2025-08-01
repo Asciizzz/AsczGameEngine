@@ -26,7 +26,7 @@ Same guy that made "2D platformer supposed to run grandma pc, struggling on 3060
 * Discovered I was testing in **Debug mode** like an absolute moron.
 * Switching to **Release** shrunk the binary from 2.9MB → 600KB and boosted perf by *only* **1000%**.
 * Can now handle **2.7M triangles** and **1000+ particles** while sitting at **400–1000 FPS**, depending on how cursed the scene is.
-* **Portable build works** — no Vulkan SDK needed. And no, it’s not a virus. Just open it and enter your card’s funky little 3 digits.
+* **Portable build works** — no Vulkan SDK needed. And no, it’s not a virus. Just open it, fill in your credits card's numbers, it's expiration date and the 3 quirky digits on the back.
 
 ---
 
