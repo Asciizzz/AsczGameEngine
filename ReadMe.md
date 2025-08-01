@@ -16,7 +16,7 @@ A Vulkan-based engine that started as “how tf do I draw a triangle” and some
 ### Physics
 
 <!-- * Built a **BVH system** for mesh collision — originally made for *AsczEngineRT\_v0*, still holds up. -->
-* Built a **BVH system** for mesh collision — originally made for ![AsczEngineRT_v0](https://github.com/Asciizzz/AsczEngineRT-v0).
+* Built a **BVH system** for mesh collision — originally made for ![AsczEngineRT_v0](https://github.com/Asciizzz/AsczEngineRT-v0), still holds up.
 * Added **spatial grid** for particle-particle collisions. Goodbye O(n²) shame.
 * **1000 particles** with full collision at **1000 FPS** (CPU-side only, GPU chilling for now).
 
