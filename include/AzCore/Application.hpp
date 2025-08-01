@@ -48,7 +48,10 @@ private:
     
     // Beta features
     AzBeta::ParticleManager particleManager;
-    AzBeta::Map gameMap;
+    
+    // Map data (formerly from AzBeta::Map)
+    size_t mapMeshIndex = 0;
+    Az3D::Transform mapTransform;
     
     // Model resource indices for the new rendering system
     size_t mapModelResourceIndex = 0;

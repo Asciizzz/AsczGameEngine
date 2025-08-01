@@ -9,6 +9,9 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <algorithm>
+#include <iostream>
+#include <queue>
 
 namespace Az3D {
 
@@ -23,16 +26,78 @@ namespace Az3D {
     };
 
 
+    // Forward declaration for Transform
+    struct Transform;
+
+    // BVH structures
+    struct BVHNode {
+        glm::vec3 min;
+        glm::vec3 max;
+
+        /* Note:
+        -1 children means leaf
+        Leaf range is [l_leaf, r_leaf)
+        */
+        int l_child = -1;
+        int r_child = -1;
+        size_t l_leaf = 0;
+        size_t r_leaf = 0;
+    };
+
+    struct HitInfo {
+        bool hit = false;
+        bool hasHit = false; // Keep both for compatibility
+        size_t index = 0;
+        uint32_t triangleIndex = 0; // Keep both for compatibility
+        glm::vec3 prop = glm::vec3(-1.0f); // {u, v, t} (u, v are for barycentric coordinates, t is distance)
+        glm::vec3 barycentric{}; // Keep both for compatibility
+        float t = 1e30f; // Keep both for compatibility
+        
+        // Get the vertex and normal at the hit point
+        glm::vec3 vrtx = glm::vec3(0.0f);
+        glm::vec3 pos{}; // Keep both for compatibility  
+        glm::vec3 nrml = glm::vec3(0.0f);
+        glm::vec3 normal{}; // Keep both for compatibility
+        uint32_t materialId = 0;
+    };
+
     struct Mesh {
+        static constexpr size_t MAX_DEPTH = 32;
+        static constexpr size_t BIN_COUNT = 11;
+
         Mesh() = default;
         Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool hasBVH = false)
-            : vertices(std::move(vertices)), indices(std::move(indices)) {}
+            : vertices(std::move(vertices)), indices(std::move(indices)), useBVH(hasBVH) {
+            if (hasBVH) {
+                createBVH();
+            }
+        }
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
-        static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath, bool hasBVH = false);
+        // BVH data structures
+        bool useBVH = false;
+        std::vector<BVHNode> nodes;
+        std::vector<size_t> sortedIndices; // For BVH traversal
+        std::vector<glm::vec3> unsortedABmin;
+        std::vector<glm::vec3> unsortedABmax;
+        std::vector<glm::vec3> unsortedCenters;
+        size_t indexCount = 0; // Number of indices in the mesh
 
+        // BVH methods
+        void createBVH();
+        void buildBVH();
+        HitInfo closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const Transform& trform) const;
+        HitInfo closestHit(const glm::vec3& center, float radius, const Transform& trform) const;
+
+        // Helper methods for BVH
+        static float rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& boxMin, const glm::vec3& boxMax);
+        static glm::vec3 rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
+        static float sphereIntersectBox(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& boxMin, const glm::vec3& boxMax);
+        static glm::vec3 sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
+
+        static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath, bool hasBVH = false);
     };
 
 
@@ -44,7 +109,7 @@ namespace Az3D {
 
         size_t addMesh(std::shared_ptr<Mesh> mesh);
         size_t addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
-        size_t loadMeshFromOBJ(const char* filePath);
+        size_t loadMeshFromOBJ(const char* filePath, bool hasBVH = false);
 
         // Index-based mesh storage
         std::vector<std::shared_ptr<Mesh>> meshes;

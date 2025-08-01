@@ -98,8 +98,8 @@ void Application::initVulkan() {
 
 // PLAYGROUND FROM HERE!
 
-    // Load all maps
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj");
+    // Load all maps (with BVH enabled for collision detection)
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
     
     // Create default material for map (material index 0)
     Az3D::Material mapMaterial;
@@ -112,16 +112,13 @@ void Application::initVulkan() {
     sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Planet.png");
     size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
 
-    // Setup map transform and BVH
-    Az3D::Transform mapTransform;
+    // Setup map transform
     mapTransform.pos = glm::vec3(-20.0f, 0.0f, 0.0f);
     // mapTransform.scale(0.1f);
     // mapTransform.rotateZ(glm::radians(-45.0f));
     // mapTransform.rotateX(glm::radians(-45.0f));
 
-    gameMap.meshIndex = mapMeshIndex;
-    gameMap.trform = mapTransform;
-    gameMap.createBVH(*meshManager.meshes[gameMap.meshIndex]);
+    this->mapMeshIndex = mapMeshIndex;
 
     // Create model resources for render system
     mapModelResourceIndex = renderSystem->addModelResource(mapMeshIndex, mapMaterialIndex);
@@ -284,7 +281,7 @@ void Application::mainLoop() {
         renderSystem->clearInstances();
         
         // Add the map instance 
-        renderSystem->addInstance(gameMap.trform.modelMatrix(), mapModelResourceIndex);
+        renderSystem->addInstance(mapTransform.modelMatrix(), mapModelResourceIndex);
         
         // Add particles to render system
         particleManager.addToRenderSystem(*renderSystem);
@@ -300,7 +297,8 @@ void Application::mainLoop() {
 
                 for (size_t i = 0; i < particleManager.particleCount; ++i) {
                     particleManager.particles[i].pos = camRef.pos +
-                        glm::vec3(0.0f, particleManager.particleRadius * 2 * i, 0.0f);
+                        // glm::vec3(0.0f, particleManager.particleRadius * 2 * i, 0.0f);
+                        glm::vec3(0.0f, 0.0f, 0.0f);
 
                     glm::vec3 rnd_direction = ParticleManager::randomDirection();
                     glm::vec3 mult_direction = { 4.0f, 4.0f, 4.0f };
@@ -321,7 +319,7 @@ void Application::mainLoop() {
         }
 
         if (physic_enable)
-            particleManager.update(dTime, *meshManager.meshes[gameMap.meshIndex], gameMap);
+            particleManager.update(dTime, *meshManager.meshes[mapMeshIndex], mapTransform);
 
         // End of particle system update
 

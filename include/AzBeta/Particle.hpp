@@ -5,6 +5,9 @@
 
 namespace AzBeta {
 
+    // Use the HitInfo from Az3D namespace
+    using HitInfo = Az3D::HitInfo;
+
     class ParticleManager {
     public:
         ParticleManager() = default;
@@ -61,13 +64,12 @@ namespace AzBeta {
             }
         }
 
-        /*
-        void update(float dTime, Az3D::Mesh& mesh, AzBeta::Map& gameMap) {
+        //*
+        void update(float dTime, Az3D::Mesh& mesh, const Az3D::Transform& meshTransform) {
             for (size_t p = 0; p < particleCount; ++p) {
-                Az3D::Transform& trform = particles[p].trform;
 
                 // If y is below a certain threshold, stop
-                if (trform.pos.y < -20.0f) continue;
+                if (particles[p].pos.y < -20.0f) continue;
 
                 // Gravity
                 particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
@@ -78,29 +80,29 @@ namespace AzBeta {
                 float step = speed * dTime;
                 if (step > particleRadius) step = particleRadius;
 
-                HitInfo map_collision = gameMap.closestHit(
-                    mesh,
-                    trform.pos + direction * step,
-                    particleRadius
+                Az3D::HitInfo map_collision = mesh.closestHit(
+                    particles[p].pos + direction * step,
+                    particleRadius,
+                    meshTransform
                 );
 
                 if (map_collision.hit) {
                     // If distance smaller than radius, that means the particle is already inside, push it out
                     if (map_collision.prop.z < particleRadius) {
-                        trform.pos = map_collision.vrtx + map_collision.nrml * particleRadius;
+                        particles[p].pos = map_collision.vrtx + map_collision.nrml * particleRadius;
                     }
 
                     particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
 
                     particles_velocity[p] *= speed * 0.8f;
                 } else {
-                    trform.pos += direction * step;
+                    particles[p].pos += direction * step;
                 }
             }
-        }
-        */
+        }//*/
 
-        void update(float dTime, Az3D::Mesh& mesh, AzBeta::Map& gameMap) {
+        /*
+        void update(float dTime, Az3D::Mesh& mesh, const Az3D::Transform& meshTransform) {
             if (particles_angular_velocity.size() != particleCount) {
                 particles_angular_velocity.resize(particleCount, glm::vec3(0.0f));
             }
@@ -118,10 +120,10 @@ namespace AzBeta {
                 float step = glm::length(velocity) * dTime;
                 if (step > particleRadius) step = particleRadius;
 
-                HitInfo map_collision = gameMap.closestHit(
-                    mesh,
+                HitInfo map_collision = mesh.closestHit(
                     trform.pos + step * glm::normalize(velocity),
-                    particleRadius
+                    particleRadius,
+                    meshTransform
                 );
 
                 if (map_collision.hit) {
@@ -169,7 +171,7 @@ namespace AzBeta {
                     trform.rot = glm::normalize(trform.rot);
                 }
             }
-        }
+        }//*/
 
     };
 
