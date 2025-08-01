@@ -100,14 +100,11 @@ void Application::initVulkan() {
 
     // Load all maps (with BVH enabled for collision detection)
     // Note: TextureManager constructor already creates default texture at index 0
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/cube.obj", true);
     Az3D::Material mapMaterial;
     mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
     // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
-
-    // Now this should work fine since we loaded the default texture at index 0
-    mapMaterial.diffTxtr = 0; // Default texture is always at index 0
-
+    mapMaterial.diffTxtr = 0;
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
     // Load all entities
@@ -120,7 +117,7 @@ void Application::initVulkan() {
 
     // Setup map transform
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
-    mapTransform.scale(1.0f);
+    mapTransform.scale(5.0f);
     // mapTransform.rotateZ(glm::radians(-45.0f));
     // mapTransform.rotateX(glm::radians(-45.0f));
 
@@ -131,7 +128,7 @@ void Application::initVulkan() {
     size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
 
     particleManager.initParticles(
-        100, sphereModelResourceIndex, 0.1f,
+        2000, sphereModelResourceIndex, 0.1f,
         // Rotation should be avoided in the first place when it comes to map meshes
         meshManager.meshes[mapMeshIndex]->meshMin * mapTransform.scl + mapTransform.pos,
         meshManager.meshes[mapMeshIndex]->meshMax * mapTransform.scl + mapTransform.pos

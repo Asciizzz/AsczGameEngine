@@ -270,48 +270,82 @@ namespace AzBeta {
             std::vector<size_t> indices(particleCount);
             std::iota(indices.begin(), indices.end(), 0);
 
-            glm::vec3 boundMin = glm::vec3(-86.0f, -10.0f, -77.0f);
-            glm::vec3 boundMax = glm::vec3(163.0f, 132.0f, 92.0f);
+            glm::vec3 boundMin = spatialGrid.gridMin;
+            glm::vec3 boundMax = spatialGrid.gridMax;
 
             // Parallel update of all particles
             std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t p) {
-                // Bound: (-86, -10, -77) -> (163, 32, 92)
-                glm::vec3 nextPos = particles[p].pos + particles_velocity[p] * dTime;
-                particles[p].pos.x = nextPos.x < boundMin.x ? boundMax.x : (nextPos.x > boundMax.x ? boundMin.x : particles[p].pos.x);
-                particles[p].pos.y = nextPos.y < boundMin.y ? boundMax.y : (nextPos.y > boundMax.y ? boundMin.y : particles[p].pos.y);
-                particles[p].pos.z = nextPos.z < boundMin.z ? boundMax.z : (nextPos.z > boundMax.z ? boundMin.z : particles[p].pos.z);
-
                 // Gravity
-                particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
+                glm::vec3 &pos = particles[p].pos;
+                glm::vec3 &vel = particles_velocity[p];
 
-                float speed = glm::length(particles_velocity[p]);
-                glm::vec3 direction = glm::normalize(particles_velocity[p]);
+                vel.y -= 9.81f * dTime; // Simple gravity
 
-                float step = speed * dTime; // Limit step to diameter
-                if (step > radius * 2.0f) step = radius * 2.0f;
+                float speed = glm::length(vel);
+                glm::vec3 direction = glm::normalize(vel);
+
+                float step = speed * dTime; // Limit step to "almost" diameter
+                if (step > radius * 1.9f) step = radius * 1.9f;
+
+                glm::vec3 predictedPos = pos + direction * step;
 
                 Az3D::HitInfo map_collision = mesh.closestHit(
-                    particles[p].pos + direction * step,
-                    radius,
-                    meshTransform
+                    predictedPos, radius, meshTransform
+                );
+                // Additional ray cast in case of an overstep
+                Az3D::HitInfo ray_collision = mesh.closestHit(
+                    pos, direction, step, meshTransform
                 );
 
-                if (map_collision.hit) {
-                    // If distance smaller than radius, that means the particle is already inside, push it out
-                    if (map_collision.prop.z < radius) {
-                        particles[p].pos = map_collision.vrtx + map_collision.nrml * radius;
-                    }
+                // Check if predicted pos is inside the bounding box
+                glm::vec3 minPlusRadius = boundMin + glm::vec3(radius);
+                glm::vec3 maxMinusRadius = boundMax - glm::vec3(radius);
 
-                    particles_velocity[p] = glm::reflect(direction, map_collision.nrml);
-                    particles_velocity[p] *= speed * 0.8f;
+                bool outLeft = predictedPos.x < minPlusRadius.x;
+                bool outRight = predictedPos.x > maxMinusRadius.x;
+                bool outAxisX = outLeft || outRight;
+
+                bool outBottom = predictedPos.y < minPlusRadius.y;
+                bool outTop = predictedPos.y > maxMinusRadius.y;
+                bool outAxisY = outBottom || outTop;
+
+                bool outBack = predictedPos.z < minPlusRadius.z;
+                bool outFront = predictedPos.z > maxMinusRadius.z;
+                bool outAxisZ = outBack || outFront;
+
+                bool checkBound = false; // Disabled because we need to address the main issue with out of bound collisions
+
+                if ((outAxisX || outAxisY || outAxisZ) && checkBound) {
+                    // Insanely cool branchless logic incoming
+
+                    vel = glm::reflect(direction, glm::vec3(
+                        outLeft - outRight, outBottom - outTop, outBack - outFront
+                    ));
+                    vel *= speed * 0.8f;
+
+                    pos.x = pos.x * !outAxisX + (minPlusRadius.x * outLeft + maxMinusRadius.x * outRight);
+                    pos.y = pos.y * !outAxisY + (minPlusRadius.y * outBottom + maxMinusRadius.y * outTop);
+                    pos.z = pos.z * !outAxisZ + (minPlusRadius.z * outBack + maxMinusRadius.z * outFront);
+
+                } 
+
+                if (map_collision.hit) {
+                    bool alreadyInside = map_collision.prop.z < radius;
+                    pos = alreadyInside ? (map_collision.vrtx + map_collision.nrml * radius) : pos;
+
+                    vel = glm::reflect(direction, map_collision.nrml);
+                    vel *= speed * 0.8f; // Energy loss
+                } else if (ray_collision.hit) { // Edge case
+                    // Place it directly on the normal
+                    pos = ray_collision.vrtx + ray_collision.nrml * radius;
                 } else {
-                    particles[p].pos += direction * step;
+                    pos += direction * step;
                 }
 
             });
-            
+
             // Handle particle-to-particle collisions after position updates
-            handleParticleCollisions();
+            // handleParticleCollisions();
         }
 
     };
