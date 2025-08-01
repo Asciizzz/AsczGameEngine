@@ -251,17 +251,17 @@ namespace AzBeta {
                 float ny = dy * invDistance;
                 float nz = dz * invDistance;
                 
-                // Separation
-                float overlap = radius * 2.0f - distance;
-                float separationHalf = overlap * 0.5f;
+                // Separation // Ignore separation since it can interfere with the collision response
+                // float overlap = radius * 2.0f - distance;
+                // float separationHalf = overlap * 0.5f;
                 
-                particles[i].pos.x += nx * separationHalf;
-                particles[i].pos.y += ny * separationHalf;
-                particles[i].pos.z += nz * separationHalf;
+                // particles[i].pos.x += nx * separationHalf;
+                // particles[i].pos.y += ny * separationHalf;
+                // particles[i].pos.z += nz * separationHalf;
                 
-                particles[j].pos.x -= nx * separationHalf;
-                particles[j].pos.y -= ny * separationHalf;
-                particles[j].pos.z -= nz * separationHalf;
+                // particles[j].pos.x -= nx * separationHalf;
+                // particles[j].pos.y -= ny * separationHalf;
+                // particles[j].pos.z -= nz * separationHalf;
                 
                 // Velocity resolution
                 glm::vec3& vel1 = particles_velocity[i];
