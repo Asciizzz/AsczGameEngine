@@ -126,7 +126,11 @@ void Application::initVulkan() {
     mapModelResourceIndex = renderSystem->addModelResource(mapMeshIndex, mapMaterialIndex);
     size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
 
-    particleManager.initParticles(1000, sphereModelResourceIndex, 0.1f);
+    particleManager.initParticles(
+        1000, sphereModelResourceIndex, 0.1f,
+        meshManager.meshes[mapMeshIndex]->meshMin * 2.0f,
+        meshManager.meshes[mapMeshIndex]->meshMax * 2.0f
+    );
 
 // PLAYGROUND END HERE 
 
