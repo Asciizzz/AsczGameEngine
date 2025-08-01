@@ -18,14 +18,7 @@ namespace AzVulk {
 
     // Material properties for per-material uniform buffer
     struct MaterialUBO {
-        alignas(16) glm::vec3 albedoColor;
-        alignas(4) float roughness;
-        alignas(16) glm::vec3 emissiveColor;
-        alignas(4) float metallic;
-        alignas(4) float specular;
-        alignas(4) float opacity;
-        alignas(4) float nrmlIntensity;
-        alignas(4) float aoIntensity;
+        alignas(16) glm::vec4 multColor;  // Material color multiplier
     };
 
     // Instance data structure for instanced rendering

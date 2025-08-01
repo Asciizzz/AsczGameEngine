@@ -100,18 +100,18 @@ void Application::initVulkan() {
 
     // Load all maps (with BVH enabled for collision detection)
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
-    
-    // Create default material for map (material index 0)
     Az3D::Material mapMaterial;
-    // Default material properties - no special textures
-    size_t mapMaterialIndex = 0; // Use material index 0 for default
+    mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
+    mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
+    size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
     // Load all entities
     size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/Icosphere.obj");
-    Az3D::Material sphereMaterial;
-    sphereMaterial.multColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f); // Red color
-    sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Planet.png");
-    size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
+    // Az3D::Material sphereMaterial;
+    // sphereMaterial.multColor = glm::vec4(0.5f, 0.6f, 1.0f, 1.0f); // Blueish color
+    // sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Planet.png");
+    // size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
+    size_t sphereMaterialIndex = 0; // Use default material
 
     // Setup map transform
     mapTransform.pos = glm::vec3(-20.0f, 0.0f, 0.0f);
@@ -132,12 +132,20 @@ void Application::initVulkan() {
     auto& bufferRef = *buffer;
     auto& descManager = *descriptorManager;
 
+    // Create material uniform buffers
+    std::vector<Az3D::Material> materialVector;
+    for (const auto& matPtr : matManager.materials) {
+        materialVector.push_back(*matPtr);
+    }
+    bufferRef.createMaterialUniformBuffers(materialVector);
+
     // Create descriptor sets for materials
     descManager.createDescriptorPool(2, matManager.materials.size());
 
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
-        descManager.createDescriptorSetsForMaterial(bufferRef.uniformBuffers, sizeof(GlobalUBO), 
-                                                    &texManager.textures[i], i);
+        VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
+        descManager.createDescriptorSetsForMaterialWithUBO(bufferRef.uniformBuffers, sizeof(GlobalUBO), 
+                                                           &texManager.textures[i], materialUniformBuffer, i);
     }
 
     // Load meshes into GPU buffer

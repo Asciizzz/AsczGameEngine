@@ -22,6 +22,15 @@ namespace AzVulk {
             vkFreeMemory(logicalDevice, uniformBuffersMemory[i], nullptr);
         }
 
+        // Cleanup material uniform buffers
+        for (size_t i = 0; i < materialUniformBuffers.size(); i++) {
+            if (materialUniformBuffersMapped[i]) {
+                vkUnmapMemory(logicalDevice, materialUniformBuffersMemory[i]);
+            }
+            vkDestroyBuffer(logicalDevice, materialUniformBuffers[i], nullptr);
+            vkFreeMemory(logicalDevice, materialUniformBuffersMemory[i], nullptr);
+        }
+
         // Cleanup legacy single-mesh buffers
         if (instanceBuffer != VK_NULL_HANDLE) {
             if (instanceBufferMapped) {
@@ -111,6 +120,42 @@ namespace AzVulk {
             
             vkMapMemory(vulkanDevice.device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
         }
+    }
+
+    void Buffer::createMaterialUniformBuffers(const std::vector<Az3D::Material>& materials) {
+        VkDeviceSize bufferSize = sizeof(MaterialUBO);
+
+        materialUniformBuffers.resize(materials.size());
+        materialUniformBuffersMemory.resize(materials.size());
+        materialUniformBuffersMapped.resize(materials.size());
+
+        for (size_t i = 0; i < materials.size(); i++) {
+            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                        materialUniformBuffers[i], materialUniformBuffersMemory[i]);
+            
+            vkMapMemory(vulkanDevice.device, materialUniformBuffersMemory[i], 0, bufferSize, 0, &materialUniformBuffersMapped[i]);
+            
+            // Initialize material data
+            MaterialUBO materialUBO{};
+            materialUBO.multColor = materials[i].multColor;
+            memcpy(materialUniformBuffersMapped[i], &materialUBO, sizeof(MaterialUBO));
+        }
+    }
+
+    void Buffer::updateMaterialUniformBuffer(size_t materialIndex, const Az3D::Material& material) {
+        if (materialIndex < materialUniformBuffersMapped.size() && materialUniformBuffersMapped[materialIndex]) {
+            MaterialUBO materialUBO{};
+            materialUBO.multColor = material.multColor;
+            memcpy(materialUniformBuffersMapped[materialIndex], &materialUBO, sizeof(MaterialUBO));
+        }
+    }
+
+    VkBuffer Buffer::getMaterialUniformBuffer(size_t materialIndex) const {
+        if (materialIndex < materialUniformBuffers.size()) {
+            return materialUniformBuffers[materialIndex];
+        }
+        return VK_NULL_HANDLE;
     }
 
     // New Az3D integration methods

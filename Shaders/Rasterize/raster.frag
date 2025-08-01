@@ -8,6 +8,11 @@ layout(binding = 0) uniform GlobalUBO {
 
 layout(binding = 1) uniform sampler2D txtrSmplr;
 
+// Material uniform buffer
+layout(binding = 2) uniform MaterialUBO {
+    vec4 multColor;
+} material;
+
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragWorldNrml;
 layout(location = 2) in vec3 fragWorldPos;
@@ -32,5 +37,9 @@ void main() {
     float finalFactor = 0.1 + toonFactor * 0.9;
 
     vec4 texColor = texture(txtrSmplr, fragTxtr);
-    outColor = vec4(texColor.rgb * finalFactor, 1.0);
+    
+    // Apply material color multiplication
+    vec4 finalColor = texColor * material.multColor;
+    
+    outColor = vec4(finalColor.rgb * finalFactor, finalColor.a);
 }
