@@ -103,17 +103,16 @@ void Application::initVulkan() {
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
     Az3D::Material mapMaterial;
     mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
-    // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
-    mapMaterial.diffTxtr = 0;
+    // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_mirage.png");
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
     // Load all entities
-    size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Shapes/Icosphere.obj");
-    // Az3D::Material sphereMaterial;
+    size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Characters/Pearto.obj");
+    Az3D::Material sphereMaterial;
     // sphereMaterial.multColor = glm::vec4(0.5f, 0.6f, 1.0f, 1.0f); // Blueish color
-    // sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Planet.png");
-    // size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
-    size_t sphereMaterialIndex = 0; // Use default material
+    sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Pearto.jpeg");
+    size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
+    // size_t sphereMaterialIndex = 0; // Use default material
 
     // Setup map transform
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -128,7 +127,7 @@ void Application::initVulkan() {
     size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
 
     particleManager.initParticles(
-        1000, sphereModelResourceIndex, 0.1f,
+        100, sphereModelResourceIndex, 0.1f, 0.2f,
         // Rotation should be avoided in the first place when it comes to map meshes
         meshManager.meshes[mapMeshIndex]->meshMin * mapTransform.scl + mapTransform.pos,
         meshManager.meshes[mapMeshIndex]->meshMax * mapTransform.scl + mapTransform.pos
@@ -390,7 +389,7 @@ void Application::mainLoop() {
 
         if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsOutput).count() >= 500) {
             // Update FPS text every 500ms for smooth display
-            std::string fpsText = "Az3D Engine | FPS: " + std::to_string(static_cast<int>(fpsRef.currentFPS)) +
+            std::string fpsText = "AsczGame | FPS: " + std::to_string(static_cast<int>(fpsRef.currentFPS)) +
                                     " | Avg: " + std::to_string(static_cast<int>(fpsRef.getAverageFPS())) +
                                     " | " + std::to_string(static_cast<int>(fpsRef.frameTimeMs * 10) / 10.0f) + "ms" +
                                     " | Pipeline: " + std::to_string(pipelineIndex) +

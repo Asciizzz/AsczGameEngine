@@ -138,7 +138,7 @@ namespace AzBeta {
             ));
         }
 
-        void initParticles( size_t count, size_t modelResIdx, float r = 0.05f, 
+        void initParticles( size_t count, size_t modelResIdx, float r = 0.05f, float display_r = 0.05f,
                             const glm::vec3& boundsMin = glm::vec3(-86.0f, -10.0f, -77.0f),
                             const glm::vec3& boundsMax = glm::vec3(163.0f, 132.0f, 92.0f)) {
             modelResourceIndex = modelResIdx;
@@ -160,7 +160,7 @@ namespace AzBeta {
 
             // Initialize particle transforms
             for (size_t i = 0; i < count; ++i) {
-                particles[i].scale(radius); // Scale to radius
+                particles[i].scale(display_r);
                 particles[i].pos = spawnCenter + glm::vec3(
                     (static_cast<float>(rand()) / RAND_MAX - 0.5f) * spawnArea.x,
                     (static_cast<float>(rand()) / RAND_MAX - 0.5f) * spawnArea.y,
@@ -229,7 +229,6 @@ namespace AzBeta {
             }
         }
 
-    private:
         // Ultra-optimized collision check using SIMD-friendly operations
         void checkAndResolveCollisionFast(size_t i, size_t j, float radiusSquared) {
             // Manual vectorization for better performance
@@ -289,41 +288,6 @@ namespace AzBeta {
                 vel2.z -= impulseZ;
             }
         }
-        
-        // Keep the old function for fallback
-        void checkAndResolveCollision(size_t i, size_t j) {
-            glm::vec3 diff = particles[i].pos - particles[j].pos;
-            float distance = glm::length(diff);
-            float minDistance = radius * 2.0f;
-            
-            if (distance < minDistance && distance > 0.001f) {
-                // Collision detected!
-                glm::vec3 normal = diff / distance;
-                float overlap = minDistance - distance;
-                
-                // Separate particles
-                glm::vec3 separation = normal * (overlap * 0.5f);
-                particles[i].pos += separation;
-                particles[j].pos -= separation;
-                
-                // Calculate relative velocity
-                glm::vec3 relativeVel = particles_velocity[i] - particles_velocity[j];
-                float velAlongNormal = glm::dot(relativeVel, normal);
-                
-                // Don't resolve if velocities are separating
-                if (velAlongNormal > 0) return;
-                
-                // Calculate impulse (assuming equal mass)
-                float impulse = -(1.0f + restitution) * velAlongNormal * 0.5f;
-                glm::vec3 impulseVec = impulse * normal;
-                
-                // Apply impulse
-                particles_velocity[i] += impulseVec;
-                particles_velocity[j] -= impulseVec;
-            }
-        }
-
-    public:
 
         // Legacy separate functions for compatibility
         void addToRenderSystem(Az3D::RenderSystem& renderSystem) {
@@ -339,9 +303,9 @@ namespace AzBeta {
                 glm::vec3 particleColor;
 
                 if (speed < 3.0f) {
-                    particleColor = glm::mix(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f), speed / 3.0f);
+                    particleColor = glm::mix(glm::vec3(0.5f, 0.5f, 1.0f), glm::vec3(1.0f, 1.0f, 0.5f), speed / 3.0f);
                 } else {
-                    particleColor = glm::mix(glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), (speed - 3.0f) / 7.0f);
+                    particleColor = glm::mix(glm::vec3(1.0f, 1.0f, 0.5f), glm::vec3(1.0f, 0.5f, 0.5f), (speed - 3.0f) / 7.0f);
                 }
 
                 Az3D::ModelInstance instance;
@@ -379,6 +343,7 @@ namespace AzBeta {
                 Az3D::HitInfo map_collision = mesh.closestHit(
                     predictedPos, radius, meshTransform
                 );
+
                 // Additional ray cast in case of an overstep
                 Az3D::HitInfo ray_collision = mesh.closestHit(
                     pos, direction, step, meshTransform
@@ -425,6 +390,14 @@ namespace AzBeta {
                 } else {
                     pos += direction * step;
                 }
+                
+                // EXTREMELY WRONG, JUST TO LOOK COOL
+                // Rotate the particles based on the direction and velocity
+
+                // Rotation speed is affected by linear speed (hence, the extremely wrong)
+
+                glm::quat rotation = glm::angleAxis(speed * dTime * 2.0f, direction);
+                particles[p].rotate(rotation);
 
             });
 
