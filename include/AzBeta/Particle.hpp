@@ -3,6 +3,7 @@
 #include "Az3D/Az3D.hpp"
 #include <execution>
 #include <algorithm>
+#include <random>
 
 namespace AzBeta {
 
@@ -20,6 +21,15 @@ namespace AzBeta {
         std::vector<Az3D::Transform> particles; // Only store transforms, not full models
         std::vector<glm::vec3> particles_velocity;
         std::vector<glm::vec3> particles_angular_velocity; // For rotation
+        std::vector<short> particles_special; // Cool rare 1% drop particles
+        std::vector<float> particles_rainbow; // For rainbow particles
+
+        // 1% drop particles will have the following effects:
+        // Index 1 - 33% chance to be red - immovable
+        // Index 2 - 33% chance to be blue - perfect energy gain on collision
+        // Index 3 - 33% chance to be green - 1% every frame to teleport to a random position
+        // Index 4 - 1% to be rainbow - immovable + x1.1 energy gain + 2% chance every frame
+        // This meant a 0.01% chance to be rainbow lol
 
         // Spatial grid for efficient collision detection
         struct SpatialGrid {
@@ -34,14 +44,7 @@ namespace AzBeta {
             // Cache for commonly accessed values
             int totalCells;
             int resolutionSquared;
-            
-            SpatialGrid() {
-                // Default bounds - will be updated when particles are initialized
-                gridMin = glm::vec3(-86.0f, -10.0f, -77.0f);
-                gridMax = glm::vec3(163.0f, 132.0f, 92.0f);
-                updateGrid();
-            }
-            
+
             void updateGrid() {
                 glm::vec3 gridSize = gridMax - gridMin;
                 cellSize = std::max({gridSize.x, gridSize.y, gridSize.z}) / resolution;
@@ -139,8 +142,8 @@ namespace AzBeta {
         }
 
         void initParticles( size_t count, size_t modelResIdx, float r = 0.05f, float display_r = 0.05f,
-                            const glm::vec3& boundsMin = glm::vec3(-86.0f, -10.0f, -77.0f),
-                            const glm::vec3& boundsMax = glm::vec3(163.0f, 132.0f, 92.0f)) {
+                            const glm::vec3& boundsMin = glm::vec3(-10.0f),
+                            const glm::vec3& boundsMax = glm::vec3(10.0f)) {
             modelResourceIndex = modelResIdx;
 
             particleCount = count;
@@ -152,6 +155,9 @@ namespace AzBeta {
             particles.resize(count);
             particles_velocity.resize(count);
             particles_angular_velocity.resize(count);
+
+            particles_special.resize(count, 0); // Initialize all to 0 (no special effect)
+            particles_rainbow.resize(count, 0.0f); // Initialize all to 0 (no rainbow effect)
 
             // Calculate spawn area within bounds
             glm::vec3 spawnSize = boundsMax - boundsMin;
@@ -166,6 +172,23 @@ namespace AzBeta {
                     (static_cast<float>(rand()) / RAND_MAX - 0.5f) * spawnArea.y,
                     (static_cast<float>(rand()) / RAND_MAX - 0.5f) * spawnArea.z
                 );
+
+                // Generate a number from 0 to 100
+                int specialEffect = 0;
+
+                // Cool way to only use 1 random number for 2 cases
+                int randValue = rand() % 10000;
+                // The lucky 1%
+                if (randValue < 100) {
+                    specialEffect = (randValue < 33 ? 1 :
+                                    (randValue < 66 ? 2 :
+                                    (randValue < 99 ? 3 : 4)));
+                }
+
+                // If rainbow effect, give them a unique starting value
+                particles_rainbow[i] = specialEffect == 4 ? rand() : 0.0f;
+
+                particles_special[i] = specialEffect;
 
                 particles_velocity[i] = randomDirection();
             }
@@ -249,19 +272,7 @@ namespace AzBeta {
                 float nx = dx * invDistance;
                 float ny = dy * invDistance;
                 float nz = dz * invDistance;
-                
-                // Separation // Ignore separation since it can interfere with the collision response
-                // float overlap = radius * 2.0f - distance;
-                // float separationHalf = overlap * 0.5f;
-                
-                // particles[i].pos.x += nx * separationHalf;
-                // particles[i].pos.y += ny * separationHalf;
-                // particles[i].pos.z += nz * separationHalf;
-                
-                // particles[j].pos.x -= nx * separationHalf;
-                // particles[j].pos.y -= ny * separationHalf;
-                // particles[j].pos.z -= nz * separationHalf;
-                
+
                 // Velocity resolution
                 glm::vec3& vel1 = particles_velocity[i];
                 glm::vec3& vel2 = particles_velocity[j];
@@ -278,35 +289,80 @@ namespace AzBeta {
                 float impulseX = impulse * nx;
                 float impulseY = impulse * ny;
                 float impulseZ = impulse * nz;
-                
-                vel1.x += impulseX;
-                vel1.y += impulseY;
-                vel1.z += impulseZ;
-                
-                vel2.x -= impulseX;
-                vel2.y -= impulseY;
-                vel2.z -= impulseZ;
+
+                // Red and rainbow particles have special behavior
+
+                bool isSpecial1 = particles_special[i] == 1 || particles_special[i] == 4;
+                bool isSpecial2 = particles_special[j] == 1 || particles_special[j] == 4;
+
+                // Act like normal
+                if (isSpecial1 == isSpecial2) {
+                    vel1.x += impulseX;
+                    vel1.y += impulseY;
+                    vel1.z += impulseZ;
+
+                    vel2.x -= impulseX;
+                    vel2.y -= impulseY;
+                    vel2.z -= impulseZ;
+                // If the first particle is special, transfer the entire impulse to the second particle
+                } else if (isSpecial1) {
+                    vel2.x += impulseX * 2.0f;
+                    vel2.y += impulseY * 2.0f;
+                    vel2.z += impulseZ * 2.0f;
+                } else if (isSpecial2) {
+                    vel1.x += impulseX * 2.0f;
+                    vel1.y += impulseY * 2.0f;
+                    vel1.z += impulseZ * 2.0f;
+                }
             }
         }
 
         // Legacy separate functions for compatibility
-        void addToRenderSystem(Az3D::RenderSystem& renderSystem) {
+        void addToRenderSystem(Az3D::RenderSystem& renderSystem, float dTime) {
+            std::vector<glm::vec3> rainbow_colors = {
+                glm::vec3(1.0f, 0.2f, 0.2f), // Red
+                glm::vec3(1.0f, 0.5f, 0.2f), // Orange
+                glm::vec3(1.0f, 1.0f, 0.2f), // Yellow
+                glm::vec3(0.2f, 1.0f, 0.2f), // Green
+                glm::vec3(0.2f, 0.2f, 1.0f), // Blue
+                glm::vec3(0.5f, 0.2f, 1.0f)  // Purple
+            };
+
             for (size_t p = 0; p < particleCount; ++p) {
 
-                // Get particle color based on speed
-                // Gradient: Blue 0 -> Yellow 3 -> Red 10
-                
-
-                float speed = glm::length(particles_velocity[p]);
-                speed = glm::clamp(speed, 0.0f, 10.0f);
+                // Get particle color based on special effect
 
                 glm::vec3 particleColor;
+                switch (particles_special[p]) {
+                     // Default white
+                    case 0: particleColor = glm::vec3(1.0f, 1.0f, 1.0f); break;
+                    // 0.33% for unique rgb colors
+                    case 1: particleColor = glm::vec3(1.0f, 0.2f, 0.2f); break;
+                    case 2: particleColor = glm::vec3(0.2f, 0.2f, 1.0f); break;
+                    case 3: particleColor = glm::vec3(0.2f, 1.0f, 0.2f); break;
+                    // 0.01% for rainbow
+                    case 4:
+                        float speed = glm::length(particles_velocity[p]) + 1.0f; // Ensure the rainbow effect is always present
 
-                if (speed < 3.0f) {
-                    particleColor = glm::mix(glm::vec3(0.5f, 0.5f, 1.0f), glm::vec3(1.0f, 1.0f, 0.5f), speed / 3.0f);
-                } else {
-                    particleColor = glm::mix(glm::vec3(1.0f, 1.0f, 0.5f), glm::vec3(1.0f, 0.5f, 0.5f), (speed - 3.0f) / 7.0f);
+                        // 4th value will run from 0 -> 1 and mix 6 total color combination
+                        float step = speed * dTime * 0.5f;
+
+                        particles_rainbow[p] = fmodf(particles_rainbow[p] + step, 1.0f);
+                        // Get the current process
+                        int colorIndex = static_cast<int>(particles_rainbow[p] * rainbow_colors.size()) % rainbow_colors.size();
+                        float local_w = particles_rainbow[p] * rainbow_colors.size() - static_cast<float>(colorIndex);
+
+                        switch (colorIndex) {
+                            case 0: particleColor = glm::mix(rainbow_colors[0], rainbow_colors[1], local_w); break;
+                            case 1: particleColor = glm::mix(rainbow_colors[1], rainbow_colors[2], local_w); break;
+                            case 2: particleColor = glm::mix(rainbow_colors[2], rainbow_colors[3], local_w); break;
+                            case 3: particleColor = glm::mix(rainbow_colors[3], rainbow_colors[4], local_w); break;
+                            case 4: particleColor = glm::mix(rainbow_colors[4], rainbow_colors[5], local_w); break;
+                            case 5: particleColor = glm::mix(rainbow_colors[5], rainbow_colors[0], local_w); break;
+                        }
+                        break;
                 }
+
 
                 Az3D::ModelInstance instance;
                 instance.modelMatrix() = particles[p].modelMatrix();
@@ -365,13 +421,20 @@ namespace AzBeta {
                 bool outFront = predictedPos.z > maxMinusRadius.z;
                 bool outAxisZ = outBack || outFront;
 
+                float energyMultiplier;
+                switch (particles_special[p]) {
+                    case 0: case 1: case 3:  energyMultiplier = 0.8f; break; // Normal, red, green
+                    case 2: energyMultiplier = 1.0f; break; // Blue
+                    case 4: energyMultiplier = 1.1f; break; // Rainbow
+                };
+
                 if (outAxisX || outAxisY || outAxisZ) {
                     // Insanely cool branchless logic incoming
 
                     vel = glm::reflect(direction, glm::vec3(
                         outLeft - outRight, outBottom - outTop, outBack - outFront
                     ));
-                    vel *= speed * 0.8f;
+                    vel *= speed * energyMultiplier;
 
                     pos.x = pos.x * !outAxisX + minPlusRadius.x * outLeft + maxMinusRadius.x * outRight;
                     pos.y = pos.y * !outAxisY + minPlusRadius.y * outBottom + maxMinusRadius.y * outTop;
@@ -383,10 +446,7 @@ namespace AzBeta {
                     pos = alreadyInside ? (map_collision.vrtx + map_collision.nrml * radius) : pos;
 
                     vel = glm::reflect(direction, map_collision.nrml);
-                    vel *= speed * 0.8f; // Energy loss
-                } else if (ray_collision.hit) { // Edge case
-                    // Place it directly on the normal
-                    pos = ray_collision.vrtx + ray_collision.nrml * radius;
+                    vel *= speed * energyMultiplier;
                 } else {
                     pos += direction * step;
                 }

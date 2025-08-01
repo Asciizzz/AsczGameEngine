@@ -106,6 +106,17 @@ void Application::initVulkan() {
     // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_mirage.png");
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
+    /* List of available cs maps
+    de_dust2.obj
+    de_mirage.obj
+    de_inferno.obj
+    de_nuke.obj
+    de_train.obj
+    de_overpass.obj
+    de_vertigo.obj
+    de_cache.obj
+    */
+
     // Load all entities
     size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Characters/Pearto.obj");
     Az3D::Material sphereMaterial;
@@ -127,7 +138,7 @@ void Application::initVulkan() {
     size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
 
     particleManager.initParticles(
-        100, sphereModelResourceIndex, 0.1f, 0.23f,
+        1000, sphereModelResourceIndex, 0.1f, 0.25f,
         // Rotation should be avoided in the first place when it comes to map meshes
         meshManager.meshes[mapMeshIndex]->meshMin * mapTransform.scl + mapTransform.pos,
         meshManager.meshes[mapMeshIndex]->meshMax * mapTransform.scl + mapTransform.pos
@@ -346,7 +357,7 @@ void Application::mainLoop() {
             hold_P = false;
         }
 
-        particleManager.addToRenderSystem(*renderSystem);
+        particleManager.addToRenderSystem(*renderSystem, dTime);
         if (physic_enable) particleManager.update(dTime, *meshManager.meshes[mapMeshIndex], mapTransform);
 
         // Press Q to push the particles away from the camera position
