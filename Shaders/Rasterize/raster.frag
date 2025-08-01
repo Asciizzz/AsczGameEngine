@@ -16,6 +16,7 @@ layout(binding = 2) uniform MaterialUBO {
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragWorldNrml;
 layout(location = 2) in vec3 fragWorldPos;
+layout(location = 3) in vec4 fragInstanceColor;
 
 layout(location = 0) out vec4 outColor;
 
@@ -39,7 +40,10 @@ void main() {
     vec4 texColor = texture(txtrSmplr, fragTxtr);
     
     // Apply material color multiplication
-    vec4 finalColor = texColor * material.multColor;
+    vec4 materialColor = texColor * material.multColor;
+    
+    // Apply instance color multiplication  
+    vec4 finalColor = materialColor * fragInstanceColor;
     
     outColor = vec4(finalColor.rgb * finalFactor, finalColor.a);
 }

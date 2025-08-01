@@ -4,7 +4,12 @@
 
 #include <vector>
 #include <unordered_map>
+#include <array>
 #include <glm/glm.hpp>
+
+// Forward declarations for Vulkan types
+struct VkVertexInputBindingDescription;
+struct VkVertexInputAttributeDescription;
 
 namespace Az3D {
     
@@ -14,10 +19,33 @@ namespace Az3D {
         size_t materialIndex;
     };
     
+    // GPU vertex data structure - must be tightly packed for vertex attributes
+    struct InstanceVertexData {
+        glm::mat4 modelMatrix;     // 64 bytes - locations 3,4,5,6
+        glm::vec4 multColor;       // 16 bytes - location 7
+    };
+    
     // Dynamic, per-frame object data
     struct ModelInstance {
-        glm::mat4 modelMatrix;
+        InstanceVertexData vertexData;
         size_t modelResourceIndex; // Index into modelResources
+        
+        // Default constructor
+        ModelInstance() {
+            vertexData.modelMatrix = glm::mat4(1.0f);
+            vertexData.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+            modelResourceIndex = 0;
+        }
+        
+        // Convenience getters/setters
+        glm::mat4& modelMatrix() { return vertexData.modelMatrix; }
+        const glm::mat4& modelMatrix() const { return vertexData.modelMatrix; }
+        glm::vec4& multColor() { return vertexData.multColor; }
+        const glm::vec4& multColor() const { return vertexData.multColor; }
+        
+        // Vulkan-specific methods for vertex input
+        static VkVertexInputBindingDescription getBindingDescription();
+        static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
     };
 
     // Global rendering system that manages all model resources and instances
@@ -32,9 +60,9 @@ namespace Az3D {
         
         // Instance management
         void clearInstances();
-        void addInstance(const glm::mat4& modelMatrix, size_t modelResourceIndex);
-        void addInstances(const std::vector<glm::mat4>& modelMatrices, size_t modelResourceIndex);
-        
+        void addInstance(const ModelInstance& instance);
+        void addInstances(const std::vector<ModelInstance>& instances);
+
         // Batch processing for rendering
         std::unordered_map<size_t, std::vector<const ModelInstance*>> groupInstancesByMesh() const;
         

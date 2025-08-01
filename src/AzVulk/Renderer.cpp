@@ -161,23 +161,23 @@ namespace AzVulk {
         auto meshToInstances = renderSystem.groupInstancesByMesh();
         
         for (const auto& [meshIndex, instancePtrs] : meshToInstances) {
-            // Extract matrices from instance pointers
-            std::vector<glm::mat4> matrices;
-            matrices.reserve(instancePtrs.size());
+            // Extract full ModelInstance objects to get both matrix and color
+            std::vector<Az3D::ModelInstance> instances;
+            instances.reserve(instancePtrs.size());
             
             for (const Az3D::ModelInstance* instancePtr : instancePtrs) {
-                matrices.push_back(instancePtr->modelMatrix);
+                instances.push_back(*instancePtr);
             }
             
             // Update or create the instance buffer for this mesh
             if (meshIndex < buffer.getMeshCount()) {
                 const auto& meshBuffers = buffer.getMeshBuffers();
                 if (meshIndex < meshBuffers.size()) {
-                    if (matrices.size() != meshBuffers[meshIndex].instanceCount) {
+                    if (instances.size() != meshBuffers[meshIndex].instanceCount) {
                         vkDeviceWaitIdle(vulkanDevice.device);
-                        buffer.createInstanceBufferForMesh(meshIndex, matrices);
+                        buffer.createInstanceBufferForMesh(meshIndex, instances);
                     } else {
-                        buffer.updateInstanceBufferForMesh(meshIndex, matrices);
+                        buffer.updateInstanceBufferForMesh(meshIndex, instances);
                     }
                 }
             }

@@ -290,7 +290,11 @@ void Application::mainLoop() {
         renderSystem->clearInstances();
         
         // Add the map instance 
-        renderSystem->addInstance(mapTransform.modelMatrix(), mapModelResourceIndex);
+        Az3D::ModelInstance mapInstance;
+        mapInstance.modelMatrix() = mapTransform.modelMatrix();
+        mapInstance.modelResourceIndex = mapModelResourceIndex;
+
+        renderSystem->addInstance(mapInstance);
 
         static bool physic_enable = false;
         static bool hold_P = false;

@@ -21,14 +21,6 @@ namespace AzVulk {
         alignas(16) glm::vec4 multColor;  // Material color multiplier
     };
 
-    // Instance data structure for instanced rendering
-    struct ModelInstance {
-        alignas(16) glm::mat4 modelMatrix;
-        
-        static VkVertexInputBindingDescription getBindingDescription();
-        static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
-    };
-
     // Billboard instance data structure for billboard rendering
     struct BillboardInstance {
         alignas(16) glm::vec3 position;
@@ -101,8 +93,8 @@ namespace AzVulk {
         
         void loadMesh(const Az3D::Mesh& mesh);
         void createVertexBuffer(const Az3D::Mesh& mesh);
-        void createInstanceBuffer(const std::vector<ModelInstance>& instances);
-        void updateInstanceBuffer(const std::vector<ModelInstance>& instances);
+        void createInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances);
+        void updateInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances);
         
         // New multi-mesh methods with matrix arrays for better performance
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
@@ -110,8 +102,8 @@ namespace AzVulk {
         void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<glm::mat4>& matrices);
         
         // Legacy multi-mesh methods (deprecated - use matrix versions)
-        void createInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances);
-        void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances);
+        void createInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
+        void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
         
         // Billboard buffer methods
         void createBillboardInstanceBuffer(const std::vector<BillboardInstance>& instances);

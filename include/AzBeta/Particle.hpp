@@ -60,8 +60,34 @@ namespace AzBeta {
 
         // Legacy separate functions for compatibility
         void addToRenderSystem(Az3D::RenderSystem& renderSystem) {
-            for (const auto& particle : particles) {
-                renderSystem.addInstance(particle.modelMatrix(), modelResourceIndex);
+            for (size_t p = 0; p < particleCount; ++p) {
+
+                float speed = glm::length(particles_velocity[p]);
+                speed = glm::clamp(speed, 0.0f, 10.0f);
+
+                glm::vec4 particleColor;
+
+                if (speed <= 5.0f) {
+                    float t = speed / 5.0f;
+                    // Interpolate from Blue to Yellow
+                    particleColor = glm::mix(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), t);
+                } else {
+                    float t = (speed - 5.0f) / 5.0f;
+                    // Interpolate from Yellow to Red
+                    particleColor = glm::mix(glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), t);
+                }
+                // // v = 0 -> cyan, v = 10 -> red
+                // float RFactor = glm::clamp(speed / 10.0f, 0.0f, 1.0f);
+                // float GBFactor = 1.0f - RFactor;
+                // glm::vec4 particleColor = glm::vec4(RFactor, GBFactor, GBFactor, 1.0f);
+                // instance.multColor() = particleColor;
+
+                Az3D::ModelInstance instance;
+                instance.modelMatrix() = particles[p].modelMatrix();
+                instance.modelResourceIndex = modelResourceIndex;
+                instance.multColor() = particleColor; // Set the color based on speed
+
+                renderSystem.addInstance(instance);
             }
         }
 
@@ -71,7 +97,6 @@ namespace AzBeta {
 
             // Parallel update of all particles
             std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t p) {
-                // If y is below a certain threshold, skip update but still render
                 if (particles[p].pos.y > -20.0f) {
                     // Gravity
                     particles_velocity[p].y -= 9.81f * dTime; // Simple gravity
@@ -101,6 +126,9 @@ namespace AzBeta {
                             particles[p].pos += direction * step;
                         }
                     }
+                } else {
+                    // Flip it back to y = 20, like portals
+                    particles[p].pos.y = 20.0f;
                 }
             });
         }

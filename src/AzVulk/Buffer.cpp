@@ -229,28 +229,37 @@ namespace AzVulk {
         vkFreeCommandBuffers(vulkanDevice.device, commandPool, 1, &commandBuffer);
     }
 
-    // ModelInstance methods for instanced rendering
-    VkVertexInputBindingDescription ModelInstance::getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 1; // Binding 1 for instance data
-        bindingDescription.stride = sizeof(ModelInstance);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-        return bindingDescription;
-    }
+    void Buffer::createInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances) {
+        VkDeviceSize bufferSize = sizeof(Az3D::InstanceVertexData) * instances.size();
+        instanceCount = static_cast<uint32_t>(instances.size());
 
-    std::array<VkVertexInputAttributeDescription, 4> ModelInstance::getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
-
-        // Model matrix is 4x4, so we need 4 attribute locations (3, 4, 5, 6)
-        // Each vec4 takes one attribute location
-        for (int i = 0; i < 4; i++) {
-            attributeDescriptions[i].binding = 1;
-            attributeDescriptions[i].location = 3 + i; // Locations 3, 4, 5, 6
-            attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescriptions[i].offset = offsetof(ModelInstance, modelMatrix) + sizeof(glm::vec4) * i;
+        // Clean up existing buffer if it exists
+        if (instanceBuffer != VK_NULL_HANDLE) {
+            vkDestroyBuffer(vulkanDevice.device, instanceBuffer, nullptr);
+            vkFreeMemory(vulkanDevice.device, instanceBufferMemory, nullptr);
         }
 
-        return attributeDescriptions;
+        createBuffer(bufferSize, 
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                    instanceBuffer, instanceBufferMemory);
+
+        // Map the buffer for updates
+        vkMapMemory(vulkanDevice.device, instanceBufferMemory, 0, bufferSize, 0, &instanceBufferMapped);
+        
+        // Copy only GPU vertex data
+        for (size_t i = 0; i < instances.size(); ++i) {
+            static_cast<Az3D::InstanceVertexData*>(instanceBufferMapped)[i] = instances[i].vertexData;
+        }
+    }
+
+    void Buffer::updateInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances) {
+        if (instanceBufferMapped && instances.size() <= instanceCount) {
+            // Copy only GPU vertex data
+            for (size_t i = 0; i < instances.size(); ++i) {
+                static_cast<Az3D::InstanceVertexData*>(instanceBufferMapped)[i] = instances[i].vertexData;
+            }
+        }
     }
 
     // BillboardInstance methods for billboard rendering
@@ -310,35 +319,6 @@ namespace AzVulk {
         return attributeDescriptions;
     }
 
-    void Buffer::createInstanceBuffer(const std::vector<ModelInstance>& instances) {
-        VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
-        instanceCount = static_cast<uint32_t>(instances.size());
-
-        // Clean up existing buffer if it exists
-        if (instanceBuffer != VK_NULL_HANDLE) {
-            vkDestroyBuffer(vulkanDevice.device, instanceBuffer, nullptr);
-            vkFreeMemory(vulkanDevice.device, instanceBufferMemory, nullptr);
-        }
-
-        createBuffer(bufferSize, 
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    instanceBuffer, instanceBufferMemory);
-
-        // Map the buffer for updates
-        vkMapMemory(vulkanDevice.device, instanceBufferMemory, 0, bufferSize, 0, &instanceBufferMapped);
-        
-        // Copy initial data
-        memcpy(instanceBufferMapped, instances.data(), bufferSize);
-    }
-
-    void Buffer::updateInstanceBuffer(const std::vector<ModelInstance>& instances) {
-        if (instanceBufferMapped && instances.size() <= instanceCount) {
-            VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
-            memcpy(instanceBufferMapped, instances.data(), bufferSize);
-        }
-    }
-
     // New multi-mesh methods implementation
     size_t Buffer::loadMeshToBuffer(const Az3D::Mesh& mesh) {
         MeshBufferData meshBuffer;
@@ -377,13 +357,13 @@ namespace AzVulk {
         return meshBuffers.size() - 1;
     }
 
-    void Buffer::createInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances) {
+    void Buffer::createInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances) {
         if (meshIndex >= meshBuffers.size()) {
             throw std::runtime_error("Invalid mesh index for instance buffer creation!");
         }
         
         auto& meshBuffer = meshBuffers[meshIndex];
-        VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
+        VkDeviceSize bufferSize = sizeof(Az3D::InstanceVertexData) * instances.size();
         meshBuffer.instanceCount = static_cast<uint32_t>(instances.size());
 
         // Clean up existing buffer if it exists
@@ -403,19 +383,23 @@ namespace AzVulk {
         // Map the buffer for updates
         vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);
         
-        // Copy initial data
-        memcpy(meshBuffer.instanceBufferMapped, instances.data(), bufferSize);
+        // Copy only GPU vertex data
+        for (size_t i = 0; i < instances.size(); ++i) {
+            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = instances[i].vertexData;
+        }
     }
 
-    void Buffer::updateInstanceBufferForMesh(size_t meshIndex, const std::vector<ModelInstance>& instances) {
+    void Buffer::updateInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances) {
         if (meshIndex >= meshBuffers.size()) {
             return; // Silently fail for invalid mesh index
         }
 
         auto& meshBuffer = meshBuffers[meshIndex];
         if (meshBuffer.instanceBufferMapped && instances.size() <= meshBuffer.instanceCount) {
-            VkDeviceSize bufferSize = sizeof(ModelInstance) * instances.size();
-            memcpy(meshBuffer.instanceBufferMapped, instances.data(), bufferSize);
+            // Copy only GPU vertex data
+            for (size_t i = 0; i < instances.size(); ++i) {
+                static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = instances[i].vertexData;
+            }
         }
     }
 
