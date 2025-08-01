@@ -3,14 +3,15 @@ project(AsczGame)
 
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(Vulkan REQUIRED)
+# Configurable distribution name - change this to rename your game!
+set(DIST_NAME "AsczGame" CACHE STRING "Name for the distribution folder and executable")
 
+find_package(Vulkan REQUIRED)
 
 set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
 set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
 file(GLOB_RECURSE SRC_FILES
-
     src/Az3D/Camera.cpp
     src/Az3D/Texture.cpp
     src/Az3D/Mesh.cpp
@@ -93,15 +94,37 @@ add_custom_command(TARGET AsczGame POST_BUILD
 # For Release builds, create a standalone distribution folder
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_custom_command(TARGET AsczGame POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/AsczGame
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/AsczGame/
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/AsczGame/Shaders
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/AsczGame/Assets
-        COMMENT "Creating standalone distribution in dist folder\n"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/${DIST_NAME}
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/${DIST_NAME}/
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/${DIST_NAME}/Shaders
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/${DIST_NAME}/Assets
+        COMMENT "Creating standalone distribution in ${DIST_NAME} folder\n"
     )
     
-    # Copy Visual C++ Redistributables if available (for portability)
+    # Copy Visual C++ Redistributables and SDL2.dll if available (for portability)
     if(WIN32)
+        # Copy SDL2.dll from Vulkan SDK
+        find_file(SDL2_DLL 
+            NAMES "SDL2.dll"
+            PATHS 
+                "$ENV{VULKAN_SDK}/Bin"
+                "$ENV{VULKAN_SDK}/Lib"
+                "$ENV{VULKAN_SDK}/Bin32"
+                "${SDL2_INCLUDE_DIR}/../Lib"
+                "${SDL2_INCLUDE_DIR}/../Bin"
+            NO_DEFAULT_PATH
+        )
+        
+        if(SDL2_DLL)
+            add_custom_command(TARGET AsczGame POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${SDL2_DLL} ${CMAKE_SOURCE_DIR}/${DIST_NAME}/
+                COMMENT "Copying SDL2.dll to distribution"
+            )
+        else()
+            message(WARNING "SDL2.dll not found - distribution may not work on target machine\n")
+        endif()
+        
         # Try to find and copy common redistributables
         find_file(VCRUNTIME_DLL 
             NAMES "vcruntime140.dll" "vcruntime140_1.dll" "msvcp140.dll"
@@ -116,7 +139,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
         if(VCRUNTIME_DLL)
             add_custom_command(TARGET AsczGame POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${VCRUNTIME_DLL} ${CMAKE_SOURCE_DIR}/AsczGame/
+                ${VCRUNTIME_DLL} ${CMAKE_SOURCE_DIR}/${DIST_NAME}/
                 COMMENT "Copying Visual C++ runtime to distribution\n"
             )
         endif()
