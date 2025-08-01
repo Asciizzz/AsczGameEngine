@@ -353,6 +353,33 @@ void Application::mainLoop() {
         particleManager.addToRenderSystem(*renderSystem);
         if (physic_enable) particleManager.update(dTime, *meshManager.meshes[mapMeshIndex], mapTransform);
 
+        // Press Q to push the particles away from the camera position
+        static bool hold_Q = false;
+        static float pushRange = 10.0f;
+        static float pushStrength = 2.0f;
+
+        if (k_state[SDL_SCANCODE_Q] && !hold_Q) {
+            hold_Q = true;
+
+            // The idea is that any sphere in the range 0 - pushRange unit will be pushed
+            // and the closer it is, the velocity vector will be stronger
+            for (size_t p = 0; p < particleManager.particleCount; ++p) {
+                glm::vec3 dir = particleManager.particles[p].pos - camRef.pos;
+
+                float length = glm::length(dir);
+
+                if (length > pushRange) continue; // Skip if outside range
+
+                particleManager.particles_velocity[p] +=
+                    glm::normalize(dir) *
+                    (pushRange - length) *
+                    pushStrength;
+            }
+
+        } else if (!k_state[SDL_SCANCODE_Q]) {
+            hold_Q = false;
+        }
+
         // End of particle system update
 
 // =================================
