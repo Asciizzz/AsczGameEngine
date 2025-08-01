@@ -49,7 +49,7 @@ Same guy that made "2D platformer supposed to run grandma pc, struggling on 3060
 
 * CMake-based with proper Debug/Release configs.
 * MSVC `/O2` and GCC `-O3` — hot CPUs, small binaries.
-* `build_portable.bat` script that actually does what it says.
+* `build_portable.bat`, it does what it says.
 
 ---
 
