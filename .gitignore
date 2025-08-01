@@ -1,6 +1,13 @@
 build/
-# Ignore portable release folder
 AsczGame_Release/
 AsczGame_Debug/
 
+GovernmentData/
+US_SocialSecurity_Lists/
+north_korea_nuclear_launch_codes/
+olive_garden_secret_recipes/
+MarkiplierOnlyFans/
+Super_Luigi_64/
+
+# Custom binary files for my game
 *.ascz
