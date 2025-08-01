@@ -21,6 +21,33 @@ namespace AzBeta {
         std::vector<glm::vec3> particles_velocity;
         std::vector<glm::vec3> particles_angular_velocity; // For rotation
 
+        // Spatial grid for efficient collision detection
+        struct SpatialGrid {
+            int resolution = 20; // Grid resolution
+            float cellSize;
+            glm::vec3 gridMin = glm::vec3(-86.0f, -10.0f, -77.0f);
+            glm::vec3 gridMax = glm::vec3(163.0f, 132.0f, 92.0f);
+            std::vector<std::vector<size_t>> cells;
+            
+            SpatialGrid() {
+                glm::vec3 gridSize = gridMax - gridMin;
+                cellSize = std::max({gridSize.x, gridSize.y, gridSize.z}) / resolution;
+                cells.resize(resolution * resolution * resolution);
+            }
+            
+            int getIndex(const glm::vec3& pos) const {
+                glm::vec3 relPos = pos - gridMin;
+                int x = std::clamp(int(relPos.x / cellSize), 0, resolution - 1);
+                int y = std::clamp(int(relPos.y / cellSize), 0, resolution - 1);
+                int z = std::clamp(int(relPos.z / cellSize), 0, resolution - 1);
+                return x + y * resolution + z * resolution * resolution;
+            }
+            
+            void clear() {
+                for (auto& cell : cells) cell.clear();
+            }
+        } spatialGrid;
+
         float radius = 0.05f;
         const float mass = 1.0f;          // Mass of the particle
         const float restitution = 0.6f;   // Bounciness (0=no bounce, 1=perfect bounce)
@@ -57,6 +84,75 @@ namespace AzBeta {
                 particles_velocity[i] = randomDirection();
             }
         }
+
+        // Efficient particle-to-particle collision detection and response
+        void handleParticleCollisions() {
+            // Clear and populate spatial grid
+            spatialGrid.clear();
+            for (size_t i = 0; i < particleCount; ++i) {
+                int cellIndex = spatialGrid.getIndex(particles[i].pos);
+                spatialGrid.cells[cellIndex].push_back(i);
+            }
+            
+            // Check collisions only within nearby cells
+            for (size_t i = 0; i < particleCount; ++i) {
+                glm::vec3 pos = particles[i].pos;
+                int cellIndex = spatialGrid.getIndex(pos);
+                
+                // Check current cell and neighboring cells
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            glm::vec3 neighborPos = pos + glm::vec3(dx, dy, dz) * spatialGrid.cellSize;
+                            int neighborIndex = spatialGrid.getIndex(neighborPos);
+                            
+                            if (neighborIndex >= 0 && neighborIndex < spatialGrid.cells.size()) {
+                                for (size_t j : spatialGrid.cells[neighborIndex]) {
+                                    if (j > i) { // Only check each pair once
+                                        checkAndResolveCollision(i, j);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    private:
+        void checkAndResolveCollision(size_t i, size_t j) {
+            glm::vec3 diff = particles[i].pos - particles[j].pos;
+            float distance = glm::length(diff);
+            float minDistance = radius * 2.0f;
+            
+            if (distance < minDistance && distance > 0.001f) {
+                // Collision detected!
+                glm::vec3 normal = diff / distance;
+                float overlap = minDistance - distance;
+                
+                // Separate particles
+                glm::vec3 separation = normal * (overlap * 0.5f);
+                particles[i].pos += separation;
+                particles[j].pos -= separation;
+                
+                // Calculate relative velocity
+                glm::vec3 relativeVel = particles_velocity[i] - particles_velocity[j];
+                float velAlongNormal = glm::dot(relativeVel, normal);
+                
+                // Don't resolve if velocities are separating
+                if (velAlongNormal > 0) return;
+                
+                // Calculate impulse (assuming equal mass)
+                float impulse = -(1.0f + restitution) * velAlongNormal * 0.5f;
+                glm::vec3 impulseVec = impulse * normal;
+                
+                // Apply impulse
+                particles_velocity[i] += impulseVec;
+                particles_velocity[j] -= impulseVec;
+            }
+        }
+
+    public:
 
         // Legacy separate functions for compatibility
         void addToRenderSystem(Az3D::RenderSystem& renderSystem) {
@@ -123,6 +219,9 @@ namespace AzBeta {
                 }
 
             });
+            
+            // Handle particle-to-particle collisions after position updates
+            handleParticleCollisions();
         }
 
     };
