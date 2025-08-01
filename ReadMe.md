@@ -88,7 +88,6 @@ cmake --build build --config Release
 
 ## Final Thoughts
 
-With a solid foundation and real optimizations, I can start implementing heavy features without the engine crumbling like a sandcastle in a tidal wave.
-
-Add me on CS2. No, I’m not trading skins.
-* [Agn3s Tachyon](https://steamcommunity.com/profiles/76561199223964635/)
+* With a solid foundation and real optimizations, I can start implementing heavy features without the engine crumbling like a bloodbath in a tidal wave.
+* There's still a lot of room for improvement, which is great since the room is already spacious enough, couldn't hurt to ring up the real estate agent.
+* Add me on CS2 ([Agn3s Tachyon](https://steamcommunity.com/profiles/76561199223964635/)). No, I’m not trading skins.
