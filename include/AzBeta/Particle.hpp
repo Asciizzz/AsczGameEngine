@@ -353,7 +353,7 @@ namespace AzBeta {
             }
         }
 
-        void update(float dTime, Az3D::Mesh& mesh, const Az3D::Transform& meshTransform) {
+        void update(float dTime, const Az3D::Mesh& mesh, const Az3D::Transform& meshTransform) {
             std::vector<size_t> indices(particleCount);
             std::iota(indices.begin(), indices.end(), 0);
 
