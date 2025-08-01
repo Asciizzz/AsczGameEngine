@@ -99,7 +99,7 @@ void Application::initVulkan() {
 // PLAYGROUND FROM HERE!
 
     // Load all maps (with BVH enabled for collision detection)
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_mirage.obj", true);
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
     // Az3D::Material mapMaterial;
     // mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
     // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_dust2.png");
