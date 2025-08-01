@@ -27,7 +27,7 @@ namespace Az3D {
         static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
     };
 
-    // Transform structure - moved from Model.hpp
+    // Transform structure
     struct Transform {
         glm::vec3 pos{0.0f};
         glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
