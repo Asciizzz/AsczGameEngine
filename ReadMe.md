@@ -9,3 +9,10 @@
 ## What I learned
 
 - That Vulkan is a pain in the ass
+
+
+## Too lazy? Copy this
+
+`cmake --build build --config Release`
+`cmake --build build --config Debug`
+`./build_portable.bat` if you want a version that can run on virtually any machine that hasn't gone through the 2 world wars

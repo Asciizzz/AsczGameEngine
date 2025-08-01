@@ -1,5 +1,6 @@
 build/
 # Ignore portable release folder
-AsczGame/ 
+AsczGame_Release/
+AsczGame_Debug/
 
 *.ascz

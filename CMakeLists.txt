@@ -42,6 +42,14 @@ file(GLOB_RECURSE SRC_FILES
 
 add_executable(AsczGame ${SRC_FILES})
 
+# Set different output names for Debug and Release builds
+set_target_properties(AsczGame PROPERTIES
+    OUTPUT_NAME_DEBUG "AsczGame_debug"
+    OUTPUT_NAME_RELEASE "AsczGame_release"
+    OUTPUT_NAME_RELWITHDEBINFO "AsczGame_release"
+    OUTPUT_NAME_MINSIZEREL "AsczGame_release"
+)
+
 target_include_directories(AsczGame PRIVATE
     ${SDL2_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/include/glm
@@ -57,7 +65,7 @@ target_include_directories(AsczGame PRIVATE
 target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY})
 
 target_compile_options(AsczGame PRIVATE 
-    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:$<IF:$<CXX_COMPILER_ID:MSVC>,/O2,-O3>>
 )
 
 # Static linking for better portability (reduces dependency on system libraries)
@@ -72,9 +80,10 @@ if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 
-# Copy executable to project root after build
+# Copy executable to project root after build with proper naming
 add_custom_command(TARGET AsczGame POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}
+    COMMENT "Copying $<TARGET_FILE_NAME:AsczGame> to project root"
 )
 
 # Copy Shaders folder to output directory for both Debug and Release
@@ -91,59 +100,75 @@ add_custom_command(TARGET AsczGame POST_BUILD
     COMMENT "Copying Assets folder to output directory\n"
 )
 
-# For Release builds, create a standalone distribution folder
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_custom_command(TARGET AsczGame POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/${DIST_NAME}
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/${DIST_NAME}/
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/${DIST_NAME}/Shaders
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/${DIST_NAME}/Assets
-        COMMENT "Creating standalone distribution in ${DIST_NAME} folder\n"
+# Create distribution folders for both Debug and Release builds using generator expressions
+add_custom_command(TARGET AsczGame POST_BUILD
+    COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E make_directory ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug
+    COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug/
+    COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug/Shaders
+    COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug/Assets
+    
+    COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E make_directory ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release
+    COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/
+    COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/Shaders
+    COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/Assets
+    COMMENT "Creating distribution folders for $<CONFIG> build"
+)
+
+# Copy DLLs only for Release builds (for portability)
+if(WIN32)
+    # Copy SDL2.dll from Vulkan SDK
+    find_file(SDL2_DLL 
+        NAMES "SDL2.dll"
+        PATHS 
+            "$ENV{VULKAN_SDK}/Bin"
+            "$ENV{VULKAN_SDK}/Lib"
+            "$ENV{VULKAN_SDK}/Bin32"
+            "${SDL2_INCLUDE_DIR}/../Lib"
+            "${SDL2_INCLUDE_DIR}/../Bin"
+        NO_DEFAULT_PATH
     )
     
-    # Copy Visual C++ Redistributables and SDL2.dll if available (for portability)
-    if(WIN32)
-        # Copy SDL2.dll from Vulkan SDK
-        find_file(SDL2_DLL 
-            NAMES "SDL2.dll"
-            PATHS 
-                "$ENV{VULKAN_SDK}/Bin"
-                "$ENV{VULKAN_SDK}/Lib"
-                "$ENV{VULKAN_SDK}/Bin32"
-                "${SDL2_INCLUDE_DIR}/../Lib"
-                "${SDL2_INCLUDE_DIR}/../Bin"
-            NO_DEFAULT_PATH
+    if(SDL2_DLL)
+        add_custom_command(TARGET AsczGame POST_BUILD
+            COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy_if_different
+            ${SDL2_DLL} ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/
+            COMMENT "Copying SDL2.dll to Release distribution"
         )
-        
-        if(SDL2_DLL)
-            add_custom_command(TARGET AsczGame POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${SDL2_DLL} ${CMAKE_SOURCE_DIR}/${DIST_NAME}/
-                COMMENT "Copying SDL2.dll to distribution"
-            )
-        else()
-            message(WARNING "SDL2.dll not found - distribution may not work on target machine\n")
-        endif()
-        
-        # Try to find and copy common redistributables
-        find_file(VCRUNTIME_DLL 
-            NAMES "vcruntime140.dll" "vcruntime140_1.dll" "msvcp140.dll"
-            PATHS 
-                "$ENV{SystemRoot}/System32"
-                "$ENV{SystemRoot}/SysWOW64"
-                "$ENV{VCToolsRedistDir}/x64/Microsoft.VC143.CRT"
-                "$ENV{VCToolsRedistDir}/x86/Microsoft.VC143.CRT"
-            NO_DEFAULT_PATH
-        )
-        
-        if(VCRUNTIME_DLL)
-            add_custom_command(TARGET AsczGame POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${VCRUNTIME_DLL} ${CMAKE_SOURCE_DIR}/${DIST_NAME}/
-                COMMENT "Copying Visual C++ runtime to distribution\n"
-            )
-        endif()
+    else()
+        message(WARNING "SDL2.dll not found - distribution may not work on target machine")
     endif()
+    
+    # Try to find and copy common redistributables  
+    find_file(VCRUNTIME_DLL 
+        NAMES "vcruntime140.dll" "vcruntime140_1.dll" "msvcp140.dll"
+        PATHS 
+            "$ENV{SystemRoot}/System32"
+            "$ENV{SystemRoot}/SysWOW64"
+            "$ENV{VCToolsRedistDir}/x64/Microsoft.VC143.CRT"
+            "$ENV{VCToolsRedistDir}/x86/Microsoft.VC143.CRT"
+        NO_DEFAULT_PATH
+    )
+    
+    if(VCRUNTIME_DLL)
+        add_custom_command(TARGET AsczGame POST_BUILD
+            COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy_if_different
+            ${VCRUNTIME_DLL} ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/
+            COMMENT "Copying Visual C++ runtime to Release distribution"
+        )
+    endif()
+endif()
+
+# For Debug builds, create a debug distribution folder (optional)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(DEBUG_DIST_NAME "${DIST_NAME}_Debug")
+    
+    add_custom_command(TARGET AsczGame POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}/
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}/Shaders
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Assets ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}/Assets
+        COMMENT "Creating debug distribution in ${DEBUG_DIST_NAME} folder"
+    )
 endif()
 
 # Optional: Treat all warnings as errors (recommended for engine dev)
