@@ -127,7 +127,7 @@ void Application::initVulkan() {
     size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
 
     particleManager.initParticles(
-        100, sphereModelResourceIndex, 0.1f, 0.2f,
+        100, sphereModelResourceIndex, 0.1f, 0.23f,
         // Rotation should be avoided in the first place when it comes to map meshes
         meshManager.meshes[mapMeshIndex]->meshMin * mapTransform.scl + mapTransform.pos,
         meshManager.meshes[mapMeshIndex]->meshMax * mapTransform.scl + mapTransform.pos
