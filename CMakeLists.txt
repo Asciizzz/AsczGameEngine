@@ -12,9 +12,29 @@ set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
 set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
 file(GLOB_RECURSE SRC_FILES
-    src/Az3D/*.cpp
-    src/AzVulk/*.cpp
-    src/AzCore/*.cpp
+    src/Az3D/Billboard.cpp
+    src/Az3D/Camera.cpp
+    src/Az3D/Mesh.cpp
+    src/Az3D/Mesh_BVH.cpp
+    src/Az3D/Material.cpp
+    src/Az3D/Texture.cpp
+    src/Az3D/ResourceManager.cpp
+    src/Az3D/RenderSystem.cpp
+
+    src/AzCore/FpsManager.cpp
+    src/AzCore/WindowManager.cpp
+    src/AzCore/Application.cpp
+
+    src/AzVulk/Device.cpp
+    src/AzVulk/Instance.cpp
+    src/AzVulk/Buffer.cpp
+    src/AzVulk/DepthManager.cpp
+    src/AzVulk/DescriptorManager.cpp
+    src/AzVulk/MSAAManager.cpp
+    src/AzVulk/RasterPipeline.cpp
+    src/AzVulk/ShaderManager.cpp
+    src/AzVulk/Swapchain.cpp
+    src/AzVulk/Renderer.cpp
 
     main.cpp
 )
