@@ -100,7 +100,7 @@ void Application::initVulkan() {
 
     // Load all maps (with BVH enabled for collision detection)
     // Note: TextureManager constructor already creates default texture at index 0
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/de_dust2.obj", true);
+    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/rust.obj", true);
     Az3D::Material mapMaterial;
     mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
     // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_mirage.png");
@@ -127,7 +127,7 @@ void Application::initVulkan() {
 
     // Setup map transform
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
-    mapTransform.scale(1.0f);
+    mapTransform.scale(0.5f);
     // mapTransform.rotateZ(glm::radians(-45.0f));
     // mapTransform.rotateX(glm::radians(-45.0f));
 

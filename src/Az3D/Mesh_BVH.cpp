@@ -53,8 +53,6 @@ namespace Az3D {
         nodes.push_back(root);
 
         buildBVH();
-
-        std::cout << "BVH created with " << indexCount << " triangles and " << nodes.size() << " nodes\n";
     }
 
     void Mesh::buildBVH() {
