@@ -11,3 +11,4 @@ Super_Luigi_64/
 
 # Custom binary files for my game
 *.ascz
+.vscode/
