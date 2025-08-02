@@ -41,7 +41,7 @@ private:
     std::unique_ptr<AzVulk::DescriptorManager> descriptorManager;
     std::unique_ptr<AzVulk::Renderer> renderer;
     
-    // Az3D resource management (Mesh - Material - Texture - Light)
+    // Az3D resource management
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
     // Az3D render system for efficient batching
     std::unique_ptr<Az3D::RenderSystem> renderSystem;
