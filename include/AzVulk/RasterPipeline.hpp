@@ -6,10 +6,10 @@
 namespace AzVulk {
     class RasterPipeline {
     public:
-        RasterPipeline(VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
-                      const char* vertexShaderPath, const char* fragmentShaderPath,
-                      const char* billboardVertexShaderPath, const char* billboardFragmentShaderPath,
-                      VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
+        RasterPipeline( VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
+                        const char* vertexShaderPath, const char* fragmentShaderPath,
+                        const char* billboardVertexShaderPath, const char* billboardFragmentShaderPath,
+                        VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
         ~RasterPipeline();        // Delete copy constructor and assignment operator
         RasterPipeline(const RasterPipeline&) = delete;
         RasterPipeline& operator=(const RasterPipeline&) = delete;
