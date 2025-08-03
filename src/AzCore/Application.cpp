@@ -136,7 +136,6 @@ void Application::initVulkan() {
     );
 
     // Printing every Mesh - Material - Texture - Model information
-    // Print the unordered_map of everything
     printf("Loaded Resources:\n> Meshes:\n");
     for (const auto& [name, index] : resManager.meshNameToIndex)
         printf("   Idx %zu: %s\n", index, name);
