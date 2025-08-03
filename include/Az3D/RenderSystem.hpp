@@ -65,12 +65,7 @@ namespace Az3D {
 
         // Batch processing for rendering
         std::unordered_map<size_t, std::vector<const ModelInstance*>> groupInstancesByMesh() const;
-        
-        // Getters
-        const std::vector<ModelResource>& getModelResources() const { return modelResources; }
-        const std::vector<ModelInstance>& getModelInstances() const { return modelInstances; }
-        
-    private:
+
         std::vector<ModelResource> modelResources;
         std::vector<ModelInstance> modelInstances;
     };

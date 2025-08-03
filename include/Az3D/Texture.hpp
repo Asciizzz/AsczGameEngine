@@ -31,7 +31,6 @@ namespace Az3D {
         size_t addTexture(const char* imagePath);
         void createDefaultTexture();
 
-    private:
         // Vulkan helper methods
         void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
                         VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 

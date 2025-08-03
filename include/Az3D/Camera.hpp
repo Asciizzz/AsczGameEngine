@@ -57,6 +57,6 @@ namespace Az3D {
         glm::mat4 projectionMatrix;
 
         // Convenience methods for common access patterns
-        glm::mat4 getViewProjectionMatrix() const { return projectionMatrix * viewMatrix; }
+        glm::mat4 getMVP() const { return projectionMatrix * viewMatrix; }
     };
 }

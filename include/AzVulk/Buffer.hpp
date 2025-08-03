@@ -85,12 +85,7 @@ namespace AzVulk {
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
         void createInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
         void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
-        
-        // Getters for multi-mesh data
-        const std::vector<MeshBufferData>& getMeshBuffers() const { return meshBuffers; }
-        size_t getMeshCount() const { return meshBuffers.size(); }
 
-        
         const Device& vulkanDevice;
         
         // Multi-mesh buffers storage

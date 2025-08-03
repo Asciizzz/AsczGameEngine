@@ -169,8 +169,8 @@ namespace AzVulk {
             }
             
             // Update or create the instance buffer for this mesh
-            if (meshIndex < buffer.getMeshCount()) {
-                const auto& meshBuffers = buffer.getMeshBuffers();
+            if (meshIndex < buffer.meshBuffers.size()) {
+                const auto& meshBuffers = buffer.meshBuffers;
                 if (meshIndex < meshBuffers.size()) {
                     if (instances.size() != meshBuffers[meshIndex].instanceCount) {
                         vkDeviceWaitIdle(vulkanDevice.device);
@@ -236,8 +236,8 @@ namespace AzVulk {
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
 
         // Render all meshes with their instances
-        const auto& meshBuffers = buffer.getMeshBuffers();
-        const auto& modelResources = renderSystem.getModelResources();
+        const auto& meshBuffers = buffer.meshBuffers;
+        const auto& modelResources = renderSystem.modelResources;
         
         // Group mesh indices by material for better batching
         std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;

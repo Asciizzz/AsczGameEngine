@@ -33,8 +33,7 @@ namespace AzVulk {
         VkDescriptorSetLayout descriptorSetLayout;
         
         VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-        
-    private:
+
         // Material Index -> frame descriptor sets (one per frame in flight)
         std::unordered_map<size_t, std::vector<VkDescriptorSet>> materialDescriptorSets;
         uint32_t maxFramesInFlight = 2;

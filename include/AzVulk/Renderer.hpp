@@ -52,7 +52,6 @@ namespace AzVulk {
 
         static const int MAX_FRAMES_IN_FLIGHT = 2;
 
-    private:
         void createCommandPool();
         void createCommandBuffers();
         void createSyncObjects();
