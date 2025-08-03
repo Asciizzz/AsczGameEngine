@@ -29,17 +29,13 @@ namespace AzVulk {
 
         // New render system-based draw function
         void drawFrame( RasterPipeline& pipeline,
-                        Az3D::RenderSystem& renderSystem,
-                        const std::vector<Az3D::Billboard>& billboards = {});
-
-        void setupBillboardDescriptors();
+                        Az3D::RenderSystem& renderSystem);
 
         const Device& vulkanDevice;
         SwapChain& swapChain;
         RasterPipeline& graphicsPipeline;
         Buffer& buffer;
         DescriptorManager& descriptorManager;
-        DescriptorManager billboardDescriptorManager;  // Integrated billboard descriptor manager
         Az3D::Camera& camera;
         Az3D::ResourceManager& resourceManager;
 

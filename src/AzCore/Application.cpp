@@ -52,8 +52,6 @@ void Application::initVulkan() {
         swapChain->imageFormat,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
-        "Shaders/Billboard/billboard.vert.spv",
-        "Shaders/Billboard/billboard.frag.spv",
         msaaManager->msaaSamples
     ));
     
@@ -63,8 +61,6 @@ void Application::initVulkan() {
         swapChain->imageFormat,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster1.frag.spv",
-        "Shaders/Billboard/billboard.vert.spv",
-        "Shaders/Billboard/billboard.frag.spv",
         msaaManager->msaaSamples
     ));
 
@@ -186,7 +182,6 @@ void Application::initVulkan() {
     // Final Renderer setup with ResourceManager
     renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *rasterPipeline[pipelineIndex], 
                                         *buffer, *descriptorManager, *camera, *resourceManager);
-    renderer->setupBillboardDescriptors();
 }
 
 void Application::createSurface() {
@@ -392,7 +387,7 @@ void Application::mainLoop() {
 // =================================
 
         // Use the new render system instead of combining model vectors
-        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], *renderSystem, {});
+        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], *renderSystem);
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();

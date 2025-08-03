@@ -11,7 +11,7 @@ namespace AzVulk {
                         Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
                         Az3D::ResourceManager& resourceManager)
         : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
-          descriptorManager(descriptorManager), billboardDescriptorManager(device, pipeline.billboardDescriptorSetLayout),
+          descriptorManager(descriptorManager),
           camera(camera), resourceManager(resourceManager), 
           startTime(std::chrono::high_resolution_clock::now()) {
         
@@ -139,8 +139,7 @@ namespace AzVulk {
 
     // New render system-based draw function
     void Renderer::drawFrame(RasterPipeline& pipeline,
-                            Az3D::RenderSystem& renderSystem,
-                            const std::vector<Az3D::Billboard>& billboards) {
+                            Az3D::RenderSystem& renderSystem) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -180,40 +179,6 @@ namespace AzVulk {
                         buffer.updateInstanceBufferForMesh(meshIndex, instances);
                     }
                 }
-            }
-        }
-
-        // Update billboard instance buffer if we have billboards
-        if (!billboards.empty()) {
-            // Group billboards by texture for optimal rendering
-            std::unordered_map<size_t, std::vector<const Az3D::Billboard*>> billboardsByTexture;
-            for (const auto& billboard : billboards) {
-                billboardsByTexture[billboard.textureIndex].push_back(&billboard);
-            }
-
-            std::vector<BillboardInstance> billboardInstances;
-            billboardInstances.reserve(billboards.size());
-
-            // Add instances in texture group order
-            for (const auto& [textureIndex, textureBillboards] : billboardsByTexture) {
-                for (const auto* billboard : textureBillboards) {
-                    BillboardInstance instance{};
-                    instance.position = billboard->position;
-                    instance.width = billboard->width;
-                    instance.height = billboard->height;
-                    instance.textureIndex = static_cast<uint32_t>(billboard->textureIndex);
-                    instance.uvMin = billboard->uvMin;
-                    instance.uvMax = billboard->uvMax;
-                    instance.color = billboard->color;
-                    billboardInstances.push_back(instance);
-                }
-            }
-
-            // Update billboard instance buffer
-            if (billboardInstances.size() != buffer.billboardInstanceCount) {
-                buffer.createBillboardInstanceBuffer(billboardInstances);
-            } else {
-                buffer.updateBillboardInstanceBuffer(billboardInstances);
             }
         }
 
@@ -313,36 +278,6 @@ namespace AzVulk {
             }
         }
 
-        // Render billboards if we have any
-        if (!billboards.empty()) {
-            // Switch to billboard pipeline
-            vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.billboardGraphicsPipeline);
-
-            // Group billboards by texture for batching
-            std::unordered_map<size_t, std::vector<const Az3D::Billboard*>> billboardsByTexture;
-            for (const auto& billboard : billboards) {
-                billboardsByTexture[billboard.textureIndex].push_back(&billboard);
-            }
-
-            uint32_t instanceOffset = 0;
-            for (const auto& [textureIndex, textureBillboards] : billboardsByTexture) {
-                // Bind descriptor set for this texture
-                VkDescriptorSet descriptorSet = billboardDescriptorManager.getDescriptorSet(currentFrame, textureIndex);
-                vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                      pipeline.billboardPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
-
-                // Bind billboard instance buffer
-                VkBuffer billboardBuffers[] = {buffer.billboardInstanceBuffer};
-                VkDeviceSize billboardOffsets[] = {instanceOffset * sizeof(BillboardInstance)};
-                vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, billboardBuffers, billboardOffsets);
-
-                // Draw billboards for this texture (4 vertices per billboard, triangle strip)
-                vkCmdDraw(commandBuffers[currentFrame], 4, static_cast<uint32_t>(textureBillboards.size()), 0, 0);
-
-                instanceOffset += static_cast<uint32_t>(textureBillboards.size());
-            }
-        }
-
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
 
         if (vkEndCommandBuffer(commandBuffers[currentFrame]) != VK_SUCCESS) {
@@ -391,18 +326,6 @@ namespace AzVulk {
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-    }
-
-    void Renderer::setupBillboardDescriptors() {
-        auto& texManager = *resourceManager.textureManager;
-        
-        // Create billboard descriptor sets for textures
-        billboardDescriptorManager.createDescriptorPool(2, texManager.textures.size());
-
-        for (size_t i = 0; i < texManager.textures.size(); ++i) {
-            billboardDescriptorManager.createDescriptorSetsForMaterial(buffer.uniformBuffers, sizeof(GlobalUBO), 
-                                                                       &texManager.textures[i], i);
-        }
     }
 
 }

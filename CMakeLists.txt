@@ -12,7 +12,6 @@ set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
 set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
 file(GLOB_RECURSE SRC_FILES
-    src/Az3D/Billboard.cpp
     src/Az3D/Camera.cpp
     src/Az3D/Mesh.cpp
     src/Az3D/Mesh_BVH.cpp

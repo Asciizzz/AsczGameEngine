@@ -12,7 +12,6 @@ echo.
 :: Check if we're in the right directory
 if not exist "CMakeLists.txt" (
     echo Error: CMakeLists.txt not found. Please run this from the project root.
-    pause
     exit /b 1
 )
 
@@ -25,7 +24,6 @@ cmake -DCMAKE_BUILD_TYPE=Release -DDIST_NAME="%DIST_NAME%" ..
 if errorlevel 1 (
     echo Error: CMake configuration failed!
     cd ..
-    pause
     exit /b 1
 )
 
@@ -35,7 +33,6 @@ cmake --build . --config Release
 if errorlevel 1 (
     echo Error: Build failed!
     cd ..
-    pause
     exit /b 1
 )
 
@@ -45,13 +42,11 @@ cd ..
 set "RELEASE_DIST_NAME=%DIST_NAME%_Release"
 if not exist "%RELEASE_DIST_NAME%" (
     echo Error: Distribution folder '%RELEASE_DIST_NAME%' not created by CMake!
-    pause
     exit /b 1
 )
 
 if not exist "%RELEASE_DIST_NAME%\%DIST_NAME%_release.exe" (
     echo Error: %DIST_NAME%_release.exe not found in distribution!
-    pause
     exit /b 1
 )
 

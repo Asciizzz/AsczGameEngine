@@ -2,7 +2,7 @@
 
 A Vulkan-based engine that started as “how tf do I draw a triangle” and somehow evolved into something *functional*. Performance-focused and kinda proud of it, actually.
 
-Same guy that made "2D platformer supposed to run grandma pc, struggling on 3060" here.
+Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3060" here.
 
 ---
 
@@ -10,23 +10,23 @@ Same guy that made "2D platformer supposed to run grandma pc, struggling on 3060
 
 ### Rendering
 
-* **Total instancing/batching rework** — old system made me physically ill.
+* **Total instancing/batching rework** - old system made me physically ill.
 * Went from barely rendering **100k triangles** to **2.7 million at 500 FPS**.
 * **Flexible material system** added. Can’t believe I didn’t have one before.
 * Overlapping geometry? **No longer tanks framerate.** We win these.
 
 ### Physics
 
-* Built a **BVH system** for mesh collision — originally made for [AsczEngineRT_v0](https://github.com/Asciizzz/AsczEngineRT-v0), still holds up.
+* Built a **BVH system** for mesh collision - originally made for [AsczEngineRT_v0](https://github.com/Asciizzz/AsczEngineRT-v0), still holds up.
 * Added **spatial grid** for particle-particle collisions. Goodbye O(n²) shame.
 * **1000 particles** with full collision at **1000 FPS** (CPU-side only, GPU chilling for now).
 
 ### Build Config & Runtime
 
 * Discovered I was testing in **Debug mode** like an absolute moron.
-* Switching to **Release** shrunk the binary from 2.9MB → 600KB and boosted perf by *only* **1000%**.
+* Switching to **Release** shrunk the binary from 2.9MB to 600KB and boosted perf by *only* **1000%**.
 * Can now handle **2.7M triangles** and **1000+ particles** while sitting at **400–1000 FPS**, depending on how cursed the scene is.
-* **Portable build works** — no Vulkan SDK needed. And no, it’s not a virus. Just open it, fill in your credits card's numbers, it's expiration date and the 3 quirky digits on the back.
+* **Portable build works** - no Vulkan SDK needed. And no, it’s not a virus. Just open it, fill in your credits card's numbers, it's expiration date and the 3 quirky digits on the back.
 
 ---
 
@@ -42,13 +42,13 @@ Same guy that made "2D platformer supposed to run grandma pc, struggling on 3060
 ### Physics
 
 * Particle ↔ map and particle ↔ particle collisions.
-* **BVH** for meshes — fast, maybe wrong in edge cases (don’t test it too hard).
+* **BVH** for meshes - fast, maybe wrong in edge cases (don’t test it too hard).
 * Collision response: objects bounce, don’t disappear into the void.
 
 ### Build System
 
 * CMake-based with proper Debug/Release configs.
-* MSVC `/O2` and GCC `-O3` — hot CPUs, small binaries.
+* MSVC `/O2` and GCC `-O3` - hot CPUs, small binaries.
 * `build_portable.bat`, it does what it says.
 
 ---
