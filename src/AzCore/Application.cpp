@@ -149,7 +149,10 @@ void Application::initVulkan() {
     printf("> Model:\n");
     for (const auto& [name, index] : renderSystem->modelResourceNameToIndex) {
         const auto& modelResource = renderSystem->modelResources[index];
-        printf("   Idx %zu: %s (Mesh: %zu, Mtl: %zu)\n", index, name, modelResource.meshIndex, modelResource.materialIndex);
+        size_t meshIndex = modelResource.meshIndex;
+        size_t materialIndex = modelResource.materialIndex;
+        printf("   Idx %zu (MS: %zu, MT: %zu): %s\n",
+                index, meshIndex, materialIndex, name);
     }
 
 
