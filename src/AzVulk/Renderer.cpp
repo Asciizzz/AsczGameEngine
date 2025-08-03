@@ -138,7 +138,7 @@ namespace AzVulk {
     }
 
     // New render system-based draw function
-    void Renderer::drawFrame(RasterPipeline& pipeline,
+    void Renderer::drawScene(RasterPipeline& pipeline,
                             Az3D::RenderSystem& renderSystem) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 

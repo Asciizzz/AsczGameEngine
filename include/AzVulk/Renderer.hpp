@@ -28,7 +28,7 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         // New render system-based draw function
-        void drawFrame( RasterPipeline& pipeline,
+        void drawScene( RasterPipeline& pipeline,
                         Az3D::RenderSystem& renderSystem);
 
         const Device& vulkanDevice;

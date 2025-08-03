@@ -387,7 +387,7 @@ void Application::mainLoop() {
 // =================================
 
         // Use the new render system instead of combining model vectors
-        rendererRef.drawFrame(*rasterPipeline[pipelineIndex], *renderSystem);
+        rendererRef.drawScene(*rasterPipeline[pipelineIndex], *renderSystem);
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
