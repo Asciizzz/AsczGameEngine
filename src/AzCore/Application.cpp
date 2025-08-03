@@ -151,14 +151,14 @@ void Application::initVulkan() {
     printf("%sLoaded Resources:\n> Meshes:\n", WHITE);
     for (const auto& [name, index] : resManager.meshNameToIndex)
         printf("%s   Idx %zu: %s\n", COLORS[index % NUM_COLORS], index, name);
-    printf("%sTextures:\n", WHITE);
+    printf("%s> Textures:\n", WHITE);
     for (const auto& [name, index] : resManager.textureNameToIndex) {
         const auto& texture = resManager.textureManager->textures[index];
         const char* color = COLORS[index % NUM_COLORS];
 
         printf("%s   Idx %zu: %s %s-> %sPATH: %s\n", color, index, name, WHITE, color, texture.path.c_str());
     }
-    printf("%sMaterials:\n", WHITE);
+    printf("%s> Materials:\n", WHITE);
     for (const auto& [name, index] : resManager.materialNameToIndex) {
         const auto& material = *resManager.materialManager->materials[index];
         const char* color = COLORS[index % NUM_COLORS];
