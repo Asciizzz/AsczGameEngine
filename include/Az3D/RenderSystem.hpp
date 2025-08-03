@@ -56,7 +56,10 @@ namespace Az3D {
 
         // Resource management
         size_t addModelResource(size_t meshIndex, size_t materialIndex);
-        const ModelResource& getModelResource(size_t index) const;
+        size_t addModelResource(const char* name, size_t meshIndex, size_t materialIndex); // with name mapping
+        
+        // String-to-index getter
+        size_t getModelResourceIndex(const char* name) const;
         
         // Instance management
         void clearInstances();
@@ -65,6 +68,9 @@ namespace Az3D {
 
         // Batch processing for rendering
         std::unordered_map<size_t, std::vector<const ModelInstance*>> groupInstancesByMesh() const;
+
+        // String-to-index map for model resources
+        std::unordered_map<const char*, size_t> modelResourceNameToIndex;
 
         std::vector<ModelResource> modelResources;
         std::vector<ModelInstance> modelInstances;

@@ -98,8 +98,8 @@ namespace Az3D {
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
         return addMesh(mesh);
     }
-    size_t MeshManager::loadMeshFromOBJ(const char* filePath, bool hasBVH) {
-        auto mesh = Mesh::loadFromOBJ(filePath, hasBVH);
+    size_t MeshManager::loadFromOBJ(const char* filePath) {
+        auto mesh = Mesh::loadFromOBJ(filePath);
         return addMesh(mesh);
     }
 
@@ -108,7 +108,7 @@ namespace Az3D {
 
 
     // OBJ loader implementation using tiny_obj_loader
-    std::shared_ptr<Mesh> Mesh::loadFromOBJ(const char* filePath, bool hasBVH) {
+    std::shared_ptr<Mesh> Mesh::loadFromOBJ(const char* filePath) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
@@ -210,6 +210,6 @@ namespace Az3D {
             }
         }
 
-        return std::make_shared<Mesh>(std::move(vertices), std::move(indices), hasBVH);
+        return std::make_shared<Mesh>(std::move(vertices), std::move(indices));
     }
 }

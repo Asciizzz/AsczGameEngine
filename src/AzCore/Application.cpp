@@ -90,30 +90,28 @@ void Application::initVulkan() {
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->descriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
-    auto& texManager = *resourceManager->textureManager;
-    auto& meshManager = *resourceManager->meshManager;
-    auto& matManager = *resourceManager->materialManager;
+    auto& resManager = *resourceManager;
+    auto& texManager = *resManager.textureManager;
+    auto& meshManager = *resManager.meshManager;
+    auto& matManager = *resManager.materialManager;
 
 // PLAYGROUND FROM HERE!
 
     // Load map mesh with BVH collision detection enabled
     // Note: TextureManager constructor already creates default texture at index 0
-    size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/rust.obj", true);
+    size_t mapMeshIndex = resManager.addMesh("Map", "Assets/Maps/rust.obj", true);
     Az3D::Material mapMaterial;
-    mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_mirage.png");
-    size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
+    size_t mapMaterialIndex = resManager.addMaterial("Map", mapMaterial);
 
     /* Available CS maps:
     de_dust2.obj, de_mirage.obj, de_inferno.obj, de_nuke.obj, 
     de_train.obj, de_overpass.obj, de_vertigo.obj, de_cache.obj */
 
     // Load character entities
-    size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Characters/Pearto.obj");
+    size_t sphereMeshIndex = resManager.addMesh("Pearto", "Assets/Characters/Pearto.obj");
     Az3D::Material sphereMaterial;
-    // sphereMaterial.multColor = glm::vec4(0.5f, 0.6f, 1.0f, 1.0f);
-    sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Pearto.jpeg");
-    size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
+    sphereMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.jpeg");
+    size_t sphereMaterialIndex = resManager.addMaterial("Pearto", sphereMaterial);
 
     // Configure map transform with scaling
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);

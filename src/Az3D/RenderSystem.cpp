@@ -8,8 +8,15 @@ namespace Az3D {
         return modelResources.size() - 1;
     }
 
-    const ModelResource& RenderSystem::getModelResource(size_t index) const {
-        return modelResources[index];
+    size_t RenderSystem::addModelResource(const char* name, size_t meshIndex, size_t materialIndex) {
+        size_t index = addModelResource(meshIndex, materialIndex);
+        modelResourceNameToIndex[name] = index;
+        return index;
+    }
+
+    size_t RenderSystem::getModelResourceIndex(const char* name) const {
+        auto it = modelResourceNameToIndex.find(name);
+        return it != modelResourceNameToIndex.end() ? it->second : SIZE_MAX; // SIZE_MAX indicates not found
     }
 
     void RenderSystem::clearInstances() {

@@ -6,6 +6,8 @@ namespace Az3D {
     // BVH Construction
 
     void Mesh::createBVH() {
+        hasBVH = true;
+
         if (indices.empty()) {
             std::cerr << "Cannot create BVH: no indices available\n";
             return;
@@ -183,7 +185,7 @@ namespace Az3D {
 
     HitInfo Mesh::closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const Transform& transform) const {
         HitInfo hit;
-        if (!useBVH || nodes.empty()) {
+        if (!hasBVH || nodes.empty()) {
             return hit; // No BVH available
         }
         
@@ -293,7 +295,7 @@ namespace Az3D {
 
     HitInfo Mesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, const Transform& transform) const {
         HitInfo hit;
-        if (!useBVH || nodes.empty()) {
+        if (!hasBVH || nodes.empty()) {
             return hit; // No BVH available
         }
         

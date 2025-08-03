@@ -84,10 +84,8 @@ namespace Az3D {
         static constexpr size_t BIN_COUNT = 11;
 
         Mesh() = default;
-        Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool hasBVH = false)
-            : vertices(std::move(vertices)), indices(std::move(indices)), useBVH(hasBVH) {
-            if (hasBVH) { createBVH(); }
-        }
+        Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
+            : vertices(std::move(vertices)), indices(std::move(indices)) {}
 
         // Mesh data
         std::vector<Vertex> vertices;
@@ -97,7 +95,7 @@ namespace Az3D {
         glm::vec3 meshMin = glm::vec3(FLT_MAX);
         glm::vec3 meshMax = glm::vec3(-FLT_MAX);
 
-        bool useBVH = false;
+        bool hasBVH = false;
         std::vector<BVHNode> nodes;
         std::vector<size_t> sortedIndices; // For BVH traversal
         std::vector<glm::vec3> unsortedABmin;
@@ -117,7 +115,7 @@ namespace Az3D {
         static float sphereIntersectBox(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& boxMin, const glm::vec3& boxMax);
         static glm::vec3 sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
 
-        static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath, bool hasBVH = false);
+        static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath);
     };
 
 
@@ -129,7 +127,7 @@ namespace Az3D {
 
         size_t addMesh(std::shared_ptr<Mesh> mesh);
         size_t addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
-        size_t loadMeshFromOBJ(const char* filePath, bool hasBVH = false);
+        size_t loadFromOBJ(const char* filePath);
 
         // Index-based mesh storage
         std::vector<std::shared_ptr<Mesh>> meshes;
