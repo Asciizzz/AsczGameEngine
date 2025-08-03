@@ -20,11 +20,10 @@ namespace AzVulk {
         Device(VkInstance instance, VkSurfaceKHR surface);
         ~Device();
 
-        // Delete copy constructor and assignment operator
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
 
-        // Utility methods
+        // Memory and buffer utilities
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
         void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) const;
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const;
@@ -32,14 +31,14 @@ namespace AzVulk {
         VkCommandBuffer beginSingleTimeCommands(VkCommandPool commandPool) const;
         void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool) const;
 
-        // Internal setup methods (now public for direct access)
+        // Device setup methods
         void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
         void createLogicalDevice();
         bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
         bool checkDeviceExtensionSupport(VkPhysicalDevice device);
         QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-        // All Vulkan objects are now public for direct access
+        // Vulkan device objects
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         VkDevice device = VK_NULL_HANDLE;
         VkQueue graphicsQueue = VK_NULL_HANDLE;

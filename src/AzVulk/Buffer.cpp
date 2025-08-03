@@ -31,7 +31,7 @@ namespace AzVulk {
             vkFreeMemory(logicalDevice, materialUniformBuffersMemory[i], nullptr);
         }
 
-        // Cleanup legacy single-mesh buffers
+        // Cleanup legacy buffers
         if (instanceBuffer != VK_NULL_HANDLE) {
             if (instanceBufferMapped) {
                 vkUnmapMemory(logicalDevice, instanceBufferMemory);

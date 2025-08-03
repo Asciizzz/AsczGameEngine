@@ -17,7 +17,7 @@ namespace AzVulk {
         SwapChain(const Device& device, VkSurfaceKHR surface, SDL_Window* window);
         ~SwapChain();
 
-        // Delete copy constructor and assignment operator
+        
         SwapChain(const SwapChain&) = delete;
         SwapChain& operator=(const SwapChain&) = delete;
 
@@ -35,7 +35,7 @@ namespace AzVulk {
         std::vector<VkImageView> imageViews;
         std::vector<VkFramebuffer> framebuffers;
 
-        // Helper methods (now public for direct access)
+        // Helper methods 
         void createSwapChain(SDL_Window* window);
         void createImageViews();
         void cleanup();

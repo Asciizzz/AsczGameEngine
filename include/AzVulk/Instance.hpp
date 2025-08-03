@@ -11,16 +11,15 @@ namespace AzVulk {
         Instance(const std::vector<const char*>& requiredExtensions, bool enableValidation = false);
         ~Instance();
 
-        // Delete copy constructor and assignment operator
         Instance(const Instance&) = delete;
         Instance& operator=(const Instance&) = delete;
 
-        
+        // Vulkan instance and debug messenger
         VkInstance instance = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
         bool validationLayersEnabled;
 
-        // Helper methods (now public for direct access)
+        // Helper methods 
         void createInstance(const std::vector<const char*>& requiredExtensions);
         void setupDebugMessenger();
         bool checkValidationLayerSupport();

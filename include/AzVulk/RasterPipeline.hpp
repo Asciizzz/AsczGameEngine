@@ -9,28 +9,30 @@ namespace AzVulk {
         RasterPipeline( VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
                         const char* vertexShaderPath, const char* fragmentShaderPath,
                         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
-        ~RasterPipeline();        // Delete copy constructor and assignment operator
+        ~RasterPipeline();        
+        
         RasterPipeline(const RasterPipeline&) = delete;
         RasterPipeline& operator=(const RasterPipeline&) = delete;
 
         void recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
 
+        // Shader paths
         const char* vertexShaderPath;
         const char* fragmentShaderPath;
         
+        // Device and format context
         VkDevice device;
         VkExtent2D swapChainExtent;
         VkFormat swapChainImageFormat;
-        VkSampleCountFlagBits msaaSamples;
+        VkSampleCountFlagBits msaaSamples; // anti-aliasing samples
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
 
-        // Descriptor set layout for the main pipeline
+        // Pipeline layout and objects
         VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
-        // Helper methods (now public for direct access)
         void createRenderPass();
         void createDescriptorSetLayout();
         void createGraphicsPipeline(const char* vertexShaderPath, const char* fragmentShaderPath);

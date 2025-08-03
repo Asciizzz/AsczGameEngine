@@ -23,14 +23,13 @@ namespace AzVulk {
                 Az3D::ResourceManager& resourceManager);
         ~Renderer();
 
-        // Delete copy constructor and assignment operator
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        // New render system-based draw function
         void drawScene( RasterPipeline& pipeline,
                         Az3D::RenderSystem& renderSystem);
 
+        // Component references
         const Device& vulkanDevice;
         SwapChain& swapChain;
         RasterPipeline& graphicsPipeline;
@@ -39,18 +38,21 @@ namespace AzVulk {
         Az3D::Camera& camera;
         Az3D::ResourceManager& resourceManager;
 
+        // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;
         std::vector<VkCommandBuffer> commandBuffers;
         
+        // Synchronization objects
         std::vector<VkSemaphore> imageAvailableSemaphores;
         std::vector<VkSemaphore> renderFinishedSemaphores;
         std::vector<VkFence> inFlightFences;
         
         uint32_t currentFrame = 0;
         bool framebufferResized = false;
+        
         std::chrono::high_resolution_clock::time_point startTime;
 
-        static const int MAX_FRAMES_IN_FLIGHT = 2;
+        static const int MAX_FRAMES_IN_FLIGHT = 2; // double buffering
 
         void createCommandPool();
         void createCommandBuffers();

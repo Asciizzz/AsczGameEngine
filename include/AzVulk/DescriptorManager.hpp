@@ -16,7 +16,7 @@ namespace AzVulk {
         DescriptorManager(const Device& device, VkDescriptorSetLayout descriptorSetLayout);
         ~DescriptorManager();
 
-        // Delete copy constructor and assignment operator
+        
         DescriptorManager(const DescriptorManager&) = delete;
         DescriptorManager& operator=(const DescriptorManager&) = delete;
 

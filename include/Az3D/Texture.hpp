@@ -9,7 +9,7 @@ namespace AzVulk {
 }
 
 namespace Az3D {
-    // Barebone Vulkan texture resource
+    // Vulkan texture resource
     struct Texture {
         std::string path;
         VkImage image = VK_NULL_HANDLE;
@@ -18,7 +18,7 @@ namespace Az3D {
         VkSampler sampler = VK_NULL_HANDLE;
     };
 
-    // Barebone manager for textures
+    // Texture manager with Vulkan helpers
     class TextureManager {
     public:
         const AzVulk::Device& vulkanDevice;
@@ -29,9 +29,9 @@ namespace Az3D {
         ~TextureManager();
         
         size_t addTexture(const char* imagePath);
-        void createDefaultTexture();
+        void createDefaultTexture(); // fallback for missing assets
 
-        // Vulkan helper methods
+        // Vulkan image creation helpers
         void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
                         VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
                         VkImage& image, VkDeviceMemory& imageMemory);

@@ -11,7 +11,7 @@ namespace AzVulk {
         DepthManager(const Device& device);
         ~DepthManager();
 
-        // Delete copy constructor and assignment operator
+        
         DepthManager(const DepthManager&) = delete;
         DepthManager& operator=(const DepthManager&) = delete;
 
@@ -26,7 +26,7 @@ namespace AzVulk {
         VkImageView depthImageView = VK_NULL_HANDLE;
         VkFormat depthFormat;
 
-        // Helper methods (now public for direct access)
+        // Helper methods 
         VkFormat findDepthFormat();
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, 
                                    VkImageTiling tiling, VkFormatFeatureFlags features);

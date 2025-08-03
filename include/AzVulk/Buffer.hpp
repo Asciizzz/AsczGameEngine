@@ -37,7 +37,7 @@ namespace AzVulk {
         void* instanceBufferMapped = nullptr;
         uint32_t instanceCount = 0;
         
-        // Cleanup helper
+        // Cleanup helper - destructors aren't enough apparently
         void cleanup(VkDevice device) {
             if (instanceBufferMapped) {
                 vkUnmapMemory(device, instanceBufferMemory);
@@ -62,7 +62,8 @@ namespace AzVulk {
         Buffer(const class Device& device);
         ~Buffer();
 
-        // Delete copy constructor and assignment operator
+        
+        // Sharing buffers: not even once
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
 
@@ -77,6 +78,7 @@ namespace AzVulk {
         void updateMaterialUniformBuffer(size_t materialIndex, const Az3D::Material& material);
         VkBuffer getMaterialUniformBuffer(size_t materialIndex) const;
         
+        // Mesh loading functions
         void loadMesh(const Az3D::Mesh& mesh);
         void createVertexBuffer(const Az3D::Mesh& mesh);
         void createInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances);
@@ -106,6 +108,7 @@ namespace AzVulk {
         void* instanceBufferMapped = nullptr;
         uint32_t instanceCount = 0;
         
+        // Uniform buffer arrays
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;
         std::vector<void*> uniformBuffersMapped;
@@ -115,7 +118,7 @@ namespace AzVulk {
         std::vector<VkDeviceMemory> materialUniformBuffersMemory;
         std::vector<void*> materialUniformBuffersMapped;
 
-        // Helper methods (now public for direct access)
+        // Helper methods 
         void createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
                             VkBuffer& buffer, VkDeviceMemory& bufferMemory);
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool);

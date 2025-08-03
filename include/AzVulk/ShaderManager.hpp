@@ -10,7 +10,7 @@ namespace AzVulk {
         ShaderManager(VkDevice device);
         ~ShaderManager();
 
-        // Delete copy constructor and assignment operator
+        
         ShaderManager(const ShaderManager&) = delete;
         ShaderManager& operator=(const ShaderManager&) = delete;
 

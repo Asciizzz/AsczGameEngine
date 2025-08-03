@@ -22,7 +22,7 @@ namespace Az3D {
         ResourceManager(const AzVulk::Device& device, VkCommandPool commandPool);
         ~ResourceManager() = default;
 
-        // Delete copy constructor and assignment operator
+        
         ResourceManager(const ResourceManager&) = delete;
         ResourceManager& operator=(const ResourceManager&) = delete;
 

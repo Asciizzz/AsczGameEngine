@@ -11,7 +11,7 @@ namespace AzCore {
         WindowManager(const char* title, uint32_t width, uint32_t height);
         ~WindowManager();
 
-        // Delete copy constructor and assignment operator
+        
         WindowManager(const WindowManager&) = delete;
         WindowManager& operator=(const WindowManager&) = delete;
 

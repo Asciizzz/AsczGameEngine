@@ -19,7 +19,7 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
     fpsManager = std::make_unique<AzCore::FpsManager>();
 
     float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-    // 10KM VIEW DISTANCE!!!
+    // 10km view distance for those distant horizons
     camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
     camera->setAspectRatio(aspectRatio);
 
@@ -66,6 +66,7 @@ void Application::initVulkan() {
 
     shaderManager = std::make_unique<ShaderManager>(vulkanDevice->device);
 
+    // Create command pool for graphics operations
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -75,6 +76,7 @@ void Application::initVulkan() {
         throw std::runtime_error("failed to create command pool!");
     }
 
+    // Initialize render targets and depth testing
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = std::make_unique<DepthManager>(*vulkanDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
@@ -94,34 +96,26 @@ void Application::initVulkan() {
 
 // PLAYGROUND FROM HERE!
 
-    // Load all maps (with BVH enabled for collision detection)
+    // Load map mesh with BVH collision detection enabled
     // Note: TextureManager constructor already creates default texture at index 0
     size_t mapMeshIndex = meshManager.loadMeshFromOBJ("Assets/Maps/rust.obj", true);
     Az3D::Material mapMaterial;
-    mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White color
+    mapMaterial.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     // mapMaterial.diffTxtr = texManager.addTexture("Assets/Textures/de_mirage.png");
     size_t mapMaterialIndex = matManager.addMaterial(mapMaterial);
 
-    /* List of available cs maps
-    de_dust2.obj
-    de_mirage.obj
-    de_inferno.obj
-    de_nuke.obj
-    de_train.obj
-    de_overpass.obj
-    de_vertigo.obj
-    de_cache.obj
-    */
+    /* Available CS maps:
+    de_dust2.obj, de_mirage.obj, de_inferno.obj, de_nuke.obj, 
+    de_train.obj, de_overpass.obj, de_vertigo.obj, de_cache.obj */
 
-    // Load all entities
+    // Load character entities
     size_t sphereMeshIndex = meshManager.loadMeshFromOBJ("Assets/Characters/Pearto.obj");
     Az3D::Material sphereMaterial;
-    // sphereMaterial.multColor = glm::vec4(0.5f, 0.6f, 1.0f, 1.0f); // Blueish color
+    // sphereMaterial.multColor = glm::vec4(0.5f, 0.6f, 1.0f, 1.0f);
     sphereMaterial.diffTxtr = texManager.addTexture("Assets/Textures/Pearto.jpeg");
     size_t sphereMaterialIndex = matManager.addMaterial(sphereMaterial);
-    // size_t sphereMaterialIndex = 0; // Use default material
 
-    // Setup map transform
+    // Configure map transform with scaling
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
     mapTransform.scale(0.5f);
     // mapTransform.rotateZ(glm::radians(-45.0f));
@@ -133,9 +127,9 @@ void Application::initVulkan() {
     mapModelResourceIndex = renderSystem->addModelResource(mapMeshIndex, mapMaterialIndex);
     size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
 
+    // Initialize particle system within map bounds
     particleManager.initParticles(
         1000, sphereModelResourceIndex, 0.1f, 0.25f,
-        // Rotation should be avoided in the first place when it comes to map meshes
         meshManager.meshes[mapMeshIndex]->meshMin * mapTransform.scl + mapTransform.pos,
         meshManager.meshes[mapMeshIndex]->meshMax * mapTransform.scl + mapTransform.pos
     );

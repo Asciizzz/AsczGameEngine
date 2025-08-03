@@ -10,7 +10,7 @@ namespace AzVulk {
         MSAAManager(const Device& device);
         ~MSAAManager();
 
-        // Delete copy constructor and assignment operator
+        
         MSAAManager(const MSAAManager&) = delete;
         MSAAManager& operator=(const MSAAManager&) = delete;
 
@@ -25,7 +25,7 @@ namespace AzVulk {
         VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;
         VkImageView colorImageView = VK_NULL_HANDLE;
 
-        // Helper methods (now public for direct access)
+        // Helper methods 
         VkSampleCountFlagBits getMaxUsableSampleCount();
         void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, 
                         VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, 

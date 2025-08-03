@@ -42,7 +42,7 @@ namespace AzCore {
         static constexpr size_t SAMPLE_COUNT = 60;
         std::deque<float> frameTimeHistory;
         
-        // Helper methods (now public for direct access)
+        // Helper methods 
         void updateFrameTimeHistory(float frameTime);
         void limitFrameRate();
     };

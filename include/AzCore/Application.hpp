@@ -13,7 +13,8 @@ public:
     Application(const char* title = "Vulkan Application", uint32_t width = 800, uint32_t height = 600);
     ~Application();
 
-    // Delete copy constructor and assignment operator
+    
+    // Modern C++ says no sharing
     Application(const Application&) = delete;
     Application& operator=(const Application&) = delete;
 
@@ -25,6 +26,7 @@ private:
     std::unique_ptr<AzCore::FpsManager> fpsManager;
     std::unique_ptr<Az3D::Camera> camera;
 
+    // Vulkan: OpenGL's ambitious cousin
     std::unique_ptr<AzVulk::Instance> vulkanInstance;
     std::unique_ptr<AzVulk::Device> vulkanDevice;
     std::unique_ptr<AzVulk::SwapChain> swapChain;
@@ -32,8 +34,9 @@ private:
     std::vector<
         std::unique_ptr<AzVulk::RasterPipeline>
     > rasterPipeline;
-    int pipelineIndex = 0;
+    int pipelineIndex = 0; // Arrays start at 0, revolutionary
 
+    // More Vulkan ceremony
     std::unique_ptr<AzVulk::ShaderManager> shaderManager;
     std::unique_ptr<AzVulk::Buffer> buffer;
     std::unique_ptr<AzVulk::DepthManager> depthManager;
@@ -43,27 +46,29 @@ private:
     
     // Az3D resource management
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
-    // Az3D render system for efficient batching
+    // Batching for "efficiency"
     std::unique_ptr<Az3D::RenderSystem> renderSystem;
     
-    // Beta features
+    // Beta features (alpha was too honest)
     AzBeta::ParticleManager particleManager;
     
     // Map data (formerly from AzBeta::Map)
     size_t mapMeshIndex = 0;
     Az3D::Transform mapTransform;
     
-    // Model resource indices for the new rendering system
+    // Model resource indices
     size_t mapModelResourceIndex = 0;
 
+    // Vulkan handles we'll definitely remember to clean up
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-    // Application settings
+    // Window metadata
     const char* appTitle;
     uint32_t appWidth;
     uint32_t appHeight;
 
+    // Functions that actually do things
     void initVulkan();
     void createSurface();
     void mainLoop();
