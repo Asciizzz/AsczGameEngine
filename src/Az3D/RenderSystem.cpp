@@ -14,7 +14,7 @@ namespace Az3D {
         return index;
     }
 
-    size_t RenderSystem::getModelResourceIndex(const char* name) const {
+    size_t RenderSystem::getModelResource(const char* name) const {
         auto it = modelResourceNameToIndex.find(name);
         return it != modelResourceNameToIndex.end() ? it->second : SIZE_MAX; // SIZE_MAX indicates not found
     }

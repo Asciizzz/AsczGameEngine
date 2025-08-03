@@ -59,7 +59,7 @@ namespace Az3D {
         size_t addModelResource(const char* name, size_t meshIndex, size_t materialIndex); // with name mapping
         
         // String-to-index getter
-        size_t getModelResourceIndex(const char* name) const;
+        size_t getModelResource(const char* name) const;
         
         // Instance management
         void clearInstances();

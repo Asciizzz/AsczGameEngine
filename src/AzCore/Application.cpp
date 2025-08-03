@@ -108,10 +108,10 @@ void Application::initVulkan() {
     de_train.obj, de_overpass.obj, de_vertigo.obj, de_cache.obj */
 
     // Load character entities
-    size_t sphereMeshIndex = resManager.addMesh("Pearto", "Assets/Characters/Pearto.obj");
-    Az3D::Material sphereMaterial;
-    sphereMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.jpeg");
-    size_t sphereMaterialIndex = resManager.addMaterial("Pearto", sphereMaterial);
+    size_t pearMeshIndex = resManager.addMesh("Pearto", "Assets/Characters/Pearto.obj");
+    Az3D::Material pearMaterial;
+    pearMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.jpeg");
+    size_t pearMaterialIndex = resManager.addMaterial("Pearto", pearMaterial);
 
     // Configure map transform with scaling
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -122,15 +122,36 @@ void Application::initVulkan() {
     this->mapMeshIndex = mapMeshIndex;
 
     // Create model resources for render system
-    mapModelResourceIndex = renderSystem->addModelResource(mapMeshIndex, mapMaterialIndex);
-    size_t sphereModelResourceIndex = renderSystem->addModelResource(sphereMeshIndex, sphereMaterialIndex);
+    mapModelResourceIndex = renderSystem->addModelResource(
+        "Map", mapMeshIndex, mapMaterialIndex
+    );
+
+    size_t pearModelResourceIndex = renderSystem->addModelResource("Pearto", pearMeshIndex, pearMaterialIndex);
 
     // Initialize particle system within map bounds
     particleManager.initParticles(
-        1000, sphereModelResourceIndex, 0.1f, 0.25f,
+        1000, pearModelResourceIndex, 0.1f, 0.25f,
         meshManager.meshes[mapMeshIndex]->meshMin * mapTransform.scl + mapTransform.pos,
         meshManager.meshes[mapMeshIndex]->meshMax * mapTransform.scl + mapTransform.pos
     );
+
+    // Printing every Mesh - Material - Texture - Model information
+    // Print the unordered_map of everything
+    printf("Loaded Resources:\n> Meshes:\n");
+    for (const auto& [name, index] : resManager.meshNameToIndex)
+        printf("   Idx %zu: %s\n", index, name);
+    printf("> Textures:\n");
+    for (const auto& [name, index] : resManager.textureNameToIndex)
+        printf("   Idx %zu: %s\n", index, name);
+    printf("> Materials:\n");
+    for (const auto& [name, index] : resManager.materialNameToIndex)
+        printf("   Idx %zu: %s\n", index, name);
+    printf("> Model:\n");
+    for (const auto& [name, index] : renderSystem->modelResourceNameToIndex) {
+        const auto& modelResource = renderSystem->modelResources[index];
+        printf("   Idx %zu: %s (Mesh: %zu, Mtl: %zu)\n", index, name, modelResource.meshIndex, modelResource.materialIndex);
+    }
+
 
 // PLAYGROUND END HERE 
 
@@ -194,9 +215,10 @@ void Application::mainLoop() {
     auto& deviceRef = *vulkanDevice;
     auto& bufferRef = *buffer;
 
-    auto& meshManager = *resourceManager->meshManager;
-    auto& texManager = *resourceManager->textureManager;
-    auto& matManager = *resourceManager->materialManager;
+    auto& resManager = *resourceManager;
+    auto& meshManager = *resManager.meshManager;
+    auto& texManager = *resManager.textureManager;
+    auto& matManager = *resManager.materialManager;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
@@ -240,10 +262,8 @@ void Application::mainLoop() {
             Uint32 flags = SDL_GetWindowFlags(winManager.window);
             
             if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-                // Exit fullscreen
                 SDL_SetWindowFullscreen(winManager.window, 0);
             } else {
-                // Enter fullscreen (borderless windowed)
                 SDL_SetWindowFullscreen(winManager.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
             }
             f11Pressed = true;
@@ -355,7 +375,7 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_Q] && !hold_Q) {
             hold_Q = true;
 
-            // The idea is that any sphere in the range 0 - pushRange unit will be pushed
+            // The idea is that any pear in the range 0 - pushRange unit will be pushed
             // and the closer it is, the velocity vector will be stronger
             for (size_t p = 0; p < particleManager.particleCount; ++p) {
                 glm::vec3 dir = particleManager.particles[p].pos - camRef.pos;
