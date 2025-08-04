@@ -31,8 +31,6 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/DescriptorManager.cpp
     src/AzVulk/MSAAManager.cpp
     src/AzVulk/RasterPipeline.cpp
-    src/AzVulk/TransparencyPipeline.cpp
-    src/AzVulk/CompositePipeline.cpp
     src/AzVulk/ShaderManager.cpp
     src/AzVulk/Swapchain.cpp
     src/AzVulk/Renderer.cpp

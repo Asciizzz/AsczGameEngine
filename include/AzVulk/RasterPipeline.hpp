@@ -36,7 +36,7 @@ namespace AzVulk {
 
         void createRenderPass();
         void createDescriptorSetLayout();
-        void createGraphicsPipeline(const char* vertexShaderPath, const char* fragmentShaderPath);
+        void createGraphicsPipeline();
         void createTransparentPipeline(); // Create alpha-blended version
         void cleanup();
     };

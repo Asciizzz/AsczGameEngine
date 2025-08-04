@@ -112,11 +112,9 @@ namespace Az3D {
             const auto& resource = modelResources[instance.modelResourceIndex];
             const auto& material = *resourceManager->materialManager->materials[resource.materialIndex];
             
-            if (material.diffTxtr > 0 && material.diffTxtr < resourceManager->textureManager->textures.size()) {
+            if (material.diffTxtr > 0) {
                 const auto& texture = resourceManager->textureManager->textures[material.diffTxtr];
-                if (texture.hasTransparency) {
-                    return true;
-                }
+                if (texture.hasTransparency) { return true; }
             }
         }
 

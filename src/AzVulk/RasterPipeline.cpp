@@ -17,7 +17,7 @@ namespace AzVulk {
         createRenderPass();
         createDescriptorSetLayout();
 
-        createGraphicsPipeline(vertexShaderPath, fragmentShaderPath);
+        createGraphicsPipeline();
         createTransparentPipeline();
     }
 
@@ -33,7 +33,9 @@ namespace AzVulk {
         cleanup();
         createRenderPass();
         createDescriptorSetLayout();
-        createGraphicsPipeline(vertexShaderPath, fragmentShaderPath);
+
+        createGraphicsPipeline();
+        createTransparentPipeline();
     }
 
     void RasterPipeline::createRenderPass() {
@@ -143,7 +145,7 @@ namespace AzVulk {
         }
     }
 
-    void RasterPipeline::createGraphicsPipeline(const char* vertexShaderPath, const char* fragmentShaderPath) {
+    void RasterPipeline::createGraphicsPipeline() {
         auto vertShaderCode = ShaderManager::readFile(vertexShaderPath);
         auto fragShaderCode = ShaderManager::readFile(fragmentShaderPath);
 

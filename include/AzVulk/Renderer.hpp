@@ -7,8 +7,6 @@
 #include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/RasterPipeline.hpp"
-#include "AzVulk/TransparencyPipeline.hpp"
-#include "AzVulk/CompositePipeline.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
 #include "Az3D/Az3D.hpp"
