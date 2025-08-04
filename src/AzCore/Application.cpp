@@ -404,12 +404,6 @@ void Application::mainLoop() {
 
         rendSys.addInstance(mapInstance);
 
-        // Add the river instance
-        Az3D::ModelInstance riverInstance;
-        riverInstance.multColor() = glm::vec4(0.0f, 0.5f, 1.0f, 0.5f); // Semi-transparent blue
-        riverInstance.modelResourceIndex = rendSys.getModelResource("River");
-        rendSys.addInstance(riverInstance);
-
         static bool physic_enable = false;
         static bool hold_P = false;
         if (k_state[SDL_SCANCODE_P] && !hold_P) {
@@ -440,9 +434,15 @@ void Application::mainLoop() {
         } else if (!k_state[SDL_SCANCODE_P]) {
             hold_P = false;
         }
-
-        particleManager.addToRenderSystem(*renderSystem, dTime);
         if (physic_enable) particleManager.update(dTime, *meshManager.meshes[mapMeshIndex], mapTransform);
+
+        particleManager.addToRenderSystem(rendSys, dTime);
+
+        // Add the river instance
+        Az3D::ModelInstance riverInstance;
+        riverInstance.multColor() = glm::vec4(0.0f, 0.5f, 1.0f, 0.5f); // Semi-transparent blue
+        riverInstance.modelResourceIndex = rendSys.getModelResource("River");
+        rendSys.addInstance(riverInstance);
 
         // Press Q to push the particles away from the camera position
         static bool hold_Q = false;

@@ -315,7 +315,7 @@ namespace AzVulk {
             for (const auto& [materialIndex, meshIndices] : transparentMaterialToMeshes) {
                 VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
                 vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                      pipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                                        pipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
                 for (size_t meshIndex : meshIndices) {
                     if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {
