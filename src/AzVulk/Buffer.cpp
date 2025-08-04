@@ -127,9 +127,9 @@ namespace AzVulk {
             
             vkMapMemory(vulkanDevice.device, materialUniformBuffersMemory[i], 0, bufferSize, 0, &materialUniformBuffersMapped[i]);
             
-            // Initialize material data
+            // Initialize material data (currently just padding)
             MaterialUBO materialUBO{};
-            materialUBO.multColor = materials[i].multColor;
+            // Future material properties will be set here
             memcpy(materialUniformBuffersMapped[i], &materialUBO, sizeof(MaterialUBO));
         }
     }
@@ -137,7 +137,7 @@ namespace AzVulk {
     void Buffer::updateMaterialUniformBuffer(size_t materialIndex, const Az3D::Material& material) {
         if (materialIndex < materialUniformBuffersMapped.size() && materialUniformBuffersMapped[materialIndex]) {
             MaterialUBO materialUBO{};
-            materialUBO.multColor = material.multColor;
+            // Future material properties will be updated here
             memcpy(materialUniformBuffersMapped[materialIndex], &materialUBO, sizeof(MaterialUBO));
         }
     }

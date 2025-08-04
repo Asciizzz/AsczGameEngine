@@ -8,9 +8,9 @@ layout(binding = 0) uniform GlobalUBO {
 
 layout(binding = 1) uniform sampler2D txtrSmplr;
 
-// Material uniform buffer
+// Material uniform buffer (reserved for future material properties)
 layout(binding = 2) uniform MaterialUBO {
-    vec4 multColor;
+    float padding;
 } material;
 
 layout(location = 0) in vec2 fragTxtr;
@@ -27,6 +27,6 @@ void main() {
     // Red = X component, Green = Y component, Blue = Z component
     vec4 debugColor = vec4(normalColor, 1.0);
     
-    // Apply material color multiplication to debug output too
-    outColor = debugColor * material.multColor;
+    // No material color multiplication needed since instance coloring is handled elsewhere
+    outColor = debugColor;
 }

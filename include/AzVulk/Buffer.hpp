@@ -18,7 +18,9 @@ namespace AzVulk {
 
     // Material properties for per-material uniform buffer
     struct MaterialUBO {
-        alignas(16) glm::vec4 multColor;  // Material color multiplier
+        // Future material properties can be added here
+        // For now, just padding to keep the UBO valid
+        alignas(16) float padding = 0.0f;
     };
 
     // Multi-mesh data structure for storing multiple mesh types
