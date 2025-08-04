@@ -87,6 +87,10 @@ void Application::initVulkan() {
 
     resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
     renderSystem = std::make_unique<Az3D::RenderSystem>();
+    
+    // Set up the render system to have access to materials for transparency detection
+    renderSystem->setResourceManager(resourceManager.get());
+    
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->descriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
@@ -107,11 +111,17 @@ void Application::initVulkan() {
     de_dust2.obj, de_mirage.obj, de_inferno.obj, de_nuke.obj, 
     de_train.obj, de_overpass.obj, de_vertigo.obj, de_cache.obj */
 
-    // Load character entities
+    // Load Kasane Teto but as a pear (Pearto)
     size_t pearMeshIndex = resManager.addMesh("Pearto", "Assets/Characters/Pearto.obj");
     Az3D::Material pearMaterial;
-    pearMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.jpeg");
+    pearMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.png");
     size_t pearMaterialIndex = resManager.addMaterial("Pearto", pearMaterial);
+
+    // Add a test transparent Pearto for debugging texture alpha
+    size_t testPearMeshIndex = resManager.addMesh("TestPear", "Assets/Characters/Pearto.obj");
+    Az3D::Material testPearMaterial;
+    testPearMaterial.diffTxtr = resManager.addTexture("TestPear", "Assets/Textures/Pearto.png");
+    size_t testPearMaterialIndex = resManager.addMaterial("TestPear", testPearMaterial);
 
     // Configure map transform with scaling
     mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -127,6 +137,9 @@ void Application::initVulkan() {
     );
 
     size_t pearModelResourceIndex = renderSystem->addModelResource("Pearto", pearMeshIndex, pearMaterialIndex);
+
+    // Create test transparent pear model resource
+    testPearModelResourceIndex = renderSystem->addModelResource("TestPear", testPearMeshIndex, testPearMaterialIndex);
 
     // Initialize particle system within map bounds
     particleManager.initParticles(
@@ -375,6 +388,13 @@ void Application::mainLoop() {
         mapInstance.modelResourceIndex = mapModelResourceIndex;
 
         renderSystem->addInstance(mapInstance);
+
+        // // Add a test transparent Pearto instance
+        // Az3D::ModelInstance testPearInstance;
+        // testPearInstance.modelMatrix() = glm::translate(glm::mat4(1.0f), camRef.pos + camRef.forward * 3.0f);
+        // testPearInstance.modelResourceIndex = testPearModelResourceIndex;
+        // testPearInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% transparent white tint
+        // renderSystem->addInstance(testPearInstance);
 
         static bool physic_enable = false;
         static bool hold_P = false;

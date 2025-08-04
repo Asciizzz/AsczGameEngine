@@ -54,6 +54,9 @@ namespace Az3D {
         RenderSystem() = default;
         ~RenderSystem() = default;
 
+        // Set resource manager for transparency detection (called after resource manager is created)
+        void setResourceManager(const class ResourceManager* resourceManager);
+
         // Resource management
         size_t addModelResource(size_t meshIndex, size_t materialIndex);
         size_t addModelResource(const char* name, size_t meshIndex, size_t materialIndex); // with name mapping
@@ -81,6 +84,9 @@ namespace Az3D {
 
         std::vector<ModelResource> modelResources;
         std::vector<ModelInstance> modelInstances;
+
+    private:
+        const class ResourceManager* resourceManager = nullptr; // For texture transparency checking
     };
 
 } // namespace Az3D

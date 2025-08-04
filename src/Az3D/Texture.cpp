@@ -47,6 +47,17 @@ namespace Az3D {
             if (!pixels) {
                 throw std::runtime_error("Failed to load texture: " + std::string(imagePath));
             }
+
+            // Check for transparency by scanning alpha channel
+            texture.hasTransparency = false;
+            if (texChannels == 4) { // Original image had alpha channel
+                for (int i = 3; i < texWidth * texHeight * 4; i += 4) { // Check every 4th byte (alpha)
+                    if (pixels[i] < 255) { // Non-opaque pixel found
+                        texture.hasTransparency = true;
+                        break;
+                    }
+                }
+            }
             
             uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
             

@@ -1,4 +1,5 @@
 #include "Az3D/RenderSystem.hpp"
+#include "Az3D/ResourceManager.hpp"
 #include <vulkan/vulkan.h>
 
 namespace Az3D {
@@ -101,8 +102,29 @@ namespace Az3D {
     }
 
     bool RenderSystem::isInstanceTransparent(const ModelInstance& instance) const {
-        // An instance is transparent if its alpha (multColor.w) is less than 1.0
-        return instance.multColor().w < 1.0f;
+        // Check instance alpha first
+        if (instance.multColor().w < 1.0f) {
+            return true;
+        }
+
+        // Check if the material's texture has transparency
+        if (resourceManager != nullptr) {
+            const auto& resource = modelResources[instance.modelResourceIndex];
+            const auto& material = *resourceManager->materialManager->materials[resource.materialIndex];
+            
+            if (material.diffTxtr > 0 && material.diffTxtr < resourceManager->textureManager->textures.size()) {
+                const auto& texture = resourceManager->textureManager->textures[material.diffTxtr];
+                if (texture.hasTransparency) {
+                    return true;
+                }
+            }
+        }
+
+        return false; // Fully opaque
+    }
+
+    void RenderSystem::setResourceManager(const ResourceManager* resManager) {
+        resourceManager = resManager;
     }
 
 }

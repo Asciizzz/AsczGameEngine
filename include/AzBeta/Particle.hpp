@@ -395,7 +395,7 @@ namespace AzBeta {
                 Az3D::ModelInstance instance;
                 instance.modelMatrix() = particles[p].modelMatrix();
                 instance.modelResourceIndex = modelResourceIndex;
-                instance.multColor() = glm::vec4(particleColor, 0.3f);
+                instance.multColor() = glm::vec4(particleColor, 1.0f);
 
                 renderSystem.addInstance(instance);
             }

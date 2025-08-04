@@ -58,6 +58,7 @@ private:
     
     // Model resource indices
     size_t mapModelResourceIndex = 0;
+    size_t testPearModelResourceIndex = 0;
 
     // Vulkan handles we'll definitely remember to clean up
     VkCommandPool commandPool = VK_NULL_HANDLE;
