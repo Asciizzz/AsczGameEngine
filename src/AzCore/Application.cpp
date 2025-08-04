@@ -105,9 +105,12 @@ void Application::initVulkan() {
     de_dust2.obj, de_mirage.obj, de_inferno.obj, de_nuke.obj, 
     de_train.obj, de_overpass.obj, de_vertigo.obj, de_cache.obj */
 
-    // Load map mesh with BVH collision detection enabled
-    // Note: TextureManager constructor already creates default texture at index 0
-    size_t mapMeshIndex = resManager.addMesh("Map", "Assets/Maps/rust.obj", true);
+    // Load map
+    size_t mapMeshIndex = resManager.addMesh("Map", "Assets/Maps/de_dust2.obj", true);
+    Az3D::Material mapMaterial;
+    mapMaterial.diffTxtr = resManager.addTexture("Map", "Assets/Textures/de_dust2.png");
+    size_t mapMaterialIndex = resManager.addMaterial("Map", mapMaterial);
+
     const auto& mapMesh = *meshManager.meshes[mapMeshIndex];
     
     this->mapMeshIndex = mapMeshIndex;
@@ -142,7 +145,7 @@ void Application::initVulkan() {
 
     // Create model resources for render system
     mapModelResourceIndex = renderSystem->addModelResource(
-        "Map", mapMeshIndex, 0
+        "Map", mapMeshIndex, mapMaterialIndex
     );
 
     size_t riverModelResourceIndex = renderSystem->addModelResource(
