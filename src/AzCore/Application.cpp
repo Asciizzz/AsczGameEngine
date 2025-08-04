@@ -101,15 +101,38 @@ void Application::initVulkan() {
 
 // PLAYGROUND FROM HERE!
 
-    // Load map mesh with BVH collision detection enabled
-    // Note: TextureManager constructor already creates default texture at index 0
-    size_t mapMeshIndex = resManager.addMesh("Map", "Assets/Maps/rust.obj", true);
-    Az3D::Material mapMaterial;
-    size_t mapMaterialIndex = resManager.addMaterial("Map", mapMaterial);
-
     /* Available CS maps:
     de_dust2.obj, de_mirage.obj, de_inferno.obj, de_nuke.obj, 
     de_train.obj, de_overpass.obj, de_vertigo.obj, de_cache.obj */
+
+    // Load map mesh with BVH collision detection enabled
+    // Note: TextureManager constructor already creates default texture at index 0
+    size_t mapMeshIndex = resManager.addMesh("Map", "Assets/Maps/rust.obj", true);
+    const auto& mapMesh = *meshManager.meshes[mapMeshIndex];
+    
+    this->mapMeshIndex = mapMeshIndex;
+
+    // Configure map transform with scaling
+    mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
+    mapTransform.scale(0.5f);
+
+    // Create a quad mesh that act as like a river covering the map
+
+    // Get the AABB bound of the map mesh
+
+    glm::vec3 riverMin = mapMesh.meshMin * mapTransform.scl + mapTransform.pos;
+    glm::vec3 riverMax = mapMesh.meshMax * mapTransform.scl + mapTransform.pos;
+    float riverY = 5;
+    std::vector<Az3D::Vertex> riverVertices = {
+        {glm::vec3(riverMin.x, riverY, riverMax.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f)},
+        {glm::vec3(riverMax.x, riverY, riverMax.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f)},
+        {glm::vec3(riverMax.x, riverY, riverMin.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f)},
+        {glm::vec3(riverMin.x, riverY, riverMin.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f)}
+    };
+    std::vector<uint32_t> riverIndices = {0, 1, 2, 2, 3, 0};
+    Az3D::Mesh riverMesh(riverVertices, riverIndices);
+
+    size_t riverMeshIndex = resManager.addMesh("River", riverMesh);
 
     // Load Kasane Teto but as a pear (Pearto)
     size_t pearMeshIndex = resManager.addMesh("Pearto", "Assets/Characters/Pearto.obj");
@@ -117,39 +140,28 @@ void Application::initVulkan() {
     pearMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.png");
     size_t pearMaterialIndex = resManager.addMaterial("Pearto", pearMaterial);
 
-    // Add a test transparent Pearto for debugging texture alpha
-    size_t testPearMeshIndex = resManager.addMesh("TestPear", "Assets/Characters/Pearto.obj");
-    Az3D::Material testPearMaterial;
-    testPearMaterial.diffTxtr = resManager.addTexture("TestPear", "Assets/Textures/Pearto.png");
-    size_t testPearMaterialIndex = resManager.addMaterial("TestPear", testPearMaterial);
-
-    // Configure map transform with scaling
-    mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
-    mapTransform.scale(0.5f);
-    // mapTransform.rotateZ(glm::radians(-45.0f));
-    // mapTransform.rotateX(glm::radians(-45.0f));
-
-    this->mapMeshIndex = mapMeshIndex;
-
     // Create model resources for render system
     mapModelResourceIndex = renderSystem->addModelResource(
-        "Map", mapMeshIndex, mapMaterialIndex
+        "Map", mapMeshIndex, 0
+    );
+
+    size_t riverModelResourceIndex = renderSystem->addModelResource(
+        "River", riverMeshIndex, 0
     );
 
     size_t pearModelResourceIndex = renderSystem->addModelResource("Pearto", pearMeshIndex, pearMaterialIndex);
 
-    // Create test transparent pear model resource
-    testPearModelResourceIndex = renderSystem->addModelResource("TestPear", testPearMeshIndex, testPearMaterialIndex);
-
     // Initialize particle system within map bounds
     particleManager.initParticles(
         1000, pearModelResourceIndex, 0.1f, 0.25f,
-        meshManager.meshes[mapMeshIndex]->meshMin * mapTransform.scl + mapTransform.pos,
-        meshManager.meshes[mapMeshIndex]->meshMax * mapTransform.scl + mapTransform.pos
+        mapMesh.meshMin * mapTransform.scl + mapTransform.pos,
+        mapMesh.meshMax * mapTransform.scl + mapTransform.pos
     );
 
-    // Printing every Mesh - Material - Texture - Model information
     
+    printf("Map mesh index: %zu\n", mapMeshIndex);
+
+    // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
     "\x1b[31m", // Red
     "\x1b[32m", // Green
@@ -276,6 +288,8 @@ void Application::mainLoop() {
     auto& texManager = *resManager.textureManager;
     auto& matManager = *resManager.materialManager;
 
+    auto& rendSys = *renderSystem;
+
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
         fpsRef.update();
@@ -380,22 +394,21 @@ void Application::mainLoop() {
         camRef.pos = camPos;
 
         // Clear and populate the render system for this frame
-        renderSystem->clearInstances();
-        
-        // Add the map instance 
+        rendSys.clearInstances();
+
+        // Add the map instance
         Az3D::ModelInstance mapInstance;
         mapInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); 
         mapInstance.modelMatrix() = mapTransform.modelMatrix();
         mapInstance.modelResourceIndex = mapModelResourceIndex;
 
-        renderSystem->addInstance(mapInstance);
+        rendSys.addInstance(mapInstance);
 
-        // // Add a test transparent Pearto instance
-        // Az3D::ModelInstance testPearInstance;
-        // testPearInstance.modelMatrix() = glm::translate(glm::mat4(1.0f), camRef.pos + camRef.forward * 3.0f);
-        // testPearInstance.modelResourceIndex = testPearModelResourceIndex;
-        // testPearInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% transparent white tint
-        // renderSystem->addInstance(testPearInstance);
+        // Add the river instance
+        Az3D::ModelInstance riverInstance;
+        riverInstance.multColor() = glm::vec4(0.0f, 0.5f, 1.0f, 0.5f); // Semi-transparent blue
+        riverInstance.modelResourceIndex = rendSys.getModelResource("River");
+        rendSys.addInstance(riverInstance);
 
         static bool physic_enable = false;
         static bool hold_P = false;
