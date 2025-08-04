@@ -161,20 +161,26 @@ namespace AzVulk {
         vkResetFences(vulkanDevice.device, 1, &inFlightFences[currentFrame]);
         vkResetCommandBuffer(commandBuffers[currentFrame], 0);
 
-        // Update instance buffers using the new rendering system
-        // Separate opaque and transparent instances
-        auto opaqueInstances = renderSystem.groupOpaqueInstancesByMesh();
-        auto transparentInstances = renderSystem.groupTransparentInstancesByMesh();
+        // Single pass: Update buffers AND classify opaque/transparent instances
+        std::unordered_map<size_t, std::vector<const Az3D::ModelInstance*>> opaqueInstances;
+        std::unordered_map<size_t, std::vector<const Az3D::ModelInstance*>> transparentInstances;
         
-        // Update buffers for all instances (opaque + transparent)
         auto allInstances = renderSystem.groupInstancesByMesh();
         for (const auto& [meshIndex, instancePtrs] : allInstances) {
             // Extract full ModelInstance objects to get both matrix and color
             std::vector<Az3D::ModelInstance> instances;
             instances.reserve(instancePtrs.size());
             
+            // Classify instances while building the buffer data
             for (const Az3D::ModelInstance* instancePtr : instancePtrs) {
                 instances.push_back(*instancePtr);
+                
+                // Classify this instance as opaque or transparent
+                if (renderSystem.isInstanceTransparent(*instancePtr)) {
+                    transparentInstances[meshIndex].push_back(instancePtr);
+                } else {
+                    opaqueInstances[meshIndex].push_back(instancePtr);
+                }
             }
             
             // Update or create the instance buffer for this mesh
