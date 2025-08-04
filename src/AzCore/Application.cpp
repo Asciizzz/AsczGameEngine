@@ -384,6 +384,7 @@ void Application::mainLoop() {
         
         // Add the map instance 
         Az3D::ModelInstance mapInstance;
+        mapInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f);
         mapInstance.modelMatrix() = mapTransform.modelMatrix();
         mapInstance.modelResourceIndex = mapModelResourceIndex;
 
