@@ -7,6 +7,8 @@
 #include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/RasterPipeline.hpp"
+#include "AzVulk/TransparencyPipeline.hpp"
+#include "AzVulk/CompositePipeline.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
 #include "Az3D/Az3D.hpp"
@@ -54,9 +56,27 @@ namespace AzVulk {
 
         static const int MAX_FRAMES_IN_FLIGHT = 2; // double buffering
 
+        // OIT (Order-Independent Transparency) render targets
+        VkImage oitAccumImage = VK_NULL_HANDLE;
+        VkDeviceMemory oitAccumImageMemory = VK_NULL_HANDLE;
+        VkImageView oitAccumImageView = VK_NULL_HANDLE;
+        
+        VkImage oitRevealImage = VK_NULL_HANDLE;
+        VkDeviceMemory oitRevealImageMemory = VK_NULL_HANDLE;
+        VkImageView oitRevealImageView = VK_NULL_HANDLE;
+        
+        VkFramebuffer oitFramebuffer = VK_NULL_HANDLE;
+        VkRenderPass oitRenderPass = VK_NULL_HANDLE;
+
         void createCommandPool();
         void createCommandBuffers();
         void createSyncObjects();
         void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+        
+        // OIT methods
+        void createOITRenderTargets();
+        void createOITRenderPass();
+        void createOITFramebuffer(VkImageView depthImageView);
+        void cleanupOIT();
     };
 }

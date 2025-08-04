@@ -68,6 +68,13 @@ namespace Az3D {
 
         // Batch processing for rendering
         std::unordered_map<size_t, std::vector<const ModelInstance*>> groupInstancesByMesh() const;
+        
+        // Transparency classification
+        std::unordered_map<size_t, std::vector<const ModelInstance*>> groupOpaqueInstancesByMesh() const;
+        std::unordered_map<size_t, std::vector<const ModelInstance*>> groupTransparentInstancesByMesh() const;
+        
+        // Check if an instance is transparent (alpha < 1.0)
+        bool isInstanceTransparent(const ModelInstance& instance) const;
 
         // String-to-index map for model resources
         std::unordered_map<const char*, size_t> modelResourceNameToIndex;

@@ -18,10 +18,15 @@ namespace AzVulk {
         createCommandPool();
         createCommandBuffers();
         createSyncObjects();
+        createOITRenderTargets();
+        createOITRenderPass();
+        // createOITFramebuffer(); // TODO: Integrate with depth manager
     }
 
     Renderer::~Renderer() {
         VkDevice device = vulkanDevice.device;
+
+        cleanupOIT();
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -157,9 +162,13 @@ namespace AzVulk {
         vkResetCommandBuffer(commandBuffers[currentFrame], 0);
 
         // Update instance buffers using the new rendering system
-        auto meshToInstances = renderSystem.groupInstancesByMesh();
+        // Separate opaque and transparent instances
+        auto opaqueInstances = renderSystem.groupOpaqueInstancesByMesh();
+        auto transparentInstances = renderSystem.groupTransparentInstancesByMesh();
         
-        for (const auto& [meshIndex, instancePtrs] : meshToInstances) {
+        // Update buffers for all instances (opaque + transparent)
+        auto allInstances = renderSystem.groupInstancesByMesh();
+        for (const auto& [meshIndex, instancePtrs] : allInstances) {
             // Extract full ModelInstance objects to get both matrix and color
             std::vector<Az3D::ModelInstance> instances;
             instances.reserve(instancePtrs.size());
@@ -232,24 +241,26 @@ namespace AzVulk {
         memcpy(data, &ubo, sizeof(ubo));
         vkUnmapMemory(vulkanDevice.device, buffer.uniformBuffersMemory[currentFrame]);
 
-        // Bind main graphics pipeline for models
+        // Bind main graphics pipeline for opaque models
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
 
-        // Render all meshes with their instances
+        // === PASS 1: RENDER OPAQUE OBJECTS ===
+        // Render opaque meshes with their instances
         const auto& meshBuffers = buffer.meshBuffers;
         const auto& modelResources = renderSystem.modelResources;
         
-        // Group mesh indices by material for better batching
-        std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;
-        for (const auto& [meshIndex, instancePtrs] : meshToInstances) {
+        // Group opaque mesh indices by material for better batching
+        std::unordered_map<size_t, std::vector<size_t>> opaqueMaterialToMeshes;
+        for (const auto& [meshIndex, instancePtrs] : opaqueInstances) {
             if (!instancePtrs.empty()) {
                 // Get material from the first instance's resource
                 const auto& resource = modelResources[instancePtrs[0]->modelResourceIndex];
-                materialToMeshes[resource.materialIndex].push_back(meshIndex);
+                opaqueMaterialToMeshes[resource.materialIndex].push_back(meshIndex);
             }
         }
 
-        for (const auto& [materialIndex, meshIndices] : materialToMeshes) {
+        // Render opaque objects
+        for (const auto& [materialIndex, meshIndices] : opaqueMaterialToMeshes) {
             // Bind descriptor set for this material
             VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -259,21 +270,86 @@ namespace AzVulk {
                 if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {
                     const auto& meshBuffer = meshBuffers[meshIndex];
                     
-                    // Bind vertex buffer
-                    VkBuffer vertexBuffers[] = {meshBuffer.vertexBuffer};
-                    VkDeviceSize offsets[] = {0};
-                    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
+                    // Count opaque instances for this mesh
+                    size_t opaqueCount = 0;
+                    if (opaqueInstances.find(meshIndex) != opaqueInstances.end()) {
+                        opaqueCount = opaqueInstances.at(meshIndex).size();
+                    }
+                    
+                    if (opaqueCount > 0) {
+                        // Bind vertex buffer
+                        VkBuffer vertexBuffers[] = {meshBuffer.vertexBuffer};
+                        VkDeviceSize offsets[] = {0};
+                        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
 
-                    // Bind instance buffer
-                    VkBuffer instanceBuffers[] = {meshBuffer.instanceBuffer};
-                    VkDeviceSize instanceOffsets[] = {0};
-                    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
+                        // Bind instance buffer
+                        VkBuffer instanceBuffers[] = {meshBuffer.instanceBuffer};
+                        VkDeviceSize instanceOffsets[] = {0};
+                        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
 
-                    // Bind index buffer
-                    vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshBuffer.indexBuffer, 0, meshBuffer.indexType);
+                        // Bind index buffer
+                        vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshBuffer.indexBuffer, 0, meshBuffer.indexType);
 
-                    // Draw instanced
-                    vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, meshBuffer.instanceCount, 0, 0, 0);
+                        // Draw only opaque instances
+                        vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, static_cast<uint32_t>(opaqueCount), 0, 0, 0);
+                    }
+                }
+            }
+        }
+
+        // === PASS 2: RENDER TRANSPARENT OBJECTS (if any exist) ===
+        if (!transparentInstances.empty()) {
+            // Bind transparent pipeline with alpha blending enabled
+            vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.transparentPipeline);
+            
+            // Group transparent mesh indices by material
+            std::unordered_map<size_t, std::vector<size_t>> transparentMaterialToMeshes;
+            for (const auto& [meshIndex, instancePtrs] : transparentInstances) {
+                if (!instancePtrs.empty()) {
+                    const auto& resource = modelResources[instancePtrs[0]->modelResourceIndex];
+                    transparentMaterialToMeshes[resource.materialIndex].push_back(meshIndex);
+                }
+            }
+
+            // Render transparent objects with alpha blending
+            for (const auto& [materialIndex, meshIndices] : transparentMaterialToMeshes) {
+                VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
+                vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                      pipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+                for (size_t meshIndex : meshIndices) {
+                    if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {
+                        const auto& meshBuffer = meshBuffers[meshIndex];
+                        
+                        // Count transparent instances for this mesh
+                        size_t transparentCount = 0;
+                        if (transparentInstances.find(meshIndex) != transparentInstances.end()) {
+                            transparentCount = transparentInstances.at(meshIndex).size();
+                        }
+                        
+                        if (transparentCount > 0) {
+                            // Bind buffers
+                            VkBuffer vertexBuffers[] = {meshBuffer.vertexBuffer};
+                            VkDeviceSize offsets[] = {0};
+                            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
+
+                            VkBuffer instanceBuffers[] = {meshBuffer.instanceBuffer};
+                            VkDeviceSize instanceOffsets[] = {0};
+                            
+                            // Calculate offset for transparent instances (they come after opaque ones)
+                            size_t opaqueCount = 0;
+                            if (opaqueInstances.find(meshIndex) != opaqueInstances.end()) {
+                                opaqueCount = opaqueInstances.at(meshIndex).size();
+                            }
+                            instanceOffsets[0] = opaqueCount * sizeof(Az3D::InstanceVertexData);
+                            
+                            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
+                            vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshBuffer.indexBuffer, 0, meshBuffer.indexType);
+
+                            // Draw transparent instances
+                            vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, static_cast<uint32_t>(transparentCount), 0, 0, 0);
+                        }
+                    }
                 }
             }
         }
@@ -326,6 +402,257 @@ namespace AzVulk {
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    }
+
+    // OIT (Order-Independent Transparency) Implementation
+    void Renderer::createOITRenderTargets() {
+        VkExtent2D extent = swapChain.extent;
+        
+        // Create accumulation buffer (RGBA16F)
+        VkImageCreateInfo accumImageInfo{};
+        accumImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        accumImageInfo.imageType = VK_IMAGE_TYPE_2D;
+        accumImageInfo.extent.width = extent.width;
+        accumImageInfo.extent.height = extent.height;
+        accumImageInfo.extent.depth = 1;
+        accumImageInfo.mipLevels = 1;
+        accumImageInfo.arrayLayers = 1;
+        accumImageInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+        accumImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        accumImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        accumImageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        accumImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        accumImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateImage(vulkanDevice.device, &accumImageInfo, nullptr, &oitAccumImage) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create OIT accumulation image!");
+        }
+
+        VkMemoryRequirements accumMemRequirements;
+        vkGetImageMemoryRequirements(vulkanDevice.device, oitAccumImage, &accumMemRequirements);
+
+        VkMemoryAllocateInfo accumAllocInfo{};
+        accumAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        accumAllocInfo.allocationSize = accumMemRequirements.size;
+        accumAllocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(accumMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        if (vkAllocateMemory(vulkanDevice.device, &accumAllocInfo, nullptr, &oitAccumImageMemory) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate OIT accumulation image memory!");
+        }
+
+        vkBindImageMemory(vulkanDevice.device, oitAccumImage, oitAccumImageMemory, 0);
+
+        // Create accumulation image view
+        VkImageViewCreateInfo accumViewInfo{};
+        accumViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        accumViewInfo.image = oitAccumImage;
+        accumViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        accumViewInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+        accumViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        accumViewInfo.subresourceRange.baseMipLevel = 0;
+        accumViewInfo.subresourceRange.levelCount = 1;
+        accumViewInfo.subresourceRange.baseArrayLayer = 0;
+        accumViewInfo.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(vulkanDevice.device, &accumViewInfo, nullptr, &oitAccumImageView) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create OIT accumulation image view!");
+        }
+
+        // Create reveal buffer (R8)
+        VkImageCreateInfo revealImageInfo{};
+        revealImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        revealImageInfo.imageType = VK_IMAGE_TYPE_2D;
+        revealImageInfo.extent.width = extent.width;
+        revealImageInfo.extent.height = extent.height;
+        revealImageInfo.extent.depth = 1;
+        revealImageInfo.mipLevels = 1;
+        revealImageInfo.arrayLayers = 1;
+        revealImageInfo.format = VK_FORMAT_R8_UNORM;
+        revealImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        revealImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        revealImageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        revealImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        revealImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateImage(vulkanDevice.device, &revealImageInfo, nullptr, &oitRevealImage) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create OIT reveal image!");
+        }
+
+        VkMemoryRequirements revealMemRequirements;
+        vkGetImageMemoryRequirements(vulkanDevice.device, oitRevealImage, &revealMemRequirements);
+
+        VkMemoryAllocateInfo revealAllocInfo{};
+        revealAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        revealAllocInfo.allocationSize = revealMemRequirements.size;
+        revealAllocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(revealMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        if (vkAllocateMemory(vulkanDevice.device, &revealAllocInfo, nullptr, &oitRevealImageMemory) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate OIT reveal image memory!");
+        }
+
+        vkBindImageMemory(vulkanDevice.device, oitRevealImage, oitRevealImageMemory, 0);
+
+        // Create reveal image view
+        VkImageViewCreateInfo revealViewInfo{};
+        revealViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        revealViewInfo.image = oitRevealImage;
+        revealViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        revealViewInfo.format = VK_FORMAT_R8_UNORM;
+        revealViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        revealViewInfo.subresourceRange.baseMipLevel = 0;
+        revealViewInfo.subresourceRange.levelCount = 1;
+        revealViewInfo.subresourceRange.baseArrayLayer = 0;
+        revealViewInfo.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(vulkanDevice.device, &revealViewInfo, nullptr, &oitRevealImageView) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create OIT reveal image view!");
+        }
+    }
+
+    void Renderer::createOITRenderPass() {
+        // Accumulation attachment (RGBA16F)
+        VkAttachmentDescription accumAttachment{};
+        accumAttachment.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+        accumAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        accumAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        accumAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        accumAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        accumAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        accumAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        accumAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        // Reveal attachment (R8)
+        VkAttachmentDescription revealAttachment{};
+        revealAttachment.format = VK_FORMAT_R8_UNORM;
+        revealAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        revealAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        revealAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        revealAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        revealAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        revealAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        revealAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        // Depth attachment (reuse existing depth buffer)
+        VkAttachmentDescription depthAttachment{};
+        depthAttachment.format = VK_FORMAT_D32_SFLOAT;
+        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // Load existing depth
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        // Attachment references
+        VkAttachmentReference accumRef{};
+        accumRef.attachment = 0;
+        accumRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference revealRef{};
+        revealRef.attachment = 1;
+        revealRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference depthRef{};
+        depthRef.attachment = 2;
+        depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        std::array<VkAttachmentReference, 2> colorAttachments = {accumRef, revealRef};
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size());
+        subpass.pColorAttachments = colorAttachments.data();
+        subpass.pDepthStencilAttachment = &depthRef;
+
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        std::array<VkAttachmentDescription, 3> attachments = {accumAttachment, revealAttachment, depthAttachment};
+
+        VkRenderPassCreateInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        renderPassInfo.pAttachments = attachments.data();
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
+
+        if (vkCreateRenderPass(vulkanDevice.device, &renderPassInfo, nullptr, &oitRenderPass) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create OIT render pass!");
+        }
+    }
+
+    void Renderer::createOITFramebuffer(VkImageView depthImageView) {
+        // TODO: Complete framebuffer creation when depth manager integration is ready
+        
+        std::array<VkImageView, 3> attachments = {
+            oitAccumImageView,
+            oitRevealImageView,
+            depthImageView
+        };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = oitRenderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = swapChain.extent.width;
+        framebufferInfo.height = swapChain.extent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(vulkanDevice.device, &framebufferInfo, nullptr, &oitFramebuffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create OIT framebuffer!");
+        }
+    }
+
+    void Renderer::cleanupOIT() {
+        VkDevice device = vulkanDevice.device;
+
+        if (oitFramebuffer != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(device, oitFramebuffer, nullptr);
+            oitFramebuffer = VK_NULL_HANDLE;
+        }
+
+        if (oitRenderPass != VK_NULL_HANDLE) {
+            vkDestroyRenderPass(device, oitRenderPass, nullptr);
+            oitRenderPass = VK_NULL_HANDLE;
+        }
+
+        if (oitAccumImageView != VK_NULL_HANDLE) {
+            vkDestroyImageView(device, oitAccumImageView, nullptr);
+            oitAccumImageView = VK_NULL_HANDLE;
+        }
+
+        if (oitRevealImageView != VK_NULL_HANDLE) {
+            vkDestroyImageView(device, oitRevealImageView, nullptr);
+            oitRevealImageView = VK_NULL_HANDLE;
+        }
+
+        if (oitAccumImage != VK_NULL_HANDLE) {
+            vkDestroyImage(device, oitAccumImage, nullptr);
+            oitAccumImage = VK_NULL_HANDLE;
+        }
+
+        if (oitRevealImage != VK_NULL_HANDLE) {
+            vkDestroyImage(device, oitRevealImage, nullptr);
+            oitRevealImage = VK_NULL_HANDLE;
+        }
+
+        if (oitAccumImageMemory != VK_NULL_HANDLE) {
+            vkFreeMemory(device, oitAccumImageMemory, nullptr);
+            oitAccumImageMemory = VK_NULL_HANDLE;
+        }
+
+        if (oitRevealImageMemory != VK_NULL_HANDLE) {
+            vkFreeMemory(device, oitRevealImageMemory, nullptr);
+            oitRevealImageMemory = VK_NULL_HANDLE;
+        }
     }
 
 }

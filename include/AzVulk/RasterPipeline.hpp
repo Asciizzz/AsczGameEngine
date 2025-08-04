@@ -32,10 +32,12 @@ namespace AzVulk {
         VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+        VkPipeline transparentPipeline = VK_NULL_HANDLE; // Alpha-blended pipeline for transparent objects
 
         void createRenderPass();
         void createDescriptorSetLayout();
         void createGraphicsPipeline(const char* vertexShaderPath, const char* fragmentShaderPath);
+        void createTransparentPipeline(); // Create alpha-blended version
         void cleanup();
     };
 }

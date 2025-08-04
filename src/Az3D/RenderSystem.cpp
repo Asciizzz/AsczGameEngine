@@ -74,4 +74,35 @@ namespace Az3D {
         return attributeDescriptions;
     }
 
+    std::unordered_map<size_t, std::vector<const ModelInstance*>> RenderSystem::groupOpaqueInstancesByMesh() const {
+        std::unordered_map<size_t, std::vector<const ModelInstance*>> meshToInstances;
+        
+        for (const auto& instance : modelInstances) {
+            if (!isInstanceTransparent(instance)) {
+                const auto& resource = modelResources[instance.modelResourceIndex];
+                meshToInstances[resource.meshIndex].push_back(&instance);
+            }
+        }
+        
+        return meshToInstances;
+    }
+
+    std::unordered_map<size_t, std::vector<const ModelInstance*>> RenderSystem::groupTransparentInstancesByMesh() const {
+        std::unordered_map<size_t, std::vector<const ModelInstance*>> meshToInstances;
+        
+        for (const auto& instance : modelInstances) {
+            if (isInstanceTransparent(instance)) {
+                const auto& resource = modelResources[instance.modelResourceIndex];
+                meshToInstances[resource.meshIndex].push_back(&instance);
+            }
+        }
+        
+        return meshToInstances;
+    }
+
+    bool RenderSystem::isInstanceTransparent(const ModelInstance& instance) const {
+        // An instance is transparent if its alpha (multColor.w) is less than 1.0
+        return instance.multColor().w < 1.0f;
+    }
+
 }
