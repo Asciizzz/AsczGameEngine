@@ -452,7 +452,12 @@ namespace AzBeta {
                     vel += direction * speed * dTime * sign;
                 }
 
-                vel.y -= 9.81f * dTime; // Simple gravity
+                if (pos.y > 5.0f) vel.y -= 9.81f * dTime; // Simple gravity
+                else {
+                    vel *= 0.99f;
+
+                    vel.y += 1.0f * dTime; // Float on top of water
+                }
 
                 float speed = glm::length(vel);
                 glm::vec3 direction = glm::normalize(vel);

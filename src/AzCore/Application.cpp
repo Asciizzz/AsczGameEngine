@@ -135,7 +135,7 @@ void Application::initVulkan() {
     size_t riverMeshIndex = resManager.addMesh("River", riverMesh);
 
     // Load Kasane Teto but as a pear (Pearto)
-    size_t pearMeshIndex = resManager.addMesh("Pearto", "Assets/Characters/Pearto.obj");
+    size_t pearMeshIndex = resManager.addMesh("Pearto", "Assets/Shapes/Icosphere.obj");
     Az3D::Material pearMaterial;
     pearMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.png");
     size_t pearMaterialIndex = resManager.addMaterial("Pearto", pearMaterial);
@@ -153,7 +153,7 @@ void Application::initVulkan() {
 
     // Initialize particle system within map bounds
     particleManager.initParticles(
-        1000, pearModelResourceIndex, 0.1f, 0.25f,
+        1000, pearModelResourceIndex, 0.1f, 0.1f,
         mapMesh.meshMin * mapTransform.scl + mapTransform.pos,
         mapMesh.meshMax * mapTransform.scl + mapTransform.pos
     );
