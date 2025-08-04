@@ -1,6 +1,5 @@
 #version 450
 
-// Global uniform buffer for camera matrices
 layout(binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
@@ -30,18 +29,10 @@ void main() {
     vec3 normal = normalize(fragWorldNrml);
 
     float lightFactor = max(dot(normal, lightDir), 0.0);
-    // In case there's no normal
     lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
-
-    // For toon shading effect
-    // float toonFactor = ceil(lightFactor * 2.0) * 0.5;
-    float toonFactor = lightFactor; // Ignore toon shading for now
-
-    // Final brightness factor
-    float finalFactor = 0.1 + toonFactor * 0.9;
+    float finalFactor = 0.1 + lightFactor * 0.9;
     
-    // Apply instance color multiplication (no material color since we use instances for coloring)
     vec4 finalColor = texColor * fragInstanceColor;
-    
+
     outColor = vec4(finalColor.rgb * finalFactor, finalColor.a);
 }

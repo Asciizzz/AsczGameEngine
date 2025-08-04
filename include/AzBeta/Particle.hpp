@@ -23,7 +23,6 @@ namespace AzBeta {
         std::vector<glm::vec3> particles_angular_velocity; // For rotation
         std::vector<short> particles_special; // Cool rare 1% drop particles
         std::vector<float> particles_rainbow; // Special scalar value for all special particles (not just rainbow)
-        std::vector<glm::vec4> push_or_pull; // Pretty special, won't go into detail
 
         // 1% drop particles will have the following effects:
         // Index 1 - 33% chance to be red - immovable
@@ -31,12 +30,6 @@ namespace AzBeta {
         // Index 3 - 33% chance to be green - 1% every frame to push/pull particles
         // Index 4 - 1% to be rainbow - immovable + x1.1 energy + 2% push
         // This meant a 0.01% chance to be rainbow lol
-        
-        // Indices of all special particles
-        std::vector<size_t> special_1;
-        std::vector<size_t> special_2;
-        std::vector<size_t> special_3;
-        std::vector<size_t> special_4;
 
         // Spatial grid for efficient collision detection
         struct SpatialGrid {
@@ -187,15 +180,11 @@ namespace AzBeta {
                 int randValue = rand() % 10000;
                 // The lucky 1%
                 if (randValue < 100) {
-                    if (randValue < 33) { specialEffect = 1; special_1.push_back(i); } else
-                    if (randValue < 66) { specialEffect = 2; special_2.push_back(i); } else
-                    if (randValue < 99) { specialEffect = 3; special_3.push_back(i); } else
-                    { specialEffect = 4; special_4.push_back(i); particles_rainbow[i] = rand(); }
+                    if (randValue < 33) { specialEffect = 1; } else
+                    if (randValue < 66) { specialEffect = 2; } else
+                    if (randValue < 99) { specialEffect = 3; } else
+                    { specialEffect = 4; particles_rainbow[i] = rand(); }
                 }
-
-                // // Hard code special effects
-                // specialEffect = 3;
-                // special_3.push_back(i);
 
                 particles_special[i] = specialEffect;
 
@@ -311,30 +300,13 @@ namespace AzBeta {
                 float impulseY = impulse * ny;
                 float impulseZ = impulse * nz;
 
-                // Red and rainbow particles have special behavior
+                vel1.x += impulseX;
+                vel1.y += impulseY;
+                vel1.z += impulseZ;
 
-                bool isSpecial1 = particles_special[i] == 1 || particles_special[i] == 4;
-                bool isSpecial2 = particles_special[j] == 1 || particles_special[j] == 4;
-
-                // Act like normal
-                if (isSpecial1 == isSpecial2) {
-                    vel1.x += impulseX;
-                    vel1.y += impulseY;
-                    vel1.z += impulseZ;
-
-                    vel2.x -= impulseX;
-                    vel2.y -= impulseY;
-                    vel2.z -= impulseZ;
-                // If the first particle is special, transfer the entire impulse to the second particle
-                } else if (isSpecial1) {
-                    vel2.x += impulseX;
-                    vel2.y += impulseY;
-                    vel2.z += impulseZ;
-                } else if (isSpecial2) {
-                    vel1.x += impulseX;
-                    vel1.y += impulseY;
-                    vel1.z += impulseZ;
-                }
+                vel2.x -= impulseX;
+                vel2.y -= impulseY;
+                vel2.z -= impulseZ;
             }
         }
 
@@ -408,51 +380,13 @@ namespace AzBeta {
             glm::vec3 boundMin = spatialGrid.gridMin;
             glm::vec3 boundMax = spatialGrid.gridMax;
 
-            for (size_t g = 0; g < special_3.size(); ++g) {
-                size_t idx = special_3[g];
-
-                float sign = particles_rainbow[idx] > 0.0f ? 1.0f : -1.0f;
-
-                if (abs(particles_rainbow[idx]) > dTime * 0.5f) {
-                    particles_rainbow[idx] -= dTime * sign; // Decrease the effect over time
-                    continue;
-                } else {
-                    particles_rainbow[idx] = 0.0f; // Reset the effect
-                }
-
-                // 0.1% chance per frame to apply push/pull effect
-                if (rand() % 1000 == 0) {
-                    particles_rainbow[idx] = randomFloat(-2.0f, 2.0f); // Max 2 seconds of effect
-                }
-            }
-
             // Parallel update of all particles
             std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t p) {
                 // Gravity
                 glm::vec3 &pos = particles[p].pos;
                 glm::vec3 &vel = particles_velocity[p];
 
-                for (size_t g = 0; g < special_3.size(); ++g) {
-                    size_t idx = special_3[g];
-                    float rainbow = particles_rainbow[idx];
-                    glm::vec3 pushPos = particles[idx].pos;
-
-                    // Same particle / No effect
-                    if (idx == p || rainbow == 0 || pos == pushPos) continue;
-
-                    // Apply push or pull effect based on the signed of the timer
-                    float sign = rainbow > 0.0f ? 1.0f : -1.0f;
-
-                    glm::vec3 delta = pos - pushPos;
-
-                    float distance = glm::length(delta);
-                    glm::vec3 direction = glm::normalize(delta);
-
-                    float speed = radialPushSpeed(distance);
-                    vel += direction * speed * dTime * sign;
-                }
-
-                if (pos.y > 5.0f) vel.y -= 9.81f * dTime; // Simple gravity
+                if (pos.y > 2.1f) vel.y -= 9.81f * dTime; // Simple gravity
                 else {
                     vel *= 0.99f;
 
@@ -492,12 +426,7 @@ namespace AzBeta {
                 bool outFront = predictedPos.z > maxMinusRadius.z;
                 bool outAxisZ = outBack || outFront;
 
-                float energyMultiplier;
-                switch (particles_special[p]) {
-                    case 0: case 1: case 3:  energyMultiplier = 0.8f; break; // Normal, red, green
-                    case 2: energyMultiplier = 1.0f; break; // Blue
-                    case 4: energyMultiplier = 1.1f; break; // Rainbow
-                };
+                float energyMultiplier = 0.8f;
 
                 if (outAxisX || outAxisY || outAxisZ) {
                     // Insanely cool branchless logic incoming

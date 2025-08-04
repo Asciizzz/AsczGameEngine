@@ -60,7 +60,16 @@ void Application::initVulkan() {
         swapChain->extent,
         swapChain->imageFormat,
         "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/raster1.frag.spv",
+        "Shaders/Rasterize/rasterDepth.frag.spv",
+        msaaManager->msaaSamples
+    ));
+
+    rasterPipeline.push_back(std::make_unique<RasterPipeline>(
+        vulkanDevice->device,
+        swapChain->extent,
+        swapChain->imageFormat,
+        "Shaders/Rasterize/raster.vert.spv",
+        "Shaders/Rasterize/rasterNormal.frag.spv",
         msaaManager->msaaSamples
     ));
 
@@ -125,20 +134,21 @@ void Application::initVulkan() {
 
     glm::vec3 riverMin = mapMesh.meshMin * mapTransform.scl + mapTransform.pos;
     glm::vec3 riverMax = mapMesh.meshMax * mapTransform.scl + mapTransform.pos;
-    float riverY = 5;
+    float riverY = 2.1f;
     std::vector<Az3D::Vertex> riverVertices = {
         {glm::vec3(riverMin.x, riverY, riverMax.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f)},
         {glm::vec3(riverMax.x, riverY, riverMax.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f)},
         {glm::vec3(riverMax.x, riverY, riverMin.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f)},
         {glm::vec3(riverMin.x, riverY, riverMin.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f)}
     };
-    std::vector<uint32_t> riverIndices = {0, 1, 2, 2, 3, 0};
+    // Both counter-clockwise and clockwise to avoid backface culling
+    std::vector<uint32_t> riverIndices = {0, 1, 2, 2, 3, 0 , 2, 1, 0, 0, 3, 2};
     Az3D::Mesh riverMesh(riverVertices, riverIndices);
 
     size_t riverMeshIndex = resManager.addMesh("River", riverMesh);
 
     // Load Kasane Teto but as a pear (Pearto)
-    size_t pearMeshIndex = resManager.addMesh("Pearto", "Assets/Shapes/Icosphere.obj");
+    size_t pearMeshIndex = resManager.addMesh("Pearto", "Assets/Characters/Pearto.obj");
     Az3D::Material pearMaterial;
     pearMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.png");
     size_t pearMaterialIndex = resManager.addMaterial("Pearto", pearMaterial);

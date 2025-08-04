@@ -312,8 +312,8 @@ namespace AzVulk {
 
     void RasterPipeline::createTransparentPipeline() {
         // Load shader modules
-        auto vertShaderCode = ShaderManager::readFile("Shaders/Rasterize/raster.vert.spv");
-        auto fragShaderCode = ShaderManager::readFile("Shaders/Rasterize/raster.frag.spv");
+        auto vertShaderCode = ShaderManager::readFile(vertexShaderPath);
+        auto fragShaderCode = ShaderManager::readFile(fragmentShaderPath);
 
         VkShaderModuleCreateInfo vertCreateInfo{};
         vertCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
