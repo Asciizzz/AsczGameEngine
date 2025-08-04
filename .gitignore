@@ -2,7 +2,7 @@ build/
 AsczGame_Release/
 AsczGame_Debug/
 
-Backup/
+.backup/
 
 GovernmentData/
 US_SocialSecurity_Lists/
