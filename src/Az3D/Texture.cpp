@@ -52,7 +52,13 @@ namespace Az3D {
             texture.hasTransparency = false;
             if (texChannels == 4) { // Original image had alpha channel
                 for (int i = 3; i < texWidth * texHeight * 4; i += 4) { // Check every 4th byte (alpha)
-                    if (pixels[i] < 255) { // Non-opaque pixel found
+                    // if (pixels[i] < 255) { // Non-opaque pixel found
+                    //     texture.hasTransparency = true;
+                    //     break;
+                    // }
+
+                    // Only check if its not either fully transparent or fully opaque
+                    if (pixels[i] != 255 && pixels[i] != 0) { // neither fully opaque nor fully transparent
                         texture.hasTransparency = true;
                         break;
                     }
