@@ -16,7 +16,7 @@ namespace Az3D {
         VkImageView view = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
         VkSampler sampler = VK_NULL_HANDLE;
-        bool hasTransparency = false; // True if texture has alpha channel with non-opaque pixels
+        bool semiTransparent = false;
     };
 
     // Texture manager with Vulkan helpers

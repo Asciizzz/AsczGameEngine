@@ -49,19 +49,10 @@ namespace Az3D {
             }
 
             // Check for transparency by scanning alpha channel
-            texture.hasTransparency = false;
+            texture.semiTransparent = false;
             if (texChannels == 4) { // Original image had alpha channel
                 for (int i = 3; i < texWidth * texHeight * 4; i += 4) { // Check every 4th byte (alpha)
-                    // if (pixels[i] < 255) { // Non-opaque pixel found
-                    //     texture.hasTransparency = true;
-                    //     break;
-                    // }
-
-                    // Only check if its not either fully transparent or fully opaque
-                    if (pixels[i] != 255 && pixels[i] != 0) { // neither fully opaque nor fully transparent
-                        texture.hasTransparency = true;
-                        break;
-                    }
+                    texture.semiTransparent = pixels[i] != 255 && pixels[i] != 0;
                 }
             }
             
@@ -71,8 +62,8 @@ namespace Az3D {
             VkBuffer stagingBuffer;
             VkDeviceMemory stagingBufferMemory;
             vulkanDevice.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                                     stagingBuffer, stagingBufferMemory);
+                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                                        stagingBuffer, stagingBufferMemory);
 
             void* data;
             vkMapMemory(vulkanDevice.device, stagingBufferMemory, 0, imageSize, 0, &data);

@@ -114,7 +114,7 @@ namespace Az3D {
             
             if (material.diffTxtr > 0) {
                 const auto& texture = resourceManager->textureManager->textures[material.diffTxtr];
-                if (texture.hasTransparency) { return true; }
+                if (texture.semiTransparent) { return true; }
             }
         }
 
