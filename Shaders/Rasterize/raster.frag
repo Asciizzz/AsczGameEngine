@@ -21,6 +21,9 @@ layout(location = 3) in vec4 fragInstanceColor;
 layout(location = 0) out vec4 outColor;
 
 void main() {
+    vec4 texColor = texture(txtrSmplr, fragTxtr);
+    if (texColor.a < 0.001) { discard; }
+
     vec3 lightPos = vec3(0.0, 100.0, 0.0);
 
     vec3 lightDir = normalize(lightPos - fragWorldPos);
@@ -36,8 +39,6 @@ void main() {
 
     // Final brightness factor
     float finalFactor = 0.1 + toonFactor * 0.9;
-
-    vec4 texColor = texture(txtrSmplr, fragTxtr);
     
     // Apply instance color multiplication (no material color since we use instances for coloring)
     vec4 finalColor = texColor * fragInstanceColor;
