@@ -23,15 +23,17 @@ void main() {
     vec4 texColor = texture(txtrSmplr, fragTxtr);
     if (texColor.a < 0.001) { discard; }
 
-    vec3 lightPos = vec3(0.0, 100.0, 0.0);
+    vec3 lightPos = vec3(0.0, 1000.0, 0.0);
 
     vec3 lightDir = normalize(lightPos - fragWorldPos);
     vec3 normal = normalize(fragWorldNrml);
 
     float lightFactor = max(dot(normal, lightDir), 0.0);
     lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
-    float finalFactor = 0.1 + lightFactor * 0.9;
-    
+
+    // float finalFactor = 0.01 + lightFactor * 0.99;
+    float finalFactor = 1.0; // Turn off lighting for now
+
     vec4 finalColor = texColor * fragInstanceColor;
 
     outColor = vec4(finalColor.rgb * finalFactor, finalColor.a);

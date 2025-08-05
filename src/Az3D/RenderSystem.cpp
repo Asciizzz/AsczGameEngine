@@ -9,13 +9,13 @@ namespace Az3D {
         return modelResources.size() - 1;
     }
 
-    size_t RenderSystem::addModelResource(const char* name, size_t meshIndex, size_t materialIndex) {
+    size_t RenderSystem::addModelResource(std::string name, size_t meshIndex, size_t materialIndex) {
         size_t index = addModelResource(meshIndex, materialIndex);
         modelResourceNameToIndex[name] = index;
         return index;
     }
 
-    size_t RenderSystem::getModelResource(const char* name) const {
+    size_t RenderSystem::getModelResource(std::string name) const {
         auto it = modelResourceNameToIndex.find(name);
         return it != modelResourceNameToIndex.end() ? it->second : SIZE_MAX; // SIZE_MAX indicates not found
     }

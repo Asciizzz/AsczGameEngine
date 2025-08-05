@@ -44,21 +44,14 @@ private:
     std::unique_ptr<AzVulk::DescriptorManager> descriptorManager;
     std::unique_ptr<AzVulk::Renderer> renderer;
     
-    // Az3D resource management
+    // Az3D resource management and render system's batching
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
-    // Batching for "efficiency"
     std::unique_ptr<Az3D::RenderSystem> renderSystem;
+    // World construction using instances
+    std::vector<Az3D::ModelInstance> worldInstances;
     
-    // Beta features (alpha was too honest)
+    // Beta features
     AzBeta::ParticleManager particleManager;
-    
-    // Map data (formerly from AzBeta::Map)
-    size_t mapMeshIndex = 0;
-    Az3D::Transform mapTransform;
-    
-    // Model resource indices
-    size_t mapModelResourceIndex = 0;
-    size_t testPearModelResourceIndex = 0;
 
     // Vulkan handles we'll definitely remember to clean up
     VkCommandPool commandPool = VK_NULL_HANDLE;

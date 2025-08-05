@@ -98,7 +98,7 @@ namespace Az3D {
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
         return addMesh(mesh);
     }
-    size_t MeshManager::loadFromOBJ(const char* filePath) {
+    size_t MeshManager::loadFromOBJ(std::string filePath) {
         auto mesh = Mesh::loadFromOBJ(filePath);
         return addMesh(mesh);
     }
@@ -108,14 +108,14 @@ namespace Az3D {
 
 
     // OBJ loader implementation using tiny_obj_loader
-    std::shared_ptr<Mesh> Mesh::loadFromOBJ(const char* filePath) {
+    std::shared_ptr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
         std::string warn, err;
 
         // Load the OBJ file
-        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath)) {
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
             std::cerr << "Failed to load OBJ file: " << filePath << std::endl;
             if (!warn.empty()) std::cerr << "Warning: " << warn << std::endl;
             if (!err.empty()) std::cerr << "Error: " << err << std::endl;

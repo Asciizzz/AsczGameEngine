@@ -115,7 +115,7 @@ namespace Az3D {
         static float sphereIntersectBox(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& boxMin, const glm::vec3& boxMax);
         static glm::vec3 sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
 
-        static std::shared_ptr<Mesh> loadFromOBJ(const char* filePath);
+        static std::shared_ptr<Mesh> loadFromOBJ(std::string filePath);
     };
 
 
@@ -127,7 +127,7 @@ namespace Az3D {
 
         size_t addMesh(std::shared_ptr<Mesh> mesh);
         size_t addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
-        size_t loadFromOBJ(const char* filePath);
+        size_t loadFromOBJ(std::string filePath);
 
         // Index-based mesh storage
         std::vector<std::shared_ptr<Mesh>> meshes;

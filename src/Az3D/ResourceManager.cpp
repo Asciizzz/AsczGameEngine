@@ -10,19 +10,19 @@ namespace Az3D {
         meshManager = std::make_unique<MeshManager>();
     }
 
-    size_t ResourceManager::addTexture(const char* name, const char* imagePath) {
+    size_t ResourceManager::addTexture(std::string name, std::string imagePath) {
         size_t index = textureManager->addTexture(imagePath);
         textureNameToIndex[name] = index;
         return index;
     }
     
-    size_t ResourceManager::addMaterial(const char* name, const Material& material) {
+    size_t ResourceManager::addMaterial(std::string name, const Material& material) {
         size_t index = materialManager->addMaterial(material);
         materialNameToIndex[name] = index;
         return index;
     }
 
-    size_t ResourceManager::addMesh(const char* name, const Mesh& mesh, bool hasBVH) {
+    size_t ResourceManager::addMesh(std::string name, const Mesh& mesh, bool hasBVH) {
         auto newMesh = std::make_shared<Mesh>(mesh);
         if (hasBVH) newMesh->createBVH();
 
@@ -30,7 +30,7 @@ namespace Az3D {
         meshNameToIndex[name] = index;
         return index;
     }
-    size_t ResourceManager::addMesh(const char* name, const char* filePath, bool hasBVH) {
+    size_t ResourceManager::addMesh(std::string name, std::string filePath, bool hasBVH) {
         auto newMesh = Mesh::loadFromOBJ(filePath); 
         if (hasBVH) newMesh->createBVH();
 
@@ -39,17 +39,17 @@ namespace Az3D {
         return index;
     }
 
-    size_t ResourceManager::getTexture(const char* name) const {
+    size_t ResourceManager::getTexture(std::string name) const {
         auto it = textureNameToIndex.find(name);
         return it != textureNameToIndex.end() ? it->second : SIZE_MAX;
     }
 
-    size_t ResourceManager::getMaterial(const char* name) const {
+    size_t ResourceManager::getMaterial(std::string name) const {
         auto it = materialNameToIndex.find(name);
         return it != materialNameToIndex.end() ? it->second : SIZE_MAX;
     }
 
-    size_t ResourceManager::getMesh(const char* name) const {
+    size_t ResourceManager::getMesh(std::string name) const {
         auto it = meshNameToIndex.find(name);
         return it != meshNameToIndex.end() ? it->second : SIZE_MAX;
     }

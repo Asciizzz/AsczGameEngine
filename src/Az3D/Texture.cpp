@@ -34,14 +34,14 @@ namespace Az3D {
         textures.clear();
     }
 
-    size_t TextureManager::addTexture(const char* imagePath) {
+    size_t TextureManager::addTexture(std::string imagePath) {
         try {
             Texture texture;
             texture.path = imagePath; // Convert to std::string for storage
             
             // Load image using STB
             int texWidth, texHeight, texChannels;
-            stbi_uc* pixels = stbi_load(imagePath, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+            stbi_uc* pixels = stbi_load(imagePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
             VkDeviceSize imageSize = texWidth * texHeight * 4;
             
             if (!pixels) {

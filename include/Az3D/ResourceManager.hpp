@@ -25,20 +25,20 @@ namespace Az3D {
         ResourceManager(const ResourceManager&) = delete;
         ResourceManager& operator=(const ResourceManager&) = delete;
 
-        size_t addTexture(const char* name, const char* imagePath);
-        size_t addMaterial(const char* name, const Material& material);
-        size_t addMesh(const char* name, const Mesh& mesh, bool hasBVH = false);
-        size_t addMesh(const char* name, const char* filePath, bool hasBVH = false);
+        size_t addTexture(std::string name, std::string imagePath);
+        size_t addMaterial(std::string name, const Material& material);
+        size_t addMesh(std::string name, const Mesh& mesh, bool hasBVH = false);
+        size_t addMesh(std::string name, std::string filePath, bool hasBVH = false);
 
         // String-to-index getters
-        size_t getTexture(const char* name) const;
-        size_t getMaterial(const char* name) const;
-        size_t getMesh(const char* name) const;
+        size_t getTexture(std::string name) const;
+        size_t getMaterial(std::string name) const;
+        size_t getMesh(std::string name) const;
 
         // String-to-index maps
-        std::unordered_map<const char*, size_t> textureNameToIndex;
-        std::unordered_map<const char*, size_t> materialNameToIndex;
-        std::unordered_map<const char*, size_t> meshNameToIndex;
+        std::unordered_map<std::string, size_t> textureNameToIndex;
+        std::unordered_map<std::string, size_t> materialNameToIndex;
+        std::unordered_map<std::string, size_t> meshNameToIndex;
 
         std::unique_ptr<MeshManager> meshManager;
         std::unique_ptr<TextureManager> textureManager;

@@ -107,72 +107,80 @@ void Application::initVulkan() {
     auto& texManager = *resManager.textureManager;
     auto& meshManager = *resManager.meshManager;
     auto& matManager = *resManager.materialManager;
+    auto& rendSystem = *renderSystem;
 
 // PLAYGROUND FROM HERE!
 
-    /* Available CS maps:
-    de_dust2.obj, de_mirage.obj, de_inferno.obj, de_nuke.obj, 
-    de_train.obj, de_overpass.obj, de_vertigo.obj, de_cache.obj */
+    // Load the global pallete texture that will be used for all platformer assets
+    size_t globalPaletteIndex = resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png");
+    Az3D::Material globalPaletteMaterial;
+    globalPaletteMaterial.diffTxtr = globalPaletteIndex;
+    size_t globalMaterialIndex = resManager.addMaterial("GlobalPalette", globalPaletteMaterial);
 
-    // Load map
-    size_t mapMeshIndex = resManager.addMesh("Map", "Assets/Maps/de_dust2.obj", true);
-    Az3D::Material mapMaterial;
-    mapMaterial.diffTxtr = resManager.addTexture("Map", "Assets/Textures/de_dust2.png");
-    size_t mapMaterialIndex = resManager.addMaterial("Map", mapMaterial);
+    // Useful shorthand function for adding platformer meshes
+    std::unordered_map<std::string, size_t> platformerMeshIndices;
 
-    const auto& mapMesh = *meshManager.meshes[mapMeshIndex];
-    
-    this->mapMeshIndex = mapMeshIndex;
+    auto addPlatformerMesh = [&](std::string name, std::string path) {
+        std::string fullName = "Platformer/" + name;
+        std::string fullPath = "Assets/Platformer/" + path;
 
-    // Configure map transform with scaling
-    mapTransform.pos = glm::vec3(0.0f, 0.0f, 0.0f);
-    mapTransform.scale(0.5f);
-
-    // Create a quad mesh that act as like a river covering the map
-
-    // Get the AABB bound of the map mesh
-
-    glm::vec3 riverMin = mapMesh.meshMin * mapTransform.scl + mapTransform.pos;
-    glm::vec3 riverMax = mapMesh.meshMax * mapTransform.scl + mapTransform.pos;
-    float riverY = 2.1f;
-    std::vector<Az3D::Vertex> riverVertices = {
-        {glm::vec3(riverMin.x, riverY, riverMax.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f)},
-        {glm::vec3(riverMax.x, riverY, riverMax.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f)},
-        {glm::vec3(riverMax.x, riverY, riverMin.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f)},
-        {glm::vec3(riverMin.x, riverY, riverMin.z), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f)}
+        platformerMeshIndices[name] = resManager.addMesh(fullName, fullPath, true);
     };
-    // Both counter-clockwise and clockwise to avoid backface culling
-    std::vector<uint32_t> riverIndices = {0, 1, 2, 2, 3, 0 , 2, 1, 0, 0, 3, 2};
-    Az3D::Mesh riverMesh(riverVertices, riverIndices);
 
-    size_t riverMeshIndex = resManager.addMesh("River", riverMesh);
+    // Useful shorthand for getting a model resource index
+    auto getPlatformIndex = [&](const std::string& name) {
+        return rendSystem.getModelResource("Platformer/" + name);
+    };
+    // Useful shorthand for placing models
+    auto placePlatform = [&](const std::string& name, const Az3D::Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
+        Az3D::ModelInstance instance;
+        instance.modelMatrix() = transform.modelMatrix();
+        instance.multColor() = color;
+        instance.modelResourceIndex = getPlatformIndex(name);
 
-    // Load Kasane Teto but as a pear (Pearto)
-    size_t pearMeshIndex = resManager.addMesh("Pearto", "Assets/Characters/Pearto.obj");
-    Az3D::Material pearMaterial;
-    pearMaterial.diffTxtr = resManager.addTexture("Pearto", "Assets/Textures/Pearto.png");
-    size_t pearMaterialIndex = resManager.addMaterial("Pearto", pearMaterial);
+        worldInstances.push_back(instance);
+    };
 
-    // Create model resources for render system
-    mapModelResourceIndex = renderSystem->addModelResource(
-        "Map", mapMeshIndex, mapMaterialIndex
-    );
+    struct NameAndPath {
+        std::string name;
+        std::string path;
+    };
 
-    size_t riverModelResourceIndex = renderSystem->addModelResource(
-        "River", riverMeshIndex, 0
-    );
+    std::vector<NameAndPath> platformerMeshes = {
+        {"Ground_x2", "ground_grass_2.obj"},
+        {"Ground_x4", "ground_grass_4.obj"},
+        {"Ground_x8", "ground_grass_8.obj"},
+        {"Tree_1", "Tree_1.obj"},
+        {"Tree_2", "Tree_2.obj"},
+        {"TrailCurve_1", "trail_dirt_curved_1.obj"},
+        {"TrailCurve_2", "trail_dirt_curved_2.obj"},
+        {"TrailEnd_1", "trail_dirt_end_1.obj"},
+        {"TrailEnd_2", "trail_dirt_end_2.obj"}
+    };
 
-    size_t pearModelResourceIndex = renderSystem->addModelResource("Pearto", pearMeshIndex, pearMaterialIndex);
+    for (const auto& mesh : platformerMeshes) {
+        addPlatformerMesh(mesh.name, mesh.path);
+    }
+    for (const auto& [name, meshIndex] : platformerMeshIndices) {
+        size_t modelResourceIndex = rendSystem.addModelResource(
+            "Platformer/" + name, meshIndex, globalMaterialIndex
+        );
+    }
 
-    // Initialize particle system within map bounds
-    particleManager.initParticles(
-        1000, pearModelResourceIndex, 0.1f, 0.1f,
-        mapMesh.meshMin * mapTransform.scl + mapTransform.pos,
-        mapMesh.meshMax * mapTransform.scl + mapTransform.pos
-    );
 
-    
-    printf("Map mesh index: %zu\n", mapMeshIndex);
+
+    // Construct a simple world
+
+    // Place every existing platformer model
+    int count = 0;
+    for (const auto& [name, meshIndex] : platformerMeshIndices) {
+        Az3D::Transform transform;
+        transform.pos = glm::vec3(0.0f, 0.0f, static_cast<float>(count) * 8.0f);
+
+        placePlatform(name, transform);
+        count++;
+    }
+
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
@@ -188,13 +196,13 @@ void Application::initVulkan() {
 
     printf("%sLoaded Resources:\n> Meshes:\n", WHITE);
     for (const auto& [name, index] : resManager.meshNameToIndex)
-        printf("%s   Idx %zu: %s\n", COLORS[index % NUM_COLORS], index, name);
+        printf("%s   Idx %zu: %s\n", COLORS[index % NUM_COLORS], index, name.c_str());
     printf("%s> Textures:\n", WHITE);
     for (const auto& [name, index] : resManager.textureNameToIndex) {
         const auto& texture = resManager.textureManager->textures[index];
         const char* color = COLORS[index % NUM_COLORS];
 
-        printf("%s   Idx %zu: %s %s-> %sPATH: %s\n", color, index, name, WHITE, color, texture.path.c_str());
+        printf("%s   Idx %zu: %s %s-> %sPATH: %s\n", color, index, name.c_str(), WHITE, color, texture.path.c_str());
     }
     printf("%s> Materials:\n", WHITE);
     for (const auto& [name, index] : resManager.materialNameToIndex) {
@@ -206,12 +214,12 @@ void Application::initVulkan() {
             const char* diffColor = COLORS[material.diffTxtr % NUM_COLORS];
 
             printf("%s   Idx %zu: %s %s-> %sDIFF: Idx %zu\n",
-                color, index, name, WHITE,
+                color, index, name.c_str(), WHITE,
                 diffColor, material.diffTxtr
             );
         } else {
             printf("%s   Idx %zu: %s %s(TX none)\n",
-                color, index, name, WHITE);
+                color, index, name.c_str(), WHITE);
         }
     }
     printf("%s> Model:\n", WHITE);
@@ -228,7 +236,7 @@ void Application::initVulkan() {
             color, index, WHITE,
             meshColor, meshIndex, WHITE,
             materialColor, materialIndex, WHITE,
-            color, name
+            color, name.c_str()
         );
     }
     printf("%s", WHITE);
@@ -408,83 +416,7 @@ void Application::mainLoop() {
 
         // Clear and populate the render system for this frame
         rendSys.clearInstances();
-
-        // Add the map instance
-        Az3D::ModelInstance mapInstance;
-        mapInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); 
-        mapInstance.modelMatrix() = mapTransform.modelMatrix();
-        mapInstance.modelResourceIndex = mapModelResourceIndex;
-
-        rendSys.addInstance(mapInstance);
-
-        static bool physic_enable = false;
-        static bool hold_P = false;
-        if (k_state[SDL_SCANCODE_P] && !hold_P) {
-            hold_P = true;
-
-            if (k_state[SDL_SCANCODE_LSHIFT]) {
-                // Reset the particle system to the camera position
-                physic_enable = false; // Disable physics to setup
-
-                for (size_t i = 0; i < particleManager.particleCount; ++i) {
-                    particleManager.particles[i].pos = camRef.pos +
-                        // glm::vec3(0.0f, particleManager.particleRadius * 2 * i, 0.0f);
-                        glm::vec3(0.0f, 0.0f, 0.0f);
-
-                    glm::vec3 rnd_direction = ParticleManager::randomDirection();
-                    glm::vec3 mult_direction = { 5.0f, 5.0f, 5.0f };
-
-                    particleManager.particles_velocity[i] = {
-                        rnd_direction.x * mult_direction.x,
-                        rnd_direction.y * mult_direction.y,
-                        rnd_direction.z * mult_direction.z
-                    };
-                }
-
-            } else {
-                physic_enable = !physic_enable;
-            }
-        } else if (!k_state[SDL_SCANCODE_P]) {
-            hold_P = false;
-        }
-        if (physic_enable) particleManager.update(dTime, *meshManager.meshes[mapMeshIndex], mapTransform);
-
-        particleManager.addToRenderSystem(rendSys, dTime);
-
-        // Add the river instance
-        Az3D::ModelInstance riverInstance;
-        riverInstance.multColor() = glm::vec4(0.0f, 0.5f, 1.0f, 0.5f); // Semi-transparent blue
-        riverInstance.modelResourceIndex = rendSys.getModelResource("River");
-        rendSys.addInstance(riverInstance);
-
-        // Press Q to push the particles away from the camera position
-        static bool hold_Q = false;
-        static float pushRange = 10.0f;
-        static float pushStrength = 2.0f;
-
-        if (k_state[SDL_SCANCODE_Q] && !hold_Q) {
-            hold_Q = true;
-
-            // The idea is that any pear in the range 0 - pushRange unit will be pushed
-            // and the closer it is, the velocity vector will be stronger
-            for (size_t p = 0; p < particleManager.particleCount; ++p) {
-                glm::vec3 dir = particleManager.particles[p].pos - camRef.pos;
-
-                float length = glm::length(dir);
-
-                if (length > pushRange) continue; // Skip if outside range
-
-                particleManager.particles_velocity[p] +=
-                    glm::normalize(dir) *
-                    (pushRange - length) *
-                    pushStrength;
-            }
-
-        } else if (!k_state[SDL_SCANCODE_Q]) {
-            hold_Q = false;
-        }
-
-        // End of particle system update
+        rendSys.addInstances(worldInstances);
 
 // =================================
 

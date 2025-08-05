@@ -30,6 +30,6 @@ void main() {
     float farPlane = 100.0;  // Objects farther than this will be white
     
     float normalizedDepth = clamp((distance - nearPlane) / (farPlane - nearPlane), 0.0, 1.0);
-    
-    outColor = vec4(normalizedDepth);
+
+    outColor = vec4(normalizedDepth, normalizedDepth, normalizedDepth, 1.0);
 }

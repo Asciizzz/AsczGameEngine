@@ -2,9 +2,10 @@
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
-#include <vector>
-#include <unordered_map>
 #include <array>
+#include <vector>
+#include <string>
+#include <unordered_map>
 #include <glm/glm.hpp>
 
 // Forward declarations for Vulkan types
@@ -59,10 +60,10 @@ namespace Az3D {
 
         // Resource management
         size_t addModelResource(size_t meshIndex, size_t materialIndex);
-        size_t addModelResource(const char* name, size_t meshIndex, size_t materialIndex); // with name mapping
+        size_t addModelResource(std::string name, size_t meshIndex, size_t materialIndex); // with name mapping
         
         // String-to-index getter
-        size_t getModelResource(const char* name) const;
+        size_t getModelResource(std::string name) const;
         
         // Instance management
         void clearInstances();
@@ -80,13 +81,12 @@ namespace Az3D {
         bool isInstanceTransparent(const ModelInstance& instance) const;
 
         // String-to-index map for model resources
-        std::unordered_map<const char*, size_t> modelResourceNameToIndex;
+        std::unordered_map<std::string, size_t> modelResourceNameToIndex;
 
         std::vector<ModelResource> modelResources;
         std::vector<ModelInstance> modelInstances;
 
-    private:
-        const class ResourceManager* resourceManager = nullptr; // For texture transparency checking
+        const class ResourceManager* resourceManager = nullptr;
     };
 
 } // namespace Az3D
