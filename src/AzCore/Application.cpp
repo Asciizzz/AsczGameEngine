@@ -171,14 +171,14 @@ void Application::initVulkan() {
 
     // Construct a simple world
 
-    // Place every existing platformer model
-    int count = 0;
-    for (const auto& [name, meshIndex] : platformerMeshIndices) {
-        Az3D::Transform transform;
-        transform.pos = glm::vec3(0.0f, 0.0f, static_cast<float>(count) * 8.0f);
-
-        placePlatform(name, transform);
-        count++;
+    int world_size_x = 10;
+    int world_size_z = 10;
+    for (int x = 0; x < world_size_x; ++x) {
+        for (int z = 0; z < world_size_z; ++z) {
+            Az3D::Transform transform;
+            transform.pos = glm::vec3(static_cast<float>(x) * 8.0f, 0.0f, static_cast<float>(z) * 8.0f);
+            placePlatform("Ground_x8", transform, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+        }
     }
 
 
