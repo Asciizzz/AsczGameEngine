@@ -147,7 +147,7 @@ void Application::initVulkan() {
     std::vector<NameAndPath> platformerMeshes = {
         {"Ground_x2", "ground_grass_2.obj"},
         {"Ground_x4", "ground_grass_4.obj"},
-        {"Ground_x8", "ground_dirt_8.obj"},
+        {"Ground_x8", "ground_grass_8.obj"},
         
         {"Tree_1", "Tree_1.obj"},
         {"Tree_2", "Tree_2.obj"},
@@ -268,15 +268,6 @@ void Application::initVulkan() {
         placePlatform(grassName, grassTrform, grassColor);
     }
 
-    for (float i = 0; i < 4; ++i) {
-        Az3D::Transform fenceTrform;
-        fenceTrform.pos = glm::vec3(
-            i * 2.0f + 4.0f, 0.0f, 2.0f
-        );
-        fenceTrform.scale(1.3f);
-        placePlatform("Fence_x2", fenceTrform);
-    }
-
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
@@ -295,7 +286,7 @@ void Application::initVulkan() {
         printf("%s   Idx %zu: %s\n", COLORS[index % NUM_COLORS], index, name.c_str());
     printf("%s> Textures:\n", WHITE);
     for (const auto& [name, index] : resManager.textureNameToIndex) {
-        const auto& texture = resManager.textureManager->textures[index];
+        const auto& texture = texManager.textures[index];
         const char* color = COLORS[index % NUM_COLORS];
 
         printf("%s   Idx %zu: %s %s-> %sPATH: %s\n", color, index, name.c_str(), WHITE, color, texture.path.c_str());
