@@ -25,7 +25,7 @@ namespace Az3D {
         ResourceManager(const ResourceManager&) = delete;
         ResourceManager& operator=(const ResourceManager&) = delete;
 
-        size_t addTexture(std::string name, std::string imagePath);
+        size_t addTexture(std::string name, std::string imagePath, bool semiTransparent = false);
         size_t addMaterial(std::string name, const Material& material);
         size_t addMesh(std::string name, const Mesh& mesh, bool hasBVH = false);
         size_t addMesh(std::string name, std::string filePath, bool hasBVH = false);

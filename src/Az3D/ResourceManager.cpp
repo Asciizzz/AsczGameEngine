@@ -10,8 +10,8 @@ namespace Az3D {
         meshManager = std::make_unique<MeshManager>();
     }
 
-    size_t ResourceManager::addTexture(std::string name, std::string imagePath) {
-        size_t index = textureManager->addTexture(imagePath);
+    size_t ResourceManager::addTexture(std::string name, std::string imagePath, bool semiTransparent) {
+        size_t index = textureManager->addTexture(imagePath, semiTransparent);
         textureNameToIndex[name] = index;
         return index;
     }

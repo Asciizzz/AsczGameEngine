@@ -34,11 +34,12 @@ namespace Az3D {
         textures.clear();
     }
 
-    size_t TextureManager::addTexture(std::string imagePath) {
+    size_t TextureManager::addTexture(std::string imagePath, bool semiTransparent) {
         try {
             Texture texture;
             texture.path = imagePath; // Convert to std::string for storage
-            
+            texture.semiTransparent = semiTransparent;
+
             // Load image using STB
             int texWidth, texHeight, texChannels;
             stbi_uc* pixels = stbi_load(imagePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
@@ -48,14 +49,6 @@ namespace Az3D {
                 throw std::runtime_error("Failed to load texture: " + std::string(imagePath));
             }
 
-            // Check for transparency by scanning alpha channel
-            texture.semiTransparent = false;
-            if (texChannels == 4) { // Original image had alpha channel
-                for (int i = 3; i < texWidth * texHeight * 4; i += 4) { // Check every 4th byte (alpha)
-                    texture.semiTransparent = pixels[i] != 255 && pixels[i] != 0;
-                }
-            }
-            
             uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
             
             // Create staging buffer

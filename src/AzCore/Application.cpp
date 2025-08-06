@@ -71,7 +71,7 @@ void Application::initVulkan() {
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = vulkanDevice->queueFamilyIndices.graphicsFamily.value();
-    
+
     if (vkCreateCommandPool(vulkanDevice->device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create command pool!");
     }
@@ -88,7 +88,7 @@ void Application::initVulkan() {
     resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
     renderSystem = std::make_unique<Az3D::RenderSystem>();
     
-    // Set up the render system to have access to materials for transparency detection
+    // Set up the render system
     renderSystem->setResourceManager(resourceManager.get());
 
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, opaquePipeline->descriptorSetLayout);
@@ -165,8 +165,6 @@ void Application::initVulkan() {
             "Platformer/" + name, meshIndex, globalMaterialIndex
         );
     }
-
-
 
     // Construct a simple world
 

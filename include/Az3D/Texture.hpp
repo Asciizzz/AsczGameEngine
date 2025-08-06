@@ -29,7 +29,7 @@ namespace Az3D {
         TextureManager(const AzVulk::Device& device, VkCommandPool pool);
         ~TextureManager();
         
-        size_t addTexture(std::string imagePath);
+        size_t addTexture(std::string imagePath, bool semiTransparent = false);
         void createDefaultTexture(); // fallback for missing assets
 
         // Vulkan image creation helpers

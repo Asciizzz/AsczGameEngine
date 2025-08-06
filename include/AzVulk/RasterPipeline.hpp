@@ -40,7 +40,7 @@ namespace AzVulk {
         RasterPipeline( VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
                         const char* vertexShaderPath, const char* fragmentShaderPath,
                         const RasterPipelineConfig& config);
-        ~RasterPipeline();        
+        ~RasterPipeline();
         
         RasterPipeline(const RasterPipeline&) = delete;
         RasterPipeline& operator=(const RasterPipeline&) = delete;
