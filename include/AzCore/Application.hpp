@@ -31,10 +31,8 @@ private:
     std::unique_ptr<AzVulk::Device> vulkanDevice;
     std::unique_ptr<AzVulk::SwapChain> swapChain;
 
-    std::vector<
-        std::unique_ptr<AzVulk::RasterPipeline>
-    > rasterPipeline;
-    int pipelineIndex = 0; // Arrays start at 0, revolutionary
+    std::unique_ptr<AzVulk::RasterPipeline> opaquePipeline;
+    std::unique_ptr<AzVulk::RasterPipeline> transparentPipeline;
 
     // More Vulkan ceremony
     std::unique_ptr<AzVulk::ShaderManager> shaderManager;

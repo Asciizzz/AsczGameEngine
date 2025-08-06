@@ -45,33 +45,24 @@ void Application::initVulkan() {
     msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
     swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
 
-    // Create multiple graphics pipelines for different rendering modes
-    rasterPipeline.push_back(std::make_unique<RasterPipeline>(
+    opaquePipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         swapChain->extent,
         swapChain->imageFormat,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
-        msaaManager->msaaSamples
-    ));
-    
-    rasterPipeline.push_back(std::make_unique<RasterPipeline>(
-        vulkanDevice->device,
-        swapChain->extent,
-        swapChain->imageFormat,
-        "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/rasterDepth.frag.spv",
-        msaaManager->msaaSamples
-    ));
+        RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
+    );
 
-    rasterPipeline.push_back(std::make_unique<RasterPipeline>(
+    // Create a separate transparent pipeline
+    transparentPipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         swapChain->extent,
         swapChain->imageFormat,
         "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/rasterNormal.frag.spv",
-        msaaManager->msaaSamples
-    ));
+        "Shaders/Rasterize/raster.frag.spv",
+        RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
+    );
 
     shaderManager = std::make_unique<ShaderManager>(vulkanDevice->device);
 
@@ -89,7 +80,7 @@ void Application::initVulkan() {
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = std::make_unique<DepthManager>(*vulkanDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(rasterPipeline[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    swapChain->createFramebuffers(opaquePipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     buffer = std::make_unique<Buffer>(*vulkanDevice);
     buffer->createUniformBuffers(2);
@@ -99,8 +90,8 @@ void Application::initVulkan() {
     
     // Set up the render system to have access to materials for transparency detection
     renderSystem->setResourceManager(resourceManager.get());
-    
-    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, rasterPipeline[pipelineIndex]->descriptorSetLayout);
+
+    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, opaquePipeline->descriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
@@ -212,7 +203,7 @@ void Application::initVulkan() {
             static_cast<float>(rand() % 2 + 1) * 0.5f
         );
 
-        placePlatform("Flower", flowerTrform);
+        placePlatform("Flower", flowerTrform, glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
     }
 
     for (float i = 0; i < 4; ++i) {
@@ -325,8 +316,8 @@ void Application::initVulkan() {
     }
 
     // Final Renderer setup with ResourceManager
-    renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *rasterPipeline[pipelineIndex], 
-                                        *buffer, *descriptorManager, *camera, *resourceManager);
+    renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *buffer, 
+                                        *descriptorManager, *resourceManager);
 }
 
 void Application::createSurface() {
@@ -379,8 +370,9 @@ void Application::mainLoop() {
             camRef.updateAspectRatio(newWidth, newHeight);
             msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
             depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-            swapChain->recreate(winManager.window, rasterPipeline[pipelineIndex]->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
-            rasterPipeline[pipelineIndex]->recreate(swapChain->extent, swapChain->imageFormat, depthManager->depthFormat, msaaManager->msaaSamples);
+            swapChain->recreate(winManager.window, opaquePipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+            opaquePipeline->recreate(swapChain->extent, swapChain->imageFormat, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples));
+            transparentPipeline->recreate(swapChain->extent, swapChain->imageFormat, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples));
         }
 
         const Uint8* k_state = SDL_GetKeyboardState(nullptr);
@@ -419,15 +411,6 @@ void Application::mainLoop() {
         } else if (!k_state[SDL_SCANCODE_F1]) {
             f1Pressed = false;
         }
-        
-        // Switch graphics pipelines with Tab key
-        static bool tabPressed = false;
-        if (k_state[SDL_SCANCODE_TAB] && !tabPressed) {
-            pipelineIndex = (pipelineIndex + 1) % rasterPipeline.size();
-            tabPressed = true;
-        } else if (!k_state[SDL_SCANCODE_TAB]) {
-            tabPressed = false;
-        }
 
         // Handle mouse look when locked
         if (mouseLocked) {
@@ -464,7 +447,7 @@ void Application::mainLoop() {
 // =================================
 
         // Use the new render system instead of combining model vectors
-        rendererRef.drawScene(*rasterPipeline[pipelineIndex], *renderSystem);
+        rendererRef.drawScene(*opaquePipeline, *transparentPipeline, camRef, rendSys);
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
@@ -475,7 +458,6 @@ void Application::mainLoop() {
             std::string fpsText = "AsczGame | FPS: " + std::to_string(static_cast<int>(fpsRef.currentFPS)) +
                                     " | Avg: " + std::to_string(static_cast<int>(fpsRef.getAverageFPS())) +
                                     " | " + std::to_string(static_cast<int>(fpsRef.frameTimeMs * 10) / 10.0f) + "ms" +
-                                    " | Pipeline: " + std::to_string(pipelineIndex) +
                                     " | Pos: "+ std::to_string(camRef.pos.x) + ", " +
                                                 std::to_string(camRef.pos.y) + ", " +
                                                 std::to_string(camRef.pos.z);

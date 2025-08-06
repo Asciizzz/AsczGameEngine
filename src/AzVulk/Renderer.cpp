@@ -7,13 +7,12 @@
 #include <iostream>
 
 namespace AzVulk {
-    Renderer::Renderer (const Device& device, SwapChain& swapChain, RasterPipeline& pipeline, 
-                        Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
+    Renderer::Renderer (const Device& device, SwapChain& swapChain, Buffer& buffer,
+                        DescriptorManager& descriptorManager,
                         Az3D::ResourceManager& resourceManager)
-        : vulkanDevice(device), swapChain(swapChain), graphicsPipeline(pipeline), buffer(buffer),
+        : vulkanDevice(device), swapChain(swapChain), buffer(buffer),
           descriptorManager(descriptorManager),
-          camera(camera), resourceManager(resourceManager), 
-          startTime(std::chrono::high_resolution_clock::now()) {
+          resourceManager(resourceManager) {
         
         createCommandPool();
         createCommandBuffers();
@@ -87,64 +86,9 @@ namespace AzVulk {
         }
     }
 
-    void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-            throw std::runtime_error("failed to begin recording command buffer!");
-        }
-
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = graphicsPipeline.renderPass;
-        renderPassInfo.framebuffer = swapChain.framebuffers[imageIndex];
-        renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = swapChain.extent;
-
-        std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-        clearValues[1].depthStencil = {1.0f, 0};
-
-        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderPassInfo.pClearValues = clearValues.data();
-
-        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline.graphicsPipeline);
-
-        VkViewport viewport{};
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = (float) swapChain.extent.width;
-        viewport.height = (float) swapChain.extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-        VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = swapChain.extent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-        VkBuffer vertexBuffers[] = {buffer.vertexBuffer};
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-        vkCmdBindIndexBuffer(commandBuffer, buffer.indexBuffer, 0, buffer.indexType);
-
-        vkCmdDrawIndexed(commandBuffer, buffer.indexCount, 1, 0, 0, 0);
-
-        vkCmdEndRenderPass(commandBuffer);
-
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to record command buffer!");
-        }
-    }
-
     // New render system-based draw function
-    void Renderer::drawScene(RasterPipeline& pipeline,
-                            Az3D::RenderSystem& renderSystem) {
+    void Renderer::drawScene(RasterPipeline& opaquePipeline, RasterPipeline& transparentPipeline,
+                            Az3D::Camera& camera, Az3D::RenderSystem& renderSystem) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -208,7 +152,7 @@ namespace AzVulk {
         // Begin render pass
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = pipeline.renderPass;
+        renderPassInfo.renderPass = opaquePipeline.renderPass;
         renderPassInfo.framebuffer = swapChain.framebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain.extent;
@@ -247,9 +191,6 @@ namespace AzVulk {
         memcpy(data, &ubo, sizeof(ubo));
         vkUnmapMemory(vulkanDevice.device, buffer.uniformBuffersMemory[currentFrame]);
 
-        // Bind main graphics pipeline for opaque models
-        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
-
         // === PASS 1: RENDER OPAQUE OBJECTS ===
         // Render opaque meshes with their instances
         const auto& meshBuffers = buffer.meshBuffers;
@@ -266,11 +207,12 @@ namespace AzVulk {
         }
 
         // Render opaque objects
+        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, opaquePipeline.graphicsPipeline);
         for (const auto& [materialIndex, meshIndices] : opaqueMaterialToMeshes) {
             // Bind descriptor set for this material
             VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  pipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                                    opaquePipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
             for (size_t meshIndex : meshIndices) {
                 if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {
@@ -305,9 +247,6 @@ namespace AzVulk {
 
         // === PASS 2: RENDER TRANSPARENT OBJECTS (if any exist) ===
         if (!transparentInstances.empty()) {
-            // Bind transparent pipeline with alpha blending enabled
-            vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.transparentPipeline);
-            
             // Group transparent mesh indices by material
             std::unordered_map<size_t, std::vector<size_t>> transparentMaterialToMeshes;
             for (const auto& [meshIndex, instancePtrs] : transparentInstances) {
@@ -318,10 +257,11 @@ namespace AzVulk {
             }
 
             // Render transparent objects with alpha blending
+            vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, transparentPipeline.graphicsPipeline);
             for (const auto& [materialIndex, meshIndices] : transparentMaterialToMeshes) {
                 VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
                 vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        pipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                                        transparentPipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
                 for (size_t meshIndex : meshIndices) {
                     if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {

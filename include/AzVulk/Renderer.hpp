@@ -18,24 +18,22 @@ namespace AzCore {
 namespace AzVulk {
     class Renderer {
     public:
-        Renderer(const Device& device, SwapChain& swapChain, RasterPipeline& pipeline, 
-                Buffer& buffer, DescriptorManager& descriptorManager, Az3D::Camera& camera,
+        Renderer(const Device& device, SwapChain& swapChain, Buffer& buffer,
+                DescriptorManager& descriptorManager,
                 Az3D::ResourceManager& resourceManager);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        void drawScene( RasterPipeline& pipeline,
-                        Az3D::RenderSystem& renderSystem);
+        void drawScene( RasterPipeline& opaquePipeline, RasterPipeline& transparentPipeline,
+                        Az3D::Camera& camera, Az3D::RenderSystem& renderSystem);
 
         // Component references
         const Device& vulkanDevice;
         SwapChain& swapChain;
-        RasterPipeline& graphicsPipeline;
         Buffer& buffer;
         DescriptorManager& descriptorManager;
-        Az3D::Camera& camera;
         Az3D::ResourceManager& resourceManager;
 
         // Command recording
@@ -49,8 +47,6 @@ namespace AzVulk {
         
         uint32_t currentFrame = 0;
         bool framebufferResized = false;
-        
-        std::chrono::high_resolution_clock::time_point startTime;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2; // double buffering
 
@@ -69,7 +65,6 @@ namespace AzVulk {
         void createCommandPool();
         void createCommandBuffers();
         void createSyncObjects();
-        void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
         
         // OIT methods
         void createOITRenderTargets();

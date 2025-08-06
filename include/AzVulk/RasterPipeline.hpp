@@ -4,18 +4,52 @@
 #include "AzVulk/Buffer.hpp"
 
 namespace AzVulk {
+    struct RasterPipelineConfig {
+        // Rasterization settings
+        VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+        VkFrontFace frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
+        VkBool32 depthBiasEnable = VK_FALSE;
+        
+        // Depth/Stencil settings
+        VkBool32 depthTestEnable = VK_TRUE;
+        VkBool32 depthWriteEnable = VK_TRUE;
+        VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
+        
+        // Color blending settings
+        VkBool32 blendEnable = VK_FALSE;
+        VkBlendFactor srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        VkBlendFactor dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        VkBlendOp colorBlendOp = VK_BLEND_OP_ADD;
+        VkBlendFactor srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        VkBlendFactor dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        VkBlendOp alphaBlendOp = VK_BLEND_OP_ADD;
+        
+        // Multisampling settings
+        VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+        VkBool32 sampleShadingEnable = VK_TRUE;
+        float minSampleShading = 0.2f;
+        
+        // Static factory methods for common configurations
+        static RasterPipelineConfig createOpaqueConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
+        static RasterPipelineConfig createTransparentConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
+    };
+
     class RasterPipeline {
     public:
         RasterPipeline( VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
                         const char* vertexShaderPath, const char* fragmentShaderPath,
-                        VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
+                        const RasterPipelineConfig& config);
         ~RasterPipeline();        
         
         RasterPipeline(const RasterPipeline&) = delete;
         RasterPipeline& operator=(const RasterPipeline&) = delete;
 
-        void recreate(VkExtent2D newExtent, VkFormat newFormat, VkFormat depthFormat, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
+        void recreate(VkExtent2D newExtent, VkFormat newFormat, const RasterPipelineConfig& newConfig);
 
+        // Configuration
+        RasterPipelineConfig config;
+        
         // Shader paths
         const char* vertexShaderPath;
         const char* fragmentShaderPath;
@@ -24,7 +58,6 @@ namespace AzVulk {
         VkDevice device;
         VkExtent2D swapChainExtent;
         VkFormat swapChainImageFormat;
-        VkSampleCountFlagBits msaaSamples; // anti-aliasing samples
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
 
@@ -32,12 +65,10 @@ namespace AzVulk {
         VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
-        VkPipeline transparentPipeline = VK_NULL_HANDLE; // Alpha-blended pipeline for transparent objects
 
         void createRenderPass();
         void createDescriptorSetLayout();
         void createGraphicsPipeline();
-        void createTransparentPipeline(); // Create alpha-blended version
         void cleanup();
     };
 }
