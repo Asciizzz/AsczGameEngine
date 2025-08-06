@@ -107,8 +107,8 @@ void Application::initVulkan() {
     Az3D::Material globalPaletteMaterial;
     globalPaletteMaterial.diffTxtr = globalPaletteIndex;
 
-    // shading=1.0, toonLevel=1, normalBlend=0.5, unused=0.0
-    globalPaletteMaterial.prop1 = glm::vec4(1.0f, 1.0f, 0.5f, 0.0f);
+    // shading=1.0, toonLevel=0, normalBlend=0.5, unused=0.0
+    globalPaletteMaterial.prop1 = glm::vec4(1.0f, 2.0f, 0.5f, 0.0f);
 
     size_t globalMaterialIndex = resManager.addMaterial("GlobalPalette", globalPaletteMaterial);
     
@@ -147,7 +147,7 @@ void Application::initVulkan() {
     std::vector<NameAndPath> platformerMeshes = {
         {"Ground_x2", "ground_grass_2.obj"},
         {"Ground_x4", "ground_grass_4.obj"},
-        {"Ground_x8", "ground_grass_8.obj"},
+        {"Ground_x8", "ground_dirt_8.obj"},
         
         {"Tree_1", "Tree_1.obj"},
         {"Tree_2", "Tree_2.obj"},

@@ -192,6 +192,35 @@ Use preprocessor directives in shaders for optional features:
 #endif
 ```
 
+## Critical Memory Alignment Warning ⚠️
+
+**EXTREMELY IMPORTANT**: When modifying the Material struct, always follow this memory alignment rule:
+
+- **All `glm::vec4` members MUST be declared first**
+- **All `size_t` and other scalar members MUST be declared after vec4 members**
+
+Example of CORRECT ordering:
+```cpp
+struct Material {
+    glm::vec4 prop1;     // MUST be first for 16-byte alignment
+    glm::vec4 prop2;     // Additional vec4s can follow
+    size_t diffTxtr;     // size_t comes AFTER vec4s
+    size_t normalTxtr;   // Additional scalars after vec4s
+};
+```
+
+Example of INCORRECT ordering (will cause memory corruption):
+```cpp
+struct Material {
+    size_t diffTxtr;     // WRONG! This breaks vec4 alignment
+    glm::vec4 prop1;     // Will be corrupted due to misalignment
+};
+```
+
+**Why this matters**: GLM vector types require 16-byte alignment for SIMD operations. If a `size_t` (8 bytes on 64-bit) is placed before a `glm::vec4`, it breaks the alignment and causes severe memory corruption where vector components get corrupted values like `-5.78737e-24`.
+
+**Testing alignment**: After any struct changes, verify in your shader that vec4 components contain expected values, not garbage data.
+
 ## Testing Your Changes
 
 1. **Compile**: Make sure your code compiles without errors

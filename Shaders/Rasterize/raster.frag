@@ -19,6 +19,24 @@ layout(location = 3) in vec4 fragInstanceColor;
 
 layout(location = 0) out vec4 outColor;
 
+// Toon shading function (branchless)
+float applyToonShading(float value, int toonLevel) {
+    // Convert toonLevel to float for calculations
+    float level = float(toonLevel);
+    
+    // For level 0, return original value (no quantization)
+    // For level > 0, apply quantization
+    float bands = level + 1.0;
+    float quantized = floor(value * bands + 0.5) / bands;
+    
+    // Use step function to select between original and quantized
+    // step(1.0, level) returns 1.0 when level >= 1.0, 0.0 otherwise
+    float useToon = step(1.0, level);
+    float result = mix(value, quantized, useToon);
+    
+    return clamp(result, 0.0, 1.0);
+}
+
 void main() {
     vec4 texColor = texture(txtrSmplr, fragTxtr);
     if (texColor.a < 0.001) { discard; }
@@ -37,7 +55,9 @@ void main() {
     float lightFactor = max(dot(normal, -lightDir), 1 - shading);
     lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
 
-    lightFactor = 0.3 + lightFactor * 0.7;
+    // Apply toon shading based on toon level
+    lightFactor = applyToonShading(lightFactor, toonLevel);
+    lightFactor = 0.2 + lightFactor * 0.8; // Ambient
 
     // vec4 finalColor = texColor * fragInstanceColor;
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
