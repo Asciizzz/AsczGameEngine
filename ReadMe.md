@@ -90,7 +90,8 @@ cmake --build build --config Release
 
 * Finishes up all the graphic backbone stuff like:
   * **Shadow mapping** - I can't believe ray trace shadow is easier than this.
-  * **
+  * **Billboarding** - axis-aligned and screen-aligned (fun fact: the engine used to have screen-aligned billboard, but after the instancing update it was removed).
+* Making a truly optimized game for the first time.
 
 ---
 
