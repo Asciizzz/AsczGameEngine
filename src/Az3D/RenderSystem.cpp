@@ -29,7 +29,8 @@ namespace Az3D {
     }
 
     void RenderSystem::addInstances(const std::vector<ModelInstance>& instances) {
-        std::copy(instances.begin(), instances.end(), std::back_inserter(modelInstances));
+        modelInstances.reserve(modelInstances.size() + instances.size());
+        modelInstances.insert(modelInstances.end(), instances.begin(), instances.end());
     }
 
     std::unordered_map<size_t, std::vector<const ModelInstance*>> RenderSystem::groupInstancesByMesh() const {
