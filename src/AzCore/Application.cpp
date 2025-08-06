@@ -150,12 +150,20 @@ void Application::initVulkan() {
         {"Ground_x2", "ground_grass_2.obj"},
         {"Ground_x4", "ground_grass_4.obj"},
         {"Ground_x8", "ground_grass_8.obj"},
+        
         {"Tree_1", "Tree_1.obj"},
         {"Tree_2", "Tree_2.obj"},
+
         {"TrailCurve_1", "trail_dirt_curved_1.obj"},
         {"TrailCurve_2", "trail_dirt_curved_2.obj"},
         {"TrailEnd_1", "trail_dirt_end_1.obj"},
-        {"TrailEnd_2", "trail_dirt_end_2.obj"}
+        {"TrailEnd_2", "trail_dirt_end_2.obj"},
+
+        {"Fence_x1", "fence_1.obj"},
+        {"Fence_x2", "fence_2.obj"},
+        {"Fence_x4", "fence_4.obj"},
+
+        {"Flower", "flower.obj"}
     };
 
     for (const auto& mesh : platformerMeshes) {
@@ -171,14 +179,49 @@ void Application::initVulkan() {
 
     // Construct a simple world
 
-    int world_size_x = 10;
-    int world_size_z = 10;
+    int world_size_x = 2;
+    int world_size_z = 2;
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
-            Az3D::Transform transform;
-            transform.pos = glm::vec3(static_cast<float>(x) * 8.0f, 0.0f, static_cast<float>(z) * 8.0f);
-            placePlatform("Ground_x8", transform, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+            Az3D::Transform trform;
+            trform.pos = glm::vec3(
+                static_cast<float>(x) * 8.0f + 4.0f,
+                0.0f,
+                static_cast<float>(z) * 8.0f + 4.0f
+            );
+            placePlatform("Ground_x8", trform);
         }
+    }
+
+    Az3D::Transform treeTrform;
+    treeTrform.pos = glm::vec3(8.0f, 0.0f, 8.0f);
+    placePlatform("Tree_1", treeTrform);
+
+    for (int i = 0; i < 10; ++i) {
+        Az3D::Transform flowerTrform;
+
+        int max_x = world_size_x * 8 - 1;
+        int max_z = world_size_z * 8 - 1;
+
+        flowerTrform.pos = glm::vec3(
+            static_cast<float>(rand() % max_x),
+            0.0f, // y is always 0
+            static_cast<float>(rand() % max_z)
+        );
+        flowerTrform.scale(
+            static_cast<float>(rand() % 2 + 1) * 0.5f
+        );
+
+        placePlatform("Flower", flowerTrform);
+    }
+
+    for (float i = 0; i < 4; ++i) {
+        Az3D::Transform fenceTrform;
+        fenceTrform.pos = glm::vec3(
+            i * 2.0f + 4.0f, 0.0f, 2.0f
+        );
+        fenceTrform.scale(1.3f);
+        placePlatform("Fence_x2", fenceTrform);
     }
 
 
