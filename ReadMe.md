@@ -11,7 +11,7 @@ Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3
 ### Rendering
 
 * **Total instancing/batching rework** - old system made me physically ill.
-* Went from barely rendering **100k triangles** to **2.7 million at 500 FPS**.
+* Went from barely rendering **100k triangles** to **2.7 million at 500 FPS** on a 3060.
 * **Flexible material system** added. Can’t believe I didn’t have one before.
 * Overlapping geometry? **No longer tanks framerate.** We win these.
 
@@ -41,15 +41,17 @@ Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3
 
 ### Physics
 
-* Particle ↔ map and particle ↔ particle collisions.
+* Particle-map and particle-particle collisions.
 * **BVH** for meshes - fast, maybe wrong in edge cases (don’t test it too hard).
-* Collision response: objects bounce, don’t disappear into the void.
+* Collision response: objects bounce into each other, Einstein shivers in his grave.
 
 ### Build System
 
 * CMake-based with proper Debug/Release configs.
 * MSVC `/O2` and GCC `-O3` - hot CPUs, small binaries.
 * `build_portable.bat`, it does what it says.
+* `compile_shader.bat` for shader compilation, convenient.
+* `compile_shader.sh` for Linux/Mac (not yet implemented, sorry).
 
 ---
 
@@ -83,6 +85,12 @@ cmake --build build --config Release
 * Vulkan is hell, but I sinned, so it cancels out.
 * FPS go up when you optimize things. Revolutionary.
 * "The hell is a Release build?" - "Oh."
+
+## Future Plans
+
+* Finishes up all the graphic backbone stuff like:
+  * **Shadow mapping** - I can't believe ray trace shadow is easier than this.
+  * **
 
 ---
 
