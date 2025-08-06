@@ -154,7 +154,12 @@ void Application::initVulkan() {
         {"Fence_x2", "fence_2.obj"},
         {"Fence_x4", "fence_4.obj"},
 
-        {"Flower", "flower.obj"}
+        {"Flower", "flower.obj"},
+
+        {"Grass_1", "grass_blades_1.obj"},
+        {"Grass_2", "grass_blades_2.obj"},
+        {"Grass_3", "grass_blades_3.obj"},
+        {"Grass_4", "grass_blades_4.obj"}
     };
 
     for (const auto& mesh : platformerMeshes) {
@@ -168,8 +173,8 @@ void Application::initVulkan() {
 
     // Construct a simple world
 
-    int world_size_x = 2;
-    int world_size_z = 2;
+    int world_size_x = 8;
+    int world_size_z = 8;
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
             Az3D::Transform trform;
@@ -182,26 +187,78 @@ void Application::initVulkan() {
         }
     }
 
-    Az3D::Transform treeTrform;
-    treeTrform.pos = glm::vec3(8.0f, 0.0f, 8.0f);
-    placePlatform("Tree_1", treeTrform);
+    
+    // Set up random number generation
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    
+    int numTrees = 500;
+    for (int i = 0; i < numTrees; ++i) {
+        float max_x = static_cast<float>(world_size_x * 8) - 2.0f;
+        float max_z = static_cast<float>(world_size_z * 8) - 2.0f;
 
-    for (int i = 0; i < 10; ++i) {
+        std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
+        std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
+        std::uniform_real_distribution<float> rnd_scl(0.5f, 1.4f);
+        std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
+
+        Az3D::Transform treeTrform;
+        treeTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
+        treeTrform.scale(rnd_scl(gen));
+        treeTrform.rotateY(rnd_rot(gen));
+
+        std::string treeName = "Tree_" + std::to_string(i % 2 + 1);
+
+        placePlatform(treeName, treeTrform);
+    }
+
+    int numFlowers = 2000;
+    for (int i = 0; i < numFlowers; ++i) {
+    
+        float max_x = static_cast<float>(world_size_x * 8) - 2.0f;
+        float max_z = static_cast<float>(world_size_z * 8) - 2.0f;
+
+        std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
+        std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
+        std::uniform_real_distribution<float> rnd_scl(0.2f, 0.4f);
+        std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
+        std::uniform_real_distribution<float> rnd_color(0.0f, 1.0f);
+
         Az3D::Transform flowerTrform;
+        flowerTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
+        flowerTrform.scale(rnd_scl(gen));
+        flowerTrform.rotateY(rnd_rot(gen));
 
-        int max_x = world_size_x * 8 - 1;
-        int max_z = world_size_z * 8 - 1;
+        glm::vec4 flowerColor(rnd_color(gen), rnd_color(gen), rnd_color(gen), 1.0f);
+        placePlatform("Flower", flowerTrform, flowerColor);
+    }
 
-        flowerTrform.pos = glm::vec3(
-            static_cast<float>(rand() % max_x),
-            0.0f, // y is always 0
-            static_cast<float>(rand() % max_z)
-        );
-        flowerTrform.scale(
-            static_cast<float>(rand() % 2 + 1) * 0.5f
-        );
+    int numGrass = 10000;
+    glm::vec4 grassYoung = glm::vec4(1.5f, 1.5f, 0.0f, 1.0f);
+    glm::vec4 grassOld = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        placePlatform("Flower", flowerTrform, glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+    for (int i = 0; i < numGrass; ++i) {
+        float max_x = static_cast<float>(world_size_x * 8);
+        float max_z = static_cast<float>(world_size_z * 8);
+
+        std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
+        std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
+        std::uniform_real_distribution<float> rnd_scl(0.2f, 0.4f);
+        std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
+        std::uniform_int_distribution<int> rnd_grass_type(1, 4);
+
+        Az3D::Transform grassTrform;
+        grassTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
+        grassTrform.scale(rnd_scl(gen));
+        grassTrform.rotateY(rnd_rot(gen));
+
+        // Colored grass based on scale (larger/older = slightly more green, smaller/younger = slightly more yellow)
+        float greenFactor = (grassTrform.scl - 0.2f) * 5.0f; // Convert to [0.0, 1.0] range
+
+        glm::vec4 grassColor = glm::mix(grassYoung, grassOld, greenFactor);
+
+        std::string grassName = "Grass_" + std::to_string(rnd_grass_type(gen));
+        placePlatform(grassName, grassTrform, grassColor);
     }
 
     for (float i = 0; i < 4; ++i) {

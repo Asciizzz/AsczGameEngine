@@ -23,18 +23,36 @@ void main() {
     vec4 texColor = texture(txtrSmplr, fragTxtr);
     if (texColor.a < 0.001) { discard; }
 
-    vec3 lightPos = vec3(0.0, 1000.0, 0.0);
+    // vec3 lightPos = vec3(0.0, 1000.0, 0.0);
 
-    vec3 lightDir = normalize(lightPos - fragWorldPos);
-    vec3 normal = normalize(fragWorldNrml);
+    vec3 lightDir = normalize(vec3(-1.0, -1.0, -1.0));
 
-    float lightFactor = max(dot(normal, lightDir), 0.0);
-    lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
+// Turn off lighting for now
+
+    // vec3 lightDir = normalize(lightPos - fragWorldPos);
+    // vec3 normal = normalize(fragWorldNrml);
+
+    // float lightFactor = max(dot(normal, lightDir), 0.0);
+    // lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
 
     // float finalFactor = 0.01 + lightFactor * 0.99;
-    float finalFactor = 1.0; // Turn off lighting for now
+    // float finalFactor = 1.0;
 
-    vec4 finalColor = texColor * fragInstanceColor;
 
-    outColor = vec4(finalColor.rgb * finalFactor, finalColor.a);
+    vec3 normal = normalize(fragWorldNrml);
+    vec3 normalColor = (normal + 1.0) * 0.5;
+    
+    float lightFactor = max(dot(normal, -lightDir), 0.0);
+    lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
+
+    lightFactor = 0.3 + lightFactor * 0.7;
+
+    // vec4 finalColor = texColor * fragInstanceColor;
+    vec3 rgbColor = texColor.rgb * 0.9 + normalColor * 0.1;
+
+    vec3 rgbFinal = rgbColor * fragInstanceColor.rgb;
+
+    float alpha = texColor.a * fragInstanceColor.a;
+
+    outColor = vec4(rgbFinal * lightFactor, alpha);
 }
