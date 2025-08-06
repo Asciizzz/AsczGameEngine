@@ -83,8 +83,8 @@ namespace Az3D {
             vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
             
             textures.push_back(texture);
-            return textures.size() - 1;
-            
+            return count++;
+
         } catch (const std::exception& e) {
             std::cout << "Application error: " << e.what() << std::endl;
             return 0; // Return default texture index on failure
@@ -131,6 +131,7 @@ namespace Az3D {
         vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
         
         textures.push_back(defaultTexture);
+        count++;
     }
 
 

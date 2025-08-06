@@ -7,9 +7,9 @@ layout(binding = 0) uniform GlobalUBO {
 
 layout(binding = 1) uniform sampler2D txtrSmplr;
 
-// Material uniform buffer (reserved for future material properties)
+// Material uniform buffer
 layout(binding = 2) uniform MaterialUBO {
-    float padding;
+    vec4 prop1; // <bool shading>, <int toonLevel>, <float normalBlend>, <empty>
 } material;
 
 layout(location = 0) in vec2 fragTxtr;
@@ -23,32 +23,24 @@ void main() {
     vec4 texColor = texture(txtrSmplr, fragTxtr);
     if (texColor.a < 0.001) { discard; }
 
-    // vec3 lightPos = vec3(0.0, 1000.0, 0.0);
+    // Unwrap the generic material property
+    float shading = material.prop1.x;
+    int toonLevel = int(material.prop1.y);
+    float normalBlend = material.prop1.z;
 
     vec3 lightDir = normalize(vec3(-1.0, -1.0, -1.0));
-
-// Turn off lighting for now
-
-    // vec3 lightDir = normalize(lightPos - fragWorldPos);
-    // vec3 normal = normalize(fragWorldNrml);
-
-    // float lightFactor = max(dot(normal, lightDir), 0.0);
-    // lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
-
-    // float finalFactor = 0.01 + lightFactor * 0.99;
-    // float finalFactor = 1.0;
-
 
     vec3 normal = normalize(fragWorldNrml);
     vec3 normalColor = (normal + 1.0) * 0.5;
     
-    float lightFactor = max(dot(normal, -lightDir), 0.0);
+    // The idea is that if shading is disabled, lightFactor should be 1.0
+    float lightFactor = max(dot(normal, -lightDir), 1 - shading);
     lightFactor = length(fragWorldNrml) > 0.001 ? lightFactor : 1.0;
 
     lightFactor = 0.3 + lightFactor * 0.7;
 
     // vec4 finalColor = texColor * fragInstanceColor;
-    vec3 rgbColor = texColor.rgb * 0.9 + normalColor * 0.1;
+    vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
 
     vec3 rgbFinal = rgbColor * fragInstanceColor.rgb;
 

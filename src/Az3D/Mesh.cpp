@@ -92,7 +92,7 @@ namespace Az3D {
 
     size_t MeshManager::addMesh(std::shared_ptr<Mesh> mesh) {
         meshes.push_back(mesh);
-        return meshes.size() - 1;
+        return count++;
     }
     size_t MeshManager::addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
         auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));

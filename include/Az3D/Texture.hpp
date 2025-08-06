@@ -24,6 +24,8 @@ namespace Az3D {
     public:
         const AzVulk::Device& vulkanDevice;
         VkCommandPool commandPool;
+
+        size_t count = 0; // Track the number of textures
         std::vector<Texture> textures;
 
         TextureManager(const AzVulk::Device& device, VkCommandPool pool);

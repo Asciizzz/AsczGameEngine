@@ -130,6 +130,7 @@ namespace Az3D {
         size_t loadFromOBJ(std::string filePath);
 
         // Index-based mesh storage
+        size_t count = 0; // Track the number of meshes
         std::vector<std::shared_ptr<Mesh>> meshes;
     };
 }

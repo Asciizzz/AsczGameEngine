@@ -3,11 +3,16 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
+#include <iostream>
 
 namespace Az3D {
 
     struct Material {
-        // Custom material properties exclusive to my game engine
+        // Generic material properties using vec4 for alignment and flexibility
+        // Put this FIRST to ensure proper alignment
+        glm::vec4 prop1 = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <empty>
+        
+        // Custom material properties exclusive to AsczGameEngine
         size_t diffTxtr = 0; // Albedo/Diffuse map
     };
 
@@ -15,16 +20,19 @@ namespace Az3D {
     // MaterialManager - manages materials using index-based access
     class MaterialManager {
     public:
-        MaterialManager() = default;
+        MaterialManager() {
+            auto defaultMaterial = std::make_shared<Material>();
+            materials.push_back(defaultMaterial);
+            count = 1; // Start with one default material
+        }
         MaterialManager(const MaterialManager&) = delete;
         MaterialManager& operator=(const MaterialManager&) = delete;
 
         size_t addMaterial(const Material& material);
 
         // Material storage - index-based
-        std::vector<std::shared_ptr<Material>> materials = { 
-            std::make_shared<Material>()
-        };
+        size_t count = 0; // Track the number of materials
+        std::vector<std::shared_ptr<Material>> materials;
     };
     
 } // namespace Az3D

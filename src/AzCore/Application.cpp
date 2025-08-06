@@ -106,7 +106,14 @@ void Application::initVulkan() {
     size_t globalPaletteIndex = resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png");
     Az3D::Material globalPaletteMaterial;
     globalPaletteMaterial.diffTxtr = globalPaletteIndex;
+
+    // shading=1.0, toonLevel=1, normalBlend=0.5, unused=0.0
+    globalPaletteMaterial.prop1 = glm::vec4(1.0f, 1.0f, 0.5f, 0.0f);
+
     size_t globalMaterialIndex = resManager.addMaterial("GlobalPalette", globalPaletteMaterial);
+    
+    // DEBUG: Check the material after adding it to the manager
+    const auto& storedMaterial = *resManager.materialManager->materials[globalMaterialIndex];
 
     // Useful shorthand function for adding platformer meshes
     std::unordered_map<std::string, size_t> platformerMeshIndices;
