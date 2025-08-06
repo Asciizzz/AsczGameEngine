@@ -105,10 +105,9 @@ void Application::initVulkan() {
     // Load the global pallete texture that will be used for all platformer assets
     size_t globalPaletteIndex = resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png");
     Az3D::Material globalPaletteMaterial;
+    globalPaletteMaterial.prop1 = glm::vec4(1.0f, 2.0f, 0.2f, 0.0f);
     globalPaletteMaterial.diffTxtr = globalPaletteIndex;
 
-    // shading=1.0, toonLevel=0, normalBlend=0.5, unused=0.0
-    globalPaletteMaterial.prop1 = glm::vec4(1.0f, 2.0f, 0.5f, 0.0f);
 
     size_t globalMaterialIndex = resManager.addMaterial("GlobalPalette", globalPaletteMaterial);
     
@@ -199,7 +198,7 @@ void Application::initVulkan() {
     std::random_device rd;
     std::mt19937 gen(rd());
     
-    int numTrees = 500;
+    int numTrees = 100;
     for (int i = 0; i < numTrees; ++i) {
         float max_x = static_cast<float>(world_size_x * 8) - 2.0f;
         float max_z = static_cast<float>(world_size_z * 8) - 2.0f;
