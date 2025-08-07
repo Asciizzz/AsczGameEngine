@@ -35,6 +35,9 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Swapchain.cpp
     src/AzVulk/Renderer.cpp
 
+    src/AzVulk/ShadowManager.cpp
+    src/AzVulk/ShadowPipeline.cpp
+
     main.cpp
 )
 

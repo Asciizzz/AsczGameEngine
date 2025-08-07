@@ -266,7 +266,34 @@ void Application::initVulkan() {
         std::string grassName = "Grass_" + std::to_string(rnd_grass_type(gen));
         placePlatform(grassName, grassTrform, grassColor);
     }
-    
+
+
+    // Testing out the new TextureMode feature
+    // Create a quad
+    std::vector<Az3D::Vertex> quadVertices = {
+        {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{ 1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+        {{-1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
+    };
+    std::vector<uint32_t> quadIndices = { 0, 1, 2, 2, 3, 0 };
+    Az3D::Mesh quadMesh(quadVertices, quadIndices);
+    size_t quadMeshIndex = resManager.addMesh("Quad", quadMesh);
+
+    Az3D::Material quadMaterial;
+    quadMaterial.prop1 = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    quadMaterial.diffTxtr = resManager.addTexture("QuadTexture", "Assets/Textures/Grass.png", Az3D::TextureMode::ClampToEdge);
+    size_t quadMaterialIndex = resManager.addMaterial("QuadMaterial", quadMaterial);
+
+    size_t quadModelIndex = rendSystem.addModelResource("QuadModel", quadMeshIndex, quadMaterialIndex);
+
+    Az3D::ModelInstance quadInstance;
+    quadInstance.modelMatrix() = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 4.0f, 0.0f));
+    quadInstance.modelResourceIndex = quadModelIndex;
+    quadInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    worldInstances.push_back(quadInstance);
+
     rendSystem.addInstances(worldInstances);
 
     // Printing every Mesh - Material - Texture - Model information

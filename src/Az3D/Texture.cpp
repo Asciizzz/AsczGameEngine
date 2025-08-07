@@ -34,11 +34,13 @@ namespace Az3D {
         textures.clear();
     }
 
-    size_t TextureManager::addTexture(std::string imagePath, bool semiTransparent) {
+    size_t TextureManager::addTexture(std::string imagePath, bool semiTransparent, 
+                                      TextureMode addressMode) {
         try {
             Texture texture;
             texture.path = imagePath; // Convert to std::string for storage
             texture.semiTransparent = semiTransparent;
+            texture.addressMode = addressMode;
 
             // Load image using STB
             int texWidth, texHeight, texChannels;
@@ -78,7 +80,7 @@ namespace Az3D {
 
             // Create image view and sampler
             createImageView(texture.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, texture.view);
-            createSampler(mipLevels, texture.sampler);
+            createSampler(mipLevels, texture.sampler, texture.addressMode);
 
             vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
             
@@ -126,7 +128,7 @@ namespace Az3D {
 
         // Create image view and sampler
         createImageView(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, 1, defaultTexture.view);
-        createSampler(1, defaultTexture.sampler);
+        createSampler(1, defaultTexture.sampler, TextureMode::Repeat);
 
         vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
         
@@ -190,20 +192,22 @@ namespace Az3D {
         }
     }
 
-    void TextureManager::createSampler(uint32_t mipLevels, VkSampler& sampler) {
+    void TextureManager::createSampler(uint32_t mipLevels, VkSampler& sampler, TextureMode addressMode) {
         VkPhysicalDeviceProperties properties{};
         vkGetPhysicalDeviceProperties(vulkanDevice.physicalDevice, &properties);
 
         VkPhysicalDeviceFeatures deviceFeatures{};
         vkGetPhysicalDeviceFeatures(vulkanDevice.physicalDevice, &deviceFeatures);
 
+        VkSamplerAddressMode vulkanAddressMode = toVulkanAddressMode(addressMode);
+
         VkSamplerCreateInfo samplerInfo{};
         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerInfo.magFilter = VK_FILTER_LINEAR;
         samplerInfo.minFilter = VK_FILTER_LINEAR;
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeU = vulkanAddressMode;
+        samplerInfo.addressModeV = vulkanAddressMode;
+        samplerInfo.addressModeW = vulkanAddressMode;
         
         if (deviceFeatures.samplerAnisotropy) {
             samplerInfo.anisotropyEnable = VK_TRUE;
