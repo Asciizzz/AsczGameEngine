@@ -10,10 +10,17 @@ namespace Az3D {
     struct Material {
         // Generic material properties using vec4 for alignment and flexibility
         // Put this FIRST to ensure proper alignment
-        glm::vec4 prop1 = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <empty>
+        glm::vec4 prop1 = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <empty>
         
         // Custom material properties exclusive to AsczGameEngine
         size_t diffTxtr = 0; // Albedo/Diffuse map
+
+        static Material fastTemplate(float a, float b, float c, float d, size_t diffTexture) {
+            Material mat;
+            mat.prop1 = glm::vec4(a, b, c, d);
+            mat.diffTxtr = diffTexture;
+            return mat;
+        }
     };
 
 

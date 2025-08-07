@@ -9,6 +9,7 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = false;
 #endif
 
+// You're welcome
 using namespace AzVulk;
 using namespace AzBeta;
 using namespace AzCore;
@@ -105,13 +106,12 @@ void Application::initVulkan() {
 // PLAYGROUND FROM HERE!
 
     // Load the global pallete texture that will be used for all platformer assets
-    size_t globalPaletteIndex = resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png");
-    Material globalPaletteMaterial;
-    globalPaletteMaterial.prop1 = glm::vec4(1.0f, 2.0f, 0.2f, 0.0f);
-    globalPaletteMaterial.diffTxtr = globalPaletteIndex;
-
-
-    size_t globalMaterialIndex = resManager.addMaterial("GlobalPalette", globalPaletteMaterial);
+    size_t globalMaterialIndex = resManager.addMaterial("GlobalPalette",
+        Material::fastTemplate(
+            1.0f, 2.0f, 0.2f, 0.0f,
+            resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png")
+        )
+    );
     
     // DEBUG: Check the material after adding it to the manager
     const auto& storedMaterial = *resManager.materialManager->materials[globalMaterialIndex];
@@ -282,10 +282,12 @@ void Application::initVulkan() {
     Mesh quadMesh(quadVertices, quadIndices);
     size_t quadMeshIndex = resManager.addMesh("Quad", quadMesh);
 
-    Material quadMaterial;
-    quadMaterial.prop1 = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    quadMaterial.diffTxtr = resManager.addTexture("QuadTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge);
-    size_t quadMaterialIndex = resManager.addMaterial("QuadMaterial", quadMaterial);
+    size_t quadMaterialIndex = resManager.addMaterial("QuadMaterial",
+        Material::fastTemplate(
+            1.0f, 0.0f, 0.0f, 1.0f,
+            resManager.addTexture("QuadTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
+        )
+    );
 
     size_t quadModelIndex = rendSystem.addModelResource("QuadModel", quadMeshIndex, quadMaterialIndex);
 
