@@ -304,7 +304,9 @@ namespace Az3D {
         glm::mat4 invModel = glm::inverse(transform.modelMatrix());
 
         glm::vec3 sphereOrg = glm::vec3(invModel * glm::vec4(sphere_origin, 1.0f));
-        float sphereRad = sphere_radius / transform.scl; // Apply scale to radius
+
+        // IMPORTANT: Keep in mind that bvh assume uniform scaling
+        float sphereRad = sphere_radius / transform.scl.x; // Apply scale to radius
 
         int nstack[MAX_DEPTH] = { 0 };
         int ns_top = 1;

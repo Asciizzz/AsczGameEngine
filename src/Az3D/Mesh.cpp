@@ -34,10 +34,14 @@ namespace Az3D {
         this->scl *= scale;
     }
 
+    void Transform::scale(const glm::vec3& scale) {
+        this->scl *= scale;
+    }
+
     glm::mat4 Transform::modelMatrix() const {
         glm::mat4 translation = glm::translate(glm::mat4(1.0f), pos);
         glm::mat4 rotMat = glm::mat4_cast(rot);
-        glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(scl));
+        glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scl);
 
         return translation * rotMat * scaleMat;
     }
@@ -45,7 +49,7 @@ namespace Az3D {
     void Transform::reset() {
         pos = glm::vec3(0.0f);
         rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-        scl = 1.0f;
+        scl = glm::vec3(1.0f);
     }
 
     // Vertex implementation

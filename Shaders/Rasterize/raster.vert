@@ -28,11 +28,9 @@ void main() {
 
     gl_Position = glb.proj * glb.view * worldPos;
 
-    // Can be computationally expensive, avoid scaling if possible
-    // mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
-    // fragWorldNrml = normalize(nrmlMat * inNrml);
-
-    fragWorldNrml = normalize(mat3(modelMatrix) * inNrml);
+    // Proper normal transformation that handles non-uniform scaling
+    mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
+    fragWorldNrml = normalize(nrmlMat * inNrml);
 
     fragTxtr = inTxtr;
     fragInstanceColor = instanceColor;

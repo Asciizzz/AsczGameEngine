@@ -43,7 +43,7 @@ void main() {
 
     if (texColor.a < discardThreshold) { discard; }
 
-    // Unwrap the generic material property
+    // Unwrap the other generic material properties
     float shading = material.prop1.x;
     int toonLevel = int(material.prop1.y);
     float normalBlend = material.prop1.z;

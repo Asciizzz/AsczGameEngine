@@ -35,7 +35,7 @@ namespace Az3D {
     struct Transform {
         glm::vec3 pos{0.0f};
         glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
-        float scl{1.0f};
+        glm::vec3 scl{1.0f};
 
         void translate(const glm::vec3& translation);
         void rotate(const glm::quat& rotation);
@@ -43,6 +43,7 @@ namespace Az3D {
         void rotateY(float radians);
         void rotateZ(float radians);
         void scale(float scale);
+        void scale(const glm::vec3& scale);
 
         glm::mat4 modelMatrix() const;
         void reset();

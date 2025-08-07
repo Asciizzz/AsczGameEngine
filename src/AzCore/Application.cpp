@@ -181,8 +181,8 @@ void Application::initVulkan() {
 
     // Construct a simple world
 
-    int world_size_x = 8;
-    int world_size_z = 8;
+    int world_size_x = 0;
+    int world_size_z = 0;
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
             Transform trform;
@@ -257,11 +257,11 @@ void Application::initVulkan() {
 
         Transform grassTrform;
         grassTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
-        grassTrform.scale(rnd_scl(gen));
+        grassTrform.scale(glm::vec3(1.0f, rnd_scl(gen), 1.0f)); // Scale only on Y axis
         grassTrform.rotateY(rnd_rot(gen));
 
         // Colored grass based on scale (larger/older = slightly more green, smaller/younger = slightly more yellow)
-        float greenFactor = (grassTrform.scl - 0.2f) * 5.0f; // Convert to [0.0, 1.0] range
+        float greenFactor = (grassTrform.scl.y - 0.2f) * 5.0f; // Convert to [0.0, 1.0] range
 
         glm::vec4 grassColor = glm::mix(grassYoung, grassOld, greenFactor);
 
@@ -327,36 +327,296 @@ void Application::initVulkan() {
 
     size_t grassModelIndex = rendSystem.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
 
-    // ModelInstance grassInstance;
-    // grassInstance.modelMatrix() = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 4.0f, 0.0f));
-    // grassInstance.modelResourceIndex = grassModelIndex;
-    // grassInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
     glm::vec4 grassYoungColor(1.5f, 1.5f, 0.0f, 1.0f);
     glm::vec4 grassOldColor(1.0f, 1.0f, 1.0f, 1.0f);
-    for (float x = 0; x < world_size_x * 8; ++x) {
-        for (float z = 0; z < world_size_z * 8; ++z) {
-            std::uniform_real_distribution<float> rnd_x(0.3f, 0.7f);
-            std::uniform_real_distribution<float> rnd_z(0.3f, 0.7f);
-            std::uniform_real_distribution<float> rnd_scl(1.0, 1.2f);
-            std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
 
-            Transform grassTrform;
-            grassTrform.pos = glm::vec3(x + rnd_x(gen), 0.0f, z + rnd_z(gen));
-            grassTrform.scale(rnd_scl(gen));
-            grassTrform.rotateY(rnd_rot(gen));
+    int grassWorldSizeX = 14;
+    int grassWorldSizeZ = 14;
 
-            float greenFactor = (grassTrform.scl - 1.0f) * 5.0f; // Convert to [0.0, 1.0] range
-            glm::vec4 grassColor = glm::mix(grassYoungColor, grassOldColor, greenFactor);
-
-            ModelInstance grassInstance;
-            grassInstance.modelMatrix() = grassTrform.modelMatrix();
-            grassInstance.modelResourceIndex = grassModelIndex;
-            grassInstance.multColor() = grassColor;
-
-            worldInstances.push_back(grassInstance);
+    // Generate height map first (moved this before grass placement)
+    std::vector<std::vector<float>> heightMap;
+    heightMap.resize(grassWorldSizeX, std::vector<float>(grassWorldSizeZ, 0.0f));
+    
+    // Generate height map using random nodes with smooth falloff
+    int numHeightNodes = 8;
+    float heightVariance = 0.8f; // Reduced max height variance for smoother terrain
+    
+    std::uniform_int_distribution<int> rnd_x_node(0, grassWorldSizeX - 1);
+    std::uniform_int_distribution<int> rnd_z_node(0, grassWorldSizeZ - 1);
+    std::uniform_real_distribution<float> rnd_height(-heightVariance, heightVariance);
+    
+    for (int i = 0; i < numHeightNodes; ++i) {
+        int centerX = rnd_x_node(gen);
+        int centerZ = rnd_z_node(gen);
+        float nodeHeight = rnd_height(gen);
+        
+        // Apply height to center node and surrounding area with smooth falloff
+        float radius = 6.0f; // Larger influence radius for smoother transitions
+        int radiusInt = static_cast<int>(std::ceil(radius));
+        
+        for (int x = std::max(0, centerX - radiusInt); x < std::min(grassWorldSizeX, centerX + radiusInt + 1); ++x) {
+            for (int z = std::max(0, centerZ - radiusInt); z < std::min(grassWorldSizeZ, centerZ + radiusInt + 1); ++z) {
+                float distance = std::sqrt((x - centerX) * (x - centerX) + (z - centerZ) * (z - centerZ));
+                
+                if (distance <= radius) {
+                    // Smooth falloff using cosine interpolation for natural curves
+                    float normalizedDistance = distance / radius;
+                    float influence = 0.5f * (1.0f + std::cos(normalizedDistance * glm::pi<float>()));
+                    heightMap[x][z] += nodeHeight * influence;
+                }
+            }
         }
     }
+
+    float terrainScale = 1.0f; // Scale between height map grid points
+    float heightScale = 2.0f;  // Scale for height values
+
+    // Helper function to get terrain height and normal at a world position
+    auto getTerrainInfoAt = [&](float worldX, float worldZ) -> std::pair<float, glm::vec3> {
+        // Convert world position to height map coordinates
+        float mapX_f = worldX / terrainScale;
+        float mapZ_f = worldZ / terrainScale;
+        
+        int mapX = static_cast<int>(mapX_f);
+        int mapZ = static_cast<int>(mapZ_f);
+        
+        // Bounds check
+        if (mapX < 0 || mapX >= grassWorldSizeX - 1 || mapZ < 0 || mapZ >= grassWorldSizeZ - 1) {
+            // For edge cases, just use the nearest valid height
+            mapX = std::clamp(mapX, 0, grassWorldSizeX - 1);
+            mapZ = std::clamp(mapZ, 0, grassWorldSizeZ - 1);
+            return {heightMap[mapX][mapZ] * heightScale, glm::vec3(0.0f, 1.0f, 0.0f)};
+        }
+        
+        // Bilinear interpolation for smooth height
+        float fx = mapX_f - mapX;
+        float fz = mapZ_f - mapZ;
+        
+        float h00 = heightMap[mapX][mapZ] * heightScale;
+        float h10 = heightMap[mapX + 1][mapZ] * heightScale;
+        float h01 = heightMap[mapX][mapZ + 1] * heightScale;
+        float h11 = heightMap[mapX + 1][mapZ + 1] * heightScale;
+        
+        float height = h00 * (1 - fx) * (1 - fz) + 
+                      h10 * fx * (1 - fz) + 
+                      h01 * (1 - fx) * fz + 
+                      h11 * fx * fz;
+        
+        // Calculate normal from surrounding heights
+        glm::vec3 normal(0.0f, 1.0f, 0.0f);
+        if (mapX > 0 && mapX < grassWorldSizeX - 1 && mapZ > 0 && mapZ < grassWorldSizeZ - 1) {
+            float heightL = heightMap[mapX - 1][mapZ] * heightScale;
+            float heightR = heightMap[mapX + 1][mapZ] * heightScale;
+            float heightD = heightMap[mapX][mapZ - 1] * heightScale;
+            float heightU = heightMap[mapX][mapZ + 1] * heightScale;
+            
+            // Calculate height differences
+            float dX = (heightR - heightL) / (2.0f * terrainScale);
+            float dZ = (heightU - heightD) / (2.0f * terrainScale);
+            
+            // Normal is the cross product of the tangent vectors
+            glm::vec3 tangentX(1.0f, dX, 0.0f);
+            glm::vec3 tangentZ(0.0f, dZ, 1.0f);
+            normal = glm::normalize(glm::cross(tangentZ, tangentX));
+        }
+        
+        return {height, normal};
+    };
+
+    // Enhanced grass placement system based on terrain characteristics
+    std::vector<ModelInstance> grassInstances;
+    
+    // Grass color definitions based on your guide
+    glm::vec4 richGreen(0.3f, 0.8f, 0.3f, 1.0f);      // Low elevation, lush
+    glm::vec4 normalGreen(0.5f, 0.7f, 0.4f, 1.0f);    // Mid elevation, healthy
+    glm::vec4 paleGreen(0.7f, 0.8f, 0.5f, 1.0f);      // High elevation, pale
+    glm::vec4 yellowishGreen(0.8f, 0.8f, 0.4f, 1.0f); // Very high/old grass
+    
+    // Find terrain height range for elevation-based coloring
+    float minTerrainHeight = std::numeric_limits<float>::max();
+    float maxTerrainHeight = std::numeric_limits<float>::lowest();
+    for (int x = 0; x < grassWorldSizeX; ++x) {
+        for (int z = 0; z < grassWorldSizeZ; ++z) {
+            float height = heightMap[x][z] * heightScale;
+            minTerrainHeight = std::min(minTerrainHeight, height);
+            maxTerrainHeight = std::max(maxTerrainHeight, height);
+        }
+    }
+
+    // Generate grass based on terrain characteristics with higher density
+    int baseDensity = 4; // Base grass attempts per terrain grid cell
+    for (int gridX = 0; gridX < grassWorldSizeX - 1; ++gridX) {
+        for (int gridZ = 0; gridZ < grassWorldSizeZ - 1; ++gridZ) {
+            
+            // Variable density based on terrain - some areas are naturally more dense
+            std::uniform_real_distribution<float> rnd_density_mod(0.8f, 1.4f);
+            int grassDensity = static_cast<int>(baseDensity * rnd_density_mod(gen));
+            
+            for (int attempt = 0; attempt < grassDensity; ++attempt) {
+                std::uniform_real_distribution<float> rnd_offset(0.05f, 0.95f); // Wider spread
+                std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
+                
+                // Random position within the grid cell
+                float worldX = (gridX + rnd_offset(gen)) * terrainScale;
+                float worldZ = (gridZ + rnd_offset(gen)) * terrainScale;
+                
+                auto [terrainHeight, terrainNormal] = getTerrainInfoAt(worldX, worldZ);
+                
+                // Skip very steep terrain (grass doesn't grow well on cliffs)
+                if (terrainNormal.y < 0.3f) continue;
+                
+                // Calculate elevation factor (0 = lowest, 1 = highest)
+                float elevationFactor = (terrainHeight - minTerrainHeight) / 
+                                        std::max(0.1f, maxTerrainHeight - minTerrainHeight);
+                
+                // Grass height based on elevation (lower = taller grass)
+                float baseGrassHeight = 1.0f;
+                if (elevationFactor < 0.3f) {
+                    // Valleys - tall grass
+                    std::uniform_real_distribution<float> rnd_height(1.2f, 1.8f);
+                    baseGrassHeight = rnd_height(gen);
+                } else if (elevationFactor < 0.7f) {
+                    // Mid elevation - medium grass
+                    std::uniform_real_distribution<float> rnd_height(0.8f, 1.4f);
+                    baseGrassHeight = rnd_height(gen);
+                } else {
+                    // High elevation - short, sparse grass
+                    std::uniform_real_distribution<float> rnd_height(0.3f, 0.8f);
+                    baseGrassHeight = rnd_height(gen);
+                    
+                    // Make high elevation grass sparser (but not as much as before)
+                    std::uniform_real_distribution<float> rnd_sparse(0.0f, 1.0f);
+                    if (rnd_sparse(gen) > 0.75f) continue; // Skip 25% of high elevation grass
+                }
+                
+                // Color based on elevation and grass height
+                glm::vec4 grassColor;
+                if (elevationFactor < 0.3f) {
+                    // Low elevation - rich green to normal green based on grass height
+                    float heightFactor = (baseGrassHeight - 1.2f) / 0.6f; // 0-1 range
+                    grassColor = glm::mix(richGreen, normalGreen, std::clamp(heightFactor, 0.0f, 1.0f));
+                } else if (elevationFactor < 0.7f) {
+                    // Mid elevation - normal green to pale green
+                    grassColor = glm::mix(normalGreen, paleGreen, (elevationFactor - 0.3f) / 0.4f);
+                } else {
+                    // High elevation - pale to yellowish
+                    grassColor = glm::mix(paleGreen, yellowishGreen, (elevationFactor - 0.7f) / 0.3f);
+                }
+                
+                // Add slight color variation based on grass blade height
+                float agingFactor = std::min(1.0f, baseGrassHeight / 1.5f);
+                glm::vec4 youngColor = grassColor * 1.2f; // Brighter
+                glm::vec4 oldColor = grassColor * 0.8f;   // Duller
+                grassColor = glm::mix(youngColor, oldColor, agingFactor);
+                grassColor.a = 1.0f; // Ensure alpha is 1
+                
+                // Create grass transform
+                Transform grassTrform;
+                grassTrform.pos = glm::vec3(worldX, terrainHeight, worldZ);
+                grassTrform.scl = glm::vec3(1.0f, baseGrassHeight, 1.0f);
+                grassTrform.rotateY(rnd_rot(gen));
+                
+                // Align grass to terrain normal (slight tilt towards slope)
+                glm::vec3 up(0.0f, 1.0f, 0.0f);
+                glm::vec3 tiltDirection = glm::normalize(glm::mix(up, terrainNormal, 0.3f));
+                
+                // Calculate rotation to align with tilted normal
+                if (glm::length(glm::cross(up, tiltDirection)) > 0.01f) {
+                    glm::vec3 rotAxis = glm::normalize(glm::cross(up, tiltDirection));
+                    float rotAngle = std::acos(glm::clamp(glm::dot(up, tiltDirection), -1.0f, 1.0f));
+                    glm::quat tiltQuat = glm::angleAxis(rotAngle * 0.5f, rotAxis); // Reduce tilt by half
+                    grassTrform.rot = tiltQuat * grassTrform.rot;
+                }
+                
+                // Create grass instance
+                ModelInstance grassInstance;
+                grassInstance.modelMatrix() = grassTrform.modelMatrix();
+                grassInstance.modelResourceIndex = grassModelIndex;
+                grassInstance.multColor() = grassColor;
+                
+                grassInstances.push_back(grassInstance);
+            }
+        }
+    }
+
+    // Generate terrain mesh from height map
+    std::vector<Vertex> terrainVertices;
+    std::vector<uint32_t> terrainIndices;
+    
+    // Generate vertices
+    for (int x = 0; x < grassWorldSizeX; ++x) {
+        for (int z = 0; z < grassWorldSizeZ; ++z) {
+            float worldX = x * terrainScale;
+            float worldZ = z * terrainScale;
+            float worldY = heightMap[x][z] * heightScale;
+            
+            // Calculate smooth normal using neighboring heights
+            glm::vec3 normal(0.0f, 1.0f, 0.0f);
+            if (x > 0 && x < grassWorldSizeX - 1 && z > 0 && z < grassWorldSizeZ - 1) {
+                float heightL = heightMap[x - 1][z] * heightScale;
+                float heightR = heightMap[x + 1][z] * heightScale;
+                float heightD = heightMap[x][z - 1] * heightScale;
+                float heightU = heightMap[x][z + 1] * heightScale;
+                
+                // Calculate height differences
+                float dX = (heightR - heightL) / (2.0f * terrainScale);
+                float dZ = (heightU - heightD) / (2.0f * terrainScale);
+                
+                // Normal is the cross product of the tangent vectors
+                glm::vec3 tangentX(1.0f, dX, 0.0f);
+                glm::vec3 tangentZ(0.0f, dZ, 1.0f);
+                normal = glm::normalize(glm::cross(tangentZ, tangentX)); // Note order for correct winding
+            }
+            
+            // UV coordinates (0-1 range across the terrain)
+            glm::vec2 uv(static_cast<float>(x) / (grassWorldSizeX - 1), 
+                        static_cast<float>(z) / (grassWorldSizeZ - 1));
+
+            terrainVertices.push_back({glm::vec3(worldX, worldY, worldZ), normal, uv});
+        }
+    }
+    
+    // Generate indices for triangles
+    for (int x = 0; x < grassWorldSizeX - 1; ++x) {
+        for (int z = 0; z < grassWorldSizeZ - 1; ++z) {
+            uint32_t topLeft = x * grassWorldSizeZ + z;
+            uint32_t topRight = (x + 1) * grassWorldSizeZ + z;
+            uint32_t bottomLeft = x * grassWorldSizeZ + (z + 1);
+            uint32_t bottomRight = (x + 1) * grassWorldSizeZ + (z + 1);
+            
+            // First triangle (top-left, bottom-left, top-right)
+            terrainIndices.push_back(topLeft);
+            terrainIndices.push_back(bottomLeft);
+            terrainIndices.push_back(topRight);
+            
+            // Second triangle (top-right, bottom-left, bottom-right)
+            terrainIndices.push_back(topRight);
+            terrainIndices.push_back(bottomLeft);
+            terrainIndices.push_back(bottomRight);
+        }
+    }
+    
+    // Create terrain mesh and material
+    size_t terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices);
+    
+    size_t terrainMaterialIndex = resManager.addMaterial("TerrainMaterial",
+        Material::fastTemplate(
+            1.0f, 2.0f, 0.2f, 0.0f, 0 // No discard threshold/No texture
+        )
+    );
+    
+    size_t terrainModelIndex = rendSystem.addModelResource("TerrainModel", terrainMeshIndex, 0);
+    
+    // Add terrain to world instances
+    ModelInstance terrainInstance;
+    terrainInstance.modelMatrix() = glm::mat4(1.0f); // Identity matrix - no transformation
+    terrainInstance.modelResourceIndex = terrainModelIndex;
+    terrainInstance.multColor() = glm::vec4(0.5f, 0.55f, 0.22f, 1.0f);
+
+    worldInstances.push_back(terrainInstance);
+    
+    // Add all grass instances to world instances
+    worldInstances.insert(worldInstances.end(), grassInstances.begin(), grassInstances.end());
 
     rendSystem.addInstances(worldInstances);
 
