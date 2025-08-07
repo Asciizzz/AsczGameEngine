@@ -266,7 +266,8 @@ void Application::initVulkan() {
         std::string grassName = "Grass_" + std::to_string(rnd_grass_type(gen));
         placePlatform(grassName, grassTrform, grassColor);
     }
-
+    
+    rendSystem.addInstances(worldInstances);
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
