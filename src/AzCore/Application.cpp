@@ -340,10 +340,10 @@ void Application::initVulkan() {
         float falloffRadius = 6.0f;
         
         // Grass density and distribution
-        int baseDensity = 6;                    // Increased base density
+        int baseDensity = 8;                    // Increased base density further
         float densityVariation = 0.6f;         // Range: baseDensity * (1.0 ± densityVariation)
-        float steepnessMultiplier = 2.0f;       // Up to 3x density on steep slopes
-        float steepnessSpawnChance = 0.5f;      // 50% chance for extra steep grass
+        float steepnessMultiplier = 4.0f;       // Up to 5x density on steep slopes
+        float steepnessSpawnChance = 0.8f;      // 80% chance for extra steep grass
         
         // Grass placement
         float offsetMin = 0.0f;                 // Wider spread to avoid clustering
