@@ -340,10 +340,11 @@ void Application::initVulkan() {
     // Generate height map using random nodes with smooth falloff
     int numHeightNodes = 8;
     float heightVariance = 0.8f; // Reduced max height variance for smoother terrain
+    float lowVariance = 0.2f; // Lower variance for more subtle hills
     
     std::uniform_int_distribution<int> rnd_x_node(0, grassWorldSizeX - 1);
     std::uniform_int_distribution<int> rnd_z_node(0, grassWorldSizeZ - 1);
-    std::uniform_real_distribution<float> rnd_height(-heightVariance, heightVariance);
+    std::uniform_real_distribution<float> rnd_height(-lowVariance, heightVariance);
     
     for (int i = 0; i < numHeightNodes; ++i) {
         int centerX = rnd_x_node(gen);
@@ -448,6 +449,8 @@ void Application::initVulkan() {
     for (int gridX = 0; gridX < grassWorldSizeX - 1; ++gridX) {
         for (int gridZ = 0; gridZ < grassWorldSizeZ - 1; ++gridZ) {
             
+            if (gridX % 2 == 0 && gridZ % 2 == 0) continue; // Skip every other cell for less clutter
+
             // Variable density based on terrain - some areas are naturally more dense
             std::uniform_real_distribution<float> rnd_density_mod(0.8f, 1.4f);
             int grassDensity = static_cast<int>(baseDensity * rnd_density_mod(gen));
