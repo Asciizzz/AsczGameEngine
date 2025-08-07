@@ -30,6 +30,7 @@ namespace Az3D {
                         bool semiTransparent = false);
         size_t addMaterial(std::string name, const Material& material);
 
+        size_t addMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, bool hasBVH = false);
         size_t addMesh(std::string name, const Mesh& mesh, bool hasBVH = false);
         size_t addMesh(std::string name, std::string filePath, bool hasBVH = false);
 

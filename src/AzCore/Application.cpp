@@ -108,7 +108,7 @@ void Application::initVulkan() {
     // Load the global pallete texture that will be used for all platformer assets
     size_t globalMaterialIndex = resManager.addMaterial("GlobalPalette",
         Material::fastTemplate(
-            1.0f, 2.0f, 0.2f, 0.0f,
+            1.0f, 2.0f, 0.2f, 0.0f, // No discard threshold since the texture is opaque anyway
             resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png")
         )
     );
@@ -270,74 +270,93 @@ void Application::initVulkan() {
     }
 
 
-    // Create a quad
+    // Create grasss for the grass texture
 
-    glm::vec3 normal(0.0f, 1.0f, 0.0f);
+    glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
 
-    glm::vec2 uv1(0.0f, 0.0f);
-    glm::vec2 uv2(1.0f, 0.0f);
-    glm::vec2 uv3(1.0f, 1.0f);
-    glm::vec2 uv4(0.0f, 1.0f);
+    glm::vec2 g_uv00(0.0f, 0.0f);
+    glm::vec2 g_uv10(1.0f, 0.0f);
+    glm::vec2 g_uv11(1.0f, 1.0f);
+    glm::vec2 g_uv01(0.0f, 1.0f);
 
-    glm::vec3 pos1(-1.0f, -1.0f, 0.0f);
-    glm::vec3 pos2(1.0f, -1.0f, 0.0f);
-    glm::vec3 pos3(1.0f, 1.0f, 0.0f);
-    glm::vec3 pos4(-1.0f, 1.0f, 0.0f);
+    glm::vec3 g_pos1(-0.5f, 0.0f, 0.0f);
+    glm::vec3 g_pos2(0.5f, 0.0f, 0.0f);
+    glm::vec3 g_pos3(0.5f, 1.0f, 0.0f);
+    glm::vec3 g_pos4(-0.5f, 1.0f, 0.0f);
 
-    glm::vec3 pos5 = Transform::rotate(pos1, normal, glm::radians(120.0f));
-    glm::vec3 pos6 = Transform::rotate(pos2, normal, glm::radians(120.0f));
-    glm::vec3 pos7 = Transform::rotate(pos3, normal, glm::radians(120.0f));
-    glm::vec3 pos8 = Transform::rotate(pos4, normal, glm::radians(120.0f));
+    glm::vec3 g_pos5 = Transform::rotate(g_pos1, g_normal, glm::radians(120.0f));
+    glm::vec3 g_pos6 = Transform::rotate(g_pos2, g_normal, glm::radians(120.0f));
+    glm::vec3 g_pos7 = Transform::rotate(g_pos3, g_normal, glm::radians(120.0f));
+    glm::vec3 g_pos8 = Transform::rotate(g_pos4, g_normal, glm::radians(120.0f));
 
-    glm::vec3 pos9 = Transform::rotate(pos1, normal, glm::radians(240.0f));
-    glm::vec3 pos10 = Transform::rotate(pos2, normal, glm::radians(240.0f));
-    glm::vec3 pos11 = Transform::rotate(pos3, normal, glm::radians(240.0f));
-    glm::vec3 pos12 = Transform::rotate(pos4, normal, glm::radians(240.0f));
+    glm::vec3 g_pos9 = Transform::rotate(g_pos1, g_normal, glm::radians(240.0f));
+    glm::vec3 g_pos10 = Transform::rotate(g_pos2, g_normal, glm::radians(240.0f));
+    glm::vec3 g_pos11 = Transform::rotate(g_pos3, g_normal, glm::radians(240.0f));
+    glm::vec3 g_pos12 = Transform::rotate(g_pos4, g_normal, glm::radians(240.0f));
 
-    std::vector<Vertex> quadVertices = {
-        // {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        // {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        // {{ 1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-        // {{-1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
+    std::vector<Vertex> grassVertices = {
+        {g_pos1, g_normal, g_uv01},
+        {g_pos2, g_normal, g_uv11},
+        {g_pos3, g_normal, g_uv10},
+        {g_pos4, g_normal, g_uv00},
 
-        {pos1, normal, uv1},
-        {pos2, normal, uv2},
-        {pos3, normal, uv3},
-        {pos4, normal, uv4},
+        {g_pos5, g_normal, g_uv01},
+        {g_pos6, g_normal, g_uv11},
+        {g_pos7, g_normal, g_uv10},
+        {g_pos8, g_normal, g_uv00},
 
-        {pos5, normal, uv1},
-        {pos6, normal, uv2},
-        {pos7, normal, uv3},
-        {pos8, normal, uv4},
-
-        {pos9, normal, uv1},
-        {pos10, normal, uv2},
-        {pos11, normal, uv3},
-        {pos12, normal, uv4}
+        {g_pos9, g_normal, g_uv01},
+        {g_pos10, g_normal, g_uv11},
+        {g_pos11, g_normal, g_uv10},
+        {g_pos12, g_normal, g_uv00}
     };
-    std::vector<uint32_t> quadIndices = { 
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4,
-        8, 9, 10, 10, 11, 8
+    std::vector<uint32_t> grassIndices = { 
+        0, 1, 2, 2, 3, 0,  2, 1, 0, 0, 3, 2,
+        4, 5, 6, 6, 7, 4,  6, 5, 4, 4, 7, 6,
+        8, 9, 10, 10, 11, 8,  10, 9, 8, 8, 11, 10
     };
-    Mesh quadMesh(quadVertices, quadIndices);
-    size_t quadMeshIndex = resManager.addMesh("Quad", quadMesh);
 
-    size_t quadMaterialIndex = resManager.addMaterial("QuadMaterial",
+    size_t grassMeshIndex = resManager.addMesh("GrassMesh", grassVertices, grassIndices);
+
+    size_t grassMaterialIndex = resManager.addMaterial("grassMaterial",
         Material::fastTemplate(
-            1.0f, 0.0f, 0.0f, 1.0f,
-            resManager.addTexture("QuadTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
+            1.0f, 0.0f, 0.0f, 0.7f, // 0.7f discard threshold
+            resManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
         )
     );
 
-    size_t quadModelIndex = rendSystem.addModelResource("QuadModel", quadMeshIndex, quadMaterialIndex);
+    size_t grassModelIndex = rendSystem.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
 
-    ModelInstance quadInstance;
-    quadInstance.modelMatrix() = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 4.0f, 0.0f));
-    quadInstance.modelResourceIndex = quadModelIndex;
-    quadInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    // ModelInstance grassInstance;
+    // grassInstance.modelMatrix() = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 4.0f, 0.0f));
+    // grassInstance.modelResourceIndex = grassModelIndex;
+    // grassInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-    worldInstances.push_back(quadInstance);
+    glm::vec4 grassYoungColor(1.5f, 1.5f, 0.0f, 1.0f);
+    glm::vec4 grassOldColor(1.0f, 1.0f, 1.0f, 1.0f);
+    for (float x = 0; x < world_size_x * 8; ++x) {
+        for (float z = 0; z < world_size_z * 8; ++z) {
+            std::uniform_real_distribution<float> rnd_x(0.3f, 0.7f);
+            std::uniform_real_distribution<float> rnd_z(0.3f, 0.7f);
+            std::uniform_real_distribution<float> rnd_scl(1.0, 1.2f);
+            std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
+
+            Transform grassTrform;
+            grassTrform.pos = glm::vec3(x + rnd_x(gen), 0.0f, z + rnd_z(gen));
+            grassTrform.scale(rnd_scl(gen));
+            grassTrform.rotateY(rnd_rot(gen));
+
+            float greenFactor = (grassTrform.scl - 1.0f) * 5.0f; // Convert to [0.0, 1.0] range
+            glm::vec4 grassColor = glm::mix(grassYoungColor, grassOldColor, greenFactor);
+
+            ModelInstance grassInstance;
+            grassInstance.modelMatrix() = grassTrform.modelMatrix();
+            grassInstance.modelResourceIndex = grassModelIndex;
+            grassInstance.multColor() = grassColor;
+
+            worldInstances.push_back(grassInstance);
+        }
+    }
 
     rendSystem.addInstances(worldInstances);
 
@@ -557,7 +576,6 @@ void Application::mainLoop() {
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
         float p_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
 
-        // Move the camera normally
         if (k_state[SDL_SCANCODE_W]) camPos += camRef.forward * p_speed;
         if (k_state[SDL_SCANCODE_S]) camPos -= camRef.forward * p_speed;
         if (k_state[SDL_SCANCODE_A]) camPos -= camRef.right * p_speed;

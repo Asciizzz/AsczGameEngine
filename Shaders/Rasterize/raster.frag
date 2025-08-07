@@ -9,7 +9,7 @@ layout(binding = 1) uniform sampler2D txtrSmplr;
 
 // Material uniform buffer
 layout(binding = 2) uniform MaterialUBO {
-    vec4 prop1; // <bool shading>, <int toonLevel>, <float normalBlend>, <empty>
+    vec4 prop1; // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
 } material;
 
 layout(location = 0) in vec2 fragTxtr;
@@ -39,7 +39,9 @@ float applyToonShading(float value, int toonLevel) {
 
 void main() {
     vec4 texColor = texture(txtrSmplr, fragTxtr);
-    if (texColor.a < 0.001) { discard; }
+    float discardThreshold = material.prop1.w;
+
+    if (texColor.a < discardThreshold) { discard; }
 
     // Unwrap the generic material property
     float shading = material.prop1.x;

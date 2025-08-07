@@ -22,6 +22,10 @@ namespace Az3D {
         glm::vec3 nrml;
         glm::vec2 txtr;
 
+        Vertex() : pos(0.0f), nrml(0.0f), txtr(0.0f) {}
+        Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texCoord)
+            : pos(position), nrml(normal), txtr(texCoord) {}
+
         // Vulkan binding description for rendering
         static VkVertexInputBindingDescription getBindingDescription();
         static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();

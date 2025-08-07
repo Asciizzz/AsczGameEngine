@@ -10,7 +10,7 @@ namespace Az3D {
     struct Material {
         // Generic material properties using vec4 for alignment and flexibility
         // Put this FIRST to ensure proper alignment
-        glm::vec4 prop1 = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <empty>
+        glm::vec4 prop1 = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
         
         // Custom material properties exclusive to AsczGameEngine
         size_t diffTxtr = 0; // Albedo/Diffuse map
