@@ -376,7 +376,7 @@ void Grass::generateTerrainMesh(ResourceManager& resourceManager, RenderSystem& 
     ModelInstance terrainInstance;
     terrainInstance.modelMatrix() = glm::mat4(1.0f);
     terrainInstance.modelResourceIndex = terrainModelIndex;
-    terrainInstance.multColor() = glm::vec4(0.5411f, 0.8157f, 0.2549f, 1.0f);
+    terrainInstance.multColor() = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
     
     terrainInstances.push_back(terrainInstance);
 }
