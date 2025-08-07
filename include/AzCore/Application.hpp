@@ -5,6 +5,7 @@
 #include "AzCore/AzCore.hpp"
 #include "AzVulk/AzVulk.hpp"
 #include "Az3D/Az3D.hpp"
+#include "AzGame/Grass.hpp"
 
 #include "AzBeta/AzBeta.hpp"
 
@@ -47,6 +48,9 @@ private:
     std::unique_ptr<Az3D::RenderSystem> renderSystem;
     // World construction using instances
     std::vector<Az3D::ModelInstance> worldInstances;
+    
+    // AzGame systems
+    std::unique_ptr<AzGame::Grass> grassSystem;
     
     // Beta features
     AzBeta::ParticleManager particleManager;

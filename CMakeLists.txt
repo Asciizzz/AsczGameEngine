@@ -38,6 +38,8 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/ShadowManager.cpp
     src/AzVulk/ShadowPipeline.cpp
 
+    src/AzGame/Grass.cpp
+
     main.cpp
 )
 
@@ -60,6 +62,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/AzCore
     ${CMAKE_SOURCE_DIR}/include/AzVulk
     ${CMAKE_SOURCE_DIR}/include/Az3D
+    ${CMAKE_SOURCE_DIR}/include/AzGame
 )
 
 
