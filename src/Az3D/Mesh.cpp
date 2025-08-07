@@ -34,12 +34,6 @@ namespace Az3D {
         this->scl *= scale;
     }
 
-    void Transform::rotate(const glm::vec3& eulerAngles) {
-        // Convert Euler angles to quaternion and apply
-        glm::quat eulerQuat = glm::quat(eulerAngles);
-        this->rot = eulerQuat * this->rot;
-    }
-
     glm::mat4 Transform::modelMatrix() const {
         glm::mat4 translation = glm::translate(glm::mat4(1.0f), pos);
         glm::mat4 rotMat = glm::mat4_cast(rot);

@@ -200,7 +200,7 @@ void Application::initVulkan() {
     std::random_device rd;
     std::mt19937 gen(rd());
     
-    int numTrees = 100;
+    int numTrees = 0;
     for (int i = 0; i < numTrees; ++i) {
         float max_x = static_cast<float>(world_size_x * 8) - 2.0f;
         float max_z = static_cast<float>(world_size_z * 8) - 2.0f;
@@ -220,7 +220,7 @@ void Application::initVulkan() {
         placePlatform(treeName, treeTrform);
     }
 
-    int numFlowers = 2000;
+    int numFlowers = 0;
     for (int i = 0; i < numFlowers; ++i) {
     
         float max_x = static_cast<float>(world_size_x * 8) - 2.0f;
@@ -241,7 +241,7 @@ void Application::initVulkan() {
         placePlatform("Flower", flowerTrform, flowerColor);
     }
 
-    int numGrass = 10000;
+    int numGrass = 0;
     glm::vec4 grassYoung = glm::vec4(1.5f, 1.5f, 0.0f, 1.0f);
     glm::vec4 grassOld = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -270,15 +270,56 @@ void Application::initVulkan() {
     }
 
 
-    // Testing out the new TextureMode feature
     // Create a quad
+
+    glm::vec3 normal(0.0f, 1.0f, 0.0f);
+
+    glm::vec2 uv1(0.0f, 0.0f);
+    glm::vec2 uv2(1.0f, 0.0f);
+    glm::vec2 uv3(1.0f, 1.0f);
+    glm::vec2 uv4(0.0f, 1.0f);
+
+    glm::vec3 pos1(-1.0f, -1.0f, 0.0f);
+    glm::vec3 pos2(1.0f, -1.0f, 0.0f);
+    glm::vec3 pos3(1.0f, 1.0f, 0.0f);
+    glm::vec3 pos4(-1.0f, 1.0f, 0.0f);
+
+    glm::vec3 pos5 = Transform::rotate(pos1, normal, glm::radians(120.0f));
+    glm::vec3 pos6 = Transform::rotate(pos2, normal, glm::radians(120.0f));
+    glm::vec3 pos7 = Transform::rotate(pos3, normal, glm::radians(120.0f));
+    glm::vec3 pos8 = Transform::rotate(pos4, normal, glm::radians(120.0f));
+
+    glm::vec3 pos9 = Transform::rotate(pos1, normal, glm::radians(240.0f));
+    glm::vec3 pos10 = Transform::rotate(pos2, normal, glm::radians(240.0f));
+    glm::vec3 pos11 = Transform::rotate(pos3, normal, glm::radians(240.0f));
+    glm::vec3 pos12 = Transform::rotate(pos4, normal, glm::radians(240.0f));
+
     std::vector<Vertex> quadVertices = {
-        {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{ 1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-        {{-1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
+        // {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        // {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        // {{ 1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+        // {{-1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
+
+        {pos1, normal, uv1},
+        {pos2, normal, uv2},
+        {pos3, normal, uv3},
+        {pos4, normal, uv4},
+
+        {pos5, normal, uv1},
+        {pos6, normal, uv2},
+        {pos7, normal, uv3},
+        {pos8, normal, uv4},
+
+        {pos9, normal, uv1},
+        {pos10, normal, uv2},
+        {pos11, normal, uv3},
+        {pos12, normal, uv4}
     };
-    std::vector<uint32_t> quadIndices = { 0, 1, 2, 2, 3, 0 };
+    std::vector<uint32_t> quadIndices = { 
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4,
+        8, 9, 10, 10, 11, 8
+    };
     Mesh quadMesh(quadVertices, quadIndices);
     size_t quadMeshIndex = resManager.addMesh("Quad", quadMesh);
 

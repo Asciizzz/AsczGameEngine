@@ -40,11 +40,15 @@ namespace Az3D {
         void rotateZ(float radians);
         void scale(float scale);
 
-        // Legacy methods for compatibility
-        void rotate(const glm::vec3& eulerAngles);
-
         glm::mat4 modelMatrix() const;
         void reset();
+
+        // Useful static methods
+
+        static glm::vec3 rotate(const glm::vec3& point, const glm::vec3& axis, float angle) {
+            glm::quat rotation = glm::angleAxis(angle, axis);
+            return rotation * point;
+        }
     };
 
     // BVH structures
