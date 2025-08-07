@@ -11,6 +11,7 @@ const bool enableValidationLayers = false;
 
 using namespace AzVulk;
 using namespace AzBeta;
+using namespace AzCore;
 using namespace Az3D;
 
 Application::Application(const char* title, uint32_t width, uint32_t height)

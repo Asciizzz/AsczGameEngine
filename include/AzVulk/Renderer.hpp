@@ -11,10 +11,6 @@
 #include "AzVulk/DescriptorManager.hpp"
 #include "Az3D/Az3D.hpp"
 
-namespace AzCore {
-    class Camera;
-}
-
 namespace AzVulk {
     class Renderer {
     public:
