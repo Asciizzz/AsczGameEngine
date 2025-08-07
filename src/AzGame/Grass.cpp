@@ -588,7 +588,7 @@ void Grass::cleanup() {
 // Wind compute shader implementation stubs
 void Grass::createWindComputePipeline() {
     // Load compute shader
-    std::ifstream file("Shaders/grass_wind.comp.spv", std::ios::ate | std::ios::binary);
+    std::ifstream file("Shaders/GrassWind/grass_wind.comp.spv", std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open grass wind compute shader file!");
     }
