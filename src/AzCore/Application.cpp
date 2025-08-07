@@ -11,6 +11,7 @@ const bool enableValidationLayers = false;
 
 using namespace AzVulk;
 using namespace AzBeta;
+using namespace Az3D;
 
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
@@ -20,7 +21,7 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
 
     float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     // 10km view distance for those distant horizons
-    camera = std::make_unique<Az3D::Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
+    camera = std::make_unique<Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
     camera->setAspectRatio(aspectRatio);
 
     initVulkan();
@@ -85,8 +86,8 @@ void Application::initVulkan() {
     buffer = std::make_unique<Buffer>(*vulkanDevice);
     buffer->createUniformBuffers(2);
 
-    resourceManager = std::make_unique<Az3D::ResourceManager>(*vulkanDevice, commandPool);
-    renderSystem = std::make_unique<Az3D::RenderSystem>();
+    resourceManager = std::make_unique<ResourceManager>(*vulkanDevice, commandPool);
+    renderSystem = std::make_unique<RenderSystem>();
     
     // Set up the render system
     renderSystem->setResourceManager(resourceManager.get());
@@ -104,7 +105,7 @@ void Application::initVulkan() {
 
     // Load the global pallete texture that will be used for all platformer assets
     size_t globalPaletteIndex = resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png");
-    Az3D::Material globalPaletteMaterial;
+    Material globalPaletteMaterial;
     globalPaletteMaterial.prop1 = glm::vec4(1.0f, 2.0f, 0.2f, 0.0f);
     globalPaletteMaterial.diffTxtr = globalPaletteIndex;
 
@@ -129,8 +130,8 @@ void Application::initVulkan() {
         return rendSystem.getModelResource("Platformer/" + name);
     };
     // Useful shorthand for placing models
-    auto placePlatform = [&](const std::string& name, const Az3D::Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
-        Az3D::ModelInstance instance;
+    auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
+        ModelInstance instance;
         instance.modelMatrix() = transform.modelMatrix();
         instance.multColor() = color;
         instance.modelResourceIndex = getPlatformIndex(name);
@@ -183,7 +184,7 @@ void Application::initVulkan() {
     int world_size_z = 8;
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
-            Az3D::Transform trform;
+            Transform trform;
             trform.pos = glm::vec3(
                 static_cast<float>(x) * 8.0f + 4.0f,
                 0.0f,
@@ -208,7 +209,7 @@ void Application::initVulkan() {
         std::uniform_real_distribution<float> rnd_scl(0.5f, 1.4f);
         std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
 
-        Az3D::Transform treeTrform;
+        Transform treeTrform;
         treeTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
         treeTrform.scale(rnd_scl(gen));
         treeTrform.rotateY(rnd_rot(gen));
@@ -230,7 +231,7 @@ void Application::initVulkan() {
         std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
         std::uniform_real_distribution<float> rnd_color(0.0f, 1.0f);
 
-        Az3D::Transform flowerTrform;
+        Transform flowerTrform;
         flowerTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
         flowerTrform.scale(rnd_scl(gen));
         flowerTrform.rotateY(rnd_rot(gen));
@@ -253,7 +254,7 @@ void Application::initVulkan() {
         std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
         std::uniform_int_distribution<int> rnd_grass_type(1, 4);
 
-        Az3D::Transform grassTrform;
+        Transform grassTrform;
         grassTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
         grassTrform.scale(rnd_scl(gen));
         grassTrform.rotateY(rnd_rot(gen));
@@ -270,24 +271,24 @@ void Application::initVulkan() {
 
     // Testing out the new TextureMode feature
     // Create a quad
-    std::vector<Az3D::Vertex> quadVertices = {
+    std::vector<Vertex> quadVertices = {
         {{-1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
         {{ 1.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
         {{ 1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
         {{-1.0f, 0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}
     };
     std::vector<uint32_t> quadIndices = { 0, 1, 2, 2, 3, 0 };
-    Az3D::Mesh quadMesh(quadVertices, quadIndices);
+    Mesh quadMesh(quadVertices, quadIndices);
     size_t quadMeshIndex = resManager.addMesh("Quad", quadMesh);
 
-    Az3D::Material quadMaterial;
+    Material quadMaterial;
     quadMaterial.prop1 = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    quadMaterial.diffTxtr = resManager.addTexture("QuadTexture", "Assets/Textures/Grass.png", Az3D::TextureMode::ClampToEdge);
+    quadMaterial.diffTxtr = resManager.addTexture("QuadTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge);
     size_t quadMaterialIndex = resManager.addMaterial("QuadMaterial", quadMaterial);
 
     size_t quadModelIndex = rendSystem.addModelResource("QuadModel", quadMeshIndex, quadMaterialIndex);
 
-    Az3D::ModelInstance quadInstance;
+    ModelInstance quadInstance;
     quadInstance.modelMatrix() = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 4.0f, 0.0f));
     quadInstance.modelResourceIndex = quadModelIndex;
     quadInstance.multColor() = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -362,7 +363,7 @@ void Application::initVulkan() {
     auto& descManager = *descriptorManager;
 
     // Create material uniform buffers
-    std::vector<Az3D::Material> materialVector;
+    std::vector<Material> materialVector;
     for (const auto& matPtr : matManager.materials) {
         materialVector.push_back(*matPtr);
     }
