@@ -32,6 +32,9 @@ private:
     std::unique_ptr<AzVulk::Device> vulkanDevice;
     std::unique_ptr<AzVulk::SwapChain> swapChain;
 
+    // Render pass - shared between pipelines
+    std::unique_ptr<AzVulk::RenderPass> mainRenderPass;
+    
     std::unique_ptr<AzVulk::RasterPipeline> opaquePipeline;
     std::unique_ptr<AzVulk::RasterPipeline> transparentPipeline;
 

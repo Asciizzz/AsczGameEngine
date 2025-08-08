@@ -48,20 +48,23 @@ void Application::initVulkan() {
     msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
     swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
 
+    // Create shared render pass for forward rendering
+    auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
+        swapChain->imageFormat, msaaManager->msaaSamples);
+    mainRenderPass = std::make_unique<RenderPass>(vulkanDevice->device, renderPassConfig);
+
     opaquePipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
-        swapChain->extent,
-        swapChain->imageFormat,
+        mainRenderPass->renderPass,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
     );
 
-    // Create a separate transparent pipeline
+    // Create a separate transparent pipeline (uses same render pass)
     transparentPipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
-        swapChain->extent,
-        swapChain->imageFormat,
+        mainRenderPass->renderPass,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
@@ -83,7 +86,7 @@ void Application::initVulkan() {
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = std::make_unique<DepthManager>(*vulkanDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(opaquePipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    swapChain->createFramebuffers(mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     buffer = std::make_unique<Buffer>(*vulkanDevice);
     buffer->createUniformBuffers(2);
@@ -500,9 +503,15 @@ void Application::mainLoop() {
             camRef.updateAspectRatio(newWidth, newHeight);
             msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
             depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-            swapChain->recreate(winManager.window, opaquePipeline->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
-            opaquePipeline->recreate(swapChain->extent, swapChain->imageFormat, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples));
-            transparentPipeline->recreate(swapChain->extent, swapChain->imageFormat, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples));
+            
+            // Recreate render pass with new settings
+            auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
+                swapChain->imageFormat, msaaManager->msaaSamples);
+            mainRenderPass->recreate(newRenderPassConfig);
+            
+            swapChain->recreate(winManager.window, mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+            opaquePipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples));
+            transparentPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples));
         }
 
         const Uint8* k_state = SDL_GetKeyboardState(nullptr);

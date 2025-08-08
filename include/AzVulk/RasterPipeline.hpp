@@ -37,7 +37,7 @@ namespace AzVulk {
 
     class RasterPipeline {
     public:
-        RasterPipeline( VkDevice device, VkExtent2D swapChainExtent, VkFormat swapChainImageFormat,
+        RasterPipeline( VkDevice device, VkRenderPass renderPass,
                         const char* vertexShaderPath, const char* fragmentShaderPath,
                         const RasterPipelineConfig& config);
         ~RasterPipeline();
@@ -45,7 +45,7 @@ namespace AzVulk {
         RasterPipeline(const RasterPipeline&) = delete;
         RasterPipeline& operator=(const RasterPipeline&) = delete;
 
-        void recreate(VkExtent2D newExtent, VkFormat newFormat, const RasterPipelineConfig& newConfig);
+        void recreate(VkRenderPass newRenderPass, const RasterPipelineConfig& newConfig);
 
         // Configuration
         RasterPipelineConfig config;
@@ -54,19 +54,15 @@ namespace AzVulk {
         const char* vertexShaderPath;
         const char* fragmentShaderPath;
         
-        // Device and format context
+        // Device context
         VkDevice device;
-        VkExtent2D swapChainExtent;
-        VkFormat swapChainImageFormat;
-
-        VkRenderPass renderPass = VK_NULL_HANDLE;
+        VkRenderPass renderPass; // Reference to external render pass
 
         // Pipeline layout and objects
         VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
-        void createRenderPass();
         void createDescriptorSetLayout();
         void createGraphicsPipeline();
         void cleanup();

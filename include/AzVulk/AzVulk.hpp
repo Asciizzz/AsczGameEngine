@@ -3,6 +3,7 @@
 #include "AzVulk/Instance.hpp"
 #include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
+#include "AzVulk/RenderPass.hpp"
 #include "AzVulk/RasterPipeline.hpp"
 #include "AzVulk/ShaderManager.hpp"
 #include "AzVulk/Buffer.hpp"
