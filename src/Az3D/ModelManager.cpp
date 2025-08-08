@@ -14,9 +14,9 @@ namespace Az3D {
         return index;
     }
 
-    size_t ModelManager::getModelResource(std::string name) const {
+    size_t ModelManager::getModelResourceIndex(std::string name) const {
         auto it = modelResourceNameToIndex.find(name);
-        return it != modelResourceNameToIndex.end() ? it->second : SIZE_MAX; // SIZE_MAX indicates not found
+        return it != modelResourceNameToIndex.end() ? it->second : SIZE_MAX;
     }
 
     void ModelManager::clearOpaqueInstances() {

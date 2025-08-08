@@ -60,7 +60,7 @@ namespace Az3D {
         size_t addModelResource(std::string name, size_t meshIndex, size_t materialIndex); // with name mapping
         
         // String-to-index getter
-        size_t getModelResource(std::string name) const;
+        size_t getModelResourceIndex(std::string name) const;
         
         // Instance management - separate arrays for opaque and transparent instances
         void clearOpaqueInstances();

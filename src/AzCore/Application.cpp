@@ -125,7 +125,7 @@ void Application::initVulkan() {
 
     // Useful shorthand for getting a model resource index
     auto getPlatformIndex = [&](const std::string& name) {
-        return modManager.getModelResource("Platformer/" + name);
+        return modManager.getModelResourceIndex("Platformer/" + name);
     };
     // Useful shorthand for placing models
     auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
