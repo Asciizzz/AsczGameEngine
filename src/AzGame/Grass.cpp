@@ -449,7 +449,7 @@ void Grass::updateWindAnimation(float deltaTime) {
 
 void Grass::updateGrassInstancesCPU(float deltaTime) {
     glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
-    
+
     // Apply wind animation to each grass instance
     for (size_t i = 0; i < windGrassInstances.size() && i < grassInstances.size(); ++i) {
         const auto& windData = windGrassInstances[i];
