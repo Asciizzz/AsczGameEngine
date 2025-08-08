@@ -15,7 +15,7 @@
 // Forward declarations
 namespace Az3D {
     class ResourceManager;
-    class RenderSystem;
+    class ModelManager;
     struct ModelInstance;
     struct Transform;
     struct Vertex;
@@ -115,7 +115,7 @@ namespace AzGame {
 
         // Initialize the grass system
         bool initialize(Az3D::ResourceManager& resourceManager, 
-                       Az3D::RenderSystem& renderSystem,
+                       Az3D::ModelManager& modelManager,
                        AzVulk::Device& device,
                        VkCommandPool commandPool);
 
@@ -163,7 +163,7 @@ namespace AzGame {
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         VkCommandPool commandPool = VK_NULL_HANDLE;
         Az3D::ResourceManager* resourceManagerPtr = nullptr;
-        Az3D::RenderSystem* renderSystemPtr = nullptr;
+        Az3D::ModelManager* modelManagerPtr = nullptr;
         VkPipeline windComputePipeline = VK_NULL_HANDLE;
         VkPipelineLayout windComputePipelineLayout = VK_NULL_HANDLE;
         VkDescriptorSetLayout windComputeDescriptorSetLayout = VK_NULL_HANDLE;
@@ -182,7 +182,7 @@ namespace AzGame {
         void generateHeightMap(std::mt19937& generator);
         void createGrassMesh(Az3D::ResourceManager& resourceManager);
         void generateGrassInstances(std::mt19937& generator);
-        void generateTerrainMesh(Az3D::ResourceManager& resourceManager, Az3D::RenderSystem& renderSystem);
+        void generateTerrainMesh(Az3D::ResourceManager& resourceManager, Az3D::ModelManager& modelManager);
         std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
         
         // Wind compute shader helpers

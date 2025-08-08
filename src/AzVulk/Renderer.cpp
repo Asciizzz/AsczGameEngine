@@ -86,9 +86,8 @@ namespace AzVulk {
         }
     }
 
-    // New render system-based draw function
-    void Renderer::drawScene(RasterPipeline& opaquePipeline, RasterPipeline& transparentPipeline,
-                            Az3D::Camera& camera, Az3D::RenderSystem& renderSystem) {
+    // Begin frame: handle synchronization, image acquisition, and render pass setup
+    uint32_t Renderer::beginFrame(RasterPipeline& pipeline, Az3D::Camera& camera) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -97,49 +96,13 @@ namespace AzVulk {
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             framebufferResized = true;
-            return;
+            return UINT32_MAX; // Return invalid index to signal error
         } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
             throw std::runtime_error("failed to acquire swap chain image!");
         }
 
         vkResetFences(vulkanDevice.device, 1, &inFlightFences[currentFrame]);
         vkResetCommandBuffer(commandBuffers[currentFrame], 0);
-
-        // Single pass: Update buffers AND classify opaque/transparent instances
-        std::unordered_map<size_t, std::vector<const Az3D::ModelInstance*>> opaqueInstances;
-        std::unordered_map<size_t, std::vector<const Az3D::ModelInstance*>> transparentInstances;
-        
-        auto allInstances = renderSystem.groupInstancesByMesh();
-        for (const auto& [meshIndex, instancePtrs] : allInstances) {
-            // Extract full ModelInstance objects to get both matrix and color
-            std::vector<Az3D::ModelInstance> instances;
-            instances.reserve(instancePtrs.size());
-            
-            // Classify instances while building the buffer data
-            for (const Az3D::ModelInstance* instancePtr : instancePtrs) {
-                instances.push_back(*instancePtr);
-                
-                // Classify this instance as opaque or transparent
-                if (renderSystem.isInstanceTransparent(*instancePtr)) {
-                    transparentInstances[meshIndex].push_back(instancePtr);
-                } else {
-                    opaqueInstances[meshIndex].push_back(instancePtr);
-                }
-            }
-            
-            // Update or create the instance buffer for this mesh
-            if (meshIndex < buffer.meshBuffers.size()) {
-                const auto& meshBuffers = buffer.meshBuffers;
-                if (meshIndex < meshBuffers.size()) {
-                    if (instances.size() != meshBuffers[meshIndex].instanceCount) {
-                        vkDeviceWaitIdle(vulkanDevice.device);
-                        buffer.createInstanceBufferForMesh(meshIndex, instances);
-                    } else {
-                        buffer.updateInstanceBufferForMesh(meshIndex, instances);
-                    }
-                }
-            }
-        }
 
         // Start recording command buffer
         VkCommandBufferBeginInfo beginInfo{};
@@ -152,7 +115,7 @@ namespace AzVulk {
         // Begin render pass
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = opaquePipeline.renderPass;
+        renderPassInfo.renderPass = pipeline.renderPass;
         renderPassInfo.framebuffer = swapChain.framebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain.extent;
@@ -191,40 +154,71 @@ namespace AzVulk {
         memcpy(data, &ubo, sizeof(ubo));
         vkUnmapMemory(vulkanDevice.device, buffer.uniformBuffersMemory[currentFrame]);
 
-        // === PASS 1: RENDER OPAQUE OBJECTS ===
-        // Render opaque meshes with their instances
-        const auto& meshBuffers = buffer.meshBuffers;
-        const auto& modelResources = renderSystem.modelResources;
+        return imageIndex;
+    }
+
+    // Draw scene with specified pipeline - efficiently groups instances internally
+    void Renderer::drawScene(RasterPipeline& pipeline, 
+                            const std::vector<Az3D::ModelInstance>& instances,
+                            const std::vector<Az3D::ModelResource>& modelResources) {
         
-        // Group opaque mesh indices by material for better batching
-        std::unordered_map<size_t, std::vector<size_t>> opaqueMaterialToMeshes;
-        for (const auto& [meshIndex, instancePtrs] : opaqueInstances) {
-            if (!instancePtrs.empty()) {
-                // Get material from the first instance's resource
-                const auto& resource = modelResources[instancePtrs[0]->modelResourceIndex];
-                opaqueMaterialToMeshes[resource.materialIndex].push_back(meshIndex);
+        // Group instances by mesh efficiently
+        std::unordered_map<size_t, std::vector<Az3D::ModelInstance>> meshToInstances;
+        for (const auto& instance : instances) {
+            const auto& resource = modelResources[instance.modelResourceIndex];
+            meshToInstances[resource.meshIndex].push_back(instance);
+        }
+        
+        // Update instance buffers for all meshes
+        for (const auto& [meshIndex, meshInstances] : meshToInstances) {
+            // Update or create the instance buffer for this mesh
+            if (meshIndex < buffer.meshBuffers.size()) {
+                const auto& meshBuffers = buffer.meshBuffers;
+                if (meshIndex < meshBuffers.size()) {
+                    if (meshInstances.size() != meshBuffers[meshIndex].instanceCount) {
+                        vkDeviceWaitIdle(vulkanDevice.device);
+                        buffer.createMeshInstanceBuffer(meshIndex, meshInstances);
+                    } else {
+                        buffer.updateMeshInstanceBuffer(meshIndex, meshInstances);
+                    }
+                }
             }
         }
 
-        // Render opaque objects
-        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, opaquePipeline.graphicsPipeline);
-        for (const auto& [materialIndex, meshIndices] : opaqueMaterialToMeshes) {
+        // Render all meshes with their instances
+        const auto& meshBuffers = buffer.meshBuffers;
+        
+        // Group mesh indices by material for better batching
+        std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;
+        for (const auto& [meshIndex, meshInstances] : meshToInstances) {
+            if (!meshInstances.empty()) {
+                // Get material from the first instance's resource
+                const auto& resource = modelResources[meshInstances[0].modelResourceIndex];
+                materialToMeshes[resource.materialIndex].push_back(meshIndex);
+            }
+        }
+
+        // Bind pipeline once
+        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
+        
+        // Render by material groups
+        for (const auto& [materialIndex, meshIndices] : materialToMeshes) {
             // Bind descriptor set for this material
             VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    opaquePipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                                    pipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
             for (size_t meshIndex : meshIndices) {
                 if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {
                     const auto& meshBuffer = meshBuffers[meshIndex];
                     
-                    // Count opaque instances for this mesh
-                    size_t opaqueCount = 0;
-                    if (opaqueInstances.find(meshIndex) != opaqueInstances.end()) {
-                        opaqueCount = opaqueInstances.at(meshIndex).size();
+                    // Get instance count for this mesh
+                    size_t instanceCount = 0;
+                    if (meshToInstances.find(meshIndex) != meshToInstances.end()) {
+                        instanceCount = meshToInstances.at(meshIndex).size();
                     }
                     
-                    if (opaqueCount > 0) {
+                    if (instanceCount > 0) {
                         // Bind vertex buffer
                         VkBuffer vertexBuffers[] = {meshBuffer.vertexBuffer};
                         VkDeviceSize offsets[] = {0};
@@ -238,66 +232,19 @@ namespace AzVulk {
                         // Bind index buffer
                         vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshBuffer.indexBuffer, 0, meshBuffer.indexType);
 
-                        // Draw only opaque instances
-                        vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, static_cast<uint32_t>(opaqueCount), 0, 0, 0);
+                        // Draw all instances
+                        vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, static_cast<uint32_t>(instanceCount), 0, 0, 0);
                     }
                 }
             }
         }
+    }
 
-        // === PASS 2: RENDER TRANSPARENT OBJECTS (if any exist) ===
-        if (!transparentInstances.empty()) {
-            // Group transparent mesh indices by material
-            std::unordered_map<size_t, std::vector<size_t>> transparentMaterialToMeshes;
-            for (const auto& [meshIndex, instancePtrs] : transparentInstances) {
-                if (!instancePtrs.empty()) {
-                    const auto& resource = modelResources[instancePtrs[0]->modelResourceIndex];
-                    transparentMaterialToMeshes[resource.materialIndex].push_back(meshIndex);
-                }
-            }
-
-            // Render transparent objects with alpha blending
-            vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, transparentPipeline.graphicsPipeline);
-            for (const auto& [materialIndex, meshIndices] : transparentMaterialToMeshes) {
-                VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
-                vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        transparentPipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
-
-                for (size_t meshIndex : meshIndices) {
-                    if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {
-                        const auto& meshBuffer = meshBuffers[meshIndex];
-                        
-                        // Count transparent instances for this mesh
-                        size_t transparentCount = 0;
-                        if (transparentInstances.find(meshIndex) != transparentInstances.end()) {
-                            transparentCount = transparentInstances.at(meshIndex).size();
-                        }
-                        
-                        if (transparentCount > 0) {
-                            // Bind buffers
-                            VkBuffer vertexBuffers[] = {meshBuffer.vertexBuffer};
-                            VkDeviceSize offsets[] = {0};
-                            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
-
-                            VkBuffer instanceBuffers[] = {meshBuffer.instanceBuffer};
-                            VkDeviceSize instanceOffsets[] = {0};
-                            
-                            // Calculate offset for transparent instances (they come after opaque ones)
-                            size_t opaqueCount = 0;
-                            if (opaqueInstances.find(meshIndex) != opaqueInstances.end()) {
-                                opaqueCount = opaqueInstances.at(meshIndex).size();
-                            }
-                            instanceOffsets[0] = opaqueCount * sizeof(Az3D::InstanceVertexData);
-                            
-                            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
-                            vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshBuffer.indexBuffer, 0, meshBuffer.indexType);
-
-                            // Draw transparent instances
-                            vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, static_cast<uint32_t>(transparentCount), 0, 0, 0);
-                        }
-                    }
-                }
-            }
+    // End frame: finalize command buffer, submit, and present
+    void Renderer::endFrame(uint32_t imageIndex) {
+        if (imageIndex == UINT32_MAX) {
+            // Invalid image index, skip presentation
+            return;
         }
 
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
@@ -339,7 +286,7 @@ namespace AzVulk {
 
         presentInfo.pImageIndices = &imageIndex;
 
-        result = vkQueuePresentKHR(vulkanDevice.presentQueue, &presentInfo);
+        VkResult result = vkQueuePresentKHR(vulkanDevice.presentQueue, &presentInfo);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
             framebufferResized = true;

@@ -43,9 +43,9 @@ private:
     std::unique_ptr<AzVulk::DescriptorManager> descriptorManager;
     std::unique_ptr<AzVulk::Renderer> renderer;
     
-    // Az3D resource management and render system's batching
+    // Az3D resource management and model manager
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
-    std::unique_ptr<Az3D::RenderSystem> renderSystem;
+    std::unique_ptr<Az3D::ModelManager> modelManager;
     // World construction using instances
     std::vector<Az3D::ModelInstance> worldInstances;
     

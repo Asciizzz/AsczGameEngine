@@ -49,14 +49,11 @@ namespace Az3D {
         static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
     };
 
-    // Global rendering system that manages all model resources and instances
-    class RenderSystem {
+    // Global model management system that manages all model resources and instances
+    class ModelManager {
     public:
-        RenderSystem() = default;
-        ~RenderSystem() = default;
-
-        // Set resource manager for transparency detection (called after resource manager is created)
-        void setResourceManager(const class ResourceManager* resourceManager);
+        ModelManager() = default;
+        ~ModelManager() = default;
 
         // Resource management
         size_t addModelResource(size_t meshIndex, size_t materialIndex);
@@ -65,29 +62,28 @@ namespace Az3D {
         // String-to-index getter
         size_t getModelResource(std::string name) const;
         
-        // Instance management
-        void clearInstances();
-        void addInstance(const ModelInstance& instance);
-        void addInstances(const std::vector<ModelInstance>& instances);
-
-        // Batch processing for rendering
-        std::unordered_map<size_t, std::vector<const ModelInstance*>> groupInstancesByMesh() const;
+        // Instance management - separate arrays for opaque and transparent instances
+        void clearOpaqueInstances();
+        void clearTransparentInstances();
+        void clearAllInstances();
         
-        // Transparency classification
+        void addOpaqueInstance(const ModelInstance& instance);
+        void addOpaqueInstances(const std::vector<ModelInstance>& instances);
+        
+        void addTransparentInstance(const ModelInstance& instance);
+        void addTransparentInstances(const std::vector<ModelInstance>& instances);
+
+        // Batch processing for rendering - returns grouped instances by mesh
         std::unordered_map<size_t, std::vector<const ModelInstance*>> groupOpaqueInstancesByMesh() const;
         std::unordered_map<size_t, std::vector<const ModelInstance*>> groupTransparentInstancesByMesh() const;
-        
-        // Check if an instance is transparent (alpha < 1.0)
-        bool isInstanceTransparent(const ModelInstance& instance) const;
 
         // String-to-index map for model resources
         std::unordered_map<std::string, size_t> modelResourceNameToIndex;
 
+        // Public data members
         std::vector<ModelResource> modelResources;
-
-        std::vector<ModelInstance> modelInstances;
-
-        const class ResourceManager* resourceManager = nullptr;
+        std::vector<ModelInstance> opaqueInstances;
+        std::vector<ModelInstance> transparentInstances;
     };
 
 } // namespace Az3D

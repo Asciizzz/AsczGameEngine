@@ -84,12 +84,10 @@ namespace AzVulk {
         // Mesh loading functions
         void loadMesh(const Az3D::Mesh& mesh);
         void createVertexBuffer(const Az3D::Mesh& mesh);
-        void createInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances);
-        void updateInstanceBuffer(const std::vector<Az3D::ModelInstance>& instances);
         
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
-        void createInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
-        void updateInstanceBufferForMesh(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
+        void createMeshInstanceBuffer(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
+        void updateMeshInstanceBuffer(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
 
         const Device& vulkanDevice;
         
@@ -104,12 +102,6 @@ namespace AzVulk {
         VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
         uint32_t indexCount = 0;
         VkIndexType indexType = VK_INDEX_TYPE_UINT16;
-        
-        // Legacy instance buffer for backwards compatibility
-        VkBuffer instanceBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory instanceBufferMemory = VK_NULL_HANDLE;
-        void* instanceBufferMapped = nullptr;
-        uint32_t instanceCount = 0;
         
         // Uniform buffer arrays
         std::vector<VkBuffer> uniformBuffers;

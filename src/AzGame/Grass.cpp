@@ -27,20 +27,20 @@ Grass::~Grass() {
     cleanup();
 }
 
-bool Grass::initialize(ResourceManager& resourceManager, RenderSystem& renderSystem,
+bool Grass::initialize(ResourceManager& resourceManager, ModelManager& modelManager,
                       Device& device, VkCommandPool cmdPool) {
     vulkanDevice = device.device;
     physicalDevice = device.physicalDevice;
     commandPool = cmdPool;
     resourceManagerPtr = &resourceManager;
-    renderSystemPtr = &renderSystem;
+    modelManagerPtr = &modelManager;
     
     try {
         // Create grass mesh and material
         createGrassMesh(resourceManager);
         
         // Add grass model to render system
-        grassModelIndex = renderSystem.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
+        grassModelIndex = modelManager.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
         
         printf("Grass system initialized successfully!\n");
         return true;
@@ -57,8 +57,8 @@ void Grass::generateTerrain(std::mt19937& generator) {
     generateHeightMap(generator);
     
     // Generate terrain mesh
-    if (resourceManagerPtr && renderSystemPtr) {
-        generateTerrainMesh(*resourceManagerPtr, *renderSystemPtr);
+    if (resourceManagerPtr && modelManagerPtr) {
+        generateTerrainMesh(*resourceManagerPtr, *modelManagerPtr);
     }
     
     // Generate grass instances
@@ -312,7 +312,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
     }
 }
 
-void Grass::generateTerrainMesh(ResourceManager& resourceManager, RenderSystem& renderSystem) {
+void Grass::generateTerrainMesh(ResourceManager& resourceManager, ModelManager& modelManager) {
     std::vector<Vertex> terrainVertices;
     std::vector<uint32_t> terrainIndices;
     
@@ -370,7 +370,7 @@ void Grass::generateTerrainMesh(ResourceManager& resourceManager, RenderSystem& 
     terrainMaterialIndex = resourceManager.addMaterial("TerrainMaterial",
         Material::fastTemplate(1.0f, 2.0f, 0.2f, 0.0f, 0));
     
-    terrainModelIndex = renderSystem.addModelResource("TerrainModel", terrainMeshIndex, terrainMaterialIndex);
+    terrainModelIndex = modelManager.addModelResource("TerrainModel", terrainMeshIndex, terrainMaterialIndex);
     
     // Create terrain instance
     ModelInstance terrainInstance;

@@ -311,7 +311,7 @@ namespace AzBeta {
         }
 
         // Legacy separate functions for compatibility
-        void addToRenderSystem(Az3D::RenderSystem& renderSystem, float dTime) {
+        void addToModelManager(Az3D::ModelManager& modelManager, float dTime) {
             std::vector<glm::vec3> rainbow_colors = {
                 glm::vec3(1.0f, 0.2f, 0.2f), // Red
                 glm::vec3(1.0f, 0.5f, 0.2f), // Orange
@@ -369,7 +369,7 @@ namespace AzBeta {
                 instance.modelResourceIndex = modelResourceIndex;
                 instance.multColor() = glm::vec4(particleColor, 1.0f);
 
-                renderSystem.addInstance(instance);
+                modelManager.addOpaqueInstance(instance);
             }
         }
 

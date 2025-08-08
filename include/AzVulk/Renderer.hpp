@@ -22,8 +22,12 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        void drawScene( RasterPipeline& opaquePipeline, RasterPipeline& transparentPipeline,
-                        Az3D::Camera& camera, Az3D::RenderSystem& renderSystem);
+        // New split rendering functions for explicit control
+        uint32_t beginFrame(RasterPipeline& pipeline, Az3D::Camera& camera);
+        void drawScene(RasterPipeline& pipeline, 
+                      const std::vector<Az3D::ModelInstance>& instances,
+                      const std::vector<Az3D::ModelResource>& modelResources);
+        void endFrame(uint32_t imageIndex);
 
         // Component references
         const Device& vulkanDevice;

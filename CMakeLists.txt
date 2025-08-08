@@ -17,8 +17,8 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/Mesh_BVH.cpp
     src/Az3D/Material.cpp
     src/Az3D/Texture.cpp
+    src/Az3D/ModelManager.cpp
     src/Az3D/ResourceManager.cpp
-    src/Az3D/RenderSystem.cpp
 
     src/AzCore/FpsManager.cpp
     src/AzCore/WindowManager.cpp
@@ -34,9 +34,6 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/ShaderManager.cpp
     src/AzVulk/Swapchain.cpp
     src/AzVulk/Renderer.cpp
-
-    src/AzVulk/ShadowManager.cpp
-    src/AzVulk/ShadowPipeline.cpp
 
     src/AzGame/Grass.cpp
 

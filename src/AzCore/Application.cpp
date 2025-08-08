@@ -89,10 +89,7 @@ void Application::initVulkan() {
     buffer->createUniformBuffers(2);
 
     resourceManager = std::make_unique<ResourceManager>(*vulkanDevice, commandPool);
-    renderSystem = std::make_unique<RenderSystem>();
-    
-    // Set up the render system
-    renderSystem->setResourceManager(resourceManager.get());
+    modelManager = std::make_unique<ModelManager>();
 
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, opaquePipeline->descriptorSetLayout);
 
@@ -101,7 +98,7 @@ void Application::initVulkan() {
     auto& texManager = *resManager.textureManager;
     auto& meshManager = *resManager.meshManager;
     auto& matManager = *resManager.materialManager;
-    auto& rendSystem = *renderSystem;
+    auto& modManager = *modelManager;
 
 // PLAYGROUND FROM HERE!
 
@@ -128,7 +125,7 @@ void Application::initVulkan() {
 
     // Useful shorthand for getting a model resource index
     auto getPlatformIndex = [&](const std::string& name) {
-        return rendSystem.getModelResource("Platformer/" + name);
+        return modManager.getModelResource("Platformer/" + name);
     };
     // Useful shorthand for placing models
     auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
@@ -174,7 +171,7 @@ void Application::initVulkan() {
         addPlatformerMesh(mesh.name, mesh.path);
     }
     for (const auto& [name, meshIndex] : platformerMeshIndices) {
-        size_t modelResourceIndex = rendSystem.addModelResource(
+        size_t modelResourceIndex = modManager.addModelResource(
             "Platformer/" + name, meshIndex, globalMaterialIndex
         );
     }
@@ -325,7 +322,7 @@ void Application::initVulkan() {
         )
     );
 
-    size_t grassModelIndex = rendSystem.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
+    size_t grassModelIndex = modManager.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
@@ -339,7 +336,7 @@ void Application::initVulkan() {
     
     // Initialize grass system
     grassSystem = std::make_unique<AzGame::Grass>(grassConfig);
-    if (!grassSystem->initialize(*resourceManager, *renderSystem, *vulkanDevice, commandPool)) {
+    if (!grassSystem->initialize(*resourceManager, *modelManager, *vulkanDevice, commandPool)) {
         throw std::runtime_error("Failed to initialize grass system!");
     }
     
@@ -350,7 +347,7 @@ void Application::initVulkan() {
     const auto& terrainInst = grassSystem->getTerrainInstances();
     worldInstances.insert(worldInstances.end(), terrainInst.begin(), terrainInst.end());
 
-    rendSystem.addInstances(worldInstances);
+    modManager.addOpaqueInstances(worldInstances);
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
@@ -393,8 +390,8 @@ void Application::initVulkan() {
         }
     }
     printf("%s> Model:\n", WHITE);
-    for (const auto& [name, index] : renderSystem->modelResourceNameToIndex) {
-        const auto& modelResource = renderSystem->modelResources[index];
+    for (const auto& [name, index] : modelManager->modelResourceNameToIndex) {
+        const auto& modelResource = modelManager->modelResources[index];
         size_t meshIndex = modelResource.meshIndex;
         size_t materialIndex = modelResource.materialIndex;
 
@@ -479,7 +476,7 @@ void Application::mainLoop() {
     auto& texManager = *resManager.textureManager;
     auto& matManager = *resManager.materialManager;
 
-    auto& rendSys = *renderSystem;
+    auto& rendSys = *modelManager;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
@@ -580,22 +577,35 @@ void Application::mainLoop() {
             grassSystem->updateWindAnimation(dTime);
         }
 
-        // Clear and populate the render system for this frame
-        rendSys.clearInstances();
+        // Clear and populate the model manager for this frame
+        rendSys.clearAllInstances();
         
-        // Add all static world instances 
-        rendSys.addInstances(worldInstances);
+        // Add all static world instances (assuming they are opaque)
+        rendSys.addOpaqueInstances(worldInstances);
         
         // Add updated grass instances (these override the static ones)
         if (grassSystem) {
             const auto& grassInst = grassSystem->getGrassInstances();
-            rendSys.addInstances(grassInst);
+            rendSys.addOpaqueInstances(grassInst);
         }
 
 // =================================
 
-        // Use the new render system instead of combining model vectors
-        rendererRef.drawScene(*opaquePipeline, *transparentPipeline, camRef, rendSys);
+        // Use the new explicit rendering interface
+        uint32_t imageIndex = rendererRef.beginFrame(*opaquePipeline, camRef);
+        if (imageIndex != UINT32_MAX) {
+            // First pass: render opaque objects
+            if (!rendSys.opaqueInstances.empty()) {
+                rendererRef.drawScene(*opaquePipeline, rendSys.opaqueInstances, rendSys.modelResources);
+            }
+            
+            // Second pass: render transparent objects
+            if (!rendSys.transparentInstances.empty()) {
+                rendererRef.drawScene(*transparentPipeline, rendSys.transparentInstances, rendSys.modelResources);
+            }
+
+            rendererRef.endFrame(imageIndex);
+        }
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
