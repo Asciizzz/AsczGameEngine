@@ -340,9 +340,6 @@ void Application::initVulkan() {
         throw std::runtime_error("Failed to initialize grass system!");
     }
     
-    // Generate terrain and grass
-    grassSystem->generateTerrain(gen);
-    
     // Add only terrain to world instances (grass will be added dynamically each frame)
     const auto& terrainInst = grassSystem->getTerrainInstances();
     worldInstances.insert(worldInstances.end(), terrainInst.begin(), terrainInst.end());
@@ -573,7 +570,16 @@ void Application::mainLoop() {
         camRef.pos = camPos;
 
         // Update grass wind animation
-        if (grassSystem) {
+        static bool hold_y = false;
+        static bool enable_wind = true;
+        if (k_state[SDL_SCANCODE_Y] && !hold_y) {
+            enable_wind = !enable_wind;
+            hold_y = true;
+        } else if (!k_state[SDL_SCANCODE_Y]) {
+            hold_y = false;
+        }
+
+        if (grassSystem && enable_wind) {
             grassSystem->updateWindAnimation(dTime);
         }
 

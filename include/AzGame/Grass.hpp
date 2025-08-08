@@ -115,28 +115,25 @@ namespace AzGame {
 
         // Initialize the grass system
         bool initialize(Az3D::ResourceManager& resourceManager, 
-                       Az3D::ModelManager& modelManager,
-                       AzVulk::Device& device,
-                       VkCommandPool commandPool);
+                        Az3D::ModelManager& modelManager,
+                        AzVulk::Device& device,
+                        VkCommandPool commandPool);
 
         // Generate terrain and grass instances
-        void generateTerrain(std::mt19937& generator);
-        
+        void generateTerrain(
+            Az3D::ResourceManager& resourceManager,
+            Az3D::ModelManager& modelManager,
+            std::mt19937& generator
+        );
+
         // Get the generated model instances for rendering
         const std::vector<Az3D::ModelInstance>& getGrassInstances() const { return grassInstances; }
         const std::vector<Az3D::ModelInstance>& getTerrainInstances() const { return terrainInstances; }
         
         // Wind animation functions (if enabled)
-        void setupWindCompute();
         void updateWindAnimation(float deltaTime);
-        void cleanup();
+        void updateGrassInstancesCPU(float deltaTime);
 
-        // Accessors
-        size_t getGrassCount() const { return windGrassInstances.size(); }
-        bool isWindEnabled() const { return config.enableWind; }
-        const GrassConfig& getConfig() const { return config; }
-
-    private:
         // Configuration
         GrassConfig config;
         
@@ -157,24 +154,7 @@ namespace AzGame {
         size_t terrainMeshIndex = 0;
         size_t terrainMaterialIndex = 0;
         size_t terrainModelIndex = 0;
-        
-        // Wind compute shader resources
-        VkDevice vulkanDevice = VK_NULL_HANDLE;
-        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-        VkCommandPool commandPool = VK_NULL_HANDLE;
-        Az3D::ResourceManager* resourceManagerPtr = nullptr;
-        Az3D::ModelManager* modelManagerPtr = nullptr;
-        VkPipeline windComputePipeline = VK_NULL_HANDLE;
-        VkPipelineLayout windComputePipelineLayout = VK_NULL_HANDLE;
-        VkDescriptorSetLayout windComputeDescriptorSetLayout = VK_NULL_HANDLE;
-        VkDescriptorPool windComputeDescriptorPool = VK_NULL_HANDLE;
-        VkDescriptorSet windComputeDescriptorSet = VK_NULL_HANDLE;
-        VkBuffer windGrassBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory windGrassBufferMemory = VK_NULL_HANDLE;
-        VkBuffer windUniformBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory windUniformBufferMemory = VK_NULL_HANDLE;
-        void* windUniformBufferMapped = nullptr;
-        
+
         // Time tracking for wind animation
         float windTime = 0.0f;
         
@@ -184,20 +164,6 @@ namespace AzGame {
         void generateGrassInstances(std::mt19937& generator);
         void generateTerrainMesh(Az3D::ResourceManager& resourceManager, Az3D::ModelManager& modelManager);
         std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
-        
-        // Wind compute shader helpers
-        void createWindComputePipeline();
-        void createWindBuffers();
-        void createWindDescriptorSets();
-        void updateGrassInstancesFromGPU();
-        void updateGrassInstancesCPU(float deltaTime);
-        void cleanupWindCompute();
-        
-        // Vulkan helper functions
-        void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-                         VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-        void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     };
 
 } // namespace AzGame

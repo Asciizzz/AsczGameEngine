@@ -24,24 +24,20 @@ Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
 }
 
 Grass::~Grass() {
-    cleanup();
+
 }
 
-bool Grass::initialize(ResourceManager& resourceManager, ModelManager& modelManager,
-                      Device& device, VkCommandPool cmdPool) {
-    vulkanDevice = device.device;
-    physicalDevice = device.physicalDevice;
-    commandPool = cmdPool;
-    resourceManagerPtr = &resourceManager;
-    modelManagerPtr = &modelManager;
-    
+bool Grass::initialize( ResourceManager& resourceManager, ModelManager& modelManager,
+                        Device& device, VkCommandPool cmdPool) {
     try {
         // Create grass mesh and material
         createGrassMesh(resourceManager);
-        
         // Add grass model to render system
         grassModelIndex = modelManager.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
-        
+
+        std::mt19937 generator(std::random_device{}());
+        generateTerrain(resourceManager, modelManager, generator);
+
         printf("Grass system initialized successfully!\n");
         return true;
     } catch (const std::exception& e) {
@@ -50,26 +46,19 @@ bool Grass::initialize(ResourceManager& resourceManager, ModelManager& modelMana
     }
 }
 
-void Grass::generateTerrain(std::mt19937& generator) {
-    printf("Generating terrain with %dx%d heightmap...\n", config.worldSizeX, config.worldSizeZ);
-    
+void Grass::generateTerrain(
+    Az3D::ResourceManager& resourceManager,
+    Az3D::ModelManager& modelManager,
+    std::mt19937& generator
+) {
     // Generate height map
     generateHeightMap(generator);
     
     // Generate terrain mesh
-    if (resourceManagerPtr && modelManagerPtr) {
-        generateTerrainMesh(*resourceManagerPtr, *modelManagerPtr);
-    }
-    
+    generateTerrainMesh(resourceManager, modelManager);
+
     // Generate grass instances
     generateGrassInstances(generator);
-    
-    printf("Generated %zu grass instances\n", windGrassInstances.size());
-    
-    // Set up wind compute shader if enabled
-    if (config.enableWind && !windGrassInstances.empty()) {
-        setupWindCompute();
-    }
 }
 
 void Grass::generateHeightMap(std::mt19937& generator) {
@@ -188,8 +177,8 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
         for (int gridZ = 0; gridZ < config.worldSizeZ - 1; ++gridZ) {
 
             // Variable density based on terrain
-            std::uniform_real_distribution<float> rnd_density_mod(1.0f - config.densityVariation, 
-                                                                 1.0f + config.densityVariation);
+            std::uniform_real_distribution<float> rnd_density_mod(  1.0f - config.densityVariation, 
+                                                                    1.0f + config.densityVariation);
             int baseGrassDensity = static_cast<int>(config.baseDensity * rnd_density_mod(generator));
             
             // Calculate average steepness for this grid cell
@@ -298,7 +287,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 float phaseOffset = rnd_phase(generator);
                 
                 WindGrassInstance windGrassInstance(grassTrform.modelMatrix(), grassColor, 
-                                                   baseGrassHeight, flexibility, phaseOffset);
+                                                    baseGrassHeight, flexibility, phaseOffset);
                 windGrassInstances.push_back(windGrassInstance);
                 
                 // Create regular instance for rendering
@@ -425,21 +414,6 @@ std::pair<float, glm::vec3> Grass::getTerrainInfoAt(float worldX, float worldZ) 
     return {height, normal};
 }
 
-void Grass::setupWindCompute() {
-    printf("Setting up wind compute shader for %zu grass instances...\n", windGrassInstances.size());
-    
-    try {
-        createWindBuffers();
-        createWindComputePipeline();
-        createWindDescriptorSets();
-        
-        printf("Wind compute shader setup complete!\n");
-    } catch (const std::exception& e) {
-        printf("Failed to setup wind compute shader: %s\n", e.what());
-        cleanupWindCompute();
-    }
-}
-
 void Grass::updateWindAnimation(float deltaTime) {
     if (!config.enableWind || windGrassInstances.empty()) {
         return;
@@ -549,349 +523,4 @@ void Grass::updateGrassInstancesCPU(float deltaTime) {
             grassInstances[i].modelMatrix() = translationMatrix * rotationMatrix * scaleMatrix;
         }
     }
-}
-
-void Grass::updateGrassInstancesFromGPU() {
-    // Create staging buffer to read back data
-    VkDeviceSize bufferSize = sizeof(WindGrassInstance) * windGrassInstances.size();
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                stagingBuffer, stagingBufferMemory);
-    
-    // Copy from GPU buffer to staging buffer
-    copyBuffer(windGrassBuffer, stagingBuffer, bufferSize);
-    
-    // Map and read the data
-    void* data;
-    vkMapMemory(vulkanDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(windGrassInstances.data(), data, bufferSize);
-    vkUnmapMemory(vulkanDevice, stagingBufferMemory);
-    
-    // Update CPU-side grass instances with new transform data
-    for (size_t i = 0; i < windGrassInstances.size() && i < grassInstances.size(); ++i) {
-        grassInstances[i].modelMatrix() = windGrassInstances[i].modelMatrix;
-        grassInstances[i].multColor() = windGrassInstances[i].color;
-    }
-    
-    // Clean up staging buffer
-    vkDestroyBuffer(vulkanDevice, stagingBuffer, nullptr);
-    vkFreeMemory(vulkanDevice, stagingBufferMemory, nullptr);
-}
-
-void Grass::cleanup() {
-    cleanupWindCompute();
-}
-
-// Wind compute shader implementation stubs
-void Grass::createWindComputePipeline() {
-    // Load compute shader
-    std::ifstream file("Shaders/GrassWind/grass_wind.comp.spv", std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open grass wind compute shader file!");
-    }
-
-    size_t fileSize = (size_t) file.tellg();
-    std::vector<char> buffer(fileSize);
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-    file.close();
-
-    // Create shader module
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = buffer.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(buffer.data());
-
-    VkShaderModule computeShaderModule;
-    if (vkCreateShaderModule(vulkanDevice, &createInfo, nullptr, &computeShaderModule) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create compute shader module!");
-    }
-
-    // Create descriptor set layout
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings{};
-    
-    // Binding 0: Storage buffer for grass instances
-    bindings[0].binding = 0;
-    bindings[0].descriptorCount = 1;
-    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    bindings[0].pImmutableSamplers = nullptr;
-    bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    // Binding 1: Uniform buffer for wind parameters
-    bindings[1].binding = 1;
-    bindings[1].descriptorCount = 1;
-    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bindings[1].pImmutableSamplers = nullptr;
-    bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
-
-    if (vkCreateDescriptorSetLayout(vulkanDevice, &layoutInfo, nullptr, &windComputeDescriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create compute descriptor set layout!");
-    }
-
-    // Create pipeline layout
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &windComputeDescriptorSetLayout;
-
-    if (vkCreatePipelineLayout(vulkanDevice, &pipelineLayoutInfo, nullptr, &windComputePipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create compute pipeline layout!");
-    }
-
-    // Create compute pipeline
-    VkComputePipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipelineInfo.layout = windComputePipelineLayout;
-    pipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    pipelineInfo.stage.module = computeShaderModule;
-    pipelineInfo.stage.pName = "main";
-
-    if (vkCreateComputePipelines(vulkanDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &windComputePipeline) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create compute pipeline!");
-    }
-
-    // Clean up shader module
-    vkDestroyShaderModule(vulkanDevice, computeShaderModule, nullptr);
-    
-    printf("Wind compute pipeline created successfully\n");
-}
-
-void Grass::createWindBuffers() {
-    if (windGrassInstances.empty()) return;
-    
-    // Create storage buffer for grass instances
-    VkDeviceSize bufferSize = sizeof(WindGrassInstance) * windGrassInstances.size();
-    
-    // Create staging buffer
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                stagingBuffer, stagingBufferMemory);
-    
-    // Copy grass instance data to staging buffer
-    void* data;
-    vkMapMemory(vulkanDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, windGrassInstances.data(), bufferSize);
-    vkUnmapMemory(vulkanDevice, stagingBufferMemory);
-    
-    // Create device local storage buffer
-    createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, windGrassBuffer, windGrassBufferMemory);
-    
-    // Copy from staging buffer to device buffer
-    copyBuffer(stagingBuffer, windGrassBuffer, bufferSize);
-    
-    // Clean up staging buffer
-    vkDestroyBuffer(vulkanDevice, stagingBuffer, nullptr);
-    vkFreeMemory(vulkanDevice, stagingBufferMemory, nullptr);
-    
-    // Create uniform buffer for wind parameters
-    VkDeviceSize uniformBufferSize = sizeof(WindUBO);
-    createBuffer(uniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                windUniformBuffer, windUniformBufferMemory);
-    
-    // Map uniform buffer
-    vkMapMemory(vulkanDevice, windUniformBufferMemory, 0, uniformBufferSize, 0, &windUniformBufferMapped);
-    
-    printf("Wind buffers created with %zu grass instances\n", windGrassInstances.size());
-}
-
-void Grass::createWindDescriptorSets() {
-    // Create descriptor pool
-    std::array<VkDescriptorPoolSize, 2> poolSizes{};
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[0].descriptorCount = 1;
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[1].descriptorCount = 1;
-
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 1;
-
-    if (vkCreateDescriptorPool(vulkanDevice, &poolInfo, nullptr, &windComputeDescriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create descriptor pool!");
-    }
-
-    // Allocate descriptor set
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = windComputeDescriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &windComputeDescriptorSetLayout;
-
-    if (vkAllocateDescriptorSets(vulkanDevice, &allocInfo, &windComputeDescriptorSet) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to allocate descriptor set!");
-    }
-
-    // Update descriptor set
-    std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-    VkDescriptorBufferInfo storageBufferInfo{};
-    storageBufferInfo.buffer = windGrassBuffer;
-    storageBufferInfo.offset = 0;
-    storageBufferInfo.range = sizeof(WindGrassInstance) * windGrassInstances.size();
-
-    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[0].dstSet = windComputeDescriptorSet;
-    descriptorWrites[0].dstBinding = 0;
-    descriptorWrites[0].dstArrayElement = 0;
-    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrites[0].descriptorCount = 1;
-    descriptorWrites[0].pBufferInfo = &storageBufferInfo;
-
-    VkDescriptorBufferInfo uniformBufferInfo{};
-    uniformBufferInfo.buffer = windUniformBuffer;
-    uniformBufferInfo.offset = 0;
-    uniformBufferInfo.range = sizeof(WindUBO);
-
-    descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[1].dstSet = windComputeDescriptorSet;
-    descriptorWrites[1].dstBinding = 1;
-    descriptorWrites[1].dstArrayElement = 0;
-    descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrites[1].descriptorCount = 1;
-    descriptorWrites[1].pBufferInfo = &uniformBufferInfo;
-
-    vkUpdateDescriptorSets(vulkanDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-
-    printf("Wind descriptor sets created successfully\n");
-}
-
-void Grass::cleanupWindCompute() {
-    if (windUniformBufferMapped) {
-        vkUnmapMemory(vulkanDevice, windUniformBufferMemory);
-        windUniformBufferMapped = nullptr;
-    }
-    
-    if (windComputePipeline != VK_NULL_HANDLE) {
-        vkDestroyPipeline(vulkanDevice, windComputePipeline, nullptr);
-        windComputePipeline = VK_NULL_HANDLE;
-    }
-    
-    if (windComputePipelineLayout != VK_NULL_HANDLE) {
-        vkDestroyPipelineLayout(vulkanDevice, windComputePipelineLayout, nullptr);
-        windComputePipelineLayout = VK_NULL_HANDLE;
-    }
-    
-    if (windComputeDescriptorSetLayout != VK_NULL_HANDLE) {
-        vkDestroyDescriptorSetLayout(vulkanDevice, windComputeDescriptorSetLayout, nullptr);
-        windComputeDescriptorSetLayout = VK_NULL_HANDLE;
-    }
-    
-    if (windComputeDescriptorPool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(vulkanDevice, windComputeDescriptorPool, nullptr);
-        windComputeDescriptorPool = VK_NULL_HANDLE;
-    }
-    
-    if (windGrassBuffer != VK_NULL_HANDLE) {
-        vkDestroyBuffer(vulkanDevice, windGrassBuffer, nullptr);
-        windGrassBuffer = VK_NULL_HANDLE;
-    }
-    
-    if (windGrassBufferMemory != VK_NULL_HANDLE) {
-        vkFreeMemory(vulkanDevice, windGrassBufferMemory, nullptr);
-        windGrassBufferMemory = VK_NULL_HANDLE;
-    }
-    
-    if (windUniformBuffer != VK_NULL_HANDLE) {
-        vkDestroyBuffer(vulkanDevice, windUniformBuffer, nullptr);
-        windUniformBuffer = VK_NULL_HANDLE;
-    }
-    
-    if (windUniformBufferMemory != VK_NULL_HANDLE) {
-        vkFreeMemory(vulkanDevice, windUniformBufferMemory, nullptr);
-        windUniformBufferMemory = VK_NULL_HANDLE;
-    }
-}
-
-void Grass::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-                        VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateBuffer(vulkanDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create buffer!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(vulkanDevice, buffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(vulkanDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate buffer memory!");
-    }
-
-    vkBindBufferMemory(vulkanDevice, buffer, bufferMemory, 0);
-}
-
-uint32_t Grass::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("failed to find suitable memory type!");
-}
-
-void Grass::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = commandPool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(vulkanDevice, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    VkBufferCopy copyRegion{};
-    copyRegion.srcOffset = 0;
-    copyRegion.dstOffset = 0;
-    copyRegion.size = size;
-    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-    vkEndCommandBuffer(commandBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    // Get graphics queue from device (simplified)
-    VkQueue graphicsQueue;
-    vkGetDeviceQueue(vulkanDevice, 0, 0, &graphicsQueue); // Assume graphics family is 0
-    
-    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(graphicsQueue);
-
-    vkFreeCommandBuffers(vulkanDevice, commandPool, 1, &commandBuffer);
 }
