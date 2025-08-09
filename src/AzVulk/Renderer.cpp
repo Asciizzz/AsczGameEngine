@@ -181,12 +181,12 @@ namespace AzVulk {
 
                 size_t prevInstanceCount = (toPrevInstanceCount.count(meshIndex) > 0) 
                     ? toPrevInstanceCount.at(meshIndex) : 0;
-                
+
                 if (instanceIndices.size() != prevInstanceCount) {
                     // Buffer size changed - need to recreate
                     vkDeviceWaitIdle(vulkanDevice.device);
                     buffer.createMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
-                    
+
                     // Update previous instance count in ModelGroup's mesh mapping
                     const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping.toPrevInstanceCount[meshIndex] = instanceIndices.size();
                 } else {
@@ -195,9 +195,6 @@ namespace AzVulk {
                     if (updateIt != toUpdateIndices.end() && !updateIt->second.empty()) {
                         // Use selective update - only update changed instances
                         buffer.updateMeshInstanceBufferSelective(meshIndex, updateIt->second, instanceIndices, modelInstances);
-                    } else {
-                        // No updates needed for this mesh, skip buffer update entirely
-                        // (This is the efficiency gain - we don't update unchanged meshes!)
                     }
                 }
 

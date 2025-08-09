@@ -145,7 +145,7 @@ void Application::initVulkan() {
         {"Fence_x2", "fence_2.obj"},
         {"Fence_x4", "fence_4.obj"},
 
-        {"Flower", "de_dust2.obj"},
+        {"Flower", "Icosphere.obj"},
 
         {"Grass_1", "grass_blades_1.obj"},
         {"Grass_2", "grass_blades_2.obj"},
@@ -178,29 +178,36 @@ void Application::initVulkan() {
         worldGroup.addInstance(instance);
     };
 
-    int world_size_x = 10;
-    int world_size_z = 10;
+    int world_size_x = 100;
+    int world_size_z = 100;
+
+    float ground_step_x = 2.0f;
+    float ground_step_z = 2.0f;
+
+    float half_ground_step_x = ground_step_x * 0.5f;
+    float half_ground_step_z = ground_step_z * 0.5f;
+
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
             Transform trform;
             trform.pos = glm::vec3(
-                static_cast<float>(x) * 318.0f + 4.0f,
+                static_cast<float>(x) * ground_step_x + half_ground_step_x,
                 0.0f,
-                static_cast<float>(z) * 218.0f + 4.0f
+                static_cast<float>(z) * ground_step_z + half_ground_step_z
             );
             placePlatform("Flower", trform);
         }
     }
 
-    
+
     // Set up random number generation
     std::random_device rd;
     std::mt19937 gen(rd());
     
     int numTrees = 0;
     for (int i = 0; i < numTrees; ++i) {
-        float max_x = static_cast<float>(world_size_x * 8) - 2.0f;
-        float max_z = static_cast<float>(world_size_z * 8) - 2.0f;
+        float max_x = static_cast<float>(world_size_x * ground_step_x) - 2.0f;
+        float max_z = static_cast<float>(world_size_z * ground_step_z) - 2.0f;
 
         std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
         std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
@@ -220,8 +227,8 @@ void Application::initVulkan() {
     int numFlowers = 0;
     for (int i = 0; i < numFlowers; ++i) {
     
-        float max_x = static_cast<float>(world_size_x * 8) - 2.0f;
-        float max_z = static_cast<float>(world_size_z * 8) - 2.0f;
+        float max_x = static_cast<float>(world_size_x * ground_step_x) - 2.0f;
+        float max_z = static_cast<float>(world_size_z * ground_step_z) - 2.0f;
 
         std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
         std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
@@ -243,8 +250,8 @@ void Application::initVulkan() {
     glm::vec4 grassOld = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
     for (int i = 0; i < numGrass; ++i) {
-        float max_x = static_cast<float>(world_size_x * 8);
-        float max_z = static_cast<float>(world_size_z * 8);
+        float max_x = static_cast<float>(world_size_x * ground_step_x);
+        float max_z = static_cast<float>(world_size_z * ground_step_z);
 
         std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
         std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
