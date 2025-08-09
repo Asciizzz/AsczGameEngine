@@ -1,4 +1,4 @@
-#include "Az3D/Material.hpp"
+#include "Az3D/MaterialManager.hpp"
 #include <iostream>
 
 namespace Az3D {

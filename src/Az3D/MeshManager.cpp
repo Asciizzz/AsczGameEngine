@@ -1,7 +1,7 @@
-#include "Az3D/Mesh.hpp"
+#include "Az3D/MeshManager.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
+#include "Helpers/tiny_obj_loader.h"
 #include <unordered_map>
 
 namespace Az3D {

@@ -1,9 +1,9 @@
 // Texture.cpp implementation for TextureManager
-#include "Az3D/Texture.hpp"
+#include "Az3D/TextureManager.hpp"
 #include "AzVulk/Device.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "Helpers/stb_image.h"
 #include <stdexcept>
 #include <cstring>
 #include <cmath>
