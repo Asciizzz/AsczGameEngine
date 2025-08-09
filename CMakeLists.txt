@@ -8,6 +8,12 @@ set(DIST_NAME "AsczGame" CACHE STRING "Name for the distribution folder and exec
 
 find_package(Vulkan REQUIRED)
 
+# Find and enable OpenMP for parallel processing
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "OpenMP found: ${OpenMP_CXX_VERSION}")
+endif()
+
 set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
 set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
@@ -65,7 +71,7 @@ target_include_directories(AsczGame PRIVATE
 )
 
 
-target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY})
+target_link_libraries(AsczGame PRIVATE Vulkan::Vulkan ${SDL2_LIBRARY} OpenMP::OpenMP_CXX)
 
 target_compile_options(AsczGame PRIVATE 
     $<$<CONFIG:Release>:$<IF:$<CXX_COMPILER_ID:MSVC>,/O2,-O3>>

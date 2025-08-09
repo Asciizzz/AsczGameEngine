@@ -263,50 +263,9 @@ namespace AzVulk {
 
         // Map the buffer for updates
         vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);
-        
-        // Copy GPU vertex data directly using indices - maximum efficiency with parallelization!
-        const size_t parallelThreshold = 1000; // Only parallelize for 1000+ instances
-        if (instanceIndices.size() >= parallelThreshold) {
-    
-            #pragma omp parallel for schedule(static)
-            for (int i = 0; i < static_cast<int>(instanceIndices.size()); ++i) {
-                static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
-            }
 
-        } else {
-
-            for (size_t i = 0; i < instanceIndices.size(); ++i) {
-                static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
-            }
-
-        }
-    }
-
-    void Buffer::updateMeshInstanceBuffer(size_t meshIndex, const std::vector<size_t>& instanceIndices, const std::vector<Az3D::ModelInstance>& modelInstances) {
-        if (meshIndex >= meshBuffers.size()) {
-            return; // Silently fail for invalid mesh index
-        }
-
-        auto& meshBuffer = meshBuffers[meshIndex];
-        if (meshBuffer.instanceBufferMapped) {
-            // Copy GPU vertex data directly using indices - maximum efficiency with parallelization!
-            const size_t parallelThreshold = 1000;
-            if (instanceIndices.size() >= parallelThreshold) {
-
-                // Parallel version for large update counts
-                #pragma omp parallel for schedule(static)
-                for (int i = 0; i < static_cast<int>(instanceIndices.size()); ++i) {
-                    static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
-                }
-
-            } else {
-
-                // Serial version for small update counts
-                for (size_t i = 0; i < instanceIndices.size(); ++i) {
-                    static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
-                }
-
-            }
+        for (size_t i = 0; i < instanceIndices.size(); ++i) {
+            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
         }
     }
 
@@ -324,31 +283,12 @@ namespace AzVulk {
             return; // Buffer not mapped
         }
 
-        // Use the pre-built hash map - fastest for this use case
-        const size_t parallelThreshold = 1000; // Only parallelize for 1000+ updates
-
-        if (updateIndices.size() >= parallelThreshold) {
-
-            #pragma omp parallel for schedule(static)
-            for (int i = 0; i < static_cast<int>(updateIndices.size()); ++i) {
-                size_t instanceIndex = updateIndices[i];
-                auto it = instanceToBufferPos.find(instanceIndex);
-                if (it != instanceToBufferPos.end()) {
-                    size_t bufferPos = it->second;
-                    static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
-                }
+        for (size_t instanceIndex : updateIndices) {
+            auto it = instanceToBufferPos.find(instanceIndex);
+            if (it != instanceToBufferPos.end()) {
+                size_t bufferPos = it->second;
+                static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
             }
-
-        } else {
-
-            for (size_t instanceIndex : updateIndices) {
-                auto it = instanceToBufferPos.find(instanceIndex);
-                if (it != instanceToBufferPos.end()) {
-                    size_t bufferPos = it->second;
-                    static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
-                }
-            }
-
         }
     }
 }
