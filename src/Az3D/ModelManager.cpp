@@ -40,29 +40,68 @@ namespace Az3D {
     }
 
     void ModelGroup::addInstance(const ModelInstance& instance) {
+        size_t newInstanceIndex = modelInstances.size();
         modelInstances.push_back(instance);
-        modelInstanceCount++;
-
+        auto& addedInstance = modelInstances.back();
+        
+        // Set up mesh mapping indices
         const auto& resource = modelResources[instance.modelResourceIndex];
-
-        size_t meshIndex = resource.meshIndex;
-        meshIndexToModelInstances[meshIndex].push_back(&instance);
+        addedInstance.meshIndex = resource.meshIndex;
+        addedInstance.instanceIndex = newInstanceIndex;
+        
+        // Add instance index to mesh mapping
+        meshIndexToModelInstances[addedInstance.meshIndex].push_back(newInstanceIndex);
+        
+        modelInstanceCount++;
     }
 
     void ModelGroup::addInstances(const std::vector<ModelInstance>& instances) {
-        this->modelInstances.reserve(this->modelInstances.size() + instances.size());
+        size_t startIndex = modelInstances.size();
+        this->modelInstances.reserve(startIndex + instances.size());
         this->modelInstances.insert(this->modelInstances.end(), instances.begin(), instances.end());
 
-        modelInstanceCount += instances.size();
+        // Set up mesh mapping indices for all added instances
+        for (size_t i = 0; i < instances.size(); ++i) {
+            size_t instanceIndex = startIndex + i;
+            auto& addedInstance = modelInstances[instanceIndex];
+            const auto& resource = modelResources[instances[i].modelResourceIndex];
+            
+            addedInstance.meshIndex = resource.meshIndex;
+            addedInstance.instanceIndex = instanceIndex;
+            
+            // Add instance index to mesh mapping
+            meshIndexToModelInstances[addedInstance.meshIndex].push_back(instanceIndex);
+        }
 
-        for (const auto& instance : instances) {
+        modelInstanceCount += instances.size();
+    }
+
+    void ModelGroup::buildMeshMapping() {
+        // Clear the existing mapping
+        meshIndexToModelInstances.clear();
+
+        // Rebuild mapping with instance indices
+        for (size_t i = 0; i < modelInstances.size(); ++i) {
+            auto& instance = modelInstances[i];
+            
             if (instance.modelResourceIndex >= modelResourceCount) continue;
 
             const auto& resource = modelResources[instance.modelResourceIndex];
             size_t meshIndex = resource.meshIndex;
-
-            meshIndexToModelInstances[meshIndex].push_back(&instance);
+            
+            // Set the indices in the instance
+            instance.meshIndex = meshIndex;
+            instance.instanceIndex = i;
+            
+            // Add instance index to mesh mapping
+            meshIndexToModelInstances[meshIndex].push_back(i);
         }
+    }
+
+    void ModelGroup::updateInstanceInMeshMap(ModelInstance& instance) {
+        // With index-based mapping, no update needed! 
+        // The mesh mapping points to indices, and the instance is modified in-place.
+        // This method can be a no-op now since indices are stable.
     }
 
     void ModelGroup::copyFrom(const ModelGroup& other) {

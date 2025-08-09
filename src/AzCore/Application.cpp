@@ -178,8 +178,8 @@ void Application::initVulkan() {
         worldGroup.addInstance(instance);
     };
 
-    int world_size_x = 10;
-    int world_size_z = 10;
+    int world_size_x = 200;
+    int world_size_z = 200;
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
             Transform trform;
@@ -188,7 +188,7 @@ void Application::initVulkan() {
                 0.0f,
                 static_cast<float>(z) * 8.0f + 4.0f
             );
-            placePlatform("Ground_x8", trform);
+            placePlatform("Flower", trform);
         }
     }
 
@@ -266,6 +266,7 @@ void Application::initVulkan() {
         placePlatform(grassName, grassTrform, grassColor);
     }
 
+    worldGroup.buildMeshMapping();
     mdlManager.addGroup("World", worldGroup);
 
 
@@ -531,13 +532,23 @@ void Application::mainLoop() {
         //     grassSystem->updateWindAnimation(dTime);
         // }
 
-        // Clear and populate the model manager for this frame
-        mdlManager.clearAllInstances();
-
         // Add all static world instances (assuming they are opaque)
         // mdlManager.addInstances("World", worldGroup.modelInstances);
 
-        mdlManager.getGroup("World").copyFrom(worldGroup);
+        // auto& worldGroupInstances = mdlManager.getGroup("World").modelInstances;
+
+        // static float d = 0.0f;
+        // static float last_d = -1.0f;
+        // for (auto& instance : worldGroupInstances) {
+        //     // Move the instance by d
+        //     Transform trform;
+        //     trform.pos = glm::vec3(d, 0.0f, 0.0f);
+
+        //     instance.modelMatrix() = trform.modelMatrix();
+            
+        //     // No mesh map update needed! Index-based mapping is automatically consistent.
+        // }
+        // d += dTime;
 
         // Add updated grass instances (these override the static ones)
         // if (grassSystem) {
@@ -553,8 +564,8 @@ void Application::mainLoop() {
             // First pass: render opaque objects
             const auto& worldGroup = mdlManager.groups["World"];
 
-            if (worldGroup.modelInstanceCount) {
-                rendererRef.drawScene(*opaquePipeline, worldGroup.modelInstances, worldGroup.modelResources);
+            if (worldGroup.modelInstanceCount > 0) {
+                rendererRef.drawScene(*opaquePipeline, worldGroup);
             }
 
             rendererRef.endFrame(imageIndex);

@@ -31,6 +31,10 @@ namespace Az3D {
         InstanceVertexData vertexData;
         size_t modelResourceIndex; // Index into modelResources
         
+        // Dynamic mesh mapping indices for direct mesh map updates
+        size_t meshIndex = SIZE_MAX;        // Which mesh this instance belongs to
+        size_t instanceIndex = SIZE_MAX;    // This instance's index in the modelInstances array
+        
         // Default constructor
         ModelInstance() {
             vertexData.modelMatrix = glm::mat4(1.0f);
@@ -62,7 +66,8 @@ namespace Az3D {
 
         size_t modelInstanceCount = 0;
         std::vector<ModelInstance> modelInstances;
-        std::unordered_map<size_t, std::vector<const ModelInstance*>> meshIndexToModelInstances;
+        // Dynamic mapping: mesh index -> array of instance indices (no pointers!)
+        std::unordered_map<size_t, std::vector<size_t>> meshIndexToModelInstances;
 
         size_t addModelResource(const std::string& name, size_t meshIndex, size_t materialIndex);
         size_t getModelResourceIndex(const std::string& name) const;
@@ -72,6 +77,11 @@ namespace Az3D {
         void addInstances(const std::vector<ModelInstance>& instances);
 
         void copyFrom(const ModelGroup& other);
+
+        void buildMeshMapping();
+
+        // Direct mesh mapping update - for efficient instance modifications
+        void updateInstanceInMeshMap(ModelInstance& instance);
 
         void printDebug() const {
             printf("ModelGroup '%s': %zu resources, %zu instances\n", name.c_str(), modelResourceCount, modelInstanceCount);

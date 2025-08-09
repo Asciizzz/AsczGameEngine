@@ -24,9 +24,7 @@ namespace AzVulk {
 
         // New split rendering functions for explicit control
         uint32_t beginFrame(RasterPipeline& pipeline, Az3D::Camera& camera);
-        void drawScene( RasterPipeline& pipeline, 
-                        const std::vector<Az3D::ModelInstance>& instances,
-                        const std::vector<Az3D::ModelResource>& modelResources);
+        void drawScene(RasterPipeline& pipeline, const Az3D::ModelGroup& modelGroup);
         void endFrame(uint32_t imageIndex);
 
         // Component references

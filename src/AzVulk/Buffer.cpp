@@ -282,4 +282,98 @@ namespace AzVulk {
             }
         }
     }
+
+    // Optimized version that works directly with pointer vectors (no copy overhead)
+    void Buffer::createMeshInstanceBuffer(size_t meshIndex, const std::vector<const Az3D::ModelInstance*>& instancePtrs) {
+        if (meshIndex >= meshBuffers.size()) {
+            throw std::runtime_error("Invalid mesh index for instance buffer creation!");
+        }
+        
+        auto& meshBuffer = meshBuffers[meshIndex];
+        VkDeviceSize bufferSize = sizeof(Az3D::InstanceVertexData) * instancePtrs.size();
+        meshBuffer.instanceCount = static_cast<uint32_t>(instancePtrs.size());
+
+        // Clean up existing buffer if it exists
+        if (meshBuffer.instanceBuffer != VK_NULL_HANDLE) {
+            if (meshBuffer.instanceBufferMapped) {
+                vkUnmapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory);
+            }
+            vkDestroyBuffer(vulkanDevice.device, meshBuffer.instanceBuffer, nullptr);
+            vkFreeMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, nullptr);
+        }
+
+        createBuffer(bufferSize, 
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                    meshBuffer.instanceBuffer, meshBuffer.instanceBufferMemory);
+
+        // Map the buffer for updates
+        vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);
+        
+        // Copy only GPU vertex data directly from pointers - much faster!
+        for (size_t i = 0; i < instancePtrs.size(); ++i) {
+            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = instancePtrs[i]->vertexData;
+        }
+    }
+
+    void Buffer::updateMeshInstanceBuffer(size_t meshIndex, const std::vector<const Az3D::ModelInstance*>& instancePtrs) {
+        if (meshIndex >= meshBuffers.size()) {
+            return; // Silently fail for invalid mesh index
+        }
+
+        auto& meshBuffer = meshBuffers[meshIndex];
+        if (meshBuffer.instanceBufferMapped && instancePtrs.size() <= meshBuffer.instanceCount) {
+            // Copy only GPU vertex data directly from pointers - much faster!
+            for (size_t i = 0; i < instancePtrs.size(); ++i) {
+                static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = instancePtrs[i]->vertexData;
+            }
+        }
+    }
+
+    // Ultra-efficient versions that work directly with index arrays (zero intermediate allocations)
+    void Buffer::createMeshInstanceBuffer(size_t meshIndex, const std::vector<size_t>& instanceIndices, const std::vector<Az3D::ModelInstance>& modelInstances) {
+        if (meshIndex >= meshBuffers.size()) {
+            throw std::runtime_error("Invalid mesh index for instance buffer creation!");
+        }
+
+        auto& meshBuffer = meshBuffers[meshIndex];
+        VkDeviceSize bufferSize = sizeof(Az3D::InstanceVertexData) * instanceIndices.size();
+        meshBuffer.instanceCount = static_cast<uint32_t>(instanceIndices.size());
+
+        // Clean up existing buffer if it exists
+        if (meshBuffer.instanceBuffer != VK_NULL_HANDLE) {
+            if (meshBuffer.instanceBufferMapped) {
+                vkUnmapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory);
+            }
+            vkDestroyBuffer(vulkanDevice.device, meshBuffer.instanceBuffer, nullptr);
+            vkFreeMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, nullptr);
+        }
+
+        createBuffer(bufferSize, 
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                    meshBuffer.instanceBuffer, meshBuffer.instanceBufferMemory);
+
+        // Map the buffer for updates
+        vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);
+        
+        // Copy GPU vertex data directly using indices - maximum efficiency!
+        for (size_t i = 0; i < instanceIndices.size(); ++i) {
+            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
+        }
+    }
+
+    void Buffer::updateMeshInstanceBuffer(size_t meshIndex, const std::vector<size_t>& instanceIndices, const std::vector<Az3D::ModelInstance>& modelInstances) {
+        if (meshIndex >= meshBuffers.size()) {
+            return; // Silently fail for invalid mesh index
+        }
+
+        auto& meshBuffer = meshBuffers[meshIndex];
+        if (meshBuffer.instanceBufferMapped && instanceIndices.size() <= meshBuffer.instanceCount) {
+            // Copy GPU vertex data directly using indices - maximum efficiency!
+            for (size_t i = 0; i < instanceIndices.size(); ++i) {
+                static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
+            }
+        }
+    }
 }

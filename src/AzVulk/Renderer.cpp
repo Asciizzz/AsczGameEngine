@@ -157,43 +157,40 @@ namespace AzVulk {
         return imageIndex;
     }
 
-    // Draw scene with specified pipeline - efficiently groups instances internally
-    void Renderer::drawScene(RasterPipeline& pipeline, 
-                            const std::vector<Az3D::ModelInstance>& instances,
-                            const std::vector<Az3D::ModelResource>& modelResources) {
+    // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
+    void Renderer::drawScene(RasterPipeline& pipeline, const Az3D::ModelGroup& modelGroup) {
         
-        // Group instances by mesh efficiently
-        std::unordered_map<size_t, std::vector<Az3D::ModelInstance>> meshToInstances;
-        for (const auto& instance : instances) {
-            const auto& resource = modelResources[instance.modelResourceIndex];
-            meshToInstances[resource.meshIndex].push_back(instance);
-        }
-        
-        // Update instance buffers for all meshes
-        for (const auto& [meshIndex, meshInstances] : meshToInstances) {
+        // Use the pre-computed mesh mapping directly - no need to rebuild!
+        const auto& meshToInstanceIndices = modelGroup.meshIndexToModelInstances;
+        const auto& modelResources = modelGroup.modelResources;
+        const auto& modelInstances = modelGroup.modelInstances;
+
+        // Render all meshes with their instances
+        const auto& meshBuffers = buffer.meshBuffers;
+
+        // Build material to meshes mapping for efficient rendering
+        std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;
+
+        for (const auto& [meshIndex, instanceIndices] : meshToInstanceIndices) {
+            if (instanceIndices.empty()) continue;
+
             // Update or create the instance buffer for this mesh
             if (meshIndex < buffer.meshBuffers.size()) {
                 const auto& meshBuffers = buffer.meshBuffers;
                 if (meshIndex < meshBuffers.size()) {
-                    if (meshInstances.size() != meshBuffers[meshIndex].instanceCount) {
+                    // Use ultra-efficient buffer functions that work directly with indices - zero allocations!
+                    if (instanceIndices.size() != meshBuffers[meshIndex].instanceCount) {
                         vkDeviceWaitIdle(vulkanDevice.device);
-                        buffer.createMeshInstanceBuffer(meshIndex, meshInstances);
+                        buffer.createMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
                     } else {
-                        buffer.updateMeshInstanceBuffer(meshIndex, meshInstances);
+                        buffer.updateMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
                     }
                 }
             }
-        }
 
-        // Render all meshes with their instances
-        const auto& meshBuffers = buffer.meshBuffers;
-        
-        // Group mesh indices by material for better batching
-        std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;
-        for (const auto& [meshIndex, meshInstances] : meshToInstances) {
-            if (!meshInstances.empty()) {
+            if (!instanceIndices.empty()) {
                 // Get material from the first instance's resource
-                const auto& resource = modelResources[meshInstances[0].modelResourceIndex];
+                const auto& resource = modelResources[modelInstances[instanceIndices[0]].modelResourceIndex];
                 materialToMeshes[resource.materialIndex].push_back(meshIndex);
             }
         }
@@ -212,10 +209,10 @@ namespace AzVulk {
                 if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {
                     const auto& meshBuffer = meshBuffers[meshIndex];
                     
-                    // Get instance count for this mesh
+                    // Get instance count directly from the pre-computed mapping
                     size_t instanceCount = 0;
-                    if (meshToInstances.find(meshIndex) != meshToInstances.end()) {
-                        instanceCount = meshToInstances.at(meshIndex).size();
+                    if (meshToInstanceIndices.find(meshIndex) != meshToInstanceIndices.end()) {
+                        instanceCount = meshToInstanceIndices.at(meshIndex).size();
                     }
                     
                     if (instanceCount > 0) {
