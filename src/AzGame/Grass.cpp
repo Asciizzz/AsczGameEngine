@@ -27,28 +27,28 @@ Grass::~Grass() {
 
 }
 
-bool Grass::initialize() {
-    // Create grass mesh and material
-    createGrassMesh();
-    // Add grass model to render system
-    // grassModelIndex = modelManager.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
+bool Grass::initialize(ResourceManager& resourceManager) {
+    createGrassMesh(resourceManager);
 
     std::mt19937 generator(std::random_device{}());
-    generateTerrain(generator);
+    generateHeightMap(generator);
+    generateTerrainMesh(resourceManager);
+
+    printf("Grass system initialized with %d height nodes, terrain scale %.2f, height scale %.2f\n",
+           config.numHeightNodes, terrainScale, heightScale);
+
+    generateGrassInstances(generator);
+
+    grassModelGroup.addModelResource("Grass", grassMeshIndex, grassMaterialIndex);
+    grassModelGroup.addInstances(grassInstances);
+    grassModelGroup.buildMeshMapping();
+
+    terrainModelGroup.addModelResource("Terrain", terrainMeshIndex, terrainMaterialIndex);
+    terrainModelGroup.addInstances(terrainInstances);
+    terrainModelGroup.buildMeshMapping();
 
     printf("Grass system initialized successfully!\n");
     return true;
-}
-
-void Grass::generateTerrain(std::mt19937& generator) {
-    // Generate height map
-    generateHeightMap(generator);
-    
-    // Generate terrain mesh
-    generateTerrainMesh();
-
-    // Generate grass instances
-    generateGrassInstances(generator);
 }
 
 void Grass::generateHeightMap(std::mt19937& generator) {
@@ -87,7 +87,7 @@ void Grass::generateHeightMap(std::mt19937& generator) {
     }
 }
 
-void Grass::createGrassMesh() {
+void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
     // Create grass geometry - 3 intersecting quads for volume
     glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
 
@@ -135,22 +135,22 @@ void Grass::createGrassMesh() {
         8, 9, 10, 10, 11, 8,  10, 9, 8, 8, 11, 10
     };
 
-    // // Create mesh
-    // grassMeshIndex = resourceManager.addMesh("GrassMesh", grassVertices, grassIndices);
+    // Create mesh
+    grassMeshIndex = resourceManager.addMesh("GrassMesh", grassVertices, grassIndices);
 
-    // // Create material
-    // grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
-    //     Material::fastTemplate(
-    //         1.0f, 0.0f, 0.0f, 0.7f, // 0.7f discard threshold for transparency
-    //         resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
-    //     )
-    // );
+    // Create material
+    grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
+        Material::fastTemplate(
+            1.0f, 0.0f, 0.0f, 0.7f, // 0.7f discard threshold for transparency
+            resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
+        )
+    );
 }
 
 void Grass::generateGrassInstances(std::mt19937& generator) {
     windGrassInstances.clear();
     grassInstances.clear();
-    
+
     // Find terrain height range for elevation-based coloring
     float minTerrainHeight = std::numeric_limits<float>::max();
     float maxTerrainHeight = std::numeric_limits<float>::lowest();
@@ -291,10 +291,10 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
     }
 }
 
-void Grass::generateTerrainMesh() {
+void Grass::generateTerrainMesh(ResourceManager& resManager) {
     std::vector<Vertex> terrainVertices;
     std::vector<uint32_t> terrainIndices;
-    
+
     // Generate vertices
     for (int x = 0; x < config.worldSizeX; ++x) {
         for (int z = 0; z < config.worldSizeZ; ++z) {
@@ -344,13 +344,10 @@ void Grass::generateTerrainMesh() {
     }
     
     // Create terrain mesh and material
-    // terrainMeshIndex = resourceManager.addMesh("TerrainMesh", terrainVertices, terrainIndices);
-    
-    // terrainMaterialIndex = resourceManager.addMaterial("TerrainMaterial",
-    //     Material::fastTemplate(1.0f, 2.0f, 0.2f, 0.0f, 0));
-    
-    // terrainModelIndex = modelManager.addModelResource("TerrainModel", terrainMeshIndex, terrainMaterialIndex);
-    
+    terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices);
+    terrainMaterialIndex = resManager.addMaterial("TerrainMaterial",
+        Material::fastTemplate(1.0f, 2.0f, 0.2f, 0.0f, 0));
+
     // Create terrain instance
     ModelInstance terrainInstance;
     terrainInstance.modelMatrix() = glm::mat4(1.0f);
@@ -510,7 +507,11 @@ void Grass::updateGrassInstancesCPU(float deltaTime) {
             glm::mat4 rotationMatrix = glm::mat4_cast(finalRot);
             glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
             
-            grassInstances[i].modelMatrix() = translationMatrix * rotationMatrix * scaleMatrix;
+            auto& grassInstance = grassModelGroup.modelInstances[i];
+
+            grassInstance.modelMatrix() = translationMatrix * rotationMatrix * scaleMatrix;
+
+            grassModelGroup.queueUpdate(grassInstance);
         }
     }
 }

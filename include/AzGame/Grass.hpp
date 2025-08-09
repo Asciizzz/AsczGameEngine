@@ -116,18 +116,12 @@ namespace AzGame {
         Grass& operator=(const Grass&) = delete;
 
         // Initialize the grass system
-        bool initialize();
-
-        // Generate terrain and grass instances
-        void generateTerrain(std::mt19937& generator);
+        bool initialize(Az3D::ResourceManager& resourceManager);
 
         // Wind animation functions (if enabled)
         void updateWindAnimation(float deltaTime);
         void updateGrassInstancesCPU(float deltaTime);
 
-        // Model Group
-        Az3D::ModelGroup grassGroup;
-        Az3D::ModelGroup terrainGroup;
 
         // Configuration
         GrassConfig config;
@@ -150,14 +144,18 @@ namespace AzGame {
         size_t terrainMaterialIndex = 0;
         size_t terrainModelIndex = 0;
 
+        // Model Group
+        Az3D::ModelGroup grassModelGroup;
+        Az3D::ModelGroup terrainModelGroup;
+
         // Time tracking for wind animation
         float windTime = 0.0f;
         
         // Helper functions
         void generateHeightMap(std::mt19937& generator);
-        void createGrassMesh();
+        void createGrassMesh(Az3D::ResourceManager& resManager);
         void generateGrassInstances(std::mt19937& generator);
-        void generateTerrainMesh();
+        void generateTerrainMesh(Az3D::ResourceManager& resManager);
         std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
     };
 

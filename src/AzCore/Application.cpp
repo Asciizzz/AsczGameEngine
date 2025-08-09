@@ -178,8 +178,8 @@ void Application::initVulkan() {
         worldGroup.addInstance(instance);
     };
 
-    int world_size_x = 64;
-    int world_size_z = 64;
+    int world_size_x = 0;
+    int world_size_z = 0;
 
     float ground_step_x = 2.0f;
     float ground_step_z = 2.0f;
@@ -279,8 +279,8 @@ void Application::initVulkan() {
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 120;
-    grassConfig.worldSizeZ = 120;
+    grassConfig.worldSizeX = 64;
+    grassConfig.worldSizeZ = 64;
     grassConfig.baseDensity = 4;
     grassConfig.heightVariance = 2.9f;
     grassConfig.lowVariance = 0.1f;
@@ -288,11 +288,11 @@ void Application::initVulkan() {
     grassConfig.enableWind = true;
     
     // Initialize grass system
-    // grassSystem = std::make_unique<AzGame::Grass>(grassConfig);
-    // if (!grassSystem->initialize(*resourceManager, *modelManager, *vulkanDevice, commandPool)) {
-    //     throw std::runtime_error("Failed to initialize grass system!");
-    // }
-    
+    grassSystem = std::make_unique<AzGame::Grass>(grassConfig);
+    if (!grassSystem->initialize(*resourceManager)) {
+        throw std::runtime_error("Failed to initialize grass system!");
+    }
+
     // Add only terrain to world instances (grass will be added dynamically each frame)
 
     // Printing every Mesh - Material - Texture - Model information
@@ -535,12 +535,9 @@ void Application::mainLoop() {
             hold_y = false;
         }
 
-        // if (grassSystem && enable_wind) {
-        //     grassSystem->updateWindAnimation(dTime);
-        // }
-
-        // Add all static world instances (assuming they are opaque)
-        // mdlManager.addInstances("World", worldGroup.modelInstances);
+        if (grassSystem && enable_wind) {
+            grassSystem->updateWindAnimation(dTime);
+        }
 
         auto& worldGroupInstances = mdlManager.getGroup("World").modelInstances;
 
@@ -621,12 +618,6 @@ void Application::mainLoop() {
             }
         }
 
-        // Add updated grass instances (these override the static ones)
-        // if (grassSystem) {
-        //     const auto& grassInst = grassSystem->getGrassInstances();
-        //     mdlManager.addInstances("World", grassInst);
-        // }
-
 // =================================
 
         // Use the new explicit rendering interface
@@ -637,6 +628,15 @@ void Application::mainLoop() {
 
             if (worldGroup.modelInstanceCount > 0) {
                 rendererRef.drawScene(*opaquePipeline, worldGroup);
+            }
+
+            const auto& grassGroup = grassSystem->grassModelGroup;
+            if (grassGroup.modelInstanceCount > 0) {
+                rendererRef.drawScene(*opaquePipeline, grassGroup);
+            }
+            const auto& terrainGroup = grassSystem->terrainModelGroup;
+            if (terrainGroup.modelInstanceCount > 0) {
+                rendererRef.drawScene(*opaquePipeline, terrainGroup);
             }
 
             rendererRef.endFrame(imageIndex);
