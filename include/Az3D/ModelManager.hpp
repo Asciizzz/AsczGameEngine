@@ -67,7 +67,10 @@ namespace Az3D {
         size_t modelInstanceCount = 0;
         std::vector<ModelInstance> modelInstances;
         // Dynamic mapping: mesh index -> array of instance indices (no pointers!)
-        std::unordered_map<size_t, std::vector<size_t>> meshIndexToModelInstances;
+        std::unordered_map<size_t, std::vector<size_t>> meshIndexToInstanceIndices;
+        
+        // Per-mesh instance count tracking for buffer resize decisions
+        std::unordered_map<size_t, uint32_t> prevInstanceCount;
 
         size_t addModelResource(const std::string& name, size_t meshIndex, size_t materialIndex);
         size_t getModelResourceIndex(const std::string& name) const;

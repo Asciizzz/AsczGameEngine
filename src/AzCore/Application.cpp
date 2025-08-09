@@ -178,8 +178,8 @@ void Application::initVulkan() {
         worldGroup.addInstance(instance);
     };
 
-    int world_size_x = 200;
-    int world_size_z = 200;
+    int world_size_x = 1000;
+    int world_size_z = 1000;
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
             Transform trform;

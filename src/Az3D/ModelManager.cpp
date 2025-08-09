@@ -34,8 +34,8 @@ namespace Az3D {
 
     void ModelGroup::clearInstances() {
         modelInstances.clear();
-        meshIndexToModelInstances.clear();
-        meshIndexToModelInstances.rehash(0);
+        meshIndexToInstanceIndices.clear();
+        meshIndexToInstanceIndices.rehash(0);
         modelInstanceCount = 0;
     }
 
@@ -50,7 +50,7 @@ namespace Az3D {
         addedInstance.instanceIndex = newInstanceIndex;
         
         // Add instance index to mesh mapping
-        meshIndexToModelInstances[addedInstance.meshIndex].push_back(newInstanceIndex);
+        meshIndexToInstanceIndices[addedInstance.meshIndex].push_back(newInstanceIndex);
         
         modelInstanceCount++;
     }
@@ -70,7 +70,7 @@ namespace Az3D {
             addedInstance.instanceIndex = instanceIndex;
             
             // Add instance index to mesh mapping
-            meshIndexToModelInstances[addedInstance.meshIndex].push_back(instanceIndex);
+            meshIndexToInstanceIndices[addedInstance.meshIndex].push_back(instanceIndex);
         }
 
         modelInstanceCount += instances.size();
@@ -78,7 +78,7 @@ namespace Az3D {
 
     void ModelGroup::buildMeshMapping() {
         // Clear the existing mapping
-        meshIndexToModelInstances.clear();
+        meshIndexToInstanceIndices.clear();
 
         // Rebuild mapping with instance indices
         for (size_t i = 0; i < modelInstances.size(); ++i) {
@@ -94,7 +94,7 @@ namespace Az3D {
             instance.instanceIndex = i;
             
             // Add instance index to mesh mapping
-            meshIndexToModelInstances[meshIndex].push_back(i);
+            meshIndexToInstanceIndices[meshIndex].push_back(i);
         }
     }
 
@@ -111,7 +111,7 @@ namespace Az3D {
 
         modelInstanceCount = other.modelInstanceCount;
         modelInstances = other.modelInstances;
-        meshIndexToModelInstances = other.meshIndexToModelInstances;
+        meshIndexToInstanceIndices = other.meshIndexToInstanceIndices;
     }
 
 

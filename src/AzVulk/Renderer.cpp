@@ -159,9 +159,9 @@ namespace AzVulk {
 
     // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
     void Renderer::drawScene(RasterPipeline& pipeline, const Az3D::ModelGroup& modelGroup) {
-        
+
         // Use the pre-computed mesh mapping directly - no need to rebuild!
-        const auto& meshToInstanceIndices = modelGroup.meshIndexToModelInstances;
+        const auto& meshToInstanceIndices = modelGroup.meshIndexToInstanceIndices;
         const auto& modelResources = modelGroup.modelResources;
         const auto& modelInstances = modelGroup.modelInstances;
 
@@ -175,17 +175,21 @@ namespace AzVulk {
             if (instanceIndices.empty()) continue;
 
             // Update or create the instance buffer for this mesh
-            if (meshIndex < buffer.meshBuffers.size()) {
-                const auto& meshBuffers = buffer.meshBuffers;
-                if (meshIndex < meshBuffers.size()) {
-                    // Use ultra-efficient buffer functions that work directly with indices - zero allocations!
-                    if (instanceIndices.size() != meshBuffers[meshIndex].instanceCount) {
-                        vkDeviceWaitIdle(vulkanDevice.device);
-                        buffer.createMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
-                    } else {
-                        buffer.updateMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
-                    }
+            if (meshIndex < meshBuffers.size()) {
+
+                size_t prevInstanceCount = (modelGroup.prevInstanceCount.count(meshIndex) > 0) 
+                    ? modelGroup.prevInstanceCount.at(meshIndex) : 0;
+                
+                if (instanceIndices.size() != prevInstanceCount) {
+                    vkDeviceWaitIdle(vulkanDevice.device);
+                    buffer.createMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
+                    
+                    // Update previous instance count in ModelGroup
+                    const_cast<Az3D::ModelGroup&>(modelGroup).prevInstanceCount[meshIndex] = instanceIndices.size();
+                } else {
+                    buffer.updateMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
                 }
+
             }
 
             if (!instanceIndices.empty()) {
@@ -206,32 +210,30 @@ namespace AzVulk {
                                     pipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
             for (size_t meshIndex : meshIndices) {
-                if (meshIndex < meshBuffers.size() && meshBuffers[meshIndex].instanceCount > 0) {
+                // Get instance count directly from the pre-computed mapping
+                size_t instanceCount = 0;
+                if (meshToInstanceIndices.find(meshIndex) != meshToInstanceIndices.end()) {
+                    instanceCount = meshToInstanceIndices.at(meshIndex).size();
+                }
+                
+                if (meshIndex < meshBuffers.size() && instanceCount > 0) {
                     const auto& meshBuffer = meshBuffers[meshIndex];
-                    
-                    // Get instance count directly from the pre-computed mapping
-                    size_t instanceCount = 0;
-                    if (meshToInstanceIndices.find(meshIndex) != meshToInstanceIndices.end()) {
-                        instanceCount = meshToInstanceIndices.at(meshIndex).size();
-                    }
-                    
-                    if (instanceCount > 0) {
-                        // Bind vertex buffer
-                        VkBuffer vertexBuffers[] = {meshBuffer.vertexBuffer};
-                        VkDeviceSize offsets[] = {0};
-                        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
 
-                        // Bind instance buffer
-                        VkBuffer instanceBuffers[] = {meshBuffer.instanceBuffer};
-                        VkDeviceSize instanceOffsets[] = {0};
-                        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
+                    // Bind vertex buffer
+                    VkBuffer vertexBuffers[] = {meshBuffer.vertexBuffer};
+                    VkDeviceSize offsets[] = {0};
+                    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
 
-                        // Bind index buffer
-                        vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshBuffer.indexBuffer, 0, meshBuffer.indexType);
+                    // Bind instance buffer
+                    VkBuffer instanceBuffers[] = {meshBuffer.instanceBuffer};
+                    VkDeviceSize instanceOffsets[] = {0};
+                    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
 
-                        // Draw all instances
-                        vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, static_cast<uint32_t>(instanceCount), 0, 0, 0);
-                    }
+                    // Bind index buffer
+                    vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshBuffer.indexBuffer, 0, meshBuffer.indexType);
+
+                    // Draw all instances
+                    vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, static_cast<uint32_t>(instanceCount), 0, 0, 0);
                 }
             }
         }

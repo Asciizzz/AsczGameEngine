@@ -246,7 +246,6 @@ namespace AzVulk {
 
         auto& meshBuffer = meshBuffers[meshIndex];
         VkDeviceSize bufferSize = sizeof(Az3D::InstanceVertexData) * instanceIndices.size();
-        meshBuffer.instanceCount = static_cast<uint32_t>(instanceIndices.size());
 
         // Clean up existing buffer if it exists
         if (meshBuffer.instanceBuffer != VK_NULL_HANDLE) {
@@ -268,22 +267,18 @@ namespace AzVulk {
         // Copy GPU vertex data directly using indices - maximum efficiency with parallelization!
         const size_t parallelThreshold = 1000; // Only parallelize for 1000+ instances
         if (instanceIndices.size() >= parallelThreshold) {
-            // Parallel version for large instance counts
-            static bool firstParallelMsg = true;
-            if (firstParallelMsg) {
-                printf("Using parallel buffer update for %zu instances (%d threads)\n", 
-                       instanceIndices.size(), omp_get_max_threads());
-                firstParallelMsg = false;
-            }
+    
             #pragma omp parallel for schedule(static)
             for (int i = 0; i < static_cast<int>(instanceIndices.size()); ++i) {
                 static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
             }
+
         } else {
-            // Serial version for small instance counts (avoids threading overhead)
+
             for (size_t i = 0; i < instanceIndices.size(); ++i) {
                 static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
             }
+
         }
     }
 
@@ -293,20 +288,22 @@ namespace AzVulk {
         }
 
         auto& meshBuffer = meshBuffers[meshIndex];
-        if (meshBuffer.instanceBufferMapped && instanceIndices.size() <= meshBuffer.instanceCount) {
+        if (meshBuffer.instanceBufferMapped) {
             // Copy GPU vertex data directly using indices - maximum efficiency with parallelization!
             const size_t parallelThreshold = 1000; // Only parallelize for 1000+ instances  
             if (instanceIndices.size() >= parallelThreshold) {
-                // Parallel version for large instance counts
+
                 #pragma omp parallel for schedule(static)
                 for (int i = 0; i < static_cast<int>(instanceIndices.size()); ++i) {
                     static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
                 }
+
             } else {
-                // Serial version for small instance counts (avoids threading overhead)
+
                 for (size_t i = 0; i < instanceIndices.size(); ++i) {
                     static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
                 }
+
             }
         }
     }

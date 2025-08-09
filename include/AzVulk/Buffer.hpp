@@ -38,7 +38,7 @@ namespace AzVulk {
         VkBuffer instanceBuffer = VK_NULL_HANDLE;
         VkDeviceMemory instanceBufferMemory = VK_NULL_HANDLE;
         void* instanceBufferMapped = nullptr;
-        uint32_t instanceCount = 0;
+        // Note: instanceCount removed - now tracked per-ModelGroup
         
         // Cleanup helper - destructors aren't enough apparently
         void cleanup(VkDevice device) {
