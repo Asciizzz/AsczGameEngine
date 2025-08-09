@@ -560,22 +560,63 @@ void Application::mainLoop() {
         if (enable_animation) {
             animationTime += dTime;
             
-            // Only animate every 10th flower to demonstrate selective updates
+            // Wave function parameters
+            const float waveSpeed = 2.0f;          // How fast the wave travels
+            const float waveAmplitude = 3.0f;      // Height of the wave
+            const float waveFrequency = 0.15f;     // How tightly packed the waves are
+            const float dampening = 0.85f;         // Wave dampening from center
+            
+            // Grid constants (matching the initialization values)
+            const int grid_size_x = 64;
+            const int grid_size_z = 64;
+            const float step_x = 2.0f;
+            const float step_z = 2.0f;
+            const float half_step_x = step_x * 0.5f;
+            const float half_step_z = step_z * 0.5f;
+            
+            // Calculate center of the grid for radial waves
+            const float centerX = (grid_size_x * step_x) * 0.5f;
+            const float centerZ = (grid_size_z * step_z) * 0.5f;
+            
             auto& worldGroup = mdlManager.getGroup("World");
-            for (size_t i = 0; i < worldGroupInstances.size(); i += 10) {
+            
+            // Create rippling wave effect across all icospheres
+            for (size_t i = 0; i < worldGroupInstances.size(); ++i) {
                 auto& instance = worldGroupInstances[i];
                 
-                // Create oscillating movement
+                // Calculate grid position from instance index
+                int x = i % grid_size_x;
+                int z = i / grid_size_x;
+                
+                // World position of this icosphere
+                float worldX = x * step_x + half_step_x;
+                float worldZ = z * step_z + half_step_z;
+                
+                // Distance from center for radial wave effect
+                float distanceFromCenter = sqrt((worldX - centerX) * (worldX - centerX) + 
+                                               (worldZ - centerZ) * (worldZ - centerZ));
+                
+                // Create multiple wave patterns
+                float wave1 = sin(animationTime * waveSpeed + distanceFromCenter * waveFrequency) * waveAmplitude;
+                float wave2 = cos(animationTime * waveSpeed * 0.7f + distanceFromCenter * waveFrequency * 1.3f) * waveAmplitude * 0.6f;
+                float wave3 = sin(animationTime * waveSpeed * 1.5f + worldX * 0.1f + worldZ * 0.08f) * waveAmplitude * 0.4f;
+                
+                // Combine waves with dampening
+                float dampFactor = exp(-distanceFromCenter * 0.01f * dampening);
+                float finalHeight = (wave1 + wave2 + wave3) * dampFactor;
+                
+                // Apply rotation for more dynamic effect
+                float rotationY = animationTime * 0.5f + distanceFromCenter * 0.02f;
+                
+                // Create transform with wave height and rotation
                 Transform trform;
-                trform.pos = glm::vec3(
-                    static_cast<float>(i / 10) * 318.0f + 4.0f + sin(animationTime + i * 0.1f) * 20.0f,  // Add sine wave
-                    sin(animationTime * 2.0f + i * 0.2f) * 5.0f,  // Vertical oscillation
-                    static_cast<float>((i / 10) % 10) * 218.0f + 4.0f + cos(animationTime + i * 0.1f) * 15.0f   // Add cosine wave
-                );
+                trform.pos = glm::vec3(worldX, finalHeight, worldZ);
+                trform.rotateY(rotationY);
+                trform.scale(0.8f + sin(animationTime + distanceFromCenter * 0.05f) * 0.3f); // Pulsing scale
                 
                 instance.modelMatrix() = trform.modelMatrix();
                 
-                // Queue this instance for selective update
+                // Queue this instance for selective update (ALL instances now animated!)
                 worldGroup.queueUpdate(i);
             }
         }
