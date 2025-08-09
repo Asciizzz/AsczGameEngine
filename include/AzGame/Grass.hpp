@@ -16,6 +16,9 @@
 // Forward declarations
 namespace Az3D {
     struct ModelGroup;
+    struct ResourceManager;
+    struct MeshManager;
+
     struct Transform;
     struct Vertex;
 }
@@ -92,8 +95,8 @@ namespace AzGame {
         glm::vec4 windData; // x: base height, y: flexibility, z: phase offset, w: unused
         
         WindGrassInstance() = default;
-        WindGrassInstance(const glm::mat4& transform, const glm::vec4& instanceColor, 
-                         float baseHeight, float flexibility, float phaseOffset);
+        WindGrassInstance(  const glm::mat4& transform, const glm::vec4& instanceColor, 
+                            float baseHeight, float flexibility, float phaseOffset);
     };
 
     // Wind uniform buffer data

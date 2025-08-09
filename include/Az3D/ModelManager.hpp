@@ -96,8 +96,11 @@ namespace Az3D {
         
         // Explicit update tracking system
         void queueUpdate(size_t instanceIndex);
+        void queueUpdate(const ModelInstance& instance);
+        void queueUpdates(const std::vector<ModelInstance>& instances);
         void clearUpdateQueue();
-        bool hasUpdates() const;
+
+        bool hasUpdates() const; // Costly, avoid using this
 
         void printDebug() const {
             printf("ModelGroup '%s': %zu resources, %zu instances\n", name.c_str(), modelResourceCount, modelInstanceCount);

@@ -93,6 +93,12 @@ namespace Az3D {
             updateIndices.push_back(instanceIndex);
         }
     }
+    void ModelGroup::queueUpdate(const ModelInstance& instance) {
+        queueUpdate(instance.instanceIndex);
+    }
+    void ModelGroup::queueUpdates(const std::vector<ModelInstance>& instances) {
+        for (const auto& instance : instances) queueUpdate(instance);
+    }
 
     void ModelGroup::clearUpdateQueue() {
         meshMapping.toUpdateIndices.clear();
