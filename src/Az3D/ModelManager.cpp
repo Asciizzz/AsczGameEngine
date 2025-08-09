@@ -3,22 +3,6 @@
 
 namespace Az3D {
 
-    size_t ModelManager::addModelResource(size_t meshIndex, size_t materialIndex) {
-        modelResources.emplace_back(ModelResource{meshIndex, materialIndex});
-        return modelResources.size() - 1;
-    }
-
-    size_t ModelManager::addModelResource(std::string name, size_t meshIndex, size_t materialIndex) {
-        size_t index = addModelResource(meshIndex, materialIndex);
-        modelResourceNameToIndex[name] = index;
-        return index;
-    }
-
-    size_t ModelManager::getModelResourceIndex(std::string name) const {
-        auto it = modelResourceNameToIndex.find(name);
-        return it != modelResourceNameToIndex.end() ? it->second : SIZE_MAX;
-    }
-
 // Model Group
 
     size_t ModelGroup::addModelResource(const std::string& name, size_t meshIndex, size_t materialIndex) {
@@ -34,8 +18,7 @@ namespace Az3D {
 
     void ModelGroup::clearInstances() {
         modelInstances.clear();
-        meshIndexToInstanceIndices.clear();
-        meshIndexToInstanceIndices.rehash(0);
+        meshMapping.clear();
         modelInstanceCount = 0;
     }
 
@@ -50,7 +33,7 @@ namespace Az3D {
         addedInstance.instanceIndex = newInstanceIndex;
         
         // Add instance index to mesh mapping
-        meshIndexToInstanceIndices[addedInstance.meshIndex].push_back(newInstanceIndex);
+        meshMapping.toInstanceIndices[addedInstance.meshIndex].push_back(newInstanceIndex);
         
         modelInstanceCount++;
     }
@@ -70,7 +53,7 @@ namespace Az3D {
             addedInstance.instanceIndex = instanceIndex;
             
             // Add instance index to mesh mapping
-            meshIndexToInstanceIndices[addedInstance.meshIndex].push_back(instanceIndex);
+            meshMapping.toInstanceIndices[addedInstance.meshIndex].push_back(instanceIndex);
         }
 
         modelInstanceCount += instances.size();
@@ -78,7 +61,7 @@ namespace Az3D {
 
     void ModelGroup::buildMeshMapping() {
         // Clear the existing mapping
-        meshIndexToInstanceIndices.clear();
+        meshMapping.toInstanceIndices.clear();
 
         // Rebuild mapping with instance indices
         for (size_t i = 0; i < modelInstances.size(); ++i) {
@@ -94,14 +77,32 @@ namespace Az3D {
             instance.instanceIndex = i;
             
             // Add instance index to mesh mapping
-            meshIndexToInstanceIndices[meshIndex].push_back(i);
+            meshMapping.toInstanceIndices[meshIndex].push_back(i);
         }
     }
 
-    void ModelGroup::updateInstanceInMeshMap(ModelInstance& instance) {
-        // With index-based mapping, no update needed! 
-        // The mesh mapping points to indices, and the instance is modified in-place.
-        // This method can be a no-op now since indices are stable.
+    void ModelGroup::queueUpdate(size_t instanceIndex) {
+        if (instanceIndex >= modelInstances.size()) return;
+        
+        const auto& instance = modelInstances[instanceIndex];
+        size_t meshIndex = instance.meshIndex;
+        
+        // Add to update queue if not already present
+        auto& updateIndices = meshMapping.toUpdateIndices[meshIndex];
+        if (std::find(updateIndices.begin(), updateIndices.end(), instanceIndex) == updateIndices.end()) {
+            updateIndices.push_back(instanceIndex);
+        }
+    }
+
+    void ModelGroup::clearUpdateQueue() {
+        meshMapping.toUpdateIndices.clear();
+    }
+
+    bool ModelGroup::hasUpdates() const {
+        for (const auto& [meshIndex, updateIndices] : meshMapping.toUpdateIndices) {
+            if (!updateIndices.empty()) return true;
+        }
+        return false;
     }
 
     void ModelGroup::copyFrom(const ModelGroup& other) {
@@ -111,7 +112,7 @@ namespace Az3D {
 
         modelInstanceCount = other.modelInstanceCount;
         modelInstances = other.modelInstances;
-        meshIndexToInstanceIndices = other.meshIndexToInstanceIndices;
+        meshMapping = other.meshMapping;
     }
 
 

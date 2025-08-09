@@ -53,6 +53,19 @@ namespace Az3D {
         static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
     };
 
+    // Mesh mapping structure to organize the three vectors
+    struct MeshMappingData {
+        std::unordered_map<size_t, std::vector<size_t>> toInstanceIndices;     // mesh index -> instance indices
+        std::unordered_map<size_t, std::vector<size_t>> toUpdateIndices;       // mesh index -> update queue indices  
+        std::unordered_map<size_t, uint32_t> toPrevInstanceCount;              // mesh index -> previous instance count
+        
+        void clear() {
+            toInstanceIndices.clear();
+            toUpdateIndices.clear();
+            toPrevInstanceCount.clear();
+        }
+    };
+
     // Model group for separate renderer
     struct ModelGroup {
         ModelGroup() = default;
@@ -66,11 +79,9 @@ namespace Az3D {
 
         size_t modelInstanceCount = 0;
         std::vector<ModelInstance> modelInstances;
-        // Dynamic mapping: mesh index -> array of instance indices (no pointers!)
-        std::unordered_map<size_t, std::vector<size_t>> meshIndexToInstanceIndices;
         
-        // Per-mesh instance count tracking for buffer resize decisions
-        std::unordered_map<size_t, uint32_t> prevInstanceCount;
+        // Organized mesh mapping data
+        MeshMappingData meshMapping;
 
         size_t addModelResource(const std::string& name, size_t meshIndex, size_t materialIndex);
         size_t getModelResourceIndex(const std::string& name) const;
@@ -82,9 +93,11 @@ namespace Az3D {
         void copyFrom(const ModelGroup& other);
 
         void buildMeshMapping();
-
-        // Direct mesh mapping update - for efficient instance modifications
-        void updateInstanceInMeshMap(ModelInstance& instance);
+        
+        // Explicit update tracking system
+        void queueUpdate(size_t instanceIndex);
+        void clearUpdateQueue();
+        bool hasUpdates() const;
 
         void printDebug() const {
             printf("ModelGroup '%s': %zu resources, %zu instances\n", name.c_str(), modelResourceCount, modelInstanceCount);
@@ -97,19 +110,8 @@ namespace Az3D {
         ModelManager() = default;
         ~ModelManager() = default;
 
-    // Resource management
-        // String-to-index map for model resources
-        std::unordered_map<std::string, size_t> modelResourceNameToIndex;
+    // Model Grupo
 
-        // Public data members
-        std::vector<ModelResource> modelResources;
-        size_t addModelResource(size_t meshIndex, size_t materialIndex);
-        size_t addModelResource(std::string name, size_t meshIndex, size_t materialIndex); // with name mapping
-
-        // String-to-index getter
-        size_t getModelResourceIndex(std::string name) const;
-
-    // Instances group
         size_t groupCount = 0;
         std::unordered_map<std::string, ModelGroup> groups;
 

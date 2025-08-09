@@ -50,7 +50,7 @@ private:
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
     std::unique_ptr<Az3D::ModelManager> modelManager;
     // World construction using ModelGroup
-    Az3D::ModelGroup worldGroup;
+    Az3D::ModelGroup worldGroup{ "WorldGroup" };
 
     // AzGame systems
     std::unique_ptr<AzGame::Grass> grassSystem;

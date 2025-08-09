@@ -161,7 +161,9 @@ namespace AzVulk {
     void Renderer::drawScene(RasterPipeline& pipeline, const Az3D::ModelGroup& modelGroup) {
 
         // Use the pre-computed mesh mapping directly - no need to rebuild!
-        const auto& meshToInstanceIndices = modelGroup.meshIndexToInstanceIndices;
+        const auto& toInstanceIndices = modelGroup.meshMapping.toInstanceIndices;
+        const auto& toUpdateIndices = modelGroup.meshMapping.toUpdateIndices;
+        const auto& toPrevInstanceCount = modelGroup.meshMapping.toPrevInstanceCount;
         const auto& modelResources = modelGroup.modelResources;
         const auto& modelInstances = modelGroup.modelInstances;
 
@@ -171,23 +173,32 @@ namespace AzVulk {
         // Build material to meshes mapping for efficient rendering
         std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;
 
-        for (const auto& [meshIndex, instanceIndices] : meshToInstanceIndices) {
+        for (const auto& [meshIndex, instanceIndices] : toInstanceIndices) {
             if (instanceIndices.empty()) continue;
 
             // Update or create the instance buffer for this mesh
             if (meshIndex < meshBuffers.size()) {
 
-                size_t prevInstanceCount = (modelGroup.prevInstanceCount.count(meshIndex) > 0) 
-                    ? modelGroup.prevInstanceCount.at(meshIndex) : 0;
+                size_t prevInstanceCount = (toPrevInstanceCount.count(meshIndex) > 0) 
+                    ? toPrevInstanceCount.at(meshIndex) : 0;
                 
                 if (instanceIndices.size() != prevInstanceCount) {
+                    // Buffer size changed - need to recreate
                     vkDeviceWaitIdle(vulkanDevice.device);
                     buffer.createMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
                     
-                    // Update previous instance count in ModelGroup
-                    const_cast<Az3D::ModelGroup&>(modelGroup).prevInstanceCount[meshIndex] = instanceIndices.size();
+                    // Update previous instance count in ModelGroup's mesh mapping
+                    const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping.toPrevInstanceCount[meshIndex] = instanceIndices.size();
                 } else {
-                    buffer.updateMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
+                    // Check if this mesh has selective updates
+                    auto updateIt = toUpdateIndices.find(meshIndex);
+                    if (updateIt != toUpdateIndices.end() && !updateIt->second.empty()) {
+                        // Use selective update - only update changed instances
+                        buffer.updateMeshInstanceBufferSelective(meshIndex, updateIt->second, instanceIndices, modelInstances);
+                    } else {
+                        // No updates needed for this mesh, skip buffer update entirely
+                        // (This is the efficiency gain - we don't update unchanged meshes!)
+                    }
                 }
 
             }
@@ -212,8 +223,8 @@ namespace AzVulk {
             for (size_t meshIndex : meshIndices) {
                 // Get instance count directly from the pre-computed mapping
                 size_t instanceCount = 0;
-                if (meshToInstanceIndices.find(meshIndex) != meshToInstanceIndices.end()) {
-                    instanceCount = meshToInstanceIndices.at(meshIndex).size();
+                if (toInstanceIndices.find(meshIndex) != toInstanceIndices.end()) {
+                    instanceCount = toInstanceIndices.at(meshIndex).size();
                 }
                 
                 if (meshIndex < meshBuffers.size() && instanceCount > 0) {
@@ -237,6 +248,9 @@ namespace AzVulk {
                 }
             }
         }
+        
+        // Clear the update queue after rendering - all changes have been applied
+        const_cast<Az3D::ModelGroup&>(modelGroup).clearUpdateQueue();
     }
 
     // End frame: finalize command buffer, submit, and present

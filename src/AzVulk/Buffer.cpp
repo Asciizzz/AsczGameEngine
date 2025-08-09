@@ -307,4 +307,50 @@ namespace AzVulk {
             }
         }
     }
+
+    void Buffer::updateMeshInstanceBufferSelective( size_t meshIndex,
+                                                    const std::vector<size_t>& updateIndices, 
+                                                    const std::vector<size_t>& instanceIndices,
+                                                    const std::vector<Az3D::ModelInstance>& modelInstances) {
+        if (meshIndex >= meshBuffers.size() || updateIndices.empty()) {
+            return; // Nothing to update
+        }
+
+        auto& meshBuffer = meshBuffers[meshIndex];
+        if (!meshBuffer.instanceBufferMapped) {
+            return; // Buffer not mapped
+        }
+
+        // Map update indices to buffer positions
+        // Each updateIndex points to an instance, we need to find its position in the buffer
+        std::unordered_map<size_t, size_t> instanceToBufferPos;
+        for (size_t bufferPos = 0; bufferPos < instanceIndices.size(); ++bufferPos) {
+            instanceToBufferPos[instanceIndices[bufferPos]] = bufferPos;
+        }
+
+        // Only update the instances that have changed
+        const size_t parallelThreshold = 1000; // Only parallelize for 1000+ updates
+
+        if (updateIndices.size() >= parallelThreshold) {
+            // Parallel version for large update counts
+            #pragma omp parallel for schedule(static)
+            for (int i = 0; i < static_cast<int>(updateIndices.size()); ++i) {
+                size_t instanceIndex = updateIndices[i];
+                auto it = instanceToBufferPos.find(instanceIndex);
+                if (it != instanceToBufferPos.end()) {
+                    size_t bufferPos = it->second;
+                    static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
+                }
+            }
+        } else {
+            // Serial version for small update counts
+            for (size_t instanceIndex : updateIndices) {
+                auto it = instanceToBufferPos.find(instanceIndex);
+                if (it != instanceToBufferPos.end()) {
+                    size_t bufferPos = it->second;
+                    static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
+                }
+            }
+        }
+    }
 }

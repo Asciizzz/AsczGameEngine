@@ -145,7 +145,7 @@ void Application::initVulkan() {
         {"Fence_x2", "fence_2.obj"},
         {"Fence_x4", "fence_4.obj"},
 
-        {"Flower", "flower.obj"},
+        {"Flower", "de_dust2.obj"},
 
         {"Grass_1", "grass_blades_1.obj"},
         {"Grass_2", "grass_blades_2.obj"},
@@ -178,15 +178,15 @@ void Application::initVulkan() {
         worldGroup.addInstance(instance);
     };
 
-    int world_size_x = 1000;
-    int world_size_z = 1000;
+    int world_size_x = 10;
+    int world_size_z = 10;
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
             Transform trform;
             trform.pos = glm::vec3(
-                static_cast<float>(x) * 8.0f + 4.0f,
+                static_cast<float>(x) * 318.0f + 4.0f,
                 0.0f,
-                static_cast<float>(z) * 8.0f + 4.0f
+                static_cast<float>(z) * 218.0f + 4.0f
             );
             placePlatform("Flower", trform);
         }
@@ -329,7 +329,7 @@ void Application::initVulkan() {
         }
     }
 
-    printf("%s> World Model Resources:\n", WHITE);
+    printf("%s> [%s] Model Resources:\n", WHITE, worldGroup.name.c_str());
     for (const auto& [name, index] : worldGroup.modelResourceNameToIndex) {
         const auto& modelResource = worldGroup.modelResources[index];
         size_t meshIndex = modelResource.meshIndex;
@@ -535,20 +535,43 @@ void Application::mainLoop() {
         // Add all static world instances (assuming they are opaque)
         // mdlManager.addInstances("World", worldGroup.modelInstances);
 
-        // auto& worldGroupInstances = mdlManager.getGroup("World").modelInstances;
+        auto& worldGroupInstances = mdlManager.getGroup("World").modelInstances;
 
-        // static float d = 0.0f;
-        // static float last_d = -1.0f;
-        // for (auto& instance : worldGroupInstances) {
-        //     // Move the instance by d
-        //     Transform trform;
-        //     trform.pos = glm::vec3(d, 0.0f, 0.0f);
+        // Demonstrate selective update system - only animate some instances
+        static float animationTime = 0.0f;
+        static bool enable_animation = false;
+        static bool hold_u = false;
+        
+        if (k_state[SDL_SCANCODE_U] && !hold_u) {
+            enable_animation = !enable_animation;
+            hold_u = true;
+            printf("Animation %s\n", enable_animation ? "ENABLED" : "DISABLED");
+        } else if (!k_state[SDL_SCANCODE_U]) {
+            hold_u = false;
+        }
 
-        //     instance.modelMatrix() = trform.modelMatrix();
+        if (enable_animation) {
+            animationTime += dTime;
             
-        //     // No mesh map update needed! Index-based mapping is automatically consistent.
-        // }
-        // d += dTime;
+            // Only animate every 10th flower to demonstrate selective updates
+            auto& worldGroup = mdlManager.getGroup("World");
+            for (size_t i = 0; i < worldGroupInstances.size(); i += 10) {
+                auto& instance = worldGroupInstances[i];
+                
+                // Create oscillating movement
+                Transform trform;
+                trform.pos = glm::vec3(
+                    static_cast<float>(i / 10) * 318.0f + 4.0f + sin(animationTime + i * 0.1f) * 20.0f,  // Add sine wave
+                    sin(animationTime * 2.0f + i * 0.2f) * 5.0f,  // Vertical oscillation
+                    static_cast<float>((i / 10) % 10) * 218.0f + 4.0f + cos(animationTime + i * 0.1f) * 15.0f   // Add cosine wave
+                );
+                
+                instance.modelMatrix() = trform.modelMatrix();
+                
+                // Queue this instance for selective update
+                worldGroup.queueUpdate(i);
+            }
+        }
 
         // Add updated grass instances (these override the static ones)
         // if (grassSystem) {
