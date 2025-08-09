@@ -37,6 +37,7 @@ private:
     
     std::unique_ptr<AzVulk::RasterPipeline> opaquePipeline;
     std::unique_ptr<AzVulk::RasterPipeline> transparentPipeline;
+    std::unique_ptr<AzVulk::RasterPipeline> skyPipeline; // Beta, very inefficient, yet really amazing
 
     // More Vulkan ceremony
     std::unique_ptr<AzVulk::ShaderManager> shaderManager;

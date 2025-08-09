@@ -33,6 +33,18 @@ namespace AzVulk {
         return config;
     }
 
+    RasterPipelineConfig RasterPipelineConfig::createSkyConfig(VkSampleCountFlagBits msaaSamples) {
+        RasterPipelineConfig config;
+        config.cullMode = VK_CULL_MODE_NONE;           // No culling for fullscreen quad
+        config.depthTestEnable = VK_FALSE;             // Sky is always furthest
+        config.depthWriteEnable = VK_FALSE;            // Don't write depth
+        config.depthCompareOp = VK_COMPARE_OP_ALWAYS;  // Always pass depth test
+        config.blendEnable = VK_FALSE;                 // No blending needed
+        config.msaaSamples = msaaSamples;
+        config.sampleShadingEnable = VK_FALSE;
+        return config;
+    }
+
     RasterPipeline::RasterPipeline( VkDevice device, VkRenderPass renderPass,
                                     const char* vertexShaderPath, const char* fragmentShaderPath,
                                     const RasterPipelineConfig& config)

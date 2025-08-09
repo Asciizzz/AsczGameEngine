@@ -33,6 +33,7 @@ namespace AzVulk {
         // Static factory methods for common configurations
         static RasterPipelineConfig createOpaqueConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
         static RasterPipelineConfig createTransparentConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
+        static RasterPipelineConfig createSkyConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
     };
 
     class RasterPipeline {

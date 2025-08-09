@@ -65,7 +65,7 @@ void main() {
     float shading = material.prop1.x;
     int toonLevel = int(material.prop1.y);
     
-    vec3 lightDir = normalize(vec3(-1.0, -1.0, -1.0));
+    vec3 lightDir = normalize(vec3(-1.0, -0.5, 1.0));
     
     // The idea is that if shading is disabled, lightFactor should be 1.0
     float lightFactor = max(dot(worldNormal, -lightDir), 1 - shading);

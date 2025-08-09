@@ -70,6 +70,15 @@ void Application::initVulkan() {
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
     );
 
+    // Create sky pipeline (renders first as background)
+    skyPipeline = std::make_unique<RasterPipeline>(
+        vulkanDevice->device,
+        mainRenderPass->renderPass,
+        "Shaders/Sky/sky.vert.spv",
+        "Shaders/Sky/sky.frag.spv",
+        RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
+    );
+
     shaderManager = std::make_unique<ShaderManager>(vulkanDevice->device);
 
     // Create command pool for graphics operations
@@ -279,10 +288,10 @@ void Application::initVulkan() {
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 120;
-    grassConfig.worldSizeZ = 120;
-    grassConfig.baseDensity = 4;
-    grassConfig.heightVariance = 2.9f;
+    grassConfig.worldSizeX = 64;
+    grassConfig.worldSizeZ = 64;
+    grassConfig.baseDensity = 8;
+    grassConfig.heightVariance = 1.9f;
     grassConfig.lowVariance = 0.1f;
     grassConfig.numHeightNodes = 150;
     grassConfig.enableWind = true;
@@ -459,6 +468,7 @@ void Application::mainLoop() {
             swapChain->recreate(winManager.window, mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
             opaquePipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples));
             transparentPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples));
+            skyPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples));
         }
 
         const Uint8* k_state = SDL_GetKeyboardState(nullptr);
@@ -623,7 +633,10 @@ void Application::mainLoop() {
         // Use the new explicit rendering interface
         uint32_t imageIndex = rendererRef.beginFrame(*opaquePipeline, camRef);
         if (imageIndex != UINT32_MAX) {
-            // First pass: render opaque objects
+            // First: render sky background with dedicated pipeline
+            rendererRef.drawSky(*skyPipeline);
+            
+            // Second: render opaque objects
             const auto& worldGroup = mdlManager.groups["World"];
 
             if (worldGroup.modelInstanceCount > 0) {

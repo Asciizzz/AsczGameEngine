@@ -1,0 +1,69 @@
+#version 450
+
+layout(binding = 0) uniform GlobalUBO {
+    mat4 proj;
+    mat4 view;
+    vec4 cameraPos;     // xyz = camera position, w = fov (radians)
+    vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
+    vec4 cameraRight;   // xyz = camera right, w = unused
+    vec4 cameraUp;      // xyz = camera up, w = unused
+} glb;
+
+layout(location = 0) in vec2 fragScreenCoord;  // Screen coordinates [-1, 1]
+layout(location = 0) out vec4 outColor;
+
+// Sky calculation function (your original path tracer algorithm)
+vec3 calculateSkyColor(vec3 rayDir) {
+    vec3 sunDir = normalize(vec3(-1.0, -0.5, 1.0));
+    vec3 skyHorizon = vec3(1.0, 1.0, 1.0);        // White horizon
+    vec3 skyZenith = vec3(0.1, 0.2, 0.9);         // Blue zenith  
+    vec3 groundColor = vec3(1.0, 1.0, 1.0);       // White ground
+    float sunFocus = 180.0;
+    float sunIntensity = 10.0;
+    
+    float sky_t = clamp(rayDir.y * 2.2, 0.0, 1.0);
+    float skyGradT = pow(sky_t, 0.35);
+    vec3 skyGrad = mix(skyHorizon, skyZenith, skyGradT);
+    
+    // Sun calculation
+    float SdotR = dot(sunDir, rayDir);
+    SdotR = max(0.0, -SdotR);
+    float sun_t = pow(SdotR, sunFocus) * sunIntensity;
+    
+    // Sky mask (above/below horizon)
+    bool sky_mask = rayDir.y > 0.0;
+    
+    if (sky_mask) {
+        return skyGrad + vec3(sun_t);
+    } else {
+        return groundColor;
+    }
+}
+
+// Reconstruct ray direction from screen coordinates
+vec3 reconstructRayDirection() {
+    // Method 1: Using inverse view-projection matrix (more robust)
+    vec4 clipCoord = vec4(fragScreenCoord, 1.0, 1.0);
+    
+    // Transform to world space using inverse view-projection
+    mat4 invView = inverse(glb.view);
+    mat4 invProj = inverse(glb.proj);
+    
+    // Transform from clip space to eye space
+    vec4 eyeCoord = invProj * clipCoord;
+    eyeCoord = vec4(eyeCoord.xy, -1.0, 0.0);  // Point far into the scene
+    
+    // Transform from eye space to world space  
+    vec4 worldCoord = invView * eyeCoord;
+    
+    // Calculate ray direction from camera to world point
+    vec3 rayDir = normalize(worldCoord.xyz);
+    
+    return rayDir;
+}
+
+void main() {
+    vec3 rayDir = reconstructRayDirection();
+    vec3 skyColor = calculateSkyColor(rayDir);
+    outColor = vec4(skyColor, 1.0);
+}

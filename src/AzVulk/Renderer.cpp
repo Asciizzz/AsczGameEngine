@@ -2,6 +2,7 @@
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/glm.hpp>
 #include <cstring>
 #include <unordered_map>
 #include <iostream>
@@ -120,8 +121,19 @@ namespace AzVulk {
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain.extent;
 
+        // Calculate dynamic sky color based on camera direction
+        glm::vec3 sunDir = glm::normalize(glm::vec3(-1.0f, -1.0f, 1.0f));
+        glm::vec3 skyHorizon = glm::vec3(1.0f, 1.0f, 1.0f);      // White horizon
+        glm::vec3 skyZenith = glm::vec3(0.1f, 0.2f, 0.9f);       // Blue zenith
+        
+        // Use camera's forward direction for sky calculation
+        glm::vec3 viewDir = camera.forward;
+        float sky_t = glm::clamp(viewDir.y * 2.2f, 0.0f, 1.0f);
+        float skyGradT = glm::pow(sky_t, 0.35f);
+        glm::vec3 skyColor = glm::mix(skyHorizon, skyZenith, skyGradT);
+        
         std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};  // Black clear color, sky will be rendered per-fragment
         clearValues[1].depthStencil = {1.0f, 0};
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -148,6 +160,12 @@ namespace AzVulk {
         GlobalUBO ubo{};
         ubo.proj = camera.projectionMatrix;
         ubo.view = camera.viewMatrix;
+
+        // These should not exist lol
+        ubo.cameraPos = glm::vec4(camera.pos, glm::radians(camera.fov));
+        ubo.cameraForward = glm::vec4(camera.forward, camera.aspectRatio);
+        ubo.cameraRight = glm::vec4(camera.right, 0.0f);
+        ubo.cameraUp = glm::vec4(camera.up, 0.0f);
 
         void* data;
         vkMapMemory(vulkanDevice.device, buffer.uniformBuffersMemory[currentFrame], 0, sizeof(ubo), 0, &data);
@@ -249,6 +267,20 @@ namespace AzVulk {
         
         // Clear the update queue after rendering - all changes have been applied
         const_cast<Az3D::ModelGroup&>(modelGroup).clearUpdateQueue();
+    }
+
+    // Sky rendering using dedicated sky pipeline
+    void Renderer::drawSky(RasterPipeline& skyPipeline) {
+        // Bind sky pipeline
+        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
+
+        // Bind descriptor sets (use material index 0 for global UBO)
+        VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, 0);
+        vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                               skyPipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+        // Draw fullscreen triangle (3 vertices, no input)
+        vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
     }
 
     // End frame: finalize command buffer, submit, and present

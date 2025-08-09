@@ -26,12 +26,11 @@ void main() {
 
     if (texColor.a < discardThreshold) { discard; }
 
-    // Normal blending (only thing left to do per-fragment)
+    // Normal material rendering
     float normalBlend = material.prop1.z;
     vec3 normal = normalize(fragWorldNrml);
     vec3 normalColor = (normal + 1.0) * 0.5;
     
-    // Simple texture + normal color blending
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
     vec3 rgbFinal = rgbColor * fragInstanceColor.rgb;
     float alpha = texColor.a * fragInstanceColor.a;
