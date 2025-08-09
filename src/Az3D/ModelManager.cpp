@@ -36,6 +36,7 @@ namespace Az3D {
         modelInstances.clear();
         meshIndexToModelInstances.clear();
         meshIndexToModelInstances.rehash(0);
+        modelInstanceCount = 0;
     }
 
     void ModelGroup::addInstance(const ModelInstance& instance) {

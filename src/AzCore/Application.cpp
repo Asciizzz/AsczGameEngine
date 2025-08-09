@@ -553,7 +553,7 @@ void Application::mainLoop() {
             // First pass: render opaque objects
             const auto& worldGroup = mdlManager.groups["World"];
 
-            if (!worldGroup.modelInstances.empty()) {
+            if (worldGroup.modelInstanceCount) {
                 rendererRef.drawScene(*opaquePipeline, worldGroup.modelInstances, worldGroup.modelResources);
             }
 
