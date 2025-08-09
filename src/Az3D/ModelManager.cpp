@@ -64,6 +64,17 @@ namespace Az3D {
         }
     }
 
+    void ModelGroup::copyFrom(const ModelGroup& other) {
+        modelResourceCount = other.modelResourceCount;
+        modelResources = other.modelResources;
+        modelResourceNameToIndex = other.modelResourceNameToIndex;
+
+        modelInstanceCount = other.modelInstanceCount;
+        modelInstances = other.modelInstances;
+        meshIndexToModelInstances = other.meshIndexToModelInstances;
+    }
+
+
 // Ease of use function straight from model manager
 
     void ModelManager::addGroup(const std::string& groupName) {

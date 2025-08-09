@@ -592,7 +592,9 @@ void Application::mainLoop() {
         mdlManager.clearAllInstances();
 
         // Add all static world instances (assuming they are opaque)
-        mdlManager.addInstances("World", worldGroup.modelInstances);
+        // mdlManager.addInstances("World", worldGroup.modelInstances);
+
+        mdlManager.getGroup("World").copyFrom(worldGroup);
 
         // Add updated grass instances (these override the static ones)
         // if (grassSystem) {

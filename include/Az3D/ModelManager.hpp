@@ -67,6 +67,12 @@ namespace Az3D {
         void clearInstances();
         void addInstance(const ModelInstance& instance);
         void addInstances(const std::vector<ModelInstance>& instances);
+
+        void copyFrom(const ModelGroup& other);
+
+        void debug() {
+            printf("ModelGroup: %zu resources, %zu instances\n", modelResourceCount, modelInstanceCount);
+        }
     };
 
     // Global model management system that manages all model resources and instances
@@ -90,6 +96,8 @@ namespace Az3D {
     // Instances group
         size_t groupCount = 0;
         std::unordered_map<std::string, ModelGroup> groups;
+
+        ModelGroup& getGroup(const std::string& groupName) { return groups[groupName]; }
 
         void addGroup(const std::string& groupName);
         void addGroup(const std::string& groupName, const std::vector<ModelInstance>& instances);
