@@ -86,13 +86,6 @@ namespace AzVulk {
         void createVertexBuffer(const Az3D::Mesh& mesh);
         
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
-        void createMeshInstanceBuffer(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
-        void updateMeshInstanceBuffer(size_t meshIndex, const std::vector<Az3D::ModelInstance>& instances);
-        
-        // Optimized versions that work directly with pointer vectors (no copy overhead)
-        void createMeshInstanceBuffer(size_t meshIndex, const std::vector<const Az3D::ModelInstance*>& instancePtrs);
-        void updateMeshInstanceBuffer(size_t meshIndex, const std::vector<const Az3D::ModelInstance*>& instancePtrs);
-        
         // Most efficient versions that work directly with index arrays (zero intermediate allocations)
         void createMeshInstanceBuffer(size_t meshIndex, const std::vector<size_t>& instanceIndices, const std::vector<Az3D::ModelInstance>& modelInstances);
         void updateMeshInstanceBuffer(size_t meshIndex, const std::vector<size_t>& instanceIndices, const std::vector<Az3D::ModelInstance>& modelInstances);
