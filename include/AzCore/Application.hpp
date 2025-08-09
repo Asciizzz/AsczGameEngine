@@ -49,9 +49,9 @@ private:
     // Az3D resource management and model manager
     std::unique_ptr<Az3D::ResourceManager> resourceManager;
     std::unique_ptr<Az3D::ModelManager> modelManager;
-    // World construction using instances
-    std::vector<Az3D::ModelInstance> worldInstances;
-    
+    // World construction using ModelGroup
+    Az3D::ModelGroup worldGroup;
+
     // AzGame systems
     std::unique_ptr<AzGame::Grass> grassSystem;
     

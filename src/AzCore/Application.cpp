@@ -101,7 +101,7 @@ void Application::initVulkan() {
     auto& texManager = *resManager.textureManager;
     auto& meshManager = *resManager.meshManager;
     auto& matManager = *resManager.materialManager;
-    auto& modManager = *modelManager;
+    auto& mdlManager = *modelManager;
 
 // PLAYGROUND FROM HERE!
 
@@ -112,9 +112,7 @@ void Application::initVulkan() {
             resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png")
         )
     );
-    
-    // DEBUG: Check the material after adding it to the manager
-    const auto& storedMaterial = *resManager.materialManager->materials[globalMaterialIndex];
+
 
     // Useful shorthand function for adding platformer meshes
     std::unordered_map<std::string, size_t> platformerMeshIndices;
@@ -125,21 +123,6 @@ void Application::initVulkan() {
 
         platformerMeshIndices[name] = resManager.addMesh(fullName, fullPath, true);
     };
-
-    // Useful shorthand for getting a model resource index
-    auto getPlatformIndex = [&](const std::string& name) {
-        return modManager.getModelResourceIndex("Platformer/" + name);
-    };
-    // Useful shorthand for placing models
-    auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
-        ModelInstance instance;
-        instance.modelMatrix() = transform.modelMatrix();
-        instance.multColor() = color;
-        instance.modelResourceIndex = getPlatformIndex(name);
-
-        worldInstances.push_back(instance);
-    };
-
     struct NameAndPath {
         std::string name;
         std::string path;
@@ -174,15 +157,29 @@ void Application::initVulkan() {
         addPlatformerMesh(mesh.name, mesh.path);
     }
     for (const auto& [name, meshIndex] : platformerMeshIndices) {
-        size_t modelResourceIndex = modManager.addModelResource(
+        size_t modelResourceIndex = worldGroup.addModelResource(
             "Platformer/" + name, meshIndex, globalMaterialIndex
         );
     }
 
     // Construct a simple world
 
-    int world_size_x = 0;
-    int world_size_z = 0;
+    // Useful shorthand for getting a model resource index
+    auto getPlatformIndex = [&](const std::string& name) {
+        return worldGroup.getModelResourceIndex("Platformer/" + name);
+    };
+    // Useful shorthand for placing models
+    auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
+        ModelInstance instance;
+        instance.modelMatrix() = transform.modelMatrix();
+        instance.multColor() = color;
+        instance.modelResourceIndex = getPlatformIndex(name);
+
+        worldGroup.addInstance(instance);
+    };
+
+    int world_size_x = 10;
+    int world_size_z = 10;
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
             Transform trform;
@@ -269,8 +266,10 @@ void Application::initVulkan() {
         placePlatform(grassName, grassTrform, grassColor);
     }
 
+    mdlManager.addGroup("World", worldGroup);
 
-    // Create grasss for the grass texture
+
+    // Create grass for the grass texture
 
     glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
 
@@ -325,7 +324,7 @@ void Application::initVulkan() {
         )
     );
 
-    size_t grassModelIndex = modManager.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
+    size_t grassModelIndex = mdlManager.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
@@ -339,15 +338,11 @@ void Application::initVulkan() {
     
     // Initialize grass system
     grassSystem = std::make_unique<AzGame::Grass>(grassConfig);
-    if (!grassSystem->initialize(*resourceManager, *modelManager, *vulkanDevice, commandPool)) {
-        throw std::runtime_error("Failed to initialize grass system!");
-    }
+    // if (!grassSystem->initialize(*resourceManager, *modelManager, *vulkanDevice, commandPool)) {
+    //     throw std::runtime_error("Failed to initialize grass system!");
+    // }
     
     // Add only terrain to world instances (grass will be added dynamically each frame)
-    const auto& terrainInst = grassSystem->getTerrainInstances();
-    worldInstances.insert(worldInstances.end(), terrainInst.begin(), terrainInst.end());
-
-    modManager.addOpaqueInstances(worldInstances);
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
@@ -389,9 +384,10 @@ void Application::initVulkan() {
                 color, index, name.c_str(), WHITE);
         }
     }
-    printf("%s> Model:\n", WHITE);
-    for (const auto& [name, index] : modelManager->modelResourceNameToIndex) {
-        const auto& modelResource = modelManager->modelResources[index];
+
+    printf("%s> World Model Resources:\n", WHITE);
+    for (const auto& [name, index] : worldGroup.modelResourceNameToIndex) {
+        const auto& modelResource = worldGroup.modelResources[index];
         size_t meshIndex = modelResource.meshIndex;
         size_t materialIndex = modelResource.materialIndex;
 
@@ -476,7 +472,7 @@ void Application::mainLoop() {
     auto& texManager = *resManager.textureManager;
     auto& matManager = *resManager.materialManager;
 
-    auto& rendSys = *modelManager;
+    auto& mdlManager = *modelManager;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
@@ -580,7 +576,7 @@ void Application::mainLoop() {
 
         // Update grass wind animation
         static bool hold_y = false;
-        static bool enable_wind = true;
+        static bool enable_wind = false;
         if (k_state[SDL_SCANCODE_Y] && !hold_y) {
             enable_wind = !enable_wind;
             hold_y = true;
@@ -593,16 +589,16 @@ void Application::mainLoop() {
         }
 
         // Clear and populate the model manager for this frame
-        rendSys.clearAllInstances();
-        
+        mdlManager.clearAllInstances();
+
         // Add all static world instances (assuming they are opaque)
-        rendSys.addOpaqueInstances(worldInstances);
-        
+        mdlManager.addInstances("World", worldGroup.modelInstances);
+
         // Add updated grass instances (these override the static ones)
-        if (grassSystem) {
-            const auto& grassInst = grassSystem->getGrassInstances();
-            rendSys.addOpaqueInstances(grassInst);
-        }
+        // if (grassSystem) {
+        //     const auto& grassInst = grassSystem->getGrassInstances();
+        //     mdlManager.addInstances("World", grassInst);
+        // }
 
 // =================================
 
@@ -610,13 +606,10 @@ void Application::mainLoop() {
         uint32_t imageIndex = rendererRef.beginFrame(*opaquePipeline, camRef);
         if (imageIndex != UINT32_MAX) {
             // First pass: render opaque objects
-            if (!rendSys.opaqueInstances.empty()) {
-                rendererRef.drawScene(*opaquePipeline, rendSys.opaqueInstances, rendSys.modelResources);
-            }
-            
-            // Second pass: render transparent objects
-            if (!rendSys.transparentInstances.empty()) {
-                rendererRef.drawScene(*transparentPipeline, rendSys.transparentInstances, rendSys.modelResources);
+            const auto& worldGroup = mdlManager.groups["World"];
+
+            if (!worldGroup.modelInstances.empty()) {
+                rendererRef.drawScene(*opaquePipeline, worldGroup.modelInstances, worldGroup.modelResources);
             }
 
             rendererRef.endFrame(imageIndex);

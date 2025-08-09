@@ -49,41 +49,60 @@ namespace Az3D {
         static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
     };
 
+    // Model group for separate renderer
+    struct ModelGroup {
+        ModelGroup() = default;
+
+        size_t modelResourceCount = 0;
+        std::vector<ModelResource> modelResources;
+        std::unordered_map<std::string, size_t> modelResourceNameToIndex;
+
+        size_t modelInstanceCount = 0;
+        std::vector<ModelInstance> modelInstances;
+        std::unordered_map<size_t, std::vector<const ModelInstance*>> meshIndexToModelInstances;
+
+        size_t addModelResource(const std::string& name, size_t meshIndex, size_t materialIndex);
+        size_t getModelResourceIndex(const std::string& name) const;
+
+        void clearInstances();
+        void addInstance(const ModelInstance& instance);
+        void addInstances(const std::vector<ModelInstance>& instances);
+    };
+
     // Global model management system that manages all model resources and instances
     class ModelManager {
     public:
         ModelManager() = default;
         ~ModelManager() = default;
 
-        // Resource management
-        size_t addModelResource(size_t meshIndex, size_t materialIndex);
-        size_t addModelResource(std::string name, size_t meshIndex, size_t materialIndex); // with name mapping
-        
-        // String-to-index getter
-        size_t getModelResourceIndex(std::string name) const;
-        
-        // Instance management - separate arrays for opaque and transparent instances
-        void clearOpaqueInstances();
-        void clearTransparentInstances();
-        void clearAllInstances();
-        
-        void addOpaqueInstance(const ModelInstance& instance);
-        void addOpaqueInstances(const std::vector<ModelInstance>& instances);
-        
-        void addTransparentInstance(const ModelInstance& instance);
-        void addTransparentInstances(const std::vector<ModelInstance>& instances);
-
-        // Batch processing for rendering - returns grouped instances by mesh
-        std::unordered_map<size_t, std::vector<const ModelInstance*>> groupOpaqueInstancesByMesh() const;
-        std::unordered_map<size_t, std::vector<const ModelInstance*>> groupTransparentInstancesByMesh() const;
-
+    // Resource management
         // String-to-index map for model resources
         std::unordered_map<std::string, size_t> modelResourceNameToIndex;
 
         // Public data members
         std::vector<ModelResource> modelResources;
-        std::vector<ModelInstance> opaqueInstances;
-        std::vector<ModelInstance> transparentInstances;
+        size_t addModelResource(size_t meshIndex, size_t materialIndex);
+        size_t addModelResource(std::string name, size_t meshIndex, size_t materialIndex); // with name mapping
+
+        // String-to-index getter
+        size_t getModelResourceIndex(std::string name) const;
+
+    // Instances group
+        size_t groupCount = 0;
+        std::unordered_map<std::string, ModelGroup> groups;
+
+        void addGroup(const std::string& groupName);
+        void addGroup(const std::string& groupName, const std::vector<ModelInstance>& instances);
+        void addGroup(const std::string& groupName, const ModelGroup& group);
+
+        void clearAllInstances();
+        void clearInstances(const std::string& groupName);
+
+        void addInstance(const std::string& groupName, const ModelInstance& instance);
+        void addInstances(const std::string& groupName, const std::vector<ModelInstance>& instances);
+
+        void deleteGroup(const std::string& groupName);
+        void deleteAllGroups();
     };
 
 } // namespace Az3D

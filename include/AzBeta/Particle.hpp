@@ -321,6 +321,8 @@ namespace AzBeta {
                 glm::vec3(0.5f, 0.2f, 1.0f)  // Purple
             };
 
+            modelManager.addGroup("Particles");
+
             for (size_t p = 0; p < particleCount; ++p) {
 
                 // Get particle color based on special effect
@@ -369,7 +371,7 @@ namespace AzBeta {
                 instance.modelResourceIndex = modelResourceIndex;
                 instance.multColor() = glm::vec4(particleColor, 1.0f);
 
-                modelManager.addOpaqueInstance(instance);
+                modelManager.addInstance("Particles", instance);
             }
         }
 
