@@ -1,5 +1,6 @@
 #include "Az3D/ModelManager.hpp"
 #include <vulkan/vulkan.h>
+#include <algorithm>
 
 namespace Az3D {
 
@@ -62,12 +63,11 @@ namespace Az3D {
     void ModelGroup::buildMeshMapping() {
         // Clear the existing mapping
         meshMapping.toInstanceIndices.clear();
+        meshMapping.toInstanceToBufferPos.clear();
 
         // Rebuild mapping with instance indices
         for (size_t i = 0; i < modelInstances.size(); ++i) {
             auto& instance = modelInstances[i];
-            
-            if (instance.modelResourceIndex >= modelResourceCount) continue;
 
             const auto& resource = modelResources[instance.modelResourceIndex];
             size_t meshIndex = resource.meshIndex;
@@ -79,29 +79,64 @@ namespace Az3D {
             // Add instance index to mesh mapping
             meshMapping.toInstanceIndices[meshIndex].push_back(i);
         }
+        
+        // Build buffer position mapping for efficient lookups
+        for (const auto& [meshIndex, instanceIndices] : meshMapping.toInstanceIndices) {
+            auto& bufferPosMap = meshMapping.toInstanceToBufferPos[meshIndex];
+            for (size_t bufferPos = 0; bufferPos < instanceIndices.size(); ++bufferPos) {
+                size_t instanceIndex = instanceIndices[bufferPos];
+                bufferPosMap[instanceIndex] = bufferPos;
+            }
+        }
     }
 
     void ModelGroup::queueUpdate(size_t instanceIndex) {
-        if (instanceIndex >= modelInstances.size()) return;
-        
-        const auto& instance = modelInstances[instanceIndex];
-        size_t meshIndex = instance.meshIndex;
-        
-        // Add to update queue if not already present
-        auto& updateIndices = meshMapping.toUpdateIndices[meshIndex];
-        if (std::find(updateIndices.begin(), updateIndices.end(), instanceIndex) == updateIndices.end()) {
-            updateIndices.push_back(instanceIndex);
-        }
+        size_t meshIndex = modelInstances[instanceIndex].meshIndex;
+        meshMapping.toUpdateIndices[meshIndex].push_back(instanceIndex);
     }
+    
     void ModelGroup::queueUpdate(const ModelInstance& instance) {
         queueUpdate(instance.instanceIndex);
     }
+    
     void ModelGroup::queueUpdates(const std::vector<ModelInstance>& instances) {
         for (const auto& instance : instances) queueUpdate(instance);
+    }
+    
+    void ModelGroup::queueUpdates(const std::vector<size_t>& instanceIndices) {
+        // Group by mesh index for efficient bulk insertion
+        std::unordered_map<size_t, std::vector<size_t>> meshUpdates;
+        
+        for (size_t instanceIndex : instanceIndices) {
+            size_t meshIndex = modelInstances[instanceIndex].meshIndex;
+            meshUpdates[meshIndex].push_back(instanceIndex);
+        }
+        
+        // Bulk insert into update queues
+        for (const auto& [meshIndex, updates] : meshUpdates) {
+            auto& updateQueue = meshMapping.toUpdateIndices[meshIndex];
+            updateQueue.insert(updateQueue.end(), updates.begin(), updates.end());
+        }
     }
 
     void ModelGroup::clearUpdateQueue() {
         meshMapping.toUpdateIndices.clear();
+    }
+
+    bool ModelGroup::hasSequentialInstances(size_t meshIndex) const {
+        auto it = meshMapping.toInstanceIndices.find(meshIndex);
+        if (it == meshMapping.toInstanceIndices.end()) return false;
+        
+        const auto& instanceIndices = it->second;
+        if (instanceIndices.empty()) return false;
+        
+        // Check if instances are sequential: [0, 1, 2, 3, ...] or [n, n+1, n+2, ...]
+        for (size_t i = 1; i < instanceIndices.size(); ++i) {
+            if (instanceIndices[i] != instanceIndices[i-1] + 1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     bool ModelGroup::hasUpdates() const {

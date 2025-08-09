@@ -313,7 +313,8 @@ namespace AzVulk {
     void Buffer::updateMeshInstanceBufferSelective( size_t meshIndex,
                                                     const std::vector<size_t>& updateIndices, 
                                                     const std::vector<size_t>& instanceIndices,
-                                                    const std::vector<Az3D::ModelInstance>& modelInstances) {
+                                                    const std::vector<Az3D::ModelInstance>& modelInstances,
+                                                    const std::unordered_map<size_t, size_t>& instanceToBufferPos) {
         if (meshIndex >= meshBuffers.size() || updateIndices.empty()) {
             return; // Nothing to update
         }
@@ -323,14 +324,7 @@ namespace AzVulk {
             return; // Buffer not mapped
         }
 
-        // Map update indices to buffer positions
-        // Each updateIndex points to an instance, we need to find its position in the buffer
-        std::unordered_map<size_t, size_t> instanceToBufferPos;
-        for (size_t bufferPos = 0; bufferPos < instanceIndices.size(); ++bufferPos) {
-            instanceToBufferPos[instanceIndices[bufferPos]] = bufferPos;
-        }
-
-        // Only update the instances that have changed
+        // Use the pre-built hash map - fastest for this use case
         const size_t parallelThreshold = 1000; // Only parallelize for 1000+ updates
 
         if (updateIndices.size() >= parallelThreshold) {

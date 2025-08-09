@@ -147,6 +147,8 @@ namespace AzGame {
         // Model Group
         Az3D::ModelGroup grassModelGroup;
         Az3D::ModelGroup terrainModelGroup;
+        // Perma instance update
+        std::vector<size_t> grassInstanceUpdateQueue;
 
         // Time tracking for wind animation
         float windTime = 0.0f;

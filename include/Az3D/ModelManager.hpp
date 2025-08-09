@@ -58,11 +58,13 @@ namespace Az3D {
         std::unordered_map<size_t, std::vector<size_t>> toInstanceIndices;     // mesh index -> instance indices
         std::unordered_map<size_t, std::vector<size_t>> toUpdateIndices;       // mesh index -> update queue indices  
         std::unordered_map<size_t, uint32_t> toPrevInstanceCount;              // mesh index -> previous instance count
+        std::unordered_map<size_t, std::unordered_map<size_t, size_t>> toInstanceToBufferPos; // mesh index -> (instance index -> buffer position)
         
         void clear() {
             toInstanceIndices.clear();
             toUpdateIndices.clear();
             toPrevInstanceCount.clear();
+            toInstanceToBufferPos.clear();
         }
     };
 
@@ -98,7 +100,11 @@ namespace Az3D {
         void queueUpdate(size_t instanceIndex);
         void queueUpdate(const ModelInstance& instance);
         void queueUpdates(const std::vector<ModelInstance>& instances);
+        void queueUpdates(const std::vector<size_t>& instanceIndices); // Bulk update method
         void clearUpdateQueue();
+
+        // Check if instances are sequential (for optimization)
+        bool hasSequentialInstances(size_t meshIndex) const;
 
         bool hasUpdates() const; // Costly, avoid using this
 

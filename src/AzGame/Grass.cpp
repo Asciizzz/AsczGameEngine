@@ -39,6 +39,10 @@ bool Grass::initialize(ResourceManager& resourceManager) {
 
     generateGrassInstances(generator);
 
+    for (size_t i = 0; i < grassInstances.size(); ++i) {
+        grassInstanceUpdateQueue.push_back(i);
+    }
+
     grassModelGroup.addModelResource("Grass", grassMeshIndex, grassMaterialIndex);
     grassModelGroup.addInstances(grassInstances);
     grassModelGroup.buildMeshMapping();
@@ -47,7 +51,7 @@ bool Grass::initialize(ResourceManager& resourceManager) {
     terrainModelGroup.addInstances(terrainInstances);
     terrainModelGroup.buildMeshMapping();
 
-    printf("Grass system initialized successfully!\n");
+    printf("Grass system initialized successfully with %zu grass instances!\n", grassInstances.size());
     return true;
 }
 
@@ -437,6 +441,10 @@ void Grass::updateWindAnimation(float deltaTime) {
 void Grass::updateGrassInstancesCPU(float deltaTime) {
     glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
 
+    // Pre-build the update queue instead of calling queueUpdate() in the loop!
+    std::vector<size_t> updatedInstances;
+    updatedInstances.reserve(windGrassInstances.size()); // Pre-allocate for efficiency
+
     // Apply wind animation to each grass instance
     for (size_t i = 0; i < windGrassInstances.size() && i < grassInstances.size(); ++i) {
         const auto& windData = windGrassInstances[i];
@@ -511,7 +519,11 @@ void Grass::updateGrassInstancesCPU(float deltaTime) {
 
             grassInstance.modelMatrix() = translationMatrix * rotationMatrix * scaleMatrix;
 
-            grassModelGroup.queueUpdate(i);
+            // Add to bulk update list instead of individual queueUpdate()
+            updatedInstances.push_back(i);
         }
     }
+
+    // Bulk update the queue - much more efficient than individual queueUpdate() calls!
+    grassModelGroup.queueUpdates(updatedInstances);
 }

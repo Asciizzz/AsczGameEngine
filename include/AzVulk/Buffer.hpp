@@ -94,7 +94,8 @@ namespace AzVulk {
         void updateMeshInstanceBufferSelective( size_t meshIndex,
                                                 const std::vector<size_t>& updateIndices, 
                                                 const std::vector<size_t>& instanceIndices, 
-                                                const std::vector<Az3D::ModelInstance>& modelInstances);
+                                                const std::vector<Az3D::ModelInstance>& modelInstances,
+                                                const std::unordered_map<size_t, size_t>& instanceToBufferPos);
 
         const Device& vulkanDevice;
         

@@ -190,11 +190,12 @@ namespace AzVulk {
                     // Update previous instance count in ModelGroup's mesh mapping
                     const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping.toPrevInstanceCount[meshIndex] = instanceIndices.size();
                 } else {
-                    // Check if this mesh has selective updates
+                    // Only update changes
                     auto updateIt = meshToUpdateIndices.find(meshIndex);
                     if (updateIt != meshToUpdateIndices.end() && !updateIt->second.empty()) {
-                        // Only update changes
-                        buffer.updateMeshInstanceBufferSelective(meshIndex, updateIt->second, instanceIndices, modelInstances);
+                        // Use the pre-built buffer position mapping
+                        const auto& bufferPosMap = modelGroup.meshMapping.toInstanceToBufferPos.at(meshIndex);
+                        buffer.updateMeshInstanceBufferSelective(meshIndex, updateIt->second, instanceIndices, modelInstances, bufferPosMap);
                     }
                 }
 
