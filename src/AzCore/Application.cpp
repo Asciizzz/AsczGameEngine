@@ -178,8 +178,8 @@ void Application::initVulkan() {
         worldGroup.addInstance(instance);
     };
 
-    int world_size_x = 100;
-    int world_size_z = 100;
+    int world_size_x = 64;
+    int world_size_z = 64;
 
     float ground_step_x = 2.0f;
     float ground_step_z = 2.0f;
