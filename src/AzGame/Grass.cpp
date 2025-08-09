@@ -511,7 +511,7 @@ void Grass::updateGrassInstancesCPU(float deltaTime) {
 
             grassInstance.modelMatrix() = translationMatrix * rotationMatrix * scaleMatrix;
 
-            grassModelGroup.queueUpdate(grassInstance);
+            grassModelGroup.queueUpdate(i);
         }
     }
 }
