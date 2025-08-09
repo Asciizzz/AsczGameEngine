@@ -100,7 +100,6 @@ namespace Az3D {
         void queueUpdate(size_t instanceIndex);
         void queueUpdate(const ModelInstance& instance);
         void queueUpdates(const std::vector<ModelInstance>& instances);
-        void queueUpdates(const std::vector<size_t>& instanceIndices); // Bulk update method
         void clearUpdateQueue();
 
         // Check if instances are sequential (for optimization)

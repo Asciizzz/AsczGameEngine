@@ -102,22 +102,6 @@ namespace Az3D {
     void ModelGroup::queueUpdates(const std::vector<ModelInstance>& instances) {
         for (const auto& instance : instances) queueUpdate(instance);
     }
-    
-    void ModelGroup::queueUpdates(const std::vector<size_t>& instanceIndices) {
-        // Group by mesh index for efficient bulk insertion
-        std::unordered_map<size_t, std::vector<size_t>> meshUpdates;
-        
-        for (size_t instanceIndex : instanceIndices) {
-            size_t meshIndex = modelInstances[instanceIndex].meshIndex;
-            meshUpdates[meshIndex].push_back(instanceIndex);
-        }
-        
-        // Bulk insert into update queues
-        for (const auto& [meshIndex, updates] : meshUpdates) {
-            auto& updateQueue = meshMapping.toUpdateIndices[meshIndex];
-            updateQueue.insert(updateQueue.end(), updates.begin(), updates.end());
-        }
-    }
 
     void ModelGroup::clearUpdateQueue() {
         meshMapping.toUpdateIndices.clear();
