@@ -52,6 +52,9 @@ namespace Az3D {
     // Model group for separate renderer
     struct ModelGroup {
         ModelGroup() = default;
+        ModelGroup(const std::string& name) : name(name) {}
+
+        std::string name = "Default";
 
         size_t modelResourceCount = 0;
         std::vector<ModelResource> modelResources;
@@ -70,8 +73,8 @@ namespace Az3D {
 
         void copyFrom(const ModelGroup& other);
 
-        void debug() {
-            printf("ModelGroup: %zu resources, %zu instances\n", modelResourceCount, modelInstanceCount);
+        void printDebug() const {
+            printf("ModelGroup '%s': %zu resources, %zu instances\n", name.c_str(), modelResourceCount, modelInstanceCount);
         }
     };
 
