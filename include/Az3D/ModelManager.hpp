@@ -103,6 +103,7 @@ namespace Az3D {
         ModelGroup& getGroup(const std::string& groupName) { return groups[groupName]; }
 
         void addGroup(const std::string& groupName);
+        void addGroups(const std::vector<std::string>& groupNames);
         void addGroup(const std::string& groupName, const std::vector<ModelInstance>& instances);
         void addGroup(const std::string& groupName, const ModelGroup& group);
 

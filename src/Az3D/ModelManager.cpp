@@ -80,7 +80,12 @@ namespace Az3D {
     void ModelManager::addGroup(const std::string& groupName) {
         groups[groupName] = ModelGroup{};
         groupCount++;
-
+    }
+    void ModelManager::addGroups(const std::vector<std::string>& groupNames) {
+        for (const auto& groupName : groupNames) {
+            groups[groupName] = ModelGroup{groupName};
+        }
+        groupCount += groupNames.size();
     }
     void ModelManager::addGroup(const std::string& groupName, const std::vector<ModelInstance>& instances) {
         groups[groupName] = ModelGroup{};

@@ -269,63 +269,6 @@ void Application::initVulkan() {
     mdlManager.addGroup("World", worldGroup);
 
 
-    // Create grass for the grass texture
-
-    glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
-
-    glm::vec2 g_uv00(0.0f, 0.0f);
-    glm::vec2 g_uv10(1.0f, 0.0f);
-    glm::vec2 g_uv11(1.0f, 1.0f);
-    glm::vec2 g_uv01(0.0f, 1.0f);
-
-    glm::vec3 g_pos1(-0.5f, 0.0f, 0.0f);
-    glm::vec3 g_pos2(0.5f, 0.0f, 0.0f);
-    glm::vec3 g_pos3(0.5f, 1.0f, 0.0f);
-    glm::vec3 g_pos4(-0.5f, 1.0f, 0.0f);
-
-    glm::vec3 g_pos5 = Transform::rotate(g_pos1, g_normal, glm::radians(120.0f));
-    glm::vec3 g_pos6 = Transform::rotate(g_pos2, g_normal, glm::radians(120.0f));
-    glm::vec3 g_pos7 = Transform::rotate(g_pos3, g_normal, glm::radians(120.0f));
-    glm::vec3 g_pos8 = Transform::rotate(g_pos4, g_normal, glm::radians(120.0f));
-
-    glm::vec3 g_pos9 = Transform::rotate(g_pos1, g_normal, glm::radians(240.0f));
-    glm::vec3 g_pos10 = Transform::rotate(g_pos2, g_normal, glm::radians(240.0f));
-    glm::vec3 g_pos11 = Transform::rotate(g_pos3, g_normal, glm::radians(240.0f));
-    glm::vec3 g_pos12 = Transform::rotate(g_pos4, g_normal, glm::radians(240.0f));
-
-    std::vector<Vertex> grassVertices = {
-        {g_pos1, g_normal, g_uv01},
-        {g_pos2, g_normal, g_uv11},
-        {g_pos3, g_normal, g_uv10},
-        {g_pos4, g_normal, g_uv00},
-
-        {g_pos5, g_normal, g_uv01},
-        {g_pos6, g_normal, g_uv11},
-        {g_pos7, g_normal, g_uv10},
-        {g_pos8, g_normal, g_uv00},
-
-        {g_pos9, g_normal, g_uv01},
-        {g_pos10, g_normal, g_uv11},
-        {g_pos11, g_normal, g_uv10},
-        {g_pos12, g_normal, g_uv00}
-    };
-    std::vector<uint32_t> grassIndices = { 
-        0, 1, 2, 2, 3, 0,  2, 1, 0, 0, 3, 2,
-        4, 5, 6, 6, 7, 4,  6, 5, 4, 4, 7, 6,
-        8, 9, 10, 10, 11, 8,  10, 9, 8, 8, 11, 10
-    };
-
-    size_t grassMeshIndex = resManager.addMesh("GrassMesh", grassVertices, grassIndices);
-
-    size_t grassMaterialIndex = resManager.addMaterial("grassMaterial",
-        Material::fastTemplate(
-            1.0f, 0.0f, 0.0f, 0.7f, // 0.7f discard threshold
-            resManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
-        )
-    );
-
-    size_t grassModelIndex = mdlManager.addModelResource("GrassModel", grassMeshIndex, grassMaterialIndex);
-
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
     grassConfig.worldSizeX = 120;
@@ -337,7 +280,7 @@ void Application::initVulkan() {
     grassConfig.enableWind = true;
     
     // Initialize grass system
-    grassSystem = std::make_unique<AzGame::Grass>(grassConfig);
+    // grassSystem = std::make_unique<AzGame::Grass>(grassConfig);
     // if (!grassSystem->initialize(*resourceManager, *modelManager, *vulkanDevice, commandPool)) {
     //     throw std::runtime_error("Failed to initialize grass system!");
     // }
@@ -584,9 +527,9 @@ void Application::mainLoop() {
             hold_y = false;
         }
 
-        if (grassSystem && enable_wind) {
-            grassSystem->updateWindAnimation(dTime);
-        }
+        // if (grassSystem && enable_wind) {
+        //     grassSystem->updateWindAnimation(dTime);
+        // }
 
         // Clear and populate the model manager for this frame
         mdlManager.clearAllInstances();

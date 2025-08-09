@@ -7,16 +7,15 @@
 #include <memory>
 #include <limits>
 
-#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include <Az3D/ModelManager.hpp>
+
 // Forward declarations
 namespace Az3D {
-    class ResourceManager;
-    class ModelManager;
-    struct ModelInstance;
+    struct ModelGroup;
     struct Transform;
     struct Vertex;
 }
@@ -114,25 +113,18 @@ namespace AzGame {
         Grass& operator=(const Grass&) = delete;
 
         // Initialize the grass system
-        bool initialize(Az3D::ResourceManager& resourceManager, 
-                        Az3D::ModelManager& modelManager,
-                        AzVulk::Device& device,
-                        VkCommandPool commandPool);
+        bool initialize();
 
         // Generate terrain and grass instances
-        void generateTerrain(
-            Az3D::ResourceManager& resourceManager,
-            Az3D::ModelManager& modelManager,
-            std::mt19937& generator
-        );
+        void generateTerrain(std::mt19937& generator);
 
-        // Get the generated model instances for rendering
-        const std::vector<Az3D::ModelInstance>& getGrassInstances() const { return grassInstances; }
-        const std::vector<Az3D::ModelInstance>& getTerrainInstances() const { return terrainInstances; }
-        
         // Wind animation functions (if enabled)
         void updateWindAnimation(float deltaTime);
         void updateGrassInstancesCPU(float deltaTime);
+
+        // Model Group
+        Az3D::ModelGroup grassGroup;
+        Az3D::ModelGroup terrainGroup;
 
         // Configuration
         GrassConfig config;
@@ -160,9 +152,9 @@ namespace AzGame {
         
         // Helper functions
         void generateHeightMap(std::mt19937& generator);
-        void createGrassMesh(Az3D::ResourceManager& resourceManager);
+        void createGrassMesh();
         void generateGrassInstances(std::mt19937& generator);
-        void generateTerrainMesh(Az3D::ResourceManager& resourceManager, Az3D::ModelManager& modelManager);
+        void generateTerrainMesh();
         std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
     };
 
