@@ -14,11 +14,16 @@ layout(location = 0) out vec4 outColor;
 
 // Sky calculation function (your original path tracer algorithm)
 vec3 calculateSkyColor(vec3 rayDir) {
-    vec3 sunDir = normalize(vec3(-1.0, -0.5, 1.0));
-    vec3 skyHorizon = vec3(1.0, 1.0, 1.0);        // White horizon
-    vec3 skyZenith = vec3(0.1, 0.2, 0.9);         // Blue zenith  
-    vec3 groundColor = vec3(1.0, 1.0, 1.0);       // White ground
-    float sunFocus = 180.0;
+    vec3 sunDir = normalize(vec3(-1.0, -0.3, 1.0));
+    // vec3 skyZenith = vec3(0.1, 0.2, 0.9);   // Blue zenith (727 WYSI)  
+    // vec3 skyHorizon = vec3(1.0, 1.0, 1.0);  // White horizon
+    // vec3 groundColor = vec3(1.0, 1.0, 1.0); // White ground
+    
+    // Custom color
+    vec3 skyZenith = vec3(0.8, 0.6, 0.2);
+    vec3 skyHorizon = vec3(1.0, 0.8, 0.5);
+    vec3 groundColor = vec3(1.0, 0.8, 0.5);
+    float sunFocus = 1240.0;
     float sunIntensity = 10.0;
     
     float sky_t = clamp(rayDir.y * 2.2, 0.0, 1.0);

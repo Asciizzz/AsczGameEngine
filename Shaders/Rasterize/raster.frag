@@ -30,9 +30,11 @@ void main() {
     float normalBlend = material.prop1.z;
     vec3 normal = normalize(fragWorldNrml);
     vec3 normalColor = (normal + 1.0) * 0.5;
-    
+
+    vec3 skyColor = vec3(0.8, 0.6, 0.2);
+
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
-    vec3 rgbFinal = rgbColor * fragInstanceColor.rgb;
+    vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * skyColor;
     float alpha = texColor.a * fragInstanceColor.a;
 
     // Use the pre-computed lighting from vertex shader
