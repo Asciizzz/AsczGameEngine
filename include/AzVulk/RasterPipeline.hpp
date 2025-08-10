@@ -39,6 +39,7 @@ namespace AzVulk {
     class RasterPipeline {
     public:
         RasterPipeline( VkDevice device, VkRenderPass renderPass,
+                        VkDescriptorSetLayout descriptorSetLayout,
                         const char* vertexShaderPath, const char* fragmentShaderPath,
                         const RasterPipelineConfig& config);
         ~RasterPipeline();
@@ -55,16 +56,15 @@ namespace AzVulk {
         const char* vertexShaderPath;
         const char* fragmentShaderPath;
         
-        // Device context
+        // References to Vulkan objects
         VkDevice device;
-        VkRenderPass renderPass; // Reference to external render pass
+        VkRenderPass renderPass;
 
         // Pipeline layout and objects
         VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
-        void createDescriptorSetLayout();
         void createGraphicsPipeline();
         void cleanup();
     };

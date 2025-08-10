@@ -53,18 +53,24 @@ void Application::initVulkan() {
         swapChain->imageFormat, msaaManager->msaaSamples);
     mainRenderPass = std::make_unique<RenderPass>(vulkanDevice->device, renderPassConfig);
 
+    // Create descriptor manager first and get the standard layout
+    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice);
+    VkDescriptorSetLayout standardLayout = descriptorManager->createStandardRasterLayout();
+
     opaquePipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
+        standardLayout,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
     );
 
-    // Create a separate transparent pipeline (uses same render pass)
+    // Create a separate transparent pipeline (uses same render pass and layout)
     transparentPipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
+        standardLayout,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
@@ -74,6 +80,7 @@ void Application::initVulkan() {
     skyPipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
+        standardLayout,
         "Shaders/Sky/sky.vert.spv",
         "Shaders/Sky/sky.frag.spv",
         RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
@@ -102,8 +109,6 @@ void Application::initVulkan() {
 
     resourceManager = std::make_unique<ResourceManager>(*vulkanDevice, commandPool);
     modelManager = std::make_unique<ModelManager>();
-
-    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice, opaquePipeline->descriptorSetLayout);
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;

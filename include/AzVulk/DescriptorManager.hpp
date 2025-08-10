@@ -13,12 +13,15 @@ namespace Az3D {
 namespace AzVulk {
     class DescriptorManager {
     public:
-        DescriptorManager(const Device& device, VkDescriptorSetLayout descriptorSetLayout);
+        DescriptorManager(const Device& device);
         ~DescriptorManager();
 
         
         DescriptorManager(const DescriptorManager&) = delete;
         DescriptorManager& operator=(const DescriptorManager&) = delete;
+
+        // Create standard descriptor set layout for raster pipelines
+        VkDescriptorSetLayout createStandardRasterLayout();
 
         void createDescriptorPool(uint32_t maxFramesInFlight, uint32_t maxMaterials = 10);
         void createDescriptorSetsForMaterial(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize, 
@@ -30,7 +33,7 @@ namespace AzVulk {
         VkDescriptorSet getDescriptorSet(uint32_t frameIndex, size_t materialIndex);
         
         const Device& vulkanDevice;
-        VkDescriptorSetLayout descriptorSetLayout;
+        VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
         
         VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 

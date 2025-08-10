@@ -46,13 +46,13 @@ namespace AzVulk {
     }
 
     RasterPipeline::RasterPipeline( VkDevice device, VkRenderPass renderPass,
+                                    VkDescriptorSetLayout descriptorSetLayout,
                                     const char* vertexShaderPath, const char* fragmentShaderPath,
                                     const RasterPipelineConfig& config)
-        : device(device), renderPass(renderPass),
+        : device(device), renderPass(renderPass), descriptorSetLayout(descriptorSetLayout),
           vertexShaderPath(vertexShaderPath), fragmentShaderPath(fragmentShaderPath),
           config(config) {
 
-        createDescriptorSetLayout();
         createGraphicsPipeline();
     }
 
@@ -65,42 +65,7 @@ namespace AzVulk {
         config = newConfig;
         
         cleanup();
-        createDescriptorSetLayout();
         createGraphicsPipeline();
-    }
-
-    void RasterPipeline::createDescriptorSetLayout() {
-        VkDescriptorSetLayoutBinding uboLayoutBinding{};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.pImmutableSamplers = nullptr;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; // Now used in both stages
-
-        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-        samplerLayoutBinding.binding = 1;
-        samplerLayoutBinding.descriptorCount = 1;
-        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerLayoutBinding.pImmutableSamplers = nullptr;
-        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        VkDescriptorSetLayoutBinding materialLayoutBinding{};
-        materialLayoutBinding.binding = 2;
-        materialLayoutBinding.descriptorCount = 1;
-        materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        materialLayoutBinding.pImmutableSamplers = nullptr;
-        materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        std::array<VkDescriptorSetLayoutBinding, 3> bindings = {uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding};
-
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
-
-        if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor set layout!");
-        }
     }
 
     void RasterPipeline::createGraphicsPipeline() {
@@ -286,11 +251,7 @@ namespace AzVulk {
             pipelineLayout = VK_NULL_HANDLE;
         }
         
-        if (descriptorSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
-            descriptorSetLayout = VK_NULL_HANDLE;
-        }
-        
+        // Note: descriptorSetLayout is now managed by DescriptorManager, don't destroy it here
         // Note: renderPass is managed externally, don't destroy it here
     }
 }
