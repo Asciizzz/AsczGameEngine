@@ -50,7 +50,8 @@ void Application::initVulkan() {
 
     // Create shared render pass for forward rendering
     auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapChain->imageFormat, msaaManager->msaaSamples);
+        swapChain->imageFormat, msaaManager->msaaSamples
+    );
     mainRenderPass = std::make_unique<RenderPass>(vulkanDevice->device, renderPassConfig);
 
     // Create descriptor manager first and get the standard layout
@@ -293,10 +294,10 @@ void Application::initVulkan() {
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 120;
-    grassConfig.worldSizeZ = 120;
-    grassConfig.baseDensity = 8;
-    grassConfig.heightVariance = 1.9f;
+    grassConfig.worldSizeX = 80;
+    grassConfig.worldSizeZ = 80;
+    grassConfig.baseDensity = 12;
+    grassConfig.heightVariance = 3.9f;
     grassConfig.lowVariance = 0.1f;
     grassConfig.numHeightNodes = 150;
     grassConfig.enableWind = true;

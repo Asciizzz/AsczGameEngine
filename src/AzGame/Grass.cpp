@@ -75,15 +75,15 @@ void Grass::generateHeightMap(std::mt19937& generator) {
         int radiusInt = static_cast<int>(std::ceil(config.falloffRadius));
         
         for (int x = std::max(0, centerX - radiusInt); 
-             x < std::min(config.worldSizeX, centerX + radiusInt + 1); ++x) {
+            x < std::min(config.worldSizeX, centerX + radiusInt + 1); ++x) {
             for (int z = std::max(0, centerZ - radiusInt); 
-                 z < std::min(config.worldSizeZ, centerZ + radiusInt + 1); ++z) {
+                z < std::min(config.worldSizeZ, centerZ + radiusInt + 1); ++z) {
                 float distance = std::sqrt((x - centerX) * (x - centerX) + (z - centerZ) * (z - centerZ));
                 
                 if (distance <= config.falloffRadius) {
                     // Smooth falloff using cosine interpolation for natural curves
-                    float normalizedDistance = distance / config.falloffRadius;
-                    float influence = 0.5f * (1.0f + std::cos(normalizedDistance * glm::pi<float>()));
+                    float normalizedDistance = distance / config.falloffRadius * 0.5f;
+                    float influence = 0.2f * (1.0f + std::cos(normalizedDistance * glm::pi<float>()));
                     heightMap[x][z] += nodeHeight * influence;
                 }
             }
@@ -204,7 +204,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 float worldZ = (gridZ + rnd_offset(generator)) * terrainScale;
                 
                 auto [terrainHeight, terrainNormal] = getTerrainInfoAt(worldX, worldZ);
-                
+
                 // For steeper areas, add random variation
                 bool isExtraFromSteepness = attempt >= baseGrassDensity;
                 if (isExtraFromSteepness) {
