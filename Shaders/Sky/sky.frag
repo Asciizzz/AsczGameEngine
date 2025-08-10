@@ -15,34 +15,35 @@ layout(location = 0) out vec4 outColor;
 // Sky calculation function (your original path tracer algorithm)
 vec3 calculateSkyColor(vec3 rayDir) {
     vec3 sunDir = normalize(vec3(-1.0, -0.3, 1.0));
-    // vec3 skyZenith = vec3(0.1, 0.2, 0.9);   // Blue zenith (727 WYSI)  
-    // vec3 skyHorizon = vec3(1.0, 1.0, 1.0);  // White horizon
-    // vec3 groundColor = vec3(1.0, 1.0, 1.0); // White ground
+
+    // vec3 skyZenith = vec3(0.8, 0.6, 0.2);
+    // vec3 skyHorizon = vec3(1.0, 0.8, 0.5);
+    // vec3 groundColor = vec3(1.0, 0.8, 0.5);
     
     // Custom color
-    vec3 skyZenith = vec3(0.8, 0.6, 0.2);
-    vec3 skyHorizon = vec3(1.0, 0.8, 0.5);
-    vec3 groundColor = vec3(1.0, 0.8, 0.5);
+    vec3 skyZenith = vec3(0.2098, 0.425, 0.586);
+    vec3 skyHorizon = vec3(1.0, 0.9, 0.4);
+    vec3 groundColor = vec3(1.0, 1.0, 1.0);
+
+    vec3 sunColor = vec3(1.2, 0.8, 0.8);
+
     float sunFocus = 1240.0;
     float sunIntensity = 10.0;
     
     float sky_t = clamp(rayDir.y * 2.2, 0.0, 1.0);
-    float skyGradT = pow(sky_t, 0.35);
+    float skyGradT = pow(sky_t, 0.45);
     vec3 skyGrad = mix(skyHorizon, skyZenith, skyGradT);
-    
+
     // Sun calculation
     float SdotR = dot(sunDir, rayDir);
     SdotR = max(0.0, -SdotR);
     float sun_t = pow(SdotR, sunFocus) * sunIntensity;
-    
+    vec3 sunIllumination = sunColor * sun_t;
+
     // Sky mask (above/below horizon)
     bool sky_mask = rayDir.y > 0.0;
-    
-    if (sky_mask) {
-        return skyGrad + vec3(sun_t);
-    } else {
-        return groundColor;
-    }
+
+    return sky_mask ? skyGrad + sunIllumination : groundColor;
 }
 
 // Reconstruct ray direction from screen coordinates

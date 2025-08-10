@@ -32,21 +32,19 @@ void main() {
 
     float distance = length(fragWorldPos - glb.cameraPos.xyz);
     
-    float maxFogDistance = 60.0;
+    float maxFogDistance = 100.0;
     float fogFactor = clamp(distance / maxFogDistance, 0.0, 1.0);
     
     fogFactor = smoothstep(0.0, 1.0, fogFactor);
 
-    vec3 skyColor = vec3(0.8, 0.6, 0.2);
+    vec3 skyColor = vec3(0.3098, 0.525, 0.686);
 
     float normalBlend = material.prop1.z;
     vec3 normal = normalize(fragWorldNrml);
     vec3 normalColor = (normal + 1.0) * 0.5;
 
-    vec3 tintColor = vec3(0.8, 0.6, 0.2);
-
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
-    vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * tintColor;
+    vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * skyColor;
     
     rgbFinal = mix(rgbFinal * vertexLightFactor, skyColor, fogFactor);
     
