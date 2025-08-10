@@ -5,9 +5,10 @@
 #include "AzCore/AzCore.hpp"
 #include "AzVulk/AzVulk.hpp"
 #include "Az3D/Az3D.hpp"
-#include "AzGame/Grass.hpp"
 
 #include "AzBeta/AzBeta.hpp"
+#include "AzGame/Grass.hpp"
+
 
 class Application {
 public:

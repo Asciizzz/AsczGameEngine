@@ -263,7 +263,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 // Create grass transform
                 Transform grassTrform;
                 grassTrform.pos = glm::vec3(worldX, terrainHeight, worldZ);
-                grassTrform.scl = glm::vec3(1.0f, baseGrassHeight * 10.0f, 1.0f);
+                grassTrform.scl = glm::vec3(1.0f, baseGrassHeight * 1.2f, 1.0f);
                 grassTrform.rotateY(rnd_rot(generator));
                 
                 // Align grass to terrain normal

@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+
 #include "AzVulk/Device.hpp"
 
 namespace Az3D {
@@ -16,7 +17,7 @@ namespace AzVulk {
         DescriptorManager(const Device& device);
         ~DescriptorManager();
 
-        
+
         DescriptorManager(const DescriptorManager&) = delete;
         DescriptorManager& operator=(const DescriptorManager&) = delete;
 
@@ -28,6 +29,10 @@ namespace AzVulk {
                                             const Az3D::Texture* texture, size_t materialIndex);
         void createDescriptorSetsForMaterialWithUBO(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
                                                     const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
+                                                    size_t materialIndex);
+        void createDescriptorSetsForMaterialWithDepth(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
+                                                    const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
+                                                    VkImageView depthImageView, VkSampler depthSampler,
                                                     size_t materialIndex);
         
         VkDescriptorSet getDescriptorSet(uint32_t frameIndex, size_t materialIndex);

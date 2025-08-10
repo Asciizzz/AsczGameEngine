@@ -24,6 +24,7 @@ namespace AzVulk {
         VkImage depthImage = VK_NULL_HANDLE;
         VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
         VkImageView depthImageView = VK_NULL_HANDLE;
+        VkSampler depthSampler = VK_NULL_HANDLE;  // For sampling depth in shaders
         VkFormat depthFormat;
 
         // Helper methods 
