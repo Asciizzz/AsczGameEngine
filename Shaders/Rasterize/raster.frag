@@ -3,6 +3,10 @@
 layout(binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
+    vec4 cameraPos;    // xyz: camera position, w: fov
+    vec4 cameraForward; // xyz: forward direction, w: aspect ratio
+    vec4 cameraRight;
+    vec4 cameraUp;
 } glb;
 
 layout(binding = 1) uniform sampler2D txtrSmplr;
@@ -16,7 +20,7 @@ layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragWorldNrml;
 layout(location = 2) in vec3 fragWorldPos;
 layout(location = 3) in vec4 fragInstanceColor;
-layout(location = 4) in float vertexLightFactor;  // Pre-computed from vertex shader
+layout(location = 4) in float vertexLightFactor;
 
 layout(location = 0) out vec4 outColor;
 
@@ -26,17 +30,27 @@ void main() {
 
     if (texColor.a < discardThreshold) { discard; }
 
-    // Normal material rendering
+    float distance = length(fragWorldPos - glb.cameraPos.xyz);
+    
+    float maxFogDistance = 60.0;
+    float fogFactor = clamp(distance / maxFogDistance, 0.0, 1.0);
+    
+    fogFactor = smoothstep(0.0, 1.0, fogFactor);
+
+    vec3 skyColor = vec3(0.8, 0.6, 0.2);
+
     float normalBlend = material.prop1.z;
     vec3 normal = normalize(fragWorldNrml);
     vec3 normalColor = (normal + 1.0) * 0.5;
 
-    vec3 skyColor = vec3(0.8, 0.6, 0.2);
+    vec3 tintColor = vec3(0.8, 0.6, 0.2);
 
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
-    vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * skyColor;
+    vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * tintColor;
+    
+    rgbFinal = mix(rgbFinal * vertexLightFactor, skyColor, fogFactor);
+    
     float alpha = texColor.a * fragInstanceColor.a;
 
-    // Use the pre-computed lighting from vertex shader
-    outColor = vec4(rgbFinal * vertexLightFactor, alpha);
+    outColor = vec4(rgbFinal, alpha * fogFactor);
 }

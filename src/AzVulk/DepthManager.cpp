@@ -2,6 +2,7 @@
 #include "AzVulk/Device.hpp"
 #include <stdexcept>
 #include <algorithm>
+#include <cstdio>
 
 namespace AzVulk {
     DepthManager::DepthManager(const Device& device) : vulkanDevice(device) {}
@@ -12,11 +13,6 @@ namespace AzVulk {
 
     void DepthManager::cleanup() {
         VkDevice logicalDevice = vulkanDevice.device;
-
-        if (depthSampler != VK_NULL_HANDLE) {
-            vkDestroySampler(logicalDevice, depthSampler, nullptr);
-            depthSampler = VK_NULL_HANDLE;
-        }
 
         if (depthImageView != VK_NULL_HANDLE) {
             vkDestroyImageView(logicalDevice, depthImageView, nullptr);
@@ -41,32 +37,11 @@ namespace AzVulk {
         depthFormat = findDepthFormat();
 
         createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                     depthImage, depthImageMemory, msaaSamples);
 
         depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-        // Create depth sampler for shader access
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter = VK_FILTER_LINEAR;
-        samplerInfo.minFilter = VK_FILTER_LINEAR;
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.anisotropyEnable = VK_FALSE;
-        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.compareEnable = VK_FALSE;  // Set to VK_TRUE for shadow mapping
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        samplerInfo.mipLodBias = 0.0f;
-        samplerInfo.minLod = 0.0f;
-        samplerInfo.maxLod = 0.0f;
-
-        if (vkCreateSampler(vulkanDevice.device, &samplerInfo, nullptr, &depthSampler) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create depth sampler!");
-        }
     }
 
     VkFormat DepthManager::findDepthFormat() {
