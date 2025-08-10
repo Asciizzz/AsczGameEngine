@@ -17,7 +17,6 @@ namespace AzVulk {
         DescriptorManager(const Device& device);
         ~DescriptorManager();
 
-
         DescriptorManager(const DescriptorManager&) = delete;
         DescriptorManager& operator=(const DescriptorManager&) = delete;
 
