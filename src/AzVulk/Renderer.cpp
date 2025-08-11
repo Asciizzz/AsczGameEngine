@@ -227,8 +227,8 @@ namespace AzVulk {
         for (const auto& [materialIndex, meshIndices] : materialToMeshes) {
 
             // Bind both global (set 0) and material (set 1) descriptor sets
-            VkDescriptorSet globalSet = descriptorManager.getGlobalDescriptorSet(currentFrame);
-            VkDescriptorSet materialSet = descriptorManager.getMaterialDescriptorSet(currentFrame, materialIndex);
+            VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
+            VkDescriptorSet materialSet = descriptorManager.materialDynamicDescriptor.getMapSet(materialIndex, currentFrame);
             std::array<VkDescriptorSet, 2> sets = {globalSet, materialSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     pipeline.pipelineLayout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
@@ -273,7 +273,7 @@ namespace AzVulk {
 
 
         // Bind only the global descriptor set (set 0) for sky
-        VkDescriptorSet globalSet = descriptorManager.getGlobalDescriptorSet(currentFrame);
+        VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                     skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
 

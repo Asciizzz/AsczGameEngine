@@ -56,12 +56,11 @@ void Application::initVulkan() {
 
 
     // Create descriptor manager and both set layouts
-    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice);
-    descriptorManager->createDescriptorSetLayouts();
-    descriptorManager->createDynamicMaterialDescriptorLayout(2);
+    descriptorManager = std::make_unique<DescriptorManager>(vulkanDevice->device);
+    descriptorManager->createDescriptorSetLayouts(2);
 
     std::vector<VkDescriptorSetLayout> setLayouts = {
-        descriptorManager->globalDescriptorSetLayout,
+        descriptorManager->globalDynamicDescriptor.setLayout,
         descriptorManager->materialDynamicDescriptor.setLayout
     };
 
@@ -392,7 +391,7 @@ void Application::initVulkan() {
     bufferRef.createMaterialUniformBuffers(materialVector);
 
     // Create descriptor pools and sets (split global/material)
-    descManager.createDescriptorPools(2, matManager.materials.size());
+    descManager.createDescriptorPools(matManager.materials.size());
     descManager.createGlobalDescriptorSets(bufferRef.uniformBuffers, sizeof(GlobalUBO));
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);

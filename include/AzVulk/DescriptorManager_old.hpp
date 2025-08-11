@@ -34,40 +34,54 @@ namespace AzVulk {
         void createPool(const std::vector<VkDescriptorType>& types);
 
         std::vector<VkDescriptorSet> sets;
-        const VkDescriptorSet getSet(uint32_t frameIndex) const { return sets[frameIndex]; }
-        void moveSet(std::vector<VkDescriptorSet>& newLocation) { newLocation = std::move(sets); }
+        void createDescriptorSet(std::vector<VkWriteDescriptorSet>& writes);
 
-        std::unordered_map<size_t, std::vector<VkDescriptorSet>> mapSets;
-        const VkDescriptorSet& getMapSet(size_t key, uint32_t frameIndex) const {
-            return mapSets.at(key)[frameIndex];
-        }
-        void moveMapSet(size_t key, std::vector<VkDescriptorSet>& newLocation) { 
-            newLocation = std::move(mapSets[key]); 
-            mapSets.erase(key);
-        }
+        VkDescriptorSet getSet(uint32_t frameIndex) const { return sets[frameIndex]; }
+        void relocateSet(std::vector<VkDescriptorSet>& newLocation) { sets = std::move(newLocation); }
     };
 
 
     class DescriptorManager {
     public:
-        DescriptorManager(VkDevice device);
+        DescriptorManager(const Device& device);
         ~DescriptorManager();
 
         DescriptorManager(const DescriptorManager&) = delete;
         DescriptorManager& operator=(const DescriptorManager&) = delete;
-
-        VkDevice device;
-
+        
         std::unordered_map<size_t, std::vector<VkDescriptorSet>> materialDescriptorSets; // materialIndex -> [frame]
 
         DynamicDescriptor materialDynamicDescriptor;
         DynamicDescriptor globalDynamicDescriptor;
 
-        // Create split descriptor set layouts (set 0: global UBO, set 1: material UBO+texture)
-        void createDescriptorSetLayouts(uint32_t maxFramesInFlight);
-        void createDescriptorPools(uint32_t maxMaterials = 10);
+        void createDynamicMaterialDescriptorLayout(uint32_t maxFramesInFlight);
 
-        void createMaterialDescriptorSets(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex);
+        // Create split descriptor set layouts (set 0: global UBO, set 1: material UBO+texture)
+        void createDescriptorSetLayouts();
+        void createDescriptorPools(uint32_t maxFramesInFlight, uint32_t maxMaterials = 10);
+
         void createGlobalDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize);
+        void createMaterialDescriptorSets(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex);
+
+        void freeAllDescriptorSets();
+        VkDescriptorSet getMaterialDescriptorSet(uint32_t frameIndex, size_t materialIndex);
+        VkDescriptorSet getGlobalDescriptorSet(uint32_t frameIndex);
+
+        const Device& vulkanDevice;
+
+
+        // Descriptor set layouts
+        VkDescriptorSetLayout globalDescriptorSetLayout = VK_NULL_HANDLE; // set 0
+        VkDescriptorSetLayout materialDescriptorSetLayout = VK_NULL_HANDLE; // set 1
+
+        // Descriptor pools
+        VkDescriptorPool globalDescriptorPool = VK_NULL_HANDLE;
+        VkDescriptorPool materialDescriptorPool = VK_NULL_HANDLE;
+
+        // Descriptor sets
+        std::vector<VkDescriptorSet> globalDescriptorSets; // [frame]
+
+        uint32_t maxFramesInFlight = 2;
+        uint32_t maxMaterials = 10;
     };
 }
