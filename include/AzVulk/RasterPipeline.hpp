@@ -38,10 +38,11 @@ namespace AzVulk {
 
     class RasterPipeline {
     public:
-        RasterPipeline( VkDevice device, VkRenderPass renderPass,
-                        VkDescriptorSetLayout descriptorSetLayout,
-                        const char* vertexShaderPath, const char* fragmentShaderPath,
-                        const RasterPipelineConfig& config);
+    RasterPipeline( VkDevice device, VkRenderPass renderPass,
+            VkDescriptorSetLayout globalDescriptorSetLayout,
+            VkDescriptorSetLayout materialDescriptorSetLayout,
+            const char* vertexShaderPath, const char* fragmentShaderPath,
+            const RasterPipelineConfig& config);
         ~RasterPipeline();
         
         RasterPipeline(const RasterPipeline&) = delete;
@@ -61,7 +62,8 @@ namespace AzVulk {
         VkRenderPass renderPass;
 
         // Pipeline layout and objects
-        VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+    VkDescriptorSetLayout globalDescriptorSetLayout = VK_NULL_HANDLE;
+    VkDescriptorSetLayout materialDescriptorSetLayout = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 

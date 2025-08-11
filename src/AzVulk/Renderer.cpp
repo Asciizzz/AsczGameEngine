@@ -225,10 +225,13 @@ namespace AzVulk {
         
         // Render by material groups
         for (const auto& [materialIndex, meshIndices] : materialToMeshes) {
-            // Bind descriptor set for this material
-            VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, materialIndex);
+
+            // Bind both global (set 0) and material (set 1) descriptor sets
+            VkDescriptorSet globalSet = descriptorManager.getGlobalDescriptorSet(currentFrame);
+            VkDescriptorSet materialSet = descriptorManager.getMaterialDescriptorSet(currentFrame, materialIndex);
+            std::array<VkDescriptorSet, 2> sets = {globalSet, materialSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    pipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                                    pipeline.pipelineLayout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
             for (size_t meshIndex : meshIndices) {
                 // Get instance count directly from the pre-computed mapping
@@ -268,10 +271,11 @@ namespace AzVulk {
     // Bind sky pipeline
     vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
 
-    // Bind descriptor sets (use material index 0 for global UBO)
-    VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, 0);
+
+    // Bind only the global descriptor set (set 0) for sky
+    VkDescriptorSet globalSet = descriptorManager.getGlobalDescriptorSet(currentFrame);
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                skyPipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
 
     // Bind dummy vertex buffer for both vertex and instance bindings (Vulkan requires this even if not used)
     VkBuffer dummyBuffers[] = { buffer.dummyVertexBuffer, buffer.dummyVertexBuffer };

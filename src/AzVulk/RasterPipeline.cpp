@@ -45,15 +45,18 @@ namespace AzVulk {
         return config;
     }
 
-    RasterPipeline::RasterPipeline( VkDevice device, VkRenderPass renderPass,
-                                    VkDescriptorSetLayout descriptorSetLayout,
-                                    const char* vertexShaderPath, const char* fragmentShaderPath,
-                                    const RasterPipelineConfig& config)
-        : device(device), renderPass(renderPass), descriptorSetLayout(descriptorSetLayout),
-          vertexShaderPath(vertexShaderPath), fragmentShaderPath(fragmentShaderPath),
-          config(config) {
 
-        createGraphicsPipeline();
+    RasterPipeline::RasterPipeline( VkDevice device, VkRenderPass renderPass,
+                                                                    VkDescriptorSetLayout globalDescriptorSetLayout,
+                                                                    VkDescriptorSetLayout materialDescriptorSetLayout,
+                                                                    const char* vertexShaderPath, const char* fragmentShaderPath,
+                                                                    const RasterPipelineConfig& config)
+            : device(device), renderPass(renderPass),
+                globalDescriptorSetLayout(globalDescriptorSetLayout),
+                materialDescriptorSetLayout(materialDescriptorSetLayout),
+                vertexShaderPath(vertexShaderPath), fragmentShaderPath(fragmentShaderPath),
+                config(config) {
+            createGraphicsPipeline();
     }
 
     RasterPipeline::~RasterPipeline() {
@@ -203,10 +206,13 @@ namespace AzVulk {
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicState.pDynamicStates = dynamicStates.data();
 
+
+        // Use two set layouts: set 0 (global), set 1 (material)
+        std::array<VkDescriptorSetLayout, 2> setLayouts = {globalDescriptorSetLayout, materialDescriptorSetLayout};
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
+        pipelineLayoutInfo.pSetLayouts = setLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
 

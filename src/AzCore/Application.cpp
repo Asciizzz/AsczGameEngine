@@ -54,34 +54,37 @@ void Application::initVulkan() {
     );
     mainRenderPass = std::make_unique<RenderPass>(vulkanDevice->device, renderPassConfig);
 
-    // Create descriptor manager first and get the standard layout
-    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice);
-    VkDescriptorSetLayout standardLayout = descriptorManager->createStandardRasterLayout();
 
+    // Create descriptor manager and both set layouts
+    descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice);
+    descriptorManager->createDescriptorSetLayouts();
+
+    // Use both layouts for all pipelines
     opaquePipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
-        standardLayout,
+        descriptorManager->globalDescriptorSetLayout,
+        descriptorManager->materialDescriptorSetLayout,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
     );
 
-    // Create a separate transparent pipeline (uses same render pass and layout)
     transparentPipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
-        standardLayout,
+        descriptorManager->globalDescriptorSetLayout,
+        descriptorManager->materialDescriptorSetLayout,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
     );
 
-    // Create sky pipeline (renders first as background)
     skyPipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
-        standardLayout,
+        descriptorManager->globalDescriptorSetLayout,
+        descriptorManager->materialDescriptorSetLayout,
         "Shaders/Sky/sky.vert.spv",
         "Shaders/Sky/sky.frag.spv",
         RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
@@ -385,14 +388,13 @@ void Application::initVulkan() {
     }
     bufferRef.createMaterialUniformBuffers(materialVector);
 
-    // Create descriptor sets for materials
-    descManager.createDescriptorPool(2, matManager.materials.size());
-
+    // Create descriptor pools and sets (split global/material)
+    descManager.createDescriptorPools(2, matManager.materials.size());
+    descManager.createGlobalDescriptorSets(bufferRef.uniformBuffers, sizeof(GlobalUBO));
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
         size_t textureIndex = matManager.materials[i]->diffTxtr;
-        descManager.createDescriptorSets(
-            bufferRef.uniformBuffers, sizeof(GlobalUBO), 
+        descManager.createMaterialDescriptorSets(
             &texManager.textures[textureIndex], materialUniformBuffer, i
         );
     }
@@ -436,12 +438,12 @@ bool Application::checkWindowResize() {
     auto& matManager = *resourceManager->materialManager;
 
     descriptorManager->freeAllDescriptorSets();
-    descriptorManager->createDescriptorPool(2, matManager.materials.size());
+    descriptorManager->createDescriptorPools(2, matManager.materials.size());
+    descriptorManager->createGlobalDescriptorSets(bufferRef.uniformBuffers, sizeof(GlobalUBO));
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
         size_t textureIndex = matManager.materials[i]->diffTxtr;
-        descriptorManager->createDescriptorSets(
-            bufferRef.uniformBuffers, sizeof(GlobalUBO), 
+        descriptorManager->createMaterialDescriptorSets(
             &texManager.textures[textureIndex], materialUniformBuffer, i
         );
     }

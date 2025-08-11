@@ -6,14 +6,20 @@
 namespace AzVulk {
 
     void DescriptorManager::freeAllDescriptorSets() {
-        if (descriptorPool != VK_NULL_HANDLE) {
+        // Free material descriptor sets
+        if (materialDescriptorPool != VK_NULL_HANDLE) {
             for (auto& pair : materialDescriptorSets) {
                 const std::vector<VkDescriptorSet>& sets = pair.second;
                 if (!sets.empty()) {
-                    vkFreeDescriptorSets(vulkanDevice.device, descriptorPool, static_cast<uint32_t>(sets.size()), sets.data());
+                    vkFreeDescriptorSets(vulkanDevice.device, materialDescriptorPool, static_cast<uint32_t>(sets.size()), sets.data());
                 }
             }
             materialDescriptorSets.clear();
+        }
+        // Free global descriptor sets
+        if (globalDescriptorPool != VK_NULL_HANDLE && !globalDescriptorSets.empty()) {
+            vkFreeDescriptorSets(vulkanDevice.device, globalDescriptorPool, static_cast<uint32_t>(globalDescriptorSets.size()), globalDescriptorSets.data());
+            globalDescriptorSets.clear();
         }
     }
     DescriptorManager::DescriptorManager(const Device& device)
@@ -21,126 +27,192 @@ namespace AzVulk {
     }
 
     DescriptorManager::~DescriptorManager() {
-        // Explicitly free all descriptor sets if pool allows it
-        if (descriptorPool != VK_NULL_HANDLE) {
+        // Free and destroy material descriptor sets and pool
+        if (materialDescriptorPool != VK_NULL_HANDLE) {
             for (auto& pair : materialDescriptorSets) {
                 const std::vector<VkDescriptorSet>& sets = pair.second;
                 if (!sets.empty()) {
-                    vkFreeDescriptorSets(vulkanDevice.device, descriptorPool, static_cast<uint32_t>(sets.size()), sets.data());
+                    vkFreeDescriptorSets(vulkanDevice.device, materialDescriptorPool, static_cast<uint32_t>(sets.size()), sets.data());
                 }
             }
             materialDescriptorSets.clear();
-            vkDestroyDescriptorPool(vulkanDevice.device, descriptorPool, nullptr);
+            vkDestroyDescriptorPool(vulkanDevice.device, materialDescriptorPool, nullptr);
         }
-        if (descriptorSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(vulkanDevice.device, descriptorSetLayout, nullptr);
+        // Free and destroy global descriptor sets and pool
+        if (globalDescriptorPool != VK_NULL_HANDLE) {
+            if (!globalDescriptorSets.empty()) {
+                vkFreeDescriptorSets(vulkanDevice.device, globalDescriptorPool, static_cast<uint32_t>(globalDescriptorSets.size()), globalDescriptorSets.data());
+            }
+            globalDescriptorSets.clear();
+            vkDestroyDescriptorPool(vulkanDevice.device, globalDescriptorPool, nullptr);
         }
-    }
-
-    VkDescriptorSetLayout DescriptorManager::createStandardRasterLayout() {
-        if (descriptorSetLayout != VK_NULL_HANDLE) {
-            return descriptorSetLayout; // Already created
+        // Destroy layouts
+        if (materialDescriptorSetLayout != VK_NULL_HANDLE) {
+            vkDestroyDescriptorSetLayout(vulkanDevice.device, materialDescriptorSetLayout, nullptr);
         }
-
-        VkDescriptorSetLayoutBinding uboLayoutBinding{};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.pImmutableSamplers = nullptr;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        VkDescriptorSetLayoutBinding textureLayoutBinding{};
-        textureLayoutBinding.binding = 1;
-        textureLayoutBinding.descriptorCount = 1;
-        textureLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        textureLayoutBinding.pImmutableSamplers = nullptr;
-        textureLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        VkDescriptorSetLayoutBinding materialLayoutBinding{};
-        materialLayoutBinding.binding = 2;
-        materialLayoutBinding.descriptorCount = 1;
-        materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        materialLayoutBinding.pImmutableSamplers = nullptr;
-        materialLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-
-    std::array<VkDescriptorSetLayoutBinding, 3> bindings = {uboLayoutBinding, textureLayoutBinding, materialLayoutBinding};
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
-
-        if (vkCreateDescriptorSetLayout(vulkanDevice.device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor set layout!");
-        }
-
-        return descriptorSetLayout;
-    }
-
-    void DescriptorManager::createDescriptorPool(uint32_t maxFramesInFlight, uint32_t maxMaterials) {
-        // Destroy old pool if it exists (after freeing sets)
-        if (descriptorPool != VK_NULL_HANDLE) {
-            freeAllDescriptorSets();
-            vkDestroyDescriptorPool(vulkanDevice.device, descriptorPool, nullptr);
-            descriptorPool = VK_NULL_HANDLE;
-        }
-
-        this->maxFramesInFlight = maxFramesInFlight;
-        this->maxMaterials = maxMaterials;
-
-        std::array<VkDescriptorPoolSize, 3> poolSizes{};
-
-        // Global uniform buffers: maxMaterials * maxFramesInFlight (each material needs uniform buffer per frame)
-        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[0].descriptorCount = maxMaterials * maxFramesInFlight;
-
-        // Combined image samplers: maxMaterials * maxFramesInFlight (material textures)
-        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight;
-
-        // Material uniform buffers: maxMaterials (one per material, not per frame)
-        poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[2].descriptorCount = maxMaterials;
-
-        VkDescriptorPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-        poolInfo.pPoolSizes = poolSizes.data();
-        poolInfo.maxSets = maxMaterials * maxFramesInFlight; // Total descriptor sets
-        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow freeing individual sets
-
-        if (vkCreateDescriptorPool(vulkanDevice.device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor pool!");
+        if (globalDescriptorSetLayout != VK_NULL_HANDLE) {
+            vkDestroyDescriptorSetLayout(vulkanDevice.device, globalDescriptorSetLayout, nullptr);
         }
     }
 
-    void DescriptorManager::createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
-                                                const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
-                                                size_t materialIndex) {
-        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, descriptorSetLayout);
-        
+    // Create two descriptor set layouts: set 0 (global UBO), set 1 (material UBO + texture)
+    void DescriptorManager::createDescriptorSetLayouts() {
+        // Set 0: Global UBO
+        if (globalDescriptorSetLayout == VK_NULL_HANDLE) {
+            VkDescriptorSetLayoutBinding globalUBOBinding{};
+            globalUBOBinding.binding = 0;
+            globalUBOBinding.descriptorCount = 1;
+            globalUBOBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            globalUBOBinding.pImmutableSamplers = nullptr;
+            globalUBOBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            VkDescriptorSetLayoutCreateInfo globalLayoutInfo{};
+            globalLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            globalLayoutInfo.bindingCount = 1;
+            globalLayoutInfo.pBindings = &globalUBOBinding;
+
+            if (vkCreateDescriptorSetLayout(vulkanDevice.device, &globalLayoutInfo, nullptr, &globalDescriptorSetLayout) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create global descriptor set layout!");
+            }
+        }
+
+        // Set 1: Material UBO + Texture
+        if (materialDescriptorSetLayout == VK_NULL_HANDLE) {
+            VkDescriptorSetLayoutBinding materialUBOBinding{};
+            materialUBOBinding.binding = 0;
+            materialUBOBinding.descriptorCount = 1;
+            materialUBOBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            materialUBOBinding.pImmutableSamplers = nullptr;
+            materialUBOBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            VkDescriptorSetLayoutBinding textureBinding{};
+            textureBinding.binding = 1;
+            textureBinding.descriptorCount = 1;
+            textureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            textureBinding.pImmutableSamplers = nullptr;
+            textureBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            std::array<VkDescriptorSetLayoutBinding, 2> bindings = {materialUBOBinding, textureBinding};
+
+            VkDescriptorSetLayoutCreateInfo materialLayoutInfo{};
+            materialLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            materialLayoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+            materialLayoutInfo.pBindings = bindings.data();
+
+            if (vkCreateDescriptorSetLayout(vulkanDevice.device, &materialLayoutInfo, nullptr, &materialDescriptorSetLayout) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create material descriptor set layout!");
+            }
+        }
+    }
+
+    // Create two pools: one for global UBOs, one for material sets
+    void DescriptorManager::createDescriptorPools(uint32_t maxFramesInFlight, uint32_t maxMaterials) {
+    // Destroy old pools if they exist
+    if (globalDescriptorPool != VK_NULL_HANDLE) {
+        vkDestroyDescriptorPool(vulkanDevice.device, globalDescriptorPool, nullptr);
+        globalDescriptorPool = VK_NULL_HANDLE;
+    }
+    if (materialDescriptorPool != VK_NULL_HANDLE) {
+        vkDestroyDescriptorPool(vulkanDevice.device, materialDescriptorPool, nullptr);
+        materialDescriptorPool = VK_NULL_HANDLE;
+    }
+
+    this->maxFramesInFlight = maxFramesInFlight;
+    this->maxMaterials = maxMaterials;
+
+    // Pool for global UBOs (one per frame)
+    VkDescriptorPoolSize globalPoolSize{};
+    globalPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    globalPoolSize.descriptorCount = maxFramesInFlight;
+
+    VkDescriptorPoolCreateInfo globalPoolInfo{};
+    globalPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    globalPoolInfo.poolSizeCount = 1;
+    globalPoolInfo.pPoolSizes = &globalPoolSize;
+    globalPoolInfo.maxSets = maxFramesInFlight;
+    globalPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+    if (vkCreateDescriptorPool(vulkanDevice.device, &globalPoolInfo, nullptr, &globalDescriptorPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create global descriptor pool!");
+    }
+
+    // Pool for material sets (material UBO + texture, per material per frame)
+    std::array<VkDescriptorPoolSize, 2> materialPoolSizes{};
+    materialPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    materialPoolSizes[0].descriptorCount = maxMaterials * maxFramesInFlight;
+    materialPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    materialPoolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight;
+
+    VkDescriptorPoolCreateInfo materialPoolInfo{};
+    materialPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    materialPoolInfo.poolSizeCount = static_cast<uint32_t>(materialPoolSizes.size());
+    materialPoolInfo.pPoolSizes = materialPoolSizes.data();
+    materialPoolInfo.maxSets = maxMaterials * maxFramesInFlight;
+    materialPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+    if (vkCreateDescriptorPool(vulkanDevice.device, &materialPoolInfo, nullptr, &materialDescriptorPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create material descriptor pool!");
+    }
+    }
+
+
+    // Create global UBO descriptor sets (set 0, one per frame)
+    void DescriptorManager::createGlobalDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize) {
+        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, globalDescriptorSetLayout);
+
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = descriptorPool;
+        allocInfo.descriptorPool = globalDescriptorPool;
+        allocInfo.descriptorSetCount = maxFramesInFlight;
+        allocInfo.pSetLayouts = layouts.data();
+
+        globalDescriptorSets.resize(maxFramesInFlight);
+        if (vkAllocateDescriptorSets(vulkanDevice.device, &allocInfo, globalDescriptorSets.data()) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate global descriptor sets");
+        }
+
+        for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = uniformBuffers[i];
+            bufferInfo.offset = 0;
+            bufferInfo.range = uniformBufferSize;
+
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = globalDescriptorSets[i];
+            write.dstBinding = 0;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &bufferInfo;
+
+            vkUpdateDescriptorSets(vulkanDevice.device, 1, &write, 0, nullptr);
+        }
+    }
+
+    // Create material descriptor sets (set 1, per material per frame)
+    void DescriptorManager::createMaterialDescriptorSets(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex) {
+        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, materialDescriptorSetLayout);
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = materialDescriptorPool;
         allocInfo.descriptorSetCount = maxFramesInFlight;
         allocInfo.pSetLayouts = layouts.data();
 
         std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
         if (vkAllocateDescriptorSets(vulkanDevice.device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate descriptor sets for material index: " + std::to_string(materialIndex));
+            throw std::runtime_error("failed to allocate material descriptor sets for material index: " + std::to_string(materialIndex));
         }
 
-        // Configure each descriptor set for this material
-        // I have no regard for safety, fear me
         for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
-            // Global uniform buffer binding (binding 0)
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = uniformBuffers[i];
-            bufferInfo.offset = 0;
-            bufferInfo.range = uniformBufferSize;
+            // Material UBO (binding 0)
+            VkDescriptorBufferInfo materialBufferInfo{};
+            materialBufferInfo.buffer = materialUniformBuffer;
+            materialBufferInfo.offset = 0;
+            materialBufferInfo.range = sizeof(MaterialUBO);
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptorSets[i];
@@ -148,9 +220,9 @@ namespace AzVulk {
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &bufferInfo;
+            descriptorWrites[0].pBufferInfo = &materialBufferInfo;
 
-            // Texture binding (binding 1)
+            // Texture (binding 1)
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView = texture->view;
@@ -164,35 +236,24 @@ namespace AzVulk {
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfo;
 
-            // Material uniform buffer binding (binding 2)
-            VkDescriptorBufferInfo materialBufferInfo{};
-            materialBufferInfo.buffer = materialUniformBuffer;
-            materialBufferInfo.offset = 0;
-            materialBufferInfo.range = sizeof(MaterialUBO);
-
-            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].dstSet = descriptorSets[i];
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pBufferInfo = &materialBufferInfo;
-
-            // Write all descriptors (global UBO, texture, material UBO)
-            uint32_t writeCount = 3;
-            vkUpdateDescriptorSets(vulkanDevice.device, writeCount, descriptorWrites.data(), 0, nullptr);
+            vkUpdateDescriptorSets(vulkanDevice.device, 2, descriptorWrites.data(), 0, nullptr);
         }
 
-        // Store the descriptor sets for this material
         materialDescriptorSets[materialIndex] = std::move(descriptorSets);
     }
 
-    VkDescriptorSet DescriptorManager::getDescriptorSet(uint32_t frameIndex, size_t materialIndex) {
+    VkDescriptorSet DescriptorManager::getMaterialDescriptorSet(uint32_t frameIndex, size_t materialIndex) {
         auto it = materialDescriptorSets.find(materialIndex);
         if (it != materialDescriptorSets.end() && frameIndex < it->second.size()) {
             return it->second[frameIndex];
         }
-        
-        throw std::runtime_error("Descriptor set not found for material index: " + std::to_string(materialIndex) + " frame: " + std::to_string(frameIndex));
+        throw std::runtime_error("Material descriptor set not found for material index: " + std::to_string(materialIndex) + " frame: " + std::to_string(frameIndex));
+    }
+
+    VkDescriptorSet DescriptorManager::getGlobalDescriptorSet(uint32_t frameIndex) {
+        if (frameIndex < globalDescriptorSets.size()) {
+            return globalDescriptorSets[frameIndex];
+        }
+        throw std::runtime_error("Global descriptor set not found for frame: " + std::to_string(frameIndex));
     }
 }
