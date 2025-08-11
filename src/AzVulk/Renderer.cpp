@@ -280,18 +280,10 @@ namespace AzVulk {
     vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
     }
 
-    // Copy depth buffer for sampling in effects
-    void Renderer::copyDepthForSampling(DepthManager& depthManager) {
-        depthManager.copyDepthForSampling(commandBuffers[currentFrame],
-                                        swapChain.extent.width, swapChain.extent.height);
-    }
 
     // End frame: finalize command buffer, submit, and present
     void Renderer::endFrame(uint32_t imageIndex) {
-        if (imageIndex == UINT32_MAX) {
-            // Invalid image index, skip presentation
-            return;
-        }
+        if (imageIndex == UINT32_MAX) return;
 
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
 

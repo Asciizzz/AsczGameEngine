@@ -23,13 +23,14 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        // New split rendering functions for explicit control
+        // Introduction
         uint32_t beginFrame(RasterPipeline& pipeline, Az3D::Camera& camera);
+        // Body
         void drawScene(RasterPipeline& pipeline, Az3D::ModelGroup& modelGroup);
         void drawSky(RasterPipeline& skyPipeline);
-    
-        void copyDepthForSampling(DepthManager& depthManager);
+        // Conclusion
         void endFrame(uint32_t imageIndex);
+        // Thank's for attending my Ted-Talk
 
         // Component references
         const Device& vulkanDevice;

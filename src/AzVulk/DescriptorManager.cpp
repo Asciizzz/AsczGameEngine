@@ -63,19 +63,13 @@ namespace AzVulk {
         materialLayoutBinding.pImmutableSamplers = nullptr;
         materialLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        VkDescriptorSetLayoutBinding depthSamplerLayoutBinding{};
-        depthSamplerLayoutBinding.binding = 3;
-        depthSamplerLayoutBinding.descriptorCount = 1;
-        depthSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        depthSamplerLayoutBinding.pImmutableSamplers = nullptr;
-        depthSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::array<VkDescriptorSetLayoutBinding, 4> bindings = {uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding, depthSamplerLayoutBinding};
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings = {uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding};
 
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
 
         if (vkCreateDescriptorSetLayout(vulkanDevice.device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor set layout!");
@@ -101,9 +95,9 @@ namespace AzVulk {
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = maxMaterials * maxFramesInFlight;
 
-        // Combined image samplers: maxMaterials * maxFramesInFlight * 2 (texture + depth)
+        // Combined image samplers: maxMaterials * maxFramesInFlight (only material textures, no depth)
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight * 2;
+        poolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight;
 
         // Material uniform buffers: maxMaterials (one per material, not per frame)
         poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -123,7 +117,7 @@ namespace AzVulk {
 
     void DescriptorManager::createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
                                                 const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
-                                                size_t materialIndex, VkImageView depthImageView, VkSampler depthSampler) {
+                                                size_t materialIndex) {
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, descriptorSetLayout);
         
         VkDescriptorSetAllocateInfo allocInfo{};
@@ -140,7 +134,7 @@ namespace AzVulk {
         // Configure each descriptor set for this material
         // I have no regard for safety, fear me
         for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
-            std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
 
             // Global uniform buffer binding (binding 0)
             VkDescriptorBufferInfo bufferInfo{};
@@ -184,22 +178,8 @@ namespace AzVulk {
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pBufferInfo = &materialBufferInfo;
 
-            // Depth sampler binding (binding 3)
-            VkDescriptorImageInfo depthImageInfo{};
-            depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            depthImageInfo.imageView = depthImageView;
-            depthImageInfo.sampler = depthSampler;
-
-            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[3].dstSet = descriptorSets[i];
-            descriptorWrites[3].dstBinding = 3;
-            descriptorWrites[3].dstArrayElement = 0;
-            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[3].descriptorCount = 1;
-            descriptorWrites[3].pImageInfo = &depthImageInfo;
-
-            // Write all descriptors (global UBO, texture, material UBO, depth sampler)
-            uint32_t writeCount = 4; // Always write all 4 bindings
+            // Write all descriptors (global UBO, texture, material UBO)
+            uint32_t writeCount = 3;
             vkUpdateDescriptorSets(vulkanDevice.device, writeCount, descriptorWrites.data(), 0, nullptr);
         }
 

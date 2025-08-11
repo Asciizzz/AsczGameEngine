@@ -390,13 +390,10 @@ void Application::initVulkan() {
 
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
-
         size_t textureIndex = matManager.materials[i]->diffTxtr;
-        
         descManager.createDescriptorSets(
             bufferRef.uniformBuffers, sizeof(GlobalUBO), 
-            &texManager.textures[textureIndex], materialUniformBuffer, i,
-            depthManager->depthSamplerView, depthManager->depthSampler
+            &texManager.textures[textureIndex], materialUniformBuffer, i
         );
     }
 
@@ -442,13 +439,10 @@ bool Application::checkWindowResize() {
     descriptorManager->createDescriptorPool(2, matManager.materials.size());
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
-
         size_t textureIndex = matManager.materials[i]->diffTxtr;
-        
         descriptorManager->createDescriptorSets(
             bufferRef.uniformBuffers, sizeof(GlobalUBO), 
-            &texManager.textures[textureIndex], materialUniformBuffer, i,
-            depthManager->depthSamplerView, depthManager->depthSampler
+            &texManager.textures[textureIndex], materialUniformBuffer, i
         );
     }
 
@@ -594,9 +588,6 @@ void Application::mainLoop() {
 
             auto& terrainGroup = grassSystem->terrainModelGroup;
             rendererRef.drawScene(*opaquePipeline, terrainGroup);
-
-            // Copy depth buffer for sampling in effects
-            rendererRef.copyDepthForSampling(*depthManager);
 
             rendererRef.endFrame(imageIndex);
         }
