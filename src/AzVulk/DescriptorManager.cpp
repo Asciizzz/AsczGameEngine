@@ -55,16 +55,22 @@ namespace AzVulk {
         }
     }
 
+
+    VkDescriptorSetLayoutBinding fastBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1) {
+        VkDescriptorSetLayoutBinding bindingInfo{};
+        bindingInfo.binding = binding;
+        bindingInfo.descriptorCount = descriptorCount;
+        bindingInfo.descriptorType = type;
+        bindingInfo.pImmutableSamplers = nullptr;
+        bindingInfo.stageFlags = stageFlags;
+        return bindingInfo;
+    }
+
     // Create two descriptor set layouts: set 0 (global UBO), set 1 (material UBO + texture)
     void DescriptorManager::createDescriptorSetLayouts() {
         // Set 0: Global UBO
         if (globalDescriptorSetLayout == VK_NULL_HANDLE) {
-            VkDescriptorSetLayoutBinding globalUBOBinding{};
-            globalUBOBinding.binding = 0;
-            globalUBOBinding.descriptorCount = 1;
-            globalUBOBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            globalUBOBinding.pImmutableSamplers = nullptr;
-            globalUBOBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            VkDescriptorSetLayoutBinding globalUBOBinding = fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
             VkDescriptorSetLayoutCreateInfo globalLayoutInfo{};
             globalLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -78,19 +84,8 @@ namespace AzVulk {
 
         // Set 1: Material UBO + Texture
         if (materialDescriptorSetLayout == VK_NULL_HANDLE) {
-            VkDescriptorSetLayoutBinding materialUBOBinding{};
-            materialUBOBinding.binding = 0;
-            materialUBOBinding.descriptorCount = 1;
-            materialUBOBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            materialUBOBinding.pImmutableSamplers = nullptr;
-            materialUBOBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-            VkDescriptorSetLayoutBinding textureBinding{};
-            textureBinding.binding = 1;
-            textureBinding.descriptorCount = 1;
-            textureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            textureBinding.pImmutableSamplers = nullptr;
-            textureBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            VkDescriptorSetLayoutBinding materialUBOBinding = fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+            VkDescriptorSetLayoutBinding textureBinding = fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
             std::array<VkDescriptorSetLayoutBinding, 2> bindings = {materialUBOBinding, textureBinding};
 
