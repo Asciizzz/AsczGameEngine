@@ -44,9 +44,9 @@ namespace AzVulk {
         std::vector<VkCommandBuffer> commandBuffers;
         
         // Synchronization objects
-    std::vector<VkSemaphore> imageAvailableSemaphores; // Per frame-in-flight
-    std::vector<VkSemaphore> renderFinishedSemaphores; // Per frame-in-flight
-    std::vector<VkFence> imagesInFlight; // Per swapchain image
+        std::vector<VkFence> imagesInFlight; // Per swapchain image
+        std::vector<VkSemaphore> imageAvailableSemaphores; // Per swapchain image
+        std::vector<VkSemaphore> renderFinishedSemaphores; // Per swapchain image
         std::vector<VkFence> inFlightFences;
         
         uint32_t currentFrame = 0;

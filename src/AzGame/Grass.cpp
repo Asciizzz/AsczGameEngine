@@ -33,9 +33,6 @@ bool Grass::initialize(ResourceManager& resourceManager) {
     generateHeightMap(generator);
     generateTerrainMesh(resourceManager);
 
-    printf("Grass system initialized with %d height nodes, terrain scale %.2f, height scale %.2f\n",
-           config.numHeightNodes, terrainScale, heightScale);
-
     generateGrassInstances(generator);
 
     for (size_t i = 0; i < grassInstances.size(); ++i) {
@@ -50,7 +47,6 @@ bool Grass::initialize(ResourceManager& resourceManager) {
     terrainModelGroup.addInstances(terrainInstances);
     terrainModelGroup.buildMeshMapping();
 
-    printf("Grass system initialized successfully with %zu grass instances!\n", grassInstances.size());
     return true;
 }
 
