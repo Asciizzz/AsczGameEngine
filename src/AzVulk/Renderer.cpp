@@ -271,7 +271,7 @@ namespace AzVulk {
         // Bind descriptor sets (use material index 0 for global UBO)
         VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, 0);
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                               skyPipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+                                skyPipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
         // Draw fullscreen triangle (3 vertices, no input)
         vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);

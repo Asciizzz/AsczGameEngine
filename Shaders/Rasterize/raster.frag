@@ -35,24 +35,20 @@ void main() {
 
     if (texColor.a < discardThreshold) { discard; }
 
-    // Calculate screen coordinates for depth sampling
     vec3 screenCoords = fragScreenPos.xyz / fragScreenPos.w;
     vec2 depthUV = screenCoords.xy * 0.5 + 0.5; // Convert from NDC [-1,1] to UV [0,1]
-    
-    // Sample depth from the copied depth texture
+
     float sampledDepth = texture(depthSampler, depthUV).r;
 
     float near = glb.nearFar.x;
     float far = glb.nearFar.y;
     
-    // Linearize the depth value to get world-space distance
+    // World space depth
     float z = sampledDepth * 2.0 - 1.0; // Back to NDC
     float linearDepth = (2.0 * near * far) / (far + near - z * (far - near));
 
-    // Apply fog based on final distance
-    float maxFogDistance = 50.0;
+    float maxFogDistance = 70.0;
     float fogFactor = clamp(linearDepth / maxFogDistance, 0.0, 1.0);
-    
     fogFactor = smoothstep(0.0, 1.0, fogFactor);
 
     vec3 skyColor = vec3(0.3098, 0.525, 0.686);

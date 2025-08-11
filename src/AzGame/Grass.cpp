@@ -7,6 +7,7 @@
 #include <fstream>
 #include <algorithm>
 #include <cstring>
+#include <execution>
 
 using namespace AzGame;
 using namespace Az3D;
@@ -442,12 +443,20 @@ void Grass::updateGrassInstancesCPU(float deltaTime) {
     glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
 
     // Apply wind animation to each grass instance
-    for (size_t i = 0; i < windGrassInstances.size() && i < grassInstances.size(); ++i) {
+    std::vector<glm::mat4> updatedInstances(grassInstances.size());
+
+    std::vector<size_t> indices(windGrassInstances.size());
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::for_each(std::execution::par, indices.begin(), indices.end(),
+    [&](size_t i) {
+        if (i >= windGrassInstances.size()) return;
+
         const auto& windData = windGrassInstances[i];
         float baseHeight = windData.windData.x;
         float flexibility = windData.windData.y;
         float phaseOffset = windData.windData.z;
-        
+
         // Get base position (bottom of grass blade)
         glm::vec3 basePos = glm::vec3(windData.modelMatrix[3]);
         
@@ -510,15 +519,15 @@ void Grass::updateGrassInstancesCPU(float deltaTime) {
             glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
             glm::mat4 rotationMatrix = glm::mat4_cast(finalRot);
             glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
-            
-            auto& grassInstance = grassModelGroup.modelInstances[i];
 
-            grassInstance.modelMatrix() = translationMatrix * rotationMatrix * scaleMatrix;
-
-            // Add to bulk update list instead of individual queueUpdate()
-            // updatedInstances.push_back(i);
+            updatedInstances[i] = translationMatrix * rotationMatrix * scaleMatrix;
         }
+    });
+
+    for (size_t i = 0; i < updatedInstances.size() && i < grassInstances.size(); ++i) {
+        grassModelGroup.modelInstances[i].modelMatrix() = updatedInstances[i];
     }
 
-    grassModelGroup.meshMapping[grassMeshIndex].updateIndices = grassInstanceUpdateQueue;
+    auto& grassMeshMap = grassModelGroup.meshMapping[grassMeshIndex];
+    grassMeshMap.updateIndices = grassInstanceUpdateQueue;
 }
