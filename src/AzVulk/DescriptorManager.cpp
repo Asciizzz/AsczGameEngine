@@ -12,8 +12,7 @@ namespace AzVulk {
     // Create two descriptor set layouts: set 0 (global UBO), set 1 (material UBO + texture)
     void DescriptorManager::createDescriptorSetLayouts(uint32_t maxFramesInFlight) {
         // For material
-        materialDynamicDescriptor.init(device);
-        materialDynamicDescriptor.maxFramesInFlight = maxFramesInFlight;
+        materialDynamicDescriptor.init(device, maxFramesInFlight);
 
         VkDescriptorSetLayoutBinding materialUBOBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
         VkDescriptorSetLayoutBinding textureBinding = DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -21,8 +20,7 @@ namespace AzVulk {
         materialDynamicDescriptor.createSetLayout({materialUBOBinding, textureBinding});
 
         // For global ubo
-        globalDynamicDescriptor.init(device);
-        globalDynamicDescriptor.maxFramesInFlight = maxFramesInFlight;
+        globalDynamicDescriptor.init(device, maxFramesInFlight);
 
         VkDescriptorSetLayoutBinding globalUBOBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
         globalDynamicDescriptor.createSetLayout({globalUBOBinding});
@@ -31,12 +29,10 @@ namespace AzVulk {
     // Create two pools: one for global UBOs, one for material sets
     void DescriptorManager::createDescriptorPools(uint32_t maxMaterials) {
         // For material
-        materialDynamicDescriptor.maxResources = maxMaterials;
-        materialDynamicDescriptor.createPool({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
+        materialDynamicDescriptor.createPool(maxMaterials, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
 
         // For GlobalUBO
-        globalDynamicDescriptor.maxResources = 1;
-        globalDynamicDescriptor.createPool({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER});
+        globalDynamicDescriptor.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER});
     }
 
     // Create material descriptor sets (set 1, per material per frame)
@@ -149,11 +145,13 @@ namespace AzVulk {
         }
     }
 
-    void DynamicDescriptor::createPool(const std::vector<VkDescriptorType>& types) {
+    void DynamicDescriptor::createPool(uint32_t maxResources, const std::vector<VkDescriptorType>& types) {
         if (pool != VK_NULL_HANDLE) {
             vkDestroyDescriptorPool(device, pool, nullptr);
             pool = VK_NULL_HANDLE;
         }
+
+        this->maxResources = maxResources;
 
         for (const auto& type : types) {
             poolSizes.push_back({ type, maxResources * maxFramesInFlight });

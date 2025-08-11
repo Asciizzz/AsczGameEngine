@@ -15,8 +15,8 @@ namespace Az3D {
 namespace AzVulk {
 
     struct DynamicDescriptor {
-        DynamicDescriptor(VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight) :
-            device(device), maxResources(maxResources), maxFramesInFlight(maxFramesInFlight) {}
+        DynamicDescriptor(VkDevice device, uint32_t maxFramesInFlight) :
+            device(device), maxFramesInFlight(maxFramesInFlight) {}
         DynamicDescriptor() = default;
         ~DynamicDescriptor();
 
@@ -24,14 +24,17 @@ namespace AzVulk {
         uint32_t maxResources;
         uint32_t maxFramesInFlight;
 
-        void init(VkDevice device) { this->device = device; }
+        void init(VkDevice device, uint32_t maxFramesInFlight=2) {
+            this->device = device;
+            this->maxFramesInFlight = maxFramesInFlight;
+        }
 
         VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
         void createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 
         VkDescriptorPool pool = VK_NULL_HANDLE;
         std::vector<VkDescriptorPoolSize> poolSizes;
-        void createPool(const std::vector<VkDescriptorType>& types);
+        void createPool(uint32_t maxResources, const std::vector<VkDescriptorType>& types);
 
         std::vector<VkDescriptorSet> sets;
         const VkDescriptorSet getSet(uint32_t frameIndex) const { return sets[frameIndex]; }
