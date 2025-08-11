@@ -123,10 +123,7 @@ namespace AzVulk {
     }
 
     VkBuffer Buffer::getMaterialUniformBuffer(size_t materialIndex) const {
-        if (materialIndex < materialUniformBuffers.size()) {
-            return materialUniformBuffers[materialIndex];
-        }
-        return VK_NULL_HANDLE;
+        return materialUniformBuffers[materialIndex];
     }
 
     // New Az3D integration methods

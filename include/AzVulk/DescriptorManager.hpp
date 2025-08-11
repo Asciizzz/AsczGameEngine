@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <array>
 
 #include "AzVulk/Device.hpp"
 
@@ -12,6 +13,7 @@ namespace Az3D {
 }
 
 namespace AzVulk {
+
     class DescriptorManager {
     public:
         DescriptorManager(const Device& device);

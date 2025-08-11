@@ -120,7 +120,7 @@ namespace AzGame {
 
         // Wind animation functions (if enabled)
         void updateWindAnimation(float deltaTime);
-        void updateGrassInstancesCPU(float deltaTime);
+        void updateGrassInstancesCPU();
 
 
         // Configuration
@@ -156,6 +156,7 @@ namespace AzGame {
         // Helper functions
         void generateHeightMap(std::mt19937& generator);
         void createGrassMesh(Az3D::ResourceManager& resManager);
+        void createGrassMesh90deg(Az3D::ResourceManager& resManager);
         void generateGrassInstances(std::mt19937& generator);
         void generateTerrainMesh(Az3D::ResourceManager& resManager);
         std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;

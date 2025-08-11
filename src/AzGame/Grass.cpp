@@ -24,12 +24,10 @@ Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
     heightMap.resize(config.worldSizeX, std::vector<float>(config.worldSizeZ, 0.0f));
 }
 
-Grass::~Grass() {
-
-}
+Grass::~Grass() {}
 
 bool Grass::initialize(ResourceManager& resourceManager) {
-    createGrassMesh(resourceManager);
+    createGrassMesh90deg(resourceManager);
 
     std::mt19937 generator(std::random_device{}());
     generateHeightMap(generator);
@@ -138,6 +136,56 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
         0, 1, 2, 2, 3, 0,  2, 1, 0, 0, 3, 2,
         4, 5, 6, 6, 7, 4,  6, 5, 4, 4, 7, 6,
         8, 9, 10, 10, 11, 8,  10, 9, 8, 8, 11, 10
+    };
+
+    // Create mesh
+    grassMeshIndex = resourceManager.addMesh("GrassMesh", grassVertices, grassIndices);
+
+    // Create material
+    grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
+        Material::fastTemplate(
+            1.0f, 0.0f, 0.0f, 0.7f, // 0.7f discard threshold for transparency
+            resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
+        )
+    );
+}
+
+
+void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
+    // Create grass geometry - 3 intersecting quads for volume
+    glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
+
+    glm::vec2 g_uv00(0.0f, 0.0f);
+    glm::vec2 g_uv10(1.0f, 0.0f);
+    glm::vec2 g_uv11(1.0f, 1.0f);
+    glm::vec2 g_uv01(0.0f, 1.0f);
+
+    glm::vec3 g_pos1(-0.5f, 0.0f, 0.0f);
+    glm::vec3 g_pos2(0.5f, 0.0f, 0.0f);
+    glm::vec3 g_pos3(0.5f, 1.0f, 0.0f);
+    glm::vec3 g_pos4(-0.5f, 1.0f, 0.0f);
+
+    // Rotate for 3 intersecting quads
+    glm::vec3 g_pos5 = Transform::rotate(g_pos1, g_normal, glm::radians(90.0f));
+    glm::vec3 g_pos6 = Transform::rotate(g_pos2, g_normal, glm::radians(90.0f));
+    glm::vec3 g_pos7 = Transform::rotate(g_pos3, g_normal, glm::radians(90.0f));
+    glm::vec3 g_pos8 = Transform::rotate(g_pos4, g_normal, glm::radians(90.0f));
+
+    std::vector<Vertex> grassVertices = {
+        {g_pos1, g_normal, g_uv01},
+        {g_pos2, g_normal, g_uv11},
+        {g_pos3, g_normal, g_uv10},
+        {g_pos4, g_normal, g_uv00},
+
+        {g_pos5, g_normal, g_uv01},
+        {g_pos6, g_normal, g_uv11},
+        {g_pos7, g_normal, g_uv10},
+        {g_pos8, g_normal, g_uv00}
+    };
+    
+    std::vector<uint32_t> grassIndices = { 
+        0, 1, 2, 2, 3, 0,  2, 1, 0, 0, 3, 2,
+        4, 5, 6, 6, 7, 4,  6, 5, 4, 4, 7, 6
     };
 
     // Create mesh
@@ -349,7 +397,7 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     }
     
     // Create terrain mesh and material
-    terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices);
+    terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices, true);
     terrainMaterialIndex = resManager.addMaterial("TerrainMaterial",
         Material::fastTemplate(1.0f, 2.0f, 0.2f, 0.0f, 0));
 
@@ -413,33 +461,10 @@ void Grass::updateWindAnimation(float dTime) {
     
     windTime += dTime * 0.5f;
     
-    // For now, use CPU-side wind animation that mirrors the compute shader
-    // This provides the same visual effect without the GPU-CPU synchronization overhead
-    updateGrassInstancesCPU(dTime);
-    
-    // TODO: Once we integrate compute shader results directly into rendering,
-    // we can enable the GPU compute path:
-    /*
-    if (windComputePipeline != VK_NULL_HANDLE) {
-        // Update wind uniform buffer
-        if (windUniformBufferMapped) {
-            WindUBO windUBO;
-            glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
-            windUBO.windDirection = glm::vec4(normalizedWindDir, config.windStrength);
-            windUBO.windParams = glm::vec4(windTime, config.windFrequency, config.windTurbulence, config.windGustiness);
-            windUBO.windWaves = glm::vec4(config.windWave1Freq, config.windWave2Freq, 
-                                         config.windWave1Amp, config.windWave2Amp);
-            
-            memcpy(windUniformBufferMapped, &windUBO, sizeof(WindUBO));
-        }
-        
-        // Dispatch compute shader
-        // ... (GPU compute code)
-    }
-    */
+    updateGrassInstancesCPU();
 }
 
-void Grass::updateGrassInstancesCPU(float dTime) {
+void Grass::updateGrassInstancesCPU() {
     glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
 
     // Apply wind animation to each grass instance
@@ -520,13 +545,13 @@ void Grass::updateGrassInstancesCPU(float dTime) {
             glm::mat4 rotationMatrix = glm::mat4_cast(finalRot);
             glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
 
-            updatedInstances[i] = translationMatrix * rotationMatrix * scaleMatrix;
+            grassModelGroup.modelInstances[i].modelMatrix() = translationMatrix * rotationMatrix * scaleMatrix;
         }
     });
 
-    for (size_t i = 0; i < updatedInstances.size() && i < grassInstances.size(); ++i) {
-        grassModelGroup.modelInstances[i].modelMatrix() = updatedInstances[i];
-    }
+    // for (size_t i = 0; i < updatedInstances.size() && i < grassInstances.size(); ++i) {
+    //     grassModelGroup.modelInstances[i].modelMatrix() = updatedInstances[i];
+    // }
 
     auto& grassMeshMap = grassModelGroup.meshMapping[grassMeshIndex];
     grassMeshMap.updateIndices = grassInstanceUpdateQueue;

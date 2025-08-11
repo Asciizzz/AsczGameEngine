@@ -2,7 +2,6 @@
 #include "AzVulk/Buffer.hpp"
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
-#include <array>
 
 namespace AzVulk {
     DescriptorManager::DescriptorManager(const Device& device)
@@ -98,11 +97,6 @@ namespace AzVulk {
     void DescriptorManager::createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
                                                 const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
                                                 size_t materialIndex, VkImageView depthImageView, VkSampler depthSampler) {
-        // Check if material already has descriptor sets
-        if (materialDescriptorSets.find(materialIndex) != materialDescriptorSets.end()) {
-            return; // Already created
-        }
-
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, descriptorSetLayout);
         
         VkDescriptorSetAllocateInfo allocInfo{};
@@ -117,6 +111,7 @@ namespace AzVulk {
         }
 
         // Configure each descriptor set for this material
+        // I have no regard for safety, fear me
         for (uint32_t i = 0; i < maxFramesInFlight; i++) {
             std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 
@@ -136,14 +131,9 @@ namespace AzVulk {
 
             // Texture binding (binding 1)
             VkDescriptorImageInfo imageInfo{};
-            bool hasValidTexture = false;
-            
-            if (texture && texture->view != VK_NULL_HANDLE && texture->sampler != VK_NULL_HANDLE) {
-                imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                imageInfo.imageView = texture->view;
-                imageInfo.sampler = texture->sampler;
-                hasValidTexture = true;
-            }
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = texture->view;
+            imageInfo.sampler = texture->sampler;
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[1].dstSet = descriptorSets[i];
@@ -169,23 +159,9 @@ namespace AzVulk {
 
             // Depth sampler binding (binding 3)
             VkDescriptorImageInfo depthImageInfo{};
-            bool hasValidDepthSampler = false;
-            
-            if (depthImageView != VK_NULL_HANDLE && depthSampler != VK_NULL_HANDLE) {
-                depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                depthImageInfo.imageView = depthImageView;
-                depthImageInfo.sampler = depthSampler;
-                hasValidDepthSampler = true;
-            } else {
-                // Use a fallback - use the material texture as depth (won't be correct but won't crash)
-                if (texture && texture->view != VK_NULL_HANDLE && texture->sampler != VK_NULL_HANDLE) {
-                    depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                    depthImageInfo.imageView = texture->view;
-                    depthImageInfo.sampler = texture->sampler;
-                } else {
-                    throw std::runtime_error("No valid depth sampler or fallback texture for material " + std::to_string(materialIndex));
-                }
-            }
+            depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            depthImageInfo.imageView = depthImageView;
+            depthImageInfo.sampler = depthSampler;
 
             descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[3].dstSet = descriptorSets[i];
@@ -197,10 +173,6 @@ namespace AzVulk {
 
             // Write all descriptors (global UBO, texture, material UBO, depth sampler)
             uint32_t writeCount = 4; // Always write all 4 bindings
-            if (!hasValidTexture) {
-                // If no texture, still write all but with a default/fallback texture
-                // For now, we'll write all 4 bindings regardless
-            }
             vkUpdateDescriptorSets(vulkanDevice.device, writeCount, descriptorWrites.data(), 0, nullptr);
         }
 

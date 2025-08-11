@@ -296,7 +296,7 @@ void Application::initVulkan() {
     AzGame::GrassConfig grassConfig;
     grassConfig.worldSizeX = 80;
     grassConfig.worldSizeZ = 80;
-    grassConfig.baseDensity = 12;
+    grassConfig.baseDensity = 4;
     grassConfig.heightVariance = 3.9f;
     grassConfig.lowVariance = 0.1f;
     grassConfig.numHeightNodes = 150;
@@ -388,16 +388,8 @@ void Application::initVulkan() {
 
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
-        
-        // Get the correct texture index from the material
-        size_t textureIndex = matManager.materials[i]->diffTxtr;
 
-        // Safety check to prevent out of bounds access
-        if (textureIndex >= texManager.textures.size())
-            throw std::runtime_error(
-                "Material references texture index " + std::to_string(textureIndex) + 
-                " but only " + std::to_string(texManager.textures.size()) + " textures are loaded!"
-            );
+        size_t textureIndex = matManager.materials[i]->diffTxtr;
         
         descManager.createDescriptorSets(
             bufferRef.uniformBuffers, sizeof(GlobalUBO), 
@@ -466,12 +458,25 @@ void Application::mainLoop() {
             camRef.updateAspectRatio(newWidth, newHeight);
             msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
             depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-            
+
+            descriptorManager->createDescriptorPool(2, matManager.materials.size());
+            for (size_t i = 0; i < matManager.materials.size(); ++i) {
+                VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
+
+                size_t textureIndex = matManager.materials[i]->diffTxtr;
+                
+                descriptorManager->createDescriptorSets(
+                    bufferRef.uniformBuffers, sizeof(GlobalUBO), 
+                    &texManager.textures[textureIndex], materialUniformBuffer, i,
+                    depthManager->depthSamplerView, depthManager->depthSampler
+                );
+            }
+
             // Recreate render pass with new settings
             auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
                 swapChain->imageFormat, msaaManager->msaaSamples);
             mainRenderPass->recreate(newRenderPassConfig);
-            
+
             swapChain->recreate(winManager.window, mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
             opaquePipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples));
             transparentPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples));
