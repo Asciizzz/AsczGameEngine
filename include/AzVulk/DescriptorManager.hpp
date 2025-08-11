@@ -25,6 +25,7 @@ namespace AzVulk {
             created = true;
         }
         DynamicDescriptor() = default;
+        ~DynamicDescriptor();
 
         void createDynamicDescriptor(VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight,
                                     const std::vector<VkDescriptorSetLayoutBinding>& bindings,
@@ -33,20 +34,20 @@ namespace AzVulk {
 
         VkDevice device;
         uint32_t maxResources;
+        uint32_t maxFramesInFlight;
 
         VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
         void createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 
         VkDescriptorPool pool = VK_NULL_HANDLE;
         std::vector<VkDescriptorPoolSize> poolSizes;
-        void createPool(uint32_t maxFramesInFlight, uint32_t maxResources,
-                        const std::vector<VkDescriptorType>& types);
+        void createPool(const std::vector<VkDescriptorType>& types);
 
         std::vector<VkDescriptorSet> sets;
-        void createDescriptorSet(uint32_t maxFramesInFlight,
-                                std::vector<VkWriteDescriptorSet>& writes);
+        void createDescriptorSet(std::vector<VkWriteDescriptorSet>& writes);
 
         VkDescriptorSet getSet(uint32_t frameIndex) const { return sets[frameIndex]; }
+        void relocateSet(std::vector<VkDescriptorSet>& newLocation) { sets = std::move(newLocation); }
     };
 
 

@@ -261,15 +261,29 @@ namespace AzVulk {
 
 
 // DYNAMIC DESCRIPTOR SETS
+
+    DynamicDescriptor::~DynamicDescriptor() {
+        for (auto& set : sets) {
+            vkFreeDescriptorSets(device, pool, 1, &set);
+        }
+
+        if (setLayout != VK_NULL_HANDLE) vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
+        if (pool != VK_NULL_HANDLE) vkDestroyDescriptorPool(device, pool, nullptr);
+    }
+
     void DynamicDescriptor::createDynamicDescriptor(
         VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight,
         const std::vector<VkDescriptorSetLayoutBinding>& bindings,
         const std::vector<VkDescriptorType>& types,
         std::vector<VkWriteDescriptorSet>& writes) {
 
+        this->device = device;
+        this->maxResources = maxResources;
+        this->maxFramesInFlight = maxFramesInFlight;
+
         createSetLayout(bindings);
-        createPool(maxFramesInFlight, maxResources, types);
-        createDescriptorSet(maxFramesInFlight, writes);
+        createPool(types);
+        createDescriptorSet(writes);
     }
 
     void DynamicDescriptor::createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
@@ -288,9 +302,7 @@ namespace AzVulk {
         }
     }
 
-    void DynamicDescriptor::createPool( uint32_t maxFramesInFlight, uint32_t maxResources,
-                                        const std::vector<VkDescriptorType>& types
-    ) {
+    void DynamicDescriptor::createPool(const std::vector<VkDescriptorType>& types) {
         if (pool != VK_NULL_HANDLE) {
             vkDestroyDescriptorPool(device, pool, nullptr);
             pool = VK_NULL_HANDLE;
@@ -314,8 +326,7 @@ namespace AzVulk {
         }
     }
 
-    void DynamicDescriptor::createDescriptorSet(uint32_t maxFramesInFlight,
-                                                std::vector<VkWriteDescriptorSet>& writes) {
+    void DynamicDescriptor::createDescriptorSet(std::vector<VkWriteDescriptorSet>& writes) {
         std::vector<VkDescriptorSetLayout> layouts(maxResources, setLayout);
 
         VkDescriptorSetAllocateInfo allocInfo{};
