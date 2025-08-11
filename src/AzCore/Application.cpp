@@ -58,10 +58,11 @@ void Application::initVulkan() {
     // Create descriptor manager and both set layouts
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice);
     descriptorManager->createDescriptorSetLayouts();
+    descriptorManager->createDynamicMaterialDescriptorLayout(2);
 
     std::vector<VkDescriptorSetLayout> setLayouts = {
         descriptorManager->globalDescriptorSetLayout,
-        descriptorManager->materialDescriptorSetLayout
+        descriptorManager->materialDynamicDescriptor.setLayout
     };
 
     // Use both layouts for all pipelines

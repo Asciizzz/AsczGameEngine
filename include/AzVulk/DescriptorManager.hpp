@@ -15,26 +15,16 @@ namespace Az3D {
 namespace AzVulk {
 
     struct DynamicDescriptor {
-        bool created = false;
-
-        DynamicDescriptor(VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight,
-                        const std::vector<VkDescriptorSetLayoutBinding>& bindings,
-                        const std::vector<VkDescriptorType>& types,
-                        std::vector<VkWriteDescriptorSet>& writes) {
-            createDynamicDescriptor(device, maxResources, maxFramesInFlight, bindings, types, writes);
-            created = true;
-        }
+        DynamicDescriptor(VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight) :
+            device(device), maxResources(maxResources), maxFramesInFlight(maxFramesInFlight) {}
         DynamicDescriptor() = default;
         ~DynamicDescriptor();
-
-        void createDynamicDescriptor(VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight,
-                                    const std::vector<VkDescriptorSetLayoutBinding>& bindings,
-                                    const std::vector<VkDescriptorType>& types,
-                                    std::vector<VkWriteDescriptorSet>& writes);
 
         VkDevice device;
         uint32_t maxResources;
         uint32_t maxFramesInFlight;
+
+        void init(VkDevice device) { this->device = device; }
 
         VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
         void createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
@@ -58,6 +48,13 @@ namespace AzVulk {
 
         DescriptorManager(const DescriptorManager&) = delete;
         DescriptorManager& operator=(const DescriptorManager&) = delete;
+        
+        std::unordered_map<size_t, std::vector<VkDescriptorSet>> materialDescriptorSets; // materialIndex -> [frame]
+
+        DynamicDescriptor materialDynamicDescriptor;
+        DynamicDescriptor globalDynamicDescriptor;
+
+        void createDynamicMaterialDescriptorLayout(uint32_t maxFramesInFlight);
 
         // Create split descriptor set layouts (set 0: global UBO, set 1: material UBO+texture)
         void createDescriptorSetLayouts();
@@ -71,6 +68,8 @@ namespace AzVulk {
         VkDescriptorSet getGlobalDescriptorSet(uint32_t frameIndex);
 
         const Device& vulkanDevice;
+
+
         // Descriptor set layouts
         VkDescriptorSetLayout globalDescriptorSetLayout = VK_NULL_HANDLE; // set 0
         VkDescriptorSetLayout materialDescriptorSetLayout = VK_NULL_HANDLE; // set 1
@@ -81,7 +80,6 @@ namespace AzVulk {
 
         // Descriptor sets
         std::vector<VkDescriptorSet> globalDescriptorSets; // [frame]
-        std::unordered_map<size_t, std::vector<VkDescriptorSet>> materialDescriptorSets; // materialIndex -> [frame]
 
         uint32_t maxFramesInFlight = 2;
         uint32_t maxMaterials = 10;

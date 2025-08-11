@@ -257,7 +257,26 @@ namespace AzVulk {
         throw std::runtime_error("Global descriptor set not found for frame: " + std::to_string(frameIndex));
     }
 
+// Testing out the dynamic descriptor sets
+    void DescriptorManager::createDynamicMaterialDescriptorLayout(uint32_t maxFramesInFlight) {
+        materialDynamicDescriptor.init(vulkanDevice.device);
 
+        VkDescriptorSetLayoutBinding materialUBOBinding{};
+        materialUBOBinding.binding = 0;
+        materialUBOBinding.descriptorCount = 1;
+        materialUBOBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        materialUBOBinding.pImmutableSamplers = nullptr;
+        materialUBOBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        VkDescriptorSetLayoutBinding textureBinding{};
+        textureBinding.binding = 1;
+        textureBinding.descriptorCount = 1;
+        textureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        textureBinding.pImmutableSamplers = nullptr;
+        textureBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        materialDynamicDescriptor.createSetLayout({materialUBOBinding, textureBinding});
+    }
 
 
 // DYNAMIC DESCRIPTOR SETS
@@ -269,21 +288,6 @@ namespace AzVulk {
 
         if (setLayout != VK_NULL_HANDLE) vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
         if (pool != VK_NULL_HANDLE) vkDestroyDescriptorPool(device, pool, nullptr);
-    }
-
-    void DynamicDescriptor::createDynamicDescriptor(
-        VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight,
-        const std::vector<VkDescriptorSetLayoutBinding>& bindings,
-        const std::vector<VkDescriptorType>& types,
-        std::vector<VkWriteDescriptorSet>& writes) {
-
-        this->device = device;
-        this->maxResources = maxResources;
-        this->maxFramesInFlight = maxFramesInFlight;
-
-        createSetLayout(bindings);
-        createPool(types);
-        createDescriptorSet(writes);
     }
 
     void DynamicDescriptor::createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
@@ -307,8 +311,6 @@ namespace AzVulk {
             vkDestroyDescriptorPool(device, pool, nullptr);
             pool = VK_NULL_HANDLE;
         }
-
-        this->maxResources = maxResources;
 
         for (const auto& type : types) {
             poolSizes.push_back({ type, maxResources * maxFramesInFlight });
