@@ -95,7 +95,7 @@ namespace AzVulk {
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = maxMaterials * maxFramesInFlight;
 
-        // Combined image samplers: maxMaterials * maxFramesInFlight (only material textures, no depth)
+        // Combined image samplers: maxMaterials * maxFramesInFlight (material textures)
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight;
 
