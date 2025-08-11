@@ -59,9 +59,12 @@ void Application::initVulkan() {
     descriptorManager = std::make_unique<DescriptorManager>(vulkanDevice->device);
     descriptorManager->createDescriptorSetLayouts(2);
 
+    auto& matDesc = descriptorManager->materialDynamicDescriptor;
+    auto& glbDesc = descriptorManager->globalDynamicDescriptor;
+
     std::vector<VkDescriptorSetLayout> setLayouts = {
-        descriptorManager->globalDynamicDescriptor.setLayout,
-        descriptorManager->materialDynamicDescriptor.setLayout
+        glbDesc.setLayout,
+        matDesc.setLayout
     };
 
     // Use both layouts for all pipelines
@@ -379,12 +382,8 @@ void Application::initVulkan() {
 
 
 // PLAYGROUND END HERE 
-
     auto& bufferRef = *buffer;
     auto& descManager = *descriptorManager;
-
-    auto& matDesc = descManager.materialDynamicDescriptor;
-    auto& glbDesc = descManager.globalDynamicDescriptor;
 
     // Create material uniform buffers
     std::vector<Material> materialVector;
