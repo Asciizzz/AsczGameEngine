@@ -3,11 +3,11 @@
 layout(binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
-    vec4 cameraPos;     // xyz = camera position, w = fov (radians)
-    vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
-    vec4 cameraRight;   // xyz = camera right, w = unused
-    vec4 cameraUp;      // xyz = camera up, w = unused
-    vec4 nearFar;       // x = near, y = far, z = unused, w = unused
+    // vec4 cameraPos;     // xyz = camera position, w = fov (radians)
+    // vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
+    // vec4 cameraRight;   // xyz = camera right, w = unused
+    // vec4 cameraUp;      // xyz = camera up, w = unused
+    // vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
 
 // Material uniform buffer (same as fragment shader)

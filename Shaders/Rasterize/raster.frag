@@ -3,11 +3,11 @@
 layout(binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
-    vec4 cameraPos;    // xyz: camera position, w: fov
-    vec4 cameraForward; // xyz: forward direction, w: aspect ratio
-    vec4 cameraRight;
-    vec4 cameraUp;
-    vec4 nearFar;       // x = near, y = far, z = unused, w = unused
+    // vec4 cameraPos;    // xyz: camera position, w: fov
+    // vec4 cameraForward; // xyz: forward direction, w: aspect ratio
+    // vec4 cameraRight;
+    // vec4 cameraUp;
+    // vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
 
 layout(binding = 1) uniform sampler2D txtrSmplr;
@@ -38,8 +38,8 @@ void main() {
     vec3 screenCoords = fragScreenPos.xyz / fragScreenPos.w;
     vec2 depthUV = screenCoords.xy * 0.5 + 0.5; // Convert from NDC [-1,1] to UV [0,1]
 
-    float near = glb.nearFar.x;
-    float far = glb.nearFar.y;
+    // float near = glb.nearFar.x;
+    // float far = glb.nearFar.y;
     
     // World space depth
     // float z = sampledDepth * 2.0 - 1.0; // Back to NDC
