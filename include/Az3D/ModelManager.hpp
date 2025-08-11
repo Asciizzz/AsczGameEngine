@@ -53,18 +53,20 @@ namespace Az3D {
         static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
     };
 
-    // Mesh mapping structure to organize the three vectors
+    // Mesh mapping structure to organize instance data per mesh
     struct MeshMappingData {
-        std::unordered_map<size_t, std::vector<size_t>> toInstanceIndices;     // mesh index -> instance indices
-        std::unordered_map<size_t, std::vector<size_t>> toUpdateIndices;       // mesh index -> update queue indices  
-        std::unordered_map<size_t, uint32_t> toPrevInstanceCount;              // mesh index -> previous instance count
-        std::unordered_map<size_t, std::unordered_map<size_t, size_t>> toInstanceToBufferPos; // mesh index -> (instance index -> buffer position)
+        std::vector<size_t> instanceIndices;           // instance indices for this mesh
+        std::vector<size_t> updateIndices;             // update queue indices for this mesh
+        std::vector<bool> instanceActive;              // active state for each instance
+        uint32_t prevInstanceCount = 0;                // previous instance count for this mesh
+        std::unordered_map<size_t, size_t> instanceToBufferPos; // instance index -> buffer position mapping
         
         void clear() {
-            toInstanceIndices.clear();
-            toUpdateIndices.clear();
-            toPrevInstanceCount.clear();
-            toInstanceToBufferPos.clear();
+            instanceIndices.clear();
+            updateIndices.clear();
+            instanceActive.clear();
+            prevInstanceCount = 0;
+            instanceToBufferPos.clear();
         }
     };
 
@@ -82,8 +84,8 @@ namespace Az3D {
         size_t modelInstanceCount = 0;
         std::vector<ModelInstance> modelInstances;
         
-        // Organized mesh mapping data
-        MeshMappingData meshMapping;
+        // Organized mesh mapping data - now per mesh index
+        std::unordered_map<size_t, MeshMappingData> meshMapping;
 
         size_t addModelResource(const std::string& name, size_t meshIndex, size_t materialIndex);
         size_t getModelResourceIndex(const std::string& name) const;

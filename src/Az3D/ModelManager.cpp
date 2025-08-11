@@ -34,7 +34,9 @@ namespace Az3D {
         addedInstance.instanceIndex = newInstanceIndex;
         
         // Add instance index to mesh mapping
-        meshMapping.toInstanceIndices[addedInstance.meshIndex].push_back(newInstanceIndex);
+        auto& meshData = meshMapping[addedInstance.meshIndex];
+        meshData.instanceIndices.push_back(newInstanceIndex);
+        meshData.instanceActive.push_back(true);  // New instances are active by default
         
         modelInstanceCount++;
     }
@@ -54,7 +56,9 @@ namespace Az3D {
             addedInstance.instanceIndex = instanceIndex;
             
             // Add instance index to mesh mapping
-            meshMapping.toInstanceIndices[addedInstance.meshIndex].push_back(instanceIndex);
+            auto& meshData = meshMapping[addedInstance.meshIndex];
+            meshData.instanceIndices.push_back(instanceIndex);
+            meshData.instanceActive.push_back(true);  // New instances are active by default
         }
 
         modelInstanceCount += instances.size();
@@ -62,8 +66,7 @@ namespace Az3D {
 
     void ModelGroup::buildMeshMapping() {
         // Clear the existing mapping
-        meshMapping.toInstanceIndices.clear();
-        meshMapping.toInstanceToBufferPos.clear();
+        meshMapping.clear();
 
         // Rebuild mapping with instance indices
         for (size_t i = 0; i < modelInstances.size(); ++i) {
@@ -77,22 +80,23 @@ namespace Az3D {
             instance.instanceIndex = i;
             
             // Add instance index to mesh mapping
-            meshMapping.toInstanceIndices[meshIndex].push_back(i);
+            auto& meshData = meshMapping[meshIndex];
+            meshData.instanceIndices.push_back(i);
+            meshData.instanceActive.push_back(true);  // Assume all instances are active during rebuild
         }
         
         // Build buffer position mapping for efficient lookups
-        for (const auto& [meshIndex, instanceIndices] : meshMapping.toInstanceIndices) {
-            auto& bufferPosMap = meshMapping.toInstanceToBufferPos[meshIndex];
-            for (size_t bufferPos = 0; bufferPos < instanceIndices.size(); ++bufferPos) {
-                size_t instanceIndex = instanceIndices[bufferPos];
-                bufferPosMap[instanceIndex] = bufferPos;
+        for (auto& [meshIndex, meshData] : meshMapping) {
+            for (size_t bufferPos = 0; bufferPos < meshData.instanceIndices.size(); ++bufferPos) {
+                size_t instanceIndex = meshData.instanceIndices[bufferPos];
+                meshData.instanceToBufferPos[instanceIndex] = bufferPos;
             }
         }
     }
 
     void ModelGroup::queueUpdate(size_t instanceIndex) {
         size_t meshIndex = modelInstances[instanceIndex].meshIndex;
-        meshMapping.toUpdateIndices[meshIndex].push_back(instanceIndex);
+        meshMapping[meshIndex].updateIndices.push_back(instanceIndex);
     }
     
     void ModelGroup::queueUpdate(const ModelInstance& instance) {
@@ -104,7 +108,9 @@ namespace Az3D {
     }
 
     void ModelGroup::clearUpdateQueue() {
-        meshMapping.toUpdateIndices.clear();
+        for (auto& [meshIndex, meshData] : meshMapping) {
+            meshData.updateIndices.clear();
+        }
     }
 
     void ModelGroup::copyFrom(const ModelGroup& other) {

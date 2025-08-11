@@ -42,8 +42,5 @@ namespace AzVulk {
                         VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
         VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
         void createDepthSampler();  // Create sampler for depth texture sampling
-        
-        // Helper to transition depth buffer for sampling
-        void transitionDepthForSampling(VkCommandBuffer commandBuffer, VkImage depthImage, VkImageLayout oldLayout, VkImageLayout newLayout);
     };
 }

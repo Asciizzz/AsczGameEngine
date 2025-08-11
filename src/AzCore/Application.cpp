@@ -644,20 +644,14 @@ void Application::mainLoop() {
             rendererRef.drawSky(*skyPipeline);
             
             // Second: render opaque objects
-            const auto& worldGroup = mdlManager.groups["World"];
+            auto& worldGroup = mdlManager.groups["World"];
+            rendererRef.drawScene(*opaquePipeline, worldGroup);
 
-            if (worldGroup.modelInstanceCount > 0) {
-                rendererRef.drawScene(*opaquePipeline, worldGroup);
-            }
+            auto& grassGroup = grassSystem->grassModelGroup;
+            rendererRef.drawScene(*opaquePipeline, grassGroup);
 
-            const auto& grassGroup = grassSystem->grassModelGroup;
-            if (grassGroup.modelInstanceCount > 0) {
-                rendererRef.drawScene(*opaquePipeline, grassGroup);
-            }
-            const auto& terrainGroup = grassSystem->terrainModelGroup;
-            if (terrainGroup.modelInstanceCount > 0) {
-                rendererRef.drawScene(*opaquePipeline, terrainGroup);
-            }
+            auto& terrainGroup = grassSystem->terrainModelGroup;
+            rendererRef.drawScene(*opaquePipeline, terrainGroup);
 
             // Copy depth buffer for sampling in effects
             rendererRef.copyDepthForSampling(*depthManager);

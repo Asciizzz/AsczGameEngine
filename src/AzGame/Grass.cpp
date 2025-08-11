@@ -520,5 +520,5 @@ void Grass::updateGrassInstancesCPU(float deltaTime) {
         }
     }
 
-    grassModelGroup.meshMapping.toUpdateIndices[grassMeshIndex] = grassInstanceUpdateQueue;
+    grassModelGroup.meshMapping[grassMeshIndex].updateIndices = grassInstanceUpdateQueue;
 }

@@ -93,14 +93,12 @@ namespace AzVulk {
         void createVertexBuffer(const Az3D::Mesh& mesh);
         
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
-        // Most efficient versions that work directly with index arrays (zero intermediate allocations)
-        void createMeshInstanceBuffer(size_t meshIndex, const std::vector<size_t>& instanceIndices, const std::vector<Az3D::ModelInstance>& modelInstances);
+        // Most efficient versions that work directly with mesh mapping data
+        void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
         // Selective update method - only updates specific instances based on update queue
         void updateMeshInstanceBufferSelective( size_t meshIndex,
-                                                const std::vector<size_t>& updateIndices, 
-                                                const std::vector<size_t>& instanceIndices, 
-                                                const std::vector<Az3D::ModelInstance>& modelInstances,
-                                                const std::unordered_map<size_t, size_t>& instanceToBufferPos);
+                                                Az3D::MeshMappingData& meshData, 
+                                                const std::vector<Az3D::ModelInstance>& modelInstances);
 
         const Device& vulkanDevice;
         

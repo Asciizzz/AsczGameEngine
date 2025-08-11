@@ -25,10 +25,10 @@ namespace AzVulk {
 
         // New split rendering functions for explicit control
         uint32_t beginFrame(RasterPipeline& pipeline, Az3D::Camera& camera);
-        void drawScene(RasterPipeline& pipeline, const Az3D::ModelGroup& modelGroup);
-        void drawSky(RasterPipeline& skyPipeline); // Sky rendering with proper pipeline
-        void transitionDepthForSampling(VkImage depthImage); // Transition depth buffer for sampling
-        void copyDepthForSampling(DepthManager& depthManager); // Copy depth buffer for sampling
+        void drawScene(RasterPipeline& pipeline, Az3D::ModelGroup& modelGroup);
+        void drawSky(RasterPipeline& skyPipeline);
+    
+        void copyDepthForSampling(DepthManager& depthManager);
         void endFrame(uint32_t imageIndex);
 
         // Component references

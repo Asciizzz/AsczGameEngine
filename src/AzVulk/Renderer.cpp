@@ -178,12 +178,10 @@ namespace AzVulk {
     }
 
     // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
-    void Renderer::drawScene(RasterPipeline& pipeline, const Az3D::ModelGroup& modelGroup) {
+    void Renderer::drawScene(RasterPipeline& pipeline, Az3D::ModelGroup& modelGroup) {
 
         // Use the pre-computed mesh mapping directly
-        const auto& meshToInstanceIndices = modelGroup.meshMapping.toInstanceIndices;
-        const auto& meshToUpdateIndices = modelGroup.meshMapping.toUpdateIndices;
-        const auto& meshToPrevInstanceCount = modelGroup.meshMapping.toPrevInstanceCount;
+        const auto& meshMapping = modelGroup.meshMapping;
         const auto& modelResources = modelGroup.modelResources;
         const auto& modelInstances = modelGroup.modelInstances;
 
@@ -193,29 +191,23 @@ namespace AzVulk {
         // Build material to meshes mapping for efficient rendering
         std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;
 
-        for (const auto& [meshIndex, instanceIndices] : meshToInstanceIndices) {
+        for (const auto& [meshIndex, meshData] : meshMapping) {
+            const auto& instanceIndices = meshData.instanceIndices;
             if (instanceIndices.empty()) continue;
 
             // Update or create the instance buffer for this mesh
             if (meshIndex < meshBuffers.size()) {
 
-                size_t prevInstanceCount = (meshToPrevInstanceCount.count(meshIndex) > 0) 
-                    ? meshToPrevInstanceCount.at(meshIndex) : 0;
+                size_t prevInstanceCount = meshData.prevInstanceCount;
 
                 if (instanceIndices.size() != prevInstanceCount) {
                     // Buffer size changed - need to recreate
                     vkDeviceWaitIdle(vulkanDevice.device);
-                    buffer.createMeshInstanceBuffer(meshIndex, instanceIndices, modelInstances);
-
-                    // Update previous instance count in ModelGroup's mesh mapping
-                    const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping.toPrevInstanceCount[meshIndex] = instanceIndices.size();
+                    buffer.createMeshInstanceBuffer(meshIndex, const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping[meshIndex], modelInstances);
                 } else {
                     // Only update changes
-                    auto updateIt = meshToUpdateIndices.find(meshIndex);
-                    if (updateIt != meshToUpdateIndices.end() && !updateIt->second.empty()) {
-                        // Use the pre-built buffer position mapping
-                        const auto& bufferPosMap = modelGroup.meshMapping.toInstanceToBufferPos.at(meshIndex);
-                        buffer.updateMeshInstanceBufferSelective(meshIndex, updateIt->second, instanceIndices, modelInstances, bufferPosMap);
+                    if (!meshData.updateIndices.empty()) {
+                        buffer.updateMeshInstanceBufferSelective(meshIndex, const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping[meshIndex], modelInstances);
                     }
                 }
 
@@ -241,8 +233,8 @@ namespace AzVulk {
             for (size_t meshIndex : meshIndices) {
                 // Get instance count directly from the pre-computed mapping
                 size_t instanceCount = 0;
-                if (meshToInstanceIndices.find(meshIndex) != meshToInstanceIndices.end()) {
-                    instanceCount = meshToInstanceIndices.at(meshIndex).size();
+                if (meshMapping.find(meshIndex) != meshMapping.end()) {
+                    instanceCount = meshMapping.at(meshIndex).instanceIndices.size();
                 }
                 
                 if (meshIndex < meshBuffers.size() && instanceCount > 0) {
@@ -268,7 +260,7 @@ namespace AzVulk {
         }
         
         // Clear the update queue after rendering - all changes have been applied
-        const_cast<Az3D::ModelGroup&>(modelGroup).clearUpdateQueue();
+        modelGroup.clearUpdateQueue();
     }
 
     // Sky rendering using dedicated sky pipeline
@@ -283,34 +275,6 @@ namespace AzVulk {
 
         // Draw fullscreen triangle (3 vertices, no input)
         vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
-    }
-
-    // Transition depth buffer for sampling
-    void Renderer::transitionDepthForSampling(VkImage depthImage) {
-        VkImageMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = depthImage;
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
-        barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        vkCmdPipelineBarrier(
-            commandBuffers[currentFrame],
-            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
     }
 
     // Copy depth buffer for sampling in effects

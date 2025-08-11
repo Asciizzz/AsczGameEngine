@@ -239,11 +239,12 @@ namespace AzVulk {
     }
 
 
-    void Buffer::createMeshInstanceBuffer(size_t meshIndex, const std::vector<size_t>& instanceIndices, const std::vector<Az3D::ModelInstance>& modelInstances) {
+    void Buffer::createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances) {
         if (meshIndex >= meshBuffers.size()) {
             throw std::runtime_error("Invalid mesh index for instance buffer creation!");
         }
 
+        const auto& instanceIndices = meshData.instanceIndices;
         auto& meshBuffer = meshBuffers[meshIndex];
         VkDeviceSize bufferSize = sizeof(Az3D::InstanceVertexData) * instanceIndices.size();
 
@@ -267,14 +268,15 @@ namespace AzVulk {
         for (size_t i = 0; i < instanceIndices.size(); ++i) {
             static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
         }
+
+        // Update previous instance count directly in the mesh data
+        meshData.prevInstanceCount = instanceIndices.size();
     }
 
     void Buffer::updateMeshInstanceBufferSelective( size_t meshIndex,
-                                                    const std::vector<size_t>& updateIndices, 
-                                                    const std::vector<size_t>& instanceIndices,
-                                                    const std::vector<Az3D::ModelInstance>& modelInstances,
-                                                    const std::unordered_map<size_t, size_t>& instanceToBufferPos) {
-        if (meshIndex >= meshBuffers.size() || updateIndices.empty()) {
+                                                    Az3D::MeshMappingData& meshData, 
+                                                    const std::vector<Az3D::ModelInstance>& modelInstances) {
+        if (meshIndex >= meshBuffers.size() || meshData.updateIndices.empty()) {
             return; // Nothing to update
         }
 
@@ -283,12 +285,9 @@ namespace AzVulk {
             return; // Buffer not mapped
         }
 
-        for (size_t instanceIndex : updateIndices) {
-            auto it = instanceToBufferPos.find(instanceIndex);
-            if (it != instanceToBufferPos.end()) {
-                size_t bufferPos = it->second;
-                static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
-            }
+        for (size_t instanceIndex : meshData.updateIndices) {
+            size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
+            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
         }
     }
 }
