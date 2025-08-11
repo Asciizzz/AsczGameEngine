@@ -383,6 +383,9 @@ void Application::initVulkan() {
     auto& bufferRef = *buffer;
     auto& descManager = *descriptorManager;
 
+    auto& matDesc = descManager.materialDynamicDescriptor;
+    auto& glbDesc = descManager.globalDynamicDescriptor;
+
     // Create material uniform buffers
     std::vector<Material> materialVector;
     for (const auto& matPtr : matManager.materials) {
@@ -391,15 +394,17 @@ void Application::initVulkan() {
     bufferRef.createMaterialUniformBuffers(materialVector);
 
     // Create descriptor pools and sets (split global/material)
-    descManager.createDescriptorPools(matManager.materials.size());
-    descManager.createGlobalDescriptorSets(bufferRef.uniformBuffers, sizeof(GlobalUBO));
+    size_t matCount = matManager.materials.size();
+
+    descriptorManager->createDescriptorPools(matCount);
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
         size_t textureIndex = matManager.materials[i]->diffTxtr;
-        descManager.createMaterialDescriptorSets(
+        matDesc.createMaterialDescriptorSets(
             &texManager.textures[textureIndex], materialUniformBuffer, i
         );
     }
+    glbDesc.createGlobalUBODescriptorSets(bufferRef.uniformBuffers, sizeof(GlobalUBO));
 
     // Load meshes into GPU buffer
     for (size_t i = 0; i < meshManager.meshes.size(); ++i) {

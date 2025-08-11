@@ -52,6 +52,11 @@ namespace AzVulk {
                                                                 VkDescriptorType type,
                                                                 VkShaderStageFlags stageFlags,
                                                                 uint32_t descriptorCount = 1);
+
+
+        // Template for relevant components
+        void createMaterialDescriptorSets(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex);
+        void createGlobalUBODescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize);
     };
 
 
@@ -65,16 +70,11 @@ namespace AzVulk {
 
         VkDevice device;
 
-        std::unordered_map<size_t, std::vector<VkDescriptorSet>> materialDescriptorSets; // materialIndex -> [frame]
-
         DynamicDescriptor materialDynamicDescriptor;
         DynamicDescriptor globalDynamicDescriptor;
 
         // Create split descriptor set layouts (set 0: global UBO, set 1: material UBO+texture)
         void createDescriptorSetLayouts(uint32_t maxFramesInFlight);
         void createDescriptorPools(uint32_t maxMaterials = 10);
-
-        void createMaterialDescriptorSets(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex);
-        void createGlobalDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize);
     };
 }

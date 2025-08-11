@@ -40,15 +40,12 @@ namespace AzVulk {
     }
 
     // Create material descriptor sets (set 1, per material per frame)
-    void DescriptorManager::createMaterialDescriptorSets(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex) {
-        auto& matDesc = materialDynamicDescriptor;
-        uint32_t maxFramesInFlight = matDesc.maxFramesInFlight;
-
-        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, matDesc.setLayout);
+    void DynamicDescriptor::createMaterialDescriptorSets(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex) {
+        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
 
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = matDesc.pool;
+        allocInfo.descriptorPool = pool;
         allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
         allocInfo.pSetLayouts = layouts.data();
 
@@ -91,26 +88,24 @@ namespace AzVulk {
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
 
-        matDesc.mapSets[materialIndex] = std::move(descriptorSets);
+        mapSets[materialIndex] = std::move(descriptorSets);
     }
 
-    void DescriptorManager::createGlobalDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize) {
-        auto& glbDesc = globalDynamicDescriptor;
-
-        std::vector<VkDescriptorSetLayout> layouts(glbDesc.maxFramesInFlight, glbDesc.setLayout);
+    void DynamicDescriptor::createGlobalUBODescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize) {
+        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
 
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = glbDesc.pool;
+        allocInfo.descriptorPool = pool;
         allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
         allocInfo.pSetLayouts = layouts.data();
 
-        glbDesc.sets.resize(glbDesc.maxFramesInFlight);
-        if (vkAllocateDescriptorSets(device, &allocInfo, glbDesc.sets.data()) != VK_SUCCESS) {
+        sets.resize(maxFramesInFlight);
+        if (vkAllocateDescriptorSets(device, &allocInfo, sets.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate global descriptor sets");
         }
 
-        for (uint32_t i = 0; i < glbDesc.maxFramesInFlight; ++i) {
+        for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = uniformBuffers[i];
             bufferInfo.offset = 0;
@@ -118,7 +113,7 @@ namespace AzVulk {
 
             VkWriteDescriptorSet write{};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write.dstSet = glbDesc.sets[i];
+            write.dstSet = sets[i];
             write.dstBinding = 0;
             write.dstArrayElement = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -128,11 +123,6 @@ namespace AzVulk {
             vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
         }
     }
-
-
-
-
-// DYNAMIC DESCRIPTOR SETS
 
     DynamicDescriptor::~DynamicDescriptor() {
         for (auto& set : sets) {
