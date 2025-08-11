@@ -25,7 +25,9 @@ namespace AzVulk {
         // Create standard descriptor set layout for raster pipelines
         VkDescriptorSetLayout createStandardRasterLayout();
 
-        void createDescriptorPool(uint32_t maxFramesInFlight, uint32_t maxMaterials = 10);
+    void createDescriptorPool(uint32_t maxFramesInFlight, uint32_t maxMaterials = 10);
+    // Frees all descriptor sets and clears the map (for pool recreation)
+    void freeAllDescriptorSets();
         void createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
                                 const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
                                 size_t materialIndex, VkImageView depthImageView = VK_NULL_HANDLE, 

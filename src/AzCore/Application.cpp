@@ -427,6 +427,8 @@ bool Application::checkWindowResize() {
 
     // Reset like literally everything
     camera->updateAspectRatio(newWidth, newHeight);
+
+
     msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
     depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
 
@@ -434,6 +436,7 @@ bool Application::checkWindowResize() {
     auto& texManager = *resourceManager->textureManager;
     auto& matManager = *resourceManager->materialManager;
 
+    descriptorManager->freeAllDescriptorSets();
     descriptorManager->createDescriptorPool(2, matManager.materials.size());
     for (size_t i = 0; i < matManager.materials.size(); ++i) {
         VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
@@ -617,13 +620,22 @@ void Application::mainLoop() {
 }
 
 void Application::cleanup() {
+    // Destroy all Vulkan-resource-owning objects before device destruction
+    if (renderer) renderer.reset();
+    if (resourceManager) resourceManager.reset();
+    if (buffer) buffer.reset();
+    if (descriptorManager) descriptorManager.reset();
+    if (msaaManager) msaaManager.reset();
+    if (depthManager) depthManager.reset();
+    if (mainRenderPass) mainRenderPass.reset();
+    if (opaquePipeline) opaquePipeline.reset();
+    if (transparentPipeline) transparentPipeline.reset();
+    if (skyPipeline) skyPipeline.reset();
+    if (shaderManager) shaderManager.reset();
+    if (swapChain) swapChain.reset();
+
     if (commandPool != VK_NULL_HANDLE) {
         vkDestroyCommandPool(vulkanDevice->device, commandPool, nullptr);
-    }
-
-    // Ensure swapchain is destroyed before surface
-    if (swapChain) {
-        swapChain.reset();
     }
 
     if (surface != VK_NULL_HANDLE && vulkanInstance) {

@@ -4,12 +4,32 @@
 #include <stdexcept>
 
 namespace AzVulk {
+
+    void DescriptorManager::freeAllDescriptorSets() {
+        if (descriptorPool != VK_NULL_HANDLE) {
+            for (auto& pair : materialDescriptorSets) {
+                const std::vector<VkDescriptorSet>& sets = pair.second;
+                if (!sets.empty()) {
+                    vkFreeDescriptorSets(vulkanDevice.device, descriptorPool, static_cast<uint32_t>(sets.size()), sets.data());
+                }
+            }
+            materialDescriptorSets.clear();
+        }
+    }
     DescriptorManager::DescriptorManager(const Device& device)
         : vulkanDevice(device) {
     }
 
     DescriptorManager::~DescriptorManager() {
+        // Explicitly free all descriptor sets if pool allows it
         if (descriptorPool != VK_NULL_HANDLE) {
+            for (auto& pair : materialDescriptorSets) {
+                const std::vector<VkDescriptorSet>& sets = pair.second;
+                if (!sets.empty()) {
+                    vkFreeDescriptorSets(vulkanDevice.device, descriptorPool, static_cast<uint32_t>(sets.size()), sets.data());
+                }
+            }
+            materialDescriptorSets.clear();
             vkDestroyDescriptorPool(vulkanDevice.device, descriptorPool, nullptr);
         }
         if (descriptorSetLayout != VK_NULL_HANDLE) {
@@ -41,7 +61,7 @@ namespace AzVulk {
         materialLayoutBinding.descriptorCount = 1;
         materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         materialLayoutBinding.pImmutableSamplers = nullptr;
-        materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        materialLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
         VkDescriptorSetLayoutBinding depthSamplerLayoutBinding{};
         depthSamplerLayoutBinding.binding = 3;
@@ -65,15 +85,22 @@ namespace AzVulk {
     }
 
     void DescriptorManager::createDescriptorPool(uint32_t maxFramesInFlight, uint32_t maxMaterials) {
+        // Destroy old pool if it exists (after freeing sets)
+        if (descriptorPool != VK_NULL_HANDLE) {
+            freeAllDescriptorSets();
+            vkDestroyDescriptorPool(vulkanDevice.device, descriptorPool, nullptr);
+            descriptorPool = VK_NULL_HANDLE;
+        }
+
         this->maxFramesInFlight = maxFramesInFlight;
         this->maxMaterials = maxMaterials;
-        
+
         std::array<VkDescriptorPoolSize, 3> poolSizes{};
-        
+
         // Global uniform buffers: maxMaterials * maxFramesInFlight (each material needs uniform buffer per frame)
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = maxMaterials * maxFramesInFlight;
-        
+
         // Combined image samplers: maxMaterials * maxFramesInFlight * 2 (texture + depth)
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight * 2;
