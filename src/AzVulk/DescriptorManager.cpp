@@ -44,7 +44,13 @@ namespace AzVulk {
         auto& matDesc = materialDynamicDescriptor;
         uint32_t maxFramesInFlight = matDesc.maxFramesInFlight;
 
-        VkDescriptorSetAllocateInfo allocInfo = DynamicDescriptor::fastAllocateInfo(matDesc);
+        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, matDesc.setLayout);
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = matDesc.pool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+        allocInfo.pSetLayouts = layouts.data();
 
         std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
         if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
@@ -91,7 +97,13 @@ namespace AzVulk {
     void DescriptorManager::createGlobalDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize) {
         auto& glbDesc = globalDynamicDescriptor;
 
-        VkDescriptorSetAllocateInfo allocInfo = DynamicDescriptor::fastAllocateInfo(glbDesc);
+        std::vector<VkDescriptorSetLayout> layouts(glbDesc.maxFramesInFlight, glbDesc.setLayout);
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = glbDesc.pool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+        allocInfo.pSetLayouts = layouts.data();
 
         glbDesc.sets.resize(glbDesc.maxFramesInFlight);
         if (vkAllocateDescriptorSets(device, &allocInfo, glbDesc.sets.data()) != VK_SUCCESS) {
@@ -180,16 +192,5 @@ namespace AzVulk {
         bindingInfo.pImmutableSamplers = nullptr;
         bindingInfo.stageFlags = stageFlags;
         return bindingInfo;
-    }
-
-    inline VkDescriptorSetAllocateInfo DynamicDescriptor::fastAllocateInfo(const DynamicDescriptor& desc) {
-        std::vector<VkDescriptorSetLayout> layouts(desc.maxFramesInFlight, desc.setLayout);
-
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = desc.pool;
-        allocInfo.descriptorSetCount = desc.maxFramesInFlight;
-        allocInfo.pSetLayouts = layouts.data();
-        return allocInfo;
     }
 }

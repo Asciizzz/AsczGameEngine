@@ -52,7 +52,6 @@ namespace AzVulk {
                                                                 VkDescriptorType type,
                                                                 VkShaderStageFlags stageFlags,
                                                                 uint32_t descriptorCount = 1);
-        static inline VkDescriptorSetAllocateInfo fastAllocateInfo(const DynamicDescriptor& desc);
     };
 
 
