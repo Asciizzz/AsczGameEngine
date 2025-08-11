@@ -447,11 +447,13 @@ bool Application::checkWindowResize() {
     mainRenderPass->recreate(newRenderPassConfig);
 
     swapChain->recreate(windowManager->window, mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
-    
-    // Since descriptor receive no changes, we no need to change the descriptor in here
-    opaquePipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples));
-    transparentPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples));
-    skyPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples));
+
+    VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
+
+    // Since descriptor receive no changes, we no need to change the descriptor in the pipeline
+    opaquePipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createOpaqueConfig(newMsaaSamples));
+    transparentPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createTransparentConfig(newMsaaSamples));
+    skyPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createSkyConfig(newMsaaSamples));
 
     return true;
 }
