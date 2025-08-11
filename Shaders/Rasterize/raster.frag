@@ -10,12 +10,13 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     // vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
 
-layout(set = 1, binding = 1) uniform sampler2D txtrSmplr;
 
 // Material uniform buffer
 layout(set = 1, binding = 0) uniform MaterialUBO {
     vec4 prop1; // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
 } material;
+// and it's texture sampler
+layout(set = 1, binding = 1) uniform sampler2D txtrSmplr;
 
 // TODO: Implement actual working depth sampler, not this piece of shi
 // layout(binding = 3) uniform sampler2D depthSampler;

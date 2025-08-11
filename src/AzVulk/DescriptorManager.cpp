@@ -222,7 +222,7 @@ namespace AzVulk {
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &materialBufferInfo;
 
-            // Texture (binding 1)
+            // Texture (binding 1) - This is where the texture linked up with the material
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView = texture->view;
