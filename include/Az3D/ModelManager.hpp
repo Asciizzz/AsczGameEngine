@@ -101,15 +101,6 @@ namespace Az3D {
         void queueUpdate(const ModelInstance& instance);
         void queueUpdates(const std::vector<ModelInstance>& instances);
         void clearUpdateQueue();
-
-        // Check if instances are sequential (for optimization)
-        bool hasSequentialInstances(size_t meshIndex) const;
-
-        bool hasUpdates() const; // Costly, avoid using this
-
-        void printDebug() const {
-            printf("ModelGroup '%s': %zu resources, %zu instances\n", name.c_str(), modelResourceCount, modelInstanceCount);
-        }
     };
 
     // Global model management system that manages all model resources and instances

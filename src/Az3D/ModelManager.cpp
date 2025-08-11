@@ -107,29 +107,6 @@ namespace Az3D {
         meshMapping.toUpdateIndices.clear();
     }
 
-    bool ModelGroup::hasSequentialInstances(size_t meshIndex) const {
-        auto it = meshMapping.toInstanceIndices.find(meshIndex);
-        if (it == meshMapping.toInstanceIndices.end()) return false;
-        
-        const auto& instanceIndices = it->second;
-        if (instanceIndices.empty()) return false;
-        
-        // Check if instances are sequential: [0, 1, 2, 3, ...] or [n, n+1, n+2, ...]
-        for (size_t i = 1; i < instanceIndices.size(); ++i) {
-            if (instanceIndices[i] != instanceIndices[i-1] + 1) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    bool ModelGroup::hasUpdates() const {
-        for (const auto& [meshIndex, updateIndices] : meshMapping.toUpdateIndices) {
-            if (!updateIndices.empty()) return true;
-        }
-        return false;
-    }
-
     void ModelGroup::copyFrom(const ModelGroup& other) {
         modelResourceCount = other.modelResourceCount;
         modelResources = other.modelResources;
