@@ -44,35 +44,19 @@ namespace AzVulk {
         std::vector<VkCommandBuffer> commandBuffers;
         
         // Synchronization objects
-        std::vector<VkSemaphore> imageAvailableSemaphores;
-        std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkSemaphore> imageAvailableSemaphores; // Per frame-in-flight
+    std::vector<VkSemaphore> renderFinishedSemaphores; // Per frame-in-flight
+    std::vector<VkFence> imagesInFlight; // Per swapchain image
         std::vector<VkFence> inFlightFences;
         
         uint32_t currentFrame = 0;
         bool framebufferResized = false;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2; // double buffering
-
-        // OIT (Order-Independent Transparency) render targets
-        VkImage oitAccumImage = VK_NULL_HANDLE;
-        VkDeviceMemory oitAccumImageMemory = VK_NULL_HANDLE;
-        VkImageView oitAccumImageView = VK_NULL_HANDLE;
-        
-        VkImage oitRevealImage = VK_NULL_HANDLE;
-        VkDeviceMemory oitRevealImageMemory = VK_NULL_HANDLE;
-        VkImageView oitRevealImageView = VK_NULL_HANDLE;
-        
-        VkFramebuffer oitFramebuffer = VK_NULL_HANDLE;
-        VkRenderPass oitRenderPass = VK_NULL_HANDLE;
+    size_t swapchainImageCount = 0;
 
         void createCommandPool();
         void createCommandBuffers();
         void createSyncObjects();
-        
-        // OIT methods
-        void createOITRenderTargets();
-        void createOITRenderPass();
-        void createOITFramebuffer(VkImageView depthImageView);
-        void cleanupOIT();
     };
 }

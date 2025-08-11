@@ -19,15 +19,10 @@ namespace AzVulk {
         createCommandPool();
         createCommandBuffers();
         createSyncObjects();
-        createOITRenderTargets();
-        createOITRenderPass();
-        // createOITFramebuffer(); // TODO: Integrate with depth manager
     }
 
     Renderer::~Renderer() {
         VkDevice device = vulkanDevice.device;
-
-        cleanupOIT();
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -68,8 +63,10 @@ namespace AzVulk {
     }
 
     void Renderer::createSyncObjects() {
-        imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    swapchainImageCount = swapChain.images.size();
+    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    imagesInFlight.resize(swapchainImageCount, VK_NULL_HANDLE);
         inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
         VkSemaphoreCreateInfo semaphoreInfo{};
@@ -93,28 +90,37 @@ namespace AzVulk {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(vulkanDevice.device, swapChain.swapChain, 
-                                                UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(
+            vulkanDevice.device,
+            swapChain.swapChain,
+            UINT64_MAX,
+            imageAvailableSemaphores[currentFrame], // per-frame semaphore for acquire
+            VK_NULL_HANDLE,
+            &imageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             framebufferResized = true;
-            return UINT32_MAX; // Return invalid index to signal error
+            return UINT32_MAX;
         } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
             throw std::runtime_error("failed to acquire swap chain image!");
         }
 
+        // If a previous frame is using this image, wait for it to finish
+        if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
+            vkWaitForFences(vulkanDevice.device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        }
+        // Mark the image as now being in use by this frame
+        imagesInFlight[imageIndex] = inFlightFences[currentFrame];
+
         vkResetFences(vulkanDevice.device, 1, &inFlightFences[currentFrame]);
         vkResetCommandBuffer(commandBuffers[currentFrame], 0);
 
-        // Start recording command buffer
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        
         if (vkBeginCommandBuffer(commandBuffers[currentFrame], &beginInfo) != VK_SUCCESS) {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
-        // Begin render pass
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = pipeline.renderPass;
@@ -122,19 +128,16 @@ namespace AzVulk {
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain.extent;
 
-        // Calculate dynamic sky color based on camera direction
         glm::vec3 sunDir = glm::normalize(glm::vec3(-1.0f, -1.0f, 1.0f));
-        glm::vec3 skyHorizon = glm::vec3(1.0f, 1.0f, 1.0f);      // White horizon
-        glm::vec3 skyZenith = glm::vec3(0.1f, 0.2f, 0.9f);       // Blue zenith
-        
-        // Use camera's forward direction for sky calculation
+        glm::vec3 skyHorizon = glm::vec3(1.0f, 1.0f, 1.0f);
+        glm::vec3 skyZenith = glm::vec3(0.1f, 0.2f, 0.9f);
         glm::vec3 viewDir = camera.forward;
         float sky_t = glm::clamp(viewDir.y * 2.2f, 0.0f, 1.0f);
         float skyGradT = glm::pow(sky_t, 0.35f);
         glm::vec3 skyColor = glm::mix(skyHorizon, skyZenith, skyGradT);
-        
+
         std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};  // Black clear color, sky will be rendered per-fragment
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
         clearValues[1].depthStencil = {1.0f, 0};
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -142,7 +145,6 @@ namespace AzVulk {
 
         vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        // Set dynamic viewport and scissor
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
@@ -157,19 +159,15 @@ namespace AzVulk {
         scissor.extent = swapChain.extent;
         vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
-        // Update global UBO
         GlobalUBO ubo{};
         ubo.proj = camera.projectionMatrix;
         ubo.view = camera.viewMatrix;
-
-        // These should not exist lol
         ubo.cameraPos = glm::vec4(camera.pos, glm::radians(camera.fov));
         ubo.cameraForward = glm::vec4(camera.forward, camera.aspectRatio);
         ubo.cameraRight = glm::vec4(camera.right, 0.0f);
         ubo.cameraUp = glm::vec4(camera.up, 0.0f);
         ubo.nearFar = glm::vec4(camera.nearPlane, camera.farPlane, 0.0f, 0.0f);
 
-        // Use persistent mapping for uniform buffers
         memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
         return imageIndex;
@@ -333,257 +331,6 @@ namespace AzVulk {
         }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-    }
-
-    // OIT (Order-Independent Transparency) Implementation
-    void Renderer::createOITRenderTargets() {
-        VkExtent2D extent = swapChain.extent;
-        
-        // Create accumulation buffer (RGBA16F)
-        VkImageCreateInfo accumImageInfo{};
-        accumImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        accumImageInfo.imageType = VK_IMAGE_TYPE_2D;
-        accumImageInfo.extent.width = extent.width;
-        accumImageInfo.extent.height = extent.height;
-        accumImageInfo.extent.depth = 1;
-        accumImageInfo.mipLevels = 1;
-        accumImageInfo.arrayLayers = 1;
-        accumImageInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-        accumImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        accumImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        accumImageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        accumImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        accumImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if (vkCreateImage(vulkanDevice.device, &accumImageInfo, nullptr, &oitAccumImage) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create OIT accumulation image!");
-        }
-
-        VkMemoryRequirements accumMemRequirements;
-        vkGetImageMemoryRequirements(vulkanDevice.device, oitAccumImage, &accumMemRequirements);
-
-        VkMemoryAllocateInfo accumAllocInfo{};
-        accumAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        accumAllocInfo.allocationSize = accumMemRequirements.size;
-        accumAllocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(accumMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-        if (vkAllocateMemory(vulkanDevice.device, &accumAllocInfo, nullptr, &oitAccumImageMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate OIT accumulation image memory!");
-        }
-
-        vkBindImageMemory(vulkanDevice.device, oitAccumImage, oitAccumImageMemory, 0);
-
-        // Create accumulation image view
-        VkImageViewCreateInfo accumViewInfo{};
-        accumViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        accumViewInfo.image = oitAccumImage;
-        accumViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        accumViewInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-        accumViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        accumViewInfo.subresourceRange.baseMipLevel = 0;
-        accumViewInfo.subresourceRange.levelCount = 1;
-        accumViewInfo.subresourceRange.baseArrayLayer = 0;
-        accumViewInfo.subresourceRange.layerCount = 1;
-
-        if (vkCreateImageView(vulkanDevice.device, &accumViewInfo, nullptr, &oitAccumImageView) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create OIT accumulation image view!");
-        }
-
-        // Create reveal buffer (R8)
-        VkImageCreateInfo revealImageInfo{};
-        revealImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        revealImageInfo.imageType = VK_IMAGE_TYPE_2D;
-        revealImageInfo.extent.width = extent.width;
-        revealImageInfo.extent.height = extent.height;
-        revealImageInfo.extent.depth = 1;
-        revealImageInfo.mipLevels = 1;
-        revealImageInfo.arrayLayers = 1;
-        revealImageInfo.format = VK_FORMAT_R8_UNORM;
-        revealImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        revealImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        revealImageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        revealImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        revealImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if (vkCreateImage(vulkanDevice.device, &revealImageInfo, nullptr, &oitRevealImage) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create OIT reveal image!");
-        }
-
-        VkMemoryRequirements revealMemRequirements;
-        vkGetImageMemoryRequirements(vulkanDevice.device, oitRevealImage, &revealMemRequirements);
-
-        VkMemoryAllocateInfo revealAllocInfo{};
-        revealAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        revealAllocInfo.allocationSize = revealMemRequirements.size;
-        revealAllocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(revealMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-        if (vkAllocateMemory(vulkanDevice.device, &revealAllocInfo, nullptr, &oitRevealImageMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate OIT reveal image memory!");
-        }
-
-        vkBindImageMemory(vulkanDevice.device, oitRevealImage, oitRevealImageMemory, 0);
-
-        // Create reveal image view
-        VkImageViewCreateInfo revealViewInfo{};
-        revealViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        revealViewInfo.image = oitRevealImage;
-        revealViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        revealViewInfo.format = VK_FORMAT_R8_UNORM;
-        revealViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        revealViewInfo.subresourceRange.baseMipLevel = 0;
-        revealViewInfo.subresourceRange.levelCount = 1;
-        revealViewInfo.subresourceRange.baseArrayLayer = 0;
-        revealViewInfo.subresourceRange.layerCount = 1;
-
-        if (vkCreateImageView(vulkanDevice.device, &revealViewInfo, nullptr, &oitRevealImageView) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create OIT reveal image view!");
-        }
-    }
-
-    void Renderer::createOITRenderPass() {
-        // Accumulation attachment (RGBA16F)
-        VkAttachmentDescription accumAttachment{};
-        accumAttachment.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-        accumAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        accumAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        accumAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        accumAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        accumAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        accumAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        accumAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        // Reveal attachment (R8)
-        VkAttachmentDescription revealAttachment{};
-        revealAttachment.format = VK_FORMAT_R8_UNORM;
-        revealAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        revealAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        revealAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        revealAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        revealAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        revealAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        revealAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        // Depth attachment (reuse existing depth buffer)
-        VkAttachmentDescription depthAttachment{};
-        depthAttachment.format = VK_FORMAT_D32_SFLOAT;
-        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // Load existing depth
-        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        // Attachment references
-        VkAttachmentReference accumRef{};
-        accumRef.attachment = 0;
-        accumRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference revealRef{};
-        revealRef.attachment = 1;
-        revealRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference depthRef{};
-        depthRef.attachment = 2;
-        depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        std::array<VkAttachmentReference, 2> colorAttachments = {accumRef, revealRef};
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size());
-        subpass.pColorAttachments = colorAttachments.data();
-        subpass.pDepthStencilAttachment = &depthRef;
-
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        std::array<VkAttachmentDescription, 3> attachments = {accumAttachment, revealAttachment, depthAttachment};
-
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        renderPassInfo.pAttachments = attachments.data();
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
-
-        if (vkCreateRenderPass(vulkanDevice.device, &renderPassInfo, nullptr, &oitRenderPass) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create OIT render pass!");
-        }
-    }
-
-    void Renderer::createOITFramebuffer(VkImageView depthImageView) {
-        // TODO: Complete framebuffer creation when depth manager integration is ready
-        
-        std::array<VkImageView, 3> attachments = {
-            oitAccumImageView,
-            oitRevealImageView,
-            depthImageView
-        };
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = oitRenderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = swapChain.extent.width;
-        framebufferInfo.height = swapChain.extent.height;
-        framebufferInfo.layers = 1;
-
-        if (vkCreateFramebuffer(vulkanDevice.device, &framebufferInfo, nullptr, &oitFramebuffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create OIT framebuffer!");
-        }
-    }
-
-    void Renderer::cleanupOIT() {
-        VkDevice device = vulkanDevice.device;
-
-        if (oitFramebuffer != VK_NULL_HANDLE) {
-            vkDestroyFramebuffer(device, oitFramebuffer, nullptr);
-            oitFramebuffer = VK_NULL_HANDLE;
-        }
-
-        if (oitRenderPass != VK_NULL_HANDLE) {
-            vkDestroyRenderPass(device, oitRenderPass, nullptr);
-            oitRenderPass = VK_NULL_HANDLE;
-        }
-
-        if (oitAccumImageView != VK_NULL_HANDLE) {
-            vkDestroyImageView(device, oitAccumImageView, nullptr);
-            oitAccumImageView = VK_NULL_HANDLE;
-        }
-
-        if (oitRevealImageView != VK_NULL_HANDLE) {
-            vkDestroyImageView(device, oitRevealImageView, nullptr);
-            oitRevealImageView = VK_NULL_HANDLE;
-        }
-
-        if (oitAccumImage != VK_NULL_HANDLE) {
-            vkDestroyImage(device, oitAccumImage, nullptr);
-            oitAccumImage = VK_NULL_HANDLE;
-        }
-
-        if (oitRevealImage != VK_NULL_HANDLE) {
-            vkDestroyImage(device, oitRevealImage, nullptr);
-            oitRevealImage = VK_NULL_HANDLE;
-        }
-
-        if (oitAccumImageMemory != VK_NULL_HANDLE) {
-            vkFreeMemory(device, oitAccumImageMemory, nullptr);
-            oitAccumImageMemory = VK_NULL_HANDLE;
-        }
-
-        if (oitRevealImageMemory != VK_NULL_HANDLE) {
-            vkFreeMemory(device, oitRevealImageMemory, nullptr);
-            oitRevealImageMemory = VK_NULL_HANDLE;
-        }
     }
 
 }

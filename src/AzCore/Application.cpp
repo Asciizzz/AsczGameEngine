@@ -403,7 +403,7 @@ void Application::initVulkan() {
     }
 
     // Final Renderer setup with ResourceManager
-    renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *buffer, 
+    renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *buffer,
                                         *descriptorManager, *resourceManager);
 }
 
