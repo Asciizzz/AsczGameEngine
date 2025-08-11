@@ -240,10 +240,6 @@ namespace AzVulk {
 
 
     void Buffer::createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances) {
-        if (meshIndex >= meshBuffers.size()) {
-            throw std::runtime_error("Invalid mesh index for instance buffer creation!");
-        }
-
         const auto& instanceIndices = meshData.instanceIndices;
         auto& meshBuffer = meshBuffers[meshIndex];
         VkDeviceSize bufferSize = sizeof(Az3D::InstanceVertexData) * instanceIndices.size();
@@ -276,14 +272,7 @@ namespace AzVulk {
     void Buffer::updateMeshInstanceBufferSelective( size_t meshIndex,
                                                     Az3D::MeshMappingData& meshData, 
                                                     const std::vector<Az3D::ModelInstance>& modelInstances) {
-        if (meshIndex >= meshBuffers.size() || meshData.updateIndices.empty()) {
-            return; // Nothing to update
-        }
-
         auto& meshBuffer = meshBuffers[meshIndex];
-        if (!meshBuffer.instanceBufferMapped) {
-            return; // Buffer not mapped
-        }
 
         for (size_t instanceIndex : meshData.updateIndices) {
             size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;

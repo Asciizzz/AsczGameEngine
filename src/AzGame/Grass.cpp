@@ -406,16 +406,16 @@ std::pair<float, glm::vec3> Grass::getTerrainInfoAt(float worldX, float worldZ) 
     return {height, normal};
 }
 
-void Grass::updateWindAnimation(float deltaTime) {
+void Grass::updateWindAnimation(float dTime) {
     if (!config.enableWind || windGrassInstances.empty()) {
         return;
     }
     
-    windTime += deltaTime;
+    windTime += dTime * 0.5f;
     
     // For now, use CPU-side wind animation that mirrors the compute shader
     // This provides the same visual effect without the GPU-CPU synchronization overhead
-    updateGrassInstancesCPU(deltaTime);
+    updateGrassInstancesCPU(dTime);
     
     // TODO: Once we integrate compute shader results directly into rendering,
     // we can enable the GPU compute path:
@@ -439,7 +439,7 @@ void Grass::updateWindAnimation(float deltaTime) {
     */
 }
 
-void Grass::updateGrassInstancesCPU(float deltaTime) {
+void Grass::updateGrassInstancesCPU(float dTime) {
     glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
 
     // Apply wind animation to each grass instance

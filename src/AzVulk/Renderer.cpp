@@ -279,8 +279,8 @@ namespace AzVulk {
 
     // Copy depth buffer for sampling in effects
     void Renderer::copyDepthForSampling(DepthManager& depthManager) {
-        depthManager.copyDepthForSampling(  commandBuffers[currentFrame], 
-                                            swapChain.extent.width, swapChain.extent.height);
+        depthManager.copyDepthForSampling(commandBuffers[currentFrame],
+                                        swapChain.extent.width, swapChain.extent.height);
     }
 
     // End frame: finalize command buffer, submit, and present
