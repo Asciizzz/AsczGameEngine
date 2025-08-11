@@ -169,10 +169,8 @@ namespace AzVulk {
         ubo.cameraUp = glm::vec4(camera.up, 0.0f);
         ubo.nearFar = glm::vec4(camera.nearPlane, camera.farPlane, 0.0f, 0.0f);
 
-        void* data;
-        vkMapMemory(vulkanDevice.device, buffer.uniformBuffersMemory[currentFrame], 0, sizeof(ubo), 0, &data);
-        memcpy(data, &ubo, sizeof(ubo));
-        vkUnmapMemory(vulkanDevice.device, buffer.uniformBuffersMemory[currentFrame]);
+        // Use persistent mapping for uniform buffers
+        memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 
         return imageIndex;
     }
