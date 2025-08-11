@@ -190,7 +190,7 @@ namespace Az3D {
 
         // Model matrix is 4x4, so we need 4 attribute locations (3, 4, 5, 6)
         // Each vec4 takes one attribute location
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; ++i) {
             attributeDescriptions[i].binding = 1;
             attributeDescriptions[i].location = 3 + i; // Locations 3, 4, 5, 6
             attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;

@@ -18,13 +18,13 @@ namespace AzVulk {
         }
 
         // Cleanup uniform buffers
-        for (size_t i = 0; i < uniformBuffers.size(); i++) {
+        for (size_t i = 0; i < uniformBuffers.size(); ++i) {
             vkDestroyBuffer(logicalDevice, uniformBuffers[i], nullptr);
             vkFreeMemory(logicalDevice, uniformBuffersMemory[i], nullptr);
         }
 
         // Cleanup material uniform buffers
-        for (size_t i = 0; i < materialUniformBuffers.size(); i++) {
+        for (size_t i = 0; i < materialUniformBuffers.size(); ++i) {
             if (materialUniformBuffersMapped[i]) {
                 vkUnmapMemory(logicalDevice, materialUniformBuffersMemory[i]);
             }
@@ -86,7 +86,7 @@ namespace AzVulk {
         uniformBuffersMemory.resize(count);
         uniformBuffersMapped.resize(count);
 
-        for (size_t i = 0; i < count; i++) {
+        for (size_t i = 0; i < count; ++i) {
             createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                         uniformBuffers[i], uniformBuffersMemory[i]);
@@ -102,7 +102,7 @@ namespace AzVulk {
         materialUniformBuffersMemory.resize(materials.size());
         materialUniformBuffersMapped.resize(materials.size());
 
-        for (size_t i = 0; i < materials.size(); i++) {
+        for (size_t i = 0; i < materials.size(); ++i) {
             createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                         materialUniformBuffers[i], materialUniformBuffersMemory[i]);

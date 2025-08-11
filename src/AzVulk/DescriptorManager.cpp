@@ -112,7 +112,7 @@ namespace AzVulk {
 
         // Configure each descriptor set for this material
         // I have no regard for safety, fear me
-        for (uint32_t i = 0; i < maxFramesInFlight; i++) {
+        for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
             std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 
             // Global uniform buffer binding (binding 0)
