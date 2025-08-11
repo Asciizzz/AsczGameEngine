@@ -11,7 +11,6 @@ namespace AzVulk {
         DepthManager(const Device& device);
         ~DepthManager();
 
-        
         DepthManager(const DepthManager&) = delete;
         DepthManager& operator=(const DepthManager&) = delete;
 
