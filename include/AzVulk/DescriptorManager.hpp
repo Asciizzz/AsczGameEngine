@@ -45,6 +45,14 @@ namespace AzVulk {
             newLocation = std::move(mapSets[key]); 
             mapSets.erase(key);
         }
+
+
+        // Some really helpful functions
+        static inline VkDescriptorSetLayoutBinding fastBinding( uint32_t binding,
+                                                                VkDescriptorType type,
+                                                                VkShaderStageFlags stageFlags,
+                                                                uint32_t descriptorCount = 1);
+        static inline VkDescriptorSetAllocateInfo fastAllocateInfo(const DynamicDescriptor& desc);
     };
 
 

@@ -9,25 +9,14 @@ namespace AzVulk {
 
     DescriptorManager::~DescriptorManager() {}
 
-
-    inline VkDescriptorSetLayoutBinding fastBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1) {
-        VkDescriptorSetLayoutBinding bindingInfo{};
-        bindingInfo.binding = binding;
-        bindingInfo.descriptorCount = descriptorCount;
-        bindingInfo.descriptorType = type;
-        bindingInfo.pImmutableSamplers = nullptr;
-        bindingInfo.stageFlags = stageFlags;
-        return bindingInfo;
-    }
-
     // Create two descriptor set layouts: set 0 (global UBO), set 1 (material UBO + texture)
     void DescriptorManager::createDescriptorSetLayouts(uint32_t maxFramesInFlight) {
         // For material
         materialDynamicDescriptor.init(device);
         materialDynamicDescriptor.maxFramesInFlight = maxFramesInFlight;
 
-        VkDescriptorSetLayoutBinding materialUBOBinding = fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-        VkDescriptorSetLayoutBinding textureBinding = fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+        VkDescriptorSetLayoutBinding materialUBOBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        VkDescriptorSetLayoutBinding textureBinding = DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
         materialDynamicDescriptor.createSetLayout({materialUBOBinding, textureBinding});
 
@@ -35,7 +24,7 @@ namespace AzVulk {
         globalDynamicDescriptor.init(device);
         globalDynamicDescriptor.maxFramesInFlight = maxFramesInFlight;
 
-        VkDescriptorSetLayoutBinding globalUBOBinding = fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        VkDescriptorSetLayoutBinding globalUBOBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
         globalDynamicDescriptor.createSetLayout({globalUBOBinding});
     }
 
@@ -55,13 +44,7 @@ namespace AzVulk {
         auto& matDesc = materialDynamicDescriptor;
         uint32_t maxFramesInFlight = matDesc.maxFramesInFlight;
 
-        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, matDesc.setLayout);
-
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = matDesc.pool;
-        allocInfo.descriptorSetCount = maxFramesInFlight;
-        allocInfo.pSetLayouts = layouts.data();
+        VkDescriptorSetAllocateInfo allocInfo = DynamicDescriptor::fastAllocateInfo(matDesc);
 
         std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
         if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
@@ -108,13 +91,7 @@ namespace AzVulk {
     void DescriptorManager::createGlobalDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize) {
         auto& glbDesc = globalDynamicDescriptor;
 
-        std::vector<VkDescriptorSetLayout> layouts(glbDesc.maxFramesInFlight, glbDesc.setLayout);
-
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = glbDesc.pool;
-        allocInfo.descriptorSetCount = glbDesc.maxFramesInFlight;
-        allocInfo.pSetLayouts = layouts.data();
+        VkDescriptorSetAllocateInfo allocInfo = DynamicDescriptor::fastAllocateInfo(glbDesc);
 
         glbDesc.sets.resize(glbDesc.maxFramesInFlight);
         if (vkAllocateDescriptorSets(device, &allocInfo, glbDesc.sets.data()) != VK_SUCCESS) {
@@ -192,4 +169,27 @@ namespace AzVulk {
         }
     }
 
+
+// Helpful functions
+
+    inline VkDescriptorSetLayoutBinding DynamicDescriptor::fastBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t descriptorCount) {
+        VkDescriptorSetLayoutBinding bindingInfo{};
+        bindingInfo.binding = binding;
+        bindingInfo.descriptorCount = descriptorCount;
+        bindingInfo.descriptorType = type;
+        bindingInfo.pImmutableSamplers = nullptr;
+        bindingInfo.stageFlags = stageFlags;
+        return bindingInfo;
+    }
+
+    inline VkDescriptorSetAllocateInfo DynamicDescriptor::fastAllocateInfo(const DynamicDescriptor& desc) {
+        std::vector<VkDescriptorSetLayout> layouts(desc.maxFramesInFlight, desc.setLayout);
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = desc.pool;
+        allocInfo.descriptorSetCount = desc.maxFramesInFlight;
+        allocInfo.pSetLayouts = layouts.data();
+        return allocInfo;
+    }
 }

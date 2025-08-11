@@ -271,7 +271,6 @@ namespace AzVulk {
         // Bind sky pipeline
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
 
-
         // Bind only the global descriptor set (set 0) for sky
         VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
