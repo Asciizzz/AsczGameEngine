@@ -263,16 +263,21 @@ namespace AzVulk {
 
     // Sky rendering using dedicated sky pipeline
     void Renderer::drawSky(RasterPipeline& skyPipeline) {
-        // Bind sky pipeline
-        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
+    // Bind sky pipeline
+    vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
 
-        // Bind descriptor sets (use material index 0 for global UBO)
-        VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, 0);
-        vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                skyPipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+    // Bind descriptor sets (use material index 0 for global UBO)
+    VkDescriptorSet descriptorSet = descriptorManager.getDescriptorSet(currentFrame, 0);
+    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                skyPipeline.pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
-        // Draw fullscreen triangle (3 vertices, no input)
-        vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
+    // Bind dummy vertex buffer for both vertex and instance bindings (Vulkan requires this even if not used)
+    VkBuffer dummyBuffers[] = { buffer.dummyVertexBuffer, buffer.dummyVertexBuffer };
+    VkDeviceSize dummyOffsets[] = { 0, 0 };
+    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, dummyBuffers, dummyOffsets);
+
+    // Draw fullscreen triangle (3 vertices, no input)
+    vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
     }
 
     // Copy depth buffer for sampling in effects

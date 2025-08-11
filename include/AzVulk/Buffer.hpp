@@ -128,5 +128,12 @@ namespace AzVulk {
         void createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
                             VkBuffer& buffer, VkDeviceMemory& bufferMemory);
         void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool);
+        // === Dummy Vertex Buffer Support ===
+        VkBuffer dummyVertexBuffer = VK_NULL_HANDLE;
+        VkDeviceMemory dummyVertexBufferMemory = VK_NULL_HANDLE;
+
+        // Dummy vertex buffer creation and access (for passes with no real vertex input)
+        void createDummyVertexBuffer();
+        void destroyDummyVertexBuffer();
     };
 }

@@ -107,6 +107,8 @@ void Application::initVulkan() {
 
     buffer = std::make_unique<Buffer>(*vulkanDevice);
     buffer->createUniformBuffers(2);
+    // Create dummy vertex buffer for sky pass (fullscreen, no attributes)
+    buffer->createDummyVertexBuffer();
 
     resourceManager = std::make_unique<ResourceManager>(*vulkanDevice, commandPool);
     modelManager = std::make_unique<ModelManager>();
