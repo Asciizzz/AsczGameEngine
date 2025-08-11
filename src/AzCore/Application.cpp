@@ -59,12 +59,16 @@ void Application::initVulkan() {
     descriptorManager = std::make_unique<DescriptorManager>(*vulkanDevice);
     descriptorManager->createDescriptorSetLayouts();
 
+    std::vector<VkDescriptorSetLayout> setLayouts = {
+        descriptorManager->globalDescriptorSetLayout,
+        descriptorManager->materialDescriptorSetLayout
+    };
+
     // Use both layouts for all pipelines
     opaquePipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
-        descriptorManager->globalDescriptorSetLayout,
-        descriptorManager->materialDescriptorSetLayout,
+        setLayouts,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
@@ -73,8 +77,7 @@ void Application::initVulkan() {
     transparentPipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
-        descriptorManager->globalDescriptorSetLayout,
-        descriptorManager->materialDescriptorSetLayout,
+        setLayouts,
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
@@ -83,8 +86,7 @@ void Application::initVulkan() {
     skyPipeline = std::make_unique<RasterPipeline>(
         vulkanDevice->device,
         mainRenderPass->renderPass,
-        descriptorManager->globalDescriptorSetLayout,
-        descriptorManager->materialDescriptorSetLayout,
+        setLayouts,
         "Shaders/Sky/sky.vert.spv",
         "Shaders/Sky/sky.frag.spv",
         RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)

@@ -47,14 +47,14 @@ namespace AzVulk {
 
 
     RasterPipeline::RasterPipeline( VkDevice device, VkRenderPass renderPass,
-                                                                    VkDescriptorSetLayout globalDescriptorSetLayout,
-                                                                    VkDescriptorSetLayout materialDescriptorSetLayout,
-                                                                    const char* vertexShaderPath, const char* fragmentShaderPath,
-                                                                    const RasterPipelineConfig& config)
-            : device(device), renderPass(renderPass),
-                globalDescriptorSetLayout(globalDescriptorSetLayout),
-                materialDescriptorSetLayout(materialDescriptorSetLayout),
-                vertexShaderPath(vertexShaderPath), fragmentShaderPath(fragmentShaderPath),
+                                    std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
+                                    const char* vertexShaderPath, const char* fragmentShaderPath,
+                                    const RasterPipelineConfig& config)
+            :   device(device),
+                renderPass(renderPass),
+                descriptorSetLayouts(descriptorSetLayouts),
+                vertexShaderPath(vertexShaderPath),
+                fragmentShaderPath(fragmentShaderPath),
                 config(config) {
             createGraphicsPipeline();
     }
@@ -208,11 +208,10 @@ namespace AzVulk {
 
 
         // Use two set layouts: set 0 (global), set 1 (material)
-        std::array<VkDescriptorSetLayout, 2> setLayouts = {globalDescriptorSetLayout, materialDescriptorSetLayout};
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
-        pipelineLayoutInfo.pSetLayouts = setLayouts.data();
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
 

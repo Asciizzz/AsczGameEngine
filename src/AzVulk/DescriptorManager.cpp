@@ -107,52 +107,52 @@ namespace AzVulk {
 
     // Create two pools: one for global UBOs, one for material sets
     void DescriptorManager::createDescriptorPools(uint32_t maxFramesInFlight, uint32_t maxMaterials) {
-    // Destroy old pools if they exist
-    if (globalDescriptorPool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(vulkanDevice.device, globalDescriptorPool, nullptr);
-        globalDescriptorPool = VK_NULL_HANDLE;
-    }
-    if (materialDescriptorPool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(vulkanDevice.device, materialDescriptorPool, nullptr);
-        materialDescriptorPool = VK_NULL_HANDLE;
-    }
+        // Destroy old pools if they exist
+        if (globalDescriptorPool != VK_NULL_HANDLE) {
+            vkDestroyDescriptorPool(vulkanDevice.device, globalDescriptorPool, nullptr);
+            globalDescriptorPool = VK_NULL_HANDLE;
+        }
+        if (materialDescriptorPool != VK_NULL_HANDLE) {
+            vkDestroyDescriptorPool(vulkanDevice.device, materialDescriptorPool, nullptr);
+            materialDescriptorPool = VK_NULL_HANDLE;
+        }
 
-    this->maxFramesInFlight = maxFramesInFlight;
-    this->maxMaterials = maxMaterials;
+        this->maxFramesInFlight = maxFramesInFlight;
+        this->maxMaterials = maxMaterials;
 
-    // Pool for global UBOs (one per frame)
-    VkDescriptorPoolSize globalPoolSize{};
-    globalPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    globalPoolSize.descriptorCount = maxFramesInFlight;
+        // Pool for global UBOs (one per frame)
+        VkDescriptorPoolSize globalPoolSize{};
+        globalPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        globalPoolSize.descriptorCount = maxFramesInFlight;
 
-    VkDescriptorPoolCreateInfo globalPoolInfo{};
-    globalPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    globalPoolInfo.poolSizeCount = 1;
-    globalPoolInfo.pPoolSizes = &globalPoolSize;
-    globalPoolInfo.maxSets = maxFramesInFlight;
-    globalPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        VkDescriptorPoolCreateInfo globalPoolInfo{};
+        globalPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        globalPoolInfo.poolSizeCount = 1;
+        globalPoolInfo.pPoolSizes = &globalPoolSize;
+        globalPoolInfo.maxSets = maxFramesInFlight;
+        globalPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-    if (vkCreateDescriptorPool(vulkanDevice.device, &globalPoolInfo, nullptr, &globalDescriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create global descriptor pool!");
-    }
+        if (vkCreateDescriptorPool(vulkanDevice.device, &globalPoolInfo, nullptr, &globalDescriptorPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create global descriptor pool!");
+        }
 
-    // Pool for material sets (material UBO + texture, per material per frame)
-    std::array<VkDescriptorPoolSize, 2> materialPoolSizes{};
-    materialPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    materialPoolSizes[0].descriptorCount = maxMaterials * maxFramesInFlight;
-    materialPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    materialPoolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight;
+        // Pool for material sets (material UBO + texture, per material per frame)
+        std::array<VkDescriptorPoolSize, 2> materialPoolSizes{};
+        materialPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        materialPoolSizes[0].descriptorCount = maxMaterials * maxFramesInFlight;
+        materialPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        materialPoolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight;
 
-    VkDescriptorPoolCreateInfo materialPoolInfo{};
-    materialPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    materialPoolInfo.poolSizeCount = static_cast<uint32_t>(materialPoolSizes.size());
-    materialPoolInfo.pPoolSizes = materialPoolSizes.data();
-    materialPoolInfo.maxSets = maxMaterials * maxFramesInFlight;
-    materialPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        VkDescriptorPoolCreateInfo materialPoolInfo{};
+        materialPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        materialPoolInfo.poolSizeCount = static_cast<uint32_t>(materialPoolSizes.size());
+        materialPoolInfo.pPoolSizes = materialPoolSizes.data();
+        materialPoolInfo.maxSets = maxMaterials * maxFramesInFlight;
+        materialPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-    if (vkCreateDescriptorPool(vulkanDevice.device, &materialPoolInfo, nullptr, &materialDescriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create material descriptor pool!");
-    }
+        if (vkCreateDescriptorPool(vulkanDevice.device, &materialPoolInfo, nullptr, &materialDescriptorPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create material descriptor pool!");
+        }
     }
 
 
@@ -205,38 +205,38 @@ namespace AzVulk {
             throw std::runtime_error("failed to allocate material descriptor sets for material index: " + std::to_string(materialIndex));
         }
 
+        // Prepare the write structures outside the loop
+        VkDescriptorBufferInfo materialBufferInfo{};
+        materialBufferInfo.buffer = materialUniformBuffer;
+        materialBufferInfo.offset = 0;
+        materialBufferInfo.range = sizeof(MaterialUBO);
+
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView = texture->view;
+        imageInfo.sampler = texture->sampler;
+
+        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+        // Fill in all fields except dstSet
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &materialBufferInfo;
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &imageInfo;
+
         for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
-            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+            for (auto& write : descriptorWrites) write.dstSet = descriptorSets[i];
 
-            // Material UBO (binding 0)
-            VkDescriptorBufferInfo materialBufferInfo{};
-            materialBufferInfo.buffer = materialUniformBuffer;
-            materialBufferInfo.offset = 0;
-            materialBufferInfo.range = sizeof(MaterialUBO);
-
-            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = descriptorSets[i];
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &materialBufferInfo;
-
-            // Texture (binding 1) - This is where the texture linked up with the material
-            VkDescriptorImageInfo imageInfo{};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = texture->view;
-            imageInfo.sampler = texture->sampler;
-
-            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = descriptorSets[i];
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &imageInfo;
-
-            vkUpdateDescriptorSets(vulkanDevice.device, 2, descriptorWrites.data(), 0, nullptr);
+            vkUpdateDescriptorSets(vulkanDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
 
         materialDescriptorSets[materialIndex] = std::move(descriptorSets);
@@ -255,5 +255,84 @@ namespace AzVulk {
             return globalDescriptorSets[frameIndex];
         }
         throw std::runtime_error("Global descriptor set not found for frame: " + std::to_string(frameIndex));
+    }
+
+
+
+
+// DYNAMIC DESCRIPTOR SETS
+    void DynamicDescriptor::createDynamicDescriptor(
+        VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight,
+        const std::vector<VkDescriptorSetLayoutBinding>& bindings,
+        const std::vector<VkDescriptorType>& types,
+        std::vector<VkWriteDescriptorSet>& writes) {
+
+        createSetLayout(bindings);
+        createPool(maxFramesInFlight, maxResources, types);
+        createDescriptorSet(maxFramesInFlight, writes);
+    }
+
+    void DynamicDescriptor::createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+        if (setLayout != VK_NULL_HANDLE) {
+            vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
+            setLayout = VK_NULL_HANDLE;
+        }
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+        layoutInfo.pBindings = bindings.data();
+
+        if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &setLayout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor set layout");
+        }
+    }
+
+    void DynamicDescriptor::createPool( uint32_t maxFramesInFlight, uint32_t maxResources,
+                                        const std::vector<VkDescriptorType>& types
+    ) {
+        if (pool != VK_NULL_HANDLE) {
+            vkDestroyDescriptorPool(device, pool, nullptr);
+            pool = VK_NULL_HANDLE;
+        }
+
+        this->maxResources = maxResources;
+
+        for (const auto& type : types) {
+            poolSizes.push_back({ type, maxResources * maxFramesInFlight });
+        }
+
+        VkDescriptorPoolCreateInfo poolInfo = {};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        poolInfo.maxSets = maxFramesInFlight * maxResources;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+
+        if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor pool");
+        }
+    }
+
+    void DynamicDescriptor::createDescriptorSet(uint32_t maxFramesInFlight,
+                                                std::vector<VkWriteDescriptorSet>& writes) {
+        std::vector<VkDescriptorSetLayout> layouts(maxResources, setLayout);
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = pool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+        allocInfo.pSetLayouts = layouts.data();
+
+        sets.resize(maxResources);
+        if (vkAllocateDescriptorSets(device, &allocInfo, sets.data()) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate descriptor sets");
+        }
+
+        for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+            for (auto& write : writes) write.dstSet = sets[i];
+
+            vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+        }
     }
 }

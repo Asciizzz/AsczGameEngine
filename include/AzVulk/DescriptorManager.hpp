@@ -14,6 +14,42 @@ namespace Az3D {
 
 namespace AzVulk {
 
+    struct DynamicDescriptor {
+        bool created = false;
+
+        DynamicDescriptor(VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight,
+                        const std::vector<VkDescriptorSetLayoutBinding>& bindings,
+                        const std::vector<VkDescriptorType>& types,
+                        std::vector<VkWriteDescriptorSet>& writes) {
+            createDynamicDescriptor(device, maxResources, maxFramesInFlight, bindings, types, writes);
+            created = true;
+        }
+        DynamicDescriptor() = default;
+
+        void createDynamicDescriptor(VkDevice device, uint32_t maxResources, uint32_t maxFramesInFlight,
+                                    const std::vector<VkDescriptorSetLayoutBinding>& bindings,
+                                    const std::vector<VkDescriptorType>& types,
+                                    std::vector<VkWriteDescriptorSet>& writes);
+
+        VkDevice device;
+        uint32_t maxResources;
+
+        VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
+        void createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+
+        VkDescriptorPool pool = VK_NULL_HANDLE;
+        std::vector<VkDescriptorPoolSize> poolSizes;
+        void createPool(uint32_t maxFramesInFlight, uint32_t maxResources,
+                        const std::vector<VkDescriptorType>& types);
+
+        std::vector<VkDescriptorSet> sets;
+        void createDescriptorSet(uint32_t maxFramesInFlight,
+                                std::vector<VkWriteDescriptorSet>& writes);
+
+        VkDescriptorSet getSet(uint32_t frameIndex) const { return sets[frameIndex]; }
+    };
+
+
     class DescriptorManager {
     public:
         DescriptorManager(const Device& device);
