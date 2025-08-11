@@ -268,22 +268,22 @@ namespace AzVulk {
 
     // Sky rendering using dedicated sky pipeline
     void Renderer::drawSky(RasterPipeline& skyPipeline) {
-    // Bind sky pipeline
-    vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
+        // Bind sky pipeline
+        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
 
 
-    // Bind only the global descriptor set (set 0) for sky
-    VkDescriptorSet globalSet = descriptorManager.getGlobalDescriptorSet(currentFrame);
-    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
+        // Bind only the global descriptor set (set 0) for sky
+        VkDescriptorSet globalSet = descriptorManager.getGlobalDescriptorSet(currentFrame);
+        vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
 
-    // Bind dummy vertex buffer for both vertex and instance bindings (Vulkan requires this even if not used)
-    VkBuffer dummyBuffers[] = { buffer.dummyVertexBuffer, buffer.dummyVertexBuffer };
-    VkDeviceSize dummyOffsets[] = { 0, 0 };
-    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, dummyBuffers, dummyOffsets);
+        // Bind dummy vertex buffer for both vertex and instance bindings (Vulkan requires this even if not used)
+        VkBuffer dummyBuffers[] = { buffer.dummyVertexBuffer, buffer.dummyVertexBuffer };
+        VkDeviceSize dummyOffsets[] = { 0, 0 };
+        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, dummyBuffers, dummyOffsets);
 
-    // Draw fullscreen triangle (3 vertices, no input)
-    vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
+        // Draw fullscreen triangle (3 vertices, no input)
+        vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
     }
 
 
