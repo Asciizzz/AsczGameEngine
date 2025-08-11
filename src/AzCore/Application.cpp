@@ -439,16 +439,7 @@ bool Application::checkWindowResize() {
     auto& texManager = *resourceManager->textureManager;
     auto& matManager = *resourceManager->materialManager;
 
-    descriptorManager->freeAllDescriptorSets();
-    descriptorManager->createDescriptorPools(2, matManager.materials.size());
-    descriptorManager->createGlobalDescriptorSets(bufferRef.uniformBuffers, sizeof(GlobalUBO));
-    for (size_t i = 0; i < matManager.materials.size(); ++i) {
-        VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
-        size_t textureIndex = matManager.materials[i]->diffTxtr;
-        descriptorManager->createMaterialDescriptorSets(
-            &texManager.textures[textureIndex], materialUniformBuffer, i
-        );
-    }
+    // Descriptor need no change, since resizing the window aint gonna steal yo material dawg
 
     // Recreate render pass with new settings
     auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
