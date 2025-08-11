@@ -25,8 +25,10 @@ namespace AzVulk {
     // Create split descriptor set layouts (set 0: global UBO, set 1: material UBO+texture)
     void createDescriptorSetLayouts();
     void createDescriptorPools(uint32_t maxFramesInFlight, uint32_t maxMaterials = 10);
+
     void createGlobalDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize);
     void createMaterialDescriptorSets(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex);
+
     void freeAllDescriptorSets();
     VkDescriptorSet getMaterialDescriptorSet(uint32_t frameIndex, size_t materialIndex);
     VkDescriptorSet getGlobalDescriptorSet(uint32_t frameIndex);
