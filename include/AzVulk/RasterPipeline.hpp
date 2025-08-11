@@ -62,8 +62,8 @@ namespace AzVulk {
         VkRenderPass renderPass;
 
         // Pipeline layout and objects
-    VkDescriptorSetLayout globalDescriptorSetLayout = VK_NULL_HANDLE;
-    VkDescriptorSetLayout materialDescriptorSetLayout = VK_NULL_HANDLE;
+        VkDescriptorSetLayout globalDescriptorSetLayout = VK_NULL_HANDLE;
+        VkDescriptorSetLayout materialDescriptorSetLayout = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
