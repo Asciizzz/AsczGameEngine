@@ -144,7 +144,7 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
     // Create material
     grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
         Material::fastTemplate(
-            1.0f, 0.0f, 0.0f, 0.7f, // 0.7f discard threshold for transparency
+            1.0f, 0.0f, 0.0f, 0.1f, // 0.7f discard threshold for transparency
             resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
         )
     );
@@ -194,7 +194,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
     // Create material
     grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
         Material::fastTemplate(
-            1.0f, 0.0f, 0.0f, 0.7f, // 0.7f discard threshold for transparency
+            1.0f, 0.0f, 0.0f, 0.9f,
             resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
         )
     );
@@ -399,7 +399,8 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     // Create terrain mesh and material
     terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices, true);
     terrainMaterialIndex = resManager.addMaterial("TerrainMaterial",
-        Material::fastTemplate(1.0f, 2.0f, 0.2f, 0.0f, 0));
+        Material::fastTemplate(1.0f, 2.0f, 0.2f, 0.0f, 0)
+    );
 
     // Create terrain instance
     ModelInstance terrainInstance;

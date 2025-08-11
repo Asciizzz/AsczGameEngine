@@ -27,7 +27,7 @@ namespace AzVulk {
     struct MaterialUBO {
         alignas(16) glm::vec4 prop1;
 
-        MaterialUBO() : prop1(0.0f, 0.0f, 0.0f, 0.0f) {}
+        MaterialUBO() : prop1(1.0f, 0.0f, 0.0f, 0.0f) {}
         MaterialUBO(const glm::vec4& p1) : prop1(p1) {}
     };
 

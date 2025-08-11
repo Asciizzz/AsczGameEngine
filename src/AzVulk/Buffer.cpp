@@ -118,6 +118,7 @@ namespace AzVulk {
             vkMapMemory(vulkanDevice.device, materialUniformBuffersMemory[i], 0, bufferSize, 0, &materialUniformBuffersMapped[i]);
 
             MaterialUBO materialUBO(materials[i].prop1);
+
             memcpy(materialUniformBuffersMapped[i], &materialUBO, sizeof(MaterialUBO));
         }
     }
