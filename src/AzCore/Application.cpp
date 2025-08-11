@@ -620,7 +620,12 @@ void Application::cleanup() {
     if (commandPool != VK_NULL_HANDLE) {
         vkDestroyCommandPool(vulkanDevice->device, commandPool, nullptr);
     }
-    
+
+    // Ensure swapchain is destroyed before surface
+    if (swapChain) {
+        swapChain.reset();
+    }
+
     if (surface != VK_NULL_HANDLE && vulkanInstance) {
         vkDestroySurfaceKHR(vulkanInstance->instance, surface, nullptr);
     }

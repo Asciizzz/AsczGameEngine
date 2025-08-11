@@ -90,7 +90,11 @@ namespace AzVulk {
             createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                         uniformBuffers[i], uniformBuffersMemory[i]);
-            
+            // Robust: unmap if already mapped
+            if (uniformBuffersMapped[i]) {
+                vkUnmapMemory(vulkanDevice.device, uniformBuffersMemory[i]);
+                uniformBuffersMapped[i] = nullptr;
+            }
             vkMapMemory(vulkanDevice.device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
         }
     }
@@ -106,11 +110,14 @@ namespace AzVulk {
             createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                         materialUniformBuffers[i], materialUniformBuffersMemory[i]);
-            
+            // Robust: unmap if already mapped
+            if (materialUniformBuffersMapped[i]) {
+                vkUnmapMemory(vulkanDevice.device, materialUniformBuffersMemory[i]);
+                materialUniformBuffersMapped[i] = nullptr;
+            }
             vkMapMemory(vulkanDevice.device, materialUniformBuffersMemory[i], 0, bufferSize, 0, &materialUniformBuffersMapped[i]);
 
             MaterialUBO materialUBO(materials[i].prop1);
-
             memcpy(materialUniformBuffersMapped[i], &materialUBO, sizeof(MaterialUBO));
         }
     }
@@ -245,6 +252,7 @@ namespace AzVulk {
         if (meshBuffer.instanceBuffer != VK_NULL_HANDLE) {
             if (meshBuffer.instanceBufferMapped) {
                 vkUnmapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory);
+                meshBuffer.instanceBufferMapped = nullptr;
             }
             vkDestroyBuffer(vulkanDevice.device, meshBuffer.instanceBuffer, nullptr);
             vkFreeMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, nullptr);
