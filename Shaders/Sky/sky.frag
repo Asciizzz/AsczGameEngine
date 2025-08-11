@@ -10,6 +10,10 @@ layout(binding = 0) uniform GlobalUBO {
     vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
 
+// If Vulkan validation return warnings where
+// vertex attributes are not being consumed
+// this shader is to blame XD
+
 layout(location = 0) in vec2 fragScreenCoord;  // Screen coordinates [-1, 1]
 layout(location = 0) out vec4 outColor;
 

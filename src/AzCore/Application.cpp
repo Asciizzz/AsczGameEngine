@@ -380,10 +380,6 @@ void Application::initVulkan() {
     std::vector<Material> materialVector;
     for (const auto& matPtr : matManager.materials) {
         materialVector.push_back(*matPtr);
-
-        // Print material attributes
-        printf("Material %zu: Prop1: %f, Prop2: %f, Prop3: %f, Prop4: %f\n", materialVector.size() - 1,
-            matPtr->prop1.x, matPtr->prop1.y, matPtr->prop1.z, matPtr->prop1.w);
     }
     bufferRef.createMaterialUniformBuffers(materialVector);
 
