@@ -53,49 +53,50 @@ void Application::initVulkan() {
         swapChain->imageFormat, msaaManager->msaaSamples
     );
     mainRenderPass = std::make_unique<RenderPass>(vulkanDevice->device, renderPassConfig);
+    
+    // Some very repetitive vulkan stuff
+    VkDevice device = vulkanDevice->device;
+    VkRenderPass renderPass = mainRenderPass->renderPass;
 
 
     // Create descriptor manager and both set layouts
-    descriptorManager = std::make_unique<DescriptorManager>(vulkanDevice->device);
+    descriptorManager = std::make_unique<DescriptorManager>(device);
     descriptorManager->createDescriptorSetLayouts(2);
 
     auto& matDesc = descriptorManager->materialDynamicDescriptor;
     auto& glbDesc = descriptorManager->globalDynamicDescriptor;
 
-    std::vector<VkDescriptorSetLayout> setLayouts = {
-        glbDesc.setLayout,
-        matDesc.setLayout
-    };
+    using LayoutVec = std::vector<VkDescriptorSetLayout>;
 
     // Use both layouts for all pipelines
     opaquePipeline = std::make_unique<RasterPipeline>(
-        vulkanDevice->device,
-        mainRenderPass->renderPass,
-        setLayouts,
+        device,
+        renderPass,
+        LayoutVec{glbDesc.setLayout, matDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
     );
 
     transparentPipeline = std::make_unique<RasterPipeline>(
-        vulkanDevice->device,
-        mainRenderPass->renderPass,
-        setLayouts,
+        device,
+        renderPass,
+        LayoutVec{glbDesc.setLayout, matDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
     );
 
     skyPipeline = std::make_unique<RasterPipeline>(
-        vulkanDevice->device,
-        mainRenderPass->renderPass,
-        setLayouts,
+        device,
+        renderPass,
+        LayoutVec{glbDesc.setLayout},
         "Shaders/Sky/sky.vert.spv",
         "Shaders/Sky/sky.frag.spv",
         RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
     );
 
-    shaderManager = std::make_unique<ShaderManager>(vulkanDevice->device);
+    shaderManager = std::make_unique<ShaderManager>(device);
 
     // Create command pool for graphics operations
     VkCommandPoolCreateInfo poolInfo{};
@@ -103,7 +104,7 @@ void Application::initVulkan() {
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = vulkanDevice->queueFamilyIndices.graphicsFamily.value();
 
-    if (vkCreateCommandPool(vulkanDevice->device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create command pool!");
     }
 
@@ -111,7 +112,7 @@ void Application::initVulkan() {
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = std::make_unique<DepthManager>(*vulkanDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     buffer = std::make_unique<Buffer>(*vulkanDevice);
     buffer->createUniformBuffers(2);
@@ -450,14 +451,16 @@ bool Application::checkWindowResize() {
         swapChain->imageFormat, msaaManager->msaaSamples);
     mainRenderPass->recreate(newRenderPassConfig);
 
-    swapChain->recreate(windowManager->window, mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    VkRenderPass renderPass = mainRenderPass->renderPass;
+
+    swapChain->recreate(windowManager->window, renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
 
     // Since descriptor receive no changes, we no need to change the descriptor in the pipeline
-    opaquePipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createOpaqueConfig(newMsaaSamples));
-    transparentPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createTransparentConfig(newMsaaSamples));
-    skyPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createSkyConfig(newMsaaSamples));
+    opaquePipeline->recreate(renderPass, RasterPipelineConfig::createOpaqueConfig(newMsaaSamples));
+    transparentPipeline->recreate(renderPass, RasterPipelineConfig::createTransparentConfig(newMsaaSamples));
+    skyPipeline->recreate(renderPass, RasterPipelineConfig::createSkyConfig(newMsaaSamples));
 
     return true;
 }
