@@ -1,4 +1,5 @@
 #include "AzVulk/Renderer.hpp"
+#include "AzVulk/DepthManager.hpp"
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
 #include <glm/gtc/matrix_transform.hpp>
@@ -166,6 +167,7 @@ namespace AzVulk {
         ubo.cameraForward = glm::vec4(camera.forward, camera.aspectRatio);
         ubo.cameraRight = glm::vec4(camera.right, 0.0f);
         ubo.cameraUp = glm::vec4(camera.up, 0.0f);
+        ubo.nearFar = glm::vec4(camera.nearPlane, camera.farPlane, 0.0f, 0.0f);
 
         void* data;
         vkMapMemory(vulkanDevice.device, buffer.uniformBuffersMemory[currentFrame], 0, sizeof(ubo), 0, &data);
@@ -281,6 +283,40 @@ namespace AzVulk {
 
         // Draw fullscreen triangle (3 vertices, no input)
         vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
+    }
+
+    // Transition depth buffer for sampling
+    void Renderer::transitionDepthForSampling(VkImage depthImage) {
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = depthImage;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+        barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(
+            commandBuffers[currentFrame],
+            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier
+        );
+    }
+
+    // Copy depth buffer for sampling in effects
+    void Renderer::copyDepthForSampling(DepthManager& depthManager) {
+        depthManager.copyDepthForSampling(  commandBuffers[currentFrame], 
+                                            swapChain.extent.width, swapChain.extent.height);
     }
 
     // End frame: finalize command buffer, submit, and present

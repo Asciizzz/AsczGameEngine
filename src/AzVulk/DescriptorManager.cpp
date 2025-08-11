@@ -44,7 +44,14 @@ namespace AzVulk {
         materialLayoutBinding.pImmutableSamplers = nullptr;
         materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::array<VkDescriptorSetLayoutBinding, 3> bindings = {uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding};
+        VkDescriptorSetLayoutBinding depthSamplerLayoutBinding{};
+        depthSamplerLayoutBinding.binding = 3;
+        depthSamplerLayoutBinding.descriptorCount = 1;
+        depthSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        depthSamplerLayoutBinding.pImmutableSamplers = nullptr;
+        depthSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        std::array<VkDescriptorSetLayoutBinding, 4> bindings = {uboLayoutBinding, samplerLayoutBinding, materialLayoutBinding, depthSamplerLayoutBinding};
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -68,9 +75,9 @@ namespace AzVulk {
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = maxMaterials * maxFramesInFlight;
         
-        // Combined image samplers: maxMaterials * maxFramesInFlight
+        // Combined image samplers: maxMaterials * maxFramesInFlight * 2 (texture + depth)
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight;
+        poolSizes[1].descriptorCount = maxMaterials * maxFramesInFlight * 2;
 
         // Material uniform buffers: maxMaterials (one per material, not per frame)
         poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -88,9 +95,9 @@ namespace AzVulk {
         }
     }
 
-    void DescriptorManager::createDescriptorSetsForMaterialWithUBO( const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
-                                                                    const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
-                                                                    size_t materialIndex) {
+    void DescriptorManager::createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
+                                                const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
+                                                size_t materialIndex, VkImageView depthImageView, VkSampler depthSampler) {
         // Check if material already has descriptor sets
         if (materialDescriptorSets.find(materialIndex) != materialDescriptorSets.end()) {
             return; // Already created
@@ -111,7 +118,7 @@ namespace AzVulk {
 
         // Configure each descriptor set for this material
         for (uint32_t i = 0; i < maxFramesInFlight; i++) {
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
 
             // Global uniform buffer binding (binding 0)
             VkDescriptorBufferInfo bufferInfo{};
@@ -160,8 +167,40 @@ namespace AzVulk {
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pBufferInfo = &materialBufferInfo;
 
-            // Write all descriptors (global UBO, texture, material UBO)
-            uint32_t writeCount = hasValidTexture ? 3 : 2; // Skip texture if not valid, but keep material UBO
+            // Depth sampler binding (binding 3)
+            VkDescriptorImageInfo depthImageInfo{};
+            bool hasValidDepthSampler = false;
+            
+            if (depthImageView != VK_NULL_HANDLE && depthSampler != VK_NULL_HANDLE) {
+                depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                depthImageInfo.imageView = depthImageView;
+                depthImageInfo.sampler = depthSampler;
+                hasValidDepthSampler = true;
+            } else {
+                // Use a fallback - use the material texture as depth (won't be correct but won't crash)
+                if (texture && texture->view != VK_NULL_HANDLE && texture->sampler != VK_NULL_HANDLE) {
+                    depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    depthImageInfo.imageView = texture->view;
+                    depthImageInfo.sampler = texture->sampler;
+                } else {
+                    throw std::runtime_error("No valid depth sampler or fallback texture for material " + std::to_string(materialIndex));
+                }
+            }
+
+            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[3].dstSet = descriptorSets[i];
+            descriptorWrites[3].dstBinding = 3;
+            descriptorWrites[3].dstArrayElement = 0;
+            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pImageInfo = &depthImageInfo;
+
+            // Write all descriptors (global UBO, texture, material UBO, depth sampler)
+            uint32_t writeCount = 4; // Always write all 4 bindings
+            if (!hasValidTexture) {
+                // If no texture, still write all but with a default/fallback texture
+                // For now, we'll write all 4 bindings regardless
+            }
             vkUpdateDescriptorSets(vulkanDevice.device, writeCount, descriptorWrites.data(), 0, nullptr);
         }
 

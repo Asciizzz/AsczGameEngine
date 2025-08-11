@@ -7,6 +7,7 @@ layout(binding = 0) uniform GlobalUBO {
     vec4 cameraForward; // xyz: forward direction, w: aspect ratio
     vec4 cameraRight;
     vec4 cameraUp;
+    vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
 
 layout(binding = 1) uniform sampler2D txtrSmplr;
@@ -16,11 +17,15 @@ layout(binding = 2) uniform MaterialUBO {
     vec4 prop1; // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
 } material;
 
+// Depth sampler for depth-based effects
+layout(binding = 3) uniform sampler2D depthSampler;
+
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragWorldNrml;
 layout(location = 2) in vec3 fragWorldPos;
 layout(location = 3) in vec4 fragInstanceColor;
 layout(location = 4) in float vertexLightFactor;
+layout(location = 5) in vec4 fragScreenPos;
 
 layout(location = 0) out vec4 outColor;
 
@@ -30,10 +35,23 @@ void main() {
 
     if (texColor.a < discardThreshold) { discard; }
 
-    float distance = length(fragWorldPos - glb.cameraPos.xyz);
+    // Calculate screen coordinates for depth sampling
+    vec3 screenCoords = fragScreenPos.xyz / fragScreenPos.w;
+    vec2 depthUV = screenCoords.xy * 0.5 + 0.5; // Convert from NDC [-1,1] to UV [0,1]
     
-    float maxFogDistance = 100.0;
-    float fogFactor = clamp(distance / maxFogDistance, 0.0, 1.0);
+    // Sample depth from the copied depth texture
+    float sampledDepth = texture(depthSampler, depthUV).r;
+
+    float near = glb.nearFar.x;
+    float far = glb.nearFar.y;
+    
+    // Linearize the depth value to get world-space distance
+    float z = sampledDepth * 2.0 - 1.0; // Back to NDC
+    float linearDepth = (2.0 * near * far) / (far + near - z * (far - near));
+
+    // Apply fog based on final distance
+    float maxFogDistance = 50.0;
+    float fogFactor = clamp(linearDepth / maxFogDistance, 0.0, 1.0);
     
     fogFactor = smoothstep(0.0, 1.0, fogFactor);
 
@@ -50,5 +68,5 @@ void main() {
     
     float alpha = texColor.a * fragInstanceColor.a;
 
-    outColor = vec4(rgbFinal, alpha * fogFactor);
+    outColor = vec4(rgbFinal, alpha);
 }

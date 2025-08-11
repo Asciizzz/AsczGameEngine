@@ -399,9 +399,10 @@ void Application::initVulkan() {
                 " but only " + std::to_string(texManager.textures.size()) + " textures are loaded!"
             );
         
-        descManager.createDescriptorSetsForMaterialWithUBO(
+        descManager.createDescriptorSets(
             bufferRef.uniformBuffers, sizeof(GlobalUBO), 
-            &texManager.textures[textureIndex], materialUniformBuffer, i
+            &texManager.textures[textureIndex], materialUniformBuffer, i,
+            depthManager->depthSamplerView, depthManager->depthSampler
         );
     }
 
@@ -657,6 +658,9 @@ void Application::mainLoop() {
             if (terrainGroup.modelInstanceCount > 0) {
                 rendererRef.drawScene(*opaquePipeline, terrainGroup);
             }
+
+            // Copy depth buffer for sampling in effects
+            rendererRef.copyDepthForSampling(*depthManager);
 
             rendererRef.endFrame(imageIndex);
         }

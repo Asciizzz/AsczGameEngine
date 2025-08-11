@@ -3,6 +3,11 @@
 layout(binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
+    vec4 cameraPos;     // xyz = camera position, w = fov (radians)
+    vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
+    vec4 cameraRight;   // xyz = camera right, w = unused
+    vec4 cameraUp;      // xyz = camera up, w = unused
+    vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
 
 // Material uniform buffer (same as fragment shader)
@@ -25,6 +30,7 @@ layout(location = 1) out vec3 fragWorldNrml;
 layout(location = 2) out vec3 fragWorldPos;
 layout(location = 3) out vec4 fragInstanceColor;
 layout(location = 4) out float vertexLightFactor;  // Pre-computed lighting
+layout(location = 5) out vec4 fragScreenPos;  // Screen space position for depth sampling
 
 // Toon shading function (moved from fragment shader)
 float applyToonShading(float value, int toonLevel) {
@@ -51,6 +57,7 @@ void main() {
     fragWorldPos = worldPos.xyz;
 
     gl_Position = glb.proj * glb.view * worldPos;
+    fragScreenPos = gl_Position;  // Store screen position for depth sampling
 
     // Proper normal transformation that handles non-uniform scaling
     mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));

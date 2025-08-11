@@ -7,6 +7,7 @@ layout(binding = 0) uniform GlobalUBO {
     vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
     vec4 cameraRight;   // xyz = camera right, w = unused
     vec4 cameraUp;      // xyz = camera up, w = unused
+    vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
 
 layout(location = 0) in vec2 fragScreenCoord;  // Screen coordinates [-1, 1]

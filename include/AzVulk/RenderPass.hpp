@@ -16,7 +16,7 @@ namespace AzVulk {
         VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
         VkSampleCountFlagBits depthSamples = VK_SAMPLE_COUNT_1_BIT;
         VkAttachmentLoadOp depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        VkAttachmentStoreOp depthStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        VkAttachmentStoreOp depthStoreOp = VK_ATTACHMENT_STORE_OP_STORE;  // Store for sampling
         
         // MSAA resolve settings
         bool hasResolve = false;

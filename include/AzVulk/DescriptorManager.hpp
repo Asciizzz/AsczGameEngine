@@ -24,9 +24,10 @@ namespace AzVulk {
         VkDescriptorSetLayout createStandardRasterLayout();
 
         void createDescriptorPool(uint32_t maxFramesInFlight, uint32_t maxMaterials = 10);
-        void createDescriptorSetsForMaterialWithUBO(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
-                                                    const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
-                                                    size_t materialIndex);
+        void createDescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize,
+                                const Az3D::Texture* texture, VkBuffer materialUniformBuffer,
+                                size_t materialIndex, VkImageView depthImageView = VK_NULL_HANDLE, 
+                                VkSampler depthSampler = VK_NULL_HANDLE);
         
         VkDescriptorSet getDescriptorSet(uint32_t frameIndex, size_t materialIndex);
         

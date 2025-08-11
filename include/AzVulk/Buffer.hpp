@@ -20,6 +20,7 @@ namespace AzVulk {
         alignas(16) glm::vec4 cameraForward; // xyz = camera forward, w = aspect ratio
         alignas(16) glm::vec4 cameraRight;   // xyz = camera right, w = unused
         alignas(16) glm::vec4 cameraUp;      // xyz = camera up, w = unused
+        alignas(16) glm::vec4 nearFar;       // x = near, y = far, z = unused, w = unused
     };
 
     // Material properties for per-material uniform buffer

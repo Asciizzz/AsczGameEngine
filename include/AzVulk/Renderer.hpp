@@ -12,6 +12,7 @@
 #include "Az3D/Az3D.hpp"
 
 namespace AzVulk {
+    class DepthManager; // Forward declaration
     class Renderer {
     public:
         Renderer(const Device& device, SwapChain& swapChain, Buffer& buffer,
@@ -26,6 +27,8 @@ namespace AzVulk {
         uint32_t beginFrame(RasterPipeline& pipeline, Az3D::Camera& camera);
         void drawScene(RasterPipeline& pipeline, const Az3D::ModelGroup& modelGroup);
         void drawSky(RasterPipeline& skyPipeline); // Sky rendering with proper pipeline
+        void transitionDepthForSampling(VkImage depthImage); // Transition depth buffer for sampling
+        void copyDepthForSampling(DepthManager& depthManager); // Copy depth buffer for sampling
         void endFrame(uint32_t imageIndex);
 
         // Component references
