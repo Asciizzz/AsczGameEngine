@@ -414,6 +414,53 @@ void Application::createSurface() {
     }
 }
 
+bool Application::checkWindowResize() {
+    if (!windowManager->resizedFlag && !renderer->framebufferResized) return false;
+        
+    windowManager->resizedFlag = false;
+    renderer->framebufferResized = false;
+
+    vkDeviceWaitIdle(vulkanDevice->device);
+
+    int newWidth, newHeight;
+    SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
+
+    // Reset like literally everything
+    camera->updateAspectRatio(newWidth, newHeight);
+    msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
+    depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
+
+    auto& bufferRef = *buffer;
+    auto& texManager = *resourceManager->textureManager;
+    auto& matManager = *resourceManager->materialManager;
+
+    descriptorManager->createDescriptorPool(2, matManager.materials.size());
+    for (size_t i = 0; i < matManager.materials.size(); ++i) {
+        VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
+
+        size_t textureIndex = matManager.materials[i]->diffTxtr;
+        
+        descriptorManager->createDescriptorSets(
+            bufferRef.uniformBuffers, sizeof(GlobalUBO), 
+            &texManager.textures[textureIndex], materialUniformBuffer, i,
+            depthManager->depthSamplerView, depthManager->depthSampler
+        );
+    }
+
+    // Recreate render pass with new settings
+    auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
+        swapChain->imageFormat, msaaManager->msaaSamples);
+    mainRenderPass->recreate(newRenderPassConfig);
+
+    swapChain->recreate(windowManager->window, mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    opaquePipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples));
+    transparentPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples));
+    skyPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples));
+
+    return true;
+}
+
+
 void Application::mainLoop() {
     SDL_SetRelativeMouseMode(SDL_TRUE); // Start with mouse locked
 
@@ -445,43 +492,7 @@ void Application::mainLoop() {
         static bool mouseLocked = true;
 
         // Check if window was resized or renderer needs to be updated
-        if (winManager.resizedFlag || rendererRef.framebufferResized) {
-            winManager.resizedFlag = false;
-            rendererRef.framebufferResized = false;
-
-            vkDeviceWaitIdle(deviceRef.device);
-
-            int newWidth, newHeight;
-            SDL_GetWindowSize(winManager.window, &newWidth, &newHeight);
-
-            // Reset like literally everything
-            camRef.updateAspectRatio(newWidth, newHeight);
-            msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
-            depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-
-            descriptorManager->createDescriptorPool(2, matManager.materials.size());
-            for (size_t i = 0; i < matManager.materials.size(); ++i) {
-                VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
-
-                size_t textureIndex = matManager.materials[i]->diffTxtr;
-                
-                descriptorManager->createDescriptorSets(
-                    bufferRef.uniformBuffers, sizeof(GlobalUBO), 
-                    &texManager.textures[textureIndex], materialUniformBuffer, i,
-                    depthManager->depthSamplerView, depthManager->depthSampler
-                );
-            }
-
-            // Recreate render pass with new settings
-            auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-                swapChain->imageFormat, msaaManager->msaaSamples);
-            mainRenderPass->recreate(newRenderPassConfig);
-
-            swapChain->recreate(winManager.window, mainRenderPass->renderPass, depthManager->depthImageView, msaaManager->colorImageView);
-            opaquePipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples));
-            transparentPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples));
-            skyPipeline->recreate(mainRenderPass->renderPass, RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples));
-        }
+        checkWindowResize();
 
         const Uint8* k_state = SDL_GetKeyboardState(nullptr);
         if (k_state[SDL_SCANCODE_ESCAPE]) {

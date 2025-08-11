@@ -74,4 +74,6 @@ private:
     void createSurface();
     void mainLoop();
     void cleanup();
+
+    bool checkWindowResize();
 };
