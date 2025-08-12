@@ -81,59 +81,8 @@ float random(vec2 uv) {
 }
 
 void main() {
-
-
-    vec2 depthUV = fragScreenCoord * 0.5 + 0.5;
     vec3 rayDir = reconstructRayDirection();
     vec3 skyColor = calculateSkyColor(rayDir);
 
-    // --- God Rays Implementation (adapted from demo) ---
-    vec3 sunDir = normalize(vec3(-1.0, -0.3, 1.0));
-    vec3 camPos = glb.cameraPos.xyz;
-    vec3 sunPosWorld = camPos + sunDir * 100.0;
-    vec4 sunView = glb.view * vec4(sunPosWorld, 1.0);
-    vec4 sunClip = glb.proj * sunView;
-    sunClip /= sunClip.w;
-    vec2 sunScreen = sunClip.xy;
-    vec2 sunUV = sunScreen * 0.5 + 0.5;
-
-    // Parameters (tweak as needed)
-    const int SAMPLE_COUNT = 100;
-    float ray_length = 1.0;
-    float ray_intensity = 120.0;
-    float light_source_scale = 1.0;
-    float light_source_feather = 0.7;
-    float noise_strength = 0.2;
-
-    // Radial blur
-    vec2 dir = depthUV - sunUV;
-    vec2 ratio = vec2(1.0, 1.0); // Assume square pixels for now
-    vec2 dir2 = depthUV / ratio - sunUV / ratio;
-    float light_rays = 0.0;
-    vec2 uv2;
-    float scale, l;
-    for (int i = 0; i < SAMPLE_COUNT; i++) {
-        scale = 1.0 - ray_length * (float(i) / float(SAMPLE_COUNT - 1));
-        float d = texture(depthSampler, dir * scale + sunUV).r;
-        l = 1.0 - d;
-        uv2 = dir2 * scale * (light_source_scale * light_source_scale);
-        l *= smoothstep(1.0, 0.999 - light_source_feather, dot(uv2, uv2) * 4.0);
-        light_rays += l / float(SAMPLE_COUNT);
-    }
-
-
-    // Noise to reduce banding
-    float n = 1.0 - random(depthUV) * noise_strength * smoothstep(0.999 - 1.25, 1.0, dot(dir2, dir2) * 2.0);
-    light_rays *= n;
-
-    // Fade based on view angle
-    float d_angle = clamp(-dot(normalize(rayDir), normalize(sunDir)), 0.0, 1.0);
-    light_rays *= d_angle;
-
-    vec3 godRayColor = vec3(1.2, 1.1, 0.9) * light_rays * ray_intensity;
-
-    godRayColor = clamp(godRayColor, 0.0, 1.0); // Ensure color is within valid range
-
-    vec3 finalColor = skyColor + godRayColor;
-    outColor = vec4(finalColor, 1.0);
+    outColor = vec4(skyColor, 1.0);
 }
