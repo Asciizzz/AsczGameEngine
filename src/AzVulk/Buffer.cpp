@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
-#include <omp.h>
+#include <execution>
 
 namespace AzVulk {
 
@@ -282,10 +282,15 @@ namespace AzVulk {
                                                     const std::vector<Az3D::ModelInstance>& modelInstances) {
         auto& meshBuffer = meshBuffers[meshIndex];
 
-        for (size_t instanceIndex : meshData.updateIndices) {
+        std::for_each(std::execution::par_unseq, meshData.updateIndices.begin(), meshData.updateIndices.end(), [&](size_t instanceIndex) {
             size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
             static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
-        }
+        });
+
+        // for (size_t instanceIndex : meshData.updateIndices) {
+        //     size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
+        //     static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
+        // }
     }
 }
 // === Dummy Vertex Buffer Support ===

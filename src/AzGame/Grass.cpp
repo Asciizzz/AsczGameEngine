@@ -470,7 +470,7 @@ void Grass::updateGrassInstancesCPU() {
     std::vector<size_t> indices(windGrassInstances.size());
     std::iota(indices.begin(), indices.end(), 0);
 
-    std::for_each(std::execution::par, indices.begin(), indices.end(),
+    std::for_each(std::execution::par_unseq, indices.begin(), indices.end(),
     [&](size_t i) {
         if (i >= windGrassInstances.size()) return;
 
