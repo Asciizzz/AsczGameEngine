@@ -51,10 +51,10 @@ namespace AzVulk {
 
 
         // Some really helpful functions
-        static inline VkDescriptorSetLayoutBinding fastBinding( uint32_t binding,
-                                                                VkDescriptorType type,
-                                                                VkShaderStageFlags stageFlags,
-                                                                uint32_t descriptorCount = 1);
+        static VkDescriptorSetLayoutBinding fastBinding(uint32_t binding,
+                                                        VkDescriptorType type,
+                                                        VkShaderStageFlags stageFlags,
+                                                        uint32_t descriptorCount = 1);
 
 
         // Template for relevant components

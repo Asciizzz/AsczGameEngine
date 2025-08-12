@@ -29,10 +29,7 @@ namespace AzVulk {
 
     // Create two pools: one for global UBOs, one for material sets
     void DescriptorManager::createDescriptorPools(uint32_t maxMaterials) {
-        // For material
         materialDynamicDescriptor.createPool(maxMaterials, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
-
-        // For GlobalUBO + depth sampler
         globalDynamicDescriptor.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
     }
 
@@ -50,6 +47,11 @@ namespace AzVulk {
         allocInfo.descriptorPool = pool;
         allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
         allocInfo.pSetLayouts = layouts.data();
+
+        for (auto& set : sets) {
+            vkFreeDescriptorSets(device, pool, 1, &set);
+            set = VK_NULL_HANDLE;
+        }
 
         sets.resize(maxFramesInFlight);
         if (vkAllocateDescriptorSets(device, &allocInfo, sets.data()) != VK_SUCCESS) {
@@ -144,9 +146,7 @@ namespace AzVulk {
     }
 
     DynamicDescriptor::~DynamicDescriptor() {
-        for (auto& set : sets) {
-            vkFreeDescriptorSets(device, pool, 1, &set);
-        }
+        for (auto& set : sets) vkFreeDescriptorSets(device, pool, 1, &set);
 
         if (setLayout != VK_NULL_HANDLE) vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
         if (pool != VK_NULL_HANDLE) vkDestroyDescriptorPool(device, pool, nullptr);
@@ -195,7 +195,7 @@ namespace AzVulk {
 
 // Helpful functions
 
-    inline VkDescriptorSetLayoutBinding DynamicDescriptor::fastBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t descriptorCount) {
+    VkDescriptorSetLayoutBinding DynamicDescriptor::fastBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t descriptorCount) {
         VkDescriptorSetLayoutBinding bindingInfo{};
         bindingInfo.binding = binding;
         bindingInfo.descriptorCount = descriptorCount;

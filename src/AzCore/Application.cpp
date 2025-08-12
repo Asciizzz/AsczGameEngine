@@ -206,11 +206,11 @@ void Application::initVulkan() {
     int world_size_x = 0;
     int world_size_z = 0;
 
-    float ground_step_x = 4.0f;
-    float ground_step_z = 4.0f;
+    float ground_step_x = 8.0f;
+    float ground_step_z = 8.0f;
 
-    float ground_offset_x = ground_step_x * 0.5f - 64;
-    float ground_offset_z = ground_step_z * 0.5f - 64;
+    float ground_offset_x = ground_step_x * 0.5f;
+    float ground_offset_z = ground_step_z * 0.5f;
 
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
@@ -220,7 +220,7 @@ void Application::initVulkan() {
                 0.0f,
                 static_cast<float>(z) * ground_step_z + ground_offset_z
             );
-            placePlatform("Water_x4", trform);
+            placePlatform("Ground_x8", trform);
         }
     }
 
@@ -304,9 +304,9 @@ void Application::initVulkan() {
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 80;
-    grassConfig.worldSizeZ = 80;
-    grassConfig.baseDensity = 4;
+    grassConfig.worldSizeX = 64;
+    grassConfig.worldSizeZ = 64;
+    grassConfig.baseDensity = 10;
     grassConfig.heightVariance = 3.9f;
     grassConfig.lowVariance = 0.1f;
     grassConfig.numHeightNodes = 150;
@@ -426,7 +426,7 @@ void Application::createSurface() {
 
 bool Application::checkWindowResize() {
     if (!windowManager->resizedFlag && !renderer->framebufferResized) return false;
-        
+
     windowManager->resizedFlag = false;
     renderer->framebufferResized = false;
 
@@ -438,7 +438,6 @@ bool Application::checkWindowResize() {
     // Reset like literally everything
     camera->updateAspectRatio(newWidth, newHeight);
 
-
     msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
     depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
 
@@ -446,7 +445,20 @@ bool Application::checkWindowResize() {
     auto& texManager = *resourceManager->textureManager;
     auto& matManager = *resourceManager->materialManager;
 
-    // Descriptor need no change, since resizing the window aint gonna steal yo material dawg
+    // TODO: Currently the global depth sampler is still using the outdated depth sampler
+
+    auto& glbDesc = descriptorManager->globalDynamicDescriptor;
+    // glbDesc.createSetLayout({
+    //     DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT),
+    //     DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+    // });
+
+    // glbDesc.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
+
+    glbDesc.createGlobalUBODescriptorSetsWithDepth(
+        bufferRef.uniformBuffers, sizeof(GlobalUBO),
+        depthManager->depthSamplerView, depthManager->depthSampler
+    );
 
     // Recreate render pass with new settings
     auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
