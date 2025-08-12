@@ -154,6 +154,9 @@ void Application::initVulkan() {
         {"Ground_x2", "ground_grass_2.obj"},
         {"Ground_x4", "ground_grass_4.obj"},
         {"Ground_x8", "ground_grass_8.obj"},
+
+        {"Water_x2", "water_2.obj"},
+        {"Water_x4", "water_4.obj"},
         
         {"Tree_1", "Tree_1.obj"},
         {"Tree_2", "Tree_2.obj"},
@@ -167,7 +170,7 @@ void Application::initVulkan() {
         {"Fence_x2", "fence_2.obj"},
         {"Fence_x4", "fence_4.obj"},
 
-        {"Flower", "Icosphere.obj"},
+        {"Flower", "flower.obj"},
 
         {"Grass_1", "grass_blades_1.obj"},
         {"Grass_2", "grass_blades_2.obj"},
@@ -203,21 +206,21 @@ void Application::initVulkan() {
     int world_size_x = 0;
     int world_size_z = 0;
 
-    float ground_step_x = 2.0f;
-    float ground_step_z = 2.0f;
+    float ground_step_x = 4.0f;
+    float ground_step_z = 4.0f;
 
-    float half_ground_step_x = ground_step_x * 0.5f;
-    float half_ground_step_z = ground_step_z * 0.5f;
+    float ground_offset_x = ground_step_x * 0.5f - 64;
+    float ground_offset_z = ground_step_z * 0.5f - 64;
 
     for (int x = 0; x < world_size_x; ++x) {
         for (int z = 0; z < world_size_z; ++z) {
             Transform trform;
             trform.pos = glm::vec3(
-                static_cast<float>(x) * ground_step_x + half_ground_step_x,
+                static_cast<float>(x) * ground_step_x + ground_offset_x,
                 0.0f,
-                static_cast<float>(z) * ground_step_z + half_ground_step_z
+                static_cast<float>(z) * ground_step_z + ground_offset_z
             );
-            placePlatform("Flower", trform);
+            placePlatform("Water_x4", trform);
         }
     }
 
