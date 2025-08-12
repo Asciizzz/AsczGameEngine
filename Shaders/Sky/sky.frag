@@ -10,13 +10,7 @@ layout(binding = 0) uniform GlobalUBO {
     vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
 
-layout (binding = 1) uniform sampler2D depthSampler;
-
-// If Vulkan validation return warnings where
-// vertex attributes are not being consumed
-// this shader is to blame XD
-
-layout(location = 0) in vec2 fragScreenCoord;  // Screen coordinates [-1, 1]
+layout(location = 0) in vec2 fragScreenCoord;
 layout(location = 0) out vec4 outColor;
 
 // Sky calculation function (your original path tracer algorithm)
@@ -73,11 +67,6 @@ vec3 reconstructRayDirection() {
     vec3 rayDir = normalize(worldCoord.xyz);
     
     return rayDir;
-}
-
-// Random function for noise (global scope)
-float random(vec2 uv) {
-    return fract(sin(dot(uv.xy, vec2(12.9898,78.233))) * 43758.5453123);
 }
 
 void main() {
