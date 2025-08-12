@@ -58,7 +58,6 @@ void Application::initVulkan() {
     VkDevice device = vulkanDevice->device;
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
-
     // Create descriptor manager and both set layouts
     descriptorManager = std::make_unique<DescriptorManager>(device);
     descriptorManager->createDescriptorSetLayouts(2);
@@ -70,8 +69,7 @@ void Application::initVulkan() {
 
     // Use both layouts for all pipelines
     opaquePipeline = std::make_unique<RasterPipeline>(
-        device,
-        renderPass,
+        device, renderPass,
         LayoutVec{glbDesc.setLayout, matDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
@@ -79,8 +77,7 @@ void Application::initVulkan() {
     );
 
     transparentPipeline = std::make_unique<RasterPipeline>(
-        device,
-        renderPass,
+        device, renderPass,
         LayoutVec{glbDesc.setLayout, matDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
@@ -88,8 +85,7 @@ void Application::initVulkan() {
     );
 
     skyPipeline = std::make_unique<RasterPipeline>(
-        device,
-        renderPass,
+        device, renderPass,
         LayoutVec{glbDesc.setLayout},
         "Shaders/Sky/sky.vert.spv",
         "Shaders/Sky/sky.frag.spv",
@@ -404,7 +400,10 @@ void Application::initVulkan() {
             &texManager.textures[textureIndex], materialUniformBuffer, i
         );
     }
-    glbDesc.createGlobalUBODescriptorSets(bufferRef.uniformBuffers, sizeof(GlobalUBO));
+    glbDesc.createGlobalUBODescriptorSetsWithDepth(
+        bufferRef.uniformBuffers, sizeof(GlobalUBO),
+        depthManager->depthSamplerView, depthManager->depthSampler
+    );
 
     // Load meshes into GPU buffer
     for (size_t i = 0; i < meshManager.meshes.size(); ++i) {
@@ -413,7 +412,7 @@ void Application::initVulkan() {
 
     // Final Renderer setup with ResourceManager
     renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *buffer,
-                                        *descriptorManager, *resourceManager);
+                                        *descriptorManager, *resourceManager, depthManager.get());
 }
 
 void Application::createSurface() {

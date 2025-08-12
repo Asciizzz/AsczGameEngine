@@ -19,11 +19,12 @@ namespace AzVulk {
 
         materialDynamicDescriptor.createSetLayout({materialUBOBinding, textureBinding});
 
-        // For global ubo
+        // For global ubo + depth sampler
         globalDynamicDescriptor.init(device, maxFramesInFlight);
 
         VkDescriptorSetLayoutBinding globalUBOBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-        globalDynamicDescriptor.createSetLayout({globalUBOBinding});
+        VkDescriptorSetLayoutBinding depthSamplerBinding = DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+        globalDynamicDescriptor.createSetLayout({globalUBOBinding, depthSamplerBinding});
     }
 
     // Create two pools: one for global UBOs, one for material sets
@@ -31,8 +32,63 @@ namespace AzVulk {
         // For material
         materialDynamicDescriptor.createPool(maxMaterials, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
 
-        // For GlobalUBO
-        globalDynamicDescriptor.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER});
+        // For GlobalUBO + depth sampler
+        globalDynamicDescriptor.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
+    }
+
+    // Create global descriptor sets (set 0, one per frame), now with depth sampler
+    void DynamicDescriptor::createGlobalUBODescriptorSetsWithDepth(
+        const std::vector<VkBuffer>& uniformBuffers,
+        size_t uniformBufferSize,
+        VkImageView depthImageView,
+        VkSampler depthSampler
+    ) {
+        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = pool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+        allocInfo.pSetLayouts = layouts.data();
+
+        sets.resize(maxFramesInFlight);
+        if (vkAllocateDescriptorSets(device, &allocInfo, sets.data()) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate global descriptor sets");
+        }
+
+        for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = uniformBuffers[i];
+            bufferInfo.offset = 0;
+            bufferInfo.range = uniformBufferSize;
+
+            VkDescriptorImageInfo depthInfo{};
+            depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            depthInfo.imageView = depthImageView;
+            depthInfo.sampler = depthSampler;
+
+            std::array<VkWriteDescriptorSet, 2> writes{};
+
+            // UBO
+            writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writes[0].dstSet = sets[i];
+            writes[0].dstBinding = 0;
+            writes[0].dstArrayElement = 0;
+            writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            writes[0].descriptorCount = 1;
+            writes[0].pBufferInfo = &bufferInfo;
+
+            // Depth sampler
+            writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writes[1].dstSet = sets[i];
+            writes[1].dstBinding = 1;
+            writes[1].dstArrayElement = 0;
+            writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            writes[1].descriptorCount = 1;
+            writes[1].pImageInfo = &depthInfo;
+
+            vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+        }
     }
 
     // Create material descriptor sets (set 1, per material per frame)
@@ -85,39 +141,6 @@ namespace AzVulk {
         }
 
         mapSets[materialIndex] = std::move(descriptorSets);
-    }
-
-    void DynamicDescriptor::createGlobalUBODescriptorSets(const std::vector<VkBuffer>& uniformBuffers, size_t uniformBufferSize) {
-        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
-
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = pool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-        allocInfo.pSetLayouts = layouts.data();
-
-        sets.resize(maxFramesInFlight);
-        if (vkAllocateDescriptorSets(device, &allocInfo, sets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate global descriptor sets");
-        }
-
-        for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = uniformBuffers[i];
-            bufferInfo.offset = 0;
-            bufferInfo.range = uniformBufferSize;
-
-            VkWriteDescriptorSet write{};
-            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write.dstSet = sets[i];
-            write.dstBinding = 0;
-            write.dstArrayElement = 0;
-            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            write.descriptorCount = 1;
-            write.pBufferInfo = &bufferInfo;
-
-            vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-        }
     }
 
     DynamicDescriptor::~DynamicDescriptor() {

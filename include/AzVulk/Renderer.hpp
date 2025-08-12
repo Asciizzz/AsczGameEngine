@@ -17,7 +17,8 @@ namespace AzVulk {
     public:
         Renderer(const Device& device, SwapChain& swapChain, Buffer& buffer,
                 DescriptorManager& descriptorManager,
-                Az3D::ResourceManager& resourceManager);
+                Az3D::ResourceManager& resourceManager,
+                DepthManager* depthManager);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -32,12 +33,13 @@ namespace AzVulk {
         void endFrame(uint32_t imageIndex);
         // Thank's for attending my Ted-Talk
 
-        // Component references
-        const Device& vulkanDevice;
-        SwapChain& swapChain;
-        Buffer& buffer;
-        DescriptorManager& descriptorManager;
-        Az3D::ResourceManager& resourceManager;
+    // Component references
+    const Device& vulkanDevice;
+    SwapChain& swapChain;
+    Buffer& buffer;
+    DescriptorManager& descriptorManager;
+    Az3D::ResourceManager& resourceManager;
+    DepthManager* depthManager = nullptr;
 
         // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;

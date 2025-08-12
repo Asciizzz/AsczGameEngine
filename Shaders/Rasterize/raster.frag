@@ -3,12 +3,14 @@
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
-    // vec4 cameraPos;    // xyz: camera position, w: fov
-    // vec4 cameraForward; // xyz: forward direction, w: aspect ratio
-    // vec4 cameraRight;
-    // vec4 cameraUp;
-    // vec4 nearFar;       // x = near, y = far, z = unused, w = unused
+    vec4 cameraPos;    // xyz: camera position, w: fov
+    vec4 cameraForward; // xyz: forward direction, w: aspect ratio
+    vec4 cameraRight;
+    vec4 cameraUp;
+    vec4 nearFar;       // x = near, y = far, z = unused, w = unused
 } glb;
+
+layout(set = 0, binding = 1) uniform sampler2D depthSampler;
 
 
 // Material uniform buffer
@@ -18,8 +20,6 @@ layout(set = 1, binding = 0) uniform MaterialUBO {
 // and it's texture sampler
 layout(set = 1, binding = 1) uniform sampler2D txtrSmplr;
 
-// TODO: Implement actual working depth sampler, not this piece of shi
-// layout(binding = 3) uniform sampler2D depthSampler;
 
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragWorldNrml;
@@ -39,14 +39,16 @@ void main() {
     vec3 screenCoords = fragScreenPos.xyz / fragScreenPos.w;
     vec2 depthUV = screenCoords.xy * 0.5 + 0.5; // Convert from NDC [-1,1] to UV [0,1]
 
-    // float near = glb.nearFar.x;
-    // float far = glb.nearFar.y;
-    
-    // World space depth
-    // float z = sampledDepth * 2.0 - 1.0; // Back to NDC
-    // float linearDepth = (2.0 * near * far) / (far + near - z * (far - near));
+    float near = glb.nearFar.x;
+    float far = glb.nearFar.y;
 
-    float linearDepth = 1.0; // Placeholder before I actually fixed the depth
+    float sampledDepth = texture(depthSampler, depthUV).r;
+
+    // World space depth
+    float z = sampledDepth * 2.0 - 1.0; // Back to NDC
+    float linearDepth = (2.0 * near * far) / (far + near - z * (far - near));
+
+    // float linearDepth = 1.0; // Placeholder before I actually fixed the depth
 
     float maxFogDistance = 70.0;
     float fogFactor = clamp(linearDepth / maxFogDistance, 0.0, 1.0);

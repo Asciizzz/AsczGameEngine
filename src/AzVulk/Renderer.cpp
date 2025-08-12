@@ -9,17 +9,18 @@
 #include <iostream>
 
 namespace AzVulk {
-    Renderer::Renderer (const Device& device, SwapChain& swapChain, Buffer& buffer,
-                        DescriptorManager& descriptorManager,
-                        Az3D::ResourceManager& resourceManager)
-        : vulkanDevice(device), swapChain(swapChain), buffer(buffer),
-          descriptorManager(descriptorManager),
-          resourceManager(resourceManager) {
-        
-        createCommandPool();
-        createCommandBuffers();
-        createSyncObjects();
-    }
+        Renderer::Renderer (const Device& device, SwapChain& swapChain, Buffer& buffer,
+                                                DescriptorManager& descriptorManager,
+                                                Az3D::ResourceManager& resourceManager,
+                                                DepthManager* depthManager)
+                : vulkanDevice(device), swapChain(swapChain), buffer(buffer),
+                    descriptorManager(descriptorManager),
+                    resourceManager(resourceManager),
+                    depthManager(depthManager) {
+                createCommandPool();
+                createCommandBuffers();
+                createSyncObjects();
+        }
 
     Renderer::~Renderer() {
         VkDevice device = vulkanDevice.device;
@@ -63,11 +64,11 @@ namespace AzVulk {
     }
 
     void Renderer::createSyncObjects() {
-    swapchainImageCount = swapChain.images.size();
-    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    imagesInFlight.resize(swapchainImageCount, VK_NULL_HANDLE);
-    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+        swapchainImageCount = swapChain.images.size();
+        imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        imagesInFlight.resize(swapchainImageCount, VK_NULL_HANDLE);
+        inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -100,7 +101,8 @@ namespace AzVulk {
             UINT64_MAX,
             imageAvailableSemaphores[currentFrame], // per-frame semaphore for acquire
             VK_NULL_HANDLE,
-            &imageIndex);
+            &imageIndex
+        );
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             framebufferResized = true;
@@ -131,14 +133,6 @@ namespace AzVulk {
         renderPassInfo.framebuffer = swapChain.framebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain.extent;
-
-        glm::vec3 sunDir = glm::normalize(glm::vec3(-1.0f, -1.0f, 1.0f));
-        glm::vec3 skyHorizon = glm::vec3(1.0f, 1.0f, 1.0f);
-        glm::vec3 skyZenith = glm::vec3(0.1f, 0.2f, 0.9f);
-        glm::vec3 viewDir = camera.forward;
-        float sky_t = glm::clamp(viewDir.y * 2.2f, 0.0f, 1.0f);
-        float skyGradT = glm::pow(sky_t, 0.35f);
-        glm::vec3 skyColor = glm::mix(skyHorizon, skyZenith, skyGradT);
 
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -291,6 +285,11 @@ namespace AzVulk {
         if (imageIndex == UINT32_MAX) return;
 
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
+
+        // Copy depth buffer for sampling (after render pass, before ending command buffer)
+        if (depthManager) {
+            depthManager->copyDepthForSampling(commandBuffers[currentFrame], swapChain.extent.width, swapChain.extent.height);
+        }
 
         if (vkEndCommandBuffer(commandBuffers[currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
