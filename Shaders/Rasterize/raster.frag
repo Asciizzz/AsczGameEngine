@@ -45,7 +45,7 @@ void main() {
     float z = texture(depthSampler, depthUV).r * 2.0 - 1.0; // Back to NDC
     float linearDepth = (2.0 * near * far) / (far + near - z * (far - near));
 
-    float maxFogDistance = 70.0;
+    float maxFogDistance = 700.0;
     float fogFactor = clamp(linearDepth / maxFogDistance, 0.0, 1.0);
     fogFactor = smoothstep(0.0, 1.0, fogFactor);
 

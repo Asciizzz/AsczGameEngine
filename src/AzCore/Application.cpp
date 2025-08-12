@@ -178,6 +178,8 @@ void Application::initVulkan() {
         {"Grass_4", "grass_blades_4.obj"}
     };
 
+    ModelGroup worldGroup("WorldGroup");
+
     for (const auto& mesh : platformerMeshes) {
         addPlatformerMesh(mesh.name, mesh.path);
     }
@@ -203,113 +205,20 @@ void Application::initVulkan() {
         worldGroup.addInstance(instance);
     };
 
-    int world_size_x = 0;
-    int world_size_z = 0;
-
-    float ground_step_x = 8.0f;
-    float ground_step_z = 8.0f;
-
-    float ground_offset_x = ground_step_x * 0.5f;
-    float ground_offset_z = ground_step_z * 0.5f;
-
-    for (int x = 0; x < world_size_x; ++x) {
-        for (int z = 0; z < world_size_z; ++z) {
-            Transform trform;
-            trform.pos = glm::vec3(
-                static_cast<float>(x) * ground_step_x + ground_offset_x,
-                0.0f,
-                static_cast<float>(z) * ground_step_z + ground_offset_z
-            );
-            placePlatform("Ground_x8", trform);
-        }
-    }
-
-
-    // Set up random number generation
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    
-    int numTrees = 0;
-    for (int i = 0; i < numTrees; ++i) {
-        float max_x = static_cast<float>(world_size_x * ground_step_x) - 2.0f;
-        float max_z = static_cast<float>(world_size_z * ground_step_z) - 2.0f;
-
-        std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
-        std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
-        std::uniform_real_distribution<float> rnd_scl(0.5f, 1.4f);
-        std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
-
-        Transform treeTrform;
-        treeTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
-        treeTrform.scale(rnd_scl(gen));
-        treeTrform.rotateY(rnd_rot(gen));
-
-        std::string treeName = "Tree_" + std::to_string(i % 2 + 1);
-
-        placePlatform(treeName, treeTrform);
-    }
-
-    int numFlowers = 0;
-    for (int i = 0; i < numFlowers; ++i) {
-    
-        float max_x = static_cast<float>(world_size_x * ground_step_x) - 2.0f;
-        float max_z = static_cast<float>(world_size_z * ground_step_z) - 2.0f;
-
-        std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
-        std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
-        std::uniform_real_distribution<float> rnd_scl(0.2f, 0.4f);
-        std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
-        std::uniform_real_distribution<float> rnd_color(0.0f, 1.0f);
-
-        Transform flowerTrform;
-        flowerTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
-        flowerTrform.scale(rnd_scl(gen));
-        flowerTrform.rotateY(rnd_rot(gen));
-
-        glm::vec4 flowerColor(rnd_color(gen), rnd_color(gen), rnd_color(gen), 1.0f);
-        placePlatform("Flower", flowerTrform, flowerColor);
-    }
-
-    int numGrass = 0;
-    glm::vec4 grassYoung = glm::vec4(1.5f, 1.5f, 0.0f, 1.0f);
-    glm::vec4 grassOld = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-    for (int i = 0; i < numGrass; ++i) {
-        float max_x = static_cast<float>(world_size_x * ground_step_x);
-        float max_z = static_cast<float>(world_size_z * ground_step_z);
-
-        std::uniform_real_distribution<float> rnd_x(1.0f, max_x);
-        std::uniform_real_distribution<float> rnd_z(1.0f, max_z);
-        std::uniform_real_distribution<float> rnd_scl(0.2f, 0.4f);
-        std::uniform_real_distribution<float> rnd_rot(0.0f, 2.0f * glm::pi<float>());
-        std::uniform_int_distribution<int> rnd_grass_type(1, 4);
-
-        Transform grassTrform;
-        grassTrform.pos = glm::vec3(rnd_x(gen), 0.0f, rnd_z(gen));
-        grassTrform.scale(glm::vec3(1.0f, rnd_scl(gen), 1.0f)); // Scale only on Y axis
-        grassTrform.rotateY(rnd_rot(gen));
-
-        // Colored grass based on scale (larger/older = slightly more green, smaller/younger = slightly more yellow)
-        float greenFactor = (grassTrform.scl.y - 0.2f) * 5.0f; // Convert to [0.0, 1.0] range
-
-        glm::vec4 grassColor = glm::mix(grassYoung, grassOld, greenFactor);
-
-        std::string grassName = "Grass_" + std::to_string(rnd_grass_type(gen));
-        placePlatform(grassName, grassTrform, grassColor);
-    }
 
     worldGroup.buildMeshMapping();
-    mdlManager.addGroup("World", worldGroup);
+
+    mdlManager.addGroup("World", std::move(worldGroup));
 
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
     grassConfig.worldSizeX = 64;
     grassConfig.worldSizeZ = 64;
-    grassConfig.baseDensity = 10;
+    grassConfig.baseDensity = 4;
     grassConfig.heightVariance = 3.9f;
     grassConfig.lowVariance = 0.1f;
-    grassConfig.numHeightNodes = 150;
+    grassConfig.numHeightNodes = 100;
     grassConfig.enableWind = true;
     
     // Initialize grass system
@@ -489,8 +398,6 @@ void Application::mainLoop() {
     auto& camRef = *camera;
 
     auto& rendererRef = *renderer;
-    auto& deviceRef = *vulkanDevice;
-    auto& bufferRef = *buffer;
 
     auto& resManager = *resourceManager;
     auto& meshManager = *resManager.meshManager;
@@ -629,7 +536,7 @@ void Application::mainLoop() {
         }
     }
 
-    vkDeviceWaitIdle(deviceRef.device);
+    vkDeviceWaitIdle(vulkanDevice->device);
 }
 
 void Application::cleanup() {
