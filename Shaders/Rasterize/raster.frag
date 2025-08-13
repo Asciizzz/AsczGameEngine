@@ -50,6 +50,8 @@ void main() {
     float fogFactor = clamp(linearDepth / maxFogDistance, 0.0, 1.0);
     fogFactor = smoothstep(0.0, 1.0, fogFactor);
 
+    fogFactor = 0.0;
+
     vec3 skyColor = vec3(0.3098, 0.525, 0.686);
     vec3 tintColor = vec3(0.3098, 0.525, 0.686);
 

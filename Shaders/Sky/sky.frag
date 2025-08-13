@@ -24,7 +24,7 @@ vec3 calculateSkyColor(vec3 rayDir) {
     // Custom color
     vec3 skyZenith = vec3(0.2098, 0.425, 0.586);
     vec3 skyHorizon = vec3(1.0, 0.9, 0.4);
-    vec3 groundColor = vec3(0.6098, 0.725, 0.986);
+    vec3 groundColor = vec3(0.1098, 0.225, 0.986);
 
     vec3 sunColor = vec3(0.3, 0.2, 0.1);
 

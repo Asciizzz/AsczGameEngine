@@ -214,12 +214,12 @@ void Application::initVulkan() {
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 64;
-    grassConfig.worldSizeZ = 64;
+    grassConfig.worldSizeX = 16;
+    grassConfig.worldSizeZ = 16;
     grassConfig.baseDensity = 4;
     grassConfig.heightVariance = 3.9f;
     grassConfig.lowVariance = 0.1f;
-    grassConfig.numHeightNodes = 100;
+    grassConfig.numHeightNodes = 0;
     grassConfig.enableWind = true;
     
     // Initialize grass system

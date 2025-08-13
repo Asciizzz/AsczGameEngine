@@ -115,7 +115,7 @@ namespace AzVulk {
         // Get vertex binding and attributes
         auto vertexBindingDescription = Az3D::Vertex::getBindingDescription();
         auto vertexAttributeDescriptions = Az3D::Vertex::getAttributeDescriptions();
-        
+
         // Get instance binding and attributes
         auto instanceBindingDescription = Az3D::ModelInstance::getBindingDescription();
         auto instanceAttributeDescriptions = Az3D::ModelInstance::getAttributeDescriptions();
