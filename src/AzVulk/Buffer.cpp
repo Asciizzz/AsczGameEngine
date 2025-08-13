@@ -35,52 +35,6 @@ namespace AzVulk {
         destroyDummyVertexBuffer();
     }
 
-    void Buffer::createVertexBuffer(const std::vector<Az3D::Vertex>& vertices) {
-        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-        // For simplicity, create buffer directly in host-visible memory
-        createBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                    vertexBuffer, vertexBufferMemory);
-
-        void* data;
-        vkMapMemory(vulkanDevice.device, vertexBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, vertices.data(), (size_t) bufferSize);
-        vkUnmapMemory(vulkanDevice.device, vertexBufferMemory);
-    }
-
-    void Buffer::createIndexBuffer(const std::vector<uint16_t>& indices) {
-        VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-        indexCount = static_cast<uint32_t>(indices.size());
-        indexType = VK_INDEX_TYPE_UINT16;
-
-        // For simplicity, create buffer directly in host-visible memory
-        createBuffer(bufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                    indexBuffer, indexBufferMemory);
-
-        void* data;
-        vkMapMemory(vulkanDevice.device, indexBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, indices.data(), (size_t) bufferSize);
-        vkUnmapMemory(vulkanDevice.device, indexBufferMemory);
-    }
-
-    void Buffer::createIndexBuffer(const std::vector<uint32_t>& indices) {
-        VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-        indexCount = static_cast<uint32_t>(indices.size());
-        indexType = VK_INDEX_TYPE_UINT32;
-
-        // For simplicity, create buffer directly in host-visible memory
-        createBuffer(bufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                    indexBuffer, indexBufferMemory);
-
-        void* data;
-        vkMapMemory(vulkanDevice.device, indexBufferMemory, 0, bufferSize, 0, &data);
-        memcpy(data, indices.data(), (size_t) bufferSize);
-        vkUnmapMemory(vulkanDevice.device, indexBufferMemory);
-    }
-
     void Buffer::createUniformBuffers(size_t count) {
         VkDeviceSize bufferSize = sizeof(GlobalUBO);
 
@@ -136,16 +90,6 @@ namespace AzVulk {
         return materialUniformBuffers[materialIndex];
     }
 
-    // New Az3D integration methods
-    void Buffer::loadMesh(const Az3D::Mesh& mesh) {
-        // Use Az3D vertices directly
-        createVertexBuffer(mesh.vertices);
-        createIndexBuffer(mesh.indices);
-    }
-
-    void Buffer::createVertexBuffer(const Az3D::Mesh& mesh) {
-        createVertexBuffer(mesh.vertices);
-    }
 
     void Buffer::createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
                                 VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
@@ -211,10 +155,8 @@ namespace AzVulk {
     size_t Buffer::loadMeshToBuffer(const Az3D::Mesh& mesh) {
         MeshBufferData meshBuffer;
         
-        // Use Az3D vertices directly
-        const auto& vertices = mesh.vertices;
-        
         // Create vertex buffer for this mesh
+        const auto& vertices = mesh.vertices;
         VkDeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
         createBuffer(vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
@@ -228,12 +170,13 @@ namespace AzVulk {
         // Create index buffer for this mesh
         const auto& indices = mesh.indices;
         VkDeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
-        meshBuffer.indexCount = static_cast<uint32_t>(indices.size());
-        meshBuffer.indexType = VK_INDEX_TYPE_UINT32;
 
         createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                     meshBuffer.indexBuffer, meshBuffer.indexBufferMemory);
+
+        meshBuffer.indexCount = static_cast<uint32_t>(indices.size());
+        meshBuffer.indexType = VK_INDEX_TYPE_UINT32;
 
         void* indexData;
         vkMapMemory(vulkanDevice.device, meshBuffer.indexBufferMemory, 0, indexBufferSize, 0, &indexData);
@@ -292,7 +235,40 @@ namespace AzVulk {
         //     static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
         // }
     }
+
+
+// New Buffer Struct
+
+
+    // BufferData::BufferData(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+    //     : size(size), usage(usage), memoryFlags(properties)
+    // {
+    //     VkBufferCreateInfo bufferInfo{};
+    //     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    //     bufferInfo.size = size;
+    //     bufferInfo.usage = usage;
+    //     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    //     if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+    //         throw std::runtime_error("Failed to create buffer!");
+    //     }
+
+    //     VkMemoryRequirements memRequirements;
+    //     vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+    //     VkMemoryAllocateInfo allocInfo{};
+    //     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    //     allocInfo.allocationSize = memRequirements.size;
+    //     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+    //     if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+    //         throw std::runtime_error("Failed to allocate buffer memory!");
+    //     }
+
+    //     vkBindBufferMemory(device, buffer, bufferMemory, 0);
+    // }
 }
+
 // === Dummy Vertex Buffer Support ===
 #include <array>
 

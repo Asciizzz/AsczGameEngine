@@ -31,6 +31,43 @@ namespace AzVulk {
         MaterialUBO(const glm::vec4& p1) : prop1(p1) {}
     };
 
+    // Most commonly used ones
+    enum BufferType {
+        None           = 0,
+        VertexBit      = 1 << 0,
+        IndexBit       = 1 << 1,
+        UniformBit     = 1 << 2,
+        StorageBit     = 1 << 3,
+        TransferSrcBit = 1 << 4,
+        TransferDstBit = 1 << 5
+    };
+    inline VkBufferUsageFlags getBufferUsageFlags(int type) {
+        VkBufferUsageFlags flags = 0;
+        if (type & VertexBit)      flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        if (type & IndexBit)       flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        if (type & UniformBit)     flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        if (type & StorageBit)     flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        if (type & TransferSrcBit) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        if (type & TransferDstBit) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        return flags;
+    }
+
+    struct BufferData {
+        VkBuffer buffer = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        void* mapped = nullptr;
+
+        VkDevice device = VK_NULL_HANDLE;
+        VkDeviceSize size = 0;
+        VkBufferUsageFlags usage = 0;
+        VkMemoryPropertyFlags memoryFlags = 0;
+
+        uint32_t resourceNum = 0;
+
+        BufferData( VkDevice device, VkMemoryAllocateInfo allocInfo,
+                    VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+    };
+
     // Multi-mesh data structure for storing multiple mesh types
     struct MeshBufferData {
         VkBuffer vertexBuffer = VK_NULL_HANDLE;
@@ -72,26 +109,17 @@ namespace AzVulk {
         Buffer(const class Device& device);
         ~Buffer();
 
-        
         // Sharing buffers: not even once
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
 
-        // Legacy single-mesh methods (for backwards compatibility)
-        void createVertexBuffer(const std::vector<Az3D::Vertex>& vertices);
-        void createIndexBuffer(const std::vector<uint16_t>& indices);
-        void createIndexBuffer(const std::vector<uint32_t>& indices);
         void createUniformBuffers(size_t count);
         
         // Material uniform buffer methods
         void createMaterialUniformBuffers(const std::vector<Az3D::Material>& materials);
         void updateMaterialUniformBuffer(size_t materialIndex, const Az3D::Material& material);
         VkBuffer getMaterialUniformBuffer(size_t materialIndex) const;
-        
-        // Mesh loading functions
-        void loadMesh(const Az3D::Mesh& mesh);
-        void createVertexBuffer(const Az3D::Mesh& mesh);
-        
+
         size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
         // Most efficient versions that work directly with mesh mapping data
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
@@ -104,16 +132,7 @@ namespace AzVulk {
         
         // Multi-mesh buffers storage
         std::vector<MeshBufferData> meshBuffers;
-        
-        // Legacy single-mesh buffers (for backwards compatibility)
-        VkBuffer vertexBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
 
-        VkBuffer indexBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-        uint32_t indexCount = 0;
-        VkIndexType indexType = VK_INDEX_TYPE_UINT16;
-        
         // Uniform buffer arrays
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;

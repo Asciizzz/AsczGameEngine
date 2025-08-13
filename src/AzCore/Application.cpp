@@ -517,7 +517,7 @@ void Application::mainLoop() {
             rendererRef.drawScene(*opaquePipeline, terrainGroup);
 
             rendererRef.endFrame(imageIndex);
-        }
+        };
 
         // On-screen FPS display (toggleable with F2) - using window title for now
         static auto lastFpsOutput = std::chrono::steady_clock::now();
