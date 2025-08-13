@@ -31,41 +31,46 @@ namespace AzVulk {
         MaterialUBO(const glm::vec4& p1) : prop1(p1) {}
     };
 
-    // Most commonly used ones
-    enum BufferType {
-        None           = 0,
-        VertexBit      = 1 << 0,
-        IndexBit       = 1 << 1,
-        UniformBit     = 1 << 2,
-        StorageBit     = 1 << 3,
-        TransferSrcBit = 1 << 4,
-        TransferDstBit = 1 << 5
-    };
-    inline VkBufferUsageFlags getBufferUsageFlags(int type) {
-        VkBufferUsageFlags flags = 0;
-        if (type & VertexBit)      flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        if (type & IndexBit)       flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        if (type & UniformBit)     flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        if (type & StorageBit)     flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        if (type & TransferSrcBit) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        if (type & TransferDstBit) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        return flags;
-    }
 
     struct BufferData {
+        enum Type {
+            None = 0,
+            Vertex = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            Index = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            Uniform = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            Storage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            TransferSrc = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            TransferDst = VK_BUFFER_USAGE_TRANSFER_DST_BIT
+        };
+
+        enum Usage {
+            DeviceLocal = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            HostVisible = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            HostCoherent = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            HostCached = VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+            LazilyAllocated = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT
+        };
+
+        template<typename T>
+        BufferData(const Device& vulkanDevice, std::vector<T>& data);
+        ~BufferData(); void cleanup();
+
+        template<typename T>
+        void createBuffer(const Device& vulkanDevice, std::vector<T>& data, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, bool keepMapped = true);
+
+        VkDevice device;
+
         VkBuffer buffer = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
+
+        bool hasMapped = false;
         void* mapped = nullptr;
 
-        VkDevice device = VK_NULL_HANDLE;
         VkDeviceSize size = 0;
-        VkBufferUsageFlags usage = 0;
+        VkBufferUsageFlags usageFlags = 0;
         VkMemoryPropertyFlags memoryFlags = 0;
 
-        uint32_t resourceNum = 0;
-
-        BufferData( VkDevice device, VkMemoryAllocateInfo allocInfo,
-                    VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+        uint32_t resourceCount = 0;
     };
 
     // Multi-mesh data structure for storing multiple mesh types
