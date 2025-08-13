@@ -51,12 +51,25 @@ namespace AzVulk {
             LazilyAllocated = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT
         };
 
-        template<typename T>
-        BufferData(const Device& vulkanDevice, std::vector<T>& data);
-        ~BufferData(); void cleanup();
+        BufferData() = default;
+        ~BufferData() { cleanup(); }
 
-        template<typename T>
-        void createBuffer(const Device& vulkanDevice, std::vector<T>& data, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, bool keepMapped = true);
+        void cleanup() {
+            if (buffer != VK_NULL_HANDLE) {
+                if (mapped) {
+                    vkUnmapMemory(device, memory);
+                    mapped = nullptr;
+                }
+
+                vkDestroyBuffer(device, buffer, nullptr);
+                buffer = VK_NULL_HANDLE;
+            }
+
+            if (memory != VK_NULL_HANDLE) {
+                vkFreeMemory(device, memory, nullptr);
+                memory = VK_NULL_HANDLE;
+            }
+        }
 
         VkDevice device;
 
@@ -71,6 +84,61 @@ namespace AzVulk {
         VkMemoryPropertyFlags memoryFlags = 0;
 
         uint32_t resourceCount = 0;
+
+        template<typename T>
+        void createBuffer(
+            const Device& vulkanDevice, const std::vector<T>& data,
+            VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags,
+            bool keepMapped=false
+        ) {
+            this->usageFlags = usageFlags;
+            this->memoryFlags = memoryFlags;
+            this->device = vulkanDevice.device;
+
+            this->resourceCount = static_cast<uint32_t>(data.size());
+            this->size = sizeof(T) * data.size();
+
+            // Cleanup existing buffer if it exists
+            cleanup();
+
+
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size = size;
+            bufferInfo.usage = usageFlags;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+            if (vkCreateBuffer(vulkanDevice.device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+                throw std::runtime_error("Failed to create buffer!");
+            }
+
+            VkMemoryRequirements memRequirements;
+            vkGetBufferMemoryRequirements(vulkanDevice.device, buffer, &memRequirements);
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize = memRequirements.size;
+            allocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(memRequirements.memoryTypeBits, memoryFlags);
+
+            if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+                throw std::runtime_error("Failed to allocate buffer memory!");
+            }
+
+            vkBindBufferMemory(vulkanDevice.device, buffer, memory, 0);
+
+            hasMapped = keepMapped;
+
+            if (keepMapped) {
+                // Memory mapping
+                vkMapMemory(vulkanDevice.device, memory, 0, size, 0, &mapped);
+                memcpy(mapped, data.data(), sizeof(T) * data.size());
+            } else {
+                vkMapMemory(vulkanDevice.device, memory, 0, size, 0, &mapped);
+                memcpy(mapped, data.data(), sizeof(T) * data.size());
+                vkUnmapMemory(vulkanDevice.device, memory);
+                mapped = nullptr;
+            }
+        }
     };
 
     // Multi-mesh data structure for storing multiple mesh types
