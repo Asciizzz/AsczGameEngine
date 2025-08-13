@@ -275,11 +275,6 @@ namespace AzVulk {
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                     skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
 
-        // Bind dummy vertex buffer for both vertex and instance bindings (Vulkan requires this even if not used)
-        VkBuffer dummyBuffers[] = { buffer.dummyVertexBuffer, buffer.dummyVertexBuffer };
-        VkDeviceSize dummyOffsets[] = { 0, 0 };
-        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, dummyBuffers, dummyOffsets);
-
         // Draw fullscreen triangle (3 vertices, no input)
         vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
     }

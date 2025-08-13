@@ -31,8 +31,6 @@ namespace AzVulk {
             vkDestroyBuffer(logicalDevice, materialUniformBuffers[i], nullptr);
             vkFreeMemory(logicalDevice, materialUniformBuffersMemory[i], nullptr);
         }
-        // Cleanup dummy vertex buffer
-        destroyDummyVertexBuffer();
     }
 
     void Buffer::createUniformBuffers(size_t count) {
@@ -306,57 +304,4 @@ namespace AzVulk {
         memcpy(mapped, data.data(), sizeof(T) * data.size());
     }
 
-}
-
-// === Dummy Vertex Buffer Support ===
-#include <array>
-
-void AzVulk::Buffer::createDummyVertexBuffer() {
-    // Only create if not already created
-    if (dummyVertexBuffer != VK_NULL_HANDLE) return;
-
-    // A single float (could be any value, not used by shader)
-    std::array<float, 1> dummyData = {0.0f};
-    VkDeviceSize bufferSize = sizeof(dummyData);
-
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = bufferSize;
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateBuffer(vulkanDevice.device, &bufferInfo, nullptr, &dummyVertexBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create dummy vertex buffer!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(vulkanDevice.device, dummyVertexBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &dummyVertexBufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to allocate dummy vertex buffer memory!");
-    }
-
-    // Upload dummy data
-    void* data;
-    vkMapMemory(vulkanDevice.device, dummyVertexBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, dummyData.data(), (size_t)bufferSize);
-    vkUnmapMemory(vulkanDevice.device, dummyVertexBufferMemory);
-
-    vkBindBufferMemory(vulkanDevice.device, dummyVertexBuffer, dummyVertexBufferMemory, 0);
-}
-
-void AzVulk::Buffer::destroyDummyVertexBuffer() {
-    if (dummyVertexBuffer != VK_NULL_HANDLE) {
-        vkDestroyBuffer(vulkanDevice.device, dummyVertexBuffer, nullptr);
-        dummyVertexBuffer = VK_NULL_HANDLE;
-    }
-    if (dummyVertexBufferMemory != VK_NULL_HANDLE) {
-        vkFreeMemory(vulkanDevice.device, dummyVertexBufferMemory, nullptr);
-        dummyVertexBufferMemory = VK_NULL_HANDLE;
-    }
 }
