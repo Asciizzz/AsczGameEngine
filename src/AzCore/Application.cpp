@@ -64,13 +64,14 @@ void Application::initVulkan() {
 
     auto& matDesc = descriptorManager->materialDynamicDescriptor;
     auto& glbDesc = descriptorManager->globalDynamicDescriptor;
+    auto& texDesc = descriptorManager->textureDynamicDescriptor;
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
 
     // Use both layouts for all pipelines
     opaquePipeline = std::make_unique<RasterPipeline>(
         device, renderPass,
-        LayoutVec{glbDesc.setLayout, matDesc.setLayout},
+        LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
@@ -78,7 +79,7 @@ void Application::initVulkan() {
 
     transparentPipeline = std::make_unique<RasterPipeline>(
         device, renderPass,
-        LayoutVec{glbDesc.setLayout, matDesc.setLayout},
+        LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv",
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
@@ -303,19 +304,25 @@ void Application::initVulkan() {
 
     // Create descriptor pools and sets (split global/material)
     size_t matCount = matManager.materials.size();
+    size_t texCount = texManager.textures.size();
 
-    descriptorManager->createDescriptorPools(matCount);
-    for (size_t i = 0; i < matManager.materials.size(); ++i) {
-        VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
-        size_t textureIndex = matManager.materials[i]->diffTxtr;
-        matDesc.createMaterialDescriptorSets(
-            &texManager.textures[textureIndex], materialUniformBuffer, i
-        );
-    }
-    glbDesc.createGlobalUBODescriptorSetsWithDepth(
+    descriptorManager->createDescriptorPools(matCount, texCount);
+    glbDesc.createGlobalDescriptorSets(
         bufferRef.uniformBuffers, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );
+    // for (size_t i = 0; i < matManager.materials.size(); ++i) {
+    //     VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
+    //     size_t textureIndex = matManager.materials[i]->diffTxtr;
+    //     matDesc.createMaterialDescriptorSets_LEGACY(
+    //         &texManager.textures[textureIndex], materialUniformBuffer, i
+    //     );
+    // }
+    matDesc.createMaterialDescriptorSets(
+        matManager.materials, bufferRef.materialUniformBuffers
+    );
+    texDesc.createTextureDescriptorSets(texManager.textures);
+
 
     // Load meshes into GPU buffer
     for (size_t i = 0; i < meshManager.meshes.size(); ++i) {
@@ -364,7 +371,7 @@ bool Application::checkWindowResize() {
 
     // glbDesc.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
 
-    glbDesc.createGlobalUBODescriptorSetsWithDepth(
+    glbDesc.createGlobalDescriptorSets(
         bufferRef.uniformBuffers, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );

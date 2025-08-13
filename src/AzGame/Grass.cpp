@@ -141,7 +141,7 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
     grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
         Material::fastTemplate(
             1.0f, 0.0f, 0.0f, 0.1f, // 0.7f discard threshold for transparency
-            resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
+            resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", Texture::ClampToEdge)
         )
     );
 }
@@ -191,7 +191,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
     grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
         Material::fastTemplate(
             1.0f, 0.0f, 0.0f, 0.9f,
-            resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", TextureMode::ClampToEdge)
+            resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", Texture::ClampToEdge)
         )
     );
 }

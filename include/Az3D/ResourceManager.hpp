@@ -26,7 +26,7 @@ namespace Az3D {
         ResourceManager& operator=(const ResourceManager&) = delete;
 
         size_t addTexture(std::string name, std::string imagePath,
-                        TextureMode addressMode = TextureMode::Repeat,
+                        Texture::Mode addressMode = Texture::Repeat,
                         bool semiTransparent = false);
         size_t addMaterial(std::string name, const Material& material);
 

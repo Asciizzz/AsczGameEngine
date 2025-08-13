@@ -17,8 +17,9 @@ layout(set = 0, binding = 1) uniform sampler2D depthSampler;
 layout(set = 1, binding = 0) uniform MaterialUBO {
     vec4 prop1; // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
 } material;
-// and it's texture sampler
-layout(set = 1, binding = 1) uniform sampler2D txtrSmplr;
+
+// Texture buffer
+layout(set = 2, binding = 0) uniform sampler2D txtrSmplr;
 
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragWorldNrml;

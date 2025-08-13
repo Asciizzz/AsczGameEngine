@@ -9,36 +9,24 @@ namespace AzVulk {
 }
 
 namespace Az3D {
-    // Texture addressing modes for easier use
-    enum class TextureMode {
-        Repeat,
-        MirroredRepeat,
-        ClampToEdge,
-        ClampToBorder,
-        MirrorClampToEdge
-    };
-
-    // Convert our enum to Vulkan enum
-    inline VkSamplerAddressMode toVulkanAddressMode(TextureMode mode) {
-        switch (mode) {
-            case TextureMode::Repeat: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            case TextureMode::MirroredRepeat: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-            case TextureMode::ClampToEdge: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            case TextureMode::ClampToBorder: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-            case TextureMode::MirrorClampToEdge: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-            default: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        }
-    }
 
     // Vulkan texture resource
     struct Texture {
+        enum Mode {
+            Repeat = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            MirroredRepeat = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+            ClampToEdge = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            ClampToBorder = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+            MirrorClampToEdge = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE
+        };
+
         std::string path;
         VkImage image = VK_NULL_HANDLE;
         VkImageView view = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
         VkSampler sampler = VK_NULL_HANDLE;
         bool semiTransparent = false;
-        TextureMode addressMode = TextureMode::Repeat;
+        Mode addressMode = Repeat;
     };
 
     // Texture manager with Vulkan helpers
@@ -52,9 +40,8 @@ namespace Az3D {
 
         TextureManager(const AzVulk::Device& device, VkCommandPool pool);
         ~TextureManager();
-        
-        size_t addTexture(std::string imagePath, bool semiTransparent = false, 
-                         TextureMode addressMode = TextureMode::Repeat);
+
+        size_t addTexture(std::string imagePath, bool semiTransparent = false, Texture::Mode addressMode = Texture::Repeat);
         void createDefaultTexture(); // fallback for missing assets
 
         // Vulkan image creation helpers
@@ -62,8 +49,7 @@ namespace Az3D {
                         VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
                         VkImage& image, VkDeviceMemory& imageMemory);
         void createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView);
-        void createSampler(uint32_t mipLevels, VkSampler& sampler, 
-                          TextureMode addressMode = TextureMode::Repeat);
+        void createSampler(uint32_t mipLevels, VkSampler& sampler, Texture::Mode adressMode = Texture::Repeat);
         void transitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, 
                                     VkImageLayout newLayout, uint32_t mipLevels);
         void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);

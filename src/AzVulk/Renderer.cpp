@@ -222,8 +222,13 @@ namespace AzVulk {
 
             // Bind both global (set 0) and material (set 1) descriptor sets
             VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
-            VkDescriptorSet materialSet = descriptorManager.materialDynamicDescriptor.getMapSet(materialIndex, currentFrame);
-            std::array<VkDescriptorSet, 2> sets = {globalSet, materialSet};
+            VkDescriptorSet materialSet = descriptorManager.materialDynamicDescriptor.getSet(materialIndex, currentFrame);
+
+            size_t textureIndex = resourceManager.materialManager->materials[materialIndex]->diffTxtr;
+
+            VkDescriptorSet textureSet = descriptorManager.textureDynamicDescriptor.getSet(textureIndex, currentFrame);
+
+            std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     pipeline.pipelineLayout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 

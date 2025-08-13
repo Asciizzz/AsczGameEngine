@@ -34,8 +34,7 @@ namespace Az3D {
         textures.clear();
     }
 
-    size_t TextureManager::addTexture(std::string imagePath, bool semiTransparent, 
-                                      TextureMode addressMode) {
+    size_t TextureManager::addTexture(std::string imagePath, bool semiTransparent, Texture::Mode addressMode) {
         try {
             Texture texture;
             texture.path = imagePath; // Convert to std::string for storage
@@ -128,7 +127,7 @@ namespace Az3D {
 
         // Create image view and sampler
         createImageView(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, 1, defaultTexture.view);
-        createSampler(1, defaultTexture.sampler, TextureMode::Repeat);
+        createSampler(1, defaultTexture.sampler, Texture::Repeat);
 
         vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
         
@@ -192,14 +191,14 @@ namespace Az3D {
         }
     }
 
-    void TextureManager::createSampler(uint32_t mipLevels, VkSampler& sampler, TextureMode addressMode) {
+    void TextureManager::createSampler(uint32_t mipLevels, VkSampler& sampler, Texture::Mode addressMode) {
         VkPhysicalDeviceProperties properties{};
         vkGetPhysicalDeviceProperties(vulkanDevice.physicalDevice, &properties);
 
         VkPhysicalDeviceFeatures deviceFeatures{};
         vkGetPhysicalDeviceFeatures(vulkanDevice.physicalDevice, &deviceFeatures);
 
-        VkSamplerAddressMode vulkanAddressMode = toVulkanAddressMode(addressMode);
+        VkSamplerAddressMode vulkanAddressMode = static_cast<VkSamplerAddressMode>(addressMode);
 
         VkSamplerCreateInfo samplerInfo{};
         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

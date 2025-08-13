@@ -33,13 +33,13 @@ namespace AzVulk {
         void endFrame(uint32_t imageIndex);
         // Thank's for attending my Ted-Talk
 
-    // Component references
-    const Device& vulkanDevice;
-    SwapChain& swapChain;
-    Buffer& buffer;
-    DescriptorManager& descriptorManager;
-    Az3D::ResourceManager& resourceManager;
-    DepthManager* depthManager = nullptr;
+        // Component references
+        const Device& vulkanDevice;
+        SwapChain& swapChain;
+        Buffer& buffer;
+        DescriptorManager& descriptorManager;
+        Az3D::ResourceManager& resourceManager;
+        DepthManager* depthManager = nullptr;
 
         // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;
@@ -55,7 +55,7 @@ namespace AzVulk {
         bool framebufferResized = false;
 
         static const int MAX_FRAMES_IN_FLIGHT = 2; // double buffering
-    size_t swapchainImageCount = 0;
+        size_t swapchainImageCount = 0;
 
         void createCommandPool();
         void createCommandBuffers();
