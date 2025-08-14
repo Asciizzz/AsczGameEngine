@@ -15,6 +15,7 @@ namespace Az3D {
 }
 
 namespace AzVulk {
+    struct BufferData;
 
     struct DynamicDescriptor {
         DynamicDescriptor(VkDevice device, uint32_t maxFramesInFlight) :
@@ -64,7 +65,7 @@ namespace AzVulk {
 
         void createMaterialDescriptorSets(
             const std::vector<std::shared_ptr<Az3D::Material>>& materials,
-            const std::vector<VkBuffer>& materialUniformBuffers
+            const std::vector<BufferData>& materialUniformBuffers
         );
         void createTextureDescriptorSets(const std::vector<Az3D::Texture>& textures);
     };

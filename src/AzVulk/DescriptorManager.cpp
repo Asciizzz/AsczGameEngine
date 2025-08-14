@@ -151,7 +151,7 @@ namespace AzVulk {
 
     void DynamicDescriptor::createMaterialDescriptorSets(
         const std::vector<std::shared_ptr<Az3D::Material>>& materials,
-        const std::vector<VkBuffer>& materialUniformBuffers
+        const std::vector<BufferData>& materialUniformBuffers
     ) {
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
 
@@ -163,7 +163,7 @@ namespace AzVulk {
 
         for (size_t i = 0; i < materials.size(); ++i) {
             const auto& material = materials[i];
-            const auto& materialUniformBuffer = materialUniformBuffers[i];
+            const auto& materialUniformBuffer = materialUniformBuffers[i].buffer;
 
             std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
 

@@ -132,12 +132,15 @@ namespace AzVulk {
         }
 
         // Cleanup material uniform buffers
-        for (size_t i = 0; i < materialUniformBuffers.size(); ++i) {
-            if (materialUniformBuffersMapped[i]) {
-                vkUnmapMemory(logicalDevice, materialUniformBuffersMemory[i]);
-            }
-            vkDestroyBuffer(logicalDevice, materialUniformBuffers[i], nullptr);
-            vkFreeMemory(logicalDevice, materialUniformBuffersMemory[i], nullptr);
+        // for (size_t i = 0; i < materialUniformBuffers.size(); ++i) {
+        //     if (materialUniformBuffersMapped[i]) {
+        //         vkUnmapMemory(logicalDevice, materialUniformBuffersMemory[i]);
+        //     }
+        //     vkDestroyBuffer(logicalDevice, materialUniformBuffers[i], nullptr);
+        //     vkFreeMemory(logicalDevice, materialUniformBuffersMemory[i], nullptr);
+        // Cleanup material uniform buffers
+        for (auto& bufferData : materialUniformBuffers) {
+            bufferData.cleanup();
         }
     }
 
@@ -165,41 +168,45 @@ namespace AzVulk {
     void Buffer::createMaterialUniformBuffers(const std::vector<Az3D::Material>& materials) {
         VkDeviceSize bufferSize = sizeof(MaterialUBO);
 
+        // materialUniformBuffers.resize(materials.size());
+        // materialUniformBuffersMemory.resize(materials.size());
+        // materialUniformBuffersMapped.resize(materials.size());
+
+        // for (size_t i = 0; i < materials.size(); ++i) {
+        //     vulkanDevice.createBuffer(
+        //         bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+        //         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+        //         materialUniformBuffers[i], materialUniformBuffersMemory[i]);
+        //     // Robust: unmap if already mapped
+        //     if (materialUniformBuffersMapped[i]) {
+        //         vkUnmapMemory(vulkanDevice.device, materialUniformBuffersMemory[i]);
+        //         materialUniformBuffersMapped[i] = nullptr;
+        //     }
+        //     vkMapMemory(vulkanDevice.device, materialUniformBuffersMemory[i], 0, bufferSize, 0, &materialUniformBuffersMapped[i]);
+
+        //     MaterialUBO materialUBO(materials[i].prop1);
+
+        //     memcpy(materialUniformBuffersMapped[i], &materialUBO, sizeof(MaterialUBO));
+        // }
+
         materialUniformBuffers.resize(materials.size());
-        materialUniformBuffersMemory.resize(materials.size());
-        materialUniformBuffersMapped.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
-            vulkanDevice.createBuffer(
-                bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                materialUniformBuffers[i], materialUniformBuffersMemory[i]);
-            // Robust: unmap if already mapped
-            if (materialUniformBuffersMapped[i]) {
-                vkUnmapMemory(vulkanDevice.device, materialUniformBuffersMemory[i]);
-                materialUniformBuffersMapped[i] = nullptr;
-            }
-            vkMapMemory(vulkanDevice.device, materialUniformBuffersMemory[i], 0, bufferSize, 0, &materialUniformBuffersMapped[i]);
+            auto& bufferData = materialUniformBuffers[i];
+
+            bufferData.createBuffer(
+                vulkanDevice, sizeof(MaterialUBO), 1,
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            );
 
             MaterialUBO materialUBO(materials[i].prop1);
-
-            memcpy(materialUniformBuffersMapped[i], &materialUBO, sizeof(MaterialUBO));
+            bufferData.uploadData(&materialUBO);
         }
-    }
-
-    void Buffer::updateMaterialUniformBuffer(size_t materialIndex, const Az3D::Material& material) {
-        if (materialIndex < materialUniformBuffersMapped.size() && materialUniformBuffersMapped[materialIndex]) {
-            MaterialUBO materialUBO(material.prop1);
-            memcpy(materialUniformBuffersMapped[materialIndex], &materialUBO, sizeof(MaterialUBO));
-        }
-    }
-
-    VkBuffer Buffer::getMaterialUniformBuffer(size_t materialIndex) const {
-        return materialUniformBuffers[materialIndex];
     }
 
     // New multi-mesh methods implementation
-    size_t Buffer::loadMeshToBuffer(const Az3D::Mesh& mesh) {
+    size_t Buffer::createMeshBuffer(const Az3D::Mesh& mesh) {
         MeshBufferData meshBuffer;
 
         const auto& vertices = mesh.vertices;

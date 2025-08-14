@@ -153,13 +153,10 @@ namespace AzVulk {
         Buffer& operator=(const Buffer&) = delete;
 
         void createUniformBuffers(size_t count);
-        
-        // Material uniform buffer methods
-        void createMaterialUniformBuffers(const std::vector<Az3D::Material>& materials);
-        void updateMaterialUniformBuffer(size_t materialIndex, const Az3D::Material& material);
-        VkBuffer getMaterialUniformBuffer(size_t materialIndex) const;
 
-        size_t loadMeshToBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
+        void createMaterialUniformBuffers(const std::vector<Az3D::Material>& materials);
+
+        size_t createMeshBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
         // Most efficient versions that work directly with mesh mapping data
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
         // Selective update method - only updates specific instances based on update queue
@@ -178,8 +175,10 @@ namespace AzVulk {
         std::vector<void*> uniformBuffersMapped;
         
         // Material uniform buffers
-        std::vector<VkBuffer> materialUniformBuffers;
-        std::vector<VkDeviceMemory> materialUniformBuffersMemory;
-        std::vector<void*> materialUniformBuffersMapped;
+        // std::vector<VkBuffer> materialUniformBuffers;
+        // std::vector<VkDeviceMemory> materialUniformBuffersMemory;
+        // std::vector<void*> materialUniformBuffersMapped;
+
+        std::vector<BufferData> materialUniformBuffers;
     };
 }

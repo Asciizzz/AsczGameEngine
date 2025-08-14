@@ -324,7 +324,7 @@ void Application::initVulkan() {
 
     // Load meshes into GPU buffer
     for (size_t i = 0; i < meshManager.meshes.size(); ++i) {
-        bufferRef.loadMeshToBuffer(*meshManager.meshes[i]);
+        bufferRef.createMeshBuffer(*meshManager.meshes[i]);
     }
 
     // Final Renderer setup with ResourceManager
