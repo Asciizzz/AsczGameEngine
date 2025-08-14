@@ -57,9 +57,8 @@ namespace Az3D {
             AzVulk::BufferData stagingBuffer;
             stagingBuffer.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
             stagingBuffer.createBuffer(
-                imageSize, sizeof(uint8_t),
-                AzVulk::BufferData::TransferSrc,
-                AzVulk::BufferData::HostVisible | AzVulk::BufferData::HostCoherent
+                imageSize, sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             stagingBuffer.uploadData(pixels);
 
@@ -107,9 +106,8 @@ namespace Az3D {
         AzVulk::BufferData stagingBuffer;
         stagingBuffer.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
         stagingBuffer.createBuffer(
-            imageSize, sizeof(uint8_t),
-            AzVulk::BufferData::TransferSrc,
-            AzVulk::BufferData::HostVisible | AzVulk::BufferData::HostCoherent
+            imageSize, sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         stagingBuffer.uploadData(white);
 

@@ -18,8 +18,8 @@ namespace Az3D {
             bufferData.initVulkan(device, physicalDevice);
 
             bufferData.createBuffer(
-                1, sizeof(MaterialUBO), BufferData::Uniform,
-                BufferData::HostVisible | BufferData::HostCoherent
+                1, sizeof(MaterialUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
 
             MaterialUBO materialUBO(materials[i]->prop1);
@@ -59,23 +59,26 @@ namespace Az3D {
             materialBufferInfo.offset = 0;
             materialBufferInfo.range = sizeof(MaterialUBO);
 
-            std::vector<VkWriteDescriptorSet> descriptorWrites(2);
-            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &materialBufferInfo;
-            descriptorWrites[0].dstSet = descriptorSets[0];
+            VkWriteDescriptorSet descriptorWrite0;
+            descriptorWrite0.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite0.dstBinding = 0;
+            descriptorWrite0.dstArrayElement = 0;
+            descriptorWrite0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite0.descriptorCount = 1;
+            descriptorWrite0.pBufferInfo = &materialBufferInfo;
+            descriptorWrite0.dstSet = descriptorSets[0];
 
-            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pBufferInfo = &materialBufferInfo;
+            // VkWriteDescriptorSet descriptorWrite1;
+            // descriptorWrite1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            // descriptorWrite1.dstBinding = 0;
+            // descriptorWrite1.dstArrayElement = 0;
+            // descriptorWrite1.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            // descriptorWrite1.descriptorCount = 1;
+            // descriptorWrite1.pBufferInfo = &materialBufferInfo;
+            // descriptorWrite1.dstSet = descriptorSets[1];
 
-            vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            // vkUpdateDescriptorSets(device, 1, &descriptorWrite0, 0, nullptr);
+            // vkUpdateDescriptorSets(device, 1, &descriptorWrite1, 0, nullptr);
 
             dynamicDescriptor.manySets.push_back(std::move(descriptorSets));
         }

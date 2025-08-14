@@ -221,15 +221,17 @@ namespace Az3D {
 
             vertexBufferDatas[i].initVulkan(device, physicalDevice);
             vertexBufferDatas[i].createBuffer(
-                mesh->vertices.size(), sizeof(Vertex),
-                BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
+                mesh->vertices.size(), sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
+
+            
             vertexBufferDatas[i].uploadData(mesh->vertices);
 
             indexBufferDatas[i].initVulkan(device, physicalDevice);
             indexBufferDatas[i].createBuffer(
-                mesh->indices.size(), sizeof(uint32_t),
-                BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent
+                mesh->indices.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             indexBufferDatas[i].uploadData(mesh->indices);
         }

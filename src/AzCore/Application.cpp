@@ -299,7 +299,7 @@ void Application::initVulkan() {
     meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
 
     matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    // matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
+    // matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT); // Buggy af right now
 
     size_t matCount = matManager.materials.size();
     size_t texCount = texManager.textures.size();

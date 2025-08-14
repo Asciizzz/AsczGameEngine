@@ -165,8 +165,8 @@ namespace AzVulk {
             bufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
 
             bufferData.createBuffer(
-                1, sizeof(GlobalUBO), BufferData::TransferSrc,
-                BufferData::HostVisible | BufferData::HostCoherent
+                1, sizeof(GlobalUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
 
             bufferData.mappedData();
@@ -181,8 +181,8 @@ namespace AzVulk {
 
         instanceBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
         instanceBufferData.createBuffer(
-            instanceIndices.size(), sizeof(Az3D::InstanceVertexData),
-            BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
+            instanceIndices.size(), sizeof(Az3D::InstanceVertexData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
 
         instanceBufferData.mappedData();

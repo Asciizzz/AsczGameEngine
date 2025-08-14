@@ -33,25 +33,6 @@ namespace AzVulk {
 
 
     struct BufferData {
-        enum Type {
-            None = 0,
-            Vertex = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            Index = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            Uniform = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            Storage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            TransferSrc = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            TransferDst = VK_BUFFER_USAGE_TRANSFER_DST_BIT
-        };
-
-        enum Usage {
-            DeviceLocal = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            HostVisible = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-            HostCoherent = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            HostCached = VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-            LazilyAllocated = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT
-        };
-
-
         BufferData() = default;
         void initVulkan(VkDevice device, VkPhysicalDevice physicalDevice) {
             this->device = device;
