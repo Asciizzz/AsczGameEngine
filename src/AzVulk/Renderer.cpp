@@ -244,6 +244,7 @@ namespace AzVulk {
 
                     const auto& vertexBufferData = meshBuffer.vertexBufferData;
                     const auto& indexBufferData = meshBuffer.indexBufferData;
+                    const auto& instanceBufferData = meshBuffer.instanceBufferData;
 
                     // Bind vertex buffer
                     VkBuffer vertexBuffers[] = {vertexBufferData.buffer};
@@ -251,7 +252,7 @@ namespace AzVulk {
                     vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
 
                     // Bind instance buffer
-                    VkBuffer instanceBuffers[] = {meshBuffer.instanceBuffer};
+                    VkBuffer instanceBuffers[] = {instanceBufferData.buffer};
                     VkDeviceSize instanceOffsets[] = {0};
                     vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
 

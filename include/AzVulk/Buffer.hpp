@@ -75,7 +75,7 @@ namespace AzVulk {
         VkDeviceMemory memory = VK_NULL_HANDLE;
         void* mapped = nullptr;
 
-        VkDeviceSize dataSize = 0;
+        VkDeviceSize totalDataSize = 0;
         uint32_t resourceCount = 0;
 
         VkBufferUsageFlags usageFlags = 0;
@@ -88,30 +88,34 @@ namespace AzVulk {
 
         template<typename T>
         void uploadData(const std::vector<T>& data) {
-            if (sizeof(T) * data.size() != dataSize) {
+            if (sizeof(T) * data.size() != totalDataSize) {
                 throw std::runtime_error("Data type size mismatch!");
             }
 
-            vkMapMemory(device, memory, 0, dataSize, 0, &mapped);
+            vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
             memcpy(mapped, data.data(), sizeof(T) * data.size());
             vkUnmapMemory(device, memory);
             mapped = nullptr;
         }
         template<typename T>
         void uploadData(const T* data) {
-            if (sizeof(T) * resourceCount != dataSize) {
+            if (sizeof(T) * resourceCount != totalDataSize) {
                 throw std::runtime_error("Data type size mismatch!");
             }
 
-            vkMapMemory(device, memory, 0, dataSize, 0, &mapped);
+            vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
             memcpy(mapped, data, sizeof(T) * resourceCount);
             vkUnmapMemory(device, memory);
             mapped = nullptr;
         }
 
+        void mapData() {
+            if (!mapped) vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
+        }
+
         template<typename T>
         void mapData(const std::vector<T>& data) {
-            vkMapMemory(device, memory, 0, dataSize, 0, &mapped);
+            vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
             memcpy(mapped, data.data(), sizeof(T) * data.size());
         }
     };
@@ -121,21 +125,21 @@ namespace AzVulk {
         BufferData vertexBufferData;
         BufferData indexBufferData;
 
-        VkBuffer instanceBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory instanceBufferMemory = VK_NULL_HANDLE;
-        void* instanceBufferMapped = nullptr;
+        // VkBuffer instanceBuffer = VK_NULL_HANDLE;
+        // VkDeviceMemory instanceBufferMemory = VK_NULL_HANDLE;
+        // void* instanceBufferMapped = nullptr;
 
         BufferData instanceBufferData;
 
         // Cleanup helper - destructors aren't enough apparently
         void cleanup(VkDevice device) {
-            if (instanceBufferMapped) {
-                vkUnmapMemory(device, instanceBufferMemory);
-            }
-            if (instanceBuffer != VK_NULL_HANDLE) {
-                vkDestroyBuffer(device, instanceBuffer, nullptr);
-                vkFreeMemory(device, instanceBufferMemory, nullptr);
-            }
+            // if (instanceBufferMapped) {
+            //     vkUnmapMemory(device, instanceBufferMemory);
+            // }
+            // if (instanceBuffer != VK_NULL_HANDLE) {
+            //     vkDestroyBuffer(device, instanceBuffer, nullptr);
+            //     vkFreeMemory(device, instanceBufferMemory, nullptr);
+            // }
 
             instanceBufferData.cleanup();
             vertexBufferData.cleanup();

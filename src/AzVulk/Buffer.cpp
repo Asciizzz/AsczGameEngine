@@ -18,7 +18,7 @@ namespace AzVulk {
         memory = other.memory;
         mapped = other.mapped;
 
-        dataSize = other.dataSize;
+        totalDataSize = other.totalDataSize;
         resourceCount = other.resourceCount;
 
         usageFlags = other.usageFlags;
@@ -41,7 +41,7 @@ namespace AzVulk {
             memory = other.memory;
             mapped = other.mapped;
 
-            dataSize = other.dataSize;
+            totalDataSize = other.totalDataSize;
             resourceCount = other.resourceCount;
 
             usageFlags = other.usageFlags;
@@ -81,14 +81,14 @@ namespace AzVulk {
         this->device = vulkanDevice.device;
         this->physicalDevice = vulkanDevice.physicalDevice;
 
-        this->dataSize = static_cast<VkDeviceSize>(dataTypeSize * resourceCount);
+        this->totalDataSize = static_cast<VkDeviceSize>(dataTypeSize * resourceCount);
         this->resourceCount = static_cast<uint32_t>(resourceCount);
 
         cleanup();
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = dataSize;
+        bufferInfo.size = totalDataSize;
         bufferInfo.usage = usageFlags;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -118,14 +118,12 @@ namespace AzVulk {
     Buffer::Buffer(const Device& device) : vulkanDevice(device) {}
 
     Buffer::~Buffer() {
-        VkDevice logicalDevice = vulkanDevice.device;
-        
         for (auto& bufferData : uniformBuffers) {
             bufferData.cleanup();
         }
 
         for (auto& bufferData : meshBuffers) {
-            bufferData.cleanup(logicalDevice);
+            bufferData.cleanup(vulkanDevice.device);
         }
 
         for (auto& bufferData : materialBuffers) {
@@ -135,24 +133,9 @@ namespace AzVulk {
 
     void Buffer::createUniformBuffers(size_t count) {
 
-        // uniformBuffers.resize(count);
-        // uniformBuffersMemory.resize(count);
-        // uniformBuffersMapped.resize(count);
-
         uniformBuffers.resize(count);
 
         for (size_t i = 0; i < count; ++i) {
-            // vulkanDevice.createBuffer(
-            //     bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-            //     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-            //     uniformBuffers[i], uniformBuffersMemory[i]);
-            // // Robust: unmap if already mapped
-            // if (uniformBuffersMapped[i]) {
-            //     vkUnmapMemory(vulkanDevice.device, uniformBuffersMemory[i]);
-            //     uniformBuffersMapped[i] = nullptr;
-            // }
-            // vkMapMemory(vulkanDevice.device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
-
             auto& bufferData = uniformBuffers[i];
 
             bufferData.createBuffer(
@@ -160,6 +143,8 @@ namespace AzVulk {
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
+
+            bufferData.mapData();
         }
     }
 
@@ -211,26 +196,40 @@ namespace AzVulk {
         auto& meshBuffer = meshBuffers[meshIndex];
         VkDeviceSize bufferSize = sizeof(Az3D::InstanceVertexData) * instanceIndices.size();
 
-        // Clean up existing buffer if it exists
-        if (meshBuffer.instanceBuffer != VK_NULL_HANDLE) {
-            if (meshBuffer.instanceBufferMapped) {
-                vkUnmapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory);
-                meshBuffer.instanceBufferMapped = nullptr;
-            }
-            vkDestroyBuffer(vulkanDevice.device, meshBuffer.instanceBuffer, nullptr);
-            vkFreeMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, nullptr);
-        }
+        // // Clean up existing buffer if it exists
+        // if (meshBuffer.instanceBuffer != VK_NULL_HANDLE) {
+        //     if (meshBuffer.instanceBufferMapped) {
+        //         vkUnmapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory);
+        //         meshBuffer.instanceBufferMapped = nullptr;
+        //     }
+        //     vkDestroyBuffer(vulkanDevice.device, meshBuffer.instanceBuffer, nullptr);
+        //     vkFreeMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, nullptr);
+        // }
 
-        vulkanDevice.createBuffer(
-            bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            meshBuffer.instanceBuffer, meshBuffer.instanceBufferMemory);
+        // vulkanDevice.createBuffer(
+        //     bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        //     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        //     meshBuffer.instanceBuffer, meshBuffer.instanceBufferMemory);
 
-        // Map the buffer for updates
-        vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);
+        // // Map the buffer for updates
+        // vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);
+
+        // for (size_t i = 0; i < instanceIndices.size(); ++i) {
+        //     static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
+        // }
+
+        auto& instanceBufferData = meshBuffer.instanceBufferData;
+
+        instanceBufferData.createBuffer(
+            vulkanDevice, sizeof(Az3D::InstanceVertexData), instanceIndices.size(),
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+
+        instanceBufferData.mapData();
 
         for (size_t i = 0; i < instanceIndices.size(); ++i) {
-            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[i] = modelInstances[instanceIndices[i]].vertexData;
+            static_cast<Az3D::InstanceVertexData*>(instanceBufferData.mapped)[i] = modelInstances[instanceIndices[i]].vertexData;
         }
 
         // Update previous instance count directly in the mesh data
@@ -244,7 +243,7 @@ namespace AzVulk {
 
         std::for_each(std::execution::par_unseq, meshData.updateIndices.begin(), meshData.updateIndices.end(), [&](size_t instanceIndex) {
             size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
-            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
+            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferData.mapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
         });
 
         // for (size_t instanceIndex : meshData.updateIndices) {
