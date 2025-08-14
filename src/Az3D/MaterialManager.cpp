@@ -59,21 +59,23 @@ namespace Az3D {
             materialBufferInfo.offset = 0;
             materialBufferInfo.range = sizeof(MaterialUBO);
 
-            VkWriteDescriptorSet descriptorWrite;
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo = &materialBufferInfo;
+            std::vector<VkWriteDescriptorSet> descriptorWrites(2);
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &materialBufferInfo;
+            descriptorWrites[0].dstSet = descriptorSets[0];
 
-            for (uint32_t j = 0; j < maxFramesInFlight; ++j) {
-                descriptorWrite.dstSet = descriptorSets[j];
+            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pBufferInfo = &materialBufferInfo;
 
-                printf("Updated descriptor set for material %zu, frame %u\n", i, j);
-                vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-            }
-
+            vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
             dynamicDescriptor.manySets.push_back(std::move(descriptorSets));
         }

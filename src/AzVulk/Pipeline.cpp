@@ -112,6 +112,8 @@ namespace AzVulk {
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
+    // TODO: Make this dynamic
+
         // Get vertex binding and attributes
         auto vertexBindingDescription = Az3D::Vertex::getBindingDescription();
         auto vertexAttributeDescriptions = Az3D::Vertex::getAttributeDescriptions();

@@ -38,10 +38,10 @@ namespace AzVulk {
 
     class Pipeline {
     public:
-        Pipeline( VkDevice device, VkRenderPass renderPass,
-                        std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
-                        const char* vertexShaderPath, const char* fragmentShaderPath,
-                        const RasterPipelineConfig& config);
+        Pipeline(VkDevice device, VkRenderPass renderPass,
+                std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
+                const char* vertexShaderPath, const char* fragmentShaderPath,
+                const RasterPipelineConfig& config);
         ~Pipeline();
         
         Pipeline(const Pipeline&) = delete;
