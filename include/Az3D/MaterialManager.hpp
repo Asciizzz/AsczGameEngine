@@ -40,16 +40,16 @@ namespace Az3D {
         MaterialManager() {
             auto defaultMaterial = MakeShared<Material>();
             materials.push_back(defaultMaterial);
-            count = 1; // Start with one default material
         }
         MaterialManager(const MaterialManager&) = delete;
         MaterialManager& operator=(const MaterialManager&) = delete;
 
         size_t addMaterial(const Material& material);
 
-        // Material storage - index-based
-        size_t count = 0; // Track the number of materials
         SharedPtrVec<Material> materials;
+
+        std::vector<AzVulk::BufferData> materialBufferDatas;
+        void createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice);
     };
     
 } // namespace Az3D

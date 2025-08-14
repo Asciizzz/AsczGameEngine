@@ -153,7 +153,6 @@ namespace AzVulk {
     Buffer::~Buffer() {
         for (auto& bufferData : uniformBufferDatas)  bufferData.cleanup();
         for (auto& bufferData : instanceBufferDatas)     bufferData.cleanup();
-        for (auto& bufferData : materialBufferDatas) bufferData.cleanup();
     }
 
     void Buffer::createUniformBuffers(size_t count) {
@@ -170,23 +169,6 @@ namespace AzVulk {
             );
 
             bufferData.mappedData();
-        }
-    }
-
-    void Buffer::createMaterialBuffers(const SharedPtrVec<Az3D::Material>& materials) {
-        materialBufferDatas.resize(materials.size());
-
-        for (size_t i = 0; i < materials.size(); ++i) {
-            auto& bufferData = materialBufferDatas[i];
-            bufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
-
-            bufferData.createBuffer(
-                1, sizeof(MaterialUBO), BufferData::Uniform,
-                BufferData::HostVisible | BufferData::HostCoherent
-            );
-
-            MaterialUBO materialUBO(materials[i]->prop1);
-            bufferData.uploadData(&materialUBO);
         }
     }
 

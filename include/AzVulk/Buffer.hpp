@@ -7,11 +7,12 @@
 #include <glm/glm.hpp>
 
 #include <vulkan/vulkan.h>
+#include <stdexcept>
+
 #include "Helpers/Templates.hpp"
 
 namespace Az3D {
     struct Mesh;
-    struct Material;
     struct MeshMappingData;
     struct ModelInstance;
 }
@@ -28,14 +29,6 @@ namespace AzVulk {
         alignas(16) glm::vec4 cameraRight;   // xyz = camera right, w = unused
         alignas(16) glm::vec4 cameraUp;      // xyz = camera up, w = unused
         alignas(16) glm::vec4 nearFar;       // x = near, y = far, z = unused, w = unused
-    };
-
-    // Material properties for per-material uniform buffer
-    struct MaterialUBO {
-        alignas(16) glm::vec4 prop1;
-
-        MaterialUBO() : prop1(1.0f, 0.0f, 0.0f, 0.0f) {}
-        MaterialUBO(const glm::vec4& p1) : prop1(p1) {}
     };
 
 
@@ -149,8 +142,8 @@ namespace AzVulk {
         // This one's chill, it gets to stay
         void createUniformBuffers(size_t count);
 
-        // Soon to be legacy
-        void createMaterialBuffers(const SharedPtrVec<Az3D::Material>& materials);
+        // Soon to be legacy - Rip bozo lol
+        // void createMaterialBuffers(const SharedPtrVec<Az3D::Material>& materials);
 
         // Soon to be legacy
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
@@ -162,6 +155,5 @@ namespace AzVulk {
 
         std::vector<BufferData> uniformBufferDatas;
         std::vector<BufferData> instanceBufferDatas;
-        std::vector<BufferData> materialBufferDatas;
     };
 }

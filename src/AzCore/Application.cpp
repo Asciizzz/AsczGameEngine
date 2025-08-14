@@ -293,11 +293,11 @@ void Application::initVulkan() {
     auto& bufferRef = *buffer;
     auto& descManager = *descriptorManager;
 
-    bufferRef.createMaterialBuffers(matManager.materials);
     // Create dummy buffers before actually migrating them to somewhere else correct
     bufferRef.instanceBufferDatas.resize(meshManager.meshes.size());
     
     meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
+    matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
 
     // Create descriptor pools and sets (split global/material)
     size_t matCount = matManager.materials.size();
@@ -309,7 +309,7 @@ void Application::initVulkan() {
         depthManager->depthSamplerView, depthManager->depthSampler
     );
     matDesc.createMaterialDescriptorSets(
-        matManager.materials, bufferRef.materialBufferDatas
+        matManager.materials, matManager.materialBufferDatas
     );
     texDesc.createTextureDescriptorSets(texManager.textures);
 

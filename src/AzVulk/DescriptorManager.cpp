@@ -119,7 +119,7 @@ namespace AzVulk {
             VkDescriptorBufferInfo materialBufferInfo{};
             materialBufferInfo.buffer = materialBuffer;
             materialBufferInfo.offset = 0;
-            materialBufferInfo.range = sizeof(MaterialUBO);
+            materialBufferInfo.range = sizeof(Az3D::MaterialUBO);
 
             VkWriteDescriptorSet descriptorWrite;
             descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
