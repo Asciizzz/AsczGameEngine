@@ -264,6 +264,31 @@ void Application::initVulkan() {
     auto& glbDesc = descriptorManager->globalDynamicDescriptor;
     auto& texDesc = descriptorManager->textureDynamicDescriptor;
 
+    auto& bufferRef = *buffer;
+    auto& descManager = *descriptorManager;
+
+    // Create dummy buffers before actually migrating them to somewhere else correct
+    bufferRef.instanceBufferDatas.resize(meshManager.meshes.size());
+    
+    meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
+
+    matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
+    matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
+
+    size_t matCount = matManager.materials.size();
+    size_t texCount = texManager.textures.size();
+
+    descriptorManager->createDescriptorPools(matCount, texCount);
+    glbDesc.createGlobalDescriptorSets(
+        bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
+        depthManager->depthSamplerView, depthManager->depthSampler
+    );
+
+    texDesc.createTextureDescriptorSets(texManager.textures);
+
+    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
+                                    *descriptorManager, *resourceManager, *depthManager);
+
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
 
     opaquePipeline = MakeUnique<Pipeline>(
@@ -289,32 +314,6 @@ void Application::initVulkan() {
         "Shaders/Sky/sky.frag.spv",
         RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
     );
-
-    auto& bufferRef = *buffer;
-    auto& descManager = *descriptorManager;
-
-    // Create dummy buffers before actually migrating them to somewhere else correct
-    bufferRef.instanceBufferDatas.resize(meshManager.meshes.size());
-    
-    meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-
-    matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT); // Buggy af right now
-
-    size_t matCount = matManager.materials.size();
-    size_t texCount = texManager.textures.size();
-
-    descriptorManager->createDescriptorPools(matCount, texCount);
-    glbDesc.createGlobalDescriptorSets(
-        bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
-        depthManager->depthSamplerView, depthManager->depthSampler
-    );
-
-    texDesc.createTextureDescriptorSets(texManager.textures);
-
-    // Final Renderer setup with ResourceManager
-    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
-                                    *descriptorManager, *resourceManager, *depthManager);
 }
 
 void Application::createSurface() {
