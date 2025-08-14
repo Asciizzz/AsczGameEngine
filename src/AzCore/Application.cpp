@@ -62,37 +62,6 @@ void Application::initVulkan() {
     descriptorManager = MakeUnique<DescriptorManager>(device);
     descriptorManager->createDescriptorSetLayouts(MAX_FRAMES_IN_FLIGHT);
 
-    auto& matDesc = descriptorManager->materialDynamicDescriptor;
-    auto& glbDesc = descriptorManager->globalDynamicDescriptor;
-    auto& texDesc = descriptorManager->textureDynamicDescriptor;
-
-    using LayoutVec = std::vector<VkDescriptorSetLayout>;
-
-    // Use both layouts for all pipelines
-    opaquePipeline = MakeUnique<Pipeline>(
-        device, renderPass,
-        LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
-        "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/raster.frag.spv",
-        RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
-    );
-
-    transparentPipeline = MakeUnique<Pipeline>(
-        device, renderPass,
-        LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
-        "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/raster.frag.spv",
-        RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
-    );
-
-    skyPipeline = MakeUnique<Pipeline>(
-        device, renderPass,
-        LayoutVec{glbDesc.setLayout},
-        "Shaders/Sky/sky.vert.spv",
-        "Shaders/Sky/sky.frag.spv",
-        RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
-    );
-
     shaderManager = MakeUnique<ShaderManager>(device);
 
     // Create command pool for graphics operations
@@ -290,6 +259,37 @@ void Application::initVulkan() {
 
 
 // PLAYGROUND END HERE 
+
+    auto& matDesc = descriptorManager->materialDynamicDescriptor;
+    auto& glbDesc = descriptorManager->globalDynamicDescriptor;
+    auto& texDesc = descriptorManager->textureDynamicDescriptor;
+
+    using LayoutVec = std::vector<VkDescriptorSetLayout>;
+
+    opaquePipeline = MakeUnique<Pipeline>(
+        device, renderPass,
+        LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
+        "Shaders/Rasterize/raster.vert.spv",
+        "Shaders/Rasterize/raster.frag.spv",
+        RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
+    );
+
+    transparentPipeline = MakeUnique<Pipeline>(
+        device, renderPass,
+        LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
+        "Shaders/Rasterize/raster.vert.spv",
+        "Shaders/Rasterize/raster.frag.spv",
+        RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
+    );
+
+    skyPipeline = MakeUnique<Pipeline>(
+        device, renderPass,
+        LayoutVec{glbDesc.setLayout},
+        "Shaders/Sky/sky.vert.spv",
+        "Shaders/Sky/sky.frag.spv",
+        RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
+    );
+
     auto& bufferRef = *buffer;
     auto& descManager = *descriptorManager;
 
