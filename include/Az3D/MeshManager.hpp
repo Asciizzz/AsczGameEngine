@@ -15,6 +15,10 @@
 #include <iostream>
 #include <queue>
 
+namespace AzVulk {
+    struct BufferData;
+}
+
 namespace Az3D {
 
     struct Vertex {
@@ -99,6 +103,7 @@ namespace Az3D {
         // Mesh data
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
+        static std::shared_ptr<Mesh> loadFromOBJ(std::string filePath);
 
         // BVH data structures
         glm::vec3 meshMin = glm::vec3(FLT_MAX);
@@ -123,8 +128,6 @@ namespace Az3D {
         static glm::vec3 rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
         static float sphereIntersectBox(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& boxMin, const glm::vec3& boxMax);
         static glm::vec3 sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
-
-        static std::shared_ptr<Mesh> loadFromOBJ(std::string filePath);
     };
 
 

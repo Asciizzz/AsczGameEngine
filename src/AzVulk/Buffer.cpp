@@ -142,9 +142,8 @@ namespace AzVulk {
             auto& bufferData = uniformBuffers[i];
 
             bufferData.createBuffer(
-                vulkanDevice, 1, sizeof(GlobalUBO),
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                vulkanDevice, 1, sizeof(GlobalUBO), BufferData::TransferSrc,
+                BufferData::HostVisible | BufferData::HostCoherent
             );
 
             bufferData.mapData();
@@ -158,9 +157,8 @@ namespace AzVulk {
             auto& bufferData = materialBuffers[i];
 
             bufferData.createBuffer(
-                vulkanDevice, 1, sizeof(MaterialUBO),
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                vulkanDevice, 1, sizeof(MaterialUBO), BufferData::Uniform,
+                BufferData::HostVisible | BufferData::HostCoherent
             );
 
             MaterialUBO materialUBO(materials[i].prop1);
@@ -178,14 +176,12 @@ namespace AzVulk {
         // Beta: Using the new BufferData struct
         meshBuffer.vertexBufferData.createBuffer(
             vulkanDevice, vertices.size(), sizeof(Az3D::Vertex),
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent);
         meshBuffer.vertexBufferData.uploadData(vertices);
 
         meshBuffer.indexBufferData.createBuffer(
             vulkanDevice, indices.size(), sizeof(uint32_t),
-            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent);
         meshBuffer.indexBufferData.uploadData(indices);
 
         // Add to meshBuffers vector and return index
@@ -202,8 +198,7 @@ namespace AzVulk {
 
         instanceBufferData.createBuffer(
             vulkanDevice, instanceIndices.size(), sizeof(Az3D::InstanceVertexData),
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
         );
 
         instanceBufferData.mapData();
