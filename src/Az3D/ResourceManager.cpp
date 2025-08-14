@@ -5,9 +5,9 @@
 namespace Az3D {
 
     ResourceManager::ResourceManager(const AzVulk::Device& device, VkCommandPool commandPool) {
-        textureManager = std::make_unique<TextureManager>(device, commandPool);
-        materialManager = std::make_unique<MaterialManager>();
-        meshManager = std::make_unique<MeshManager>();
+        textureManager = MakeUnique<TextureManager>(device, commandPool);
+        materialManager = MakeUnique<MaterialManager>();
+        meshManager = MakeUnique<MeshManager>();
     }
 
     size_t ResourceManager::addTexture(std::string name, std::string imagePath,

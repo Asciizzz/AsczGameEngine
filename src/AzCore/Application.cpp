@@ -18,12 +18,12 @@ using namespace Az3D;
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
 
-    windowManager = std::make_unique<AzCore::WindowManager>(title, width, height);
-    fpsManager = std::make_unique<AzCore::FpsManager>();
+    windowManager = MakeUnique<AzCore::WindowManager>(title, width, height);
+    fpsManager = MakeUnique<AzCore::FpsManager>();
 
     float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     // 10km view distance for those distant horizons
-    camera = std::make_unique<Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
+    camera = MakeUnique<Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
     camera->setAspectRatio(aspectRatio);
 
     initVulkan();
@@ -41,25 +41,25 @@ void Application::run() {
 
 void Application::initVulkan() {
     auto extensions = windowManager->getRequiredVulkanExtensions();
-    vulkanInstance = std::make_unique<Instance>(extensions, enableValidationLayers);
+    vulkanInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
     createSurface();
 
-    vulkanDevice = std::make_unique<Device>(vulkanInstance->instance, surface);
-    msaaManager = std::make_unique<MSAAManager>(*vulkanDevice);
-    swapChain = std::make_unique<SwapChain>(*vulkanDevice, surface, windowManager->window);
+    vulkanDevice = MakeUnique<Device>(vulkanInstance->instance, surface);
+    msaaManager = MakeUnique<MSAAManager>(*vulkanDevice);
+    swapChain = MakeUnique<SwapChain>(*vulkanDevice, surface, windowManager->window);
 
     // Create shared render pass for forward rendering
     auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
         swapChain->imageFormat, msaaManager->msaaSamples
     );
-    mainRenderPass = std::make_unique<RenderPass>(vulkanDevice->device, renderPassConfig);
+    mainRenderPass = MakeUnique<RenderPass>(vulkanDevice->device, renderPassConfig);
     
     // Some very repetitive vulkan stuff
     VkDevice device = vulkanDevice->device;
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
     // Create descriptor manager and both set layouts
-    descriptorManager = std::make_unique<DescriptorManager>(device);
+    descriptorManager = MakeUnique<DescriptorManager>(device);
     descriptorManager->createDescriptorSetLayouts(2);
 
     auto& matDesc = descriptorManager->materialDynamicDescriptor;
@@ -69,7 +69,7 @@ void Application::initVulkan() {
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
 
     // Use both layouts for all pipelines
-    opaquePipeline = std::make_unique<Pipeline>(
+    opaquePipeline = MakeUnique<Pipeline>(
         device, renderPass,
         LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
@@ -77,7 +77,7 @@ void Application::initVulkan() {
         RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
     );
 
-    transparentPipeline = std::make_unique<Pipeline>(
+    transparentPipeline = MakeUnique<Pipeline>(
         device, renderPass,
         LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
@@ -85,7 +85,7 @@ void Application::initVulkan() {
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
     );
 
-    skyPipeline = std::make_unique<Pipeline>(
+    skyPipeline = MakeUnique<Pipeline>(
         device, renderPass,
         LayoutVec{glbDesc.setLayout},
         "Shaders/Sky/sky.vert.spv",
@@ -93,7 +93,7 @@ void Application::initVulkan() {
         RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
     );
 
-    shaderManager = std::make_unique<ShaderManager>(device);
+    shaderManager = MakeUnique<ShaderManager>(device);
 
     // Create command pool for graphics operations
     VkCommandPoolCreateInfo poolInfo{};
@@ -107,15 +107,15 @@ void Application::initVulkan() {
 
     // Initialize render targets and depth testing
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
-    depthManager = std::make_unique<DepthManager>(*vulkanDevice);
+    depthManager = MakeUnique<DepthManager>(*vulkanDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
-    buffer = std::make_unique<Buffer>(*vulkanDevice);
+    buffer = MakeUnique<Buffer>(*vulkanDevice);
     buffer->createUniformBuffers(2);
 
-    resourceManager = std::make_unique<ResourceManager>(*vulkanDevice, commandPool);
-    modelManager = std::make_unique<ModelManager>();
+    resourceManager = MakeUnique<ResourceManager>(*vulkanDevice, commandPool);
+    modelManager = MakeUnique<ModelManager>();
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
@@ -221,7 +221,7 @@ void Application::initVulkan() {
     grassConfig.enableWind = true;
     
     // Initialize grass system
-    grassSystem = std::make_unique<AzGame::Grass>(grassConfig);
+    grassSystem = MakeUnique<AzGame::Grass>(grassConfig);
     if (!grassSystem->initialize(*resourceManager)) {
         throw std::runtime_error("Failed to initialize grass system!");
     }
@@ -315,7 +315,7 @@ void Application::initVulkan() {
     texDesc.createTextureDescriptorSets(texManager.textures);
 
     // Final Renderer setup with ResourceManager
-    renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *buffer,
+    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
                                         *descriptorManager, *resourceManager, depthManager.get());
 }
 
