@@ -152,7 +152,7 @@ namespace AzVulk {
 
     Buffer::~Buffer() {
         for (auto& bufferData : uniformBufferDatas)  bufferData.cleanup();
-        for (auto& bufferData : meshBufferDatas)     bufferData.cleanup();
+        for (auto& bufferData : instanceBufferDatas)     bufferData.cleanup();
         for (auto& bufferData : materialBufferDatas) bufferData.cleanup();
     }
 
@@ -193,9 +193,8 @@ namespace AzVulk {
 
     void Buffer::createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances) {
         const auto& instanceIndices = meshData.instanceIndices;
-        auto& meshBuffer = meshBufferDatas[meshIndex];
 
-        auto& instanceBufferData = meshBuffer.instanceBufferData;
+        auto& instanceBufferData = instanceBufferDatas[meshIndex];
 
         instanceBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
         instanceBufferData.createBuffer(
@@ -217,12 +216,11 @@ namespace AzVulk {
     void Buffer::updateMeshInstanceBufferSelective( size_t meshIndex,
                                                     Az3D::MeshMappingData& meshData, 
                                                     const std::vector<Az3D::ModelInstance>& modelInstances) {
-        auto& meshBuffer = meshBufferDatas[meshIndex];
+        auto& instanceBufferData = instanceBufferDatas[meshIndex];
 
         std::for_each(std::execution::par_unseq, meshData.updateIndices.begin(), meshData.updateIndices.end(), [&](size_t instanceIndex) {
             size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
-            // static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferData.mapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
-            meshBuffer.instanceBufferData.updateMapped(bufferPos, modelInstances[instanceIndex].vertexData);
+            instanceBufferData.updateMapped(bufferPos, modelInstances[instanceIndex].vertexData);
         });
     }
 

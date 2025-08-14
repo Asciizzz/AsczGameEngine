@@ -1,13 +1,21 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <memory>
-#include <vector>
-#include <iostream>
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
-#include "Helpers/Templates.hpp"
+#include <glm/glm.hpp>
+
+#include "AzVulk/Buffer.hpp"
 
 namespace Az3D {
+
+    struct MaterialUBO {
+        alignas(16) glm::vec4 prop1;
+
+        MaterialUBO() : prop1(1.0f, 0.0f, 0.0f, 0.0f) {}
+        MaterialUBO(const glm::vec4& p1) : prop1(p1) {}
+    };
 
     struct Material {
         // Generic material properties using vec4 for alignment and flexibility

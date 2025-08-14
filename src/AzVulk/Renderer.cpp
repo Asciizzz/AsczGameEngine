@@ -183,7 +183,7 @@ namespace AzVulk {
         const auto& modelInstances = modelGroup.modelInstances;
 
         // Render all meshes with their instances
-        const auto& meshBufferDatas = buffer.meshBufferDatas;
+        const auto& instanceBufferDatas = buffer.instanceBufferDatas;
 
         // Build material to meshes mapping for efficient rendering
         UnorderedMap<size_t, std::vector<size_t>> materialToMeshes;
@@ -193,7 +193,7 @@ namespace AzVulk {
             if (instanceIndices.empty()) continue;
 
             // Update or create the instance buffer for this mesh
-            if (meshIndex < meshBufferDatas.size()) {
+            if (meshIndex < instanceBufferDatas.size()) {
 
                 size_t prevInstanceCount = meshData.prevInstanceCount;
 
@@ -241,14 +241,13 @@ namespace AzVulk {
                     instanceCount = meshMapping.at(meshIndex).instanceIndices.size();
                 }
                 
-                if (meshIndex < meshBufferDatas.size() && instanceCount > 0) {
-                    const auto& meshBuffer = meshBufferDatas[meshIndex];
+                if (meshIndex < instanceBufferDatas.size() && instanceCount > 0) {
+                    const auto& instanceBufferData = instanceBufferDatas[meshIndex];
 
                     const auto& mesh = resourceManager.meshManager->meshes[meshIndex];
 
                     const auto& vertexBufferData = mesh->vertexBufferData;
                     const auto& indexBufferData = mesh->indexBufferData;
-                    const auto& instanceBufferData = meshBuffer.instanceBufferData;
 
                     // Bind vertex buffer
                     VkBuffer vertexBuffers[] = {vertexBufferData.buffer};

@@ -295,7 +295,7 @@ void Application::initVulkan() {
 
     bufferRef.createMaterialBuffers(matManager.materials);
     // Create dummy buffers before actually migrating them to somewhere else correct
-    bufferRef.meshBufferDatas.resize(meshManager.meshes.size());
+    bufferRef.instanceBufferDatas.resize(meshManager.meshes.size());
     for (auto& mesh : meshManager.meshes) {
         mesh->createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
     }

@@ -127,22 +127,13 @@ namespace AzVulk {
 
         template<typename T>
         void mappedData(const std::vector<T>& data) {
-            vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
+            mappedData();
             memcpy(mapped, data.data(), sizeof(T) * data.size());
         }
 
         template<typename T>
         void updateMapped(size_t index, const T& value) {
             static_cast<T*>(mapped)[index] = value;
-        }
-    };
-
-    // Multi-mesh data structure for storing multiple mesh types
-    struct MeshBufferData {
-        BufferData instanceBufferData;
-
-        void cleanup() {
-            instanceBufferData.cleanup();
         }
     };
 
@@ -155,13 +146,14 @@ namespace AzVulk {
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
 
+        // This one's chill, it gets to stay
         void createUniformBuffers(size_t count);
 
+        // Soon to be legacy
         void createMaterialBuffers(const SharedPtrVec<Az3D::Material>& materials);
 
-        // Most efficient versions that work directly with mesh mapping data
+        // Soon to be legacy
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
-        // Selective update method - only updates specific instances based on update queue
         void updateMeshInstanceBufferSelective( size_t meshIndex,
                                                 Az3D::MeshMappingData& meshData, 
                                                 const std::vector<Az3D::ModelInstance>& modelInstances);
@@ -169,7 +161,7 @@ namespace AzVulk {
         const Device& vulkanDevice;
 
         std::vector<BufferData> uniformBufferDatas;
-        std::vector<MeshBufferData> meshBufferDatas;
+        std::vector<BufferData> instanceBufferDatas;
         std::vector<BufferData> materialBufferDatas;
     };
 }
