@@ -198,11 +198,6 @@ namespace AzVulk {
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
     }
 
-    void Device::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const {
-        // Note: This method would typically require a command pool parameter
-        // For proper implementation, use the single time commands utilities
-    }
-
     void Device::destroyBuffer(VkBuffer buffer, VkDeviceMemory bufferMemory) const {
         vkDestroyBuffer(device, buffer, nullptr);
         vkFreeMemory(device, bufferMemory, nullptr);

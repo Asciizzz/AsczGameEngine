@@ -41,9 +41,10 @@ namespace AzVulk {
         uniformBuffersMapped.resize(count);
 
         for (size_t i = 0; i < count; ++i) {
-            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                        uniformBuffers[i], uniformBuffersMemory[i]);
+            vulkanDevice.createBuffer(
+                bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                uniformBuffers[i], uniformBuffersMemory[i]);
             // Robust: unmap if already mapped
             if (uniformBuffersMapped[i]) {
                 vkUnmapMemory(vulkanDevice.device, uniformBuffersMemory[i]);
@@ -61,9 +62,10 @@ namespace AzVulk {
         materialUniformBuffersMapped.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
-            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                        materialUniformBuffers[i], materialUniformBuffersMemory[i]);
+            vulkanDevice.createBuffer(
+                bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                materialUniformBuffers[i], materialUniformBuffersMemory[i]);
             // Robust: unmap if already mapped
             if (materialUniformBuffersMapped[i]) {
                 vkUnmapMemory(vulkanDevice.device, materialUniformBuffersMemory[i]);
@@ -86,67 +88,6 @@ namespace AzVulk {
 
     VkBuffer Buffer::getMaterialUniformBuffer(size_t materialIndex) const {
         return materialUniformBuffers[materialIndex];
-    }
-
-
-    void Buffer::createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
-                                VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size;
-        bufferInfo.usage = usage;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if (vkCreateBuffer(vulkanDevice.device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(vulkanDevice.device, buffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(memRequirements.memoryTypeBits, properties);
-
-        if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate buffer memory!");
-        }
-
-        vkBindBufferMemory(vulkanDevice.device, buffer, bufferMemory, 0);
-    }
-
-    void Buffer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool) {
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = commandPool;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(vulkanDevice.device, &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        VkBufferCopy copyRegion{};
-        copyRegion.size = size;
-        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(vulkanDevice.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(vulkanDevice.graphicsQueue);
-
-        vkFreeCommandBuffers(vulkanDevice.device, commandPool, 1, &commandBuffer);
     }
 
     // New multi-mesh methods implementation
@@ -202,10 +143,10 @@ namespace AzVulk {
             vkFreeMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, nullptr);
         }
 
-        createBuffer(bufferSize, 
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    meshBuffer.instanceBuffer, meshBuffer.instanceBufferMemory);
+        vulkanDevice.createBuffer(
+            bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            meshBuffer.instanceBuffer, meshBuffer.instanceBufferMemory);
 
         // Map the buffer for updates
         vkMapMemory(vulkanDevice.device, meshBuffer.instanceBufferMemory, 0, bufferSize, 0, &meshBuffer.instanceBufferMapped);

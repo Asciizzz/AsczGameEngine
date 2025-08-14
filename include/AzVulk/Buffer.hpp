@@ -215,10 +215,5 @@ namespace AzVulk {
         std::vector<VkBuffer> materialUniformBuffers;
         std::vector<VkDeviceMemory> materialUniformBuffersMemory;
         std::vector<void*> materialUniformBuffersMapped;
-
-        // Helper methods 
-        void createBuffer(  VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
-                            VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-        void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool);
     };
 }
