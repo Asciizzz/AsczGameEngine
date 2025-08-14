@@ -8,7 +8,6 @@
 #include <vector>
 #include <array>
 #include <memory>
-#include <typeindex>
 
 #include "AzVulk/Device.hpp"
 
@@ -88,7 +87,6 @@ namespace AzVulk {
         VkDeviceMemory memory = VK_NULL_HANDLE;
         void* mapped = nullptr;
 
-        std::type_index typeIndex = typeid(void);
         uint32_t resourceCount = 0;
         VkDeviceSize dataTypeSize = 0;
         VkDeviceSize totalDataSize = 0;
