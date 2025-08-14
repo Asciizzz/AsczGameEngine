@@ -2,7 +2,10 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "Helpers/tiny_obj_loader.h"
+
 #include <unordered_map>
+
+// using BufferData = AzVulk::BufferData;
 
 namespace Az3D {
 
@@ -114,9 +117,6 @@ namespace Az3D {
 
         // Load the OBJ file
         if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
-            std::cerr << "Failed to load OBJ file: " << filePath << std::endl;
-            if (!warn.empty()) std::cerr << "Warning: " << warn << std::endl;
-            if (!err.empty()) std::cerr << "Error: " << err << std::endl;
             return nullptr;
         }
 
@@ -210,4 +210,19 @@ namespace Az3D {
 
         return std::make_shared<Mesh>(std::move(vertices), std::move(indices));
     }
+
+
+    // void Mesh::createBuffers(AzVulk::Device& vulkanDevice) {
+    //     vertexBuffer.createBuffer(
+    //         vulkanDevice, vertices.size(), sizeof(Vertex),
+    //         BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
+    //     );
+    //     vertexBuffer.uploadData(vertices);
+
+    //     indexBuffer.createBuffer(
+    //         vulkanDevice, indices.size(), sizeof(uint32_t),
+    //         BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent
+    //     );
+    //     indexBuffer.uploadData(indices);
+    // }
 }

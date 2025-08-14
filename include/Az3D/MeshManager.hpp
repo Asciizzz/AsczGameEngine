@@ -1,23 +1,19 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <vector>
+
 #include <array>
+#include <queue>
 #include <memory>
 #include <string>
-#include <algorithm>
-#include <iostream>
-#include <queue>
 
-namespace AzVulk {
-    struct BufferData;
-}
+// #include "AzVulk/Buffer.hpp"
+#include <vulkan/vulkan.h>
 
 namespace Az3D {
 
@@ -104,6 +100,10 @@ namespace Az3D {
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
         static std::shared_ptr<Mesh> loadFromOBJ(std::string filePath);
+
+        // AzVulk::BufferData vertexBuffer;
+        // AzVulk::BufferData indexBuffer;
+        // void createBuffers(AzVulk::Device& vulkanDevice);
 
         // BVH data structures
         glm::vec3 meshMin = glm::vec3(FLT_MAX);

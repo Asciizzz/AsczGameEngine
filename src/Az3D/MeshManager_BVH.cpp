@@ -8,10 +8,7 @@ namespace Az3D {
     void Mesh::createBVH() {
         hasBVH = true;
 
-        if (indices.empty()) {
-            std::cerr << "Cannot create BVH: no indices available\n";
-            return;
-        }
+        if (indices.empty()) return;
 
         indexCount = indices.size() / 3;
 
