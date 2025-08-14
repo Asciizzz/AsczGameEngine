@@ -180,7 +180,7 @@ namespace AzVulk {
         }
     }
 
-    void Buffer::creatematerialBuffers(const std::vector<Az3D::Material>& materials) {
+    void Buffer::createMaterialBuffers(const std::vector<std::shared_ptr<Az3D::Material>>& materials) {
         materialBuffers.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
@@ -192,34 +192,34 @@ namespace AzVulk {
                 BufferData::HostVisible | BufferData::HostCoherent
             );
 
-            MaterialUBO materialUBO(materials[i].prop1);
+            MaterialUBO materialUBO(materials[i]->prop1);
             bufferData.uploadData(&materialUBO);
         }
     }
 
-    // New multi-mesh methods implementation
-    size_t Buffer::createMeshBuffer(const Az3D::Mesh& mesh) {
-        MeshBufferData meshBuffer;
+    void Buffer::createMeshBuffers(const std::vector<std::shared_ptr<Az3D::Mesh>>& meshes) {
+        for (const auto& mesh : meshes) {
+            MeshBufferData meshBuffer;
 
-        const auto& vertices = mesh.vertices;
-        const auto& indices = mesh.indices;
+            const auto& vertices = mesh->vertices;
+            const auto& indices = mesh->indices;
 
-        // Beta: Using the new BufferData struct
-        meshBuffer.vertexBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
-        meshBuffer.vertexBufferData.createBuffer(
-            vertices.size(), sizeof(Az3D::Vertex),
-            BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent);
-        meshBuffer.vertexBufferData.uploadData(vertices);
+            // Beta: Using the new BufferData struct
+            meshBuffer.vertexBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
+            meshBuffer.vertexBufferData.createBuffer(
+                vertices.size(), sizeof(Az3D::Vertex),
+                BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent);
+            meshBuffer.vertexBufferData.uploadData(vertices);
 
-        meshBuffer.indexBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
-        meshBuffer.indexBufferData.createBuffer(
-            indices.size(), sizeof(uint32_t),
-            BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent);
-        meshBuffer.indexBufferData.uploadData(indices);
+            meshBuffer.indexBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
+            meshBuffer.indexBufferData.createBuffer(
+                indices.size(), sizeof(uint32_t),
+                BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent);
+            meshBuffer.indexBufferData.uploadData(indices);
 
-        // Add to meshBuffers vector and return index
-        meshBuffers.push_back(std::move(meshBuffer));
-        return meshBuffers.size() - 1;
+            // Add to meshBuffers vector and return index
+            meshBuffers.push_back(std::move(meshBuffer));
+        }
     }
 
 

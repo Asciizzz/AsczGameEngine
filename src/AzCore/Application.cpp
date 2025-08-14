@@ -293,12 +293,8 @@ void Application::initVulkan() {
     auto& bufferRef = *buffer;
     auto& descManager = *descriptorManager;
 
-    // Create material uniform buffers
-    std::vector<Material> materialVector;
-    for (const auto& matPtr : matManager.materials) {
-        materialVector.push_back(*matPtr);
-    }
-    bufferRef.creatematerialBuffers(materialVector);
+    bufferRef.createMaterialBuffers(matManager.materials);
+    bufferRef.createMeshBuffers(meshManager.meshes);
 
     // Create descriptor pools and sets (split global/material)
     size_t matCount = matManager.materials.size();
@@ -313,12 +309,6 @@ void Application::initVulkan() {
         matManager.materials, bufferRef.materialBuffers
     );
     texDesc.createTextureDescriptorSets(texManager.textures);
-
-
-    // Load meshes into GPU buffer
-    for (size_t i = 0; i < meshManager.meshes.size(); ++i) {
-        bufferRef.createMeshBuffer(*meshManager.meshes[i]);
-    }
 
     // Final Renderer setup with ResourceManager
     renderer = std::make_unique<Renderer>(*vulkanDevice, *swapChain, *buffer,

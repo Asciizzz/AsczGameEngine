@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <array>
+#include <memory>
 
 #include "AzVulk/Device.hpp"
 
@@ -171,9 +172,9 @@ namespace AzVulk {
 
         void createUniformBuffers(size_t count);
 
-        void creatematerialBuffers(const std::vector<Az3D::Material>& materials);
+        void createMaterialBuffers(const std::vector<std::shared_ptr<Az3D::Material>>& materials);
+        void createMeshBuffers(const std::vector<std::shared_ptr<Az3D::Mesh>>& meshes);
 
-        size_t createMeshBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
         // Most efficient versions that work directly with mesh mapping data
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
         // Selective update method - only updates specific instances based on update queue
