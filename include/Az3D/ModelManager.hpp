@@ -28,8 +28,8 @@ namespace Az3D {
     
     // Dynamic, per-frame object data
     struct ModelInstance {
-        size_t modelResourceIndex; // Index into modelResources
         InstanceVertexData vertexData;
+        size_t modelResourceIndex; // Index into modelResources
         
         // Dynamic mesh mapping indices for direct mesh map updates
         size_t meshIndex = SIZE_MAX;        // Which mesh this instance belongs to
