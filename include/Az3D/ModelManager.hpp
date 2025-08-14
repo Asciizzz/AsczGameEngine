@@ -43,12 +43,6 @@ namespace Az3D {
         // Dynamic mesh mapping indices for direct mesh map updates
         size_t meshIndex = SIZE_MAX;        // Which mesh this instance belongs to
         size_t instanceIndex = SIZE_MAX;    // This instance's index in the modelInstances array
-        
-        // Convenience getters/setters
-        glm::mat4& modelMatrix() { return data.modelMatrix; }
-        const glm::mat4& modelMatrix() const { return data.modelMatrix; }
-        glm::vec4& multColor() { return data.multColor; }
-        const glm::vec4& multColor() const { return data.multColor; }
 
         // Vulkan-specific methods for vertex input
         static VkVertexInputBindingDescription getBindingDescription();
