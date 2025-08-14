@@ -180,7 +180,7 @@ namespace Az3D {
     VkVertexInputBindingDescription ModelInstance::getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 1; // Binding 1 for instance data
-        bindingDescription.stride = sizeof(InstanceVertexData); // Only GPU data
+        bindingDescription.stride = sizeof(GPUData); // Only GPU data
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
         return bindingDescription;
     }
@@ -194,14 +194,14 @@ namespace Az3D {
             attributeDescriptions[i].binding = 1;
             attributeDescriptions[i].location = 3 + i; // Locations 3, 4, 5, 6
             attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescriptions[i].offset = offsetof(InstanceVertexData, modelMatrix) + sizeof(glm::vec4) * i;
+            attributeDescriptions[i].offset = offsetof(GPUData, modelMatrix) + sizeof(glm::vec4) * i;
         }
 
-        // Instance color multiplier vec4 (location 7) - directly after modelMatrix in InstanceVertexData
+        // Instance color multiplier vec4 (location 7) - directly after modelMatrix in GPUData
         attributeDescriptions[4].binding = 1;
         attributeDescriptions[4].location = 7;
         attributeDescriptions[4].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        attributeDescriptions[4].offset = offsetof(InstanceVertexData, multColor);
+        attributeDescriptions[4].offset = offsetof(GPUData, multColor);
 
         return attributeDescriptions;
     }

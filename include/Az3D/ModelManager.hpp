@@ -16,35 +16,44 @@ namespace Az3D {
     struct ModelResource {
         size_t meshIndex;
         size_t materialIndex;
+
+        bool operator==(const ModelResource& other) const {
+            return meshIndex == other.meshIndex && materialIndex == other.materialIndex;
+        }
     };
-    
-    // GPU vertex data structure - must be tightly packed for vertex attributes
-    struct InstanceVertexData {
-        glm::mat4 modelMatrix;     // 64 bytes - locations 3,4,5,6
-        glm::vec4 multColor;       // 16 bytes - location 7
+
+    struct ModelResourceHash {
+        std::size_t operator()(const ModelResource& res) const {
+            return std::hash<size_t>{}(res.meshIndex) ^ (std::hash<size_t>{}(res.materialIndex) << 1);
+        }
     };
+
     
     // Dynamic, per-frame object data
     struct ModelInstance {
-        InstanceVertexData vertexData;
+        struct GPUData {
+            glm::mat4 modelMatrix;
+            glm::vec4 multColor;
+        } data;
+
         size_t modelResourceIndex; // Index into modelResources
-        
+
         // Dynamic mesh mapping indices for direct mesh map updates
         size_t meshIndex = SIZE_MAX;        // Which mesh this instance belongs to
         size_t instanceIndex = SIZE_MAX;    // This instance's index in the modelInstances array
         
         // Default constructor
         ModelInstance() {
-            vertexData.modelMatrix = glm::mat4(1.0f);
-            vertexData.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+            data.modelMatrix = glm::mat4(1.0f);
+            data.multColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
             modelResourceIndex = 0;
         }
         
         // Convenience getters/setters
-        glm::mat4& modelMatrix() { return vertexData.modelMatrix; }
-        const glm::mat4& modelMatrix() const { return vertexData.modelMatrix; }
-        glm::vec4& multColor() { return vertexData.multColor; }
-        const glm::vec4& multColor() const { return vertexData.multColor; }
+        glm::mat4& modelMatrix() { return data.modelMatrix; }
+        const glm::mat4& modelMatrix() const { return data.modelMatrix; }
+        glm::vec4& multColor() { return data.multColor; }
+        const glm::vec4& multColor() const { return data.multColor; }
 
         // Vulkan-specific methods for vertex input
         static VkVertexInputBindingDescription getBindingDescription();
