@@ -18,18 +18,20 @@ namespace Az3D {
 
     TextureManager::~TextureManager() {
         // Clean up all textures
+        VkDevice device = vulkanDevice.device;
+
         for (auto& texture : textures) {
             if (texture->view != VK_NULL_HANDLE) {
-                vkDestroyImageView(vulkanDevice.device, texture->view, nullptr);
+                vkDestroyImageView(device, texture->view, nullptr);
             }
             if (texture->sampler != VK_NULL_HANDLE) {
-                vkDestroySampler(vulkanDevice.device, texture->sampler, nullptr);
+                vkDestroySampler(device, texture->sampler, nullptr);
             }
             if (texture->image != VK_NULL_HANDLE) {
-                vkDestroyImage(vulkanDevice.device, texture->image, nullptr);
+                vkDestroyImage(device, texture->image, nullptr);
             }
             if (texture->memory != VK_NULL_HANDLE) {
-                vkFreeMemory(vulkanDevice.device, texture->memory, nullptr);
+                vkFreeMemory(device, texture->memory, nullptr);
             }
         }
         textures.clear();
