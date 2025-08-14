@@ -5,8 +5,6 @@
 
 #include <unordered_map>
 
-// using BufferData = AzVulk::BufferData;
-
 namespace Az3D {
 
     // Transform implementation - moved from Model.cpp
@@ -211,18 +209,4 @@ namespace Az3D {
         return std::make_shared<Mesh>(std::move(vertices), std::move(indices));
     }
 
-
-    // void Mesh::createBuffers(AzVulk::Device& vulkanDevice) {
-    //     vertexBuffer.createBuffer(
-    //         vulkanDevice, vertices.size(), sizeof(Vertex),
-    //         BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
-    //     );
-    //     vertexBuffer.uploadData(vertices);
-
-    //     indexBuffer.createBuffer(
-    //         vulkanDevice, indices.size(), sizeof(uint32_t),
-    //         BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent
-    //     );
-    //     indexBuffer.uploadData(indices);
-    // }
 }

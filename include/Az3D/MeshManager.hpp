@@ -6,14 +6,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <vulkan/vulkan.h>
 
 #include <array>
 #include <queue>
 #include <memory>
 #include <string>
-
-// #include "AzVulk/Buffer.hpp"
-#include <vulkan/vulkan.h>
 
 namespace Az3D {
 
@@ -100,10 +98,6 @@ namespace Az3D {
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
         static std::shared_ptr<Mesh> loadFromOBJ(std::string filePath);
-
-        // AzVulk::BufferData vertexBuffer;
-        // AzVulk::BufferData indexBuffer;
-        // void createBuffers(AzVulk::Device& vulkanDevice);
 
         // BVH data structures
         glm::vec3 meshMin = glm::vec3(FLT_MAX);
