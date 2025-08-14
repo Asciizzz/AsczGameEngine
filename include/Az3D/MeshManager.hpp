@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <vulkan/vulkan.h>
+// #include <vulkan/vulkan.h>
 
 #include <array>
 #include <queue>
@@ -14,6 +14,7 @@
 #include <string>
 
 #include "AzVulk/Buffer.hpp"
+#include "Helpers/Templates.hpp"
 
 namespace Az3D {
 
@@ -103,7 +104,7 @@ namespace Az3D {
         // Mesh data
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
-        static std::shared_ptr<Mesh> loadFromOBJ(std::string filePath);
+        static SharedPtr<Mesh> loadFromOBJ(std::string filePath);
 
         AzVulk::BufferData vertexBufferData;
         AzVulk::BufferData indexBufferData;
@@ -140,12 +141,12 @@ namespace Az3D {
         MeshManager(const MeshManager&) = delete;
         MeshManager& operator=(const MeshManager&) = delete;
 
-        size_t addMesh(std::shared_ptr<Mesh> mesh);
+        size_t addMesh(SharedPtr<Mesh> mesh);
         size_t addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
         size_t loadFromOBJ(std::string filePath);
 
         // Index-based mesh storage
         size_t count = 0; // Track the number of meshes
-        std::vector<std::shared_ptr<Mesh>> meshes;
+        SharedPtrVec<Mesh> meshes;
     };
 }

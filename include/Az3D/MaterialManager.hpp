@@ -5,6 +5,8 @@
 #include <vector>
 #include <iostream>
 
+#include "Helpers/Templates.hpp"
+
 namespace Az3D {
 
     struct Material {
@@ -39,7 +41,7 @@ namespace Az3D {
 
         // Material storage - index-based
         size_t count = 0; // Track the number of materials
-        std::vector<std::shared_ptr<Material>> materials;
+        SharedPtrVec<Material> materials;
     };
     
 } // namespace Az3D

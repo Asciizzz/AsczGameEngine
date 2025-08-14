@@ -1,13 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include <vector>
-#include <unordered_map>
-#include <string>
 #include <array>
-#include <memory>
 
 #include "AzVulk/Device.hpp"
+#include "Helpers/Templates.hpp"
 
 namespace Az3D {
     struct Texture;
