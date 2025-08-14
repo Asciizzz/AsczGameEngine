@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <string>
 
+#include "AzVulk/DescriptorManager.hpp"
 #include "Helpers/Templates.hpp"
 
 namespace AzVulk {
@@ -36,8 +36,9 @@ namespace Az3D {
         const AzVulk::Device& vulkanDevice;
         VkCommandPool commandPool;
 
-        size_t count = 0; // Track the number of textures
         SharedPtrVec<Texture> textures;
+        AzVulk::DynamicDescriptor dynamicDescriptor;
+        void createDynamicDescriptorSets(VkDevice device, uint32_t maxFramesInFlight);
 
         TextureManager(const AzVulk::Device& device, VkCommandPool pool);
         ~TextureManager();

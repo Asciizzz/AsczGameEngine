@@ -58,10 +58,6 @@ void Application::initVulkan() {
     VkDevice device = vulkanDevice->device;
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
-    // Create descriptor manager and both set layouts
-    descriptorManager = MakeUnique<DescriptorManager>(device);
-    descriptorManager->createDescriptorSetLayouts(MAX_FRAMES_IN_FLIGHT);
-
     shaderManager = MakeUnique<ShaderManager>(device);
 
     // Create command pool for graphics operations
@@ -260,8 +256,7 @@ void Application::initVulkan() {
 
 // PLAYGROUND END HERE 
 
-    auto& glbDesc = descriptorManager->globalDynamicDescriptor;
-    auto& texDesc = descriptorManager->textureDynamicDescriptor;
+    descriptorManager = MakeUnique<DescriptorManager>(device);
 
     auto& bufferRef = *buffer;
     auto& descManager = *descriptorManager;
@@ -274,22 +269,25 @@ void Application::initVulkan() {
     matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
     matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
 
+    texManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
+
     size_t matCount = matManager.materials.size();
     size_t texCount = texManager.textures.size();
 
-    descriptorManager->createDescriptorPools(texCount);
-    glbDesc.createGlobalDescriptorSets(
+    descriptorManager->createDescriptorSetLayouts(MAX_FRAMES_IN_FLIGHT);
+    descriptorManager->createDescriptorPools();
+    descriptorManager->globalDynamicDescriptor.createGlobalDescriptorSets(
         bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );
-
-    texDesc.createTextureDescriptorSets(texManager.textures);
 
     renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
                                     *descriptorManager, *resourceManager, *depthManager);
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     auto& matDesc = matManager.dynamicDescriptor;
+    auto& texDesc = texManager.dynamicDescriptor;
+    auto& glbDesc = descriptorManager->globalDynamicDescriptor;
 
     opaquePipeline = MakeUnique<Pipeline>(
         device, renderPass,

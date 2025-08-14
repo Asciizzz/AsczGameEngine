@@ -16,16 +16,10 @@ namespace AzVulk {
         VkDescriptorSetLayoutBinding globalUBOBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
         VkDescriptorSetLayoutBinding depthSamplerBinding = DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
         globalDynamicDescriptor.createSetLayout({globalUBOBinding, depthSamplerBinding});
-
-        // For texture
-        textureDynamicDescriptor.init(device, maxFramesInFlight);
-        VkDescriptorSetLayoutBinding textureBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-        textureDynamicDescriptor.createSetLayout({textureBinding});
     }
 
-    void DescriptorManager::createDescriptorPools(uint32_t maxTextures) {
+    void DescriptorManager::createDescriptorPools() {
         globalDynamicDescriptor.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
-        textureDynamicDescriptor.createPool(maxTextures, {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
     }
 
 
@@ -87,50 +81,6 @@ namespace AzVulk {
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
         }
     }
-
-
-    void DynamicDescriptor::createTextureDescriptorSets(
-        const SharedPtrVec<Az3D::Texture>& textures
-    ) {
-        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
-
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = pool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-        allocInfo.pSetLayouts = layouts.data();
-
-        for (size_t i = 0; i < textures.size(); ++i) {
-            const auto& texture = textures[i];
-
-            std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
-
-            if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) continue;
-
-            // Prepare the write structures outside the loop
-            VkDescriptorImageInfo imageInfo{};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = texture->view;
-            imageInfo.sampler = texture->sampler;
-
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pImageInfo = &imageInfo;
-
-            for (uint32_t j = 0; j < maxFramesInFlight; ++j) {
-                descriptorWrite.dstSet = descriptorSets[j];
-
-                vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-            }
-
-            manySets.push_back(std::move(descriptorSets));
-        }
-    }
-
 
 
     DynamicDescriptor::~DynamicDescriptor() {

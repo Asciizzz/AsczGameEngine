@@ -222,17 +222,17 @@ namespace AzVulk {
         // Render by material groups
         for (const auto& [materialIndex, meshIndices] : materialToMeshes) {
             const auto& matManager = *resourceManager.materialManager;
+            const auto& texManager = *resourceManager.textureManager;
 
-            // Bind both global (set 0) and material (set 1) descriptor sets
+            // Global UBO set
             VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
-            // VkDescriptorSet materialSet = descriptorManager.materialDynamicDescriptor.getSet(materialIndex, currentFrame);
 
-            // Trying out the new material set
+            // Material descriptor set
             VkDescriptorSet materialSet = matManager.dynamicDescriptor.getSet(materialIndex, currentFrame);
 
+            // Texture descriptor set
             size_t textureIndex = matManager.materials[materialIndex]->diffTxtr;
-
-            VkDescriptorSet textureSet = descriptorManager.textureDynamicDescriptor.getSet(textureIndex, currentFrame);
+            VkDescriptorSet textureSet = texManager.dynamicDescriptor.getSet(textureIndex, currentFrame);
 
             std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,

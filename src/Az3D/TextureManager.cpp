@@ -82,7 +82,7 @@ namespace Az3D {
             stagingBuffer.cleanup();
 
             textures.push_back(MakeShared<Texture>(texture));
-            return count++;
+            return textures.size() - 1;
 
         } catch (const std::exception& e) {
             std::cout << "Application error: " << e.what() << std::endl;
@@ -130,7 +130,6 @@ namespace Az3D {
         stagingBuffer.cleanup();
 
         textures.push_back(MakeShared<Texture>(defaultTexture));
-        count++;
     }
 
 
@@ -351,6 +350,58 @@ namespace Az3D {
         vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
         vulkanDevice.endSingleTimeCommands(commandBuffer, commandPool);
+    }
+
+
+    // Descriptor function
+    void TextureManager::createDynamicDescriptorSets(VkDevice device, uint32_t maxFramesInFlight) {
+        using namespace AzVulk;
+
+        dynamicDescriptor.init(device, maxFramesInFlight);
+        VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(0,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+        );
+        dynamicDescriptor.createSetLayout({binding});
+        dynamicDescriptor.createPool(static_cast<uint32_t>(textures.size()), {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
+
+        // Descriptor sets creation
+        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, dynamicDescriptor.setLayout);
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = dynamicDescriptor.pool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+        allocInfo.pSetLayouts = layouts.data();
+
+        for (size_t i = 0; i < textures.size(); ++i) {
+            const auto& texture = textures[i];
+
+            std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
+
+            if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) continue;
+
+            // Prepare the write structures outside the loop
+            VkDescriptorImageInfo textureImageInfo{};
+            textureImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            textureImageInfo.imageView = texture->view;
+            textureImageInfo.sampler = texture->sampler;
+
+            for (uint32_t j = 0; j < maxFramesInFlight; ++j) {
+                VkWriteDescriptorSet descriptorWrite{};
+                descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrite.dstBinding = 0;
+                descriptorWrite.dstArrayElement = 0;
+                descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descriptorWrite.descriptorCount = 1;
+                descriptorWrite.pImageInfo = &textureImageInfo;
+                descriptorWrite.dstSet = descriptorSets[j];
+
+                vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+            }
+
+            dynamicDescriptor.manySets.push_back(std::move(descriptorSets));
+        }
     }
 
 } // namespace Az3D
