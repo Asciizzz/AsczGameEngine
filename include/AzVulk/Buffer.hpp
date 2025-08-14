@@ -97,6 +97,17 @@ namespace AzVulk {
             vkUnmapMemory(device, memory);
             mapped = nullptr;
         }
+        template<typename T>
+        void uploadData(const T* data) {
+            if (sizeof(T) * resourceCount != dataSize) {
+                throw std::runtime_error("Data type size mismatch!");
+            }
+
+            vkMapMemory(device, memory, 0, dataSize, 0, &mapped);
+            memcpy(mapped, data, sizeof(T) * resourceCount);
+            vkUnmapMemory(device, memory);
+            mapped = nullptr;
+        }
 
         template<typename T>
         void mapData(const std::vector<T>& data) {
