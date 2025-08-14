@@ -13,6 +13,8 @@
 #include <memory>
 #include <string>
 
+#include "AzVulk/Buffer.hpp"
+
 namespace Az3D {
 
     struct Vertex {
@@ -90,6 +92,10 @@ namespace Az3D {
         static constexpr size_t MAX_DEPTH = 32;
         static constexpr size_t BIN_COUNT = 11;
 
+        // Delete copy semantics
+        Mesh(const Mesh&) = delete;
+        Mesh& operator=(const Mesh&) = delete;
+
         Mesh() = default;
         Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
             : vertices(std::move(vertices)), indices(std::move(indices)) {}
@@ -98,6 +104,9 @@ namespace Az3D {
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
         static std::shared_ptr<Mesh> loadFromOBJ(std::string filePath);
+
+        AzVulk::BufferData vertexBufferData;
+        AzVulk::BufferData indexBufferData;
 
         // BVH data structures
         glm::vec3 meshMin = glm::vec3(FLT_MAX);

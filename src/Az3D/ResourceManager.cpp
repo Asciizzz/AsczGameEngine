@@ -32,11 +32,10 @@ namespace Az3D {
         return index;
     }
 
-    size_t ResourceManager::addMesh(std::string name, const Mesh& mesh, bool hasBVH) {
-        auto newMesh = std::make_shared<Mesh>(mesh);
-        if (hasBVH) newMesh->createBVH();
+    size_t ResourceManager::addMesh(std::string name, std::shared_ptr<Mesh> mesh, bool hasBVH) {
+        if (hasBVH) mesh->createBVH();
 
-        size_t index = meshManager->addMesh(newMesh);
+        size_t index = meshManager->addMesh(mesh);
         meshNameToIndex[name] = index;
         return index;
     }
