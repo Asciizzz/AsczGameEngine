@@ -211,7 +211,7 @@ namespace Az3D {
 
     
     void Mesh::createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice) {
-        using namespace AzVulk;
+        using namespace AzVulk; // WHAT THE FUCK???
         
         vertexBufferData.initVulkan(device, physicalDevice);
         vertexBufferData.createBuffer(
@@ -227,3 +227,5 @@ namespace Az3D {
         );
         indexBufferData.uploadData(indices);
     }
+
+}
