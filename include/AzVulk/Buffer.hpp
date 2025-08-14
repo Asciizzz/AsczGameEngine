@@ -56,75 +56,17 @@ namespace AzVulk {
 
         BufferData() = default;
         ~BufferData() { cleanup(); }
+        void cleanup();
 
         // Non-copyable
         BufferData(const BufferData&) = delete;
         BufferData& operator=(const BufferData&) = delete;
 
         // Move constructor
-        BufferData(BufferData&& other) noexcept {
-            device = other.device;
-            physicalDevice = other.physicalDevice;
-
-            buffer = other.buffer;
-            memory = other.memory;
-            mapped = other.mapped;
-
-            dataTypeSize = other.dataTypeSize;
-            resourceCount = other.resourceCount;
-            totalSize = other.totalSize;
-
-            usageFlags = other.usageFlags;
-            memoryFlags = other.memoryFlags;
-
-            // Invalidate other's handles
-            other.buffer = VK_NULL_HANDLE;
-            other.memory = VK_NULL_HANDLE;
-            other.mapped = nullptr;
-        }
+        BufferData(BufferData&& other) noexcept;
 
         // Move assignment
-        BufferData& operator=(BufferData&& other) noexcept {
-            if (this != &other) {
-                cleanup();
-                device = other.device;
-                physicalDevice = other.physicalDevice;
-                
-                buffer = other.buffer;
-                memory = other.memory;
-                mapped = other.mapped;
-
-                dataTypeSize = other.dataTypeSize;
-                resourceCount = other.resourceCount;
-                totalSize = other.totalSize;
-
-                usageFlags = other.usageFlags;
-                memoryFlags = other.memoryFlags;
-
-                // Invalidate other's handles
-                other.buffer = VK_NULL_HANDLE;
-                other.memory = VK_NULL_HANDLE;
-                other.mapped = nullptr;
-            }
-            return *this;
-        }
-
-        void cleanup() {
-            if (buffer != VK_NULL_HANDLE) {
-                if (mapped) {
-                    vkUnmapMemory(device, memory);
-                    mapped = nullptr;
-                }
-
-                vkDestroyBuffer(device, buffer, nullptr);
-                buffer = VK_NULL_HANDLE;
-            }
-
-            if (memory != VK_NULL_HANDLE) {
-                vkFreeMemory(device, memory, nullptr);
-                memory = VK_NULL_HANDLE;
-            }
-        }
+        BufferData& operator=(BufferData&& other) noexcept;
 
         VkDevice device;
         VkPhysicalDevice physicalDevice;
@@ -133,9 +75,8 @@ namespace AzVulk {
         VkDeviceMemory memory = VK_NULL_HANDLE;
         void* mapped = nullptr;
 
+        VkDeviceSize dataSize = 0;
         uint32_t resourceCount = 0;
-        VkDeviceSize dataTypeSize = 0;
-        VkDeviceSize totalSize = 0;
 
         VkBufferUsageFlags usageFlags = 0;
         VkMemoryPropertyFlags memoryFlags = 0;
@@ -143,50 +84,15 @@ namespace AzVulk {
         void createBuffer(
             const Device& vulkanDevice, size_t dataTypeSize, size_t resourceCount,
             VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
-        ) {
-            this->usageFlags = usageFlags;
-            this->memoryFlags = memoryFlags;
-            this->device = vulkanDevice.device;
-            this->physicalDevice = vulkanDevice.physicalDevice;
-
-            this->resourceCount = static_cast<uint32_t>(resourceCount);
-            this->dataTypeSize = static_cast<VkDeviceSize>(dataTypeSize);
-            this->totalSize = dataTypeSize * resourceCount;
-
-            cleanup();
-
-            VkBufferCreateInfo bufferInfo{};
-            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            bufferInfo.size = totalSize;
-            bufferInfo.usage = usageFlags;
-            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-            if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-                throw std::runtime_error("Failed to create buffer!");
-            }
-
-            VkMemoryRequirements memRequirements;
-            vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
-
-            VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize = memRequirements.size;
-            allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memoryFlags, physicalDevice);
-
-            if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
-                throw std::runtime_error("Failed to allocate buffer memory!");
-            }
-
-            vkBindBufferMemory(device, buffer, memory, 0);
-        }
+        );
 
         template<typename T>
         void uploadData(const std::vector<T>& data) {
-            if (sizeof(T) != dataTypeSize) {
+            if (sizeof(T) * data.size() != dataSize) {
                 throw std::runtime_error("Data type size mismatch!");
             }
 
-            vkMapMemory(device, memory, 0, totalSize, 0, &mapped);
+            vkMapMemory(device, memory, 0, dataSize, 0, &mapped);
             memcpy(mapped, data.data(), sizeof(T) * data.size());
             vkUnmapMemory(device, memory);
             mapped = nullptr;
@@ -194,7 +100,7 @@ namespace AzVulk {
 
         template<typename T>
         void mapData(const std::vector<T>& data) {
-            vkMapMemory(device, memory, 0, totalSize, 0, &mapped);
+            vkMapMemory(device, memory, 0, dataSize, 0, &mapped);
             memcpy(mapped, data.data(), sizeof(T) * data.size());
         }
     };

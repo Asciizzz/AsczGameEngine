@@ -1,6 +1,7 @@
 // Texture.cpp implementation for TextureManager
 #include "Az3D/TextureManager.hpp"
 #include "AzVulk/Device.hpp"
+#include "AzVulk/Buffer.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Helpers/stb_image.h"
@@ -53,16 +54,28 @@ namespace Az3D {
             uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
             
             // Create staging buffer
-            VkBuffer stagingBuffer;
-            VkDeviceMemory stagingBufferMemory;
-            vulkanDevice.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                                        stagingBuffer, stagingBufferMemory);
+            // VkBuffer stagingBuffer;
+            // VkDeviceMemory stagingBufferMemory;
+            // vulkanDevice.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            //                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            //                             stagingBuffer, stagingBufferMemory);
+
+            // void* data;
+            // vkMapMemory(vulkanDevice.device, stagingBufferMemory, 0, imageSize, 0, &data);
+            // memcpy(data, pixels, static_cast<size_t>(imageSize));
+            // vkUnmapMemory(vulkanDevice.device, stagingBufferMemory);
+
+            AzVulk::BufferData stagingBuffer;
+            stagingBuffer.createBuffer(vulkanDevice, sizeof(uint8_t), texWidth * texHeight * 4,
+                                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
             void* data;
-            vkMapMemory(vulkanDevice.device, stagingBufferMemory, 0, imageSize, 0, &data);
+            vkMapMemory(vulkanDevice.device, stagingBuffer.memory, 0, imageSize, 0, &data);
             memcpy(data, pixels, static_cast<size_t>(imageSize));
-            vkUnmapMemory(vulkanDevice.device, stagingBufferMemory);
+            vkUnmapMemory(vulkanDevice.device, stagingBuffer.memory);
+
+            // stagingBuffer.uploadData(pixels);
 
             stbi_image_free(pixels);
 
@@ -74,15 +87,15 @@ namespace Az3D {
             // Transfer data and generate mipmaps
             transitionImageLayout(texture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-            copyBufferToImage(stagingBuffer, texture.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+            copyBufferToImage(stagingBuffer.buffer, texture.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
             generateMipmaps(texture.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
 
             // Create image view and sampler
             createImageView(texture.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, texture.view);
             createSampler(mipLevels, texture.sampler, texture.addressMode);
 
-            vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
-            
+            stagingBuffer.cleanup();
+
             textures.push_back(texture);
             return count++;
 
