@@ -93,37 +93,25 @@ namespace AzVulk {
     // New multi-mesh methods implementation
     size_t Buffer::loadMeshToBuffer(const Az3D::Mesh& mesh) {
         MeshBufferData meshBuffer;
-        
-        // Create vertex buffer for this mesh
+
         const auto& vertices = mesh.vertices;
-        VkDeviceSize vertexBufferSize = sizeof(Az3D::Vertex) * vertices.size();
-        vulkanDevice.createBuffer(vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                    meshBuffer.vertexBuffer, meshBuffer.vertexBufferMemory);
-
-        void* vertexData;
-        vkMapMemory(vulkanDevice.device, meshBuffer.vertexBufferMemory, 0, vertexBufferSize, 0, &vertexData);
-        memcpy(vertexData, vertices.data(), (size_t)vertexBufferSize);
-        vkUnmapMemory(vulkanDevice.device, meshBuffer.vertexBufferMemory);
-        
-        // Create index buffer for this mesh
         const auto& indices = mesh.indices;
-        VkDeviceSize indexBufferSize = sizeof(uint32_t) * indices.size();
 
-        vulkanDevice.createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                    meshBuffer.indexBuffer, meshBuffer.indexBufferMemory);
+        // Beta: Using the new BufferData struct
+        meshBuffer.vertexBufferData.createBuffer(
+            vulkanDevice, sizeof(Az3D::Vertex), vertices.size(),
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        meshBuffer.vertexBufferData.mapData(vertices);
 
-        meshBuffer.indexCount = static_cast<uint32_t>(indices.size());
-        meshBuffer.indexType = VK_INDEX_TYPE_UINT32;
+        meshBuffer.indexBufferData.createBuffer(
+            vulkanDevice, sizeof(uint32_t), indices.size(),
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        meshBuffer.indexBufferData.mapData(indices);
 
-        void* indexData;
-        vkMapMemory(vulkanDevice.device, meshBuffer.indexBufferMemory, 0, indexBufferSize, 0, &indexData);
-        memcpy(indexData, indices.data(), (size_t)indexBufferSize);
-        vkUnmapMemory(vulkanDevice.device, meshBuffer.indexBufferMemory);
-        
         // Add to meshBuffers vector and return index
-        meshBuffers.push_back(meshBuffer);
+        meshBuffers.push_back(std::move(meshBuffer));
         return meshBuffers.size() - 1;
     }
 

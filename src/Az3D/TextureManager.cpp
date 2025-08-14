@@ -165,7 +165,7 @@ namespace Az3D {
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(memRequirements.memoryTypeBits, properties);
+        allocInfo.memoryTypeIndex = AzVulk::Device::findMemoryType(memRequirements.memoryTypeBits, properties, vulkanDevice.physicalDevice);
 
         if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate image memory!");

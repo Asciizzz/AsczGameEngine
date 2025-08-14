@@ -1,13 +1,15 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+
 #include <glm/glm.hpp>
 #include <vector>
 #include <array>
+
 #include "Az3D/Az3D.hpp"
+#include "AzVulk/Device.hpp"
 
 namespace AzVulk {
     struct GlobalUBO {
@@ -51,8 +53,61 @@ namespace AzVulk {
             LazilyAllocated = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT
         };
 
+
         BufferData() = default;
         ~BufferData() { cleanup(); }
+
+        // Non-copyable
+        BufferData(const BufferData&) = delete;
+        BufferData& operator=(const BufferData&) = delete;
+
+        // Move constructor
+        BufferData(BufferData&& other) noexcept {
+            device = other.device;
+            physicalDevice = other.physicalDevice;
+
+            buffer = other.buffer;
+            memory = other.memory;
+            mapped = other.mapped;
+
+            dataTypeSize = other.dataTypeSize;
+            resourceCount = other.resourceCount;
+            totalSize = other.totalSize;
+
+            usageFlags = other.usageFlags;
+            memoryFlags = other.memoryFlags;
+
+            // Invalidate other's handles
+            other.buffer = VK_NULL_HANDLE;
+            other.memory = VK_NULL_HANDLE;
+            other.mapped = nullptr;
+        }
+
+        // Move assignment
+        BufferData& operator=(BufferData&& other) noexcept {
+            if (this != &other) {
+                cleanup();
+                device = other.device;
+                physicalDevice = other.physicalDevice;
+                
+                buffer = other.buffer;
+                memory = other.memory;
+                mapped = other.mapped;
+
+                dataTypeSize = other.dataTypeSize;
+                resourceCount = other.resourceCount;
+                totalSize = other.totalSize;
+
+                usageFlags = other.usageFlags;
+                memoryFlags = other.memoryFlags;
+
+                // Invalidate other's handles
+                other.buffer = VK_NULL_HANDLE;
+                other.memory = VK_NULL_HANDLE;
+                other.mapped = nullptr;
+            }
+            return *this;
+        }
 
         void cleanup() {
             if (buffer != VK_NULL_HANDLE) {
@@ -72,91 +127,89 @@ namespace AzVulk {
         }
 
         VkDevice device;
+        VkPhysicalDevice physicalDevice;
 
         VkBuffer buffer = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
-
-        bool hasMapped = false;
         void* mapped = nullptr;
 
-        VkDeviceSize size = 0;
+        uint32_t resourceCount = 0;
+        VkDeviceSize dataTypeSize = 0;
+        VkDeviceSize totalSize = 0;
+
         VkBufferUsageFlags usageFlags = 0;
         VkMemoryPropertyFlags memoryFlags = 0;
 
-        uint32_t resourceCount = 0;
-
-        template<typename T>
         void createBuffer(
-            const Device& vulkanDevice, const std::vector<T>& data,
-            VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags,
-            bool keepMapped=false
+            const Device& vulkanDevice, size_t dataTypeSize, size_t resourceCount,
+            VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
         ) {
             this->usageFlags = usageFlags;
             this->memoryFlags = memoryFlags;
             this->device = vulkanDevice.device;
+            this->physicalDevice = vulkanDevice.physicalDevice;
 
-            this->resourceCount = static_cast<uint32_t>(data.size());
-            this->size = sizeof(T) * data.size();
+            this->resourceCount = static_cast<uint32_t>(resourceCount);
+            this->dataTypeSize = static_cast<VkDeviceSize>(dataTypeSize);
+            this->totalSize = dataTypeSize * resourceCount;
 
-            // Cleanup existing buffer if it exists
             cleanup();
-
 
             VkBufferCreateInfo bufferInfo{};
             bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            bufferInfo.size = size;
+            bufferInfo.size = totalSize;
             bufferInfo.usage = usageFlags;
             bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-            if (vkCreateBuffer(vulkanDevice.device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+            if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
                 throw std::runtime_error("Failed to create buffer!");
             }
 
             VkMemoryRequirements memRequirements;
-            vkGetBufferMemoryRequirements(vulkanDevice.device, buffer, &memRequirements);
+            vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
 
             VkMemoryAllocateInfo allocInfo{};
             allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
             allocInfo.allocationSize = memRequirements.size;
-            allocInfo.memoryTypeIndex = vulkanDevice.findMemoryType(memRequirements.memoryTypeBits, memoryFlags);
+            allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memoryFlags, physicalDevice);
 
-            if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+            if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
                 throw std::runtime_error("Failed to allocate buffer memory!");
             }
 
-            vkBindBufferMemory(vulkanDevice.device, buffer, memory, 0);
+            vkBindBufferMemory(device, buffer, memory, 0);
+        }
 
-            hasMapped = keepMapped;
-
-            if (keepMapped) {
-                // Memory mapping
-                vkMapMemory(vulkanDevice.device, memory, 0, size, 0, &mapped);
-                memcpy(mapped, data.data(), sizeof(T) * data.size());
-            } else {
-                vkMapMemory(vulkanDevice.device, memory, 0, size, 0, &mapped);
-                memcpy(mapped, data.data(), sizeof(T) * data.size());
-                vkUnmapMemory(vulkanDevice.device, memory);
-                mapped = nullptr;
+        template<typename T>
+        void uploadData(const std::vector<T>& data) {
+            if (sizeof(T) != dataTypeSize) {
+                throw std::runtime_error("Data type size mismatch!");
             }
+
+            vkMapMemory(device, memory, 0, totalSize, 0, &mapped);
+            memcpy(mapped, data.data(), sizeof(T) * data.size());
+            vkUnmapMemory(device, memory);
+            mapped = nullptr;
+        }
+
+        template<typename T>
+        void mapData(const std::vector<T>& data) {
+            vkMapMemory(device, memory, 0, totalSize, 0, &mapped);
+            memcpy(mapped, data.data(), sizeof(T) * data.size());
         }
     };
 
     // Multi-mesh data structure for storing multiple mesh types
     struct MeshBufferData {
-        VkBuffer vertexBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
-        
-        VkBuffer indexBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
-        uint32_t indexCount = 0;
-        VkIndexType indexType = VK_INDEX_TYPE_UINT32;
-        
-        // Instance buffer for this specific mesh type
+        BufferData vertexBufferData;
+        BufferData indexBufferData;
+
         VkBuffer instanceBuffer = VK_NULL_HANDLE;
         VkDeviceMemory instanceBufferMemory = VK_NULL_HANDLE;
         void* instanceBufferMapped = nullptr;
-        // Note: instanceCount removed - now tracked per-ModelGroup
-        
+
+        BufferData instanceBufferData;
+
         // Cleanup helper - destructors aren't enough apparently
         void cleanup(VkDevice device) {
             if (instanceBufferMapped) {
@@ -166,14 +219,10 @@ namespace AzVulk {
                 vkDestroyBuffer(device, instanceBuffer, nullptr);
                 vkFreeMemory(device, instanceBufferMemory, nullptr);
             }
-            if (indexBuffer != VK_NULL_HANDLE) {
-                vkDestroyBuffer(device, indexBuffer, nullptr);
-                vkFreeMemory(device, indexBufferMemory, nullptr);
-            }
-            if (vertexBuffer != VK_NULL_HANDLE) {
-                vkDestroyBuffer(device, vertexBuffer, nullptr);
-                vkFreeMemory(device, vertexBufferMemory, nullptr);
-            }
+
+            instanceBufferData.cleanup();
+            vertexBufferData.cleanup();
+            indexBufferData.cleanup();
         }
     };
 

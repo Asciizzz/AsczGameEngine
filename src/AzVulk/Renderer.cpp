@@ -242,8 +242,11 @@ namespace AzVulk {
                 if (meshIndex < meshBuffers.size() && instanceCount > 0) {
                     const auto& meshBuffer = meshBuffers[meshIndex];
 
+                    const auto& vertexBufferData = meshBuffer.vertexBufferData;
+                    const auto& indexBufferData = meshBuffer.indexBufferData;
+
                     // Bind vertex buffer
-                    VkBuffer vertexBuffers[] = {meshBuffer.vertexBuffer};
+                    VkBuffer vertexBuffers[] = {vertexBufferData.buffer};
                     VkDeviceSize offsets[] = {0};
                     vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
 
@@ -253,10 +256,10 @@ namespace AzVulk {
                     vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
 
                     // Bind index buffer
-                    vkCmdBindIndexBuffer(commandBuffers[currentFrame], meshBuffer.indexBuffer, 0, meshBuffer.indexType);
+                    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
 
                     // Draw all instances
-                    vkCmdDrawIndexed(commandBuffers[currentFrame], meshBuffer.indexCount, static_cast<uint32_t>(instanceCount), 0, 0, 0);
+                    vkCmdDrawIndexed(commandBuffers[currentFrame], indexBufferData.resourceCount, static_cast<uint32_t>(instanceCount), 0, 0, 0);
                 }
             }
         }
