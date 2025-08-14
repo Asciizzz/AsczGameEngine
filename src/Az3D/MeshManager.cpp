@@ -209,4 +209,21 @@ namespace Az3D {
         return std::make_shared<Mesh>(std::move(vertices), std::move(indices));
     }
 
-}
+    
+    void Mesh::createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice) {
+        using namespace AzVulk;
+        
+        vertexBufferData.initVulkan(device, physicalDevice);
+        vertexBufferData.createBuffer(
+            vertices.size(), sizeof(Vertex),
+            BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
+        );
+        vertexBufferData.uploadData(vertices);
+
+        indexBufferData.initVulkan(device, physicalDevice);
+        indexBufferData.createBuffer(
+            indices.size(), sizeof(uint32_t),
+            BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent
+        );
+        indexBufferData.uploadData(indices);
+    }

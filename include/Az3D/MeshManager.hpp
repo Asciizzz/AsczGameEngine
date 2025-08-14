@@ -108,6 +108,7 @@ namespace Az3D {
 
         AzVulk::BufferData vertexBufferData;
         AzVulk::BufferData indexBufferData;
+        void createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice);
 
         // BVH data structures
         glm::vec3 meshMin = glm::vec3(FLT_MAX);
