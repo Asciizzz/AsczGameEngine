@@ -193,7 +193,9 @@ namespace AzVulk {
         }
     }
 
-    void DynamicDescriptor::createTextureDescriptorSets(const std::vector<Az3D::Texture>& textures) {
+    void DynamicDescriptor::createTextureDescriptorSets(
+        const std::vector<std::shared_ptr<Az3D::Texture>>& textures
+    ) {
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
 
         VkDescriptorSetAllocateInfo allocInfo{};
@@ -212,8 +214,8 @@ namespace AzVulk {
             // Prepare the write structures outside the loop
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = texture.view;
-            imageInfo.sampler = texture.sampler;
+            imageInfo.imageView = texture->view;
+            imageInfo.sampler = texture->sampler;
 
             VkWriteDescriptorSet descriptorWrite{};
             descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

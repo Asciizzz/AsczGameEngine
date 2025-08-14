@@ -19,17 +19,17 @@ namespace Az3D {
     TextureManager::~TextureManager() {
         // Clean up all textures
         for (auto& texture : textures) {
-            if (texture.view != VK_NULL_HANDLE) {
-                vkDestroyImageView(vulkanDevice.device, texture.view, nullptr);
+            if (texture->view != VK_NULL_HANDLE) {
+                vkDestroyImageView(vulkanDevice.device, texture->view, nullptr);
             }
-            if (texture.sampler != VK_NULL_HANDLE) {
-                vkDestroySampler(vulkanDevice.device, texture.sampler, nullptr);
+            if (texture->sampler != VK_NULL_HANDLE) {
+                vkDestroySampler(vulkanDevice.device, texture->sampler, nullptr);
             }
-            if (texture.image != VK_NULL_HANDLE) {
-                vkDestroyImage(vulkanDevice.device, texture.image, nullptr);
+            if (texture->image != VK_NULL_HANDLE) {
+                vkDestroyImage(vulkanDevice.device, texture->image, nullptr);
             }
-            if (texture.memory != VK_NULL_HANDLE) {
-                vkFreeMemory(vulkanDevice.device, texture.memory, nullptr);
+            if (texture->memory != VK_NULL_HANDLE) {
+                vkFreeMemory(vulkanDevice.device, texture->memory, nullptr);
             }
         }
         textures.clear();
@@ -46,18 +46,18 @@ namespace Az3D {
             int texWidth, texHeight, texChannels;
             uint8_t* pixels = stbi_load(imagePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
             VkDeviceSize imageSize = texWidth * texHeight * 4;
-            
-            if (!pixels) {
-                throw std::runtime_error("Failed to load texture: " + std::string(imagePath));
-            }
+
+            if (!pixels) throw std::runtime_error("Failed to load texture: " + std::string(imagePath));
 
             uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
 
             AzVulk::BufferData stagingBuffer;
-            stagingBuffer.createBuffer(vulkanDevice, sizeof(uint8_t), imageSize,
-                                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            stagingBuffer.createBuffer(
+                vulkanDevice, imageSize, sizeof(uint8_t),
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            );
             stagingBuffer.uploadData(pixels);
 
             stbi_image_free(pixels);
@@ -79,7 +79,7 @@ namespace Az3D {
 
             stagingBuffer.cleanup();
 
-            textures.push_back(texture);
+            textures.push_back(std::make_shared<Texture>(texture));
             return count++;
 
         } catch (const std::exception& e) {
@@ -90,24 +90,24 @@ namespace Az3D {
 
     void TextureManager::createDefaultTexture() {
         // Create a simple 1x1 white texture as default at index 0
-        const uint32_t white = 0xFFFFFFFF;
-        
+        uint8_t* white = new uint8_t[4];
+        white[0] = 255;   // R
+        white[1] = 255;   // G
+        white[2] = 255;   // B
+        white[3] = 255;   // A
+
         Texture defaultTexture;
         defaultTexture.path = "__default__";
         
         VkDeviceSize imageSize = 4; // 1 pixel * 4 bytes (RGBA)
-        
-        // Create staging buffer
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-        vulkanDevice.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                                 stagingBuffer, stagingBufferMemory);
 
-        void* data;
-        vkMapMemory(vulkanDevice.device, stagingBufferMemory, 0, imageSize, 0, &data);
-        memcpy(data, &white, static_cast<size_t>(imageSize));
-        vkUnmapMemory(vulkanDevice.device, stagingBufferMemory);
+        AzVulk::BufferData stagingBuffer;
+        stagingBuffer.createBuffer(
+            vulkanDevice, imageSize, sizeof(uint8_t),
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        stagingBuffer.uploadData(white);
 
         // Create texture image
         createImage(1, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, 
@@ -117,7 +117,7 @@ namespace Az3D {
         // Transfer data
         transitionImageLayout(  defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
-        copyBufferToImage(stagingBuffer, defaultTexture.image, 1, 1);
+        copyBufferToImage(stagingBuffer.buffer, defaultTexture.image, 1, 1);
         transitionImageLayout(  defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
 
@@ -125,9 +125,9 @@ namespace Az3D {
         createImageView(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, 1, defaultTexture.view);
         createSampler(1, defaultTexture.sampler, Texture::Repeat);
 
-        vulkanDevice.destroyBuffer(stagingBuffer, stagingBufferMemory);
-        
-        textures.push_back(defaultTexture);
+        stagingBuffer.cleanup();
+
+        textures.push_back(std::make_shared<Texture>(defaultTexture));
         count++;
     }
 

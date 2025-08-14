@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace AzVulk {
     class Device;
@@ -36,7 +37,7 @@ namespace Az3D {
         VkCommandPool commandPool;
 
         size_t count = 0; // Track the number of textures
-        std::vector<Texture> textures;
+        std::vector<std::shared_ptr<Texture>> textures;
 
         TextureManager(const AzVulk::Device& device, VkCommandPool pool);
         ~TextureManager();

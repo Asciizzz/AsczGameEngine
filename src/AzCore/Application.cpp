@@ -248,7 +248,7 @@ void Application::initVulkan() {
         const auto& texture = texManager.textures[index];
         const char* color = COLORS[index % NUM_COLORS];
 
-        printf("%s   Idx %zu: %s %s-> %sPATH: %s\n", color, index, name.c_str(), WHITE, color, texture.path.c_str());
+        printf("%s   Idx %zu: %s %s-> %sPATH: %s\n", color, index, name.c_str(), WHITE, color, texture->path.c_str());
     }
     printf("%s> Materials:\n", WHITE);
     for (const auto& [name, index] : resManager.materialNameToIndex) {

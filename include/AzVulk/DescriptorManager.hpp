@@ -67,7 +67,9 @@ namespace AzVulk {
             const std::vector<std::shared_ptr<Az3D::Material>>& materials,
             const std::vector<BufferData>& materialBuffers
         );
-        void createTextureDescriptorSets(const std::vector<Az3D::Texture>& textures);
+        void createTextureDescriptorSets(
+            const std::vector<std::shared_ptr<Az3D::Texture>>& textures
+        );
     };
 
 

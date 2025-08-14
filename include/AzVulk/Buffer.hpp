@@ -75,14 +75,15 @@ namespace AzVulk {
         VkDeviceMemory memory = VK_NULL_HANDLE;
         void* mapped = nullptr;
 
-        VkDeviceSize totalDataSize = 0;
         uint32_t resourceCount = 0;
+        VkDeviceSize dataTypeSize = 0;
+        VkDeviceSize totalDataSize = 0;
 
         VkBufferUsageFlags usageFlags = 0;
         VkMemoryPropertyFlags memoryFlags = 0;
 
         void createBuffer(
-            const Device& vulkanDevice, size_t dataTypeSize, size_t resourceCount,
+            const Device& vulkanDevice, size_t resourceCount, size_t dataTypeSize,
             VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
         );
 

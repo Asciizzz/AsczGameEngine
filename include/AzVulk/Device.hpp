@@ -26,10 +26,6 @@ namespace AzVulk {
         // Memory and buffer utilities
         static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physicalDevice);
         
-        // Legacy, moved to Buffer.cpp
-        void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) const;
-        void destroyBuffer(VkBuffer buffer, VkDeviceMemory bufferMemory) const;
-        
         VkCommandBuffer beginSingleTimeCommands(VkCommandPool commandPool) const;
         void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool) const;
 
