@@ -53,6 +53,9 @@ namespace Az3D {
         static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
     };
 
+    // TODO: Completely rework the entire MeshMappingData structure.
+    // turn it into ModelMapping instead
+
     // Mesh mapping structure to organize instance data per mesh
     struct MeshMappingData {
         std::vector<size_t> instanceIndices;           // instance indices for this mesh

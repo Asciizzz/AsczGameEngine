@@ -230,7 +230,8 @@ namespace AzVulk {
         instanceBufferData.mapData();
 
         for (size_t i = 0; i < instanceIndices.size(); ++i) {
-            static_cast<Az3D::InstanceVertexData*>(instanceBufferData.mapped)[i] = modelInstances[instanceIndices[i]].vertexData;
+            // static_cast<Az3D::InstanceVertexData*>(instanceBufferData.mapped)[i] = modelInstances[instanceIndices[i]].vertexData;
+            instanceBufferData.updateMapped(i, modelInstances[instanceIndices[i]].vertexData);
         }
 
         // Update previous instance count directly in the mesh data
@@ -244,13 +245,9 @@ namespace AzVulk {
 
         std::for_each(std::execution::par_unseq, meshData.updateIndices.begin(), meshData.updateIndices.end(), [&](size_t instanceIndex) {
             size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
-            static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferData.mapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
+            // static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferData.mapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
+            meshBuffer.instanceBufferData.updateMapped(bufferPos, modelInstances[instanceIndex].vertexData);
         });
-
-        // for (size_t instanceIndex : meshData.updateIndices) {
-        //     size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
-        //     static_cast<Az3D::InstanceVertexData*>(meshBuffer.instanceBufferMapped)[bufferPos] = modelInstances[instanceIndex].vertexData;
-        // }
     }
 
 

@@ -8,6 +8,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <typeindex>
 
 #include "AzVulk/Device.hpp"
 
@@ -87,6 +88,7 @@ namespace AzVulk {
         VkDeviceMemory memory = VK_NULL_HANDLE;
         void* mapped = nullptr;
 
+        std::type_index typeIndex = typeid(void);
         uint32_t resourceCount = 0;
         VkDeviceSize dataTypeSize = 0;
         VkDeviceSize totalDataSize = 0;
@@ -131,6 +133,11 @@ namespace AzVulk {
         void mapData(const std::vector<T>& data) {
             vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
             memcpy(mapped, data.data(), sizeof(T) * data.size());
+        }
+
+        template<typename T>
+        void updateMapped(size_t index, const T& value) {
+            static_cast<T*>(mapped)[index] = value;
         }
     };
 
