@@ -9,7 +9,7 @@
 #include <array>
 #include <memory>
 
-#include "AzVulk/Device.hpp"
+#include <vulkan/vulkan.h>
 
 namespace Az3D {
     struct Mesh;

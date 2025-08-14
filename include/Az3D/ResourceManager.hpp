@@ -13,8 +13,8 @@ namespace AzVulk {
 }
 
 namespace Az3D {
-    
-    // ResourceManager - central manager for all Az3D resources with string-to-index mapping
+
+    // All these resource are static and fixed, created upon load
     class ResourceManager {
     public:
         ResourceManager(const AzVulk::Device& device, VkCommandPool commandPool);

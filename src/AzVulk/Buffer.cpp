@@ -1,4 +1,5 @@
 #include "AzVulk/Buffer.hpp"
+#include "AzVulk/Device.hpp"
 #include "Az3D/Az3D.hpp"
 
 #include <stdexcept>
