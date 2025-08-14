@@ -299,7 +299,7 @@ void Application::initVulkan() {
     meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
 
     matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    // matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT); // Buggy af right now
+    matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT); // Buggy af right now
 
     size_t matCount = matManager.materials.size();
     size_t texCount = texManager.textures.size();
@@ -309,9 +309,6 @@ void Application::initVulkan() {
         bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );
-    
-    // Soon to be legacy
-    matDesc.createMaterialDescriptorSets(matManager.bufferDatas);
 
     texDesc.createTextureDescriptorSets(texManager.textures);
 

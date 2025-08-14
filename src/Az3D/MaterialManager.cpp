@@ -59,26 +59,18 @@ namespace Az3D {
             materialBufferInfo.offset = 0;
             materialBufferInfo.range = sizeof(MaterialUBO);
 
-            VkWriteDescriptorSet descriptorWrite0;
-            descriptorWrite0.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite0.dstBinding = 0;
-            descriptorWrite0.dstArrayElement = 0;
-            descriptorWrite0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite0.descriptorCount = 1;
-            descriptorWrite0.pBufferInfo = &materialBufferInfo;
-            descriptorWrite0.dstSet = descriptorSets[0];
+            for (uint32_t j = 0; j < maxFramesInFlight; ++j) {
+                VkWriteDescriptorSet descriptorWrite{};
+                descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrite.dstBinding = 0;
+                descriptorWrite.dstArrayElement = 0;
+                descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                descriptorWrite.descriptorCount = 1;
+                descriptorWrite.pBufferInfo = &materialBufferInfo;
+                descriptorWrite.dstSet = descriptorSets[j];
 
-            // VkWriteDescriptorSet descriptorWrite1;
-            // descriptorWrite1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            // descriptorWrite1.dstBinding = 0;
-            // descriptorWrite1.dstArrayElement = 0;
-            // descriptorWrite1.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            // descriptorWrite1.descriptorCount = 1;
-            // descriptorWrite1.pBufferInfo = &materialBufferInfo;
-            // descriptorWrite1.dstSet = descriptorSets[1];
-
-            // vkUpdateDescriptorSets(device, 1, &descriptorWrite0, 0, nullptr);
-            // vkUpdateDescriptorSets(device, 1, &descriptorWrite1, 0, nullptr);
+                vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+            }
 
             dynamicDescriptor.manySets.push_back(std::move(descriptorSets));
         }
