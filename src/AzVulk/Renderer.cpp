@@ -2,11 +2,7 @@
 #include "AzVulk/DepthManager.hpp"
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/glm.hpp>
 #include <cstring>
-#include <unordered_map>
-#include <iostream>
 
 namespace AzVulk {
         Renderer::Renderer (const Device& device, SwapChain& swapChain, Buffer& buffer,

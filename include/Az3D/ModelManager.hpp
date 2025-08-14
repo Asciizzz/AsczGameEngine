@@ -3,9 +3,8 @@
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include <string>
-#include <glm/glm.hpp>
 
-#include "Helpers/Templates.hpp"
+#include "AzVulk/Buffer.hpp"
 
 // Forward declarations for Vulkan types
 struct VkVertexInputBindingDescription;
