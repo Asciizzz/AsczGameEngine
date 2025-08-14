@@ -331,9 +331,9 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 
                 // Create regular instance for rendering
                 ModelInstance grassInstance;
-                grassInstance.modelMatrix() = grassTrform.modelMatrix();
+                grassInstance.data.modelMatrix = grassTrform.modelMatrix();
                 grassInstance.modelResourceIndex = grassModelIndex;
-                grassInstance.multColor() = grassColor;
+                grassInstance.data.multColor = grassColor;
                 grassInstances.push_back(grassInstance);
             }
         }
@@ -400,9 +400,9 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
 
     // Create terrain instance
     ModelInstance terrainInstance;
-    terrainInstance.modelMatrix() = glm::mat4(1.0f);
+    terrainInstance.data.modelMatrix = glm::mat4(1.0f);
     terrainInstance.modelResourceIndex = terrainModelIndex;
-    terrainInstance.multColor() = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
+    terrainInstance.data.multColor = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
     
     terrainInstances.push_back(terrainInstance);
 }
@@ -542,12 +542,12 @@ void Grass::updateGrassInstancesCPU() {
             glm::mat4 rotationMatrix = glm::mat4_cast(finalRot);
             glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
 
-            grassModelGroup.modelInstances[i].modelMatrix() = translationMatrix * rotationMatrix * scaleMatrix;
+            grassModelGroup.modelInstances[i].data.modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
         }
     });
 
     // for (size_t i = 0; i < updatedInstances.size() && i < grassInstances.size(); ++i) {
-    //     grassModelGroup.modelInstances[i].modelMatrix() = updatedInstances[i];
+    //     grassModelGroup.modelInstances[i].data.modelMatrix = updatedInstances[i];
     // }
 
     auto& grassMeshMap = grassModelGroup.meshMapping[grassMeshIndex];

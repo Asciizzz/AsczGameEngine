@@ -162,8 +162,8 @@ void Application::initVulkan() {
     // Useful shorthand for placing models
     auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
         ModelInstance instance;
-        instance.modelMatrix() = transform.modelMatrix();
-        instance.multColor() = color;
+        instance.data.modelMatrix = transform.modelMatrix();
+        instance.data.multColor = color;
         instance.modelResourceIndex = getPlatformIndex(name);
 
         worldGroup.addInstance(instance);
