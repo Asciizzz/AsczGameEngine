@@ -5,11 +5,9 @@
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include <glm/glm.hpp>
-#include <vector>
-#include <array>
-#include <memory>
 
 #include <vulkan/vulkan.h>
+#include "Helpers/Templates.hpp"
 
 namespace Az3D {
     struct Mesh;
@@ -163,8 +161,8 @@ namespace AzVulk {
 
         void createUniformBuffers(size_t count);
 
-        void createMaterialBuffers(const std::vector<std::shared_ptr<Az3D::Material>>& materials);
-        void createMeshBuffers(const std::vector<std::shared_ptr<Az3D::Mesh>>& meshes);
+        void createMaterialBuffers(const SharedPtrVec<Az3D::Material>& materials);
+        void createMeshBuffers(const SharedPtrVec<Az3D::Mesh>& meshes);
 
         // Most efficient versions that work directly with mesh mapping data
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);

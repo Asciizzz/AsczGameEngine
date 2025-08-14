@@ -173,7 +173,7 @@ namespace AzVulk {
         }
     }
 
-    void Buffer::createMaterialBuffers(const std::vector<std::shared_ptr<Az3D::Material>>& materials) {
+    void Buffer::createMaterialBuffers(const SharedPtrVec<Az3D::Material>& materials) {
         materialBufferDatas.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
@@ -190,7 +190,7 @@ namespace AzVulk {
         }
     }
 
-    void Buffer::createMeshBuffers(const std::vector<std::shared_ptr<Az3D::Mesh>>& meshes) {
+    void Buffer::createMeshBuffers(const SharedPtrVec<Az3D::Mesh>& meshes) {
         for (const auto& mesh : meshes) {
             MeshBufferData meshBuffer;
 

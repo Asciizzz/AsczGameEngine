@@ -60,11 +60,11 @@ namespace AzVulk {
         void createMaterialDescriptorSets_LEGACY(const Az3D::Texture* texture, VkBuffer materialBuffer, size_t materialIndex);
 
         void createMaterialDescriptorSets(
-            const std::vector<std::shared_ptr<Az3D::Material>>& materials,
+            const SharedPtrVec<Az3D::Material>& materials,
             const std::vector<BufferData>& materialBufferDatas
         );
         void createTextureDescriptorSets(
-            const std::vector<std::shared_ptr<Az3D::Texture>>& textures
+            const SharedPtrVec<Az3D::Texture>& textures
         );
     };
 
