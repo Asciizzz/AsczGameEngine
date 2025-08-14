@@ -30,7 +30,7 @@ namespace Az3D {
     class MaterialManager {
     public:
         MaterialManager() {
-            auto defaultMaterial = std::make_shared<Material>();
+            auto defaultMaterial = MakeShared<Material>();
             materials.push_back(defaultMaterial);
             count = 1; // Start with one default material
         }

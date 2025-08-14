@@ -1,5 +1,6 @@
 #include "Az3D/MeshManager.hpp"
 #include <cfloat>
+#include <queue>
 
 namespace Az3D {
 

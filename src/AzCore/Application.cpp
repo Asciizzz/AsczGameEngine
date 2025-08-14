@@ -294,7 +294,11 @@ void Application::initVulkan() {
     auto& descManager = *descriptorManager;
 
     bufferRef.createMaterialBuffers(matManager.materials);
-    bufferRef.createMeshBuffers(meshManager.meshes);
+    // Create dummy buffers before actually migrating them to somewhere else correct
+    bufferRef.meshBufferDatas.resize(meshManager.meshes.size());
+    for (auto& mesh : meshManager.meshes) {
+        mesh->createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
+    }
 
     // Create descriptor pools and sets (split global/material)
     size_t matCount = matManager.materials.size();
@@ -345,13 +349,6 @@ bool Application::checkWindowResize() {
     // TODO: Currently the global depth sampler is still using the outdated depth sampler
 
     auto& glbDesc = descriptorManager->globalDynamicDescriptor;
-    // glbDesc.createSetLayout({
-    //     DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT),
-    //     DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-    // });
-
-    // glbDesc.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
-
     glbDesc.createGlobalDescriptorSets(
         bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler

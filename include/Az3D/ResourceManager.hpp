@@ -4,7 +4,6 @@
 #include "Az3D/MaterialManager.hpp"
 #include "Az3D/MeshManager.hpp"
 
-#include <unordered_map>
 #include <vulkan/vulkan.h>
 
 // Forward declarations

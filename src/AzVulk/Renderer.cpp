@@ -201,13 +201,12 @@ namespace AzVulk {
                     // Buffer size changed - need to recreate
                     vkDeviceWaitIdle(vulkanDevice.device);
                     buffer.createMeshInstanceBuffer(meshIndex, const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping[meshIndex], modelInstances);
-                } else {
-                    // Only update changes
-                    if (!meshData.updateIndices.empty()) {
-                        buffer.updateMeshInstanceBufferSelective(meshIndex, const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping[meshIndex], modelInstances);
-                    }
                 }
 
+                // Only update changes
+                if (!meshData.updateIndices.empty()) {
+                    buffer.updateMeshInstanceBufferSelective(meshIndex, const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping[meshIndex], modelInstances);
+                }
             }
 
             if (!instanceIndices.empty()) {
@@ -245,8 +244,11 @@ namespace AzVulk {
                 if (meshIndex < meshBufferDatas.size() && instanceCount > 0) {
                     const auto& meshBuffer = meshBufferDatas[meshIndex];
 
-                    const auto& vertexBufferData = meshBuffer.vertexBufferData;
-                    const auto& indexBufferData = meshBuffer.indexBufferData;
+                    const auto& mesh = resourceManager.meshManager->meshes[meshIndex];
+                    printf("Rendering mesh %zu with %zu instances\n", meshIndex, instanceCount);
+
+                    const auto& vertexBufferData = mesh->vertexBufferData;
+                    const auto& indexBufferData = mesh->indexBufferData;
                     const auto& instanceBufferData = meshBuffer.instanceBufferData;
 
                     // Bind vertex buffer

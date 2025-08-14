@@ -82,7 +82,7 @@ namespace Az3D {
 
             stagingBuffer.cleanup();
 
-            textures.push_back(std::make_shared<Texture>(texture));
+            textures.push_back(MakeShared<Texture>(texture));
             return count++;
 
         } catch (const std::exception& e) {
@@ -131,7 +131,7 @@ namespace Az3D {
 
         stagingBuffer.cleanup();
 
-        textures.push_back(std::make_shared<Texture>(defaultTexture));
+        textures.push_back(MakeShared<Texture>(defaultTexture));
         count++;
     }
 

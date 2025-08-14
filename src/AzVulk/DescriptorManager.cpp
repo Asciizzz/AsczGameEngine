@@ -95,60 +95,6 @@ namespace AzVulk {
     }
 
 
-    // Create material descriptor sets (set 1, per material per frame)
-
-    // Legacy function (wrong)
-    void DynamicDescriptor::createMaterialDescriptorSets_LEGACY(const Az3D::Texture* texture, VkBuffer materialBuffer, size_t materialIndex) {
-        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
-
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = pool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-        allocInfo.pSetLayouts = layouts.data();
-
-        std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
-        if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate material descriptor sets for material index: " + std::to_string(materialIndex));
-        }
-
-        // Prepare the write structures outside the loop
-        VkDescriptorBufferInfo materialBufferInfo{};
-        materialBufferInfo.buffer = materialBuffer;
-        materialBufferInfo.offset = 0;
-        materialBufferInfo.range = sizeof(MaterialUBO);
-
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = texture->view;
-        imageInfo.sampler = texture->sampler;
-
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-        // Fill in all fields except dstSet
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &materialBufferInfo;
-
-        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &imageInfo;
-
-        for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
-            for (auto& write : descriptorWrites) write.dstSet = descriptorSets[i];
-
-            vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-        }
-
-        // mapSets[materialIndex] = std::move(descriptorSets);
-    }
-
     void DynamicDescriptor::createMaterialDescriptorSets(
         const SharedPtrVec<Az3D::Material>& materials,
         const std::vector<BufferData>& materialBufferDatas

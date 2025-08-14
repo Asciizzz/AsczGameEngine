@@ -94,7 +94,7 @@ namespace Az3D {
         return count++;
     }
     size_t MeshManager::addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
-        auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
+        auto mesh = MakeShared<Mesh>(std::move(vertices), std::move(indices));
         return addMesh(mesh);
     }
     size_t MeshManager::loadFromOBJ(std::string filePath) {
@@ -206,7 +206,7 @@ namespace Az3D {
             }
         }
 
-        return std::make_shared<Mesh>(std::move(vertices), std::move(indices));
+        return MakeShared<Mesh>(std::move(vertices), std::move(indices));
     }
 
     

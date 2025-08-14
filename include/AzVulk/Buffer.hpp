@@ -121,12 +121,12 @@ namespace AzVulk {
             mapped = nullptr;
         }
 
-        void mapData() {
+        void mappedData() {
             if (!mapped) vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
         }
 
         template<typename T>
-        void mapData(const std::vector<T>& data) {
+        void mappedData(const std::vector<T>& data) {
             vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
             memcpy(mapped, data.data(), sizeof(T) * data.size());
         }
@@ -139,14 +139,10 @@ namespace AzVulk {
 
     // Multi-mesh data structure for storing multiple mesh types
     struct MeshBufferData {
-        BufferData vertexBufferData;
-        BufferData indexBufferData;
         BufferData instanceBufferData;
 
         void cleanup() {
             instanceBufferData.cleanup();
-            vertexBufferData.cleanup();
-            indexBufferData.cleanup();
         }
     };
 
@@ -162,7 +158,6 @@ namespace AzVulk {
         void createUniformBuffers(size_t count);
 
         void createMaterialBuffers(const SharedPtrVec<Az3D::Material>& materials);
-        void createMeshBuffers(const SharedPtrVec<Az3D::Mesh>& meshes);
 
         // Most efficient versions that work directly with mesh mapping data
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);

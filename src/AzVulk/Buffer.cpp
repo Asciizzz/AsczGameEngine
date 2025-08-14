@@ -169,7 +169,7 @@ namespace AzVulk {
                 BufferData::HostVisible | BufferData::HostCoherent
             );
 
-            bufferData.mapData();
+            bufferData.mappedData();
         }
     }
 
@@ -190,31 +190,6 @@ namespace AzVulk {
         }
     }
 
-    void Buffer::createMeshBuffers(const SharedPtrVec<Az3D::Mesh>& meshes) {
-        for (const auto& mesh : meshes) {
-            MeshBufferData meshBuffer;
-
-            const auto& vertices = mesh->vertices;
-            const auto& indices = mesh->indices;
-
-            // Beta: Using the new BufferData struct
-            meshBuffer.vertexBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
-            meshBuffer.vertexBufferData.createBuffer(
-                vertices.size(), sizeof(Az3D::Vertex),
-                BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent);
-            meshBuffer.vertexBufferData.uploadData(vertices);
-
-            meshBuffer.indexBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
-            meshBuffer.indexBufferData.createBuffer(
-                indices.size(), sizeof(uint32_t),
-                BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent);
-            meshBuffer.indexBufferData.uploadData(indices);
-
-            // Add to meshBufferDatas vector and return index
-            meshBufferDatas.push_back(std::move(meshBuffer));
-        }
-    }
-
 
     void Buffer::createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances) {
         const auto& instanceIndices = meshData.instanceIndices;
@@ -228,7 +203,7 @@ namespace AzVulk {
             BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
         );
 
-        instanceBufferData.mapData();
+        instanceBufferData.mappedData();
 
         for (size_t i = 0; i < instanceIndices.size(); ++i) {
             // static_cast<Az3D::InstanceVertexData*>(instanceBufferData.mapped)[i] = modelInstances[instanceIndices[i]].vertexData;

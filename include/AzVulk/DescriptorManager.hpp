@@ -57,8 +57,6 @@ namespace AzVulk {
             VkImageView depthImageView,
             VkSampler depthSampler
         );
-        void createMaterialDescriptorSets_LEGACY(const Az3D::Texture* texture, VkBuffer materialBuffer, size_t materialIndex);
-
         void createMaterialDescriptorSets(
             const SharedPtrVec<Az3D::Material>& materials,
             const std::vector<BufferData>& materialBufferDatas
