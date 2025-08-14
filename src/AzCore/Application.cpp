@@ -298,7 +298,7 @@ void Application::initVulkan() {
     for (const auto& matPtr : matManager.materials) {
         materialVector.push_back(*matPtr);
     }
-    bufferRef.createMaterialUniformBuffers(materialVector);
+    bufferRef.creatematerialBuffers(materialVector);
 
     // Create descriptor pools and sets (split global/material)
     size_t matCount = matManager.materials.size();
@@ -310,14 +310,14 @@ void Application::initVulkan() {
         depthManager->depthSamplerView, depthManager->depthSampler
     );
     // for (size_t i = 0; i < matManager.materials.size(); ++i) {
-    //     VkBuffer materialUniformBuffer = bufferRef.getMaterialUniformBuffer(i);
+    //     VkBuffer materialBuffer = bufferRef.getmaterialBuffer(i);
     //     size_t textureIndex = matManager.materials[i]->diffTxtr;
     //     matDesc.createMaterialDescriptorSets_LEGACY(
-    //         &texManager.textures[textureIndex], materialUniformBuffer, i
+    //         &texManager.textures[textureIndex], materialBuffer, i
     //     );
     // }
     matDesc.createMaterialDescriptorSets(
-        matManager.materials, bufferRef.materialUniformBuffers
+        matManager.materials, bufferRef.materialBuffers
     );
     texDesc.createTextureDescriptorSets(texManager.textures);
 

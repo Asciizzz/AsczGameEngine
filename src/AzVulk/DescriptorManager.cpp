@@ -36,7 +36,7 @@ namespace AzVulk {
 
 
     void DynamicDescriptor::createGlobalDescriptorSets(
-        const std::vector<VkBuffer>& uniformBuffers,
+        const std::vector<BufferData>& uniformBuffers,
         size_t uniformBufferSize,
         VkImageView depthImageView,
         VkSampler depthSampler
@@ -61,7 +61,7 @@ namespace AzVulk {
 
         for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = uniformBuffers[i];
+            bufferInfo.buffer = uniformBuffers[i].buffer;
             bufferInfo.offset = 0;
             bufferInfo.range = uniformBufferSize;
 
@@ -98,7 +98,7 @@ namespace AzVulk {
     // Create material descriptor sets (set 1, per material per frame)
 
     // Legacy function (wrong)
-    void DynamicDescriptor::createMaterialDescriptorSets_LEGACY(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex) {
+    void DynamicDescriptor::createMaterialDescriptorSets_LEGACY(const Az3D::Texture* texture, VkBuffer materialBuffer, size_t materialIndex) {
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
 
         VkDescriptorSetAllocateInfo allocInfo{};
@@ -114,7 +114,7 @@ namespace AzVulk {
 
         // Prepare the write structures outside the loop
         VkDescriptorBufferInfo materialBufferInfo{};
-        materialBufferInfo.buffer = materialUniformBuffer;
+        materialBufferInfo.buffer = materialBuffer;
         materialBufferInfo.offset = 0;
         materialBufferInfo.range = sizeof(MaterialUBO);
 
@@ -151,7 +151,7 @@ namespace AzVulk {
 
     void DynamicDescriptor::createMaterialDescriptorSets(
         const std::vector<std::shared_ptr<Az3D::Material>>& materials,
-        const std::vector<BufferData>& materialUniformBuffers
+        const std::vector<BufferData>& materialBuffers
     ) {
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
 
@@ -163,7 +163,7 @@ namespace AzVulk {
 
         for (size_t i = 0; i < materials.size(); ++i) {
             const auto& material = materials[i];
-            const auto& materialUniformBuffer = materialUniformBuffers[i].buffer;
+            const auto& materialBuffer = materialBuffers[i].buffer;
 
             std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
 
@@ -171,7 +171,7 @@ namespace AzVulk {
 
             // Prepare the write structures outside the loop
             VkDescriptorBufferInfo materialBufferInfo{};
-            materialBufferInfo.buffer = materialUniformBuffer;
+            materialBufferInfo.buffer = materialBuffer;
             materialBufferInfo.offset = 0;
             materialBufferInfo.range = sizeof(MaterialUBO);
 

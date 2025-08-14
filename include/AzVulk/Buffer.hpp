@@ -154,7 +154,7 @@ namespace AzVulk {
 
         void createUniformBuffers(size_t count);
 
-        void createMaterialUniformBuffers(const std::vector<Az3D::Material>& materials);
+        void creatematerialBuffers(const std::vector<Az3D::Material>& materials);
 
         size_t createMeshBuffer(const Az3D::Mesh& mesh);  // Returns mesh index
         // Most efficient versions that work directly with mesh mapping data
@@ -165,20 +165,9 @@ namespace AzVulk {
                                                 const std::vector<Az3D::ModelInstance>& modelInstances);
 
         const Device& vulkanDevice;
-        
-        // Multi-mesh buffers storage
+
+        std::vector<BufferData> uniformBuffers;
         std::vector<MeshBufferData> meshBuffers;
-
-        // Uniform buffer arrays
-        std::vector<VkBuffer> uniformBuffers;
-        std::vector<VkDeviceMemory> uniformBuffersMemory;
-        std::vector<void*> uniformBuffersMapped;
-        
-        // Material uniform buffers
-        // std::vector<VkBuffer> materialUniformBuffers;
-        // std::vector<VkDeviceMemory> materialUniformBuffersMemory;
-        // std::vector<void*> materialUniformBuffersMapped;
-
-        std::vector<BufferData> materialUniformBuffers;
+        std::vector<BufferData> materialBuffers;
     };
 }

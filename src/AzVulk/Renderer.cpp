@@ -166,7 +166,7 @@ namespace AzVulk {
         ubo.cameraUp = glm::vec4(camera.up, 0.0f);
         ubo.nearFar = glm::vec4(camera.nearPlane, camera.farPlane, 0.0f, 0.0f);
 
-        memcpy(buffer.uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
+        memcpy(buffer.uniformBuffers[currentFrame].mapped, &ubo, sizeof(ubo));
 
         return imageIndex;
     }

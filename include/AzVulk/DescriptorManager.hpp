@@ -56,16 +56,16 @@ namespace AzVulk {
 
         // Template for relevant components
         void createGlobalDescriptorSets(
-            const std::vector<VkBuffer>& uniformBuffers,
+            const std::vector<BufferData>& uniformBuffers,
             size_t uniformBufferSize,
             VkImageView depthImageView,
             VkSampler depthSampler
         );
-        void createMaterialDescriptorSets_LEGACY(const Az3D::Texture* texture, VkBuffer materialUniformBuffer, size_t materialIndex);
+        void createMaterialDescriptorSets_LEGACY(const Az3D::Texture* texture, VkBuffer materialBuffer, size_t materialIndex);
 
         void createMaterialDescriptorSets(
             const std::vector<std::shared_ptr<Az3D::Material>>& materials,
-            const std::vector<BufferData>& materialUniformBuffers
+            const std::vector<BufferData>& materialBuffers
         );
         void createTextureDescriptorSets(const std::vector<Az3D::Texture>& textures);
     };
