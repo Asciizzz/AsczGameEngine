@@ -1,11 +1,11 @@
 #include "AzVulk/Buffer.hpp"
-#include "AzVulk/Device.hpp"
+#include "Az3D/Az3D.hpp"
+
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
 #include <execution>
 
-#include <stb_image.h>
 
 namespace AzVulk {
 

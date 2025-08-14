@@ -8,8 +8,14 @@
 #include <vector>
 #include <array>
 
-#include "Az3D/Az3D.hpp"
 #include "AzVulk/Device.hpp"
+
+namespace Az3D {
+    struct Mesh;
+    struct Material;
+    struct MeshMappingData;
+    struct ModelInstance;
+}
 
 namespace AzVulk {
     struct GlobalUBO {
