@@ -260,7 +260,6 @@ void Application::initVulkan() {
 
 // PLAYGROUND END HERE 
 
-    auto& matDesc = descriptorManager->materialDynamicDescriptor;
     auto& glbDesc = descriptorManager->globalDynamicDescriptor;
     auto& texDesc = descriptorManager->textureDynamicDescriptor;
 
@@ -278,7 +277,7 @@ void Application::initVulkan() {
     size_t matCount = matManager.materials.size();
     size_t texCount = texManager.textures.size();
 
-    descriptorManager->createDescriptorPools(matCount, texCount);
+    descriptorManager->createDescriptorPools(texCount);
     glbDesc.createGlobalDescriptorSets(
         bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
@@ -290,6 +289,7 @@ void Application::initVulkan() {
                                     *descriptorManager, *resourceManager, *depthManager);
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
+    auto& matDesc = matManager.dynamicDescriptor;
 
     opaquePipeline = MakeUnique<Pipeline>(
         device, renderPass,

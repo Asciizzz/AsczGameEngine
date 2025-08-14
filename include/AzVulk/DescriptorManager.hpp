@@ -57,9 +57,6 @@ namespace AzVulk {
             VkImageView depthImageView,
             VkSampler depthSampler
         );
-        void createMaterialDescriptorSets(
-            const std::vector<BufferData>& materialBufferDatas
-        );
         void createTextureDescriptorSets(
             const SharedPtrVec<Az3D::Texture>& textures
         );
@@ -77,11 +74,10 @@ namespace AzVulk {
         VkDevice device;
 
         DynamicDescriptor globalDynamicDescriptor;
-        DynamicDescriptor materialDynamicDescriptor;
         DynamicDescriptor textureDynamicDescriptor;
 
         // Create split descriptor set layouts (set 0: global UBO, set 1: material UBO+texture)
         void createDescriptorSetLayouts(uint32_t maxFramesInFlight);
-        void createDescriptorPools(uint32_t maxMaterials = 10, uint32_t maxTextures = 10);
+        void createDescriptorPools(uint32_t maxTextures = 10);
     };
 }
