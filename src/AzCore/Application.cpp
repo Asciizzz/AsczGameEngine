@@ -136,7 +136,7 @@ void Application::initVulkan() {
 
 
     // Useful shorthand function for adding platformer meshes
-    std::unordered_map<std::string, size_t> platformerMeshIndices;
+    UnorderedMap<std::string, size_t> platformerMeshIndices;
 
     auto addPlatformerMesh = [&](std::string name, std::string path) {
         std::string fullName = "Platformer/" + name;

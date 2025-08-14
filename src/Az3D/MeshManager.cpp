@@ -120,7 +120,7 @@ namespace Az3D {
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
-        std::unordered_map<size_t, uint32_t> uniqueVertices;
+        UnorderedMap<size_t, uint32_t> uniqueVertices;
 
         // Hash combine utility
         auto hash_combine = [](std::size_t& seed, std::size_t hash) {

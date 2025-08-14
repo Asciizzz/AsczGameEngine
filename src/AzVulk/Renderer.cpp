@@ -186,7 +186,7 @@ namespace AzVulk {
         const auto& meshBufferDatas = buffer.meshBufferDatas;
 
         // Build material to meshes mapping for efficient rendering
-        std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;
+        UnorderedMap<size_t, std::vector<size_t>> materialToMeshes;
 
         for (const auto& [meshIndex, meshData] : meshMapping) {
             const auto& instanceIndices = meshData.instanceIndices;

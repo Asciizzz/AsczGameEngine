@@ -38,9 +38,9 @@ namespace Az3D {
         size_t getMesh(std::string name) const;
 
         // String-to-index maps
-        std::unordered_map<std::string, size_t> textureNameToIndex;
-        std::unordered_map<std::string, size_t> materialNameToIndex;
-        std::unordered_map<std::string, size_t> meshNameToIndex;
+        UnorderedMap<std::string, size_t> textureNameToIndex;
+        UnorderedMap<std::string, size_t> materialNameToIndex;
+        UnorderedMap<std::string, size_t> meshNameToIndex;
 
         UniquePtr<MeshManager> meshManager;
         UniquePtr<TextureManager> textureManager;

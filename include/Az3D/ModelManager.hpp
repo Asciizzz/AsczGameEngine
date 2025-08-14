@@ -2,11 +2,10 @@
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
-#include <array>
-#include <vector>
 #include <string>
-#include <unordered_map>
 #include <glm/glm.hpp>
+
+#include "Helpers/Templates.hpp"
 
 // Forward declarations for Vulkan types
 struct VkVertexInputBindingDescription;
@@ -62,7 +61,7 @@ namespace Az3D {
         std::vector<size_t> updateIndices;             // update queue indices for this mesh
         std::vector<bool> instanceActive;              // active state for each instance
         uint32_t prevInstanceCount = 0;                // previous instance count for this mesh
-        std::unordered_map<size_t, size_t> instanceToBufferPos; // instance index -> buffer position mapping
+        UnorderedMap<size_t, size_t> instanceToBufferPos; // instance index -> buffer position mapping
         
         void clear() {
             instanceIndices.clear();
@@ -82,13 +81,13 @@ namespace Az3D {
 
         size_t modelResourceCount = 0;
         std::vector<ModelResource> modelResources;
-        std::unordered_map<std::string, size_t> modelResourceNameToIndex;
+        UnorderedMap<std::string, size_t> modelResourceNameToIndex;
 
         size_t modelInstanceCount = 0;
         std::vector<ModelInstance> modelInstances;
         
         // Organized mesh mapping data - now per mesh index
-        std::unordered_map<size_t, MeshMappingData> meshMapping;
+        UnorderedMap<size_t, MeshMappingData> meshMapping;
 
         size_t addModelResource(const std::string& name, size_t meshIndex, size_t materialIndex);
         size_t getModelResourceIndex(const std::string& name) const;
@@ -117,7 +116,7 @@ namespace Az3D {
     // Model Grupo
 
         size_t groupCount = 0;
-        std::unordered_map<std::string, ModelGroup> groups;
+        UnorderedMap<std::string, ModelGroup> groups;
 
         ModelGroup& getGroup(const std::string& groupName) { return groups[groupName]; }
 

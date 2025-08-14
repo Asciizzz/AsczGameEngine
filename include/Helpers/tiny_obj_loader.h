@@ -408,7 +408,7 @@ struct attrib_t {
   // NOTE(syoyo): array index is based on the appearance order.
   // To get a corresponding skin weight for a specific vertex id `vid`,
   // Need to reconstruct a look up table: `skin_weight_t::vertex_id` == `vid`
-  // (e.g. using std::map, std::unordered_map)
+  // (e.g. using std::map, UnorderedMap)
   std::vector<skin_weight_t> skin_weights;
 
   attrib_t() {}
