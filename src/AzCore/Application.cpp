@@ -309,13 +309,6 @@ void Application::initVulkan() {
         bufferRef.uniformBuffers, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );
-    // for (size_t i = 0; i < matManager.materials.size(); ++i) {
-    //     VkBuffer materialBuffer = bufferRef.getmaterialBuffer(i);
-    //     size_t textureIndex = matManager.materials[i]->diffTxtr;
-    //     matDesc.createMaterialDescriptorSets_LEGACY(
-    //         &texManager.textures[textureIndex], materialBuffer, i
-    //     );
-    // }
     matDesc.createMaterialDescriptorSets(
         matManager.materials, bufferRef.materialBuffers
     );
