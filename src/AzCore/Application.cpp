@@ -296,9 +296,8 @@ void Application::initVulkan() {
     bufferRef.createMaterialBuffers(matManager.materials);
     // Create dummy buffers before actually migrating them to somewhere else correct
     bufferRef.instanceBufferDatas.resize(meshManager.meshes.size());
-    for (auto& mesh : meshManager.meshes) {
-        mesh->createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    }
+    
+    meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
 
     // Create descriptor pools and sets (split global/material)
     size_t matCount = matManager.materials.size();

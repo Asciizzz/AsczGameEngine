@@ -244,10 +244,10 @@ namespace AzVulk {
                 if (meshIndex < instanceBufferDatas.size() && instanceCount > 0) {
                     const auto& instanceBufferData = instanceBufferDatas[meshIndex];
 
-                    const auto& mesh = resourceManager.meshManager->meshes[meshIndex];
+                    const auto& meshManager = resourceManager.meshManager;
 
-                    const auto& vertexBufferData = mesh->vertexBufferData;
-                    const auto& indexBufferData = mesh->indexBufferData;
+                    const auto& vertexBufferData = meshManager->vertexBufferDatas[meshIndex];
+                    const auto& indexBufferData = meshManager->indexBufferDatas[meshIndex];
 
                     // Bind vertex buffer
                     VkBuffer vertexBuffers[] = {vertexBufferData.buffer};

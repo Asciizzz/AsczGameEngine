@@ -102,10 +102,6 @@ namespace Az3D {
         std::vector<uint32_t> indices;
         static SharedPtr<Mesh> loadFromOBJ(std::string filePath);
 
-        AzVulk::BufferData vertexBufferData;
-        AzVulk::BufferData indexBufferData;
-        void createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice);
-
         // BVH data structures
         glm::vec3 meshMin = glm::vec3(FLT_MAX);
         glm::vec3 meshMax = glm::vec3(-FLT_MAX);
@@ -145,5 +141,9 @@ namespace Az3D {
         // Index-based mesh storage
         size_t count = 0; // Track the number of meshes
         SharedPtrVec<Mesh> meshes;
+
+        std::vector<AzVulk::BufferData> vertexBufferDatas;
+        std::vector<AzVulk::BufferData> indexBufferDatas;
+        void createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice);
     };
 }

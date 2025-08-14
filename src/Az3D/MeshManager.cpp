@@ -210,22 +210,29 @@ namespace Az3D {
     }
 
     
-    void Mesh::createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice) {
+    void MeshManager::createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice) {
         using namespace AzVulk; // WHAT THE FUCK???
-        
-        vertexBufferData.initVulkan(device, physicalDevice);
-        vertexBufferData.createBuffer(
-            vertices.size(), sizeof(Vertex),
-            BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
-        );
-        vertexBufferData.uploadData(vertices);
 
-        indexBufferData.initVulkan(device, physicalDevice);
-        indexBufferData.createBuffer(
-            indices.size(), sizeof(uint32_t),
-            BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent
-        );
-        indexBufferData.uploadData(indices);
+        vertexBufferDatas.resize(meshes.size());
+        indexBufferDatas.resize(meshes.size());
+
+        for (size_t i = 0; i < meshes.size(); ++i) {
+            const auto& mesh = meshes[i];
+
+            vertexBufferDatas[i].initVulkan(device, physicalDevice);
+            vertexBufferDatas[i].createBuffer(
+                mesh->vertices.size(), sizeof(Vertex),
+                BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
+            );
+            vertexBufferDatas[i].uploadData(mesh->vertices);
+
+            indexBufferDatas[i].initVulkan(device, physicalDevice);
+            indexBufferDatas[i].createBuffer(
+                mesh->indices.size(), sizeof(uint32_t),
+                BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent
+            );
+            indexBufferDatas[i].uploadData(mesh->indices);
+        }
     }
 
 }
