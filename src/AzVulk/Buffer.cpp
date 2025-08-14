@@ -75,13 +75,15 @@ namespace AzVulk {
     }
 
     void BufferData::createBuffer(
-        const Device& vulkanDevice, size_t resourceCount, size_t dataTypeSize,
+        size_t resourceCount, size_t dataTypeSize,
         VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
     ) {
+        if (device == VK_NULL_HANDLE || physicalDevice == VK_NULL_HANDLE) {
+            throw std::runtime_error("BufferData: Vulkan device not initialized");
+        }
+
         this->usageFlags = usageFlags;
         this->memoryFlags = memoryFlags;
-        this->device = vulkanDevice.device;
-        this->physicalDevice = vulkanDevice.physicalDevice;
 
         this->resourceCount = static_cast<uint32_t>(resourceCount);
         this->dataTypeSize = static_cast<VkDeviceSize>(dataTypeSize);
@@ -114,9 +116,36 @@ namespace AzVulk {
         vkBindBufferMemory(device, buffer, memory, 0);
     }
 
+    void BufferData::recreateBuffer(size_t resourceCount) {
+        this->resourceCount = static_cast<uint32_t>(resourceCount);
+        this->totalDataSize = static_cast<VkDeviceSize>(dataTypeSize * resourceCount);
 
+        cleanup();
 
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = totalDataSize;
+        bufferInfo.usage = usageFlags;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+        if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create buffer!");
+        }
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memoryFlags, physicalDevice);
+
+        if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to allocate buffer memory!");
+        }
+
+        vkBindBufferMemory(device, buffer, memory, 0);
+    }
 
     Buffer::Buffer(const Device& device) : vulkanDevice(device) {}
 
@@ -140,9 +169,10 @@ namespace AzVulk {
 
         for (size_t i = 0; i < count; ++i) {
             auto& bufferData = uniformBuffers[i];
+            bufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
 
             bufferData.createBuffer(
-                vulkanDevice, 1, sizeof(GlobalUBO), BufferData::TransferSrc,
+                1, sizeof(GlobalUBO), BufferData::TransferSrc,
                 BufferData::HostVisible | BufferData::HostCoherent
             );
 
@@ -155,9 +185,10 @@ namespace AzVulk {
 
         for (size_t i = 0; i < materials.size(); ++i) {
             auto& bufferData = materialBuffers[i];
+            bufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
 
             bufferData.createBuffer(
-                vulkanDevice, 1, sizeof(MaterialUBO), BufferData::Uniform,
+                1, sizeof(MaterialUBO), BufferData::Uniform,
                 BufferData::HostVisible | BufferData::HostCoherent
             );
 
@@ -174,13 +205,15 @@ namespace AzVulk {
         const auto& indices = mesh.indices;
 
         // Beta: Using the new BufferData struct
+        meshBuffer.vertexBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
         meshBuffer.vertexBufferData.createBuffer(
-            vulkanDevice, vertices.size(), sizeof(Az3D::Vertex),
+            vertices.size(), sizeof(Az3D::Vertex),
             BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent);
         meshBuffer.vertexBufferData.uploadData(vertices);
 
+        meshBuffer.indexBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
         meshBuffer.indexBufferData.createBuffer(
-            vulkanDevice, indices.size(), sizeof(uint32_t),
+            indices.size(), sizeof(uint32_t),
             BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent);
         meshBuffer.indexBufferData.uploadData(indices);
 
@@ -196,8 +229,9 @@ namespace AzVulk {
 
         auto& instanceBufferData = meshBuffer.instanceBufferData;
 
+        instanceBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
         instanceBufferData.createBuffer(
-            vulkanDevice, instanceIndices.size(), sizeof(Az3D::InstanceVertexData),
+            instanceIndices.size(), sizeof(Az3D::InstanceVertexData),
             BufferData::Vertex, BufferData::HostVisible | BufferData::HostCoherent
         );
 

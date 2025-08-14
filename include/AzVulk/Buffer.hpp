@@ -61,6 +61,11 @@ namespace AzVulk {
 
 
         BufferData() = default;
+        void initVulkan(VkDevice device, VkPhysicalDevice physicalDevice) {
+            this->device = device;
+            this->physicalDevice = physicalDevice;
+        }
+
         ~BufferData() { cleanup(); }
         void cleanup();
 
@@ -89,9 +94,10 @@ namespace AzVulk {
         VkMemoryPropertyFlags memoryFlags = 0;
 
         void createBuffer(
-            const Device& vulkanDevice, size_t resourceCount, size_t dataTypeSize,
+            size_t resourceCount, size_t dataTypeSize,
             VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
         );
+        void recreateBuffer(size_t resourceCount);
 
         template<typename T>
         void uploadData(const std::vector<T>& data) {
