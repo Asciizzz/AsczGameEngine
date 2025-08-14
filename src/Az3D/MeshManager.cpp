@@ -89,7 +89,7 @@ namespace Az3D {
 
 
 
-    size_t MeshManager::addMesh(std::shared_ptr<Mesh> mesh) {
+    size_t MeshManager::addMesh(SharedPtr<Mesh> mesh) {
         meshes.push_back(mesh);
         return count++;
     }
@@ -107,7 +107,7 @@ namespace Az3D {
 
 
     // OBJ loader implementation using tiny_obj_loader
-    std::shared_ptr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
+    SharedPtr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;

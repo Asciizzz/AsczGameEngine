@@ -24,36 +24,36 @@ public:
 
 private:
     // Core components
-    std::unique_ptr<AzCore::WindowManager> windowManager;
-    std::unique_ptr<AzCore::FpsManager> fpsManager;
-    std::unique_ptr<Az3D::Camera> camera;
+    UniquePtr<AzCore::WindowManager> windowManager;
+    UniquePtr<AzCore::FpsManager> fpsManager;
+    UniquePtr<Az3D::Camera> camera;
 
     // Vulkan: OpenGL's ambitious cousin
-    std::unique_ptr<AzVulk::Instance> vulkanInstance;
-    std::unique_ptr<AzVulk::Device> vulkanDevice;
-    std::unique_ptr<AzVulk::SwapChain> swapChain;
+    UniquePtr<AzVulk::Instance> vulkanInstance;
+    UniquePtr<AzVulk::Device> vulkanDevice;
+    UniquePtr<AzVulk::SwapChain> swapChain;
 
     // Render pass - shared between pipelines
-    std::unique_ptr<AzVulk::RenderPass> mainRenderPass;
+    UniquePtr<AzVulk::RenderPass> mainRenderPass;
     
-    std::unique_ptr<AzVulk::RasterPipeline> opaquePipeline;
-    std::unique_ptr<AzVulk::RasterPipeline> transparentPipeline;
-    std::unique_ptr<AzVulk::RasterPipeline> skyPipeline; // Beta, very inefficient, yet really amazing
+    UniquePtr<AzVulk::RasterPipeline> opaquePipeline;
+    UniquePtr<AzVulk::RasterPipeline> transparentPipeline;
+    UniquePtr<AzVulk::RasterPipeline> skyPipeline; // Beta, very inefficient, yet really amazing
 
     // More Vulkan ceremony
-    std::unique_ptr<AzVulk::ShaderManager> shaderManager;
-    std::unique_ptr<AzVulk::Buffer> buffer;
-    std::unique_ptr<AzVulk::DepthManager> depthManager;
-    std::unique_ptr<AzVulk::MSAAManager> msaaManager;
-    std::unique_ptr<AzVulk::DescriptorManager> descriptorManager;
-    std::unique_ptr<AzVulk::Renderer> renderer;
+    UniquePtr<AzVulk::ShaderManager> shaderManager;
+    UniquePtr<AzVulk::Buffer> buffer;
+    UniquePtr<AzVulk::DepthManager> depthManager;
+    UniquePtr<AzVulk::MSAAManager> msaaManager;
+    UniquePtr<AzVulk::DescriptorManager> descriptorManager;
+    UniquePtr<AzVulk::Renderer> renderer;
     
     // Az3D resource management and model manager
-    std::unique_ptr<Az3D::ResourceManager> resourceManager;
-    std::unique_ptr<Az3D::ModelManager> modelManager;
+    UniquePtr<Az3D::ResourceManager> resourceManager;
+    UniquePtr<Az3D::ModelManager> modelManager;
 
     // AzGame systems
-    std::unique_ptr<AzGame::Grass> grassSystem;
+    UniquePtr<AzGame::Grass> grassSystem;
     
     // Beta features
     AzBeta::ParticleManager particleManager;

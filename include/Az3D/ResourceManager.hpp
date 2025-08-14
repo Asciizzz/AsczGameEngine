@@ -29,7 +29,7 @@ namespace Az3D {
         size_t addMaterial(std::string name, const Material& material);
 
         size_t addMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, bool hasBVH = false);
-        size_t addMesh(std::string name, std::shared_ptr<Mesh> mesh, bool hasBVH = false);
+        size_t addMesh(std::string name, SharedPtr<Mesh> mesh, bool hasBVH = false);
         size_t addMesh(std::string name, std::string filePath, bool hasBVH = false);
 
         // String-to-index getters
@@ -42,9 +42,9 @@ namespace Az3D {
         std::unordered_map<std::string, size_t> materialNameToIndex;
         std::unordered_map<std::string, size_t> meshNameToIndex;
 
-        std::unique_ptr<MeshManager> meshManager;
-        std::unique_ptr<TextureManager> textureManager;
-        std::unique_ptr<MaterialManager> materialManager;
+        UniquePtr<MeshManager> meshManager;
+        UniquePtr<TextureManager> textureManager;
+        UniquePtr<MaterialManager> materialManager;
     };
     
 } // namespace Az3D
