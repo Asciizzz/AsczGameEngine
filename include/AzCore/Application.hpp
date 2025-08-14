@@ -12,10 +12,11 @@
 
 class Application {
 public:
+    static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
     Application(const char* title = "Vulkan Application", uint32_t width = 800, uint32_t height = 600);
     ~Application();
 
-    
     // Modern C++ says no sharing
     Application(const Application&) = delete;
     Application& operator=(const Application&) = delete;

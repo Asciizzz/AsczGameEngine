@@ -153,6 +153,7 @@ namespace AzVulk {
     Buffer::~Buffer() {
         for (auto& bufferData : uniformBufferDatas)  bufferData.cleanup();
         for (auto& bufferData : instanceBufferDatas)     bufferData.cleanup();
+        // for (auto& bufferData : materialBufferDatas) bufferData.cleanup();
     }
 
     void Buffer::createUniformBuffers(size_t count) {

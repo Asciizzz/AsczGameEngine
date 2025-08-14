@@ -142,9 +142,6 @@ namespace AzVulk {
         // This one's chill, it gets to stay
         void createUniformBuffers(size_t count);
 
-        // Soon to be legacy - Rip bozo lol
-        // void createMaterialBuffers(const SharedPtrVec<Az3D::Material>& materials);
-
         // Soon to be legacy
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
         void updateMeshInstanceBufferSelective( size_t meshIndex,

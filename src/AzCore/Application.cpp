@@ -60,7 +60,7 @@ void Application::initVulkan() {
 
     // Create descriptor manager and both set layouts
     descriptorManager = MakeUnique<DescriptorManager>(device);
-    descriptorManager->createDescriptorSetLayouts(2);
+    descriptorManager->createDescriptorSetLayouts(MAX_FRAMES_IN_FLIGHT);
 
     auto& matDesc = descriptorManager->materialDynamicDescriptor;
     auto& glbDesc = descriptorManager->globalDynamicDescriptor;
@@ -112,7 +112,7 @@ void Application::initVulkan() {
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     buffer = MakeUnique<Buffer>(*vulkanDevice);
-    buffer->createUniformBuffers(2);
+    buffer->createUniformBuffers(MAX_FRAMES_IN_FLIGHT);
 
     resourceManager = MakeUnique<ResourceManager>(*vulkanDevice, commandPool);
     modelManager = MakeUnique<ModelManager>();
@@ -299,7 +299,7 @@ void Application::initVulkan() {
     meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
 
     matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    // matManager.createDynamicDescriptorSets(vulkanDevice->device, 2);
+    // matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
 
     size_t matCount = matManager.materials.size();
     size_t texCount = texManager.textures.size();
@@ -309,7 +309,10 @@ void Application::initVulkan() {
         bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );
+    
+    // Soon to be legacy
     matDesc.createMaterialDescriptorSets(matManager.bufferDatas);
+
     texDesc.createTextureDescriptorSets(texManager.textures);
 
     // Final Renderer setup with ResourceManager
