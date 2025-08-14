@@ -297,9 +297,10 @@ void Application::initVulkan() {
     bufferRef.instanceBufferDatas.resize(meshManager.meshes.size());
     
     meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
 
-    // Create descriptor pools and sets (split global/material)
+    matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
+    // matManager.createDynamicDescriptorSets(vulkanDevice->device, 2);
+
     size_t matCount = matManager.materials.size();
     size_t texCount = texManager.textures.size();
 
@@ -308,9 +309,7 @@ void Application::initVulkan() {
         bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );
-    matDesc.createMaterialDescriptorSets(
-        matManager.materials, matManager.bufferDatas
-    );
+    matDesc.createMaterialDescriptorSets(matManager.bufferDatas);
     texDesc.createTextureDescriptorSets(texManager.textures);
 
     // Final Renderer setup with ResourceManager

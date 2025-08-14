@@ -53,6 +53,7 @@ namespace Az3D {
         void createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice);
 
         AzVulk::DynamicDescriptor dynamicDescriptor;
+        void createDynamicDescriptorSets(VkDevice device, uint32_t maxFramesInFlight);
     };
     
 } // namespace Az3D
