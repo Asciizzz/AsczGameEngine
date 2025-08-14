@@ -9,6 +9,8 @@
 #include "AzVulk/Pipeline.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
+#include "AzVulk/DepthManager.hpp"
+
 #include "Az3D/Az3D.hpp"
 
 namespace AzVulk {
@@ -18,7 +20,7 @@ namespace AzVulk {
         Renderer(const Device& device, SwapChain& swapChain, Buffer& buffer,
                 DescriptorManager& descriptorManager,
                 Az3D::ResourceManager& resourceManager,
-                DepthManager* depthManager);
+                DepthManager& depthManager);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -39,7 +41,7 @@ namespace AzVulk {
         Buffer& buffer;
         DescriptorManager& descriptorManager;
         Az3D::ResourceManager& resourceManager;
-        DepthManager* depthManager = nullptr;
+        DepthManager& depthManager;
 
         // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;

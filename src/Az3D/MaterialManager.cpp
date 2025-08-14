@@ -11,10 +11,10 @@ namespace Az3D {
     void MaterialManager::createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice) {
         using namespace AzVulk;
 
-        materialBufferDatas.resize(materials.size());
+        bufferDatas.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
-            auto& bufferData = materialBufferDatas[i];
+            auto& bufferData = bufferDatas[i];
             bufferData.initVulkan(device, physicalDevice);
 
             bufferData.createBuffer(

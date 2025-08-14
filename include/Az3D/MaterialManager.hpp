@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "AzVulk/Buffer.hpp"
+#include "AzVulk/DescriptorManager.hpp"
 
 namespace Az3D {
 
@@ -48,8 +49,10 @@ namespace Az3D {
 
         SharedPtrVec<Material> materials;
 
-        std::vector<AzVulk::BufferData> materialBufferDatas;
+        std::vector<AzVulk::BufferData> bufferDatas;
         void createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice);
+
+        AzVulk::DynamicDescriptor dynamicDescriptor;
     };
     
 } // namespace Az3D

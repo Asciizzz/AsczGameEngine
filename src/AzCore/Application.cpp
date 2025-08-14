@@ -309,13 +309,13 @@ void Application::initVulkan() {
         depthManager->depthSamplerView, depthManager->depthSampler
     );
     matDesc.createMaterialDescriptorSets(
-        matManager.materials, matManager.materialBufferDatas
+        matManager.materials, matManager.bufferDatas
     );
     texDesc.createTextureDescriptorSets(texManager.textures);
 
     // Final Renderer setup with ResourceManager
     renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
-                                        *descriptorManager, *resourceManager, depthManager.get());
+                                    *descriptorManager, *resourceManager, *depthManager);
 }
 
 void Application::createSurface() {

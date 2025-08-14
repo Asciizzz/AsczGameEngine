@@ -10,16 +10,16 @@
 
 namespace AzVulk {
         Renderer::Renderer (const Device& device, SwapChain& swapChain, Buffer& buffer,
-                                                DescriptorManager& descriptorManager,
-                                                Az3D::ResourceManager& resourceManager,
-                                                DepthManager* depthManager)
-                : vulkanDevice(device), swapChain(swapChain), buffer(buffer),
-                    descriptorManager(descriptorManager),
-                    resourceManager(resourceManager),
-                    depthManager(depthManager) {
-                createCommandPool();
-                createCommandBuffers();
-                createSyncObjects();
+                            DescriptorManager& descriptorManager,
+                            Az3D::ResourceManager& resourceManager,
+                            DepthManager& depthManager) :
+        vulkanDevice(device), swapChain(swapChain), buffer(buffer),
+        descriptorManager(descriptorManager),
+        resourceManager(resourceManager),
+        depthManager(depthManager) {
+            createCommandPool();
+            createCommandBuffers();
+            createSyncObjects();
         }
 
     Renderer::~Renderer() {
@@ -294,9 +294,7 @@ namespace AzVulk {
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
 
         // Copy depth buffer for sampling (after render pass, before ending command buffer)
-        if (depthManager) {
-            depthManager->copyDepthForSampling(commandBuffers[currentFrame], swapChain.extent.width, swapChain.extent.height);
-        }
+        depthManager.copyDepthForSampling(commandBuffers[currentFrame], swapChain.extent.width, swapChain.extent.height);
 
         if (vkEndCommandBuffer(commandBuffers[currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
