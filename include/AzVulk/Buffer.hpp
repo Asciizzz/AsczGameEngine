@@ -138,23 +138,9 @@ namespace AzVulk {
     struct MeshBufferData {
         BufferData vertexBufferData;
         BufferData indexBufferData;
-
-        // VkBuffer instanceBuffer = VK_NULL_HANDLE;
-        // VkDeviceMemory instanceBufferMemory = VK_NULL_HANDLE;
-        // void* instanceBufferMapped = nullptr;
-
         BufferData instanceBufferData;
 
-        // Cleanup helper - destructors aren't enough apparently
-        void cleanup(VkDevice device) {
-            // if (instanceBufferMapped) {
-            //     vkUnmapMemory(device, instanceBufferMemory);
-            // }
-            // if (instanceBuffer != VK_NULL_HANDLE) {
-            //     vkDestroyBuffer(device, instanceBuffer, nullptr);
-            //     vkFreeMemory(device, instanceBufferMemory, nullptr);
-            // }
-
+        void cleanup() {
             instanceBufferData.cleanup();
             vertexBufferData.cleanup();
             indexBufferData.cleanup();
@@ -184,8 +170,8 @@ namespace AzVulk {
 
         const Device& vulkanDevice;
 
-        std::vector<BufferData> uniformBuffers;
-        std::vector<MeshBufferData> meshBuffers;
-        std::vector<BufferData> materialBuffers;
+        std::vector<BufferData> uniformBufferDatas;
+        std::vector<MeshBufferData> meshBufferDatas;
+        std::vector<BufferData> materialBufferDatas;
     };
 }

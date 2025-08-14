@@ -36,7 +36,7 @@ namespace AzVulk {
 
 
     void DynamicDescriptor::createGlobalDescriptorSets(
-        const std::vector<BufferData>& uniformBuffers,
+        const std::vector<BufferData>& uniformBufferDatas,
         size_t uniformBufferSize,
         VkImageView depthImageView,
         VkSampler depthSampler
@@ -61,7 +61,7 @@ namespace AzVulk {
 
         for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = uniformBuffers[i].buffer;
+            bufferInfo.buffer = uniformBufferDatas[i].buffer;
             bufferInfo.offset = 0;
             bufferInfo.range = uniformBufferSize;
 
@@ -151,7 +151,7 @@ namespace AzVulk {
 
     void DynamicDescriptor::createMaterialDescriptorSets(
         const std::vector<std::shared_ptr<Az3D::Material>>& materials,
-        const std::vector<BufferData>& materialBuffers
+        const std::vector<BufferData>& materialBufferDatas
     ) {
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
 
@@ -163,7 +163,7 @@ namespace AzVulk {
 
         for (size_t i = 0; i < materials.size(); ++i) {
             const auto& material = materials[i];
-            const auto& materialBuffer = materialBuffers[i].buffer;
+            const auto& materialBuffer = materialBufferDatas[i].buffer;
 
             std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
 

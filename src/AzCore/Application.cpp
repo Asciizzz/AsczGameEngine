@@ -302,11 +302,11 @@ void Application::initVulkan() {
 
     descriptorManager->createDescriptorPools(matCount, texCount);
     glbDesc.createGlobalDescriptorSets(
-        bufferRef.uniformBuffers, sizeof(GlobalUBO),
+        bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );
     matDesc.createMaterialDescriptorSets(
-        matManager.materials, bufferRef.materialBuffers
+        matManager.materials, bufferRef.materialBufferDatas
     );
     texDesc.createTextureDescriptorSets(texManager.textures);
 
@@ -353,7 +353,7 @@ bool Application::checkWindowResize() {
     // glbDesc.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
 
     glbDesc.createGlobalDescriptorSets(
-        bufferRef.uniformBuffers, sizeof(GlobalUBO),
+        bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
         depthManager->depthSamplerView, depthManager->depthSampler
     );
 

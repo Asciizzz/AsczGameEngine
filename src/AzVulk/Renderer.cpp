@@ -166,7 +166,7 @@ namespace AzVulk {
         ubo.cameraUp = glm::vec4(camera.up, 0.0f);
         ubo.nearFar = glm::vec4(camera.nearPlane, camera.farPlane, 0.0f, 0.0f);
 
-        memcpy(buffer.uniformBuffers[currentFrame].mapped, &ubo, sizeof(ubo));
+        memcpy(buffer.uniformBufferDatas[currentFrame].mapped, &ubo, sizeof(ubo));
 
         return imageIndex;
     }
@@ -174,13 +174,16 @@ namespace AzVulk {
     // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
     void Renderer::drawScene(RasterPipeline& pipeline, Az3D::ModelGroup& modelGroup) {
 
+        // TODO: Completely fix and rework the model-resource-mesh-indexing-mapping-thingy-i-have
+        // no-idea-at-this-point structure. Instead of meshMapping, its modelResourceMapping
+
         // Use the pre-computed mesh mapping directly
         const auto& meshMapping = modelGroup.meshMapping;
         const auto& modelResources = modelGroup.modelResources;
         const auto& modelInstances = modelGroup.modelInstances;
 
         // Render all meshes with their instances
-        const auto& meshBuffers = buffer.meshBuffers;
+        const auto& meshBufferDatas = buffer.meshBufferDatas;
 
         // Build material to meshes mapping for efficient rendering
         std::unordered_map<size_t, std::vector<size_t>> materialToMeshes;
@@ -190,7 +193,7 @@ namespace AzVulk {
             if (instanceIndices.empty()) continue;
 
             // Update or create the instance buffer for this mesh
-            if (meshIndex < meshBuffers.size()) {
+            if (meshIndex < meshBufferDatas.size()) {
 
                 size_t prevInstanceCount = meshData.prevInstanceCount;
 
@@ -239,8 +242,8 @@ namespace AzVulk {
                     instanceCount = meshMapping.at(meshIndex).instanceIndices.size();
                 }
                 
-                if (meshIndex < meshBuffers.size() && instanceCount > 0) {
-                    const auto& meshBuffer = meshBuffers[meshIndex];
+                if (meshIndex < meshBufferDatas.size() && instanceCount > 0) {
+                    const auto& meshBuffer = meshBufferDatas[meshIndex];
 
                     const auto& vertexBufferData = meshBuffer.vertexBufferData;
                     const auto& indexBufferData = meshBuffer.indexBufferData;

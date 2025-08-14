@@ -150,25 +150,17 @@ namespace AzVulk {
     Buffer::Buffer(const Device& device) : vulkanDevice(device) {}
 
     Buffer::~Buffer() {
-        for (auto& bufferData : uniformBuffers) {
-            bufferData.cleanup();
-        }
-
-        for (auto& bufferData : meshBuffers) {
-            bufferData.cleanup(vulkanDevice.device);
-        }
-
-        for (auto& bufferData : materialBuffers) {
-            bufferData.cleanup();
-        }
+        for (auto& bufferData : uniformBufferDatas)  bufferData.cleanup();
+        for (auto& bufferData : meshBufferDatas)     bufferData.cleanup();
+        for (auto& bufferData : materialBufferDatas) bufferData.cleanup();
     }
 
     void Buffer::createUniformBuffers(size_t count) {
 
-        uniformBuffers.resize(count);
+        uniformBufferDatas.resize(count);
 
         for (size_t i = 0; i < count; ++i) {
-            auto& bufferData = uniformBuffers[i];
+            auto& bufferData = uniformBufferDatas[i];
             bufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
 
             bufferData.createBuffer(
@@ -181,10 +173,10 @@ namespace AzVulk {
     }
 
     void Buffer::createMaterialBuffers(const std::vector<std::shared_ptr<Az3D::Material>>& materials) {
-        materialBuffers.resize(materials.size());
+        materialBufferDatas.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
-            auto& bufferData = materialBuffers[i];
+            auto& bufferData = materialBufferDatas[i];
             bufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
 
             bufferData.createBuffer(
@@ -217,15 +209,15 @@ namespace AzVulk {
                 BufferData::Index, BufferData::HostVisible | BufferData::HostCoherent);
             meshBuffer.indexBufferData.uploadData(indices);
 
-            // Add to meshBuffers vector and return index
-            meshBuffers.push_back(std::move(meshBuffer));
+            // Add to meshBufferDatas vector and return index
+            meshBufferDatas.push_back(std::move(meshBuffer));
         }
     }
 
 
     void Buffer::createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances) {
         const auto& instanceIndices = meshData.instanceIndices;
-        auto& meshBuffer = meshBuffers[meshIndex];
+        auto& meshBuffer = meshBufferDatas[meshIndex];
 
         auto& instanceBufferData = meshBuffer.instanceBufferData;
 
@@ -248,7 +240,7 @@ namespace AzVulk {
     void Buffer::updateMeshInstanceBufferSelective( size_t meshIndex,
                                                     Az3D::MeshMappingData& meshData, 
                                                     const std::vector<Az3D::ModelInstance>& modelInstances) {
-        auto& meshBuffer = meshBuffers[meshIndex];
+        auto& meshBuffer = meshBufferDatas[meshIndex];
 
         std::for_each(std::execution::par_unseq, meshData.updateIndices.begin(), meshData.updateIndices.end(), [&](size_t instanceIndex) {
             size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
