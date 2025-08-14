@@ -6,7 +6,7 @@
 #include <chrono>
 #include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
-#include "AzVulk/RasterPipeline.hpp"
+#include "AzVulk/Pipeline.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/DescriptorManager.hpp"
 #include "Az3D/Az3D.hpp"
@@ -25,10 +25,10 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         // Introduction
-        uint32_t beginFrame(RasterPipeline& pipeline, Az3D::Camera& camera);
+        uint32_t beginFrame(Pipeline& pipeline, Az3D::Camera& camera);
         // Body
-        void drawScene(RasterPipeline& pipeline, Az3D::ModelGroup& modelGroup);
-        void drawSky(RasterPipeline& skyPipeline);
+        void drawScene(Pipeline& pipeline, Az3D::ModelGroup& modelGroup);
+        void drawSky(Pipeline& skyPipeline);
         // Conclusion
         void endFrame(uint32_t imageIndex);
         // Thank's for attending my Ted-Talk

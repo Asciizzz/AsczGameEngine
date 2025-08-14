@@ -36,16 +36,16 @@ namespace AzVulk {
         static RasterPipelineConfig createSkyConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
     };
 
-    class RasterPipeline {
+    class Pipeline {
     public:
-        RasterPipeline( VkDevice device, VkRenderPass renderPass,
+        Pipeline( VkDevice device, VkRenderPass renderPass,
                         std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
                         const char* vertexShaderPath, const char* fragmentShaderPath,
                         const RasterPipelineConfig& config);
-        ~RasterPipeline();
+        ~Pipeline();
         
-        RasterPipeline(const RasterPipeline&) = delete;
-        RasterPipeline& operator=(const RasterPipeline&) = delete;
+        Pipeline(const Pipeline&) = delete;
+        Pipeline& operator=(const Pipeline&) = delete;
 
         void recreate(VkRenderPass newRenderPass, const RasterPipelineConfig& newConfig);
 

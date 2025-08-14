@@ -1,4 +1,4 @@
-#include "AzVulk/RasterPipeline.hpp"
+#include "AzVulk/Pipeline.hpp"
 #include "AzVulk/ShaderManager.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "Az3D/Az3D.hpp"
@@ -46,7 +46,7 @@ namespace AzVulk {
     }
 
 
-    RasterPipeline::RasterPipeline( VkDevice device, VkRenderPass renderPass,
+    Pipeline::Pipeline( VkDevice device, VkRenderPass renderPass,
                                     std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
                                     const char* vertexShaderPath, const char* fragmentShaderPath,
                                     const RasterPipelineConfig& config)
@@ -59,11 +59,11 @@ namespace AzVulk {
             createGraphicsPipeline();
     }
 
-    RasterPipeline::~RasterPipeline() {
+    Pipeline::~Pipeline() {
         cleanup();
     }
 
-    void RasterPipeline::recreate(VkRenderPass newRenderPass, const RasterPipelineConfig& newConfig) {
+    void Pipeline::recreate(VkRenderPass newRenderPass, const RasterPipelineConfig& newConfig) {
         renderPass = newRenderPass;
         config = newConfig;
         
@@ -71,7 +71,7 @@ namespace AzVulk {
         createGraphicsPipeline();
     }
 
-    void RasterPipeline::createGraphicsPipeline() {
+    void Pipeline::createGraphicsPipeline() {
         auto vertShaderCode = ShaderManager::readFile(vertexShaderPath);
         auto fragShaderCode = ShaderManager::readFile(fragmentShaderPath);
 
@@ -244,7 +244,7 @@ namespace AzVulk {
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
     }
 
-    void RasterPipeline::cleanup() {
+    void Pipeline::cleanup() {
         // Clean up main pipeline
         if (graphicsPipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(device, graphicsPipeline, nullptr);

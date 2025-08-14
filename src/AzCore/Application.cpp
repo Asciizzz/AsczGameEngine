@@ -69,7 +69,7 @@ void Application::initVulkan() {
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
 
     // Use both layouts for all pipelines
-    opaquePipeline = std::make_unique<RasterPipeline>(
+    opaquePipeline = std::make_unique<Pipeline>(
         device, renderPass,
         LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
@@ -77,7 +77,7 @@ void Application::initVulkan() {
         RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
     );
 
-    transparentPipeline = std::make_unique<RasterPipeline>(
+    transparentPipeline = std::make_unique<Pipeline>(
         device, renderPass,
         LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
         "Shaders/Rasterize/raster.vert.spv",
@@ -85,7 +85,7 @@ void Application::initVulkan() {
         RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
     );
 
-    skyPipeline = std::make_unique<RasterPipeline>(
+    skyPipeline = std::make_unique<Pipeline>(
         device, renderPass,
         LayoutVec{glbDesc.setLayout},
         "Shaders/Sky/sky.vert.spv",

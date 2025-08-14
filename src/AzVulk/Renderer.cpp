@@ -91,7 +91,7 @@ namespace AzVulk {
     }
 
     // Begin frame: handle synchronization, image acquisition, and render pass setup
-    uint32_t Renderer::beginFrame(RasterPipeline& pipeline, Az3D::Camera& camera) {
+    uint32_t Renderer::beginFrame(Pipeline& pipeline, Az3D::Camera& camera) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -172,7 +172,7 @@ namespace AzVulk {
     }
 
     // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
-    void Renderer::drawScene(RasterPipeline& pipeline, Az3D::ModelGroup& modelGroup) {
+    void Renderer::drawScene(Pipeline& pipeline, Az3D::ModelGroup& modelGroup) {
 
         // TODO: Completely fix and rework the model-resource-mesh-indexing-mapping-thingy-i-have
         // no-idea-at-this-point structure. Instead of meshMapping, its modelResourceMapping
@@ -245,7 +245,6 @@ namespace AzVulk {
                     const auto& meshBuffer = meshBufferDatas[meshIndex];
 
                     const auto& mesh = resourceManager.meshManager->meshes[meshIndex];
-                    printf("Rendering mesh %zu with %zu instances\n", meshIndex, instanceCount);
 
                     const auto& vertexBufferData = mesh->vertexBufferData;
                     const auto& indexBufferData = mesh->indexBufferData;
@@ -275,7 +274,7 @@ namespace AzVulk {
     }
 
     // Sky rendering using dedicated sky pipeline
-    void Renderer::drawSky(RasterPipeline& skyPipeline) {
+    void Renderer::drawSky(Pipeline& skyPipeline) {
         // Bind sky pipeline
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
 
