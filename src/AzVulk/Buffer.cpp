@@ -156,7 +156,7 @@ namespace AzVulk {
         // Create vertex buffer for this mesh
         const auto& vertices = mesh.vertices;
         VkDeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
-        createBuffer(vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        vulkanDevice.createBuffer(vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                     meshBuffer.vertexBuffer, meshBuffer.vertexBufferMemory);
 
@@ -169,7 +169,7 @@ namespace AzVulk {
         const auto& indices = mesh.indices;
         VkDeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
 
-        createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
+        vulkanDevice.createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                     meshBuffer.indexBuffer, meshBuffer.indexBufferMemory);
 
