@@ -5,11 +5,6 @@
 #include "AzVulk/Device.hpp"
 #include "Helpers/Templates.hpp"
 
-namespace Az3D {
-    struct Texture;
-    struct Material;
-}
-
 namespace AzVulk {
     struct BufferData;
 

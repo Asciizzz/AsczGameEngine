@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include "AzVulk/Buffer.hpp"
 
 namespace AzVulk {

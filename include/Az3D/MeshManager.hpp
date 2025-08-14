@@ -10,7 +10,6 @@
 #include <string>
 
 #include "AzVulk/Buffer.hpp"
-#include "Helpers/Templates.hpp"
 
 namespace Az3D {
 

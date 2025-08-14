@@ -1,4 +1,3 @@
-// Texture.cpp implementation for TextureManager
 #include "Az3D/TextureManager.hpp"
 #include "AzVulk/Device.hpp"
 #include "AzVulk/Buffer.hpp"
