@@ -195,18 +195,17 @@ namespace AzVulk {
             const auto& indexBufferData = meshManager.indexBufferDatas[meshIndex];
             const auto& instanceBufferData = mapData.bufferData;
 
-            // Bind vertex buffer
-            VkBuffer vertexBuffers[] = {vertexBufferData.buffer};
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
+            // Skip if nothing to draw or bad data
+            if (indexBufferData.resourceCount == 0) continue;
+            if (instanceBufferData.buffer == VK_NULL_HANDLE) continue;
+
+            // Bind vertex + instance buffers in a single call (starting at binding 0)
+            VkBuffer buffers[] = { vertexBufferData.buffer, instanceBufferData.buffer };
+            VkDeviceSize offsets[] = { 0, 0 };
+            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, buffers, offsets);
 
             // Bind index buffer
             vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-            // Bind instance buffer
-            VkBuffer instanceBuffers[] = {instanceBufferData.buffer};
-            VkDeviceSize instanceOffsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
 
             // Draw all instances
             vkCmdDrawIndexed(commandBuffers[currentFrame], indexBufferData.resourceCount, instanceCount, 0, 0, 0);
