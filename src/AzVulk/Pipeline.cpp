@@ -118,8 +118,8 @@ namespace AzVulk {
         auto vertexAttributeDescriptions = Az3D::Vertex::getAttributeDescriptions();
 
         // Get instance binding and attributes
-        auto instanceBindingDescription = Az3D::ModelInstance::getBindingDescription();
-        auto instanceAttributeDescriptions = Az3D::ModelInstance::getAttributeDescriptions();
+        auto instanceBindingDescription = Az3D::Model::getBindingDescription();
+        auto instanceAttributeDescriptions = Az3D::Model::getAttributeDescriptions();
 
         // Combine binding descriptions
         std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = {

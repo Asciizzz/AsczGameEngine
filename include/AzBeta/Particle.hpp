@@ -366,7 +366,7 @@ namespace AzBeta {
         //         }
 
 
-        //         // Az3D::ModelInstance instance;
+        //         // Az3D::Model instance;
         //         // instance.data.modelMatrix = particles[p].modelMatrix();
         //         // instance.modelResourceIndex = modelResourceIndex;
         //         // instance.data.multColor = glm::vec4(particleColor, 1.0f);

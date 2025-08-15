@@ -108,7 +108,7 @@ namespace AzGame {
 
     class Grass {
     public:
-        using Data3D = Az3D::ModelInstance::Data3D;
+        using Data3D = Az3D::Model::Data3D;
 
         explicit Grass(const GrassConfig& config);
         ~Grass();

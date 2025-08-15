@@ -4,8 +4,8 @@
 
 namespace Az3D {
 
-    // Vulkan-specific methods for ModelInstance
-    VkVertexInputBindingDescription ModelInstance::getBindingDescription() {
+    // Vulkan-specific methods for Model
+    VkVertexInputBindingDescription Model::getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 1; // Binding 1 for instance data
         bindingDescription.stride = sizeof(Data3D); // Only GPU data
@@ -13,7 +13,7 @@ namespace Az3D {
         return bindingDescription;
     }
 
-    std::array<VkVertexInputAttributeDescription, 5> ModelInstance::getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, 5> Model::getAttributeDescriptions() {
         std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions{};
 
         // Model matrix is 4x4, so we need 4 attribute locations (3, 4, 5, 6)
@@ -47,7 +47,7 @@ namespace Az3D {
     }
 
 // Add data
-    size_t ModelMappingData::addData(const ModelInstance::Data3D& data) {
+    size_t ModelMappingData::addData(const Model::Data3D& data) {
         datas.push_back(data);
         return datas.size() - 1;
     }
@@ -61,7 +61,7 @@ namespace Az3D {
         if (!vulkanFlag) return;
 
         bufferData.createBuffer( // Already contain safeguards
-            datas.size(), sizeof(Az3D::ModelInstance::Data3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            datas.size(), sizeof(Az3D::Model::Data3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         bufferData.mappedData(datas);
@@ -75,5 +75,34 @@ namespace Az3D {
         if (prevInstanceCount != datas.size()) recreateBufferData();
 
         bufferData.mappedData(datas);
+    }
+
+
+
+    void ModelGroup::initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
+        this->device = device;
+        this->physicalDevice = physicalDevice;
+    }
+
+    void ModelGroup::addInstance(const Model& instance) {
+        size_t modelEncode = ModelPair::encode(instance.meshIndex, instance.materialIndex);
+        
+        auto [it, inserted] = modelMapping.try_emplace(modelEncode);
+        if (inserted) { // New entry
+            it->second.initVulkanDevice(device, physicalDevice);
+        }
+        // Add to existing entry
+        it->second.addData(instance.data);
+    }
+
+    void ModelGroup::addInstance(size_t meshIndex, size_t materialIndex, const Model::Data3D& instanceData) {
+        size_t modelEncode = ModelPair::encode(meshIndex, materialIndex);
+
+        auto [it, inserted] = modelMapping.try_emplace(modelEncode);
+        if (inserted) { // New entry
+            it->second.initVulkanDevice(device, physicalDevice);
+        }
+        // Add to existing entry
+        it->second.addData(instanceData);
     }
 }

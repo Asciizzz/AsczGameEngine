@@ -10,8 +10,8 @@
 namespace Az3D {
 
     // Dynamic, per-frame object data
-    struct ModelInstance {
-        ModelInstance() = default;
+    struct Model {
+        Model() = default;
 
         struct Data3D {
             alignas(16) glm::mat4 modelMatrix = glm::mat4(1.0f);
@@ -40,8 +40,8 @@ namespace Az3D {
         ModelMappingData& operator=(ModelMappingData&& other) noexcept;
 
         size_t prevInstanceCount = 0;
-        std::vector<ModelInstance::Data3D> datas;
-        size_t addData(const ModelInstance::Data3D& data);
+        std::vector<Model::Data3D> datas;
+        size_t addData(const Model::Data3D& data);
 
         bool vulkanFlag = false;
         AzVulk::BufferData bufferData;
@@ -58,10 +58,7 @@ namespace Az3D {
         ModelGroup() = default;
         ModelGroup(const std::string& name, VkDevice device, VkPhysicalDevice physicalDevice)
             : name(name), device(device), physicalDevice(physicalDevice) {}
-        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
-            this->device = device;
-            this->physicalDevice = physicalDevice;
-        }
+        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice);
 
         ModelGroup(const ModelGroup&) = delete;
         ModelGroup& operator=(const ModelGroup&) = delete;
@@ -75,26 +72,8 @@ namespace Az3D {
         // Hash Model -> data
         UnorderedMap<size_t, ModelMappingData> modelMapping;
 
-        void addInstance(const ModelInstance& instance) {
-            size_t modelEncode = ModelPair::encode(instance.meshIndex, instance.materialIndex);
-            
-            auto [it, inserted] = modelMapping.try_emplace(modelEncode);
-            if (inserted) { // New entry
-                it->second.initVulkanDevice(device, physicalDevice);
-            }
-            // Add to existing entry
-            it->second.addData(instance.data);
-        }
-        void addInstance(size_t meshIndex, size_t materialIndex, const ModelInstance::Data3D& instanceData) {
-            size_t modelEncode = ModelPair::encode(meshIndex, materialIndex);
-
-            auto [it, inserted] = modelMapping.try_emplace(modelEncode);
-            if (inserted) { // New entry
-                it->second.initVulkanDevice(device, physicalDevice);
-            }
-            // Add to existing entry
-            it->second.addData(instanceData);
-        }
+        void addInstance(const Model& instance);
+        void addInstance(size_t meshIndex, size_t materialIndex, const Model::Data3D& instanceData);
     };
 
 } // namespace Az3D

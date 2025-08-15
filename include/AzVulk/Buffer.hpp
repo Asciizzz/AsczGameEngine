@@ -12,7 +12,7 @@
 namespace Az3D {
     struct Mesh;
     struct MeshMappingData;
-    struct ModelInstance;
+    struct Model;
 }
 
 namespace AzVulk {
