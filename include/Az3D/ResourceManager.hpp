@@ -4,12 +4,6 @@
 #include "Az3D/MaterialManager.hpp"
 #include "Az3D/MeshManager.hpp"
 
-#include <vulkan/vulkan.h>
-
-// Forward declarations
-namespace AzVulk {
-    class Device;
-}
 
 namespace Az3D {
 

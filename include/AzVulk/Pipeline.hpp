@@ -1,9 +1,11 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include "AzVulk/Buffer.hpp"
+
+#include "Helpers/Templates.hpp"
 
 namespace AzVulk {
+
     struct RasterPipelineConfig {
         // Rasterization settings
         VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;

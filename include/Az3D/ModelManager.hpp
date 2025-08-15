@@ -6,10 +6,6 @@
 
 #include "AzVulk/Buffer.hpp"
 
-// Forward declarations for Vulkan types
-struct VkVertexInputBindingDescription;
-struct VkVertexInputAttributeDescription;
-
 namespace Az3D {
     
     // Immutable data shared by many instances
@@ -34,8 +30,8 @@ namespace Az3D {
         ModelInstance() = default;
 
         struct GPUData {
-            glm::mat4 modelMatrix = glm::mat4(1.0f);
-            glm::vec4 multColor = glm::vec4(1.0f);
+            alignas(16) glm::mat4 modelMatrix = glm::mat4(1.0f);
+            alignas(16) glm::vec4 multColor = glm::vec4(1.0f);
         } data;
 
         size_t modelResourceIndex = 0;

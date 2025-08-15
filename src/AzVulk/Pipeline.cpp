@@ -1,6 +1,5 @@
 #include "AzVulk/Pipeline.hpp"
 #include "AzVulk/ShaderManager.hpp"
-#include "AzVulk/Buffer.hpp"
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
 #include <vector>
@@ -24,7 +23,7 @@ namespace AzVulk {
         RasterPipelineConfig config;
         config.cullMode = VK_CULL_MODE_BACK_BIT;
         config.depthTestEnable = VK_TRUE;
-        config.depthWriteEnable = VK_FALSE; // Don't write to depth buffer for transparency
+        config.depthWriteEnable = VK_FALSE;
         config.blendEnable = VK_TRUE;
         config.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         config.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
