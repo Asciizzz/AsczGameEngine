@@ -5,7 +5,7 @@
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include "AzVulk/Buffer.hpp"
-#include "AzVulk/DescriptorManager.hpp"
+#include "AzVulk/DescriptorSets.hpp"
 #include "AzVulk/DepthManager.hpp"
 
 #include "Az3D/Camera.hpp"

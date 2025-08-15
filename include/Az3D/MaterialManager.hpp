@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "AzVulk/Buffer.hpp"
-#include "AzVulk/DescriptorManager.hpp"
+#include "AzVulk/DescriptorSets.hpp"
 
 namespace Az3D {
 

@@ -8,6 +8,6 @@
 #include "AzVulk/ShaderManager.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Renderer.hpp"
-#include "AzVulk/DescriptorManager.hpp"
+#include "AzVulk/DescriptorSets.hpp"
 #include "AzVulk/DepthManager.hpp"
 #include "AzVulk/MSAAManager.hpp"
