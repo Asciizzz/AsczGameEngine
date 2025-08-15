@@ -3,23 +3,35 @@
 layout(binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
-    vec4 cameraPos;     // xyz = camera position, w = fov (radians)
-    vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
-    vec4 cameraRight;   // xyz = camera right, w = unused
-    vec4 cameraUp;      // xyz = camera up, w = unused
-    vec4 nearFar;       // x = near, y = far, z = unused, w = unused
+    vec4 prop1; // General purpose: <float time>, <unused>, <unused>, <unused>
+
+    // vec4 cameraPos;     // xyz = camera position, w = fov (radians)
+    // vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
+    // vec4 cameraRight;   // xyz = camera right, w = near
+    // vec4 cameraUp;      // xyz = camera up, w = far
 } glb;
 
 layout(location = 0) in vec2 fragScreenCoord;
 layout(location = 0) out vec4 outColor;
 
+vec3 calculateSunDirection(float timeOfDay, float latitude) {
+    // timeOfDay: 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 1.0 = next midnight
+    float theta = 2.0 * 3.14159 * timeOfDay; // Full day cycle
+    float tilt = radians(latitude); // Latitude tilt in radians
+
+    // Spherical coordinates for sun position
+    float y = sin(theta); // Height above/below horizon
+    float r = cos(theta); // Horizontal distance from zenith
+
+    float x = r * cos(tilt); // East-West (X)
+    float z = r * sin(tilt); // North-South (Z)
+
+    return normalize(vec3(x, y, z));
+}
+
 // Sky calculation function (your original path tracer algorithm)
 vec3 calculateSkyColor(vec3 rayDir) {
-    vec3 sunDir = normalize(vec3(-1.0, -0.3, 1.0));
-
-    // vec3 skyZenith = vec3(0.8, 0.6, 0.2);
-    // vec3 skyHorizon = vec3(1.0, 0.8, 0.5);
-    // vec3 groundColor = vec3(1.0, 0.8, 0.5);
+    vec3 sunDir = calculateSunDirection(glb.prop1.x * 10, 45.0);
 
     // Custom color
     vec3 skyZenith = vec3(0.2098, 0.425, 0.586);

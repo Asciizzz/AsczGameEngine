@@ -2,6 +2,7 @@
 #include "Az3D/Camera.hpp"
 
 #include <stdexcept>
+#include <chrono>
 
 namespace Az3D {
 
@@ -122,11 +123,19 @@ namespace Az3D {
     void GlobalUBOManager::updateUBO(const Camera& camera) {
         ubo.proj = camera.projectionMatrix;
         ubo.view = camera.viewMatrix;
+
+        float elapsedSeconds = std::chrono::duration<float>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+        
+        float timeSpeedUp = 1000.0f;
+        float timeOfDay = fmod(elapsedSeconds * timeSpeedUp / 86400.0f, 1.0f); // 86400 seconds in a day
+
+
+        ubo.prop1 = glm::vec4(timeOfDay, 0.0f, 0.0f, 0.0f);
+
         ubo.cameraPos = glm::vec4(camera.pos, glm::radians(camera.fov));
         ubo.cameraForward = glm::vec4(camera.forward, camera.aspectRatio);
-        ubo.cameraRight = glm::vec4(camera.right, 0.0f);
-        ubo.cameraUp = glm::vec4(camera.up, 0.0f);
-        ubo.nearFar = glm::vec4(camera.nearPlane, camera.farPlane, 0.0f, 0.0f);
+        ubo.cameraRight = glm::vec4(camera.right, camera.nearPlane);
+        ubo.cameraUp = glm::vec4(camera.up, camera.farPlane);
     }
 
     void GlobalUBOManager::resizeWindow(VkSampler newDepthSampler, VkImageView newDepthSamplerView) {

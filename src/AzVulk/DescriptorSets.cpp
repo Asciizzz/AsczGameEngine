@@ -5,67 +5,6 @@
 
 namespace AzVulk {
 
-
-    void DynamicDescriptor::createGlobalDescriptorSets(
-        const std::vector<BufferData>& uniformBufferDatas,
-        size_t uniformBufferSize,
-        VkImageView depthImageView,
-        VkSampler depthSampler, uint32_t maxFramesInFlight
-    ) {
-        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
-
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = pool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-        allocInfo.pSetLayouts = layouts.data();
-
-        for (auto& set : sets) {
-            vkFreeDescriptorSets(device, pool, 1, &set);
-            set = VK_NULL_HANDLE;
-        }
-
-        sets.resize(maxFramesInFlight);
-        if (vkAllocateDescriptorSets(device, &allocInfo, sets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate global descriptor sets");
-        }
-
-        for (uint32_t i = 0; i < maxFramesInFlight; ++i) {
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = uniformBufferDatas[i].buffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = uniformBufferSize;
-
-            VkDescriptorImageInfo depthInfo{};
-            depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            depthInfo.imageView = depthImageView;
-            depthInfo.sampler = depthSampler;
-
-            std::array<VkWriteDescriptorSet, 2> writes{};
-
-            // UBO
-            writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writes[0].dstSet = sets[i];
-            writes[0].dstBinding = 0;
-            writes[0].dstArrayElement = 0;
-            writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            writes[0].descriptorCount = 1;
-            writes[0].pBufferInfo = &bufferInfo;
-
-            // Depth sampler
-            writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writes[1].dstSet = sets[i];
-            writes[1].dstBinding = 1;
-            writes[1].dstArrayElement = 0;
-            writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            writes[1].descriptorCount = 1;
-            writes[1].pImageInfo = &depthInfo;
-
-            vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
-        }
-    }
-
-
     DynamicDescriptor::~DynamicDescriptor() {
         for (auto& set : sets) vkFreeDescriptorSets(device, pool, 1, &set);
 

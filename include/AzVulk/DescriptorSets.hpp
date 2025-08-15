@@ -31,15 +31,5 @@ namespace AzVulk {
                                                         VkDescriptorType type,
                                                         VkShaderStageFlags stageFlags,
                                                         uint32_t descriptorCount = 1);
-
-
-        // Template for relevant components
-        void createGlobalDescriptorSets(
-            const std::vector<BufferData>& uniformBufferDatas,
-            size_t uniformBufferSize,
-            VkImageView depthImageView,
-            VkSampler depthSampler,
-            uint32_t maxFramesInFlight
-        );
     };
 }

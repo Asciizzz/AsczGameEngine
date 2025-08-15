@@ -15,12 +15,13 @@ namespace Az3D {
         alignas(16) glm::mat4 proj;
         alignas(16) glm::mat4 view;
 
+        alignas(16) glm::vec4 prop1; // General purpose: <float time>, <unused>, <unused>, <unused>
+
         // Remember to remove this in the future
         alignas(16) glm::vec4 cameraPos;     // xyz = camera position, w = fov (radians)
         alignas(16) glm::vec4 cameraForward; // xyz = camera forward, w = aspect ratio
-        alignas(16) glm::vec4 cameraRight;   // xyz = camera right, w = unused
-        alignas(16) glm::vec4 cameraUp;      // xyz = camera up, w = unused
-        alignas(16) glm::vec4 nearFar;       // x = near, y = far, z = unused, w = unused
+        alignas(16) glm::vec4 cameraRight;   // xyz = camera right, w = near
+        alignas(16) glm::vec4 cameraUp;      // xyz = camera up, w = far
     };
 
 
