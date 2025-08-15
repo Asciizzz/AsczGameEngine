@@ -27,10 +27,6 @@ namespace AzVulk {
         ~BufferData() { cleanup(); }
         void cleanup();
 
-        // Non-copyable
-        BufferData(const BufferData&) = delete;
-        BufferData& operator=(const BufferData&) = delete;
-
         // Move constructor
         BufferData(BufferData&& other) noexcept;
 
