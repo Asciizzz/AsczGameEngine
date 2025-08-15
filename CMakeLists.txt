@@ -19,6 +19,7 @@ set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 
 file(GLOB_RECURSE SRC_FILES
     src/Az3D/Camera.cpp
+    src/Az3D/GlobalUBO.cpp
     src/Az3D/MeshManager.cpp
     src/Az3D/MeshManager_BVH.cpp
     src/Az3D/MaterialManager.cpp
