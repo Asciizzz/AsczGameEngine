@@ -4,13 +4,11 @@
 
 namespace Az3D {
 
-
-
     // Vulkan-specific methods for ModelInstance
     VkVertexInputBindingDescription ModelInstance::getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 1; // Binding 1 for instance data
-        bindingDescription.stride = sizeof(Data); // Only GPU data
+        bindingDescription.stride = sizeof(Data3D); // Only GPU data
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
         return bindingDescription;
     }
@@ -24,16 +22,58 @@ namespace Az3D {
             attributeDescriptions[i].binding = 1;
             attributeDescriptions[i].location = 3 + i; // Locations 3, 4, 5, 6
             attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescriptions[i].offset = offsetof(Data, modelMatrix) + sizeof(glm::vec4) * i;
+            attributeDescriptions[i].offset = offsetof(Data3D, modelMatrix) + sizeof(glm::vec4) * i;
         }
 
         // Instance color multiplier vec4 (location 7) - directly after modelMatrix in Data
         attributeDescriptions[4].binding = 1;
         attributeDescriptions[4].location = 7;
         attributeDescriptions[4].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        attributeDescriptions[4].offset = offsetof(Data, multColor);
+        attributeDescriptions[4].offset = offsetof(Data3D, multColor);
 
         return attributeDescriptions;
     }
 
+
+// Move semantics
+    ModelMappingData::ModelMappingData(ModelMappingData&& other) noexcept
+        : datas(std::move(other.datas)),
+        bufferData(std::move(other.bufferData)) {}
+
+    ModelMappingData& ModelMappingData::operator=(ModelMappingData&& other) noexcept {
+        datas = std::move(other.datas);
+        bufferData = std::move(other.bufferData);
+        return *this;
+    }
+
+// Add data
+    size_t ModelMappingData::addData(const ModelInstance::Data3D& data) {
+        datas.push_back(data);
+        return datas.size() - 1;
+    }
+
+    void ModelMappingData::initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
+        bufferData.initVulkanDevice(device, physicalDevice);
+        vulkanFlag = true;
+    }
+
+    void ModelMappingData::recreateBufferData() {
+        if (!vulkanFlag) return;
+
+        bufferData.createBuffer( // Already contain safeguards
+            datas.size(), sizeof(Az3D::ModelInstance::Data3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        bufferData.mappedData(datas);
+
+        prevInstanceCount = datas.size();
+    }
+
+    void ModelMappingData::updateBufferData() {
+        if (!vulkanFlag) return;
+
+        if (prevInstanceCount != datas.size()) recreateBufferData();
+
+        bufferData.mappedData(datas);
+    }
 }

@@ -13,7 +13,7 @@ namespace Az3D {
     struct ModelInstance {
         ModelInstance() = default;
 
-        struct Data {
+        struct Data3D {
             alignas(16) glm::mat4 modelMatrix = glm::mat4(1.0f);
             alignas(16) glm::vec4 multColor = glm::vec4(1.0f);
         } data;
@@ -36,51 +36,18 @@ namespace Az3D {
         ModelMappingData& operator=(const ModelMappingData&) = delete;
 
         // Move semantics
-        ModelMappingData(ModelMappingData&& other) noexcept
-            : datas(std::move(other.datas)),
-            bufferData(std::move(other.bufferData)) {}
-
-        ModelMappingData& operator=(ModelMappingData&& other) noexcept {
-            datas = std::move(other.datas);
-            bufferData = std::move(other.bufferData);
-            return *this;
-        }
+        ModelMappingData(ModelMappingData&& other) noexcept;
+        ModelMappingData& operator=(ModelMappingData&& other) noexcept;
 
         size_t prevInstanceCount = 0;
-        std::vector<ModelInstance::Data> datas;
-        size_t addInstance(const ModelInstance& instance) {
-            datas.push_back(instance.data);
-            return datas.size() - 1;
-        }
-        size_t addInstance(const ModelInstance::Data& instanceData) {
-            datas.push_back(instanceData);
-            return datas.size() - 1;
-        }
+        std::vector<ModelInstance::Data3D> datas;
+        size_t addData(const ModelInstance::Data3D& data);
 
         bool vulkanFlag = false;
         AzVulk::BufferData bufferData;
-        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
-            bufferData.initVulkanDevice(device, physicalDevice);
-            vulkanFlag = true;
-        }
-
-        void recreateBufferData() {
-            bufferData.createBuffer( // Already contain safeguards
-                datas.size(), sizeof(Az3D::ModelInstance::Data), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            );
-            bufferData.mappedData(datas);
-
-            prevInstanceCount = datas.size();
-        }
-
-        void updateBufferData() {
-            if (!vulkanFlag) return;
-
-            if (prevInstanceCount != datas.size()) recreateBufferData();
-
-            bufferData.mappedData(datas);
-        }
+        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice);
+        void recreateBufferData();
+        void updateBufferData();
 
     };
 
@@ -117,9 +84,9 @@ namespace Az3D {
                 it->second.initVulkanDevice(device, physicalDevice);
             }
             // Add to existing entry
-            it->second.addInstance(instance);
+            it->second.addData(instance.data);
         }
-        void addInstance(size_t meshIndex, size_t materialIndex, const ModelInstance::Data& instanceData) {
+        void addInstance(size_t meshIndex, size_t materialIndex, const ModelInstance::Data3D& instanceData) {
             size_t modelEncode = ModelPair::encode(meshIndex, materialIndex);
 
             auto [it, inserted] = modelMapping.try_emplace(modelEncode);
@@ -127,7 +94,7 @@ namespace Az3D {
                 it->second.initVulkanDevice(device, physicalDevice);
             }
             // Add to existing entry
-            it->second.addInstance(instanceData);
+            it->second.addData(instanceData);
         }
     };
 
