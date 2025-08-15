@@ -233,7 +233,7 @@ bool Application::checkWindowResize() {
 
     VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
 
-    // Since descriptor receive no changes, we no need to change the descriptor in the pipeline
+    // No need to change layout
     opaquePipeline->recreate(renderPass, RasterPipelineConfig::createOpaqueConfig(newMsaaSamples));
     transparentPipeline->recreate(renderPass, RasterPipelineConfig::createTransparentConfig(newMsaaSamples));
     skyPipeline->recreate(renderPass, RasterPipelineConfig::createSkyConfig(newMsaaSamples));
