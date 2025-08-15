@@ -48,7 +48,6 @@ namespace Az3D {
         void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice);
         void recreateBufferData();
         void updateBufferData();
-
     };
 
     // Model group for separate renderer
