@@ -34,7 +34,8 @@ layout(location = 0) out vec4 outColor;
 const float PI = 3.14159265359;
 const float timeSpeed = 10000.0; // actual timeOfDay passed already scaled in app
 
-const vec3 skyDayZenith   = vec3(0.20, 0.45, 0.70);
+// const vec3 skyDayZenith   = vec3(0.20, 0.45, 0.70);
+const vec3 skyDayZenith   = vec3(0.05, 0.09, 0.24);
 const vec3 skyNightZenith = vec3(0.05, 0.09, 0.24);
 
 vec3 calculateSunDirection(float timeOfDay, float latitude) {

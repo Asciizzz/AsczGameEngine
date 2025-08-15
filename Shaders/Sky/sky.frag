@@ -13,14 +13,23 @@ const float PI = 3.14159265359;
 const float timeSpeed = 10000.0; // actual timeOfDay passed already scaled in app
 
 // Gradients for day/night
-const vec3 skyDayZenith   = vec3(0.20, 0.45, 0.70);
+// const vec3 skyDayZenith   = vec3(0.20, 0.45, 0.70);
+const vec3 skyDayZenith = vec3(0.02, 0.03, 0.08);
 const vec3 skyNightZenith = vec3(0.02, 0.03, 0.08);
 
-const vec3 skyDayHorizon  = vec3(0.95, 0.85, 0.55);
+// const vec3 skyDayHorizon  = vec3(0.95, 0.85, 0.55);
+const vec3 skyDayHorizon  = vec3(0.08, 0.08, 0.12);
 const vec3 skyNightHorizon= vec3(0.08, 0.08, 0.12);
 
-const vec3 seaDay   = vec3(0.05, 0.20, 0.30);
+// const vec3 seaDay   = vec3(0.05, 0.20, 0.30);
+const vec3 seaDay   = vec3(0.02, 0.03, 0.08);
 const vec3 seaNight = vec3(0.02, 0.03, 0.08);
+
+
+// vec3 sunColorDay   = vec3(1.0, 0.95, 0.8);
+// vec3 sunColorNight = vec3(0.3, 0.4, 0.6); // bluish moon-like glow
+vec3 sunColorDay = vec3(0.0);
+vec3 sunColorNight = vec3(0.0);
 
 // --------------------------------------------------
 // Sun direction calculation
@@ -99,8 +108,6 @@ vec3 calculateSkyColor(vec3 rayDir) {
 
     // Sun highlight
     float SdotR = max(0.0, dot(sunDir, rayDir));
-    vec3 sunColorDay   = vec3(1.0, 0.95, 0.8);
-    vec3 sunColorNight = vec3(0.3, 0.4, 0.6); // bluish moon-like glow
     vec3 sunColor      = mix(sunColorNight, sunColorDay, elev01);
     float sunFocus = 1240.0;
     float sunIntensity = 100.0;
@@ -123,7 +130,9 @@ vec3 calculateSkyColor(vec3 rayDir) {
     // --------------------------------------------------
     if (rayDir.y > 0.0) {
         // Darkness factor — stars fade at dusk/dawn
-        float darkness = clamp(1.0 - elev01 * 4.0, 0.0, 1.0);
+        // float darkness = clamp(1.0 - elev01 * 4.0, 0.0, 1.0);
+        
+        float darkness = 1.0;
 
         // Convert rayDir to sky UV
         float az = atan(rayDir.z, rayDir.x) / (2.0 * PI);
