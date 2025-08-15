@@ -14,34 +14,24 @@ namespace AzVulk {
     struct BufferData;
 
     struct DynamicDescriptor {
-        DynamicDescriptor(VkDevice device, uint32_t maxFramesInFlight) :
-            device(device), maxFramesInFlight(maxFramesInFlight) {}
         DynamicDescriptor() = default;
+        DynamicDescriptor(VkDevice device) : device(device) {}
+        void init(VkDevice device) { this->device = device; }
+        
         ~DynamicDescriptor();
 
         VkDevice device;
-        uint32_t maxResources;
-        uint32_t maxFramesInFlight;
-
-        void init(VkDevice device, uint32_t maxFramesInFlight=2) {
-            this->device = device;
-            this->maxFramesInFlight = maxFramesInFlight;
-        }
 
         VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
         void createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 
+        uint32_t maxSets = 0;
         VkDescriptorPool pool = VK_NULL_HANDLE;
-        std::vector<VkDescriptorPoolSize> poolSizes;
-        void createPool(uint32_t maxResources, const std::vector<VkDescriptorType>& types);
+        std::vector<VkDescriptorPoolSize> poolSizes; // Contain both <Type> and <size>
+        void createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
         std::vector<VkDescriptorSet> sets;
-        const VkDescriptorSet getSet(uint32_t frameIndex) const { return sets[frameIndex]; }
-
-        std::vector<std::vector<VkDescriptorSet>> manySets;
-        const VkDescriptorSet getSet(uint32_t setsIndex, uint32_t frameIndex) const {
-            return manySets[setsIndex][frameIndex];
-        }
+        const VkDescriptorSet getSet(uint32_t index) const { return sets[index]; }
 
         // Some really helpful functions
         static VkDescriptorSetLayoutBinding fastBinding(uint32_t binding,
@@ -55,7 +45,8 @@ namespace AzVulk {
             const std::vector<BufferData>& uniformBufferDatas,
             size_t uniformBufferSize,
             VkImageView depthImageView,
-            VkSampler depthSampler
+            VkSampler depthSampler,
+            uint32_t maxFramesInFlight
         );
     };
 
@@ -75,6 +66,6 @@ namespace AzVulk {
         DynamicDescriptor globalDynamicDescriptor;
 
         void createDescriptorSetLayouts(uint32_t maxFramesInFlight);
-        void createDescriptorPools();
+        void createDescriptorPools(uint32_t maxFramesInFlight);
     };
 }

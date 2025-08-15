@@ -354,16 +354,20 @@ namespace Az3D {
 
 
     // Descriptor function
-    void TextureManager::createDynamicDescriptorSets(VkDevice device, uint32_t maxFramesInFlight) {
+    void TextureManager::createDescriptorSets(VkDevice device, uint32_t maxFramesInFlight) {
         using namespace AzVulk;
 
-        dynamicDescriptor.init(device, maxFramesInFlight);
+        dynamicDescriptor.init(device);
         VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(0,
             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
         );
         dynamicDescriptor.createSetLayout({binding});
-        dynamicDescriptor.createPool(static_cast<uint32_t>(textures.size()), {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
+
+        uint32_t textureCount = static_cast<uint32_t>(textures.size());
+        dynamicDescriptor.createPool({
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, textureCount}
+        }, maxFramesInFlight * textureCount);
 
         // Descriptor sets creation
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, dynamicDescriptor.setLayout);
@@ -398,9 +402,8 @@ namespace Az3D {
                 descriptorWrite.dstSet = descriptorSets[j];
 
                 vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+                dynamicDescriptor.sets.push_back(descriptorSets[j]);
             }
-
-            dynamicDescriptor.manySets.push_back(std::move(descriptorSets));
         }
     }
 

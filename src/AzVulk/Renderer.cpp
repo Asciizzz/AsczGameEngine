@@ -224,11 +224,11 @@ namespace AzVulk {
             VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
 
             // Material descriptor set
-            VkDescriptorSet materialSet = matManager.dynamicDescriptor.getSet(materialIndex, currentFrame);
+            VkDescriptorSet materialSet = matManager.getDescriptorSet(materialIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
 
             // Texture descriptor set
             size_t textureIndex = matManager.materials[materialIndex]->diffTxtr;
-            VkDescriptorSet textureSet = texManager.dynamicDescriptor.getSet(textureIndex, currentFrame);
+            VkDescriptorSet textureSet = texManager.getDescriptorSet(textureIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
 
             std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -280,7 +280,7 @@ namespace AzVulk {
         // Bind only the global descriptor set (set 0) for sky
         VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
+                                skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
 
         // Draw fullscreen triangle (3 vertices, no input)
         vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);

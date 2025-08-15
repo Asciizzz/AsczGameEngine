@@ -38,7 +38,10 @@ namespace Az3D {
 
         SharedPtrVec<Texture> textures;
         AzVulk::DynamicDescriptor dynamicDescriptor;
-        void createDynamicDescriptorSets(VkDevice device, uint32_t maxFramesInFlight);
+        void createDescriptorSets(VkDevice device, uint32_t maxFramesInFlight);
+        VkDescriptorSet getDescriptorSet(uint32_t textureIndex, uint32_t frameIndex, uint32_t maxFramesInFlight) const {
+            return dynamicDescriptor.getSet(textureIndex * maxFramesInFlight + frameIndex);
+        }
 
         TextureManager(const AzVulk::Device& device, VkCommandPool pool);
         ~TextureManager();

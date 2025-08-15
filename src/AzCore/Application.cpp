@@ -267,18 +267,18 @@ void Application::initVulkan() {
     meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
 
     matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    matManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
-
-    texManager.createDynamicDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
+    matManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
+    texManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
 
     size_t matCount = matManager.materials.size();
     size_t texCount = texManager.textures.size();
 
     descriptorManager->createDescriptorSetLayouts(MAX_FRAMES_IN_FLIGHT);
-    descriptorManager->createDescriptorPools();
+    descriptorManager->createDescriptorPools(MAX_FRAMES_IN_FLIGHT);
     descriptorManager->globalDynamicDescriptor.createGlobalDescriptorSets(
         bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
-        depthManager->depthSamplerView, depthManager->depthSampler
+        depthManager->depthSamplerView, depthManager->depthSampler,
+        MAX_FRAMES_IN_FLIGHT
     );
 
     renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
@@ -346,7 +346,8 @@ bool Application::checkWindowResize() {
     auto& glbDesc = descriptorManager->globalDynamicDescriptor;
     glbDesc.createGlobalDescriptorSets(
         bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
-        depthManager->depthSamplerView, depthManager->depthSampler
+        depthManager->depthSamplerView, depthManager->depthSampler,
+        MAX_FRAMES_IN_FLIGHT
     );
 
     // Recreate render pass with new settings

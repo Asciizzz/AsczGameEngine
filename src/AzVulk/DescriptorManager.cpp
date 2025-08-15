@@ -12,14 +12,18 @@ namespace AzVulk {
 
     void DescriptorManager::createDescriptorSetLayouts(uint32_t maxFramesInFlight) {
         // For global ubo + depth sampler
-        globalDynamicDescriptor.init(device, maxFramesInFlight);
+        globalDynamicDescriptor.init(device);
         VkDescriptorSetLayoutBinding globalUBOBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
         VkDescriptorSetLayoutBinding depthSamplerBinding = DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
         globalDynamicDescriptor.createSetLayout({globalUBOBinding, depthSamplerBinding});
     }
 
-    void DescriptorManager::createDescriptorPools() {
-        globalDynamicDescriptor.createPool(1, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER});
+    void DescriptorManager::createDescriptorPools(uint32_t maxFramesInFlight) {
+        globalDynamicDescriptor.createPool(
+            {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxFramesInFlight}},
+            maxFramesInFlight
+        );
     }
 
 
@@ -27,7 +31,7 @@ namespace AzVulk {
         const std::vector<BufferData>& uniformBufferDatas,
         size_t uniformBufferSize,
         VkImageView depthImageView,
-        VkSampler depthSampler
+        VkSampler depthSampler, uint32_t maxFramesInFlight
     ) {
         std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, setLayout);
 
@@ -106,22 +110,19 @@ namespace AzVulk {
         }
     }
 
-    void DynamicDescriptor::createPool(uint32_t maxResources, const std::vector<VkDescriptorType>& types) {
+    void DynamicDescriptor::createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
         if (pool != VK_NULL_HANDLE) {
             vkDestroyDescriptorPool(device, pool, nullptr);
             pool = VK_NULL_HANDLE;
         }
 
-        this->maxResources = maxResources;
+        this->poolSizes = poolSizes;
 
-        for (const auto& type : types) {
-            poolSizes.push_back({ type, maxResources * maxFramesInFlight });
-        }
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        poolInfo.maxSets = maxFramesInFlight * maxResources;
+        poolInfo.maxSets = maxSets;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes = poolSizes.data();
 
