@@ -148,46 +148,4 @@ namespace AzVulk {
         vkBindBufferMemory(device, buffer, memory, 0);
     }
 
-    Buffer::Buffer(const Device& device) : vulkanDevice(device) {}
-
-    Buffer::~Buffer() {
-        for (auto& bufferData : instanceBufferDatas)     bufferData.cleanup();
-    }
-
-
-    void Buffer::createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances) {
-        const auto& instanceIndices = meshData.instanceIndices;
-
-        auto& instanceBufferData = instanceBufferDatas[meshIndex];
-
-        instanceBufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
-        instanceBufferData.createBuffer(
-            instanceIndices.size(), sizeof(Az3D::ModelInstance::GPUData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-
-        instanceBufferData.mappedData();
-
-        for (size_t i = 0; i < instanceIndices.size(); ++i) {
-            // static_cast<Az3D::*>(instanceBufferData.mapped)[i] = modelInstances[instanceIndices[i]].vertexData;
-            instanceBufferData.updateMapped(i, modelInstances[instanceIndices[i]].data);
-        }
-
-        // Update previous instance count directly in the mesh data
-        meshData.prevInstanceCount = instanceIndices.size();
-    }
-
-    void Buffer::updateMeshInstanceBufferSelective( size_t meshIndex,
-                                                    Az3D::MeshMappingData& meshData, 
-                                                    const std::vector<Az3D::ModelInstance>& modelInstances) {
-        auto& instanceBufferData = instanceBufferDatas[meshIndex];
-
-        std::for_each(std::execution::par_unseq, meshData.updateIndices.begin(), meshData.updateIndices.end(), [&](size_t instanceIndex) {
-            size_t bufferPos = meshData.instanceToBufferPos.find(instanceIndex)->second;
-            instanceBufferData.updateMapped(bufferPos, modelInstances[instanceIndex].data);
-        });
-    }
-
-
-
 }

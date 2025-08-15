@@ -3,12 +3,14 @@
 #include <stdexcept>
 #include <cstring>
 
+using namespace Az3D;
+
 namespace AzVulk {
-        Renderer::Renderer (const Device& device, SwapChain& swapChain, Buffer& buffer,
-                            Az3D::GlobalUBOManager& globalUBOManager,
-                            Az3D::ResourceManager& resourceManager,
+        Renderer::Renderer (const Device& device, SwapChain& swapChain,
+                            GlobalUBOManager& globalUBOManager,
+                            ResourceManager& resourceManager,
                             DepthManager& depthManager) :
-        vulkanDevice(device), swapChain(swapChain), buffer(buffer),
+        vulkanDevice(device), swapChain(swapChain),
         globalUBOManager(globalUBOManager),
         resourceManager(resourceManager),
         depthManager(depthManager) {
@@ -86,7 +88,7 @@ namespace AzVulk {
     }
 
     // Begin frame: handle synchronization, image acquisition, and render pass setup
-    uint32_t Renderer::beginFrame(Pipeline& pipeline, Az3D::GlobalUBO& globalUBO) {
+    uint32_t Renderer::beginFrame(Pipeline& pipeline, GlobalUBO& globalUBO) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -158,60 +160,25 @@ namespace AzVulk {
     }
 
     // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
-    void Renderer::drawScene(Pipeline& pipeline, Az3D::ModelGroup& modelGroup) {
+    void Renderer::drawScene(Pipeline& pipeline, ModelGroup& modelGroup) {
+        const auto& matManager = *resourceManager.materialManager;
+        const auto& texManager = *resourceManager.textureManager;
+        const auto& meshManager = *resourceManager.meshManager;
 
-        // TODO: Completely fix and rework the model-resource-mesh-indexing-mapping-thingy-i-have
-        // no-idea-at-this-point structure. Instead of meshMapping, its modelResourceMapping
-
-        // Use the pre-computed mesh mapping directly
-        const auto& meshMapping = modelGroup.meshMapping;
-        const auto& modelResources = modelGroup.modelResources;
-        const auto& modelInstances = modelGroup.modelInstances;
-
-        // Render all meshes with their instances
-        const auto& instanceBufferDatas = buffer.instanceBufferDatas;
-
-        // Build material to meshes mapping for efficient rendering
-        UnorderedMap<size_t, std::vector<size_t>> materialToMeshes;
-
-        for (const auto& [meshIndex, meshData] : meshMapping) {
-            const auto& instanceIndices = meshData.instanceIndices;
-            if (instanceIndices.empty()) continue;
-
-            // Update or create the instance buffer for this mesh
-            if (meshIndex < instanceBufferDatas.size()) {
-
-                size_t prevInstanceCount = meshData.prevInstanceCount;
-
-                if (instanceIndices.size() != prevInstanceCount) {
-                    // Buffer size changed - need to recreate
-                    vkDeviceWaitIdle(vulkanDevice.device);
-                    buffer.createMeshInstanceBuffer(meshIndex, const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping[meshIndex], modelInstances);
-                }
-
-                // Only update changes
-                if (!meshData.updateIndices.empty()) {
-                    buffer.updateMeshInstanceBufferSelective(meshIndex, const_cast<Az3D::ModelGroup&>(modelGroup).meshMapping[meshIndex], modelInstances);
-                }
-            }
-
-            if (!instanceIndices.empty()) {
-                // Get material from the first instance's resource
-                const auto& resource = modelResources[modelInstances[instanceIndices[0]].modelResourceIndex];
-                materialToMeshes[resource.materialIndex].push_back(meshIndex);
-            }
-        }
+        VkDescriptorSet globalSet = globalUBOManager.getDescriptorSet(currentFrame);
 
         // Bind pipeline once
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
-        
-        // Render by material groups
-        for (const auto& [materialIndex, meshIndices] : materialToMeshes) {
-            const auto& matManager = *resourceManager.materialManager;
-            const auto& texManager = *resourceManager.textureManager;
 
-            // Global UBO set
-            VkDescriptorSet globalSet = globalUBOManager.getDescriptorSet(currentFrame);
+        for (auto& [hash, mapData] : modelGroup.modelMapping) {
+            uint32_t instanceCount = static_cast<uint32_t>(mapData.datas.size());
+            if (instanceCount == 0) continue;
+
+            mapData.updateBufferData();
+
+            std::pair<size_t, size_t> modelDecode = ModelGroup::ModelPair::decode(hash);
+            size_t meshIndex = modelDecode.first;
+            size_t materialIndex = modelDecode.second;
 
             // Material descriptor set
             VkDescriptorSet materialSet = matManager.getDescriptorSet(materialIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
@@ -224,42 +191,27 @@ namespace AzVulk {
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     pipeline.pipelineLayout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-            for (size_t meshIndex : meshIndices) {
-                // Get instance count directly from the pre-computed mapping
-                size_t instanceCount = 0;
-                if (meshMapping.find(meshIndex) != meshMapping.end()) {
-                    instanceCount = meshMapping.at(meshIndex).instanceIndices.size();
-                }
-                
-                if (meshIndex < instanceBufferDatas.size() && instanceCount > 0) {
-                    const auto& instanceBufferData = instanceBufferDatas[meshIndex];
+            const auto& vertexBufferData = meshManager.vertexBufferDatas[meshIndex];
+            const auto& indexBufferData = meshManager.indexBufferDatas[meshIndex];
+            const auto& instanceBufferData = mapData.bufferData;
 
-                    const auto& meshManager = resourceManager.meshManager;
+            // Bind vertex buffer
+            VkBuffer vertexBuffers[] = {vertexBufferData.buffer};
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
 
-                    const auto& vertexBufferData = meshManager->vertexBufferDatas[meshIndex];
-                    const auto& indexBufferData = meshManager->indexBufferDatas[meshIndex];
+            // Bind index buffer
+            vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-                    // Bind vertex buffer
-                    VkBuffer vertexBuffers[] = {vertexBufferData.buffer};
-                    VkDeviceSize offsets[] = {0};
-                    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
+            // Bind instance buffer
+            VkBuffer instanceBuffers[] = {instanceBufferData.buffer};
+            VkDeviceSize instanceOffsets[] = {0};
+            vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
 
-                    // Bind instance buffer
-                    VkBuffer instanceBuffers[] = {instanceBufferData.buffer};
-                    VkDeviceSize instanceOffsets[] = {0};
-                    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 1, 1, instanceBuffers, instanceOffsets);
+            // Draw all instances
+            vkCmdDrawIndexed(commandBuffers[currentFrame], indexBufferData.resourceCount, instanceCount, 0, 0, 0);
 
-                    // Bind index buffer
-                    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-                    // Draw all instances
-                    vkCmdDrawIndexed(commandBuffers[currentFrame], indexBufferData.resourceCount, static_cast<uint32_t>(instanceCount), 0, 0, 0);
-                }
-            }
         }
-        
-        // Clear the update queue after rendering - all changes have been applied
-        modelGroup.clearUpdateQueue();
     }
 
     // Sky rendering using dedicated sky pipeline

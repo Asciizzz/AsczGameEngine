@@ -108,6 +108,8 @@ namespace AzGame {
 
     class Grass {
     public:
+        using Data3D = Az3D::ModelInstance::Data;
+
         explicit Grass(const GrassConfig& config);
         ~Grass();
 
@@ -116,12 +118,11 @@ namespace AzGame {
         Grass& operator=(const Grass&) = delete;
 
         // Initialize the grass system
-        bool initialize(Az3D::ResourceManager& resourceManager);
+        bool initialize(Az3D::ResourceManager& resourceManager, VkDevice device, VkPhysicalDevice physicalDevice);
 
         // Wind animation functions (if enabled)
         void updateWindAnimation(float deltaTime);
         void updateGrassInstancesCPU();
-
 
         // Configuration
         GrassConfig config;
@@ -133,22 +134,20 @@ namespace AzGame {
         
         // Grass instances
         std::vector<WindGrassInstance> windGrassInstances;
-        std::vector<Az3D::ModelInstance> grassInstances;
-        std::vector<Az3D::ModelInstance> terrainInstances;
-        
+        std::vector<Data3D> grassData3Ds;
+        std::vector<Data3D> terrainData3Ds;
+
         // Resource indices
         size_t grassMeshIndex = 0;
         size_t grassMaterialIndex = 0;
-        size_t grassModelIndex = 0;
+        size_t grassModelHash = 0;
+
         size_t terrainMeshIndex = 0;
         size_t terrainMaterialIndex = 0;
-        size_t terrainModelIndex = 0;
+        size_t terrainModelHash = 0;
 
         // Model Group
-        Az3D::ModelGroup grassModelGroup;
-        Az3D::ModelGroup terrainModelGroup;
-        // Perma instance update
-        std::vector<size_t> grassInstanceUpdateQueue;
+        Az3D::ModelGroup grassFieldModelGroup;
 
         // Time tracking for wind animation
         float windTime = 0.0f;

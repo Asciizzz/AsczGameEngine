@@ -15,7 +15,7 @@ namespace Az3D {
 
         for (size_t i = 0; i < materials.size(); ++i) {
             auto& bufferData = bufferDatas[i];
-            bufferData.initVulkan(device, physicalDevice);
+            bufferData.initVulkanDevice(device, physicalDevice);
 
             bufferData.createBuffer(
                 1, sizeof(MaterialUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

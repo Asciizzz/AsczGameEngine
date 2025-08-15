@@ -19,13 +19,17 @@ namespace AzVulk {
 
     struct BufferData {
         BufferData() = default;
-        void initVulkan(VkDevice device, VkPhysicalDevice physicalDevice) {
+        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
             this->device = device;
             this->physicalDevice = physicalDevice;
         }
 
         ~BufferData() { cleanup(); }
         void cleanup();
+
+        // Non-copyable
+        BufferData(const BufferData&) = delete;
+        BufferData& operator=(const BufferData&) = delete;
 
         // Move constructor
         BufferData(BufferData&& other) noexcept;
@@ -84,24 +88,4 @@ namespace AzVulk {
         }
     };
 
-    class Buffer {
-    public:
-        Buffer(const class Device& device);
-        ~Buffer();
-
-        // Sharing buffers: not even once
-        Buffer(const Buffer&) = delete;
-        Buffer& operator=(const Buffer&) = delete;
-
-        // Soon to be legacy
-        void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
-        void updateMeshInstanceBufferSelective( size_t meshIndex,
-                                                Az3D::MeshMappingData& meshData, 
-                                                const std::vector<Az3D::ModelInstance>& modelInstances);
-
-        const Device& vulkanDevice;
-
-        // Soon to be 6 feet under
-        std::vector<BufferData> instanceBufferDatas;
-    };
 }

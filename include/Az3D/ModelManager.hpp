@@ -5,127 +5,130 @@
 #include <string>
 
 #include "AzVulk/Buffer.hpp"
+#include "Helpers/AzPair.hpp"
 
 namespace Az3D {
-    
-    // Immutable data shared by many instances
-    struct ModelResource {
-        size_t meshIndex;
-        size_t materialIndex;
 
-        bool operator==(const ModelResource& other) const {
-            return meshIndex == other.meshIndex && materialIndex == other.materialIndex;
-        }
-    };
-
-    struct ModelResourceHash {
-        std::size_t operator()(const ModelResource& res) const {
-            return std::hash<size_t>{}(res.meshIndex) ^ (std::hash<size_t>{}(res.materialIndex) << 1);
-        }
-    };
-
-    
     // Dynamic, per-frame object data
     struct ModelInstance {
         ModelInstance() = default;
 
-        struct GPUData {
+        struct Data {
             alignas(16) glm::mat4 modelMatrix = glm::mat4(1.0f);
             alignas(16) glm::vec4 multColor = glm::vec4(1.0f);
         } data;
 
-        size_t modelResourceIndex = 0;
-
-        // Dynamic mesh mapping indices for direct mesh map updates
-        size_t meshIndex = SIZE_MAX;        // Which mesh this instance belongs to
-        size_t instanceIndex = SIZE_MAX;    // This instance's index in the modelInstances array
+        size_t meshIndex = SIZE_MAX;
+        size_t materialIndex = SIZE_MAX;
 
         // Vulkan-specific methods for vertex input
         static VkVertexInputBindingDescription getBindingDescription();
         static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
     };
 
-    // TODO: Completely rework the entire MeshMappingData structure.
-    // turn it into ModelMapping instead
 
-    // Mesh mapping structure to organize instance data per mesh
-    struct MeshMappingData {
-        std::vector<size_t> instanceIndices;           // instance indices for this mesh
-        std::vector<size_t> updateIndices;             // update queue indices for this mesh
-        std::vector<bool> instanceActive;              // active state for each instance
-        uint32_t prevInstanceCount = 0;                // previous instance count for this mesh
-        UnorderedMap<size_t, size_t> instanceToBufferPos; // instance index -> buffer position mapping
-        
-        void clear() {
-            instanceIndices.clear();
-            updateIndices.clear();
-            instanceActive.clear();
-            prevInstanceCount = 0;
-            instanceToBufferPos.clear();
+    struct ModelMappingData {
+        ModelMappingData() = default;
+        ~ModelMappingData() { bufferData.cleanup(); }
+
+        // Delete copy constructor and assignment operator
+        ModelMappingData(const ModelMappingData&) = delete;
+        ModelMappingData& operator=(const ModelMappingData&) = delete;
+
+        // Move semantics
+        ModelMappingData(ModelMappingData&& other) noexcept
+            : datas(std::move(other.datas)),
+            bufferData(std::move(other.bufferData)) {}
+
+        ModelMappingData& operator=(ModelMappingData&& other) noexcept {
+            datas = std::move(other.datas);
+            bufferData = std::move(other.bufferData);
+            return *this;
         }
+
+        size_t prevInstanceCount = 0;
+        std::vector<ModelInstance::Data> datas;
+        size_t addInstance(const ModelInstance& instance) {
+            datas.push_back(instance.data);
+            return datas.size() - 1;
+        }
+        size_t addInstance(const ModelInstance::Data& instanceData) {
+            datas.push_back(instanceData);
+            return datas.size() - 1;
+        }
+
+        bool vulkanFlag = false;
+        AzVulk::BufferData bufferData;
+        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
+            bufferData.initVulkanDevice(device, physicalDevice);
+            vulkanFlag = true;
+        }
+
+        void recreateBufferData() {
+            bufferData.createBuffer( // Already contain safeguards
+                datas.size(), sizeof(Az3D::ModelInstance::Data), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            );
+            bufferData.mappedData(datas);
+
+            prevInstanceCount = datas.size();
+        }
+
+        void updateBufferData() {
+            if (!vulkanFlag) return;
+
+            if (prevInstanceCount != datas.size()) recreateBufferData();
+
+            bufferData.mappedData(datas);
+        }
+
     };
 
     // Model group for separate renderer
     struct ModelGroup {
+        // No chance in hell we passing 1 million meshes/materials
+        using ModelPair = AzPair<1'000'000, 1'000'000>;
+
         ModelGroup() = default;
-        ModelGroup(const std::string& name) : name(name) {}
+        ModelGroup(const std::string& name, VkDevice device, VkPhysicalDevice physicalDevice)
+            : name(name), device(device), physicalDevice(physicalDevice) {}
+        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
+            this->device = device;
+            this->physicalDevice = physicalDevice;
+        }
+
+        ModelGroup(const ModelGroup&) = delete;
+        ModelGroup& operator=(const ModelGroup&) = delete;
+        ModelGroup(ModelGroup&&) noexcept = default;
+        ModelGroup& operator=(ModelGroup&&) noexcept = default;
 
         std::string name = "Default";
+        VkDevice device = VK_NULL_HANDLE;
+        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
-        size_t modelResourceCount = 0;
-        std::vector<ModelResource> modelResources;
-        UnorderedMap<std::string, size_t> modelResourceNameToIndex;
+        // Hash Model -> data
+        UnorderedMap<size_t, ModelMappingData> modelMapping;
 
-        size_t modelInstanceCount = 0;
-        std::vector<ModelInstance> modelInstances;
-        
-        // Organized mesh mapping data - now per mesh index
-        UnorderedMap<size_t, MeshMappingData> meshMapping;
+        void addInstance(const ModelInstance& instance) {
+            size_t modelEncode = ModelPair::encode(instance.meshIndex, instance.materialIndex);
+            
+            auto [it, inserted] = modelMapping.try_emplace(modelEncode);
+            if (inserted) { // New entry
+                it->second.initVulkanDevice(device, physicalDevice);
+            }
+            // Add to existing entry
+            it->second.addInstance(instance);
+        }
+        void addInstance(size_t meshIndex, size_t materialIndex, const ModelInstance::Data& instanceData) {
+            size_t modelEncode = ModelPair::encode(meshIndex, materialIndex);
 
-        size_t addModelResource(const std::string& name, size_t meshIndex, size_t materialIndex);
-        size_t getModelResourceIndex(const std::string& name) const;
-
-        void clearInstances();
-        void addInstance(const ModelInstance& instance);
-        void addInstances(const std::vector<ModelInstance>& instances);
-
-        void copyFrom(const ModelGroup& other);
-
-        void buildMeshMapping();
-        
-        // Explicit update tracking system
-        void queueUpdate(size_t instanceIndex);
-        void queueUpdate(const ModelInstance& instance);
-        void queueUpdates(const std::vector<ModelInstance>& instances);
-        void clearUpdateQueue();
-    };
-
-    // Global model management system that manages all model resources and instances
-    class ModelManager {
-    public:
-        ModelManager() = default;
-        ~ModelManager() = default;
-
-    // Model Grupo
-
-        size_t groupCount = 0;
-        UnorderedMap<std::string, ModelGroup> groups;
-
-        ModelGroup& getGroup(const std::string& groupName) { return groups[groupName]; }
-
-        void addGroup(const std::string& groupName);
-        void addGroups(const std::vector<std::string>& groupNames);
-        void addGroup(const std::string& groupName, const std::vector<ModelInstance>& instances);
-        void addGroup(const std::string& groupName, const ModelGroup& group);
-
-        void clearAllInstances();
-        void clearInstances(const std::string& groupName);
-
-        void addInstance(const std::string& groupName, const ModelInstance& instance);
-        void addInstances(const std::string& groupName, const std::vector<ModelInstance>& instances);
-
-        void deleteGroup(const std::string& groupName);
-        void deleteAllGroups();
+            auto [it, inserted] = modelMapping.try_emplace(modelEncode);
+            if (inserted) { // New entry
+                it->second.initVulkanDevice(device, physicalDevice);
+            }
+            // Add to existing entry
+            it->second.addInstance(instanceData);
+        }
     };
 
 } // namespace Az3D

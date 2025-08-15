@@ -26,7 +26,7 @@ namespace Az3D {
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             auto& bufferData = bufferDatas[i];
-            bufferData.initVulkan(device, physicalDevice);
+            bufferData.initVulkanDevice(device, physicalDevice);
 
             bufferData.createBuffer(
                 1, sizeof(GlobalUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

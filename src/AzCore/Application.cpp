@@ -56,6 +56,7 @@ void Application::initVulkan() {
     
     // Some very repetitive vulkan stuff
     VkDevice device = vulkanDevice->device;
+    VkPhysicalDevice physicalDevice = vulkanDevice->physicalDevice;
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
     shaderManager = MakeUnique<ShaderManager>(device);
@@ -76,109 +77,21 @@ void Application::initVulkan() {
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
-    buffer = MakeUnique<Buffer>(*vulkanDevice);
-
     globalUBOManager = MakeUnique<GlobalUBOManager>(
         device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT,
         depthManager->depthSampler, depthManager->depthSamplerView
     );
 
     resourceManager = MakeUnique<ResourceManager>(*vulkanDevice, commandPool);
-    modelManager = MakeUnique<ModelManager>();
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
-    auto& mdlManager = *modelManager;
     auto& texManager = *resManager.textureManager;
     auto& meshManager = *resManager.meshManager;
     auto& matManager = *resManager.materialManager;
     auto& glbUBOManager = *globalUBOManager;
 
-// PLAYGROUND FROM HERE!
-
-    // Load the global pallete texture that will be used for all platformer assets
-    size_t globalMaterialIndex = resManager.addMaterial("GlobalPalette",
-        Material::fastTemplate(
-            1.0f, 2.0f, 0.2f, 0.0f, // No discard threshold since the texture is opaque anyway
-            resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png")
-        )
-    );
-
-
-    // Useful shorthand function for adding platformer meshes
-    UnorderedMap<std::string, size_t> platformerMeshIndices;
-
-    auto addPlatformerMesh = [&](std::string name, std::string path) {
-        std::string fullName = "Platformer/" + name;
-        std::string fullPath = "Assets/Platformer/" + path;
-
-        platformerMeshIndices[name] = resManager.addMesh(fullName, fullPath, true);
-    };
-    struct NameAndPath {
-        std::string name;
-        std::string path;
-    };
-
-    std::vector<NameAndPath> platformerMeshes = {
-        {"Ground_x2", "ground_grass_2.obj"},
-        {"Ground_x4", "ground_grass_4.obj"},
-        {"Ground_x8", "ground_grass_8.obj"},
-
-        {"Water_x2", "water_2.obj"},
-        {"Water_x4", "water_4.obj"},
-        
-        {"Tree_1", "Tree_1.obj"},
-        {"Tree_2", "Tree_2.obj"},
-
-        {"TrailCurve_1", "trail_dirt_curved_1.obj"},
-        {"TrailCurve_2", "trail_dirt_curved_2.obj"},
-        {"TrailEnd_1", "trail_dirt_end_1.obj"},
-        {"TrailEnd_2", "trail_dirt_end_2.obj"},
-
-        {"Fence_x1", "fence_1.obj"},
-        {"Fence_x2", "fence_2.obj"},
-        {"Fence_x4", "fence_4.obj"},
-
-        {"Flower", "flower.obj"},
-
-        {"Grass_1", "grass_blades_1.obj"},
-        {"Grass_2", "grass_blades_2.obj"},
-        {"Grass_3", "grass_blades_3.obj"},
-        {"Grass_4", "grass_blades_4.obj"}
-    };
-
-    ModelGroup worldGroup("WorldGroup");
-
-    for (const auto& mesh : platformerMeshes) {
-        addPlatformerMesh(mesh.name, mesh.path);
-    }
-    for (const auto& [name, meshIndex] : platformerMeshIndices) {
-        size_t modelResourceIndex = worldGroup.addModelResource(
-            "Platformer/" + name, meshIndex, globalMaterialIndex
-        );
-    }
-
-    // Construct a simple world
-
-    // Useful shorthand for getting a model resource index
-    auto getPlatformIndex = [&](const std::string& name) {
-        return worldGroup.getModelResourceIndex("Platformer/" + name);
-    };
-    // Useful shorthand for placing models
-    auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
-        ModelInstance instance;
-        instance.data.modelMatrix = transform.modelMatrix();
-        instance.data.multColor = color;
-        instance.modelResourceIndex = getPlatformIndex(name);
-
-        worldGroup.addInstance(instance);
-    };
-
-
-    worldGroup.buildMeshMapping();
-
-    mdlManager.addGroup("World", std::move(worldGroup));
-
+// PLAYGROUND FROM HERE
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
@@ -192,7 +105,7 @@ void Application::initVulkan() {
     
     // Initialize grass system
     grassSystem = MakeUnique<AzGame::Grass>(grassConfig);
-    if (!grassSystem->initialize(*resourceManager)) {
+    if (!grassSystem->initialize(*resourceManager, device, physicalDevice)) {
         throw std::runtime_error("Failed to initialize grass system!");
     }
 
@@ -239,41 +152,19 @@ void Application::initVulkan() {
         }
     }
 
-    printf("%s> [%s] Model Resources:\n", WHITE, worldGroup.name.c_str());
-    for (const auto& [name, index] : worldGroup.modelResourceNameToIndex) {
-        const auto& modelResource = worldGroup.modelResources[index];
-        size_t meshIndex = modelResource.meshIndex;
-        size_t materialIndex = modelResource.materialIndex;
-
-        const char* color = COLORS[index % NUM_COLORS];
-        const char* meshColor = COLORS[meshIndex % NUM_COLORS];
-        const char* materialColor = COLORS[materialIndex % NUM_COLORS];
-
-        printf("%s   Idx %zu %s(%sMS: %zu%s, %sMT: %zu%s): %s%s\n",
-            color, index, WHITE,
-            meshColor, meshIndex, WHITE,
-            materialColor, materialIndex, WHITE,
-            color, name.c_str()
-        );
-    }
     printf("%s", WHITE);
 
 
 // PLAYGROUND END HERE 
 
-    auto& bufferRef = *buffer;
-
-    // Create dummy buffers before actually migrating them to somewhere else correct
-    bufferRef.instanceBufferDatas.resize(meshManager.meshes.size());
-    
     meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
 
     matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
     matManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
     texManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
 
-    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
-                                    *globalUBOManager, *resourceManager, *depthManager);
+    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *globalUBOManager,
+                                    *resourceManager, *depthManager);
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     auto& matDesc = matManager.dynamicDescriptor;
@@ -330,7 +221,6 @@ bool Application::checkWindowResize() {
 
     globalUBOManager->resizeWindow(depthManager->depthSampler, depthManager->depthSamplerView);
 
-    auto& bufferRef = *buffer;
     auto& texManager = *resourceManager->textureManager;
     auto& matManager = *resourceManager->materialManager;
 
@@ -368,8 +258,6 @@ void Application::mainLoop() {
     auto& meshManager = *resManager.meshManager;
     auto& texManager = *resManager.textureManager;
     auto& matManager = *resManager.materialManager;
-
-    auto& mdlManager = *modelManager;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
@@ -471,16 +359,8 @@ void Application::mainLoop() {
         if (imageIndex != UINT32_MAX) {
             // First: render sky background with dedicated pipeline
             rendererRef.drawSky(*skyPipeline);
-            
-            // Second: render opaque objects
-            auto& worldGroup = mdlManager.groups["World"];
-            rendererRef.drawScene(*opaquePipeline, worldGroup);
 
-            auto& grassGroup = grassSystem->grassModelGroup;
-            rendererRef.drawScene(*opaquePipeline, grassGroup);
-
-            auto& terrainGroup = grassSystem->terrainModelGroup;
-            rendererRef.drawScene(*opaquePipeline, terrainGroup);
+            rendererRef.drawScene(*opaquePipeline, grassSystem->grassFieldModelGroup);
 
             rendererRef.endFrame(imageIndex);
         };
@@ -509,7 +389,6 @@ void Application::cleanup() {
     // Destroy all Vulkan-resource-owning objects before device destruction
     if (renderer) renderer.reset();
     if (resourceManager) resourceManager.reset();
-    if (buffer) buffer.reset();
     if (msaaManager) msaaManager.reset();
     if (depthManager) depthManager.reset();
     if (mainRenderPass) mainRenderPass.reset();

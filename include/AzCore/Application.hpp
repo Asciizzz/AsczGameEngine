@@ -43,7 +43,6 @@ private:
 
     // More Vulkan ceremony
     UniquePtr<AzVulk::ShaderManager> shaderManager;
-    UniquePtr<AzVulk::Buffer> buffer;
     UniquePtr<AzVulk::DepthManager> depthManager;
     UniquePtr<AzVulk::MSAAManager> msaaManager;
     UniquePtr<AzVulk::Renderer> renderer;
@@ -53,7 +52,6 @@ private:
 
     // Az3D resource management and model manager
     UniquePtr<Az3D::ResourceManager> resourceManager;
-    UniquePtr<Az3D::ModelManager> modelManager;
 
     // AzGame systems
     UniquePtr<AzGame::Grass> grassSystem;

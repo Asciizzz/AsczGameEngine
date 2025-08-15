@@ -82,6 +82,7 @@
         "xtr1common": "cpp",
         "xtree": "cpp",
         "filesystem": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "pair": "cpp"
     }
 }

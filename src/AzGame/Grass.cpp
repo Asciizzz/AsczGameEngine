@@ -26,7 +26,7 @@ Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
 
 Grass::~Grass() {}
 
-bool Grass::initialize(ResourceManager& resourceManager) {
+bool Grass::initialize(ResourceManager& resourceManager, VkDevice device, VkPhysicalDevice physicalDevice) {
     createGrassMesh90deg(resourceManager);
 
     std::mt19937 generator(std::random_device{}());
@@ -35,17 +35,17 @@ bool Grass::initialize(ResourceManager& resourceManager) {
 
     generateGrassInstances(generator);
 
-    for (size_t i = 0; i < grassInstances.size(); ++i) {
-        grassInstanceUpdateQueue.push_back(i);
+    grassModelHash = ModelGroup::ModelPair::encode(grassMeshIndex, grassMaterialIndex);
+    terrainModelHash = ModelGroup::ModelPair::encode(terrainMeshIndex, terrainMaterialIndex);
+
+    grassFieldModelGroup.initVulkanDevice(device, physicalDevice);
+
+    for (const auto& data : grassData3Ds) {
+        grassFieldModelGroup.addInstance(grassMeshIndex, grassMaterialIndex, data);
     }
-
-    grassModelGroup.addModelResource("Grass", grassMeshIndex, grassMaterialIndex);
-    grassModelGroup.addInstances(grassInstances);
-    grassModelGroup.buildMeshMapping();
-
-    terrainModelGroup.addModelResource("Terrain", terrainMeshIndex, terrainMaterialIndex);
-    terrainModelGroup.addInstances(terrainInstances);
-    terrainModelGroup.buildMeshMapping();
+    for (const auto& data : terrainData3Ds) {
+        grassFieldModelGroup.addInstance(terrainMeshIndex, terrainMaterialIndex, data);
+    }
 
     return true;
 }
@@ -198,7 +198,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
 
 void Grass::generateGrassInstances(std::mt19937& generator) {
     windGrassInstances.clear();
-    grassInstances.clear();
+    grassData3Ds.clear();
 
     // Find terrain height range for elevation-based coloring
     float minTerrainHeight = std::numeric_limits<float>::max();
@@ -330,11 +330,10 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 windGrassInstances.push_back(windGrassInstance);
                 
                 // Create regular instance for rendering
-                ModelInstance grassInstance;
-                grassInstance.data.modelMatrix = grassTrform.modelMatrix();
-                grassInstance.modelResourceIndex = grassModelIndex;
-                grassInstance.data.multColor = grassColor;
-                grassInstances.push_back(grassInstance);
+                Data3D grassInstance;
+                grassInstance.modelMatrix = grassTrform.modelMatrix();
+                grassInstance.multColor = grassColor;
+                grassData3Ds.push_back(grassInstance);
             }
         }
     }
@@ -399,12 +398,11 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     );
 
     // Create terrain instance
-    ModelInstance terrainInstance;
-    terrainInstance.data.modelMatrix = glm::mat4(1.0f);
-    terrainInstance.modelResourceIndex = terrainModelIndex;
-    terrainInstance.data.multColor = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
-    
-    terrainInstances.push_back(terrainInstance);
+    Data3D terrainData;
+    terrainData.modelMatrix = glm::mat4(1.0f);
+    terrainData.multColor = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
+
+    terrainData3Ds.push_back(terrainData);
 }
 
 std::pair<float, glm::vec3> Grass::getTerrainInfoAt(float worldX, float worldZ) const {
@@ -455,7 +453,7 @@ void Grass::updateWindAnimation(float dTime) {
     if (!config.enableWind || windGrassInstances.empty()) {
         return;
     }
-    
+
     windTime += dTime * 0.5f;
     
     updateGrassInstancesCPU();
@@ -464,8 +462,6 @@ void Grass::updateWindAnimation(float dTime) {
 void Grass::updateGrassInstancesCPU() {
     glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
 
-    // Apply wind animation to each grass instance
-    std::vector<glm::mat4> updatedInstances(grassInstances.size());
 
     std::vector<size_t> indices(windGrassInstances.size());
     std::iota(indices.begin(), indices.end(), 0);
@@ -542,14 +538,7 @@ void Grass::updateGrassInstancesCPU() {
             glm::mat4 rotationMatrix = glm::mat4_cast(finalRot);
             glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
 
-            grassModelGroup.modelInstances[i].data.modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+            grassData3Ds[i].modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
         }
     });
-
-    // for (size_t i = 0; i < updatedInstances.size() && i < grassInstances.size(); ++i) {
-    //     grassModelGroup.modelInstances[i].data.modelMatrix = updatedInstances[i];
-    // }
-
-    auto& grassMeshMap = grassModelGroup.meshMapping[grassMeshIndex];
-    grassMeshMap.updateIndices = grassInstanceUpdateQueue;
 }

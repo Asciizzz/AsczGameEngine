@@ -55,7 +55,7 @@ namespace Az3D {
 
 
             AzVulk::BufferData stagingBuffer;
-            stagingBuffer.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
+            stagingBuffer.initVulkanDevice(vulkanDevice.device, vulkanDevice.physicalDevice);
             stagingBuffer.createBuffer(
                 imageSize, sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -104,7 +104,7 @@ namespace Az3D {
         VkDeviceSize imageSize = 4; // 1 pixel * 4 bytes (RGBA)
 
         AzVulk::BufferData stagingBuffer;
-        stagingBuffer.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
+        stagingBuffer.initVulkanDevice(vulkanDevice.device, vulkanDevice.physicalDevice);
         stagingBuffer.createBuffer(
             imageSize, sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT

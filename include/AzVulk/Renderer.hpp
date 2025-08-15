@@ -12,7 +12,7 @@ namespace AzVulk {
     class DepthManager; // Forward declaration
     class Renderer {
     public:
-        Renderer(const Device& device, SwapChain& swapChain, Buffer& buffer,
+        Renderer(const Device& device, SwapChain& swapChain,
                 Az3D::GlobalUBOManager& globalUBOManager,
                 Az3D::ResourceManager& resourceManager,
                 DepthManager& depthManager);
@@ -33,7 +33,6 @@ namespace AzVulk {
         // Component references
         const Device& vulkanDevice;
         SwapChain& swapChain;
-        Buffer& buffer;
         Az3D::GlobalUBOManager& globalUBOManager;
         Az3D::ResourceManager& resourceManager;
         DepthManager& depthManager;
