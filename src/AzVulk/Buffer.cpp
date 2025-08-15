@@ -151,26 +151,7 @@ namespace AzVulk {
     Buffer::Buffer(const Device& device) : vulkanDevice(device) {}
 
     Buffer::~Buffer() {
-        for (auto& bufferData : uniformBufferDatas)  bufferData.cleanup();
         for (auto& bufferData : instanceBufferDatas)     bufferData.cleanup();
-        // for (auto& bufferData : materialBufferDatas) bufferData.cleanup();
-    }
-
-    void Buffer::createUniformBuffers(size_t count) {
-
-        uniformBufferDatas.resize(count);
-
-        for (size_t i = 0; i < count; ++i) {
-            auto& bufferData = uniformBufferDatas[i];
-            bufferData.initVulkan(vulkanDevice.device, vulkanDevice.physicalDevice);
-
-            bufferData.createBuffer(
-                1, sizeof(GlobalUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            );
-
-            bufferData.mappedData();
-        }
     }
 
 

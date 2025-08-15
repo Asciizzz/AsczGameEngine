@@ -18,19 +18,6 @@ namespace Az3D {
 }
 
 namespace AzVulk {
-    struct GlobalUBO {
-        // Camera matrices
-        alignas(16) glm::mat4 proj;
-        alignas(16) glm::mat4 view;
-
-        // Remember to remove this in the future
-        alignas(16) glm::vec4 cameraPos;     // xyz = camera position, w = fov (radians)
-        alignas(16) glm::vec4 cameraForward; // xyz = camera forward, w = aspect ratio
-        alignas(16) glm::vec4 cameraRight;   // xyz = camera right, w = unused
-        alignas(16) glm::vec4 cameraUp;      // xyz = camera up, w = unused
-        alignas(16) glm::vec4 nearFar;       // x = near, y = far, z = unused, w = unused
-    };
-
 
     struct BufferData {
         BufferData() = default;
@@ -120,9 +107,6 @@ namespace AzVulk {
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
 
-        // This one's chill, it gets to stay
-        void createUniformBuffers(size_t count);
-
         // Soon to be legacy
         void createMeshInstanceBuffer(size_t meshIndex, Az3D::MeshMappingData& meshData, const std::vector<Az3D::ModelInstance>& modelInstances);
         void updateMeshInstanceBufferSelective( size_t meshIndex,
@@ -131,7 +115,7 @@ namespace AzVulk {
 
         const Device& vulkanDevice;
 
-        std::vector<BufferData> uniformBufferDatas;
+        // Soon to be 6 feet under
         std::vector<BufferData> instanceBufferDatas;
     };
 }

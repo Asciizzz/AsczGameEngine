@@ -77,7 +77,6 @@ void Application::initVulkan() {
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     buffer = MakeUnique<Buffer>(*vulkanDevice);
-    buffer->createUniformBuffers(MAX_FRAMES_IN_FLIGHT);
 
     globalUBOManager = MakeUnique<GlobalUBOManager>(
         device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT,
