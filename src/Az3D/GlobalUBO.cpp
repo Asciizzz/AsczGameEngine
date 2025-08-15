@@ -1,6 +1,8 @@
 #include "Az3D/GlobalUBO.hpp"
 #include "Az3D/Camera.hpp"
 
+#include <stdexcept>
+
 namespace Az3D {
 
     GlobalUBOManager::GlobalUBOManager(

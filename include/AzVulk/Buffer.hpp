@@ -5,9 +5,7 @@
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include <glm/glm.hpp>
-
 #include <vulkan/vulkan.h>
-#include <stdexcept>
 
 #include "Helpers/Templates.hpp"
 
@@ -61,10 +59,6 @@ namespace AzVulk {
 
         template<typename T>
         void uploadData(const std::vector<T>& data) {
-            if (sizeof(T) * data.size() != totalDataSize) {
-                throw std::runtime_error("Data type size mismatch!");
-            }
-
             vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
             memcpy(mapped, data.data(), sizeof(T) * data.size());
             vkUnmapMemory(device, memory);
@@ -72,10 +66,6 @@ namespace AzVulk {
         }
         template<typename T>
         void uploadData(const T* data) {
-            if (sizeof(T) * resourceCount != totalDataSize) {
-                throw std::runtime_error("Data type size mismatch!");
-            }
-
             vkMapMemory(device, memory, 0, totalDataSize, 0, &mapped);
             memcpy(mapped, data, sizeof(T) * resourceCount);
             vkUnmapMemory(device, memory);
