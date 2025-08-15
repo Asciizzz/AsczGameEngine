@@ -79,6 +79,11 @@ void Application::initVulkan() {
     buffer = MakeUnique<Buffer>(*vulkanDevice);
     buffer->createUniformBuffers(MAX_FRAMES_IN_FLIGHT);
 
+    globalUBOManager = MakeUnique<GlobalUBOManager>(
+        device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT,
+        depthManager->depthSampler, depthManager->depthSamplerView
+    );
+
     resourceManager = MakeUnique<ResourceManager>(*vulkanDevice, commandPool);
     modelManager = MakeUnique<ModelManager>();
 
@@ -273,21 +278,21 @@ void Application::initVulkan() {
     size_t matCount = matManager.materials.size();
     size_t texCount = texManager.textures.size();
 
-    descriptorManager->createDescriptorSetLayouts(MAX_FRAMES_IN_FLIGHT);
-    descriptorManager->createDescriptorPools(MAX_FRAMES_IN_FLIGHT);
-    descriptorManager->globalDynamicDescriptor.createGlobalDescriptorSets(
-        bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
-        depthManager->depthSamplerView, depthManager->depthSampler,
-        MAX_FRAMES_IN_FLIGHT
-    );
+    // descriptorManager->createDescriptorSetLayouts(MAX_FRAMES_IN_FLIGHT);
+    // descriptorManager->createDescriptorPools(MAX_FRAMES_IN_FLIGHT);
+    // descriptorManager->globalDynamicDescriptor.createGlobalDescriptorSets(
+    //     bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
+    //     depthManager->depthSamplerView, depthManager->depthSampler,
+    //     MAX_FRAMES_IN_FLIGHT
+    // );
 
     renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
-                                    *descriptorManager, *resourceManager, *depthManager);
+                                    *globalUBOManager, *resourceManager, *depthManager);
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     auto& matDesc = matManager.dynamicDescriptor;
     auto& texDesc = texManager.dynamicDescriptor;
-    auto& glbDesc = descriptorManager->globalDynamicDescriptor;
+    auto& glbDesc = globalUBOManager->dynamicDescriptor;
 
     opaquePipeline = MakeUnique<Pipeline>(
         device, renderPass,
@@ -337,18 +342,11 @@ bool Application::checkWindowResize() {
     msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
     depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
 
+    globalUBOManager->resizeWindow(depthManager->depthSampler, depthManager->depthSamplerView);
+
     auto& bufferRef = *buffer;
     auto& texManager = *resourceManager->textureManager;
     auto& matManager = *resourceManager->materialManager;
-
-    // TODO: Currently the global depth sampler is still using the outdated depth sampler
-
-    auto& glbDesc = descriptorManager->globalDynamicDescriptor;
-    glbDesc.createGlobalDescriptorSets(
-        bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
-        depthManager->depthSamplerView, depthManager->depthSampler,
-        MAX_FRAMES_IN_FLIGHT
-    );
 
     // Recreate render pass with new settings
     auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
@@ -482,7 +480,8 @@ void Application::mainLoop() {
 // =================================
 
         // Use the new explicit rendering interface
-        uint32_t imageIndex = rendererRef.beginFrame(*opaquePipeline, camRef);
+        globalUBOManager->updateUBO(camRef);
+        uint32_t imageIndex = rendererRef.beginFrame(*opaquePipeline, globalUBOManager->ubo);
         if (imageIndex != UINT32_MAX) {
             // First: render sky background with dedicated pipeline
             rendererRef.drawSky(*skyPipeline);

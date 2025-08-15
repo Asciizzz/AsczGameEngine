@@ -49,6 +49,9 @@ private:
     UniquePtr<AzVulk::DescriptorManager> descriptorManager;
     UniquePtr<AzVulk::Renderer> renderer;
     
+    // Global UBO Data
+    UniquePtr<Az3D::GlobalUBOManager> globalUBOManager;
+
     // Az3D resource management and model manager
     UniquePtr<Az3D::ResourceManager> resourceManager;
     UniquePtr<Az3D::ModelManager> modelManager;

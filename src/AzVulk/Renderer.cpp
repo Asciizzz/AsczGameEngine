@@ -1,16 +1,15 @@
 #include "AzVulk/Renderer.hpp"
-#include "AzVulk/DepthManager.hpp"
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
 #include <cstring>
 
 namespace AzVulk {
         Renderer::Renderer (const Device& device, SwapChain& swapChain, Buffer& buffer,
-                            DescriptorManager& descriptorManager,
+                            Az3D::GlobalUBOManager& globalUBOManager,
                             Az3D::ResourceManager& resourceManager,
                             DepthManager& depthManager) :
         vulkanDevice(device), swapChain(swapChain), buffer(buffer),
-        descriptorManager(descriptorManager),
+        globalUBOManager(globalUBOManager),
         resourceManager(resourceManager),
         depthManager(depthManager) {
             createCommandPool();
@@ -87,7 +86,7 @@ namespace AzVulk {
     }
 
     // Begin frame: handle synchronization, image acquisition, and render pass setup
-    uint32_t Renderer::beginFrame(Pipeline& pipeline, Az3D::Camera& camera) {
+    uint32_t Renderer::beginFrame(Pipeline& pipeline, Az3D::GlobalUBO& globalUBO) {
         vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex;
@@ -153,16 +152,7 @@ namespace AzVulk {
         scissor.extent = swapChain.extent;
         vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
-        GlobalUBO ubo{};
-        ubo.proj = camera.projectionMatrix;
-        ubo.view = camera.viewMatrix;
-        ubo.cameraPos = glm::vec4(camera.pos, glm::radians(camera.fov));
-        ubo.cameraForward = glm::vec4(camera.forward, camera.aspectRatio);
-        ubo.cameraRight = glm::vec4(camera.right, 0.0f);
-        ubo.cameraUp = glm::vec4(camera.up, 0.0f);
-        ubo.nearFar = glm::vec4(camera.nearPlane, camera.farPlane, 0.0f, 0.0f);
-
-        memcpy(buffer.uniformBufferDatas[currentFrame].mapped, &ubo, sizeof(ubo));
+        memcpy(globalUBOManager.bufferDatas[currentFrame].mapped, &globalUBO, sizeof(globalUBO));
 
         return imageIndex;
     }
@@ -221,7 +211,7 @@ namespace AzVulk {
             const auto& texManager = *resourceManager.textureManager;
 
             // Global UBO set
-            VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
+            VkDescriptorSet globalSet = globalUBOManager.getDescriptorSet(currentFrame);
 
             // Material descriptor set
             VkDescriptorSet materialSet = matManager.getDescriptorSet(materialIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
@@ -278,7 +268,7 @@ namespace AzVulk {
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
 
         // Bind only the global descriptor set (set 0) for sky
-        VkDescriptorSet globalSet = descriptorManager.globalDynamicDescriptor.getSet(currentFrame);
+        VkDescriptorSet globalSet = globalUBOManager.getDescriptorSet(currentFrame);
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
 

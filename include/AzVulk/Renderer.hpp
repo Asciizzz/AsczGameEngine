@@ -1,9 +1,7 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include <vector>
-#include <unordered_map>
 #include <chrono>
+
 #include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline.hpp"
@@ -18,7 +16,7 @@ namespace AzVulk {
     class Renderer {
     public:
         Renderer(const Device& device, SwapChain& swapChain, Buffer& buffer,
-                DescriptorManager& descriptorManager,
+                Az3D::GlobalUBOManager& globalUBOManager,
                 Az3D::ResourceManager& resourceManager,
                 DepthManager& depthManager);
         ~Renderer();
@@ -27,7 +25,7 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         // Introduction
-        uint32_t beginFrame(Pipeline& pipeline, Az3D::Camera& camera);
+        uint32_t beginFrame(Pipeline& pipeline, Az3D::GlobalUBO& globalUBO);
         // Body
         void drawScene(Pipeline& pipeline, Az3D::ModelGroup& modelGroup);
         void drawSky(Pipeline& skyPipeline);
@@ -39,7 +37,7 @@ namespace AzVulk {
         const Device& vulkanDevice;
         SwapChain& swapChain;
         Buffer& buffer;
-        DescriptorManager& descriptorManager;
+        Az3D::GlobalUBOManager& globalUBOManager;
         Az3D::ResourceManager& resourceManager;
         DepthManager& depthManager;
 
