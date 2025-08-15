@@ -119,17 +119,16 @@ namespace Az3D {
         return dynamicDescriptor.sets[frameIndex];
     }
 
+    float deltaDay = 1.0f / 86400.0f;
+
     // Functionalities
     void GlobalUBOManager::updateUBO(const Camera& camera) {
         ubo.proj = camera.projectionMatrix;
         ubo.view = camera.viewMatrix;
 
         float elapsedSeconds = std::chrono::duration<float>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-        
-        float timeSpeedUp = 1000.0f;
-        float timeOfDay = fmod(elapsedSeconds * timeSpeedUp / 86400.0f, 1.0f); // 86400 seconds in a day
 
-
+        float timeOfDay = fmod(elapsedSeconds * deltaDay, 1.0f);
         ubo.prop1 = glm::vec4(timeOfDay, 0.0f, 0.0f, 0.0f);
 
         ubo.cameraPos = glm::vec4(camera.pos, glm::radians(camera.fov));
