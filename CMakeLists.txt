@@ -39,7 +39,6 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/MSAAManager.cpp
     src/AzVulk/Pipeline.cpp
     src/AzVulk/RenderPass.cpp
-    src/AzVulk/ShaderManager.cpp
     src/AzVulk/Swapchain.cpp
     src/AzVulk/Renderer.cpp
 

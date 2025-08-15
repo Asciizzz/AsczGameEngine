@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <fstream>
 
 #include "Helpers/Templates.hpp"
 
@@ -69,5 +70,9 @@ namespace AzVulk {
 
         void createGraphicsPipeline();
         void cleanup();
+
+
+        // Helper functions
+        static std::vector<char> readShaderFile(const std::string& filename);
     };
 }

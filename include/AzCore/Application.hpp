@@ -42,7 +42,6 @@ private:
     UniquePtr<AzVulk::Pipeline> skyPipeline; // Beta, very inefficient, yet really amazing
 
     // More Vulkan ceremony
-    UniquePtr<AzVulk::ShaderManager> shaderManager;
     UniquePtr<AzVulk::DepthManager> depthManager;
     UniquePtr<AzVulk::MSAAManager> msaaManager;
     UniquePtr<AzVulk::Renderer> renderer;

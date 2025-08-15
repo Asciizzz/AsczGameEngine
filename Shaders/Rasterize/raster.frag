@@ -81,7 +81,7 @@ void main() {
     float fogFactor = clamp(linearDepth / maxFogDistance, 0.0, 1.0);
     fogFactor = smoothstep(0.0, 1.0, fogFactor);
 
-    fogFactor = 0.0;
+    // fogFactor = 0.0;
 
     float normalBlend = material.prop1.z;
     vec3 normal = normalize(fragWorldNrml);
@@ -90,7 +90,7 @@ void main() {
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
     vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * zenithCol;
 
-    rgbFinal = mix(rgbFinal * vertexLightFactor, zenithCol, fogFactor);
+    rgbFinal = mix(rgbFinal * vertexLightFactor, zenithCol * 0.4, fogFactor);
     
     float alpha = texColor.a * fragInstanceColor.a;
 

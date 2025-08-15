@@ -5,7 +5,6 @@
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/RenderPass.hpp"
 #include "AzVulk/Pipeline.hpp"
-#include "AzVulk/ShaderManager.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Renderer.hpp"
 #include "AzVulk/DescriptorSets.hpp"

@@ -1,5 +1,4 @@
 #include "AzVulk/Pipeline.hpp"
-#include "AzVulk/ShaderManager.hpp"
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
 #include <vector>
@@ -71,8 +70,10 @@ namespace AzVulk {
     }
 
     void Pipeline::createGraphicsPipeline() {
-        auto vertShaderCode = ShaderManager::readFile(vertexShaderPath);
-        auto fragShaderCode = ShaderManager::readFile(fragmentShaderPath);
+        auto vertShaderCode = readShaderFile(vertexShaderPath);
+        auto fragShaderCode = readShaderFile(fragmentShaderPath);
+
+        // Create shader modules
 
         VkShaderModuleCreateInfo vertCreateInfo{};
         vertCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -256,8 +257,26 @@ namespace AzVulk {
             vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
             pipelineLayout = VK_NULL_HANDLE;
         }
-        
-        // Note: descriptorSetLayout is now managed by DescriptorManager, don't destroy it here
-        // Note: renderPass is managed externally, don't destroy it here
+
+        // Note: descriptorSetLayout and Renderpass are managed externally
+        // Do not destroy them here
+    }
+
+// Helpers
+    std::vector<char> Pipeline::readShaderFile(const std::string& filename) {
+        std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+        if (!file.is_open()) {
+            throw std::runtime_error("failed to open file: " + filename);
+        }
+
+        size_t fileSize = (size_t) file.tellg();
+        std::vector<char> buffer(fileSize);
+
+        file.seekg(0);
+        file.read(buffer.data(), fileSize);
+        file.close();
+
+        return buffer;
     }
 }

@@ -59,8 +59,6 @@ void Application::initVulkan() {
     VkPhysicalDevice physicalDevice = vulkanDevice->physicalDevice;
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
-    shaderManager = MakeUnique<ShaderManager>(device);
-
     // Create command pool for graphics operations
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -395,7 +393,6 @@ void Application::cleanup() {
     if (opaquePipeline) opaquePipeline.reset();
     if (transparentPipeline) transparentPipeline.reset();
     if (skyPipeline) skyPipeline.reset();
-    if (shaderManager) shaderManager.reset();
     if (swapChain) swapChain.reset();
 
     if (commandPool != VK_NULL_HANDLE) {
