@@ -2,11 +2,8 @@
 
 #include <chrono>
 
-#include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline.hpp"
-#include "AzVulk/Buffer.hpp"
-#include "AzVulk/DescriptorSets.hpp"
 #include "AzVulk/DepthManager.hpp"
 
 #include "Az3D/Az3D.hpp"
