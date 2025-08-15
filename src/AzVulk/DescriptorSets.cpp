@@ -5,27 +5,6 @@
 
 namespace AzVulk {
 
-    DescriptorManager::DescriptorManager(VkDevice device) : device(device) {}
-
-    DescriptorManager::~DescriptorManager() {}
-
-
-    void DescriptorManager::createDescriptorSetLayouts(uint32_t maxFramesInFlight) {
-        // For global ubo + depth sampler
-        globalDynamicDescriptor.init(device);
-        VkDescriptorSetLayoutBinding globalUBOBinding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-        VkDescriptorSetLayoutBinding depthSamplerBinding = DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-        globalDynamicDescriptor.createSetLayout({globalUBOBinding, depthSamplerBinding});
-    }
-
-    void DescriptorManager::createDescriptorPools(uint32_t maxFramesInFlight) {
-        globalDynamicDescriptor.createPool(
-            {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxFramesInFlight}},
-            maxFramesInFlight
-        );
-    }
-
 
     void DynamicDescriptor::createGlobalDescriptorSets(
         const std::vector<BufferData>& uniformBufferDatas,

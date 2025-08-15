@@ -1,14 +1,7 @@
 #pragma once
 
-#include <array>
-
 #include "AzVulk/Device.hpp"
 #include "Helpers/Templates.hpp"
-
-namespace Az3D {
-    struct Texture;
-    struct Material;
-}
 
 namespace AzVulk {
     struct BufferData;
@@ -48,24 +41,5 @@ namespace AzVulk {
             VkSampler depthSampler,
             uint32_t maxFramesInFlight
         );
-    };
-
-
-    class DescriptorManager {
-    public:
-        // Soon to remove the entire class
-        DescriptorManager(VkDevice device);
-        ~DescriptorManager();
-
-        DescriptorManager(const DescriptorManager&) = delete;
-        DescriptorManager& operator=(const DescriptorManager&) = delete;
-
-        VkDevice device;
-
-        // Soon to be 6 feet under
-        DynamicDescriptor globalDynamicDescriptor;
-
-        void createDescriptorSetLayouts(uint32_t maxFramesInFlight);
-        void createDescriptorPools(uint32_t maxFramesInFlight);
     };
 }

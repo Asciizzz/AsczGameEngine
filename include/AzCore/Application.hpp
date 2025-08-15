@@ -46,7 +46,6 @@ private:
     UniquePtr<AzVulk::Buffer> buffer;
     UniquePtr<AzVulk::DepthManager> depthManager;
     UniquePtr<AzVulk::MSAAManager> msaaManager;
-    UniquePtr<AzVulk::DescriptorManager> descriptorManager;
     UniquePtr<AzVulk::Renderer> renderer;
     
     // Global UBO Data

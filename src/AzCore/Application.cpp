@@ -89,10 +89,11 @@ void Application::initVulkan() {
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
+    auto& mdlManager = *modelManager;
     auto& texManager = *resManager.textureManager;
     auto& meshManager = *resManager.meshManager;
     auto& matManager = *resManager.materialManager;
-    auto& mdlManager = *modelManager;
+    auto& glbUBOManager = *globalUBOManager;
 
 // PLAYGROUND FROM HERE!
 
@@ -261,10 +262,7 @@ void Application::initVulkan() {
 
 // PLAYGROUND END HERE 
 
-    descriptorManager = MakeUnique<DescriptorManager>(device);
-
     auto& bufferRef = *buffer;
-    auto& descManager = *descriptorManager;
 
     // Create dummy buffers before actually migrating them to somewhere else correct
     bufferRef.instanceBufferDatas.resize(meshManager.meshes.size());
@@ -275,24 +273,13 @@ void Application::initVulkan() {
     matManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
     texManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
 
-    size_t matCount = matManager.materials.size();
-    size_t texCount = texManager.textures.size();
-
-    // descriptorManager->createDescriptorSetLayouts(MAX_FRAMES_IN_FLIGHT);
-    // descriptorManager->createDescriptorPools(MAX_FRAMES_IN_FLIGHT);
-    // descriptorManager->globalDynamicDescriptor.createGlobalDescriptorSets(
-    //     bufferRef.uniformBufferDatas, sizeof(GlobalUBO),
-    //     depthManager->depthSamplerView, depthManager->depthSampler,
-    //     MAX_FRAMES_IN_FLIGHT
-    // );
-
     renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *buffer,
                                     *globalUBOManager, *resourceManager, *depthManager);
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     auto& matDesc = matManager.dynamicDescriptor;
     auto& texDesc = texManager.dynamicDescriptor;
-    auto& glbDesc = globalUBOManager->dynamicDescriptor;
+    auto& glbDesc = glbUBOManager.dynamicDescriptor;
 
     opaquePipeline = MakeUnique<Pipeline>(
         device, renderPass,
@@ -524,7 +511,6 @@ void Application::cleanup() {
     if (renderer) renderer.reset();
     if (resourceManager) resourceManager.reset();
     if (buffer) buffer.reset();
-    if (descriptorManager) descriptorManager.reset();
     if (msaaManager) msaaManager.reset();
     if (depthManager) depthManager.reset();
     if (mainRenderPass) mainRenderPass.reset();
