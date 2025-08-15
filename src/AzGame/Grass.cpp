@@ -541,4 +541,6 @@ void Grass::updateGrassInstancesCPU() {
             grassData3Ds[i].modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
         }
     });
+
+    grassFieldModelGroup.modelMapping[grassModelHash].datas = grassData3Ds;
 }
