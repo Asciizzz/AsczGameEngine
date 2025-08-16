@@ -32,44 +32,39 @@ namespace AzVulk {
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
         VkBool32 sampleShadingEnable = VK_TRUE;
         float minSampleShading = 0.2f;
-        
+
+        // Renderpass and descriptor setLayouts
+        VkRenderPass renderPass = VK_NULL_HANDLE;
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+
         // Static factory methods for common configurations
-        static RasterPipelineConfig createOpaqueConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
-        static RasterPipelineConfig createTransparentConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
-        static RasterPipelineConfig createSkyConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
+        static RasterPipelineConfig createOpaqueConfig(VkSampleCountFlagBits msaaSamples, VkRenderPass renderPass, const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts);
+        static RasterPipelineConfig createTransparentConfig(VkSampleCountFlagBits msaaSamples, VkRenderPass renderPass, const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts);
+        static RasterPipelineConfig createSkyConfig(VkSampleCountFlagBits msaaSamples, VkRenderPass renderPass, const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts);
     };
 
     class Pipeline {
     public:
-        Pipeline(VkDevice device, VkRenderPass renderPass,
-                std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
-                const char* vertexShaderPath, const char* fragmentShaderPath,
-                const RasterPipelineConfig& config);
-        ~Pipeline();
+        Pipeline(VkDevice device, const RasterPipelineConfig& config,
+                const char* vertexShaderPath, const char* fragmentShaderPath);
+        ~Pipeline() { cleanup(); } void cleanup();
         
         Pipeline(const Pipeline&) = delete;
         Pipeline& operator=(const Pipeline&) = delete;
 
-        void recreate(VkRenderPass newRenderPass, const RasterPipelineConfig& newConfig);
 
-        // Configuration
         RasterPipelineConfig config;
-        
-        // Shader paths
+
         const char* vertexShaderPath;
         const char* fragmentShaderPath;
-        
-        // References to Vulkan objects
-        VkDevice device;
-        VkRenderPass renderPass;
 
-        // Pipeline layout and objects
-        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+        VkDevice device;
+
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
-        void createGraphicsPipeline();
-        void cleanup();
+        void createGraphicPipeline();
+        void recreateGraphicPipeline(VkRenderPass newRenderPass);
 
 
         // Helper functions

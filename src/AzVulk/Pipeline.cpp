@@ -6,7 +6,10 @@
 
 namespace AzVulk {
     // Static factory methods for common configurations
-    RasterPipelineConfig RasterPipelineConfig::createOpaqueConfig(VkSampleCountFlagBits msaaSamples) {
+    RasterPipelineConfig RasterPipelineConfig::createOpaqueConfig(
+        VkSampleCountFlagBits msaaSamples, VkRenderPass renderPass,
+        const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts
+    ) {
         RasterPipelineConfig config;
         config.cullMode = VK_CULL_MODE_BACK_BIT;
         config.depthTestEnable = VK_TRUE;
@@ -15,10 +18,15 @@ namespace AzVulk {
         config.msaaSamples = msaaSamples;
         config.sampleShadingEnable = VK_TRUE;
         config.minSampleShading = 0.2f;
+        config.renderPass = renderPass;
+        config.descriptorSetLayouts = descriptorSetLayouts;
         return config;
     }
 
-    RasterPipelineConfig RasterPipelineConfig::createTransparentConfig(VkSampleCountFlagBits msaaSamples) {
+    RasterPipelineConfig RasterPipelineConfig::createTransparentConfig(
+        VkSampleCountFlagBits msaaSamples, VkRenderPass renderPass,
+        const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts
+    ) {
         RasterPipelineConfig config;
         config.cullMode = VK_CULL_MODE_BACK_BIT;
         config.depthTestEnable = VK_TRUE;
@@ -28,10 +36,15 @@ namespace AzVulk {
         config.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         config.msaaSamples = msaaSamples;
         config.sampleShadingEnable = VK_FALSE;
+        config.renderPass = renderPass;
+        config.descriptorSetLayouts = descriptorSetLayouts;
         return config;
     }
 
-    RasterPipelineConfig RasterPipelineConfig::createSkyConfig(VkSampleCountFlagBits msaaSamples) {
+    RasterPipelineConfig RasterPipelineConfig::createSkyConfig(
+        VkSampleCountFlagBits msaaSamples, VkRenderPass renderPass,
+        const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts
+    ) {
         RasterPipelineConfig config;
         config.cullMode = VK_CULL_MODE_NONE;           // No culling for fullscreen quad
         config.depthTestEnable = VK_FALSE;             // Sky is always furthest
@@ -40,36 +53,27 @@ namespace AzVulk {
         config.blendEnable = VK_FALSE;                 // No blending needed
         config.msaaSamples = msaaSamples;
         config.sampleShadingEnable = VK_FALSE;
+        config.renderPass = renderPass;
+        config.descriptorSetLayouts = descriptorSetLayouts;
         return config;
     }
 
 
-    Pipeline::Pipeline( VkDevice device, VkRenderPass renderPass,
-                                    std::vector<VkDescriptorSetLayout> descriptorSetLayouts,
-                                    const char* vertexShaderPath, const char* fragmentShaderPath,
-                                    const RasterPipelineConfig& config)
-            :   device(device),
-                renderPass(renderPass),
-                descriptorSetLayouts(descriptorSetLayouts),
-                vertexShaderPath(vertexShaderPath),
-                fragmentShaderPath(fragmentShaderPath),
-                config(config) {
-            createGraphicsPipeline();
-    }
+    Pipeline::Pipeline(
+        VkDevice device, const RasterPipelineConfig& config,
+        const char* vertexShaderPath, const char* fragmentShaderPath
+    ) : device(device), config(config),
+        vertexShaderPath(vertexShaderPath),
+        fragmentShaderPath(fragmentShaderPath) {}
 
-    Pipeline::~Pipeline() {
+    void Pipeline::recreateGraphicPipeline(VkRenderPass newRenderPass) {
+        config.renderPass = newRenderPass;
+
         cleanup();
+        createGraphicPipeline();
     }
 
-    void Pipeline::recreate(VkRenderPass newRenderPass, const RasterPipelineConfig& newConfig) {
-        renderPass = newRenderPass;
-        config = newConfig;
-        
-        cleanup();
-        createGraphicsPipeline();
-    }
-
-    void Pipeline::createGraphicsPipeline() {
+    void Pipeline::createGraphicPipeline() {
         auto vertShaderCode = readShaderFile(vertexShaderPath);
         auto fragShaderCode = readShaderFile(fragmentShaderPath);
 
@@ -210,6 +214,8 @@ namespace AzVulk {
 
 
         // Use two set layouts: set 0 (global), set 1 (material), set 2 (texture)
+        const auto& descriptorSetLayouts = config.descriptorSetLayouts;
+
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
@@ -234,7 +240,7 @@ namespace AzVulk {
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
         pipelineInfo.layout = pipelineLayout;
-        pipelineInfo.renderPass = renderPass;
+        pipelineInfo.renderPass = config.renderPass;
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -257,9 +263,6 @@ namespace AzVulk {
             vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
             pipelineLayout = VK_NULL_HANDLE;
         }
-
-        // Note: descriptorSetLayout and Renderpass are managed externally
-        // Do not destroy them here
     }
 
 // Helpers

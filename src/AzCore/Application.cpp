@@ -4,7 +4,7 @@
 #include <random>
 
 #ifdef NDEBUG
-const bool enableValidationLayers = false;
+const bool enableValidationLayers = true;
 #else
 const bool enableValidationLayers = true;
 #endif
@@ -181,29 +181,35 @@ void Application::initVulkan() {
     auto& texDesc = texManager.dynamicDescriptor;
     auto& glbDesc = glbUBOManager.dynamicDescriptor;
 
+    LayoutVec layouts = {glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout};
+
     opaquePipeline = MakeUnique<Pipeline>(
-        device, renderPass,
-        LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
+        device, RasterPipelineConfig::createOpaqueConfig(
+            msaaManager->msaaSamples, renderPass, layouts
+        ),
         "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/raster.frag.spv",
-        RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples)
+        "Shaders/Rasterize/raster.frag.spv"
     );
+    opaquePipeline->createGraphicPipeline();
 
     transparentPipeline = MakeUnique<Pipeline>(
-        device, renderPass,
-        LayoutVec{glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout},
+        device, RasterPipelineConfig::createTransparentConfig(
+            msaaManager->msaaSamples, renderPass, layouts
+        ),
         "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/raster.frag.spv",
-        RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples)
+        "Shaders/Rasterize/raster.frag.spv"
     );
+    transparentPipeline->createGraphicPipeline();
 
     skyPipeline = MakeUnique<Pipeline>(
-        device, renderPass,
-        LayoutVec{glbDesc.setLayout},
+        device, RasterPipelineConfig::createSkyConfig(
+            msaaManager->msaaSamples, renderPass,
+            LayoutVec{glbDesc.setLayout}
+        ),
         "Shaders/Sky/sky.vert.spv",
-        "Shaders/Sky/sky.frag.spv",
-        RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples)
+        "Shaders/Sky/sky.frag.spv"
     );
+    skyPipeline->createGraphicPipeline();
 }
 
 void Application::createSurface() {
@@ -246,9 +252,9 @@ bool Application::checkWindowResize() {
     VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
 
     // No need to change layout
-    opaquePipeline->recreate(renderPass, RasterPipelineConfig::createOpaqueConfig(newMsaaSamples));
-    transparentPipeline->recreate(renderPass, RasterPipelineConfig::createTransparentConfig(newMsaaSamples));
-    skyPipeline->recreate(renderPass, RasterPipelineConfig::createSkyConfig(newMsaaSamples));
+    opaquePipeline->recreateGraphicPipeline(renderPass);
+    transparentPipeline->recreateGraphicPipeline(renderPass);
+    skyPipeline->recreateGraphicPipeline(renderPass);
 
     return true;
 }
