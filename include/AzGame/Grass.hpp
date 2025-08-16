@@ -159,6 +159,15 @@ namespace AzGame {
         void generateGrassInstances(std::mt19937& generator);
         void generateTerrainMesh(Az3D::ResourceManager& resManager);
         std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
+
+
+        // Test function
+        void addGrassInstance(Data3D& instanceData) {
+            windGrassInstances.emplace_back(glm::mat4(1.0f), glm::vec4(1.0f), 0.0f, 1.0f, 0.0f);
+            grassData3Ds.push_back(instanceData);
+
+            terrainData3Ds.push_back(instanceData);
+        }
     };
 
 } // namespace AzGame

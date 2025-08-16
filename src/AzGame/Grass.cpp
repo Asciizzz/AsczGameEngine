@@ -325,13 +325,13 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 std::uniform_real_distribution<float> rnd_phase(0.0f, 6.28f);
                 float phaseOffset = rnd_phase(generator);
                 
-                WindGrassInstance windGrassInstance(grassTrform.modelMatrix(), grassColor, 
+                WindGrassInstance windGrassInstance(grassTrform.getModelMat4(), grassColor, 
                                                     baseGrassHeight, flexibility, phaseOffset);
                 windGrassInstances.push_back(windGrassInstance);
                 
                 // Create regular instance for rendering
                 Data3D grassInstance;
-                grassInstance.modelMatrix = grassTrform.modelMatrix();
+                grassInstance.modelMatrix = grassTrform.getModelMat4();
                 grassInstance.multColor = grassColor;
                 grassData3Ds.push_back(grassInstance);
             }

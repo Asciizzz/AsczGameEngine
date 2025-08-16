@@ -4,7 +4,7 @@
 #include <random>
 
 #ifdef NDEBUG
-const bool enableValidationLayers = true;
+const bool enableValidationLayers = false;
 #else
 const bool enableValidationLayers = true;
 #endif
@@ -36,7 +36,7 @@ Application::~Application() {
 void Application::run() {
     mainLoop();
 
-    printf("Application exited successfully. See you next time! o/\n");
+    printf("Application exited successfully. See you next time!\n");
 }
 
 void Application::initVulkan() {
@@ -347,6 +347,22 @@ void Application::mainLoop() {
 
         if (grassSystem && enable_wind) {
             grassSystem->updateWindAnimation(dTime);
+        }
+
+        // Testing out the dynamicness of the grass instance data
+        static bool hold_g = false;
+        if (k_state[SDL_SCANCODE_G] && !hold_g) {
+            // Toggle grass instance data update
+            Transform trform;
+            trform.pos = camRef.pos;
+
+            Model::Data3D instanceData;
+            instanceData.modelMatrix = trform.getModelMat4();
+
+            grassSystem->addGrassInstance(instanceData);
+            hold_g = true;
+        } else if (!k_state[SDL_SCANCODE_G]) {
+            hold_g = false;
         }
 
 // =================================

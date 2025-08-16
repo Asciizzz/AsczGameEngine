@@ -39,7 +39,7 @@ namespace Az3D {
         this->scl *= scale;
     }
 
-    glm::mat4 Transform::modelMatrix() const {
+    glm::mat4 Transform::getModelMat4() const {
         glm::mat4 translation = glm::translate(glm::mat4(1.0f), pos);
         glm::mat4 rotMat = glm::mat4_cast(rot);
         glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scl);
