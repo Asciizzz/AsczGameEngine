@@ -191,7 +191,7 @@ namespace Az3D {
         hit.prop.z = maxDistance; // Initialize with max distance
 
         // Apply reverse transform to origin and direction based on the mesh's transform
-        glm::mat4 invModel = glm::inverse(transform.getModelMat4());
+        glm::mat4 invModel = glm::inverse(transform.getMat4());
 
         glm::vec3 rayOrg = glm::vec3(invModel * glm::vec4(origin, 1.0f));
         glm::vec3 rayDir = glm::normalize(glm::vec3(invModel * glm::vec4(direction, 0.0f)));
@@ -299,7 +299,7 @@ namespace Az3D {
         
         hit.prop.z = sphere_radius;
 
-        glm::mat4 invModel = glm::inverse(transform.getModelMat4());
+        glm::mat4 invModel = glm::inverse(transform.getMat4());
 
         glm::vec3 sphereOrg = glm::vec3(invModel * glm::vec4(sphere_origin, 1.0f));
 

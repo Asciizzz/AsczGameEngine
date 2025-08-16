@@ -41,7 +41,7 @@ namespace Az3D {
         void scale(float scale);
         void scale(const glm::vec3& scale);
 
-        glm::mat4 getModelMat4() const;
+        glm::mat4 getMat4() const;
         void reset();
 
         // Useful static methods

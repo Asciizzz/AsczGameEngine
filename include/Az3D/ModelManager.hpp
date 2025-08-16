@@ -43,7 +43,7 @@ namespace Az3D {
         std::vector<Model::Data3D> datas;
         size_t addData(const Model::Data3D& data);
 
-        bool vulkanFlag = false;
+        bool vulkanInitialized = false;
         AzVulk::BufferData bufferData;
         void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice);
         void recreateBufferData();
@@ -55,9 +55,15 @@ namespace Az3D {
         // No chance in hell we passing 1 million meshes/materials
         using ModelPair = AzPair<1'000'000, 1'000'000>;
 
+        std::string name = "Default";
+
+        VkDevice device = VK_NULL_HANDLE;
+        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+        bool vulkanInitialized = false;
+
         ModelGroup() = default;
         ModelGroup(const std::string& name, VkDevice device, VkPhysicalDevice physicalDevice)
-            : name(name), device(device), physicalDevice(physicalDevice) {}
+            : name(name), device(device), physicalDevice(physicalDevice), vulkanInitialized(true) {}
         void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice);
 
         ModelGroup(const ModelGroup&) = delete;
@@ -65,9 +71,6 @@ namespace Az3D {
         ModelGroup(ModelGroup&&) noexcept = default;
         ModelGroup& operator=(ModelGroup&&) noexcept = default;
 
-        std::string name = "Default";
-        VkDevice device = VK_NULL_HANDLE;
-        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
         // Hash Model -> data
         UnorderedMap<size_t, ModelMappingData> modelMapping;

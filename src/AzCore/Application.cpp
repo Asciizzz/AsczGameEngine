@@ -91,6 +91,17 @@ void Application::initVulkan() {
 
 // PLAYGROUND FROM HERE
 
+    // // Useful shorthand for placing models
+    // auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
+    //     Model instance;
+    //     instance.data.modelMatrix = transform.getMat4();
+    //     instance.data.multColor = color;
+    //     instance.meshIndex = platformerMeshIndices.at(name);
+    //     instance.materialIndex = globalMaterialIndex;
+
+    //     worldModelGroup->addInstance(instance);
+    // };
+
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
     grassConfig.worldSizeX = 240;
@@ -107,7 +118,8 @@ void Application::initVulkan() {
         throw std::runtime_error("Failed to initialize grass system!");
     }
 
-    // Add only terrain to world instances (grass will be added dynamically each frame)
+    // Initialized world
+    newWorld = MakeUnique<AzGame::World>(*resourceManager, device, physicalDevice);
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
@@ -349,7 +361,7 @@ void Application::mainLoop() {
             grassSystem->updateWindAnimation(dTime);
         }
 
-        // Testing out the dynamicness of the grass instance data
+        // Place platform in the world
         static bool hold_g = false;
         if (k_state[SDL_SCANCODE_G] && !hold_g) {
             // Toggle grass instance data update
@@ -357,9 +369,11 @@ void Application::mainLoop() {
             trform.pos = camRef.pos;
 
             Model::Data3D instanceData;
-            instanceData.modelMatrix = trform.getModelMat4();
+            instanceData.modelMatrix = trform.getMat4();
 
-            grassSystem->addGrassInstance(instanceData);
+            // grassSystem->addGrassInstance(instanceData);
+            newWorld->placePlatformGrid("Ground_x2", camRef.pos);
+
             hold_g = true;
         } else if (!k_state[SDL_SCANCODE_G]) {
             hold_g = false;
@@ -374,7 +388,10 @@ void Application::mainLoop() {
             // First: render sky background with dedicated pipeline
             rendererRef.drawSky(*skyPipeline);
 
+            // Draw grass system
             rendererRef.drawScene(*opaquePipeline, grassSystem->grassFieldModelGroup);
+            // Draw the world model group
+            rendererRef.drawScene(*opaquePipeline, newWorld->worldModelGroup);
 
             rendererRef.endFrame(imageIndex);
         };

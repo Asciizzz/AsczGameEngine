@@ -7,7 +7,9 @@
 #include "Az3D/Az3D.hpp"
 
 #include "AzBeta/AzBeta.hpp"
+
 #include "AzGame/Grass.hpp"
+#include "AzGame/World.hpp"
 
 
 class Application {
@@ -52,9 +54,10 @@ private:
     // Az3D resource management and model manager
     UniquePtr<Az3D::ResourceManager> resourceManager;
 
-    // AzGame systems
+    // Some cool game element demos
     UniquePtr<AzGame::Grass> grassSystem;
-    
+    UniquePtr<AzGame::World> newWorld;
+
     // Beta features
     AzBeta::ParticleManager particleManager;
 
