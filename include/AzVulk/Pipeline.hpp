@@ -45,8 +45,7 @@ namespace AzVulk {
 
     class Pipeline {
     public:
-        Pipeline(VkDevice device, const RasterPipelineConfig& config,
-                const char* vertexShaderPath, const char* fragmentShaderPath);
+        Pipeline(VkDevice device, const RasterPipelineConfig& config);
         ~Pipeline() { cleanup(); } void cleanup();
         
         Pipeline(const Pipeline&) = delete;
@@ -63,7 +62,7 @@ namespace AzVulk {
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
-        void createGraphicPipeline();
+        void createGraphicPipeline(const char* vertexShaderPath, const char* fragmentShaderPath);
         void recreateGraphicPipeline(VkRenderPass newRenderPass);
 
 

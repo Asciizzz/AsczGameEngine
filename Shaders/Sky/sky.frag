@@ -141,7 +141,7 @@ vec3 calculateSkyColor(vec3 rayDir) {
         vec2 uv = vec2(az, alt);
 
         float stars = starField(uv, time);
-        stars *= pow(darkness, 2.0); // softer fade
+        stars *= pow(darkness, 4.0); // softer fade
 
         skyCol += vec3(stars);
     }

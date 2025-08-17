@@ -5,6 +5,11 @@
 #include <array>
 
 namespace AzVulk {
+
+
+    // TODO: Completely rework this mess of a pipeline please
+
+
     // Static factory methods for common configurations
     RasterPipelineConfig RasterPipelineConfig::createOpaqueConfig(
         VkSampleCountFlagBits msaaSamples, VkRenderPass renderPass,
@@ -60,20 +65,20 @@ namespace AzVulk {
 
 
     Pipeline::Pipeline(
-        VkDevice device, const RasterPipelineConfig& config,
-        const char* vertexShaderPath, const char* fragmentShaderPath
-    ) : device(device), config(config),
-        vertexShaderPath(vertexShaderPath),
-        fragmentShaderPath(fragmentShaderPath) {}
+        VkDevice device, const RasterPipelineConfig& config
+    ) : device(device), config(config) {}
 
     void Pipeline::recreateGraphicPipeline(VkRenderPass newRenderPass) {
         config.renderPass = newRenderPass;
 
         cleanup();
-        createGraphicPipeline();
+        createGraphicPipeline(vertexShaderPath, fragmentShaderPath);
     }
 
-    void Pipeline::createGraphicPipeline() {
+    void Pipeline::createGraphicPipeline(const char* vertexShaderPath, const char* fragmentShaderPath) {
+        this->vertexShaderPath = vertexShaderPath;
+        this->fragmentShaderPath = fragmentShaderPath;
+
         auto vertShaderCode = readShaderFile(vertexShaderPath);
         auto fragShaderCode = readShaderFile(fragmentShaderPath);
 

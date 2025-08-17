@@ -91,25 +91,14 @@ void Application::initVulkan() {
 
 // PLAYGROUND FROM HERE
 
-    // // Useful shorthand for placing models
-    // auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
-    //     Model instance;
-    //     instance.data.modelMatrix = transform.getMat4();
-    //     instance.data.multColor = color;
-    //     instance.meshIndex = platformerMeshIndices.at(name);
-    //     instance.materialIndex = globalMaterialIndex;
-
-    //     worldModelGroup->addInstance(instance);
-    // };
-
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 240;
-    grassConfig.worldSizeZ = 240;
-    grassConfig.baseDensity = 4;
+    grassConfig.worldSizeX = 124;
+    grassConfig.worldSizeZ = 124;
+    grassConfig.baseDensity = 6;
     grassConfig.heightVariance = 6.9f;
     grassConfig.lowVariance = 0.1f;
-    grassConfig.numHeightNodes = 450;
+    grassConfig.numHeightNodes = 250;
     grassConfig.enableWind = true;
     
     // Initialize grass system
@@ -186,30 +175,33 @@ void Application::initVulkan() {
     opaquePipeline = MakeUnique<Pipeline>(
         device, RasterPipelineConfig::createOpaqueConfig(
             msaaManager->msaaSamples, renderPass, layouts
-        ),
+        )
+    );
+    opaquePipeline->createGraphicPipeline(
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv"
     );
-    opaquePipeline->createGraphicPipeline();
 
     transparentPipeline = MakeUnique<Pipeline>(
         device, RasterPipelineConfig::createTransparentConfig(
             msaaManager->msaaSamples, renderPass, layouts
-        ),
+        )
+    );
+    transparentPipeline->createGraphicPipeline(
         "Shaders/Rasterize/raster.vert.spv",
         "Shaders/Rasterize/raster.frag.spv"
     );
-    transparentPipeline->createGraphicPipeline();
 
     skyPipeline = MakeUnique<Pipeline>(
         device, RasterPipelineConfig::createSkyConfig(
             msaaManager->msaaSamples, renderPass,
             LayoutVec{glbDesc.setLayout}
-        ),
+        )
+    );
+    skyPipeline->createGraphicPipeline(
         "Shaders/Sky/sky.vert.spv",
         "Shaders/Sky/sky.frag.spv"
     );
-    skyPipeline->createGraphicPipeline();
 }
 
 void Application::createSurface() {
