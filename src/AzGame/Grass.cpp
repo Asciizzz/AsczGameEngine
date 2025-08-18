@@ -40,9 +40,9 @@ bool Grass::initialize(ResourceManager& resourceManager, VkDevice device, VkPhys
 
     grassFieldModelGroup.initVulkanDevice(device, physicalDevice);
 
-    // for (const auto& data : grassData3Ds) {
-    //     grassFieldModelGroup.addInstance(grassMeshIndex, grassMaterialIndex, data);
-    // }
+    for (const auto& data : grassData3Ds) {
+        grassFieldModelGroup.addInstance(grassMeshIndex, grassMaterialIndex, data);
+    }
     for (const auto& data : terrainData3Ds) {
         grassFieldModelGroup.addInstance(terrainMeshIndex, terrainMaterialIndex, data);
     }
