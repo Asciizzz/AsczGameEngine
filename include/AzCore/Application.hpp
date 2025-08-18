@@ -61,8 +61,6 @@ private:
     // Beta features
     AzBeta::ParticleManager particleManager;
 
-    // Vulkan handles we'll definitely remember to clean up
-    VkCommandPool commandPool = VK_NULL_HANDLE;
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 
     // Window metadata

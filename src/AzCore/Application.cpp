@@ -53,21 +53,11 @@ void Application::initVulkan() {
         swapChain->imageFormat, msaaManager->msaaSamples
     );
     mainRenderPass = MakeUnique<RenderPass>(vulkanDevice->device, renderPassConfig);
-    
+
     // Some very repetitive vulkan stuff
     VkDevice device = vulkanDevice->device;
     VkPhysicalDevice physicalDevice = vulkanDevice->physicalDevice;
     VkRenderPass renderPass = mainRenderPass->renderPass;
-
-    // Create command pool for graphics operations
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = vulkanDevice->queueFamilyIndices.graphicsFamily.value();
-
-    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create command pool!");
-    }
 
     // Initialize render targets and depth testing
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
@@ -80,7 +70,7 @@ void Application::initVulkan() {
         depthManager->depthSampler, depthManager->depthSamplerView
     );
 
-    resourceManager = MakeUnique<ResourceManager>(*vulkanDevice, commandPool);
+    resourceManager = MakeUnique<ResourceManager>(*vulkanDevice);
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
@@ -427,10 +417,6 @@ void Application::cleanup() {
     if (transparentPipeline) transparentPipeline.reset();
     if (skyPipeline) skyPipeline.reset();
     if (swapChain) swapChain.reset();
-
-    if (commandPool != VK_NULL_HANDLE) {
-        vkDestroyCommandPool(vulkanDevice->device, commandPool, nullptr);
-    }
 
     if (surface != VK_NULL_HANDLE && vulkanInstance) {
         vkDestroySurfaceKHR(vulkanInstance->instance, surface, nullptr);

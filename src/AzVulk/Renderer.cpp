@@ -34,16 +34,14 @@ namespace AzVulk {
     }
 
     void Renderer::createCommandPool() {
-        QueueFamilyIndices queueFamilyIndices = vulkanDevice.queueFamilyIndices;
-
-        VkCommandPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-
-        if (vkCreateCommandPool(vulkanDevice.device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create graphics command pool!");
+        if (commandPool != VK_NULL_HANDLE) {
+            vkDestroyCommandPool(vulkanDevice.device, commandPool, nullptr);
         }
+
+        commandPool = vulkanDevice.createCommandPool(
+            Device::GraphicsQueueType,
+            VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+        );
     }
 
     void Renderer::createCommandBuffers() {

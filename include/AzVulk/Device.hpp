@@ -1,15 +1,20 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include <vector>
+#include <unordered_map>
 #include <optional>
+#include <string>
+#include <vector>
 #include <set>
 
 namespace AzVulk {
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentFamily;
+        std::optional<uint32_t> transferFamily;
+        std::optional<uint32_t> computeFamily;
 
+        // Graphic and present are the minimum required queue families
         bool isComplete() const {
             return graphicsFamily.has_value() && presentFamily.has_value();
         }
@@ -42,6 +47,22 @@ namespace AzVulk {
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue presentQueue = VK_NULL_HANDLE;
         QueueFamilyIndices queueFamilyIndices;
+
+        enum QueueFamilyType {
+            GraphicsQueueType,
+            PresentQueueType,
+            TransferQueueType,
+            ComputeQueueType
+        };
+
+        uint32_t getGraphicsQueueFamilyIndex() const;
+        uint32_t getPresentQueueFamilyIndex() const;
+        uint32_t getTransferQueueFamilyIndex() const;
+        uint32_t getComputeQueueFamilyIndex() const;
+        uint32_t getQueueFamilyIndex(QueueFamilyType type) const;
+
+        // Command pools
+        VkCommandPool createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags = 0) const;
 
         static const std::vector<const char*> deviceExtensions;
     };

@@ -204,4 +204,43 @@ namespace AzVulk {
 
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
+
+
+
+    uint32_t Device::getGraphicsQueueFamilyIndex() const {
+        return queueFamilyIndices.graphicsFamily.value();
+    }
+    uint32_t Device::getPresentQueueFamilyIndex() const {
+        return queueFamilyIndices.presentFamily.value();
+    }
+    // Fallback to graphics family if transfer family is not available
+    uint32_t Device::getTransferQueueFamilyIndex() const {
+        return queueFamilyIndices.transferFamily.value_or(getGraphicsQueueFamilyIndex());
+    }
+    uint32_t Device::getComputeQueueFamilyIndex() const {
+        return queueFamilyIndices.computeFamily.value_or(getGraphicsQueueFamilyIndex());
+    }
+    uint32_t Device::getQueueFamilyIndex(QueueFamilyType type) const {
+        switch (type) {
+            case GraphicsQueueType: return getGraphicsQueueFamilyIndex();
+            case PresentQueueType: return getPresentQueueFamilyIndex();
+            case TransferQueueType: return getTransferQueueFamilyIndex();
+            case ComputeQueueType: return getComputeQueueFamilyIndex();
+            default: throw std::invalid_argument("Invalid queue family type");
+        }
+    }
+
+    VkCommandPool Device::createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags) const {
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.queueFamilyIndex = getQueueFamilyIndex(type);
+        poolInfo.flags = flags;
+
+        VkCommandPool commandPool;
+        if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create command pool!");
+        }
+
+        return commandPool;
+    }
 }

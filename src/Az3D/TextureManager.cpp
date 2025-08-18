@@ -11,8 +11,10 @@
 #include <iostream>
 
 namespace Az3D {
-    TextureManager::TextureManager(const AzVulk::Device& device, VkCommandPool pool)
-        : vulkanDevice(device), commandPool(pool) {
+    TextureManager::TextureManager(const AzVulk::Device& device)
+        : vulkanDevice(device) {
+        createCommandPool();
+
         createDefaultTexture();
     }
 
@@ -35,6 +37,18 @@ namespace Az3D {
             }
         }
         textures.clear();
+
+        // Destroy command pool
+        if (commandPool != VK_NULL_HANDLE) {
+            vkDestroyCommandPool(device, commandPool, nullptr);
+        }
+    }
+
+    void TextureManager::createCommandPool() {
+        commandPool = vulkanDevice.createCommandPool(
+            AzVulk::Device::GraphicsQueueType,
+            VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+        );
     }
 
     size_t TextureManager::addTexture(std::string imagePath, bool semiTransparent, Texture::Mode addressMode) {
