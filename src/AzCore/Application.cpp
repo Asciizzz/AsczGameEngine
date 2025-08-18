@@ -71,8 +71,7 @@ void Application::initVulkan() {
     );
 
     globalUBOManager = MakeUnique<GlobalUBOManager>(
-        device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT,
-        depthManager->depthSampler, depthManager->depthSamplerView
+        device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT
     );
 
     resourceManager = MakeUnique<ResourceManager>(*vulkanDevice);
@@ -224,8 +223,6 @@ bool Application::checkWindowResize() {
 
     msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
     depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-
-    globalUBOManager->resizeWindow(depthManager->depthSampler, depthManager->depthSamplerView);
 
     auto& texManager = *resourceManager->textureManager;
     auto& matManager = *resourceManager->materialManager;
