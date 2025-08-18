@@ -39,8 +39,8 @@ namespace AzVulk {
         return config;
     }
 
-    RenderPass::RenderPass(VkDevice device, const RenderPassConfig& config)
-        : device(device), config(config) {
+    RenderPass::RenderPass(VkDevice device, VkPhysicalDevice physicalDevice, const RenderPassConfig& config)
+        : device(device), physicalDevice(physicalDevice), config(config) {
         createRenderPass();
     }
 
@@ -153,13 +153,9 @@ namespace AzVulk {
         }
 
         // --- Depth resolve struct
-        VkSubpassDescriptionDepthStencilResolve depthResolveDesc{};
-        if (useDepthResolve) {
-            depthResolveDesc.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE;
-            depthResolveDesc.depthResolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
-            depthResolveDesc.stencilResolveMode = VK_RESOLVE_MODE_NONE;
-            depthResolveDesc.pDepthStencilResolveAttachment = &depthResolveRef;
-        }
+
+        VkResolveModeFlagBits resolveMode = chooseDepthResolveMode(physicalDevice);
+        bool depthResolveSupported = (resolveMode != VK_RESOLVE_MODE_NONE);
 
         // --- Subpass
         VkSubpassDescription2 subpass{};
@@ -169,7 +165,19 @@ namespace AzVulk {
         subpass.pColorAttachments = colorRefs.empty() ? nullptr : colorRefs.data();
         subpass.pResolveAttachments = hasColorResolve ? &colorResolveRef : nullptr;
         subpass.pDepthStencilAttachment = config.hasDepth ? &depthRef : nullptr;
-        subpass.pNext = useDepthResolve ? &depthResolveDesc : nullptr;
+        subpass.pNext = nullptr; // default
+
+        // --- Depth resolve struct
+        VkSubpassDescriptionDepthStencilResolve depthResolveDesc{};
+        if (useDepthResolve && depthResolveSupported) {
+            depthResolveDesc.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE;
+            depthResolveDesc.depthResolveMode = resolveMode;
+            depthResolveDesc.stencilResolveMode = VK_RESOLVE_MODE_NONE;
+            depthResolveDesc.pDepthStencilResolveAttachment = &depthResolveRef;
+
+            // Chain it into the subpass
+            subpass.pNext = &depthResolveDesc;
+        }
 
         // --- Dependency
         VkSubpassDependency2 dep{};
@@ -196,7 +204,6 @@ namespace AzVulk {
         info.dependencyCount = 1;
         info.pDependencies = &dep;
         
-        printf("Hello\n");
 
         auto fpCreateRenderPass2KHR = (PFN_vkCreateRenderPass2KHR)
             vkGetDeviceProcAddr(device, "vkCreateRenderPass2KHR");
@@ -206,8 +213,6 @@ namespace AzVulk {
         if (fpCreateRenderPass2KHR(device, &info, nullptr, &renderPass) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create render pass!");
         }
-
-        printf("Hello\n");
     }
 
     void RenderPass::cleanup() {
@@ -215,6 +220,26 @@ namespace AzVulk {
             vkDestroyRenderPass(device, renderPass, nullptr);
             renderPass = VK_NULL_HANDLE;
         }
+    }
+
+
+
+    VkResolveModeFlagBits RenderPass::chooseDepthResolveMode(VkPhysicalDevice physicalDevice) {
+        VkPhysicalDeviceDepthStencilResolveProperties dsResolveProps{};
+        dsResolveProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
+
+        VkPhysicalDeviceProperties2 props2{};
+        props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        props2.pNext = &dsResolveProps;
+
+        vkGetPhysicalDeviceProperties2(physicalDevice, &props2);
+
+        if (dsResolveProps.supportedDepthResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT) {
+            return VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+        }
+
+        // fallback: no hardware resolve support
+        return VK_RESOLVE_MODE_NONE;
     }
 
 } // namespace AzVulk

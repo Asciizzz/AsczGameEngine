@@ -10,8 +10,6 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     vec4 cameraUp;      // xyz: camera up, w: far
 } glb;
 
-layout(set = 0, binding = 1) uniform sampler2D depthSampler;
-
 
 // Material uniform buffer
 layout(set = 1, binding = 0) uniform MaterialUBO {
@@ -70,18 +68,7 @@ void main() {
     vec3 screenCoords = fragScreenPos.xyz / fragScreenPos.w;
     vec2 depthUV = screenCoords.xy * 0.5 + 0.5; // Convert from NDC [-1,1] to UV [0,1]
 
-    float near = glb.cameraRight.w;
-    float far = glb.cameraUp.w;
-
-    // World space depth
-    float z = texture(depthSampler, depthUV).r * 2.0 - 1.0; // Back to NDC
-    float linearDepth = (2.0 * near * far) / (far + near - z * (far - near));
-
-    float maxFogDistance = 100.0;
-    float fogFactor = clamp(linearDepth / maxFogDistance, 0.0, 1.0);
-    fogFactor = smoothstep(0.0, 1.0, fogFactor);
-
-    // fogFactor = 0.0;
+    float fogFactor = 0.0;
 
     float normalBlend = material.prop1.z;
     vec3 normal = normalize(fragWorldNrml);

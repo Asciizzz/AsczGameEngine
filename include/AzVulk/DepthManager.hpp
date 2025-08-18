@@ -31,6 +31,7 @@ namespace AzVulk {
         VkFormat depthFormat;
 
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT; // Default to 1x MSAA
+        bool depthResolveSupported;
 
         // Helper methods
         VkFormat findDepthFormat();

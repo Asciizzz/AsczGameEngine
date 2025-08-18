@@ -45,18 +45,18 @@ void Application::initVulkan() {
     createSurface();
 
     vulkanDevice = MakeUnique<Device>(vulkanInstance->instance, surface);
+    VkDevice device = vulkanDevice->device;
+    VkPhysicalDevice physicalDevice = vulkanDevice->physicalDevice;
+
     msaaManager = MakeUnique<MSAAManager>(*vulkanDevice);
     swapChain = MakeUnique<SwapChain>(*vulkanDevice, surface, windowManager->window);
+
 
     // Create shared render pass for forward rendering
     auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
         swapChain->imageFormat, msaaManager->msaaSamples
     );
-    mainRenderPass = MakeUnique<RenderPass>(vulkanDevice->device, renderPassConfig);
-
-    // Some very repetitive vulkan stuff
-    VkDevice device = vulkanDevice->device;
-    VkPhysicalDevice physicalDevice = vulkanDevice->physicalDevice;
+    mainRenderPass = MakeUnique<RenderPass>(device, physicalDevice, renderPassConfig);
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
     // Initialize render targets and depth testing
