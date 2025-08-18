@@ -3,9 +3,12 @@
 #include <stdexcept>
 #include <set>
 
-namespace AzVulk {
-    const std::vector<const char*> Device::deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+namespace AzVulk
+{
+    const std::vector<const char *> Device::deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        // Render pass 2 khr
+        VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME
     };
 
     Device::Device(VkInstance instance, VkSurfaceKHR surface) {
@@ -14,9 +17,12 @@ namespace AzVulk {
     }
 
     Device::~Device() {
-        if (device != VK_NULL_HANDLE) {
-            vkDestroyDevice(device, nullptr);
+        // Destroy command pools
+        for (const auto &[name, poolWrapper] : commandPools) {
+            vkDestroyCommandPool(device, poolWrapper.pool, nullptr);
         }
+
+        if (device != VK_NULL_HANDLE) vkDestroyDevice(device, nullptr);
     }
 
     void Device::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
@@ -30,7 +36,7 @@ namespace AzVulk {
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-        for (const auto& device : devices) {
+        for (const auto &device : devices) {
             if (isDeviceSuitable(device, surface)) {
                 physicalDevice = device;
                 queueFamilyIndices = findQueueFamilies(device, surface);
@@ -46,8 +52,10 @@ namespace AzVulk {
     void Device::createLogicalDevice() {
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         std::set<uint32_t> uniqueQueueFamilies = {
-            queueFamilyIndices.graphicsFamily.value(), 
-            queueFamilyIndices.presentFamily.value()
+            queueFamilyIndices.graphicsFamily.value(),
+            queueFamilyIndices.presentFamily.value(),
+            queueFamilyIndices.transferFamily.value(),
+            queueFamilyIndices.computeFamily.value()
         };
 
         float queuePriority = 1.0f;
@@ -79,6 +87,8 @@ namespace AzVulk {
 
         vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
         vkGetDeviceQueue(device, queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
+        vkGetDeviceQueue(device, queueFamilyIndices.transferFamily.value(), 0, &transferQueue);
+        vkGetDeviceQueue(device, queueFamilyIndices.computeFamily.value(), 0, &computeQueue);
     }
 
     bool Device::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
@@ -88,7 +98,7 @@ namespace AzVulk {
         bool swapChainAdequate = false;
         if (extensionsSupported) {
             SwapChainSupportDetails swapChainSupport;
-            
+
             vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &swapChainSupport.capabilities);
 
             uint32_t formatCount;
@@ -120,7 +130,7 @@ namespace AzVulk {
 
         std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
-        for (const auto& extension : availableExtensions) {
+        for (const auto &extension : availableExtensions) {
             requiredExtensions.erase(extension.extensionName);
         }
 
@@ -138,22 +148,40 @@ namespace AzVulk {
 
         int i = 0;
         for (const auto& queueFamily : queueFamilies) {
+            // Graphics
             if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 indices.graphicsFamily = i;
             }
 
+            // Present
             VkBool32 presentSupport = false;
             vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-
             if (presentSupport) {
                 indices.presentFamily = i;
             }
 
-            if (indices.isComplete()) {
-                break;
+            // Compute (prefer a dedicated compute queue if possible)
+            if ((queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) &&
+                !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
+                indices.computeFamily = i;
+            }
+
+            // Transfer (prefer a dedicated transfer queue if possible)
+            if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) &&
+                !(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+                !(queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)) {
+                indices.transferFamily = i;
             }
 
             i++;
+        }
+
+        // Fallbacks: if no dedicated compute/transfer queue was found, use graphics
+        if (!indices.computeFamily.has_value()) {
+            indices.computeFamily = indices.graphicsFamily;
+        }
+        if (!indices.transferFamily.has_value()) {
+            indices.transferFamily = indices.graphicsFamily;
         }
 
         return indices;
@@ -172,26 +200,53 @@ namespace AzVulk {
         throw std::runtime_error("failed to find suitable memory type!");
     }
 
-    VkCommandBuffer Device::beginSingleTimeCommands(VkCommandPool commandPool) const {
+
+
+    VkCommandPool Device::createCommandPool(std::string name, QueueFamilyType type, VkCommandPoolCreateFlags flags) {
+        if (commandPools.find(name) != commandPools.end()) {
+            throw std::runtime_error("Command pool with name '" + name + "' already exists!");
+        }
+
+        
+
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.queueFamilyIndex = getQueueFamilyIndex(type);
+        poolInfo.flags = flags;
+
+        VkCommandPool commandPool;
+        if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create command pool!");
+        }
+        commandPools[name] = { commandPool, type };
+        return commandPool;
+    }
+
+
+
+    VkCommandBuffer Device::beginSingleTimeCommands(std::string name) const {
+        const PoolWrapper &poolWrapper = commandPools.at(name); // get both pool + type
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = commandPool;
+        allocInfo.commandPool = poolWrapper.pool; // from wrapper
         allocInfo.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+        if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate command buffer!");
+        }
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
         vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
         return commandBuffer;
     }
 
-    void Device::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool) const {
+    void Device::endSingleTimeCommands(std::string name, VkCommandBuffer commandBuffer) const {
+        const PoolWrapper& poolWrapper = commandPools.at(name);
         vkEndCommandBuffer(commandBuffer);
 
         VkSubmitInfo submitInfo{};
@@ -199,9 +254,9 @@ namespace AzVulk {
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
 
-        vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(graphicsQueue);
-
-        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+        vkQueueSubmit(getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(getQueue(poolWrapper.type));
+        vkFreeCommandBuffers(device, poolWrapper.pool, 1, &commandBuffer);
     }
+
 }

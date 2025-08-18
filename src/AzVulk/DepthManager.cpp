@@ -1,11 +1,26 @@
+// DepthManager.cpp
 #include "AzVulk/DepthManager.hpp"
 #include "AzVulk/Device.hpp"
+
 #include <stdexcept>
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 
 namespace AzVulk {
-    DepthManager::DepthManager(const Device& device) : vulkanDevice(device) {}
+
+    DepthManager::DepthManager(const Device& device)
+        : vulkanDevice(device),
+          depthSampler(VK_NULL_HANDLE),
+          depthSamplerView(VK_NULL_HANDLE),
+          depthImage(VK_NULL_HANDLE),
+          depthImageMemory(VK_NULL_HANDLE),
+          depthImageView(VK_NULL_HANDLE),
+          depthSampleImage(VK_NULL_HANDLE),
+          depthSampleImageMemory(VK_NULL_HANDLE),
+          msaaSamples(VK_SAMPLE_COUNT_1_BIT),
+          depthResolveSupported(false)
+    {}
 
     DepthManager::~DepthManager() {
         cleanup();
@@ -50,33 +65,84 @@ namespace AzVulk {
         }
     }
 
-    void DepthManager::createDepthResources(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSamples) {
+    // Helper: query whether the physical device supports any depth-resolve modes
+    static VkResolveModeFlagBits chooseDepthResolveModeForPhysicalDevice(VkPhysicalDevice physicalDevice) {
+        VkPhysicalDeviceDepthStencilResolveProperties dsResolveProps{};
+        dsResolveProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
+        dsResolveProps.pNext = nullptr;
+
+        VkPhysicalDeviceProperties2 props2{};
+        props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        props2.pNext = &dsResolveProps;
+
+        // This call is guaranteed to exist on recent SDKs; the runtime will fill dsResolveProps
+        vkGetPhysicalDeviceProperties2(physicalDevice, &props2);
+
+        if (dsResolveProps.supportedDepthResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT) {
+            return VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+        }
+
+        // no supported depth resolve modes
+        return VK_RESOLVE_MODE_NONE;
+    }
+
+    void DepthManager::createDepthResources(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSamplesIn) {
         // Clean up existing resources first
         cleanup();
 
-        this->msaaSamples = msaaSamples;
+        this->msaaSamples = msaaSamplesIn;
 
         depthFormat = findDepthFormat();
 
-        // Create main depth buffer for depth testing
-        createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                    depthImage, depthImageMemory, msaaSamples);
+        // Query depth-resolve support on this GPU
+        VkResolveModeFlagBits mode = chooseDepthResolveModeForPhysicalDevice(vulkanDevice.physicalDevice);
+        depthResolveSupported = (mode != VK_RESOLVE_MODE_NONE);
 
-        depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        // If MSAA disabled (1 sample) create one depth image that is both attachment + sampled
+        if (msaaSamples == VK_SAMPLE_COUNT_1_BIT) {
+            // Create a single image usable as depth attachment and sampled image
+            createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                        depthImage, depthImageMemory, VK_SAMPLE_COUNT_1_BIT);
 
-        // Create separate depth texture for sampling (copy destination)
-        createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                    depthSampleImage, depthSampleImageMemory);
+            depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-        depthSamplerView = createImageView(depthSampleImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-        
+            // Use same image for sampling view (no separate resolve image needed)
+            depthSampleImage = depthImage;
+            depthSampleImageMemory = depthImageMemory;
+            depthSamplerView = depthImageView;
+        } else {
+            // MSAA > 1: create a multisampled depth attachment image
+            // Note: we intentionally *do not* request SAMPLED_BIT here. If you later want to implement a shader-based manual resolve,
+            // you might need to create the multisampled depth with SAMPLED_BIT so you can sample with sampler2DMS in a shader.
+            createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                        depthImage, depthImageMemory, msaaSamples);
+
+            depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+            if (depthResolveSupported) {
+                // Create single-sample resolve image that will be written by the renderpass depth-resolve
+                createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+                            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                            depthSampleImage, depthSampleImageMemory, VK_SAMPLE_COUNT_1_BIT);
+
+                depthSamplerView = createImageView(depthSampleImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+            } else {
+                // No hardware depth resolve: don't create resolve image here.
+                // The application must perform a manual resolve (blit/compute/shader) if it needs a single-sample depth sampler.
+                depthSampleImage = VK_NULL_HANDLE;
+                depthSampleImageMemory = VK_NULL_HANDLE;
+                depthSamplerView = VK_NULL_HANDLE;
+            }
+        }
+
         createDepthSampler();
     }
-    
+
     VkFormat DepthManager::findDepthFormat() {
         return findSupportedFormat(
             {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
@@ -186,78 +252,73 @@ namespace AzVulk {
         }
     }
 
+    // Ensure the depth image usable for sampling is in DEPTH_STENCIL_READ_ONLY_OPTIMAL and synchronized
+    // If MSAA > 1 we expect the renderpass to resolve to depthSampleImage (single-sample) already if supported,
+    // but perform a safe barrier to make sure availability for fragment shader reads. If hardware resolve isn't supported,
+    // a manual resolve must be performed prior to sampling (see TODO).
     void DepthManager::copyDepthForSampling(VkCommandBuffer commandBuffer, uint32_t width, uint32_t height) {
-        // Transition source depth image for transfer
-        VkImageMemoryBarrier srcBarrier{};
-        srcBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        srcBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        srcBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        srcBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        srcBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        srcBarrier.image = depthImage;
-        srcBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        srcBarrier.subresourceRange.baseMipLevel = 0;
-        srcBarrier.subresourceRange.levelCount = 1;
-        srcBarrier.subresourceRange.baseArrayLayer = 0;
-        srcBarrier.subresourceRange.layerCount = 1;
-        srcBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        srcBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        // Determine which image we will use for sampling:
+        // - msaa == 1: depthImage is the sampled image
+        // - msaa > 1 && depthResolveSupported: depthSampleImage is the resolved single-sample image
+        // - msaa > 1 && !depthResolveSupported: no automatic resolved image exists; manual resolve is required.
+        VkImage targetImage = VK_NULL_HANDLE;
 
-        // Transition destination depth sample image for transfer
-        VkImageMemoryBarrier dstBarrier{};
-        dstBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        dstBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        dstBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        dstBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        dstBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        dstBarrier.image = depthSampleImage;
-        dstBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        dstBarrier.subresourceRange.baseMipLevel = 0;
-        dstBarrier.subresourceRange.levelCount = 1;
-        dstBarrier.subresourceRange.baseArrayLayer = 0;
-        dstBarrier.subresourceRange.layerCount = 1;
-        dstBarrier.srcAccessMask = 0;
-        dstBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        if (msaaSamples == VK_SAMPLE_COUNT_1_BIT) {
+            targetImage = depthImage;
+        } else if (depthResolveSupported) {
+            targetImage = depthSampleImage;
+        } else {
+            // No hardware resolve support — TODO: perform manual resolve here (blit/compute). For now, we log and return.
+            // Manual resolve approaches:
+            //  - Create the MSAA depth image with VK_IMAGE_USAGE_SAMPLED_BIT and sample it in a fullscreen compute shader
+            //    (sampler2DMS) that writes the resolved depth into a single-sample R32_SFLOAT image (with STORAGE usage).
+            //  - Or run a fullscreen fragment shader that reads the MSAA depth (if created with SAMPLED_BIT) and writes depth
+            //    into a single-sample color image (R32) via color output. That color image can then be sampled.
+            // Note: these approaches require additional pipelines/shaders and slightly different image usage flags.
+            std::fprintf(stderr, "[DepthManager] Warning: depth resolve not supported by hardware and no manual resolve implemented.\n");
+            return;
+        }
 
-        VkImageMemoryBarrier preTransferBarriers[] = {srcBarrier, dstBarrier};
-        vkCmdPipelineBarrier(commandBuffer,
-                            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                            0, 0, nullptr, 0, nullptr, 2, preTransferBarriers);
+        if (targetImage == VK_NULL_HANDLE) {
+            return;
+        }
 
-        // Copy depth image to sample image
-        VkImageCopy copyRegion{};
-        copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        copyRegion.srcSubresource.mipLevel = 0;
-        copyRegion.srcSubresource.baseArrayLayer = 0;
-        copyRegion.srcSubresource.layerCount = 1;
-        copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        copyRegion.dstSubresource.mipLevel = 0;
-        copyRegion.dstSubresource.baseArrayLayer = 0;
-        copyRegion.dstSubresource.layerCount = 1;
-        copyRegion.srcOffset = {0, 0, 0};
-        copyRegion.dstOffset = {0, 0, 0};
-        copyRegion.extent.width = width;
-        copyRegion.extent.height = height;
-        copyRegion.extent.depth = 1;
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.pNext = nullptr;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = targetImage;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
 
-        vkCmdCopyImage( commandBuffer, depthImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        depthSampleImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+        // Renderpass wrote to depth -> make available to shader read
+        barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        // Transition back to usable layouts
-        srcBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        srcBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        srcBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        srcBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        // If multisample and hardware-resolve supported, the renderpass typically finalizes the resolve image into
+        // DEPTH_STENCIL_READ_ONLY_OPTIMAL; in single-sample case it may leave it as DEPTH_STENCIL_ATTACHMENT_OPTIMAL.
+        VkImageLayout assumedOldLayout = (msaaSamples == VK_SAMPLE_COUNT_1_BIT)
+            ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            : VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
-        dstBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        dstBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        dstBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        dstBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = assumedOldLayout;
+        barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
-        VkImageMemoryBarrier postTransferBarriers[] = {srcBarrier, dstBarrier};
-        vkCmdPipelineBarrier(commandBuffer,
-                            VK_PIPELINE_STAGE_TRANSFER_BIT, 
-                            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                            0, 0, nullptr, 0, nullptr, 2, postTransferBarriers);
+        VkPipelineStageFlags srcStages = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        VkPipelineStageFlags dstStages = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            srcStages,
+            dstStages,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier
+        );
     }
-}
+} // namespace AzVulk

@@ -11,8 +11,11 @@
 #include <iostream>
 
 namespace Az3D {
-    TextureManager::TextureManager(const AzVulk::Device& device, VkCommandPool pool)
-        : vulkanDevice(device), commandPool(pool) {
+    TextureManager::TextureManager(AzVulk::Device& device)
+        : vulkanDevice(device) {
+
+        vulkanDevice.createCommandPool("TexturePool", AzVulk::Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
         createDefaultTexture();
     }
 
@@ -116,18 +119,22 @@ namespace Az3D {
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, defaultTexture.image, defaultTexture.memory);
 
+
         // Transfer data
         transitionImageLayout(  defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
+
         copyBufferToImage(stagingBuffer.buffer, defaultTexture.image, 1, 1);
         transitionImageLayout(  defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
+                                
 
         // Create image view and sampler
         createImageView(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, 1, defaultTexture.view);
         createSampler(1, defaultTexture.sampler, Texture::Repeat);
 
         stagingBuffer.cleanup();
+
 
         textures.push_back(MakeShared<Texture>(defaultTexture));
     }
@@ -228,7 +235,7 @@ namespace Az3D {
     }
 
     void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
-        VkCommandBuffer commandBuffer = vulkanDevice.beginSingleTimeCommands(commandPool);
+        VkCommandBuffer commandBuffer = vulkanDevice.beginSingleTimeCommands("TexturePool");
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -261,11 +268,12 @@ namespace Az3D {
         }
 
         vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-        vulkanDevice.endSingleTimeCommands(commandBuffer, commandPool);
+        // AzVulk::Device::endSingleTimeCommands(vulkanDevice.device, vulkanDevice.graphicsQueue, commandBuffer, commandPool);
+        vulkanDevice.endSingleTimeCommands("TexturePool", commandBuffer);
     }
 
     void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-        VkCommandBuffer commandBuffer = vulkanDevice.beginSingleTimeCommands(commandPool);
+        VkCommandBuffer commandBuffer = vulkanDevice.beginSingleTimeCommands("TexturePool");
 
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -279,7 +287,7 @@ namespace Az3D {
         region.imageExtent = {width, height, 1};
 
         vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-        vulkanDevice.endSingleTimeCommands(commandBuffer, commandPool);
+        vulkanDevice.endSingleTimeCommands("TexturePool", commandBuffer);
     }
 
     void TextureManager::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
@@ -290,7 +298,7 @@ namespace Az3D {
             throw std::runtime_error("texture image format does not support linear blitting!");
         }
 
-        VkCommandBuffer commandBuffer = vulkanDevice.beginSingleTimeCommands(commandPool);
+        VkCommandBuffer commandBuffer = vulkanDevice.beginSingleTimeCommands("TexturePool");
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -349,7 +357,7 @@ namespace Az3D {
 
         vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-        vulkanDevice.endSingleTimeCommands(commandBuffer, commandPool);
+        vulkanDevice.endSingleTimeCommands("TexturePool", commandBuffer);
     }
 
 

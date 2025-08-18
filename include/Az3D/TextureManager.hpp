@@ -33,8 +33,7 @@ namespace Az3D {
     // Texture manager with Vulkan helpers
     class TextureManager {
     public:
-        const AzVulk::Device& vulkanDevice;
-        VkCommandPool commandPool;
+        AzVulk::Device& vulkanDevice;
 
         SharedPtrVec<Texture> textures;
         AzVulk::DynamicDescriptor dynamicDescriptor;
@@ -43,7 +42,7 @@ namespace Az3D {
             return dynamicDescriptor.getSet(textureIndex * maxFramesInFlight + frameIndex);
         }
 
-        TextureManager(const AzVulk::Device& device, VkCommandPool pool);
+        TextureManager(AzVulk::Device& device);
         ~TextureManager();
 
         size_t addTexture(std::string imagePath, bool semiTransparent = false, Texture::Mode addressMode = Texture::Repeat);

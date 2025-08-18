@@ -31,7 +31,7 @@ namespace AzVulk {
 
     class RenderPass {
     public:
-        RenderPass(VkDevice device, const RenderPassConfig& config);
+        RenderPass(VkDevice device, VkPhysicalDevice physicalDevice, const RenderPassConfig& config);
         ~RenderPass();
         
         RenderPass(const RenderPass&) = delete;
@@ -40,11 +40,15 @@ namespace AzVulk {
         void recreate(const RenderPassConfig& newConfig);
 
         VkDevice device;
+        VkPhysicalDevice physicalDevice;
         VkRenderPass renderPass = VK_NULL_HANDLE;
         RenderPassConfig config;
         
         void createRenderPass();
         void cleanup();
+
+        // Helper
+        static VkResolveModeFlagBits chooseDepthResolveMode(VkPhysicalDevice physicalDevice);
     };
     
 } // namespace AzVulk

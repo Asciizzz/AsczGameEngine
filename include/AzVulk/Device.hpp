@@ -1,22 +1,27 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include <vector>
 #include <optional>
 #include <set>
+
+#include "Helpers/Templates.hpp"
 
 namespace AzVulk {
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentFamily;
+        std::optional<uint32_t> transferFamily;
+        std::optional<uint32_t> computeFamily;
 
-        bool isComplete() const {
+        bool isComplete() const { // Minimum requirements
             return graphicsFamily.has_value() && presentFamily.has_value();
         }
     };
 
     class Device {
     public:
+        static const std::vector<const char*> deviceExtensions;
+
         Device(VkInstance instance, VkSurfaceKHR surface);
         ~Device();
 
@@ -25,9 +30,6 @@ namespace AzVulk {
 
         // Memory and buffer utilities
         static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physicalDevice);
-        
-        VkCommandBuffer beginSingleTimeCommands(VkCommandPool commandPool) const;
-        void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool) const;
 
         // Device setup methods
         void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
@@ -39,10 +41,49 @@ namespace AzVulk {
         // Vulkan device objects
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         VkDevice device = VK_NULL_HANDLE;
+
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue presentQueue = VK_NULL_HANDLE;
+        VkQueue transferQueue = VK_NULL_HANDLE;
+        VkQueue computeQueue = VK_NULL_HANDLE;
+
         QueueFamilyIndices queueFamilyIndices;
 
-        static const std::vector<const char*> deviceExtensions;
+        enum QueueFamilyType {
+            GraphicsType,
+            PresentType,
+            TransferType,
+            ComputeType
+        };
+
+        struct PoolWrapper { VkCommandPool pool; QueueFamilyType type; };
+        uint32_t getGraphicsQueueFamilyIndex() const { return queueFamilyIndices.graphicsFamily.value(); }
+        uint32_t getPresentQueueFamilyIndex() const { return queueFamilyIndices.presentFamily.value(); }
+        uint32_t getTransferQueueFamilyIndex() const { return queueFamilyIndices.transferFamily.value_or(getGraphicsQueueFamilyIndex()); }
+        uint32_t getComputeQueueFamilyIndex() const { return queueFamilyIndices.computeFamily.value_or(getGraphicsQueueFamilyIndex()); }
+        uint32_t getQueueFamilyIndex(QueueFamilyType type) const {
+            switch (type) {
+                case GraphicsType: return getGraphicsQueueFamilyIndex();
+                case PresentType: return getPresentQueueFamilyIndex();
+                case TransferType: return getTransferQueueFamilyIndex();
+                case ComputeType: return getComputeQueueFamilyIndex();
+                default: return getGraphicsQueueFamilyIndex(); // Fallback
+            }
+        }
+        VkQueue getQueue(QueueFamilyType type) const {
+            switch (type) {
+                case GraphicsType: return graphicsQueue;
+                case PresentType: return presentQueue;
+                case TransferType: return transferQueue;
+                case ComputeType: return computeQueue;
+                default: return graphicsQueue; // Fallback
+            }
+        }
+
+        UnorderedMap<std::string, PoolWrapper> commandPools; // Command pools
+        VkCommandPool createCommandPool(std::string name, QueueFamilyType type, VkCommandPoolCreateFlags flags = 0);
+
+        VkCommandBuffer beginSingleTimeCommands(std::string poolName) const;
+        void endSingleTimeCommands(std::string poolName, VkCommandBuffer commandBuffer) const;
     };
 }

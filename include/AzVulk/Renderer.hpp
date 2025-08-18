@@ -12,10 +12,11 @@ namespace AzVulk {
     class DepthManager; // Forward declaration
     class Renderer {
     public:
-        Renderer(const Device& device, SwapChain& swapChain,
+        Renderer(Device& device,
+                SwapChain& swapChain,
+                DepthManager& depthManager,
                 Az3D::GlobalUBOManager& globalUBOManager,
-                Az3D::ResourceManager& resourceManager,
-                DepthManager& depthManager);
+                Az3D::ResourceManager& resourceManager);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -31,21 +32,21 @@ namespace AzVulk {
         // Thank's for attending my Ted-Talk
 
         // Component references
-        const Device& vulkanDevice;
+        Device& vulkanDevice;
         SwapChain& swapChain;
+        DepthManager& depthManager;
         Az3D::GlobalUBOManager& globalUBOManager;
         Az3D::ResourceManager& resourceManager;
-        DepthManager& depthManager;
 
         // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;
         std::vector<VkCommandBuffer> commandBuffers;
         
         // Synchronization objects
-        std::vector<VkFence> imagesInFlight; // Per swapchain image
-        std::vector<VkSemaphore> imageAvailableSemaphores; // Per swapchain image
+        std::vector<VkSemaphore> imageAvailableSemaphores; // Per MAX_FRAMES_IN_FLIGHT
         std::vector<VkSemaphore> renderFinishedSemaphores; // Per swapchain image
-        std::vector<VkFence> inFlightFences;
+        std::vector<VkFence> inFlightFences; // Per MAX_FRAMES_IN_FLIGHT
+        std::vector<VkFence> imagesInFlight; // Per swapchain image
         
         uint32_t currentFrame = 0;
         bool framebufferResized = false;

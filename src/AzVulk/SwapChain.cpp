@@ -91,25 +91,26 @@ namespace AzVulk {
         }
     }
 
-    void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
+    void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView depthResolveImageView, VkImageView colorImageView) {
         cleanupFramebuffers();
         framebuffers.resize(imageViews.size());
 
         for (size_t i = 0; i < imageViews.size(); ++i) {
             std::vector<VkImageView> attachments;
-            
+
             if (colorImageView != VK_NULL_HANDLE) {
-                // MSAA case: colorImageView, depthImageView, swapChainImageView (resolve target)
+                // MSAA case: colorMSAA, depthMSAA, depthResolve(single-sample), swapchain (color resolve)
                 attachments = {
-                    colorImageView,
-                    depthImageView,
-                    imageViews[i]
+                    colorImageView,          // attachment 0
+                    depthImageView,          // attachment 1
+                    depthResolveImageView,   // attachment 2  <-- IMPORTANT
+                    imageViews[i]            // attachment 3 (swapchain/resolved color)
                 };
             } else {
-                // Non-MSAA case: swapChainImageView, depthImageView
+                // Non-MSAA case: swapchain (color), depth (single-sample)
                 attachments = {
-                    imageViews[i],
-                    depthImageView
+                    imageViews[i],           // attachment 0 (swapchain)
+                    depthImageView           // attachment 1 (depth)
                 };
             }
 
@@ -128,7 +129,7 @@ namespace AzVulk {
         }
     }
 
-    void SwapChain::recreate(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
+    void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView depthResolveImageView, VkImageView colorImageView) {
         int width = 0, height = 0;
         SDL_GetWindowSize(window, &width, &height);
         while (width == 0 || height == 0) {
@@ -141,7 +142,7 @@ namespace AzVulk {
         cleanup();
         createSwapChain(window);
         createImageViews();
-        createFramebuffers(renderPass, depthImageView, colorImageView);
+        createFramebuffers(renderPass, depthImageView, depthResolveImageView, colorImageView);
     }
 
     void SwapChain::cleanup() {

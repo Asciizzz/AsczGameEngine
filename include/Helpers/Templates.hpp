@@ -1,8 +1,9 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <vector>
-#include <array>
+#include <string>
 #include <unordered_map>
 
 template<typename T> using UniquePtr = std::unique_ptr<T>;
@@ -20,3 +21,4 @@ SharedPtr<T> MakeShared(Args&&... args) {
 }
 
 template<typename K, typename V> using UnorderedMap = std::unordered_map<K, V>;
+// template<typename T> using UnorderedStringMap = std::unordered_map<std::string, T>;

@@ -10,7 +10,7 @@ namespace Az3D {
     // All these resource are static and fixed, created upon load
     class ResourceManager {
     public:
-        ResourceManager(const AzVulk::Device& device, VkCommandPool commandPool);
+        ResourceManager(AzVulk::Device& device);
         ~ResourceManager() = default;
 
         ResourceManager(const ResourceManager&) = delete;

@@ -28,9 +28,7 @@ namespace Az3D {
     class GlobalUBOManager {
     public:
         GlobalUBOManager(
-            VkDevice device, VkPhysicalDevice physicalDevice, uint32_t MAX_FRAMES_IN_FLIGHT,
-            // Add additional global component as needed
-            VkSampler depthSampler, VkImageView depthSamplerView
+            VkDevice device, VkPhysicalDevice physicalDevice, uint32_t MAX_FRAMES_IN_FLIGHT
         );
         ~GlobalUBOManager() = default;
 
@@ -43,9 +41,6 @@ namespace Az3D {
         uint32_t MAX_FRAMES_IN_FLIGHT;
 
         GlobalUBO ubo;
-        // Depth sampler
-        VkSampler depthSampler = VK_NULL_HANDLE;
-        VkImageView depthSamplerView = VK_NULL_HANDLE;
 
         std::vector<AzVulk::BufferData> bufferDatas;
         void createBufferDatas();
@@ -57,8 +52,6 @@ namespace Az3D {
 
     // Functionalities
         void updateUBO(const Camera& camera);
-        void resizeWindow(VkSampler newDepthSampler, VkImageView newDepthSamplerView);
-
     };
 
 }

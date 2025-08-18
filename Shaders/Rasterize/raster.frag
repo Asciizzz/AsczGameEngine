@@ -10,8 +10,6 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     vec4 cameraUp;      // xyz: camera up, w: far
 } glb;
 
-layout(set = 0, binding = 1) uniform sampler2D depthSampler;
-
 
 // Material uniform buffer
 layout(set = 1, binding = 0) uniform MaterialUBO {
@@ -73,15 +71,6 @@ void main() {
     float near = glb.cameraRight.w;
     float far = glb.cameraUp.w;
 
-    // World space depth
-    float z = texture(depthSampler, depthUV).r * 2.0 - 1.0; // Back to NDC
-    float linearDepth = (2.0 * near * far) / (far + near - z * (far - near));
-
-    float maxFogDistance = 100.0;
-    float fogFactor = clamp(linearDepth / maxFogDistance, 0.0, 1.0);
-    fogFactor = smoothstep(0.0, 1.0, fogFactor);
-
-    // fogFactor = 0.0;
 
     float normalBlend = material.prop1.z;
     vec3 normal = normalize(fragWorldNrml);
@@ -90,8 +79,6 @@ void main() {
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
     vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * zenithCol;
 
-    rgbFinal = mix(rgbFinal * vertexLightFactor, zenithCol * 0.4, fogFactor);
-    
     float alpha = texColor.a * fragInstanceColor.a;
 
     outColor = vec4(rgbFinal, alpha);

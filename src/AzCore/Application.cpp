@@ -3,7 +3,7 @@
 #include <iostream>
 #include <random>
 
-#ifdef NDEBUG
+#ifdef NDEBUG // Remember to set this to false
 const bool enableValidationLayers = true;
 #else
 const bool enableValidationLayers = true;
@@ -45,42 +45,39 @@ void Application::initVulkan() {
     createSurface();
 
     vulkanDevice = MakeUnique<Device>(vulkanInstance->instance, surface);
+    VkDevice device = vulkanDevice->device;
+    VkPhysicalDevice physicalDevice = vulkanDevice->physicalDevice;
+
     msaaManager = MakeUnique<MSAAManager>(*vulkanDevice);
     swapChain = MakeUnique<SwapChain>(*vulkanDevice, surface, windowManager->window);
+
 
     // Create shared render pass for forward rendering
     auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
         swapChain->imageFormat, msaaManager->msaaSamples
     );
-    mainRenderPass = MakeUnique<RenderPass>(vulkanDevice->device, renderPassConfig);
-    
-    // Some very repetitive vulkan stuff
-    VkDevice device = vulkanDevice->device;
-    VkPhysicalDevice physicalDevice = vulkanDevice->physicalDevice;
+    mainRenderPass = MakeUnique<RenderPass>(device, physicalDevice, renderPassConfig);
+
     VkRenderPass renderPass = mainRenderPass->renderPass;
-
-    // Create command pool for graphics operations
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = vulkanDevice->queueFamilyIndices.graphicsFamily.value();
-
-    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create command pool!");
-    }
 
     // Initialize render targets and depth testing
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = MakeUnique<DepthManager>(*vulkanDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
-
-    globalUBOManager = MakeUnique<GlobalUBOManager>(
-        device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT,
-        depthManager->depthSampler, depthManager->depthSamplerView
+    swapChain->createFramebuffers(
+        renderPass, 
+        depthManager->depthImageView,
+        depthManager->depthSamplerView,
+        msaaManager->colorImageView
     );
 
-    resourceManager = MakeUnique<ResourceManager>(*vulkanDevice, commandPool);
+    globalUBOManager = MakeUnique<GlobalUBOManager>(
+        device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT
+    );
+
+    resourceManager = MakeUnique<ResourceManager>(*vulkanDevice);
+    
+    printf("Hello\n");
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
@@ -91,14 +88,25 @@ void Application::initVulkan() {
 
 // PLAYGROUND FROM HERE
 
+    // // Useful shorthand for placing models
+    // auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
+    //     Model instance;
+    //     instance.data.modelMatrix = transform.getMat4();
+    //     instance.data.multColor = color;
+    //     instance.meshIndex = platformerMeshIndices.at(name);
+    //     instance.materialIndex = globalMaterialIndex;
+
+    //     worldModelGroup->addInstance(instance);
+    // };
+
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 124;
-    grassConfig.worldSizeZ = 124;
-    grassConfig.baseDensity = 6;
+    grassConfig.worldSizeX = 240;
+    grassConfig.worldSizeZ = 240;
+    grassConfig.baseDensity = 4;
     grassConfig.heightVariance = 6.9f;
     grassConfig.lowVariance = 0.1f;
-    grassConfig.numHeightNodes = 250;
+    grassConfig.numHeightNodes = 450;
     grassConfig.enableWind = true;
     
     // Initialize grass system
@@ -156,14 +164,15 @@ void Application::initVulkan() {
 
 // PLAYGROUND END HERE 
 
-    meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
+    meshManager.createBufferDatas(device, physicalDevice);
 
-    matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    matManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
-    texManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
+    matManager.createBufferDatas(device, physicalDevice);
+    matManager.createDescriptorSets(device, MAX_FRAMES_IN_FLIGHT);
 
-    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *globalUBOManager,
-                                    *resourceManager, *depthManager);
+    texManager.createDescriptorSets(device, MAX_FRAMES_IN_FLIGHT);
+
+    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *depthManager,
+                                    *globalUBOManager, *resourceManager);
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     auto& matDesc = matManager.dynamicDescriptor;
@@ -173,35 +182,19 @@ void Application::initVulkan() {
     LayoutVec layouts = {glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout};
 
     opaquePipeline = MakeUnique<Pipeline>(
-        device, RasterPipelineConfig::createOpaqueConfig(
-            msaaManager->msaaSamples, renderPass, layouts
-        )
+        device, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples, renderPass, layouts)
     );
-    opaquePipeline->createGraphicPipeline(
-        "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/raster.frag.spv"
-    );
+    opaquePipeline->createGraphicPipeline("Shaders/Rasterize/raster.vert.spv", "Shaders/Rasterize/raster.frag.spv");
 
     transparentPipeline = MakeUnique<Pipeline>(
-        device, RasterPipelineConfig::createTransparentConfig(
-            msaaManager->msaaSamples, renderPass, layouts
-        )
+        device, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples, renderPass, layouts)
     );
-    transparentPipeline->createGraphicPipeline(
-        "Shaders/Rasterize/raster.vert.spv",
-        "Shaders/Rasterize/raster.frag.spv"
-    );
+    transparentPipeline->createGraphicPipeline("Shaders/Rasterize/raster.vert.spv", "Shaders/Rasterize/raster.frag.spv");
 
     skyPipeline = MakeUnique<Pipeline>(
-        device, RasterPipelineConfig::createSkyConfig(
-            msaaManager->msaaSamples, renderPass,
-            LayoutVec{glbDesc.setLayout}
-        )
+        device, RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples, renderPass, layouts)
     );
-    skyPipeline->createGraphicPipeline(
-        "Shaders/Sky/sky.vert.spv",
-        "Shaders/Sky/sky.frag.spv"
-    );
+    skyPipeline->createGraphicPipeline("Shaders/Sky/sky.vert.spv", "Shaders/Sky/sky.frag.spv");
 }
 
 void Application::createSurface() {
@@ -227,8 +220,6 @@ bool Application::checkWindowResize() {
     msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
     depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
 
-    globalUBOManager->resizeWindow(depthManager->depthSampler, depthManager->depthSamplerView);
-
     auto& texManager = *resourceManager->textureManager;
     auto& matManager = *resourceManager->materialManager;
 
@@ -239,7 +230,12 @@ bool Application::checkWindowResize() {
 
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
-    swapChain->recreate(windowManager->window, renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    swapChain->recreateFramebuffers(
+        windowManager->window, renderPass,
+        depthManager->depthImageView,
+        depthManager->depthSamplerView,
+        msaaManager->colorImageView
+    );
 
     VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
 
@@ -425,10 +421,6 @@ void Application::cleanup() {
     if (transparentPipeline) transparentPipeline.reset();
     if (skyPipeline) skyPipeline.reset();
     if (swapChain) swapChain.reset();
-
-    if (commandPool != VK_NULL_HANDLE) {
-        vkDestroyCommandPool(vulkanDevice->device, commandPool, nullptr);
-    }
 
     if (surface != VK_NULL_HANDLE && vulkanInstance) {
         vkDestroySurfaceKHR(vulkanInstance->instance, surface, nullptr);

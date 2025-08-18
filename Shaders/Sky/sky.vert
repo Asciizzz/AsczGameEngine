@@ -1,6 +1,6 @@
 #version 450
 
-layout(binding = 0) uniform GlobalUBO {
+layout(set = 0,binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
 } glb;
