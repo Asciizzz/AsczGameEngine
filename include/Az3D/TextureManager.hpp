@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "AzVulk/DescriptorSets.hpp"
 #include "Helpers/Templates.hpp"
 
@@ -34,9 +32,6 @@ namespace Az3D {
     class TextureManager {
     public:
         const AzVulk::Device& vulkanDevice;
-        
-        VkCommandPool commandPool;
-        void createCommandPool();
 
         SharedPtrVec<Texture> textures;
         AzVulk::DynamicDescriptor dynamicDescriptor;

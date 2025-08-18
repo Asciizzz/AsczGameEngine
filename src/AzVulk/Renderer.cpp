@@ -6,7 +6,7 @@
 using namespace Az3D;
 
 namespace AzVulk {
-        Renderer::Renderer (const Device& device,
+        Renderer::Renderer (Device& device,
                             SwapChain& swapChain,
                             DepthManager& depthManager,
                             Az3D::GlobalUBOManager& globalUBOManager,
@@ -17,7 +17,8 @@ namespace AzVulk {
         globalUBOManager(globalUBOManager),
         resourceManager(resourceManager) {
 
-            createCommandPool();
+            vulkanDevice.createCommandPool("RendererPool", Device::GraphicsQueueType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
             createCommandBuffers();
             createSyncObjects();
         }
@@ -30,21 +31,6 @@ namespace AzVulk {
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
             vkDestroyFence(device, inFlightFences[i], nullptr);
         }
-
-        if (commandPool != VK_NULL_HANDLE) {
-            vkDestroyCommandPool(device, commandPool, nullptr);
-        }
-    }
-
-    void Renderer::createCommandPool() {
-        if (commandPool != VK_NULL_HANDLE) {
-            vkDestroyCommandPool(vulkanDevice.device, commandPool, nullptr);
-        }
-
-        commandPool = vulkanDevice.createCommandPool(
-            Device::GraphicsQueueType,
-            VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
-        );
     }
 
     void Renderer::createCommandBuffers() {
@@ -52,7 +38,7 @@ namespace AzVulk {
 
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = commandPool;
+        allocInfo.commandPool = vulkanDevice.getCommandPool("RendererPool");
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
@@ -216,6 +202,7 @@ namespace AzVulk {
 
     // Sky rendering using dedicated sky pipeline
     void Renderer::drawSky(Pipeline& skyPipeline) {
+        return;
         // Bind sky pipeline
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
 

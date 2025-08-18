@@ -1,10 +1,9 @@
 #pragma once
 
+#include "Helpers/Templates.hpp"
+
 #include <vulkan/vulkan.h>
-#include <unordered_map>
 #include <optional>
-#include <string>
-#include <vector>
 #include <set>
 
 namespace AzVulk {
@@ -45,6 +44,8 @@ namespace AzVulk {
         VkDevice device = VK_NULL_HANDLE;
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue presentQueue = VK_NULL_HANDLE;
+        VkQueue transferQueue = VK_NULL_HANDLE;
+        VkQueue computeQueue = VK_NULL_HANDLE;
         QueueFamilyIndices queueFamilyIndices;
 
         enum QueueFamilyType {
@@ -54,18 +55,27 @@ namespace AzVulk {
             ComputeQueueType
         };
 
+        struct PoolWrapper {
+            VkCommandPool pool;
+            QueueFamilyType type;
+        };
+
         uint32_t getGraphicsQueueFamilyIndex() const;
         uint32_t getPresentQueueFamilyIndex() const;
         uint32_t getTransferQueueFamilyIndex() const;
         uint32_t getComputeQueueFamilyIndex() const;
         uint32_t getQueueFamilyIndex(QueueFamilyType type) const;
 
+        VkQueue getQueue(QueueFamilyType type) const;
+
+        UnorderedStringMap<PoolWrapper> commandPools;
+        VkCommandPool getCommandPool(std::string name) const;
+
         // Command pools
-        VkCommandPool createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags = 0) const;
+        VkCommandPool createCommandPool(std::string name, QueueFamilyType type, VkCommandPoolCreateFlags flags = 0);
+        VkCommandBuffer beginSingleTimeCommands(std::string name) const;
 
-
-
-        static VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool);
-        static void endSingleTimeCommands(VkDevice device, VkQueue queue, VkCommandBuffer commandBuffer, VkCommandPool commandPool);
+        // Currently not correct
+        void endSingleTimeCommands(std::string name, VkCommandBuffer commandBuffer) const;
     };
 }

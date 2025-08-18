@@ -12,7 +12,7 @@ namespace AzVulk {
     class DepthManager; // Forward declaration
     class Renderer {
     public:
-        Renderer(const Device& device,
+        Renderer(Device& device,
                 SwapChain& swapChain,
                 DepthManager& depthManager,
                 Az3D::GlobalUBOManager& globalUBOManager,
@@ -32,14 +32,13 @@ namespace AzVulk {
         // Thank's for attending my Ted-Talk
 
         // Component references
-        const Device& vulkanDevice;
+        Device& vulkanDevice;
         SwapChain& swapChain;
         Az3D::GlobalUBOManager& globalUBOManager;
         Az3D::ResourceManager& resourceManager;
         DepthManager& depthManager;
 
         // Command recording
-        VkCommandPool commandPool = VK_NULL_HANDLE;
         std::vector<VkCommandBuffer> commandBuffers;
         
         // Synchronization objects
@@ -54,7 +53,6 @@ namespace AzVulk {
         static const int MAX_FRAMES_IN_FLIGHT = 2; // double buffering
         size_t swapchainImageCount = 0;
 
-        void createCommandPool();
         void createCommandBuffers();
         void createSyncObjects();
     };

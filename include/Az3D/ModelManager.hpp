@@ -2,8 +2,6 @@
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
-#include <string>
-
 #include "AzVulk/Buffer.hpp"
 #include "Helpers/AzPair.hpp"
 

@@ -159,6 +159,8 @@ namespace AzVulk {
             throw std::runtime_error("failed to create depth image view!");
         }
 
+        printf("Created depth image view: %p\n", (void*)imageView);
+
         return imageView;
     }
 
