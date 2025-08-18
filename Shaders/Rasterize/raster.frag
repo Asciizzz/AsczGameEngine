@@ -81,5 +81,5 @@ void main() {
 
     float alpha = texColor.a * fragInstanceColor.a;
 
-    outColor = vec4(rgbFinal, alpha);
+    outColor = vec4(rgbFinal * vertexLightFactor, alpha);
 }

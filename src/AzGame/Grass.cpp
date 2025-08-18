@@ -40,9 +40,9 @@ bool Grass::initialize(ResourceManager& resourceManager, VkDevice device, VkPhys
 
     grassFieldModelGroup.initVulkanDevice(device, physicalDevice);
 
-    for (const auto& data : grassData3Ds) {
-        grassFieldModelGroup.addInstance(grassMeshIndex, grassMaterialIndex, data);
-    }
+    // for (const auto& data : grassData3Ds) {
+    //     grassFieldModelGroup.addInstance(grassMeshIndex, grassMaterialIndex, data);
+    // }
     for (const auto& data : terrainData3Ds) {
         grassFieldModelGroup.addInstance(terrainMeshIndex, terrainMaterialIndex, data);
     }
@@ -394,7 +394,7 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     // Create terrain mesh and material
     terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices, true);
     terrainMaterialIndex = resManager.addMaterial("TerrainMaterial",
-        Material::fastTemplate(1.0f, 2.0f, 0.2f, 0.0f, 0)
+        Material::fastTemplate(1.0f, 0.0f, 0.2f, 0.0f, 0)
     );
 
     // Create terrain instance
