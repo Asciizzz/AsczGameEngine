@@ -3,8 +3,8 @@
 #include <iostream>
 #include <random>
 
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
+#ifdef NDEBUG // Remember to set this to false
+const bool enableValidationLayers = true;
 #else
 const bool enableValidationLayers = true;
 #endif
@@ -157,14 +157,15 @@ void Application::initVulkan() {
 
 // PLAYGROUND END HERE 
 
-    meshManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
+    meshManager.createBufferDatas(device, physicalDevice);
 
-    matManager.createBufferDatas(vulkanDevice->device, vulkanDevice->physicalDevice);
-    matManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
-    texManager.createDescriptorSets(vulkanDevice->device, MAX_FRAMES_IN_FLIGHT);
+    matManager.createBufferDatas(device, physicalDevice);
+    matManager.createDescriptorSets(device, MAX_FRAMES_IN_FLIGHT);
 
-    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *globalUBOManager,
-                                    *resourceManager, *depthManager);
+    texManager.createDescriptorSets(device, MAX_FRAMES_IN_FLIGHT);
+
+    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *depthManager,
+                                    *globalUBOManager, *resourceManager);
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     auto& matDesc = matManager.dynamicDescriptor;

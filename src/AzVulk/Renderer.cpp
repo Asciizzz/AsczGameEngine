@@ -6,14 +6,17 @@
 using namespace Az3D;
 
 namespace AzVulk {
-        Renderer::Renderer (const Device& device, SwapChain& swapChain,
-                            GlobalUBOManager& globalUBOManager,
-                            ResourceManager& resourceManager,
-                            DepthManager& depthManager) :
-        vulkanDevice(device), swapChain(swapChain),
+        Renderer::Renderer (const Device& device,
+                            SwapChain& swapChain,
+                            DepthManager& depthManager,
+                            Az3D::GlobalUBOManager& globalUBOManager,
+                            Az3D::ResourceManager& resourceManager) :
+        vulkanDevice(device),
+        swapChain(swapChain),
+        depthManager(depthManager),
         globalUBOManager(globalUBOManager),
-        resourceManager(resourceManager),
-        depthManager(depthManager) {
+        resourceManager(resourceManager) {
+
             createCommandPool();
             createCommandBuffers();
             createSyncObjects();

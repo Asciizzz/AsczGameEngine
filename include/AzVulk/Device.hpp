@@ -22,6 +22,8 @@ namespace AzVulk {
 
     class Device {
     public:
+        static const std::vector<const char*> deviceExtensions;
+
         Device(VkInstance instance, VkSurfaceKHR surface);
         ~Device();
 
@@ -30,9 +32,6 @@ namespace AzVulk {
 
         // Memory and buffer utilities
         static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physicalDevice);
-        
-        VkCommandBuffer beginSingleTimeCommands(VkCommandPool commandPool) const;
-        void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkCommandPool commandPool) const;
 
         // Device setup methods
         void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
@@ -64,6 +63,9 @@ namespace AzVulk {
         // Command pools
         VkCommandPool createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags = 0) const;
 
-        static const std::vector<const char*> deviceExtensions;
+
+
+        static VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool);
+        static void endSingleTimeCommands(VkDevice device, VkQueue queue, VkCommandBuffer commandBuffer, VkCommandPool commandPool);
     };
 }
