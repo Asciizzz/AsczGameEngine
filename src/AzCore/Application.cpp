@@ -63,7 +63,12 @@ void Application::initVulkan() {
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = MakeUnique<DepthManager>(*vulkanDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    swapChain->createFramebuffers(
+        renderPass, 
+        depthManager->depthImageView,
+        depthManager->depthSamplerView,
+        msaaManager->colorImageView
+    );
 
     globalUBOManager = MakeUnique<GlobalUBOManager>(
         device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT,
@@ -232,7 +237,12 @@ bool Application::checkWindowResize() {
 
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
-    swapChain->recreate(windowManager->window, renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    swapChain->recreateFramebuffers(
+        windowManager->window, renderPass,
+        depthManager->depthImageView,
+        depthManager->depthSamplerView,
+        msaaManager->colorImageView
+    );
 
     VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
 

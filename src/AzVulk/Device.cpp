@@ -5,7 +5,8 @@
 
 namespace AzVulk {
     const std::vector<const char*> Device::deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME
     };
 
     Device::Device(VkInstance instance, VkSurfaceKHR surface) {
