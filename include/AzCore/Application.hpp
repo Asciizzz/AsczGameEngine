@@ -32,7 +32,7 @@ private:
     UniquePtr<Az3D::Camera> camera;
 
     // Vulkan: OpenGL's ambitious cousin
-    UniquePtr<AzVulk::Instance> vulkanInstance;
+    UniquePtr<AzVulk::Instance> vkInstance;
     UniquePtr<AzVulk::Device> vkDevice;
     UniquePtr<AzVulk::SwapChain> swapChain;
 
@@ -60,9 +60,6 @@ private:
 
     UniquePtr<AzBeta::ParticleManager> particleManager;
 
-    // Vulkan handles we'll definitely remember to clean up
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-
     // Window metadata
     const char* appTitle;
     uint32_t appWidth;
@@ -70,7 +67,6 @@ private:
 
     // Functions that actually do things
     void initVulkan();
-    void createSurface();
     void mainLoop();
     void cleanup();
 

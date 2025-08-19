@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL2/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <optional>
@@ -19,8 +20,12 @@ namespace AzVulk {
         VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
         bool validationLayersEnabled;
 
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+
         // Helper methods 
         void createInstance(const std::vector<const char*>& requiredExtensions);
+        void createSurface(SDL_Window* window);
+
         void setupDebugMessenger();
         bool checkValidationLayerSupport();
         void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
@@ -29,7 +34,8 @@ namespace AzVulk {
             VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
             VkDebugUtilsMessageTypeFlagsEXT messageType,
             const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-            void* pUserData);
+            void* pUserData
+        );
 
         static const std::vector<const char*> validationLayers;
     };

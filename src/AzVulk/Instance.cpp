@@ -38,10 +38,10 @@ namespace AzVulk {
         if (validationLayersEnabled && debugMessenger != VK_NULL_HANDLE) {
             DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
         }
-        
-        if (instance != VK_NULL_HANDLE) {
-            vkDestroyInstance(instance, nullptr);
-        }
+
+        if (surface != VK_NULL_HANDLE) { vkDestroySurfaceKHR(instance, surface, nullptr); }
+
+        if (instance != VK_NULL_HANDLE) { vkDestroyInstance(instance, nullptr); }
     }
 
     void Instance::createInstance(const std::vector<const char*>& requiredExtensions) {
@@ -83,6 +83,12 @@ namespace AzVulk {
 
         if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
             throw std::runtime_error("failed to create instance!");
+        }
+    }
+
+    void Instance::createSurface(SDL_Window* window) {
+        if (SDL_Vulkan_CreateSurface(window, instance, &surface) != SDL_TRUE) {
+            throw std::runtime_error("failed to create surface!");
         }
     }
 

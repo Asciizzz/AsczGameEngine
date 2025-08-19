@@ -39,17 +39,20 @@ void Application::run() {
     printf("Application exited successfully. See you next time!\n");
 }
 
+
+
+
 void Application::initVulkan() {
     auto extensions = windowManager->getRequiredVulkanExtensions();
-    vulkanInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
-    createSurface();
+    vkInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
+    vkInstance->createSurface(windowManager->window);
 
-    vkDevice = MakeUnique<Device>(vulkanInstance->instance, surface);
+    vkDevice = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
     VkDevice device = vkDevice->device;
     VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
 
     msaaManager = MakeUnique<MSAAManager>(vkDevice.get());
-    swapChain = MakeUnique<SwapChain>(vkDevice.get(), surface, windowManager->window);
+    swapChain = MakeUnique<SwapChain>(vkDevice.get(), vkInstance->surface, windowManager->window);
 
 
     // Create shared render pass for forward rendering
@@ -193,12 +196,6 @@ void Application::initVulkan() {
         device, RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples, renderPass, layouts)
     );
     skyPipeline->createGraphicPipeline("Shaders/Sky/sky.vert.spv", "Shaders/Sky/sky.frag.spv");
-}
-
-void Application::createSurface() {
-    if (!SDL_Vulkan_CreateSurface(windowManager->window, vulkanInstance->instance, &surface)) {
-        throw std::runtime_error("failed to create window surface!");
-    }
 }
 
 bool Application::checkWindowResize() {
@@ -446,18 +443,5 @@ void Application::mainLoop() {
 }
 
 void Application::cleanup() {
-    // Destroy all Vulkan-resource-owning objects before device destruction
-    if (renderer) renderer.reset();
-    if (resourceManager) resourceManager.reset();
-    if (msaaManager) msaaManager.reset();
-    if (depthManager) depthManager.reset();
-    if (mainRenderPass) mainRenderPass.reset();
-    if (opaquePipeline) opaquePipeline.reset();
-    if (transparentPipeline) transparentPipeline.reset();
-    if (skyPipeline) skyPipeline.reset();
-    if (swapChain) swapChain.reset();
 
-    if (surface != VK_NULL_HANDLE && vulkanInstance) {
-        vkDestroySurfaceKHR(vulkanInstance->instance, surface, nullptr);
-    }
 }
