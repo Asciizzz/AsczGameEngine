@@ -150,7 +150,7 @@ namespace AzBeta {
                         size_t count, float r = 0.05f, float display_r = 0.05f,
                         const glm::vec3& boundsMin = glm::vec3(-10.0f),
                         const glm::vec3& boundsMax = glm::vec3(10.0f)) {
-            
+
             size_t textureIndex = resourceManager->addTexture("Particle", "Assets/Textures/Pearto.png");
             size_t materialIndex = resourceManager->addMaterial("Particle", Az3D::Material::fastTemplate(0.0f, 0.0f, 0.0f, 0.0f, textureIndex));
             size_t meshIndex = resourceManager->addMesh("Particle", "Assets/Characters/Pearto.obj", false);
@@ -491,11 +491,7 @@ namespace AzBeta {
             // Handle particle-to-particle collisions after position updates
             handleParticleCollisions();
 
-            // Mapped the particles vector to the particles_data vector
-            std::vector<size_t> mappedIndices(particleCount);
-            std::iota(mappedIndices.begin(), mappedIndices.end(), 0);
-
-            std::for_each(std::execution::par_unseq, mappedIndices.begin(), mappedIndices.end(), [&](size_t i) {
+            std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t i) {
                 Data3D data;
                 data.modelMatrix = particles[i].getMat4();
                 data.multColor = glm::vec4(1.0f);
