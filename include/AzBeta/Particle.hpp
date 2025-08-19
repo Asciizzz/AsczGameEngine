@@ -29,6 +29,15 @@ namespace AzBeta {
 
         Az3D::ModelGroup particleModelGroup;
 
+        std::vector<glm::vec3> rainbow_colors = {
+            glm::vec3(1.0f, 0.2f, 0.2f), // Red
+            glm::vec3(1.0f, 0.5f, 0.2f), // Orange
+            glm::vec3(1.0f, 1.0f, 0.2f), // Yellow
+            glm::vec3(0.2f, 1.0f, 0.2f), // Green
+            glm::vec3(0.2f, 0.2f, 1.0f), // Blue
+            glm::vec3(0.5f, 0.2f, 1.0f)  // Purple
+        };
+
         // 1% drop particles will have the following effects:
         // Index 1 - 33% chance to be red - immovable
         // Index 2 - 33% chance to be blue - perfect energy gain on collision
@@ -485,17 +494,55 @@ namespace AzBeta {
 
                 glm::quat rotation = glm::angleAxis(speed * dTime * 2.0f, direction);
                 particles[p].rotate(rotation);
-
             });
 
             // Handle particle-to-particle collisions after position updates
             handleParticleCollisions();
 
-            std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t i) {
+            std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t p) {
+                glm::vec3 particleColor;
+                switch (particles_special[p]) {
+                    // Default white
+                    case 0: particleColor = glm::vec3(1.0f, 1.0f, 1.0f); break;
+                    // 0.33% for unique rgb colors
+                    case 1: particleColor = glm::vec3(1.0f, 0.4f, 0.4f); break;
+                    case 2: particleColor = glm::vec3(0.4f, 0.4f, 1.0f); break;
+                    // If pull active, full green
+                    case 3: 
+                        particleColor = particles_rainbow[p] > 0.0f ? // Push
+                                        glm::vec3(5.0f, 10.0f, 0.0f) :
+                                        particles_rainbow[p] < 0.0f ? // Pull
+                                        glm::vec3(0.0f, 10.0f, 5.0f) :
+                                        glm::vec3(0.4f, 1.0f, 0.4f); // No effect
+                        break;
+                        // 0.01% for rainbow
+                    case 4:
+                        float speed = glm::length(particles_velocity[p]) + 1.0f; // Ensure the rainbow effect is always present
+
+                        // 4th value will run from 0 -> 1 and mix 6 total color combination
+                        float step = speed * dTime * 0.5f;
+
+                        particles_rainbow[p] = fmodf(particles_rainbow[p] + step, 1.0f);
+                        // Get the current process
+                        int colorIndex = static_cast<int>(particles_rainbow[p] * rainbow_colors.size()) % rainbow_colors.size();
+                        float local_w = particles_rainbow[p] * rainbow_colors.size() - static_cast<float>(colorIndex);
+
+                        switch (colorIndex) {
+                            case 0: particleColor = glm::mix(rainbow_colors[0], rainbow_colors[1], local_w); break;
+                            case 1: particleColor = glm::mix(rainbow_colors[1], rainbow_colors[2], local_w); break;
+                            case 2: particleColor = glm::mix(rainbow_colors[2], rainbow_colors[3], local_w); break;
+                            case 3: particleColor = glm::mix(rainbow_colors[3], rainbow_colors[4], local_w); break;
+                            case 4: particleColor = glm::mix(rainbow_colors[4], rainbow_colors[5], local_w); break;
+                            case 5: particleColor = glm::mix(rainbow_colors[5], rainbow_colors[0], local_w); break;
+                        }
+                        break;
+                }
+
+
                 Data3D data;
-                data.modelMatrix = particles[i].getMat4();
-                data.multColor = glm::vec4(1.0f);
-                particles_data[i] = data;
+                data.modelMatrix = particles[p].getMat4();
+                data.multColor = glm::vec4(particleColor, 1.0f);
+                particles_data[p] = data;
             });
 
             particleModelGroup.modelMapping[modelHash].datas = particles_data;
