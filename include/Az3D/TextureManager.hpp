@@ -33,11 +33,11 @@ namespace Az3D {
     // Texture manager with Vulkan helpers
     class TextureManager {
     public:
-        AzVulk::Device& vkDevice;
+        const AzVulk::Device& vkDevice;
 
         SharedPtrVec<Texture> textures;
 
-        TextureManager(AzVulk::Device& device);
+        TextureManager(const AzVulk::Device& device);
         ~TextureManager();
 
         size_t addTexture(std::string imagePath, bool semiTransparent = false, Texture::Mode addressMode = Texture::Repeat);

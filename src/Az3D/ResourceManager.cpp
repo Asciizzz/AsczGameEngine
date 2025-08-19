@@ -8,6 +8,7 @@ namespace Az3D {
 
     ResourceManager::ResourceManager(Device& vkDevice) {
         vkDevice.createCommandPool("TransferPool", Device::TransferType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        vkDevice.createCommandPool("TexturePool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
         textureManager = MakeUnique<TextureManager>(vkDevice);
         materialManager = MakeUnique<MaterialManager>(vkDevice);

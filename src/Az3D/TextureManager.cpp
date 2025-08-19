@@ -11,11 +11,8 @@
 using namespace AzVulk;
 
 namespace Az3D {
-    TextureManager::TextureManager(Device& device)
-        : vkDevice(device) {
-
-        vkDevice.createCommandPool("TexturePool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
+    TextureManager::TextureManager(const Device& vkDevice)
+        : vkDevice(vkDevice) {
         createDefaultTexture();
     }
 
