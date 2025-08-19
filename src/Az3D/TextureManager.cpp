@@ -358,8 +358,6 @@ namespace Az3D {
 
     // Descriptor function
     void TextureManager::createDescriptorSets(uint32_t maxFramesInFlight) {
-        using namespace AzVulk;
-
         VkDevice device = vkDevice.device;
 
         dynamicDescriptor.init(device);
