@@ -12,6 +12,8 @@ namespace AzBeta {
 
     class ParticleManager {
     public:
+        using Data3D = Az3D::Model::Data3D;
+
         ParticleManager() = default;
         ~ParticleManager() = default;
 
@@ -19,6 +21,7 @@ namespace AzBeta {
 
         size_t particleCount = 0;
         std::vector<Az3D::Transform> particles; // Only store transforms, not full models
+        std::vector<Data3D> particles_data;
         std::vector<glm::vec3> particles_velocity;
         std::vector<glm::vec3> particles_angular_velocity; // For rotation
         std::vector<short> particles_special; // Cool rare 1% drop particles
@@ -143,16 +146,18 @@ namespace AzBeta {
             ));
         }
 
-        void initParticles( Az3D::ResourceManager* resourceManager,
-                            size_t count, float r = 0.05f, float display_r = 0.05f,
-                            const glm::vec3& boundsMin = glm::vec3(-10.0f),
-                            const glm::vec3& boundsMax = glm::vec3(10.0f)) {
-
+        void initialize(Az3D::ResourceManager* resourceManager, const AzVulk::Device* vkDevice,
+                        size_t count, float r = 0.05f, float display_r = 0.05f,
+                        const glm::vec3& boundsMin = glm::vec3(-10.0f),
+                        const glm::vec3& boundsMax = glm::vec3(10.0f)) {
+            
             size_t textureIndex = resourceManager->addTexture("Particle", "Assets/Textures/Pearto.png");
-            size_t materialIndex = resourceManager->addMaterial("Particle", Az3D::Material::fastTemplate(1.0, 0.0, 0.0, 0.0, textureIndex));
+            size_t materialIndex = resourceManager->addMaterial("Particle", Az3D::Material::fastTemplate(0.0f, 0.0f, 0.0f, 0.0f, textureIndex));
             size_t meshIndex = resourceManager->addMesh("Particle", "Assets/Characters/Pearto.obj", false);
 
             modelHash = Az3D::ModelGroup::Hash::encode(meshIndex, materialIndex);
+
+            particleModelGroup.init("ParticleGroup", vkDevice);
 
             particleCount = count;
             radius = r;
@@ -161,6 +166,8 @@ namespace AzBeta {
             spatialGrid.setBounds(boundsMin, boundsMax);
 
             particles.resize(count);
+            particles_data.resize(count);
+
             particles_velocity.resize(count);
             particles_angular_velocity.resize(count);
 
@@ -197,6 +204,15 @@ namespace AzBeta {
                 particles_special[i] = specialEffect;
 
                 particles_velocity[i] = randomDirection();
+
+                // Generate data
+                Data3D particleData;
+                particleData.modelMatrix = particles[i].getMat4();
+                particleData.multColor = glm::vec4(1.0f);
+
+                particles_data[i] = particleData;
+
+                particleModelGroup.addInstance(meshIndex, materialIndex, particleData);
             }
         }
 
@@ -383,7 +399,7 @@ namespace AzBeta {
         //     }
         // }
 
-        void update(float dTime, const Az3D::Mesh& mesh, const Az3D::Transform& meshTransform) {
+        void update(float dTime, const Az3D::Mesh* mesh, const glm::mat4& meshModelMat4) {
             std::vector<size_t> indices(particleCount);
             std::iota(indices.begin(), indices.end(), 0);
 
@@ -396,12 +412,13 @@ namespace AzBeta {
                 glm::vec3 &pos = particles[p].pos;
                 glm::vec3 &vel = particles_velocity[p];
 
-                if (pos.y > 2.1f) vel.y -= 9.81f * dTime; // Simple gravity
-                else {
-                    vel *= 0.99f;
+                // if (pos.y > 2.1f) vel.y -= 9.81f * dTime; // Simple gravity
+                // else {
+                //     vel *= 0.99f;
 
-                    vel.y += 1.0f * dTime; // Float on top of water
-                }
+                //     vel.y += 1.0f * dTime; // Float on top of water
+                // }
+                vel.y -= 9.81f * dTime;
 
                 float speed = glm::length(vel);
                 glm::vec3 direction = glm::normalize(vel);
@@ -411,13 +428,13 @@ namespace AzBeta {
 
                 glm::vec3 predictedPos = pos + direction * step;
 
-                Az3D::HitInfo map_collision = mesh.closestHit(
-                    predictedPos, radius, meshTransform.getMat4()
+                Az3D::HitInfo map_collision = mesh->closestHit(
+                    predictedPos, radius, meshModelMat4
                 );
 
                 // Additional ray cast in case of an overstep
-                Az3D::HitInfo ray_collision = mesh.closestHit(
-                    pos, direction, step, meshTransform.getMat4()
+                Az3D::HitInfo ray_collision = mesh->closestHit(
+                    pos, direction, step, meshModelMat4
                 );
 
                 // Check if predicted pos is inside the bounding box
@@ -473,6 +490,19 @@ namespace AzBeta {
 
             // Handle particle-to-particle collisions after position updates
             handleParticleCollisions();
+
+            // Mapped the particles vector to the particles_data vector
+            std::vector<size_t> mappedIndices(particleCount);
+            std::iota(mappedIndices.begin(), mappedIndices.end(), 0);
+
+            std::for_each(std::execution::par_unseq, mappedIndices.begin(), mappedIndices.end(), [&](size_t i) {
+                Data3D data;
+                data.modelMatrix = particles[i].getMat4();
+                data.multColor = glm::vec4(1.0f);
+                particles_data[i] = data;
+            });
+
+            particleModelGroup.modelMapping[modelHash].datas = particles_data;
         }
 
 

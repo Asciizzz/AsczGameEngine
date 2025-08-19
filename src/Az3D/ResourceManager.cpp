@@ -53,19 +53,35 @@ namespace Az3D {
         return index;
     }
 
-    size_t ResourceManager::getTexture(std::string name) const {
+    size_t ResourceManager::getTextureIndex(std::string name) const {
         auto it = textureNameToIndex.find(name);
         return it != textureNameToIndex.end() ? it->second : SIZE_MAX;
     }
 
-    size_t ResourceManager::getMaterial(std::string name) const {
+    size_t ResourceManager::getMaterialIndex(std::string name) const {
         auto it = materialNameToIndex.find(name);
         return it != materialNameToIndex.end() ? it->second : SIZE_MAX;
     }
 
-    size_t ResourceManager::getMesh(std::string name) const {
+    size_t ResourceManager::getMeshIndex(std::string name) const {
         auto it = meshNameToIndex.find(name);
         return it != meshNameToIndex.end() ? it->second : SIZE_MAX;
+    }
+
+
+    Mesh* ResourceManager::getMesh(std::string name) const {
+        size_t index = getMeshIndex(name);
+        return index != SIZE_MAX ? meshManager->meshes[index].get() : nullptr;
+    }
+
+    Material* ResourceManager::getMaterial(std::string name) const {
+        size_t index = getMaterialIndex(name);
+        return index != SIZE_MAX ? materialManager->materials[index].get() : nullptr;
+    }
+
+    Texture* ResourceManager::getTexture(std::string name) const {
+        size_t index = getTextureIndex(name);
+        return index != SIZE_MAX ? textureManager->textures[index].get() : nullptr;
     }
 
 } // namespace Az3D

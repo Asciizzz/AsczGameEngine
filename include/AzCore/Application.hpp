@@ -58,8 +58,7 @@ private:
     UniquePtr<AzGame::Grass> grassSystem;
     UniquePtr<AzGame::World> newWorld;
 
-    // Beta features
-    AzBeta::ParticleManager particleManager;
+    UniquePtr<AzBeta::ParticleManager> particleManager;
 
     // Vulkan handles we'll definitely remember to clean up
     VkSurfaceKHR surface = VK_NULL_HANDLE;

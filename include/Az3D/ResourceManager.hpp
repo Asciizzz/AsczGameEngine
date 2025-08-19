@@ -26,9 +26,13 @@ namespace Az3D {
         size_t addMesh(std::string name, std::string filePath, bool hasBVH = false);
 
         // String-to-index getters
-        size_t getTexture(std::string name) const;
-        size_t getMaterial(std::string name) const;
-        size_t getMesh(std::string name) const;
+        size_t getTextureIndex(std::string name) const;
+        size_t getMaterialIndex(std::string name) const;
+        size_t getMeshIndex(std::string name) const;
+
+        Mesh* getMesh(std::string name) const;
+        Material* getMaterial(std::string name) const;
+        Texture* getTexture(std::string name) const;
 
         // String-to-index maps
         UnorderedMap<std::string, size_t> textureNameToIndex;

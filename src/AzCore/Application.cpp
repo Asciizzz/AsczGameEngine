@@ -90,12 +90,30 @@ void Application::initVulkan() {
     
     // Initialize grass system
     grassSystem = MakeUnique<AzGame::Grass>(grassConfig);
-    if (!grassSystem->initialize(*resourceManager, vkDevice.get())) {
-        throw std::runtime_error("Failed to initialize grass system!");
-    }
+    grassSystem->initialize(*resourceManager, vkDevice.get());
+
 
     // Initialized world
     newWorld = MakeUnique<AzGame::World>(resourceManager.get(), vkDevice.get());
+
+    // Initialize particle system
+    particleManager = MakeUnique<AzBeta::ParticleManager>();
+
+    glm::vec3 boundMin = resourceManager->getMesh("TerrainMesh")->nodes[0].min;
+    glm::vec3 boundMax = resourceManager->getMesh("TerrainMesh")->nodes[0].max;
+    boundMax.y += abs(boundMax.y - boundMin.y) * 0.5f;
+
+    particleManager->initialize(
+        resourceManager.get(), vkDevice.get(),
+        1000, // Count
+        0.5f, // Radius
+        0.5f, // Display radius (for objects that seems bigger/smaller than their hitbox)
+        // The bound
+        resourceManager->getMesh("TerrainMesh")->nodes[0].min,
+        resourceManager->getMesh("TerrainMesh")->nodes[0].max
+    );
+
+
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
@@ -351,6 +369,22 @@ void Application::mainLoop() {
             hold_g = false;
         }
 
+        // Place platform in the world
+        static bool hold_p = false;
+        static bool particlePhysicsEnabled = false;
+        if (k_state[SDL_SCANCODE_P] && !hold_p) {
+            // Toggle particle physics
+            particlePhysicsEnabled = !particlePhysicsEnabled;
+
+            hold_p = true;
+        } else if (!k_state[SDL_SCANCODE_P]) {
+            hold_p = false;
+        }
+
+        if (particlePhysicsEnabled) {
+            particleManager->update(dTime, resourceManager->getMesh("TerrainMesh"), glm::mat4(1.0f));
+        }
+
 // =================================
 
         // Use the new explicit rendering interface
@@ -364,6 +398,8 @@ void Application::mainLoop() {
             rendererRef.drawScene(*opaquePipeline, grassSystem->grassFieldModelGroup);
             // Draw the world model group
             rendererRef.drawScene(*opaquePipeline, newWorld->worldModelGroup);
+            // Draw the particles
+            rendererRef.drawScene(*opaquePipeline, particleManager->particleModelGroup);
 
             rendererRef.endFrame(imageIndex);
         };
