@@ -1,19 +1,6 @@
 #pragma once
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-
-#include <glm/glm.hpp>
-#include <vulkan/vulkan.h>
-
-#include "Helpers/Templates.hpp"
-
-namespace Az3D {
-    struct Mesh;
-    struct MeshMappingData;
-    struct Model;
-}
+#include "AzVulk/Device.hpp"
 
 namespace AzVulk {
 
