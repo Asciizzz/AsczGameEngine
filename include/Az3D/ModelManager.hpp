@@ -52,8 +52,8 @@ namespace Az3D {
 
     // Model group for separate renderer
     struct ModelGroup {
-        // No chance in hell we passing 1 million meshes/materials
-        using ModelPair = AzPair<1'000'000, 1'000'000>;
+        // Mesh - Material (in that order)
+        using Hash = AzPair<1'000'000, 1'000'000>;
 
         std::string name = "Default";
 

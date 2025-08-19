@@ -15,7 +15,7 @@ namespace AzBeta {
         ParticleManager() = default;
         ~ParticleManager() = default;
 
-        size_t modelResourceIndex = 0; // Index into the global rendering system's model resources
+        size_t modelHash = 0;
 
         size_t particleCount = 0;
         std::vector<Az3D::Transform> particles; // Only store transforms, not full models
@@ -23,6 +23,8 @@ namespace AzBeta {
         std::vector<glm::vec3> particles_angular_velocity; // For rotation
         std::vector<short> particles_special; // Cool rare 1% drop particles
         std::vector<float> particles_rainbow; // Special scalar value for all special particles (not just rainbow)
+
+        Az3D::ModelGroup particleModelGroup;
 
         // 1% drop particles will have the following effects:
         // Index 1 - 33% chance to be red - immovable
@@ -141,10 +143,16 @@ namespace AzBeta {
             ));
         }
 
-        void initParticles( size_t count, size_t modelResIdx, float r = 0.05f, float display_r = 0.05f,
+        void initParticles( Az3D::ResourceManager* resourceManager,
+                            size_t count, float r = 0.05f, float display_r = 0.05f,
                             const glm::vec3& boundsMin = glm::vec3(-10.0f),
                             const glm::vec3& boundsMax = glm::vec3(10.0f)) {
-            modelResourceIndex = modelResIdx;
+
+            size_t textureIndex = resourceManager->addTexture("Particle", "Assets/Textures/Pearto.png");
+            size_t materialIndex = resourceManager->addMaterial("Particle", Az3D::Material::fastTemplate(1.0, 0.0, 0.0, 0.0, textureIndex));
+            size_t meshIndex = resourceManager->addMesh("Particle", "Assets/Characters/Pearto.obj", false);
+
+            modelHash = Az3D::ModelGroup::Hash::encode(meshIndex, materialIndex);
 
             particleCount = count;
             radius = r;

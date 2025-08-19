@@ -81,7 +81,7 @@ namespace Az3D {
     void ModelGroup::addInstance(const Model& instance) {
         if (!vkDevice) return;
 
-        size_t modelEncode = ModelPair::encode(instance.meshIndex, instance.materialIndex);
+        size_t modelEncode = Hash::encode(instance.meshIndex, instance.materialIndex);
         
         auto [it, inserted] = modelMapping.try_emplace(modelEncode);
         if (inserted) { // New entry
@@ -94,7 +94,7 @@ namespace Az3D {
     void ModelGroup::addInstance(size_t meshIndex, size_t materialIndex, const Model::Data3D& instanceData) {
         if (!vkDevice) return;
 
-        size_t modelEncode = ModelPair::encode(meshIndex, materialIndex);
+        size_t modelEncode = Hash::encode(meshIndex, materialIndex);
 
         auto [it, inserted] = modelMapping.try_emplace(modelEncode);
         if (inserted) { // New entry

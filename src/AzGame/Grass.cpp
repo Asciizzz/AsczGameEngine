@@ -35,8 +35,8 @@ bool Grass::initialize(ResourceManager& resourceManager, const AzVulk::Device* v
 
     generateGrassInstances(generator);
 
-    grassModelHash = ModelGroup::ModelPair::encode(grassMeshIndex, grassMaterialIndex);
-    terrainModelHash = ModelGroup::ModelPair::encode(terrainMeshIndex, terrainMaterialIndex);
+    grassModelHash = ModelGroup::Hash::encode(grassMeshIndex, grassMaterialIndex);
+    terrainModelHash = ModelGroup::Hash::encode(terrainMeshIndex, terrainMaterialIndex);
 
     grassFieldModelGroup.init("GrassField", vkDevice);
 

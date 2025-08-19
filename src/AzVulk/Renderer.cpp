@@ -162,7 +162,7 @@ namespace AzVulk {
 
             mapData.updateBufferData();
 
-            std::pair<size_t, size_t> modelDecode = ModelGroup::ModelPair::decode(hash);
+            std::pair<size_t, size_t> modelDecode = ModelGroup::Hash::decode(hash);
             size_t meshIndex = modelDecode.first;
             size_t materialIndex = modelDecode.second;
 
