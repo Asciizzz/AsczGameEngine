@@ -75,7 +75,7 @@ void Application::initVulkan() {
         device, vkDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT
     );
 
-    resourceManager = MakeUnique<ResourceManager>(*vkDevice);
+    resourceManager = MakeUnique<ResourceManager>(vkDevice.get());
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;

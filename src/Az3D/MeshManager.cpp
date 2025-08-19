@@ -90,7 +90,7 @@ namespace Az3D {
 
 
 
-    MeshManager::MeshManager(const AzVulk::Device& vkDevice) : vkDevice(vkDevice) {}
+    MeshManager::MeshManager(const AzVulk::Device* vkDevice) : vkDevice(vkDevice) {}
 
     size_t MeshManager::addMesh(SharedPtr<Mesh> mesh) {
         meshes.push_back(mesh);
@@ -218,8 +218,8 @@ namespace Az3D {
         vertexGPUBufferDatas.resize(meshes.size());
         indexGPUBufferDatas.resize(meshes.size());
 
-        VkDevice device = vkDevice.device;
-        VkPhysicalDevice physicalDevice = vkDevice.physicalDevice;
+        VkDevice device = vkDevice->device;
+        VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
 
         for (size_t i = 0; i < meshes.size(); ++i) {
             const auto& mesh = meshes[i];
