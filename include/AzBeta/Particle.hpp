@@ -408,7 +408,11 @@ namespace AzBeta {
         //     }
         // }
 
-        void update(float dTime, const Az3D::Mesh* mesh, const glm::mat4& meshModelMat4) {
+        void updateRender() {
+            particleModelGroup.modelMapping[modelHash].datas = particles_data;
+        }
+
+        void updatePhysic(float dTime, const Az3D::Mesh* mesh, const glm::mat4& meshModelMat4) {
             std::vector<size_t> indices(particleCount);
             std::iota(indices.begin(), indices.end(), 0);
 
@@ -545,7 +549,6 @@ namespace AzBeta {
                 particles_data[p] = data;
             });
 
-            particleModelGroup.modelMapping[modelHash].datas = particles_data;
         }
 
 

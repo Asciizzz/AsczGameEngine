@@ -101,16 +101,16 @@ void Application::initVulkan() {
 
     glm::vec3 boundMin = resourceManager->getMesh("TerrainMesh")->nodes[0].min;
     glm::vec3 boundMax = resourceManager->getMesh("TerrainMesh")->nodes[0].max;
-    boundMax.y += abs(boundMax.y - boundMin.y) * 0.5f;
+    float totalHeight = abs(boundMax.y - boundMin.y);
+    boundMin.y -= totalHeight * 2.5f;
+    boundMax.y += totalHeight * 12.5f;
 
     particleManager->initialize(
         resourceManager.get(), vkDevice.get(),
         1000, // Count
         0.5f, // Radius
         0.5f, // Display radius (for objects that seems bigger/smaller than their hitbox)
-        // The bound
-        resourceManager->getMesh("TerrainMesh")->nodes[0].min,
-        resourceManager->getMesh("TerrainMesh")->nodes[0].max
+        boundMin, boundMax
     );
 
 
@@ -374,7 +374,24 @@ void Application::mainLoop() {
         static bool particlePhysicsEnabled = false;
         if (k_state[SDL_SCANCODE_P] && !hold_p) {
             // Toggle particle physics
-            particlePhysicsEnabled = !particlePhysicsEnabled;
+            if (!k_state[SDL_SCANCODE_LSHIFT]) { 
+                particlePhysicsEnabled = !particlePhysicsEnabled;
+            } else {
+                particlePhysicsEnabled = false;
+
+                // Teleport every particle to the current location
+                std::vector<Transform>& particles = particleManager->particles;
+                std::vector<Model::Data3D>& particlesData = particleManager->particles_data;
+
+                std::vector<size_t> indices(particles.size());
+                std::iota(indices.begin(), indices.end(), 0);
+
+                std::for_each(indices.begin(), indices.end(), [&](size_t i) {
+                    particles[i].pos = camRef.pos;
+
+                    particlesData[i].modelMatrix = particles[i].getMat4();
+                });
+            }
 
             hold_p = true;
         } else if (!k_state[SDL_SCANCODE_P]) {
@@ -382,13 +399,15 @@ void Application::mainLoop() {
         }
 
         if (particlePhysicsEnabled) {
-            particleManager->update(dTime, resourceManager->getMesh("TerrainMesh"), glm::mat4(1.0f));
-        }
+            particleManager->updatePhysic(dTime, resourceManager->getMesh("TerrainMesh"), glm::mat4(1.0f));
+        };
+        particleManager->updateRender();
 
 // =================================
 
         // Use the new explicit rendering interface
         globalUBOManager->updateUBO(camRef);
+
         uint32_t imageIndex = rendererRef.beginFrame(*opaquePipeline, globalUBOManager->ubo);
         if (imageIndex != UINT32_MAX) {
             // First: render sky background with dedicated pipeline
