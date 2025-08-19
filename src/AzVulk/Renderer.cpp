@@ -6,12 +6,12 @@
 using namespace Az3D;
 
 namespace AzVulk {
-        Renderer::Renderer (Device& device,
-                            SwapChain& swapChain,
-                            DepthManager& depthManager,
-                            GlobalUBOManager& globalUBOManager,
-                            ResourceManager& resourceManager) :
-        vkDevice(device),
+        Renderer::Renderer (Device* vkDevice,
+                            SwapChain* swapChain,
+                            DepthManager* depthManager,
+                            GlobalUBOManager* globalUBOManager,
+                            ResourceManager* resourceManager) :
+        vkDevice(vkDevice),
         swapChain(swapChain),
         depthManager(depthManager),
         globalUBOManager(globalUBOManager),
@@ -22,7 +22,7 @@ namespace AzVulk {
         }
 
     Renderer::~Renderer() {
-        VkDevice device = vkDevice.device;
+        VkDevice device = vkDevice->device;
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             if (inFlightFences[i])           vkDestroyFence(    device, inFlightFences[i],           nullptr);
@@ -34,7 +34,7 @@ namespace AzVulk {
     }
 
     void Renderer::createCommandPool() {
-        commandPool = vkDevice.createCommandPool("RendererPool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        commandPool = vkDevice->createCommandPool("RendererPool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     }
 
     void Renderer::createCommandBuffers() {
@@ -46,13 +46,13 @@ namespace AzVulk {
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(vkDevice.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(vkDevice->device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
     }
 
     void Renderer::createSyncObjects() {
-        swapchainImageCount = swapChain.images.size();
+        swapchainImageCount = swapChain->images.size();
 
         imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
         inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -69,15 +69,15 @@ namespace AzVulk {
 
         // per-frame acquire + fence
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-            if (vkCreateSemaphore(vkDevice.device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(    vkDevice.device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
+            if (vkCreateSemaphore(vkDevice->device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(    vkDevice->device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
                 throw std::runtime_error("failed to create per-frame sync objects!");
             }
         }
 
         // per-image render-finished
         for (size_t i = 0; i < swapchainImageCount; ++i) {
-            if (vkCreateSemaphore(vkDevice.device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+            if (vkCreateSemaphore(vkDevice->device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create per-image renderFinished semaphore!");
             }
         }
@@ -85,11 +85,11 @@ namespace AzVulk {
 
     // Begin frame: handle synchronization, image acquisition, and render pass setup
     uint32_t Renderer::beginFrame(Pipeline& pipeline, GlobalUBO& globalUBO) {
-        vkWaitForFences(vkDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(vkDevice->device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex = UINT32_MAX;
         VkResult acquire = vkAcquireNextImageKHR(
-            vkDevice.device, swapChain.swapChain, UINT64_MAX,
+            vkDevice->device, swapChain->swapChain, UINT64_MAX,
             imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
         if (acquire == VK_ERROR_OUT_OF_DATE_KHR) { framebufferResized = true; return UINT32_MAX; }
@@ -98,11 +98,11 @@ namespace AzVulk {
 
         // If that image is already in flight, wait for its fence
         if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-            vkWaitForFences(vkDevice.device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+            vkWaitForFences(vkDevice->device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
         }
         imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
-        vkResetFences(vkDevice.device, 1, &inFlightFences[currentFrame]);
+        vkResetFences(vkDevice->device, 1, &inFlightFences[currentFrame]);
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -113,9 +113,9 @@ namespace AzVulk {
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = pipeline.config.renderPass;
-        renderPassInfo.framebuffer = swapChain.framebuffers[imageIndex];
+        renderPassInfo.framebuffer = swapChain->framebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = swapChain.extent;
+        renderPassInfo.renderArea.extent = swapChain->extent;
 
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -129,29 +129,29 @@ namespace AzVulk {
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = static_cast<float>(swapChain.extent.width);
-        viewport.height = static_cast<float>(swapChain.extent.height);
+        viewport.width = static_cast<float>(swapChain->extent.width);
+        viewport.height = static_cast<float>(swapChain->extent.height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(commandBuffers[currentFrame], 0, 1, &viewport);
 
         VkRect2D scissor{};
         scissor.offset = {0, 0};
-        scissor.extent = swapChain.extent;
+        scissor.extent = swapChain->extent;
         vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
-        memcpy(globalUBOManager.bufferDatas[currentFrame].mapped, &globalUBO, sizeof(globalUBO));
+        memcpy(globalUBOManager->bufferDatas[currentFrame].mapped, &globalUBO, sizeof(globalUBO));
 
         return imageIndex;
     }
 
     // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
     void Renderer::drawScene(Pipeline& pipeline, ModelGroup& modelGroup) {
-        const auto& matManager = *resourceManager.materialManager;
-        const auto& texManager = *resourceManager.textureManager;
-        const auto& meshManager = *resourceManager.meshManager;
+        const Az3D::MaterialManager* matManager = resourceManager->materialManager.get();
+        const Az3D::TextureManager* texManager = resourceManager->textureManager.get();
+        const Az3D::MeshManager* meshManager = resourceManager->meshManager.get();
 
-        VkDescriptorSet globalSet = globalUBOManager.getDescriptorSet(currentFrame);
+        VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
 
         // Bind pipeline once
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
@@ -167,18 +167,18 @@ namespace AzVulk {
             size_t materialIndex = modelDecode.second;
 
             // Material descriptor set
-            VkDescriptorSet materialSet = matManager.getDescriptorSet(materialIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
+            VkDescriptorSet materialSet = matManager->getDescriptorSet(materialIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
 
             // Texture descriptor set
-            size_t textureIndex = matManager.materials[materialIndex]->diffTxtr;
-            VkDescriptorSet textureSet = texManager.getDescriptorSet(textureIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
+            size_t textureIndex = matManager->materials[materialIndex]->diffTxtr;
+            VkDescriptorSet textureSet = texManager->getDescriptorSet(textureIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
 
             std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     pipeline.pipelineLayout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-            const auto& vertexBufferData = meshManager.vertexGPUBufferDatas[meshIndex];
-            const auto& indexBufferData = meshManager.indexGPUBufferDatas[meshIndex];
+            const auto& vertexBufferData = meshManager->vertexGPUBufferDatas[meshIndex];
+            const auto& indexBufferData = meshManager->indexGPUBufferDatas[meshIndex];
             const auto& instanceBufferData = mapData.bufferData;
 
             // Skip if nothing to draw or bad data
@@ -211,7 +211,7 @@ namespace AzVulk {
         vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
 
         // Bind only the global descriptor set (set 0) for sky
-        VkDescriptorSet globalSet = globalUBOManager.getDescriptorSet(currentFrame);
+        VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
 
@@ -227,7 +227,7 @@ namespace AzVulk {
         vkCmdEndRenderPass(commandBuffers[currentFrame]);
 
         // Copy depth buffer for sampling (after render pass, before ending command buffer)
-        depthManager.copyDepthForSampling(commandBuffers[currentFrame], swapChain.extent.width, swapChain.extent.height);
+        depthManager->copyDepthForSampling(commandBuffers[currentFrame], swapChain->extent.width, swapChain->extent.height);
 
         if (vkEndCommandBuffer(commandBuffers[currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
@@ -248,7 +248,7 @@ namespace AzVulk {
         submit.signalSemaphoreCount = 1;
         submit.pSignalSemaphores    = signalSemaphores;
 
-        if (vkQueueSubmit(vkDevice.graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
+        if (vkQueueSubmit(vkDevice->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to submit draw command buffer");
         }
 
@@ -257,11 +257,11 @@ namespace AzVulk {
         present.waitSemaphoreCount = 1;
         present.pWaitSemaphores    = signalSemaphores;
         present.swapchainCount     = 1;
-        VkSwapchainKHR chains[]    = { swapChain.swapChain };
+        VkSwapchainKHR chains[]    = { swapChain->swapChain };
         present.pSwapchains        = chains;
         present.pImageIndices      = &imageIndex;
 
-        VkResult res = vkQueuePresentKHR(vkDevice.presentQueue, &present);
+        VkResult res = vkQueuePresentKHR(vkDevice->presentQueue, &present);
         if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || framebufferResized) {
             framebufferResized = true;
         } else if (res != VK_SUCCESS) {

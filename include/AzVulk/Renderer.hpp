@@ -12,11 +12,11 @@ namespace AzVulk {
     class DepthManager; // Forward declaration
     class Renderer {
     public:
-        Renderer(Device& device,
-                SwapChain& swapChain,
-                DepthManager& depthManager,
-                Az3D::GlobalUBOManager& globalUBOManager,
-                Az3D::ResourceManager& resourceManager);
+        Renderer(Device* vkDevice,
+                SwapChain* swapChain,
+                DepthManager* depthManager,
+                Az3D::GlobalUBOManager* globalUBOManager,
+                Az3D::ResourceManager* resourceManager);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -32,11 +32,11 @@ namespace AzVulk {
         // Thank's for attending my Ted-Talk
 
         // Component references
-        Device& vkDevice;
-        SwapChain& swapChain;
-        DepthManager& depthManager;
-        Az3D::GlobalUBOManager& globalUBOManager;
-        Az3D::ResourceManager& resourceManager;
+        Device* vkDevice;
+        SwapChain* swapChain;
+        DepthManager* depthManager;
+        Az3D::GlobalUBOManager* globalUBOManager;
+        Az3D::ResourceManager* resourceManager;
 
         // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;

@@ -169,8 +169,8 @@ void Application::initVulkan() {
 
     texManager.uploadToGPU(MAX_FRAMES_IN_FLIGHT);
 
-    renderer = MakeUnique<Renderer>(*vkDevice, *swapChain, *depthManager,
-                                    *globalUBOManager, *resourceManager);
+    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get(),
+                                    globalUBOManager.get(), resourceManager.get());
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     auto& matDesc = matManager.dynamicDescriptor;
