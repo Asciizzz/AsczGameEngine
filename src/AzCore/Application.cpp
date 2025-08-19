@@ -76,8 +76,6 @@ void Application::initVulkan() {
     );
 
     resourceManager = MakeUnique<ResourceManager>(*vulkanDevice);
-    
-    printf("Hello\n");
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;

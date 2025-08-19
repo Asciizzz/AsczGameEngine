@@ -8,8 +8,6 @@ namespace Az3D {
         textureManager = MakeUnique<TextureManager>(device);
         materialManager = MakeUnique<MaterialManager>();
         meshManager = MakeUnique<MeshManager>();
-
-        printf("ResourceManager initialized with Texture, Material, and Mesh managers.\n");
     }
 
     size_t ResourceManager::addTexture(std::string name, std::string imagePath,
