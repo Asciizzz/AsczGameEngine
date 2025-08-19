@@ -404,12 +404,12 @@ namespace AzBeta {
                 glm::vec3 predictedPos = pos + direction * step;
 
                 Az3D::HitInfo map_collision = mesh.closestHit(
-                    predictedPos, radius, meshTransform
+                    predictedPos, radius, meshTransform.getMat4()
                 );
 
                 // Additional ray cast in case of an overstep
                 Az3D::HitInfo ray_collision = mesh.closestHit(
-                    pos, direction, step, meshTransform
+                    pos, direction, step, meshTransform.getMat4()
                 );
 
                 // Check if predicted pos is inside the bounding box

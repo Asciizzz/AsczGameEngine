@@ -181,7 +181,7 @@ namespace Az3D {
 
     // BVH Traversal
 
-    HitInfo Mesh::closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const Transform& transform) const {
+    HitInfo Mesh::closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const glm::mat4& modelMat4) const {
         HitInfo hit;
         if (!hasBVH || nodes.empty()) {
             return hit; // No BVH available
@@ -191,7 +191,7 @@ namespace Az3D {
         hit.prop.z = maxDistance; // Initialize with max distance
 
         // Apply reverse transform to origin and direction based on the mesh's transform
-        glm::mat4 invModel = glm::inverse(transform.getMat4());
+        glm::mat4 invModel = glm::inverse(modelMat4);
 
         glm::vec3 rayOrg = glm::vec3(invModel * glm::vec4(origin, 1.0f));
         glm::vec3 rayDir = glm::normalize(glm::vec3(invModel * glm::vec4(direction, 0.0f)));
@@ -278,33 +278,32 @@ namespace Az3D {
                     nrml2 * (1.0f - hit.prop.x - hit.prop.y);
 
         // Convert back to world coordinates
-        glm::vec3 worldVertex = localVertex * transform.scl + transform.pos; // Apply scale and translation
-        worldVertex = transform.rot * worldVertex;
+        // glm::vec3 worldVertex = localVertex * transform.scl + transform.pos; // Apply scale and translation
+        // worldVertex = transform.rot * worldVertex;
 
-        glm::vec3 worldNormal = glm::normalize(transform.rot * hit.nrml); // Rotate the normal
+        // glm::vec3 worldNormal = glm::normalize(transform.rot * hit.nrml); // Rotate the normal
+        
+        glm::vec3 worldVertex = glm::vec3(modelMat4 * glm::vec4(localVertex, 1.0f));
+        glm::vec3 worldNormal = glm::normalize(glm::vec3(modelMat4 * glm::vec4(hit.nrml, 0.0f))); // Rotate the normal
 
         hit.vrtx = worldVertex;
-        hit.pos = worldVertex;
         hit.nrml = worldNormal;
-        hit.normal = worldNormal;
 
         return hit;
     }
 
-    HitInfo Mesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, const Transform& transform) const {
+    HitInfo Mesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, const glm::mat4& modelMat4) const {
         HitInfo hit;
-        if (!hasBVH || nodes.empty()) {
-            return hit; // No BVH available
-        }
+        if (!hasBVH || nodes.empty()) { return hit; }
         
         hit.prop.z = sphere_radius;
 
-        glm::mat4 invModel = glm::inverse(transform.getMat4());
+        glm::mat4 invModel = glm::inverse(modelMat4);
 
         glm::vec3 sphereOrg = glm::vec3(invModel * glm::vec4(sphere_origin, 1.0f));
 
         // IMPORTANT: Keep in mind that bvh assume uniform scaling
-        float sphereRad = sphere_radius / transform.scl.x; // Apply scale to radius
+        float sphereRad = sphere_radius / glm::vec3(modelMat4[0][0], modelMat4[1][1], modelMat4[2][2]).x;
 
         int nstack[MAX_DEPTH] = { 0 };
         int ns_top = 1;
@@ -386,15 +385,11 @@ namespace Az3D {
                     vrtx2.pos * (1.0f - hit.prop.x - hit.prop.y);
 
         // Convert back to world coordinates
-        glm::vec3 worldVertex = hit.vrtx * transform.scl + transform.pos; // Apply scale and translation
-        worldVertex = transform.rot * worldVertex;
-
-        glm::vec3 worldNormal = glm::normalize(transform.rot * hit.nrml); // Rotate the normal
+        glm::vec3 worldVertex = glm::vec3(modelMat4 * glm::vec4(hit.vrtx, 1.0f));
+        glm::vec3 worldNormal = glm::normalize(glm::vec3(modelMat4 * glm::vec4(hit.nrml, 0.0f))); // Rotate the normal
 
         hit.vrtx = worldVertex;
-        hit.pos = worldVertex;
         hit.nrml = worldNormal;
-        hit.normal = worldNormal;
         hit.hit = true; // Mark as hit
 
         return hit;

@@ -77,9 +77,7 @@ namespace Az3D {
         
         // Get the vertex and normal at the hit point
         glm::vec3 vrtx = glm::vec3(0.0f);
-        glm::vec3 pos{}; // Keep both for compatibility  
         glm::vec3 nrml = glm::vec3(0.0f);
-        glm::vec3 normal{}; // Keep both for compatibility
         uint32_t materialId = 0;
     };
 
@@ -115,8 +113,8 @@ namespace Az3D {
         // BVH methods (implemented in Mesh_BVH.cpp)
         void createBVH();
         void buildBVH();
-        HitInfo closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const Transform& transform) const;
-        HitInfo closestHit(const glm::vec3& center, float radius, const Transform& transform) const;
+        HitInfo closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const glm::mat4& modelMat4) const;
+        HitInfo closestHit(const glm::vec3& center, float radius, const glm::mat4& modelMat4) const;
 
         // Helper methods for BVH (implemented in Mesh_BVH.cpp)
         static float rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& boxMin, const glm::vec3& boxMax);
