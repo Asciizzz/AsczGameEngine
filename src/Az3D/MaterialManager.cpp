@@ -27,7 +27,7 @@ namespace Az3D {
         for (size_t i = 0; i < materials.size(); ++i) {
             // Create staging buffer
             BufferData stagingBuffer;
-            stagingBuffer.initVulkanDevice(device, physicalDevice);
+            stagingBuffer.initVulkanDevice(vkDevice);
             stagingBuffer.createBuffer(
                 1, sizeof(MaterialUBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -39,7 +39,7 @@ namespace Az3D {
             
             // printf("Copying material %zu\n", i);
 
-            gpuBufferDatas[i].initVulkanDevice(device, physicalDevice);
+            gpuBufferDatas[i].initVulkanDevice(vkDevice);
             gpuBufferDatas[i].createBuffer(
                 1, sizeof(MaterialUBO),
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

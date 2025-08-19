@@ -78,17 +78,6 @@ void Application::initVulkan() {
 
 // PLAYGROUND FROM HERE
 
-    // // Useful shorthand for placing models
-    // auto placePlatform = [&](const std::string& name, const Transform& transform, const glm::vec4& color = glm::vec4(1.0f)) {
-    //     Model instance;
-    //     instance.data.modelMatrix = transform.getMat4();
-    //     instance.data.multColor = color;
-    //     instance.meshIndex = platformerMeshIndices.at(name);
-    //     instance.materialIndex = globalMaterialIndex;
-
-    //     worldModelGroup->addInstance(instance);
-    // };
-
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
     grassConfig.worldSizeX = 240;
@@ -101,21 +90,21 @@ void Application::initVulkan() {
     
     // Initialize grass system
     grassSystem = MakeUnique<AzGame::Grass>(grassConfig);
-    if (!grassSystem->initialize(*resourceManager, device, physicalDevice)) {
+    if (!grassSystem->initialize(*resourceManager, vkDevice.get())) {
         throw std::runtime_error("Failed to initialize grass system!");
     }
 
     // Initialized world
-    newWorld = MakeUnique<AzGame::World>(*resourceManager, device, physicalDevice);
+    newWorld = MakeUnique<AzGame::World>(*resourceManager, vkDevice.get());
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {
-    "\x1b[31m", // Red
-    "\x1b[32m", // Green
-    "\x1b[33m", // Yellow
-    "\x1b[34m", // Blue
-    "\x1b[35m", // Magenta
-    "\x1b[36m"  // Cyan
+        "\x1b[31m", // Red
+        "\x1b[32m", // Green
+        "\x1b[33m", // Yellow
+        "\x1b[34m", // Blue
+        "\x1b[35m", // Magenta
+        "\x1b[36m"  // Cyan
     };
     const char* WHITE = "\x1b[37m";
     const int NUM_COLORS = sizeof(COLORS) / sizeof(COLORS[0]);

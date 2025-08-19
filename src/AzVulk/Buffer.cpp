@@ -12,8 +12,7 @@ namespace AzVulk {
 
     // Move constructor
     BufferData::BufferData(BufferData&& other) noexcept {
-        device = other.device;
-        physicalDevice = other.physicalDevice;
+        vkDevice = other.vkDevice;
 
         buffer = other.buffer;
         memory = other.memory;
@@ -36,9 +35,8 @@ namespace AzVulk {
     BufferData& BufferData::operator=(BufferData&& other) noexcept {
         if (this != &other) {
             cleanup();
-            device = other.device;
-            physicalDevice = other.physicalDevice;
-            
+            vkDevice = other.vkDevice;
+
             buffer = other.buffer;
             memory = other.memory;
             mapped = other.mapped;
@@ -61,16 +59,16 @@ namespace AzVulk {
     void BufferData::cleanup() {
         if (buffer != VK_NULL_HANDLE) {
             if (mapped) {
-                vkUnmapMemory(device, memory);
+                vkUnmapMemory(vkDevice->device, memory);
                 mapped = nullptr;
             }
 
-            vkDestroyBuffer(device, buffer, nullptr);
+            vkDestroyBuffer(vkDevice->device, buffer, nullptr);
             buffer = VK_NULL_HANDLE;
         }
 
         if (memory != VK_NULL_HANDLE) {
-            vkFreeMemory(device, memory, nullptr);
+            vkFreeMemory(vkDevice->device, memory, nullptr);
             memory = VK_NULL_HANDLE;
         }
     }
@@ -79,6 +77,9 @@ namespace AzVulk {
         size_t resourceCount, size_t dataTypeSize,
         VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
     ) {
+        VkDevice device = vkDevice->device;
+        VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
+
         if (device == VK_NULL_HANDLE || physicalDevice == VK_NULL_HANDLE) {
             throw std::runtime_error("BufferData: Vulkan device not initialized");
         }
@@ -88,37 +89,6 @@ namespace AzVulk {
 
         this->resourceCount = static_cast<uint32_t>(resourceCount);
         this->dataTypeSize = static_cast<VkDeviceSize>(dataTypeSize);
-        this->totalDataSize = static_cast<VkDeviceSize>(dataTypeSize * resourceCount);
-
-        cleanup();
-
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = totalDataSize;
-        bufferInfo.usage = usageFlags;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memoryFlags, physicalDevice);
-
-        if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to allocate buffer memory!");
-        }
-
-        vkBindBufferMemory(device, buffer, memory, 0);
-    }
-
-    void BufferData::recreateBuffer(size_t resourceCount) {
-        this->resourceCount = static_cast<uint32_t>(resourceCount);
         this->totalDataSize = static_cast<VkDeviceSize>(dataTypeSize * resourceCount);
 
         cleanup();

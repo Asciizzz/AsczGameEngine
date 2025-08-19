@@ -26,7 +26,7 @@ Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
 
 Grass::~Grass() {}
 
-bool Grass::initialize(ResourceManager& resourceManager, VkDevice device, VkPhysicalDevice physicalDevice) {
+bool Grass::initialize(ResourceManager& resourceManager, const AzVulk::Device* vkDevice) {
     createGrassMesh90deg(resourceManager);
 
     std::mt19937 generator(std::random_device{}());
@@ -38,7 +38,7 @@ bool Grass::initialize(ResourceManager& resourceManager, VkDevice device, VkPhys
     grassModelHash = ModelGroup::ModelPair::encode(grassMeshIndex, grassMaterialIndex);
     terrainModelHash = ModelGroup::ModelPair::encode(terrainMeshIndex, terrainMaterialIndex);
 
-    grassFieldModelGroup.initVulkanDevice(device, physicalDevice);
+    grassFieldModelGroup.init("GrassField", vkDevice);
 
     for (const auto& data : grassData3Ds) {
         grassFieldModelGroup.addInstance(grassMeshIndex, grassMaterialIndex, data);

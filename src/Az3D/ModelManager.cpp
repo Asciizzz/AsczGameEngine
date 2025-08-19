@@ -52,13 +52,12 @@ namespace Az3D {
         return datas.size() - 1;
     }
 
-    void ModelMappingData::initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
-        bufferData.initVulkanDevice(device, physicalDevice);
-        vulkanInitialized = true;
+    void ModelMappingData::initVulkanDevice(const AzVulk::Device* device) {
+        bufferData.initVulkanDevice(device);
     }
 
     void ModelMappingData::recreateBufferData() {
-        if (!vulkanInitialized) return;
+        if (!bufferData.vkDevice) return;
 
         bufferData.createBuffer( // Already contain safeguards
             datas.size(), sizeof(Az3D::Model::Data3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -70,7 +69,7 @@ namespace Az3D {
     }
 
     void ModelMappingData::updateBufferData() {
-        if (!vulkanInitialized) return;
+        if (!bufferData.vkDevice) return;
 
         if (prevInstanceCount != datas.size()) recreateBufferData();
 
@@ -79,34 +78,27 @@ namespace Az3D {
 
 
 
-    void ModelGroup::initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice) {
-        this->device = device;
-        this->physicalDevice = physicalDevice;
-
-        vulkanInitialized = true;
-    }
-
     void ModelGroup::addInstance(const Model& instance) {
-        if (!vulkanInitialized) return;
+        if (!vkDevice) return;
 
         size_t modelEncode = ModelPair::encode(instance.meshIndex, instance.materialIndex);
         
         auto [it, inserted] = modelMapping.try_emplace(modelEncode);
         if (inserted) { // New entry
-            it->second.initVulkanDevice(device, physicalDevice);
+            it->second.initVulkanDevice(vkDevice);
         }
         // Add to existing entry
         it->second.addData(instance.data);
     }
 
     void ModelGroup::addInstance(size_t meshIndex, size_t materialIndex, const Model::Data3D& instanceData) {
-        if (!vulkanInitialized) return;
+        if (!vkDevice) return;
 
         size_t modelEncode = ModelPair::encode(meshIndex, materialIndex);
 
         auto [it, inserted] = modelMapping.try_emplace(modelEncode);
         if (inserted) { // New entry
-            it->second.initVulkanDevice(device, physicalDevice);
+            it->second.initVulkanDevice(vkDevice);
         }
         // Add to existing entry
         it->second.addData(instanceData);

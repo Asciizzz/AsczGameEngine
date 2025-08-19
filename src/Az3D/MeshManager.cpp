@@ -224,7 +224,7 @@ namespace Az3D {
         for (size_t i = 0; i < meshes.size(); ++i) {
             const auto& mesh = meshes[i];
 
-            vertexGPUBufferDatas[i].initVulkanDevice(device, physicalDevice);
+            vertexGPUBufferDatas[i].initVulkanDevice(vkDevice);
             vertexGPUBufferDatas[i].createBuffer(
                 mesh->vertices.size(), sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -232,7 +232,7 @@ namespace Az3D {
 
             vertexGPUBufferDatas[i].uploadData(mesh->vertices);
 
-            indexGPUBufferDatas[i].initVulkanDevice(device, physicalDevice);
+            indexGPUBufferDatas[i].initVulkanDevice(vkDevice);
             indexGPUBufferDatas[i].createBuffer(
                 mesh->indices.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT

@@ -5,8 +5,8 @@
 namespace AzGame {
     class World {
     public:
-        World(Az3D::ResourceManager& resManager, VkDevice device, VkPhysicalDevice physicalDevice)
-            : resourceManager(resManager), device(device), physicalDevice(physicalDevice) {
+        World(Az3D::ResourceManager& resManager, const AzVulk::Device* device)
+        : resourceManager(resManager), vkDevice(device) {
 
             // Initialized global pallete material
             materialIndex = resManager.addMaterial("GlobalPalette",
@@ -26,12 +26,11 @@ namespace AzGame {
             }
 
             // Initialized world model group
-            worldModelGroup = Az3D::ModelGroup("World", device, physicalDevice);
+            worldModelGroup = Az3D::ModelGroup("World", vkDevice);
         }
 
         Az3D::ResourceManager& resourceManager;
-        VkDevice device;
-        VkPhysicalDevice physicalDevice;
+        const AzVulk::Device* vkDevice;
 
     // World element!
         size_t materialIndex = SIZE_MAX;

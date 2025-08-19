@@ -2,9 +2,7 @@
 
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
-#include <vector>
 #include <random>
-#include <memory>
 #include <limits>
 
 #include <glm/glm.hpp>
@@ -118,7 +116,7 @@ namespace AzGame {
         Grass& operator=(const Grass&) = delete;
 
         // Initialize the grass system
-        bool initialize(Az3D::ResourceManager& resourceManager, VkDevice device, VkPhysicalDevice physicalDevice);
+        bool initialize(Az3D::ResourceManager& resourceManager, const AzVulk::Device* vkDevice);
 
         // Wind animation functions (if enabled)
         void updateWindAnimation(float deltaTime);

@@ -44,9 +44,8 @@ namespace Az3D {
         std::vector<Model::Data3D> datas;
         size_t addData(const Model::Data3D& data);
 
-        bool vulkanInitialized = false;
         AzVulk::BufferData bufferData;
-        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice);
+        void initVulkanDevice(const AzVulk::Device* device);
         void recreateBufferData();
         void updateBufferData();
     };
@@ -58,14 +57,11 @@ namespace Az3D {
 
         std::string name = "Default";
 
-        VkDevice device = VK_NULL_HANDLE;
-        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-        bool vulkanInitialized = false;
+        const AzVulk::Device* vkDevice = nullptr;
 
         ModelGroup() = default;
-        ModelGroup(const std::string& name, VkDevice device, VkPhysicalDevice physicalDevice)
-            : name(name), device(device), physicalDevice(physicalDevice), vulkanInitialized(true) {}
-        void initVulkanDevice(VkDevice device, VkPhysicalDevice physicalDevice);
+        ModelGroup(const std::string& name, const AzVulk::Device* device) : name(name), vkDevice(device) {}
+        void init(const std::string& name, const AzVulk::Device* device) { this->name = name; vkDevice = device; }
 
         ModelGroup(const ModelGroup&) = delete;
         ModelGroup& operator=(const ModelGroup&) = delete;
