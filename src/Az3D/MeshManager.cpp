@@ -3,7 +3,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "Helpers/tiny_obj_loader.h"
 
-#include <unordered_map>
+
+using namespace AzVulk;
 
 namespace Az3D {
 
@@ -89,7 +90,7 @@ namespace Az3D {
 
 
 
-    MeshManager::MeshManager(AzVulk::Device& vkDevice) : vkDevice(vkDevice) {}
+    MeshManager::MeshManager(const AzVulk::Device& vkDevice) : vkDevice(vkDevice) {}
 
     size_t MeshManager::addMesh(SharedPtr<Mesh> mesh) {
         meshes.push_back(mesh);
@@ -213,10 +214,9 @@ namespace Az3D {
 
     
     void MeshManager::createBufferDatas() {
-        using namespace AzVulk; // WHAT THE FUCK???
 
-        vertexBufferDatas.resize(meshes.size());
-        indexBufferDatas.resize(meshes.size());
+        vertexGPUBufferDatas.resize(meshes.size());
+        indexGPUBufferDatas.resize(meshes.size());
 
         VkDevice device = vkDevice.device;
         VkPhysicalDevice physicalDevice = vkDevice.physicalDevice;
@@ -224,20 +224,20 @@ namespace Az3D {
         for (size_t i = 0; i < meshes.size(); ++i) {
             const auto& mesh = meshes[i];
 
-            vertexBufferDatas[i].initVulkanDevice(device, physicalDevice);
-            vertexBufferDatas[i].createBuffer(
+            vertexGPUBufferDatas[i].initVulkanDevice(device, physicalDevice);
+            vertexGPUBufferDatas[i].createBuffer(
                 mesh->vertices.size(), sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
 
-            vertexBufferDatas[i].uploadData(mesh->vertices);
+            vertexGPUBufferDatas[i].uploadData(mesh->vertices);
 
-            indexBufferDatas[i].initVulkanDevice(device, physicalDevice);
-            indexBufferDatas[i].createBuffer(
+            indexGPUBufferDatas[i].initVulkanDevice(device, physicalDevice);
+            indexGPUBufferDatas[i].createBuffer(
                 mesh->indices.size(), sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
-            indexBufferDatas[i].uploadData(mesh->indices);
+            indexGPUBufferDatas[i].uploadData(mesh->indices);
         }
     }
 

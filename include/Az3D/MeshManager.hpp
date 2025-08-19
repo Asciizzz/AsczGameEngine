@@ -128,7 +128,7 @@ namespace Az3D {
 
     class MeshManager {
     public:
-        MeshManager(AzVulk::Device& vkDevice);
+        MeshManager(const AzVulk::Device& vkDevice);
         MeshManager(const MeshManager&) = delete;
         MeshManager& operator=(const MeshManager&) = delete;
 
@@ -140,10 +140,10 @@ namespace Az3D {
         size_t count = 0; // Track the number of meshes
         SharedPtrVec<Mesh> meshes;
 
-        AzVulk::Device& vkDevice;
+        const AzVulk::Device& vkDevice;
 
-        std::vector<AzVulk::BufferData> vertexBufferDatas;
-        std::vector<AzVulk::BufferData> indexBufferDatas;
+        std::vector<AzVulk::BufferData> vertexGPUBufferDatas;
+        std::vector<AzVulk::BufferData> indexGPUBufferDatas;
         void createBufferDatas();
     };
 }
