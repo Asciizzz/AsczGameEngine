@@ -6,7 +6,7 @@ using namespace AzVulk;
 
 namespace Az3D {
 
-    MaterialManager::MaterialManager(Device& vkDevice)
+    MaterialManager::MaterialManager(const Device& vkDevice)
     : vkDevice(vkDevice) {
         auto defaultMaterial = MakeShared<Material>();
         materials.push_back(defaultMaterial);
