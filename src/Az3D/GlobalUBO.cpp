@@ -2,21 +2,16 @@
 
 #include "Az3D/GlobalUBO.hpp"
 #include "Az3D/Camera.hpp"
-#include "AzVulk/DescriptorSets.hpp"
-#include "AzVulk/Buffer.hpp"
 
 #include <stdexcept>
 #include <chrono>
 
+using namespace AzVulk;
+
 namespace Az3D {
 
-    GlobalUBOManager::GlobalUBOManager(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        uint32_t MAX_FRAMES_IN_FLIGHT
-    ) : device(device),
-        physicalDevice(physicalDevice),
-        MAX_FRAMES_IN_FLIGHT(MAX_FRAMES_IN_FLIGHT)
+    GlobalUBOManager::GlobalUBOManager(const Device* vkDevice, uint32_t MAX_FRAMES_IN_FLIGHT)
+    : vkDevice(vkDevice), MAX_FRAMES_IN_FLIGHT(MAX_FRAMES_IN_FLIGHT)
     {
         createBufferDatas();
         initDescriptorSets();
@@ -28,7 +23,7 @@ namespace Az3D {
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             auto& bufferData = bufferDatas[i];
-            bufferData.initVulkanDevice(device, physicalDevice);
+            bufferData.initVulkanDevice(vkDevice->device, vkDevice->physicalDevice);
 
             bufferData.createBuffer(
                 1, sizeof(GlobalUBO),
@@ -43,7 +38,7 @@ namespace Az3D {
     void GlobalUBOManager::initDescriptorSets() {
         using namespace AzVulk;
 
-        dynamicDescriptor.init(device);
+        dynamicDescriptor.init(vkDevice->device);
         dynamicDescriptor.createSetLayout({
             // Global UBO only
             DynamicDescriptor::fastBinding(
@@ -63,7 +58,7 @@ namespace Az3D {
         // Free old sets
         for (auto& set : dynamicDescriptor.sets) {
             if (set != VK_NULL_HANDLE) {
-                vkFreeDescriptorSets(device, dynamicDescriptor.pool, 1, &set);
+                vkFreeDescriptorSets(vkDevice->device, dynamicDescriptor.pool, 1, &set);
                 set = VK_NULL_HANDLE;
             }
         }
@@ -77,7 +72,7 @@ namespace Az3D {
         allocInfo.pSetLayouts = layouts.data();
 
         dynamicDescriptor.sets.resize(MAX_FRAMES_IN_FLIGHT);
-        if (vkAllocateDescriptorSets(device, &allocInfo, dynamicDescriptor.sets.data()) != VK_SUCCESS) {
+        if (vkAllocateDescriptorSets(vkDevice->device, &allocInfo, dynamicDescriptor.sets.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate global descriptor sets");
         }
 
@@ -96,7 +91,7 @@ namespace Az3D {
             write.descriptorCount = 1;
             write.pBufferInfo = &bufferInfo;
 
-            vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+            vkUpdateDescriptorSets(vkDevice->device, 1, &write, 0, nullptr);
         }
     }
 

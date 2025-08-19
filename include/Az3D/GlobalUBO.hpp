@@ -29,17 +29,14 @@ namespace Az3D {
 
     class GlobalUBOManager {
     public:
-        GlobalUBOManager(
-            VkDevice device, VkPhysicalDevice physicalDevice, uint32_t MAX_FRAMES_IN_FLIGHT
-        );
+        GlobalUBOManager(const AzVulk::Device* vkDevice, uint32_t MAX_FRAMES_IN_FLIGHT);
         ~GlobalUBOManager() = default;
 
         // Delete copy constructor and assignment operator
         GlobalUBOManager(const GlobalUBOManager&) = delete;
         GlobalUBOManager& operator=(const GlobalUBOManager&) = delete;
 
-        VkDevice device;
-        VkPhysicalDevice physicalDevice;
+        const AzVulk::Device* vkDevice;
         uint32_t MAX_FRAMES_IN_FLIGHT;
 
         GlobalUBO ubo;

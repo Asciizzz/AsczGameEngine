@@ -64,18 +64,10 @@ void Application::initVulkan() {
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = MakeUnique<DepthManager>(*vkDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(
-        renderPass, 
-        depthManager->depthImageView,
-        depthManager->depthSamplerView,
-        msaaManager->colorImageView
-    );
-
-    globalUBOManager = MakeUnique<GlobalUBOManager>(
-        device, vkDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT
-    );
+    swapChain->createFramebuffers(renderPass, depthManager->depthImageView, depthManager->depthSamplerView, msaaManager->colorImageView);
 
     resourceManager = MakeUnique<ResourceManager>(vkDevice.get());
+    globalUBOManager = MakeUnique<GlobalUBOManager>(vkDevice.get(), MAX_FRAMES_IN_FLIGHT);
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
