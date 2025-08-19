@@ -6,7 +6,7 @@ using namespace AzVulk;
 
 namespace Az3D {
 
-    MaterialManager::MaterialManager(const Device& vkDevice)
+    MaterialManager::MaterialManager(const Device* vkDevice)
     : vkDevice(vkDevice) {
         auto defaultMaterial = MakeShared<Material>();
         materials.push_back(defaultMaterial);
@@ -19,8 +19,8 @@ namespace Az3D {
     }
 
     void MaterialManager::createGPUBufferDatas() {
-        VkDevice device = vkDevice.device;
-        VkPhysicalDevice physicalDevice = vkDevice.physicalDevice;
+        VkDevice device = vkDevice->device;
+        VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
 
         gpuBufferDatas.resize(materials.size());
 
@@ -46,7 +46,7 @@ namespace Az3D {
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );
 
-            TemporaryCommand copyCmd(&vkDevice, "TransferPool");
+            TemporaryCommand copyCmd(vkDevice, "TransferPool");
 
             VkBufferCopy copyRegion{};
             copyRegion.srcOffset = 0;
@@ -60,7 +60,7 @@ namespace Az3D {
 
     // Descriptor set creation
     void MaterialManager::createDescriptorSets(uint32_t maxFramesInFlight) {
-        VkDevice device = vkDevice.device;
+        VkDevice device = vkDevice->device;
 
         dynamicDescriptor.init(device);
         VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);

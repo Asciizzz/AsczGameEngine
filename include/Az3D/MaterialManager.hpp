@@ -38,12 +38,12 @@ namespace Az3D {
     // MaterialManager - manages materials using index-based access
     class MaterialManager {
     public:
-        MaterialManager(const AzVulk::Device& vkDevice);
+        MaterialManager(const AzVulk::Device* vkDevice);
 
         MaterialManager(const MaterialManager&) = delete;
         MaterialManager& operator=(const MaterialManager&) = delete;
 
-        const AzVulk::Device& vkDevice;
+        const AzVulk::Device* vkDevice;
 
         size_t addMaterial(const Material& material);
 
