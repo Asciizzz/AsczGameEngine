@@ -226,6 +226,10 @@ namespace AzVulk
 
     TemporaryCommand::TemporaryCommand(Device& device, const std::string& poolName)
     : device(device), poolName(poolName) {
+        if (device.commandPools.find(poolName) == device.commandPools.end()) {
+            throw std::runtime_error("Command pool not found!");
+        }
+
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;

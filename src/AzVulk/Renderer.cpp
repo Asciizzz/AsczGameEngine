@@ -200,7 +200,7 @@ namespace AzVulk {
 
     // Sky rendering using dedicated sky pipeline
     void Renderer::drawSky(Pipeline& skyPipeline) {
-        // return;
+        return;
         /* 
         Dont worry about the validation warning too much, since the sky is sharing the same shader
         as the main rasterization renderer, it expects the vertex - index - instance buffers to be bound

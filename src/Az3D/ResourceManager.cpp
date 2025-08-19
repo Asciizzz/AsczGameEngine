@@ -2,9 +2,13 @@
 #include "AzVulk/Device.hpp"
 #include <iostream>
 
+using namespace AzVulk;
+
 namespace Az3D {
 
-    ResourceManager::ResourceManager(AzVulk::Device& vkDevice) {
+    ResourceManager::ResourceManager(Device& vkDevice) {
+        vkDevice.createCommandPool("TransferPool", Device::TransferType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
         textureManager = MakeUnique<TextureManager>(vkDevice);
         materialManager = MakeUnique<MaterialManager>(vkDevice);
         meshManager = MakeUnique<MeshManager>(vkDevice);

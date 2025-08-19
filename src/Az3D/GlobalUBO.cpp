@@ -31,8 +31,7 @@ namespace Az3D {
             bufferData.initVulkanDevice(device, physicalDevice);
 
             bufferData.createBuffer(
-                1,
-                sizeof(GlobalUBO),
+                1, sizeof(GlobalUBO),
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
@@ -48,8 +47,7 @@ namespace Az3D {
         dynamicDescriptor.createSetLayout({
             // Global UBO only
             DynamicDescriptor::fastBinding(
-                0,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
             )
         });

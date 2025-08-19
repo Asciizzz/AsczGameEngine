@@ -25,44 +25,35 @@ namespace Az3D {
         gpuBufferDatas.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
-            // // Create staging buffer
-            // BufferData stagingBuffer;
-            // stagingBuffer.initVulkanDevice(device, physicalDevice);
-            // stagingBuffer.createBuffer(
-            //     1, sizeof(MaterialUBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            //     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            // );
-            // stagingBuffer.mappedData();
+            // Create staging buffer
+            BufferData stagingBuffer;
+            stagingBuffer.initVulkanDevice(device, physicalDevice);
+            stagingBuffer.createBuffer(
+                1, sizeof(MaterialUBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            );
+            stagingBuffer.mappedData();
 
-            // MaterialUBO materialUBO(materials[i]->prop1);
-            // memccpy(stagingBuffer.mapped, &materialUBO, sizeof(MaterialUBO), 1);
+            MaterialUBO materialUBO(materials[i]->prop1);
+            memcpy(stagingBuffer.mapped, &materialUBO, sizeof(MaterialUBO));
             
             // printf("Copying material %zu\n", i);
 
             gpuBufferDatas[i].initVulkanDevice(device, physicalDevice);
             gpuBufferDatas[i].createBuffer(
-                // 1, sizeof(MaterialUBO),
-                // VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                // VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-
-                1, sizeof(MaterialUBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                1, sizeof(MaterialUBO),
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );
-            
-            MaterialUBO materialUBO(materials[i]->prop1);
-            gpuBufferDatas[i].uploadData(&materialUBO);
 
-            // TemporaryCommand copyCmd(vkDevice, "TransferPool");
-            
-            // printf("Hello\n");
+            TemporaryCommand copyCmd(vkDevice, "TransferPool");
 
-            // VkBufferCopy copyRegion{};
-            // copyRegion.srcOffset = 0;
-            // copyRegion.dstOffset = 0;
-            // copyRegion.size = sizeof(MaterialUBO);
+            VkBufferCopy copyRegion{};
+            copyRegion.srcOffset = 0;
+            copyRegion.dstOffset = 0;
+            copyRegion.size = sizeof(MaterialUBO);
             
-
-            // vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, gpuBufferDatas[i].buffer, 1, &copyRegion);
+            vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, gpuBufferDatas[i].buffer, 1, &copyRegion);
         }
     }
 
