@@ -65,12 +65,15 @@ void main() {
     vec3 zenithCol  = mix(skyNightZenith,  skyDayZenith,  elev01);
 
 
-    vec3 screenCoords = fragScreenPos.xyz / fragScreenPos.w;
-    vec2 depthUV = screenCoords.xy * 0.5 + 0.5; // Convert from NDC [-1,1] to UV [0,1]
+    // vec3 screenCoords = fragScreenPos.xyz / fragScreenPos.w;
+    // vec2 depthUV = screenCoords.xy * 0.5 + 0.5; // Convert from NDC [-1,1] to UV [0,1]
 
     float near = glb.cameraRight.w;
     float far = glb.cameraUp.w;
-
+    
+    float vertexDistance = length(fragWorldPos - glb.cameraPos.xyz);
+    float fogMaxDistance = 69.0;
+    float fogFactor = clamp((vertexDistance - fogMaxDistance) / fogMaxDistance, 0.0, 1.0);
 
     float normalBlend = material.prop1.z;
     vec3 normal = normalize(fragWorldNrml);
@@ -79,7 +82,9 @@ void main() {
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
     vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * zenithCol;
 
+    rgbFinal = mix(rgbFinal * vertexLightFactor, zenithCol * 0.2, fogFactor);
+
     float alpha = texColor.a * fragInstanceColor.a;
 
-    outColor = vec4(rgbFinal * vertexLightFactor, alpha);
+    outColor = vec4(rgbFinal, alpha);
 }

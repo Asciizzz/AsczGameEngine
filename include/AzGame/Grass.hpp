@@ -36,7 +36,8 @@ namespace AzGame {
         int numHeightNodes = 180;
         float heightVariance = 1.2f;
         float lowVariance = 0.4f;
-        float falloffRadius = 6.0f;
+        float falloffRadius = 26.0f;
+        float influenceFactor = 0.01f;
         
         // Grass density and distribution
         int baseDensity = 8;                    // Base grass attempts per grid cell

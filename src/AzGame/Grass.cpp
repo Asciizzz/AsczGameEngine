@@ -78,7 +78,7 @@ void Grass::generateHeightMap(std::mt19937& generator) {
                 if (distance <= config.falloffRadius) {
                     // Smooth falloff using cosine interpolation for natural curves
                     float normalizedDistance = distance / config.falloffRadius * 0.5f;
-                    float influence = 0.2f * (1.0f + std::cos(normalizedDistance * glm::pi<float>()));
+                    float influence = config.influenceFactor * (1.0f + std::cos(normalizedDistance * glm::pi<float>()));
                     heightMap[x][z] += nodeHeight * influence;
                 }
             }
