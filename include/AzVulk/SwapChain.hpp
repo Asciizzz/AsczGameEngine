@@ -14,7 +14,7 @@ namespace AzVulk {
 
     class SwapChain {
     public:
-        SwapChain(const Device& device, VkSurfaceKHR surface, SDL_Window* window);
+        SwapChain(const Device* vkDevice, VkSurfaceKHR surface, SDL_Window* window);
         ~SwapChain();
 
         
@@ -25,7 +25,7 @@ namespace AzVulk {
         void recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView depthResolveImageView, VkImageView colorImageView);
 
         
-        const Device& vkDevice;
+        const Device* vkDevice;
         VkSurfaceKHR surface;
         
         VkSwapchainKHR swapChain = VK_NULL_HANDLE;

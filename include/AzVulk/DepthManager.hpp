@@ -8,7 +8,7 @@ namespace AzVulk {
 
     class DepthManager {
     public:
-        DepthManager(const Device& device);
+        DepthManager(const Device* vkDevice);
         ~DepthManager(); void cleanup();
 
         DepthManager(const DepthManager&) = delete;
@@ -17,7 +17,7 @@ namespace AzVulk {
         void createDepthResources(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
         void copyDepthForSampling(VkCommandBuffer commandBuffer, uint32_t width, uint32_t height); // Copy current depth to sampling texture
 
-        const Device& vkDevice;
+        const Device* vkDevice;
         
         VkImage depthImage = VK_NULL_HANDLE;
         VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;

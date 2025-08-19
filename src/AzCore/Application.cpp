@@ -48,8 +48,8 @@ void Application::initVulkan() {
     VkDevice device = vkDevice->device;
     VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
 
-    msaaManager = MakeUnique<MSAAManager>(*vkDevice);
-    swapChain = MakeUnique<SwapChain>(*vkDevice, surface, windowManager->window);
+    msaaManager = MakeUnique<MSAAManager>(vkDevice.get());
+    swapChain = MakeUnique<SwapChain>(vkDevice.get(), surface, windowManager->window);
 
 
     // Create shared render pass for forward rendering
@@ -62,7 +62,7 @@ void Application::initVulkan() {
 
     // Initialize render targets and depth testing
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
-    depthManager = MakeUnique<DepthManager>(*vkDevice);
+    depthManager = MakeUnique<DepthManager>(vkDevice.get());
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, depthManager->depthSamplerView, msaaManager->colorImageView);
 
@@ -74,7 +74,7 @@ void Application::initVulkan() {
     auto& texManager = *resManager.textureManager;
     auto& meshManager = *resManager.meshManager;
     auto& matManager = *resManager.materialManager;
-    auto& glbUBOManager = *globalUBOManager;
+    auto& glbUBOManager = *globalUBOManager;    
 
 // PLAYGROUND FROM HERE
 
@@ -95,7 +95,7 @@ void Application::initVulkan() {
     }
 
     // Initialized world
-    newWorld = MakeUnique<AzGame::World>(*resourceManager, vkDevice.get());
+    newWorld = MakeUnique<AzGame::World>(resourceManager.get(), vkDevice.get());
 
     // Printing every Mesh - Material - Texture - Model information
     const char* COLORS[] = {

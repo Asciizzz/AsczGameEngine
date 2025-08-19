@@ -6,8 +6,8 @@
 #include <array>
 
 namespace AzVulk {
-    SwapChain::SwapChain(const Device& device, VkSurfaceKHR surface, SDL_Window* window)
-        : vkDevice(device), surface(surface) {
+    SwapChain::SwapChain(const Device* vkDevice, VkSurfaceKHR surface, SDL_Window* window)
+        : vkDevice(vkDevice), surface(surface) {
         createSwapChain(window);
         createImageViews();
     }
@@ -17,7 +17,7 @@ namespace AzVulk {
     }
 
     void SwapChain::createSwapChain(SDL_Window* window) {
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vkDevice.physicalDevice);
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vkDevice->physicalDevice);
 
         VkSurfaceFormatKHR sc_surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR sc_presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -38,7 +38,7 @@ namespace AzVulk {
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        QueueFamilyIndices indices = vkDevice.queueFamilyIndices;
+        QueueFamilyIndices indices = vkDevice->queueFamilyIndices;
         uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
         if (indices.graphicsFamily != indices.presentFamily) {
@@ -54,13 +54,13 @@ namespace AzVulk {
         createInfo.presentMode = sc_presentMode;
         createInfo.clipped = VK_TRUE;
 
-        if (vkCreateSwapchainKHR(vkDevice.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+        if (vkCreateSwapchainKHR(vkDevice->device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
             throw std::runtime_error("failed to create swap chain!");
         }
 
-        vkGetSwapchainImagesKHR(vkDevice.device, swapChain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(vkDevice->device, swapChain, &imageCount, nullptr);
         images.resize(imageCount);
-        vkGetSwapchainImagesKHR(vkDevice.device, swapChain, &imageCount, images.data());
+        vkGetSwapchainImagesKHR(vkDevice->device, swapChain, &imageCount, images.data());
 
         imageFormat = sc_surfaceFormat.format;
         extent = sc_extent;
@@ -85,7 +85,7 @@ namespace AzVulk {
             createInfo.subresourceRange.baseArrayLayer = 0;
             createInfo.subresourceRange.layerCount = 1;
 
-            if (vkCreateImageView(vkDevice.device, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
+            if (vkCreateImageView(vkDevice->device, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create image views!");
             }
         }
@@ -123,7 +123,7 @@ namespace AzVulk {
             framebufferInfo.height = extent.height;
             framebufferInfo.layers = 1;
 
-            if (vkCreateFramebuffer(vkDevice.device, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
+            if (vkCreateFramebuffer(vkDevice->device, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create framebuffer!");
             }
         }
@@ -137,7 +137,7 @@ namespace AzVulk {
             SDL_WaitEvent(nullptr);
         }
 
-        vkDeviceWaitIdle(vkDevice.device);
+        vkDeviceWaitIdle(vkDevice->device);
 
         cleanup();
         createSwapChain(window);
@@ -149,19 +149,19 @@ namespace AzVulk {
         cleanupFramebuffers();
 
         for (auto imageView : imageViews) {
-            vkDestroyImageView(vkDevice.device, imageView, nullptr);
+            vkDestroyImageView(vkDevice->device, imageView, nullptr);
         }
         imageViews.clear();
 
         if (swapChain != VK_NULL_HANDLE) {
-            vkDestroySwapchainKHR(vkDevice.device, swapChain, nullptr);
+            vkDestroySwapchainKHR(vkDevice->device, swapChain, nullptr);
             swapChain = VK_NULL_HANDLE;
         }
     }
 
     void SwapChain::cleanupFramebuffers() {
         for (auto framebuffer : framebuffers) {
-            vkDestroyFramebuffer(vkDevice.device, framebuffer, nullptr);
+            vkDestroyFramebuffer(vkDevice->device, framebuffer, nullptr);
         }
         framebuffers.clear();
     }

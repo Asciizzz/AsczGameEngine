@@ -5,14 +5,14 @@
 namespace AzGame {
     class World {
     public:
-        World(Az3D::ResourceManager& resManager, const AzVulk::Device* device)
-        : resourceManager(resManager), vkDevice(device) {
+        World(Az3D::ResourceManager* resManager, const AzVulk::Device* vkDevice)
+        : resourceManager(resManager), vkDevice(vkDevice) {
 
             // Initialized global pallete material
-            materialIndex = resManager.addMaterial("GlobalPalette",
+            materialIndex = resourceManager->addMaterial("GlobalPalette",
                 Az3D::Material::fastTemplate(
                     1.0f, 2.0f, 0.2f, 0.0f, // No discard threshold since the texture is opaque anyway
-                    resManager.addTexture("GlobalPalette", "Assets/Platformer/Palette.png")
+                    resourceManager->addTexture("GlobalPalette", "Assets/Platformer/Palette.png")
                 )
             );
 
@@ -22,14 +22,14 @@ namespace AzGame {
                 std::string fullPath = "Assets/Platformer/" + mesh.second;
 
                 // Short hand name -----------------------------------Full name and Full path
-                platformerMeshIndices[mesh.first] = resManager.addMesh(fullName, fullPath, true);
+                platformerMeshIndices[mesh.first] = resourceManager->addMesh(fullName, fullPath, true);
             }
 
             // Initialized world model group
             worldModelGroup = Az3D::ModelGroup("World", vkDevice);
         }
 
-        Az3D::ResourceManager& resourceManager;
+        Az3D::ResourceManager* resourceManager;
         const AzVulk::Device* vkDevice;
 
     // World element!

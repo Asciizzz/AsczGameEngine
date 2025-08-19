@@ -7,7 +7,7 @@ namespace AzVulk {
 
     class MSAAManager {
     public:
-        MSAAManager(const Device& device);
+        MSAAManager(const Device* vkDevice);
         ~MSAAManager();
 
         
@@ -18,7 +18,7 @@ namespace AzVulk {
         void cleanup();
 
         
-        const Device& vkDevice;
+        const Device* vkDevice;
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
         VkImage colorImage = VK_NULL_HANDLE;
