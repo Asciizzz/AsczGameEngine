@@ -46,7 +46,7 @@ namespace Az3D {
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );
 
-            TemporaryCommand copyCmd(vkDevice, "TransferPool");
+            TemporaryCommand copyCmd(&vkDevice, "TransferPool");
 
             VkBufferCopy copyRegion{};
             copyRegion.srcOffset = 0;

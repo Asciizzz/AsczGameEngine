@@ -224,19 +224,19 @@ namespace AzVulk
 
 
 
-    TemporaryCommand::TemporaryCommand(const Device& device, const std::string& poolName)
-    : device(device), poolName(poolName) {
-        if (device.commandPools.find(poolName) == device.commandPools.end()) {
+    TemporaryCommand::TemporaryCommand(const Device* vkDevice, const std::string& poolName)
+    : vkDevice(vkDevice), poolName(poolName) {
+        if (vkDevice->commandPools.find(poolName) == vkDevice->commandPools.end()) {
             throw std::runtime_error("Command pool not found!");
         }
 
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = device.getPoolWrapper(poolName).pool;
+        allocInfo.commandPool = vkDevice->getPoolWrapper(poolName).pool;
         allocInfo.commandBufferCount = 1;
 
-        if (vkAllocateCommandBuffers(device.device, &allocInfo, &cmdBuffer) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(vkDevice->device, &allocInfo, &cmdBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffer!");
         }
 
@@ -255,12 +255,12 @@ namespace AzVulk
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &cmdBuffer;
 
-            const Device::PoolWrapper& poolWrapper = device.getPoolWrapper(poolName);
+            const Device::PoolWrapper& poolWrapper = vkDevice->getPoolWrapper(poolName);
 
-            vkQueueSubmit(device.getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
-            vkQueueWaitIdle(device.getQueue(poolWrapper.type));
+            vkQueueSubmit(vkDevice->getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
+            vkQueueWaitIdle(vkDevice->getQueue(poolWrapper.type));
 
-            vkFreeCommandBuffers(device.device, poolWrapper.pool, 1, &cmdBuffer);
+            vkFreeCommandBuffers(vkDevice->device, poolWrapper.pool, 1, &cmdBuffer);
         }
     }
 }
