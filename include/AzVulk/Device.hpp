@@ -91,13 +91,13 @@ namespace AzVulk {
     // Extension helper for one-time instant command
     class TemporaryCommand {
     public:
-        TemporaryCommand(Device& device, const std::string& poolName);
+        TemporaryCommand(const Device& device, const std::string& poolName);
         ~TemporaryCommand();
 
         VkCommandBuffer getCmdBuffer() const { return cmdBuffer; }
         VkCommandBuffer operator*() const { return cmdBuffer; }
 
-        Device& device;
+        const Device& device;
         std::string poolName;
         VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
     };

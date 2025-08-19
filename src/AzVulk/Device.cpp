@@ -224,7 +224,7 @@ namespace AzVulk
 
 
 
-    TemporaryCommand::TemporaryCommand(Device& device, const std::string& poolName)
+    TemporaryCommand::TemporaryCommand(const Device& device, const std::string& poolName)
     : device(device), poolName(poolName) {
         if (device.commandPools.find(poolName) == device.commandPools.end()) {
             throw std::runtime_error("Command pool not found!");
