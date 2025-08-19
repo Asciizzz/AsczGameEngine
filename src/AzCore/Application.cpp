@@ -164,7 +164,7 @@ void Application::initVulkan() {
 
     meshManager.createBufferDatas();
 
-    matManager.createBufferDatas();
+    matManager.createGPUBufferDatas();
     matManager.createDescriptorSets(MAX_FRAMES_IN_FLIGHT);
 
     texManager.createDescriptorSets(MAX_FRAMES_IN_FLIGHT);

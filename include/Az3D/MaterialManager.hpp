@@ -48,8 +48,8 @@ namespace Az3D {
 
         SharedPtrVec<Material> materials;
 
-        std::vector<AzVulk::BufferData> bufferDatas;
-        void createBufferDatas();
+        std::vector<AzVulk::BufferData> gpuBufferDatas;
+        void createGPUBufferDatas();
 
         AzVulk::DynamicDescriptor dynamicDescriptor;
         void createDescriptorSets(uint32_t maxFramesInFlight);

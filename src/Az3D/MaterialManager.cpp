@@ -1,8 +1,12 @@
 #include "Az3D/MaterialManager.hpp"
 
+#include "AzVulk/Device.hpp"
+
+using namespace AzVulk;
+
 namespace Az3D {
 
-    MaterialManager::MaterialManager(AzVulk::Device& vkDevice)
+    MaterialManager::MaterialManager(Device& vkDevice)
     : vkDevice(vkDevice) {
         auto defaultMaterial = MakeShared<Material>();
         materials.push_back(defaultMaterial);
@@ -14,33 +18,57 @@ namespace Az3D {
         return materials.size() - 1;
     }
 
-    void MaterialManager::createBufferDatas() {
-        using namespace AzVulk;
-
+    void MaterialManager::createGPUBufferDatas() {
         VkDevice device = vkDevice.device;
         VkPhysicalDevice physicalDevice = vkDevice.physicalDevice;
 
-        bufferDatas.resize(materials.size());
+        gpuBufferDatas.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
-            auto& bufferData = bufferDatas[i];
-            bufferData.initVulkanDevice(device, physicalDevice);
+            // // Create staging buffer
+            // BufferData stagingBuffer;
+            // stagingBuffer.initVulkanDevice(device, physicalDevice);
+            // stagingBuffer.createBuffer(
+            //     1, sizeof(MaterialUBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            //     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            // );
+            // stagingBuffer.mappedData();
 
-            bufferData.createBuffer(
-                1, sizeof(MaterialUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            // MaterialUBO materialUBO(materials[i]->prop1);
+            // memccpy(stagingBuffer.mapped, &materialUBO, sizeof(MaterialUBO), 1);
+            
+            // printf("Copying material %zu\n", i);
+
+            gpuBufferDatas[i].initVulkanDevice(device, physicalDevice);
+            gpuBufferDatas[i].createBuffer(
+                // 1, sizeof(MaterialUBO),
+                // VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                // VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+
+                1, sizeof(MaterialUBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
-
+            
             MaterialUBO materialUBO(materials[i]->prop1);
-            bufferData.uploadData(&materialUBO);
+            gpuBufferDatas[i].uploadData(&materialUBO);
+
+            // TemporaryCommand copyCmd(vkDevice, "TransferPool");
+            
+            // printf("Hello\n");
+
+            // VkBufferCopy copyRegion{};
+            // copyRegion.srcOffset = 0;
+            // copyRegion.dstOffset = 0;
+            // copyRegion.size = sizeof(MaterialUBO);
+            
+
+            // vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, gpuBufferDatas[i].buffer, 1, &copyRegion);
         }
     }
 
 
     // Descriptor set creation
     void MaterialManager::createDescriptorSets(uint32_t maxFramesInFlight) {
-        using namespace AzVulk;
-
         VkDevice device = vkDevice.device;
 
         dynamicDescriptor.init(device);
@@ -62,7 +90,7 @@ namespace Az3D {
         allocInfo.pSetLayouts = layouts.data();
 
         for (size_t i = 0; i < materials.size(); ++i) {
-            const auto& materialBuffer = bufferDatas[i].buffer;
+            const auto& materialBuffer = gpuBufferDatas[i].buffer;
 
             std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
 

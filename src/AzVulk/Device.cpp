@@ -232,31 +232,31 @@ namespace AzVulk
         allocInfo.commandPool = device.getPoolWrapper(poolName).pool;
         allocInfo.commandBufferCount = 1;
 
-        if (vkAllocateCommandBuffers(device.device, &allocInfo, &cmd) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(device.device, &allocInfo, &cmdBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffer!");
         }
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(cmd, &beginInfo);
+        vkBeginCommandBuffer(cmdBuffer, &beginInfo);
     }
 
     TemporaryCommand::~TemporaryCommand() {
-        if (cmd != VK_NULL_HANDLE) {
-            vkEndCommandBuffer(cmd);
+        if (cmdBuffer != VK_NULL_HANDLE) {
+            vkEndCommandBuffer(cmdBuffer);
 
             VkSubmitInfo submitInfo{};
             submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
             submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &cmd;
+            submitInfo.pCommandBuffers = &cmdBuffer;
 
             const Device::PoolWrapper& poolWrapper = device.getPoolWrapper(poolName);
 
             vkQueueSubmit(device.getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
             vkQueueWaitIdle(device.getQueue(poolWrapper.type));
 
-            vkFreeCommandBuffers(device.device, poolWrapper.pool, 1, &cmd);
+            vkFreeCommandBuffers(device.device, poolWrapper.pool, 1, &cmdBuffer);
         }
     }
 }
