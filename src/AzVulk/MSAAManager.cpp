@@ -5,7 +5,7 @@
 #include <iostream>
 
 namespace AzVulk {
-    MSAAManager::MSAAManager(const Device& device) : vulkanDevice(device) {
+    MSAAManager::MSAAManager(const Device& device) : vkDevice(device) {
         msaaSamples = getMaxUsableSampleCount();
     }
 
@@ -15,7 +15,7 @@ namespace AzVulk {
 
     VkSampleCountFlagBits MSAAManager::getMaxUsableSampleCount() {
         VkPhysicalDeviceProperties physicalDeviceProperties;
-        vkGetPhysicalDeviceProperties(vulkanDevice.physicalDevice, &physicalDeviceProperties);
+        vkGetPhysicalDeviceProperties(vkDevice.physicalDevice, &physicalDeviceProperties);
 
         VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & 
                                     physicalDeviceProperties.limits.framebufferDepthSampleCounts;
@@ -41,15 +41,15 @@ namespace AzVulk {
 
     void MSAAManager::cleanup() {
         if (colorImageView != VK_NULL_HANDLE) {
-            vkDestroyImageView(vulkanDevice.device, colorImageView, nullptr);
+            vkDestroyImageView(vkDevice.device, colorImageView, nullptr);
             colorImageView = VK_NULL_HANDLE;
         }
         if (colorImage != VK_NULL_HANDLE) {
-            vkDestroyImage(vulkanDevice.device, colorImage, nullptr);
+            vkDestroyImage(vkDevice.device, colorImage, nullptr);
             colorImage = VK_NULL_HANDLE;
         }
         if (colorImageMemory != VK_NULL_HANDLE) {
-            vkFreeMemory(vulkanDevice.device, colorImageMemory, nullptr);
+            vkFreeMemory(vkDevice.device, colorImageMemory, nullptr);
             colorImageMemory = VK_NULL_HANDLE;
         }
     }
@@ -72,23 +72,23 @@ namespace AzVulk {
         imageInfo.samples = numSamples;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateImage(vulkanDevice.device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+        if (vkCreateImage(vkDevice.device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
             throw std::runtime_error("failed to create image!");
         }
 
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(vulkanDevice.device, image, &memRequirements);
+        vkGetImageMemoryRequirements(vkDevice.device, image, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vulkanDevice.physicalDevice);
+        allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice.physicalDevice);
 
-        if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(vkDevice.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate image memory!");
         }
 
-        vkBindImageMemory(vulkanDevice.device, image, imageMemory, 0);
+        vkBindImageMemory(vkDevice.device, image, imageMemory, 0);
     }
 
     VkImageView MSAAManager::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels) {
@@ -104,7 +104,7 @@ namespace AzVulk {
         viewInfo.subresourceRange.layerCount = 1;
 
         VkImageView imageView;
-        if (vkCreateImageView(vulkanDevice.device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+        if (vkCreateImageView(vkDevice.device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture image view!");
         }
 

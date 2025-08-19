@@ -2,14 +2,23 @@
 
 namespace Az3D {
 
+    MaterialManager::MaterialManager(AzVulk::Device& vkDevice)
+    : vkDevice(vkDevice) {
+        auto defaultMaterial = MakeShared<Material>();
+        materials.push_back(defaultMaterial);
+    }
+
     size_t MaterialManager::addMaterial(const Material& material) {
         materials.push_back(MakeShared<Material>(material));
 
         return materials.size() - 1;
     }
 
-    void MaterialManager::createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice) {
+    void MaterialManager::createBufferDatas() {
         using namespace AzVulk;
+
+        VkDevice device = vkDevice.device;
+        VkPhysicalDevice physicalDevice = vkDevice.physicalDevice;
 
         bufferDatas.resize(materials.size());
 
@@ -29,8 +38,10 @@ namespace Az3D {
 
 
     // Descriptor set creation
-    void MaterialManager::createDescriptorSets(VkDevice device, uint32_t maxFramesInFlight) {
+    void MaterialManager::createDescriptorSets(uint32_t maxFramesInFlight) {
         using namespace AzVulk;
+
+        VkDevice device = vkDevice.device;
 
         dynamicDescriptor.init(device);
         VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);

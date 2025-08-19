@@ -11,7 +11,7 @@ namespace AzVulk {
                             DepthManager& depthManager,
                             GlobalUBOManager& globalUBOManager,
                             ResourceManager& resourceManager) :
-        vulkanDevice(device),
+        vkDevice(device),
         swapChain(swapChain),
         depthManager(depthManager),
         globalUBOManager(globalUBOManager),
@@ -22,7 +22,7 @@ namespace AzVulk {
         }
 
     Renderer::~Renderer() {
-        VkDevice device = vulkanDevice.device;
+        VkDevice device = vkDevice.device;
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             if (inFlightFences[i])           vkDestroyFence(    device, inFlightFences[i],           nullptr);
@@ -34,7 +34,7 @@ namespace AzVulk {
     }
 
     void Renderer::createCommandPool() {
-        commandPool = vulkanDevice.createCommandPool("RendererPool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        commandPool = vkDevice.createCommandPool("RendererPool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     }
 
     void Renderer::createCommandBuffers() {
@@ -46,7 +46,7 @@ namespace AzVulk {
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(vulkanDevice.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(vkDevice.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
         }
     }
@@ -69,15 +69,15 @@ namespace AzVulk {
 
         // per-frame acquire + fence
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-            if (vkCreateSemaphore(vulkanDevice.device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(    vulkanDevice.device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
+            if (vkCreateSemaphore(vkDevice.device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(    vkDevice.device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
                 throw std::runtime_error("failed to create per-frame sync objects!");
             }
         }
 
         // per-image render-finished
         for (size_t i = 0; i < swapchainImageCount; ++i) {
-            if (vkCreateSemaphore(vulkanDevice.device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+            if (vkCreateSemaphore(vkDevice.device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create per-image renderFinished semaphore!");
             }
         }
@@ -85,11 +85,11 @@ namespace AzVulk {
 
     // Begin frame: handle synchronization, image acquisition, and render pass setup
     uint32_t Renderer::beginFrame(Pipeline& pipeline, GlobalUBO& globalUBO) {
-        vkWaitForFences(vulkanDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(vkDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex = UINT32_MAX;
         VkResult acquire = vkAcquireNextImageKHR(
-            vulkanDevice.device, swapChain.swapChain, UINT64_MAX,
+            vkDevice.device, swapChain.swapChain, UINT64_MAX,
             imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
         if (acquire == VK_ERROR_OUT_OF_DATE_KHR) { framebufferResized = true; return UINT32_MAX; }
@@ -98,11 +98,11 @@ namespace AzVulk {
 
         // If that image is already in flight, wait for its fence
         if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-            vkWaitForFences(vulkanDevice.device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+            vkWaitForFences(vkDevice.device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
         }
         imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
-        vkResetFences(vulkanDevice.device, 1, &inFlightFences[currentFrame]);
+        vkResetFences(vkDevice.device, 1, &inFlightFences[currentFrame]);
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -248,7 +248,7 @@ namespace AzVulk {
         submit.signalSemaphoreCount = 1;
         submit.pSignalSemaphores    = signalSemaphores;
 
-        if (vkQueueSubmit(vulkanDevice.graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
+        if (vkQueueSubmit(vkDevice.graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to submit draw command buffer");
         }
 
@@ -261,7 +261,7 @@ namespace AzVulk {
         present.pSwapchains        = chains;
         present.pImageIndices      = &imageIndex;
 
-        VkResult res = vkQueuePresentKHR(vulkanDevice.presentQueue, &present);
+        VkResult res = vkQueuePresentKHR(vkDevice.presentQueue, &present);
         if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || framebufferResized) {
             framebufferResized = true;
         } else if (res != VK_SUCCESS) {

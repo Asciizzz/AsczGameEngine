@@ -10,7 +10,7 @@
 namespace AzVulk {
 
     DepthManager::DepthManager(const Device& device)
-        : vulkanDevice(device),
+        : vkDevice(device),
           depthSampler(VK_NULL_HANDLE),
           depthSamplerView(VK_NULL_HANDLE),
           depthImage(VK_NULL_HANDLE),
@@ -27,7 +27,7 @@ namespace AzVulk {
     }
 
     void DepthManager::cleanup() {
-        VkDevice logicalDevice = vulkanDevice.device;
+        VkDevice logicalDevice = vkDevice.device;
 
         if (depthSampler != VK_NULL_HANDLE) {
             vkDestroySampler(logicalDevice, depthSampler, nullptr);
@@ -95,7 +95,7 @@ namespace AzVulk {
         depthFormat = findDepthFormat();
 
         // Query depth-resolve support on this GPU
-        VkResolveModeFlagBits mode = chooseDepthResolveModeForPhysicalDevice(vulkanDevice.physicalDevice);
+        VkResolveModeFlagBits mode = chooseDepthResolveModeForPhysicalDevice(vkDevice.physicalDevice);
         depthResolveSupported = (mode != VK_RESOLVE_MODE_NONE);
 
         // If MSAA disabled (1 sample) create one depth image that is both attachment + sampled
@@ -155,7 +155,7 @@ namespace AzVulk {
                                                 VkImageTiling tiling, VkFormatFeatureFlags features) {
         for (VkFormat format : candidates) {
             VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(vulkanDevice.physicalDevice, format, &props);
+            vkGetPhysicalDeviceFormatProperties(vkDevice.physicalDevice, format, &props);
 
             if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
                 return format;
@@ -189,23 +189,23 @@ namespace AzVulk {
         imageInfo.samples = numSamples;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateImage(vulkanDevice.device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+        if (vkCreateImage(vkDevice.device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
             throw std::runtime_error("failed to create depth image!");
         }
 
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(vulkanDevice.device, image, &memRequirements);
+        vkGetImageMemoryRequirements(vkDevice.device, image, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vulkanDevice.physicalDevice);
+        allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice.physicalDevice);
 
-        if (vkAllocateMemory(vulkanDevice.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(vkDevice.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate depth image memory!");
         }
 
-        vkBindImageMemory(vulkanDevice.device, image, imageMemory, 0);
+        vkBindImageMemory(vkDevice.device, image, imageMemory, 0);
     }
 
     VkImageView DepthManager::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
@@ -221,7 +221,7 @@ namespace AzVulk {
         viewInfo.subresourceRange.layerCount = 1;
 
         VkImageView imageView;
-        if (vkCreateImageView(vulkanDevice.device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+        if (vkCreateImageView(vkDevice.device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
             throw std::runtime_error("failed to create depth image view!");
         }
 
@@ -247,7 +247,7 @@ namespace AzVulk {
         samplerInfo.maxLod = 0.0f;
         samplerInfo.mipLodBias = 0.0f;
 
-        if (vkCreateSampler(vulkanDevice.device, &samplerInfo, nullptr, &depthSampler) != VK_SUCCESS) {
+        if (vkCreateSampler(vkDevice.device, &samplerInfo, nullptr, &depthSampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create depth sampler!");
         }
     }

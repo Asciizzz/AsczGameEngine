@@ -7,9 +7,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include <string>
-
 #include "AzVulk/Buffer.hpp"
+#include "AzVulk/Device.hpp"
 
 namespace Az3D {
 
@@ -129,7 +128,7 @@ namespace Az3D {
 
     class MeshManager {
     public:
-        MeshManager() = default;
+        MeshManager(AzVulk::Device& vkDevice);
         MeshManager(const MeshManager&) = delete;
         MeshManager& operator=(const MeshManager&) = delete;
 
@@ -141,8 +140,10 @@ namespace Az3D {
         size_t count = 0; // Track the number of meshes
         SharedPtrVec<Mesh> meshes;
 
+        AzVulk::Device& vkDevice;
+
         std::vector<AzVulk::BufferData> vertexBufferDatas;
         std::vector<AzVulk::BufferData> indexBufferDatas;
-        void createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice);
+        void createBufferDatas();
     };
 }

@@ -38,22 +38,21 @@ namespace Az3D {
     // MaterialManager - manages materials using index-based access
     class MaterialManager {
     public:
-        MaterialManager() {
-            auto defaultMaterial = MakeShared<Material>();
-            materials.push_back(defaultMaterial);
-        }
+        MaterialManager(AzVulk::Device& vkDevice);
         MaterialManager(const MaterialManager&) = delete;
         MaterialManager& operator=(const MaterialManager&) = delete;
+
+        AzVulk::Device& vkDevice;
 
         size_t addMaterial(const Material& material);
 
         SharedPtrVec<Material> materials;
 
         std::vector<AzVulk::BufferData> bufferDatas;
-        void createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice);
+        void createBufferDatas();
 
         AzVulk::DynamicDescriptor dynamicDescriptor;
-        void createDescriptorSets(VkDevice device, uint32_t maxFramesInFlight);
+        void createDescriptorSets(uint32_t maxFramesInFlight);
         VkDescriptorSet getDescriptorSet(uint32_t materialIndex, uint32_t frameIndex, uint32_t maxFramesInFlight) const {
             return dynamicDescriptor.getSet(materialIndex * maxFramesInFlight + frameIndex);
         }

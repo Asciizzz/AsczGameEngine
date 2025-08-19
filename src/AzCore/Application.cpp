@@ -44,12 +44,12 @@ void Application::initVulkan() {
     vulkanInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
     createSurface();
 
-    vulkanDevice = MakeUnique<Device>(vulkanInstance->instance, surface);
-    VkDevice device = vulkanDevice->device;
-    VkPhysicalDevice physicalDevice = vulkanDevice->physicalDevice;
+    vkDevice = MakeUnique<Device>(vulkanInstance->instance, surface);
+    VkDevice device = vkDevice->device;
+    VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
 
-    msaaManager = MakeUnique<MSAAManager>(*vulkanDevice);
-    swapChain = MakeUnique<SwapChain>(*vulkanDevice, surface, windowManager->window);
+    msaaManager = MakeUnique<MSAAManager>(*vkDevice);
+    swapChain = MakeUnique<SwapChain>(*vkDevice, surface, windowManager->window);
 
 
     // Create shared render pass for forward rendering
@@ -62,7 +62,7 @@ void Application::initVulkan() {
 
     // Initialize render targets and depth testing
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
-    depthManager = MakeUnique<DepthManager>(*vulkanDevice);
+    depthManager = MakeUnique<DepthManager>(*vkDevice);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
     swapChain->createFramebuffers(
         renderPass, 
@@ -72,10 +72,10 @@ void Application::initVulkan() {
     );
 
     globalUBOManager = MakeUnique<GlobalUBOManager>(
-        device, vulkanDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT
+        device, vkDevice->physicalDevice, MAX_FRAMES_IN_FLIGHT
     );
 
-    resourceManager = MakeUnique<ResourceManager>(*vulkanDevice);
+    resourceManager = MakeUnique<ResourceManager>(*vkDevice);
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
@@ -162,14 +162,14 @@ void Application::initVulkan() {
 
 // PLAYGROUND END HERE 
 
-    meshManager.createBufferDatas(device, physicalDevice);
+    meshManager.createBufferDatas();
 
-    matManager.createBufferDatas(device, physicalDevice);
-    matManager.createDescriptorSets(device, MAX_FRAMES_IN_FLIGHT);
+    matManager.createBufferDatas();
+    matManager.createDescriptorSets(MAX_FRAMES_IN_FLIGHT);
 
-    texManager.createDescriptorSets(device, MAX_FRAMES_IN_FLIGHT);
+    texManager.createDescriptorSets(MAX_FRAMES_IN_FLIGHT);
 
-    renderer = MakeUnique<Renderer>(*vulkanDevice, *swapChain, *depthManager,
+    renderer = MakeUnique<Renderer>(*vkDevice, *swapChain, *depthManager,
                                     *globalUBOManager, *resourceManager);
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
@@ -207,7 +207,7 @@ bool Application::checkWindowResize() {
     windowManager->resizedFlag = false;
     renderer->framebufferResized = false;
 
-    vkDeviceWaitIdle(vulkanDevice->device);
+    vkDeviceWaitIdle(vkDevice->device);
 
     int newWidth, newHeight;
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
@@ -405,7 +405,7 @@ void Application::mainLoop() {
         }
     }
 
-    vkDeviceWaitIdle(vulkanDevice->device);
+    vkDeviceWaitIdle(vkDevice->device);
 }
 
 void Application::cleanup() {

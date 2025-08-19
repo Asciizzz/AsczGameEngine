@@ -33,14 +33,9 @@ namespace Az3D {
     // Texture manager with Vulkan helpers
     class TextureManager {
     public:
-        AzVulk::Device& vulkanDevice;
+        AzVulk::Device& vkDevice;
 
         SharedPtrVec<Texture> textures;
-        AzVulk::DynamicDescriptor dynamicDescriptor;
-        void createDescriptorSets(VkDevice device, uint32_t maxFramesInFlight);
-        VkDescriptorSet getDescriptorSet(uint32_t textureIndex, uint32_t frameIndex, uint32_t maxFramesInFlight) const {
-            return dynamicDescriptor.getSet(textureIndex * maxFramesInFlight + frameIndex);
-        }
 
         TextureManager(AzVulk::Device& device);
         ~TextureManager();
@@ -61,5 +56,12 @@ namespace Az3D {
         void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
     
         void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+
+
+        AzVulk::DynamicDescriptor dynamicDescriptor;
+        void createDescriptorSets(uint32_t maxFramesInFlight);
+        VkDescriptorSet getDescriptorSet(uint32_t textureIndex, uint32_t frameIndex, uint32_t maxFramesInFlight) const {
+            return dynamicDescriptor.getSet(textureIndex * maxFramesInFlight + frameIndex);
+        }
     };
 }

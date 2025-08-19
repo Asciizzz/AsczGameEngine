@@ -89,6 +89,8 @@ namespace Az3D {
 
 
 
+    MeshManager::MeshManager(AzVulk::Device& vkDevice) : vkDevice(vkDevice) {}
+
     size_t MeshManager::addMesh(SharedPtr<Mesh> mesh) {
         meshes.push_back(mesh);
         return count++;
@@ -210,11 +212,14 @@ namespace Az3D {
     }
 
     
-    void MeshManager::createBufferDatas(VkDevice device, VkPhysicalDevice physicalDevice) {
+    void MeshManager::createBufferDatas() {
         using namespace AzVulk; // WHAT THE FUCK???
 
         vertexBufferDatas.resize(meshes.size());
         indexBufferDatas.resize(meshes.size());
+
+        VkDevice device = vkDevice.device;
+        VkPhysicalDevice physicalDevice = vkDevice.physicalDevice;
 
         for (size_t i = 0; i < meshes.size(); ++i) {
             const auto& mesh = meshes[i];
@@ -225,7 +230,6 @@ namespace Az3D {
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
 
-            
             vertexBufferDatas[i].uploadData(mesh->vertices);
 
             indexBufferDatas[i].initVulkanDevice(device, physicalDevice);

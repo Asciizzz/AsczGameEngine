@@ -32,7 +32,7 @@ namespace AzVulk {
         // Thank's for attending my Ted-Talk
 
         // Component references
-        Device& vulkanDevice;
+        Device& vkDevice;
         SwapChain& swapChain;
         DepthManager& depthManager;
         Az3D::GlobalUBOManager& globalUBOManager;

@@ -25,7 +25,7 @@ namespace AzVulk {
         void recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView depthResolveImageView, VkImageView colorImageView);
 
         
-        const Device& vulkanDevice;
+        const Device& vkDevice;
         VkSurfaceKHR surface;
         
         VkSwapchainKHR swapChain = VK_NULL_HANDLE;

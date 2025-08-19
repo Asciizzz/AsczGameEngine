@@ -18,7 +18,7 @@ namespace AzVulk {
         void cleanup();
 
         
-        const Device& vulkanDevice;
+        const Device& vkDevice;
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
         VkImage colorImage = VK_NULL_HANDLE;

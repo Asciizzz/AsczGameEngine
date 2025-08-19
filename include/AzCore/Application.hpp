@@ -33,7 +33,7 @@ private:
 
     // Vulkan: OpenGL's ambitious cousin
     UniquePtr<AzVulk::Instance> vulkanInstance;
-    UniquePtr<AzVulk::Device> vulkanDevice;
+    UniquePtr<AzVulk::Device> vkDevice;
     UniquePtr<AzVulk::SwapChain> swapChain;
 
     // Render pass - shared between pipelines
