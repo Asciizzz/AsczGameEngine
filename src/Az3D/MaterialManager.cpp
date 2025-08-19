@@ -110,4 +110,9 @@ namespace Az3D {
         }
     }
 
+    void MaterialManager::uploadToGPU(uint32_t maxFramesInFlight) {
+        createGPUBufferDatas();
+        createDescriptorSets(maxFramesInFlight);
+    }
+
 } // namespace Az3D

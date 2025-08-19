@@ -164,10 +164,9 @@ void Application::initVulkan() {
 
     meshManager.createBufferDatas();
 
-    matManager.createGPUBufferDatas();
-    matManager.createDescriptorSets(MAX_FRAMES_IN_FLIGHT);
+    matManager.uploadToGPU(MAX_FRAMES_IN_FLIGHT);
 
-    texManager.createDescriptorSets(MAX_FRAMES_IN_FLIGHT);
+    texManager.uploadToGPU(MAX_FRAMES_IN_FLIGHT);
 
     renderer = MakeUnique<Renderer>(*vkDevice, *swapChain, *depthManager,
                                     *globalUBOManager, *resourceManager);

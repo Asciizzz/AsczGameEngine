@@ -63,5 +63,10 @@ namespace Az3D {
         VkDescriptorSet getDescriptorSet(uint32_t textureIndex, uint32_t frameIndex, uint32_t maxFramesInFlight) const {
             return dynamicDescriptor.getSet(textureIndex * maxFramesInFlight + frameIndex);
         }
+
+        void uploadToGPU(uint32_t maxFramesInFlight) {
+            // Will soon fix this reimplementation
+            createDescriptorSets(maxFramesInFlight);
+        }
     };
 }
