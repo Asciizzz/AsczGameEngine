@@ -85,8 +85,20 @@ namespace AzVulk {
 
         PoolWrapper getPoolWrapper(const std::string& name) const { return commandPools.at(name); }
         VkCommandPool getCommandPool(const std::string& name) const { return commandPools.at(name).pool; }
+    };
 
-        VkCommandBuffer beginSingleTimeCommands(std::string poolName) const;
-        void endSingleTimeCommands(std::string poolName, VkCommandBuffer commandBuffer) const;
+
+    // Extension helper for one-time instant command
+    class TemporaryCommand {
+    public:
+        TemporaryCommand(Device& device, const std::string& poolName);
+        ~TemporaryCommand();
+
+        VkCommandBuffer getCmdBuffer() const { return cmd; }
+        VkCommandBuffer operator*() const { return cmd; }
+
+        Device& device;
+        std::string poolName;
+        VkCommandBuffer cmd = VK_NULL_HANDLE;
     };
 }

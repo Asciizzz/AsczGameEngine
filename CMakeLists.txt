@@ -32,7 +32,6 @@ file(GLOB_RECURSE SRC_FILES
     src/AzCore/Application.cpp
 
     src/AzVulk/Device.cpp
-    src/AzVulk/SingleTimeCommand.cpp
     src/AzVulk/Instance.cpp
     src/AzVulk/Buffer.cpp
     src/AzVulk/DepthManager.cpp

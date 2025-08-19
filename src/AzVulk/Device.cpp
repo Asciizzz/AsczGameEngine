@@ -224,39 +224,39 @@ namespace AzVulk
 
 
 
-    VkCommandBuffer Device::beginSingleTimeCommands(std::string name) const {
-        const PoolWrapper &poolWrapper = commandPools.at(name); // get both pool + type
+    TemporaryCommand::TemporaryCommand(Device& device, const std::string& poolName)
+    : device(device), poolName(poolName) {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = poolWrapper.pool; // from wrapper
+        allocInfo.commandPool = device.getPoolWrapper(poolName).pool;
         allocInfo.commandBufferCount = 1;
 
-        VkCommandBuffer commandBuffer;
-        if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(device.device, &allocInfo, &cmd) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffer!");
         }
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        return commandBuffer;
+        vkBeginCommandBuffer(cmd, &beginInfo);
     }
 
-    void Device::endSingleTimeCommands(std::string name, VkCommandBuffer commandBuffer) const {
-        const PoolWrapper& poolWrapper = commandPools.at(name);
-        vkEndCommandBuffer(commandBuffer);
+    TemporaryCommand::~TemporaryCommand() {
+        if (cmd != VK_NULL_HANDLE) {
+            vkEndCommandBuffer(cmd);
 
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &cmd;
 
-        vkQueueSubmit(getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(getQueue(poolWrapper.type));
-        vkFreeCommandBuffers(device, poolWrapper.pool, 1, &commandBuffer);
+            const Device::PoolWrapper& poolWrapper = device.getPoolWrapper(poolName);
+
+            vkQueueSubmit(device.getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
+            vkQueueWaitIdle(device.getQueue(poolWrapper.type));
+
+            vkFreeCommandBuffers(device.device, poolWrapper.pool, 1, &cmd);
+        }
     }
-
 }

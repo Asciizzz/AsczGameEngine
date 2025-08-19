@@ -1,5 +1,5 @@
 #include "Az3D/TextureManager.hpp"
-#include "AzVulk/SingleTimeCommand.hpp"
+#include "AzVulk/Device.hpp"
 #include "AzVulk/Buffer.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -235,7 +235,7 @@ namespace Az3D {
     }
 
     void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
-        SingleTimeCommand cmd(vulkanDevice, "TexturePool");
+        TemporaryCommand cmd(vulkanDevice, "TexturePool");
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -271,7 +271,7 @@ namespace Az3D {
     }
 
     void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-        SingleTimeCommand cmd(vulkanDevice, "TexturePool");
+        TemporaryCommand cmd(vulkanDevice, "TexturePool");
 
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -295,7 +295,7 @@ namespace Az3D {
             throw std::runtime_error("texture image format does not support linear blitting!");
         }
 
-        SingleTimeCommand cmd(vulkanDevice, "TexturePool");
+        TemporaryCommand cmd(vulkanDevice, "TexturePool");
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
