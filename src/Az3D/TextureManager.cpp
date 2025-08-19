@@ -11,14 +11,14 @@
 using namespace AzVulk;
 
 namespace Az3D {
-    TextureManager::TextureManager(const Device& vkDevice)
+    TextureManager::TextureManager(const Device* vkDevice)
         : vkDevice(vkDevice) {
         createDefaultTexture();
     }
 
     TextureManager::~TextureManager() {
         // Clean up all textures
-        VkDevice device = vkDevice.device;
+        VkDevice device = vkDevice->device;
 
         for (auto& texture : textures) {
             if (texture->view != VK_NULL_HANDLE) {
@@ -55,7 +55,7 @@ namespace Az3D {
 
 
             BufferData stagingBuffer;
-            stagingBuffer.initVulkanDevice(vkDevice.device, vkDevice.physicalDevice);
+            stagingBuffer.initVulkanDevice(vkDevice->device, vkDevice->physicalDevice);
             stagingBuffer.createBuffer(
                 imageSize, sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -104,7 +104,7 @@ namespace Az3D {
         VkDeviceSize imageSize = 4; // 1 pixel * 4 bytes (RGBA)
 
         BufferData stagingBuffer;
-        stagingBuffer.initVulkanDevice(vkDevice.device, vkDevice.physicalDevice);
+        stagingBuffer.initVulkanDevice(vkDevice->device, vkDevice->physicalDevice);
         stagingBuffer.createBuffer(
             imageSize, sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -156,23 +156,23 @@ namespace Az3D {
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateImage(vkDevice.device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+        if (vkCreateImage(vkDevice->device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
             throw std::runtime_error("failed to create image!");
         }
 
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(vkDevice.device, image, &memRequirements);
+        vkGetImageMemoryRequirements(vkDevice->device, image, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice.physicalDevice);
+        allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice->physicalDevice);
 
-        if (vkAllocateMemory(vkDevice.device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+        if (vkAllocateMemory(vkDevice->device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate image memory!");
         }
 
-        vkBindImageMemory(vkDevice.device, image, imageMemory, 0);
+        vkBindImageMemory(vkDevice->device, image, imageMemory, 0);
     }
 
     void TextureManager::createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView) {
@@ -187,17 +187,17 @@ namespace Az3D {
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(vkDevice.device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+        if (vkCreateImageView(vkDevice->device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture image view!");
         }
     }
 
     void TextureManager::createSampler(uint32_t mipLevels, VkSampler& sampler, Texture::Mode addressMode) {
         VkPhysicalDeviceProperties properties{};
-        vkGetPhysicalDeviceProperties(vkDevice.physicalDevice, &properties);
+        vkGetPhysicalDeviceProperties(vkDevice->physicalDevice, &properties);
 
         VkPhysicalDeviceFeatures deviceFeatures{};
-        vkGetPhysicalDeviceFeatures(vkDevice.physicalDevice, &deviceFeatures);
+        vkGetPhysicalDeviceFeatures(vkDevice->physicalDevice, &deviceFeatures);
 
         VkSamplerAddressMode vulkanAddressMode = static_cast<VkSamplerAddressMode>(addressMode);
 
@@ -226,13 +226,13 @@ namespace Az3D {
         samplerInfo.maxLod = static_cast<float>(mipLevels);
         samplerInfo.mipLodBias = 0.0f;
 
-        if (vkCreateSampler(vkDevice.device, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
+        if (vkCreateSampler(vkDevice->device, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture sampler!");
         }
     }
 
     void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
-        TemporaryCommand tempCmd(&vkDevice, "TexturePool");
+        TemporaryCommand tempCmd(vkDevice, "TexturePool");
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -268,7 +268,7 @@ namespace Az3D {
     }
 
     void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-        TemporaryCommand tempCmd(&vkDevice, "TexturePool");
+        TemporaryCommand tempCmd(vkDevice, "TexturePool");
 
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -286,13 +286,13 @@ namespace Az3D {
 
     void TextureManager::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
         VkFormatProperties formatProperties;
-        vkGetPhysicalDeviceFormatProperties(vkDevice.physicalDevice, imageFormat, &formatProperties);
+        vkGetPhysicalDeviceFormatProperties(vkDevice->physicalDevice, imageFormat, &formatProperties);
 
         if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
             throw std::runtime_error("texture image format does not support linear blitting!");
         }
 
-        TemporaryCommand tempCmd(&vkDevice, "TexturePool");
+        TemporaryCommand tempCmd(vkDevice, "TexturePool");
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -355,7 +355,7 @@ namespace Az3D {
 
     // Descriptor function
     void TextureManager::createDescriptorSets(uint32_t maxFramesInFlight) {
-        VkDevice device = vkDevice.device;
+        VkDevice device = vkDevice->device;
 
         dynamicDescriptor.init(device);
         VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(0,
