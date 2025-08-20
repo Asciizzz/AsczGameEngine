@@ -28,15 +28,15 @@ namespace AzVulk {
         VkDeviceMemory memory = VK_NULL_HANDLE;
         void* mapped = nullptr;
 
-        uint32_t resourceCount = 0;
-        VkDeviceSize dataTypeSize = 0;
+        uint64_t dataCount = 0;
+        VkDeviceSize typeSize = 0;
         VkDeviceSize totalDataSize = 0;
 
         VkBufferUsageFlags usageFlags = 0;
         VkMemoryPropertyFlags memoryFlags = 0;
 
         void createBuffer(
-            size_t resourceCount, size_t dataTypeSize,
+            uint64_t dataCount, uint64_t typeSize,
             VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
         );
 
@@ -50,7 +50,7 @@ namespace AzVulk {
         template<typename T>
         void uploadData(const T* data) {
             vkMapMemory(vkDevice->device, memory, 0, totalDataSize, 0, &mapped);
-            memcpy(mapped, data, sizeof(T) * resourceCount);
+            memcpy(mapped, data, sizeof(T) * dataCount);
             vkUnmapMemory(vkDevice->device, memory);
             mapped = nullptr;
         }

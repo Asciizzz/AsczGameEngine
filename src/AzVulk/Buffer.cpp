@@ -18,8 +18,8 @@ namespace AzVulk {
         memory = other.memory;
         mapped = other.mapped;
 
-        dataTypeSize = other.dataTypeSize;
-        resourceCount = other.resourceCount;
+        typeSize = other.typeSize;
+        dataCount = other.dataCount;
         totalDataSize = other.totalDataSize;
 
         usageFlags = other.usageFlags;
@@ -41,8 +41,8 @@ namespace AzVulk {
             memory = other.memory;
             mapped = other.mapped;
 
-            dataTypeSize = other.dataTypeSize;
-            resourceCount = other.resourceCount;
+            typeSize = other.typeSize;
+            dataCount = other.dataCount;
             totalDataSize = other.totalDataSize;
 
             usageFlags = other.usageFlags;
@@ -74,7 +74,7 @@ namespace AzVulk {
     }
 
     void BufferData::createBuffer(
-        size_t resourceCount, size_t dataTypeSize,
+        uint64_t dataCount, uint64_t typeSize,
         VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
     ) {
         VkDevice device = vkDevice->device;
@@ -87,9 +87,9 @@ namespace AzVulk {
         this->usageFlags = usageFlags;
         this->memoryFlags = memoryFlags;
 
-        this->resourceCount = static_cast<uint32_t>(resourceCount);
-        this->dataTypeSize = static_cast<VkDeviceSize>(dataTypeSize);
-        this->totalDataSize = static_cast<VkDeviceSize>(dataTypeSize * resourceCount);
+        this->dataCount = dataCount;
+        this->typeSize = typeSize;
+        this->totalDataSize = typeSize * dataCount;
 
         cleanup();
 
