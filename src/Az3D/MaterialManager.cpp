@@ -29,7 +29,7 @@ namespace Az3D {
             BufferData stagingBuffer;
             stagingBuffer.initVulkanDevice(vkDevice);
             stagingBuffer.createBuffer(
-                1, sizeof(MaterialUBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                sizeof(MaterialUBO), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             stagingBuffer.mappedData();
@@ -41,7 +41,7 @@ namespace Az3D {
 
             gpuBufferDatas[i].initVulkanDevice(vkDevice);
             gpuBufferDatas[i].createBuffer(
-                1, sizeof(MaterialUBO),
+                sizeof(MaterialUBO),
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );

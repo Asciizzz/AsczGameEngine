@@ -181,8 +181,10 @@ namespace AzVulk {
             const auto& indexBufferData = meshManager->indexGPUBufferDatas[meshIndex];
             const auto& instanceBufferData = mapData.bufferData;
 
+            uint64_t indexCount = meshManager->meshes[meshIndex]->indices.size();
+
             // Skip if nothing to draw or bad data
-            if (indexBufferData.dataCount == 0) continue;
+            if (indexCount == 0) continue;
             if (instanceBufferData.buffer == VK_NULL_HANDLE) continue;
 
             // Bind vertex + instance buffers in a single call (starting at binding 0)
@@ -194,7 +196,7 @@ namespace AzVulk {
             vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
 
             // Draw all instances
-            vkCmdDrawIndexed(commandBuffers[currentFrame], indexBufferData.dataCount, instanceCount, 0, 0, 0);
+            vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
         }
     }
 
