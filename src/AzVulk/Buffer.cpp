@@ -20,7 +20,7 @@ namespace AzVulk {
 
         typeSize = other.typeSize;
         dataCount = other.dataCount;
-        totalDataSize = other.totalDataSize;
+        dataSize = other.dataSize;
 
         usageFlags = other.usageFlags;
         memoryFlags = other.memoryFlags;
@@ -43,7 +43,7 @@ namespace AzVulk {
 
             typeSize = other.typeSize;
             dataCount = other.dataCount;
-            totalDataSize = other.totalDataSize;
+            dataSize = other.dataSize;
 
             usageFlags = other.usageFlags;
             memoryFlags = other.memoryFlags;
@@ -89,13 +89,13 @@ namespace AzVulk {
 
         this->dataCount = dataCount;
         this->typeSize = typeSize;
-        this->totalDataSize = typeSize * dataCount;
+        this->dataSize = typeSize * dataCount;
 
         cleanup();
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = totalDataSize;
+        bufferInfo.size = dataSize;
         bufferInfo.usage = usageFlags;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 

@@ -30,7 +30,7 @@ namespace AzVulk {
 
         uint64_t dataCount = 0;
         VkDeviceSize typeSize = 0;
-        VkDeviceSize totalDataSize = 0;
+        VkDeviceSize dataSize = 0;
 
         VkBufferUsageFlags usageFlags = 0;
         VkMemoryPropertyFlags memoryFlags = 0;
@@ -42,21 +42,21 @@ namespace AzVulk {
 
         template<typename T>
         void uploadData(const std::vector<T>& data) {
-            vkMapMemory(vkDevice->device, memory, 0, totalDataSize, 0, &mapped);
+            vkMapMemory(vkDevice->device, memory, 0, dataSize, 0, &mapped);
             memcpy(mapped, data.data(), sizeof(T) * data.size());
             vkUnmapMemory(vkDevice->device, memory);
             mapped = nullptr;
         }
         template<typename T>
         void uploadData(const T* data) {
-            vkMapMemory(vkDevice->device, memory, 0, totalDataSize, 0, &mapped);
+            vkMapMemory(vkDevice->device, memory, 0, dataSize, 0, &mapped);
             memcpy(mapped, data, sizeof(T) * dataCount);
             vkUnmapMemory(vkDevice->device, memory);
             mapped = nullptr;
         }
 
         void mappedData() {
-            if (!mapped) vkMapMemory(vkDevice->device, memory, 0, totalDataSize, 0, &mapped);
+            if (!mapped) vkMapMemory(vkDevice->device, memory, 0, dataSize, 0, &mapped);
         }
 
         template<typename T>
