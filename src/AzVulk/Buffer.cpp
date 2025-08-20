@@ -69,20 +69,13 @@ namespace AzVulk {
         }
     }
 
-    void BufferData::createBuffer(
-        VkDeviceSize dataSize, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags
-    ) {
+    void BufferData::createBuffer() {
         VkDevice device = vkDevice->device;
         VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
 
         if (device == VK_NULL_HANDLE || physicalDevice == VK_NULL_HANDLE) {
             throw std::runtime_error("BufferData: Vulkan device not initialized");
         }
-
-        this->usageFlags = usageFlags;
-        this->memoryFlags = memoryFlags;
-
-        this->dataSize = dataSize;
 
         cleanup();
 

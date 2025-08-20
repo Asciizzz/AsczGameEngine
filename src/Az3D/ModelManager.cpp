@@ -53,16 +53,17 @@ namespace Az3D {
     }
 
     void ModelMappingData::initVulkanDevice(const AzVulk::Device* device) {
-        bufferData.initVulkanDevice(device);
+        bufferData.initVkDevice(device);
     }
 
     void ModelMappingData::recreateBufferData() {
         if (!bufferData.vkDevice) return;
 
-        bufferData.createBuffer( // Already contain safeguards
+        bufferData.setProperties(
             datas.size() * sizeof(Az3D::Model::Data3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
+        bufferData.createBuffer();
         bufferData.mappedData(datas);
 
         prevInstanceCount = datas.size();

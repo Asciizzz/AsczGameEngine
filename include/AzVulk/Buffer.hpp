@@ -6,8 +6,6 @@ namespace AzVulk {
 
     struct BufferData {
         BufferData() = default;
-        BufferData(const Device* vkDevice) : vkDevice(vkDevice) {}
-        void initVulkanDevice(const Device* vkDevice) { this->vkDevice = vkDevice; }
 
         ~BufferData() { cleanup(); }
         void cleanup();
@@ -33,7 +31,21 @@ namespace AzVulk {
         VkBufferUsageFlags usageFlags = 0;
         VkMemoryPropertyFlags memoryFlags = 0;
 
-        void createBuffer(VkDeviceSize dataSize, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags);
+        void initVkDevice(const Device* vkDevice) {
+            this->vkDevice = vkDevice;
+        }
+
+        void setProperties(
+            VkDeviceSize dataSize,
+            VkBufferUsageFlags usageFlags,
+            VkMemoryPropertyFlags memoryFlags
+        ) {
+            this->dataSize = dataSize;
+            this->usageFlags = usageFlags;
+            this->memoryFlags = memoryFlags;
+        }
+
+        void createBuffer();
 
         template<typename T>
         void uploadData(const std::vector<T>& data) {

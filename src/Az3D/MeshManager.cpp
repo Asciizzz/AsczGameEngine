@@ -224,19 +224,20 @@ namespace Az3D {
         for (size_t i = 0; i < meshes.size(); ++i) {
             const auto& mesh = meshes[i];
 
-            vertexGPUBufferDatas[i].initVulkanDevice(vkDevice);
-            vertexGPUBufferDatas[i].createBuffer(
+            vertexGPUBufferDatas[i].initVkDevice(vkDevice);
+            vertexGPUBufferDatas[i].setProperties(
                 mesh->vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
-
+            vertexGPUBufferDatas[i].createBuffer();
             vertexGPUBufferDatas[i].uploadData(mesh->vertices);
 
-            indexGPUBufferDatas[i].initVulkanDevice(vkDevice);
-            indexGPUBufferDatas[i].createBuffer(
+            indexGPUBufferDatas[i].initVkDevice(vkDevice);
+            indexGPUBufferDatas[i].setProperties(
                 mesh->indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
+            indexGPUBufferDatas[i].createBuffer();
             indexGPUBufferDatas[i].uploadData(mesh->indices);
         }
     }

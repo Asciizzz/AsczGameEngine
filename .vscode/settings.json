@@ -83,6 +83,9 @@
         "xtree": "cpp",
         "filesystem": "cpp",
         "typeindex": "cpp",
-        "pair": "cpp"
+        "pair": "cpp",
+        "cinttypes": "cpp",
+        "condition_variable": "cpp",
+        "shared_mutex": "cpp"
     }
 }

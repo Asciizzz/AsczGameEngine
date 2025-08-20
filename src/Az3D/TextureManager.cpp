@@ -55,11 +55,12 @@ namespace Az3D {
 
 
             BufferData stagingBuffer;
-            stagingBuffer.initVulkanDevice(vkDevice);
-            stagingBuffer.createBuffer(
+            stagingBuffer.initVkDevice(vkDevice);
+            stagingBuffer.setProperties(
                 imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
+            stagingBuffer.createBuffer();
             stagingBuffer.uploadData(pixels);
 
             stbi_image_free(pixels);
@@ -104,11 +105,12 @@ namespace Az3D {
         VkDeviceSize imageSize = 4; // 1 pixel * 4 bytes (RGBA)
 
         BufferData stagingBuffer;
-        stagingBuffer.initVulkanDevice(vkDevice);
-        stagingBuffer.createBuffer(
+        stagingBuffer.initVkDevice(vkDevice);
+        stagingBuffer.setProperties(
             imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
+        stagingBuffer.createBuffer();
         stagingBuffer.uploadData(white);
 
         // Create texture image
