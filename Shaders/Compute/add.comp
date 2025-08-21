@@ -1,19 +1,24 @@
 #version 450
-layout(local_size_x = 64) in;
 
-layout(set = 0, binding = 0) buffer BufferA {
-    int a[];
+layout(local_size_x = 1) in;  // one thread = one matrix
+
+struct Mat4 {
+    mat4 m;
 };
 
-layout(set = 0, binding = 1) buffer BufferB {
-    int b[];
+layout(set = 0, binding = 0) readonly buffer InA {
+    Mat4 a[];
 };
 
-layout(set = 0, binding = 2) buffer BufferC {
-    int c[];
+layout(set = 0, binding = 1) readonly buffer InB {
+    Mat4 b[];
+};
+
+layout(set = 0, binding = 2) writeonly buffer OutC {
+    Mat4 c[];
 };
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    c[idx] = a[idx] + b[idx];
+    c[idx].m = a[idx].m + b[idx].m;  // element-wise mat4 addition
 }

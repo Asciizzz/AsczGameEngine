@@ -21,4 +21,3 @@ SharedPtr<T> MakeShared(Args&&... args) {
 }
 
 template<typename K, typename V> using UnorderedMap = std::unordered_map<K, V>;
-// template<typename T> using UnorderedStringMap = std::unordered_map<std::string, T>;

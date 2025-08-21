@@ -220,6 +220,13 @@ namespace AzVulk
         return commandPool;
     }
 
+    void Device::destroyCommandPool(const std::string& name) {
+        if (commandPools.find(name) != commandPools.end()) {
+            vkDestroyCommandPool(device, commandPools[name].pool, nullptr);
+            commandPools.erase(name);
+        }
+    }
+
 
 
     TemporaryCommand::TemporaryCommand(const Device* vkDevice, const std::string& poolName)
