@@ -34,12 +34,14 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Device.cpp
     src/AzVulk/Instance.cpp
     src/AzVulk/Buffer.cpp
-    src/AzVulk/DepthManager.cpp
     src/AzVulk/DescriptorSets.cpp
-    src/AzVulk/MSAAManager.cpp
-    src/AzVulk/Pipeline.cpp
-    src/AzVulk/RenderPass.cpp
     src/AzVulk/Swapchain.cpp
+    src/AzVulk/RenderPass.cpp
+    src/AzVulk/MSAAManager.cpp
+    src/AzVulk/DepthManager.cpp
+    src/AzVulk/Pipeline_base.cpp
+    src/AzVulk/Pipeline_graphic.cpp
+    src/AzVulk/Pipeline_compute.cpp
     src/AzVulk/Renderer.cpp
 
     src/AzGame/Grass.cpp

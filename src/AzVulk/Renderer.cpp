@@ -84,7 +84,7 @@ namespace AzVulk {
     }
 
     // Begin frame: handle synchronization, image acquisition, and render pass setup
-    uint32_t Renderer::beginFrame(Pipeline& pipeline, GlobalUBO& globalUBO) {
+    uint32_t Renderer::beginFrame(GraphicsPipeline& gPipeline, GlobalUBO& globalUBO) {
         vkWaitForFences(vkDevice->device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
         uint32_t imageIndex = UINT32_MAX;
@@ -112,7 +112,7 @@ namespace AzVulk {
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = pipeline.config.renderPass;
+        renderPassInfo.renderPass = gPipeline.cfg.renderPass;
         renderPassInfo.framebuffer = swapChain->framebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain->extent;
@@ -146,7 +146,7 @@ namespace AzVulk {
     }
 
     // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
-    void Renderer::drawScene(Pipeline& pipeline, ModelGroup& modelGroup) {
+    void Renderer::drawScene(GraphicsPipeline& gPipeline, ModelGroup& modelGroup) {
         const Az3D::MaterialManager* matManager = resourceManager->materialManager.get();
         const Az3D::TextureManager* texManager = resourceManager->textureManager.get();
         const Az3D::MeshManager* meshManager = resourceManager->meshManager.get();
@@ -154,7 +154,8 @@ namespace AzVulk {
         VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
 
         // Bind pipeline once
-        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
+        // vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
+        gPipeline.bind(commandBuffers[currentFrame]);
 
         for (auto& [hash, mapData] : modelGroup.modelMapping) {
             uint32_t instanceCount = static_cast<uint32_t>(mapData.datas.size());
@@ -175,7 +176,7 @@ namespace AzVulk {
 
             std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    pipeline.pipelineLayout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
+                                    gPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
             const auto& vertexBufferData = meshManager->vertexGPUBufferDatas[meshIndex];
             const auto& indexBufferData = meshManager->indexGPUBufferDatas[meshIndex];
@@ -201,7 +202,7 @@ namespace AzVulk {
     }
 
     // Sky rendering using dedicated sky pipeline
-    void Renderer::drawSky(Pipeline& skyPipeline) {
+    void Renderer::drawSky(GraphicsPipeline& gPipeline) {
         // return;
         /* 
         Dont worry about the validation warning too much, since the sky is sharing the same shader
@@ -210,12 +211,12 @@ namespace AzVulk {
         */
 
         // Bind sky pipeline
-        vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline.graphicsPipeline);
+        gPipeline.bind(commandBuffers[currentFrame]);
 
         // Bind only the global descriptor set (set 0) for sky
         VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
         vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                skyPipeline.pipelineLayout, 0, 1, &globalSet, 0, nullptr);
+                                gPipeline.layout, 0, 1, &globalSet, 0, nullptr);
 
         // Draw fullscreen triangle (3 vertices, no input)
         vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);

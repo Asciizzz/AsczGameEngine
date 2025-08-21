@@ -3,8 +3,8 @@
 #include <chrono>
 
 #include "AzVulk/SwapChain.hpp"
-#include "AzVulk/Pipeline.hpp"
 #include "AzVulk/DepthManager.hpp"
+#include "AzVulk/Pipeline_include.hpp"
 
 #include "Az3D/Az3D.hpp"
 
@@ -23,10 +23,10 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         // Introduction
-        uint32_t beginFrame(Pipeline& pipeline, Az3D::GlobalUBO& globalUBO);
+        uint32_t beginFrame(GraphicsPipeline& pipeline, Az3D::GlobalUBO& globalUBO);
         // Body
-        void drawScene(Pipeline& pipeline, Az3D::ModelGroup& modelGroup);
-        void drawSky(Pipeline& skyPipeline);
+        void drawScene(GraphicsPipeline& pipeline, Az3D::ModelGroup& modelGroup);
+        void drawSky(GraphicsPipeline& skyPipeline);
         // Conclusion
         void endFrame(uint32_t imageIndex);
         // Thank's for attending my Ted-Talk

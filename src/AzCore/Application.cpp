@@ -182,20 +182,25 @@ void Application::initVulkan() {
 
     LayoutVec layouts = {glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout};
 
-    opaquePipeline = MakeUnique<Pipeline>(
-        device, RasterPipelineConfig::createOpaqueConfig(msaaManager->msaaSamples, renderPass, layouts)
-    );
-    opaquePipeline->createGraphicPipeline("Shaders/Rasterize/raster.vert.spv", "Shaders/Rasterize/raster.frag.spv");
+    RasterPipelineConfig opaqueConfig;
+    opaqueConfig.renderPass = renderPass;
+    opaqueConfig.msaaSamples = msaaManager->msaaSamples;
+    opaqueConfig.setLayouts = layouts;
+    opaqueConfig.vertPath = "Shaders/Rasterize/raster.vert.spv";
+    opaqueConfig.fragPath = "Shaders/Rasterize/raster.frag.spv";
 
-    transparentPipeline = MakeUnique<Pipeline>(
-        device, RasterPipelineConfig::createTransparentConfig(msaaManager->msaaSamples, renderPass, layouts)
-    );
-    transparentPipeline->createGraphicPipeline("Shaders/Rasterize/raster.vert.spv", "Shaders/Rasterize/raster.frag.spv");
+    opaquePipeline = MakeUnique<GraphicsPipeline>(device, opaqueConfig);
+    opaquePipeline->create();
 
-    skyPipeline = MakeUnique<Pipeline>(
-        device, RasterPipelineConfig::createSkyConfig(msaaManager->msaaSamples, renderPass, layouts)
-    );
-    skyPipeline->createGraphicPipeline("Shaders/Sky/sky.vert.spv", "Shaders/Sky/sky.frag.spv");
+    RasterPipelineConfig skyConfig;
+    skyConfig.renderPass = renderPass;
+    skyConfig.msaaSamples = msaaManager->msaaSamples;
+    skyConfig.setLayouts = layouts;
+    skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
+    skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
+
+    skyPipeline = MakeUnique<GraphicsPipeline>(device, skyConfig);
+    skyPipeline->create();
 }
 
 bool Application::checkWindowResize() {
@@ -235,9 +240,13 @@ bool Application::checkWindowResize() {
     VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
 
     // No need to change layout
-    opaquePipeline->recreateGraphicPipeline(renderPass);
-    transparentPipeline->recreateGraphicPipeline(renderPass);
-    skyPipeline->recreateGraphicPipeline(renderPass);
+    opaquePipeline->setRenderPass(renderPass);
+    opaquePipeline->setMsaa(newMsaaSamples);
+    opaquePipeline->recreate();
+
+    skyPipeline->setRenderPass(renderPass);
+    skyPipeline->setMsaa(newMsaaSamples);
+    skyPipeline->recreate();
 
     return true;
 }
