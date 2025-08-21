@@ -215,9 +215,19 @@ void Application::initComponents() {
 }
 
 void Application::featuresTestingGround() {
-    std::vector<int> dataA = {1 ,2 ,3 ,4 ,5 ,6 ,7 ,8};
-    std::vector<int> dataB = {10,20,30,40,50,60,70,80};
-    std::vector<int> dataC(dataA.size(), 0);
+    // std::vector<int> dataA = {1 ,2 ,3 ,4 ,5 ,6 ,7 ,8};
+    // std::vector<int> dataB = {10,20,30,40,50,60,70,80};
+    // std::vector<int> dataC(dataA.size(), 0);
+
+    std::vector<glm::mat4> dataA = {
+        glm::mat4(1.0f), glm::mat4(2.0f), glm::mat4(3.0f), glm::mat4(4.0f),
+        glm::mat4(5.0f), glm::mat4(6.0f), glm::mat4(7.0f), glm::mat4(8.0f)
+    };
+    std::vector<glm::mat4> dataB = {
+        glm::mat4(10.0f), glm::mat4(20.0f), glm::mat4(30.0f), glm::mat4(40.0f),
+        glm::mat4(50.0f), glm::mat4(60.0f), glm::mat4(70.0f), glm::mat4(80.0f)
+    };
+    std::vector<glm::mat4> dataC(dataA.size(), glm::mat4(0.0f));
 
     // Create buffer
 
@@ -225,7 +235,7 @@ void Application::featuresTestingGround() {
 
     auto makeBuffer = [&](BufferData& buf, auto& src) {
         buf.setProperties(
-            sizeof(int) * src.size(),
+            sizeof(glm::mat4) * src.size(),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -336,12 +346,20 @@ void Application::featuresTestingGround() {
     tempCmd.endAndSubmit();
 
     // Get the result
-    int* finalC = reinterpret_cast<int*>(bufC.mapped);
+    glm::mat4* finalC = reinterpret_cast<glm::mat4*>(bufC.mapped);
     // Copy the result to dataC
-    std::memcpy(dataC.data(), finalC, dataC.size() * sizeof(int));
+    std::memcpy(dataC.data(), finalC, dataC.size() * sizeof(glm::mat4));
 
     for (size_t i = 0; i < dataC.size(); ++i) {
-        std::cout << "C[" << i << "] = " << dataA[i] << " + " << dataB[i] << " = " << dataC[i] << std::endl;
+        // std::cout << "C[" << i << "] = " << dataA[i] << " + " << dataB[i] << " = " << dataC[i] << std::endl;
+
+        std::cout << "C[" << i << "]:\n";
+        for (int j = 0; j < 4; ++j) {
+            for (int k = 0; k < 4; ++k) {
+                std::cout << dataC[i][j][k] << " ";
+            }
+            std::cout << "\n";
+        }
     }
 
     // Automatic cleanup
