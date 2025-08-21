@@ -18,8 +18,8 @@ using namespace Az3D;
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
 
+    initComponents();
     initSomeShitIdk();
-    initVulkan();
 }
 
 Application::~Application() {
@@ -32,7 +32,8 @@ void Application::run() {
     printf("Application exited successfully. See you next time!\n");
 }
 
-void Application::initSomeShitIdk() {
+void Application::initComponents() {
+
     windowManager = MakeUnique<AzCore::WindowManager>(appTitle, appWidth, appHeight);
     fpsManager = MakeUnique<AzCore::FpsManager>();
 
@@ -40,9 +41,7 @@ void Application::initSomeShitIdk() {
     // 10km view distance for those distant horizons
     camera = MakeUnique<Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
     camera->setAspectRatio(aspectRatio);
-}
 
-void Application::initVulkan() {
     auto extensions = windowManager->getRequiredVulkanExtensions();
     vkInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
     vkInstance->createSurface(windowManager->window);
@@ -207,9 +206,11 @@ void Application::initVulkan() {
     skyPipeline = MakeUnique<GraphicsPipeline>(device, skyConfig);
     skyPipeline->create();
 
+}
 
-    // Testing out the new compute pipeline to see if it's a hay, or a nay
-
+void Application::initSomeShitIdk() {
+    // Do whatever you want here
+    // ComputePipeline computePipeline(vkDevice.get());
 }
 
 bool Application::checkWindowResize() {

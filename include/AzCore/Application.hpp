@@ -66,7 +66,7 @@ private:
 
     // Functions that actually do things
     void initSomeShitIdk();
-    void initVulkan();
+    void initComponents();
     void mainLoop();
     void cleanup();
 
