@@ -198,6 +198,11 @@ void Application::initVulkan() {
     skyConfig.setLayouts = layouts;
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
+    skyConfig.cullMode = VK_CULL_MODE_NONE;           // No culling for fullscreen quad
+    skyConfig.depthTestEnable = VK_FALSE;             // Sky is always furthest
+    skyConfig.depthWriteEnable = VK_FALSE;            // Don't write depth
+    skyConfig.depthCompareOp = VK_COMPARE_OP_ALWAYS;  // Always pass depth test
+    skyConfig.blendEnable = VK_FALSE;                 // No blending needed
 
     skyPipeline = MakeUnique<GraphicsPipeline>(device, skyConfig);
     skyPipeline->create();
