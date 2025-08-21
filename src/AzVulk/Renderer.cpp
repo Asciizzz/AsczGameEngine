@@ -33,8 +33,8 @@ namespace AzVulk {
         }
     }
 
-    void Renderer::createCommandPool() {
-        commandPool = vkDevice->createCommandPool("RendererPool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    void Renderer::createCommandPool() { // Not so much of a create huh?
+        commandPool = vkDevice->getCommandPool("Default_Graphics");
     }
 
     void Renderer::createCommandBuffers() {

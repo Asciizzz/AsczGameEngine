@@ -47,6 +47,12 @@ void Application::initComponents() {
     vkInstance->createSurface(windowManager->window);
 
     vkDevice = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
+    vkDevice->createCommandPool("Default_Graphics", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    vkDevice->createCommandPool("Default_Present", Device::PresentType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    vkDevice->createCommandPool("Default_Compute", Device::ComputeType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    vkDevice->createCommandPool("Default_Transfer", Device::TransferType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+    // So we dont have to write these things over and over again
     VkDevice device = vkDevice->device;
     VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
 
@@ -209,31 +215,45 @@ void Application::initComponents() {
 }
 
 void Application::featuresTestingGround() {
-    std::vector<int> data = {1,2,3,4,5,6,7,8};
+    std::vector<int> dataA = {1 ,2 ,3 ,4 ,5 ,6 ,7 ,8};
+    std::vector<int> dataB = {10,20,30,40,50,60,70,80};
+    std::vector<int> dataC(dataA.size(), 0);
 
-    BufferData bufferData(vkDevice.get());
-    bufferData.setProperties(
-        sizeof(int) * data.size(),
+    // Create buffer
 
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    BufferData bufA(vkDevice.get()), bufB(vkDevice.get()), bufC(vkDevice.get());
 
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    bufferData.createBuffer();
-    bufferData.mappedData(data);
-    bufferData.unmapMemory();
+    auto makeBuffer = [&](BufferData& buf, auto& src) {
+        buf.setProperties(
+            sizeof(int) * src.size(),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        buf.createBuffer();
+        buf.mappedData(src);
+    };
+
+    makeBuffer(bufA, dataA);
+    makeBuffer(bufB, dataB);
+    makeBuffer(bufC, dataC);
+
+    // Create descriptor layout and pool
 
     DynamicDescriptor dataDesc(vkDevice->device);
-    dataDesc.createSetLayout({
-        DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+    dataDesc.createLayout({
+        DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT),
+        DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT),
+        DynamicDescriptor::fastBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT),
     });
 
     dataDesc.createPool({
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3}
     }, 1);
+
+    // Create descriptor set
 
     VkDescriptorSetAllocateInfo allocInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
     allocInfo.descriptorPool = dataDesc.pool;
@@ -241,38 +261,43 @@ void Application::featuresTestingGround() {
     allocInfo.pSetLayouts = &dataDesc.setLayout;
 
     VkDescriptorSet descSet;
-    if (vkAllocateDescriptorSets(vkDevice->device, &allocInfo, &descSet) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor set");
-    }
+    vkAllocateDescriptorSets(vkDevice->device, &allocInfo, &descSet);
+
+    // Bind buffer to descriptor set
+
+    auto bindBuffer = [&](BufferData& buf, uint32_t binding) {
+        VkDescriptorBufferInfo bufInfo{};
+        bufInfo.buffer = buf.buffer;
+        bufInfo.offset = 0;
+        bufInfo.range  = VK_WHOLE_SIZE;
+
+        VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        write.dstSet = descSet;
+        write.dstBinding = binding;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        write.descriptorCount = 1;
+        write.pBufferInfo = &bufInfo;
+
+        vkUpdateDescriptorSets(vkDevice->device, 1, &write, 0, nullptr);
+    };
+
+    bindBuffer(bufA, 0);
+    bindBuffer(bufB, 1);
+    bindBuffer(bufC, 2);
+
+    // Create pipeline
 
     ComputePipelineConfig computeConfig;
     computeConfig.setLayouts = {dataDesc.setLayout};
-    computeConfig.compPath = "Shaders/Compute/times2.comp.spv";
+    computeConfig.compPath = "Shaders/Compute/add.comp.spv";
 
     ComputePipeline computePipeline(vkDevice->device, computeConfig);
     computePipeline.create();
 
 
-    // Allocate descriptor set from a pool
-    VkDescriptorBufferInfo bufInfo{};
-    bufInfo.buffer = bufferData.buffer;
-    bufInfo.offset = 0;
-    bufInfo.range  = VK_WHOLE_SIZE;
+    // Dispatch compute shader
 
-    VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    write.dstSet = descSet;
-    write.dstBinding = 0;
-    write.dstArrayElement = 0;
-    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    write.descriptorCount = 1;
-    write.pBufferInfo = &bufInfo;
-
-    vkUpdateDescriptorSets(vkDevice->device, 1, &write, 0, nullptr);
-
-    vkDevice->createCommandPool("LmaoPool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
-    // It have automatic destructor out of scope
-    TemporaryCommand tempCmd(vkDevice.get(), "LmaoPool");
+    TemporaryCommand tempCmd(vkDevice.get(), "Default_Compute");
 
     vkCmdBindPipeline(tempCmd.getCmdBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.pipeline);
 
@@ -284,23 +309,19 @@ void Application::featuresTestingGround() {
         0, nullptr
     );
 
-    // Dispatch threads
-    uint32_t numElems = static_cast<uint32_t>(data.size());
+    uint32_t numElems = static_cast<uint32_t>(dataA.size());
     uint32_t groupSize = 64;
     uint32_t numGroups = (numElems + groupSize - 1) / groupSize;
 
     vkCmdDispatch(tempCmd.getCmdBuffer(), numGroups, 1, 1);
 
-
-    VkBufferMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    // Barrier
+    VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.buffer = bufferData.buffer;
+    barrier.buffer = bufC.buffer;
     barrier.offset = 0;
-    barrier.size = VK_WHOLE_SIZE;
+    barrier.size   = VK_WHOLE_SIZE;
 
     vkCmdPipelineBarrier(
         tempCmd.getCmdBuffer(),
@@ -314,14 +335,16 @@ void Application::featuresTestingGround() {
 
     tempCmd.endAndSubmit();
 
-    void* dataPtr;
-    vkMapMemory(vkDevice->device, bufferData.memory, 0, VK_WHOLE_SIZE, 0, &dataPtr);
+    // Get the result
+    int* finalC = reinterpret_cast<int*>(bufC.mapped);
+    // Copy the result to dataC
+    std::memcpy(dataC.data(), finalC, dataC.size() * sizeof(int));
 
-    int* finalData = reinterpret_cast<int*>(dataPtr);
-
-    for (size_t i = 0; i < data.size(); ++i) {
-        std::cout << "Data[" << i << "] = " << finalData[i] << std::endl;
+    for (size_t i = 0; i < dataC.size(); ++i) {
+        std::cout << "C[" << i << "] = " << dataA[i] << " + " << dataB[i] << " = " << dataC[i] << std::endl;
     }
+
+    // Automatic cleanup
 }
 
 bool Application::checkWindowResize() {

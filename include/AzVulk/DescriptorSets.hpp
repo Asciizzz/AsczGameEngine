@@ -16,7 +16,7 @@ namespace AzVulk {
         VkDevice device;
 
         VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
-        void createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+        void createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 
         uint32_t maxSets = 0;
         VkDescriptorPool pool = VK_NULL_HANDLE;

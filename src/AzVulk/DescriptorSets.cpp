@@ -12,7 +12,7 @@ namespace AzVulk {
         if (pool != VK_NULL_HANDLE) vkDestroyDescriptorPool(device, pool, nullptr);
     }
 
-    void DynamicDescriptor::createSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+    void DynamicDescriptor::createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
         if (setLayout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
             setLayout = VK_NULL_HANDLE;

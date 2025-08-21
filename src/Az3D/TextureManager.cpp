@@ -234,7 +234,7 @@ namespace Az3D {
     }
 
     void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
-        TemporaryCommand tempCmd(vkDevice, "TexturePool");
+        TemporaryCommand tempCmd(vkDevice, "Default_Graphics");
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -270,7 +270,7 @@ namespace Az3D {
     }
 
     void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-        TemporaryCommand tempCmd(vkDevice, "TexturePool");
+        TemporaryCommand tempCmd(vkDevice, "Default_Graphics");
 
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -294,7 +294,7 @@ namespace Az3D {
             throw std::runtime_error("texture image format does not support linear blitting!");
         }
 
-        TemporaryCommand tempCmd(vkDevice, "TexturePool");
+        TemporaryCommand tempCmd(vkDevice, "Default_Graphics");
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -364,7 +364,7 @@ namespace Az3D {
             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
         );
-        dynamicDescriptor.createSetLayout({binding});
+        dynamicDescriptor.createLayout({binding});
 
         uint32_t textureCount = static_cast<uint32_t>(textures.size());
         dynamicDescriptor.createPool({

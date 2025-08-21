@@ -39,7 +39,7 @@ namespace Az3D {
         using namespace AzVulk;
 
         dynamicDescriptor.init(vkDevice->device);
-        dynamicDescriptor.createSetLayout({
+        dynamicDescriptor.createLayout({
             // Global UBO only
             DynamicDescriptor::fastBinding(
                 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,

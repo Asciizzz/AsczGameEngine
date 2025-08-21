@@ -48,7 +48,7 @@ namespace Az3D {
             );
             gpuBufferDatas[i].createBuffer();
 
-            TemporaryCommand copyCmd(vkDevice, "TransferPool");
+            TemporaryCommand copyCmd(vkDevice, "Default_Transfer");
 
             VkBufferCopy copyRegion{};
             copyRegion.srcOffset = 0;
@@ -66,7 +66,7 @@ namespace Az3D {
 
         dynamicDescriptor.init(device);
         VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-        dynamicDescriptor.createSetLayout({binding});
+        dynamicDescriptor.createLayout({binding});
 
         uint32_t materialCount = static_cast<uint32_t>(materials.size());
         dynamicDescriptor.createPool({

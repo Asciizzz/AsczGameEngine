@@ -9,6 +9,6 @@ glslc Shaders/Sky/sky.vert -o Shaders/Sky/sky.vert.spv
 glslc Shaders/Sky/sky.frag -o Shaders/Sky/sky.frag.spv
 
 REM Compute shaders
-glslc Shaders/Compute/times2.comp -o Shaders/Compute/times2.comp.spv
+glslc Shaders/Compute/add.comp -o Shaders/Compute/add.comp.spv
 
 echo Compiling completed!
