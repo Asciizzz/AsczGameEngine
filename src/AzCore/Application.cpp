@@ -351,8 +351,6 @@ void Application::featuresTestingGround() {
     std::memcpy(dataC.data(), finalC, dataC.size() * sizeof(glm::mat4));
 
     for (size_t i = 0; i < dataC.size(); ++i) {
-        // std::cout << "C[" << i << "] = " << dataA[i] << " + " << dataB[i] << " = " << dataC[i] << std::endl;
-
         std::cout << "C[" << i << "]:\n";
         for (int j = 0; j < 4; ++j) {
             for (int k = 0; k < 4; ++k) {
