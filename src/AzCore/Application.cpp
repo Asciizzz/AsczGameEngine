@@ -252,7 +252,7 @@ void Application::featuresTestingGround() {
     makeBuffer(bufB, dataB);
     makeBuffer(bufC, dataC);
 
-    ComputeTask compTask(vkDevice.get(), "Shaders/Compute/add.comp.spv");
+    ComputeTask compTask(vkDevice.get(), "Shaders/Compute/mat4.comp.spv");
     compTask.addStorageBuffer(bufA, 0);
     compTask.addStorageBuffer(bufB, 1);
     compTask.addStorageBuffer(bufC, 2);
