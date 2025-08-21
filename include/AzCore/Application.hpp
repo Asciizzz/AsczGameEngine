@@ -40,7 +40,7 @@ private:
     UniquePtr<AzVulk::RenderPass> mainRenderPass;
     
     UniquePtr<AzVulk::GraphicsPipeline> opaquePipeline;
-    UniquePtr<AzVulk::GraphicsPipeline> skyPipeline; // Beta, very inefficient, yet really amazing
+    UniquePtr<AzVulk::GraphicsPipeline> skyPipeline; // Beta, very inefficient, yet really amazing looking
 
     // More Vulkan ceremony
     UniquePtr<AzVulk::DepthManager> depthManager;
@@ -65,6 +65,7 @@ private:
     uint32_t appHeight;
 
     // Functions that actually do things
+    void initSomeShitIdk();
     void initVulkan();
     void mainLoop();
     void cleanup();

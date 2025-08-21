@@ -18,14 +18,7 @@ using namespace Az3D;
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
 
-    windowManager = MakeUnique<AzCore::WindowManager>(title, width, height);
-    fpsManager = MakeUnique<AzCore::FpsManager>();
-
-    float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-    // 10km view distance for those distant horizons
-    camera = MakeUnique<Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
-    camera->setAspectRatio(aspectRatio);
-
+    initSomeShitIdk();
     initVulkan();
 }
 
@@ -39,8 +32,15 @@ void Application::run() {
     printf("Application exited successfully. See you next time!\n");
 }
 
+void Application::initSomeShitIdk() {
+    windowManager = MakeUnique<AzCore::WindowManager>(appTitle, appWidth, appHeight);
+    fpsManager = MakeUnique<AzCore::FpsManager>();
 
-
+    float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
+    // 10km view distance for those distant horizons
+    camera = MakeUnique<Camera>(glm::vec3(0.0f), 45.0f, 0.01f, 10000.0f);
+    camera->setAspectRatio(aspectRatio);
+}
 
 void Application::initVulkan() {
     auto extensions = windowManager->getRequiredVulkanExtensions();
@@ -206,6 +206,10 @@ void Application::initVulkan() {
 
     skyPipeline = MakeUnique<GraphicsPipeline>(device, skyConfig);
     skyPipeline->create();
+
+
+    // Testing out the new compute pipeline to see if it's a hay, or a nay
+
 }
 
 bool Application::checkWindowResize() {
