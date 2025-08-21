@@ -20,7 +20,6 @@ public:
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
     }
 
-private:
     ComputePipelineConfig cfg;
 };
 

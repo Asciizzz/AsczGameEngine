@@ -6,6 +6,7 @@ namespace AzVulk {
 
     struct BufferData {
         BufferData() = default;
+        BufferData(const Device* vkDevice) : vkDevice(vkDevice) {}
 
         ~BufferData() { cleanup(); }
         void cleanup();
@@ -39,11 +40,7 @@ namespace AzVulk {
             VkDeviceSize dataSize,
             VkBufferUsageFlags usageFlags,
             VkMemoryPropertyFlags memoryFlags
-        ) {
-            this->dataSize = dataSize;
-            this->usageFlags = usageFlags;
-            this->memoryFlags = memoryFlags;
-        }
+        );
 
         void createBuffer();
 
@@ -62,13 +59,16 @@ namespace AzVulk {
             mapped = nullptr;
         }
 
-        void mappedData() {
+        void mapMemory() {
             if (!mapped) vkMapMemory(vkDevice->device, memory, 0, dataSize, 0, &mapped);
+        }
+        void unmapMemory() {
+            if (mapped) vkUnmapMemory(vkDevice->device, memory);
         }
 
         template<typename T>
         void mappedData(const std::vector<T>& data) {
-            mappedData();
+            mapMemory();
             memcpy(mapped, data.data(), dataSize);
         }
 

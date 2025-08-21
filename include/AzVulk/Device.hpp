@@ -93,12 +93,15 @@ namespace AzVulk {
     public:
         TemporaryCommand(const Device* vkDevice, const std::string& poolName);
         ~TemporaryCommand();
+        void endAndSubmit();
 
         VkCommandBuffer getCmdBuffer() const { return cmdBuffer; }
+
         VkCommandBuffer operator*() const { return cmdBuffer; }
 
         const Device* vkDevice;
         std::string poolName;
         VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
+        bool submitted = false;
     };
 }

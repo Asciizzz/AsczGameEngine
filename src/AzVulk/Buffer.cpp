@@ -69,6 +69,17 @@ namespace AzVulk {
         }
     }
 
+
+    void BufferData::setProperties(
+        VkDeviceSize dataSize,
+        VkBufferUsageFlags usageFlags,
+        VkMemoryPropertyFlags memoryFlags
+    ) {
+        this->dataSize = dataSize;
+        this->usageFlags = usageFlags;
+        this->memoryFlags = memoryFlags;
+    }
+
     void BufferData::createBuffer() {
         VkDevice device = vkDevice->device;
         VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;

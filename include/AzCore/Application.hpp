@@ -65,7 +65,7 @@ private:
     uint32_t appHeight;
 
     // Functions that actually do things
-    void initSomeShitIdk();
+    void featuresTestingGround();
     void initComponents();
     void mainLoop();
     void cleanup();

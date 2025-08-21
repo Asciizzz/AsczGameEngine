@@ -33,7 +33,7 @@ namespace Az3D {
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             stagingBuffer.createBuffer();
-            stagingBuffer.mappedData();
+            stagingBuffer.mapMemory();
 
             MaterialUBO materialUBO(materials[i]->prop1);
             memcpy(stagingBuffer.mapped, &materialUBO, sizeof(MaterialUBO));

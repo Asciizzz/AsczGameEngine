@@ -31,7 +31,7 @@ namespace Az3D {
             );
             bufferData.createBuffer();
 
-            bufferData.mappedData();
+            bufferData.mapMemory();
         }
     }
 

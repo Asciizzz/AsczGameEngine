@@ -207,8 +207,6 @@ namespace AzVulk
             throw std::runtime_error("Command pool with name '" + name + "' already exists!");
         }
 
-        
-
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = getQueueFamilyIndex(type);
@@ -248,19 +246,29 @@ namespace AzVulk
 
     TemporaryCommand::~TemporaryCommand() {
         if (cmdBuffer != VK_NULL_HANDLE) {
-            vkEndCommandBuffer(cmdBuffer);
-
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &cmdBuffer;
+            if (!submitted) endAndSubmit();
 
             const Device::PoolWrapper& poolWrapper = vkDevice->getPoolWrapper(poolName);
-
-            vkQueueSubmit(vkDevice->getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
-            vkQueueWaitIdle(vkDevice->getQueue(poolWrapper.type));
-
             vkFreeCommandBuffers(vkDevice->device, poolWrapper.pool, 1, &cmdBuffer);
         }
+    }
+
+    void TemporaryCommand::endAndSubmit() {
+        if (submitted) return;
+
+        submitted = true;
+
+        vkEndCommandBuffer(cmdBuffer);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmdBuffer;
+
+        const Device::PoolWrapper& poolWrapper = vkDevice->getPoolWrapper(poolName);
+
+        vkQueueSubmit(vkDevice->getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(vkDevice->getQueue(poolWrapper.type));
+        cmdBuffer = VK_NULL_HANDLE; // prevents accidental reuse
     }
 }

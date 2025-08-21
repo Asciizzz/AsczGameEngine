@@ -19,7 +19,7 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
 
     initComponents();
-    initSomeShitIdk();
+    featuresTestingGround();
 }
 
 Application::~Application() {
@@ -208,9 +208,120 @@ void Application::initComponents() {
 
 }
 
-void Application::initSomeShitIdk() {
-    // Do whatever you want here
-    // ComputePipeline computePipeline(vkDevice.get());
+void Application::featuresTestingGround() {
+    std::vector<int> data = {1,2,3,4,5,6,7,8};
+
+    BufferData bufferData(vkDevice.get());
+    bufferData.setProperties(
+        sizeof(int) * data.size(),
+
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    bufferData.createBuffer();
+    bufferData.mappedData(data);
+    bufferData.unmapMemory();
+
+    DynamicDescriptor dataDesc(vkDevice->device);
+    dataDesc.createSetLayout({
+        DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
+    });
+
+    dataDesc.createPool({
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}
+    }, 1);
+
+    VkDescriptorSetAllocateInfo allocInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    allocInfo.descriptorPool = dataDesc.pool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &dataDesc.setLayout;
+
+    VkDescriptorSet descSet;
+    if (vkAllocateDescriptorSets(vkDevice->device, &allocInfo, &descSet) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor set");
+    }
+
+    ComputePipelineConfig computeConfig;
+    computeConfig.setLayouts = {dataDesc.setLayout};
+    computeConfig.compPath = "Shaders/Compute/times2.comp.spv";
+
+    ComputePipeline computePipeline(vkDevice->device, computeConfig);
+    computePipeline.create();
+
+
+    // Allocate descriptor set from a pool
+    VkDescriptorBufferInfo bufInfo{};
+    bufInfo.buffer = bufferData.buffer;
+    bufInfo.offset = 0;
+    bufInfo.range  = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    write.dstSet = descSet;
+    write.dstBinding = 0;
+    write.dstArrayElement = 0;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    write.descriptorCount = 1;
+    write.pBufferInfo = &bufInfo;
+
+    vkUpdateDescriptorSets(vkDevice->device, 1, &write, 0, nullptr);
+
+    vkDevice->createCommandPool("LmaoPool", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+    // It have automatic destructor out of scope
+    TemporaryCommand tempCmd(vkDevice.get(), "LmaoPool");
+
+    vkCmdBindPipeline(tempCmd.getCmdBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.pipeline);
+
+    vkCmdBindDescriptorSets(
+        tempCmd.getCmdBuffer(),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        computePipeline.layout,
+        0, 1, &descSet,
+        0, nullptr
+    );
+
+    // Dispatch threads
+    uint32_t numElems = static_cast<uint32_t>(data.size());
+    uint32_t groupSize = 64;
+    uint32_t numGroups = (numElems + groupSize - 1) / groupSize;
+
+    vkCmdDispatch(tempCmd.getCmdBuffer(), numGroups, 1, 1);
+
+
+    VkBufferMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.buffer = bufferData.buffer;
+    barrier.offset = 0;
+    barrier.size = VK_WHOLE_SIZE;
+
+    vkCmdPipelineBarrier(
+        tempCmd.getCmdBuffer(),
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_HOST_BIT,
+        0,
+        0, nullptr,
+        1, &barrier,
+        0, nullptr
+    );
+
+    tempCmd.endAndSubmit();
+
+    void* dataPtr;
+    vkMapMemory(vkDevice->device, bufferData.memory, 0, VK_WHOLE_SIZE, 0, &dataPtr);
+
+    int* finalData = reinterpret_cast<int*>(dataPtr);
+
+    for (size_t i = 0; i < data.size(); ++i) {
+        std::cout << "Data[" << i << "] = " << finalData[i] << std::endl;
+    }
 }
 
 bool Application::checkWindowResize() {
