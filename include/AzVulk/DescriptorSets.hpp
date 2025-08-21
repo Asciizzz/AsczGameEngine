@@ -1,7 +1,6 @@
 #pragma once
 
 #include "AzVulk/Device.hpp"
-#include "Helpers/Templates.hpp"
 
 namespace AzVulk {
     struct BufferData;

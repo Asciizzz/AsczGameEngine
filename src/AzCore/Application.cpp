@@ -1,5 +1,7 @@
 #include "AzCore/Application.hpp"
 
+#include "AzVulk/ComputeTask.hpp"
+
 #include <iostream>
 #include <random>
 
@@ -250,100 +252,12 @@ void Application::featuresTestingGround() {
     makeBuffer(bufB, dataB);
     makeBuffer(bufC, dataC);
 
-    // Create descriptor layout and pool
-
-    DynamicDescriptor dataDesc(vkDevice->device);
-    dataDesc.createLayout({
-        DynamicDescriptor::fastBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT),
-        DynamicDescriptor::fastBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT),
-        DynamicDescriptor::fastBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT),
-    });
-
-    dataDesc.createPool({
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3}
-    }, 1);
-
-    // Create descriptor set
-
-    VkDescriptorSetAllocateInfo allocInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-    allocInfo.descriptorPool = dataDesc.pool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &dataDesc.setLayout;
-
-    VkDescriptorSet descSet;
-    vkAllocateDescriptorSets(vkDevice->device, &allocInfo, &descSet);
-
-    // Bind buffer to descriptor set
-
-    auto bindBuffer = [&](BufferData& buf, uint32_t binding) {
-        VkDescriptorBufferInfo bufInfo{};
-        bufInfo.buffer = buf.buffer;
-        bufInfo.offset = 0;
-        bufInfo.range  = VK_WHOLE_SIZE;
-
-        VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = descSet;
-        write.dstBinding = binding;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        write.descriptorCount = 1;
-        write.pBufferInfo = &bufInfo;
-
-        vkUpdateDescriptorSets(vkDevice->device, 1, &write, 0, nullptr);
-    };
-
-    bindBuffer(bufA, 0);
-    bindBuffer(bufB, 1);
-    bindBuffer(bufC, 2);
-
-    // Create pipeline
-
-    ComputePipelineConfig computeConfig;
-    computeConfig.setLayouts = {dataDesc.setLayout};
-    computeConfig.compPath = "Shaders/Compute/add.comp.spv";
-
-    ComputePipeline computePipeline(vkDevice->device, computeConfig);
-    computePipeline.create();
-
-
-    // Dispatch compute shader
-
-    TemporaryCommand tempCmd(vkDevice.get(), "Default_Compute");
-
-    vkCmdBindPipeline(tempCmd.getCmdBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.pipeline);
-
-    vkCmdBindDescriptorSets(
-        tempCmd.getCmdBuffer(),
-        VK_PIPELINE_BIND_POINT_COMPUTE,
-        computePipeline.layout,
-        0, 1, &descSet,
-        0, nullptr
-    );
-
-    uint32_t numElems = static_cast<uint32_t>(dataA.size());
-    uint32_t groupSize = 64;
-    uint32_t numGroups = (numElems + groupSize - 1) / groupSize;
-
-    vkCmdDispatch(tempCmd.getCmdBuffer(), numGroups, 1, 1);
-
-    // Barrier
-    VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-    barrier.buffer = bufC.buffer;
-    barrier.offset = 0;
-    barrier.size   = VK_WHOLE_SIZE;
-
-    vkCmdPipelineBarrier(
-        tempCmd.getCmdBuffer(),
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        VK_PIPELINE_STAGE_HOST_BIT,
-        0,
-        0, nullptr,
-        1, &barrier,
-        0, nullptr
-    );
-
-    tempCmd.endAndSubmit();
+    ComputeTask compTask(vkDevice.get(), "Shaders/Compute/add.comp.spv");
+    compTask.addStorageBuffer(bufA, 0);
+    compTask.addStorageBuffer(bufB, 1);
+    compTask.addStorageBuffer(bufC, 2);
+    compTask.create();
+    compTask.dispatch(static_cast<uint32_t>(dataA.size()));
 
     // Get the result
     glm::mat4* finalC = reinterpret_cast<glm::mat4*>(bufC.mapped);

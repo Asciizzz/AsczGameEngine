@@ -1,19 +1,19 @@
 #version 450
-layout(local_size_x = 64) in;
+layout(local_size_x = 64) in;  // must match your dispatch groupSize
 
-layout(set = 0, binding = 0) buffer BufferA {
-    int a[];
+layout(std430, set = 0, binding = 0) readonly buffer BufferA {
+    mat4 A[];
 };
 
-layout(set = 0, binding = 1) buffer BufferB {
-    int b[];
+layout(std430, set = 0, binding = 1) readonly buffer BufferB {
+    mat4 B[];
 };
 
-layout(set = 0, binding = 2) buffer BufferC {
-    int c[];
+layout(std430, set = 0, binding = 2) writeonly buffer BufferC {
+    mat4 C[];
 };
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    c[idx] = a[idx] + b[idx];
+    C[idx] = A[idx] + B[idx];   // element-wise matrix add
 }
