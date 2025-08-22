@@ -24,6 +24,7 @@ namespace Az3D {
 
 namespace AzVulk {
     class Device;
+    struct BufferData;
 }
 
 namespace AzGame {
@@ -110,7 +111,7 @@ namespace AzGame {
         bool initialize(Az3D::ResourceManager& resourceManager, const AzVulk::Device* vkDevice);
 
         // Wind animation functions (if enabled)
-        void updateWindAnimation(float deltaTime);
+        void updateWindAnimation(float deltaTime, bool useGPU=true);
         void updateGrassInstancesCPU();
         void updateGrassInstancesGPU();
 
@@ -127,8 +128,13 @@ namespace AzGame {
         std::vector<glm::mat4> fixedMat4;
         std::vector<glm::vec4> fixedColor;
         std::vector<glm::mat4> grassMat4;
-
         std::vector<Data3D> grassData3Ds;
+
+        // Grass buffer
+        AzVulk::BufferData fixedMat4Buffer;
+        AzVulk::BufferData windPropsBuffer;
+        AzVulk::BufferData grassMat4Buffer;
+        AzVulk::BufferData grassUniformBuffer;
 
         std::vector<Data3D> terrainData3Ds;
 

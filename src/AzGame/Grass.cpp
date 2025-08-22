@@ -456,50 +456,38 @@ std::pair<float, glm::vec3> Grass::getTerrainInfoAt(float worldX, float worldZ) 
 
 
 void Grass::setupComputeShaders() {
-    auto makeBuffer = [&](BufferData& buf, auto& src, VkDeviceSize size) {
-        buf.setProperties(
-            size,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        buf.createBuffer();
-        buf.mappedData(src);
-    };
+    // Init
+    fixedMat4Buffer.initVkDevice(vkDevice);
+    windPropsBuffer.initVkDevice(vkDevice);
+    grassMat4Buffer.initVkDevice(vkDevice);
+    grassUniformBuffer.initVkDevice(vkDevice);
 
-    BufferData  fixedMat4Buffer(vkDevice),
-                windPropBuffer(vkDevice),
-                grassMat4Buffer(vkDevice);
-
-    makeBuffer(fixedMat4Buffer, fixedMat4, sizeof(glm::mat4) * fixedMat4.size());
-    makeBuffer(windPropBuffer, windProps, sizeof(glm::vec4) * windProps.size());
-    makeBuffer(grassMat4Buffer, grassMat4, sizeof(glm::mat4) * grassMat4.size());
+    ComputeTask::makeDeviceStorageBuffer(fixedMat4Buffer, fixedMat4.data(), sizeof(glm::mat4) * fixedMat4.size());
+    ComputeTask::makeDeviceStorageBuffer(windPropsBuffer, windProps.data(), sizeof(glm::vec4) * windProps.size());
+    ComputeTask::makeStorageBuffer(grassMat4Buffer, grassMat4.data(), sizeof(glm::mat4) * grassMat4.size());
+    ComputeTask::makeUniformBuffer(grassUniformBuffer, &windTime, sizeof(float));
 
     grassComputeTask.init(vkDevice, "Shaders/Compute/grass.comp.spv");
     grassComputeTask.addStorageBuffer(fixedMat4Buffer, 0);
-    grassComputeTask.addStorageBuffer(windPropBuffer, 1);
+    grassComputeTask.addStorageBuffer(windPropsBuffer, 1);
     grassComputeTask.addStorageBuffer(grassMat4Buffer, 2);
+    grassComputeTask.addUniformBuffer(grassUniformBuffer, 3);
     grassComputeTask.create();
-
-    grassComputeTask.dispatch(static_cast<uint32_t>(fixedMat4.size()));
 }
 
 
 
-void Grass::updateWindAnimation(float dTime) {
+void Grass::updateWindAnimation(float dTime, bool useGPU) {
     if (!config.enableWind) { return; }
 
     windTime += dTime * 0.5f;
-    
-    updateGrassInstancesCPU();
-    updateGrassInstancesGPU();
+
+    if (useGPU) updateGrassInstancesGPU();
+    else        updateGrassInstancesCPU();
 }
 
 void Grass::updateGrassInstancesCPU() {
     glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
-
 
     std::vector<size_t> indices(grassMat4.size());
     std::iota(indices.begin(), indices.end(), 0);
@@ -589,7 +577,19 @@ void Grass::updateGrassInstancesCPU() {
 }
 
 void Grass::updateGrassInstancesGPU() {
-    // Dispatch compute shader to update grass instances
-    // Bind necessary resources (e.g., buffers, textures)
-    // Dispatch the compute shader with appropriate workgroup sizes
+    // Mapped the time
+    grassUniformBuffer.mappedData(&windTime);
+
+    grassComputeTask.dispatch(static_cast<uint32_t>(fixedMat4.size()), 32);
+
+    glm::mat4* resultPtr = static_cast<glm::mat4*>(grassMat4Buffer.mapped);
+
+    std::vector<size_t> indices(grassMat4.size());
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::for_each(indices.begin(), indices.end(), [&](size_t i) {
+        grassData3Ds[i].modelMatrix = resultPtr[i];
+    });
+
+    grassFieldModelGroup.modelMapping[grassModelHash].datas = grassData3Ds;
 }

@@ -100,36 +100,107 @@ public:
 
         TemporaryCommand tempCmd(vkDevice, "Default_Compute");
 
-        vkCmdBindPipeline(  tempCmd.getCmdBuffer(),
+        vkCmdBindPipeline(  tempCmd.cmdBuffer,
                             VK_PIPELINE_BIND_POINT_COMPUTE,
                             pipeline->pipeline);
 
-        vkCmdBindDescriptorSets(tempCmd.getCmdBuffer(),
+        vkCmdBindDescriptorSets(tempCmd.cmdBuffer,
                                 VK_PIPELINE_BIND_POINT_COMPUTE,
                                 pipeline->layout,
                                 0, 1, &descSet,
                                 0, nullptr);
 
-        vkCmdDispatch(tempCmd.getCmdBuffer(), numGroups, 1, 1);
+        vkCmdDispatch(tempCmd.cmdBuffer, numGroups, 1, 1);
 
         // Ensure results visible to host
+        std::vector<VkBufferMemoryBarrier> barriers;
         for (auto* buf : buffers) {
-            VkBufferMemoryBarrier barrier{};
-            barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-            barrier.buffer = buf->buffer;
-            barrier.offset = 0;
-            barrier.size   = VK_WHOLE_SIZE;
-
-            vkCmdPipelineBarrier(tempCmd.getCmdBuffer(),
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_HOST_BIT,
-                0, 0, nullptr, 1, &barrier, 0, nullptr);
+            VkBufferMemoryBarrier b{};
+            b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            b.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            b.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+            b.buffer = buf->buffer;
+            b.offset = 0;
+            b.size = VK_WHOLE_SIZE;
+            barriers.push_back(b);
         }
+        vkCmdPipelineBarrier(tempCmd.cmdBuffer,
+                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                            VK_PIPELINE_STAGE_HOST_BIT,
+                            0, 0, nullptr,
+                            static_cast<uint32_t>(barriers.size()), barriers.data(),
+                            0, nullptr);
 
         tempCmd.endAndSubmit();
     }
+
+    // Helpers for creating buffers;
+    template<typename T>
+    static void makeStorageBuffer(BufferData& buf, const T* src, VkDeviceSize size) {
+        buf.setProperties(
+            size,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        buf.createBuffer();
+        buf.mappedData(src);
+    };
+
+    template<typename T>
+    static void makeDeviceStorageBuffer(BufferData& buf, const T* src, VkDeviceSize size) {
+        // buf.setProperties(
+        //     size,
+        //     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+        //     VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        //     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        //     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        //     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        // );
+        // buf.createBuffer();
+        // buf.mappedData(src);
+
+        BufferData stagingBuffer(buf.vkDevice);
+        stagingBuffer.setProperties(
+            size,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        stagingBuffer.createBuffer();
+        stagingBuffer.mappedData(src);
+
+        buf.setProperties(
+            size,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+        buf.createBuffer();
+
+        TemporaryCommand copyCmd(buf.vkDevice, "Default_Transfer");
+
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = size;
+
+        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, buf.buffer, 1, &copyRegion);
+    };
+
+    template<typename T>
+    static void makeUniformBuffer(BufferData& buf, const T* src, VkDeviceSize size) {
+        buf.setProperties(
+            size,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        buf.createBuffer();
+        buf.mappedData(src);
+    };
 
 private:
     const Device* vkDevice;

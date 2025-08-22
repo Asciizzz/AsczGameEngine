@@ -1,5 +1,5 @@
 #version 450
-layout(local_size_x = 64) in;
+layout(local_size_x = 32) in;
 
 layout(std430, set = 0, binding = 0) readonly buffer BufferFixedMat4 {
     mat4 fixedMat4[];
@@ -13,8 +13,127 @@ layout(std430, set = 0, binding = 2) writeonly buffer BufferGrassMat4 {
     mat4 grassMat4[];
 };
 
+layout(set = 0, binding = 3) uniform UniformTime {
+    float elapsedTime;
+};
+
 void main() {
     // For the time being just do simple matrix multiplication
     uint id = gl_GlobalInvocationID.x;
-    grassMat4[id] = fixedMat4[id];
+
+    vec4 windData = windProps[id];
+    float baseHeight = windData.x;
+    float flexibility = windData.y;
+    float phaseOffset = windData.z;
+
+    vec3 basePos = fixedMat4[id][3].xyz;
+
+    float time = elapsedTime + phaseOffset;
+
+    float wave1 = sin(time * 2.0) * 0.5;
+    float wave2 = sin(time * 3.0) * 0.3;
+
+    float noise = sin(basePos.x * 0.1 + time) * sin(basePos.z * 0.1 + time * 1.3);
+    float turbulence = noise * 0.8;
+
+    float gust = sin(time * 0.5) * 1.2;
+
+    float windStrength = 2.0 * (wave1 + wave2 + turbulence + gust);
+    windStrength *= flexibility;
+
+    vec3 displacement = normalize(vec3(1.0, 1.0, 0.5)) * windStrength * baseHeight;
+
+    float tiltAmount = length(displacement) * 2.0f;
+    tiltAmount = clamp(tiltAmount, 0.0f, 1.0f);
+
+    vec3 tiltDirection = normalize(displacement);
+
+    vec3 up = vec3(0.0, 1.0, 0.0);
+    vec3 tiltAxis = cross(tiltDirection, up);
+
+    /*
+
+    if (glm::length(tiltAxis) > 0.001f) {
+            tiltAxis = glm::normalize(tiltAxis);
+            float tiltAngle = tiltAmount * glm::pi<float>() * 0.2f; // Max 36 degrees
+            glm::quat tiltQuat = glm::angleAxis(tiltAngle, tiltAxis);
+            
+            // Extract original transform components
+            glm::vec3 position = glm::vec3(fixedMat4[i][3]);
+            glm::vec3 scale = glm::vec3(
+                glm::length(glm::vec3(fixedMat4[i][0])),
+                glm::length(glm::vec3(fixedMat4[i][1])),
+                glm::length(glm::vec3(fixedMat4[i][2]))
+            );
+            
+            // Get original rotation (simplified - assumes uniform scale)
+            glm::mat3 rotMatrix = glm::mat3(fixedMat4[i]);
+            rotMatrix[0] = glm::normalize(rotMatrix[0]);
+            rotMatrix[1] = glm::normalize(rotMatrix[1]);
+            rotMatrix[2] = glm::normalize(rotMatrix[2]);
+            glm::quat originalRot = glm::quat_cast(rotMatrix);
+            
+            // Apply wind tilt to original rotation
+            glm::quat finalRot = tiltQuat * originalRot;
+            
+            // Build final transform matrix
+            glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
+            glm::mat4 rotationMatrix = glm::mat4_cast(finalRot);
+            glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
+
+            grassMat4[i] = translationMatrix * rotationMatrix * scaleMatrix;
+        }
+    */
+
+    tiltAxis = normalize(tiltAxis);
+    float tiltAngle = tiltAmount * 3.14159 * 0.2; // Max 36 degrees
+
+    // Extract original transform components
+    vec3 position = fixedMat4[id][3].xyz;
+    vec3 scale = vec3(
+        length(vec3(fixedMat4[id][0])),
+        length(vec3(fixedMat4[id][1])),
+        length(vec3(fixedMat4[id][2]))
+    );
+
+    // Get original rotation (assumes uniform scale)
+    mat3 rotMatrix = mat3(fixedMat4[id]);
+    rotMatrix[0] = normalize(rotMatrix[0]);
+    rotMatrix[1] = normalize(rotMatrix[1]);
+    rotMatrix[2] = normalize(rotMatrix[2]);
+
+    // Build rotation matrix for tilt
+    float c = cos(tiltAngle);
+    float s = sin(tiltAngle);
+    float one_c = 1.0 - c;
+    vec3 axis = tiltAxis;
+
+    mat3 tiltRot;
+    tiltRot[0][0] = c + axis.x * axis.x * one_c;
+    tiltRot[0][1] = axis.x * axis.y * one_c - axis.z * s;
+    tiltRot[0][2] = axis.x * axis.z * one_c + axis.y * s;
+    tiltRot[1][0] = axis.y * axis.x * one_c + axis.z * s;
+    tiltRot[1][1] = c + axis.y * axis.y * one_c;
+    tiltRot[1][2] = axis.y * axis.z * one_c - axis.x * s;
+    tiltRot[2][0] = axis.z * axis.x * one_c - axis.y * s;
+    tiltRot[2][1] = axis.z * axis.y * one_c + axis.x * s;
+    tiltRot[2][2] = c + axis.z * axis.z * one_c;
+
+    // Apply tilt to original rotation
+    mat3 finalRot = tiltRot * rotMatrix;
+
+    // Build final transform matrix
+    mat4 translationMatrix = mat4(1.0);
+    translationMatrix[3].xyz = position;
+
+    mat4 rotationMatrix = mat4(finalRot);
+    rotationMatrix[3].w = 1.0;
+
+    mat4 scaleMatrix = mat4(1.0);
+    scaleMatrix[0][0] = scale.x;
+    scaleMatrix[1][1] = scale.y;
+    scaleMatrix[2][2] = scale.z;
+
+    grassMat4[id] = translationMatrix * rotationMatrix * scaleMatrix;
+
 }

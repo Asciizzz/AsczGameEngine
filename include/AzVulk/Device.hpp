@@ -96,8 +96,6 @@ namespace AzVulk {
         ~TemporaryCommand();
         void endAndSubmit();
 
-        VkCommandBuffer getCmdBuffer() const { return cmdBuffer; }
-
         VkCommandBuffer operator*() const { return cmdBuffer; }
 
         const Device* vkDevice;

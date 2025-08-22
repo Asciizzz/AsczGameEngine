@@ -90,8 +90,8 @@ void Application::initComponents() {
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 200;
-    grassConfig.worldSizeZ = 200;
+    grassConfig.worldSizeX = 270;
+    grassConfig.worldSizeZ = 270;
     grassConfig.baseDensity = 6;
     grassConfig.heightVariance = 26.9f;
     grassConfig.lowVariance = 0.1f;
@@ -217,9 +217,6 @@ void Application::initComponents() {
 }
 
 void Application::featuresTestingGround() {
-    // std::vector<int> dataA = {1 ,2 ,3 ,4 ,5 ,6 ,7 ,8};
-    // std::vector<int> dataB = {10,20,30,40,50,60,70,80};
-    // std::vector<int> dataC(dataA.size(), 0);
 
     std::vector<glm::mat4> dataB = {
         glm::mat4(1.0f), glm::mat4(2.0f), glm::mat4(3.0f), glm::mat4(4.0f),
@@ -233,48 +230,21 @@ void Application::featuresTestingGround() {
         1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f
     };
 
-    // The result buffer
-    std::vector<glm::mat4> dataA(dataB.size(), glm::mat4(1.0f));
-
     // Uniform buffer value
     float scalarE = 2.0f;
 
-    // Create buffer
+    // The result buffer
+    std::vector<glm::mat4> dataA(dataB.size(), glm::mat4(1.0f));
 
+
+    // Create buffer
     BufferData bufA(vkDevice.get()), bufB(vkDevice.get()), bufC(vkDevice.get()), bufD(vkDevice.get()), bufE(vkDevice.get());
 
-    auto makeStorageBuffer = [&](BufferData& buf, auto* src, VkDeviceSize size) {
-        buf.setProperties(
-            size,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        buf.createBuffer();
-        buf.mappedData(src);
-    };
-
-    auto makeUniformBuffer = [&](BufferData& buf, auto* src, VkDeviceSize size) {
-        buf.setProperties(
-            size,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        buf.createBuffer();
-        buf.mappedData(src);
-    };
-
-    makeStorageBuffer(bufA, dataA.data(), sizeof(glm::mat4) * dataA.size());
-
-    makeStorageBuffer(bufB, dataB.data(), sizeof(glm::mat4) * dataB.size());
-    makeStorageBuffer(bufC, dataC.data(), sizeof(glm::mat4) * dataC.size());
-    makeStorageBuffer(bufD, dataD.data(), sizeof(float)     * dataD.size());
-    makeUniformBuffer(bufE, &scalarE, sizeof(float));
+    ComputeTask::makeStorageBuffer(bufA, dataA.data(), sizeof(glm::mat4) * dataA.size());
+    ComputeTask::makeStorageBuffer(bufB, dataB.data(), sizeof(glm::mat4) * dataB.size());
+    ComputeTask::makeStorageBuffer(bufC, dataC.data(), sizeof(glm::mat4) * dataC.size());
+    ComputeTask::makeStorageBuffer(bufD, dataD.data(), sizeof(float)     * dataD.size());
+    ComputeTask::makeUniformBuffer(bufE, &scalarE, sizeof(float));
 
     ComputeTask compTask(vkDevice.get(), "Shaders/Compute/mat4.comp.spv");
     compTask.addStorageBuffer(bufA, 0);
@@ -283,6 +253,7 @@ void Application::featuresTestingGround() {
     compTask.addStorageBuffer(bufD, 3);
     compTask.addUniformBuffer(bufE, 4);
     compTask.create();
+
     compTask.dispatch(static_cast<uint32_t>(dataA.size()));
 
     // Get the result
@@ -448,15 +419,22 @@ void Application::mainLoop() {
         // Update grass wind animation
         static bool hold_y = false;
         static bool enable_wind = false;
+        static bool use_gpu = true;
         if (k_state[SDL_SCANCODE_Y] && !hold_y) {
-            enable_wind = !enable_wind;
+
+            if (k_state[SDL_SCANCODE_LSHIFT]) {
+                use_gpu = !use_gpu;
+            } else {
+                enable_wind = !enable_wind;
+            }
+
             hold_y = true;
         } else if (!k_state[SDL_SCANCODE_Y]) {
             hold_y = false;
         }
 
         if (grassSystem && enable_wind) {
-            grassSystem->updateWindAnimation(dTime);
+            grassSystem->updateWindAnimation(dTime, use_gpu);
         }
 
         // Place platform in the world
