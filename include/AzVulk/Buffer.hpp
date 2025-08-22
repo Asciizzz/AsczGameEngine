@@ -27,6 +27,7 @@ namespace AzVulk {
         VkDeviceMemory memory = VK_NULL_HANDLE;
         void* mapped = nullptr;
 
+        bool hostVisible = true;
         VkDeviceSize dataSize = 0;
 
         VkBufferUsageFlags usageFlags = 0;

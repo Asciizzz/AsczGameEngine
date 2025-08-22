@@ -80,8 +80,6 @@ namespace Az3D {
             createImageView(texture.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, texture.view);
             createSampler(mipLevels, texture.sampler, texture.addressMode);
 
-            stagingBuffer.cleanup();
-
             textures.push_back(MakeShared<Texture>(texture));
             return textures.size() - 1;
 

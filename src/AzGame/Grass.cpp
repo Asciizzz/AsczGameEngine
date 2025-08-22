@@ -462,8 +462,8 @@ void Grass::setupComputeShaders() {
     grassMat4Buffer.initVkDevice(vkDevice);
     grassUniformBuffer.initVkDevice(vkDevice);
 
-    ComputeTask::makeDeviceStorageBuffer(fixedMat4Buffer, fixedMat4.data(), sizeof(glm::mat4) * fixedMat4.size());
-    ComputeTask::makeDeviceStorageBuffer(windPropsBuffer, windProps.data(), sizeof(glm::vec4) * windProps.size());
+    ComputeTask::uploadDeviceStorageBuffer(fixedMat4Buffer, fixedMat4.data(), sizeof(glm::mat4) * fixedMat4.size());
+    ComputeTask::uploadDeviceStorageBuffer(windPropsBuffer, windProps.data(), sizeof(glm::vec4) * windProps.size());
     ComputeTask::makeStorageBuffer(grassMat4Buffer, grassMat4.data(), sizeof(glm::mat4) * grassMat4.size());
     ComputeTask::makeUniformBuffer(grassUniformBuffer, &windTime, sizeof(float));
 
@@ -580,16 +580,16 @@ void Grass::updateGrassInstancesGPU() {
     // Mapped the time
     grassUniformBuffer.mappedData(&windTime);
 
-    grassComputeTask.dispatch(static_cast<uint32_t>(fixedMat4.size()), 32);
+    grassComputeTask.dispatch(static_cast<uint32_t>(fixedMat4.size()), 128);
 
     glm::mat4* resultPtr = static_cast<glm::mat4*>(grassMat4Buffer.mapped);
 
     std::vector<size_t> indices(grassMat4.size());
     std::iota(indices.begin(), indices.end(), 0);
 
-    std::for_each(indices.begin(), indices.end(), [&](size_t i) {
-        grassData3Ds[i].modelMatrix = resultPtr[i];
-    });
+    // std::for_each(indices.begin(), indices.end(), [&](size_t i) {
+    //     grassData3Ds[i].modelMatrix = resultPtr[i];
+    // });
 
     grassFieldModelGroup.modelMapping[grassModelHash].datas = grassData3Ds;
 }

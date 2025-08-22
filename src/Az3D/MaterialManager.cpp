@@ -56,6 +56,7 @@ namespace Az3D {
             copyRegion.size = sizeof(MaterialUBO);
             
             vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, gpuBufferDatas[i].buffer, 1, &copyRegion);
+            gpuBufferDatas[i].hostVisible = false;
         }
     }
 
