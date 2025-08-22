@@ -123,9 +123,9 @@ namespace AzGame {
         float heightScale = 2.0f;
         
         // Grass instances
-        std::vector<glm::vec4> grassWindProps; // x: base height, y: flexibility, z: phase offset
-        std::vector<glm::mat4> grassFixedMat4;
-        std::vector<glm::vec4> grassFixedColor;
+        std::vector<glm::vec4> windProps; // x: base height, y: flexibility, z: phase offset
+        std::vector<glm::mat4> fixedMat4;
+        std::vector<glm::vec4> fixedColor;
         std::vector<glm::mat4> grassMat4;
 
         std::vector<Data3D> grassData3Ds;

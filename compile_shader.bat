@@ -10,5 +10,6 @@ glslc Shaders/Sky/sky.frag -o Shaders/Sky/sky.frag.spv
 
 REM Compute shaders
 glslc Shaders/Compute/mat4.comp -o Shaders/Compute/mat4.comp.spv
+glslc Shaders/Compute/grass.comp -o Shaders/Compute/grass.comp.spv
 
 echo Compiling completed!

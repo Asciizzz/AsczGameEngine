@@ -1,14 +1,20 @@
 #version 450
 layout(local_size_x = 64) in;
 
-layout(std430, set = 0, binding = 0) readonly buffer fixedMat4 {
+layout(std430, set = 0, binding = 0) readonly buffer BufferFixedMat4 {
     mat4 fixedMat4[];
 };
 
-layout(std430, set = 0, binding = 1) readonly buffer windProps {
-    vec4 fixedProps[];
+layout(std430, set = 0, binding = 1) readonly buffer BufferWindProps {
+    vec4 windProps[];
 };
 
-layout(std430, set = 0, binding = 2) writeonly buffer grassMat4 {
+layout(std430, set = 0, binding = 2) writeonly buffer BufferGrassMat4 {
     mat4 grassMat4[];
 };
+
+void main() {
+    // For the time being just do simple matrix multiplication
+    uint id = gl_GlobalInvocationID.x;
+    grassMat4[id] = fixedMat4[id];
+}
