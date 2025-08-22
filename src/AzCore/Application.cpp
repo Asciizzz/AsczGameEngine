@@ -229,15 +229,18 @@ void Application::featuresTestingGround() {
         glm::mat4(10.0f), glm::mat4(20.0f), glm::mat4(30.0f), glm::mat4(40.0f),
         glm::mat4(50.0f), glm::mat4(60.0f), glm::mat4(70.0f), glm::mat4(80.0f)
     };
-    std::vector<glm::mat4> dataC(dataA.size(), glm::mat4(0.0f));
+    std::vector<float> dataC = { // Testing mixed data types
+        1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f
+    };
+    std::vector<glm::mat4> dataD(dataA.size(), glm::mat4(0.0f));
 
     // Create buffer
 
-    BufferData bufA(vkDevice.get()), bufB(vkDevice.get()), bufC(vkDevice.get());
+    BufferData bufA(vkDevice.get()), bufB(vkDevice.get()), bufC(vkDevice.get()), bufD(vkDevice.get());
 
-    auto makeBuffer = [&](BufferData& buf, auto& src) {
+    auto makeBuffer = [&](BufferData& buf, auto& src, VkDeviceSize size) {
         buf.setProperties(
-            sizeof(glm::mat4) * src.size(),
+            size,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -248,27 +251,29 @@ void Application::featuresTestingGround() {
         buf.mappedData(src);
     };
 
-    makeBuffer(bufA, dataA);
-    makeBuffer(bufB, dataB);
-    makeBuffer(bufC, dataC);
+    makeBuffer(bufA, dataA, sizeof(glm::mat4) * dataA.size());
+    makeBuffer(bufB, dataB, sizeof(glm::mat4) * dataB.size());
+    makeBuffer(bufC, dataC, sizeof(float)     * dataC.size());
+    makeBuffer(bufD, dataD, sizeof(glm::mat4) * dataD.size());
 
     ComputeTask compTask(vkDevice.get(), "Shaders/Compute/mat4.comp.spv");
     compTask.addStorageBuffer(bufA, 0);
     compTask.addStorageBuffer(bufB, 1);
     compTask.addStorageBuffer(bufC, 2);
+    compTask.addStorageBuffer(bufD, 3);
     compTask.create();
     compTask.dispatch(static_cast<uint32_t>(dataA.size()));
 
     // Get the result
-    glm::mat4* finalC = reinterpret_cast<glm::mat4*>(bufC.mapped);
-    // Copy the result to dataC
-    std::memcpy(dataC.data(), finalC, dataC.size() * sizeof(glm::mat4));
+    glm::mat4* finalD = reinterpret_cast<glm::mat4*>(bufD.mapped);
+    // Copy the result to dataD
+    std::memcpy(dataD.data(), finalD, dataD.size() * sizeof(glm::mat4));
 
-    for (size_t i = 0; i < dataC.size(); ++i) {
+    for (size_t i = 0; i < dataD.size(); ++i) {
         std::cout << "C[" << i << "]:\n";
         for (int j = 0; j < 4; ++j) {
             for (int k = 0; k < 4; ++k) {
-                std::cout << dataC[i][j][k] << " ";
+                std::cout << dataD[i][j][k] << " ";
             }
             std::cout << "\n";
         }
