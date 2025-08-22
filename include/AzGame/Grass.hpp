@@ -10,6 +10,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <Az3D/ModelManager.hpp>
+#include <AzVulk/ComputeTask.hpp>
 
 // Forward declarations
 namespace Az3D {
@@ -76,7 +77,7 @@ namespace AzGame {
         
         // Wind animation parameters
         bool enableWind = true;
-        glm::vec3 windDirection{1.0f, 0.0f, 0.5f};  // Wind direction (will be normalized)
+        glm::vec3 windDirection{1.0f, 1.0f, 0.5f};  // Wind direction (will be normalized)
         float windStrength = 2.0f;                  // Base wind strength
         float windFrequency = 1.5f;                 // Wave frequency
         float windTurbulence = 0.8f;                // Noise-based turbulence
@@ -85,17 +86,6 @@ namespace AzGame {
         float windWave2Freq = 3.7f;                 // Secondary wave frequency  
         float windWave1Amp = 0.5f;                  // Primary wave amplitude
         float windWave2Amp = 0.3f;                  // Secondary wave amplitude
-    };
-
-    // Wind-enabled grass instance structure for compute shader
-    struct WindGrassInstance {
-        glm::mat4 modelMatrix;
-        glm::vec4 color;
-        glm::vec4 windData; // x: base height, y: flexibility, z: phase offset, w: unused
-        
-        WindGrassInstance() = default;
-        WindGrassInstance(  const glm::mat4& transform, const glm::vec4& instanceColor, 
-                            float baseHeight, float flexibility, float phaseOffset);
     };
 
     // Wind uniform buffer data
@@ -122,6 +112,7 @@ namespace AzGame {
         // Wind animation functions (if enabled)
         void updateWindAnimation(float deltaTime);
         void updateGrassInstancesCPU();
+        void updateGrassInstancesGPU();
 
         // Configuration
         GrassConfig config;
@@ -132,8 +123,13 @@ namespace AzGame {
         float heightScale = 2.0f;
         
         // Grass instances
-        std::vector<WindGrassInstance> windGrassInstances;
+        std::vector<glm::vec4> grassWindProps; // x: base height, y: flexibility, z: phase offset
+        std::vector<glm::mat4> grassFixedMat4;
+        std::vector<glm::vec4> grassFixedColor;
+        std::vector<glm::mat4> grassMat4;
+
         std::vector<Data3D> grassData3Ds;
+
         std::vector<Data3D> terrainData3Ds;
 
         // Resource indices
@@ -145,8 +141,13 @@ namespace AzGame {
         size_t terrainMaterialIndex = 0;
         size_t terrainModelHash = 0;
 
+        const AzVulk::Device* vkDevice = nullptr;
+
         // Model Group
         Az3D::ModelGroup grassFieldModelGroup;
+
+        // Compute Task
+        AzVulk::ComputeTask grassComputeTask;
 
         // Time tracking for wind animation
         float windTime = 0.0f;
@@ -159,14 +160,7 @@ namespace AzGame {
         void generateTerrainMesh(Az3D::ResourceManager& resManager);
         std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
 
-
-        // Test function
-        void addGrassInstance(Data3D& instanceData) {
-            windGrassInstances.emplace_back(glm::mat4(1.0f), glm::vec4(1.0f), 0.0f, 1.0f, 0.0f);
-            grassData3Ds.push_back(instanceData);
-
-            terrainData3Ds.push_back(instanceData);
-        }
+        void setupComputeShaders();
     };
 
 } // namespace AzGame

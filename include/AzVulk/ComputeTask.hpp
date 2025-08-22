@@ -10,10 +10,17 @@ namespace AzVulk {
 
 class ComputeTask {
 public:
-    ComputeTask(Device* device, const std::string& compShaderPath)
-        : vkDevice(device), shaderPath(compShaderPath) {
-            descriptor.init(vkDevice->device);
-        }
+    ComputeTask(const Device* device, const std::string& compShaderPath)
+    : vkDevice(device), shaderPath(compShaderPath) {
+        descriptor.init(vkDevice->device);
+    }
+    ComputeTask() = default;
+
+    void init(const Device* device, const std::string& compShaderPath) {
+        vkDevice = device;
+        shaderPath = compShaderPath;
+        descriptor.init(vkDevice->device);
+    }
 
     // Add buffers to bind (storage/uniform)
     void addStorageBuffer(BufferData& buffer, uint32_t binding) {
@@ -110,7 +117,7 @@ public:
     }
 
 private:
-    Device* vkDevice;
+    const Device* vkDevice;
     std::string shaderPath;
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;

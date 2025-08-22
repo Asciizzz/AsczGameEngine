@@ -13,13 +13,6 @@ using namespace AzGame;
 using namespace Az3D;
 using namespace AzVulk;
 
-WindGrassInstance::WindGrassInstance(const glm::mat4& transform, const glm::vec4& instanceColor, 
-                                    float baseHeight, float flexibility, float phaseOffset) {
-    modelMatrix = transform;
-    color = instanceColor;
-    windData = glm::vec4(baseHeight, flexibility, phaseOffset, 0.0f);
-}
-
 Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
     heightMap.resize(config.worldSizeX, std::vector<float>(config.worldSizeZ, 0.0f));
 }
@@ -27,6 +20,8 @@ Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
 Grass::~Grass() {}
 
 bool Grass::initialize(ResourceManager& resourceManager, const AzVulk::Device* vkDevice) {
+    this->vkDevice = vkDevice;
+
     createGrassMesh90deg(resourceManager);
 
     std::mt19937 generator(std::random_device{}());
@@ -39,6 +34,8 @@ bool Grass::initialize(ResourceManager& resourceManager, const AzVulk::Device* v
     terrainModelHash = ModelGroup::Hash::encode(terrainMeshIndex, terrainMaterialIndex);
 
     grassFieldModelGroup.init("GrassField", vkDevice);
+
+    setupComputeShaders();
 
     for (const auto& data : grassData3Ds) {
         grassFieldModelGroup.addInstance(grassMeshIndex, grassMaterialIndex, data);
@@ -197,8 +194,10 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
 }
 
 void Grass::generateGrassInstances(std::mt19937& generator) {
-    windGrassInstances.clear();
-    grassData3Ds.clear();
+    grassWindProps.clear();
+    grassFixedMat4.clear();
+    grassFixedColor.clear();
+    grassMat4.clear();
 
     // Find terrain height range for elevation-based coloring
     float minTerrainHeight = std::numeric_limits<float>::max();
@@ -325,14 +324,19 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 std::uniform_real_distribution<float> rnd_phase(0.0f, 6.28f);
                 float phaseOffset = rnd_phase(generator);
                 
-                WindGrassInstance windGrassInstance(grassTrform.getMat4(), grassColor, 
-                                                    baseGrassHeight, flexibility, phaseOffset);
-                windGrassInstances.push_back(windGrassInstance);
-                
                 // Create regular instance for rendering
                 Data3D grassInstance;
                 grassInstance.modelMatrix = grassTrform.getMat4();
                 grassInstance.multColor = grassColor;
+
+                // Store wind properties
+
+                // SOA structure for compute shader
+                grassWindProps.push_back(glm::vec4(baseGrassHeight, flexibility, phaseOffset, 0.0f));
+                grassFixedMat4.push_back(grassInstance.modelMatrix); 
+                grassFixedColor.push_back(grassInstance.multColor);
+                grassMat4.push_back(grassInstance.modelMatrix);
+
                 grassData3Ds.push_back(grassInstance);
             }
         }
@@ -449,35 +453,44 @@ std::pair<float, glm::vec3> Grass::getTerrainInfoAt(float worldX, float worldZ) 
     return {height, normal};
 }
 
+
+
+void Grass::setupComputeShaders() {
+    grassComputeTask.init(vkDevice, "path/to/grass_compute_shader.comp");
+}
+
+
+
 void Grass::updateWindAnimation(float dTime) {
-    if (!config.enableWind || windGrassInstances.empty()) {
-        return;
-    }
+    if (!config.enableWind) { return; }
 
     windTime += dTime * 0.5f;
     
-    updateGrassInstancesCPU();
+    // updateGrassInstancesCPU();
+    updateGrassInstancesGPU();
 }
 
 void Grass::updateGrassInstancesCPU() {
     glm::vec3 normalizedWindDir = glm::normalize(config.windDirection);
 
 
-    std::vector<size_t> indices(windGrassInstances.size());
+    std::vector<size_t> indices(grassMat4.size());
     std::iota(indices.begin(), indices.end(), 0);
 
     std::for_each(std::execution::par_unseq, indices.begin(), indices.end(),
     [&](size_t i) {
-        if (i >= windGrassInstances.size()) return;
+        if (i >= grassWindProps.size()) return;
 
-        const auto& windData = windGrassInstances[i];
-        float baseHeight = windData.windData.x;
-        float flexibility = windData.windData.y;
-        float phaseOffset = windData.windData.z;
+        const glm::vec4& windData = grassWindProps[i];
+        float baseHeight = windData.x;
+        float flexibility = windData.y;
+        float phaseOffset = windData.z;
+
+        const glm::mat4& fixedMat4 = grassFixedMat4[i];
 
         // Get base position (bottom of grass blade)
-        glm::vec3 basePos = glm::vec3(windData.modelMatrix[3]);
-        
+        glm::vec3 basePos = glm::vec3(fixedMat4[3]);
+
         // Calculate wind effect (same as compute shader)
         float time = windTime + phaseOffset;
         
@@ -516,15 +529,15 @@ void Grass::updateGrassInstancesCPU() {
             glm::quat tiltQuat = glm::angleAxis(tiltAngle, tiltAxis);
             
             // Extract original transform components
-            glm::vec3 position = glm::vec3(windData.modelMatrix[3]);
+            glm::vec3 position = glm::vec3(fixedMat4[3]);
             glm::vec3 scale = glm::vec3(
-                glm::length(glm::vec3(windData.modelMatrix[0])),
-                glm::length(glm::vec3(windData.modelMatrix[1])),
-                glm::length(glm::vec3(windData.modelMatrix[2]))
+                glm::length(glm::vec3(fixedMat4[0])),
+                glm::length(glm::vec3(fixedMat4[1])),
+                glm::length(glm::vec3(fixedMat4[2]))
             );
             
             // Get original rotation (simplified - assumes uniform scale)
-            glm::mat3 rotMatrix = glm::mat3(windData.modelMatrix);
+            glm::mat3 rotMatrix = glm::mat3(fixedMat4);
             rotMatrix[0] = glm::normalize(rotMatrix[0]);
             rotMatrix[1] = glm::normalize(rotMatrix[1]);
             rotMatrix[2] = glm::normalize(rotMatrix[2]);
@@ -538,9 +551,20 @@ void Grass::updateGrassInstancesCPU() {
             glm::mat4 rotationMatrix = glm::mat4_cast(finalRot);
             glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
 
-            grassData3Ds[i].modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+            grassMat4[i] = translationMatrix * rotationMatrix * scaleMatrix;
         }
+
+
+        // Set the updated grass matrix
+        grassData3Ds[i].modelMatrix = grassMat4[i];
+        grassData3Ds[i].multColor = grassFixedColor[i];
     });
 
     grassFieldModelGroup.modelMapping[grassModelHash].datas = grassData3Ds;
+}
+
+void Grass::updateGrassInstancesGPU() {
+    // Dispatch compute shader to update grass instances
+    // Bind necessary resources (e.g., buffers, textures)
+    // Dispatch the compute shader with appropriate workgroup sizes
 }
