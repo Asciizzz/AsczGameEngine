@@ -73,6 +73,12 @@ namespace AzVulk {
         }
 
         template<typename T>
+        void mappedData(const T* data) {
+            mapMemory();
+            memcpy(mapped, data, dataSize);
+        }
+
+        template<typename T>
         void updateMapped(size_t index, const T& value) {
             static_cast<T*>(mapped)[index] = value;
         }

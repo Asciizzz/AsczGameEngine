@@ -23,6 +23,15 @@ public:
     }
 
     // Add buffers to bind (storage/uniform)
+    void addUniformBuffer(BufferData& buffer, uint32_t binding) {
+        VkDescriptorSetLayoutBinding layout = DynamicDescriptor::fastBinding(
+            binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT
+        );
+        bindings.push_back(layout);
+
+        buffers.push_back(&buffer);
+    }
+    
     void addStorageBuffer(BufferData& buffer, uint32_t binding) {
         VkDescriptorSetLayoutBinding layout = DynamicDescriptor::fastBinding(
             binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT
@@ -37,9 +46,15 @@ public:
         descriptor.createLayout(bindings);
 
         // 2. Create descriptor pool
-        descriptor.createPool({
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, static_cast<uint32_t>(buffers.size())}
-        }, 1);
+        uint32_t storageCount = 0, uniformCount = 0;
+        for (const auto& b : bindings) {
+            if (b.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ++storageCount;
+            if (b.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ++uniformCount;
+        }
+        std::vector<VkDescriptorPoolSize> poolSizes;
+        if (storageCount) poolSizes.push_back({VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, storageCount});
+        if (uniformCount) poolSizes.push_back({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformCount});
+        descriptor.createPool(poolSizes, 1);
 
         // 3. Allocate descriptor set
         VkDescriptorSetAllocateInfo allocInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
@@ -85,9 +100,9 @@ public:
 
         TemporaryCommand tempCmd(vkDevice, "Default_Compute");
 
-        vkCmdBindPipeline(tempCmd.getCmdBuffer(),
-                          VK_PIPELINE_BIND_POINT_COMPUTE,
-                          pipeline->pipeline);
+        vkCmdBindPipeline(  tempCmd.getCmdBuffer(),
+                            VK_PIPELINE_BIND_POINT_COMPUTE,
+                            pipeline->pipeline);
 
         vkCmdBindDescriptorSets(tempCmd.getCmdBuffer(),
                                 VK_PIPELINE_BIND_POINT_COMPUTE,

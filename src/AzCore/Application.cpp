@@ -221,24 +221,29 @@ void Application::featuresTestingGround() {
     // std::vector<int> dataB = {10,20,30,40,50,60,70,80};
     // std::vector<int> dataC(dataA.size(), 0);
 
-    std::vector<glm::mat4> dataA = {
+    std::vector<glm::mat4> dataB = {
         glm::mat4(1.0f), glm::mat4(2.0f), glm::mat4(3.0f), glm::mat4(4.0f),
         glm::mat4(5.0f), glm::mat4(6.0f), glm::mat4(7.0f), glm::mat4(8.0f)
     };
-    std::vector<glm::mat4> dataB = {
+    std::vector<glm::mat4> dataC = {
         glm::mat4(10.0f), glm::mat4(20.0f), glm::mat4(30.0f), glm::mat4(40.0f),
         glm::mat4(50.0f), glm::mat4(60.0f), glm::mat4(70.0f), glm::mat4(80.0f)
     };
-    std::vector<float> dataC = { // Testing mixed data types
+    std::vector<float> dataD = { // Testing mixed data types
         1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f
     };
-    std::vector<glm::mat4> dataD(dataA.size(), glm::mat4(0.0f));
+
+    // The result buffer
+    std::vector<glm::mat4> dataA(dataB.size(), glm::mat4(1.0f));
+
+    // Uniform buffer value
+    float scalarE = 2.0f;
 
     // Create buffer
 
-    BufferData bufA(vkDevice.get()), bufB(vkDevice.get()), bufC(vkDevice.get()), bufD(vkDevice.get());
+    BufferData bufA(vkDevice.get()), bufB(vkDevice.get()), bufC(vkDevice.get()), bufD(vkDevice.get()), bufE(vkDevice.get());
 
-    auto makeBuffer = [&](BufferData& buf, auto& src, VkDeviceSize size) {
+    auto makeStorageBuffer = [&](BufferData& buf, auto* src, VkDeviceSize size) {
         buf.setProperties(
             size,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
@@ -251,29 +256,45 @@ void Application::featuresTestingGround() {
         buf.mappedData(src);
     };
 
-    makeBuffer(bufA, dataA, sizeof(glm::mat4) * dataA.size());
-    makeBuffer(bufB, dataB, sizeof(glm::mat4) * dataB.size());
-    makeBuffer(bufC, dataC, sizeof(float)     * dataC.size());
-    makeBuffer(bufD, dataD, sizeof(glm::mat4) * dataD.size());
+    auto makeUniformBuffer = [&](BufferData& buf, auto* src, VkDeviceSize size) {
+        buf.setProperties(
+            size,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        buf.createBuffer();
+        buf.mappedData(src);
+    };
+
+    makeStorageBuffer(bufA, dataA.data(), sizeof(glm::mat4) * dataA.size());
+
+    makeStorageBuffer(bufB, dataB.data(), sizeof(glm::mat4) * dataB.size());
+    makeStorageBuffer(bufC, dataC.data(), sizeof(glm::mat4) * dataC.size());
+    makeStorageBuffer(bufD, dataD.data(), sizeof(float)     * dataD.size());
+    makeUniformBuffer(bufE, &scalarE, sizeof(float));
 
     ComputeTask compTask(vkDevice.get(), "Shaders/Compute/mat4.comp.spv");
     compTask.addStorageBuffer(bufA, 0);
     compTask.addStorageBuffer(bufB, 1);
     compTask.addStorageBuffer(bufC, 2);
     compTask.addStorageBuffer(bufD, 3);
+    compTask.addUniformBuffer(bufE, 4);
     compTask.create();
     compTask.dispatch(static_cast<uint32_t>(dataA.size()));
 
     // Get the result
-    glm::mat4* finalD = reinterpret_cast<glm::mat4*>(bufD.mapped);
+    glm::mat4* finalA = reinterpret_cast<glm::mat4*>(bufA.mapped);
     // Copy the result to dataD
-    std::memcpy(dataD.data(), finalD, dataD.size() * sizeof(glm::mat4));
+    std::memcpy(dataA.data(), finalA, dataA.size() * sizeof(glm::mat4));
 
-    for (size_t i = 0; i < dataD.size(); ++i) {
-        std::cout << "C[" << i << "]:\n";
+    for (size_t i = 0; i < dataA.size(); ++i) {
+        std::cout << "A[" << i << "]:\n";
         for (int j = 0; j < 4; ++j) {
             for (int k = 0; k < 4; ++k) {
-                std::cout << dataD[i][j][k] << " ";
+                std::cout << dataA[i][j][k] << " ";
             }
             std::cout << "\n";
         }
