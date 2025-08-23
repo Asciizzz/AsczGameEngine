@@ -246,7 +246,7 @@ void Application::featuresTestingGround() {
     ComputeTask::makeStorageBuffer(bufD, dataD.data(), sizeof(float)     * dataD.size());
     ComputeTask::makeUniformBuffer(bufE, &scalarE, sizeof(float));
 
-    ComputeTask compTask(vkDevice.get(), "Shaders/Compute/mat4.comp.spv");
+    ComputeTask compTask(vkDevice.get(), "Shaders/Compute/test.comp.spv");
     compTask.addStorageBuffer(bufA, 0);
     compTask.addStorageBuffer(bufB, 1);
     compTask.addStorageBuffer(bufC, 2);

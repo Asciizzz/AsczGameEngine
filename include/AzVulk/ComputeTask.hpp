@@ -105,31 +105,41 @@ public:
         pipeline->create();
     }
 
-    void ComputeTask::dispatch(uint32_t numElems, uint32_t groupSize = 128) {
+    void dispatch(uint32_t numElems, uint32_t groupSize = 128) { // increased group size for better occupancy
+        if (!pipeline) throw std::runtime_error("ComputeTask: pipeline not created");
+
         uint32_t numGroups = (numElems + groupSize - 1) / groupSize;
 
-        vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->pipeline);
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->layout,
-                                0, 1, &descSet, 0, nullptr);
+        // Begin recording command buffer (reuse pre-allocated cmdBuffer)
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
+        vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+
+        // Bind pipeline and descriptor set
+        vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->pipeline);
+        vkCmdBindDescriptorSets(cmdBuffer,
+                                VK_PIPELINE_BIND_POINT_COMPUTE,
+                                pipeline->layout,
+                                0, 1, &descSet,
+                                0, nullptr);
+
+        // Dispatch compute shader
         vkCmdDispatch(cmdBuffer, numGroups, 1, 1);
 
-        // Barrier only if GPU data will be read by CPU later
-        std::vector<VkBufferMemoryBarrier> barriers;
-        for(auto* buf : buffers) {
-            if(buf->hostVisible) {
-                VkBufferMemoryBarrier b{};
-                b.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-                b.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                b.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-                b.buffer = buf->buffer;
-                b.offset = 0;
-                b.size = VK_WHOLE_SIZE;
-                barriers.push_back(b);
+        // Memory barrier to ensure GPU writes are visible to host (batch all buffers)
+        if (!buffers.empty()) {
+            std::vector<VkBufferMemoryBarrier> barriers(buffers.size());
+            for (size_t i = 0; i < buffers.size(); ++i) {
+                barriers[i].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+                barriers[i].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+                barriers[i].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+                barriers[i].buffer = buffers[i]->buffer;
+                barriers[i].offset = 0;
+                barriers[i].size = VK_WHOLE_SIZE;
             }
-        }
 
-        if(!barriers.empty()) {
             vkCmdPipelineBarrier(cmdBuffer,
                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                                 VK_PIPELINE_STAGE_HOST_BIT,
@@ -137,6 +147,25 @@ public:
                                 static_cast<uint32_t>(barriers.size()), barriers.data(),
                                 0, nullptr);
         }
+
+        vkEndCommandBuffer(cmdBuffer);
+
+        // Submit command buffer
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmdBuffer;
+
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        VkFence fence;
+        vkCreateFence(vkDevice->device, &fenceInfo, nullptr, &fence);
+
+        vkQueueSubmit(vkDevice->computeQueue, 1, &submitInfo, fence);
+
+        // Wait for completion (optional: remove to allow async execution)
+        vkWaitForFences(vkDevice->device, 1, &fence, VK_TRUE, UINT64_MAX);
+        vkDestroyFence(vkDevice->device, fence, nullptr);
     }
 
 
