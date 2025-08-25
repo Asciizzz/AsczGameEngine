@@ -49,10 +49,6 @@ void Application::initComponents() {
     vkInstance->createSurface(windowManager->window);
 
     vkDevice = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
-    vkDevice->createCommandPool("Default_Graphics", Device::GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    vkDevice->createCommandPool("Default_Present", Device::PresentType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    vkDevice->createCommandPool("Default_Compute", Device::ComputeType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    vkDevice->createCommandPool("Default_Transfer", Device::TransferType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
     // So we dont have to write these things over and over again
     VkDevice device = vkDevice->device;

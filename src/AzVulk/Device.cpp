@@ -14,6 +14,7 @@ namespace AzVulk
     Device::Device(VkInstance instance, VkSurfaceKHR surface) {
         pickPhysicalDevice(instance, surface);
         createLogicalDevice();
+        createDefaultCommandPools();
     }
 
     Device::~Device() {
@@ -47,6 +48,13 @@ namespace AzVulk
         if (physicalDevice == VK_NULL_HANDLE) {
             throw std::runtime_error("failed to find a suitable GPU!");
         }
+    }
+
+    void Device::createDefaultCommandPools() {
+        createCommandPool("Default_Graphics", GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        createCommandPool("Default_Present", PresentType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        createCommandPool("Default_Compute", ComputeType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        createCommandPool("Default_Transfer", TransferType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     }
 
     void Device::createLogicalDevice() {

@@ -98,6 +98,11 @@ namespace Az3D {
         std::vector<uint32_t> indices;
         static SharedPtr<Mesh> loadFromOBJ(std::string filePath);
 
+        // Mesh's buffer data
+        AzVulk::BufferData vertexBufferData;
+        AzVulk::BufferData indexBufferData;
+        void createDeviceBuffer(const AzVulk::Device* vkDevice);
+
         // BVH data structures
         glm::vec3 meshMin = glm::vec3(FLT_MAX);
         glm::vec3 meshMax = glm::vec3(-FLT_MAX);
@@ -139,9 +144,6 @@ namespace Az3D {
         SharedPtrVec<Mesh> meshes;
 
         const AzVulk::Device* vkDevice;
-
-        std::vector<AzVulk::BufferData> vertexGPUBufferDatas;
-        std::vector<AzVulk::BufferData> indexGPUBufferDatas;
         void createBufferDatas();
     };
 }

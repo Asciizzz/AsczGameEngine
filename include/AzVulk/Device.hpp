@@ -79,6 +79,8 @@ namespace AzVulk {
             }
         }
 
+        void createDefaultCommandPools();
+
         struct PoolWrapper { VkCommandPool pool; QueueFamilyType type; };
         UnorderedMap<std::string, PoolWrapper> commandPools; // Command pools
         VkCommandPool createCommandPool(std::string name, QueueFamilyType type, VkCommandPoolCreateFlags flags = 0);

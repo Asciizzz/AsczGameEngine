@@ -178,11 +178,13 @@ namespace AzVulk {
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     gPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-            const auto& vertexBufferData = meshManager->vertexGPUBufferDatas[meshIndex];
-            const auto& indexBufferData = meshManager->indexGPUBufferDatas[meshIndex];
-            const auto& instanceBufferData = mapData.bufferData;
+            const auto& mesh = meshManager->meshes[meshIndex];
+            uint64_t indexCount = mesh->indices.size();
 
-            uint64_t indexCount = meshManager->meshes[meshIndex]->indices.size();
+            const auto& vertexBufferData = mesh->vertexBufferData;
+            const auto& indexBufferData = mesh->indexBufferData;
+
+            const auto& instanceBufferData = mapData.bufferData;
 
             // Skip if nothing to draw or bad data
             if (indexCount == 0) continue;
