@@ -25,6 +25,8 @@ namespace Az3D {
         gpuBufferDatas.resize(materials.size());
 
         for (size_t i = 0; i < materials.size(); ++i) {
+            MaterialUBO materialUBO(materials[i]->prop1);
+
             // Create staging buffer
             BufferData stagingBuffer;
             stagingBuffer.initVkDevice(vkDevice);
@@ -33,12 +35,7 @@ namespace Az3D {
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             stagingBuffer.createBuffer();
-            stagingBuffer.mapMemory();
-
-            MaterialUBO materialUBO(materials[i]->prop1);
-            memcpy(stagingBuffer.mapped, &materialUBO, sizeof(MaterialUBO));
-            
-            // printf("Copying material %zu\n", i);
+            stagingBuffer.mappedData(&materialUBO);
 
             gpuBufferDatas[i].initVkDevice(vkDevice);
             gpuBufferDatas[i].setProperties(
