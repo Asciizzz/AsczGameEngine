@@ -12,7 +12,7 @@ namespace AzBeta {
 
     class ParticleManager {
     public:
-        using Data3D = Az3D::Model::Data3D;
+        using Data3D = Az3D::ModelData;
 
         ParticleManager() = default;
         ~ParticleManager() = default;

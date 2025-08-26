@@ -27,8 +27,8 @@ void GraphicsPipeline::create() {
     // 2) Vertex input (from your code) :contentReference[oaicite:0]{index=0}
     auto vBind  = Az3D::Vertex::getBindingDescription();
     auto vAttrs = Az3D::Vertex::getAttributeDescriptions();
-    auto iBind  = Az3D::Model::getBindingDescription();
-    auto iAttrs = Az3D::Model::getAttributeDescriptions();
+    auto iBind  = Az3D::ModelData::getBindingDescription();
+    auto iAttrs = Az3D::ModelData::getAttributeDescriptions();
 
     std::array<VkVertexInputBindingDescription, 2> bindings{ vBind, iBind };
     std::vector<VkVertexInputAttributeDescription> attrs;

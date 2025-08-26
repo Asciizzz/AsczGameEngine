@@ -436,14 +436,6 @@ void Application::mainLoop() {
         // Place platform in the world
         static bool hold_g = false;
         if (k_state[SDL_SCANCODE_G] && !hold_g) {
-            // Toggle grass instance data update
-            Transform trform;
-            trform.pos = camRef.pos;
-
-            Model::Data3D instanceData;
-            instanceData.modelMatrix = trform.getMat4();
-
-            // grassSystem->addGrassInstance(instanceData);
             newWorld->placePlatformGrid("Ground_x2", camRef.pos);
 
             hold_g = true;
@@ -463,7 +455,7 @@ void Application::mainLoop() {
 
                 // Teleport every particle to the current location
                 std::vector<Transform>& particles = particleManager->particles;
-                std::vector<Model::Data3D>& particlesData = particleManager->particles_data;
+                std::vector<ModelData>& particlesData = particleManager->particles_data;
 
                 std::vector<size_t> indices(particles.size());
                 std::iota(indices.begin(), indices.end(), 0);

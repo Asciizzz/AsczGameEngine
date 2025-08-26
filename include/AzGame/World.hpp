@@ -78,7 +78,7 @@ namespace AzGame {
             Az3D::Transform trform;
             trform.pos = glm::vec3(gx, gy, gz);
 
-            Az3D::Model::Data3D data;
+            Az3D::ModelData data;
             data.modelMatrix = trform.getMat4();
 
             worldModelGroup.addInstance(meshIndex, materialIndex, data);

@@ -5,15 +5,15 @@
 namespace Az3D {
 
     // Vulkan-specific methods for Model
-    VkVertexInputBindingDescription Model::getBindingDescription() {
+    VkVertexInputBindingDescription ModelData::getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 1; // Binding 1 for instance data
-        bindingDescription.stride = sizeof(Data3D); // Only GPU data
+        bindingDescription.stride = sizeof(ModelData); // Only GPU data
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
         return bindingDescription;
     }
 
-    std::array<VkVertexInputAttributeDescription, 5> Model::getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, 5> ModelData::getAttributeDescriptions() {
         std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions{};
 
         // Model matrix is 4x4, so we need 4 attribute locations (3, 4, 5, 6)
@@ -22,14 +22,14 @@ namespace Az3D {
             attributeDescriptions[i].binding = 1;
             attributeDescriptions[i].location = 3 + i; // Locations 3, 4, 5, 6
             attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescriptions[i].offset = offsetof(Data3D, modelMatrix) + sizeof(glm::vec4) * i;
+            attributeDescriptions[i].offset = offsetof(ModelData, modelMatrix) + sizeof(glm::vec4) * i;
         }
 
         // Instance color multiplier vec4 (location 7) - directly after modelMatrix in Data
         attributeDescriptions[4].binding = 1;
         attributeDescriptions[4].location = 7;
         attributeDescriptions[4].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        attributeDescriptions[4].offset = offsetof(Data3D, multColor);
+        attributeDescriptions[4].offset = offsetof(ModelData, multColor);
 
         return attributeDescriptions;
     }
@@ -47,7 +47,7 @@ namespace Az3D {
     }
 
 // Add data
-    size_t ModelMappingData::addData(const Model::Data3D& data) {
+    size_t ModelMappingData::addData(const ModelData& data) {
         datas.push_back(data);
         return datas.size() - 1;
     }
@@ -60,7 +60,7 @@ namespace Az3D {
         if (!bufferData.vkDevice) return;
 
         bufferData.setProperties(
-            datas.size() * sizeof(Az3D::Model::Data3D), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            datas.size() * sizeof(ModelData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         bufferData.createBuffer();
@@ -78,21 +78,7 @@ namespace Az3D {
     }
 
 
-
-    void ModelGroup::addInstance(const Model& instance) {
-        if (!vkDevice) return;
-
-        size_t modelEncode = Hash::encode(instance.meshIndex, instance.materialIndex);
-        
-        auto [it, inserted] = modelMapping.try_emplace(modelEncode);
-        if (inserted) { // New entry
-            it->second.initVulkanDevice(vkDevice);
-        }
-        // Add to existing entry
-        it->second.addData(instance.data);
-    }
-
-    void ModelGroup::addInstance(size_t meshIndex, size_t materialIndex, const Model::Data3D& instanceData) {
+    void ModelGroup::addInstance(size_t meshIndex, size_t materialIndex, const ModelData& instanceData) {
         if (!vkDevice) return;
 
         size_t modelEncode = Hash::encode(meshIndex, materialIndex);
