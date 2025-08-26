@@ -144,6 +144,6 @@ namespace Az3D {
         SharedPtrVec<Mesh> meshes;
 
         const AzVulk::Device* vkDevice;
-        void createBufferDatas();
+        void createDeviceBuffers();
     };
 }

@@ -53,13 +53,13 @@ namespace Az3D {
         void createGPUBufferDatas();
 
         AzVulk::DynamicDescriptor dynamicDescriptor;
-        void createDescriptorSets(uint32_t maxFramesInFlight);
-        VkDescriptorSet getDescriptorSet(uint32_t materialIndex, uint32_t frameIndex, uint32_t maxFramesInFlight) const {
-            return dynamicDescriptor.getSet(materialIndex * maxFramesInFlight + frameIndex);
+        void createDescriptorSets();
+        VkDescriptorSet getDescriptorSet(uint32_t materialIndex) const {
+            return dynamicDescriptor.getSet(materialIndex);
         }
 
 
-        void uploadToGPU(uint32_t maxFramesInFlight);
+        void uploadToGPU();
     };
     
 } // namespace Az3D

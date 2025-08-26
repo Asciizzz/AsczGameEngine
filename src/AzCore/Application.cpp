@@ -169,11 +169,11 @@ void Application::initComponents() {
 
 // PLAYGROUND END HERE 
 
-    meshManager.createBufferDatas();
+    meshManager.createDeviceBuffers();
 
-    matManager.uploadToGPU(MAX_FRAMES_IN_FLIGHT);
+    matManager.uploadToGPU();
 
-    texManager.uploadToGPU(MAX_FRAMES_IN_FLIGHT);
+    texManager.uploadToGPU();
 
     renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get(),
                                     globalUBOManager.get(), resourceManager.get());

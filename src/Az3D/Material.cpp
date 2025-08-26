@@ -62,7 +62,7 @@ namespace Az3D {
 
 
     // Descriptor set creation
-    void MaterialManager::createDescriptorSets(uint32_t maxFramesInFlight) {
+    void MaterialManager::createDescriptorSets() {
         VkDevice device = vkDevice->device;
 
         dynamicDescriptor.init(device);
@@ -72,23 +72,23 @@ namespace Az3D {
         uint32_t materialCount = static_cast<uint32_t>(materials.size());
         dynamicDescriptor.createPool({
             VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, materialCount}
-        }, maxFramesInFlight * materialCount);
+        }, materialCount);
 
         // Descriptor sets creation
-        std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, dynamicDescriptor.setLayout);
+        VkDescriptorSetLayout layout = dynamicDescriptor.setLayout;
 
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = dynamicDescriptor.pool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-        allocInfo.pSetLayouts = layouts.data();
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts = &layout;
 
         for (size_t i = 0; i < materials.size(); ++i) {
             const auto& materialBuffer = gpuBufferDatas[i].buffer;
 
-            std::vector<VkDescriptorSet> descriptorSets(maxFramesInFlight);
+            VkDescriptorSet descriptorSet;
 
-            if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) continue;
+            if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet) != VK_SUCCESS) continue;
 
             // Prepare the write structures outside the loop
             VkDescriptorBufferInfo materialBufferInfo{};
@@ -96,26 +96,24 @@ namespace Az3D {
             materialBufferInfo.offset = 0;
             materialBufferInfo.range = sizeof(MaterialUBO);
 
-            for (uint32_t j = 0; j < maxFramesInFlight; ++j) {
-                VkWriteDescriptorSet descriptorWrite{};
-                descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrite.dstBinding = 0;
-                descriptorWrite.dstArrayElement = 0;
-                descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                descriptorWrite.descriptorCount = 1;
-                descriptorWrite.pBufferInfo = &materialBufferInfo;
-                descriptorWrite.dstSet = descriptorSets[j];
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstBinding = 0;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &materialBufferInfo;
+            descriptorWrite.dstSet = descriptorSet;
 
-                vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+            vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 
-                dynamicDescriptor.sets.push_back(descriptorSets[j]);
-            }
+            dynamicDescriptor.sets.push_back(descriptorSet);
         }
     }
 
-    void MaterialManager::uploadToGPU(uint32_t maxFramesInFlight) {
+    void MaterialManager::uploadToGPU() {
         createGPUBufferDatas();
-        createDescriptorSets(maxFramesInFlight);
+        createDescriptorSets();
     }
 
 } // namespace Az3D

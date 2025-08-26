@@ -168,11 +168,11 @@ namespace AzVulk {
             size_t materialIndex = modelDecode.second;
 
             // Material descriptor set
-            VkDescriptorSet materialSet = matManager->getDescriptorSet(materialIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
+            VkDescriptorSet materialSet = matManager->getDescriptorSet(materialIndex);
 
             // Texture descriptor set
             size_t textureIndex = matManager->materials[materialIndex]->diffTxtr;
-            VkDescriptorSet textureSet = texManager->getDescriptorSet(textureIndex, currentFrame, MAX_FRAMES_IN_FLIGHT);
+            VkDescriptorSet textureSet = texManager->getDescriptorSet(textureIndex);
 
             std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,

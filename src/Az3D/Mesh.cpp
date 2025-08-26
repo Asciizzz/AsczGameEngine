@@ -270,7 +270,7 @@ namespace Az3D {
         return MakeShared<Mesh>(std::move(vertices), std::move(indices));
     }
 
-    void MeshManager::createBufferDatas() {
+    void MeshManager::createDeviceBuffers() {
         for (size_t i = 0; i < meshes.size(); ++i) {
             meshes[i]->createDeviceBuffer(vkDevice);
         }

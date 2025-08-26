@@ -59,14 +59,13 @@ namespace Az3D {
 
 
         AzVulk::DynamicDescriptor dynamicDescriptor;
-        void createDescriptorSets(uint32_t maxFramesInFlight);
-        VkDescriptorSet getDescriptorSet(uint32_t textureIndex, uint32_t frameIndex, uint32_t maxFramesInFlight) const {
-            return dynamicDescriptor.getSet(textureIndex * maxFramesInFlight + frameIndex);
+        void createDescriptorSets();
+        VkDescriptorSet getDescriptorSet(uint32_t textureIndex) const {
+            return dynamicDescriptor.getSet(textureIndex);
         }
 
-        void uploadToGPU(uint32_t maxFramesInFlight) {
-            // Will soon fix this reimplementation
-            createDescriptorSets(maxFramesInFlight);
+        void uploadToGPU() {
+            createDescriptorSets();
         }
     };
 }
