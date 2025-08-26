@@ -157,6 +157,14 @@ namespace AzVulk {
         // vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
         gPipeline.bind(commandBuffers[currentFrame]);
 
+        // Bind descriptor sets once
+        VkDescriptorSet materialSet = matManager->getDescriptorSet();
+        VkDescriptorSet textureSet = texManager->getDescriptorSet();
+
+        std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
+        vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                gPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
+
         for (auto& [hash, mapData] : modelGroup.modelMapping) {
             uint32_t instanceCount = static_cast<uint32_t>(mapData.datas.size());
             if (instanceCount == 0) continue;
@@ -165,15 +173,6 @@ namespace AzVulk {
 
             std::pair<size_t, size_t> modelDecode = ModelGroup::Hash::decode(hash);
             size_t meshIndex = modelDecode.first;
-            size_t materialIndex = modelDecode.second;
-
-            // Material descriptor set
-            VkDescriptorSet materialSet = matManager->getDescriptorSet();
-            VkDescriptorSet textureSet = texManager->getDescriptorSet();
-
-            std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
-            vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    gPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
             const auto& mesh = meshManager->meshes[meshIndex];
             uint64_t indexCount = mesh->indices.size();

@@ -41,7 +41,7 @@ namespace Az3D {
         SharedPtrVec<Texture> textures;
 
         size_t addTexture(std::string imagePath, bool semiTransparent = false, Texture::Mode addressMode = Texture::Repeat);
-        void createDefaultTexture(); // fallback for missing assets
+        void createDefaultTexture();
 
         // Vulkan image creation helpers
         void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
@@ -60,9 +60,7 @@ namespace Az3D {
 
         AzVulk::DynamicDescriptor dynamicDescriptor;
         void createDescriptorSets();
-        VkDescriptorSet getDescriptorSet() const {
-            return dynamicDescriptor.getSet();
-        }
+        VkDescriptorSet getDescriptorSet() const { return dynamicDescriptor.getSet(); }
 
         void uploadToGPU() {
             createDescriptorSets();
