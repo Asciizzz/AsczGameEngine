@@ -11,50 +11,50 @@
 
 namespace Az3D {
 
-    struct Material {
-        alignas(16) glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-        alignas(16) glm::ivec4 texIndices = glm::ivec4(0); // <albedo>, <empty>, <empty>, <empty>
+struct Material {
+    alignas(16) glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
+    alignas(16) glm::ivec4 texIndices = glm::ivec4(0); // <albedo>, <empty>, <empty>, <empty>
 
-        Material() = default;
+    Material() = default;
 
-        void setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold) {
-            shadingParams.x = shading ? 1.0f : 0.0f;
-            shadingParams.y = static_cast<float>(toonLevel);
-            shadingParams.z = normalBlend;
-            shadingParams.w = discardThreshold;
-        }
+    void setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold) {
+        shadingParams.x = shading ? 1.0f : 0.0f;
+        shadingParams.y = static_cast<float>(toonLevel);
+        shadingParams.z = normalBlend;
+        shadingParams.w = discardThreshold;
+    }
 
-        void setAlbedoTextureIndex(int index) {
-            texIndices.x = index;
-        }
-    };
-
-
-    // MaterialManager - manages materials using index-based access
-    class MaterialManager {
-    public:
-        MaterialManager(const AzVulk::Device* vkDevice);
-
-        MaterialManager(const MaterialManager&) = delete;
-        MaterialManager& operator=(const MaterialManager&) = delete;
-
-        const AzVulk::Device* vkDevice;
-
-        size_t addMaterial(const Material& material);
-
-        std::vector<Material> materials;
-
-        AzVulk::BufferData bufferData;
-        void createGPUBufferData();
-
-        AzVulk::DynamicDescriptor dynamicDescriptor;
-        void createDescriptorSets();
-        VkDescriptorSet getDescriptorSet() const {
-            return dynamicDescriptor.getSet();
-        }
+    void setAlbedoTextureIndex(int index) {
+        texIndices.x = index;
+    }
+};
 
 
-        void uploadToGPU();
-    };
-    
+// MaterialManager - manages materials using index-based access
+class MaterialManager {
+public:
+    MaterialManager(const AzVulk::Device* vkDevice);
+
+    MaterialManager(const MaterialManager&) = delete;
+    MaterialManager& operator=(const MaterialManager&) = delete;
+
+    const AzVulk::Device* vkDevice;
+
+    size_t addMaterial(const Material& material);
+
+    std::vector<Material> materials;
+
+    AzVulk::BufferData bufferData;
+    void createGPUBufferData();
+
+    AzVulk::DynamicDescriptor dynamicDescriptor;
+    void createDescriptorSets();
+    VkDescriptorSet getDescriptorSet() const {
+        return dynamicDescriptor.getSet();
+    }
+
+
+    void uploadToGPU();
+};
+
 } // namespace Az3D
