@@ -170,32 +170,42 @@ void Application::initComponents() {
 
 void Application::featuresTestingGround() {
 
-    std::vector<glm::mat4> dataB = {
-        glm::mat4(1.0f), glm::mat4(2.0f), glm::mat4(3.0f), glm::mat4(4.0f),
-        glm::mat4(5.0f), glm::mat4(6.0f), glm::mat4(7.0f), glm::mat4(8.0f)
-    };
-    std::vector<glm::mat4> dataC = {
-        glm::mat4(10.0f), glm::mat4(20.0f), glm::mat4(30.0f), glm::mat4(40.0f),
-        glm::mat4(50.0f), glm::mat4(60.0f), glm::mat4(70.0f), glm::mat4(80.0f)
-    };
-    std::vector<float> dataD = { // Testing mixed data types
-        1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f
-    };
+    size_t dataCount = 120;
 
-    // Uniform buffer value
-    float scalarE = 2.0f;
+    std::vector<glm::mat4> dataA(dataCount); // Result mat4x4
+    std::vector<glm::mat4> dataB(dataCount); // Data mat4x4 1
+    std::vector<glm::mat4> dataC(dataCount); // Data mat4x4 2
+    std::vector<float> dataD(dataCount);     // Data float
+    float scalarE = 2.0f;                    // Data scalar
 
-    // The result buffer
-    std::vector<glm::mat4> dataA(dataB.size(), glm::mat4(1.0f));
+    for (size_t i = 0; i < dataCount; ++i) {
+        dataB[i] = glm::mat4(static_cast<float>(rand()) / RAND_MAX);
+        dataC[i] = glm::mat4(static_cast<float>(rand()) / RAND_MAX);
+        dataD[i] = static_cast<float>(rand()) / RAND_MAX;
+    }
 
+    // Measure CPU time
+    auto cpuStart = std::chrono::high_resolution_clock::now();
+
+    for (size_t i = 0; i < dataCount; ++i) {
+        dataA[i] = (dataB[i] * dataC[i]) * dataD[i] * scalarE;
+    }
+
+    auto cpuEnd = std::chrono::high_resolution_clock::now();
+    double cpuDuration = std::chrono::duration<double, std::milli>(cpuEnd - cpuStart).count();
+
+    std::cout << "CPU elapsed time: " << cpuDuration << " ms\n";
+
+
+    auto gpuStart = std::chrono::high_resolution_clock::now();
 
     // Create buffer
     BufferData bufA(vkDevice.get()), bufB(vkDevice.get()), bufC(vkDevice.get()), bufD(vkDevice.get()), bufE(vkDevice.get());
 
-    ComputeTask::makeStorageBuffer(bufA, dataA.data(), sizeof(glm::mat4) * dataA.size());
-    ComputeTask::makeStorageBuffer(bufB, dataB.data(), sizeof(glm::mat4) * dataB.size());
-    ComputeTask::makeStorageBuffer(bufC, dataC.data(), sizeof(glm::mat4) * dataC.size());
-    ComputeTask::makeStorageBuffer(bufD, dataD.data(), sizeof(float)     * dataD.size());
+    ComputeTask::makeStorageBuffer(bufA, dataA.data(), sizeof(glm::mat4) * dataCount);
+    ComputeTask::makeStorageBuffer(bufB, dataB.data(), sizeof(glm::mat4) * dataCount);
+    ComputeTask::makeStorageBuffer(bufC, dataC.data(), sizeof(glm::mat4) * dataCount);
+    ComputeTask::makeStorageBuffer(bufD, dataD.data(), sizeof(float)     * dataCount);
     ComputeTask::makeUniformBuffer(bufE, &scalarE, sizeof(float));
 
     ComputeTask compTask(vkDevice.get(), "Shaders/Compute/test.comp.spv");
@@ -206,22 +216,18 @@ void Application::featuresTestingGround() {
     compTask.addUniformBuffer(bufE, 4);
     compTask.create();
 
-    compTask.dispatch(static_cast<uint32_t>(dataA.size()));
+    compTask.dispatchAsync(static_cast<uint32_t>(dataCount), 512);
 
     // Get the result
-    glm::mat4* finalA = reinterpret_cast<glm::mat4*>(bufA.mapped);
-    // Copy the result to dataD
-    std::memcpy(dataA.data(), finalA, dataA.size() * sizeof(glm::mat4));
+    // glm::mat4* finalA = reinterpret_cast<glm::mat4*>(bufA.mapped);
+    // // Copy the result to dataD
+    // std::memcpy(dataA.data(), finalA, dataCount * sizeof(glm::mat4));
+    ComputeTask::fetchResults(bufA, dataA.data(), sizeof(glm::mat4) * dataCount);
 
-    for (size_t i = 0; i < dataA.size(); ++i) {
-        std::cout << "A[" << i << "]:\n";
-        for (int j = 0; j < 4; ++j) {
-            for (int k = 0; k < 4; ++k) {
-                std::cout << dataA[i][j][k] << " ";
-            }
-            std::cout << "\n";
-        }
-    }
+    auto gpuEnd = std::chrono::high_resolution_clock::now();
+    double gpuDuration = std::chrono::duration<double, std::milli>(gpuEnd - gpuStart).count();
+
+    std::cout << "GPU elapsed time: " << gpuDuration << " ms\n";
 
     // Automatic cleanup
 }
