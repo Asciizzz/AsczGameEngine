@@ -13,8 +13,8 @@ namespace Az3D {
     }
 
     size_t ResourceManager::addTexture(std::string name, std::string imagePath,
-                                        Texture::Mode addressMode, bool semiTransparent) {
-        size_t index = textureManager->addTexture(imagePath, semiTransparent, addressMode);
+                                        Texture::Mode addressMode) {
+        size_t index = textureManager->addTexture(imagePath, addressMode);
         textureNameToIndex[name] = index;
         return index;
     }

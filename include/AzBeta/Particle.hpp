@@ -161,10 +161,11 @@ namespace AzBeta {
                         const glm::vec3& boundsMax = glm::vec3(10.0f)) {
 
             size_t textureIndex = resourceManager->addTexture("Particle", "Assets/Textures/Pearto.png");
-            // size_t materialIndex = resourceManager->addMaterial("Particle", Az3D::Material::fastTemplate(0.0f, 0.0f, 0.0f, 0.0f, textureIndex));
 
             Az3D::Material material;
+            material.setShadingParams(0.0f, 0.0f, 0.0f, 0.0f);
             material.setAlbedoTextureIndex(textureIndex);
+
             size_t materialIndex = resourceManager->addMaterial("Particle", material);
 
             size_t meshIndex = resourceManager->addMesh("Particle", "Assets/Characters/Pearto.obj", false);

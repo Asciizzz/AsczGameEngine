@@ -26,7 +26,6 @@ namespace Az3D {
         VkImageView view = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
         VkSampler sampler = VK_NULL_HANDLE;
-        bool semiTransparent = false;
         Mode addressMode = Repeat;
     };
 
@@ -40,7 +39,7 @@ namespace Az3D {
         const AzVulk::Device* vkDevice;
         SharedPtrVec<Texture> textures;
 
-        size_t addTexture(std::string imagePath, bool semiTransparent = false, Texture::Mode addressMode = Texture::Repeat);
+        size_t addTexture(std::string imagePath, Texture::Mode addressMode = Texture::Repeat);
         void createDefaultTexture();
 
         // Vulkan image creation helpers

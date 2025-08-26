@@ -56,7 +56,7 @@ vec3 calculateSunDirection(float timeOfDay, float latitude) {
 }
 
 void main() {
-    Material material = materials[1];
+    Material material = materials[0];
 
     vec4 texColor = texture(textures[material.texIndices.x], fragTxtr);
 

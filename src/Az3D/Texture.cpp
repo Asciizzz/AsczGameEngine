@@ -37,11 +37,10 @@ namespace Az3D {
         textures.clear();
     }
 
-    size_t TextureManager::addTexture(std::string imagePath, bool semiTransparent, Texture::Mode addressMode) {
+    size_t TextureManager::addTexture(std::string imagePath, Texture::Mode addressMode) {
         try {
             Texture texture;
-            texture.path = imagePath; // Convert to std::string for storage
-            texture.semiTransparent = semiTransparent;
+            texture.path = imagePath;
             texture.addressMode = addressMode;
 
             // Load image using STB
