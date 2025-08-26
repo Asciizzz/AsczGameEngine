@@ -91,6 +91,8 @@ namespace AzVulk {
 
         PoolWrapper createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags = 0);
 
+        // TODO: Additional pool in the future to support multiple threads
+
         // PoolWrapper getPoolWrapper(const std::string& name) const { return commandPools.at(name); }
         // VkCommandPool getCommandPool(const std::string& name) const { return commandPools.at(name).pool; }
     };
