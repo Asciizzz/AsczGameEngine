@@ -1,4 +1,4 @@
-#include "Az3D/MeshManager.hpp"
+#include "Az3D/Mesh.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "Helpers/tiny_obj_loader.h"

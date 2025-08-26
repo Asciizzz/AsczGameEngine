@@ -1,4 +1,4 @@
-#include "Az3D/TextureManager.hpp"
+#include "Az3D/Texture.hpp"
 #include "AzVulk/Device.hpp"
 #include "AzVulk/Buffer.hpp"
 
