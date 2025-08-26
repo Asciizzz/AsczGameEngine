@@ -154,6 +154,7 @@ void Application::initComponents() {
     skyConfig.renderPass = renderPass;
     skyConfig.msaaSamples = msaaManager->msaaSamples;
     skyConfig.setLayouts = layouts;
+    skyConfig.hasVertexInput = false; // No vertex input for skybox
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
     skyConfig.cullMode = VK_CULL_MODE_NONE;           // No culling for fullscreen quad

@@ -205,7 +205,7 @@ public:
         deviceBuf.createBuffer();
 
         // 3. Submit single copy command
-        TemporaryCommand copyCmd(deviceBuf.vkDevice, deviceBuf.vkDevice->transferPoolWrapper);
+        TemporaryCommand copyCmd(deviceBuf.vkDevice, deviceBuf.vkDevice->computePoolWrapper);
 
         VkBufferCopy region{};
         region.srcOffset = 0;

@@ -16,7 +16,7 @@ struct Material {
     ivec4 texIndices;
 };
 
-layout(std430, set = 1, binding = 0) buffer MaterialBuffer {
+layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
     Material materials[];
 };
 
@@ -72,10 +72,6 @@ void main() {
     float elev01 = clamp((sunElev + 0.1) / 1.1, 0.0, 1.0); // smooth factor for time-of-day
 
     vec3 zenithCol  = mix(skyNightZenith,  skyDayZenith,  elev01);
-
-
-    // vec3 screenCoords = fragScreenPos.xyz / fragScreenPos.w;
-    // vec2 depthUV = screenCoords.xy * 0.5 + 0.5; // Convert from NDC [-1,1] to UV [0,1]
 
     float near = glb.cameraRight.w;
     float far = glb.cameraUp.w;

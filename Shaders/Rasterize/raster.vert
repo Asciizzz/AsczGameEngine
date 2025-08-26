@@ -15,7 +15,7 @@ struct Material {
     ivec4 texIndices;
 };
 
-layout(std430, set = 1, binding = 0) buffer MaterialBuffer {
+layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
     Material materials[];
 };
 

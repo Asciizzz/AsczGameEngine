@@ -22,8 +22,6 @@ namespace Az3D {
 
         VkDeviceSize bufferSize = sizeof(Material) * materials.size();
 
-        printf("Creating material buffer with %zu materials (%llu bytes)\n", materials.size(), bufferSize);
-
         // --- staging buffer (CPU visible) ---
         BufferData stagingBuffer;
         stagingBuffer.initVkDevice(vkDevice);

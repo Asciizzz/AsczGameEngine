@@ -24,22 +24,31 @@ void GraphicsPipeline::create() {
     stages[1].module = frag;
     stages[1].pName  = "main";
 
-    // 2) Vertex input (from your code) :contentReference[oaicite:0]{index=0}
-    auto vBind  = Az3D::Vertex::getBindingDescription();
-    auto vAttrs = Az3D::Vertex::getAttributeDescriptions();
-    auto iBind  = Az3D::ModelData::getBindingDescription();
-    auto iAttrs = Az3D::ModelData::getAttributeDescriptions();
-
-    std::array<VkVertexInputBindingDescription, 2> bindings{ vBind, iBind };
-    std::vector<VkVertexInputAttributeDescription> attrs;
-    attrs.insert(attrs.end(), vAttrs.begin(), vAttrs.end());
-    attrs.insert(attrs.end(), iAttrs.begin(), iAttrs.end());
-
+    // 2) Vertex input
     VkPipelineVertexInputStateCreateInfo vin{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
-    vin.pVertexBindingDescriptions      = bindings.data();
-    vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-    vin.pVertexAttributeDescriptions    = attrs.data();
+    std::array<VkVertexInputBindingDescription, 2> bindings;
+    std::vector<VkVertexInputAttributeDescription> attrs;
+
+    if (cfg.hasVertexInput) {
+        auto vBind  = Az3D::Vertex::getBindingDescription();
+        auto vAttrs = Az3D::Vertex::getAttributeDescriptions();
+        auto iBind  = Az3D::ModelData::getBindingDescription();
+        auto iAttrs = Az3D::ModelData::getAttributeDescriptions();
+
+        bindings = { vBind, iBind };
+        attrs.insert(attrs.end(), vAttrs.begin(), vAttrs.end());
+        attrs.insert(attrs.end(), iAttrs.begin(), iAttrs.end());
+
+        vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
+        vin.pVertexBindingDescriptions      = bindings.data();
+        vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+        vin.pVertexAttributeDescriptions    = attrs.data();
+    } else {
+        vin.vertexBindingDescriptionCount   = 0;
+        vin.pVertexBindingDescriptions      = nullptr;
+        vin.vertexAttributeDescriptionCount = 0;
+        vin.pVertexAttributeDescriptions    = nullptr;
+    }
 
     VkPipelineInputAssemblyStateCreateInfo ia{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -87,14 +96,14 @@ void GraphicsPipeline::create() {
     dyn.dynamicStateCount = static_cast<uint32_t>(dynStates.size());
     dyn.pDynamicStates    = dynStates.data();
 
-    // 3) Layout (from your code) :contentReference[oaicite:1]{index=1}
+    // 3) Layout
     VkPipelineLayoutCreateInfo lci{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     lci.setLayoutCount = static_cast<uint32_t>(cfg.setLayouts.size());
     lci.pSetLayouts    = cfg.setLayouts.data();
     if (vkCreatePipelineLayout(device, &lci, nullptr, &layout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout (graphics)");
 
-    // 4) Graphics pipeline (from your code) :contentReference[oaicite:2]{index=2}
+    // 4) Graphics pipeline
     VkGraphicsPipelineCreateInfo pci{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     pci.stageCount = 2;
     pci.pStages    = stages;

@@ -5,10 +5,13 @@
 namespace AzVulk {
 
 struct RasterPipelineConfig {
-    // from your code: cull, depth flags, blend, msaa, renderPass, layouts, etc.
+    // external
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
     std::vector<VkDescriptorSetLayout> setLayouts;
+
+    // special
+    bool hasVertexInput = true;
 
     // defaults
     VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
