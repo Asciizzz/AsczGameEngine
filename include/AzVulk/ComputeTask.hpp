@@ -23,7 +23,7 @@ public:
         // Create command buffer
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = vkDevice->getCommandPool("Default_Compute");
+        allocInfo.commandPool = vkDevice->computePoolWrapper.pool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = 1;
 
@@ -205,7 +205,7 @@ public:
         deviceBuf.createBuffer();
 
         // 3. Submit single copy command
-        TemporaryCommand copyCmd(deviceBuf.vkDevice, "Default_Transfer");
+        TemporaryCommand copyCmd(deviceBuf.vkDevice, deviceBuf.vkDevice->transferPoolWrapper);
 
         VkBufferCopy region{};
         region.srcOffset = 0;

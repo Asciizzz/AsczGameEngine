@@ -54,7 +54,6 @@ namespace AzVulk {
         static const int MAX_FRAMES_IN_FLIGHT = 2; // double buffering
         size_t swapchainImageCount = 0;
 
-        void createCommandPool();
         void createCommandBuffers();
         void createSyncObjects();
     };

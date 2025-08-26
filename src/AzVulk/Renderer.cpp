@@ -16,7 +16,6 @@ namespace AzVulk {
         depthManager(depthManager),
         globalUBOManager(globalUBOManager),
         resourceManager(resourceManager) {
-            createCommandPool();
             createCommandBuffers();
             createSyncObjects();
         }
@@ -33,16 +32,12 @@ namespace AzVulk {
         }
     }
 
-    void Renderer::createCommandPool() { // Not so much of a create huh?
-        commandPool = vkDevice->getCommandPool("Default_Graphics");
-    }
-
     void Renderer::createCommandBuffers() {
         commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = commandPool;
+        allocInfo.commandPool = vkDevice->graphicsPoolWrapper.pool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 

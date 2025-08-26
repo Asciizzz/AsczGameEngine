@@ -124,7 +124,7 @@ namespace Az3D {
         );
         vertexBufferData.createBuffer();
 
-        TemporaryCommand vertexCopyCmd(vkDevice, "Default_Transfer");
+        TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
         VkBufferCopy vertexCopyRegion{};
         vertexCopyRegion.srcOffset = 0;
@@ -154,7 +154,7 @@ namespace Az3D {
         );
         indexBufferData.createBuffer();
 
-        TemporaryCommand indexCopyCmd(vkDevice, "Default_Transfer");
+        TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
         VkBufferCopy indexCopyRegion{};
         indexCopyRegion.srcOffset = 0;

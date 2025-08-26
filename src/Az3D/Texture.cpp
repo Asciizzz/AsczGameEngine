@@ -232,7 +232,7 @@ namespace Az3D {
     }
 
     void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
-        TemporaryCommand tempCmd(vkDevice, "Default_Graphics");
+        TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -268,7 +268,7 @@ namespace Az3D {
     }
 
     void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-        TemporaryCommand tempCmd(vkDevice, "Default_Graphics");
+        TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
 
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -292,7 +292,7 @@ namespace Az3D {
             throw std::runtime_error("texture image format does not support linear blitting!");
         }
 
-        TemporaryCommand tempCmd(vkDevice, "Default_Graphics");
+        TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

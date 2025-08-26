@@ -47,7 +47,7 @@ namespace Az3D {
         bufferData.createBuffer();
 
         // --- copy staging -> device local ---
-        TemporaryCommand copyCmd(vkDevice, "Default_Transfer");
+        TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
         VkBufferCopy copyRegion{};
         copyRegion.srcOffset = 0;

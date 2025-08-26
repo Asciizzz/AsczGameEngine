@@ -18,10 +18,10 @@ namespace AzVulk
     }
 
     Device::~Device() {
-        // Destroy command pools
-        for (const auto &[name, poolWrapper] : commandPools) {
-            vkDestroyCommandPool(device, poolWrapper.pool, nullptr);
-        }
+        vkDestroyCommandPool(device, graphicsPoolWrapper.pool, nullptr);
+        vkDestroyCommandPool(device, presentPoolWrapper.pool, nullptr);
+        vkDestroyCommandPool(device, computePoolWrapper.pool, nullptr);
+        vkDestroyCommandPool(device, transferPoolWrapper.pool, nullptr);
 
         if (device != VK_NULL_HANDLE) vkDestroyDevice(device, nullptr);
     }
@@ -51,10 +51,10 @@ namespace AzVulk
     }
 
     void Device::createDefaultCommandPools() {
-        createCommandPool("Default_Graphics", GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-        createCommandPool("Default_Present", PresentType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-        createCommandPool("Default_Compute", ComputeType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-        createCommandPool("Default_Transfer", TransferType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        graphicsPoolWrapper = createCommandPool(GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        presentPoolWrapper = createCommandPool(PresentType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        computePoolWrapper = createCommandPool(ComputeType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        transferPoolWrapper = createCommandPool(TransferType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     }
 
     void Device::createLogicalDevice() {
@@ -210,11 +210,7 @@ namespace AzVulk
 
 
 
-    VkCommandPool Device::createCommandPool(std::string name, QueueFamilyType type, VkCommandPoolCreateFlags flags) {
-        if (commandPools.find(name) != commandPools.end()) {
-            throw std::runtime_error("Command pool with name '" + name + "' already exists!");
-        }
-
+    Device::PoolWrapper Device::createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags) {
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = getQueueFamilyIndex(type);
@@ -224,29 +220,17 @@ namespace AzVulk
         if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create command pool!");
         }
-        commandPools[name] = { commandPool, type };
-        return commandPool;
-    }
-
-    void Device::destroyCommandPool(const std::string& name) {
-        if (commandPools.find(name) != commandPools.end()) {
-            vkDestroyCommandPool(device, commandPools[name].pool, nullptr);
-            commandPools.erase(name);
-        }
+        return { commandPool, type };
     }
 
 
 
-    TemporaryCommand::TemporaryCommand(const Device* vkDevice, const std::string& poolName)
-    : vkDevice(vkDevice), poolName(poolName) {
-        if (vkDevice->commandPools.find(poolName) == vkDevice->commandPools.end()) {
-            throw std::runtime_error("Command pool not found!");
-        }
-
+    TemporaryCommand::TemporaryCommand(const Device* vkDevice, const Device::PoolWrapper& poolWrapper)
+    : vkDevice(vkDevice), poolWrapper(poolWrapper) {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = vkDevice->getPoolWrapper(poolName).pool;
+        allocInfo.commandPool = poolWrapper.pool;
         allocInfo.commandBufferCount = 1;
 
         if (vkAllocateCommandBuffers(vkDevice->device, &allocInfo, &cmdBuffer) != VK_SUCCESS) {
@@ -263,7 +247,6 @@ namespace AzVulk
         if (cmdBuffer != VK_NULL_HANDLE) {
             if (!submitted) endAndSubmit();
 
-            const Device::PoolWrapper& poolWrapper = vkDevice->getPoolWrapper(poolName);
             vkFreeCommandBuffers(vkDevice->device, poolWrapper.pool, 1, &cmdBuffer);
         }
     }
@@ -279,8 +262,6 @@ namespace AzVulk
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmdBuffer;
-
-        const Device::PoolWrapper& poolWrapper = vkDevice->getPoolWrapper(poolName);
 
         vkQueueSubmit(vkDevice->getQueue(poolWrapper.type), 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(vkDevice->getQueue(poolWrapper.type));

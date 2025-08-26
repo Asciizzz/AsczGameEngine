@@ -56,10 +56,10 @@ namespace AzVulk {
             ComputeType
         };
 
-        uint32_t getGraphicsQueueFamilyIndex() const { return queueFamilyIndices.graphicsFamily.value(); }
-        uint32_t getPresentQueueFamilyIndex() const { return queueFamilyIndices.presentFamily.value(); }
-        uint32_t getTransferQueueFamilyIndex() const { return queueFamilyIndices.transferFamily.value_or(getGraphicsQueueFamilyIndex()); }
-        uint32_t getComputeQueueFamilyIndex() const { return queueFamilyIndices.computeFamily.value_or(getGraphicsQueueFamilyIndex()); }
+        inline uint32_t getGraphicsQueueFamilyIndex() const { return queueFamilyIndices.graphicsFamily.value(); }
+        inline uint32_t getPresentQueueFamilyIndex() const { return queueFamilyIndices.presentFamily.value(); }
+        inline uint32_t getTransferQueueFamilyIndex() const { return queueFamilyIndices.transferFamily.value_or(getGraphicsQueueFamilyIndex()); }
+        inline uint32_t getComputeQueueFamilyIndex() const { return queueFamilyIndices.computeFamily.value_or(getGraphicsQueueFamilyIndex()); }
         uint32_t getQueueFamilyIndex(QueueFamilyType type) const {
             switch (type) {
                 case GraphicsType: return getGraphicsQueueFamilyIndex();
@@ -78,30 +78,35 @@ namespace AzVulk {
                 default: return graphicsQueue; // Fallback
             }
         }
+        
+        struct PoolWrapper { VkCommandPool pool; QueueFamilyType type; };
+
+        // Default command pools
+        PoolWrapper graphicsPoolWrapper = { VK_NULL_HANDLE, GraphicsType };
+        PoolWrapper presentPoolWrapper = { VK_NULL_HANDLE, PresentType };
+        PoolWrapper transferPoolWrapper = { VK_NULL_HANDLE, TransferType };
+        PoolWrapper computePoolWrapper = { VK_NULL_HANDLE, ComputeType };
 
         void createDefaultCommandPools();
 
-        struct PoolWrapper { VkCommandPool pool; QueueFamilyType type; };
-        UnorderedMap<std::string, PoolWrapper> commandPools; // Command pools
-        VkCommandPool createCommandPool(std::string name, QueueFamilyType type, VkCommandPoolCreateFlags flags = 0);
-        void destroyCommandPool(const std::string& name);
+        PoolWrapper createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags = 0);
 
-        PoolWrapper getPoolWrapper(const std::string& name) const { return commandPools.at(name); }
-        VkCommandPool getCommandPool(const std::string& name) const { return commandPools.at(name).pool; }
+        // PoolWrapper getPoolWrapper(const std::string& name) const { return commandPools.at(name); }
+        // VkCommandPool getCommandPool(const std::string& name) const { return commandPools.at(name).pool; }
     };
 
 
     // Extension helper for one-time instant command
     class TemporaryCommand {
     public:
-        TemporaryCommand(const Device* vkDevice, const std::string& poolName);
+        TemporaryCommand(const Device* vkDevice, const Device::PoolWrapper& poolWrapper);
         ~TemporaryCommand();
         void endAndSubmit();
 
         VkCommandBuffer operator*() const { return cmdBuffer; }
 
-        const Device* vkDevice;
-        std::string poolName;
+        const Device* vkDevice = nullptr;
+        Device::PoolWrapper poolWrapper{};
         VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
         bool submitted = false;
     };
