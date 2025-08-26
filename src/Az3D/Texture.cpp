@@ -352,24 +352,57 @@ namespace Az3D {
         vkCmdPipelineBarrier(tempCmd.cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
 
-
-    // Descriptor function
     void TextureManager::createDescriptorSets() {
         VkDevice device = vkDevice->device;
+        VkPhysicalDeviceProperties deviceProps{};
+        vkGetPhysicalDeviceProperties(vkDevice->physicalDevice, &deviceProps);
 
-        dynamicDescriptor.init(device);
-        VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(0,
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
-        );
-        dynamicDescriptor.createLayout({binding});
-
+        // How many textures we have
         uint32_t textureCount = static_cast<uint32_t>(textures.size());
-        dynamicDescriptor.createPool({
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, textureCount}
-        }, textureCount);
+        if (textureCount == 0) {
+            // Nothing to do — but create an empty layout/set if you like.
+            return;
+        }
 
-        // Descriptor sets creation
+        // Check device limits for sanity and give a helpful error if we're over
+        uint32_t maxSamplersPerStage = deviceProps.limits.maxPerStageDescriptorSamplers;
+        uint32_t maxSamplersPerSet   = deviceProps.limits.maxDescriptorSetSamplers; // wrapper hint, may be same
+
+        if (textureCount > maxSamplersPerStage || textureCount > maxSamplersPerSet) {
+            // Fallback or informative error — don't crash, print a warning and fall back
+            // to the old-per-texture descriptor sets approach or consider using bindless (descriptor indexing).
+            std::cerr << "Warning: request to create a single descriptor array of "
+                    << textureCount << " combined samplers exceeds device limit of "
+                    << maxSamplersPerStage << " per stage. Falling back to per-texture descriptors or enable descriptor indexing.\n";
+            // You can either:
+            //  - implement a fallback here that creates multiple small descriptor sets,
+            //  - or attempt to use the descriptor indexing extension (VK_EXT_descriptor_indexing) and UPDATE_AFTER_BIND flags.
+            // For now we will attempt to create up to the device limit (clamp), but user must handle indices > clamp.
+            textureCount = std::min(textureCount, maxSamplersPerStage);
+        }
+
+        // --- create descriptor set layout with binding count = textureCount ---
+        // Binding 0 will be an array of combined image samplers
+        VkDescriptorSetLayoutBinding binding{};
+        binding.binding = 0;
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        binding.descriptorCount = textureCount;
+        binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+        binding.pImmutableSamplers = nullptr;
+
+        // We assume DynamicDescriptor::createLayout accepts a vector of bindings
+        dynamicDescriptor.init(device);
+        dynamicDescriptor.createLayout({ binding });
+
+        // --- create descriptor pool sized to hold the entire array of combined image samplers ---
+        VkDescriptorPoolSize poolSize{};
+        poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSize.descriptorCount = textureCount; // total number of sampler descriptors available in pool
+
+        // We need only one set from this pool
+        dynamicDescriptor.createPool({ poolSize }, 1 /* maxSets */);
+
+        // --- allocate one descriptor set from the pool ---
         VkDescriptorSetLayout layout = dynamicDescriptor.setLayout;
 
         VkDescriptorSetAllocateInfo allocInfo{};
@@ -378,31 +411,41 @@ namespace Az3D {
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts = &layout;
 
-        for (size_t i = 0; i < textures.size(); ++i) {
-            const auto& texture = textures[i];
-
-            VkDescriptorSet descriptorSet;
-
-            if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet) != VK_SUCCESS) continue;
-
-            // Prepare the write structures outside the loop
-            VkDescriptorImageInfo textureImageInfo{};
-            textureImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            textureImageInfo.imageView = texture->view;
-            textureImageInfo.sampler = texture->sampler;
-
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pImageInfo = &textureImageInfo;
-            descriptorWrite.dstSet = descriptorSet;
-
-            vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-            dynamicDescriptor.sets.push_back(descriptorSet);
+        VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+        VkResult res = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
+        if (res != VK_SUCCESS) {
+            throw std::runtime_error("Failed to allocate single texture descriptor set");
         }
+
+        // --- prepare a contiguous array of VkDescriptorImageInfo entries ---
+        // Note: we only pack up to 'textureCount' entries (which may have been clamped above).
+        std::vector<VkDescriptorImageInfo> imageInfos;
+        imageInfos.reserve(textureCount);
+
+        for (uint32_t i = 0; i < textureCount; ++i) {
+            const auto& tex = textures[i];
+            VkDescriptorImageInfo ii{};
+            ii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // ensure textures transitioned
+            ii.imageView = tex->view;
+            ii.sampler = tex->sampler;
+            imageInfos.push_back(ii);
+        }
+
+        // --- one write descriptor that writes the whole array at binding 0 ---
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = descriptorSet;
+        write.dstBinding = 0;
+        write.dstArrayElement = 0; // start at index 0 in the array
+        write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write.descriptorCount = static_cast<uint32_t>(imageInfos.size());
+        write.pImageInfo = imageInfos.data();
+
+        vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+        // Store single descriptor set for later use (replace your 'sets' vector usage)
+        dynamicDescriptor.set = descriptorSet;
     }
+
 
 } // namespace Az3D

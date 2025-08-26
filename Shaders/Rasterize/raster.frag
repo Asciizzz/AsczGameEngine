@@ -3,7 +3,7 @@
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
-    vec4 prop1; // General purpose: <float time>, <unused>, <unused>, <unused>
+    vec4 props; // General purpose: <float time>, <unused>, <unused>, <unused>
     vec4 cameraPos;    // xyz: camera position, w: fov
     vec4 cameraForward; // xyz: forward direction, w: aspect ratio
     vec4 cameraRight;   // xyz: camera right, w: near
@@ -11,13 +11,19 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 } glb;
 
 
-// Material uniform buffer
-layout(set = 1, binding = 0) uniform MaterialUBO {
-    vec4 prop1; // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-} material;
+struct Material {
+    vec4 shadingParams;
+    ivec4 texIndices;
+};
 
-// Texture buffer
-layout(set = 2, binding = 0) uniform sampler2D txtrSmplr;
+layout(std430, set = 1, binding = 0) buffer MaterialBuffer {
+    Material materials[];
+};
+
+#extension GL_EXT_nonuniform_qualifier : require      // for nonuniformEXT()
+#extension GL_EXT_samplerless_texture_functions : enable // sometimes required by toolchains; optional
+
+layout(set = 2, binding = 0) uniform sampler2D textures[]; // runtime-sized array (descriptor indexing)
 
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragWorldNrml;
@@ -33,6 +39,7 @@ const float PI = 3.14159265359;
 const float timeSpeed = 10000.0; // actual timeOfDay passed already scaled in app
 
 // const vec3 skyDayZenith   = vec3(0.20, 0.45, 0.70);
+
 const vec3 skyDayZenith   = vec3(0.05, 0.09, 0.24);
 const vec3 skyNightZenith = vec3(0.05, 0.09, 0.24);
 
@@ -49,14 +56,16 @@ vec3 calculateSunDirection(float timeOfDay, float latitude) {
 }
 
 void main() {
-    vec4 texColor = texture(txtrSmplr, fragTxtr);
-    float discardThreshold = material.prop1.w;
+    Material material = materials[1];
+
+    vec4 texColor = texture(textures[material.texIndices.x], fragTxtr);
+
+    float discardThreshold = material.shadingParams.w;
 
     if (texColor.a < discardThreshold) { discard; }
 
-
     // BORROWED
-    float time = glb.prop1.x * timeSpeed;
+    float time = glb.props.x * timeSpeed;
 
     vec3 sunDir = calculateSunDirection(time, 45.0);
     float sunElev = dot(sunDir, vec3(0.0, 1.0, 0.0));
@@ -75,7 +84,7 @@ void main() {
     float fogMaxDistance = 69.0;
     float fogFactor = clamp((vertexDistance - fogMaxDistance) / fogMaxDistance, 0.0, 1.0);
 
-    float normalBlend = material.prop1.z;
+    float normalBlend = material.shadingParams.z;
     vec3 normal = normalize(fragWorldNrml);
     vec3 normalColor = (normal + 1.0) * 0.5;
 

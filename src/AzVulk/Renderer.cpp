@@ -168,11 +168,8 @@ namespace AzVulk {
             size_t materialIndex = modelDecode.second;
 
             // Material descriptor set
-            VkDescriptorSet materialSet = matManager->getDescriptorSet(materialIndex);
-
-            // Texture descriptor set
-            size_t textureIndex = matManager->materials[materialIndex]->diffTxtr;
-            VkDescriptorSet textureSet = texManager->getDescriptorSet(textureIndex);
+            VkDescriptorSet materialSet = matManager->getDescriptorSet();
+            VkDescriptorSet textureSet = texManager->getDescriptorSet();
 
             std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
             vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,

@@ -114,7 +114,7 @@ namespace Az3D {
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         vertexStagingBuffer.createBuffer();
-        vertexStagingBuffer.mappedData(vertices);
+        vertexStagingBuffer.mappedData(vertices.data());
 
         vertexBufferData.initVkDevice(vkDevice);
         vertexBufferData.setProperties(
@@ -144,7 +144,7 @@ namespace Az3D {
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         indexStagingBuffer.createBuffer();
-        indexStagingBuffer.mappedData(indices);
+        indexStagingBuffer.mappedData(indices.data());
 
         indexBufferData.initVkDevice(vkDevice);
         indexBufferData.setProperties(

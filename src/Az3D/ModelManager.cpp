@@ -64,7 +64,7 @@ namespace Az3D {
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         bufferData.createBuffer();
-        bufferData.mappedData(datas);
+        bufferData.mappedData(datas.data());
 
         prevInstanceCount = datas.size();
     }
@@ -74,7 +74,7 @@ namespace Az3D {
 
         if (prevInstanceCount != datas.size()) recreateBufferData();
 
-        bufferData.mappedData(datas);
+        bufferData.mappedData(datas.data());
     }
 
 

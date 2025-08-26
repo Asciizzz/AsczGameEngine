@@ -60,8 +60,8 @@ namespace Az3D {
 
         AzVulk::DynamicDescriptor dynamicDescriptor;
         void createDescriptorSets();
-        VkDescriptorSet getDescriptorSet(uint32_t textureIndex) const {
-            return dynamicDescriptor.getSet(textureIndex);
+        VkDescriptorSet getDescriptorSet() const {
+            return dynamicDescriptor.getSet();
         }
 
         void uploadToGPU() {

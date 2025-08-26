@@ -25,6 +25,9 @@ namespace AzVulk {
         std::vector<VkDescriptorSet> sets;
         const VkDescriptorSet getSet(uint32_t index) const { return sets[index]; }
 
+        VkDescriptorSet set = VK_NULL_HANDLE;
+        const VkDescriptorSet getSet() const { return set; }
+
         // Some really helpful functions
         static VkDescriptorSetLayoutBinding fastBinding(uint32_t binding,
                                                         VkDescriptorType type,

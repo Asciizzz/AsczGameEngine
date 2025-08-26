@@ -3,17 +3,21 @@
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
-    vec4 prop1; // General purpose: <float time>, <unused>, <unused>, <unused>
+    // vec4 props; // General purpose: <float time>, <unused>, <unused>, <unused>
     // vec4 cameraPos;     // xyz = camera position, w = fov (radians)
     // vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
     // vec4 cameraRight;   // xyz = camera right, w = near
     // vec4 cameraUp;      // xyz = camera up, w = far
 } glb;
 
-// Material uniform buffer (same as fragment shader)
-layout(set = 1, binding = 0) uniform MaterialUBO {
-    vec4 prop1; // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-} material;
+struct Material {
+    vec4 shadingParams;
+    ivec4 texIndices;
+};
+
+layout(std430, set = 1, binding = 0) buffer MaterialBuffer {
+    Material materials[];
+};
 
 layout(location = 0) in vec3 inPos;
 layout(location = 1) in vec3 inNrml;
@@ -57,7 +61,8 @@ void main() {
     fragWorldPos = worldPos.xyz;
 
     gl_Position = glb.proj * glb.view * worldPos;
-    fragScreenPos = gl_Position;  // Store screen position for depth sampling
+
+    fragScreenPos = gl_Position;
 
     // Proper normal transformation that handles non-uniform scaling
     mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
@@ -69,9 +74,10 @@ void main() {
 
     // === MOVED LIGHTING COMPUTATION FROM FRAGMENT TO VERTEX ===
     // Unwrap material properties
-    float shading = material.prop1.x;
-    int toonLevel = int(material.prop1.y);
-    
+    Material material = materials[0];
+    float shading = material.shadingParams.x;
+    int toonLevel = int(material.shadingParams.y);
+
     vec3 lightDir = normalize(vec3(-1.0, -0.3, 1.0));
     
     // The idea is that if shading is disabled, lightFactor should be 1.0

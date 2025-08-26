@@ -46,13 +46,6 @@ namespace AzVulk {
         void createBuffer();
 
         template<typename T>
-        void uploadData(const std::vector<T>& data) {
-            vkMapMemory(vkDevice->device, memory, 0, dataSize, 0, &mapped);
-            memcpy(mapped, data.data(), dataSize);
-            vkUnmapMemory(vkDevice->device, memory);
-            mapped = nullptr;
-        }
-        template<typename T>
         void uploadData(const T* data) {
             vkMapMemory(vkDevice->device, memory, 0, dataSize, 0, &mapped);
             memcpy(mapped, data, dataSize);
@@ -65,12 +58,6 @@ namespace AzVulk {
         }
         void unmapMemory() {
             if (mapped) vkUnmapMemory(vkDevice->device, memory);
-        }
-
-        template<typename T>
-        void mappedData(const std::vector<T>& data) {
-            mapMemory();
-            memcpy(mapped, data.data(), dataSize);
         }
 
         template<typename T>

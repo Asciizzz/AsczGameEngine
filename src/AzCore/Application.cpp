@@ -122,51 +122,6 @@ void Application::initComponents() {
     );
 
 
-
-    // Printing every Mesh - Material - Texture - Model information
-    const char* COLORS[] = {
-        "\x1b[31m", // Red
-        "\x1b[32m", // Green
-        "\x1b[33m", // Yellow
-        "\x1b[34m", // Blue
-        "\x1b[35m", // Magenta
-        "\x1b[36m"  // Cyan
-    };
-    const char* WHITE = "\x1b[37m";
-    const int NUM_COLORS = sizeof(COLORS) / sizeof(COLORS[0]);
-
-    printf("%sLoaded Resources:\n> Meshes:\n", WHITE);
-    for (const auto& [name, index] : resManager.meshNameToIndex)
-        printf("%s   Idx %zu: %s\n", COLORS[index % NUM_COLORS], index, name.c_str());
-    printf("%s> Textures:\n", WHITE);
-    for (const auto& [name, index] : resManager.textureNameToIndex) {
-        const auto& texture = texManager.textures[index];
-        const char* color = COLORS[index % NUM_COLORS];
-
-        printf("%s   Idx %zu: %s %s-> %sPATH: %s\n", color, index, name.c_str(), WHITE, color, texture->path.c_str());
-    }
-    printf("%s> Materials:\n", WHITE);
-    for (const auto& [name, index] : resManager.materialNameToIndex) {
-        const auto& material = *resManager.materialManager->materials[index];
-        const char* color = COLORS[index % NUM_COLORS];
-
-        if (material.diffTxtr > 0) {
-            const auto& texture = resManager.textureManager->textures[material.diffTxtr];
-            const char* diffColor = COLORS[material.diffTxtr % NUM_COLORS];
-
-            printf("%s   Idx %zu: %s %s-> %sDIFF: Idx %zu\n",
-                color, index, name.c_str(), WHITE,
-                diffColor, material.diffTxtr
-            );
-        } else {
-            printf("%s   Idx %zu: %s %s(TX none)\n",
-                color, index, name.c_str(), WHITE);
-        }
-    }
-
-    printf("%s", WHITE);
-
-
 // PLAYGROUND END HERE 
 
     meshManager.createDeviceBuffers();

@@ -8,13 +8,12 @@ namespace AzGame {
         World(Az3D::ResourceManager* resManager, const AzVulk::Device* vkDevice)
         : resourceManager(resManager), vkDevice(vkDevice) {
 
-            // Initialized global pallete material
-            materialIndex = resourceManager->addMaterial("GlobalPalette",
-                Az3D::Material::fastTemplate(
-                    1.0f, 2.0f, 0.2f, 0.0f, // No discard threshold since the texture is opaque anyway
-                    resourceManager->addTexture("GlobalPalette", "Assets/Platformer/Palette.png")
-                )
-            );
+            // Initialized global palette material
+            Az3D::Material globalPaletteMaterial;
+            globalPaletteMaterial.setShadingParams(true, 1, 0.5f, 0.0f);
+            globalPaletteMaterial.setAlbedoTextureIndex(resourceManager->addTexture("GlobalPalette", "Assets/Platformer/Palette.png"));
+
+            materialIndex = resourceManager->addMaterial("GlobalPalette", globalPaletteMaterial);
 
             // Initialized mesh in the mesh manager
             for (const auto& mesh : platformerMeshes) {

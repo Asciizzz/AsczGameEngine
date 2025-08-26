@@ -11,26 +11,21 @@
 
 namespace Az3D {
 
-    struct MaterialUBO {
-        alignas(16) glm::vec4 prop1;
-
-        MaterialUBO() : prop1(1.0f, 0.0f, 0.0f, 0.0f) {}
-        MaterialUBO(const glm::vec4& p1) : prop1(p1) {}
-    };
-
     struct Material {
-        // Generic material properties using vec4 for alignment and flexibility
-        // Put this FIRST to ensure proper alignment
-        glm::vec4 prop1 = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-        
-        // Custom material properties exclusive to AsczGameEngine
-        size_t diffTxtr = 0; // Albedo/Diffuse map
+        alignas(16) glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
+        alignas(16) glm::ivec4 texIndices = glm::ivec4(0); // <albedo>, <empty>, <empty>, <empty>
 
-        static Material fastTemplate(float a, float b, float c, float d, size_t diffTexture) {
-            Material mat;
-            mat.prop1 = glm::vec4(a, b, c, d);
-            mat.diffTxtr = diffTexture;
-            return mat;
+        Material() = default;
+
+        void setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold) {
+            shadingParams.x = shading ? 1.0f : 0.0f;
+            shadingParams.y = static_cast<float>(toonLevel);
+            shadingParams.z = normalBlend;
+            shadingParams.w = discardThreshold;
+        }
+
+        void setAlbedoTextureIndex(int index) {
+            texIndices.x = index;
         }
     };
 
@@ -47,15 +42,15 @@ namespace Az3D {
 
         size_t addMaterial(const Material& material);
 
-        SharedPtrVec<Material> materials;
+        std::vector<Material> materials;
 
-        std::vector<AzVulk::BufferData> gpuBufferDatas;
-        void createGPUBufferDatas();
+        AzVulk::BufferData bufferData;
+        void createGPUBufferData();
 
         AzVulk::DynamicDescriptor dynamicDescriptor;
         void createDescriptorSets();
-        VkDescriptorSet getDescriptorSet(uint32_t materialIndex) const {
-            return dynamicDescriptor.getSet(materialIndex);
+        VkDescriptorSet getDescriptorSet() const {
+            return dynamicDescriptor.getSet();
         }
 
 

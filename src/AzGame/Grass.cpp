@@ -135,12 +135,11 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
     grassMeshIndex = resourceManager.addMesh("GrassMesh", grassVertices, grassIndices);
 
     // Create material
-    grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
-        Material::fastTemplate(
-            1.0f, 0.0f, 0.0f, 0.1f, // 0.7f discard threshold for transparency
-            resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", Texture::ClampToEdge)
-        )
-    );
+    Az3D::Material grassMaterial;
+    grassMaterial.setShadingParams(true, 1, 0.5f, 0.1f);
+    grassMaterial.setAlbedoTextureIndex(resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", Texture::ClampToEdge));
+
+    grassMaterialIndex = resourceManager.addMaterial("GrassMaterial", grassMaterial);
 }
 
 
@@ -185,12 +184,11 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
     grassMeshIndex = resourceManager.addMesh("GrassMesh", grassVertices, grassIndices);
 
     // Create material
-    grassMaterialIndex = resourceManager.addMaterial("GrassMaterial",
-        Material::fastTemplate(
-            1.0f, 0.0f, 0.0f, 0.9f,
-            resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", Texture::ClampToEdge)
-        )
-    );
+    Az3D::Material grassMaterial;
+    grassMaterial.setShadingParams(true, 1, 0.5f, 0.1f);
+    grassMaterial.setAlbedoTextureIndex(resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", Texture::ClampToEdge));
+
+    grassMaterialIndex = resourceManager.addMaterial("GrassMaterial", grassMaterial);
 }
 
 void Grass::generateGrassInstances(std::mt19937& generator) {
@@ -397,9 +395,10 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     
     // Create terrain mesh and material
     terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices, true);
-    terrainMaterialIndex = resManager.addMaterial("TerrainMaterial",
-        Material::fastTemplate(1.0f, 0.0f, 0.2f, 0.0f, 0)
-    );
+
+    Material terrainMaterial;
+    terrainMaterial.setShadingParams(true, 0.0f, 0.2f, 0.0f);
+    terrainMaterialIndex = resManager.addMaterial("TerrainMaterial", terrainMaterial);
 
     // Create terrain instance
     Data3D terrainData;

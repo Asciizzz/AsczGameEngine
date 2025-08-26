@@ -73,7 +73,7 @@ namespace Az3D {
 
     Material* ResourceManager::getMaterial(std::string name) const {
         size_t index = getMaterialIndex(name);
-        return index != SIZE_MAX ? materialManager->materials[index].get() : nullptr;
+        return index != SIZE_MAX ? &materialManager->materials[index] : nullptr;
     }
 
     Texture* ResourceManager::getTexture(std::string name) const {
