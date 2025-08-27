@@ -1,5 +1,5 @@
-// ComputePipeline.hpp
 #pragma once
+
 #include "AzVulk/Pipeline_base.hpp"
 
 namespace AzVulk {

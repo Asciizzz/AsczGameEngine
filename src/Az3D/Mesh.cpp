@@ -110,14 +110,14 @@ SharedPtr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
     // Full-attribute hash (position + normal + texcoord)
     auto hashVertex = [&](const VertexStatic& v) -> size_t {
         size_t seed = 0;
-        hash_combine(seed, std::hash<float>{}(v.pos.x));
-        hash_combine(seed, std::hash<float>{}(v.pos.y));
-        hash_combine(seed, std::hash<float>{}(v.pos.z));
-        hash_combine(seed, std::hash<float>{}(v.nrml.x));
-        hash_combine(seed, std::hash<float>{}(v.nrml.y));
-        hash_combine(seed, std::hash<float>{}(v.nrml.z));
-        hash_combine(seed, std::hash<float>{}(v.txtr.x));
-        hash_combine(seed, std::hash<float>{}(v.txtr.y));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.x));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.y));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.z));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.x));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.y));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.z));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.w));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.w));
         return seed;
     };
 
@@ -133,42 +133,42 @@ SharedPtr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
 
                 // Position
                 if (index.vertex_index >= 0) {
-                    vertex.pos = {
+                    vertex.setPosition({
                         attrib.vertices[3 * index.vertex_index + 0],
                         attrib.vertices[3 * index.vertex_index + 1],
                         attrib.vertices[3 * index.vertex_index + 2]
-                    };
+                    });
                 }
 
                 // Texture coordinates
                 if (index.texcoord_index >= 0) {
-                    vertex.txtr = {
+                    vertex.setTextureUV({
                         attrib.texcoords[2 * index.texcoord_index + 0],
                         1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V
-                    };
+                    });
                 } else {
-                    vertex.txtr = { 0.0f, 0.0f };
+                    vertex.setTextureUV({ 0.0f, 0.0f });
                 }
 
                 // Normals
                 if (hasNormals && index.normal_index >= 0) {
-                    vertex.nrml = {
+                    vertex.setNormal({
                         attrib.normals[3 * index.normal_index + 0],
                         attrib.normals[3 * index.normal_index + 1],
                         attrib.normals[3 * index.normal_index + 2]
-                    };
+                    });
                 }
             }
 
             // Generate face normal if needed
             if (!hasNormals) {
-                glm::vec3 edge1 = triangle[1].pos - triangle[0].pos;
-                glm::vec3 edge2 = triangle[2].pos - triangle[0].pos;
+                glm::vec3 edge1 = triangle[1].getPosition() - triangle[0].getPosition();
+                glm::vec3 edge2 = triangle[2].getPosition() - triangle[0].getPosition();
                 glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
 
-                triangle[0].nrml = faceNormal;
-                triangle[1].nrml = faceNormal;
-                triangle[2].nrml = faceNormal;
+                triangle[0].setNormal(faceNormal);
+                triangle[1].setNormal(faceNormal);
+                triangle[2].setNormal(faceNormal);
             }
 
             // Deduplicate and add vertices

@@ -1,5 +1,3 @@
-// GlobalUBOManager.cpp (simplified to only handle UBO)
-
 #include "Az3D/GlobalUBO.hpp"
 #include "Az3D/Camera.hpp"
 

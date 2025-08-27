@@ -33,7 +33,7 @@ void Mesh::createBVH() {
 
         for (size_t j = 0; j < 3; ++j) {
             size_t idx = indices[i * 3 + j];
-            const auto& vertex = vertices[idx].pos;
+            const auto& vertex = vertices[idx].getPosition();
 
             unsortedCenters[i] += vertex;
             unsortedABmin[i] = glm::min(unsortedABmin[i], vertex);
@@ -242,9 +242,9 @@ HitInfo Mesh::closestHit(const glm::vec3& origin, const glm::vec3& direction, fl
             size_t idx1 = indices[idx * 3 + 1];
             size_t idx2 = indices[idx * 3 + 2];
 
-            const glm::vec3& v0 = vertices[idx0].pos;
-            const glm::vec3& v1 = vertices[idx1].pos;
-            const glm::vec3& v2 = vertices[idx2].pos;
+            const glm::vec3& v0 = vertices[idx0].getPosition();
+            const glm::vec3& v1 = vertices[idx1].getPosition();
+            const glm::vec3& v2 = vertices[idx2].getPosition();
 
             glm::vec3 curHitProp = rayIntersectTriangle(rayOrg, rayDir, v0, v1, v2);
 
@@ -268,9 +268,9 @@ HitInfo Mesh::closestHit(const glm::vec3& origin, const glm::vec3& direction, fl
     size_t idx0 = indices[hitIdx * 3 + 0];
     size_t idx1 = indices[hitIdx * 3 + 1];
     size_t idx2 = indices[hitIdx * 3 + 2];
-    const glm::vec3& nrml0 = vertices[idx0].nrml;
-    const glm::vec3& nrml1 = vertices[idx1].nrml;
-    const glm::vec3& nrml2 = vertices[idx2].nrml;
+    const glm::vec3& nrml0 = vertices[idx0].getNormal();
+    const glm::vec3& nrml1 = vertices[idx1].getNormal();
+    const glm::vec3& nrml2 = vertices[idx2].getNormal();
 
     // Barycentric interpolation for normal
     hit.nrml =  nrml0 * hit.prop.x +
@@ -348,9 +348,9 @@ HitInfo Mesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, co
             size_t idx1 = indices[idx * 3 + 1];
             size_t idx2 = indices[idx * 3 + 2];
 
-            const glm::vec3& v0 = vertices[idx0].pos;
-            const glm::vec3& v1 = vertices[idx1].pos;
-            const glm::vec3& v2 = vertices[idx2].pos;
+            const glm::vec3& v0 = vertices[idx0].getPosition();
+            const glm::vec3& v1 = vertices[idx1].getPosition();
+            const glm::vec3& v2 = vertices[idx2].getPosition();
 
             glm::vec3 curHitProp = sphereIntersectTriangle(sphereOrg, sphereRad, v0, v1, v2);
 
@@ -375,14 +375,14 @@ HitInfo Mesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, co
     const VertexStatic& vrtx0 = vertices[idx0];
     const VertexStatic& vrtx1 = vertices[idx1];
     const VertexStatic& vrtx2 = vertices[idx2];
-    hit.nrml =  vrtx0.nrml * hit.prop.x +
-                vrtx1.nrml * hit.prop.y +
-                vrtx2.nrml * (1.0f - hit.prop.x - hit.prop.y);
+    hit.nrml =  vrtx0.getNormal() * hit.prop.x +
+                vrtx1.getNormal() * hit.prop.y +
+                vrtx2.getNormal() * (1.0f - hit.prop.x - hit.prop.y);
 
     // Retrieve the hit vertex (require barycentric coordinates)
-    hit.vrtx = vrtx0.pos * hit.prop.x +
-                vrtx1.pos * hit.prop.y +
-                vrtx2.pos * (1.0f - hit.prop.x - hit.prop.y);
+    hit.vrtx = vrtx0.getPosition() * hit.prop.x +
+                vrtx1.getPosition() * hit.prop.y +
+                vrtx2.getPosition() * (1.0f - hit.prop.x - hit.prop.y);
 
     // Convert back to world coordinates
     glm::vec3 worldVertex = glm::vec3(modelMat4 * glm::vec4(hit.vrtx, 1.0f));

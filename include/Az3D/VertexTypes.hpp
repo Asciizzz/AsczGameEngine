@@ -42,17 +42,57 @@ struct Transform {
 
 
 struct VertexStatic {
-    glm::vec3 pos;
-    glm::vec3 nrml;
-    glm::vec2 txtr;
+    // Compact 32 byte data layout
 
-    VertexStatic() : pos(0.0f), nrml(0.0f), txtr(0.0f) {}
-    VertexStatic(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texCoord)
-        : pos(position), nrml(normal), txtr(texCoord) {}
+    // Position on XYZ and Texture U on W
+    // Normal on XYZ and Texture V on W
+    alignas(16) glm::vec4 pos_tu = glm::vec4(0.0f);
+    alignas(16) glm::vec4 nrml_tv = glm::vec4(0.0f);
+
+    VertexStatic() = default;
+    VertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv) {
+        pos_tu = glm::vec4(pos, uv.x);
+        nrml_tv = glm::vec4(nrml, uv.y);
+    }
+
+    void setPosition(const glm::vec3& position);
+    void setNormal(const glm::vec3& normal);
+    void setTextureUV(const glm::vec2& uv);
+
+    glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
+    glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
+    glm::vec2 getTextureUV() const { return {pos_tu.w, nrml_tv.w}; }
 
     // Vulkan binding description for rendering
     static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
+};
+
+struct VertexSkinned {
+    // 64 bytes of data
+
+    // Refer to the guide on VertexStatic
+    glm::vec4 pos_tu = glm::vec4(0.0f);
+    glm::vec4 nrml_tv = glm::vec4(0.0f);
+
+    glm::ivec4 boneIDs = glm::ivec4(0);
+    glm::vec4 weights = glm::vec4(0.0f);
+
+    VertexSkinned() = default;
+
+    // Standard vertex data
+
+    void setPosition(const glm::vec3& position);
+    void setNormal(const glm::vec3& normal);
+    void setTextureUV(const glm::vec2& uv);
+
+    glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
+    glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
+    glm::vec2 getTextureUV() const { return {pos_tu.w, nrml_tv.w}; };
+
+    // Vulkan binding description for rendering
+    static VkVertexInputBindingDescription getBindingDescription();
+    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
 };
 
 }

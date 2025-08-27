@@ -16,25 +16,24 @@ VkVertexInputBindingDescription ModelData::getBindingDescription() {
 std::array<VkVertexInputAttributeDescription, 6> ModelData::getAttributeDescriptions() {
     std::array<VkVertexInputAttributeDescription, 6> attributeDescriptions{};
 
-    
-    // Properties (location 3)
+    // Properties (location 2)
     attributeDescriptions[0].binding = 1;
-    attributeDescriptions[0].location = 3;
+    attributeDescriptions[0].location = 2;
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SINT;
     attributeDescriptions[0].offset = offsetof(ModelData, properties);
 
-    // Model matrix is 4x4, so we need 4 attribute locations (4, 5, 6, 7)
+    // Model matrix is 4x4, so we need 4 attribute locations (3, 4, 5, 6)
     // Each vec4 takes one attribute location
     for (int i = 1; i < 5; ++i) {
         attributeDescriptions[i].binding = 1;
-        attributeDescriptions[i].location = 3 + i; // Locations 4, 5, 6, 7
+        attributeDescriptions[i].location = 2 + i;
         attributeDescriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
         attributeDescriptions[i].offset = offsetof(ModelData, modelMatrix) + sizeof(glm::vec4) * (i - 1);
     }
 
-    // Instance color multiplier vec4 (location 8) - directly after modelMatrix in Data
+    // Instance color multiplier vec4 (location 7) - directly after modelMatrix in Data
     attributeDescriptions[5].binding = 1;
-    attributeDescriptions[5].location = 8;
+    attributeDescriptions[5].location = 7;
     attributeDescriptions[5].format = VK_FORMAT_R32G32B32A32_SFLOAT;
     attributeDescriptions[5].offset = offsetof(ModelData, multColor);
 
