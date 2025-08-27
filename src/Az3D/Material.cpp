@@ -61,19 +61,16 @@ void MaterialManager::createDescriptorSets() {
 
     // --- create layout ---
     dynamicDescriptor.init(device);
-    VkDescriptorSetLayoutBinding binding =
-        DynamicDescriptor::fastBinding(
-            0,
-            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
-        );
+    VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(
+        0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+    );
     dynamicDescriptor.createLayout({binding});
 
     // --- create pool ---
     // Only 1 SSBO descriptor and 1 set are needed, because the SSBO holds ALL materials
     dynamicDescriptor.createPool(
-        { VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} },
-        1
+        { VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1
     );
 
     // --- allocate descriptor set ---
