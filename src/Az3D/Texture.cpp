@@ -12,12 +12,12 @@ using namespace AzVulk;
 
 namespace Az3D {
 
-TextureManager::TextureManager(const Device* vkDevice)
+TextureGroup::TextureGroup(const Device* vkDevice)
     : vkDevice(vkDevice) {
     createDefaultTexture();
 }
 
-TextureManager::~TextureManager() {
+TextureGroup::~TextureGroup() {
     // Clean up all textures
     VkDevice device = vkDevice->device;
 
@@ -38,7 +38,7 @@ TextureManager::~TextureManager() {
     textures.clear();
 }
 
-size_t TextureManager::addTexture(std::string imagePath, Texture::Mode addressMode) {
+size_t TextureGroup::addTexture(std::string imagePath, Texture::Mode addressMode) {
     try {
         Texture texture;
         texture.path = imagePath;
@@ -89,7 +89,7 @@ size_t TextureManager::addTexture(std::string imagePath, Texture::Mode addressMo
     }
 }
 
-void TextureManager::createDefaultTexture() {
+void TextureGroup::createDefaultTexture() {
     // Create a simple 1x1 white texture as default at index 0
     uint8_t* white = new uint8_t[4];
     white[0] = 255;   // R
@@ -138,7 +138,7 @@ void TextureManager::createDefaultTexture() {
 
 
 // Vulkan helper methods implementation
-void TextureManager::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
+void TextureGroup::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
                                 VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
                                 VkImage& image, VkDeviceMemory& imageMemory) {
     VkImageCreateInfo imageInfo{};
@@ -175,7 +175,7 @@ void TextureManager::createImage(uint32_t width, uint32_t height, uint32_t mipLe
     vkBindImageMemory(vkDevice->device, image, imageMemory, 0);
 }
 
-void TextureManager::createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView) {
+void TextureGroup::createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView) {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
@@ -192,7 +192,7 @@ void TextureManager::createImageView(VkImage image, VkFormat format, uint32_t mi
     }
 }
 
-void TextureManager::createSampler(uint32_t mipLevels, VkSampler& sampler, Texture::Mode addressMode) {
+void TextureGroup::createSampler(uint32_t mipLevels, VkSampler& sampler, Texture::Mode addressMode) {
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(vkDevice->physicalDevice, &properties);
 
@@ -231,7 +231,7 @@ void TextureManager::createSampler(uint32_t mipLevels, VkSampler& sampler, Textu
     }
 }
 
-void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
+void TextureGroup::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
     TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
 
     VkImageMemoryBarrier barrier{};
@@ -267,7 +267,7 @@ void TextureManager::transitionImageLayout(VkImage image, VkFormat format, VkIma
     vkCmdPipelineBarrier(tempCmd.cmdBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
+void TextureGroup::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
     TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
 
     VkBufferImageCopy region{};
@@ -284,7 +284,7 @@ void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t 
     vkCmdCopyBufferToImage(tempCmd.cmdBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void TextureManager::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
+void TextureGroup::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
     VkFormatProperties formatProperties;
     vkGetPhysicalDeviceFormatProperties(vkDevice->physicalDevice, imageFormat, &formatProperties);
 
@@ -352,7 +352,7 @@ void TextureManager::generateMipmaps(VkImage image, VkFormat imageFormat, int32_
     vkCmdPipelineBarrier(tempCmd.cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void TextureManager::createDescriptorSets() {
+void TextureGroup::createDescriptorSets() {
     VkDevice device = vkDevice->device;
     VkPhysicalDeviceProperties deviceProps{};
     vkGetPhysicalDeviceProperties(vkDevice->physicalDevice, &deviceProps);

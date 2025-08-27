@@ -29,13 +29,13 @@ struct Material {
 };
 
 
-// MaterialManager - manages materials using index-based access
-class MaterialManager {
+// MaterialGroup - manages materials using index-based access
+class MaterialGroup {
 public:
-    MaterialManager(const AzVulk::Device* vkDevice);
+    MaterialGroup(const AzVulk::Device* vkDevice);
 
-    MaterialManager(const MaterialManager&) = delete;
-    MaterialManager& operator=(const MaterialManager&) = delete;
+    MaterialGroup(const MaterialGroup&) = delete;
+    MaterialGroup& operator=(const MaterialGroup&) = delete;
 
     const AzVulk::Device* vkDevice;
 

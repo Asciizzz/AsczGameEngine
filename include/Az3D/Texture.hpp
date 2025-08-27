@@ -30,11 +30,11 @@ struct Texture {
 };
 
 // Texture manager with Vulkan helpers
-class TextureManager {
+class TextureGroup {
 public:
 
-    TextureManager(const AzVulk::Device* device);
-    ~TextureManager();
+    TextureGroup(const AzVulk::Device* device);
+    ~TextureGroup();
 
     const AzVulk::Device* vkDevice;
     SharedPtrVec<Texture> textures;

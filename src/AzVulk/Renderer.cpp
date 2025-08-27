@@ -143,8 +143,8 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
 
 // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
 void Renderer::drawScene(RasterPipeline& rasterPipeline, ModelGroup& modelGroup) {
-    const Az3D::MaterialManager* matManager = resourceManager->materialManager.get();
-    const Az3D::TextureManager* texManager = resourceManager->textureManager.get();
+    const Az3D::MaterialGroup* matManager = resourceManager->materialManager.get();
+    const Az3D::TextureGroup* texManager = resourceManager->textureManager.get();
     const Az3D::MeshManager* meshManager = resourceManager->meshManager.get();
 
     VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);

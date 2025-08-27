@@ -38,8 +38,8 @@ public:
     UnorderedMap<std::string, size_t> meshNameToIndex;
 
     UniquePtr<MeshManager> meshManager;
-    UniquePtr<TextureManager> textureManager;
-    UniquePtr<MaterialManager> materialManager;
+    UniquePtr<TextureGroup> textureManager;
+    UniquePtr<MaterialGroup> materialManager;
 };
 
 } // namespace Az3D

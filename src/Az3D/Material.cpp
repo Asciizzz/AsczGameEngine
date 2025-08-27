@@ -6,17 +6,17 @@ using namespace AzVulk;
 
 namespace Az3D {
 
-MaterialManager::MaterialManager(const Device* vkDevice)
+MaterialGroup::MaterialGroup(const Device* vkDevice)
 : vkDevice(vkDevice) {
     materials.push_back(Material());
 }
 
-size_t MaterialManager::addMaterial(const Material& material) {
+size_t MaterialGroup::addMaterial(const Material& material) {
     materials.push_back(material);
     return materials.size() - 1;
 }
 
-void MaterialManager::createGPUBufferData() {
+void MaterialGroup::createGPUBufferData() {
     VkDevice device = vkDevice->device;
     VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
 
@@ -56,7 +56,7 @@ void MaterialManager::createGPUBufferData() {
 }
 
 // Descriptor set creation
-void MaterialManager::createDescriptorSets() {
+void MaterialGroup::createDescriptorSets() {
     VkDevice device = vkDevice->device;
 
     // --- create layout ---
@@ -107,7 +107,7 @@ void MaterialManager::createDescriptorSets() {
     dynamicDescriptor.set = descriptorSet;
 }
 
-void MaterialManager::uploadToGPU() {
+void MaterialGroup::uploadToGPU() {
     createGPUBufferData();
     createDescriptorSets();
 }

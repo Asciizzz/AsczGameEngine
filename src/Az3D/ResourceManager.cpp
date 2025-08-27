@@ -7,8 +7,8 @@ using namespace AzVulk;
 namespace Az3D {
 
 ResourceManager::ResourceManager(Device* vkDevice) {
-    textureManager = MakeUnique<TextureManager>(vkDevice);
-    materialManager = MakeUnique<MaterialManager>(vkDevice);
+    textureManager = MakeUnique<TextureGroup>(vkDevice);
+    materialManager = MakeUnique<MaterialGroup>(vkDevice);
     meshManager = MakeUnique<MeshManager>(vkDevice);
 }
 
