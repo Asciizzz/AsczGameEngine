@@ -153,7 +153,7 @@ void Application::initComponents() {
     RasterPipelineConfig skyConfig;
     skyConfig.renderPass = renderPass;
     skyConfig.msaaSamples = msaaManager->msaaSamples;
-    skyConfig.setLayouts = layouts;
+    skyConfig.setLayouts = {glbDesc.setLayout};
     skyConfig.vertexInputType = RasterPipelineConfig::VertexInputType::None;
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
