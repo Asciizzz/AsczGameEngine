@@ -2,7 +2,6 @@
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -46,8 +45,8 @@ struct VertexStatic {
 
     // Position on XYZ and Texture U on W
     // Normal on XYZ and Texture V on W
-    alignas(16) glm::vec4 pos_tu = glm::vec4(0.0f);
-    alignas(16) glm::vec4 nrml_tv = glm::vec4(0.0f);
+    glm::vec4 pos_tu = glm::vec4(0.0f);
+    glm::vec4 nrml_tv = glm::vec4(0.0f);
 
     VertexStatic() = default;
     VertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv) {

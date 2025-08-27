@@ -2,7 +2,6 @@
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include <glm/glm.hpp>
 
@@ -15,16 +14,16 @@ class Camera;
 
 struct GlobalUBO {
     // Camera matrices
-    alignas(16) glm::mat4 proj;
-    alignas(16) glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 view;
 
-    alignas(16) glm::vec4 prop1; // General purpose: <float time>, <unused>, <unused>, <unused>
+    glm::vec4 prop1; // General purpose: <float time>, <unused>, <unused>, <unused>
 
     // Remember to remove this in the future
-    alignas(16) glm::vec4 cameraPos;     // xyz = camera position, w = fov (radians)
-    alignas(16) glm::vec4 cameraForward; // xyz = camera forward, w = aspect ratio
-    alignas(16) glm::vec4 cameraRight;   // xyz = camera right, w = near
-    alignas(16) glm::vec4 cameraUp;      // xyz = camera up, w = far
+    glm::vec4 cameraPos;     // xyz = camera position, w = fov (radians)
+    glm::vec4 cameraForward; // xyz = camera forward, w = aspect ratio
+    glm::vec4 cameraRight;   // xyz = camera right, w = near
+    glm::vec4 cameraUp;      // xyz = camera up, w = far
 };
 
 

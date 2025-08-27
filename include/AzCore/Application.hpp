@@ -1,7 +1,5 @@
 #pragma once
 
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-
 #include "AzCore/AzCore.hpp"
 #include "AzVulk/AzVulk.hpp"
 #include "Az3D/Az3D.hpp"

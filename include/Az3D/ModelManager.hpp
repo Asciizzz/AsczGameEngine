@@ -1,7 +1,5 @@
 #pragma once
 
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-
 #include <string>
 #include <glm/glm.hpp>
 
@@ -14,9 +12,9 @@ namespace Az3D {
 struct ModelData {
     ModelData() = default;
 
-    alignas(16) glm::ivec4 properties = glm::ivec4(0); // <materialIndex>, <indicator>, <empty>, <empty>
-    alignas(16) glm::mat4 modelMatrix = glm::mat4(1.0f);
-    alignas(16) glm::vec4 multColor = glm::vec4(1.0f);
+    glm::ivec4 properties = glm::ivec4(0); // <materialIndex>, <indicator>, <empty>, <empty>
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    glm::vec4 multColor = glm::vec4(1.0f);
 
     // Vulkan-specific methods for vertex input
     static VkVertexInputBindingDescription getBindingDescription();
