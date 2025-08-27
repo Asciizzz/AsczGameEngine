@@ -26,11 +26,11 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
 layout(set = 2, binding = 0) uniform sampler2D textures[]; // runtime-sized array (descriptor indexing)
 
 layout(location = 0) in vec2 fragTxtr;
-layout(location = 1) in vec3 fragWorldNrml;
-layout(location = 2) in vec3 fragWorldPos;
-layout(location = 3) in vec4 fragInstanceColor;
-layout(location = 4) in float vertexLightFactor;
-layout(location = 5) in vec4 fragScreenPos;
+layout(location = 1) in vec3 fragWorldPos;
+layout(location = 2) in vec3 fragWorldNrml;
+layout(location = 3) in flat ivec4 fragProperties;
+layout(location = 4) in vec4 fragInstanceColor;
+layout(location = 5) in float vertexLightFactor;
 
 layout(location = 0) out vec4 outColor;
 
@@ -56,7 +56,7 @@ vec3 calculateSunDirection(float timeOfDay, float latitude) {
 }
 
 void main() {
-    Material material = materials[0];
+    Material material = materials[fragProperties.x];
 
     vec4 texColor = texture(textures[material.texIndices.x], fragTxtr);
 

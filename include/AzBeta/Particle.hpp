@@ -18,6 +18,7 @@ public:
     ~ParticleManager() = default;
 
     size_t modelHash = 0;
+    size_t materialIndex = 0;
 
     size_t particleCount = 0;
     std::vector<Az3D::Transform> particles; // Only store transforms, not full models
@@ -166,7 +167,7 @@ public:
         material.setShadingParams(0.0f, 0.0f, 0.0f, 0.0f);
         material.setAlbedoTextureIndex(textureIndex);
 
-        size_t materialIndex = resourceManager->addMaterial("Particle", material);
+        materialIndex = resourceManager->addMaterial("Particle", material);
 
         size_t meshIndex = resourceManager->addMesh("Particle", "Assets/Characters/Pearto.obj", false);
 
@@ -224,6 +225,7 @@ public:
             Data3D particleData;
             particleData.modelMatrix = particles[i].getMat4();
             particleData.multColor = glm::vec4(1.0f);
+            particleData.properties.x = static_cast<int>(materialIndex);
 
             particles_data[i] = particleData;
 
@@ -487,6 +489,8 @@ public:
             Data3D data;
             data.modelMatrix = particles[p].getMat4();
             data.multColor = glm::vec4(particleColor * 10.6f, 1.0f);
+            data.properties.x = static_cast<int>(materialIndex);
+
             particles_data[p] = data;
         });
 

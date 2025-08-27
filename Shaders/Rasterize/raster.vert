@@ -23,18 +23,19 @@ layout(location = 0) in vec3 inPos;
 layout(location = 1) in vec3 inNrml;
 layout(location = 2) in vec2 inTxtr;
 
-layout(location = 3) in vec4 modelRow0;  // Row 0: [m00, m01, m02, m03]
-layout(location = 4) in vec4 modelRow1;  // Row 1: [m10, m11, m12, m13]
-layout(location = 5) in vec4 modelRow2;  // Row 2: [m20, m21, m22, m23]
-layout(location = 6) in vec4 modelRow3;  // Row 3: [m30, m31, m32, m33]
-layout(location = 7) in vec4 instanceColor; // Instance color multiplier
+layout(location = 3) in ivec4 properties; // <materialIndex>, <indicator>, <empty>, <empty>
+layout(location = 4) in vec4 modelRow0;  // Row 0: [m00, m01, m02, m03]
+layout(location = 5) in vec4 modelRow1;  // Row 1: [m10, m11, m12, m13]
+layout(location = 6) in vec4 modelRow2;  // Row 2: [m20, m21, m22, m23]
+layout(location = 7) in vec4 modelRow3;  // Row 3: [m30, m31, m32, m33]
+layout(location = 8) in vec4 instanceColor; // Instance color multiplier
 
 layout(location = 0) out vec2 fragTxtr;
-layout(location = 1) out vec3 fragWorldNrml;
-layout(location = 2) out vec3 fragWorldPos;
-layout(location = 3) out vec4 fragInstanceColor;
-layout(location = 4) out float vertexLightFactor;  // Pre-computed lighting
-layout(location = 5) out vec4 fragScreenPos;  // Screen space position for depth sampling
+layout(location = 1) out vec3 fragWorldPos;
+layout(location = 2) out vec3 fragWorldNrml;
+layout(location = 3) out flat ivec4 fragProperties;
+layout(location = 4) out vec4 fragInstanceColor;
+layout(location = 5) out float vertexLightFactor;
 
 // Toon shading function (moved from fragment shader)
 float applyToonShading(float value, int toonLevel) {
@@ -62,7 +63,7 @@ void main() {
 
     gl_Position = glb.proj * glb.view * worldPos;
 
-    fragScreenPos = gl_Position;
+    fragProperties = properties;
 
     // Proper normal transformation that handles non-uniform scaling
     mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
@@ -74,7 +75,7 @@ void main() {
 
     // === MOVED LIGHTING COMPUTATION FROM FRAGMENT TO VERTEX ===
     // Unwrap material properties
-    Material material = materials[0];
+    Material material = materials[fragProperties.x];
     float shading = material.shadingParams.x;
     int toonLevel = int(material.shadingParams.y);
 

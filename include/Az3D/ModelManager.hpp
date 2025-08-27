@@ -11,15 +11,16 @@
 namespace Az3D {
 
 // Dynamic, per-frame object data
-struct ModelData {
+struct alignas(16) ModelData {
     ModelData() = default;
 
-    alignas(16) glm::mat4 modelMatrix = glm::mat4(1.0f);
-    alignas(16) glm::vec4 multColor = glm::vec4(1.0f);
+    glm::ivec4 properties = glm::ivec4(0); // <materialIndex>, <indicator>, <empty>, <empty>
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    glm::vec4 multColor = glm::vec4(1.0f);
 
     // Vulkan-specific methods for vertex input
     static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions();
 };
 
 

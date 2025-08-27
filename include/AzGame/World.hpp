@@ -81,6 +81,7 @@ namespace AzGame {
 
             Az3D::ModelData data;
             data.modelMatrix = trform.getMat4();
+            data.properties.x = static_cast<int>(materialIndex);
 
             worldModelGroup.addInstance(meshIndex, materialIndex, data);
         }

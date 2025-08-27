@@ -136,7 +136,7 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
 
     // Create material
     Az3D::Material grassMaterial;
-    grassMaterial.setShadingParams(true, 1, 0.5f, 0.9f);
+    grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
     grassMaterial.setAlbedoTextureIndex(resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", Texture::ClampToEdge));
 
     grassMaterialIndex = resourceManager.addMaterial("GrassMaterial", grassMaterial);
@@ -185,7 +185,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
 
     // Create material
     Az3D::Material grassMaterial;
-    grassMaterial.setShadingParams(true, 1, 0.5f, 0.9f);
+    grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
     grassMaterial.setAlbedoTextureIndex(resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png", Texture::ClampToEdge));
 
     grassMaterialIndex = resourceManager.addMaterial("GrassMaterial", grassMaterial);
@@ -326,6 +326,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 Data3D grassInstance;
                 grassInstance.modelMatrix = grassTrform.getMat4();
                 grassInstance.multColor = grassColor;
+                grassInstance.properties.x = grassMaterialIndex;
 
                 // Store wind properties
 
@@ -397,13 +398,14 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices, true);
 
     Material terrainMaterial;
-    terrainMaterial.setShadingParams(true, 0.0f, 0.2f, 0.0f);
+    terrainMaterial.setShadingParams(true, 0, 0.2f, 0.0f);
     terrainMaterialIndex = resManager.addMaterial("TerrainMaterial", terrainMaterial);
 
     // Create terrain instance
     Data3D terrainData;
     terrainData.modelMatrix = glm::mat4(1.0f);
     terrainData.multColor = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
+    terrainData.properties.x = terrainMaterialIndex;
 
     terrainData3Ds.push_back(terrainData);
 }

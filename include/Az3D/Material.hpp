@@ -11,9 +11,9 @@
 
 namespace Az3D {
 
-struct Material {
-    alignas(16) glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-    alignas(16) glm::ivec4 texIndices = glm::ivec4(0); // <albedo>, <empty>, <empty>, <empty>
+struct alignas(16) Material {
+    glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
+    glm::ivec4 texIndices = glm::ivec4(0); // <albedo>, <empty>, <empty>, <empty>
 
     Material() = default;
 
