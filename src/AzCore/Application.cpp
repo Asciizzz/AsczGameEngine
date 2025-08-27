@@ -86,12 +86,12 @@ void Application::initComponents() {
 
     // Set up advanced grass system with terrain generation
     AzGame::GrassConfig grassConfig;
-    grassConfig.worldSizeX = 270;
-    grassConfig.worldSizeZ = 270;
+    grassConfig.worldSizeX = 170;
+    grassConfig.worldSizeZ = 170;
     grassConfig.baseDensity = 6;
     grassConfig.heightVariance = 26.9f;
     grassConfig.lowVariance = 0.1f;
-    grassConfig.numHeightNodes = 1250;
+    grassConfig.numHeightNodes = 750;
     grassConfig.enableWind = true;
     grassConfig.falloffRadius = 25.0f;
     grassConfig.influenceFactor = 0.02f;
