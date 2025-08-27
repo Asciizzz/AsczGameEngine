@@ -29,23 +29,23 @@ void RasterPipeline::create() {
     std::array<VkVertexInputBindingDescription, 2> bindings;
     std::vector<VkVertexInputAttributeDescription> attrs;
 
+    
+    auto vstaticBind   = Az3D::VertexStatic::getBindingDescription();
+    auto vstaticAttrs  = Az3D::VertexStatic::getAttributeDescriptions();
+    auto vskinnedBind  = Az3D::VertexSkinned::getBindingDescription();
+    auto vskinnedAttrs = Az3D::VertexSkinned::getAttributeDescriptions();
+    auto instanceBind  = Az3D::ModelData::getBindingDescription();
+    auto instanceAttrs = Az3D::ModelData::getAttributeDescriptions();
+
     switch (cfg.vertexInputType) {
     case RasterPipelineConfig::VertexInputType::None:
-        vin.vertexBindingDescriptionCount   = 0;
-        vin.pVertexBindingDescriptions      = nullptr;
-        vin.vertexAttributeDescriptionCount = 0;
-        vin.pVertexAttributeDescriptions    = nullptr;
+    default:
         break;
 
     case RasterPipelineConfig::VertexInputType::Static:
-        auto vBind  = Az3D::VertexStatic::getBindingDescription();
-        auto vAttrs = Az3D::VertexStatic::getAttributeDescriptions();
-        auto iBind  = Az3D::ModelData::getBindingDescription();
-        auto iAttrs = Az3D::ModelData::getAttributeDescriptions();
-
-        bindings = { vBind, iBind };
-        attrs.insert(attrs.end(), vAttrs.begin(), vAttrs.end());
-        attrs.insert(attrs.end(), iAttrs.begin(), iAttrs.end());
+        bindings = { vstaticBind, instanceBind };
+        attrs.insert(attrs.end(), vstaticAttrs.begin(), vstaticAttrs.end());
+        attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
 
         vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
         vin.pVertexBindingDescriptions      = bindings.data();
@@ -54,7 +54,14 @@ void RasterPipeline::create() {
         break;
 
     case RasterPipelineConfig::VertexInputType::Skinned:
-        // Handle skinned vertex input in the future
+        bindings = { vskinnedBind, instanceBind };
+        attrs.insert(attrs.end(), vskinnedAttrs.begin(), vskinnedAttrs.end());
+        attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
+
+        vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
+        vin.pVertexBindingDescriptions      = bindings.data();
+        vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+        vin.pVertexAttributeDescriptions    = attrs.data();
         break;
     }
 
