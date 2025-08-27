@@ -47,10 +47,9 @@ namespace AzVulk {
 
         template<typename T>
         void uploadData(const T* data) {
-            vkMapMemory(vkDevice->device, memory, 0, dataSize, 0, &mapped);
+            mapMemory();
             memcpy(mapped, data, dataSize);
-            vkUnmapMemory(vkDevice->device, memory);
-            mapped = nullptr;
+            unmapMemory();
         }
 
         void mapMemory() {
@@ -58,6 +57,7 @@ namespace AzVulk {
         }
         void unmapMemory() {
             if (mapped) vkUnmapMemory(vkDevice->device, memory);
+            mapped = nullptr;
         }
 
         template<typename T>
@@ -69,6 +69,13 @@ namespace AzVulk {
         template<typename T>
         void updateMapped(size_t index, const T& value) {
             static_cast<T*>(mapped)[index] = value;
+        }
+
+        template<typename T>
+        void updateSingle(size_t index, const T& value) {
+            mapMemory();
+            static_cast<T*>(mapped)[index] = value;
+            unmapMemory();
         }
     };
 
