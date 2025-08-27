@@ -76,21 +76,12 @@ VkVertexInputBindingDescription VertexStatic::getBindingDescription() {
 }
 
 std::array<VkVertexInputAttributeDescription, 2> VertexStatic::getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+    std::array<VkVertexInputAttributeDescription, 2> attribs{};
 
-    // Position and texture u
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(VertexStatic, pos_tu);
+    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, pos_tu)};
+    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, nrml_tv)};
 
-    // Normal and texture v
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(VertexStatic, nrml_tv);
-
-    return attributeDescriptions;
+    return attribs;
 }
 
 
@@ -120,33 +111,14 @@ VkVertexInputBindingDescription VertexSkinned::getBindingDescription() {
 }
 
 std::array<VkVertexInputAttributeDescription, 4> VertexSkinned::getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
+    std::array<VkVertexInputAttributeDescription, 4> attribs{};
 
-    // Position and texture u
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(VertexSkinned, pos_tu);
+    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, pos_tu)};
+    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, nrml_tv)};
+    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SINT,   offsetof(VertexSkinned, boneIDs)};
+    attribs[3] = {3, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, weights)};
 
-    // Normal and texture v
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(VertexSkinned, nrml_tv);
-
-    // Bone IDs
-    attributeDescriptions[2].binding = 0;
-    attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VK_FORMAT_R32G32B32A32_SINT;
-    attributeDescriptions[2].offset = offsetof(VertexSkinned, boneIDs);
-
-    // Weights
-    attributeDescriptions[3].binding = 0;
-    attributeDescriptions[3].location = 3;
-    attributeDescriptions[3].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    attributeDescriptions[3].offset = offsetof(VertexSkinned, weights);
-
-    return attributeDescriptions;
+    return attribs;
 }
 
 } // namespace Az3D
