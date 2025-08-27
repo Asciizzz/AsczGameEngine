@@ -52,34 +52,34 @@ void Transform::reset() {
 
 // Vertex implementation
 
-VkVertexInputBindingDescription Vertex::getBindingDescription() {
+VkVertexInputBindingDescription VertexStatic::getBindingDescription() {
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
+    bindingDescription.stride = sizeof(VertexStatic);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     return bindingDescription;
 }
 
-std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions() {
+std::array<VkVertexInputAttributeDescription, 3> VertexStatic::getAttributeDescriptions() {
     std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
 
     // Position attribute (location 0)
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(Vertex, pos);
+    attributeDescriptions[0].offset = offsetof(VertexStatic, pos);
 
     // Normal attribute (location 1)
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Vertex, nrml);
+    attributeDescriptions[1].offset = offsetof(VertexStatic, nrml);
 
     // Texture coordinate attribute (location 2)
     attributeDescriptions[2].binding = 0;
     attributeDescriptions[2].location = 2;
     attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[2].offset = offsetof(Vertex, txtr);
+    attributeDescriptions[2].offset = offsetof(VertexStatic, txtr);
 
     return attributeDescriptions;
 }

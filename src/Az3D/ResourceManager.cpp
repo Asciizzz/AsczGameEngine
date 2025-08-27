@@ -25,15 +25,6 @@ size_t ResourceManager::addMaterial(std::string name, const Material& material) 
     return index;
 }
 
-size_t ResourceManager::addMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, bool hasBVH) {
-    auto newMesh = MakeShared<Mesh>(std::move(vertices), std::move(indices));
-    if (hasBVH) newMesh->createBVH();
-
-    size_t index = meshManager->addMesh(newMesh);
-    meshNameToIndex[name] = index;
-    return index;
-}
-
 size_t ResourceManager::addMesh(std::string name, SharedPtr<Mesh> mesh, bool hasBVH) {
     if (hasBVH) mesh->createBVH();
 

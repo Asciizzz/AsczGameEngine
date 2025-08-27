@@ -20,7 +20,6 @@ public:
                     Texture::Mode addressMode = Texture::Repeat);
     size_t addMaterial(std::string name, const Material& material);
 
-    size_t addMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, bool hasBVH = false);
     size_t addMesh(std::string name, SharedPtr<Mesh> mesh, bool hasBVH = false);
     size_t addMesh(std::string name, std::string filePath, bool hasBVH = false);
 

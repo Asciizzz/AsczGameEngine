@@ -45,11 +45,11 @@ struct Mesh {
     Mesh& operator=(const Mesh&) = delete;
 
     Mesh() = default;
-    Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
+    Mesh(std::vector<VertexStatic> vertices, std::vector<uint32_t> indices)
         : vertices(std::move(vertices)), indices(std::move(indices)) {}
 
     // Mesh data
-    std::vector<Vertex> vertices;
+    std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
     static SharedPtr<Mesh> loadFromOBJ(std::string filePath);
 
@@ -91,7 +91,7 @@ public:
     MeshManager& operator=(const MeshManager&) = delete;
 
     size_t addMesh(SharedPtr<Mesh> mesh);
-    size_t addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+    size_t addMesh(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices);
     size_t loadFromOBJ(std::string filePath);
 
     // Index-based mesh storage

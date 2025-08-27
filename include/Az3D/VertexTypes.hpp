@@ -15,20 +15,6 @@ struct VkVertexInputAttributeDescription;
 
 namespace Az3D {
 
-struct Vertex {
-    glm::vec3 pos;
-    glm::vec3 nrml;
-    glm::vec2 txtr;
-
-    Vertex() : pos(0.0f), nrml(0.0f), txtr(0.0f) {}
-    Vertex(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texCoord)
-        : pos(position), nrml(normal), txtr(texCoord) {}
-
-    // Vulkan binding description for rendering
-    static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
-};
-
 // Transform structure
 struct Transform {
     glm::vec3 pos{0.0f};
@@ -52,6 +38,21 @@ struct Transform {
         glm::quat rotation = glm::angleAxis(angle, axis);
         return rotation * point;
     }
+};
+
+
+struct VertexStatic {
+    glm::vec3 pos;
+    glm::vec3 nrml;
+    glm::vec2 txtr;
+
+    VertexStatic() : pos(0.0f), nrml(0.0f), txtr(0.0f) {}
+    VertexStatic(const glm::vec3& position, const glm::vec3& normal, const glm::vec2& texCoord)
+        : pos(position), nrml(normal), txtr(texCoord) {}
+
+    // Vulkan binding description for rendering
+    static VkVertexInputBindingDescription getBindingDescription();
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
 };
 
 }

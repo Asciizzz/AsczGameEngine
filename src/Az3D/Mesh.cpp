@@ -15,7 +15,7 @@ size_t MeshManager::addMesh(SharedPtr<Mesh> mesh) {
     meshes.push_back(mesh);
     return count++;
 }
-size_t MeshManager::addMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
+size_t MeshManager::addMesh(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices) {
     auto mesh = MakeShared<Mesh>(std::move(vertices), std::move(indices));
     return addMesh(mesh);
 }
@@ -29,7 +29,7 @@ void Mesh::createDeviceBuffer(const Device* vkDevice) {
     BufferData vertexStagingBuffer;
     vertexStagingBuffer.initVkDevice(vkDevice);
     vertexStagingBuffer.setProperties(
-        vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        vertices.size() * sizeof(VertexStatic), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
     vertexStagingBuffer.createBuffer();
@@ -37,7 +37,7 @@ void Mesh::createDeviceBuffer(const Device* vkDevice) {
 
     vertexBufferData.initVkDevice(vkDevice);
     vertexBufferData.setProperties(
-        vertices.size() * sizeof(Vertex),
+        vertices.size() * sizeof(VertexStatic),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
@@ -48,7 +48,7 @@ void Mesh::createDeviceBuffer(const Device* vkDevice) {
     VkBufferCopy vertexCopyRegion{};
     vertexCopyRegion.srcOffset = 0;
     vertexCopyRegion.dstOffset = 0;
-    vertexCopyRegion.size = vertices.size() * sizeof(Vertex);
+    vertexCopyRegion.size = vertices.size() * sizeof(VertexStatic);
 
     vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vertexBufferData.buffer, 1, &vertexCopyRegion);
     vertexBufferData.hostVisible = false;
@@ -98,7 +98,7 @@ SharedPtr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
         return nullptr;
     }
 
-    std::vector<Vertex> vertices;
+    std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
     UnorderedMap<size_t, uint32_t> uniqueVertices;
 
@@ -108,7 +108,7 @@ SharedPtr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
     };
 
     // Full-attribute hash (position + normal + texcoord)
-    auto hashVertex = [&](const Vertex& v) -> size_t {
+    auto hashVertex = [&](const VertexStatic& v) -> size_t {
         size_t seed = 0;
         hash_combine(seed, std::hash<float>{}(v.pos.x));
         hash_combine(seed, std::hash<float>{}(v.pos.y));
@@ -125,11 +125,11 @@ SharedPtr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
 
     for (const auto& shape : shapes) {
         for (size_t f = 0; f < shape.mesh.indices.size(); f += 3) {
-            std::array<Vertex, 3> triangle;
+            std::array<VertexStatic, 3> triangle;
 
             for (int v = 0; v < 3; v++) {
                 const auto& index = shape.mesh.indices[f + v];
-                Vertex& vertex = triangle[v];
+                VertexStatic& vertex = triangle[v];
 
                 // Position
                 if (index.vertex_index >= 0) {

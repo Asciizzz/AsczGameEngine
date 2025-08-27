@@ -19,7 +19,7 @@ struct ResourceManager;
 struct MeshManager;
 
 struct Transform;
-struct Vertex;
+struct VertexStatic;
 }
 
 namespace AzVulk {

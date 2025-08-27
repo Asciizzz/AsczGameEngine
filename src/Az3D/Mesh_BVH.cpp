@@ -372,9 +372,9 @@ HitInfo Mesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, co
     size_t idx2 = indices[hitIdx * 3 + 2];
     
     // Retrieve the hit normal
-    const Vertex& vrtx0 = vertices[idx0];
-    const Vertex& vrtx1 = vertices[idx1];
-    const Vertex& vrtx2 = vertices[idx2];
+    const VertexStatic& vrtx0 = vertices[idx0];
+    const VertexStatic& vrtx1 = vertices[idx1];
+    const VertexStatic& vrtx2 = vertices[idx2];
     hit.nrml =  vrtx0.nrml * hit.prop.x +
                 vrtx1.nrml * hit.prop.y +
                 vrtx2.nrml * (1.0f - hit.prop.x - hit.prop.y);

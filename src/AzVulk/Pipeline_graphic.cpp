@@ -29,9 +29,38 @@ void GraphicsPipeline::create() {
     std::array<VkVertexInputBindingDescription, 2> bindings;
     std::vector<VkVertexInputAttributeDescription> attrs;
 
-    if (cfg.hasVertexInput) {
-        auto vBind  = Az3D::Vertex::getBindingDescription();
-        auto vAttrs = Az3D::Vertex::getAttributeDescriptions();
+    // if (cfg.hasVertexInput) {
+    //     auto vBind  = Az3D::VertexStatic::getBindingDescription();
+    //     auto vAttrs = Az3D::VertexStatic::getAttributeDescriptions();
+    //     auto iBind  = Az3D::ModelData::getBindingDescription();
+    //     auto iAttrs = Az3D::ModelData::getAttributeDescriptions();
+
+    //     bindings = { vBind, iBind };
+    //     attrs.insert(attrs.end(), vAttrs.begin(), vAttrs.end());
+    //     attrs.insert(attrs.end(), iAttrs.begin(), iAttrs.end());
+
+    //     vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
+    //     vin.pVertexBindingDescriptions      = bindings.data();
+    //     vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+    //     vin.pVertexAttributeDescriptions    = attrs.data();
+    // } else {
+    //     vin.vertexBindingDescriptionCount   = 0;
+    //     vin.pVertexBindingDescriptions      = nullptr;
+    //     vin.vertexAttributeDescriptionCount = 0;
+    //     vin.pVertexAttributeDescriptions    = nullptr;
+    // }
+
+    switch (cfg.vertexInputType) {
+    case RasterPipelineConfig::VertexInputType::None:
+        vin.vertexBindingDescriptionCount   = 0;
+        vin.pVertexBindingDescriptions      = nullptr;
+        vin.vertexAttributeDescriptionCount = 0;
+        vin.pVertexAttributeDescriptions    = nullptr;
+        break;
+
+    case RasterPipelineConfig::VertexInputType::Static:
+        auto vBind  = Az3D::VertexStatic::getBindingDescription();
+        auto vAttrs = Az3D::VertexStatic::getAttributeDescriptions();
         auto iBind  = Az3D::ModelData::getBindingDescription();
         auto iAttrs = Az3D::ModelData::getAttributeDescriptions();
 
@@ -43,11 +72,11 @@ void GraphicsPipeline::create() {
         vin.pVertexBindingDescriptions      = bindings.data();
         vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
         vin.pVertexAttributeDescriptions    = attrs.data();
-    } else {
-        vin.vertexBindingDescriptionCount   = 0;
-        vin.pVertexBindingDescriptions      = nullptr;
-        vin.vertexAttributeDescriptionCount = 0;
-        vin.pVertexAttributeDescriptions    = nullptr;
+        break;
+
+    case RasterPipelineConfig::VertexInputType::Skinned:
+        // Handle skinned vertex input in the future
+        break;
     }
 
     VkPipelineInputAssemblyStateCreateInfo ia{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };

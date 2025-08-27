@@ -108,7 +108,7 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
     glm::vec3 g_pos11 = Transform::rotate(g_pos3, g_normal, glm::radians(240.0f));
     glm::vec3 g_pos12 = Transform::rotate(g_pos4, g_normal, glm::radians(240.0f));
 
-    std::vector<Vertex> grassVertices = {
+    std::vector<VertexStatic> grassVertices = {
         {g_pos1, g_normal, g_uv01},
         {g_pos2, g_normal, g_uv11},
         {g_pos3, g_normal, g_uv10},
@@ -132,7 +132,8 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
     };
 
     // Create mesh
-    grassMeshIndex = resourceManager.addMesh("GrassMesh", grassVertices, grassIndices);
+    SharedPtr<Mesh> grassMesh = MakeShared<Mesh>(std::move(grassVertices), std::move(grassIndices));
+    grassMeshIndex = resourceManager.addMesh("GrassMesh", grassMesh);
 
     // Create material
     Az3D::Material grassMaterial;
@@ -163,7 +164,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
     glm::vec3 g_pos7 = Transform::rotate(g_pos3, g_normal, glm::radians(90.0f));
     glm::vec3 g_pos8 = Transform::rotate(g_pos4, g_normal, glm::radians(90.0f));
 
-    std::vector<Vertex> grassVertices = {
+    std::vector<VertexStatic> grassVertices = {
         {g_pos1, g_normal, g_uv01},
         {g_pos2, g_normal, g_uv11},
         {g_pos3, g_normal, g_uv10},
@@ -181,7 +182,8 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
     };
 
     // Create mesh
-    grassMeshIndex = resourceManager.addMesh("GrassMesh", grassVertices, grassIndices);
+    SharedPtr<Mesh> grassMesh = MakeShared<Mesh>(std::move(grassVertices), std::move(grassIndices));
+    grassMeshIndex = resourceManager.addMesh("GrassMesh", grassMesh);
 
     // Create material
     Az3D::Material grassMaterial;
@@ -343,7 +345,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
 }
 
 void Grass::generateTerrainMesh(ResourceManager& resManager) {
-    std::vector<Vertex> terrainVertices;
+    std::vector<VertexStatic> terrainVertices;
     std::vector<uint32_t> terrainIndices;
 
     // Generate vertices
@@ -372,7 +374,7 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
             glm::vec2 uv(static_cast<float>(x) / (config.worldSizeX - 1), 
                         static_cast<float>(z) / (config.worldSizeZ - 1));
 
-            terrainVertices.push_back({glm::vec3(worldX, worldY, worldZ), normal, uv});
+            terrainVertices.push_back(VertexStatic{glm::vec3(worldX, worldY, worldZ), normal, uv});
         }
     }
     
@@ -395,7 +397,9 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     }
     
     // Create terrain mesh and material
-    terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainVertices, terrainIndices, true);
+    SharedPtr<Mesh> terrainMesh = MakeShared<Mesh>(std::move(terrainVertices), std::move(terrainIndices));
+
+    terrainMeshIndex = resManager.addMesh("TerrainMesh", terrainMesh, true);
 
     Material terrainMaterial;
     terrainMaterial.setShadingParams(true, 0, 0.2f, 0.0f);

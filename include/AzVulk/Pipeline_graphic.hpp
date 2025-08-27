@@ -11,7 +11,11 @@ struct RasterPipelineConfig {
     std::vector<VkDescriptorSetLayout> setLayouts;
 
     // special
-    bool hasVertexInput = true;
+    enum class VertexInputType {
+        None = 0,
+        Static = 1,
+        Skinned = 2
+    } vertexInputType = VertexInputType::Static;
 
     // defaults
     VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
