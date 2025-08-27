@@ -140,7 +140,7 @@ void Application::initComponents() {
 
     LayoutVec layouts = {glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout};
 
-    RasterPipelineConfig opaqueConfig;
+    RasterCfg opaqueConfig;
     opaqueConfig.renderPass = renderPass;
     opaqueConfig.msaaSamples = msaaManager->msaaSamples;
     opaqueConfig.setLayouts = layouts;
@@ -150,11 +150,11 @@ void Application::initComponents() {
     opaquePipeline = MakeUnique<RasterPipeline>(device, opaqueConfig);
     opaquePipeline->create();
 
-    RasterPipelineConfig skyConfig;
+    RasterCfg skyConfig;
     skyConfig.renderPass = renderPass;
     skyConfig.msaaSamples = msaaManager->msaaSamples;
     skyConfig.setLayouts = {glbDesc.setLayout};
-    skyConfig.vertexInputType = RasterPipelineConfig::VertexInputType::None;
+    skyConfig.vertexInputType = RasterCfg::VertexInputType::None;
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
     skyConfig.cullMode = VK_CULL_MODE_NONE;           // No culling for fullscreen quad

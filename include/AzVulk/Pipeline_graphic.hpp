@@ -4,7 +4,7 @@
 
 namespace AzVulk {
 
-struct RasterPipelineConfig {
+struct RasterCfg {
     // external
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -44,7 +44,7 @@ struct RasterPipelineConfig {
 
 class RasterPipeline : public BasePipeline {
 public:
-    RasterPipeline(VkDevice device, RasterPipelineConfig cfg)
+    RasterPipeline(VkDevice device, RasterCfg cfg)
         : BasePipeline(device), cfg(std::move(cfg)) {}
 
     void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
@@ -57,7 +57,7 @@ public:
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     }
 
-    RasterPipelineConfig cfg;
+    RasterCfg cfg;
 };
 
 } // namespace AzVulk

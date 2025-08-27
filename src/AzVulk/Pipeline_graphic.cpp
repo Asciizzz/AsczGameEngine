@@ -38,11 +38,11 @@ void RasterPipeline::create() {
     auto instanceAttrs = Az3D::ModelData::getAttributeDescriptions();
 
     switch (cfg.vertexInputType) {
-    case RasterPipelineConfig::VertexInputType::None:
+    case RasterCfg::VertexInputType::None:
     default:
         break;
 
-    case RasterPipelineConfig::VertexInputType::Static:
+    case RasterCfg::VertexInputType::Static:
         bindings = { vstaticBind, instanceBind };
         attrs.insert(attrs.end(), vstaticAttrs.begin(), vstaticAttrs.end());
         attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
@@ -53,7 +53,7 @@ void RasterPipeline::create() {
         vin.pVertexAttributeDescriptions    = attrs.data();
         break;
 
-    case RasterPipelineConfig::VertexInputType::Skinned:
+    case RasterCfg::VertexInputType::Skinned:
         bindings = { vskinnedBind, instanceBind };
         attrs.insert(attrs.end(), vskinnedAttrs.begin(), vskinnedAttrs.end());
         attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
