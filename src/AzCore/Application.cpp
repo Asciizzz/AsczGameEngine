@@ -147,7 +147,7 @@ void Application::initComponents() {
     opaqueConfig.vertPath = "Shaders/Rasterize/raster.vert.spv";
     opaqueConfig.fragPath = "Shaders/Rasterize/raster.frag.spv";
 
-    opaquePipeline = MakeUnique<GraphicsPipeline>(device, opaqueConfig);
+    opaquePipeline = MakeUnique<RasterPipeline>(device, opaqueConfig);
     opaquePipeline->create();
 
     RasterPipelineConfig skyConfig;
@@ -163,7 +163,7 @@ void Application::initComponents() {
     skyConfig.depthCompareOp = VK_COMPARE_OP_ALWAYS;  // Always pass depth test
     skyConfig.blendEnable = VK_FALSE;                 // No blending needed
 
-    skyPipeline = MakeUnique<GraphicsPipeline>(device, skyConfig);
+    skyPipeline = MakeUnique<RasterPipeline>(device, skyConfig);
     skyPipeline->create();
 
 }

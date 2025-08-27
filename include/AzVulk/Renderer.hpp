@@ -23,10 +23,10 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         // Introduction
-        uint32_t beginFrame(GraphicsPipeline& pipeline, Az3D::GlobalUBO& globalUBO);
+        uint32_t beginFrame(RasterPipeline& pipeline, Az3D::GlobalUBO& globalUBO);
         // Body
-        void drawScene(GraphicsPipeline& pipeline, Az3D::ModelGroup& modelGroup);
-        void drawSky(GraphicsPipeline& skyPipeline);
+        void drawScene(RasterPipeline& pipeline, Az3D::ModelGroup& modelGroup);
+        void drawSky(RasterPipeline& skyPipeline);
         // Conclusion
         void endFrame(uint32_t imageIndex);
         // Thank's for attending my Ted-Talk

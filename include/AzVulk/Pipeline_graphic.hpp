@@ -1,4 +1,4 @@
-// GraphicsPipeline.hpp
+// RasterPipeline.hpp
 #pragma once
 #include "AzVulk/Pipeline_base.hpp"
 
@@ -42,9 +42,9 @@ struct RasterPipelineConfig {
     std::string fragPath;
 };
 
-class GraphicsPipeline : public BasePipeline {
+class RasterPipeline : public BasePipeline {
 public:
-    GraphicsPipeline(VkDevice device, RasterPipelineConfig cfg)
+    RasterPipeline(VkDevice device, RasterPipelineConfig cfg)
         : BasePipeline(device), cfg(std::move(cfg)) {}
 
     void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }

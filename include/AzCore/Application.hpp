@@ -39,8 +39,8 @@ private:
     // Render pass - shared between pipelines
     UniquePtr<AzVulk::RenderPass> mainRenderPass;
     
-    UniquePtr<AzVulk::GraphicsPipeline> opaquePipeline;
-    UniquePtr<AzVulk::GraphicsPipeline> skyPipeline; // Beta, very inefficient, yet really amazing looking
+    UniquePtr<AzVulk::RasterPipeline> opaquePipeline;
+    UniquePtr<AzVulk::RasterPipeline> skyPipeline; // Beta, very inefficient, yet really amazing looking
 
     // More Vulkan ceremony
     UniquePtr<AzVulk::DepthManager> depthManager;

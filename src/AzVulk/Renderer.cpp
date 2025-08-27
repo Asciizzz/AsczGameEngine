@@ -80,7 +80,7 @@ void Renderer::createSyncObjects() {
 }
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
-uint32_t Renderer::beginFrame(GraphicsPipeline& gPipeline, GlobalUBO& globalUBO) {
+uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
     vkWaitForFences(vkDevice->device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex = UINT32_MAX;
@@ -142,7 +142,7 @@ uint32_t Renderer::beginFrame(GraphicsPipeline& gPipeline, GlobalUBO& globalUBO)
 }
 
 // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
-void Renderer::drawScene(GraphicsPipeline& gPipeline, ModelGroup& modelGroup) {
+void Renderer::drawScene(RasterPipeline& rasterPipeline, ModelGroup& modelGroup) {
     const Az3D::MaterialManager* matManager = resourceManager->materialManager.get();
     const Az3D::TextureManager* texManager = resourceManager->textureManager.get();
     const Az3D::MeshManager* meshManager = resourceManager->meshManager.get();
@@ -151,7 +151,7 @@ void Renderer::drawScene(GraphicsPipeline& gPipeline, ModelGroup& modelGroup) {
 
     // Bind pipeline once
     // vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
-    gPipeline.bind(commandBuffers[currentFrame]);
+    rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind descriptor sets once
     VkDescriptorSet materialSet = matManager->getDescriptorSet();
@@ -159,7 +159,7 @@ void Renderer::drawScene(GraphicsPipeline& gPipeline, ModelGroup& modelGroup) {
 
     std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            gPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
+                            rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
     for (auto& [hash, mapData] : modelGroup.modelMapping) {
         uint32_t instanceCount = static_cast<uint32_t>(mapData.datas.size());
@@ -196,7 +196,7 @@ void Renderer::drawScene(GraphicsPipeline& gPipeline, ModelGroup& modelGroup) {
 }
 
 // Sky rendering using dedicated sky pipeline
-void Renderer::drawSky(GraphicsPipeline& gPipeline) {
+void Renderer::drawSky(RasterPipeline& rasterPipeline) {
     // return;
     /* 
     Dont worry about the validation warning too much, since the sky is sharing the same shader
@@ -205,12 +205,12 @@ void Renderer::drawSky(GraphicsPipeline& gPipeline) {
     */
 
     // Bind sky pipeline
-    gPipeline.bind(commandBuffers[currentFrame]);
+    rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind only the global descriptor set (set 0) for sky
     VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            gPipeline.layout, 0, 1, &globalSet, 0, nullptr);
+                            rasterPipeline.layout, 0, 1, &globalSet, 0, nullptr);
 
     // Draw fullscreen triangle (3 vertices, no input)
     vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);

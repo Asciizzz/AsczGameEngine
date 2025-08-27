@@ -1,4 +1,4 @@
-// GraphicsPipeline.cpp
+// RasterPipeline.cpp
 #include "AzVulk/Pipeline_graphic.hpp"
 #include "Az3D/Az3D.hpp"
 
@@ -7,7 +7,7 @@
 
 using namespace AzVulk;
 
-void GraphicsPipeline::create() {
+void RasterPipeline::create() {
     // 1) Shader modules
     auto vertCode = readFile(cfg.vertPath);
     auto fragCode = readFile(cfg.fragPath);
@@ -28,27 +28,6 @@ void GraphicsPipeline::create() {
     VkPipelineVertexInputStateCreateInfo vin{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
     std::array<VkVertexInputBindingDescription, 2> bindings;
     std::vector<VkVertexInputAttributeDescription> attrs;
-
-    // if (cfg.hasVertexInput) {
-    //     auto vBind  = Az3D::VertexStatic::getBindingDescription();
-    //     auto vAttrs = Az3D::VertexStatic::getAttributeDescriptions();
-    //     auto iBind  = Az3D::ModelData::getBindingDescription();
-    //     auto iAttrs = Az3D::ModelData::getAttributeDescriptions();
-
-    //     bindings = { vBind, iBind };
-    //     attrs.insert(attrs.end(), vAttrs.begin(), vAttrs.end());
-    //     attrs.insert(attrs.end(), iAttrs.begin(), iAttrs.end());
-
-    //     vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
-    //     vin.pVertexBindingDescriptions      = bindings.data();
-    //     vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-    //     vin.pVertexAttributeDescriptions    = attrs.data();
-    // } else {
-    //     vin.vertexBindingDescriptionCount   = 0;
-    //     vin.pVertexBindingDescriptions      = nullptr;
-    //     vin.vertexAttributeDescriptionCount = 0;
-    //     vin.pVertexAttributeDescriptions    = nullptr;
-    // }
 
     switch (cfg.vertexInputType) {
     case RasterPipelineConfig::VertexInputType::None:
