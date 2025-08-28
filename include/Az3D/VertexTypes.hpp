@@ -74,7 +74,7 @@ struct VertexSkinned {
     glm::vec4 pos_tu = glm::vec4(0.0f);
     glm::vec4 nrml_tv = glm::vec4(0.0f);
 
-    glm::ivec4 boneIDs = glm::ivec4(0);
+    glm::uvec4 boneIDs = glm::uvec4(0);
     glm::vec4 weights = glm::vec4(0.0f);
 
     VertexSkinned() = default;

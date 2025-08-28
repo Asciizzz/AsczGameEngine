@@ -13,7 +13,7 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 
 struct Material {
     vec4 shadingParams;
-    ivec4 texIndices;
+    uvec4 texIndices;
 };
 
 layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
@@ -28,7 +28,7 @@ layout(set = 2, binding = 0) uniform sampler2D textures[]; // runtime-sized arra
 layout(location = 0) in vec2 fragTxtr;
 layout(location = 1) in vec3 fragWorldPos;
 layout(location = 2) in vec3 fragWorldNrml;
-layout(location = 3) in flat ivec4 fragProperties;
+layout(location = 3) in flat uvec4 fragProperties;
 layout(location = 4) in vec4 fragInstanceColor;
 layout(location = 5) in float vertexLightFactor;
 

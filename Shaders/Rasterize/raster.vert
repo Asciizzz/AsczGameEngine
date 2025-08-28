@@ -12,7 +12,7 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 
 struct Material {
     vec4 shadingParams;
-    ivec4 texIndices;
+    uvec4 texIndices;
 };
 
 layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
@@ -22,7 +22,7 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
 layout(location = 0) in vec4 inPos_Tu;
 layout(location = 1) in vec4 inNrml_Tv;
 
-layout(location = 2) in ivec4 properties; // <materialIndex>, <indicator>, <empty>, <empty>
+layout(location = 2) in uvec4 properties; // <materialIndex>, <indicator>, <empty>, <empty>
 layout(location = 3) in vec4 modelRow0;  // Row 0: [m00, m01, m02, m03]
 layout(location = 4) in vec4 modelRow1;  // Row 1: [m10, m11, m12, m13]
 layout(location = 5) in vec4 modelRow2;  // Row 2: [m20, m21, m22, m23]
@@ -32,7 +32,7 @@ layout(location = 7) in vec4 instanceColor; // Instance color multiplier
 layout(location = 0) out vec2 fragTxtr;
 layout(location = 1) out vec3 fragWorldPos;
 layout(location = 2) out vec3 fragWorldNrml;
-layout(location = 3) out flat ivec4 fragProperties;
+layout(location = 3) out flat uvec4 fragProperties;
 layout(location = 4) out vec4 fragInstanceColor;
 layout(location = 5) out float vertexLightFactor;
 

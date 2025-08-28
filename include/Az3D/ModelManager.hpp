@@ -12,7 +12,7 @@ namespace Az3D {
 struct ModelData {
     ModelData() = default;
 
-    glm::ivec4 properties = glm::ivec4(0); // <materialIndex>, <indicator>, <empty>, <empty>
+    glm::uvec4 properties = glm::uvec4(0); // <materialIndex>, <indicator>, <empty>, <empty>
     glm::mat4 modelMatrix = glm::mat4(1.0f);
     glm::vec4 multColor = glm::vec4(1.0f);
 
