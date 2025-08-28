@@ -28,7 +28,7 @@ public:
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
     size_t getMaterialIndex(std::string name) const;
-    size_t getMeshIndex(std::string name) const;
+    size_t getMeshStaticIndex(std::string name) const;
 
     MeshStatic* getMeshStatic(std::string name) const;
     Material* getMaterial(std::string name) const;
@@ -37,11 +37,11 @@ public:
     // String-to-index maps
     UnorderedMap<std::string, size_t> textureNameToIndex;
     UnorderedMap<std::string, size_t> materialNameToIndex;
-    UnorderedMap<std::string, size_t> meshNameToIndex;
+    UnorderedMap<std::string, size_t> meshStaticNameToIndex;
 
-    UniquePtr<MeshStaticGroup> meshManager;
-    UniquePtr<TextureGroup> textureManager;
-    UniquePtr<MaterialGroup> materialManager;
+    UniquePtr<MeshStaticGroup> meshStaticGroup;
+    UniquePtr<TextureGroup> textureGroup;
+    UniquePtr<MaterialGroup> materialGroup;
 };
 
 } // namespace Az3D

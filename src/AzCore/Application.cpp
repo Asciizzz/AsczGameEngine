@@ -77,9 +77,9 @@ void Application::initComponents() {
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
-    auto& texManager = *resManager.textureManager;
-    auto& meshManager = *resManager.meshManager;
-    auto& matManager = *resManager.materialManager;
+    auto& texGroup = *resManager.textureGroup;
+    auto& meshStaticGroup = *resManager.meshStaticGroup;
+    auto& matGroup = *resManager.materialGroup;
     auto& glbUBOManager = *globalUBOManager;    
 
 // PLAYGROUND FROM HERE
@@ -164,17 +164,17 @@ void Application::initComponents() {
 
 // PLAYGROUND END HERE 
 
-    meshManager.createDeviceBuffers();
+    meshStaticGroup.createDeviceBuffers();
 
-    matManager.uploadToGPU();
-    texManager.uploadToGPU();
+    matGroup.uploadToGPU();
+    texGroup.uploadToGPU();
 
     renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get(),
                                     globalUBOManager.get(), resourceManager.get());
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
-    auto& matDesc = matManager.dynamicDescriptor;
-    auto& texDesc = texManager.dynamicDescriptor;
+    auto& matDesc = matGroup.dynamicDescriptor;
+    auto& texDesc = texGroup.dynamicDescriptor;
     auto& glbDesc = glbUBOManager.dynamicDescriptor;
 
     LayoutVec layouts = {glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout};
@@ -288,8 +288,8 @@ bool Application::checkWindowResize() {
     msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
     depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
 
-    auto& texManager = *resourceManager->textureManager;
-    auto& matManager = *resourceManager->materialManager;
+    auto& texGroup = *resourceManager->textureGroup;
+    auto& matGroup = *resourceManager->materialGroup;
 
     // Recreate render pass with new settings
     auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
@@ -331,9 +331,9 @@ void Application::mainLoop() {
     auto& rendererRef = *renderer;
 
     auto& resManager = *resourceManager;
-    auto& meshManager = *resManager.meshManager;
-    auto& texManager = *resManager.textureManager;
-    auto& matManager = *resManager.materialManager;
+    auto& meshStaticGroup = *resManager.meshStaticGroup;
+    auto& texGroup = *resManager.textureGroup;
+    auto& matGroup = *resManager.materialGroup;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing

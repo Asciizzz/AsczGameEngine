@@ -7,20 +7,20 @@ using namespace AzVulk;
 namespace Az3D {
 
 ResourceManager::ResourceManager(Device* vkDevice) {
-    textureManager = MakeUnique<TextureGroup>(vkDevice);
-    materialManager = MakeUnique<MaterialGroup>(vkDevice);
-    meshManager = MakeUnique<MeshStaticGroup>(vkDevice);
+    textureGroup = MakeUnique<TextureGroup>(vkDevice);
+    materialGroup = MakeUnique<MaterialGroup>(vkDevice);
+    meshStaticGroup = MakeUnique<MeshStaticGroup>(vkDevice);
 }
 
 size_t ResourceManager::addTexture(std::string name, std::string imagePath,
                                     Texture::Mode addressMode, uint32_t mipLevels) {
-    size_t index = textureManager->addTexture(imagePath, addressMode, mipLevels);
+    size_t index = textureGroup->addTexture(imagePath, addressMode, mipLevels);
     textureNameToIndex[name] = index;
     return index;
 }
 
 size_t ResourceManager::addMaterial(std::string name, const Material& material) {
-    size_t index = materialManager->addMaterial(material);
+    size_t index = materialGroup->addMaterial(material);
     materialNameToIndex[name] = index;
     return index;
 }
@@ -28,16 +28,16 @@ size_t ResourceManager::addMaterial(std::string name, const Material& material) 
 size_t ResourceManager::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
     if (hasBVH) mesh->createBVH();
 
-    size_t index = meshManager->addMeshStatic(mesh);
-    meshNameToIndex[name] = index;
+    size_t index = meshStaticGroup->addMeshStatic(mesh);
+    meshStaticNameToIndex[name] = index;
     return index;
 }
 size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
     auto newMesh = MeshStatic::loadFromOBJ(filePath); 
     if (hasBVH) newMesh->createBVH();
 
-    size_t index = meshManager->addMeshStatic(newMesh);
-    meshNameToIndex[name] = index;
+    size_t index = meshStaticGroup->addMeshStatic(newMesh);
+    meshStaticNameToIndex[name] = index;
     return index;
 }
 
@@ -51,25 +51,25 @@ size_t ResourceManager::getMaterialIndex(std::string name) const {
     return it != materialNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
-size_t ResourceManager::getMeshIndex(std::string name) const {
-    auto it = meshNameToIndex.find(name);
-    return it != meshNameToIndex.end() ? it->second : SIZE_MAX;
+size_t ResourceManager::getMeshStaticIndex(std::string name) const {
+    auto it = meshStaticNameToIndex.find(name);
+    return it != meshStaticNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
 
 MeshStatic* ResourceManager::getMeshStatic(std::string name) const {
-    size_t index = getMeshIndex(name);
-    return index != SIZE_MAX ? meshManager->meshes[index].get() : nullptr;
+    size_t index = getMeshStaticIndex(name);
+    return index != SIZE_MAX ? meshStaticGroup->meshes[index].get() : nullptr;
 }
 
 Material* ResourceManager::getMaterial(std::string name) const {
     size_t index = getMaterialIndex(name);
-    return index != SIZE_MAX ? &materialManager->materials[index] : nullptr;
+    return index != SIZE_MAX ? &materialGroup->materials[index] : nullptr;
 }
 
 Texture* ResourceManager::getTexture(std::string name) const {
     size_t index = getTextureIndex(name);
-    return index != SIZE_MAX ? textureManager->textures[index].get() : nullptr;
+    return index != SIZE_MAX ? textureGroup->textures[index].get() : nullptr;
 }
 
 } // namespace Az3D

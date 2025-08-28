@@ -148,17 +148,17 @@ void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStati
 
     if (instanceCount == 0 || meshIndex == SIZE_MAX) return;
 
-    const Az3D::MaterialGroup* matManager = resourceManager->materialManager.get();
-    const Az3D::TextureGroup* texManager = resourceManager->textureManager.get();
-    const Az3D::MeshStaticGroup* meshManager = resourceManager->meshManager.get();
+    const Az3D::MaterialGroup* matGroup = resourceManager->materialGroup.get();
+    const Az3D::TextureGroup* texGroup = resourceManager->textureGroup.get();
+    const Az3D::MeshStaticGroup* meshStaticGroup = resourceManager->meshStaticGroup.get();
 
     VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
 
     rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind descriptor sets once
-    VkDescriptorSet materialSet = matManager->getDescriptorSet();
-    VkDescriptorSet textureSet = texManager->getDescriptorSet();
+    VkDescriptorSet materialSet = matGroup->getDescriptorSet();
+    VkDescriptorSet textureSet = texGroup->getDescriptorSet();
 
     std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -166,7 +166,7 @@ void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStati
 
     instanceGroup.updateBufferData();
     
-    const auto& mesh = meshManager->meshes[meshIndex];
+    const auto& mesh = meshStaticGroup->meshes[meshIndex];
     uint64_t indexCount = mesh->indices.size();
 
     if (indexCount == 0) return;
