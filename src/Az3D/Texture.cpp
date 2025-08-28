@@ -51,6 +51,7 @@ size_t TextureGroup::addTexture(std::string imagePath, Texture::Mode addressMode
 
         if (!pixels) throw std::runtime_error("Failed to load texture: " + std::string(imagePath));
 
+        // Dynamic mipmap levels
         uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
 
@@ -357,12 +358,8 @@ void TextureGroup::createDescriptorSets() {
     VkPhysicalDeviceProperties deviceProps{};
     vkGetPhysicalDeviceProperties(vkDevice->pDevice, &deviceProps);
 
-    // How many textures we have
+    // It's impossible for textureCount to be 0 here
     uint32_t textureCount = static_cast<uint32_t>(textures.size());
-    if (textureCount == 0) {
-        // Nothing to do — but create an empty layout/set if you like.
-        return;
-    }
 
     // Check lDevice limits for sanity and give a helpful error if we're over
     uint32_t maxSamplersPerStage = deviceProps.limits.maxPerStageDescriptorSamplers;

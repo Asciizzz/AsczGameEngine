@@ -161,7 +161,7 @@ public:
                     const glm::vec3& boundsMin = glm::vec3(-10.0f),
                     const glm::vec3& boundsMax = glm::vec3(10.0f)) {
 
-        size_t textureIndex = resourceManager->addTexture("Particle", "Assets/Textures/Pearto.png");
+        size_t textureIndex = resourceManager->addTexture("Alb_Particle", "Assets/Textures/Pearto.png");
 
         Az3D::Material material;
         material.setShadingParams(0.0f, 0.0f, 0.0f, 0.0f);
