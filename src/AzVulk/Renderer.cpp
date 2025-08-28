@@ -143,6 +143,11 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
 
 // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
 void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStaticGroup& instanceGroup) {
+    uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
+    size_t meshIndex = instanceGroup.meshIndex;
+
+    if (instanceCount == 0 || meshIndex == SIZE_MAX) return;
+
     const Az3D::MaterialGroup* matManager = resourceManager->materialManager.get();
     const Az3D::TextureGroup* texManager = resourceManager->textureManager.get();
     const Az3D::MeshStaticGroup* meshManager = resourceManager->meshManager.get();
@@ -159,14 +164,8 @@ void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStati
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                             rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-
-    uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
-    size_t meshIndex = instanceGroup.meshIndex;
-
-    if (instanceCount == 0 || meshIndex == SIZE_MAX) return;
-
     instanceGroup.updateBufferData();
-
+    
     const auto& mesh = meshManager->meshes[meshIndex];
     uint64_t indexCount = mesh->indices.size();
 

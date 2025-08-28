@@ -53,9 +53,10 @@ struct VertexStatic {
     glm::vec4 tangent = glm::vec4(0.0f);
 
     VertexStatic() = default;
-    VertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv) {
+    VertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
         pos_tu = glm::vec4(pos, uv.x);
         nrml_tv = glm::vec4(nrml, uv.y);
+        tangent = tang;
     }
 
     void setPosition(const glm::vec3& position);

@@ -39,7 +39,7 @@ TextureGroup::~TextureGroup() {
     textures.clear();
 }
 
-size_t TextureGroup::addTexture(std::string imagePath, Texture::Mode addressMode) {
+size_t TextureGroup::addTexture(std::string imagePath, Texture::Mode addressMode, uint32_t mipLevels) {
     try {
         Texture texture;
         texture.path = imagePath;
@@ -52,8 +52,8 @@ size_t TextureGroup::addTexture(std::string imagePath, Texture::Mode addressMode
 
         if (!pixels) throw std::runtime_error("Failed to load texture: " + std::string(imagePath));
 
-        // Dynamic mipmap levels
-        uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+        // Dynamic mipmap levels (if not provided)
+        mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1) * !mipLevels;
 
 
         BufferData stagingBuffer;

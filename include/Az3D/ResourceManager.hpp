@@ -17,7 +17,8 @@ public:
     ResourceManager& operator=(const ResourceManager&) = delete;
 
     size_t addTexture(std::string name, std::string imagePath,
-                    Texture::Mode addressMode = Texture::Repeat);
+                    Texture::Mode addressMode = Texture::Repeat,
+                    uint32_t mipLevels = 0);
     size_t addMaterial(std::string name, const Material& material);
 
     size_t addMesh(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH = false);

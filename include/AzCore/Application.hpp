@@ -57,6 +57,9 @@ private:
 
     UniquePtr<AzBeta::ParticleManager> particleManager;
 
+    // Quick demo (will be deleted)
+    Az3D::InstanceStaticGroup demoInstanceGroup;
+
     // Window metadata
     const char* appTitle;
     uint32_t appWidth;

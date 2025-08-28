@@ -121,6 +121,45 @@ void Application::initComponents() {
         boundMin, boundMax
     );
 
+    // Create demo normal map texture
+    glm::vec3 demoNormal = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec4 demoTangent = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+
+    float demoTile = 10.0f;
+    std::vector<VertexStatic> demoVertices = {
+        {{-demoTile, 0.0f, -demoTile}, demoNormal, {0.0f, 0.0f}, demoTangent},
+        {{ demoTile, 0.0f, -demoTile}, demoNormal, {1.0f, 0.0f}, demoTangent},
+        {{ demoTile, 0.0f,  demoTile}, demoNormal, {1.0f, 1.0f}, demoTangent},
+        {{-demoTile, 0.0f,  demoTile}, demoNormal, {0.0f, 1.0f}, demoTangent}
+    };
+
+    std::vector<uint32_t> demoIndices = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    SharedPtr<MeshStatic> demoMesh = MakeShared<MeshStatic>(
+        std::move(demoVertices), 
+        std::move(demoIndices)
+    );
+
+    Az3D::Material demoMaterial;
+    demoMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
+    demoMaterial.setAlbedoTextureIndex(
+        resourceManager->addTexture("Alb_Demo", "Assets/Demo/BrickAlbedo.jpg", Texture::Repeat)
+    );
+    demoMaterial.setNormalTextureIndex(
+        resourceManager->addTexture("Nrml_Demo", "Assets/Demo/BrickNormal.jpg", Texture::Repeat)
+    );
+
+    demoInstanceGroup.initVkDevice(vkDevice.get());
+    demoInstanceGroup.meshIndex = resourceManager->addMesh("DemoMesh", demoMesh);
+    // Create Instance data
+    InstanceStatic demoInstance;
+    demoInstance.modelMatrix = glm::mat4(1.0f);
+    demoInstance.properties.x = resourceManager->addMaterial("DemoMaterial", demoMaterial);
+
+    demoInstanceGroup.addInstance(demoInstance);
 
 // PLAYGROUND END HERE 
 
@@ -450,12 +489,17 @@ void Application::mainLoop() {
             rendererRef.drawSky(*skyPipeline);
 
             // Draw grass system
-            rendererRef.drawInstances(*opaquePipeline, grassSystem->grassInstanceGroup);
-            rendererRef.drawInstances(*opaquePipeline, grassSystem->terrainInstanceGroup);
+            // rendererRef.drawInstances(*opaquePipeline, grassSystem->grassInstanceGroup);
+            // rendererRef.drawInstances(*opaquePipeline, grassSystem->terrainInstanceGroup);
+            
             // Draw the world model group
             // rendererRef.drawInstances(*opaquePipeline, newWorld->worldModelGroup);
+            
             // Draw the particles
             rendererRef.drawInstances(*opaquePipeline, particleManager->instanceGroup);
+
+            // Draw the demo instance group
+            rendererRef.drawInstances(*opaquePipeline, demoInstanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };

@@ -39,7 +39,7 @@ public:
     const AzVulk::Device* vkDevice;
     SharedPtrVec<Texture> textures;
 
-    size_t addTexture(std::string imagePath, Texture::Mode addressMode = Texture::Repeat);
+    size_t addTexture(std::string imagePath, Texture::Mode addressMode = Texture::Repeat, uint32_t mipLevels = 0);
     void createSinglePixel(uint8_t r, uint8_t g, uint8_t b); // No A, since it's a single pixel
 
     // Vulkan image creation helpers

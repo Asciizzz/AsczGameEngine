@@ -20,11 +20,11 @@ struct Skeleton {
 struct MeshSkinned {
     std::vector<VertexSkinned> vertices;
     std::vector<uint32_t> indices;
+
     Skeleton skeleton; // bones + hierarchy
-    // optional: inverseBindMatrices etc.
 
     static SharedPtr<MeshSkinned> loadFromGLTF(const std::string& filePath);
-    
+
     AzVulk::BufferData vertexBufferData;
     AzVulk::BufferData indexBufferData;
     void createDeviceBuffer(const AzVulk::Device* vkDevice);

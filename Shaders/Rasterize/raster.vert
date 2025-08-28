@@ -1,4 +1,6 @@
 #version 450
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_samplerless_texture_functions : enable
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
@@ -12,12 +14,15 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 
 struct Material {
     vec4 shadingParams;
-    uvec4 texIndices;
+    uvec4 texIndices; // Albedo, Normal, empty
 };
 
 layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
     Material materials[];
 };
+
+layout(set = 2, binding = 0) uniform sampler2D textures[];
+
 
 layout(location = 0) in vec4 inPos_Tu;
 layout(location = 1) in vec4 inNrml_Tv;
@@ -31,30 +36,13 @@ layout(location = 6) in vec4 mat4_row2;  // Row 2: [m20, m21, m22, m23]
 layout(location = 7) in vec4 mat4_row3;  // Row 3: [m30, m31, m32, m33]
 layout(location = 8) in vec4 instanceColor; // Instance color multiplier
 
-layout(location = 0) out vec2 fragTxtr;
-layout(location = 1) out vec3 fragWorldPos;
-layout(location = 2) out vec3 fragWorldNrml;
-layout(location = 3) out flat uvec4 fragProperties;
-layout(location = 4) out vec4 fragInstanceColor;
-layout(location = 5) out float vertexLightFactor;
+layout(location = 0) out flat uvec4 fragProperties;
+layout(location = 1) out vec4 fragInstanceColor;
+layout(location = 2) out vec2 fragTxtr;
+layout(location = 3) out vec3 fragWorldPos;
+layout(location = 4) out vec3 fragWorldNrml;
+layout(location = 5) out vec4 fragTangent;
 
-// Toon shading function (moved from fragment shader)
-float applyToonShading(float value, int toonLevel) {
-    // Convert toonLevel to float for calculations
-    float level = float(toonLevel);
-    
-    // For level 0, return original value (no quantization)
-    // For level > 0, apply quantization
-    float bands = level + 1.0;
-    float quantized = floor(value * bands + 0.5) / bands;
-    
-    // Use step function to select between original and quantized
-    // step(1.0, level) returns 1.0 when level >= 1.0, 0.0 otherwise
-    float useToon = step(1.0, level);
-    float result = mix(value, quantized, useToon);
-    
-    return clamp(result, 0.0, 1.0);
-}
 
 void main() {
     mat4 modelMatrix = mat4(mat4_row0, mat4_row1, mat4_row2, mat4_row3);
@@ -62,32 +50,16 @@ void main() {
 
     gl_Position = glb.proj * glb.view * worldPos;
 
-    // Proper normal transformation that handles non-uniform scaling
-    mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
-    vec3 worldNormal = normalize(nrmlMat * inNrml_Tv.xyz);
-
-    fragTxtr = vec2(inPos_Tu.w, inNrml_Tv.w);
-    fragWorldPos = worldPos.xyz;
-    fragWorldNrml = worldNormal;
     fragProperties = properties;
+    fragWorldPos = worldPos.xyz;
+    fragTxtr = vec2(inPos_Tu.w, inNrml_Tv.w);
     fragInstanceColor = instanceColor;
 
+    // Proper normal transformation that handles non-uniform scaling
+    mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
 
-    // === MOVED LIGHTING COMPUTATION FROM FRAGMENT TO VERTEX ===
-    // Unwrap material properties
-    Material material = materials[fragProperties.x];
-    float shading = material.shadingParams.x;
-    int toonLevel = int(material.shadingParams.y);
+    vec3 transNormal = normalize(nrmlMat * inNrml_Tv.xyz);
+    fragWorldNrml = transNormal;
 
-    vec3 lightDir = normalize(vec3(-1.0, -0.3, 1.0));
-    
-    // The idea is that if shading is disabled, lightFactor should be 1.0
-    float lightFactor = max(dot(worldNormal, -lightDir), 1 - shading);
-    lightFactor = length(worldNormal) > 0.001 ? lightFactor : 1.0;
-
-    // Apply toon shading based on toon level
-    lightFactor = applyToonShading(lightFactor, toonLevel);
-    lightFactor = 0.2 + lightFactor * 0.8; // Ambient
-
-    vertexLightFactor = lightFactor;
+    fragTangent = inTangent;
 }

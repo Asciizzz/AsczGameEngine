@@ -13,8 +13,8 @@ ResourceManager::ResourceManager(Device* vkDevice) {
 }
 
 size_t ResourceManager::addTexture(std::string name, std::string imagePath,
-                                    Texture::Mode addressMode) {
-    size_t index = textureManager->addTexture(imagePath, addressMode);
+                                    Texture::Mode addressMode, uint32_t mipLevels) {
+    size_t index = textureManager->addTexture(imagePath, addressMode, mipLevels);
     textureNameToIndex[name] = index;
     return index;
 }
