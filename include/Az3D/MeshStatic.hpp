@@ -89,8 +89,8 @@ public:
     MeshStaticGroup(const MeshStaticGroup&) = delete;
     MeshStaticGroup& operator=(const MeshStaticGroup&) = delete;
 
-    size_t addMesh(SharedPtr<MeshStatic> mesh);
-    size_t addMesh(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices);
+    size_t addMeshStatic(SharedPtr<MeshStatic> mesh);
+    size_t addMeshStatic(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices);
     size_t loadFromOBJ(std::string filePath);
 
     // Index-based mesh storage

@@ -25,18 +25,18 @@ size_t ResourceManager::addMaterial(std::string name, const Material& material) 
     return index;
 }
 
-size_t ResourceManager::addMesh(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
+size_t ResourceManager::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
     if (hasBVH) mesh->createBVH();
 
-    size_t index = meshManager->addMesh(mesh);
+    size_t index = meshManager->addMeshStatic(mesh);
     meshNameToIndex[name] = index;
     return index;
 }
-size_t ResourceManager::addMesh(std::string name, std::string filePath, bool hasBVH) {
+size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
     auto newMesh = MeshStatic::loadFromOBJ(filePath); 
     if (hasBVH) newMesh->createBVH();
 
-    size_t index = meshManager->addMesh(newMesh);
+    size_t index = meshManager->addMeshStatic(newMesh);
     meshNameToIndex[name] = index;
     return index;
 }
@@ -57,7 +57,7 @@ size_t ResourceManager::getMeshIndex(std::string name) const {
 }
 
 
-MeshStatic* ResourceManager::getMesh(std::string name) const {
+MeshStatic* ResourceManager::getMeshStatic(std::string name) const {
     size_t index = getMeshIndex(name);
     return index != SIZE_MAX ? meshManager->meshes[index].get() : nullptr;
 }

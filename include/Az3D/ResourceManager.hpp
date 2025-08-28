@@ -3,6 +3,7 @@
 #include "Az3D/Texture.hpp"
 #include "Az3D/Material.hpp"
 #include "Az3D/MeshStatic.hpp"
+#include "Az3D/MeshSkinned.hpp"
 
 
 namespace Az3D {
@@ -21,15 +22,15 @@ public:
                     uint32_t mipLevels = 0);
     size_t addMaterial(std::string name, const Material& material);
 
-    size_t addMesh(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH = false);
-    size_t addMesh(std::string name, std::string filePath, bool hasBVH = false);
+    size_t addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH = false);
+    size_t addMeshStatic(std::string name, std::string filePath, bool hasBVH = false);
 
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
     size_t getMaterialIndex(std::string name) const;
     size_t getMeshIndex(std::string name) const;
 
-    MeshStatic* getMesh(std::string name) const;
+    MeshStatic* getMeshStatic(std::string name) const;
     Material* getMaterial(std::string name) const;
     Texture* getTexture(std::string name) const;
 

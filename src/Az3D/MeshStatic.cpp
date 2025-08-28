@@ -11,17 +11,17 @@ namespace Az3D {
 
 MeshStaticGroup::MeshStaticGroup(const AzVulk::Device* vkDevice) : vkDevice(vkDevice) {}
 
-size_t MeshStaticGroup::addMesh(SharedPtr<MeshStatic> mesh) {
+size_t MeshStaticGroup::addMeshStatic(SharedPtr<MeshStatic> mesh) {
     meshes.push_back(mesh);
     return meshes.size() - 1;
 }
-size_t MeshStaticGroup::addMesh(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices) {
+size_t MeshStaticGroup::addMeshStatic(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices) {
     auto mesh = MakeShared<MeshStatic>(std::move(vertices), std::move(indices));
-    return addMesh(mesh);
+    return addMeshStatic(mesh);
 }
 size_t MeshStaticGroup::loadFromOBJ(std::string filePath) {
     auto mesh = MeshStatic::loadFromOBJ(filePath);
-    return addMesh(mesh);
+    return addMeshStatic(mesh);
 }
 
 // Buffer data

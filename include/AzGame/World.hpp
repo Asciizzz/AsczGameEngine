@@ -23,7 +23,7 @@ namespace AzGame {
                 std::string fullPath = "Assets/Platformer/" + mesh.second;
 
                 // Short hand name -----------------------------------Full name and Full path
-                platformerMeshIndices[mesh.first] = resourceManager->addMesh(fullName, fullPath, true);
+                platformerMeshIndices[mesh.first] = resourceManager->addMeshStatic(fullName, fullPath, true);
             }
 
             // Initialized world model group

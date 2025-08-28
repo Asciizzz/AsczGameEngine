@@ -107,8 +107,8 @@ void Application::initComponents() {
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
 
-    glm::vec3 boundMin = resourceManager->getMesh("TerrainMesh")->nodes[0].min;
-    glm::vec3 boundMax = resourceManager->getMesh("TerrainMesh")->nodes[0].max;
+    glm::vec3 boundMin = resourceManager->getMeshStatic("TerrainMesh")->nodes[0].min;
+    glm::vec3 boundMax = resourceManager->getMeshStatic("TerrainMesh")->nodes[0].max;
     float totalHeight = abs(boundMax.y - boundMin.y);
     boundMin.y -= totalHeight * 2.5f;
     boundMax.y += totalHeight * 12.5f;
@@ -153,7 +153,7 @@ void Application::initComponents() {
     );
 
     demoInstanceGroup.initVkDevice(vkDevice.get());
-    demoInstanceGroup.meshIndex = resourceManager->addMesh("DemoMesh", demoMesh);
+    demoInstanceGroup.meshIndex = resourceManager->addMeshStatic("DemoMesh", demoMesh);
 
     // Create Instance data
     InstanceStatic demoInstance;
@@ -474,7 +474,7 @@ void Application::mainLoop() {
         }
 
         if (particlePhysicsEnabled) {
-            particleManager->updatePhysic(dTime, resourceManager->getMesh("TerrainMesh"), glm::mat4(1.0f));
+            particleManager->updatePhysic(dTime, resourceManager->getMeshStatic("TerrainMesh"), glm::mat4(1.0f));
         };
         particleManager->updateRender();
 
