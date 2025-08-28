@@ -22,6 +22,7 @@ struct InstanceStatic {
 };
 
 
+/*
 struct ModelMappingData {
     ModelMappingData() = default;
     ~ModelMappingData() { bufferData.cleanup(); }
@@ -39,7 +40,7 @@ struct ModelMappingData {
     size_t addData(const InstanceStatic& data);
 
     AzVulk::BufferData bufferData;
-    void initVulkanDevice(const AzVulk::Device* device);
+    void initVkDevice(const AzVulk::Device* device);
     void recreateBufferData();
     void updateBufferData();
 };
@@ -67,6 +68,27 @@ struct ModelGroup {
     UnorderedMap<size_t, ModelMappingData> modelMapping;
 
     void addInstance(size_t meshIndex, size_t materialIndex, const InstanceStatic& instanceData);
+};
+*/
+
+struct InstanceStaticGroup {
+    InstanceStaticGroup() = default;
+
+    InstanceStaticGroup(const InstanceStaticGroup&) = delete;
+    InstanceStaticGroup& operator=(const InstanceStaticGroup&) = delete;
+    InstanceStaticGroup(InstanceStaticGroup&&) noexcept = default;
+    InstanceStaticGroup& operator=(InstanceStaticGroup&&) noexcept = default;
+
+    size_t prevInstanceCount = 0;
+    std::vector<InstanceStatic> datas;
+    size_t addInstance(const InstanceStatic& data);
+
+    AzVulk::BufferData bufferData;
+    void initVkDevice(const AzVulk::Device* vkDevice);
+    void recreateBufferData();
+    void updateBufferData();
+
+    uint32_t meshIndex = SIZE_MAX; // We only need this value
 };
 
 } // namespace Az3D

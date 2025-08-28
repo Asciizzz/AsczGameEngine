@@ -25,7 +25,7 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/MeshStatic_BVH.cpp
     src/Az3D/Material.cpp
     src/Az3D/Texture.cpp
-    src/Az3D/ModelManager.cpp
+    src/Az3D/InstanceStatic.cpp
     src/Az3D/ResourceManager.cpp
 
     src/AzCore/FpsManager.cpp

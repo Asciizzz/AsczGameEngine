@@ -30,18 +30,20 @@ bool Grass::initialize(ResourceManager& resourceManager, const AzVulk::Device* v
 
     generateGrassInstances(generator);
 
-    grassModelHash = ModelGroup::Hash::encode(grassMeshIndex, grassMaterialIndex);
-    terrainModelHash = ModelGroup::Hash::encode(terrainMeshIndex, terrainMaterialIndex);
+    // grassInstanceGroup.init("GrassField", vkDevice);
+    grassInstanceGroup.initVkDevice(vkDevice);
+    grassInstanceGroup.meshIndex = grassMeshIndex;
 
-    grassFieldModelGroup.init("GrassField", vkDevice);
+    terrainInstanceGroup.initVkDevice(vkDevice);
+    terrainInstanceGroup.meshIndex = terrainMeshIndex;
 
     setupComputeShaders();
 
     for (const auto& data : grassData3Ds) {
-        grassFieldModelGroup.addInstance(grassMeshIndex, grassMaterialIndex, data);
+        grassInstanceGroup.addInstance(data);
     }
     for (const auto& data : terrainData3Ds) {
-        grassFieldModelGroup.addInstance(terrainMeshIndex, terrainMaterialIndex, data);
+        terrainInstanceGroup.addInstance(data);
     }
 
     return true;
@@ -578,7 +580,7 @@ void Grass::updateGrassInstancesCPU() {
         grassData3Ds[i].multColor = fixedColor[i];
     });
 
-    grassFieldModelGroup.modelMapping[grassModelHash].datas = grassData3Ds;
+    grassInstanceGroup.datas = grassData3Ds;
 }
 
 void Grass::updateGrassInstancesGPU() {
@@ -596,5 +598,5 @@ void Grass::updateGrassInstancesGPU() {
     //     grassData3Ds[i].modelMatrix = resultPtr[i];
     // });
 
-    grassFieldModelGroup.modelMapping[grassModelHash].datas = grassData3Ds;
+    grassInstanceGroup.datas = grassData3Ds;
 }

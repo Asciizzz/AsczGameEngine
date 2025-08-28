@@ -450,11 +450,12 @@ void Application::mainLoop() {
             rendererRef.drawSky(*skyPipeline);
 
             // Draw grass system
-            rendererRef.drawScene(*opaquePipeline, grassSystem->grassFieldModelGroup);
+            rendererRef.drawInstances(*opaquePipeline, grassSystem->grassInstanceGroup);
+            rendererRef.drawInstances(*opaquePipeline, grassSystem->terrainInstanceGroup);
             // Draw the world model group
-            rendererRef.drawScene(*opaquePipeline, newWorld->worldModelGroup);
+            // rendererRef.drawInstances(*opaquePipeline, newWorld->worldModelGroup);
             // Draw the particles
-            rendererRef.drawScene(*opaquePipeline, particleManager->particleModelGroup);
+            rendererRef.drawInstances(*opaquePipeline, particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };

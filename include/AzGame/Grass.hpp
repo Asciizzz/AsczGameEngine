@@ -7,12 +7,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include <Az3D/ModelManager.hpp>
+#include <Az3D/InstanceStatic.hpp>
 #include <AzVulk/ComputeTask.hpp>
 
 // Forward declarations
 namespace Az3D {
-struct ModelGroup;
 struct ResourceManager;
 struct MeshStaticGroup;
 
@@ -148,7 +147,8 @@ public:
     const AzVulk::Device* vkDevice = nullptr;
 
     // Model Group
-    Az3D::ModelGroup grassFieldModelGroup;
+    Az3D::InstanceStaticGroup grassInstanceGroup;
+    Az3D::InstanceStaticGroup terrainInstanceGroup;
 
     // Compute Task
     AzVulk::ComputeTask grassComputeTask;

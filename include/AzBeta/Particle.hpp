@@ -28,7 +28,7 @@ public:
     std::vector<short> particles_special; // Cool rare 1% drop particles
     std::vector<float> particles_rainbow; // Special scalar value for all special particles (not just rainbow)
 
-    Az3D::ModelGroup particleModelGroup;
+    Az3D::InstanceStaticGroup instanceGroup;
 
     std::vector<glm::vec3> rainbow_colors = {
         glm::vec3(1.0f, 0.2f, 0.2f), // Red
@@ -171,9 +171,8 @@ public:
 
         size_t meshIndex = resourceManager->addMesh("Particle", "Assets/Characters/Pearto.obj", false);
 
-        modelHash = Az3D::ModelGroup::Hash::encode(meshIndex, materialIndex);
-
-        particleModelGroup.init("ParticleGroup", vkDevice);
+        instanceGroup.initVkDevice(vkDevice);
+        instanceGroup.meshIndex = meshIndex;
 
         particleCount = count;
         radius = r;
@@ -229,7 +228,7 @@ public:
 
             particles_data[i] = particleData;
 
-            particleModelGroup.addInstance(meshIndex, materialIndex, particleData);
+            instanceGroup.addInstance(particleData);
         }
     }
 
@@ -352,7 +351,7 @@ public:
     }
 
     void updateRender() {
-        particleModelGroup.modelMapping[modelHash].datas = particles_data;
+        instanceGroup.datas = particles_data;
     }
 
     void updatePhysic(float dTime, const Az3D::MeshStatic* mesh, const glm::mat4& meshModelMat4) {

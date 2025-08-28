@@ -27,7 +27,7 @@ namespace AzGame {
             }
 
             // Initialized world model group
-            worldModelGroup = Az3D::ModelGroup("World", vkDevice);
+            // worldModelGroup = Az3D::ModelGroup("World", vkDevice);
         }
 
         Az3D::ResourceManager* resourceManager;
@@ -60,7 +60,7 @@ namespace AzGame {
             {"Flower", "flower.obj"}
         };
 
-        Az3D::ModelGroup worldModelGroup;
+        // Az3D::ModelGroup worldModelGroup;
 
         // Unique cool things to do in here
         void placePlatformGrid(std::string name, glm::vec3 pos) {
@@ -83,7 +83,7 @@ namespace AzGame {
             data.modelMatrix = trform.getMat4();
             data.properties.x = static_cast<int>(materialIndex);
 
-            worldModelGroup.addInstance(meshIndex, materialIndex, data);
+            // worldModelGroup.addInstance(meshIndex, materialIndex, data);
         }
     };
 }

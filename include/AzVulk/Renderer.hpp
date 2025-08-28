@@ -25,7 +25,7 @@ namespace AzVulk {
         // Introduction
         uint32_t beginFrame(RasterPipeline& pipeline, Az3D::GlobalUBO& globalUBO);
         // Body
-        void drawScene(RasterPipeline& pipeline, Az3D::ModelGroup& modelGroup);
+        void drawInstances(RasterPipeline& pipeline, Az3D::InstanceStaticGroup& instanceGroup);
         void drawSky(RasterPipeline& skyPipeline);
         // Conclusion
         void endFrame(uint32_t imageIndex);

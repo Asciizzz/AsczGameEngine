@@ -1,4 +1,4 @@
-#include "Az3D/ModelManager.hpp"
+#include "Az3D/InstanceStatic.hpp"
 #include <vulkan/vulkan.h>
 #include <algorithm>
 
@@ -7,8 +7,8 @@ namespace Az3D {
 // Vulkan-specific methods for Model
 VkVertexInputBindingDescription InstanceStatic::getBindingDescription() {
     VkVertexInputBindingDescription bindingDescription{};
-    bindingDescription.binding = 1; // Binding 1 for instance data
-    bindingDescription.stride = sizeof(InstanceStatic); // Only GPU data
+    bindingDescription.binding = 1;
+    bindingDescription.stride = sizeof(InstanceStatic);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
     return bindingDescription;
 }
@@ -28,29 +28,17 @@ std::array<VkVertexInputAttributeDescription, 6> InstanceStatic::getAttributeDes
     return attribs;
 }
 
-
-// Move semantics
-ModelMappingData::ModelMappingData(ModelMappingData&& other) noexcept
-    : datas(std::move(other.datas)),
-    bufferData(std::move(other.bufferData)) {}
-
-ModelMappingData& ModelMappingData::operator=(ModelMappingData&& other) noexcept {
-    datas = std::move(other.datas);
-    bufferData = std::move(other.bufferData);
-    return *this;
-}
-
 // Add data
-size_t ModelMappingData::addData(const InstanceStatic& data) {
+size_t InstanceStaticGroup::addInstance(const InstanceStatic& data) {
     datas.push_back(data);
     return datas.size() - 1;
 }
 
-void ModelMappingData::initVulkanDevice(const AzVulk::Device* device) {
-    bufferData.initVkDevice(device);
+void InstanceStaticGroup::initVkDevice(const AzVulk::Device* vkDevice) {
+    bufferData.initVkDevice(vkDevice);
 }
 
-void ModelMappingData::recreateBufferData() {
+void InstanceStaticGroup::recreateBufferData() {
     if (!bufferData.vkDevice) return;
 
     bufferData.setProperties(
@@ -63,26 +51,12 @@ void ModelMappingData::recreateBufferData() {
     prevInstanceCount = datas.size();
 }
 
-void ModelMappingData::updateBufferData() {
+void InstanceStaticGroup::updateBufferData() {
     if (!bufferData.vkDevice) return;
 
     if (prevInstanceCount != datas.size()) recreateBufferData();
 
     bufferData.mappedData(datas.data());
-}
-
-
-void ModelGroup::addInstance(size_t meshIndex, size_t materialIndex, const InstanceStatic& instanceData) {
-    if (!vkDevice) return;
-
-    size_t modelEncode = Hash::encode(meshIndex, materialIndex);
-
-    auto [it, inserted] = modelMapping.try_emplace(modelEncode);
-    if (inserted) { // New entry
-        it->second.initVulkanDevice(vkDevice);
-    }
-    // Add to existing entry
-    it->second.addData(instanceData);
 }
 
 }

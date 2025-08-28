@@ -142,15 +142,13 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
 }
 
 // Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
-void Renderer::drawScene(RasterPipeline& rasterPipeline, ModelGroup& modelGroup) {
+void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStaticGroup& instanceGroup) {
     const Az3D::MaterialGroup* matManager = resourceManager->materialManager.get();
     const Az3D::TextureGroup* texManager = resourceManager->textureManager.get();
     const Az3D::MeshStaticGroup* meshManager = resourceManager->meshManager.get();
 
     VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
 
-    // Bind pipeline once
-    // vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
     rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind descriptor sets once
@@ -161,38 +159,33 @@ void Renderer::drawScene(RasterPipeline& rasterPipeline, ModelGroup& modelGroup)
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                             rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-    for (auto& [hash, mapData] : modelGroup.modelMapping) {
-        uint32_t instanceCount = static_cast<uint32_t>(mapData.datas.size());
-        if (instanceCount == 0) continue;
 
-        mapData.updateBufferData();
+    uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
+    size_t meshIndex = instanceGroup.meshIndex;
 
-        std::pair<size_t, size_t> modelDecode = ModelGroup::Hash::decode(hash);
-        size_t meshIndex = modelDecode.first;
+    if (instanceCount == 0 || meshIndex == SIZE_MAX) return;
 
-        const auto& mesh = meshManager->meshes[meshIndex];
-        uint64_t indexCount = mesh->indices.size();
+    instanceGroup.updateBufferData();
 
-        const auto& vertexBufferData = mesh->vertexBufferData;
-        const auto& indexBufferData = mesh->indexBufferData;
+    const auto& mesh = meshManager->meshes[meshIndex];
+    uint64_t indexCount = mesh->indices.size();
 
-        const auto& instanceBufferData = mapData.bufferData;
+    if (indexCount == 0) return;
 
-        // Skip if nothing to draw or bad data
-        if (indexCount == 0) continue;
-        if (instanceBufferData.buffer == VK_NULL_HANDLE) continue;
+    const auto& vertexBufferData = mesh->vertexBufferData;
+    const auto& indexBufferData = mesh->indexBufferData;
 
-        // Bind vertex + instance buffers in a single call (starting at binding 0)
-        VkBuffer buffers[] = { vertexBufferData.buffer, instanceBufferData.buffer };
-        VkDeviceSize offsets[] = { 0, 0 };
-        vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, buffers, offsets);
+    const auto& instanceBufferData = instanceGroup.bufferData;
 
-        // Bind index buffer
-        vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
+    VkBuffer buffers[] = { vertexBufferData.buffer, instanceBufferData.buffer };
+    VkDeviceSize offsets[] = { 0, 0 };
+    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, buffers, offsets);
 
-        // Draw all instances
-        vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
-    }
+    // Bind index buffer
+    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+    // Draw all instances
+    vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
 }
 
 // Sky rendering using dedicated sky pipeline
