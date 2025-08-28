@@ -28,7 +28,7 @@ std::array<VkVertexInputAttributeDescription, 6> InstanceStatic::getAttributeDes
     return attribs;
 }
 
-// Add data
+
 size_t InstanceStaticGroup::addInstance(const InstanceStatic& data) {
     datas.push_back(data);
     return datas.size() - 1;
