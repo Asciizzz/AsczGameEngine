@@ -34,8 +34,8 @@ void RasterPipeline::create() {
     auto vstaticAttrs  = Az3D::VertexStatic::getAttributeDescriptions();
     auto vskinnedBind  = Az3D::VertexSkinned::getBindingDescription();
     auto vskinnedAttrs = Az3D::VertexSkinned::getAttributeDescriptions();
-    auto instanceBind  = Az3D::ModelData::getBindingDescription();
-    auto instanceAttrs = Az3D::ModelData::getAttributeDescriptions();
+    auto instanceBind  = Az3D::InstanceStatic::getBindingDescription();
+    auto instanceAttrs = Az3D::InstanceStatic::getAttributeDescriptions();
 
     switch (cfg.vertexInputType) {
     case RasterCfg::VertexInputType::None:

@@ -96,7 +96,7 @@ struct WindUBO {
 
 class Grass {
 public:
-    using Data3D = Az3D::ModelData;
+    using Data3D = Az3D::InstanceStatic;
 
     explicit Grass(const GrassConfig& config);
     ~Grass();

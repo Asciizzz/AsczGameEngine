@@ -12,7 +12,7 @@ using HitInfo = Az3D::HitInfo;
 
 class ParticleManager {
 public:
-    using Data3D = Az3D::ModelData;
+    using Data3D = Az3D::InstanceStatic;
 
     ParticleManager() = default;
     ~ParticleManager() = default;

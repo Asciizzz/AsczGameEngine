@@ -9,8 +9,8 @@
 namespace Az3D {
 
 // Dynamic, per-frame object data
-struct ModelData {
-    ModelData() = default;
+struct InstanceStatic {
+    InstanceStatic() = default;
 
     glm::uvec4 properties = glm::uvec4(0); // <materialIndex>, <indicator>, <empty>, <empty>
     glm::mat4 modelMatrix = glm::mat4(1.0f);
@@ -35,8 +35,8 @@ struct ModelMappingData {
     ModelMappingData& operator=(ModelMappingData&& other) noexcept;
 
     size_t prevInstanceCount = 0;
-    std::vector<ModelData> datas;
-    size_t addData(const ModelData& data);
+    std::vector<InstanceStatic> datas;
+    size_t addData(const InstanceStatic& data);
 
     AzVulk::BufferData bufferData;
     void initVulkanDevice(const AzVulk::Device* device);
@@ -66,7 +66,7 @@ struct ModelGroup {
     // Hash Model -> data
     UnorderedMap<size_t, ModelMappingData> modelMapping;
 
-    void addInstance(size_t meshIndex, size_t materialIndex, const ModelData& instanceData);
+    void addInstance(size_t meshIndex, size_t materialIndex, const InstanceStatic& instanceData);
 };
 
 } // namespace Az3D

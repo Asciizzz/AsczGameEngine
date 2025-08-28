@@ -79,7 +79,7 @@ namespace AzGame {
             Az3D::Transform trform;
             trform.pos = glm::vec3(gx, gy, gz);
 
-            Az3D::ModelData data;
+            Az3D::InstanceStatic data;
             data.modelMatrix = trform.getMat4();
             data.properties.x = static_cast<int>(materialIndex);
 

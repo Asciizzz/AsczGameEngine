@@ -417,7 +417,7 @@ void Application::mainLoop() {
 
                 // Teleport every particle to the current location
                 std::vector<Transform>& particles = particleManager->particles;
-                std::vector<ModelData>& particlesData = particleManager->particles_data;
+                std::vector<InstanceStatic>& particlesData = particleManager->particles_data;
 
                 std::vector<size_t> indices(particles.size());
                 std::iota(indices.begin(), indices.end(), 0);

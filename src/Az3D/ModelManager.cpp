@@ -5,25 +5,25 @@
 namespace Az3D {
 
 // Vulkan-specific methods for Model
-VkVertexInputBindingDescription ModelData::getBindingDescription() {
+VkVertexInputBindingDescription InstanceStatic::getBindingDescription() {
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 1; // Binding 1 for instance data
-    bindingDescription.stride = sizeof(ModelData); // Only GPU data
+    bindingDescription.stride = sizeof(InstanceStatic); // Only GPU data
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
     return bindingDescription;
 }
 
-std::array<VkVertexInputAttributeDescription, 6> ModelData::getAttributeDescriptions() {
+std::array<VkVertexInputAttributeDescription, 6> InstanceStatic::getAttributeDescriptions() {
     std::array<VkVertexInputAttributeDescription, 6> attribs{};
 
-    attribs[0] = {2, 1, VK_FORMAT_R32G32B32A32_SINT, offsetof(ModelData, properties)};
+    attribs[0] = {2, 1, VK_FORMAT_R32G32B32A32_SINT, offsetof(InstanceStatic, properties)};
 
-    attribs[1] = {3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(ModelData, modelMatrix) + sizeof(glm::vec4) * 0};
-    attribs[2] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(ModelData, modelMatrix) + sizeof(glm::vec4) * 1};
-    attribs[3] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(ModelData, modelMatrix) + sizeof(glm::vec4) * 2};
-    attribs[4] = {6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(ModelData, modelMatrix) + sizeof(glm::vec4) * 3};
+    attribs[1] = {3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 0};
+    attribs[2] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 1};
+    attribs[3] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 2};
+    attribs[4] = {6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 3};
 
-    attribs[5] = {7, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(ModelData, multColor)};
+    attribs[5] = {7, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, multColor)};
 
     return attribs;
 }
@@ -41,7 +41,7 @@ ModelMappingData& ModelMappingData::operator=(ModelMappingData&& other) noexcept
 }
 
 // Add data
-size_t ModelMappingData::addData(const ModelData& data) {
+size_t ModelMappingData::addData(const InstanceStatic& data) {
     datas.push_back(data);
     return datas.size() - 1;
 }
@@ -54,7 +54,7 @@ void ModelMappingData::recreateBufferData() {
     if (!bufferData.vkDevice) return;
 
     bufferData.setProperties(
-        datas.size() * sizeof(ModelData), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        datas.size() * sizeof(InstanceStatic), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
     bufferData.createBuffer();
@@ -72,7 +72,7 @@ void ModelMappingData::updateBufferData() {
 }
 
 
-void ModelGroup::addInstance(size_t meshIndex, size_t materialIndex, const ModelData& instanceData) {
+void ModelGroup::addInstance(size_t meshIndex, size_t materialIndex, const InstanceStatic& instanceData) {
     if (!vkDevice) return;
 
     size_t modelEncode = Hash::encode(meshIndex, materialIndex);
