@@ -19,9 +19,9 @@ void DynamicDescriptor::createLayout(const std::vector<VkDescriptorSetLayoutBind
     }
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
+    layoutInfo.pBindings    = bindings.data();
 
     if (vkCreateDescriptorSetLayout(lDevice, &layoutInfo, nullptr, &setLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout");
@@ -38,11 +38,11 @@ void DynamicDescriptor::createPool(const std::vector<VkDescriptorPoolSize>& pool
 
 
     VkDescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    poolInfo.maxSets = maxSets;
+    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    poolInfo.maxSets       = maxSets;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.pPoolSizes    = poolSizes.data();
 
     if (vkCreateDescriptorPool(lDevice, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool");
@@ -54,11 +54,11 @@ void DynamicDescriptor::createPool(const std::vector<VkDescriptorPoolSize>& pool
 
 VkDescriptorSetLayoutBinding DynamicDescriptor::fastBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t descriptorCount) {
     VkDescriptorSetLayoutBinding bindingInfo{};
-    bindingInfo.binding = binding;
-    bindingInfo.descriptorCount = descriptorCount;
-    bindingInfo.descriptorType = type;
+    bindingInfo.binding            = binding;
+    bindingInfo.descriptorCount    = descriptorCount;
+    bindingInfo.descriptorType     = type;
     bindingInfo.pImmutableSamplers = nullptr;
-    bindingInfo.stageFlags = stageFlags;
+    bindingInfo.stageFlags         = stageFlags;
     return bindingInfo;
 }
 

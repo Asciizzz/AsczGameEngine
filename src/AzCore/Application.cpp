@@ -154,6 +154,7 @@ void Application::initComponents() {
 
     demoInstanceGroup.initVkDevice(vkDevice.get());
     demoInstanceGroup.meshIndex = resourceManager->addMesh("DemoMesh", demoMesh);
+
     // Create Instance data
     InstanceStatic demoInstance;
     demoInstance.modelMatrix = glm::mat4(1.0f);
@@ -166,7 +167,6 @@ void Application::initComponents() {
     meshManager.createDeviceBuffers();
 
     matManager.uploadToGPU();
-
     texManager.uploadToGPU();
 
     renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get(),
@@ -489,8 +489,8 @@ void Application::mainLoop() {
             rendererRef.drawSky(*skyPipeline);
 
             // Draw grass system
-            // rendererRef.drawInstances(*opaquePipeline, grassSystem->grassInstanceGroup);
-            // rendererRef.drawInstances(*opaquePipeline, grassSystem->terrainInstanceGroup);
+            rendererRef.drawInstances(*opaquePipeline, grassSystem->grassInstanceGroup);
+            rendererRef.drawInstances(*opaquePipeline, grassSystem->terrainInstanceGroup);
             
             // Draw the world model group
             // rendererRef.drawInstances(*opaquePipeline, newWorld->worldModelGroup);
@@ -499,7 +499,7 @@ void Application::mainLoop() {
             rendererRef.drawInstances(*opaquePipeline, particleManager->instanceGroup);
 
             // Draw the demo instance group
-            rendererRef.drawInstances(*opaquePipeline, demoInstanceGroup);
+            // rendererRef.drawInstances(*opaquePipeline, demoInstanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };
