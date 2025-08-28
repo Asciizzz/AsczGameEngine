@@ -40,7 +40,7 @@ public:
     SharedPtrVec<Texture> textures;
 
     size_t addTexture(std::string imagePath, Texture::Mode addressMode = Texture::Repeat);
-    void createDefaultTexture();
+    void createSinglePixel(uint8_t r, uint8_t g, uint8_t b); // No A, since it's a single pixel
 
     // Vulkan image creation helpers
     void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 

@@ -14,7 +14,10 @@ namespace Az3D {
 
 TextureGroup::TextureGroup(const Device* vkDevice)
     : vkDevice(vkDevice) {
-    createDefaultTexture();
+    // Albedo default
+    createSinglePixel(255, 255, 255); // Default to white pixel
+    // Normal map default
+    createSinglePixel(127, 127, 255); // Default to a blue normal map
 }
 
 TextureGroup::~TextureGroup() {
@@ -90,13 +93,12 @@ size_t TextureGroup::addTexture(std::string imagePath, Texture::Mode addressMode
     }
 }
 
-void TextureGroup::createDefaultTexture() {
-    // Create a simple 1x1 white texture as default at index 0
-    uint8_t* white = new uint8_t[4];
-    white[0] = 255;   // R
-    white[1] = 255;   // G
-    white[2] = 255;   // B
-    white[3] = 255;   // A
+void TextureGroup::createSinglePixel(uint8_t r, uint8_t g, uint8_t b) {
+    uint8_t* pixelColor = new uint8_t[4];
+    pixelColor[0] = r;
+    pixelColor[1] = g;
+    pixelColor[2] = b;
+    pixelColor[3] = 255;
 
     Texture defaultTexture;
     defaultTexture.path = "__default__";
@@ -110,7 +112,7 @@ void TextureGroup::createDefaultTexture() {
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
     stagingBuffer.createBuffer();
-    stagingBuffer.uploadData(white);
+    stagingBuffer.uploadData(pixelColor);
 
     // Create texture image
     createImage(1, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, 
@@ -125,7 +127,6 @@ void TextureGroup::createDefaultTexture() {
     copyBufferToImage(stagingBuffer.buffer, defaultTexture.image, 1, 1);
     transitionImageLayout(  defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
-                            
 
     // Create image view and sampler
     createImageView(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, 1, defaultTexture.view);

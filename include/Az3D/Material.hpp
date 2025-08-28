@@ -12,7 +12,7 @@ namespace Az3D {
 
 struct Material {
     glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-    glm::uvec4 texIndices = glm::uvec4(0); // <albedo>, <empty>, <empty>, <empty>
+    glm::uvec4 texIndices = glm::uvec4(0, 1, 2, 3); // <albedo>, <normal>, <metallic>, <unsure>
 
     Material() = default;
 
