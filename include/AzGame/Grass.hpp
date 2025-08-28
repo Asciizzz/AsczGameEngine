@@ -14,7 +14,7 @@
 namespace Az3D {
 struct ModelGroup;
 struct ResourceManager;
-struct MeshManager;
+struct MeshStaticGroup;
 
 struct Transform;
 struct VertexStatic;

@@ -1,4 +1,4 @@
-#include "Az3D/Mesh.hpp"
+#include "Az3D/MeshStatic.hpp"
 #include <cfloat>
 #include <queue>
 
@@ -6,7 +6,7 @@ namespace Az3D {
 
 // BVH Construction
 
-void Mesh::createBVH() {
+void MeshStatic::createBVH() {
     hasBVH = true;
 
     if (indices.empty()) return;
@@ -55,7 +55,7 @@ void Mesh::createBVH() {
     buildBVH();
 }
 
-void Mesh::buildBVH() {
+void MeshStatic::buildBVH() {
     std::queue<size_t> queue;
     queue.push(0);
 
@@ -181,7 +181,7 @@ void Mesh::buildBVH() {
 
 // BVH Traversal
 
-HitInfo Mesh::closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const glm::mat4& modelMat4) const {
+HitInfo MeshStatic::closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const glm::mat4& modelMat4) const {
     HitInfo hit;
     if (!hasBVH || nodes.empty()) {
         return hit; // No BVH available
@@ -292,7 +292,7 @@ HitInfo Mesh::closestHit(const glm::vec3& origin, const glm::vec3& direction, fl
     return hit;
 }
 
-HitInfo Mesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, const glm::mat4& modelMat4) const {
+HitInfo MeshStatic::closestHit(const glm::vec3& sphere_origin, float sphere_radius, const glm::mat4& modelMat4) const {
     HitInfo hit;
     if (!hasBVH || nodes.empty()) { return hit; }
     
@@ -396,7 +396,7 @@ HitInfo Mesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, co
 }
 
 // Helper functions - exact copies from original Map.hpp
-float Mesh::rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
+float MeshStatic::rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
                             const glm::vec3& boxMin, const glm::vec3& boxMax) {
     glm::vec3 invDir = 1.0f / rayDirection;
     glm::vec3 t0 = (boxMin - rayOrigin) * invDir;
@@ -426,7 +426,7 @@ float Mesh::rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDire
     return tMin;
 }
 
-glm::vec3 Mesh::rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
+glm::vec3 MeshStatic::rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
                                     const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
     glm::vec3 e1 = v1 - v0;
     glm::vec3 e2 = v2 - v0;
@@ -449,7 +449,7 @@ glm::vec3 Mesh::rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3
     return t > 0.0f ? glm::vec3(u, v, t) : glm::vec3(-1.0f);
 }
 
-float Mesh::sphereIntersectBox( const glm::vec3& sphereOrigin, float sphereRadius,
+float MeshStatic::sphereIntersectBox( const glm::vec3& sphereOrigin, float sphereRadius,
                                 const glm::vec3& boxMin, const glm::vec3& boxMax) {
     glm::vec3 closestPoint = glm::clamp(sphereOrigin, boxMin, boxMax);
 
@@ -461,7 +461,7 @@ float Mesh::sphereIntersectBox( const glm::vec3& sphereOrigin, float sphereRadiu
     return intersect ? glm::sqrt(distSqr) : -1.0f;
 }
 
-glm::vec3 Mesh::sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius,
+glm::vec3 MeshStatic::sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius,
                                         const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
     // Compute triangle normal
     glm::vec3 edge1 = v1 - v0;

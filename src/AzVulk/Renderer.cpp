@@ -145,7 +145,7 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
 void Renderer::drawScene(RasterPipeline& rasterPipeline, ModelGroup& modelGroup) {
     const Az3D::MaterialGroup* matManager = resourceManager->materialManager.get();
     const Az3D::TextureGroup* texManager = resourceManager->textureManager.get();
-    const Az3D::MeshManager* meshManager = resourceManager->meshManager.get();
+    const Az3D::MeshStaticGroup* meshManager = resourceManager->meshManager.get();
 
     VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
 

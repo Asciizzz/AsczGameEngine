@@ -2,7 +2,7 @@
 
 #include "Az3D/Texture.hpp"
 #include "Az3D/Material.hpp"
-#include "Az3D/Mesh.hpp"
+#include "Az3D/MeshStatic.hpp"
 
 
 namespace Az3D {
@@ -20,7 +20,7 @@ public:
                     Texture::Mode addressMode = Texture::Repeat);
     size_t addMaterial(std::string name, const Material& material);
 
-    size_t addMesh(std::string name, SharedPtr<Mesh> mesh, bool hasBVH = false);
+    size_t addMesh(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH = false);
     size_t addMesh(std::string name, std::string filePath, bool hasBVH = false);
 
     // String-to-index getters
@@ -28,7 +28,7 @@ public:
     size_t getMaterialIndex(std::string name) const;
     size_t getMeshIndex(std::string name) const;
 
-    Mesh* getMesh(std::string name) const;
+    MeshStatic* getMesh(std::string name) const;
     Material* getMaterial(std::string name) const;
     Texture* getTexture(std::string name) const;
 
@@ -37,7 +37,7 @@ public:
     UnorderedMap<std::string, size_t> materialNameToIndex;
     UnorderedMap<std::string, size_t> meshNameToIndex;
 
-    UniquePtr<MeshManager> meshManager;
+    UniquePtr<MeshStaticGroup> meshManager;
     UniquePtr<TextureGroup> textureManager;
     UniquePtr<MaterialGroup> materialManager;
 };

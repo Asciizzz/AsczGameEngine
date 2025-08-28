@@ -36,22 +36,22 @@ struct HitInfo {
     uint32_t materialId = 0;
 };
 
-struct Mesh {
+struct MeshStatic {
     static constexpr size_t MAX_DEPTH = 32;
     static constexpr size_t BIN_COUNT = 11;
 
     // Delete copy semantics
-    Mesh(const Mesh&) = delete;
-    Mesh& operator=(const Mesh&) = delete;
+    MeshStatic(const MeshStatic&) = delete;
+    MeshStatic& operator=(const MeshStatic&) = delete;
 
-    Mesh() = default;
-    Mesh(std::vector<VertexStatic> vertices, std::vector<uint32_t> indices)
+    MeshStatic() = default;
+    MeshStatic(std::vector<VertexStatic> vertices, std::vector<uint32_t> indices)
         : vertices(std::move(vertices)), indices(std::move(indices)) {}
 
     // Mesh data
     std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
-    static SharedPtr<Mesh> loadFromOBJ(std::string filePath);
+    static SharedPtr<MeshStatic> loadFromOBJ(std::string filePath);
 
     // Mesh's buffer data
     AzVulk::BufferData vertexBufferData;
@@ -84,19 +84,18 @@ struct Mesh {
 };
 
 
-class MeshManager {
+class MeshStaticGroup {
 public:
-    MeshManager(const AzVulk::Device* vkDevice);
-    MeshManager(const MeshManager&) = delete;
-    MeshManager& operator=(const MeshManager&) = delete;
+    MeshStaticGroup(const AzVulk::Device* vkDevice);
+    MeshStaticGroup(const MeshStaticGroup&) = delete;
+    MeshStaticGroup& operator=(const MeshStaticGroup&) = delete;
 
-    size_t addMesh(SharedPtr<Mesh> mesh);
+    size_t addMesh(SharedPtr<MeshStatic> mesh);
     size_t addMesh(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices);
     size_t loadFromOBJ(std::string filePath);
 
     // Index-based mesh storage
-    size_t count = 0; // Track the number of meshes
-    SharedPtrVec<Mesh> meshes;
+    SharedPtrVec<MeshStatic> meshes;
 
     const AzVulk::Device* vkDevice;
     void createDeviceBuffers();

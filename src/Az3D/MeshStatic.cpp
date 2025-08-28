@@ -1,4 +1,4 @@
-#include "Az3D/Mesh.hpp"
+#include "Az3D/MeshStatic.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "Helpers/tiny_obj_loader.h"
@@ -9,23 +9,23 @@ using namespace AzVulk;
 namespace Az3D {
 
 
-MeshManager::MeshManager(const AzVulk::Device* vkDevice) : vkDevice(vkDevice) {}
+MeshStaticGroup::MeshStaticGroup(const AzVulk::Device* vkDevice) : vkDevice(vkDevice) {}
 
-size_t MeshManager::addMesh(SharedPtr<Mesh> mesh) {
+size_t MeshStaticGroup::addMesh(SharedPtr<MeshStatic> mesh) {
     meshes.push_back(mesh);
-    return count++;
+    return meshes.size() - 1;
 }
-size_t MeshManager::addMesh(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices) {
-    auto mesh = MakeShared<Mesh>(std::move(vertices), std::move(indices));
+size_t MeshStaticGroup::addMesh(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices) {
+    auto mesh = MakeShared<MeshStatic>(std::move(vertices), std::move(indices));
     return addMesh(mesh);
 }
-size_t MeshManager::loadFromOBJ(std::string filePath) {
-    auto mesh = Mesh::loadFromOBJ(filePath);
+size_t MeshStaticGroup::loadFromOBJ(std::string filePath) {
+    auto mesh = MeshStatic::loadFromOBJ(filePath);
     return addMesh(mesh);
 }
 
 // Buffer data
-void Mesh::createDeviceBuffer(const Device* vkDevice) {
+void MeshStatic::createDeviceBuffer(const Device* vkDevice) {
     BufferData vertexStagingBuffer;
     vertexStagingBuffer.initVkDevice(vkDevice);
     vertexStagingBuffer.setProperties(
@@ -87,7 +87,7 @@ void Mesh::createDeviceBuffer(const Device* vkDevice) {
 }
 
 // OBJ loader implementation using tiny_obj_loader
-SharedPtr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
+SharedPtr<MeshStatic> MeshStatic::loadFromOBJ(std::string filePath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -186,10 +186,10 @@ SharedPtr<Mesh> Mesh::loadFromOBJ(std::string filePath) {
         }
     }
 
-    return MakeShared<Mesh>(std::move(vertices), std::move(indices));
+    return MakeShared<MeshStatic>(std::move(vertices), std::move(indices));
 }
 
-void MeshManager::createDeviceBuffers() {
+void MeshStaticGroup::createDeviceBuffers() {
     for (size_t i = 0; i < meshes.size(); ++i) {
         meshes[i]->createDeviceBuffer(vkDevice);
     }

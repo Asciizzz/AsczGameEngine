@@ -9,7 +9,7 @@ namespace Az3D {
 ResourceManager::ResourceManager(Device* vkDevice) {
     textureManager = MakeUnique<TextureGroup>(vkDevice);
     materialManager = MakeUnique<MaterialGroup>(vkDevice);
-    meshManager = MakeUnique<MeshManager>(vkDevice);
+    meshManager = MakeUnique<MeshStaticGroup>(vkDevice);
 }
 
 size_t ResourceManager::addTexture(std::string name, std::string imagePath,
@@ -25,7 +25,7 @@ size_t ResourceManager::addMaterial(std::string name, const Material& material) 
     return index;
 }
 
-size_t ResourceManager::addMesh(std::string name, SharedPtr<Mesh> mesh, bool hasBVH) {
+size_t ResourceManager::addMesh(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
     if (hasBVH) mesh->createBVH();
 
     size_t index = meshManager->addMesh(mesh);
@@ -33,7 +33,7 @@ size_t ResourceManager::addMesh(std::string name, SharedPtr<Mesh> mesh, bool has
     return index;
 }
 size_t ResourceManager::addMesh(std::string name, std::string filePath, bool hasBVH) {
-    auto newMesh = Mesh::loadFromOBJ(filePath); 
+    auto newMesh = MeshStatic::loadFromOBJ(filePath); 
     if (hasBVH) newMesh->createBVH();
 
     size_t index = meshManager->addMesh(newMesh);
@@ -57,7 +57,7 @@ size_t ResourceManager::getMeshIndex(std::string name) const {
 }
 
 
-Mesh* ResourceManager::getMesh(std::string name) const {
+MeshStatic* ResourceManager::getMesh(std::string name) const {
     size_t index = getMeshIndex(name);
     return index != SIZE_MAX ? meshManager->meshes[index].get() : nullptr;
 }
