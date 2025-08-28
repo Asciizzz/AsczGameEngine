@@ -10,16 +10,16 @@
 namespace AzVulk {
 
 DepthManager::DepthManager(const Device* vkDevice)
-    : vkDevice(vkDevice),
-        depthSampler(VK_NULL_HANDLE),
-        depthSamplerView(VK_NULL_HANDLE),
-        depthImage(VK_NULL_HANDLE),
-        depthImageMemory(VK_NULL_HANDLE),
-        depthImageView(VK_NULL_HANDLE),
-        depthSampleImage(VK_NULL_HANDLE),
-        depthSampleImageMemory(VK_NULL_HANDLE),
-        msaaSamples(VK_SAMPLE_COUNT_1_BIT),
-        depthResolveSupported(false)
+    : vkDevice              (vkDevice)
+    , depthSampler          (VK_NULL_HANDLE)
+    , depthSamplerView      (VK_NULL_HANDLE)
+    , depthImage            (VK_NULL_HANDLE)
+    , depthImageMemory      (VK_NULL_HANDLE)
+    , depthImageView        (VK_NULL_HANDLE)
+    , depthSampleImage      (VK_NULL_HANDLE)
+    , depthSampleImageMemory(VK_NULL_HANDLE)
+    , msaaSamples           (VK_SAMPLE_COUNT_1_BIT)
+    , depthResolveSupported (false)
 {}
 
 DepthManager::~DepthManager() {
@@ -27,42 +27,15 @@ DepthManager::~DepthManager() {
 }
 
 void DepthManager::cleanup() {
-    VkDevice logicalDevice = vkDevice->lDevice;
+    VkDevice lDevice = vkDevice->lDevice;
 
-    if (depthSampler != VK_NULL_HANDLE) {
-        vkDestroySampler(logicalDevice, depthSampler, nullptr);
-        depthSampler = VK_NULL_HANDLE;
-    }
-
-    if (depthSamplerView != VK_NULL_HANDLE) {
-        vkDestroyImageView(logicalDevice, depthSamplerView, nullptr);
-        depthSamplerView = VK_NULL_HANDLE;
-    }
-
-    if (depthSampleImage != VK_NULL_HANDLE) {
-        vkDestroyImage(logicalDevice, depthSampleImage, nullptr);
-        depthSampleImage = VK_NULL_HANDLE;
-    }
-
-    if (depthSampleImageMemory != VK_NULL_HANDLE) {
-        vkFreeMemory(logicalDevice, depthSampleImageMemory, nullptr);
-        depthSampleImageMemory = VK_NULL_HANDLE;
-    }
-
-    if (depthImageView != VK_NULL_HANDLE) {
-        vkDestroyImageView(logicalDevice, depthImageView, nullptr);
-        depthImageView = VK_NULL_HANDLE;
-    }
-
-    if (depthImage != VK_NULL_HANDLE) {
-        vkDestroyImage(logicalDevice, depthImage, nullptr);
-        depthImage = VK_NULL_HANDLE;
-    }
-
-    if (depthImageMemory != VK_NULL_HANDLE) {
-        vkFreeMemory(logicalDevice, depthImageMemory, nullptr);
-        depthImageMemory = VK_NULL_HANDLE;
-    }
+    if (depthSampler           != VK_NULL_HANDLE) { vkDestroySampler   (lDevice, depthSampler,           nullptr); depthSampler           = VK_NULL_HANDLE; }
+    if (depthSamplerView       != VK_NULL_HANDLE) { vkDestroyImageView (lDevice, depthSamplerView,       nullptr); depthSamplerView       = VK_NULL_HANDLE; }
+    if (depthSampleImage       != VK_NULL_HANDLE) { vkDestroyImage     (lDevice, depthSampleImage,       nullptr); depthSampleImage       = VK_NULL_HANDLE; }
+    if (depthSampleImageMemory != VK_NULL_HANDLE) { vkFreeMemory       (lDevice, depthSampleImageMemory, nullptr); depthSampleImageMemory = VK_NULL_HANDLE; }
+    if (depthImageView         != VK_NULL_HANDLE) { vkDestroyImageView (lDevice, depthImageView,         nullptr); depthImageView         = VK_NULL_HANDLE; }
+    if (depthImage             != VK_NULL_HANDLE) { vkDestroyImage     (lDevice, depthImage,             nullptr); depthImage             = VK_NULL_HANDLE; }
+    if (depthImageMemory       != VK_NULL_HANDLE) { vkFreeMemory       (lDevice, depthImageMemory,       nullptr); depthImageMemory       = VK_NULL_HANDLE; }
 }
 
 // Helper: query whether the physical lDevice supports any depth-resolve modes
@@ -91,12 +64,10 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height, VkSampl
     cleanup();
 
     this->msaaSamples = msaaSamplesIn;
+    depthFormat       = findDepthFormat();
 
-    depthFormat = findDepthFormat();
-
-    // Query depth-resolve support on this GPU
     VkResolveModeFlagBits mode = chooseDepthResolveModeForPhysicalDevice(vkDevice->pDevice);
-    depthResolveSupported = (mode != VK_RESOLVE_MODE_NONE);
+    depthResolveSupported  = (mode != VK_RESOLVE_MODE_NONE);
 
     // If MSAA disabled (1 sample) create one depth image that is both attachment + sampled
     if (msaaSamples == VK_SAMPLE_COUNT_1_BIT) {
@@ -109,9 +80,9 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height, VkSampl
         depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
         // Use same image for sampling view (no separate resolve image needed)
-        depthSampleImage = depthImage;
+        depthSampleImage       = depthImage;
         depthSampleImageMemory = depthImageMemory;
-        depthSamplerView = depthImageView;
+        depthSamplerView       = depthImageView;
     } else {
         // MSAA > 1: create a multisampled depth attachment image
         // Note: we intentionally *do not* request SAMPLED_BIT here. If you later want to implement a shader-based manual resolve,
@@ -175,19 +146,19 @@ void DepthManager::createImage( uint32_t width, uint32_t height, VkFormat format
                                 VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
                                 VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples) {
     VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
+    imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width  = width;
     imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
+    imageInfo.extent.depth  = 1;
+    imageInfo.mipLevels     = 1;
+    imageInfo.arrayLayers   = 1;
+    imageInfo.format        = format;
+    imageInfo.tiling        = tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = usage;
-    imageInfo.samples = numSamples;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.usage         = usage;
+    imageInfo.samples       = numSamples;
+    imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
     if (vkCreateImage(vkDevice->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
         throw std::runtime_error("failed to create depth image!");
@@ -197,8 +168,8 @@ void DepthManager::createImage( uint32_t width, uint32_t height, VkFormat format
     vkGetImageMemoryRequirements(vkDevice->lDevice, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize  = memRequirements.size;
     allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice->pDevice);
 
     if (vkAllocateMemory(vkDevice->lDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
@@ -210,15 +181,15 @@ void DepthManager::createImage( uint32_t width, uint32_t height, VkFormat format
 
 VkImageView DepthManager::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
     VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image                           = image;
+    viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format                          = format;
+    viewInfo.subresourceRange.aspectMask     = aspectFlags;
+    viewInfo.subresourceRange.baseMipLevel   = 0;
+    viewInfo.subresourceRange.levelCount     = 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
+    viewInfo.subresourceRange.layerCount     = 1;
 
     VkImageView imageView;
     if (vkCreateImageView(vkDevice->lDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
@@ -230,22 +201,22 @@ VkImageView DepthManager::createImageView(VkImage image, VkFormat format, VkImag
 
 void DepthManager::createDepthSampler() {
     VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.anisotropyEnable = VK_FALSE;
-    samplerInfo.maxAnisotropy = 1.0f;
-    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter               = VK_FILTER_LINEAR;
+    samplerInfo.minFilter               = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.anisotropyEnable        = VK_FALSE;
+    samplerInfo.maxAnisotropy           = 1.0f;
+    samplerInfo.borderColor             = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;  // For normal depth sampling, not shadow mapping
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 0.0f;
-    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.compareEnable           = VK_FALSE;  // For normal depth sampling, not shadow mapping
+    samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.minLod                  = 0.0f;
+    samplerInfo.maxLod                  = 0.0f;
+    samplerInfo.mipLodBias              = 0.0f;
 
     if (vkCreateSampler(vkDevice->lDevice, &samplerInfo, nullptr, &depthSampler) != VK_SUCCESS) {
         throw std::runtime_error("failed to create depth sampler!");
@@ -284,16 +255,16 @@ void DepthManager::copyDepthForSampling(VkCommandBuffer commandBuffer, uint32_t 
     }
 
     VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.pNext = nullptr;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = targetImage;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
+    barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.pNext                           = nullptr;
+    barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image                           = targetImage;
+    barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
+    barrier.subresourceRange.baseMipLevel   = 0;
+    barrier.subresourceRange.levelCount     = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount     = 1;
 
     // Renderpass wrote to depth -> make available to shader read
     barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
