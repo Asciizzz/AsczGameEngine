@@ -23,6 +23,7 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/VertexTypes.cpp
     src/Az3D/MeshStatic.cpp
     src/Az3D/MeshStatic_BVH.cpp
+    src/Az3D/MeshSkinned.cpp
     src/Az3D/Material.cpp
     src/Az3D/Texture.cpp
     src/Az3D/InstanceStatic.cpp
