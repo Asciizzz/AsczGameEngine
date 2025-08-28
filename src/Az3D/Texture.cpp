@@ -15,9 +15,7 @@ namespace Az3D {
 TextureGroup::TextureGroup(const Device* vkDevice)
     : vkDevice(vkDevice) {
     // Albedo default
-    createSinglePixel(255, 255, 255); // Default to white pixel
-    // Normal map default
-    createSinglePixel(127, 127, 255); // Default to a blue normal map
+    createSinglePixel(255, 255, 255);
 }
 
 TextureGroup::~TextureGroup() {

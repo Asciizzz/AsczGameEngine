@@ -41,12 +41,14 @@ struct Transform {
 
 
 struct VertexStatic {
-    // Compact 32 byte data layout
+    // Compact 48 byte data layout
 
     // Position on XYZ and Texture U on W
-    // Normal on XYZ and Texture V on W
     glm::vec4 pos_tu = glm::vec4(0.0f);
+    // Normal on XYZ and Texture V on W
     glm::vec4 nrml_tv = glm::vec4(0.0f);
+    // Tangent XYZ and handedness on W
+    glm::vec4 tangent = glm::vec4(0.0f);
 
     VertexStatic() = default;
     VertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv) {
@@ -68,11 +70,11 @@ struct VertexStatic {
 };
 
 struct VertexSkinned {
-    // 64 bytes of data
+    // 80 bytes of data
 
-    // Smart padding
     glm::vec4 pos_tu = glm::vec4(0.0f);
     glm::vec4 nrml_tv = glm::vec4(0.0f);
+    glm::vec4 tangent = glm::vec4(0.0f);
 
     glm::uvec4 boneIDs = glm::uvec4(0);
     glm::vec4 weights = glm::vec4(0.0f);
