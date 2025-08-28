@@ -18,7 +18,7 @@ SwapChain::~SwapChain() {
 }
 
 void SwapChain::createSwapChain(SDL_Window* window) {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vkDevice->physicalDevice);
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vkDevice->pDevice);
 
     VkSurfaceFormatKHR sc_surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR sc_presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -55,13 +55,13 @@ void SwapChain::createSwapChain(SDL_Window* window) {
     createInfo.presentMode = sc_presentMode;
     createInfo.clipped = VK_TRUE;
 
-    if (vkCreateSwapchainKHR(vkDevice->device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(vkDevice->lDevice, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    vkGetSwapchainImagesKHR(vkDevice->device, swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(vkDevice->lDevice, swapChain, &imageCount, nullptr);
     images.resize(imageCount);
-    vkGetSwapchainImagesKHR(vkDevice->device, swapChain, &imageCount, images.data());
+    vkGetSwapchainImagesKHR(vkDevice->lDevice, swapChain, &imageCount, images.data());
 
     imageFormat = sc_surfaceFormat.format;
     extent = sc_extent;
@@ -86,7 +86,7 @@ void SwapChain::createImageViews() {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(vkDevice->device, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
+        if (vkCreateImageView(vkDevice->lDevice, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create image views!");
         }
     }
@@ -124,7 +124,7 @@ void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
         framebufferInfo.height = extent.height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(vkDevice->device, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
+        if (vkCreateFramebuffer(vkDevice->lDevice, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create framebuffer!");
         }
     }
@@ -138,7 +138,7 @@ void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass
         SDL_WaitEvent(nullptr);
     }
 
-    vkDeviceWaitIdle(vkDevice->device);
+    vkDeviceWaitIdle(vkDevice->lDevice);
 
     cleanup();
     createSwapChain(window);
@@ -150,40 +150,40 @@ void SwapChain::cleanup() {
     cleanupFramebuffers();
 
     for (auto imageView : imageViews) {
-        vkDestroyImageView(vkDevice->device, imageView, nullptr);
+        vkDestroyImageView(vkDevice->lDevice, imageView, nullptr);
     }
     imageViews.clear();
 
     if (swapChain != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(vkDevice->device, swapChain, nullptr);
+        vkDestroySwapchainKHR(vkDevice->lDevice, swapChain, nullptr);
         swapChain = VK_NULL_HANDLE;
     }
 }
 
 void SwapChain::cleanupFramebuffers() {
     for (auto framebuffer : framebuffers) {
-        vkDestroyFramebuffer(vkDevice->device, framebuffer, nullptr);
+        vkDestroyFramebuffer(vkDevice->lDevice, framebuffer, nullptr);
     }
     framebuffers.clear();
 }
 
-SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice device) {
+SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice lDevice) {
     SwapChainSupportDetails details;
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(lDevice, surface, &details.capabilities);
 
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(lDevice, surface, &formatCount, nullptr);
     if (formatCount != 0) {
         details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(lDevice, surface, &formatCount, details.formats.data());
     }
 
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(lDevice, surface, &presentModeCount, nullptr);
     if (presentModeCount != 0) {
         details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+        vkGetPhysicalDeviceSurfacePresentModesKHR(lDevice, surface, &presentModeCount, details.presentModes.data());
     }
 
     return details;

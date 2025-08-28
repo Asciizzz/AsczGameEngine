@@ -7,12 +7,12 @@ namespace AzVulk {
 
     struct DynamicDescriptor {
         DynamicDescriptor() = default;
-        DynamicDescriptor(VkDevice device) : device(device) {}
-        void init(VkDevice device) { this->device = device; }
+        DynamicDescriptor(VkDevice lDevice) : lDevice(lDevice) {}
+        void init(VkDevice lDevice) { this->lDevice = lDevice; }
         
         ~DynamicDescriptor();
 
-        VkDevice device;
+        VkDevice lDevice;
 
         VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
         void createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);

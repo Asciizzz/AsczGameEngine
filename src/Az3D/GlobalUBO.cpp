@@ -36,7 +36,7 @@ void GlobalUBOManager::createBufferDatas() {
 void GlobalUBOManager::initDescriptorSets() {
     using namespace AzVulk;
 
-    dynamicDescriptor.init(vkDevice->device);
+    dynamicDescriptor.init(vkDevice->lDevice);
     dynamicDescriptor.createLayout({
         // Global UBO only
         DynamicDescriptor::fastBinding(
@@ -56,7 +56,7 @@ void GlobalUBOManager::createDescriptorSets() {
     // Free old sets
     for (auto& set : dynamicDescriptor.sets) {
         if (set != VK_NULL_HANDLE) {
-            vkFreeDescriptorSets(vkDevice->device, dynamicDescriptor.pool, 1, &set);
+            vkFreeDescriptorSets(vkDevice->lDevice, dynamicDescriptor.pool, 1, &set);
             set = VK_NULL_HANDLE;
         }
     }
@@ -70,7 +70,7 @@ void GlobalUBOManager::createDescriptorSets() {
     allocInfo.pSetLayouts = layouts.data();
 
     dynamicDescriptor.sets.resize(MAX_FRAMES_IN_FLIGHT);
-    if (vkAllocateDescriptorSets(vkDevice->device, &allocInfo, dynamicDescriptor.sets.data()) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(vkDevice->lDevice, &allocInfo, dynamicDescriptor.sets.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate global descriptor sets");
     }
 
@@ -89,7 +89,7 @@ void GlobalUBOManager::createDescriptorSets() {
         write.descriptorCount = 1;
         write.pBufferInfo = &bufferInfo;
 
-        vkUpdateDescriptorSets(vkDevice->device, 1, &write, 0, nullptr);
+        vkUpdateDescriptorSets(vkDevice->lDevice, 1, &write, 0, nullptr);
     }
 }
 

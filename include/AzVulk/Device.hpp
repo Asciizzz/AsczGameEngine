@@ -28,8 +28,8 @@ public:
     Device& operator=(const Device&) = delete;
 
     // Vulkan objects
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    VkDevice device = VK_NULL_HANDLE;
+    VkPhysicalDevice pDevice = VK_NULL_HANDLE;
+    VkDevice lDevice = VK_NULL_HANDLE;
 
     // Queues
     VkQueue graphicsQueue = VK_NULL_HANDLE;
@@ -54,14 +54,14 @@ public:
     void createDefaultCommandPools();
     PoolWrapper createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags = 0);
 
-    static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physicalDevice);
+    static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice pDevice);
 
 private:
     void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
     void createLogicalDevice();
-    bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
-    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
+    bool isDeviceSuitable(VkPhysicalDevice lDevice, VkSurfaceKHR surface);
+    bool checkDeviceExtensionSupport(VkPhysicalDevice lDevice);
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice lDevice, VkSurfaceKHR surface);
 };
 
 // RAII temporary command buffer wrapper

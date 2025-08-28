@@ -20,7 +20,7 @@ VkShaderModule BasePipeline::createModule(const std::vector<char>& code) const {
     ci.codeSize = code.size();
     ci.pCode = reinterpret_cast<const uint32_t*>(code.data());
     VkShaderModule m{};
-    if (vkCreateShaderModule(device, &ci, nullptr, &m) != VK_SUCCESS)
+    if (vkCreateShaderModule(lDevice, &ci, nullptr, &m) != VK_SUCCESS)
         throw std::runtime_error("failed to create shader module");
     return m;
 }

@@ -55,16 +55,16 @@ BufferData& BufferData::operator=(BufferData&& other) noexcept {
 void BufferData::cleanup() {
     if (buffer != VK_NULL_HANDLE) {
         if (mapped) {
-            vkUnmapMemory(vkDevice->device, memory);
+            vkUnmapMemory(vkDevice->lDevice, memory);
             mapped = nullptr;
         }
 
-        vkDestroyBuffer(vkDevice->device, buffer, nullptr);
+        vkDestroyBuffer(vkDevice->lDevice, buffer, nullptr);
         buffer = VK_NULL_HANDLE;
     }
 
     if (memory != VK_NULL_HANDLE) {
-        vkFreeMemory(vkDevice->device, memory, nullptr);
+        vkFreeMemory(vkDevice->lDevice, memory, nullptr);
         memory = VK_NULL_HANDLE;
     }
 }
@@ -81,11 +81,11 @@ void BufferData::setProperties(
 }
 
 void BufferData::createBuffer() {
-    VkDevice device = vkDevice->device;
-    VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
+    VkDevice lDevice = vkDevice->lDevice;
+    VkPhysicalDevice pDevice = vkDevice->pDevice;
 
-    if (device == VK_NULL_HANDLE || physicalDevice == VK_NULL_HANDLE) {
-        throw std::runtime_error("BufferData: Vulkan device not initialized");
+    if (lDevice == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
+        throw std::runtime_error("BufferData: Vulkan lDevice not initialized");
     }
 
     cleanup();
@@ -96,23 +96,23 @@ void BufferData::createBuffer() {
     bufferInfo.usage = usageFlags;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+    if (vkCreateBuffer(lDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create buffer!");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(lDevice, buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memoryFlags, physicalDevice);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memoryFlags, pDevice);
 
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+    if (vkAllocateMemory(lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate buffer memory!");
     }
 
-    vkBindBufferMemory(device, buffer, memory, 0);
+    vkBindBufferMemory(lDevice, buffer, memory, 0);
 }
 
 }

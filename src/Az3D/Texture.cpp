@@ -19,20 +19,20 @@ TextureGroup::TextureGroup(const Device* vkDevice)
 
 TextureGroup::~TextureGroup() {
     // Clean up all textures
-    VkDevice device = vkDevice->device;
+    VkDevice lDevice = vkDevice->lDevice;
 
     for (auto& texture : textures) {
         if (texture->view != VK_NULL_HANDLE) {
-            vkDestroyImageView(device, texture->view, nullptr);
+            vkDestroyImageView(lDevice, texture->view, nullptr);
         }
         if (texture->sampler != VK_NULL_HANDLE) {
-            vkDestroySampler(device, texture->sampler, nullptr);
+            vkDestroySampler(lDevice, texture->sampler, nullptr);
         }
         if (texture->image != VK_NULL_HANDLE) {
-            vkDestroyImage(device, texture->image, nullptr);
+            vkDestroyImage(lDevice, texture->image, nullptr);
         }
         if (texture->memory != VK_NULL_HANDLE) {
-            vkFreeMemory(device, texture->memory, nullptr);
+            vkFreeMemory(lDevice, texture->memory, nullptr);
         }
     }
     textures.clear();
@@ -156,23 +156,23 @@ void TextureGroup::createImage(uint32_t width, uint32_t height, uint32_t mipLeve
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(vkDevice->device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    if (vkCreateImage(vkDevice->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image!");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(vkDevice->device, image, &memRequirements);
+    vkGetImageMemoryRequirements(vkDevice->lDevice, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice->physicalDevice);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice->pDevice);
 
-    if (vkAllocateMemory(vkDevice->device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(vkDevice->lDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate image memory!");
     }
 
-    vkBindImageMemory(vkDevice->device, image, imageMemory, 0);
+    vkBindImageMemory(vkDevice->lDevice, image, imageMemory, 0);
 }
 
 void TextureGroup::createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView) {
@@ -187,17 +187,17 @@ void TextureGroup::createImageView(VkImage image, VkFormat format, uint32_t mipL
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(vkDevice->device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    if (vkCreateImageView(vkDevice->lDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture image view!");
     }
 }
 
 void TextureGroup::createSampler(uint32_t mipLevels, VkSampler& sampler, Texture::Mode addressMode) {
     VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(vkDevice->physicalDevice, &properties);
+    vkGetPhysicalDeviceProperties(vkDevice->pDevice, &properties);
 
     VkPhysicalDeviceFeatures deviceFeatures{};
-    vkGetPhysicalDeviceFeatures(vkDevice->physicalDevice, &deviceFeatures);
+    vkGetPhysicalDeviceFeatures(vkDevice->pDevice, &deviceFeatures);
 
     VkSamplerAddressMode vulkanAddressMode = static_cast<VkSamplerAddressMode>(addressMode);
 
@@ -226,7 +226,7 @@ void TextureGroup::createSampler(uint32_t mipLevels, VkSampler& sampler, Texture
     samplerInfo.maxLod = static_cast<float>(mipLevels);
     samplerInfo.mipLodBias = 0.0f;
 
-    if (vkCreateSampler(vkDevice->device, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
+    if (vkCreateSampler(vkDevice->lDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture sampler!");
     }
 }
@@ -286,7 +286,7 @@ void TextureGroup::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t wi
 
 void TextureGroup::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(vkDevice->physicalDevice, imageFormat, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(vkDevice->pDevice, imageFormat, &formatProperties);
 
     if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
         throw std::runtime_error("texture image format does not support linear blitting!");
@@ -353,9 +353,9 @@ void TextureGroup::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t 
 }
 
 void TextureGroup::createDescriptorSets() {
-    VkDevice device = vkDevice->device;
+    VkDevice lDevice = vkDevice->lDevice;
     VkPhysicalDeviceProperties deviceProps{};
-    vkGetPhysicalDeviceProperties(vkDevice->physicalDevice, &deviceProps);
+    vkGetPhysicalDeviceProperties(vkDevice->pDevice, &deviceProps);
 
     // How many textures we have
     uint32_t textureCount = static_cast<uint32_t>(textures.size());
@@ -364,7 +364,7 @@ void TextureGroup::createDescriptorSets() {
         return;
     }
 
-    // Check device limits for sanity and give a helpful error if we're over
+    // Check lDevice limits for sanity and give a helpful error if we're over
     uint32_t maxSamplersPerStage = deviceProps.limits.maxPerStageDescriptorSamplers;
     uint32_t maxSamplersPerSet   = deviceProps.limits.maxDescriptorSetSamplers; // wrapper hint, may be same
 
@@ -372,12 +372,12 @@ void TextureGroup::createDescriptorSets() {
         // Fallback or informative error — don't crash, print a warning and fall back
         // to the old-per-texture descriptor sets approach or consider using bindless (descriptor indexing).
         std::cerr << "Warning: request to create a single descriptor array of "
-                << textureCount << " combined samplers exceeds device limit of "
+                << textureCount << " combined samplers exceeds lDevice limit of "
                 << maxSamplersPerStage << " per stage. Falling back to per-texture descriptors or enable descriptor indexing.\n";
         // You can either:
         //  - implement a fallback here that creates multiple small descriptor sets,
         //  - or attempt to use the descriptor indexing extension (VK_EXT_descriptor_indexing) and UPDATE_AFTER_BIND flags.
-        // For now we will attempt to create up to the device limit (clamp), but user must handle indices > clamp.
+        // For now we will attempt to create up to the lDevice limit (clamp), but user must handle indices > clamp.
         textureCount = std::min(textureCount, maxSamplersPerStage);
     }
 
@@ -391,7 +391,7 @@ void TextureGroup::createDescriptorSets() {
     binding.pImmutableSamplers = nullptr;
 
     // We assume DynamicDescriptor::createLayout accepts a vector of bindings
-    dynamicDescriptor.init(device);
+    dynamicDescriptor.init(lDevice);
     dynamicDescriptor.createLayout({ binding });
 
     // --- create descriptor pool sized to hold the entire array of combined image samplers ---
@@ -412,7 +412,7 @@ void TextureGroup::createDescriptorSets() {
     allocInfo.pSetLayouts = &layout;
 
     VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-    VkResult res = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
+    VkResult res = vkAllocateDescriptorSets(lDevice, &allocInfo, &descriptorSet);
     if (res != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate single texture descriptor set");
     }
@@ -441,7 +441,7 @@ void TextureGroup::createDescriptorSets() {
     write.descriptorCount = static_cast<uint32_t>(imageInfos.size());
     write.pImageInfo = imageInfos.data();
 
-    vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+    vkUpdateDescriptorSets(lDevice, 1, &write, 0, nullptr);
 
     // Store single descriptor set for later use (replace your 'sets' vector usage)
     dynamicDescriptor.set = descriptorSet;

@@ -17,8 +17,8 @@ size_t MaterialGroup::addMaterial(const Material& material) {
 }
 
 void MaterialGroup::createGPUBufferData() {
-    VkDevice device = vkDevice->device;
-    VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
+    VkDevice lDevice = vkDevice->lDevice;
+    VkPhysicalDevice pDevice = vkDevice->pDevice;
 
     VkDeviceSize bufferSize = sizeof(Material) * materials.size();
 
@@ -34,7 +34,7 @@ void MaterialGroup::createGPUBufferData() {
 
     stagingBuffer.uploadData(materials.data());
 
-    // --- device-local buffer (GPU only, STORAGE + DST) ---
+    // --- lDevice-local buffer (GPU only, STORAGE + DST) ---
     bufferData.initVkDevice(vkDevice);
     bufferData.setProperties(
         bufferSize,
@@ -44,7 +44,7 @@ void MaterialGroup::createGPUBufferData() {
     );
     bufferData.createBuffer();
 
-    // --- copy staging -> device local ---
+    // --- copy staging -> lDevice local ---
     TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
     VkBufferCopy copyRegion{};
@@ -57,10 +57,10 @@ void MaterialGroup::createGPUBufferData() {
 
 // Descriptor set creation
 void MaterialGroup::createDescriptorSets() {
-    VkDevice device = vkDevice->device;
+    VkDevice lDevice = vkDevice->lDevice;
 
     // --- create layout ---
-    dynamicDescriptor.init(device);
+    dynamicDescriptor.init(lDevice);
     VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(
         0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
@@ -83,7 +83,7 @@ void MaterialGroup::createDescriptorSets() {
     allocInfo.pSetLayouts = &layout;
 
     VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-    if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(lDevice, &allocInfo, &descriptorSet) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate descriptor set for materials");
     }
 
@@ -102,7 +102,7 @@ void MaterialGroup::createDescriptorSets() {
     descriptorWrite.descriptorCount = 1;
     descriptorWrite.pBufferInfo = &materialBufferInfo;
 
-    vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+    vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
 
     dynamicDescriptor.set = descriptorSet;
 }

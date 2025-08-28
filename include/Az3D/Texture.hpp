@@ -33,7 +33,7 @@ struct Texture {
 class TextureGroup {
 public:
 
-    TextureGroup(const AzVulk::Device* device);
+    TextureGroup(const AzVulk::Device* lDevice);
     ~TextureGroup();
 
     const AzVulk::Device* vkDevice;

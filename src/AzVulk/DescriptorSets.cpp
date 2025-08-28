@@ -6,15 +6,15 @@
 namespace AzVulk {
 
 DynamicDescriptor::~DynamicDescriptor() {
-    for (auto& set : sets) vkFreeDescriptorSets(device, pool, 1, &set);
+    for (auto& set : sets) vkFreeDescriptorSets(lDevice, pool, 1, &set);
 
-    if (setLayout != VK_NULL_HANDLE) vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
-    if (pool != VK_NULL_HANDLE) vkDestroyDescriptorPool(device, pool, nullptr);
+    if (setLayout != VK_NULL_HANDLE) vkDestroyDescriptorSetLayout(lDevice, setLayout, nullptr);
+    if (pool != VK_NULL_HANDLE) vkDestroyDescriptorPool(lDevice, pool, nullptr);
 }
 
 void DynamicDescriptor::createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
     if (setLayout != VK_NULL_HANDLE) {
-        vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
+        vkDestroyDescriptorSetLayout(lDevice, setLayout, nullptr);
         setLayout = VK_NULL_HANDLE;
     }
 
@@ -23,14 +23,14 @@ void DynamicDescriptor::createLayout(const std::vector<VkDescriptorSetLayoutBind
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &setLayout) != VK_SUCCESS) {
+    if (vkCreateDescriptorSetLayout(lDevice, &layoutInfo, nullptr, &setLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout");
     }
 }
 
 void DynamicDescriptor::createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
     if (pool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(device, pool, nullptr);
+        vkDestroyDescriptorPool(lDevice, pool, nullptr);
         pool = VK_NULL_HANDLE;
     }
 
@@ -44,7 +44,7 @@ void DynamicDescriptor::createPool(const std::vector<VkDescriptorPoolSize>& pool
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
 
-    if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
+    if (vkCreateDescriptorPool(lDevice, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool");
     }
 }

@@ -11,7 +11,7 @@ void ComputePipeline::create() {
     VkPipelineLayoutCreateInfo lci{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     lci.setLayoutCount = static_cast<uint32_t>(cfg.setLayouts.size());
     lci.pSetLayouts    = cfg.setLayouts.data();
-    if (vkCreatePipelineLayout(device, &lci, nullptr, &layout) != VK_SUCCESS)
+    if (vkCreatePipelineLayout(lDevice, &lci, nullptr, &layout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout (compute)");
 
     VkPipelineShaderStageCreateInfo stage{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
@@ -23,8 +23,8 @@ void ComputePipeline::create() {
     ci.stage  = stage;
     ci.layout = layout;
 
-    if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &ci, nullptr, &pipeline) != VK_SUCCESS)
+    if (vkCreateComputePipelines(lDevice, VK_NULL_HANDLE, 1, &ci, nullptr, &pipeline) != VK_SUCCESS)
         throw std::runtime_error("failed to create compute pipeline");
 
-    vkDestroyShaderModule(device, mod, nullptr);
+    vkDestroyShaderModule(lDevice, mod, nullptr);
 }

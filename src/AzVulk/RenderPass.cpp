@@ -39,8 +39,8 @@ RenderPassConfig RenderPassConfig::createShadowMapConfig() {
     return config;
 }
 
-RenderPass::RenderPass(VkDevice device, VkPhysicalDevice physicalDevice, const RenderPassConfig& config)
-    : device(device), physicalDevice(physicalDevice), config(config) {
+RenderPass::RenderPass(VkDevice lDevice, VkPhysicalDevice pDevice, const RenderPassConfig& config)
+    : lDevice(lDevice), pDevice(pDevice), config(config) {
     createRenderPass();
 }
 
@@ -56,7 +56,7 @@ void RenderPass::recreate(const RenderPassConfig& newConfig) {
 
 
 // ---------- safer chooseDepthResolveMode ----------
-VkResolveModeFlagBits RenderPass::chooseDepthResolveMode(VkPhysicalDevice physicalDevice) {
+VkResolveModeFlagBits RenderPass::chooseDepthResolveMode(VkPhysicalDevice pDevice) {
     // Zero-init and set sType/pNext explicitly
     VkPhysicalDeviceDepthStencilResolveProperties dsResolveProps{};
     dsResolveProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
@@ -66,7 +66,7 @@ VkResolveModeFlagBits RenderPass::chooseDepthResolveMode(VkPhysicalDevice physic
     props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
     props2.pNext = &dsResolveProps;
 
-    vkGetPhysicalDeviceProperties2(physicalDevice, &props2);
+    vkGetPhysicalDeviceProperties2(pDevice, &props2);
 
     // If bit present, prefer SAMPLE_ZERO, otherwise return NONE
     if (dsResolveProps.supportedDepthResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT) {
@@ -88,7 +88,7 @@ void RenderPass::createRenderPass() {
     uint32_t attachmentIndex = 0;
 
     // Determine resolve mode and whether depth-resolve is supported.
-    VkResolveModeFlagBits resolveMode = chooseDepthResolveMode(physicalDevice);
+    VkResolveModeFlagBits resolveMode = chooseDepthResolveMode(pDevice);
     bool depthResolveSupported = (resolveMode != VK_RESOLVE_MODE_NONE);
 
     // Helper: does format have depth component?
@@ -157,7 +157,7 @@ void RenderPass::createRenderPass() {
 
         // Only create the depth-resolve attachment if:
         //  - we're multisampling depth, AND
-        //  - device supports depth resolve, AND
+        //  - lDevice supports depth resolve, AND
         //  - configured depth format actually has a depth component
         if (config.depthSamples != VK_SAMPLE_COUNT_1_BIT &&
             depthResolveSupported &&
@@ -280,11 +280,11 @@ void RenderPass::createRenderPass() {
     info.pCorrelatedViewMasks = nullptr;
 
     auto fpCreateRenderPass2KHR = (PFN_vkCreateRenderPass2KHR)
-        vkGetDeviceProcAddr(device, "vkCreateRenderPass2KHR");
+        vkGetDeviceProcAddr(lDevice, "vkCreateRenderPass2KHR");
     if (!fpCreateRenderPass2KHR) {
         throw std::runtime_error("vkCreateRenderPass2KHR not available");
     }
-    if (fpCreateRenderPass2KHR(device, &info, nullptr, &renderPass) != VK_SUCCESS) {
+    if (fpCreateRenderPass2KHR(lDevice, &info, nullptr, &renderPass) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create render pass!");
     }
 }
@@ -292,7 +292,7 @@ void RenderPass::createRenderPass() {
 
 void RenderPass::cleanup() {
     if (renderPass != VK_NULL_HANDLE) {
-        vkDestroyRenderPass(device, renderPass, nullptr);
+        vkDestroyRenderPass(lDevice, renderPass, nullptr);
         renderPass = VK_NULL_HANDLE;
     }
 }

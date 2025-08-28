@@ -16,7 +16,7 @@ MSAAManager::~MSAAManager() {
 
 VkSampleCountFlagBits MSAAManager::getMaxUsableSampleCount() {
     VkPhysicalDeviceProperties physicalDeviceProperties;
-    vkGetPhysicalDeviceProperties(vkDevice->physicalDevice, &physicalDeviceProperties);
+    vkGetPhysicalDeviceProperties(vkDevice->pDevice, &physicalDeviceProperties);
 
     VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & 
                                 physicalDeviceProperties.limits.framebufferDepthSampleCounts;
@@ -42,15 +42,15 @@ void MSAAManager::createColorResources(uint32_t width, uint32_t height, VkFormat
 
 void MSAAManager::cleanup() {
     if (colorImageView != VK_NULL_HANDLE) {
-        vkDestroyImageView(vkDevice->device, colorImageView, nullptr);
+        vkDestroyImageView(vkDevice->lDevice, colorImageView, nullptr);
         colorImageView = VK_NULL_HANDLE;
     }
     if (colorImage != VK_NULL_HANDLE) {
-        vkDestroyImage(vkDevice->device, colorImage, nullptr);
+        vkDestroyImage(vkDevice->lDevice, colorImage, nullptr);
         colorImage = VK_NULL_HANDLE;
     }
     if (colorImageMemory != VK_NULL_HANDLE) {
-        vkFreeMemory(vkDevice->device, colorImageMemory, nullptr);
+        vkFreeMemory(vkDevice->lDevice, colorImageMemory, nullptr);
         colorImageMemory = VK_NULL_HANDLE;
     }
 }
@@ -73,23 +73,23 @@ void MSAAManager::createImage(  uint32_t width, uint32_t height, uint32_t mipLev
     imageInfo.samples = numSamples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(vkDevice->device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    if (vkCreateImage(vkDevice->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image!");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(vkDevice->device, image, &memRequirements);
+    vkGetImageMemoryRequirements(vkDevice->lDevice, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice->physicalDevice);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice->pDevice);
 
-    if (vkAllocateMemory(vkDevice->device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(vkDevice->lDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate image memory!");
     }
 
-    vkBindImageMemory(vkDevice->device, image, imageMemory, 0);
+    vkBindImageMemory(vkDevice->lDevice, image, imageMemory, 0);
 }
 
 VkImageView MSAAManager::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels) {
@@ -105,7 +105,7 @@ VkImageView MSAAManager::createImageView(VkImage image, VkFormat format, VkImage
     viewInfo.subresourceRange.layerCount = 1;
 
     VkImageView imageView;
-    if (vkCreateImageView(vkDevice->device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    if (vkCreateImageView(vkDevice->lDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture image view!");
     }
 

@@ -115,7 +115,7 @@ void RasterPipeline::create() {
     VkPipelineLayoutCreateInfo lci{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     lci.setLayoutCount = static_cast<uint32_t>(cfg.setLayouts.size());
     lci.pSetLayouts    = cfg.setLayouts.data();
-    if (vkCreatePipelineLayout(device, &lci, nullptr, &layout) != VK_SUCCESS)
+    if (vkCreatePipelineLayout(lDevice, &lci, nullptr, &layout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout (graphics)");
 
     // 4) Graphics pipeline
@@ -134,9 +134,9 @@ void RasterPipeline::create() {
     pci.renderPass = cfg.renderPass;
     pci.subpass    = 0;
 
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pci, nullptr, &pipeline) != VK_SUCCESS)
+    if (vkCreateGraphicsPipelines(lDevice, VK_NULL_HANDLE, 1, &pci, nullptr, &pipeline) != VK_SUCCESS)
         throw std::runtime_error("failed to create graphics pipeline");
 
-    vkDestroyShaderModule(device, frag, nullptr);
-    vkDestroyShaderModule(device, vert, nullptr);
+    vkDestroyShaderModule(lDevice, frag, nullptr);
+    vkDestroyShaderModule(lDevice, vert, nullptr);
 }

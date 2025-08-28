@@ -10,15 +10,15 @@ namespace AzVulk {
 
 class ComputeTask {
 public:
-    ComputeTask(const Device* device, const std::string& compShaderPath) {
-        init(device, compShaderPath);
+    ComputeTask(const Device* lDevice, const std::string& compShaderPath) {
+        init(lDevice, compShaderPath);
     }
     ComputeTask() = default;
 
-    void init(const Device* device, const std::string& compShaderPath) {
-        vkDevice = device;
+    void init(const Device* lDevice, const std::string& compShaderPath) {
+        vkDevice = lDevice;
         shaderPath = compShaderPath;
-        descriptor.init(vkDevice->device);
+        descriptor.init(vkDevice->lDevice);
 
         // Create command buffer
         VkCommandBufferAllocateInfo allocInfo{};
@@ -27,7 +27,7 @@ public:
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = 1;
 
-        if (vkAllocateCommandBuffers(vkDevice->device, &allocInfo, &cmdBuffer) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(vkDevice->lDevice, &allocInfo, &cmdBuffer) != VK_SUCCESS) {
             throw std::runtime_error("ComputeTask: failed to allocate command buffer");
         }
     }
@@ -72,7 +72,7 @@ public:
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts = &descriptor.setLayout;
 
-        if (vkAllocateDescriptorSets(vkDevice->device, &allocInfo, &descSet) != VK_SUCCESS) {
+        if (vkAllocateDescriptorSets(vkDevice->lDevice, &allocInfo, &descSet) != VK_SUCCESS) {
             throw std::runtime_error("ComputeTask: failed to allocate descriptor set");
         }
 
@@ -91,7 +91,7 @@ public:
             write.descriptorCount = 1;
             write.pBufferInfo = &bufInfo;
 
-            vkUpdateDescriptorSets(vkDevice->device, 1, &write, 0, nullptr);
+            vkUpdateDescriptorSets(vkDevice->lDevice, 1, &write, 0, nullptr);
         }
 
         // 5. Build compute pipeline
@@ -99,7 +99,7 @@ public:
         config.setLayouts = { descriptor.setLayout };
         config.compPath   = shaderPath;
 
-        pipeline = std::make_unique<ComputePipeline>(vkDevice->device, config);
+        pipeline = std::make_unique<ComputePipeline>(vkDevice->lDevice, config);
         pipeline->create();
     }
 
@@ -123,7 +123,7 @@ public:
         // Dispatch
         vkCmdDispatch(cmdBuffer, numGroups, 1, 1);
 
-        // Memory barrier for device->host read
+        // Memory barrier for lDevice->host read
         if (readBack && !buffers.empty()) {
             VkBufferMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -151,19 +151,19 @@ public:
 
         VkFence fence;
         VkFenceCreateInfo fenceInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-        vkCreateFence(vkDevice->device, &fenceInfo, nullptr, &fence);
+        vkCreateFence(vkDevice->lDevice, &fenceInfo, nullptr, &fence);
 
         vkQueueSubmit(vkDevice->computeQueue, 1, &submitInfo, fence);
 
         // Only wait if readback is needed
         if (readBack) {
-            vkWaitForFences(vkDevice->device, 1, &fence, VK_TRUE, UINT64_MAX);
+            vkWaitForFences(vkDevice->lDevice, 1, &fence, VK_TRUE, UINT64_MAX);
 
             // Copy to CPU via mapped staging buffer if necessary
             // (you can add a helper for this)
         }
 
-        vkDestroyFence(vkDevice->device, fence, nullptr);
+        vkDestroyFence(vkDevice->lDevice, fence, nullptr);
     }
 
 
@@ -213,7 +213,7 @@ public:
             staging.createBuffer();
             staging.mappedData(src);
 
-            // 2. Create device-local buffer for GPU compute
+            // 2. Create lDevice-local buffer for GPU compute
             buf.setProperties(
                 size,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -221,7 +221,7 @@ public:
             );
             buf.createBuffer();
 
-            // 3. Submit copy from staging to device-local
+            // 3. Submit copy from staging to lDevice-local
             TemporaryCommand copyCmd(buf.vkDevice, buf.vkDevice->computePoolWrapper);
             VkBufferCopy region{};
             region.size = size;
@@ -242,7 +242,7 @@ public:
 
             copyCmd.endAndSubmit();
 
-            buf.hostVisible = false; // mark as device-local
+            buf.hostVisible = false; // mark as lDevice-local
         } else {
             // fallback to host-visible buffer (CPU read/write)
             buf.setProperties(
@@ -268,7 +268,7 @@ public:
         staging.createBuffer();
         staging.mappedData(srcData);
 
-        // 2. Create device-local buffer
+        // 2. Create lDevice-local buffer
         deviceBuf.setProperties(
             size,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,

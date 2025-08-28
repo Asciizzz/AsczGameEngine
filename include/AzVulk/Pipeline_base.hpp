@@ -8,7 +8,7 @@ namespace AzVulk {
 
 class BasePipeline {
 public:
-    explicit BasePipeline(VkDevice device) : device(device) {}
+    explicit BasePipeline(VkDevice lDevice) : lDevice(lDevice) {}
     virtual ~BasePipeline() { cleanup(); }
 
     // Lifecycle
@@ -17,18 +17,18 @@ public:
 
     virtual void cleanup() {
         if (pipeline != VK_NULL_HANDLE) {
-            vkDestroyPipeline(device, pipeline, nullptr);
+            vkDestroyPipeline(lDevice, pipeline, nullptr);
             pipeline = VK_NULL_HANDLE;
         }
         if (layout != VK_NULL_HANDLE) {
-            vkDestroyPipelineLayout(device, layout, nullptr);
+            vkDestroyPipelineLayout(lDevice, layout, nullptr);
             layout = VK_NULL_HANDLE;
         }
     }
 
     virtual void bind(VkCommandBuffer cmd) const = 0;
 
-    VkDevice device = VK_NULL_HANDLE;
+    VkDevice lDevice = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout layout = VK_NULL_HANDLE;
 

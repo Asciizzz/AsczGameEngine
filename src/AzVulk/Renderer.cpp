@@ -22,14 +22,14 @@ namespace AzVulk {
     }
 
 Renderer::~Renderer() {
-    VkDevice device = vkDevice->device;
+    VkDevice lDevice = vkDevice->lDevice;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        if (inFlightFences[i])           vkDestroyFence(    device, inFlightFences[i],           nullptr);
-        if (imageAvailableSemaphores[i]) vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+        if (inFlightFences[i])           vkDestroyFence(    lDevice, inFlightFences[i],           nullptr);
+        if (imageAvailableSemaphores[i]) vkDestroySemaphore(lDevice, imageAvailableSemaphores[i], nullptr);
     }
     for (size_t i = 0; i < renderFinishedSemaphores.size(); ++i) {
-        if (renderFinishedSemaphores[i]) vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+        if (renderFinishedSemaphores[i]) vkDestroySemaphore(lDevice, renderFinishedSemaphores[i], nullptr);
     }
 }
 
@@ -42,7 +42,7 @@ void Renderer::createCommandBuffers() {
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
-    if (vkAllocateCommandBuffers(vkDevice->device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(vkDevice->lDevice, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
@@ -65,15 +65,15 @@ void Renderer::createSyncObjects() {
 
     // per-frame acquire + fence
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        if (vkCreateSemaphore(vkDevice->device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(    vkDevice->device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
+        if (vkCreateSemaphore(vkDevice->lDevice, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(    vkDevice->lDevice, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-frame sync objects!");
         }
     }
 
     // per-image render-finished
     for (size_t i = 0; i < swapchainImageCount; ++i) {
-        if (vkCreateSemaphore(vkDevice->device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+        if (vkCreateSemaphore(vkDevice->lDevice, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-image renderFinished semaphore!");
         }
     }
@@ -81,11 +81,11 @@ void Renderer::createSyncObjects() {
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
 uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
-    vkWaitForFences(vkDevice->device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(vkDevice->lDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex = UINT32_MAX;
     VkResult acquire = vkAcquireNextImageKHR(
-        vkDevice->device, swapChain->swapChain, UINT64_MAX,
+        vkDevice->lDevice, swapChain->swapChain, UINT64_MAX,
         imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if (acquire == VK_ERROR_OUT_OF_DATE_KHR) { framebufferResized = true; return UINT32_MAX; }
@@ -94,11 +94,11 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
 
     // If that image is already in flight, wait for its fence
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-        vkWaitForFences(vkDevice->device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(vkDevice->lDevice, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
     }
     imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
-    vkResetFences(vkDevice->device, 1, &inFlightFences[currentFrame]);
+    vkResetFences(vkDevice->lDevice, 1, &inFlightFences[currentFrame]);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

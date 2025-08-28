@@ -11,8 +11,8 @@ struct ComputePipelineConfig {
 
 class ComputePipeline : public BasePipeline {
 public:
-    ComputePipeline(VkDevice device, ComputePipelineConfig cfg)
-        : BasePipeline(device), cfg(std::move(cfg)) {}
+    ComputePipeline(VkDevice lDevice, ComputePipelineConfig cfg)
+        : BasePipeline(lDevice), cfg(std::move(cfg)) {}
 
     void create() override;
     void recreate() override { cleanup(); create(); }

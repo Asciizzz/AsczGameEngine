@@ -40,7 +40,7 @@ struct ModelMappingData {
     size_t addData(const InstanceStatic& data);
 
     AzVulk::BufferData bufferData;
-    void initVkDevice(const AzVulk::Device* device);
+    void initVkDevice(const AzVulk::Device* lDevice);
     void recreateBufferData();
     void updateBufferData();
 };
@@ -55,8 +55,8 @@ struct ModelGroup {
     const AzVulk::Device* vkDevice = nullptr;
 
     ModelGroup() = default;
-    ModelGroup(const std::string& name, const AzVulk::Device* device) : name(name), vkDevice(device) {}
-    void init(const std::string& name, const AzVulk::Device* device) { this->name = name; vkDevice = device; }
+    ModelGroup(const std::string& name, const AzVulk::Device* lDevice) : name(name), vkDevice(lDevice) {}
+    void init(const std::string& name, const AzVulk::Device* lDevice) { this->name = name; vkDevice = lDevice; }
 
     ModelGroup(const ModelGroup&) = delete;
     ModelGroup& operator=(const ModelGroup&) = delete;

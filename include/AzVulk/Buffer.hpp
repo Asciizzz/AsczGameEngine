@@ -53,10 +53,10 @@ namespace AzVulk {
         }
 
         void mapMemory() {
-            if (!mapped) vkMapMemory(vkDevice->device, memory, 0, dataSize, 0, &mapped);
+            if (!mapped) vkMapMemory(vkDevice->lDevice, memory, 0, dataSize, 0, &mapped);
         }
         void unmapMemory() {
-            if (mapped) vkUnmapMemory(vkDevice->device, memory);
+            if (mapped) vkUnmapMemory(vkDevice->lDevice, memory);
             mapped = nullptr;
         }
 

@@ -51,8 +51,8 @@ void Application::initComponents() {
     vkDevice = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
 
     // So we dont have to write these things over and over again
-    VkDevice device = vkDevice->device;
-    VkPhysicalDevice physicalDevice = vkDevice->physicalDevice;
+    VkDevice lDevice = vkDevice->lDevice;
+    VkPhysicalDevice pDevice = vkDevice->pDevice;
 
     msaaManager = MakeUnique<MSAAManager>(vkDevice.get());
     swapChain = MakeUnique<SwapChain>(vkDevice.get(), vkInstance->surface, windowManager->window);
@@ -62,7 +62,7 @@ void Application::initComponents() {
     auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
         swapChain->imageFormat, msaaManager->msaaSamples
     );
-    mainRenderPass = MakeUnique<RenderPass>(device, physicalDevice, renderPassConfig);
+    mainRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, renderPassConfig);
 
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
@@ -147,7 +147,7 @@ void Application::initComponents() {
     opaqueConfig.vertPath = "Shaders/Rasterize/raster.vert.spv";
     opaqueConfig.fragPath = "Shaders/Rasterize/raster.frag.spv";
 
-    opaquePipeline = MakeUnique<RasterPipeline>(device, opaqueConfig);
+    opaquePipeline = MakeUnique<RasterPipeline>(lDevice, opaqueConfig);
     opaquePipeline->create();
 
     RasterCfg skyConfig;
@@ -163,7 +163,7 @@ void Application::initComponents() {
     skyConfig.depthCompareOp = VK_COMPARE_OP_ALWAYS;  // Always pass depth test
     skyConfig.blendEnable = VK_FALSE;                 // No blending needed
 
-    skyPipeline = MakeUnique<RasterPipeline>(device, skyConfig);
+    skyPipeline = MakeUnique<RasterPipeline>(lDevice, skyConfig);
     skyPipeline->create();
 
 }
@@ -238,7 +238,7 @@ bool Application::checkWindowResize() {
     windowManager->resizedFlag = false;
     renderer->framebufferResized = false;
 
-    vkDeviceWaitIdle(vkDevice->device);
+    vkDeviceWaitIdle(vkDevice->lDevice);
 
     int newWidth, newHeight;
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
@@ -477,7 +477,7 @@ void Application::mainLoop() {
         }
     }
 
-    vkDeviceWaitIdle(vkDevice->device);
+    vkDeviceWaitIdle(vkDevice->lDevice);
 }
 
 void Application::cleanup() {

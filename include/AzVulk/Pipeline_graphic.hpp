@@ -44,8 +44,8 @@ struct RasterCfg {
 
 class RasterPipeline : public BasePipeline {
 public:
-    RasterPipeline(VkDevice device, RasterCfg cfg)
-        : BasePipeline(device), cfg(std::move(cfg)) {}
+    RasterPipeline(VkDevice lDevice, RasterCfg cfg)
+        : BasePipeline(lDevice), cfg(std::move(cfg)) {}
 
     void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
     void setMsaa(VkSampleCountFlagBits s) { cfg.msaaSamples = s; }
