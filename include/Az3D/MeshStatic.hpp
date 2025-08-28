@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "AzVulk/Buffer.hpp"
 #include "Az3D/VertexTypes.hpp"
 
@@ -53,7 +52,7 @@ struct MeshStatic {
     std::vector<uint32_t> indices;
     static SharedPtr<MeshStatic> loadFromOBJ(std::string filePath);
 
-    // Mesh's buffer data
+    // Mesh's device buffer data
     AzVulk::BufferData vertexBufferData;
     AzVulk::BufferData indexBufferData;
     void createDeviceBuffer(const AzVulk::Device* vkDevice);

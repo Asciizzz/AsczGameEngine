@@ -1,0 +1,1 @@
+#include "Az3D/MeshSkinned.hpp"

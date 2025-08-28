@@ -70,7 +70,7 @@ struct VertexStatic {
 struct VertexSkinned {
     // 64 bytes of data
 
-    // Refer to the guide on VertexStatic
+    // Smart padding
     glm::vec4 pos_tu = glm::vec4(0.0f);
     glm::vec4 nrml_tv = glm::vec4(0.0f);
 
