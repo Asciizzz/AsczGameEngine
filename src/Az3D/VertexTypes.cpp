@@ -75,11 +75,12 @@ VkVertexInputBindingDescription VertexStatic::getBindingDescription() {
     return bindingDescription;
 }
 
-std::array<VkVertexInputAttributeDescription, 2> VertexStatic::getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 2> attribs{};
+std::array<VkVertexInputAttributeDescription, 3> VertexStatic::getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, 3> attribs{};
 
     attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, pos_tu)};
     attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, nrml_tv)};
+    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, tangent)};
 
     return attribs;
 }
@@ -110,13 +111,14 @@ VkVertexInputBindingDescription VertexSkinned::getBindingDescription() {
     return bindingDescription;
 }
 
-std::array<VkVertexInputAttributeDescription, 4> VertexSkinned::getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 4> attribs{};
+std::array<VkVertexInputAttributeDescription, 5> VertexSkinned::getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, 5> attribs{};
 
     attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, pos_tu)};
     attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, nrml_tv)};
-    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SINT,   offsetof(VertexSkinned, boneIDs)};
-    attribs[3] = {3, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, weights)};
+    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, tangent)};
+    attribs[3] = {3, 0, VK_FORMAT_R32G32B32A32_SINT,   offsetof(VertexSkinned, boneIDs)};
+    attribs[4] = {4, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, weights)};
 
     return attribs;
 }

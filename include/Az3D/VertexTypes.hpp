@@ -39,6 +39,8 @@ struct Transform {
     }
 };
 
+// Note: 0 handedness for no normal map
+
 
 struct VertexStatic {
     // Compact 48 byte data layout
@@ -66,7 +68,7 @@ struct VertexStatic {
 
     // Vulkan binding description for rendering
     static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
 };
 
 struct VertexSkinned {
@@ -93,7 +95,7 @@ struct VertexSkinned {
 
     // Vulkan binding description for rendering
     static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
 };
 
 }

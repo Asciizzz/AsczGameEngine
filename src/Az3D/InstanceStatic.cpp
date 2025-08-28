@@ -16,14 +16,14 @@ VkVertexInputBindingDescription InstanceStatic::getBindingDescription() {
 std::array<VkVertexInputAttributeDescription, 6> InstanceStatic::getAttributeDescriptions() {
     std::array<VkVertexInputAttributeDescription, 6> attribs{};
 
-    attribs[0] = {2, 1, VK_FORMAT_R32G32B32A32_SINT, offsetof(InstanceStatic, properties)};
+    attribs[0] = {3, 1, VK_FORMAT_R32G32B32A32_UINT, offsetof(InstanceStatic, properties)};
 
-    attribs[1] = {3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 0};
-    attribs[2] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 1};
-    attribs[3] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 2};
-    attribs[4] = {6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 3};
+    attribs[1] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 0};
+    attribs[2] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 1};
+    attribs[3] = {6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 2};
+    attribs[4] = {7, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, modelMatrix) + sizeof(glm::vec4) * 3};
 
-    attribs[5] = {7, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, multColor)};
+    attribs[5] = {8, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstanceStatic, multColor)};
 
     return attribs;
 }
