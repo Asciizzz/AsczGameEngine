@@ -9,8 +9,8 @@ RenderPassConfig RenderPassConfig::createForwardRenderingConfig(VkFormat swapCha
     RenderPassConfig config;
     config.colorFormat = swapChainFormat;
     config.colorSamples = msaaSamples;
-    config.hasDepth = true;
     config.depthSamples = msaaSamples;
+    config.hasDepth = true;
 
     if (msaaSamples != VK_SAMPLE_COUNT_1_BIT) {
         config.hasResolve = true;
@@ -70,7 +70,6 @@ void RenderPass::createRenderPass() {
     VkAttachmentReference depthRef{};
     VkAttachmentReference colorResolveRef{};
     VkAttachmentReference depthResolveRef{};
-    bool useDepthResolve = false;
 
     uint32_t attachmentIndex = 0;
 
@@ -94,6 +93,7 @@ void RenderPass::createRenderPass() {
     };
 
     // --- Color attachment
+    bool hasResolve = config.hasResolve;
     if (config.colorFormat != VK_FORMAT_UNDEFINED) {
         VkAttachmentDescription color{};
         color.flags = 0;
@@ -104,15 +104,31 @@ void RenderPass::createRenderPass() {
         color.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         color.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         color.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        color.finalLayout = config.hasResolve ?
-                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL :
-                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        color.finalLayout = hasResolve ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         attachments.push_back(color);
 
         VkAttachmentReference ref{};
         ref.attachment = attachmentIndex++;
         ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         colorRefs.push_back(ref);
+    }
+
+    // --- Resolve attachment (for MSAA)
+    if (hasResolve) {
+        VkAttachmentDescription resolve{};
+        resolve.flags = 0;
+        resolve.format = config.resolveFormat;
+        resolve.samples = VK_SAMPLE_COUNT_1_BIT;
+        resolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        resolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        resolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        resolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        resolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        resolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        attachments.push_back(resolve);
+
+        colorResolveRef.attachment = attachmentIndex++;
+        colorResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
 
     // --- Depth attachment
@@ -132,15 +148,9 @@ void RenderPass::createRenderPass() {
         depthRef.attachment = attachmentIndex++;
         depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-        // Only create the depth-resolve attachment if:
-        //  - we're multisampling depth, AND
-        //  - lDevice supports depth resolve, AND
-        //  - configured depth format actually has a depth component
         if (config.depthSamples != VK_SAMPLE_COUNT_1_BIT &&
             depthResolveSupported &&
             formatHasDepth(config.depthFormat)) {
-
-            useDepthResolve = true;
 
             VkAttachmentDescription depthResolve{};
             depthResolve.flags = 0;
@@ -156,31 +166,7 @@ void RenderPass::createRenderPass() {
 
             depthResolveRef.attachment = attachmentIndex++;
             depthResolveRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        } else {
-            // Explicit: do not create depth resolve attachment and do not try to chain the resolve struct
-            useDepthResolve = false;
         }
-    }
-
-    // --- Color resolve (for MSAA color)
-    bool hasColorResolve = false;
-    if (config.hasResolve) {
-        VkAttachmentDescription resolve{};
-        resolve.flags = 0;
-        resolve.format = config.resolveFormat;
-        resolve.samples = VK_SAMPLE_COUNT_1_BIT;
-        resolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        resolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        resolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        resolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        resolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        resolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        attachments.push_back(resolve);
-
-        colorResolveRef.attachment = attachmentIndex++;
-        colorResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        hasColorResolve = true;
     }
 
     // --- Subpass
@@ -188,8 +174,8 @@ void RenderPass::createRenderPass() {
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = static_cast<uint32_t>(colorRefs.size());
     subpass.pColorAttachments = colorRefs.empty() ? nullptr : colorRefs.data();
-    subpass.pResolveAttachments = hasColorResolve ? &colorResolveRef : nullptr;
     subpass.pDepthStencilAttachment = config.hasDepth ? &depthRef : nullptr;
+    subpass.pResolveAttachments = hasResolve ? &colorResolveRef : nullptr;
 
     // --- Dependency
     VkSubpassDependency dep{};

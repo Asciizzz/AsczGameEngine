@@ -20,8 +20,8 @@ namespace AzVulk {
         
         // MSAA resolve settings
         bool hasResolve = false;
-        VkFormat resolveFormat;
-        
+        VkFormat resolveFormat = VK_FORMAT_UNDEFINED;
+
         // Factory methods for common configurations
         static RenderPassConfig createForwardRenderingConfig(VkFormat swapChainFormat, 
                                                            VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
@@ -43,7 +43,7 @@ namespace AzVulk {
         VkPhysicalDevice pDevice;
         VkRenderPass renderPass = VK_NULL_HANDLE;
         RenderPassConfig config;
-        
+
         void createRenderPass();
         void cleanup();
 

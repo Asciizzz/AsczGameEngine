@@ -70,7 +70,7 @@ void Application::initComponents() {
     msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = MakeUnique<DepthManager>(vkDevice.get());
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(renderPass, depthManager->depthImageView, depthManager->depthSamplerView, msaaManager->colorImageView);
+    swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     resourceManager = MakeUnique<ResourceManager>(vkDevice.get());
     globalUBOManager = MakeUnique<GlobalUBOManager>(vkDevice.get());
@@ -141,7 +141,8 @@ void Application::initComponents() {
 
     RasterCfg opaqueConfig;
     opaqueConfig.renderPass = renderPass;
-    opaqueConfig.msaaSamples = msaaManager->msaaSamples;
+    opaqueConfig.setMSAA(msaaManager->msaaSamples);
+
     opaqueConfig.setLayouts = layouts;
     opaqueConfig.vertPath = "Shaders/Rasterize/raster.vert.spv";
     opaqueConfig.fragPath = "Shaders/Rasterize/raster.frag.spv";
@@ -151,11 +152,13 @@ void Application::initComponents() {
 
     RasterCfg skyConfig;
     skyConfig.renderPass = renderPass;
-    skyConfig.msaaSamples = msaaManager->msaaSamples;
+    skyConfig.setMSAA(msaaManager->msaaSamples);
+
     skyConfig.setLayouts = {glbLayout};
     skyConfig.vertexInputType = RasterCfg::VertexInputType::None;
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
+
     skyConfig.cullMode = VK_CULL_MODE_NONE;           // No culling for fullscreen quad
     skyConfig.depthTestEnable = VK_FALSE;             // Sky is always furthest
     skyConfig.depthWriteEnable = VK_FALSE;            // Don't write depth
@@ -261,7 +264,6 @@ bool Application::checkWindowResize() {
     swapChain->recreateFramebuffers(
         windowManager->window, renderPass,
         depthManager->depthImageView,
-        depthManager->depthSamplerView,
         msaaManager->colorImageView
     );
 

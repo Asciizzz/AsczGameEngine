@@ -92,30 +92,19 @@ void SwapChain::createImageViews() {
     }
 }
 
-void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView depthResolveImageView, VkImageView colorImageView) {
+void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
     cleanupFramebuffers();
     framebuffers.resize(imageViews.size());
 
     for (size_t i = 0; i < imageViews.size(); ++i) {
         std::vector<VkImageView> attachments;
 
-        // The logic below assumes you use RenderPassConfig::createForwardRenderingConfig for main rendering
-        // If MSAA is enabled and resolve is required, use 3 attachments: color, depth, resolve
-        // If MSAA is disabled, use 2 attachments: color, depth
-        // If you use a color resolve attachment, add it as the last one
-
-        if (colorImageView != VK_NULL_HANDLE && depthResolveImageView != VK_NULL_HANDLE) {
-            // MSAA + resolve: colorMSAA, depthMSAA, resolve (swapchain)
+        if (colorImageView != VK_NULL_HANDLE) {
+            // MSAA: colorMSAA, resolve (swapchain), depth
             attachments = {
                 colorImageView,        // color MSAA
-                depthImageView,        // depth MSAA
-                imageViews[i]          // resolve (swapchain)
-            };
-        } else if (colorImageView != VK_NULL_HANDLE) {
-            // MSAA, no resolve: colorMSAA, depthMSAA
-            attachments = {
-                colorImageView,        // color MSAA
-                depthImageView         // depth MSAA
+                imageViews[i],         // resolve (swapchain)
+                depthImageView         // depth
             };
         } else {
             // No MSAA: swapchain color, depth
@@ -140,7 +129,7 @@ void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
     }
 }
 
-void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView depthResolveImageView, VkImageView colorImageView) {
+void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
     int width = 0, height = 0;
     SDL_GetWindowSize(window, &width, &height);
     while (width == 0 || height == 0) {
@@ -153,7 +142,7 @@ void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass
     cleanup();
     createSwapChain(window);
     createImageViews();
-    createFramebuffers(renderPass, depthImageView, depthResolveImageView, colorImageView);
+    createFramebuffers(renderPass, depthImageView, colorImageView);
 }
 
 void SwapChain::cleanup() {

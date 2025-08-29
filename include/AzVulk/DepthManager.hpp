@@ -15,19 +15,13 @@ namespace AzVulk {
         DepthManager& operator=(const DepthManager&) = delete;
 
         void createDepthResources(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
-        void copyDepthForSampling(VkCommandBuffer commandBuffer, uint32_t width, uint32_t height); // Copy current depth to sampling texture
 
         const Device* vkDevice;
         
         VkImage depthImage = VK_NULL_HANDLE;
         VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
         VkImageView depthImageView = VK_NULL_HANDLE;
-        
-        // Separate depth texture for sampling (copy of current depth)
-        VkImage depthSampleImage = VK_NULL_HANDLE;
-        VkDeviceMemory depthSampleImageMemory = VK_NULL_HANDLE;
-        VkImageView depthSamplerView = VK_NULL_HANDLE;  // For sampling in shaders
-        VkSampler depthSampler = VK_NULL_HANDLE;        // Depth sampler
+
         VkFormat depthFormat;
 
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT; // Default to 1x MSAA
@@ -42,6 +36,5 @@ namespace AzVulk {
                         VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
                         VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
         VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-        void createDepthSampler();  // Create sampler for depth texture sampling
     };
 }

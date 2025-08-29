@@ -21,8 +21,8 @@ namespace AzVulk {
         SwapChain(const SwapChain&) = delete;
         SwapChain& operator=(const SwapChain&) = delete;
 
-        void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView depthResolveImageView, VkImageView colorImageView);
-        void recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView depthResolveImageView, VkImageView colorImageView);
+        void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView);
+        void recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView);
 
         const Device* vkDevice;
         VkSurfaceKHR surface;

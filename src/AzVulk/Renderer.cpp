@@ -113,11 +113,23 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = swapChain->extent;
 
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    clearValues[1].depthStencil = {1.0f, 0};
+    // Determine clear value count based on attachment count (color, resolve, depth)
+    uint32_t clearValueCount = 2; // color + depth
+    // if (gPipeline.cfg.hasMSAA) {
+    if (gPipeline.cfg.hasMSAA) {
+        clearValueCount = 3; // color, resolve, depth
+    }
 
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    std::vector<VkClearValue> clearValues(clearValueCount);
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    if (clearValueCount == 3) {
+        clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // resolve clear (usually same as color)
+        clearValues[2].depthStencil = {1.0f, 0};
+    } else {
+        clearValues[1].depthStencil = {1.0f, 0};
+    }
+
+    renderPassInfo.clearValueCount = clearValueCount;
     renderPassInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -214,9 +226,6 @@ void Renderer::endFrame(uint32_t imageIndex) {
     if (imageIndex == UINT32_MAX) return;
 
     vkCmdEndRenderPass(commandBuffers[currentFrame]);
-
-    // Copy depth buffer for sampling (after render pass, before ending command buffer)
-    depthManager->copyDepthForSampling(commandBuffers[currentFrame], swapChain->extent.width, swapChain->extent.height);
 
     if (vkEndCommandBuffer(commandBuffers[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");

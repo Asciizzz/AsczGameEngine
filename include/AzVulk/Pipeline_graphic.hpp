@@ -8,34 +8,40 @@ struct RasterCfg {
     // external
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+    bool hasMSAA = false;
+    void setMSAA(VkSampleCountFlagBits samples) {
+        msaaSamples = samples;
+        hasMSAA = (samples != VK_SAMPLE_COUNT_1_BIT);
+    }
+
     std::vector<VkDescriptorSetLayout> setLayouts;
 
     // special
     enum class VertexInputType {
-        None = 0,
-        Static = 1,
+        None    = 0,
+        Static  = 1,
         Skinned = 2
     } vertexInputType = VertexInputType::Static;
 
     // defaults
     VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-    VkBool32 depthTestEnable = VK_TRUE;
-    VkBool32 depthWriteEnable = VK_TRUE;
-    VkBool32 blendEnable = VK_FALSE;
-    VkFrontFace frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
-    VkBool32 depthBiasEnable = VK_FALSE;
-    VkBool32 sampleShadingEnable = VK_FALSE;
-    float     minSampleShading = 1.0f;
-    VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
+    VkBool32        depthTestEnable     = VK_TRUE;
+    VkBool32        depthWriteEnable    = VK_TRUE;
+    VkBool32        blendEnable         = VK_FALSE;
+    VkFrontFace     frontFace           = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    VkPolygonMode   polygonMode         = VK_POLYGON_MODE_FILL;
+    VkBool32        depthBiasEnable     = VK_FALSE;
+    VkBool32        sampleShadingEnable = VK_FALSE;
+    float           minSampleShading    = 1.0f;
+    VkCompareOp     depthCompareOp      = VK_COMPARE_OP_LESS;
 
     // blend factors (as per your code)
-    VkBlendFactor srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-    VkBlendFactor dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-    VkBlendOp     colorBlendOp        = VK_BLEND_OP_ADD;
-    VkBlendFactor srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    VkBlendFactor dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    VkBlendOp     alphaBlendOp        = VK_BLEND_OP_ADD;
+    VkBlendFactor   srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    VkBlendFactor   dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    VkBlendOp       colorBlendOp        = VK_BLEND_OP_ADD;
+    VkBlendFactor   srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    VkBlendFactor   dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    VkBlendOp       alphaBlendOp        = VK_BLEND_OP_ADD;
 
     // shader paths
     std::string vertPath;
