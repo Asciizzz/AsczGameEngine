@@ -51,7 +51,7 @@ public:
     void createDescPool();
     void createDescSet();
 
-    VkDescriptorSet getDescriptorSet();
+    VkDescriptorSet getDescSet();
 
 // Functionalities
     void updateUBO(const Camera& camera);

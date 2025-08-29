@@ -152,13 +152,13 @@ void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStati
     const Az3D::TextureGroup* texGroup = resourceManager->textureGroup.get();
     const Az3D::MeshStaticGroup* meshStaticGroup = resourceManager->meshStaticGroup.get();
 
-    VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet();
+    VkDescriptorSet globalSet = globalUBOManager->getDescSet();
 
     rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind descriptor sets once
-    VkDescriptorSet materialSet = matGroup->getDescriptorSet();
-    VkDescriptorSet textureSet = texGroup->getDescriptorSet();
+    VkDescriptorSet materialSet = matGroup->getDescSet();
+    VkDescriptorSet textureSet = texGroup->getDescSet();
 
     std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -200,7 +200,7 @@ void Renderer::drawSky(RasterPipeline& rasterPipeline) {
     rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind only the global descriptor set (set 0) for sky
-    VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet();
+    VkDescriptorSet globalSet = globalUBOManager->getDescSet();
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                             rasterPipeline.layout, 0, 1, &globalSet, 0, nullptr);
 

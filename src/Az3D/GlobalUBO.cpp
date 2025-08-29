@@ -64,7 +64,7 @@ void GlobalUBOManager::createDescSet() {
     vkUpdateDescriptorSets(lDevice, 1, &write, 0, nullptr);
 }
 
-VkDescriptorSet GlobalUBOManager::getDescriptorSet() {
+VkDescriptorSet GlobalUBOManager::getDescSet() {
     return descSet.get();
 }
 
