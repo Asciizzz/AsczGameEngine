@@ -34,7 +34,15 @@ size_t ResourceManager::addMeshStatic(std::string name, SharedPtr<MeshStatic> me
     return index;
 }
 size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
-    auto newMesh = MeshStatic::loadFromOBJ(filePath); 
+    // Check the extension
+    std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
+    SharedPtr<MeshStatic> newMesh;
+    if (extension == "obj") {
+        newMesh = MeshStatic::loadFromOBJ(filePath);
+    } else if (extension == "gltf") {
+        newMesh = MeshStatic::loadFromGLTF(filePath);
+    }
+
     if (hasBVH) newMesh->createBVH();
 
     size_t index = meshStaticGroup->addMeshStatic(newMesh);

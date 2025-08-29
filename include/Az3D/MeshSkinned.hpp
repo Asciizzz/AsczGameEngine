@@ -14,12 +14,11 @@ struct Skeleton {
     std::vector<int> parentIndices;
     std::vector<glm::mat4> inverseBindMatrices;
     std::vector<glm::mat4> localBindTransforms;
-    std::vector<glm::mat4> localPoseTransforms;
 
     std::unordered_map<std::string, int> nameToIndex;
 
-    glm::mat4 Skeleton::computeGlobalTransform(int boneIndex) const;
-    std::vector<glm::mat4> Skeleton::computeGlobalTransforms() const;
+    std::vector<glm::mat4> computeGlobalTransforms(const std::vector<glm::mat4>& localPoseTransforms) const;
+    std::vector<glm::mat4> copyLocalBindToPoseTransforms() const;
 
     void debugPrintHierarchy() const;
     void debugPrintRecursive(int boneIndex, int depth) const;
@@ -46,7 +45,6 @@ public:
     MeshSkinnedGroup& operator=(const MeshSkinnedGroup&) = delete;
 
     size_t addMeshSkinned(SharedPtr<MeshSkinned> mesh);
-    size_t addFromGLTF(const std::string& filePath);
 
     // Index-based mesh storage
     SharedPtrVec<MeshSkinned> meshes;

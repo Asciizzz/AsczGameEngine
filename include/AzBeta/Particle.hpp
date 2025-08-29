@@ -169,7 +169,7 @@ public:
 
         materialIndex = resourceManager->addMaterial("Particle", material);
 
-        size_t meshIndex = resourceManager->addMeshStatic("Particle", "Assets/Characters/Pearto.obj", false);
+        size_t meshIndex = resourceManager->addMeshStatic("Particle", "Assets/Characters/Selen.gltf", false);
 
         instanceGroup.initVkDevice(vkDevice);
         instanceGroup.meshIndex = meshIndex;

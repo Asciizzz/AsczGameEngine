@@ -2,6 +2,7 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "Helpers/tiny_obj_loader.h"
+#include "Helpers/tiny_gltf.h"
 
 
 using namespace AzVulk;
@@ -83,7 +84,7 @@ void MeshStatic::createDeviceBuffer(const Device* vkDevice) {
 }
 
 // OBJ loader implementation using tiny_obj_loader
-SharedPtr<MeshStatic> MeshStatic::loadFromOBJ(std::string filePath) {
+SharedPtr<MeshStatic> MeshStatic::loadFromOBJ(const std::string& filePath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -184,6 +185,109 @@ SharedPtr<MeshStatic> MeshStatic::loadFromOBJ(std::string filePath) {
 
     return MakeShared<MeshStatic>(std::move(vertices), std::move(indices));
 }
+
+// Utility: read GLTF accessor as typed array
+template<typename T>
+void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& accessor, std::vector<T>& out) {
+    const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
+    const tinygltf::Buffer& buf = model.buffers[view.buffer];
+
+    const unsigned char* dataPtr = buf.data.data() + view.byteOffset + accessor.byteOffset;
+    size_t stride = accessor.ByteStride(view);
+    out.resize(accessor.count);
+
+    for (size_t i = 0; i < accessor.count; i++) {
+        const void* ptr = dataPtr + stride * i;
+        memcpy(&out[i], ptr, sizeof(T));
+    }
+}
+
+SharedPtr<MeshStatic> MeshStatic::loadFromGLTF(const std::string& filePath) {
+    auto meshStatic = std::make_shared<MeshStatic>();
+
+    tinygltf::TinyGLTF loader;
+    tinygltf::Model model;
+    std::string err, warn;
+
+    bool ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
+    if (!ok) {
+        throw std::runtime_error("GLTF load error: " + err);
+    }
+
+    if (model.meshes.empty()) {
+        throw std::runtime_error("GLTF has no meshes: " + filePath);
+    }
+
+    const tinygltf::Mesh& mesh = model.meshes[0];
+    size_t vertexOffset = 0;
+
+    // Merge all primitives into one vertex/index buffer
+    for (const auto& primitive : mesh.primitives) {
+        size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
+        std::vector<glm::vec3> positions, normals;
+        std::vector<glm::vec4> tangents, weights;
+        std::vector<glm::vec2> uvs;
+        std::vector<glm::uvec4> joints;
+
+        // Read attributes (skip missing gracefully)
+        if (primitive.attributes.count("POSITION"))
+            readAccessor(model, model.accessors[primitive.attributes.at("POSITION")], positions);
+        if (primitive.attributes.count("NORMAL"))
+            readAccessor(model, model.accessors[primitive.attributes.at("NORMAL")], normals);
+        if (primitive.attributes.count("TANGENT"))
+            readAccessor(model, model.accessors[primitive.attributes.at("TANGENT")], tangents);
+        if (primitive.attributes.count("TEXCOORD_0"))
+            readAccessor(model, model.accessors[primitive.attributes.at("TEXCOORD_0")], uvs);
+        if (primitive.attributes.count("JOINTS_0"))
+            readAccessor(model, model.accessors[primitive.attributes.at("JOINTS_0")], joints);
+        if (primitive.attributes.count("WEIGHTS_0"))
+            readAccessor(model, model.accessors[primitive.attributes.at("WEIGHTS_0")], weights);
+
+        // Expand into vertices
+        for (size_t i = 0; i < vertexCount; i++) {
+            VertexStatic v{};
+            v.pos_tu     = glm::vec4(positions.size() > i ? positions[i] : glm::vec3(0.0f),
+                                     uvs.size() > i ? uvs[i].x : 0.0f);
+            v.nrml_tv    = glm::vec4(normals.size() > i ? normals[i] : glm::vec3(0.0f),
+                                     uvs.size() > i ? uvs[i].y : 0.0f);
+            v.tangent    = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
+
+            meshStatic->vertices.push_back(v);
+        }
+
+        // Indices
+        if (primitive.indices >= 0) {
+            const auto& indexAccessor = model.accessors[primitive.indices];
+            const auto& indexBufferView = model.bufferViews[indexAccessor.bufferView];
+            const auto& indexBuffer = model.buffers[indexBufferView.buffer];
+            const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+            size_t stride = indexAccessor.ByteStride(indexBufferView);
+
+            for (size_t i = 0; i < indexAccessor.count; i++) {
+                uint32_t index = 0;
+                switch (indexAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                        index = *((uint8_t*)(dataPtr + stride * i));
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                        index = *((uint16_t*)(dataPtr + stride * i));
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                        index = *((uint32_t*)(dataPtr + stride * i));
+                        break;
+                    default:
+                        throw std::runtime_error("Unsupported index component type");
+                }
+                meshStatic->indices.push_back(index + static_cast<uint32_t>(vertexOffset));
+            }
+        }
+
+        vertexOffset += vertexCount;
+    }
+
+    return meshStatic;
+}
+
 
 void MeshStaticGroup::createDeviceBuffers() {
     for (size_t i = 0; i < meshes.size(); ++i) {

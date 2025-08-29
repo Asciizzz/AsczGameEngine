@@ -4,26 +4,26 @@
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <tiny_gltf.h>
+#include "Helpers/tiny_gltf.h"
 
 namespace Az3D {
 
-
-// Compute global transform of a bone
-glm::mat4 Skeleton::computeGlobalTransform(int boneIndex) const {
-    if (parentIndices[boneIndex] == -1) {
-        return localPoseTransforms[boneIndex];
+// Compute all global bone transforms
+std::vector<glm::mat4> Skeleton::computeGlobalTransforms(const std::vector<glm::mat4>& localPoseTransforms) const {
+    std::vector<glm::mat4> globalTransforms(names.size());
+    for (size_t i = 0; i < names.size(); i++) {
+        int parent = parentIndices[i];
+        if (parent == -1) {
+            globalTransforms[i] = localPoseTransforms[i];
+        } else {
+            globalTransforms[i] = globalTransforms[parent] * localPoseTransforms[i];
+        }
     }
-    return computeGlobalTransform(parentIndices[boneIndex]) * localPoseTransforms[boneIndex];
+    return globalTransforms;
 }
 
-// Compute all global bone transforms
-std::vector<glm::mat4> Skeleton::computeGlobalTransforms() const {
-    std::vector<glm::mat4> result(names.size());
-    for (size_t i = 0; i < names.size(); i++) {
-        result[i] = computeGlobalTransform(static_cast<int>(i));
-    }
-    return result;
+std::vector<glm::mat4> Skeleton::copyLocalBindToPoseTransforms() const {
+    return localBindTransforms;
 }
 
 void Skeleton::debugPrintHierarchy() const {
@@ -57,8 +57,7 @@ void Skeleton::debugPrintRecursive(int boneIndex, int depth) const {
 
 // Utility: read GLTF accessor as typed array
 template<typename T>
-void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& accessor, std::vector<T>& out)
-{
+void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& accessor, std::vector<T>& out) {
     const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
     const tinygltf::Buffer& buf = model.buffers[view.buffer];
 
@@ -72,8 +71,7 @@ void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& access
     }
 }
 
-SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath)
-{
+SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
     auto meshSkinned = std::make_shared<MeshSkinned>();
 
     tinygltf::TinyGLTF loader;
@@ -172,7 +170,6 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath)
         meshSkinned->skeleton.parentIndices.reserve(skin.joints.size());
         meshSkinned->skeleton.inverseBindMatrices.reserve(skin.joints.size());
         meshSkinned->skeleton.localBindTransforms.reserve(skin.joints.size());
-        meshSkinned->skeleton.localPoseTransforms.reserve(skin.joints.size());
 
         for (size_t i = 0; i < skin.joints.size(); i++) {
             int nodeIndex = skin.joints[i];
@@ -222,12 +219,12 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath)
             meshSkinned->skeleton.parentIndices.push_back(boneParentIndex);
             meshSkinned->skeleton.inverseBindMatrices.push_back(boneInverseBindMatrix);
             meshSkinned->skeleton.localBindTransforms.push_back(boneLocalBindTransform);
-            meshSkinned->skeleton.localPoseTransforms.push_back(boneLocalPoseTransform);
         }
     }
 
-
     // TODO: load animations from model.animations if needed
+
+    meshSkinned->skeleton.debugPrintHierarchy();
 
     return meshSkinned;
 }
@@ -239,11 +236,6 @@ MeshSkinnedGroup::MeshSkinnedGroup(const AzVulk::Device* vkDevice) :
 size_t MeshSkinnedGroup::addMeshSkinned(SharedPtr<MeshSkinned> mesh) {
     meshes.push_back(mesh);
     return meshes.size() - 1;
-}
-
-size_t MeshSkinnedGroup::addFromGLTF(const std::string& filePath) {
-    auto mesh = MeshSkinned::loadFromGLTF(filePath);
-    return addMeshSkinned(mesh);
 }
 
 
