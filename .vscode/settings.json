@@ -87,6 +87,7 @@
         "cinttypes": "cpp",
         "condition_variable": "cpp",
         "shared_mutex": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "*.rh": "cpp"
     }
 }

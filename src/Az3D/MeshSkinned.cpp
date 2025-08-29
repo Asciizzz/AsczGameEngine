@@ -224,7 +224,7 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
 
     // TODO: load animations from model.animations if needed
 
-    meshSkinned->skeleton.debugPrintHierarchy();
+    // meshSkinned->skeleton.debugPrintHierarchy();
 
     return meshSkinned;
 }

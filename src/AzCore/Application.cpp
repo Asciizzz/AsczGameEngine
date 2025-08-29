@@ -73,7 +73,7 @@ void Application::initComponents() {
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, depthManager->depthSamplerView, msaaManager->colorImageView);
 
     resourceManager = MakeUnique<ResourceManager>(vkDevice.get());
-    globalUBOManager = MakeUnique<GlobalUBOManager>(vkDevice.get(), MAX_FRAMES_IN_FLIGHT);
+    globalUBOManager = MakeUnique<GlobalUBOManager>(vkDevice.get());
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
@@ -134,11 +134,11 @@ void Application::initComponents() {
                                     globalUBOManager.get(), resourceManager.get());
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
-    auto& matDesc = matGroup.dynamicDescriptor;
-    auto& texDesc = texGroup.dynamicDescriptor;
-    auto& glbDesc = glbUBOManager.dynamicDescriptor;
+    auto& matLayout = matGroup.dynamicDescriptor.setLayout;
+    auto& texLayout = texGroup.dynamicDescriptor.setLayout;
+    const auto& glbLayout = glbUBOManager.descLayout.get();
 
-    LayoutVec layouts = {glbDesc.setLayout, matDesc.setLayout, texDesc.setLayout};
+    LayoutVec layouts = {glbLayout, matLayout, texLayout};
 
     RasterCfg opaqueConfig;
     opaqueConfig.renderPass = renderPass;
@@ -153,7 +153,7 @@ void Application::initComponents() {
     RasterCfg skyConfig;
     skyConfig.renderPass = renderPass;
     skyConfig.msaaSamples = msaaManager->msaaSamples;
-    skyConfig.setLayouts = {glbDesc.setLayout};
+    skyConfig.setLayouts = {glbLayout};
     skyConfig.vertexInputType = RasterCfg::VertexInputType::None;
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";

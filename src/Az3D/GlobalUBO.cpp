@@ -8,93 +8,64 @@ using namespace AzVulk;
 
 namespace Az3D {
 
-GlobalUBOManager::GlobalUBOManager(const Device* vkDevice, uint32_t MAX_FRAMES_IN_FLIGHT)
-: vkDevice(vkDevice), MAX_FRAMES_IN_FLIGHT(MAX_FRAMES_IN_FLIGHT)
+GlobalUBOManager::GlobalUBOManager(const Device* vkDevice)
+: vkDevice(vkDevice)
 {
-    createBufferDatas();
-    initDescriptorSets();
-    createDescriptorSets();
+    createBufferData();
+
+    createDescLayout();
+    createDescPool();
+    createDescSet();
 }
 
-void GlobalUBOManager::createBufferDatas() {
-    bufferDatas.resize(MAX_FRAMES_IN_FLIGHT);
+void GlobalUBOManager::createBufferData() {
+    bufferData.initVkDevice(vkDevice);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        auto& bufferData = bufferDatas[i];
-        bufferData.initVkDevice(vkDevice);
+    bufferData.setProperties(
+        sizeof(GlobalUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    bufferData.createBuffer();
 
-        bufferData.setProperties(
-            sizeof(GlobalUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        bufferData.createBuffer();
-
-        bufferData.mapMemory();
-    }
+    bufferData.mapMemory();
 }
 
-void GlobalUBOManager::initDescriptorSets() {
-    using namespace AzVulk;
-
-    dynamicDescriptor.init(vkDevice->lDevice);
-    dynamicDescriptor.createLayout({
-        // Global UBO only
-        DynamicDescriptor::fastBinding(
-            0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
-        )
+void GlobalUBOManager::createDescLayout() {
+    descLayout.create(vkDevice->lDevice, {
+        DescLayout::BindInfo{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
     });
-
-    dynamicDescriptor.createPool({
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT}
-    }, MAX_FRAMES_IN_FLIGHT);
 }
 
-void GlobalUBOManager::createDescriptorSets() {
-    using namespace AzVulk;
-
-    // Free old sets
-    for (auto& set : dynamicDescriptor.sets) {
-        if (set != VK_NULL_HANDLE) {
-            vkFreeDescriptorSets(vkDevice->lDevice, dynamicDescriptor.pool, 1, &set);
-            set = VK_NULL_HANDLE;
-        }
-    }
-
-    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, dynamicDescriptor.setLayout);
-
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = dynamicDescriptor.pool;
-    allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-    allocInfo.pSetLayouts = layouts.data();
-
-    dynamicDescriptor.sets.resize(MAX_FRAMES_IN_FLIGHT);
-    if (vkAllocateDescriptorSets(vkDevice->lDevice, &allocInfo, dynamicDescriptor.sets.data()) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate global descriptor sets");
-    }
-
-    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = bufferDatas[i].buffer;
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(GlobalUBO);
-
-        VkWriteDescriptorSet write{};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet = dynamicDescriptor.sets[i];
-        write.dstBinding = 0;
-        write.dstArrayElement = 0;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        write.descriptorCount = 1;
-        write.pBufferInfo = &bufferInfo;
-
-        vkUpdateDescriptorSets(vkDevice->lDevice, 1, &write, 0, nullptr);
-    }
+void GlobalUBOManager::createDescPool() {
+    descPool.create(vkDevice->lDevice, {
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
+    }, 1);
 }
 
-VkDescriptorSet GlobalUBOManager::getDescriptorSet(uint32_t frameIndex) {
-    return dynamicDescriptor.sets[frameIndex];
+void GlobalUBOManager::createDescSet() {
+    VkDevice lDevice = vkDevice->lDevice;
+
+    descSet.allocate(lDevice, descPool.pool, descLayout.layout, 1);
+
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = bufferData.buffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = sizeof(GlobalUBO);
+
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = descSet.get();
+    write.dstBinding = 0;
+    write.dstArrayElement = 0;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write.descriptorCount = 1;
+    write.pBufferInfo = &bufferInfo;
+
+    vkUpdateDescriptorSets(lDevice, 1, &write, 0, nullptr);
+}
+
+VkDescriptorSet GlobalUBOManager::getDescriptorSet() {
+    return descSet.get();
 }
 
 float deltaDay = 1.0f / 86400.0f;

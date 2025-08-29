@@ -29,7 +29,7 @@ struct GlobalUBO {
 
 class GlobalUBOManager {
 public:
-    GlobalUBOManager(const AzVulk::Device* vkDevice, uint32_t MAX_FRAMES_IN_FLIGHT);
+    GlobalUBOManager(const AzVulk::Device* vkDevice);
     ~GlobalUBOManager() = default;
 
     // Delete copy constructor and assignment operator
@@ -37,17 +37,21 @@ public:
     GlobalUBOManager& operator=(const GlobalUBOManager&) = delete;
 
     const AzVulk::Device* vkDevice;
-    uint32_t MAX_FRAMES_IN_FLIGHT;
 
     GlobalUBO ubo;
 
-    std::vector<AzVulk::BufferData> bufferDatas;
-    void createBufferDatas();
+    AzVulk::BufferData bufferData;
+    void createBufferData();
 
-    AzVulk::DynamicDescriptor dynamicDescriptor;
-    void initDescriptorSets();
-    void createDescriptorSets();
-    VkDescriptorSet getDescriptorSet(uint32_t frameIndex);
+    AzVulk::DescLayout descLayout;
+    AzVulk::DescPool descPool;
+    AzVulk::DescSets descSet; // Only need 1 set for global UBO
+
+    void createDescLayout();
+    void createDescPool();
+    void createDescSet();
+
+    VkDescriptorSet getDescriptorSet();
 
 // Functionalities
     void updateUBO(const Camera& camera);

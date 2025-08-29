@@ -136,7 +136,7 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
     scissor.extent = swapChain->extent;
     vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
-    memcpy(globalUBOManager->bufferDatas[currentFrame].mapped, &globalUBO, sizeof(globalUBO));
+    memcpy(globalUBOManager->bufferData.mapped, &globalUBO, sizeof(globalUBO));
 
     return imageIndex;
 }
@@ -152,7 +152,7 @@ void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStati
     const Az3D::TextureGroup* texGroup = resourceManager->textureGroup.get();
     const Az3D::MeshStaticGroup* meshStaticGroup = resourceManager->meshStaticGroup.get();
 
-    VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
+    VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet();
 
     rasterPipeline.bind(commandBuffers[currentFrame]);
 
@@ -200,7 +200,7 @@ void Renderer::drawSky(RasterPipeline& rasterPipeline) {
     rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind only the global descriptor set (set 0) for sky
-    VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet(currentFrame);
+    VkDescriptorSet globalSet = globalUBOManager->getDescriptorSet();
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                             rasterPipeline.layout, 0, 1, &globalSet, 0, nullptr);
 
