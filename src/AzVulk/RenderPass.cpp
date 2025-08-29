@@ -78,11 +78,11 @@ VkResolveModeFlagBits RenderPass::chooseDepthResolveMode(VkPhysicalDevice pDevic
 
 // ---------- safer createRenderPass ----------
 void RenderPass::createRenderPass() {
-    std::vector<VkAttachmentDescription2> attachments;
-    std::vector<VkAttachmentReference2> colorRefs;
-    VkAttachmentReference2 depthRef{};
-    VkAttachmentReference2 colorResolveRef{};
-    VkAttachmentReference2 depthResolveRef{};
+    std::vector<VkAttachmentDescription> attachments;
+    std::vector<VkAttachmentReference> colorRefs;
+    VkAttachmentReference depthRef{};
+    VkAttachmentReference colorResolveRef{};
+    VkAttachmentReference depthResolveRef{};
     bool useDepthResolve = false;
 
     uint32_t attachmentIndex = 0;
@@ -108,9 +108,7 @@ void RenderPass::createRenderPass() {
 
     // --- Color attachment
     if (config.colorFormat != VK_FORMAT_UNDEFINED) {
-        VkAttachmentDescription2 color{};
-        color.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-        color.pNext = nullptr;
+        VkAttachmentDescription color{};
         color.flags = 0;
         color.format = config.colorFormat;
         color.samples = config.colorSamples;
@@ -124,20 +122,15 @@ void RenderPass::createRenderPass() {
                             VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         attachments.push_back(color);
 
-        VkAttachmentReference2 ref{};
-        ref.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-        ref.pNext = nullptr;
+        VkAttachmentReference ref{};
         ref.attachment = attachmentIndex++;
         ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        ref.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         colorRefs.push_back(ref);
     }
 
     // --- Depth attachment
     if (config.hasDepth) {
-        VkAttachmentDescription2 depth{};
-        depth.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-        depth.pNext = nullptr;
+        VkAttachmentDescription depth{};
         depth.flags = 0;
         depth.format = config.depthFormat;
         depth.samples = config.depthSamples;
@@ -149,11 +142,8 @@ void RenderPass::createRenderPass() {
         depth.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachments.push_back(depth);
 
-        depthRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-        depthRef.pNext = nullptr;
         depthRef.attachment = attachmentIndex++;
         depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        depthRef.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
         // Only create the depth-resolve attachment if:
         //  - we're multisampling depth, AND
@@ -165,9 +155,7 @@ void RenderPass::createRenderPass() {
 
             useDepthResolve = true;
 
-            VkAttachmentDescription2 depthResolve{};
-            depthResolve.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-            depthResolve.pNext = nullptr;
+            VkAttachmentDescription depthResolve{};
             depthResolve.flags = 0;
             depthResolve.format = config.depthFormat;
             depthResolve.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -179,11 +167,8 @@ void RenderPass::createRenderPass() {
             depthResolve.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
             attachments.push_back(depthResolve);
 
-            depthResolveRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-            depthResolveRef.pNext = nullptr;
             depthResolveRef.attachment = attachmentIndex++;
             depthResolveRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            depthResolveRef.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         } else {
             // Explicit: do not create depth resolve attachment and do not try to chain the resolve struct
             useDepthResolve = false;
@@ -193,9 +178,7 @@ void RenderPass::createRenderPass() {
     // --- Color resolve (for MSAA color)
     bool hasColorResolve = false;
     if (config.hasResolve) {
-        VkAttachmentDescription2 resolve{};
-        resolve.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-        resolve.pNext = nullptr;
+        VkAttachmentDescription resolve{};
         resolve.flags = 0;
         resolve.format = config.resolveFormat;
         resolve.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -207,52 +190,22 @@ void RenderPass::createRenderPass() {
         resolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         attachments.push_back(resolve);
 
-        colorResolveRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-        colorResolveRef.pNext = nullptr;
         colorResolveRef.attachment = attachmentIndex++;
         colorResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        colorResolveRef.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
         hasColorResolve = true;
     }
 
     // --- Subpass
-    VkSubpassDescription2 subpass{};
-    subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
-    subpass.pNext = nullptr;
+    VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = static_cast<uint32_t>(colorRefs.size());
     subpass.pColorAttachments = colorRefs.empty() ? nullptr : colorRefs.data();
     subpass.pResolveAttachments = hasColorResolve ? &colorResolveRef : nullptr;
     subpass.pDepthStencilAttachment = config.hasDepth ? &depthRef : nullptr;
 
-    // --- Depth resolve struct: only chain this if we actually created a depth-resolve attachment and it's supported
-    VkSubpassDescriptionDepthStencilResolve depthResolveDesc{};
-    depthResolveDesc.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE;
-    depthResolveDesc.pNext = nullptr;
-    depthResolveDesc.depthResolveMode = VK_RESOLVE_MODE_NONE;
-    depthResolveDesc.stencilResolveMode = VK_RESOLVE_MODE_NONE;
-    depthResolveDesc.pDepthStencilResolveAttachment = nullptr;
-
-    if (useDepthResolve) {
-        // As an extra defensive check: make sure resolveMode is still non-NONE and format has depth.
-        if (depthResolveSupported && formatHasDepth(config.depthFormat)) {
-            depthResolveDesc.depthResolveMode = resolveMode;
-            depthResolveDesc.stencilResolveMode = VK_RESOLVE_MODE_NONE;
-            depthResolveDesc.pDepthStencilResolveAttachment = &depthResolveRef;
-            subpass.pNext = &depthResolveDesc;
-        } else {
-            // don't chain; keep pNext == nullptr and depthResolveMode == NONE
-            subpass.pNext = nullptr;
-        }
-    } else {
-        subpass.pNext = nullptr;
-    }
-
     // --- Dependency
-    VkSubpassDependency2 dep{};
-    dep.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2;
-    dep.pNext = nullptr;
+    VkSubpassDependency dep{};
     dep.srcSubpass = VK_SUBPASS_EXTERNAL;
     dep.dstSubpass = 0;
     dep.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
@@ -263,11 +216,10 @@ void RenderPass::createRenderPass() {
     dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
                         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     dep.dependencyFlags = 0;
-    dep.viewOffset = 0;  // replaces src/dstQueueFamilyIndex
 
     // --- RenderPass create
-    VkRenderPassCreateInfo2 info{};
-    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2;
+    VkRenderPassCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     info.pNext = nullptr;
     info.flags = 0;
     info.attachmentCount = static_cast<uint32_t>(attachments.size());
@@ -276,15 +228,8 @@ void RenderPass::createRenderPass() {
     info.pSubpasses = &subpass;
     info.dependencyCount = 1;
     info.pDependencies = &dep;
-    info.correlatedViewMaskCount = 0;
-    info.pCorrelatedViewMasks = nullptr;
 
-    auto fpCreateRenderPass2KHR = (PFN_vkCreateRenderPass2KHR)
-        vkGetDeviceProcAddr(lDevice, "vkCreateRenderPass2KHR");
-    if (!fpCreateRenderPass2KHR) {
-        throw std::runtime_error("vkCreateRenderPass2KHR not available");
-    }
-    if (fpCreateRenderPass2KHR(lDevice, &info, nullptr, &renderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(lDevice, &info, nullptr, &renderPass) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create render pass!");
     }
 }

@@ -1,4 +1,5 @@
 #include "Az3D/MeshStatic.hpp"
+#include <algorithm>
 #include <cfloat>
 #include <queue>
 

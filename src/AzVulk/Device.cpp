@@ -8,10 +8,7 @@ namespace AzVulk {
 // ---------------- EXTENSIONS ----------------
 const std::vector<const char*> Device::deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-
-    // This shit buggy ah hell
-    VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME
+    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
 };
 
 // ---------------- CONSTRUCTOR / DESTRUCTOR ----------------
