@@ -48,7 +48,7 @@ public:
     std::vector<Material> materials;
 
     AzVulk::BufferData bufferData;
-    void createGPUBufferData();
+    void createDeviceBuffer();
 
     AzVulk::DescSets descSet;
     void createDescSet(const VkDescriptorPool pool, const VkDescriptorSetLayout layout);

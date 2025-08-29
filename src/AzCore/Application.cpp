@@ -125,8 +125,6 @@ void Application::initComponents() {
 
 // PLAYGROUND END HERE 
 
-    meshStaticGroup.createDeviceBuffers();
-
     // matGroup.uploadToGPU();
     resManager.uploadAllToGPU();
 

@@ -16,7 +16,7 @@ size_t MaterialGroup::addMaterial(const Material& material) {
     return materials.size() - 1;
 }
 
-void MaterialGroup::createGPUBufferData() {
+void MaterialGroup::createDeviceBuffer() {
     VkDevice lDevice = vkDevice->lDevice;
     VkPhysicalDevice pDevice = vkDevice->pDevice;
 

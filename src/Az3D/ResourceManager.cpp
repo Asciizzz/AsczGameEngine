@@ -31,8 +31,10 @@ void ResourceManager::createDescLayoutAndPool() {
 }
 
 void ResourceManager::uploadAllToGPU() {
-    materialGroup->createGPUBufferData();
-    materialGroup->createDescSet(matDescPool.get(), matDescLayout.layout);
+    meshStaticGroup->createDeviceBuffers();
+
+    materialGroup->createDeviceBuffer();
+    materialGroup->createDescSet(matDescPool.get(), matDescLayout.get());
 }
 
 
