@@ -6,6 +6,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "Helpers/tiny_gltf.h"
 
+using namespace AzVulk;
+
 namespace Az3D {
 
 // Compute all global bone transforms
@@ -229,6 +231,131 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
     return meshSkinned;
 }
 
+void MeshSkinned::createDeviceBuffer(const AzVulk::Device* vkDevice) {
+    BufferData vertexStagingBuffer;
+    vertexStagingBuffer.initVkDevice(vkDevice);
+    vertexStagingBuffer.setProperties(
+        vertices.size() * sizeof(VertexStatic), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    vertexStagingBuffer.createBuffer();
+    vertexStagingBuffer.mappedData(vertices.data());
+
+    vertexBufferData.initVkDevice(vkDevice);
+    vertexBufferData.setProperties(
+        vertices.size() * sizeof(VertexStatic),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    vertexBufferData.createBuffer();
+
+    TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+    VkBufferCopy vertexCopyRegion{};
+    vertexCopyRegion.srcOffset = 0;
+    vertexCopyRegion.dstOffset = 0;
+    vertexCopyRegion.size = vertices.size() * sizeof(VertexStatic);
+
+    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vertexBufferData.buffer, 1, &vertexCopyRegion);
+    vertexBufferData.hostVisible = false;
+
+    vertexCopyCmd.endAndSubmit();
+
+
+    BufferData indexStagingBuffer;
+    indexStagingBuffer.initVkDevice(vkDevice);
+    indexStagingBuffer.setProperties(
+        indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    indexStagingBuffer.createBuffer();
+    indexStagingBuffer.mappedData(indices.data());
+
+    indexBufferData.initVkDevice(vkDevice);
+    indexBufferData.setProperties(
+        indices.size() * sizeof(uint32_t),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    indexBufferData.createBuffer();
+
+    TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+    VkBufferCopy indexCopyRegion{};
+    indexCopyRegion.srcOffset = 0;
+    indexCopyRegion.dstOffset = 0;
+    indexCopyRegion.size = indices.size() * sizeof(uint32_t);
+
+    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, indexBufferData.buffer, 1, &indexCopyRegion);
+    indexBufferData.hostVisible = false;
+
+    indexCopyCmd.endAndSubmit();
+
+
+    BufferData inverseMatStagingBuffer;
+    inverseMatStagingBuffer.initVkDevice(vkDevice);
+    inverseMatStagingBuffer.setProperties(
+        skeleton.inverseBindMatrices.size() * sizeof(glm::mat4),
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    inverseMatStagingBuffer.createBuffer();
+    inverseMatStagingBuffer.mappedData(skeleton.inverseBindMatrices.data());
+
+    inverseMatBufferData.initVkDevice(vkDevice);
+    inverseMatBufferData.setProperties(
+        skeleton.inverseBindMatrices.size() * sizeof(glm::mat4),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    inverseMatBufferData.createBuffer();
+
+    TemporaryCommand inverseMatCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+    VkBufferCopy inverseMatCopyRegion{};
+    inverseMatCopyRegion.srcOffset = 0;
+    inverseMatCopyRegion.dstOffset = 0;
+    inverseMatCopyRegion.size = skeleton.inverseBindMatrices.size() * sizeof(glm::mat4);
+
+    vkCmdCopyBuffer(inverseMatCopyCmd.cmdBuffer, inverseMatStagingBuffer.buffer, inverseMatBufferData.buffer, 1, &inverseMatCopyRegion);
+    inverseMatBufferData.hostVisible = false;
+
+    inverseMatCopyCmd.endAndSubmit();
+
+
+    BufferData localMatStagingBuffer;
+    localMatStagingBuffer.initVkDevice(vkDevice);
+    localMatStagingBuffer.setProperties(
+        skeleton.localBindTransforms.size() * sizeof(glm::mat4),
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    localMatStagingBuffer.createBuffer();
+    localMatStagingBuffer.mappedData(skeleton.localBindTransforms.data());
+
+    localMatBufferData.initVkDevice(vkDevice);
+    localMatBufferData.setProperties(
+        skeleton.localBindTransforms.size() * sizeof(glm::mat4),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    localMatBufferData.createBuffer();
+
+    TemporaryCommand localMatCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+    VkBufferCopy localMatCopyRegion{};
+    localMatCopyRegion.srcOffset = 0;
+    localMatCopyRegion.dstOffset = 0;
+    localMatCopyRegion.size = skeleton.localBindTransforms.size() * sizeof(glm::mat4);
+
+    vkCmdCopyBuffer(localMatCopyCmd.cmdBuffer, localMatStagingBuffer.buffer, localMatBufferData.buffer, 1, &localMatCopyRegion);
+    localMatBufferData.hostVisible = false;
+
+    localMatCopyCmd.endAndSubmit();
+}
+
+
+
 
 MeshSkinnedGroup::MeshSkinnedGroup(const AzVulk::Device* vkDevice) :
     vkDevice(vkDevice) {}
@@ -236,6 +363,12 @@ MeshSkinnedGroup::MeshSkinnedGroup(const AzVulk::Device* vkDevice) :
 size_t MeshSkinnedGroup::addMeshSkinned(SharedPtr<MeshSkinned> mesh) {
     meshes.push_back(mesh);
     return meshes.size() - 1;
+}
+
+void MeshSkinnedGroup::createDeviceBuffers() {
+    for (size_t i = 0; i < meshes.size(); ++i) {
+        meshes[i]->createDeviceBuffer(vkDevice);
+    }
 }
 
 

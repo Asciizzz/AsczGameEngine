@@ -11,10 +11,14 @@ vkDevice(vkDevice) {
     textureGroup = MakeUnique<TextureGroup>(vkDevice);
     materialGroup = MakeUnique<MaterialGroup>(vkDevice);
     meshStaticGroup = MakeUnique<MeshStaticGroup>(vkDevice);
+    meshSkinnedGroup = MakeUnique<MeshSkinnedGroup>(vkDevice);
 }
 
 void ResourceManager::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
+    
+    meshStaticGroup->createDeviceBuffers();
+    meshSkinnedGroup->createDeviceBuffers();
 
     matDescPool.create(lDevice, { {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
     matDescLayout.create(lDevice, {
@@ -25,9 +29,6 @@ void ResourceManager::uploadAllToGPU() {
     });
 
     textureGroup->createDescriptorInfo();
-
-
-    meshStaticGroup->createDeviceBuffers();
 
     materialGroup->createDeviceBuffer();
     materialGroup->createDescSet(matDescPool.get(), matDescLayout.get());
@@ -58,11 +59,8 @@ size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bo
     // Check the extension
     std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
     SharedPtr<MeshStatic> newMesh;
-    if (extension == "obj") {
-        newMesh = MeshStatic::loadFromOBJ(filePath);
-    } else if (extension == "gltf") {
-        newMesh = MeshStatic::loadFromGLTF(filePath);
-    }
+    if (extension == "obj" ) newMesh = MeshStatic::loadFromOBJ(filePath); else
+    if (extension == "gltf") newMesh = MeshStatic::loadFromGLTF(filePath);
 
     if (hasBVH) newMesh->createBVH();
 

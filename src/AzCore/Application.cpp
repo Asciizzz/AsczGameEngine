@@ -122,6 +122,7 @@ void Application::initComponents() {
     );
 
     SharedPtr<MeshSkinned> demoMeshSkinned = MeshSkinned::loadFromGLTF("Assets/Characters/Selen.gltf");
+    resourceManager->addMeshSkinned("Selen", demoMeshSkinned);
 
 // PLAYGROUND END HERE 
 

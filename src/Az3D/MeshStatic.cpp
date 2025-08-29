@@ -52,7 +52,7 @@ void MeshStatic::createDeviceBuffer(const Device* vkDevice) {
 
     vertexCopyCmd.endAndSubmit();
 
-    
+
     BufferData indexStagingBuffer;
     indexStagingBuffer.initVkDevice(vkDevice);
     indexStagingBuffer.setProperties(

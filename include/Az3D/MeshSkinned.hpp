@@ -34,6 +34,9 @@ struct MeshSkinned {
 
     AzVulk::BufferData vertexBufferData;
     AzVulk::BufferData indexBufferData;
+    AzVulk::BufferData inverseMatBufferData;
+    AzVulk::BufferData localMatBufferData;
+
     void createDeviceBuffer(const AzVulk::Device* vkDevice);
 };
 
