@@ -99,19 +99,29 @@ void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
     for (size_t i = 0; i < imageViews.size(); ++i) {
         std::vector<VkImageView> attachments;
 
-        if (colorImageView != VK_NULL_HANDLE) {
-            // MSAA case: colorMSAA, depthMSAA, depthResolve(single-sample), swapchain (color resolve)
+        // The logic below assumes you use RenderPassConfig::createForwardRenderingConfig for main rendering
+        // If MSAA is enabled and resolve is required, use 3 attachments: color, depth, resolve
+        // If MSAA is disabled, use 2 attachments: color, depth
+        // If you use a color resolve attachment, add it as the last one
+
+        if (colorImageView != VK_NULL_HANDLE && depthResolveImageView != VK_NULL_HANDLE) {
+            // MSAA + resolve: colorMSAA, depthMSAA, resolve (swapchain)
             attachments = {
-                colorImageView,          // attachment 0
-                depthImageView,          // attachment 1
-                depthResolveImageView,   // attachment 2  <-- IMPORTANT
-                imageViews[i]            // attachment 3 (swapchain/resolved color)
+                colorImageView,        // color MSAA
+                depthImageView,        // depth MSAA
+                imageViews[i]          // resolve (swapchain)
+            };
+        } else if (colorImageView != VK_NULL_HANDLE) {
+            // MSAA, no resolve: colorMSAA, depthMSAA
+            attachments = {
+                colorImageView,        // color MSAA
+                depthImageView         // depth MSAA
             };
         } else {
-            // Non-MSAA case: swapchain (color), depth (single-sample)
+            // No MSAA: swapchain color, depth
             attachments = {
-                imageViews[i],           // attachment 0 (swapchain)
-                depthImageView           // attachment 1 (depth)
+                imageViews[i],         // swapchain color
+                depthImageView         // depth
             };
         }
 

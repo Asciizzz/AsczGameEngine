@@ -57,22 +57,9 @@ void RenderPass::recreate(const RenderPassConfig& newConfig) {
 
 // ---------- safer chooseDepthResolveMode ----------
 VkResolveModeFlagBits RenderPass::chooseDepthResolveMode(VkPhysicalDevice pDevice) {
-    // Zero-init and set sType/pNext explicitly
-    VkPhysicalDeviceDepthStencilResolveProperties dsResolveProps{};
-    dsResolveProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
-    dsResolveProps.pNext = nullptr;
-
-    VkPhysicalDeviceProperties2 props2{};
-    props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-    props2.pNext = &dsResolveProps;
-
-    vkGetPhysicalDeviceProperties2(pDevice, &props2);
-
-    // If bit present, prefer SAMPLE_ZERO, otherwise return NONE
-    if (dsResolveProps.supportedDepthResolveModes & VK_RESOLVE_MODE_SAMPLE_ZERO_BIT) {
-        return VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
-    }
-
+    // This function now returns VK_RESOLVE_MODE_NONE, as depth resolve properties require Vulkan 1.2+ and VkPhysicalDeviceProperties2.
+    // If you want to support depth resolve, you must use VkPhysicalDeviceProperties2 and VkPhysicalDeviceDepthStencilResolveProperties.
+    // For compatibility, we revert to NONE here.
     return VK_RESOLVE_MODE_NONE;
 }
 
