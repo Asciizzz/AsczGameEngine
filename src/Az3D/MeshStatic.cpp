@@ -19,10 +19,6 @@ size_t MeshStaticGroup::addMeshStatic(std::vector<VertexStatic>& vertices, std::
     auto mesh = MakeShared<MeshStatic>(std::move(vertices), std::move(indices));
     return addMeshStatic(mesh);
 }
-size_t MeshStaticGroup::loadFromOBJ(std::string filePath) {
-    auto mesh = MeshStatic::loadFromOBJ(filePath);
-    return addMeshStatic(mesh);
-}
 
 // Buffer data
 void MeshStatic::createDeviceBuffer(const Device* vkDevice) {

@@ -11,46 +11,45 @@ namespace Az3D {
 
 // Compute global transform of a bone
 glm::mat4 Skeleton::computeGlobalTransform(int boneIndex) const {
-    const Bone& bone = bones[boneIndex];
-    if (bone.parentIndex == -1) {
-        return bone.localPoseTransform;
+    if (parentIndices[boneIndex] == -1) {
+        return localPoseTransforms[boneIndex];
     }
-    return computeGlobalTransform(bone.parentIndex) * bone.localPoseTransform;
+    return computeGlobalTransform(parentIndices[boneIndex]) * localPoseTransforms[boneIndex];
 }
 
 // Compute all global bone transforms
 std::vector<glm::mat4> Skeleton::computeGlobalTransforms() const {
-    std::vector<glm::mat4> result(bones.size());
-    for (size_t i = 0; i < bones.size(); i++) {
+    std::vector<glm::mat4> result(names.size());
+    for (size_t i = 0; i < names.size(); i++) {
         result[i] = computeGlobalTransform(static_cast<int>(i));
     }
     return result;
 }
 
 void Skeleton::debugPrintHierarchy() const {
-    for (size_t i = 0; i < bones.size(); i++) {
-        if (bones[i].parentIndex == -1) {
+    for (size_t i = 0; i < names.size(); i++) {
+        if (parentIndices[i] == -1) {
             debugPrintRecursive(static_cast<int>(i), 0);
         }
     }
 }
 
 void Skeleton::debugPrintRecursive(int boneIndex, int depth) const {
-    const Bone& bone = bones[boneIndex];
+    // const Bone& bone = bones[boneIndex];
 
     // Indentation
     for (int i = 0; i < depth; i++) std::cout << "  ";
 
     // Print this bone
-    std::cout << "- " << bone.name << " (index " << boneIndex << ")";
-    if (bone.parentIndex != -1) {
-        std::cout << " [parent " << bone.parentIndex << "]";
+    std::cout << "- " << names[boneIndex] << " (index " << boneIndex << ")";
+    if (parentIndices[boneIndex] != -1) {
+        std::cout << " [parent " << parentIndices[boneIndex] << "]";
     }
     std::cout << "\n";
 
     // Recurse into children
-    for (size_t i = 0; i < bones.size(); i++) {
-        if (bones[i].parentIndex == boneIndex) {
+    for (size_t i = 0; i < names.size(); i++) {
+        if (parentIndices[i] == boneIndex) {
             debugPrintRecursive(static_cast<int>(i), depth + 1);
         }
     }
@@ -169,17 +168,21 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath)
             readAccessor(model, model.accessors[skin.inverseBindMatrices], ibms);
         }
 
-        meshSkinned->skeleton.bones.reserve(skin.joints.size());
+        meshSkinned->skeleton.names.reserve(skin.joints.size());
+        meshSkinned->skeleton.parentIndices.reserve(skin.joints.size());
+        meshSkinned->skeleton.inverseBindMatrices.reserve(skin.joints.size());
+        meshSkinned->skeleton.localBindTransforms.reserve(skin.joints.size());
+        meshSkinned->skeleton.localPoseTransforms.reserve(skin.joints.size());
 
         for (size_t i = 0; i < skin.joints.size(); i++) {
             int nodeIndex = skin.joints[i];
             const auto& node = model.nodes[nodeIndex];
 
-            Bone bone;
-            bone.name = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
+            
+            std::string boneName = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
 
             // Fill parent index: if node has a parent that's also a joint, link it
-            bone.parentIndex = -1;
+            int boneParentIndex = -1;
             for (size_t p = 0; p < model.nodes.size(); p++) {
                 const auto& parent = model.nodes[p];
                 for (int childIdx : parent.children) {
@@ -187,16 +190,17 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath)
                         // Check if parent is part of this skin
                         auto it = std::find(skin.joints.begin(), skin.joints.end(), p);
                         if (it != skin.joints.end()) {
-                            bone.parentIndex = static_cast<int>(std::distance(skin.joints.begin(), it));
+                            boneParentIndex = static_cast<int>(std::distance(skin.joints.begin(), it));
                         }
                     }
                 }
             }
 
-            bone.inverseBindMatrix = (ibms.size() > i) ? ibms[i] : glm::mat4(1.0f);
+            glm::mat4 boneInverseBindMatrix = (ibms.size() > i) ? ibms[i] : glm::mat4(1.0f);
 
+            glm::mat4 boneLocalBindTransform;
             if (node.matrix.size() == 16) {
-                bone.localBindTransform = glm::make_mat4(node.matrix.data());
+                boneLocalBindTransform = glm::make_mat4(node.matrix.data());
             } else {
                 glm::mat4 t = glm::translate(glm::mat4(1.0f),
                                             node.translation.size() ? glm::vec3(node.translation[0], node.translation[1], node.translation[2]) : glm::vec3(0));
@@ -207,13 +211,18 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath)
                 }
                 glm::mat4 s = glm::scale(glm::mat4(1.0f),
                                         node.scale.size() ? glm::vec3(node.scale[0], node.scale[1], node.scale[2]) : glm::vec3(1));
-                bone.localBindTransform = t * r * s;
+                boneLocalBindTransform = t * r * s;
             }
 
-            bone.localPoseTransform = bone.localBindTransform;
+            glm::mat4 boneLocalPoseTransform = boneLocalBindTransform;
 
-            meshSkinned->skeleton.nameToIndex[bone.name] = static_cast<int>(meshSkinned->skeleton.bones.size());
-            meshSkinned->skeleton.bones.push_back(bone);
+            meshSkinned->skeleton.nameToIndex[boneName] = static_cast<int>(meshSkinned->skeleton.names.size());
+
+            meshSkinned->skeleton.names.push_back(boneName);
+            meshSkinned->skeleton.parentIndices.push_back(boneParentIndex);
+            meshSkinned->skeleton.inverseBindMatrices.push_back(boneInverseBindMatrix);
+            meshSkinned->skeleton.localBindTransforms.push_back(boneLocalBindTransform);
+            meshSkinned->skeleton.localPoseTransforms.push_back(boneLocalPoseTransform);
         }
     }
 
@@ -223,4 +232,20 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath)
     return meshSkinned;
 }
 
+
+MeshSkinnedGroup::MeshSkinnedGroup(const AzVulk::Device* vkDevice) :
+    vkDevice(vkDevice) {}
+
+size_t MeshSkinnedGroup::addMeshSkinned(SharedPtr<MeshSkinned> mesh) {
+    meshes.push_back(mesh);
+    return meshes.size() - 1;
 }
+
+size_t MeshSkinnedGroup::addFromGLTF(const std::string& filePath) {
+    auto mesh = MeshSkinned::loadFromGLTF(filePath);
+    return addMeshSkinned(mesh);
+}
+
+
+
+} // namespace Az3D

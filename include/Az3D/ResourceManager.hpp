@@ -25,14 +25,19 @@ public:
     size_t addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH = false);
     size_t addMeshStatic(std::string name, std::string filePath, bool hasBVH = false);
 
+    size_t addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh);
+    size_t addMeshSkinned(std::string name, std::string filePath);
+
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
     size_t getMaterialIndex(std::string name) const;
     size_t getMeshStaticIndex(std::string name) const;
+    size_t getMeshSkinnedIndex(std::string name) const;
 
-    MeshStatic* getMeshStatic(std::string name) const;
-    Material* getMaterial(std::string name) const;
     Texture* getTexture(std::string name) const;
+    Material* getMaterial(std::string name) const;
+    MeshStatic* getMeshStatic(std::string name) const;
+    MeshSkinned* getMeshSkinned(std::string name) const;
 
     // String-to-index maps
     UnorderedMap<std::string, size_t> textureNameToIndex;
@@ -40,10 +45,10 @@ public:
     UnorderedMap<std::string, size_t> meshStaticNameToIndex;
     UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
 
-    UniquePtr<MeshStaticGroup> meshStaticGroup;
-    UniquePtr<MeshSkinnedGroup> meshSkinnedGroup;
     UniquePtr<TextureGroup> textureGroup;
     UniquePtr<MaterialGroup> materialGroup;
+    UniquePtr<MeshStaticGroup> meshStaticGroup;
+    UniquePtr<MeshSkinnedGroup> meshSkinnedGroup;
 };
 
 } // namespace Az3D

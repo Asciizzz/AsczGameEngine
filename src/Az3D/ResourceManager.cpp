@@ -12,6 +12,7 @@ ResourceManager::ResourceManager(Device* vkDevice) {
     meshStaticGroup = MakeUnique<MeshStaticGroup>(vkDevice);
 }
 
+
 size_t ResourceManager::addTexture(std::string name, std::string imagePath,
                                     Texture::Mode addressMode, uint32_t mipLevels) {
     size_t index = textureGroup->addTexture(imagePath, addressMode, mipLevels);
@@ -41,6 +42,19 @@ size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bo
     return index;
 }
 
+size_t ResourceManager::addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh) {
+    size_t index = meshSkinnedGroup->addMeshSkinned(mesh);
+    meshSkinnedNameToIndex[name] = index;
+    return index;
+}
+
+size_t ResourceManager::addMeshSkinned(std::string name, std::string filePath) {
+    auto newMesh = MeshSkinned::loadFromGLTF(filePath);
+    size_t index = meshSkinnedGroup->addMeshSkinned(newMesh);
+    meshSkinnedNameToIndex[name] = index;
+    return index;
+}
+
 size_t ResourceManager::getTextureIndex(std::string name) const {
     auto it = textureNameToIndex.find(name);
     return it != textureNameToIndex.end() ? it->second : SIZE_MAX;
@@ -56,10 +70,15 @@ size_t ResourceManager::getMeshStaticIndex(std::string name) const {
     return it != meshStaticNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
+size_t ResourceManager::getMeshSkinnedIndex(std::string name) const {
+    auto it = meshSkinnedNameToIndex.find(name);
+    return it != meshSkinnedNameToIndex.end() ? it->second : SIZE_MAX;
+}
 
-MeshStatic* ResourceManager::getMeshStatic(std::string name) const {
-    size_t index = getMeshStaticIndex(name);
-    return index != SIZE_MAX ? meshStaticGroup->meshes[index].get() : nullptr;
+
+Texture* ResourceManager::getTexture(std::string name) const {
+    size_t index = getTextureIndex(name);
+    return index != SIZE_MAX ? textureGroup->textures[index].get() : nullptr;
 }
 
 Material* ResourceManager::getMaterial(std::string name) const {
@@ -67,9 +86,14 @@ Material* ResourceManager::getMaterial(std::string name) const {
     return index != SIZE_MAX ? &materialGroup->materials[index] : nullptr;
 }
 
-Texture* ResourceManager::getTexture(std::string name) const {
-    size_t index = getTextureIndex(name);
-    return index != SIZE_MAX ? textureGroup->textures[index].get() : nullptr;
+MeshStatic* ResourceManager::getMeshStatic(std::string name) const {
+    size_t index = getMeshStaticIndex(name);
+    return index != SIZE_MAX ? meshStaticGroup->meshes[index].get() : nullptr;
+}
+
+MeshSkinned* ResourceManager::getMeshSkinned(std::string name) const {
+    size_t index = getMeshSkinnedIndex(name);
+    return index != SIZE_MAX ? meshSkinnedGroup->meshes[index].get() : nullptr;
 }
 
 } // namespace Az3D

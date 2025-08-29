@@ -7,17 +7,15 @@
 
 namespace Az3D {
 
-struct Bone {
-    std::string name;
-    int parentIndex = -1;
-    glm::mat4 inverseBindMatrix; // from mesh space to bone space
-    glm::mat4 localBindTransform; // T/R/S from glTF node
-
-    glm::mat4 localPoseTransform = glm::mat4(1.0f); // modifiable at runtime
-};
-
 struct Skeleton {
-    std::vector<Bone> bones;
+
+    // Bone SoA
+    std::vector<std::string> names;
+    std::vector<int> parentIndices;
+    std::vector<glm::mat4> inverseBindMatrices;
+    std::vector<glm::mat4> localBindTransforms;
+    std::vector<glm::mat4> localPoseTransforms;
+
     std::unordered_map<std::string, int> nameToIndex;
 
     glm::mat4 Skeleton::computeGlobalTransform(int boneIndex) const;
@@ -48,7 +46,7 @@ public:
     MeshSkinnedGroup& operator=(const MeshSkinnedGroup&) = delete;
 
     size_t addMeshSkinned(SharedPtr<MeshSkinned> mesh);
-    size_t loadFromOBJ(std::string filePath);
+    size_t addFromGLTF(const std::string& filePath);
 
     // Index-based mesh storage
     SharedPtrVec<MeshSkinned> meshes;

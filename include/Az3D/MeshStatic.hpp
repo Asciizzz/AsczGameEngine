@@ -51,6 +51,7 @@ struct MeshStatic {
     std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
     static SharedPtr<MeshStatic> loadFromOBJ(std::string filePath);
+    static SharedPtr<MeshStatic> loadFromGLTF(std::string filePath);
 
     // Mesh's device buffer data
     AzVulk::BufferData vertexBufferData;
@@ -91,9 +92,7 @@ public:
 
     size_t addMeshStatic(SharedPtr<MeshStatic> mesh);
     size_t addMeshStatic(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices);
-    size_t loadFromOBJ(std::string filePath);
 
-    // Index-based mesh storage
     SharedPtrVec<MeshStatic> meshes;
 
     const AzVulk::Device* vkDevice;
