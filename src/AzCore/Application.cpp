@@ -150,6 +150,7 @@ void Application::initComponents() {
     opaquePipeline = MakeUnique<RasterPipeline>(lDevice, opaqueConfig);
     opaquePipeline->create();
 
+
     RasterCfg skyConfig;
     skyConfig.renderPass = renderPass;
     skyConfig.setMSAA(msaaManager->msaaSamples);

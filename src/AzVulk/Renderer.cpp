@@ -113,20 +113,15 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = swapChain->extent;
 
-    // Determine clear value count based on attachment count (color, resolve, depth)
-    uint32_t clearValueCount = 2; // color + depth
-    // if (gPipeline.cfg.hasMSAA) {
-    if (gPipeline.cfg.hasMSAA) {
-        clearValueCount = 3; // color, resolve, depth
-    }
+    // No MSAA: depth + color, with MSAA: depth + color + resolve
+    uint32_t clearValueCount = 2 + gPipeline.cfg.hasMSAA;
 
     std::vector<VkClearValue> clearValues(clearValueCount);
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[0].depthStencil = {1.0f, 0};
+    clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+
     if (clearValueCount == 3) {
-        clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // resolve clear (usually same as color)
-        clearValues[2].depthStencil = {1.0f, 0};
-    } else {
-        clearValues[1].depthStencil = {1.0f, 0};
+        clearValues[2].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     }
 
     renderPassInfo.clearValueCount = clearValueCount;

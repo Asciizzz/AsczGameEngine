@@ -102,15 +102,15 @@ void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
         if (colorImageView != VK_NULL_HANDLE) {
             // MSAA: colorMSAA, resolve (swapchain), depth
             attachments = {
-                colorImageView,        // color MSAA
-                imageViews[i],         // resolve (swapchain)
-                depthImageView         // depth
+                depthImageView, // depth
+                colorImageView, // color MSAA
+                imageViews[i]   // resolve (swapchain)
             };
         } else {
             // No MSAA: swapchain color, depth
             attachments = {
-                imageViews[i],         // swapchain color
-                depthImageView         // depth
+                depthImageView, // depth
+                imageViews[i]   // swapchain color
             };
         }
 

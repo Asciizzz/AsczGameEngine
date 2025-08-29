@@ -73,24 +73,23 @@ void RenderPass::createRenderPass() {
 
     uint32_t attachmentIndex = 0;
 
-    // Determine resolve mode and whether depth-resolve is supported.
-    VkResolveModeFlagBits resolveMode = chooseDepthResolveMode(pDevice);
-    bool depthResolveSupported = (resolveMode != VK_RESOLVE_MODE_NONE);
+    // --- Depth attachment
+    if (config.hasDepth) {
+        VkAttachmentDescription depth{};
+        depth.flags = 0;
+        depth.format = config.depthFormat;
+        depth.samples = config.depthSamples;
+        depth.loadOp = config.depthLoadOp;
+        depth.storeOp = config.depthStoreOp;
+        depth.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depth.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depth.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments.push_back(depth);
 
-    // Helper: does format have depth component?
-    auto formatHasDepth = [](VkFormat fmt) -> bool {
-        switch (fmt) {
-            case VK_FORMAT_D16_UNORM:
-            case VK_FORMAT_X8_D24_UNORM_PACK32:
-            case VK_FORMAT_D32_SFLOAT:
-            case VK_FORMAT_D16_UNORM_S8_UINT:
-            case VK_FORMAT_D24_UNORM_S8_UINT:
-            case VK_FORMAT_D32_SFLOAT_S8_UINT:
-                return true;
-            default:
-                return false;
-        }
-    };
+        depthRef.attachment = attachmentIndex++;
+        depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
 
     // --- Color attachment
     bool hasResolve = config.hasResolve;
@@ -129,44 +128,6 @@ void RenderPass::createRenderPass() {
 
         colorResolveRef.attachment = attachmentIndex++;
         colorResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-
-    // --- Depth attachment
-    if (config.hasDepth) {
-        VkAttachmentDescription depth{};
-        depth.flags = 0;
-        depth.format = config.depthFormat;
-        depth.samples = config.depthSamples;
-        depth.loadOp = config.depthLoadOp;
-        depth.storeOp = config.depthStoreOp;
-        depth.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depth.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depth.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depth.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachments.push_back(depth);
-
-        depthRef.attachment = attachmentIndex++;
-        depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        if (config.depthSamples != VK_SAMPLE_COUNT_1_BIT &&
-            depthResolveSupported &&
-            formatHasDepth(config.depthFormat)) {
-
-            VkAttachmentDescription depthResolve{};
-            depthResolve.flags = 0;
-            depthResolve.format = config.depthFormat;
-            depthResolve.samples = VK_SAMPLE_COUNT_1_BIT;
-            depthResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            depthResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            depthResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            depthResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            depthResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depthResolve.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            attachments.push_back(depthResolve);
-
-            depthResolveRef.attachment = attachmentIndex++;
-            depthResolveRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        }
     }
 
     // --- Subpass
