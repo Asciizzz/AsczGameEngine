@@ -6,7 +6,55 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <tiny_gltf.h>
 
-using namespace Az3D;
+namespace Az3D {
+
+
+// Compute global transform of a bone
+glm::mat4 Skeleton::computeGlobalTransform(int boneIndex) const {
+    const Bone& bone = bones[boneIndex];
+    if (bone.parentIndex == -1) {
+        return bone.localPoseTransform;
+    }
+    return computeGlobalTransform(bone.parentIndex) * bone.localPoseTransform;
+}
+
+// Compute all global bone transforms
+std::vector<glm::mat4> Skeleton::computeGlobalTransforms() const {
+    std::vector<glm::mat4> result(bones.size());
+    for (size_t i = 0; i < bones.size(); i++) {
+        result[i] = computeGlobalTransform(static_cast<int>(i));
+    }
+    return result;
+}
+
+void Skeleton::debugPrintHierarchy() const {
+    for (size_t i = 0; i < bones.size(); i++) {
+        if (bones[i].parentIndex == -1) {
+            debugPrintRecursive(static_cast<int>(i), 0);
+        }
+    }
+}
+
+void Skeleton::debugPrintRecursive(int boneIndex, int depth) const {
+    const Bone& bone = bones[boneIndex];
+
+    // Indentation
+    for (int i = 0; i < depth; i++) std::cout << "  ";
+
+    // Print this bone
+    std::cout << "- " << bone.name << " (index " << boneIndex << ")";
+    if (bone.parentIndex != -1) {
+        std::cout << " [parent " << bone.parentIndex << "]";
+    }
+    std::cout << "\n";
+
+    // Recurse into children
+    for (size_t i = 0; i < bones.size(); i++) {
+        if (bones[i].parentIndex == boneIndex) {
+            debugPrintRecursive(static_cast<int>(i), depth + 1);
+        }
+    }
+}
 
 // Utility: read GLTF accessor as typed array
 template<typename T>
@@ -173,4 +221,6 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath)
     // TODO: load animations from model.animations if needed
 
     return meshSkinned;
+}
+
 }

@@ -20,55 +20,11 @@ struct Skeleton {
     std::vector<Bone> bones;
     std::unordered_map<std::string, int> nameToIndex;
 
-    // Compute global transform of a bone
-    glm::mat4 Skeleton::computeGlobalTransform(int boneIndex) const {
-        const Bone& bone = bones[boneIndex];
-        if (bone.parentIndex == -1) {
-            return bone.localPoseTransform;
-        }
-        return computeGlobalTransform(bone.parentIndex) * bone.localPoseTransform;
-    }
+    glm::mat4 Skeleton::computeGlobalTransform(int boneIndex) const;
+    std::vector<glm::mat4> Skeleton::computeGlobalTransforms() const;
 
-    // Compute all global bone transforms
-    std::vector<glm::mat4> Skeleton::computeGlobalTransforms() const {
-        std::vector<glm::mat4> result(bones.size());
-        for (size_t i = 0; i < bones.size(); i++) {
-            result[i] = computeGlobalTransform(static_cast<int>(i));
-        }
-        return result;
-    }
-
-    void debugPrintHierarchy() const {
-        for (size_t i = 0; i < bones.size(); i++) {
-            if (bones[i].parentIndex == -1) {
-                debugPrintRecursive(static_cast<int>(i), 0);
-            }
-        }
-    }
-
-    private:
-    void debugPrintRecursive(int boneIndex, int depth) const {
-        const Bone& bone = bones[boneIndex];
-
-        // Indentation
-        for (int i = 0; i < depth; i++) std::cout << "  ";
-
-        // Print this bone
-        std::cout << "- " << bone.name << " (index " << boneIndex << ")";
-        if (bone.parentIndex != -1) {
-            std::cout << " [parent " << bone.parentIndex << "]";
-        }
-        std::cout << "\n";
-
-        // Recurse into children
-        for (size_t i = 0; i < bones.size(); i++) {
-            if (bones[i].parentIndex == boneIndex) {
-                debugPrintRecursive(static_cast<int>(i), depth + 1);
-            }
-        }
-    }
-
-
+    void debugPrintHierarchy() const;
+    void debugPrintRecursive(int boneIndex, int depth) const;
 };
 
 struct MeshSkinned {
@@ -82,6 +38,23 @@ struct MeshSkinned {
     AzVulk::BufferData vertexBufferData;
     AzVulk::BufferData indexBufferData;
     void createDeviceBuffer(const AzVulk::Device* vkDevice);
+};
+
+
+class MeshSkinnedGroup {
+public:
+    MeshSkinnedGroup(const AzVulk::Device* vkDevice);
+    MeshSkinnedGroup(const MeshSkinnedGroup&) = delete;
+    MeshSkinnedGroup& operator=(const MeshSkinnedGroup&) = delete;
+
+    size_t addMeshSkinned(SharedPtr<MeshSkinned> mesh);
+    size_t loadFromOBJ(std::string filePath);
+
+    // Index-based mesh storage
+    SharedPtrVec<MeshSkinned> meshes;
+
+    const AzVulk::Device* vkDevice;
+    void createDeviceBuffers();
 };
 
 }

@@ -38,8 +38,10 @@ public:
     UnorderedMap<std::string, size_t> textureNameToIndex;
     UnorderedMap<std::string, size_t> materialNameToIndex;
     UnorderedMap<std::string, size_t> meshStaticNameToIndex;
+    UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
 
     UniquePtr<MeshStaticGroup> meshStaticGroup;
+    UniquePtr<MeshSkinnedGroup> meshSkinnedGroup;
     UniquePtr<TextureGroup> textureGroup;
     UniquePtr<MaterialGroup> materialGroup;
 };
