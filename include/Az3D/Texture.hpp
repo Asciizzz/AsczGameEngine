@@ -58,11 +58,11 @@ public:
 
 
     AzVulk::DynamicDescriptor dynamicDescriptor;
-    void createDescriptorSets();
+    void createDescSet();
     VkDescriptorSet getDescSet() const { return dynamicDescriptor.getSet(); }
 
     void uploadToGPU() {
-        createDescriptorSets();
+        createDescSet();
     }
 };
 

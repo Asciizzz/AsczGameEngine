@@ -50,11 +50,9 @@ public:
     AzVulk::BufferData bufferData;
     void createGPUBufferData();
 
-    AzVulk::DynamicDescriptor dynamicDescriptor;
-    void createDescriptorSets();
-    VkDescriptorSet getDescSet() const {
-        return dynamicDescriptor.getSet();
-    }
+    AzVulk::DescSets descSet;
+    void createDescSet(const VkDescriptorPool pool, const VkDescriptorSetLayout layout);
+    VkDescriptorSet getDescSet() const { return descSet.get(); }
 
 
     void uploadToGPU();

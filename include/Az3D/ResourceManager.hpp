@@ -28,6 +28,19 @@ public:
     size_t addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh);
     size_t addMeshSkinned(std::string name, std::string filePath);
 
+    // Descriptors creation
+    AzVulk::Device* vkDevice;
+
+    AzVulk::DescLayout matDescLayout;
+    AzVulk::DescPool matDescPool;
+
+    AzVulk::DescLayout texDescLayout;
+    AzVulk::DescPool texDescPool;
+
+    void createDescLayoutAndPool();
+
+    void uploadAllToGPU();
+
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
     size_t getMaterialIndex(std::string name) const;

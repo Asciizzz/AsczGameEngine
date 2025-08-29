@@ -56,36 +56,10 @@ void MaterialGroup::createGPUBufferData() {
 }
 
 // Descriptor set creation
-void MaterialGroup::createDescriptorSets() {
+void MaterialGroup::createDescSet(const VkDescriptorPool pool, const VkDescriptorSetLayout layout) {
     VkDevice lDevice = vkDevice->lDevice;
 
-    // --- create layout ---
-    dynamicDescriptor.init(lDevice);
-    VkDescriptorSetLayoutBinding binding = DynamicDescriptor::fastBinding(
-        0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
-    );
-    dynamicDescriptor.createLayout({binding});
-
-    // --- create pool ---
-    // Only 1 SSBO descriptor and 1 set are needed, because the SSBO holds ALL materials
-    dynamicDescriptor.createPool(
-        { VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1
-    );
-
-    // --- allocate descriptor set ---
-    VkDescriptorSetLayout layout = dynamicDescriptor.setLayout;
-
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = dynamicDescriptor.pool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &layout;
-
-    VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-    if (vkAllocateDescriptorSets(lDevice, &allocInfo, &descriptorSet) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to allocate descriptor set for materials");
-    }
+    descSet.allocate(lDevice, pool, layout, 1);
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
@@ -95,7 +69,7 @@ void MaterialGroup::createDescriptorSets() {
 
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = descriptorSet;
+    descriptorWrite.dstSet = descSet.get();
     descriptorWrite.dstBinding = 0;
     descriptorWrite.dstArrayElement = 0;
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -103,13 +77,6 @@ void MaterialGroup::createDescriptorSets() {
     descriptorWrite.pBufferInfo = &materialBufferInfo;
 
     vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
-
-    dynamicDescriptor.set = descriptorSet;
-}
-
-void MaterialGroup::uploadToGPU() {
-    createGPUBufferData();
-    createDescriptorSets();
 }
 
 } // namespace Az3D

@@ -352,7 +352,7 @@ void TextureGroup::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t 
     vkCmdPipelineBarrier(tempCmd.cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void TextureGroup::createDescriptorSets() {
+void TextureGroup::createDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
     VkPhysicalDeviceProperties deviceProps{};
     vkGetPhysicalDeviceProperties(vkDevice->pDevice, &deviceProps);
