@@ -352,7 +352,7 @@ void TextureGroup::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t 
     vkCmdPipelineBarrier(tempCmd.cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void TextureGroup::createDescSet() {
+void TextureGroup::createDescriptorInfo() {
     VkDevice lDevice = vkDevice->lDevice;
     VkPhysicalDeviceProperties deviceProps{};
     vkGetPhysicalDeviceProperties(vkDevice->pDevice, &deviceProps);
@@ -379,39 +379,30 @@ void TextureGroup::createDescSet() {
 
     // --- create descriptor set layout with binding count = textureCount ---
     // Binding 0 will be an array of combined image samplers
-    VkDescriptorSetLayoutBinding binding{};
-    binding.binding            = 0;
-    binding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    binding.descriptorCount    = textureCount;
-    binding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
-    binding.pImmutableSamplers = nullptr;
+    // VkDescriptorSetLayoutBinding binding{};
+    // binding.binding            = 0;
+    // binding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    // binding.descriptorCount    = textureCount;
+    // binding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+    // binding.pImmutableSamplers = nullptr;
 
-    // We assume DynamicDescriptor::createLayout accepts a vector of bindings
-    dynamicDescriptor.init(lDevice);
-    dynamicDescriptor.createLayout({ binding });
+    descLayout.create(lDevice, {
+        DescLayout::BindInfo{0, textureCount, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
+    });
 
-    // --- create descriptor pool sized to hold the entire array of combined image samplers ---
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSize.descriptorCount = textureCount; // total number of sampler descriptors available in pool
+    // // --- create descriptor pool sized to hold the entire array of combined image samplers ---
+    // VkDescriptorPoolSize poolSize{};
+    // poolSize.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    // poolSize.descriptorCount = textureCount; // total number of sampler descriptors available in pool
 
     // We need only one set from this pool
-    dynamicDescriptor.createPool({ poolSize }, 1 /* maxSets */);
+    // dynamicDescriptor.createPool({ poolSize }, 1 /* maxSets */);
 
-    // --- allocate one descriptor set from the pool ---
-    VkDescriptorSetLayout layout = dynamicDescriptor.setLayout;
+    descPool.create(lDevice, {
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, textureCount}
+    }, 1);
 
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool     = dynamicDescriptor.pool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts        = &layout;
-
-    VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-    VkResult res = vkAllocateDescriptorSets(lDevice, &allocInfo, &descriptorSet);
-    if (res != VK_SUCCESS) {
-        throw std::runtime_error("Failed to allocate single texture descriptor set");
-    }
+    descSet.allocate(lDevice, descPool.pool, descLayout.layout, 1);
 
     // --- prepare a contiguous array of VkDescriptorImageInfo entries ---
     // Note: we only pack up to 'textureCount' entries (which may have been clamped above).
@@ -430,7 +421,7 @@ void TextureGroup::createDescSet() {
     // --- one write descriptor that writes the whole array at binding 0 ---
     VkWriteDescriptorSet write{};
     write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstSet          = descriptorSet;
+    write.dstSet          = descSet.get();
     write.dstBinding      = 0;
     write.dstArrayElement = 0; // start at index 0 in the array
     write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -438,9 +429,6 @@ void TextureGroup::createDescSet() {
     write.pImageInfo      = imageInfos.data();
 
     vkUpdateDescriptorSets(lDevice, 1, &write, 0, nullptr);
-
-    // Store single descriptor set for later use (replace your 'sets' vector usage)
-    dynamicDescriptor.set = descriptorSet;
 }
 
 } // namespace Az3D

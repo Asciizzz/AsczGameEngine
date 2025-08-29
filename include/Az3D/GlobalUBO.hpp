@@ -51,7 +51,8 @@ public:
     void createDescPool();
     void createDescSet();
 
-    VkDescriptorSet getDescSet();
+    const VkDescriptorSet getDescSet() const { return descSet.get(); }
+    const VkDescriptorSetLayout getDescLayout() const { return descLayout.get(); }
 
 // Functionalities
     void updateUBO(const Camera& camera);

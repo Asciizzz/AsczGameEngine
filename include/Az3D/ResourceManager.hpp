@@ -34,12 +34,10 @@ public:
     AzVulk::DescLayout matDescLayout;
     AzVulk::DescPool matDescPool;
 
-    AzVulk::DescLayout texDescLayout;
-    AzVulk::DescPool texDescPool;
-
-    void createDescLayoutAndPool();
-
     void uploadAllToGPU();
+
+    const VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout.get(); }
+    const VkDescriptorSetLayout getTexDescLayout() const { return textureGroup->getDescLayout(); }
 
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;

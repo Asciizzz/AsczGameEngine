@@ -128,15 +128,13 @@ void Application::initComponents() {
     // matGroup.uploadToGPU();
     resManager.uploadAllToGPU();
 
-    texGroup.uploadToGPU();
-
     renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get(),
                                     globalUBOManager.get(), resourceManager.get());
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
-    const auto& matLayout = resManager.matDescLayout.get();
-    auto& texLayout = texGroup.dynamicDescriptor.setLayout;
-    const auto& glbLayout = glbUBOManager.descLayout.get();
+    const auto& matLayout = resManager.getMatDescLayout();
+    const auto& texLayout = resManager.getTexDescLayout();
+    const auto& glbLayout = glbUBOManager.getDescLayout();
 
     LayoutVec layouts = {glbLayout, matLayout, texLayout};
 

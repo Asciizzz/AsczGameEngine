@@ -64,10 +64,6 @@ void GlobalUBOManager::createDescSet() {
     vkUpdateDescriptorSets(lDevice, 1, &write, 0, nullptr);
 }
 
-VkDescriptorSet GlobalUBOManager::getDescSet() {
-    return descSet.get();
-}
-
 float deltaDay = 1.0f / 86400.0f;
 
 void GlobalUBOManager::updateUBO(const Camera& camera) {

@@ -11,32 +11,27 @@ vkDevice(vkDevice) {
     textureGroup = MakeUnique<TextureGroup>(vkDevice);
     materialGroup = MakeUnique<MaterialGroup>(vkDevice);
     meshStaticGroup = MakeUnique<MeshStaticGroup>(vkDevice);
-
-    createDescLayoutAndPool();
-}
-
-void ResourceManager::createDescLayoutAndPool() {
-    VkDevice lDevice = vkDevice->lDevice;
-    
-    matDescPool.create(lDevice, { {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-
-    matDescLayout.create(lDevice, {
-        DescLayout::BindInfo{
-            0,
-            1,
-            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
-        }
-    });
 }
 
 void ResourceManager::uploadAllToGPU() {
+    VkDevice lDevice = vkDevice->lDevice;
+
+    matDescPool.create(lDevice, { {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+    matDescLayout.create(lDevice, {
+        DescLayout::BindInfo{
+            0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
+        }
+    });
+
+    textureGroup->createDescriptorInfo();
+
+
     meshStaticGroup->createDeviceBuffers();
 
     materialGroup->createDeviceBuffer();
     materialGroup->createDescSet(matDescPool.get(), matDescLayout.get());
 }
-
 
 
 size_t ResourceManager::addTexture(std::string name, std::string imagePath,

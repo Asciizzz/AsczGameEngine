@@ -57,13 +57,14 @@ public:
     void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
 
-    AzVulk::DynamicDescriptor dynamicDescriptor;
-    void createDescSet();
-    VkDescriptorSet getDescSet() const { return dynamicDescriptor.getSet(); }
-
-    void uploadToGPU() {
-        createDescSet();
-    }
+    // AzVulk::DynamicDescriptor dynamicDescriptor;
+    AzVulk::DescPool descPool;
+    AzVulk::DescLayout descLayout;
+    AzVulk::DescSets descSet;
+    void createDescriptorInfo();
+    const VkDescriptorSet getDescSet() const { return descSet.get(); }
+    const VkDescriptorSetLayout getDescLayout() const { return descLayout.get(); }
+    const VkDescriptorPool getDescPool() const { return descPool.get(); }
 };
 
 }
