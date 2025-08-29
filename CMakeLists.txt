@@ -36,7 +36,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Device.cpp
     src/AzVulk/Instance.cpp
     src/AzVulk/Buffer.cpp
-    src/AzVulk/DescriptorSets.cpp
+    src/AzVulk/Descriptor.cpp
     src/AzVulk/Swapchain.cpp
     src/AzVulk/RenderPass.cpp
     src/AzVulk/MSAAManager.cpp

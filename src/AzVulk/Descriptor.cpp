@@ -1,4 +1,4 @@
-#include "AzVulk/DescriptorSets.hpp"
+#include "AzVulk/Descriptor.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>

@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "AzVulk/DescriptorSets.hpp"
+#include "AzVulk/Descriptor.hpp"
 #include "Helpers/Templates.hpp"
 
 namespace AzVulk {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "AzVulk/Pipeline_compute.hpp"
-#include "AzVulk/DescriptorSets.hpp"
+#include "AzVulk/Descriptor.hpp"
 #include "AzVulk/Buffer.hpp"
 
 #include <stdexcept>

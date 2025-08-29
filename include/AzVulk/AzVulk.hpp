@@ -9,7 +9,7 @@
 #include "AzVulk/DepthManager.hpp"
 
 #include "AzVulk/Buffer.hpp"
-#include "AzVulk/DescriptorSets.hpp"
+#include "AzVulk/Descriptor.hpp"
 
 #include "AzVulk/Renderer.hpp"
 #include "AzVulk/Pipeline_include.hpp"

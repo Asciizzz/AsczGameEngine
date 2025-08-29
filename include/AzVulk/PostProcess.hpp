@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AzVulk/DescriptorSets.hpp"
+#include "AzVulk/Descriptor.hpp"
 
 
 namespace AzVulk {
