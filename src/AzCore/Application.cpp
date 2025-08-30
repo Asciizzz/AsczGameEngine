@@ -481,7 +481,7 @@ void Application::mainLoop() {
             // rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, grassSystem->terrainInstanceGroup);
             
             // Draw the test
-            // rendererRef.drawDemoSkinned(*skinnedMeshPipeline, *resManager.getMeshSkinned("Demo"));
+            rendererRef.drawDemoSkinned(*skinnedMeshPipeline, *resManager.getMeshSkinned("Demo"));
 
             // // Draw the particles
             // rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, particleManager->instanceGroup);
