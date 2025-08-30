@@ -139,16 +139,16 @@ void Application::initComponents() {
 
     LayoutVec layouts = {glbLayout, matLayout, texLayout};
 
-    RasterCfg opaqueConfig;
-    opaqueConfig.renderPass = renderPass;
-    opaqueConfig.setMSAA(msaaManager->msaaSamples);
+    RasterCfg staticMeshConfig;
+    staticMeshConfig.renderPass = renderPass;
+    staticMeshConfig.setMSAA(msaaManager->msaaSamples);
 
-    opaqueConfig.setLayouts = layouts;
-    opaqueConfig.vertPath = "Shaders/Rasterize/raster.vert.spv";
-    opaqueConfig.fragPath = "Shaders/Rasterize/raster.frag.spv";
+    staticMeshConfig.setLayouts = layouts;
+    staticMeshConfig.vertPath = "Shaders/Rasterize/MeshStatic.vert.spv";
+    staticMeshConfig.fragPath = "Shaders/Rasterize/MeshStatic.frag.spv";
 
-    opaquePipeline = MakeUnique<RasterPipeline>(lDevice, opaqueConfig);
-    opaquePipeline->create();
+    staticMeshPipeline = MakeUnique<RasterPipeline>(lDevice, staticMeshConfig);
+    staticMeshPipeline->create();
 
 
     RasterCfg skyConfig;
@@ -169,6 +169,19 @@ void Application::initComponents() {
     skyPipeline = MakeUnique<RasterPipeline>(lDevice, skyConfig);
     skyPipeline->create();
 
+
+    RasterCfg foliageConfig;
+    foliageConfig.renderPass = renderPass;
+    foliageConfig.setMSAA(msaaManager->msaaSamples);
+    foliageConfig.setLayouts = layouts;
+    foliageConfig.vertPath = "Shaders/Rasterize/MeshStatic.vert.spv";
+    foliageConfig.fragPath = "Shaders/Rasterize/MeshStatic.frag.spv";
+
+    // No backface culling
+    foliageConfig.cullMode = VK_CULL_MODE_NONE;
+
+    foliagePipeline = MakeUnique<RasterPipeline>(lDevice, foliageConfig);
+    foliagePipeline->create();
 }
 
 void Application::featuresTestingGround() {
@@ -271,9 +284,9 @@ bool Application::checkWindowResize() {
     VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
 
     // No need to change layout
-    opaquePipeline->setRenderPass(renderPass);
-    opaquePipeline->setMsaa(newMsaaSamples);
-    opaquePipeline->recreate();
+    staticMeshPipeline->setRenderPass(renderPass);
+    staticMeshPipeline->setMsaa(newMsaaSamples);
+    staticMeshPipeline->recreate();
 
     skyPipeline->setRenderPass(renderPass);
     skyPipeline->setMsaa(newMsaaSamples);
@@ -446,20 +459,20 @@ void Application::mainLoop() {
         // Use the new explicit rendering interface
         globalUBOManager->updateUBO(camRef);
 
-        uint32_t imageIndex = rendererRef.beginFrame(*opaquePipeline, globalUBOManager->ubo);
+        uint32_t imageIndex = rendererRef.beginFrame(*staticMeshPipeline, globalUBOManager->ubo);
         if (imageIndex != UINT32_MAX) {
             // First: render sky background with dedicated pipeline
             rendererRef.drawSky(*skyPipeline);
 
             // Draw grass system
-            rendererRef.drawInstances(*opaquePipeline, grassSystem->grassInstanceGroup);
-            rendererRef.drawInstances(*opaquePipeline, grassSystem->terrainInstanceGroup);
+            rendererRef.drawInstances(*foliagePipeline, grassSystem->grassInstanceGroup);
+            rendererRef.drawInstances(*staticMeshPipeline, grassSystem->terrainInstanceGroup);
             
             // Draw the world model group
-            // rendererRef.drawInstances(*opaquePipeline, newWorld->worldModelGroup);
+            // rendererRef.drawInstances(*staticMeshPipeline, newWorld->worldModelGroup);
             
             // Draw the particles
-            rendererRef.drawInstances(*opaquePipeline, particleManager->instanceGroup);
+            rendererRef.drawInstances(*staticMeshPipeline, particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };

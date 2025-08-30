@@ -85,6 +85,8 @@ void Grass::generateHeightMap(std::mt19937& generator) {
     }
 }
 
+// Note: use pipeline that has no backface culling
+
 void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
     // Create grass geometry - 3 intersecting quads for volume
     glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
@@ -128,9 +130,9 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
     };
     
     std::vector<uint32_t> grassIndices = { 
-        0, 1, 2, 2, 3, 0,  2, 1, 0, 0, 3, 2,
-        4, 5, 6, 6, 7, 4,  6, 5, 4, 4, 7, 6,
-        8, 9, 10, 10, 11, 8,  10, 9, 8, 8, 11, 10
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4,
+        8, 9, 10, 10, 11, 8,
     };
 
     // Create mesh
@@ -179,8 +181,8 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
     };
     
     std::vector<uint32_t> grassIndices = { 
-        0, 1, 2, 2, 3, 0,  2, 1, 0, 0, 3, 2,
-        4, 5, 6, 6, 7, 4,  6, 5, 4, 4, 7, 6
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4
     };
 
     // Create mesh
