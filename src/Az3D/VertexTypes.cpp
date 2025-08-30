@@ -78,9 +78,9 @@ VkVertexInputBindingDescription VertexStatic::getBindingDescription() {
 std::array<VkVertexInputAttributeDescription, 3> VertexStatic::getAttributeDescriptions() {
     std::array<VkVertexInputAttributeDescription, 3> attribs{};
 
-    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, pos_tu)};
-    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, nrml_tv)};
-    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, tangent)};
+    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, pos_tu)};
+    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, nrml_tv)};
+    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, tangent)};
 
     return attribs;
 }

@@ -24,11 +24,18 @@ namespace AzVulk {
 
         // Introduction
         uint32_t beginFrame(RasterPipeline& pipeline, Az3D::GlobalUBO& globalUBO);
+
         // Body
-        void drawInstances(RasterPipeline& pipeline, Az3D::InstanceStaticGroup& instanceGroup);
+        void drawInstanceStaticGroup(RasterPipeline& pipeline, Az3D::InstanceStaticGroup& instanceGroup);
+        void drawInstanceSkinnedGroup(RasterPipeline& pipeline, Az3D::InstanceSkinnedGroup& instanceGroup);
+
+        void drawDemoSkinned(RasterPipeline& pipeline, const Az3D::MeshSkinned& meshSkinned);
+
         void drawSky(RasterPipeline& skyPipeline);
+
         // Conclusion
         void endFrame(uint32_t imageIndex);
+
         // Thank's for attending my Ted-Talk
 
         // Component references

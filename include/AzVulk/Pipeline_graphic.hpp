@@ -17,11 +17,11 @@ struct RasterCfg {
     std::vector<VkDescriptorSetLayout> setLayouts;
 
     // special
-    enum class VertexInputType {
+    enum class InputType {
         None    = 0,
         Static  = 1,
         Skinned = 2
-    } vertexInputType = VertexInputType::Static;
+    } vertexInputType = InputType::Static;
 
     // defaults
     VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;

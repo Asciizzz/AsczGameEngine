@@ -81,13 +81,16 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
     std::string err, warn;
 
     bool ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
-    if (!ok) {
-        throw std::runtime_error("GLTF load error: " + err);
-    }
 
-    if (model.meshes.empty()) {
-        throw std::runtime_error("GLTF has no meshes: " + filePath);
-    }
+    // Check file extension to decide parser
+    if (filePath.size() > 4 && filePath.substr(filePath.size() - 4) == ".glb")
+        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath); // GLB
+    else
+        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
+
+    if (!ok) throw std::runtime_error("GLTF load error: " + err);
+
+    if (model.meshes.empty()) throw std::runtime_error("GLTF has no meshes: " + filePath);
 
     const tinygltf::Mesh& mesh = model.meshes[0];
     size_t vertexOffset = 0;
@@ -95,6 +98,7 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
     // Merge all primitives into one vertex/index buffer
     for (const auto& primitive : mesh.primitives) {
         size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
+
         std::vector<glm::vec3> positions, normals;
         std::vector<glm::vec4> tangents, weights;
         std::vector<glm::vec2> uvs;
@@ -177,7 +181,6 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
             int nodeIndex = skin.joints[i];
             const auto& node = model.nodes[nodeIndex];
 
-            
             std::string boneName = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
 
             // Fill parent index: if node has a parent that's also a joint, link it
@@ -235,7 +238,7 @@ void MeshSkinned::createDeviceBuffer(const AzVulk::Device* vkDevice) {
     BufferData vertexStagingBuffer;
     vertexStagingBuffer.initVkDevice(vkDevice);
     vertexStagingBuffer.setProperties(
-        vertices.size() * sizeof(VertexStatic), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        vertices.size() * sizeof(VertexSkinned), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
     vertexStagingBuffer.createBuffer();
@@ -243,7 +246,7 @@ void MeshSkinned::createDeviceBuffer(const AzVulk::Device* vkDevice) {
 
     vertexBufferData.initVkDevice(vkDevice);
     vertexBufferData.setProperties(
-        vertices.size() * sizeof(VertexStatic),
+        vertices.size() * sizeof(VertexSkinned),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
@@ -254,7 +257,7 @@ void MeshSkinned::createDeviceBuffer(const AzVulk::Device* vkDevice) {
     VkBufferCopy vertexCopyRegion{};
     vertexCopyRegion.srcOffset = 0;
     vertexCopyRegion.dstOffset = 0;
-    vertexCopyRegion.size = vertices.size() * sizeof(VertexStatic);
+    vertexCopyRegion.size = vertices.size() * sizeof(VertexSkinned);
 
     vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vertexBufferData.buffer, 1, &vertexCopyRegion);
     vertexBufferData.hostVisible = false;
@@ -290,68 +293,6 @@ void MeshSkinned::createDeviceBuffer(const AzVulk::Device* vkDevice) {
     indexBufferData.hostVisible = false;
 
     indexCopyCmd.endAndSubmit();
-
-
-    BufferData inverseMatStagingBuffer;
-    inverseMatStagingBuffer.initVkDevice(vkDevice);
-    inverseMatStagingBuffer.setProperties(
-        skeleton.inverseBindMatrices.size() * sizeof(glm::mat4),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    inverseMatStagingBuffer.createBuffer();
-    inverseMatStagingBuffer.mappedData(skeleton.inverseBindMatrices.data());
-
-    inverseMatBufferData.initVkDevice(vkDevice);
-    inverseMatBufferData.setProperties(
-        skeleton.inverseBindMatrices.size() * sizeof(glm::mat4),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-    inverseMatBufferData.createBuffer();
-
-    TemporaryCommand inverseMatCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
-
-    VkBufferCopy inverseMatCopyRegion{};
-    inverseMatCopyRegion.srcOffset = 0;
-    inverseMatCopyRegion.dstOffset = 0;
-    inverseMatCopyRegion.size = skeleton.inverseBindMatrices.size() * sizeof(glm::mat4);
-
-    vkCmdCopyBuffer(inverseMatCopyCmd.cmdBuffer, inverseMatStagingBuffer.buffer, inverseMatBufferData.buffer, 1, &inverseMatCopyRegion);
-    inverseMatBufferData.hostVisible = false;
-
-    inverseMatCopyCmd.endAndSubmit();
-
-
-    BufferData localMatStagingBuffer;
-    localMatStagingBuffer.initVkDevice(vkDevice);
-    localMatStagingBuffer.setProperties(
-        skeleton.localBindTransforms.size() * sizeof(glm::mat4),
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    localMatStagingBuffer.createBuffer();
-    localMatStagingBuffer.mappedData(skeleton.localBindTransforms.data());
-
-    localMatBufferData.initVkDevice(vkDevice);
-    localMatBufferData.setProperties(
-        skeleton.localBindTransforms.size() * sizeof(glm::mat4),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-    localMatBufferData.createBuffer();
-
-    TemporaryCommand localMatCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
-
-    VkBufferCopy localMatCopyRegion{};
-    localMatCopyRegion.srcOffset = 0;
-    localMatCopyRegion.dstOffset = 0;
-    localMatCopyRegion.size = skeleton.localBindTransforms.size() * sizeof(glm::mat4);
-
-    vkCmdCopyBuffer(localMatCopyCmd.cmdBuffer, localMatStagingBuffer.buffer, localMatBufferData.buffer, 1, &localMatCopyRegion);
-    localMatBufferData.hostVisible = false;
-
-    localMatCopyCmd.endAndSubmit();
 }
 
 

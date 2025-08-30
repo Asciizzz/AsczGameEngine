@@ -8,7 +8,7 @@
 using namespace AzVulk;
 
 void RasterPipeline::create() {
-    // 1) Shader modules
+    // 1. Shader modules
     auto vertCode = readFile(cfg.vertPath);
     auto fragCode = readFile(cfg.fragPath);
     VkShaderModule vert = createModule(vertCode);
@@ -24,12 +24,11 @@ void RasterPipeline::create() {
     stages[1].module = frag;
     stages[1].pName  = "main";
 
-    // 2) Vertex input
+    // 2. Vertex input
     VkPipelineVertexInputStateCreateInfo vin{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    std::array<VkVertexInputBindingDescription, 2> bindings;
+    std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<VkVertexInputAttributeDescription> attrs;
 
-    
     auto vstaticBind   = Az3D::VertexStatic::getBindingDescription();
     auto vstaticAttrs  = Az3D::VertexStatic::getAttributeDescriptions();
     auto vskinnedBind  = Az3D::VertexSkinned::getBindingDescription();
@@ -38,11 +37,11 @@ void RasterPipeline::create() {
     auto instanceAttrs = Az3D::InstanceStatic::getAttributeDescriptions();
 
     switch (cfg.vertexInputType) {
-    case RasterCfg::VertexInputType::None:
+    case RasterCfg::InputType::None:
     default:
         break;
 
-    case RasterCfg::VertexInputType::Static:
+    case RasterCfg::InputType::Static:
         bindings = { vstaticBind, instanceBind };
         attrs.insert(attrs.end(), vstaticAttrs.begin(), vstaticAttrs.end());
         attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
@@ -53,10 +52,14 @@ void RasterPipeline::create() {
         vin.pVertexAttributeDescriptions    = attrs.data();
         break;
 
-    case RasterCfg::VertexInputType::Skinned:
-        bindings = { vskinnedBind, instanceBind };
+    case RasterCfg::InputType::Skinned:
+        // bindings = { vskinnedBind, instanceBind };
+        // attrs.insert(attrs.end(), vskinnedAttrs.begin(), vskinnedAttrs.end());
+        // attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
+        
+        // For the time being, we will work without instancing
+        bindings = { vskinnedBind };
         attrs.insert(attrs.end(), vskinnedAttrs.begin(), vskinnedAttrs.end());
-        attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
 
         vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
         vin.pVertexBindingDescriptions      = bindings.data();
@@ -111,14 +114,14 @@ void RasterPipeline::create() {
     dyn.dynamicStateCount = static_cast<uint32_t>(dynStates.size());
     dyn.pDynamicStates    = dynStates.data();
 
-    // 3) Layout
+    // 3. Layout
     VkPipelineLayoutCreateInfo lci{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     lci.setLayoutCount = static_cast<uint32_t>(cfg.setLayouts.size());
     lci.pSetLayouts    = cfg.setLayouts.data();
     if (vkCreatePipelineLayout(lDevice, &lci, nullptr, &layout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout (graphics)");
 
-    // 4) Graphics pipeline
+    // 4. Graphics pipeline
     VkGraphicsPipelineCreateInfo pci{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     pci.stageCount = 2;
     pci.pStages    = stages;

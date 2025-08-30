@@ -148,8 +148,8 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
     return imageIndex;
 }
 
-// Draw scene with specified pipeline - uses pre-computed mesh mapping from ModelGroup
-void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStaticGroup& instanceGroup) {
+
+void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::InstanceStaticGroup& instanceGroup) {
     uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
     size_t meshIndex = instanceGroup.meshIndex;
 
@@ -178,31 +178,93 @@ void Renderer::drawInstances(RasterPipeline& rasterPipeline, Az3D::InstanceStati
 
     if (indexCount == 0) return;
 
-    const auto& vertexBufferData = mesh->vertexBufferData;
-    const auto& indexBufferData = mesh->indexBufferData;
+    VkBuffer vertexBuffer = mesh->vertexBufferData.buffer;
+    VkBuffer indexBuffer = mesh->indexBufferData.buffer;
 
-    const auto& instanceBufferData = instanceGroup.bufferData;
+    VkBuffer instanceBuffer = instanceGroup.bufferData.buffer;
 
-    VkBuffer buffers[] = { vertexBufferData.buffer, instanceBufferData.buffer };
+    VkBuffer buffers[] = { vertexBuffer, instanceBuffer };
     VkDeviceSize offsets[] = { 0, 0 };
     vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, buffers, offsets);
 
     // Bind index buffer
-    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
     // Draw all instances
     vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
 }
 
+void Renderer::drawDemoSkinned(RasterPipeline& rasterPipeline, const Az3D::MeshSkinned& meshSkinned) {
+    rasterPipeline.bind(commandBuffers[currentFrame]);
+
+    // Bind descriptor sets
+    VkDescriptorSet globalSet = globalUBOManager->getDescSet();
+    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            rasterPipeline.layout, 0, 1, &globalSet, 0, nullptr);
+
+    uint64_t indexCount = meshSkinned.indices.size();
+    if (indexCount == 0) return;
+
+    VkBuffer vertexBuffer = meshSkinned.vertexBufferData.buffer;
+    VkBuffer indexBuffer = meshSkinned.indexBufferData.buffer;
+
+    VkBuffer buffers[] = { vertexBuffer };
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, buffers, offsets);
+
+    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, 1, 0, 0, 0);
+}
+
+void Renderer::drawInstanceSkinnedGroup(RasterPipeline& rasterPipeline, Az3D::InstanceSkinnedGroup& instanceGroup) {
+    // uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
+    // size_t meshIndex = instanceGroup.meshIndex;
+
+    // if (instanceCount == 0 || meshIndex == SIZE_MAX) return;
+
+    // const Az3D::MaterialGroup* matGroup = resourceManager->materialGroup.get();
+    // const Az3D::TextureGroup* texGroup = resourceManager->textureGroup.get();
+    // const Az3D::MeshSkinnedGroup* meshSkinnedGroup = resourceManager->meshSkinnedGroup.get();
+
+    // VkDescriptorSet globalSet = globalUBOManager->getDescSet();
+
+    // rasterPipeline.bind(commandBuffers[currentFrame]);
+
+    // // Bind descriptor sets once
+    // VkDescriptorSet materialSet = matGroup->getDescSet();
+    // VkDescriptorSet textureSet = texGroup->getDescSet();
+
+    // std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
+    // vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //                         rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
+
+    // instanceGroup.updateBufferData();
+
+    // const auto& mesh = meshSkinnedGroup->meshes[meshIndex];
+    // uint64_t indexCount = mesh->indices.size();
+
+    // if (indexCount == 0) return;
+
+    // const auto& vertexBufferData = mesh->vertexBufferData;
+    // const auto& indexBufferData = mesh->indexBufferData;
+
+    // const auto& instanceBufferData = instanceGroup.bufferData;
+
+    // VkBuffer buffers[] = { vertexBufferData.buffer, instanceBufferData.buffer };
+    // VkDeviceSize offsets[] = { 0, 0 };
+    // vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, buffers, offsets);
+
+    // // Bind index buffer
+    // vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBufferData.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+    // // Draw all instances
+    // vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
+}
+
+
 // Sky rendering using dedicated sky pipeline
 void Renderer::drawSky(RasterPipeline& rasterPipeline) {
-    // return;
-    /* 
-    Dont worry about the validation warning too much, since the sky is sharing the same shader
-    as the main rasterization renderer, it expects the vertex - index - instance buffers to be bound
-    in the same way, but its not, because we don't need them.
-    */
-
     // Bind sky pipeline
     rasterPipeline.bind(commandBuffers[currentFrame]);
 

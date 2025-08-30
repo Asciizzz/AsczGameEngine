@@ -121,8 +121,8 @@ void Application::initComponents() {
         boundMin, boundMax
     );
 
-    SharedPtr<MeshSkinned> demoMeshSkinned = MeshSkinned::loadFromGLTF("Assets/Characters/Selen.gltf");
-    resourceManager->addMeshSkinned("Selen", demoMeshSkinned);
+    SharedPtr<MeshSkinned> demoMeshSkinned = MeshSkinned::loadFromGLTF("Assets/Characters/Template.glb");
+    resourceManager->addMeshSkinned("Demo", demoMeshSkinned);
 
 // PLAYGROUND END HERE 
 
@@ -142,21 +142,33 @@ void Application::initComponents() {
     RasterCfg staticMeshConfig;
     staticMeshConfig.renderPass = renderPass;
     staticMeshConfig.setMSAA(msaaManager->msaaSamples);
-
     staticMeshConfig.setLayouts = layouts;
+    staticMeshConfig.vertexInputType = RasterCfg::InputType::Static;
     staticMeshConfig.vertPath = "Shaders/Rasterize/MeshStatic.vert.spv";
     staticMeshConfig.fragPath = "Shaders/Rasterize/MeshStatic.frag.spv";
 
     staticMeshPipeline = MakeUnique<RasterPipeline>(lDevice, staticMeshConfig);
     staticMeshPipeline->create();
 
+    RasterCfg skinnedMeshConfig;
+    skinnedMeshConfig.renderPass = renderPass;
+    skinnedMeshConfig.setMSAA(msaaManager->msaaSamples);
+    skinnedMeshConfig.setLayouts = layouts;
+    skinnedMeshConfig.vertexInputType = RasterCfg::InputType::Skinned;
+    skinnedMeshConfig.vertPath = "Shaders/Rasterize/MeshSkinned.vert.spv";
+    skinnedMeshConfig.fragPath = "Shaders/Rasterize/MeshSkinned.frag.spv";
+    // Debugging
+    skinnedMeshConfig.cullMode = VK_CULL_MODE_NONE;
+
+    skinnedMeshPipeline = MakeUnique<RasterPipeline>(lDevice, skinnedMeshConfig);
+    skinnedMeshPipeline->create();
 
     RasterCfg skyConfig;
     skyConfig.renderPass = renderPass;
     skyConfig.setMSAA(msaaManager->msaaSamples);
 
     skyConfig.setLayouts = {glbLayout};
-    skyConfig.vertexInputType = RasterCfg::VertexInputType::None;
+    skyConfig.vertexInputType = RasterCfg::InputType::None;
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
 
@@ -464,15 +476,15 @@ void Application::mainLoop() {
             // First: render sky background with dedicated pipeline
             rendererRef.drawSky(*skyPipeline);
 
-            // Draw grass system
-            rendererRef.drawInstances(*foliagePipeline, grassSystem->grassInstanceGroup);
-            rendererRef.drawInstances(*staticMeshPipeline, grassSystem->terrainInstanceGroup);
+            // // Draw grass system
+            // rendererRef.drawInstanceStaticGroup(*foliagePipeline, grassSystem->grassInstanceGroup);
+            // rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, grassSystem->terrainInstanceGroup);
             
-            // Draw the world model group
-            // rendererRef.drawInstances(*staticMeshPipeline, newWorld->worldModelGroup);
-            
-            // Draw the particles
-            rendererRef.drawInstances(*staticMeshPipeline, particleManager->instanceGroup);
+            // Draw the test
+            // rendererRef.drawDemoSkinned(*skinnedMeshPipeline, *resManager.getMeshSkinned("Demo"));
+
+            // // Draw the particles
+            // rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };
