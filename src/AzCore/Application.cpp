@@ -159,6 +159,7 @@ void Application::initComponents() {
     skinnedMeshConfig.fragPath = "Shaders/Rasterize/MeshSkinned.frag.spv";
     // Debugging
     skinnedMeshConfig.cullMode = VK_CULL_MODE_NONE;
+    // skinnedMeshConfig.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
     skinnedMeshPipeline = MakeUnique<RasterPipeline>(lDevice, skinnedMeshConfig);
     skinnedMeshPipeline->create();

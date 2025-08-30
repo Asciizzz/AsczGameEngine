@@ -30,7 +30,7 @@ void main() {
     int debugR = int(totalID % 256);
     float debugB = avgW;
 
-    debugColor = vec4(avgW);
+    debugColor = vec4(1.0);
 
     gl_Position = glb.proj * glb.view * worldPos;
 }
