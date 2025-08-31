@@ -455,7 +455,7 @@ void Application::mainLoop() {
                 std::for_each(indices.begin(), indices.end(), [&](size_t i) {
                     particles[i].pos = camRef.pos;
 
-                    particlesData[i].modelMatrix = particles[i].getMat4();
+                    particlesData[i].setTransform(particles[i].pos, particles[i].rot);
                 });
             }
 
@@ -480,14 +480,14 @@ void Application::mainLoop() {
             rendererRef.drawSky(*skyPipeline);
 
             // // Draw grass system
-            // rendererRef.drawInstanceStaticGroup(*foliagePipeline, grassSystem->grassInstanceGroup);
-            // rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, grassSystem->terrainInstanceGroup);
+            rendererRef.drawInstanceStaticGroup(*foliagePipeline, grassSystem->grassInstanceGroup);
+            rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, grassSystem->terrainInstanceGroup);
             
             // Draw the test
             rendererRef.drawDemoSkinned(*skinnedMeshPipeline, *resManager.getMeshSkinned("Demo"));
 
             // // Draw the particles
-            // rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, particleManager->instanceGroup);
+            rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };

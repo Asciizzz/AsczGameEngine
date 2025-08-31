@@ -80,7 +80,7 @@ namespace AzGame {
             trform.pos = glm::vec3(gx, gy, gz);
 
             Az3D::InstanceStatic data;
-            data.modelMatrix = trform.getMat4();
+            data.setTransform(trform.pos, trform.rot, 1.0f);
             data.properties.x = static_cast<int>(materialIndex);
 
             // worldModelGroup.addInstance(meshIndex, materialIndex, data);

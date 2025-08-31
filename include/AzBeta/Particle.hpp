@@ -12,7 +12,7 @@ using HitInfo = Az3D::HitInfo;
 
 class ParticleManager {
 public:
-    using Insta = Az3D::InstanceStatic;
+    using InstanceStatic = Az3D::InstanceStatic;
 
     ParticleManager() = default;
     ~ParticleManager() = default;
@@ -22,7 +22,7 @@ public:
 
     size_t particleCount = 0;
     std::vector<Az3D::Transform> particles; // Only store transforms, not full models
-    std::vector<Insta> particles_data;
+    std::vector<InstanceStatic> particles_data;
     std::vector<glm::vec3> particles_velocity;
     std::vector<glm::vec3> particles_angular_velocity; // For rotation
     std::vector<short> particles_special; // Cool rare 1% drop particles
@@ -221,8 +221,8 @@ public:
             particles_velocity[i] = randomDirection();
 
             // Generate data
-            Insta particleData;
-            particleData.modelMatrix = particles[i].getMat4();
+            InstanceStatic particleData;
+            particleData.setTransform(particles[i].pos, particles[i].rot);
             particleData.multColor = glm::vec4(1.0f);
             particleData.properties.x = static_cast<int>(materialIndex);
 
@@ -485,8 +485,8 @@ public:
             }
 
 
-            Insta data;
-            data.modelMatrix = particles[p].getMat4();
+            InstanceStatic data;
+            data.setTransform(particles[p].pos, particles[p].rot);
             data.multColor = glm::vec4(particleColor * 10.6f, 1.0f);
             data.properties.x = static_cast<int>(materialIndex);
 

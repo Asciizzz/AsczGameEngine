@@ -25,7 +25,7 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
 layout(set = 2, binding = 0) uniform sampler2D textures[];
 
 layout(location = 0) in flat uvec4 fragProperties;
-layout(location = 1) in vec4 fragInstanceColor;
+layout(location = 1) in vec4 fragMultColor;
 layout(location = 2) in vec2 fragTxtr;
 layout(location = 3) in vec3 fragWorldPos;
 layout(location = 4) in vec3 fragWorldNrml;
@@ -125,11 +125,11 @@ void main() {
 
     // Atmospheric blending
     vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
-    vec3 rgbFinal = rgbColor * fragInstanceColor.rgb * zenithCol;
+    vec3 rgbFinal = rgbColor * fragMultColor.rgb * zenithCol;
     rgbFinal = mix(rgbFinal * lightFactor, zenithCol * 0.2, fogFactor);
 
     // Combined alpha
-    float alpha = texColor.a * fragInstanceColor.a;
+    float alpha = texColor.a * fragMultColor.a;
 
     outColor = vec4(rgbFinal, alpha);
 }

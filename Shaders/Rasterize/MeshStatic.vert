@@ -18,15 +18,13 @@ layout(location = 1) in vec4 inNrml_Tv;
 layout(location = 2) in vec4 inTangent;
 
 // Instance data
-layout(location = 3) in uvec4 properties; // <materialIndex>, <indicator>, <empty>, <empty>
-layout(location = 4) in vec4 mat4_row0;  // Row 0: [m00, m01, m02, m03]
-layout(location = 5) in vec4 mat4_row1;  // Row 1: [m10, m11, m12, m13]
-layout(location = 6) in vec4 mat4_row2;  // Row 2: [m20, m21, m22, m23]
-layout(location = 7) in vec4 mat4_row3;  // Row 3: [m30, m31, m32, m33]
-layout(location = 8) in vec4 instanceColor; // Instance color multiplier
+layout(location = 3) in uvec4 properties;
+layout(location = 4) in vec4 trformT_S;
+layout(location = 5) in vec4 trformR;
+layout(location = 6) in vec4 multColor;
 
 layout(location = 0) out flat uvec4 fragProperties;
-layout(location = 1) out vec4 fragInstanceColor;
+layout(location = 1) out vec4 fragMultColor;
 layout(location = 2) out vec2 fragTxtr;
 layout(location = 3) out vec3 fragWorldPos;
 layout(location = 4) out vec3 fragWorldNrml;
@@ -34,7 +32,27 @@ layout(location = 5) out vec4 fragTangent;
 
 
 void main() {
-    mat4 modelMatrix = mat4(mat4_row0, mat4_row1, mat4_row2, mat4_row3);
+    // Extract translation and scale
+    vec3 translation = trformT_S.xyz;
+    float scale = trformT_S.w;
+
+    // Extract rotation quaternion
+    vec4 q = trformR; // x, y, z, w
+    // Convert quat to rotation matrix
+    mat3 rotMat = mat3(
+        1.0 - 2.0*q.y*q.y - 2.0*q.z*q.z,  2.0*q.x*q.y - 2.0*q.z*q.w,      2.0*q.x*q.z + 2.0*q.y*q.w,
+        2.0*q.x*q.y + 2.0*q.z*q.w,        1.0 - 2.0*q.x*q.x - 2.0*q.z*q.z,  2.0*q.y*q.z - 2.0*q.x*q.w,
+        2.0*q.x*q.z - 2.0*q.y*q.w,        2.0*q.y*q.z + 2.0*q.x*q.w,      1.0 - 2.0*q.x*q.x - 2.0*q.y*q.y
+    );
+
+    // Construct model matrix
+    mat4 modelMatrix = mat4(
+        vec4(rotMat[0] * scale, 0.0),
+        vec4(rotMat[1] * scale, 0.0),
+        vec4(rotMat[2] * scale, 0.0),
+        vec4(translation, 1.0)
+    );
+
     vec4 worldPos = modelMatrix * vec4(inPos_Tu.xyz, 1.0);
 
     gl_Position = glb.proj * glb.view * worldPos;
@@ -42,7 +60,7 @@ void main() {
     fragProperties = properties;
     fragWorldPos = worldPos.xyz;
     fragTxtr = vec2(inPos_Tu.w, inNrml_Tv.w);
-    fragInstanceColor = instanceColor;
+    fragMultColor = multColor;
 
     // Proper normal transformation that handles non-uniform scaling
     mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));

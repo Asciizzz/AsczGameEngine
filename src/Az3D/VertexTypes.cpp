@@ -8,7 +8,6 @@ void Transform::translate(const glm::vec3& translation) {
     this->pos += translation;
 }
 
-
 void Transform::rotate(const glm::quat& quaternion) {
     this->rot = quaternion * this->rot; // Multiply quaternion rots
 }
@@ -32,14 +31,10 @@ void Transform::scale(float scale) {
     this->scl *= scale;
 }
 
-void Transform::scale(const glm::vec3& scale) {
-    this->scl *= scale;
-}
-
 glm::mat4 Transform::getMat4() const {
     glm::mat4 translation = glm::translate(glm::mat4(1.0f), pos);
     glm::mat4 rotMat      = glm::mat4_cast(rot);
-    glm::mat4 scaleMat    = glm::scale(glm::mat4(1.0f), scl);
+    glm::mat4 scaleMat    = glm::scale(glm::mat4(1.0f), glm::vec3(scl));
 
     return translation * rotMat * scaleMat;
 }
@@ -47,7 +42,7 @@ glm::mat4 Transform::getMat4() const {
 void Transform::reset() {
     pos = glm::vec3(0.0f);
     rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-    scl = glm::vec3(1.0f);
+    scl = 1.0f;
 }
 
 // Static Vertex implementation
