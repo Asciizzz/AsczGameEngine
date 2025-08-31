@@ -286,7 +286,7 @@ bool Application::checkWindowResize() {
         swapChain->imageFormat, msaaManager->msaaSamples);
     mainRenderPass->recreate(newRenderPassConfig);
 
-    VkRenderPass renderPass = mainRenderPass->renderPass;
+    VkRenderPass renderPass = mainRenderPass->get();
 
     swapChain->recreateFramebuffers(
         windowManager->window, renderPass,
