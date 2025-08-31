@@ -43,30 +43,34 @@ float applyToonShading(float value, uint toonLevel) {
     return clamp(result, 0.0, 1.0);
 }
 
+vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
+    return texture(sampler2D(textures[nonuniformEXT(texIndex)], samplers[addressMode]), uv);
+}
+
+
 void main() {
     Material material = materials[fragProperties.x];
 
-    // Pick albedo texture index
-    uint albIndex = material.texIndices.x;
-    uint albMode = material.texIndices.y;
-
-    // For now, always use sampler 0
-    vec4 texColor = texture(sampler2D(textures[nonuniformEXT(albIndex)], samplers[albMode]), fragUV);
-    // vec4 texColor = vec4(1.0);
+    // Albedo texture
+    uint albTexIndex = material.texIndices.x;
+    uint albTexMode = material.texIndices.y;
+    vec4 texColor = getTexture(albTexIndex, albTexMode, fragUV);
 
     // Discard low opacity fragments
     float discardThreshold = material.shadingParams.w;
     if (texColor.a < discardThreshold) { discard; }
 
     // Normal mapping
+    uint nrmlTexIndex = material.texIndices.z;
+    uint nrmlTexMode = material.texIndices.w;
+    vec3 mapNrml = getTexture(nrmlTexIndex, nrmlTexMode, fragUV).xyz * 2.0 - 1.0;
+
     vec3 bitangent = cross(fragWorldNrml, fragTangent.xyz) * fragTangent.w;
     mat3 TBN = mat3(fragTangent.xyz, bitangent, fragWorldNrml);
 
-    uint normalTexIndex = material.texIndices.y;
-    vec3 mapN = texture(sampler2D(textures[nonuniformEXT(normalTexIndex)], samplers[0]), fragUV).xyz * 2.0 - 1.0;
-
+    // Fallback in case of no tangent
     bool noTangent = fragTangent.w == 0.0;
-    vec3 mappedNormal = noTangent ? fragWorldNrml : normalize(TBN * mapN);
+    vec3 mappedNormal = noTangent ? fragWorldNrml : normalize(TBN * mapNrml);
 
     // Simple directional light
     vec3 sunDir = normalize(vec3(1.0, 1.0, 1.0));
