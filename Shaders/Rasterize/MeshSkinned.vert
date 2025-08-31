@@ -28,6 +28,7 @@ layout(location = 4) in vec4 inWeights;
 // No instance data yet, i am scratching my head here
 layout(location = 0) out float debugLight;
 layout(location = 1) out vec4 debugColor;
+layout(location = 2) out vec2 fragUV;
 
 void main() {
     vec4 worldPos = mat4(1.0) * vec4(inPos_Tu.xyz, 1.0);
@@ -37,6 +38,8 @@ void main() {
     debugLight = abs(dot(normal, vec3(0.0, 1.0, 0.0)));
 
     debugColor = inWeights;
+
+    fragUV = vec2(inPos_Tu.w, inNrml_Tv.w);
 
     gl_Position = glb.proj * glb.view * worldPos;
 }

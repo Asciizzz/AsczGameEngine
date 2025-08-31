@@ -4,22 +4,22 @@
 #include <cstring>
 
 using namespace Az3D;
+using namespace AzVulk;
 
-namespace AzVulk {
 
-    Renderer::Renderer (Device* vkDevice,
-                        SwapChain* swapChain,
-                        DepthManager* depthManager,
-                        GlobalUBOManager* globalUBOManager,
-                        ResourceManager* resourceManager) :
-    vkDevice(vkDevice),
-    swapChain(swapChain),
-    depthManager(depthManager),
-    globalUBOManager(globalUBOManager),
-    resourceManager(resourceManager) {
-        createCommandBuffers();
-        createSyncObjects();
-    }
+Renderer::Renderer (Device* vkDevice,
+                    SwapChain* swapChain,
+                    DepthManager* depthManager,
+                    GlobalUBOManager* globalUBOManager,
+                    ResourceManager* resourceManager) :
+vkDevice(vkDevice),
+swapChain(swapChain),
+depthManager(depthManager),
+globalUBOManager(globalUBOManager),
+resourceManager(resourceManager) {
+    createCommandBuffers();
+    createSyncObjects();
+}
 
 Renderer::~Renderer() {
     VkDevice lDevice = vkDevice->lDevice;
@@ -153,30 +153,24 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
     uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
     size_t meshIndex = instanceGroup.meshIndex;
 
-    if (instanceCount == 0 || meshIndex == SIZE_MAX) return;
-
-    const Az3D::MaterialGroup* matGroup = resourceManager->materialGroup.get();
-    const Az3D::TextureGroup* texGroup = resourceManager->textureGroup.get();
     const Az3D::MeshStaticGroup* meshStaticGroup = resourceManager->meshStaticGroup.get();
+    const auto& mesh = meshStaticGroup->meshes[meshIndex];
+    uint64_t indexCount = mesh->indices.size();
 
-    VkDescriptorSet globalSet = globalUBOManager->getDescSet();
+    if (instanceCount == 0 || meshIndex == SIZE_MAX || indexCount == 0) return;
 
     rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind descriptor sets once
-    VkDescriptorSet materialSet = matGroup->getDescSet();
-    VkDescriptorSet textureSet = texGroup->getDescSet();
+    VkDescriptorSet globalSet = globalUBOManager->getDescSet();
+    VkDescriptorSet materialSet = resourceManager->materialGroup->getDescSet();
+    VkDescriptorSet textureSet = resourceManager->textureGroup->getDescSet();
 
     std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                             rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
     instanceGroup.updateBufferData();
-    
-    const auto& mesh = meshStaticGroup->meshes[meshIndex];
-    uint64_t indexCount = mesh->indices.size();
-
-    if (indexCount == 0) return;
 
     VkBuffer vertexBuffer = mesh->vertexBufferData.buffer;
     VkBuffer indexBuffer = mesh->indexBufferData.buffer;
@@ -195,15 +189,19 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
 }
 
 void Renderer::drawDemoSkinned(RasterPipeline& rasterPipeline, const Az3D::MeshSkinned& meshSkinned) {
+    uint64_t indexCount = meshSkinned.indices.size();
+    if (indexCount == 0) return;
+
     rasterPipeline.bind(commandBuffers[currentFrame]);
 
     // Bind descriptor sets
     VkDescriptorSet globalSet = globalUBOManager->getDescSet();
-    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            rasterPipeline.layout, 0, 1, &globalSet, 0, nullptr);
+    VkDescriptorSet materialSet = resourceManager->materialGroup->getDescSet();
+    VkDescriptorSet textureSet = resourceManager->textureGroup->getDescSet();
 
-    uint64_t indexCount = meshSkinned.indices.size();
-    if (indexCount == 0) return;
+    std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
+    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
     VkBuffer vertexBuffer = meshSkinned.vertexBufferData.buffer;
     VkBuffer indexBuffer = meshSkinned.indexBufferData.buffer;
@@ -324,6 +322,4 @@ void Renderer::endFrame(uint32_t imageIndex) {
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}
-
 }

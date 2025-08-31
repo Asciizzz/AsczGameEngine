@@ -16,7 +16,6 @@ struct InstanceStatic {
     glm::mat4 modelMatrix = glm::mat4(1.0f);
     glm::vec4 multColor = glm::vec4(1.0f);
 
-    // Vulkan-specific methods for vertex input
     static VkVertexInputBindingDescription getBindingDescription();
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
