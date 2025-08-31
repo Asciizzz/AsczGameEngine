@@ -7,6 +7,18 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 view;
 } glb;
 
+struct Material {
+    vec4 shadingParams;
+    uvec4 texIndices;
+};
+
+layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
+    Material materials[];
+};
+
+layout(set = 2, binding = 0) uniform sampler2D textures[];
+
+
 layout(location = 0) in vec4 inPos_Tu;
 layout(location = 1) in vec4 inNrml_Tv;
 layout(location = 2) in vec4 inTangent;
@@ -24,13 +36,7 @@ void main() {
 
     debugLight = abs(dot(normal, vec3(0.0, 1.0, 0.0)));
 
-    uint totalID = inBoneID.x + inBoneID.y + inBoneID.z + inBoneID.w;
-    float avgW = (inWeights.x + inWeights.y + inWeights.z + inWeights.w) / 4.0;
-
-    int debugR = int(totalID % 256);
-    float debugB = avgW;
-
-    debugColor = vec4(1.0);
+    debugColor = inWeights;
 
     gl_Position = glb.proj * glb.view * worldPos;
 }

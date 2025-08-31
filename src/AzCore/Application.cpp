@@ -121,7 +121,7 @@ void Application::initComponents() {
         boundMin, boundMax
     );
 
-    SharedPtr<MeshSkinned> demoMeshSkinned = MeshSkinned::loadFromGLTF("Assets/Characters/Template.glb");
+    SharedPtr<MeshSkinned> demoMeshSkinned = MeshSkinned::loadFromGLTF("Assets/Characters/Selen.gltf");
     resourceManager->addMeshSkinned("Demo", demoMeshSkinned);
 
 // PLAYGROUND END HERE 
