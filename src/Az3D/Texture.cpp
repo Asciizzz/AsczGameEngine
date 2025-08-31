@@ -26,9 +26,6 @@ TextureGroup::~TextureGroup() {
         if (texture->view != VK_NULL_HANDLE) {
             vkDestroyImageView(lDevice, texture->view, nullptr);
         }
-        if (texture->sampler != VK_NULL_HANDLE) {
-            vkDestroySampler(lDevice, texture->sampler, nullptr);
-        }
         if (texture->image != VK_NULL_HANDLE) {
             vkDestroyImage(lDevice, texture->image, nullptr);
         }
@@ -39,11 +36,10 @@ TextureGroup::~TextureGroup() {
     textures.clear();
 }
 
-size_t TextureGroup::addTexture(std::string imagePath, Texture::Mode addressMode, uint32_t mipLevels) {
+size_t TextureGroup::addTexture(std::string imagePath, uint32_t mipLevels) {
     try {
         Texture texture;
         texture.path = imagePath;
-        texture.addressMode = addressMode;
 
         // Load image using STB
         int texWidth, texHeight, texChannels;
@@ -78,9 +74,8 @@ size_t TextureGroup::addTexture(std::string imagePath, Texture::Mode addressMode
         copyBufferToImage(stagingBuffer.buffer, texture.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
         generateMipmaps(texture.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
 
-        // Create image view and sampler
+        // Create image view
         createImageView(texture.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, texture.view);
-        createSampler(mipLevels, texture.sampler, texture.addressMode);
 
         textures.push_back(MakeShared<Texture>(texture));
         return textures.size() - 1;
@@ -128,7 +123,6 @@ void TextureGroup::createSinglePixel(uint8_t r, uint8_t g, uint8_t b) {
 
     // Create image view and sampler
     createImageView(defaultTexture.image, VK_FORMAT_R8G8B8A8_SRGB, 1, defaultTexture.view);
-    createSampler(1, defaultTexture.sampler, Texture::Repeat);
 
     stagingBuffer.cleanup();
 
@@ -192,44 +186,6 @@ void TextureGroup::createImageView(VkImage image, VkFormat format, uint32_t mipL
     }
 }
 
-void TextureGroup::createSampler(uint32_t mipLevels, VkSampler& sampler, Texture::Mode addressMode) {
-    VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(vkDevice->pDevice, &properties);
-
-    VkPhysicalDeviceFeatures deviceFeatures{};
-    vkGetPhysicalDeviceFeatures(vkDevice->pDevice, &deviceFeatures);
-
-    VkSamplerAddressMode vulkanAddressMode = static_cast<VkSamplerAddressMode>(addressMode);
-
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter    = VK_FILTER_LINEAR;
-    samplerInfo.minFilter    = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = vulkanAddressMode;
-    samplerInfo.addressModeV = vulkanAddressMode;
-    samplerInfo.addressModeW = vulkanAddressMode;
-    
-    if (deviceFeatures.samplerAnisotropy) {
-        samplerInfo.anisotropyEnable = VK_TRUE;
-        samplerInfo.maxAnisotropy    = properties.limits.maxSamplerAnisotropy;
-    } else {
-        samplerInfo.anisotropyEnable = VK_FALSE;
-        samplerInfo.maxAnisotropy    = 1.0f;
-    }
-    
-    samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable           = VK_FALSE;
-    samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.minLod                  = 0.0f;
-    samplerInfo.maxLod                  = static_cast<float>(mipLevels);
-    samplerInfo.mipLodBias              = 0.0f;
-
-    if (vkCreateSampler(vkDevice->lDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture sampler!");
-    }
-}
 
 void TextureGroup::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
     TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
@@ -352,83 +308,109 @@ void TextureGroup::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t 
     vkCmdPipelineBarrier(tempCmd.cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void TextureGroup::createDescriptorInfo() {
+
+
+// --- Shared Samplers ---
+void TextureGroup::createSharedSamplersFromModes() {
     VkDevice lDevice = vkDevice->lDevice;
-    VkPhysicalDeviceProperties deviceProps{};
-    vkGetPhysicalDeviceProperties(vkDevice->pDevice, &deviceProps);
 
-    // It's impossible for textureCount to be 0 here
-    uint32_t textureCount = static_cast<uint32_t>(textures.size());
+    std::vector<TextureAddressMode> modes = {
+        TextureAddressMode::Repeat,
+        TextureAddressMode::MirroredRepeat,
+        TextureAddressMode::ClampToEdge,
+        TextureAddressMode::ClampToBorder,
+        TextureAddressMode::MirrorClampToEdge
+    };
 
-    // Check lDevice limits for sanity and give a helpful error if we're over
-    uint32_t maxSamplersPerStage = deviceProps.limits.maxPerStageDescriptorSamplers;
-    uint32_t maxSamplersPerSet   = deviceProps.limits.maxDescriptorSetSamplers; // wrapper hint, may be same
+    for (auto mode : modes) {
+        VkSamplerCreateInfo sci{};
+        sci.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sci.magFilter    = VK_FILTER_LINEAR;
+        sci.minFilter    = VK_FILTER_LINEAR;
+        sci.mipmapMode   = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        sci.addressModeU = static_cast<VkSamplerAddressMode>(mode);
+        sci.addressModeV = static_cast<VkSamplerAddressMode>(mode);
+        sci.addressModeW = static_cast<VkSamplerAddressMode>(mode);
+        sci.anisotropyEnable = VK_TRUE;
+        sci.maxAnisotropy    = 16.0f;
+        sci.borderColor      = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        sci.unnormalizedCoordinates = VK_FALSE;
 
-    if (textureCount > maxSamplersPerStage || textureCount > maxSamplersPerSet) {
-        // Fallback or informative error — don't crash, print a warning and fall back
-        // to the old-per-texture descriptor sets approach or consider using bindless (descriptor indexing).
-        std::cerr << "Warning: request to create a single descriptor array of "
-                << textureCount << " combined samplers exceeds lDevice limit of "
-                << maxSamplersPerStage << " per stage. Falling back to per-texture descriptors or enable descriptor indexing.\n";
-        // You can either:
-        //  - implement a fallback here that creates multiple small descriptor sets,
-        //  - or attempt to use the descriptor indexing extension (VK_EXT_descriptor_indexing) and UPDATE_AFTER_BIND flags.
-        // For now we will attempt to create up to the lDevice limit (clamp), but user must handle indices > clamp.
-        textureCount = std::min(textureCount, maxSamplersPerStage);
+        VkSampler sampler;
+        if (vkCreateSampler(lDevice, &sci, nullptr, &sampler) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create shared sampler");
+        }
+
+        modeToSamplerIndex[mode] = static_cast<uint32_t>(samplers.size());
+        samplers.push_back(sampler);
     }
 
-    // --- create descriptor set layout with binding count = textureCount ---
-    // Binding 0 will be an array of combined image samplers
-    // VkDescriptorSetLayoutBinding binding{};
-    // binding.binding            = 0;
-    // binding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    // binding.descriptorCount    = textureCount;
-    // binding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
-    // binding.pImmutableSamplers = nullptr;
+    samplerPoolCount = static_cast<uint32_t>(samplers.size());
+}
 
+void TextureGroup::cleanupSharedSamplers() {
+    VkDevice lDevice = vkDevice->lDevice;
+    for (auto sampler : samplers) {
+        vkDestroySampler(lDevice, sampler, nullptr);
+    }
+    samplers.clear();
+    modeToSamplerIndex.clear();
+    samplerPoolCount = 0;
+}
+
+void TextureGroup::createDescriptorInfo() {
+    VkDevice lDevice = vkDevice->lDevice;
+    uint32_t textureCount = static_cast<uint32_t>(textures.size());
+
+    // layout: binding 0 = images, binding 1 = samplers
     descLayout.create(lDevice, {
-        DescLayout::BindInfo{0, textureCount, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
+        {0, textureCount, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT},
+        {1, samplerPoolCount, VK_DESCRIPTOR_TYPE_SAMPLER,   VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
     });
 
-    // // --- create descriptor pool sized to hold the entire array of combined image samplers ---
-    // VkDescriptorPoolSize poolSize{};
-    // poolSize.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    // poolSize.descriptorCount = textureCount; // total number of sampler descriptors available in pool
-
-    // We need only one set from this pool
-    // dynamicDescriptor.createPool({ poolSize }, 1 /* maxSets */);
-
     descPool.create(lDevice, {
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, textureCount}
+        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, textureCount},
+        {VK_DESCRIPTOR_TYPE_SAMPLER,       samplerPoolCount}
     }, 1);
 
     descSet.allocate(lDevice, descPool.pool, descLayout.layout, 1);
 
-    // --- prepare a contiguous array of VkDescriptorImageInfo entries ---
-    // Note: we only pack up to 'textureCount' entries (which may have been clamped above).
-    std::vector<VkDescriptorImageInfo> imageInfos;
-    imageInfos.reserve(textureCount);
-
-    for (uint32_t i = 0; i < textureCount; ++i) {
-        const auto& tex = textures[i];
-        VkDescriptorImageInfo ii{};
-        ii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // ensure textures transitioned
-        ii.imageView   = tex->view;
-        ii.sampler     = tex->sampler;
-        imageInfos.push_back(ii);
+    // Write sampled images
+    std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
+    for (uint32_t i = 0; i < textureCount; i++) {
+        imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfos[i].imageView   = textures[i]->view;
+        imageInfos[i].sampler     = VK_NULL_HANDLE;
     }
 
-    // --- one write descriptor that writes the whole array at binding 0 ---
-    VkWriteDescriptorSet write{};
-    write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstSet          = descSet.get();
-    write.dstBinding      = 0;
-    write.dstArrayElement = 0; // start at index 0 in the array
-    write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    write.descriptorCount = static_cast<uint32_t>(imageInfos.size());
-    write.pImageInfo      = imageInfos.data();
+    VkWriteDescriptorSet imageWrite{};
+    imageWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    imageWrite.dstSet          = descSet.get();
+    imageWrite.dstBinding      = 0;
+    imageWrite.dstArrayElement = 0;
+    imageWrite.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    imageWrite.descriptorCount = textureCount;
+    imageWrite.pImageInfo      = imageInfos.data();
 
-    vkUpdateDescriptorSets(lDevice, 1, &write, 0, nullptr);
+    // Write samplers
+    std::vector<VkDescriptorImageInfo> samplerInfos(samplers.size());
+    for (uint32_t i = 0; i < samplers.size(); i++) {
+        samplerInfos[i].sampler     = samplers[i];
+        samplerInfos[i].imageView   = VK_NULL_HANDLE;
+        samplerInfos[i].imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+
+    VkWriteDescriptorSet samplerWrite{};
+    samplerWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    samplerWrite.dstSet          = descSet.get();
+    samplerWrite.dstBinding      = 1;
+    samplerWrite.dstArrayElement = 0;
+    samplerWrite.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
+    samplerWrite.descriptorCount = static_cast<uint32_t>(samplerInfos.size());
+    samplerWrite.pImageInfo      = samplerInfos.data();
+
+    std::vector<VkWriteDescriptorSet> writes = {imageWrite, samplerWrite};
+    vkUpdateDescriptorSets(lDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
 
 } // namespace Az3D

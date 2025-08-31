@@ -35,9 +35,8 @@ void ResourceManager::uploadAllToGPU() {
 }
 
 
-size_t ResourceManager::addTexture(std::string name, std::string imagePath,
-                                    Texture::Mode addressMode, uint32_t mipLevels) {
-    size_t index = textureGroup->addTexture(imagePath, addressMode, mipLevels);
+size_t ResourceManager::addTexture(std::string name, std::string imagePath, uint32_t mipLevels) {
+    size_t index = textureGroup->addTexture(imagePath, mipLevels);
     textureNameToIndex[name] = index;
     return index;
 }
