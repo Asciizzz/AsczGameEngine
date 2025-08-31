@@ -304,14 +304,22 @@ void TextureGroup::createSamplers() {
     VkDevice lDevice = vkDevice->lDevice;
 
     for (uint32_t i = 0; i < 5; i++) {
+        VkSamplerAddressMode addressMode = static_cast<VkSamplerAddressMode>(i);
+
+        // Skip all complex extension needing classes
+        if (addressMode == VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT ||
+            addressMode == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE) {
+            continue;
+        }
+
         VkSamplerCreateInfo sci{};
         sci.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         sci.magFilter    = VK_FILTER_LINEAR;
         sci.minFilter    = VK_FILTER_LINEAR;
         sci.mipmapMode   = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sci.addressModeU = static_cast<VkSamplerAddressMode>(i);
-        sci.addressModeV = static_cast<VkSamplerAddressMode>(i);
-        sci.addressModeW = static_cast<VkSamplerAddressMode>(i);
+        sci.addressModeU = addressMode;
+        sci.addressModeV = addressMode;
+        sci.addressModeW = addressMode;
         sci.anisotropyEnable = VK_TRUE;
         sci.maxAnisotropy    = 16.0f;
         sci.borderColor      = VK_BORDER_COLOR_INT_OPAQUE_BLACK;

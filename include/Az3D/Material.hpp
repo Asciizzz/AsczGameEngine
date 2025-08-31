@@ -11,11 +11,9 @@
 namespace Az3D {
 
 enum class TAddressMode {
-    Repeat            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-    MirroredRepeat    = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-    ClampToEdge       = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-    ClampToBorder     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-    MirrorClampToEdge = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE
+    Repeat        = 0,
+    ClampToEdge   = 1,
+    ClampToBorder = 2
 };
 
 struct Material {

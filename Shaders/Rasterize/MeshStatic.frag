@@ -21,7 +21,6 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
     Material materials[];
 };
 
-// New separation: binding 0 = sampled images, binding 1 = samplers
 layout(set = 2, binding = 0) uniform texture2D textures[];
 layout(set = 2, binding = 1) uniform sampler   samplers[];
 
@@ -68,7 +67,7 @@ void main() {
     vec3 bitangent = cross(fragWorldNrml, fragTangent.xyz) * fragTangent.w;
     mat3 TBN = mat3(fragTangent.xyz, bitangent, fragWorldNrml);
 
-    // Fallback in case of no tangent
+    // Ignore if no tangent
     bool noTangent = fragTangent.w == 0.0;
     vec3 mappedNormal = noTangent ? fragWorldNrml : normalize(TBN * mapNrml);
 
@@ -77,6 +76,7 @@ void main() {
     int shading = int(material.shadingParams.x);
     float lightFactor = max(dot(mappedNormal, sunDir), 1 - shading);
 
+    // Ignore if no normal
     lightFactor = length(mappedNormal) > 0.001 ? lightFactor : 1.0;
 
     uint toonLevel = uint(material.shadingParams.y);
