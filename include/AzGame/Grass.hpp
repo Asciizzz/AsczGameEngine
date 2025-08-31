@@ -95,7 +95,7 @@ struct WindUBO {
 
 class Grass {
 public:
-    using Data3D = Az3D::InstanceStatic;
+    using Insta = Az3D::InstanceStatic;
 
     explicit Grass(const GrassConfig& config);
     ~Grass();
@@ -125,7 +125,7 @@ public:
     std::vector<glm::mat4> fixedMat4;
     std::vector<glm::vec4> fixedColor;
     std::vector<glm::mat4> grassMat4;
-    std::vector<Data3D> grassData3Ds;
+    std::vector<Insta> grassData3Ds;
 
     // Grass buffer
     AzVulk::BufferData fixedMat4Buffer;
@@ -133,7 +133,7 @@ public:
     AzVulk::BufferData grassMat4Buffer;
     AzVulk::BufferData grassUniformBuffer;
 
-    std::vector<Data3D> terrainData3Ds;
+    std::vector<Insta> terrainData3Ds;
 
     // Resource indices
     size_t grassMeshIndex = 0;

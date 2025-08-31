@@ -329,7 +329,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 float phaseOffset = rnd_phase(generator);
                 
                 // Create regular instance for rendering
-                Data3D grassInstance;
+                Insta grassInstance;
                 grassInstance.modelMatrix = grassTrform.getMat4();
                 grassInstance.multColor = grassColor;
                 grassInstance.properties.x = grassMaterialIndex;
@@ -410,7 +410,7 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     terrainMaterialIndex = resManager.addMaterial("TerrainMaterial", terrainMaterial);
 
     // Create terrain instance
-    Data3D terrainData;
+    Insta terrainData;
     terrainData.modelMatrix = glm::mat4(1.0f);
     terrainData.multColor = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
     terrainData.properties.x = terrainMaterialIndex;
