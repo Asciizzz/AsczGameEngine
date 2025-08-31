@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <algorithm>
 #include <limits>
-#include <array>
 
 namespace AzVulk {
 

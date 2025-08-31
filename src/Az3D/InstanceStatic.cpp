@@ -13,8 +13,8 @@ VkVertexInputBindingDescription InstanceStatic::getBindingDescription() {
     return bindingDescription;
 }
 
-std::array<VkVertexInputAttributeDescription, 6> InstanceStatic::getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 6> attribs{};
+std::vector<VkVertexInputAttributeDescription> InstanceStatic::getAttributeDescriptions() {
+    std::vector<VkVertexInputAttributeDescription> attribs(6);
 
     attribs[0] = {3, 1, VK_FORMAT_R32G32B32A32_UINT, offsetof(InstanceStatic, properties)};
 

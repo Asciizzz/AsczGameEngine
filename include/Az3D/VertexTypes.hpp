@@ -69,7 +69,7 @@ struct VertexStatic {
 
     // Vulkan binding description for rendering
     static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
+    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
 
 struct VertexSkinned {
@@ -96,7 +96,7 @@ struct VertexSkinned {
 
     // Vulkan binding description for rendering
     static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
+    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
 
 }

@@ -2,7 +2,6 @@
 #include "AzVulk/Pipeline_graphic.hpp"
 #include "Az3D/Az3D.hpp"
 
-#include <array>
 #include <stdexcept>
 
 using namespace AzVulk;

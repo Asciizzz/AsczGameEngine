@@ -4,6 +4,8 @@
 #include "Helpers/tiny_obj_loader.h"
 #include "Helpers/tiny_gltf.h"
 
+#include <array>
+
 
 using namespace AzVulk;
 
@@ -122,7 +124,7 @@ SharedPtr<MeshStatic> MeshStatic::loadFromOBJ(const std::string& filePath) {
 
     for (const auto& shape : shapes) {
         for (size_t f = 0; f < shape.mesh.indices.size(); f += 3) {
-            std::array<VertexStatic, 3> triangle;
+            std::vector<VertexStatic> triangle(3);
 
             for (int v = 0; v < 3; v++) {
                 const auto& index = shape.mesh.indices[f + v];

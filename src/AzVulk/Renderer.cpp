@@ -167,7 +167,7 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
     VkDescriptorSet materialSet = matGroup->getDescSet();
     VkDescriptorSet textureSet = texGroup->getDescSet();
 
-    std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
+    std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                             rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
@@ -235,7 +235,7 @@ void Renderer::drawInstanceSkinnedGroup(RasterPipeline& rasterPipeline, Az3D::In
     // VkDescriptorSet materialSet = matGroup->getDescSet();
     // VkDescriptorSet textureSet = texGroup->getDescSet();
 
-    // std::array<VkDescriptorSet, 3> sets = {globalSet, materialSet, textureSet};
+    // std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     // vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
     //                         rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 

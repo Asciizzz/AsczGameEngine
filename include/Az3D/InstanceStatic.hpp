@@ -18,7 +18,7 @@ struct InstanceStatic {
 
     // Vulkan-specific methods for vertex input
     static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions();
+    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
 
 
