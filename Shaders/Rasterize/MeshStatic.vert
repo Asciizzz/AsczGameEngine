@@ -1,15 +1,8 @@
 #version 450
-#extension GL_EXT_nonuniform_qualifier : require
-#extension GL_EXT_samplerless_texture_functions : enable
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
-    // vec4 props; // General purpose: <float time>, <unused>, <unused>, <unused>
-    // vec4 cameraPos;     // xyz = camera position, w = fov (radians)
-    // vec4 cameraForward; // xyz = camera forward, w = aspect ratio  
-    // vec4 cameraRight;   // xyz = camera right, w = near
-    // vec4 cameraUp;      // xyz = camera up, w = far
 } glb;
 
 
@@ -45,17 +38,8 @@ void main() {
         2.0*q.x*q.z - 2.0*q.y*q.w,        2.0*q.y*q.z + 2.0*q.x*q.w,      1.0 - 2.0*q.x*q.x - 2.0*q.y*q.y
     );
 
-    // Construct model matrix
-    mat4 modelMatrix = mat4(
-        vec4(rotMat[0] * scale, 0.0),
-        vec4(rotMat[1] * scale, 0.0),
-        vec4(rotMat[2] * scale, 0.0),
-        vec4(translation, 1.0)
-    );
-
-    vec4 worldPos = modelMatrix * vec4(inPos_Tu.xyz, 1.0);
-
-    gl_Position = glb.proj * glb.view * worldPos;
+    vec3 worldPos = (rotMat * (inPos_Tu.xyz * scale)) + translation;
+    gl_Position = glb.proj * glb.view * vec4(worldPos, 1.0);
 
     fragProperties = properties;
     fragWorldPos = worldPos.xyz;
@@ -66,5 +50,5 @@ void main() {
     vec3 newNormal = normalize(rotMat * inNrml_Tv.xyz);
     fragWorldNrml = newNormal;
 
-    fragTangent = inTangent;
+    fragTangent = vec4(normalize(rotMat * inTangent.xyz), inTangent.w);
 }
