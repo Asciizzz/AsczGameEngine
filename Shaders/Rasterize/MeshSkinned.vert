@@ -33,7 +33,7 @@ void main() {
 
     vec3 normal = inNrml_Tv.xyz;
 
-    debugLight = abs(dot(normal, vec3(0.0, 1.0, 0.0)));
+    debugLight = dot(normal, normalize(vec3(0.0, 1.0, 1.0)));
 
     debugColor = inWeights;
 

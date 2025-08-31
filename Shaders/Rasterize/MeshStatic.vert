@@ -52,7 +52,4 @@ void main() {
 
     // Same thing
     fragTangent = vec4(rotMat * inTangent.xyz, inTangent.w);
-
-    // Debugging: Testing if this GPU is ALU-bound
-    // mat3 nrmlMat = transpose(inverse(mat3(1.0)));
 }
