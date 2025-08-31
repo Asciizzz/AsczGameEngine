@@ -46,9 +46,13 @@ void main() {
     fragTxtr = vec2(inPos_Tu.w, inNrml_Tv.w);
     fragMultColor = multColor;
 
-    // Proper normal transformation that handles non-uniform scaling
-    vec3 newNormal = normalize(rotMat * inNrml_Tv.xyz);
+    // Assume normalized by default
+    vec3 newNormal = rotMat * inNrml_Tv.xyz;
     fragWorldNrml = newNormal;
 
-    fragTangent = vec4(normalize(rotMat * inTangent.xyz), inTangent.w);
+    // Same thing
+    fragTangent = vec4(rotMat * inTangent.xyz, inTangent.w);
+
+    // Debugging: Testing if this GPU is ALU-bound
+    // mat3 nrmlMat = transpose(inverse(mat3(1.0)));
 }
