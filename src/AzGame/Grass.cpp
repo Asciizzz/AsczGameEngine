@@ -568,7 +568,7 @@ void Grass::updateGrassInstancesCPU() {
             grassData3Ds[i].setTransform(position, finalRot, scale);
         }
 
-        grassData3Ds[i].multColor = fixedColor[i];
+        grassData3Ds[i].multColor = glm::vec4(1.0f);
     });
 
     grassInstanceGroup.datas = grassData3Ds;

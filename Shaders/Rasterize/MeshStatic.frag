@@ -71,11 +71,11 @@ void main() {
     bool noTangent = fragTangent.w == 0.0;
     vec3 mappedNormal = noTangent ? fragWorldNrml : normalize(TBN * mapN);
 
-    vec3 sunDir = normalize(vec3(1.0, 1.0, 0.5));
+    vec3 sunDir = normalize(vec3(1.0, 1.0, 1.0));
 
     // S1mple shading
     int shading = int(material.shadingParams.x); // Shading flag
-    float lightFactor = max(abs(dot(mappedNormal, -sunDir)), 1 - shading);
+    float lightFactor = max(dot(mappedNormal, sunDir), 1 - shading);
 
     // In case no normal
     lightFactor = length(mappedNormal) > 0.001 ? lightFactor : 1.0;
@@ -83,7 +83,7 @@ void main() {
     // Toon shading
     uint toonLevel = uint(material.shadingParams.y);
     lightFactor = applyToonShading(lightFactor, toonLevel);
-    lightFactor = 0.2 + lightFactor * 0.8; // Ambient
+    lightFactor = 0.4 + lightFactor * 0.6; // Ambient
 
     // Combined values
     float finalAlpha = texColor.a * fragMultColor.a;
