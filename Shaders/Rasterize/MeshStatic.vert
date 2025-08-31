@@ -63,10 +63,8 @@ void main() {
     fragMultColor = multColor;
 
     // Proper normal transformation that handles non-uniform scaling
-    mat3 nrmlMat = transpose(inverse(mat3(modelMatrix)));
-
-    vec3 transNormal = normalize(nrmlMat * inNrml_Tv.xyz);
-    fragWorldNrml = transNormal;
+    vec3 newNormal = normalize(rotMat * inNrml_Tv.xyz);
+    fragWorldNrml = newNormal;
 
     fragTangent = inTangent;
 }

@@ -143,6 +143,8 @@ public:
     } spatialGrid;
 
     float radius = 0.05f;
+    float display_r = 0.05f; // for objects that seems bigger/smaller than their hitbox
+
     const float mass = 1.0f;          // Mass of the particle
     const float restitution = 0.6f;   // Bounciness (0=no bounce, 1=perfect bounce)
     const float friction = 0.4f;      // How much the surface "grabs" the ball
@@ -161,15 +163,17 @@ public:
                     const glm::vec3& boundsMin = glm::vec3(-10.0f),
                     const glm::vec3& boundsMax = glm::vec3(10.0f)) {
 
+        this->display_r = display_r;
+
         size_t textureIndex = resourceManager->addTexture("Alb_Particle", "Assets/Textures/Selen.png");
 
         Az3D::Material material;
-        material.setShadingParams(0.0f, 0.0f, 0.0f, 0.0f);
-        material.setAlbedoTextureIndex(textureIndex);
+        material.setShadingParams(true, 0, 0.0f, 0.0f);
+        material.setAlbedoTextureIndex(0);
 
         materialIndex = resourceManager->addMaterial("Particle", material);
 
-        size_t meshIndex = resourceManager->addMeshStatic("Particle", "Assets/Characters/Selen.gltf", false);
+        size_t meshIndex = resourceManager->addMeshStatic("Particle", "Assets/Shapes/Icosphere.obj", false);
 
         instanceGroup.initVkDevice(vkDevice);
         instanceGroup.meshIndex = meshIndex;
@@ -222,7 +226,7 @@ public:
 
             // Generate data
             InstanceStatic particleData;
-            particleData.setTransform(particles[i].pos, particles[i].rot);
+            particleData.setTransform(particles[i].pos, particles[i].rot, display_r);
             particleData.multColor = glm::vec4(1.0f);
             particleData.properties.x = static_cast<int>(materialIndex);
 
@@ -486,8 +490,8 @@ public:
 
 
             InstanceStatic data;
-            data.setTransform(particles[p].pos, particles[p].rot);
-            data.multColor = glm::vec4(particleColor * 10.6f, 1.0f);
+            data.setTransform(particles[p].pos, particles[p].rot, display_r);
+            data.multColor = glm::vec4(particleColor, 1.0f);
             data.properties.x = static_cast<int>(materialIndex);
 
             particles_data[p] = data;

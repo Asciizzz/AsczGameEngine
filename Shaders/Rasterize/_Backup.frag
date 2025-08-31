@@ -33,6 +33,27 @@ layout(location = 5) in vec4 fragTangent;
 
 layout(location = 0) out vec4 outColor;
 
+// BORROWED
+const float PI = 3.14159265359;
+const float timeSpeed = 10000.0; // actual timeOfDay passed already scaled in app
+
+// const vec3 skyDayZenith   = vec3(0.20, 0.45, 0.70);
+
+const vec3 skyDayZenith   = vec3(0.05, 0.09, 0.24);
+const vec3 skyNightZenith = vec3(0.05, 0.09, 0.24);
+
+vec3 calculateSunDirection(float timeOfDay, float latitude) {
+    float theta = 2.0 * PI * timeOfDay;
+    float tilt = radians(latitude);
+
+    float y = sin(theta);
+    float r = cos(theta);
+    float x = r * cos(tilt);
+    float z = r * sin(tilt);
+
+    return normalize(vec3(x, y, z));
+}
+
 float applyToonShading(float value, uint toonLevel) {
     // Convert toonLevel to float for calculations
     float level = float(toonLevel);
@@ -53,12 +74,34 @@ float applyToonShading(float value, uint toonLevel) {
 void main() {
     Material material = materials[fragProperties.x];
 
-    uint texIndex = material.texIndices.x;
-    vec4 texColor = texture(textures[texIndex], fragTxtr);
+    vec4 texColor = texture(textures[material.texIndices.x], fragTxtr);
 
-    // Discard low opacity fragments
     float discardThreshold = material.shadingParams.w;
+
     if (texColor.a < discardThreshold) { discard; }
+
+    // BORROWED
+    float time = glb.props.x * timeSpeed;
+
+    // vec3 sunDir = calculateSunDirection(time, 45.0);
+
+    vec3 sunDir = vec3(0.0, -1.0, 0.0);
+    float sunElev = dot(sunDir, vec3(0.0, 1.0, 0.0));
+    float elev01 = clamp((sunElev + 0.1) / 1.1, 0.0, 1.0); // smooth factor for time-of-day
+
+    vec3 zenithCol  = mix(skyNightZenith, skyDayZenith,  elev01);
+
+    // Fog effect
+    float near = glb.cameraRight.w;
+    float far = glb.cameraUp.w;
+    
+    float vertexDistance = length(fragWorldPos - glb.cameraPos.xyz);
+    float fogMaxDistance = 69.0;
+    float fogFactor = clamp((vertexDistance - fogMaxDistance) / fogMaxDistance, 0.0, 1.0);
+
+    // Normal UV blending
+    float normalBlend = material.shadingParams.z;
+    vec3 normalColor = (fragWorldNrml + 1.0) * 0.5;
 
     // Normal mapping
     vec3 bitangent = cross(fragWorldNrml, fragTangent.xyz) * fragTangent.w;
@@ -68,26 +111,25 @@ void main() {
     vec3 mapN = texture(textures[normalTexIndex], fragTxtr).xyz * 2.0 - 1.0;
 
     // Use normal if no tangent is provided
-    bool noTangent = fragTangent.w == 0.0;
-    vec3 mappedNormal = noTangent ? fragWorldNrml : normalize(TBN * mapN);
-
-    vec3 sunDir = normalize(vec3(1.0, 1.0, 0.5));
+    // vec3 mappedNormal = fragTangent.w == 0.0 ? fragWorldNrml : normalize(TBN * mapN);
+    vec3 mappedNormal = fragWorldNrml;
 
     // S1mple shading
-    int shading = int(material.shadingParams.x); // Shading flag
+    int shading = int(material.shadingParams.x);
     float lightFactor = max(abs(dot(mappedNormal, -sunDir)), 1 - shading);
-
-    // In case no normal
     lightFactor = length(mappedNormal) > 0.001 ? lightFactor : 1.0;
 
-    // Toon shading
     uint toonLevel = uint(material.shadingParams.y);
     lightFactor = applyToonShading(lightFactor, toonLevel);
     lightFactor = 0.2 + lightFactor * 0.8; // Ambient
 
-    // Combined values
-    float finalAlpha = texColor.a * fragMultColor.a;
-    vec3 finalRGB = texColor.rgb * fragMultColor.rgb * lightFactor;
+    // Atmospheric blending
+    vec3 rgbColor = texColor.rgb + normalColor * normalBlend;
+    vec3 rgbFinal = rgbColor * fragMultColor.rgb * zenithCol;
+    rgbFinal = mix(rgbFinal * lightFactor, zenithCol * 0.2, fogFactor);
 
-    outColor = vec4(finalRGB, finalAlpha);
+    // Combined alpha
+    float alpha = texColor.a * fragMultColor.a;
+
+    outColor = vec4(rgbFinal, alpha);
 }

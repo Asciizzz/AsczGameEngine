@@ -117,7 +117,7 @@ void Application::initComponents() {
         resourceManager.get(), vkDevice.get(),
         1000, // Count
         0.5f, // Radius
-        0.5f, // Display radius (for objects that seems bigger/smaller than their hitbox)
+        0.5f, // Display radius
         boundMin, boundMax
     );
 
@@ -480,8 +480,8 @@ void Application::mainLoop() {
             rendererRef.drawSky(*skyPipeline);
 
             // // Draw grass system
-            rendererRef.drawInstanceStaticGroup(*foliagePipeline, grassSystem->grassInstanceGroup);
             rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, grassSystem->terrainInstanceGroup);
+            // rendererRef.drawInstanceStaticGroup(*foliagePipeline, grassSystem->grassInstanceGroup);
             
             // Draw the test
             rendererRef.drawDemoSkinned(*skinnedMeshPipeline, *resManager.getMeshSkinned("Demo"));
