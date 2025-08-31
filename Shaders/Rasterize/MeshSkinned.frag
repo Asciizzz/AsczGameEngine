@@ -31,5 +31,7 @@ void main() {
     uint albSamplerIndex = material.texIndices.y;
     vec4 texColor = getTexture(albTexIndex, albSamplerIndex, fragUV);
 
+    texColor += debugColor * 0.2;
+
     outColor = vec4(texColor.xyz * debugLight, 1.0);
 }
