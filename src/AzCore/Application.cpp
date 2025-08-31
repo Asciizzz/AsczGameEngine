@@ -294,16 +294,18 @@ bool Application::checkWindowResize() {
         msaaManager->colorImageView
     );
 
-    VkSampleCountFlagBits newMsaaSamples = msaaManager->msaaSamples;
-
     // No need to change layout
     staticMeshPipeline->setRenderPass(renderPass);
-    staticMeshPipeline->setMsaa(newMsaaSamples);
     staticMeshPipeline->recreate();
 
+    skinnedMeshPipeline->setRenderPass(renderPass);
+    skinnedMeshPipeline->recreate();
+
     skyPipeline->setRenderPass(renderPass);
-    skyPipeline->setMsaa(newMsaaSamples);
     skyPipeline->recreate();
+
+    foliagePipeline->setRenderPass(renderPass);
+    foliagePipeline->recreate();
 
     return true;
 }
