@@ -16,24 +16,13 @@ TextureGroup::TextureGroup(const Device* vkDevice)
     : vkDevice(vkDevice) {
     // Albedo default
     createSinglePixel(255, 255, 255);
+
+    createSamplers();
 }
 
 TextureGroup::~TextureGroup() {
-    // Clean up all textures
-    VkDevice lDevice = vkDevice->lDevice;
-
-    for (auto& texture : textures) {
-        if (texture->view != VK_NULL_HANDLE) {
-            vkDestroyImageView(lDevice, texture->view, nullptr);
-        }
-        if (texture->image != VK_NULL_HANDLE) {
-            vkDestroyImage(lDevice, texture->image, nullptr);
-        }
-        if (texture->memory != VK_NULL_HANDLE) {
-            vkFreeMemory(lDevice, texture->memory, nullptr);
-        }
-    }
-    textures.clear();
+    cleanupTextures();
+    cleanupSamplers();
 }
 
 size_t TextureGroup::addTexture(std::string imagePath, uint32_t mipLevels) {
@@ -311,26 +300,18 @@ void TextureGroup::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t 
 
 
 // --- Shared Samplers ---
-void TextureGroup::createSharedSamplersFromModes() {
+void TextureGroup::createSamplers() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    std::vector<TextureAddressMode> modes = {
-        TextureAddressMode::Repeat,
-        TextureAddressMode::MirroredRepeat,
-        TextureAddressMode::ClampToEdge,
-        TextureAddressMode::ClampToBorder,
-        TextureAddressMode::MirrorClampToEdge
-    };
-
-    for (auto mode : modes) {
+    for (uint32_t i = 0; i < 5; i++) {
         VkSamplerCreateInfo sci{};
         sci.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         sci.magFilter    = VK_FILTER_LINEAR;
         sci.minFilter    = VK_FILTER_LINEAR;
         sci.mipmapMode   = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sci.addressModeU = static_cast<VkSamplerAddressMode>(mode);
-        sci.addressModeV = static_cast<VkSamplerAddressMode>(mode);
-        sci.addressModeW = static_cast<VkSamplerAddressMode>(mode);
+        sci.addressModeU = static_cast<VkSamplerAddressMode>(i);
+        sci.addressModeV = static_cast<VkSamplerAddressMode>(i);
+        sci.addressModeW = static_cast<VkSamplerAddressMode>(i);
         sci.anisotropyEnable = VK_TRUE;
         sci.maxAnisotropy    = 16.0f;
         sci.borderColor      = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -341,21 +322,10 @@ void TextureGroup::createSharedSamplersFromModes() {
             throw std::runtime_error("Failed to create shared sampler");
         }
 
-        modeToSamplerIndex[mode] = static_cast<uint32_t>(samplers.size());
         samplers.push_back(sampler);
     }
 
     samplerPoolCount = static_cast<uint32_t>(samplers.size());
-}
-
-void TextureGroup::cleanupSharedSamplers() {
-    VkDevice lDevice = vkDevice->lDevice;
-    for (auto sampler : samplers) {
-        vkDestroySampler(lDevice, sampler, nullptr);
-    }
-    samplers.clear();
-    modeToSamplerIndex.clear();
-    samplerPoolCount = 0;
 }
 
 void TextureGroup::createDescriptorInfo() {
@@ -412,5 +382,27 @@ void TextureGroup::createDescriptorInfo() {
     std::vector<VkWriteDescriptorSet> writes = {imageWrite, samplerWrite};
     vkUpdateDescriptorSets(lDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
+
+
+void TextureGroup::cleanupTextures() {
+    VkDevice lDevice = vkDevice->lDevice;
+    for (auto texture : textures) {
+        if (texture->view != VK_NULL_HANDLE) vkDestroyImageView(lDevice, texture->view, nullptr);
+        if (texture->image != VK_NULL_HANDLE) vkDestroyImage(lDevice, texture->image, nullptr);
+        if (texture->memory != VK_NULL_HANDLE) vkFreeMemory(lDevice, texture->memory, nullptr);
+    }
+    textures.clear();
+}
+
+
+void TextureGroup::cleanupSamplers() {
+    VkDevice lDevice = vkDevice->lDevice;
+    for (auto sampler : samplers) {
+        vkDestroySampler(lDevice, sampler, nullptr);
+    }
+    samplers.clear();
+    samplerPoolCount = 0;
+}
+
 
 } // namespace Az3D

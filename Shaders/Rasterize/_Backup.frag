@@ -26,7 +26,7 @@ layout(set = 2, binding = 0) uniform sampler2D textures[];
 
 layout(location = 0) in flat uvec4 fragProperties;
 layout(location = 1) in vec4 fragMultColor;
-layout(location = 2) in vec2 fragTxtr;
+layout(location = 2) in vec2 fragUV;
 layout(location = 3) in vec3 fragWorldPos;
 layout(location = 4) in vec3 fragWorldNrml;
 layout(location = 5) in vec4 fragTangent;
@@ -74,7 +74,7 @@ float applyToonShading(float value, uint toonLevel) {
 void main() {
     Material material = materials[fragProperties.x];
 
-    vec4 texColor = texture(textures[material.texIndices.x], fragTxtr);
+    vec4 texColor = texture(textures[material.texIndices.x], fragUV);
 
     float discardThreshold = material.shadingParams.w;
 
@@ -108,7 +108,7 @@ void main() {
     mat3 TBN = mat3(fragTangent.xyz, bitangent, fragWorldNrml);
 
     uint normalTexIndex = material.texIndices.y;
-    vec3 mapN = texture(textures[normalTexIndex], fragTxtr).xyz * 2.0 - 1.0;
+    vec3 mapN = texture(textures[normalTexIndex], fragUV).xyz * 2.0 - 1.0;
 
     // Use normal if no tangent is provided
     // vec3 mappedNormal = fragTangent.w == 0.0 ? fragWorldNrml : normalize(TBN * mapN);

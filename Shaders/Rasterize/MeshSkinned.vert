@@ -16,8 +16,6 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
     Material materials[];
 };
 
-layout(set = 2, binding = 0) uniform sampler2D textures[];
-
 
 layout(location = 0) in vec4 inPos_Tu;
 layout(location = 1) in vec4 inNrml_Tv;

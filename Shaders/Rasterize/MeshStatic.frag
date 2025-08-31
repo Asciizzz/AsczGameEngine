@@ -27,7 +27,7 @@ layout(set = 2, binding = 1) uniform sampler   samplers[];
 
 layout(location = 0) in flat uvec4 fragProperties;
 layout(location = 1) in vec4 fragMultColor;
-layout(location = 2) in vec2 fragTxtr;
+layout(location = 2) in vec2 fragUV;
 layout(location = 3) in vec3 fragWorldPos;
 layout(location = 4) in vec3 fragWorldNrml;
 layout(location = 5) in vec4 fragTangent;
@@ -50,7 +50,7 @@ void main() {
     uint texIndex = material.texIndices.x;
 
     // For now, always use sampler 0
-    vec4 texColor = texture(sampler2D(textures[nonuniformEXT(texIndex)], samplers[0]), fragTxtr);
+    vec4 texColor = texture(sampler2D(textures[nonuniformEXT(texIndex)], samplers[0]), fragUV);
 
     // Discard low opacity fragments
     float discardThreshold = material.shadingParams.w;
@@ -61,7 +61,7 @@ void main() {
     mat3 TBN = mat3(fragTangent.xyz, bitangent, fragWorldNrml);
 
     uint normalTexIndex = material.texIndices.y;
-    vec3 mapN = texture(sampler2D(textures[nonuniformEXT(normalTexIndex)], samplers[0]), fragTxtr).xyz * 2.0 - 1.0;
+    vec3 mapN = texture(sampler2D(textures[nonuniformEXT(normalTexIndex)], samplers[0]), fragUV).xyz * 2.0 - 1.0;
 
     bool noTangent = fragTangent.w == 0.0;
     vec3 mappedNormal = noTangent ? fragWorldNrml : normalize(TBN * mapN);

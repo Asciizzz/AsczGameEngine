@@ -10,15 +10,6 @@ class Device;
 
 namespace Az3D {
 
-// Addressing mode enum is now outside Texture, shared globally
-enum class TextureAddressMode {
-    Repeat            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-    MirroredRepeat    = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-    ClampToEdge       = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-    ClampToBorder     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-    MirrorClampToEdge = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE
-};
-
 // Vulkan texture resource (image + view + memory only)
 struct Texture {
     std::string path;
@@ -53,6 +44,11 @@ public:
 
     void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 
+    // Shared samplers
+    std::vector<VkSampler> samplers;
+    uint32_t samplerPoolCount = 0;
+    void createSamplers();
+
     // Descriptor resources
     AzVulk::DescPool   descPool;
     AzVulk::DescLayout descLayout;
@@ -62,14 +58,10 @@ public:
     const VkDescriptorSetLayout getDescLayout() const { return descLayout.get(); }
     const VkDescriptorPool      getDescPool()   const { return descPool.get(); }
 
-    // Shared samplers
-    std::vector<VkSampler> samplers;
-    std::unordered_map<TextureAddressMode, uint32_t> modeToSamplerIndex;
-    uint32_t samplerPoolCount = 0;
-
-    void createSharedSamplersFromModes();
-    void cleanupSharedSamplers();
     void createDescriptorInfo();
+
+    void cleanupTextures();
+    void cleanupSamplers();
 };
 
 } // namespace Az3D

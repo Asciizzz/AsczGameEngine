@@ -18,7 +18,7 @@ layout(location = 6) in vec4 multColor;
 
 layout(location = 0) out flat uvec4 fragProperties;
 layout(location = 1) out vec4 fragMultColor;
-layout(location = 2) out vec2 fragTxtr;
+layout(location = 2) out vec2 fragUV;
 layout(location = 3) out vec3 fragWorldPos;
 layout(location = 4) out vec3 fragWorldNrml;
 layout(location = 5) out vec4 fragTangent;
@@ -43,7 +43,7 @@ void main() {
 
     fragProperties = properties;
     fragWorldPos = worldPos.xyz;
-    fragTxtr = vec2(inPos_Tu.w, inNrml_Tv.w);
+    fragUV = vec2(inPos_Tu.w, inNrml_Tv.w);
     fragMultColor = multColor;
 
     // Assume normalized by default
