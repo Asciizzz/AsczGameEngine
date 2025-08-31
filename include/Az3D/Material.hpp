@@ -10,6 +10,14 @@
 
 namespace Az3D {
 
+enum class TAddressMode {
+    Repeat            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+    MirroredRepeat    = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+    ClampToEdge       = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    ClampToBorder     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+    MirrorClampToEdge = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE
+};
+
 struct Material {
     glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
     glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albedo>, <normal>, <metallic>, <unsure>
@@ -23,12 +31,14 @@ struct Material {
         shadingParams.w = discardThreshold;
     }
 
-    void setAlbedoTextureIndex(int index) {
+    void setAlbedoTexture(int index, TAddressMode addressMode = TAddressMode::Repeat) {
         texIndices.x = index;
+        texIndices.y = static_cast<uint32_t>(addressMode);
     }
 
-    void setNormalTextureIndex(int index) {
-        texIndices.y = index;
+    void setNormalTexture(int index, TAddressMode addressMode = TAddressMode::Repeat) {
+        texIndices.z = index;
+        texIndices.w = static_cast<uint32_t>(addressMode);
     }
 };
 

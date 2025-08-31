@@ -11,8 +11,9 @@ namespace AzGame {
             // Initialized global palette material
             Az3D::Material globalPaletteMaterial;
             globalPaletteMaterial.setShadingParams(true, 1, 0.5f, 0.0f);
-            globalPaletteMaterial.setAlbedoTextureIndex(
-                resourceManager->addTexture("Alb_GlobalPalette", "Assets/Platformer/Palette.png")
+            globalPaletteMaterial.setAlbedoTexture(
+                resourceManager->addTexture("Alb_GlobalPalette", "Assets/Platformer/Palette.png"),
+                Az3D::TAddressMode::ClampToEdge
             );
 
             materialIndex = resourceManager->addMaterial("GlobalPalette", globalPaletteMaterial);

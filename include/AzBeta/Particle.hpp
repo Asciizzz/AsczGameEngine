@@ -169,7 +169,7 @@ public:
 
         Az3D::Material material;
         material.setShadingParams(true, 0, 0.0f, 0.0f);
-        material.setAlbedoTextureIndex(0);
+        material.setAlbedoTexture(0, Az3D::TAddressMode::ClampToEdge);
 
         materialIndex = resourceManager->addMaterial("Particle", material);
 

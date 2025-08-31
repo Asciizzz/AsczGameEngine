@@ -47,10 +47,12 @@ void main() {
     Material material = materials[fragProperties.x];
 
     // Pick albedo texture index
-    uint texIndex = material.texIndices.x;
+    uint albIndex = material.texIndices.x;
+    uint albMode = material.texIndices.y;
 
     // For now, always use sampler 0
-    vec4 texColor = texture(sampler2D(textures[nonuniformEXT(texIndex)], samplers[0]), fragUV);
+    vec4 texColor = texture(sampler2D(textures[nonuniformEXT(albIndex)], samplers[albMode]), fragUV);
+    // vec4 texColor = vec4(1.0);
 
     // Discard low opacity fragments
     float discardThreshold = material.shadingParams.w;
