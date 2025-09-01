@@ -1,12 +1,7 @@
 #pragma once
 
 #include <string>
-#include "AzVulk/Descriptor.hpp"
-#include "Helpers/Templates.hpp"
-
-namespace AzVulk {
-class Device;
-}
+#include <vulkan/vulkan.h>
 
 namespace Az3D {
 

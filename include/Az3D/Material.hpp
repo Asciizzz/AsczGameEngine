@@ -5,9 +5,6 @@
 
 #include <glm/glm.hpp>
 
-#include "AzVulk/Buffer.hpp"
-#include "AzVulk/Descriptor.hpp"
-
 namespace Az3D {
 
 enum class TAddressMode {

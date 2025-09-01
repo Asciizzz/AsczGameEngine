@@ -88,6 +88,7 @@
         "condition_variable": "cpp",
         "shared_mutex": "cpp",
         "valarray": "cpp",
-        "*.rh": "cpp"
+        "*.rh": "cpp",
+        "cfloat": "cpp"
     }
 }

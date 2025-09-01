@@ -5,6 +5,9 @@
 #include "Az3D/MeshStatic.hpp"
 #include "Az3D/MeshSkinned.hpp"
 
+#include "AzVulk/Buffer.hpp"
+#include "AzVulk/Descriptor.hpp"
+
 
 namespace Az3D {
 

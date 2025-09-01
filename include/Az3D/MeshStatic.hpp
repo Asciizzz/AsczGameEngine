@@ -1,6 +1,5 @@
 #pragma once
 
-#include "AzVulk/Buffer.hpp"
 #include "Az3D/VertexTypes.hpp"
 
 namespace Az3D {
