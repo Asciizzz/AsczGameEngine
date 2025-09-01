@@ -73,10 +73,10 @@ void Application::initComponents() {
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
     resGroup = MakeUnique<ResourceGroup>(vkDevice.get());
-    globalUBOManager = MakeUnique<GlobalUBOManager>(vkDevice.get());
+    glbUBOManager = MakeUnique<GlbUBOManager>(vkDevice.get());
 
     // Create convenient references to avoid arrow spam
-    auto& glbUBOManager = *globalUBOManager;    
+    auto& glbUBO = *glbUBOManager;    
 
 // PLAYGROUND FROM HERE
 
@@ -124,13 +124,12 @@ void Application::initComponents() {
     // matGroup.uploadToGPU();
     resGroup->uploadAllToGPU();
 
-    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get(),
-                                    globalUBOManager.get(), resGroup.get());
+    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), glbUBOManager.get());
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     const auto& matLayout = resGroup->getMatDescLayout();
     const auto& texLayout = resGroup->getTexDescLayout();
-    const auto& glbLayout = glbUBOManager.getDescLayout();
+    const auto& glbLayout = glbUBO.getDescLayout();
 
     LayoutVec layouts = {glbLayout, matLayout, texLayout};
 
@@ -461,22 +460,22 @@ void Application::mainLoop() {
 // =================================
 
         // Use the new explicit rendering interface
-        globalUBOManager->updateUBO(camRef);
+        glbUBOManager->updateUBO(camRef);
 
-        uint32_t imageIndex = rendererRef.beginFrame(*staticMeshPipeline, globalUBOManager->ubo);
+        uint32_t imageIndex = rendererRef.beginFrame(*staticMeshPipeline, glbUBOManager->ubo);
         if (imageIndex != UINT32_MAX) {
             // First: render sky background with dedicated pipeline
-            rendererRef.drawSky(*skyPipeline);
+            rendererRef.drawSky(skyPipeline.get());
 
             // // Draw grass system
-            rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, grassSystem->terrainInstanceGroup);
-            rendererRef.drawInstanceStaticGroup(*foliagePipeline, grassSystem->grassInstanceGroup);
-            
+            rendererRef.drawInstanceStaticGroup(resGroup.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
+            rendererRef.drawInstanceStaticGroup(resGroup.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
+
             // Draw the test
-            rendererRef.drawDemoSkinned(*skinnedMeshPipeline, *resGroup->getMeshSkinned("Demo"));
+            rendererRef.drawDemoSkinned(resGroup.get(), skinnedMeshPipeline.get(), *resGroup->getMeshSkinned("Demo"));
 
             // // Draw the particles
-            rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, particleManager->instanceGroup);
+            rendererRef.drawInstanceStaticGroup(resGroup.get(), staticMeshPipeline.get(), &particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };

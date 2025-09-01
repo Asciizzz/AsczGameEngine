@@ -9,14 +9,10 @@ using namespace AzVulk;
 
 Renderer::Renderer (Device* vkDevice,
                     SwapChain* swapChain,
-                    DepthManager* depthManager,
-                    GlobalUBOManager* globalUBOManager,
-                    ResourceGroup* resGroup) :
+                    GlbUBOManager* glbUBOManager) :
 vkDevice(vkDevice),
 swapChain(swapChain),
-depthManager(depthManager),
-globalUBOManager(globalUBOManager),
-resGroup(resGroup) {
+glbUBOManager(glbUBOManager) {
     createCommandBuffers();
     createSyncObjects();
 }
@@ -143,15 +139,17 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
     scissor.extent = swapChain->extent;
     vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 
-    memcpy(globalUBOManager->bufferData.mapped, &globalUBO, sizeof(globalUBO));
+    memcpy(glbUBOManager->bufferData.mapped, &globalUBO, sizeof(globalUBO));
 
     return imageIndex;
 }
 
 
-void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::InstanceStaticGroup& instanceGroup) {
-    uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
-    size_t meshIndex = instanceGroup.meshIndex;
+void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup,
+                                        RasterPipeline* rasterPipeline,
+                                        Az3D::InstanceStaticGroup* instanceGroup) {
+    uint32_t instanceCount = static_cast<uint32_t>(instanceGroup->datas.size());
+    size_t meshIndex = instanceGroup->meshIndex;
 
     // const Az3D::MeshStaticGroup* meshStaticGroup = resGroup->meshStaticGroup.get();
     const auto& mesh = resGroup->meshStatics[meshIndex];
@@ -159,23 +157,23 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
 
     if (instanceCount == 0 || meshIndex == SIZE_MAX || indexCount == 0) return;
 
-    rasterPipeline.bind(commandBuffers[currentFrame]);
+    rasterPipeline->bind(commandBuffers[currentFrame]);
 
     // Bind descriptor sets once
-    VkDescriptorSet globalSet = globalUBOManager->getDescSet();
+    VkDescriptorSet globalSet = glbUBOManager->getDescSet();
     VkDescriptorSet materialSet = resGroup->getMatDescSet();
     VkDescriptorSet textureSet = resGroup->getTexDescSet();
 
     std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
+                            rasterPipeline->layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-    instanceGroup.updateBufferData();
+    instanceGroup->updateBufferData();
 
     VkBuffer vertexBuffer = resGroup->vstaticBuffers[meshIndex]->buffer;
     VkBuffer indexBuffer = resGroup->istaticBuffers[meshIndex]->buffer;
 
-    VkBuffer instanceBuffer = instanceGroup.bufferData.buffer;
+    VkBuffer instanceBuffer = instanceGroup->bufferData.buffer;
 
     VkBuffer buffers[] = { vertexBuffer, instanceBuffer };
     VkDeviceSize offsets[] = { 0, 0 };
@@ -188,20 +186,20 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
     vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
 }
 
-void Renderer::drawDemoSkinned(RasterPipeline& rasterPipeline, const Az3D::MeshSkinned& meshSkinned) {
+void Renderer::drawDemoSkinned(const ResourceGroup* resGroup, RasterPipeline* rasterPipeline, const Az3D::MeshSkinned& meshSkinned) {
     uint64_t indexCount = meshSkinned.indices.size();
     if (indexCount == 0) return;
 
-    rasterPipeline.bind(commandBuffers[currentFrame]);
+    rasterPipeline->bind(commandBuffers[currentFrame]);
 
     // Bind descriptor sets
-    VkDescriptorSet globalSet = globalUBOManager->getDescSet();
+    VkDescriptorSet globalSet = glbUBOManager->getDescSet();
     VkDescriptorSet materialSet = resGroup->getMatDescSet();
     VkDescriptorSet textureSet = resGroup->getTexDescSet();
 
     std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            rasterPipeline.layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
+                            rasterPipeline->layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
     VkBuffer vertexBuffer = meshSkinned.vertexBufferData.buffer;
     VkBuffer indexBuffer = meshSkinned.indexBufferData.buffer;
@@ -215,7 +213,7 @@ void Renderer::drawDemoSkinned(RasterPipeline& rasterPipeline, const Az3D::MeshS
     vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, 1, 0, 0, 0);
 }
 
-void Renderer::drawInstanceSkinnedGroup(RasterPipeline& rasterPipeline, Az3D::InstanceSkinnedGroup& instanceGroup) {
+void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, RasterPipeline* rasterPipeline, Az3D::InstanceSkinnedGroup* instanceGroup) {
     // uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
     // size_t meshIndex = instanceGroup.meshIndex;
 
@@ -225,7 +223,7 @@ void Renderer::drawInstanceSkinnedGroup(RasterPipeline& rasterPipeline, Az3D::In
     // const Az3D::TextureGroup* texGroup = resGroup->textureGroup.get();
     // const Az3D::MeshSkinnedGroup* meshSkinnedGroup = resGroup->meshSkinnedGroup.get();
 
-    // VkDescriptorSet globalSet = globalUBOManager->getDescSet();
+    // VkDescriptorSet globalSet = glbUBOManager->getDescSet();
 
     // rasterPipeline.bind(commandBuffers[currentFrame]);
 
@@ -262,14 +260,14 @@ void Renderer::drawInstanceSkinnedGroup(RasterPipeline& rasterPipeline, Az3D::In
 
 
 // Sky rendering using dedicated sky pipeline
-void Renderer::drawSky(RasterPipeline& rasterPipeline) {
+void Renderer::drawSky(const RasterPipeline* rasterPipeline) {
     // Bind sky pipeline
-    rasterPipeline.bind(commandBuffers[currentFrame]);
+    rasterPipeline->bind(commandBuffers[currentFrame]);
 
     // Bind only the global descriptor set (set 0) for sky
-    VkDescriptorSet globalSet = globalUBOManager->getDescSet();
+    VkDescriptorSet globalSet = glbUBOManager->getDescSet();
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            rasterPipeline.layout, 0, 1, &globalSet, 0, nullptr);
+                            rasterPipeline->layout, 0, 1, &globalSet, 0, nullptr);
 
     // Draw fullscreen triangle (3 vertices, no input)
     vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);

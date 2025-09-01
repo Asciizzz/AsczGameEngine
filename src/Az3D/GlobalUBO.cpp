@@ -8,7 +8,7 @@ using namespace AzVulk;
 
 namespace Az3D {
 
-GlobalUBOManager::GlobalUBOManager(const Device* vkDevice)
+GlbUBOManager::GlbUBOManager(const Device* vkDevice)
 : vkDevice(vkDevice)
 {
     createBufferData();
@@ -18,7 +18,7 @@ GlobalUBOManager::GlobalUBOManager(const Device* vkDevice)
     createDescSet();
 }
 
-void GlobalUBOManager::createBufferData() {
+void GlbUBOManager::createBufferData() {
     bufferData.initVkDevice(vkDevice);
 
     bufferData.setProperties(
@@ -30,19 +30,19 @@ void GlobalUBOManager::createBufferData() {
     bufferData.mapMemory();
 }
 
-void GlobalUBOManager::createDescLayout() {
+void GlbUBOManager::createDescLayout() {
     descLayout.create(vkDevice->lDevice, {
         DescLayout::BindInfo{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
     });
 }
 
-void GlobalUBOManager::createDescPool() {
+void GlbUBOManager::createDescPool() {
     descPool.create(vkDevice->lDevice, {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
     }, 1);
 }
 
-void GlobalUBOManager::createDescSet() {
+void GlbUBOManager::createDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
 
     descSet.allocate(lDevice, descPool.pool, descLayout.layout, 1);
@@ -66,7 +66,7 @@ void GlobalUBOManager::createDescSet() {
 
 float deltaDay = 1.0f / 86400.0f;
 
-void GlobalUBOManager::updateUBO(const Camera& camera) {
+void GlbUBOManager::updateUBO(const Camera& camera) {
     ubo.proj = camera.projectionMatrix;
     ubo.view = camera.viewMatrix;
 
