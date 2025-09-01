@@ -1,4 +1,5 @@
 #include "Az3D/MeshSkinned.hpp"
+
 #include <stdexcept>
 #include <glm/gtc/type_ptr.hpp>
 

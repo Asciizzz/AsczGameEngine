@@ -26,6 +26,7 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/MeshSkinned.cpp
     src/Az3D/Material.cpp
     src/Az3D/InstanceStatic.cpp
+    src/Az3D/TinyLoader.cpp
 
     src/Az3D/ResourceGroup.cpp
     src/Az3D/ResImplement/MeshStatic.cpp
