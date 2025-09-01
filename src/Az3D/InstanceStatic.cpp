@@ -2,7 +2,7 @@
 #include <vulkan/vulkan.h>
 #include <algorithm>
 
-namespace Az3D {
+using namespace Az3D;
 
 // Vulkan-specific methods for Model
 VkVertexInputBindingDescription InstanceStatic::getBindingDescription() {
@@ -55,6 +55,4 @@ void InstanceStaticGroup::updateBufferData() {
     if (prevInstanceCount != datas.size()) recreateBufferData();
 
     bufferData.mappedData(datas.data());
-}
-
 }

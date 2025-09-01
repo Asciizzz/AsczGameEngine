@@ -1,7 +1,7 @@
 #include "Az3D/Camera.hpp"
 #include <algorithm>
 
-namespace Az3D {
+using namespace Az3D;
 
 Camera::Camera() 
     : pos(0.0f, 0.0f, 0.0f)
@@ -149,6 +149,4 @@ void Camera::updateProjectionMatrix() {
     
     // Vulkan uses inverted Y axis compared to OpenGL
     projectionMatrix[1][1] *= -1;
-}
-
 }

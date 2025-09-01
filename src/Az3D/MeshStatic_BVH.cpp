@@ -3,7 +3,7 @@
 #include <cfloat>
 #include <queue>
 
-namespace Az3D {
+using namespace Az3D;
 
 // BVH Construction
 
@@ -502,6 +502,4 @@ glm::vec3 MeshStatic::sphereIntersectTriangle(const glm::vec3& sphereOrigin, flo
     }
 
     return glm::vec3(-1.0f); // Outside triangle
-}
-
 }

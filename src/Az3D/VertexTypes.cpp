@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
-namespace Az3D {
+using namespace Az3D;
 
 void Transform::translate(const glm::vec3& translation) {
     this->pos += translation;
@@ -117,5 +117,3 @@ std::vector<VkVertexInputAttributeDescription> VertexSkinned::getAttributeDescri
 
     return attribs;
 }
-
-} // namespace Az3D

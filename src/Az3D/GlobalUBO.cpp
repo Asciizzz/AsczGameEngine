@@ -6,7 +6,7 @@
 
 using namespace AzVulk;
 
-namespace Az3D {
+using namespace Az3D;
 
 GlbUBOManager::GlbUBOManager(const Device* vkDevice)
 : vkDevice(vkDevice)
@@ -80,6 +80,4 @@ void GlbUBOManager::updateUBO(const Camera& camera) {
     ubo.cameraForward = glm::vec4(camera.forward, camera.aspectRatio);
     ubo.cameraRight   = glm::vec4(camera.right, camera.nearPlane);
     ubo.cameraUp      = glm::vec4(camera.up, camera.farPlane);
-}
-
 }
