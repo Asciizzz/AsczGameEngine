@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cstring>
 
-namespace AzVulk {
+using namespace AzVulk;
 
 const std::vector<const char*> Instance::validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -147,6 +147,4 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(
     
     std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
     return VK_FALSE;
-}
-
 }

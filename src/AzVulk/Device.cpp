@@ -3,7 +3,7 @@
 #include <set>
 #include <vector>
 
-namespace AzVulk {
+using namespace AzVulk;
 
 // ---------------- EXTENSIONS ----------------
 const std::vector<const char*> Device::deviceExtensions = {
@@ -255,5 +255,3 @@ void TemporaryCommand::endAndSubmit(VkPipelineStageFlags waitStage) {
 
     cmdBuffer = VK_NULL_HANDLE;
 }
-
-} // namespace AzVulk

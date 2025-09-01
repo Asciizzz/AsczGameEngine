@@ -3,7 +3,7 @@
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
 
-namespace AzVulk {
+using namespace AzVulk;
 
 DynamicDescriptor::~DynamicDescriptor() {
     for (auto& set : sets) vkFreeDescriptorSets(lDevice, pool, 1, &set);
@@ -223,8 +223,3 @@ void DescSets::allocate(const VkDevice lDevice, const VkDescriptorPool pool, con
         throw std::runtime_error("failed to allocate descriptor sets");
     }
 }
-
-
-
-
-} // namespace AzVulk

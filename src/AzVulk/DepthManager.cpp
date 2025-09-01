@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <cstring>
 
-namespace AzVulk {
+using namespace AzVulk;
 
 DepthManager::DepthManager(const Device* vkDevice)
     : vkDevice              (vkDevice)
@@ -167,5 +167,3 @@ VkImageView DepthManager::createImageView(VkImage image, VkFormat format, VkImag
 
     return imageView;
 }
-
-} // namespace AzVulk

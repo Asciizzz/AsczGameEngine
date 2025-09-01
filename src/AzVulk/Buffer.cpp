@@ -8,7 +8,7 @@
 #include <execution>
 
 
-namespace AzVulk {
+using namespace AzVulk;
 
 // Move constructor
 BufferData::BufferData(BufferData&& other) noexcept {
@@ -113,6 +113,4 @@ void BufferData::createBuffer() {
     }
 
     vkBindBufferMemory(lDevice, buffer, memory, 0);
-}
-
 }

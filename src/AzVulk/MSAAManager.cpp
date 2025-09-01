@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <iostream>
 
-namespace AzVulk {
+using namespace AzVulk;
 
 MSAAManager::MSAAManager(const Device* vkDevice) : vkDevice(vkDevice) {
     msaaSamples = getMaxUsableSampleCount();
@@ -110,6 +110,4 @@ VkImageView MSAAManager::createImageView(VkImage image, VkFormat format, VkImage
     }
 
     return imageView;
-}
-
 }

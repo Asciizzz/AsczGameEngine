@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <limits>
 
-namespace AzVulk {
+using namespace AzVulk;
 
 SwapChain::SwapChain(const Device* vkDevice, VkSurfaceKHR surface, SDL_Window* window)
     : vkDevice(vkDevice), surface(surface) {
@@ -225,6 +225,4 @@ VkExtent2D SwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilit
         capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
     return actualExtent;
-}
-
 }

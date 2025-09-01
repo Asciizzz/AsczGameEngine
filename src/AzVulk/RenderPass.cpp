@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace AzVulk {
+using namespace AzVulk;
 
 RenderPassConfig RenderPassConfig::createForwardRenderingConfig(VkFormat swapChainFormat, VkSampleCountFlagBits msaaSamples) {
     RenderPassConfig config;
@@ -175,5 +175,3 @@ void RenderPass::cleanup() {
         renderPass = VK_NULL_HANDLE;
     }
 }
-
-} // namespace AzVulk
