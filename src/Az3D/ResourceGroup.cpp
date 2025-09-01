@@ -833,14 +833,14 @@ void ResourceGroup::createMeshSkinnedBuffers() {
 // ============================================================================
 
 void ResourceGroup::createRigBuffers() {
-    rigBuffers.clear();
+    rigInvMatBuffers.clear();
 
     for (size_t i = 0; i < rigs.size(); ++i) {
         const auto* rig = rigs[i].get();
 
         const auto& inverseBindMatrices = rig->inverseBindMatrices;
 
-        UniquePtr<BufferData> rigBufferData = MakeUnique<BufferData>();
+        UniquePtr<BufferData> rigInvMatBuffer = MakeUnique<BufferData>();
 
         // Upload inverse bind matrices
         BufferData stagingBuffer;
@@ -852,13 +852,13 @@ void ResourceGroup::createRigBuffers() {
         stagingBuffer.createBuffer();
         stagingBuffer.mappedData(inverseBindMatrices.data());
 
-        rigBufferData->initVkDevice(vkDevice);
-        rigBufferData->setProperties(
+        rigInvMatBuffer->initVkDevice(vkDevice);
+        rigInvMatBuffer->setProperties(
             inverseBindMatrices.size() * sizeof(glm::mat4),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        rigBufferData->createBuffer();
+        rigInvMatBuffer->createBuffer();
 
         TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -867,13 +867,13 @@ void ResourceGroup::createRigBuffers() {
         copyRegion.dstOffset = 0;
         copyRegion.size = inverseBindMatrices.size() * sizeof(glm::mat4);
 
-        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, rigBufferData->buffer, 1, &copyRegion);
-        rigBufferData->hostVisible = false;
+        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, rigInvMatBuffer->buffer, 1, &copyRegion);
+        rigInvMatBuffer->hostVisible = false;
 
         copyCmd.endAndSubmit();
 
         // Append buffer
-        rigBuffers.push_back(std::move(rigBufferData));
+        rigInvMatBuffers.push_back(std::move(rigInvMatBuffer));
     }
 }
 
@@ -905,7 +905,7 @@ void ResourceGroup::createRigDescSets() {
     // Bind each rig buffer to its respective descriptor set
     for (size_t i = 0; i < rigs.size(); ++i) {
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer               = rigBuffers[i]->buffer;
+        bufferInfo.buffer               = rigInvMatBuffers[i]->buffer;
         bufferInfo.offset               = 0;
         bufferInfo.range                = VK_WHOLE_SIZE;
 

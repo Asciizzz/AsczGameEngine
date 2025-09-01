@@ -92,7 +92,7 @@ public:
 
     // Skeleton data - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
     SharedPtrVec<RigSkeleton>         rigs;
-    UniquePtrVec<AzVulk::BufferData>  rigBuffers;
+    UniquePtrVec<AzVulk::BufferData>  rigInvMatBuffers; // Additional buffers in the future
     UniquePtr<AzVulk::DescLayout>     rigDescLayout;
     UniquePtr<AzVulk::DescPool>       rigDescPool;
     UniquePtr<AzVulk::DescSets>       rigDescSets;

@@ -174,7 +174,12 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup, const GlbU
 }
 
 
-void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const InstanceSkinnedGroup* instanceGroup) {
+// void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const InstanceSkinnedGroup* instanceGroup) {}
+
+
+// No instance buffer data yet
+void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, size_t meshIndex) {
+
     // uint64_t indexCount = resGroup->getSkinnedIndexCount(meshIndex);
     // if (indexCount == 0) return;
 

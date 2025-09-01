@@ -26,7 +26,9 @@ namespace AzVulk {
 
         // Body
         void drawInstanceStaticGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::InstanceStaticGroup* instanceGroup);
-        void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::InstanceSkinnedGroup* instanceGroup);
+        // void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::InstanceSkinnedGroup* instanceGroup);
+        
+        void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t meshIndex);
 
         void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline);
 

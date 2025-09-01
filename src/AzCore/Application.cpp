@@ -119,13 +119,14 @@ void Application::initComponents() {
 
 // PLAYGROUND END HERE 
 
-    // Testing if reallocation going to work smoothly
     resGroup->uploadAllToGPU();
 
     auto glbLayout = glbUBOManager->getDescLayout();
     auto matLayout = resGroup->getMatDescLayout();
     auto texLayout = resGroup->getTexDescLayout();
     auto rigLayout = resGroup->getRigDescLayout();
+
+    // Create raster pipeline configurations
 
     RasterCfg staticMeshConfig;
     staticMeshConfig.renderPass = renderPass;
@@ -142,10 +143,9 @@ void Application::initComponents() {
     skinnedMeshConfig.renderPass = renderPass;
     skinnedMeshConfig.setMSAA(msaaManager->msaaSamples);
     skinnedMeshConfig.vertexInputType = RasterCfg::InputType::Skinned;
-    skinnedMeshConfig.setLayouts = {glbLayout, matLayout, texLayout};
+    skinnedMeshConfig.setLayouts = {glbLayout, matLayout, texLayout, rigLayout};
     skinnedMeshConfig.vertPath = "Shaders/Rasterize/MeshSkinned.vert.spv";
     skinnedMeshConfig.fragPath = "Shaders/Rasterize/MeshSkinned.frag.spv";
-    // Debugging
     skinnedMeshConfig.cullMode = VK_CULL_MODE_NONE;
     // skinnedMeshConfig.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
