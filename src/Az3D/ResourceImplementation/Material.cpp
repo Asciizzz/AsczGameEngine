@@ -1,10 +1,10 @@
 
-#include "Az3D/ResourceManager.hpp"
+#include "Az3D/ResourceGroup.hpp"
 
 using namespace AzVulk;
 using namespace Az3D;
 
-void ResourceManager::createMaterialBuffer() {
+void ResourceGroup::createMaterialBuffer() {
     VkDeviceSize bufferSize = sizeof(Material) * materials.size();
 
     // --- staging buffer (CPU visible) ---
@@ -44,7 +44,7 @@ void ResourceManager::createMaterialBuffer() {
 }
 
 // Descriptor set creation
-void ResourceManager::createMaterialDescSet() {
+void ResourceGroup::createMaterialDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
 
     matDescSet.allocate(lDevice, matDescPool.get(), matDescLayout.get(), 1);

@@ -9,13 +9,13 @@
 namespace Az3D {
 
 // All these resource are static and fixed, created upon load
-class ResourceManager {
+class ResourceGroup {
 public:
-    ResourceManager(AzVulk::Device* vkDevice);
-    ~ResourceManager() = default;
+    ResourceGroup(AzVulk::Device* vkDevice);
+    ~ResourceGroup() = default;
 
-    ResourceManager(const ResourceManager&) = delete;
-    ResourceManager& operator=(const ResourceManager&) = delete;
+    ResourceGroup(const ResourceGroup&) = delete;
+    ResourceGroup& operator=(const ResourceGroup&) = delete;
 
     size_t addTexture(std::string name, std::string imagePath, uint32_t mipLevels = 0);
     size_t addMaterial(std::string name, const Material& material);

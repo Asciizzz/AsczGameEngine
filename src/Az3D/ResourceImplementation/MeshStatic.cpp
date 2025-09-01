@@ -1,10 +1,10 @@
-#include "Az3D/ResourceManager.hpp"
+#include "Az3D/ResourceGroup.hpp"
 
 using namespace AzVulk;
 using namespace Az3D;
 
 
-void ResourceManager::createMeshStaticBuffers() {
+void ResourceGroup::createMeshStaticBuffers() {
     for (int i = 0; i < meshStatics.size(); ++i) {
         const auto* mesh = meshStatics[i].get();
         const auto& vertices = mesh->vertices;

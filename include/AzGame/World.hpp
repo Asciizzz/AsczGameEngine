@@ -5,18 +5,18 @@
 namespace AzGame {
     class World {
     public:
-        World(Az3D::ResourceManager* resManager, const AzVulk::Device* vkDevice)
-        : resourceManager(resManager), vkDevice(vkDevice) {
+        World(Az3D::ResourceGroup* resGroup, const AzVulk::Device* vkDevice)
+        : resGroup(resGroup), vkDevice(vkDevice) {
 
             // Initialized global palette material
             Az3D::Material globalPaletteMaterial;
             globalPaletteMaterial.setShadingParams(true, 1, 0.5f, 0.0f);
             globalPaletteMaterial.setAlbedoTexture(
-                resourceManager->addTexture("Alb_GlobalPalette", "Assets/Platformer/Palette.png"),
+                resGroup->addTexture("Alb_GlobalPalette", "Assets/Platformer/Palette.png"),
                 Az3D::TAddressMode::ClampToEdge
             );
 
-            materialIndex = resourceManager->addMaterial("GlobalPalette", globalPaletteMaterial);
+            materialIndex = resGroup->addMaterial("GlobalPalette", globalPaletteMaterial);
 
             // Initialized mesh in the mesh manager
             for (const auto& mesh : platformerMeshes) {
@@ -24,14 +24,14 @@ namespace AzGame {
                 std::string fullPath = "Assets/Platformer/" + mesh.second;
 
                 // Short hand name -----------------------------------Full name and Full path
-                platformerMeshIndices[mesh.first] = resourceManager->addMeshStatic(fullName, fullPath, true);
+                platformerMeshIndices[mesh.first] = resGroup->addMeshStatic(fullName, fullPath, true);
             }
 
             // Initialized world model group
             // worldModelGroup = Az3D::ModelGroup("World", vkDevice);
         }
 
-        Az3D::ResourceManager* resourceManager;
+        Az3D::ResourceGroup* resGroup;
         const AzVulk::Device* vkDevice;
 
     // World element!

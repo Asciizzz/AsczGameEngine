@@ -1,4 +1,4 @@
-#include "Az3D/ResourceManager.hpp"
+#include "Az3D/ResourceGroup.hpp"
 #include "AzVulk/Device.hpp"
 #include <iostream>
 
@@ -6,13 +6,13 @@ using namespace AzVulk;
 
 namespace Az3D {
 
-ResourceManager::ResourceManager(Device* vkDevice):
+ResourceGroup::ResourceGroup(Device* vkDevice):
 vkDevice(vkDevice) {
     textureGroup = MakeUnique<TextureGroup>(vkDevice);
     meshSkinnedGroup = MakeUnique<MeshSkinnedGroup>(vkDevice);
 }
 
-void ResourceManager::uploadAllToGPU() {
+void ResourceGroup::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
 
     createMeshStaticBuffers();
@@ -34,13 +34,13 @@ void ResourceManager::uploadAllToGPU() {
 }
 
 
-size_t ResourceManager::addTexture(std::string name, std::string imagePath, uint32_t mipLevels) {
+size_t ResourceGroup::addTexture(std::string name, std::string imagePath, uint32_t mipLevels) {
     size_t index = textureGroup->addTexture(imagePath, mipLevels);
     textureNameToIndex[name] = index;
     return index;
 }
 
-size_t ResourceManager::addMaterial(std::string name, const Material& material) {
+size_t ResourceGroup::addMaterial(std::string name, const Material& material) {
     size_t index = materials.size();
     materials.push_back(material);
 
@@ -48,7 +48,7 @@ size_t ResourceManager::addMaterial(std::string name, const Material& material) 
     return index;
 }
 
-size_t ResourceManager::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
+size_t ResourceGroup::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
     if (hasBVH) mesh->createBVH();
 
     size_t index = meshStatics.size();
@@ -57,7 +57,7 @@ size_t ResourceManager::addMeshStatic(std::string name, SharedPtr<MeshStatic> me
     meshStaticNameToIndex[name] = index;
     return index;
 }
-size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
+size_t ResourceGroup::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
     // Check the extension
     std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
     SharedPtr<MeshStatic> newMesh;
@@ -75,49 +75,49 @@ size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bo
     return index;
 }
 
-size_t ResourceManager::addMeshSkinned(std::string name, std::string filePath) {
+size_t ResourceGroup::addMeshSkinned(std::string name, std::string filePath) {
     size_t index = meshSkinnedGroup->addFromGLTF(filePath);
     meshSkinnedNameToIndex[name] = index;
     return index;
 }
 
-size_t ResourceManager::getTextureIndex(std::string name) const {
+size_t ResourceGroup::getTextureIndex(std::string name) const {
     auto it = textureNameToIndex.find(name);
     return it != textureNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
-size_t ResourceManager::getMaterialIndex(std::string name) const {
+size_t ResourceGroup::getMaterialIndex(std::string name) const {
     auto it = materialNameToIndex.find(name);
     return it != materialNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
-size_t ResourceManager::getMeshStaticIndex(std::string name) const {
+size_t ResourceGroup::getMeshStaticIndex(std::string name) const {
     auto it = meshStaticNameToIndex.find(name);
     return it != meshStaticNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
-size_t ResourceManager::getMeshSkinnedIndex(std::string name) const {
+size_t ResourceGroup::getMeshSkinnedIndex(std::string name) const {
     auto it = meshSkinnedNameToIndex.find(name);
     return it != meshSkinnedNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
 
-Texture* ResourceManager::getTexture(std::string name) const {
+Texture* ResourceGroup::getTexture(std::string name) const {
     size_t index = getTextureIndex(name);
     return index != SIZE_MAX ? textureGroup->textures[index].get() : nullptr;
 }
 
-Material* ResourceManager::getMaterial(std::string name) const {
+Material* ResourceGroup::getMaterial(std::string name) const {
     size_t index = getMaterialIndex(name);
     return index != SIZE_MAX ? const_cast<Material*>(&materials[index]) : nullptr;
 }
 
-MeshStatic* ResourceManager::getMeshStatic(std::string name) const {
+MeshStatic* ResourceGroup::getMeshStatic(std::string name) const {
     size_t index = getMeshStaticIndex(name);
     return index != SIZE_MAX ? meshStatics[index].get() : nullptr;
 }
 
-MeshSkinned* ResourceManager::getMeshSkinned(std::string name) const {
+MeshSkinned* ResourceGroup::getMeshSkinned(std::string name) const {
     size_t index = getMeshSkinnedIndex(name);
     return index != SIZE_MAX ? meshSkinnedGroup->meshes[index].get() : nullptr;
 }

@@ -51,7 +51,7 @@ private:
     UniquePtr<Az3D::GlobalUBOManager> globalUBOManager;
 
     // Az3D resource management and model manager
-    UniquePtr<Az3D::ResourceManager> resourceManager;
+    UniquePtr<Az3D::ResourceGroup> resGroup;
 
     // Some cool game element demos
     UniquePtr<AzGame::Grass> grassSystem;

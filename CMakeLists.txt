@@ -28,7 +28,7 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/Texture.cpp
     src/Az3D/InstanceStatic.cpp
 
-    src/Az3D/ResourceManager.cpp
+    src/Az3D/ResourceGroup.cpp
     src/Az3D/ResourceImplementation/MeshStatic.cpp
     # src/Az3D/ResourceImplementation/MeshSkinned.cpp
     src/Az3D/ResourceImplementation/Material.cpp

@@ -12,7 +12,7 @@
 
 // Forward declarations
 namespace Az3D {
-struct ResourceManager;
+struct ResourceGroup;
 struct MeshStaticGroup;
 
 struct Transform;
@@ -105,7 +105,7 @@ public:
     Grass& operator=(const Grass&) = delete;
 
     // Initialize the grass system
-    bool initialize(Az3D::ResourceManager& resourceManager, const AzVulk::Device* vkDevice);
+    bool initialize(Az3D::ResourceGroup& resGroup, const AzVulk::Device* vkDevice);
 
     // Wind animation functions (if enabled)
     void updateWindAnimation(float deltaTime, bool useGPU=true);
@@ -160,10 +160,10 @@ public:
     
     // Helper functions
     void generateHeightMap(std::mt19937& generator);
-    void createGrassMesh(Az3D::ResourceManager& resManager);
-    void createGrassMesh90deg(Az3D::ResourceManager& resManager);
+    void createGrassMesh(Az3D::ResourceGroup& resGroup);
+    void createGrassMesh90deg(Az3D::ResourceGroup& resGroup);
     void generateGrassInstances(std::mt19937& generator);
-    void generateTerrainMesh(Az3D::ResourceManager& resManager);
+    void generateTerrainMesh(Az3D::ResourceGroup& resGroup);
     std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
 
     void setupComputeShaders();

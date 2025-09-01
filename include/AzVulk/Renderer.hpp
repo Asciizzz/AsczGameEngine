@@ -16,7 +16,7 @@ namespace AzVulk {
                 SwapChain* swapChain,
                 DepthManager* depthManager,
                 Az3D::GlobalUBOManager* globalUBOManager,
-                Az3D::ResourceManager* resourceManager);
+                Az3D::ResourceGroup* resGroup);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -43,7 +43,7 @@ namespace AzVulk {
         SwapChain* swapChain;
         DepthManager* depthManager;
         Az3D::GlobalUBOManager* globalUBOManager;
-        Az3D::ResourceManager* resourceManager;
+        Az3D::ResourceGroup* resGroup;
 
         // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;

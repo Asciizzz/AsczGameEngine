@@ -72,11 +72,10 @@ void Application::initComponents() {
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
 
-    resourceManager = MakeUnique<ResourceManager>(vkDevice.get());
+    resGroup = MakeUnique<ResourceGroup>(vkDevice.get());
     globalUBOManager = MakeUnique<GlobalUBOManager>(vkDevice.get());
 
     // Create convenient references to avoid arrow spam
-    auto& resManager = *resourceManager;
     auto& glbUBOManager = *globalUBOManager;    
 
 // PLAYGROUND FROM HERE
@@ -95,42 +94,42 @@ void Application::initComponents() {
     
     // Initialize grass system
     grassSystem = MakeUnique<AzGame::Grass>(grassConfig);
-    grassSystem->initialize(*resourceManager, vkDevice.get());
+    grassSystem->initialize(*resGroup, vkDevice.get());
 
 
     // Initialized world
-    newWorld = MakeUnique<AzGame::World>(resourceManager.get(), vkDevice.get());
+    newWorld = MakeUnique<AzGame::World>(resGroup.get(), vkDevice.get());
 
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
 
-    glm::vec3 boundMin = resourceManager->getMeshStatic("TerrainMesh")->nodes[0].min;
-    glm::vec3 boundMax = resourceManager->getMeshStatic("TerrainMesh")->nodes[0].max;
+    glm::vec3 boundMin = resGroup->getMeshStatic("TerrainMesh")->nodes[0].min;
+    glm::vec3 boundMax = resGroup->getMeshStatic("TerrainMesh")->nodes[0].max;
     float totalHeight = abs(boundMax.y - boundMin.y);
     boundMin.y -= totalHeight * 2.5f;
     boundMax.y += totalHeight * 12.5f;
 
     particleManager->initialize(
-        resourceManager.get(), vkDevice.get(),
+        resGroup.get(), vkDevice.get(),
         1000, // Count
         0.5f, // Radius
         0.5f, // Display radius
         boundMin, boundMax
     );
 
-    resourceManager->addMeshSkinned("Demo", "Assets/Characters/Selen.gltf");
+    resGroup->addMeshSkinned("Demo", "Assets/Characters/Selen.gltf");
 
 // PLAYGROUND END HERE 
 
     // matGroup.uploadToGPU();
-    resManager.uploadAllToGPU();
+    resGroup->uploadAllToGPU();
 
     renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get(),
-                                    globalUBOManager.get(), resourceManager.get());
+                                    globalUBOManager.get(), resGroup.get());
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
-    const auto& matLayout = resManager.getMatDescLayout();
-    const auto& texLayout = resManager.getTexDescLayout();
+    const auto& matLayout = resGroup->getMatDescLayout();
+    const auto& texLayout = resGroup->getTexDescLayout();
     const auto& glbLayout = glbUBOManager.getDescLayout();
 
     LayoutVec layouts = {glbLayout, matLayout, texLayout};
@@ -311,11 +310,10 @@ void Application::mainLoop() {
     // Create references to avoid arrow spam
     auto& winManager = *windowManager;
     auto& fpsRef = *fpsManager;
+
     auto& camRef = *camera;
 
     auto& rendererRef = *renderer;
-
-    auto& resManager = *resourceManager;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
@@ -456,7 +454,7 @@ void Application::mainLoop() {
         }
 
         if (particlePhysicsEnabled) {
-            particleManager->updatePhysic(dTime, resourceManager->getMeshStatic("TerrainMesh"), glm::mat4(1.0f));
+            particleManager->updatePhysic(dTime, resGroup->getMeshStatic("TerrainMesh"), glm::mat4(1.0f));
         };
         particleManager->updateRender();
 
@@ -475,7 +473,7 @@ void Application::mainLoop() {
             rendererRef.drawInstanceStaticGroup(*foliagePipeline, grassSystem->grassInstanceGroup);
             
             // Draw the test
-            rendererRef.drawDemoSkinned(*skinnedMeshPipeline, *resManager.getMeshSkinned("Demo"));
+            rendererRef.drawDemoSkinned(*skinnedMeshPipeline, *resGroup->getMeshSkinned("Demo"));
 
             // // Draw the particles
             rendererRef.drawInstanceStaticGroup(*staticMeshPipeline, particleManager->instanceGroup);

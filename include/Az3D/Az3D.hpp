@@ -8,4 +8,4 @@
 #include "Az3D/MeshStatic.hpp"
 #include "Az3D/InstanceStatic.hpp"
 #include "Az3D/InstanceSkinned.hpp"
-#include "Az3D/ResourceManager.hpp"
+#include "Az3D/ResourceGroup.hpp"

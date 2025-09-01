@@ -19,14 +19,14 @@ Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
 
 Grass::~Grass() {}
 
-bool Grass::initialize(ResourceManager& resourceManager, const AzVulk::Device* vkDevice) {
+bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::Device* vkDevice) {
     this->vkDevice = vkDevice;
 
-    createGrassMesh90deg(resourceManager);
+    createGrassMesh90deg(resGroup);
 
     std::mt19937 generator(std::random_device{}());
     generateHeightMap(generator);
-    generateTerrainMesh(resourceManager);
+    generateTerrainMesh(resGroup);
 
     generateGrassInstances(generator);
 
@@ -87,7 +87,7 @@ void Grass::generateHeightMap(std::mt19937& generator) {
 
 // Note: use pipeline that has no backface culling
 
-void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
+void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     // Create grass geometry - 3 intersecting quads for volume
     glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
 
@@ -137,21 +137,21 @@ void Grass::createGrassMesh(Az3D::ResourceManager& resourceManager) {
 
     // Create mesh
     SharedPtr<MeshStatic> grassMesh = MakeShared<MeshStatic>(std::move(grassVertices), std::move(grassIndices));
-    grassMeshIndex = resourceManager.addMeshStatic("GrassMesh", grassMesh);
+    grassMeshIndex = resGroup.addMeshStatic("GrassMesh", grassMesh);
 
     // Create material
     Az3D::Material grassMaterial;
     grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
     grassMaterial.setAlbedoTexture(
-        resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
+        resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
         Az3D::TAddressMode::ClampToEdge
     );
 
-    grassMaterialIndex = resourceManager.addMaterial("GrassMaterial", grassMaterial);
+    grassMaterialIndex = resGroup.addMaterial("GrassMaterial", grassMaterial);
 }
 
 
-void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
+void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     // Create grass geometry - 3 intersecting quads for volume
     glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
 
@@ -190,17 +190,17 @@ void Grass::createGrassMesh90deg(Az3D::ResourceManager& resourceManager) {
 
     // Create mesh
     SharedPtr<MeshStatic> grassMesh = MakeShared<MeshStatic>(std::move(grassVertices), std::move(grassIndices));
-    grassMeshIndex = resourceManager.addMeshStatic("GrassMesh", grassMesh);
+    grassMeshIndex = resGroup.addMeshStatic("GrassMesh", grassMesh);
 
     // Create material
     Az3D::Material grassMaterial;
     grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
     grassMaterial.setAlbedoTexture(
-        resourceManager.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
+        resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
         Az3D::TAddressMode::ClampToEdge
     );
 
-    grassMaterialIndex = resourceManager.addMaterial("GrassMaterial", grassMaterial);
+    grassMaterialIndex = resGroup.addMaterial("GrassMaterial", grassMaterial);
 }
 
 void Grass::generateGrassInstances(std::mt19937& generator) {
@@ -356,7 +356,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
     }
 }
 
-void Grass::generateTerrainMesh(ResourceManager& resManager) {
+void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
     std::vector<VertexStatic> terrainVertices;
     std::vector<uint32_t> terrainIndices;
 
@@ -411,11 +411,11 @@ void Grass::generateTerrainMesh(ResourceManager& resManager) {
     // Create terrain mesh and material
     SharedPtr<MeshStatic> terrainMesh = MakeShared<MeshStatic>(std::move(terrainVertices), std::move(terrainIndices));
 
-    terrainMeshIndex = resManager.addMeshStatic("TerrainMesh", terrainMesh, true);
+    terrainMeshIndex = resGroup.addMeshStatic("TerrainMesh", terrainMesh, true);
 
     Material terrainMaterial;
     terrainMaterial.setShadingParams(true, 0, 0.2f, 0.0f);
-    terrainMaterialIndex = resManager.addMaterial("TerrainMaterial", terrainMaterial);
+    terrainMaterialIndex = resGroup.addMaterial("TerrainMaterial", terrainMaterial);
 
     // Create terrain instance
     InstanceStatic terrainData;

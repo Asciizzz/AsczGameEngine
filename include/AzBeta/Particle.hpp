@@ -158,22 +158,22 @@ public:
         ));
     }
 
-    void initialize(Az3D::ResourceManager* resourceManager, const AzVulk::Device* vkDevice,
+    void initialize(Az3D::ResourceGroup* resGroup, const AzVulk::Device* vkDevice,
                     size_t count, float r = 0.05f, float display_r = 0.05f,
                     const glm::vec3& boundsMin = glm::vec3(-10.0f),
                     const glm::vec3& boundsMax = glm::vec3(10.0f)) {
 
         this->display_r = display_r;
 
-        size_t textureIndex = resourceManager->addTexture("Alb_Particle", "Assets/Textures/Selen.png");
+        size_t textureIndex = resGroup->addTexture("Alb_Particle", "Assets/Textures/Selen.png");
 
         Az3D::Material material;
         material.setShadingParams(true, 0, 0.0f, 0.0f);
         material.setAlbedoTexture(textureIndex);
 
-        materialIndex = resourceManager->addMaterial("Particle", material);
+        materialIndex = resGroup->addMaterial("Particle", material);
 
-        size_t meshIndex = resourceManager->addMeshStatic("Particle", "Assets/Shapes/Icosphere.obj", false);
+        size_t meshIndex = resGroup->addMeshStatic("Particle", "Assets/Shapes/Icosphere.obj", false);
 
         instanceGroup.initVkDevice(vkDevice);
         instanceGroup.meshIndex = meshIndex;

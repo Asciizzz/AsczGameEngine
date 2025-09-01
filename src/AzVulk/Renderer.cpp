@@ -11,12 +11,12 @@ Renderer::Renderer (Device* vkDevice,
                     SwapChain* swapChain,
                     DepthManager* depthManager,
                     GlobalUBOManager* globalUBOManager,
-                    ResourceManager* resourceManager) :
+                    ResourceGroup* resGroup) :
 vkDevice(vkDevice),
 swapChain(swapChain),
 depthManager(depthManager),
 globalUBOManager(globalUBOManager),
-resourceManager(resourceManager) {
+resGroup(resGroup) {
     createCommandBuffers();
     createSyncObjects();
 }
@@ -153,8 +153,8 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
     uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
     size_t meshIndex = instanceGroup.meshIndex;
 
-    // const Az3D::MeshStaticGroup* meshStaticGroup = resourceManager->meshStaticGroup.get();
-    const auto& mesh = resourceManager->meshStatics[meshIndex];
+    // const Az3D::MeshStaticGroup* meshStaticGroup = resGroup->meshStaticGroup.get();
+    const auto& mesh = resGroup->meshStatics[meshIndex];
     uint64_t indexCount = mesh->indices.size();
 
     if (instanceCount == 0 || meshIndex == SIZE_MAX || indexCount == 0) return;
@@ -163,8 +163,8 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
 
     // Bind descriptor sets once
     VkDescriptorSet globalSet = globalUBOManager->getDescSet();
-    VkDescriptorSet materialSet = resourceManager->matDescSet.get();
-    VkDescriptorSet textureSet = resourceManager->textureGroup->getDescSet();
+    VkDescriptorSet materialSet = resGroup->matDescSet.get();
+    VkDescriptorSet textureSet = resGroup->textureGroup->getDescSet();
 
     std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -172,8 +172,8 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
 
     instanceGroup.updateBufferData();
 
-    VkBuffer vertexBuffer = resourceManager->vstaticBuffers[meshIndex]->buffer;
-    VkBuffer indexBuffer = resourceManager->istaticBuffers[meshIndex]->buffer;
+    VkBuffer vertexBuffer = resGroup->vstaticBuffers[meshIndex]->buffer;
+    VkBuffer indexBuffer = resGroup->istaticBuffers[meshIndex]->buffer;
 
     VkBuffer instanceBuffer = instanceGroup.bufferData.buffer;
 
@@ -196,8 +196,8 @@ void Renderer::drawDemoSkinned(RasterPipeline& rasterPipeline, const Az3D::MeshS
 
     // Bind descriptor sets
     VkDescriptorSet globalSet = globalUBOManager->getDescSet();
-    VkDescriptorSet materialSet = resourceManager->matDescSet.get();
-    VkDescriptorSet textureSet = resourceManager->textureGroup->getDescSet();
+    VkDescriptorSet materialSet = resGroup->matDescSet.get();
+    VkDescriptorSet textureSet = resGroup->textureGroup->getDescSet();
 
     std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -221,9 +221,9 @@ void Renderer::drawInstanceSkinnedGroup(RasterPipeline& rasterPipeline, Az3D::In
 
     // if (instanceCount == 0 || meshIndex == SIZE_MAX) return;
 
-    // const Az3D::MaterialGroup* matGroup = resourceManager->materialGroup.get();
-    // const Az3D::TextureGroup* texGroup = resourceManager->textureGroup.get();
-    // const Az3D::MeshSkinnedGroup* meshSkinnedGroup = resourceManager->meshSkinnedGroup.get();
+    // const Az3D::MaterialGroup* matGroup = resGroup->materialGroup.get();
+    // const Az3D::TextureGroup* texGroup = resGroup->textureGroup.get();
+    // const Az3D::MeshSkinnedGroup* meshSkinnedGroup = resGroup->meshSkinnedGroup.get();
 
     // VkDescriptorSet globalSet = globalUBOManager->getDescSet();
 
