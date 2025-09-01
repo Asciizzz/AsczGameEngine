@@ -71,12 +71,10 @@ void Application::initComponents() {
     depthManager = MakeUnique<DepthManager>(vkDevice.get());
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get());
 
     resGroup = MakeUnique<ResourceGroup>(vkDevice.get());
     glbUBOManager = MakeUnique<GlbUBOManager>(vkDevice.get());
-
-    // Create convenient references to avoid arrow spam
-    auto& glbUBO = *glbUBOManager;    
 
 // PLAYGROUND FROM HERE
 
@@ -124,20 +122,15 @@ void Application::initComponents() {
     // Testing if reallocation going to work smoothly
     resGroup->uploadAllToGPU();
 
-    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get());
-
-    using LayoutVec = std::vector<VkDescriptorSetLayout>;
     const auto& matLayout = resGroup->getMatDescLayout();
     const auto& texLayout = resGroup->getTexDescLayout();
-    const auto& glbLayout = glbUBO.getDescLayout();
-
-    LayoutVec layouts = {glbLayout, matLayout, texLayout};
+    const auto& glbLayout = glbUBOManager->getDescLayout();
 
     RasterCfg staticMeshConfig;
     staticMeshConfig.renderPass = renderPass;
     staticMeshConfig.setMSAA(msaaManager->msaaSamples);
-    staticMeshConfig.setLayouts = layouts;
     staticMeshConfig.vertexInputType = RasterCfg::InputType::Static;
+    staticMeshConfig.setLayouts = {glbLayout, matLayout, texLayout};
     staticMeshConfig.vertPath = "Shaders/Rasterize/MeshStatic.vert.spv";
     staticMeshConfig.fragPath = "Shaders/Rasterize/MeshStatic.frag.spv";
 
@@ -147,8 +140,8 @@ void Application::initComponents() {
     RasterCfg skinnedMeshConfig;
     skinnedMeshConfig.renderPass = renderPass;
     skinnedMeshConfig.setMSAA(msaaManager->msaaSamples);
-    skinnedMeshConfig.setLayouts = layouts;
     skinnedMeshConfig.vertexInputType = RasterCfg::InputType::Skinned;
+    skinnedMeshConfig.setLayouts = {glbLayout, matLayout, texLayout};
     skinnedMeshConfig.vertPath = "Shaders/Rasterize/MeshSkinned.vert.spv";
     skinnedMeshConfig.fragPath = "Shaders/Rasterize/MeshSkinned.frag.spv";
     // Debugging
@@ -161,9 +154,8 @@ void Application::initComponents() {
     RasterCfg skyConfig;
     skyConfig.renderPass = renderPass;
     skyConfig.setMSAA(msaaManager->msaaSamples);
-
-    skyConfig.setLayouts = {glbLayout};
     skyConfig.vertexInputType = RasterCfg::InputType::None;
+    skyConfig.setLayouts = {glbLayout};
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
 
@@ -180,7 +172,8 @@ void Application::initComponents() {
     RasterCfg foliageConfig;
     foliageConfig.renderPass = renderPass;
     foliageConfig.setMSAA(msaaManager->msaaSamples);
-    foliageConfig.setLayouts = layouts;
+    foliageConfig.vertexInputType = RasterCfg::InputType::Static;
+    foliageConfig.setLayouts = {glbLayout, matLayout, texLayout};
     foliageConfig.vertPath = "Shaders/Rasterize/MeshStatic.vert.spv";
     foliageConfig.fragPath = "Shaders/Rasterize/MeshStatic.frag.spv";
 
