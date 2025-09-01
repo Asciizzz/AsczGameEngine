@@ -467,14 +467,14 @@ void Application::mainLoop() {
             // First: render sky background with dedicated pipeline
             rendererRef.drawSky(skyPipeline.get());
 
-            // // Draw grass system
+            // Draw grass system
             rendererRef.drawInstanceStaticGroup(resGroup.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
-            rendererRef.drawInstanceStaticGroup(resGroup.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
+            // rendererRef.drawInstanceStaticGroup(resGroup.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
 
             // Draw the test
             rendererRef.drawDemoSkinned(resGroup.get(), skinnedMeshPipeline.get(), *resGroup->getMeshSkinned("Demo"));
 
-            // // Draw the particles
+            // Draw the particles
             rendererRef.drawInstanceStaticGroup(resGroup.get(), staticMeshPipeline.get(), &particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
