@@ -27,14 +27,11 @@ public:
 
 
     const VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout.get(); }
-    // const VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout.get(); }
+    const VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout.get(); }
 
     const VkDescriptorSet getMatDescSet() const { return matDescSet.get(); }
-    // const VkDescriptorSet getTexDescSet() const { return texDescSet.get(); }
-    
-    // For the time being use this outdated version before integration complete
-    const VkDescriptorSetLayout getTexDescLayout() const { return textureGroup->getDescLayout(); }
-    const VkDescriptorSet getTexDescSet() const { return textureGroup->getDescSet(); }
+    const VkDescriptorSet getTexDescSet() const { return texDescSet.get(); }
+
 
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
@@ -80,6 +77,16 @@ public:
 
     // Texture methods
     SharedPtr<Texture> createTexture(std::string imagePath, uint32_t mipLevels = 0);
+    void createSinglePixel(uint8_t r, uint8_t g, uint8_t b);
+    void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format,
+                    VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
+                    VkImage& image, VkDeviceMemory& imageMemory);
+    void createImageView(VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView);
+    void transitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout,
+                                VkImageLayout newLayout, uint32_t mipLevels);
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+    void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+
 
     // String-to-index maps
     UnorderedMap<std::string, size_t> textureNameToIndex;
@@ -88,7 +95,6 @@ public:
     UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
 
     UniquePtr<MeshSkinnedGroup> meshSkinnedGroup;
-    UniquePtr<TextureGroup> textureGroup;
 };
 
 } // namespace Az3D

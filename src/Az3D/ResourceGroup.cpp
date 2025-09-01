@@ -9,7 +9,8 @@ namespace Az3D {
 ResourceGroup::ResourceGroup(Device* vkDevice):
 vkDevice(vkDevice) {
     meshSkinnedGroup = MakeUnique<MeshSkinnedGroup>(vkDevice);
-    textureGroup = MakeUnique<TextureGroup>(vkDevice);
+
+    createSinglePixel(255, 255, 255);
 }
 
 void ResourceGroup::cleanup() {
@@ -41,14 +42,22 @@ void ResourceGroup::uploadAllToGPU() {
     createMaterialBuffer();
     createMaterialDescSet();
 
-    textureGroup->createDescriptorInfo();
-    
+    createSamplers();
+    createTextureDescSet();
+
     meshSkinnedGroup->createDeviceBuffers();
 }
 
 
 size_t ResourceGroup::addTexture(std::string name, std::string imagePath, uint32_t mipLevels) {
-    size_t index = textureGroup->addTexture(imagePath, mipLevels);
+    SharedPtr<Texture> texture = createTexture(imagePath, mipLevels);
+
+    // If null return the default 0 index
+    if (!texture) return 0;
+
+    size_t index = textures.size();
+    textures.push_back(texture);
+
     textureNameToIndex[name] = index;
     return index;
 }
@@ -117,7 +126,7 @@ size_t ResourceGroup::getMeshSkinnedIndex(std::string name) const {
 
 Texture* ResourceGroup::getTexture(std::string name) const {
     size_t index = getTextureIndex(name);
-    return index != SIZE_MAX ? textureGroup->textures[index].get() : nullptr;
+    return index != SIZE_MAX ? textures[index].get() : nullptr;
 }
 
 Material* ResourceGroup::getMaterial(std::string name) const {
