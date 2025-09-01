@@ -9,10 +9,10 @@ struct ComputePipelineConfig {
     std::string compPath;
 };
 
-class ComputePipeline : public BasePipeline {
+class PipelineCompute : public PipelineBase {
 public:
-    ComputePipeline(VkDevice lDevice, ComputePipelineConfig cfg)
-        : BasePipeline(lDevice), cfg(std::move(cfg)) {}
+    PipelineCompute(VkDevice lDevice, ComputePipelineConfig cfg)
+        : PipelineBase(lDevice), cfg(std::move(cfg)) {}
 
     void create() override;
     void recreate() override { cleanup(); create(); }

@@ -6,10 +6,10 @@
 
 namespace AzVulk {
 
-class BasePipeline {
+class PipelineBase {
 public:
-    explicit BasePipeline(VkDevice lDevice) : lDevice(lDevice) {}
-    virtual ~BasePipeline() { cleanup(); }
+    explicit PipelineBase(VkDevice lDevice) : lDevice(lDevice) {}
+    virtual ~PipelineBase() { cleanup(); }
 
     // Lifecycle
     virtual void create() = 0;

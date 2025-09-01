@@ -76,7 +76,7 @@ void Renderer::createSyncObjects() {
 }
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
-uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
+uint32_t Renderer::beginFrame(PipelineRaster& gPipeline, GlobalUBO& globalUBO) {
     vkWaitForFences(vkDevice->lDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex = UINT32_MAX;
@@ -146,7 +146,7 @@ uint32_t Renderer::beginFrame(RasterPipeline& gPipeline, GlobalUBO& globalUBO) {
 
 
 void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup,
-                                        RasterPipeline* rasterPipeline,
+                                        PipelineRaster* rasterPipeline,
                                         Az3D::InstanceStaticGroup* instanceGroup) {
     uint32_t instanceCount = static_cast<uint32_t>(instanceGroup->datas.size());
     size_t meshIndex = instanceGroup->meshIndex;
@@ -186,7 +186,7 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup,
     vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
 }
 
-void Renderer::drawDemoSkinned(const ResourceGroup* resGroup, RasterPipeline* rasterPipeline, const Az3D::MeshSkinned& meshSkinned) {
+void Renderer::drawDemoSkinned(const ResourceGroup* resGroup, PipelineRaster* rasterPipeline, const Az3D::MeshSkinned& meshSkinned) {
     // uint64_t indexCount = meshSkinned.indices.size();
     // if (indexCount == 0) return;
 
@@ -213,7 +213,7 @@ void Renderer::drawDemoSkinned(const ResourceGroup* resGroup, RasterPipeline* ra
     // vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, 1, 0, 0, 0);
 }
 
-void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, RasterPipeline* rasterPipeline, Az3D::InstanceSkinnedGroup* instanceGroup) {
+void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, PipelineRaster* rasterPipeline, Az3D::InstanceSkinnedGroup* instanceGroup) {
     // uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
     // size_t meshIndex = instanceGroup.meshIndex;
 
@@ -260,7 +260,7 @@ void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, RasterPip
 
 
 // Sky rendering using dedicated sky pipeline
-void Renderer::drawSky(const RasterPipeline* rasterPipeline) {
+void Renderer::drawSky(const PipelineRaster* rasterPipeline) {
     // Bind sky pipeline
     rasterPipeline->bind(commandBuffers[currentFrame]);
 

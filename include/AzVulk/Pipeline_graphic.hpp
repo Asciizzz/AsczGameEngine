@@ -1,4 +1,4 @@
-// RasterPipeline.hpp
+// PipelineRaster.hpp
 #pragma once
 #include "AzVulk/Pipeline_base.hpp"
 
@@ -48,10 +48,10 @@ struct RasterCfg {
     std::string fragPath;
 };
 
-class RasterPipeline : public BasePipeline {
+class PipelineRaster : public PipelineBase {
 public:
-    RasterPipeline(VkDevice lDevice, RasterCfg cfg)
-        : BasePipeline(lDevice), cfg(std::move(cfg)) {}
+    PipelineRaster(VkDevice lDevice, RasterCfg cfg)
+        : PipelineBase(lDevice), cfg(std::move(cfg)) {}
 
     void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
     void setMsaa(VkSampleCountFlagBits s) { cfg.msaaSamples = s; }

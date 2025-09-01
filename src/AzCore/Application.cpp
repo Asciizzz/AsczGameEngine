@@ -141,7 +141,7 @@ void Application::initComponents() {
     staticMeshConfig.vertPath = "Shaders/Rasterize/MeshStatic.vert.spv";
     staticMeshConfig.fragPath = "Shaders/Rasterize/MeshStatic.frag.spv";
 
-    staticMeshPipeline = MakeUnique<RasterPipeline>(lDevice, staticMeshConfig);
+    staticMeshPipeline = MakeUnique<PipelineRaster>(lDevice, staticMeshConfig);
     staticMeshPipeline->create();
 
     RasterCfg skinnedMeshConfig;
@@ -155,7 +155,7 @@ void Application::initComponents() {
     skinnedMeshConfig.cullMode = VK_CULL_MODE_NONE;
     // skinnedMeshConfig.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
-    skinnedMeshPipeline = MakeUnique<RasterPipeline>(lDevice, skinnedMeshConfig);
+    skinnedMeshPipeline = MakeUnique<PipelineRaster>(lDevice, skinnedMeshConfig);
     skinnedMeshPipeline->create();
 
     RasterCfg skyConfig;
@@ -173,7 +173,7 @@ void Application::initComponents() {
     skyConfig.depthCompareOp = VK_COMPARE_OP_ALWAYS;  // Always pass depth test
     skyConfig.blendEnable = VK_FALSE;                 // No blending needed
 
-    skyPipeline = MakeUnique<RasterPipeline>(lDevice, skyConfig);
+    skyPipeline = MakeUnique<PipelineRaster>(lDevice, skyConfig);
     skyPipeline->create();
 
 
@@ -187,7 +187,7 @@ void Application::initComponents() {
     // No backface culling
     foliageConfig.cullMode = VK_CULL_MODE_NONE;
 
-    foliagePipeline = MakeUnique<RasterPipeline>(lDevice, foliageConfig);
+    foliagePipeline = MakeUnique<PipelineRaster>(lDevice, foliageConfig);
     foliagePipeline->create();
 }
 

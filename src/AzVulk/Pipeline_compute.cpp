@@ -1,10 +1,10 @@
-// ComputePipeline.cpp
+// PipelineCompute.cpp
 #include "AzVulk/Pipeline_compute.hpp"
 #include <stdexcept>
 
 using namespace AzVulk;
 
-void ComputePipeline::create() {
+void PipelineCompute::create() {
     auto code = readFile(cfg.compPath);
     VkShaderModule mod = createModule(code);
 

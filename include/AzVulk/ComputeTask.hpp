@@ -99,7 +99,7 @@ public:
         config.setLayouts = { descriptor.setLayout };
         config.compPath   = shaderPath;
 
-        pipeline = std::make_unique<ComputePipeline>(vkDevice->lDevice, config);
+        pipeline = std::make_unique<PipelineCompute>(vkDevice->lDevice, config);
         pipeline->create();
     }
 
@@ -336,7 +336,7 @@ private:
 
     VkFence lastFence{ VK_NULL_HANDLE };
 
-    std::unique_ptr<ComputePipeline> pipeline;
+    std::unique_ptr<PipelineCompute> pipeline;
 };
 
 }

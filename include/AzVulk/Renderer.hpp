@@ -24,15 +24,15 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         // Introduction
-        uint32_t beginFrame(RasterPipeline& pipeline, Az3D::GlobalUBO& globalUBO);
+        uint32_t beginFrame(PipelineRaster& pipeline, Az3D::GlobalUBO& globalUBO);
 
         // Body
-        void drawInstanceStaticGroup(const Az3D::ResourceGroup* resGroup, RasterPipeline* pipeline, Az3D::InstanceStaticGroup* instanceGroup);
-        void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, RasterPipeline* pipeline, Az3D::InstanceSkinnedGroup* instanceGroup);
+        void drawInstanceStaticGroup(const Az3D::ResourceGroup* resGroup, PipelineRaster* pipeline, Az3D::InstanceStaticGroup* instanceGroup);
+        void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, PipelineRaster* pipeline, Az3D::InstanceSkinnedGroup* instanceGroup);
 
-        void drawDemoSkinned(const Az3D::ResourceGroup* resGroup, RasterPipeline* pipeline, const Az3D::MeshSkinned& meshSkinned);
+        void drawDemoSkinned(const Az3D::ResourceGroup* resGroup, PipelineRaster* pipeline, const Az3D::MeshSkinned& meshSkinned);
 
-        void drawSky(const RasterPipeline* skyPipeline);
+        void drawSky(const PipelineRaster* skyPipeline);
 
         // Conclusion
         void endFrame(uint32_t imageIndex);

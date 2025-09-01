@@ -1,4 +1,4 @@
-// RasterPipeline.cpp
+// PipelineRaster.cpp
 #include "AzVulk/Pipeline_graphic.hpp"
 #include "Az3D/Az3D.hpp"
 
@@ -6,7 +6,7 @@
 
 using namespace AzVulk;
 
-void RasterPipeline::create() {
+void PipelineRaster::create() {
     // 1. Shader modules
     auto vertCode = readFile(cfg.vertPath);
     auto fragCode = readFile(cfg.fragPath);
