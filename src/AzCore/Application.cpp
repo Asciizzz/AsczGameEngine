@@ -111,7 +111,7 @@ void Application::initComponents() {
 
     particleManager->initialize(
         resGroup.get(), vkDevice.get(),
-        1000, // Count
+        5000, // Count
         0.5f, // Radius
         0.5f, // Display radius
         boundMin, boundMax
