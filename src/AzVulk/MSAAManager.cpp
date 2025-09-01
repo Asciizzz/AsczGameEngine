@@ -38,6 +38,8 @@ void MSAAManager::createColorResources(uint32_t width, uint32_t height, VkFormat
                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, colorImage, colorImageMemory);
     colorImageView = createImageView(colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    hasMSAA = msaaSamples > VK_SAMPLE_COUNT_1_BIT;
 }
 
 void MSAAManager::cleanup() {

@@ -5,34 +5,30 @@
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_include.hpp"
 
+#include "Az3D/GlobalUBO.hpp"
 #include "Az3D/ResourceGroup.hpp"
 #include "Az3D/InstanceStatic.hpp"
 #include "Az3D/InstanceSkinned.hpp"
 
-#include "Az3D/GlobalUBO.hpp"
 
 namespace AzVulk {
     class DepthManager; // Forward declaration
     class Renderer {
     public:
-        Renderer(Device* vkDevice,
-                SwapChain* swapChain,
-                Az3D::GlbUBOManager* glbUBOManager);
+        Renderer(Device* vkDevice, SwapChain* swapChain);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
         // Introduction
-        uint32_t beginFrame(PipelineRaster& pipeline, Az3D::GlobalUBO& globalUBO);
+        uint32_t beginFrame(VkRenderPass renderPass, bool hasMSAA);
 
         // Body
-        void drawInstanceStaticGroup(const Az3D::ResourceGroup* resGroup, PipelineRaster* pipeline, Az3D::InstanceStaticGroup* instanceGroup);
-        void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, PipelineRaster* pipeline, Az3D::InstanceSkinnedGroup* instanceGroup);
+        void drawInstanceStaticGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::InstanceStaticGroup* instanceGroup);
+        void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::InstanceSkinnedGroup* instanceGroup);
 
-        void drawDemoSkinned(const Az3D::ResourceGroup* resGroup, PipelineRaster* pipeline, const Az3D::MeshSkinned& meshSkinned);
-
-        void drawSky(const PipelineRaster* skyPipeline);
+        void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline);
 
         // Conclusion
         void endFrame(uint32_t imageIndex);
@@ -42,7 +38,6 @@ namespace AzVulk {
         // Component references
         Device* vkDevice;
         SwapChain* swapChain;
-        Az3D::GlbUBOManager* glbUBOManager;
 
         // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;

@@ -20,6 +20,7 @@ namespace AzVulk {
         
         const Device* vkDevice;
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+        bool hasMSAA = false;
 
         VkImage colorImage = VK_NULL_HANDLE;
         VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;

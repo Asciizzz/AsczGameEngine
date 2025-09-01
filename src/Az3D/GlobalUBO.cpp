@@ -80,4 +80,6 @@ void GlbUBOManager::updateUBO(const Camera& camera) {
     ubo.cameraForward = glm::vec4(camera.forward, camera.aspectRatio);
     ubo.cameraRight   = glm::vec4(camera.right, camera.nearPlane);
     ubo.cameraUp      = glm::vec4(camera.up, camera.farPlane);
+
+    memcpy(bufferData.mapped, &ubo, sizeof(ubo));
 }

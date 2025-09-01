@@ -46,6 +46,9 @@ bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::Device* vkDevice) 
         terrainInstanceGroup.addInstance(data);
     }
 
+    // One time update since terrain does not move
+    terrainInstanceGroup.updateBufferData();
+
     return true;
 }
 

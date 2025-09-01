@@ -124,7 +124,7 @@ void Application::initComponents() {
     // matGroup.uploadToGPU();
     resGroup->uploadAllToGPU();
 
-    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), glbUBOManager.get());
+    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get());
 
     using LayoutVec = std::vector<VkDescriptorSetLayout>;
     const auto& matLayout = resGroup->getMatDescLayout();
@@ -462,20 +462,22 @@ void Application::mainLoop() {
         // Use the new explicit rendering interface
         glbUBOManager->updateUBO(camRef);
 
-        uint32_t imageIndex = rendererRef.beginFrame(*staticMeshPipeline, glbUBOManager->ubo);
+        uint32_t imageIndex = rendererRef.beginFrame(mainRenderPass->get(), msaaManager->hasMSAA);
         if (imageIndex != UINT32_MAX) {
             // First: render sky background with dedicated pipeline
-            rendererRef.drawSky(skyPipeline.get());
+            rendererRef.drawSky(glbUBOManager.get(), skyPipeline.get());
 
             // Draw grass system
-            rendererRef.drawInstanceStaticGroup(resGroup.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
+
+            // No need for per frame terrain update since it never moves
+            rendererRef.drawInstanceStaticGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
+
+            // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
             // rendererRef.drawInstanceStaticGroup(resGroup.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
 
-            // Draw the test
-            rendererRef.drawDemoSkinned(resGroup.get(), skinnedMeshPipeline.get(), *resGroup->getMeshSkinned("Demo"));
-
             // Draw the particles
-            rendererRef.drawInstanceStaticGroup(resGroup.get(), staticMeshPipeline.get(), &particleManager->instanceGroup);
+            particleManager->instanceGroup.updateBufferData();
+            rendererRef.drawInstanceStaticGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };
