@@ -26,7 +26,8 @@ public:
         }
     }
 
-    virtual void bind(VkCommandBuffer cmd) const = 0;
+    virtual void bindCmd(VkCommandBuffer cmd) const = 0;
+    virtual void bindSets(VkCommandBuffer cmd, VkDescriptorSet* sets, uint32_t count) const = 0;
 
     VkDevice lDevice = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;

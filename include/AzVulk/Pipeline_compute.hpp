@@ -16,8 +16,12 @@ public:
 
     void create() override;
     void recreate() override { cleanup(); create(); }
-    void bind(VkCommandBuffer cmd) const override {
+    void bindCmd(VkCommandBuffer cmd) const override {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    }
+
+    void bindSets(VkCommandBuffer cmd, VkDescriptorSet* sets, uint32_t count) const override {
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, layout, 0, count, sets, 0, nullptr);
     }
 
     ComputePipelineConfig cfg;

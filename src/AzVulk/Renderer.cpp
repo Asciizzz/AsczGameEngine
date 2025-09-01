@@ -145,20 +145,19 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup, const GlbU
     size_t meshIndex = instanceGroup->meshIndex;
 
     const auto& mesh = resGroup->meshStatics[meshIndex];
-    uint64_t indexCount = resGroup->getStaticIndexCount(meshIndex);
+    uint32_t indexCount = resGroup->getStaticIndexCount(meshIndex);
 
     if (instanceCount == 0 || meshIndex == SIZE_MAX || indexCount == 0) return;
 
-    rPipeline->bind(commandBuffers[currentFrame]);
+    rPipeline->bindCmd(commandBuffers[currentFrame]);
 
     // Bind descriptor sets once
     VkDescriptorSet globalSet = glbUBO->getDescSet();
     VkDescriptorSet materialSet = resGroup->getMatDescSet();
     VkDescriptorSet textureSet = resGroup->getTexDescSet();
 
-    std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
-    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            rPipeline->layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
+    VkDescriptorSet sets[] = {globalSet, materialSet, textureSet};
+    rPipeline->bindSets(commandBuffers[currentFrame], sets, 3);
 
     VkBuffer vertexBuffer = resGroup->getStaticVertexBuffer(meshIndex);
     VkBuffer indexBuffer = resGroup->getStaticIndexBuffer(meshIndex);
@@ -168,8 +167,6 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup, const GlbU
     VkBuffer buffers[] = { vertexBuffer, instanceBuffer };
     VkDeviceSize offsets[] = { 0, 0 };
     vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, buffers, offsets);
-
-    // Bind index buffer
     vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
     // Draw all instances
@@ -208,12 +205,11 @@ void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, const Glb
 // Sky rendering using dedicated sky pipeline
 void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) {
     // Bind sky pipeline
-    skyPipeline->bind(commandBuffers[currentFrame]);
+    skyPipeline->bindCmd(commandBuffers[currentFrame]);
 
     // Bind only the global descriptor set (set 0) for sky
     VkDescriptorSet globalSet = glbUBO->getDescSet();
-    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            skyPipeline->layout, 0, 1, &globalSet, 0, nullptr);
+    skyPipeline->bindSets(commandBuffers[currentFrame], &globalSet, 1);
 
     // Draw fullscreen triangle (3 vertices, no input)
     vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
