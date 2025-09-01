@@ -78,7 +78,6 @@ void Application::initComponents() {
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
     auto& texGroup = *resManager.textureGroup;
-    auto& meshStaticGroup = *resManager.meshStaticGroup;
     auto& matGroup = *resManager.materialGroup;
     auto& glbUBOManager = *globalUBOManager;    
 
@@ -321,7 +320,6 @@ void Application::mainLoop() {
     auto& rendererRef = *renderer;
 
     auto& resManager = *resourceManager;
-    auto& meshStaticGroup = *resManager.meshStaticGroup;
     auto& texGroup = *resManager.textureGroup;
     auto& matGroup = *resManager.materialGroup;
 

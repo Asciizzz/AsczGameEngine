@@ -26,11 +26,15 @@ public:
     size_t addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh);
     size_t addMeshSkinned(std::string name, std::string filePath);
 
-    // Descriptors creation
     AzVulk::Device* vkDevice;
 
     AzVulk::DescLayout matDescLayout;
     AzVulk::DescPool matDescPool;
+
+    SharedPtrVec<MeshStatic> meshStatics;
+    SharedPtrVec<AzVulk::BufferData> vstaticBuffers;
+    SharedPtrVec<AzVulk::BufferData> istaticBuffers;
+    void createMeshStaticBuffers();
 
     void uploadAllToGPU();
 
@@ -56,7 +60,6 @@ public:
 
     UniquePtr<TextureGroup> textureGroup;
     UniquePtr<MaterialGroup> materialGroup;
-    UniquePtr<MeshStaticGroup> meshStaticGroup;
     UniquePtr<MeshSkinnedGroup> meshSkinnedGroup;
 };
 

@@ -153,8 +153,8 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
     uint32_t instanceCount = static_cast<uint32_t>(instanceGroup.datas.size());
     size_t meshIndex = instanceGroup.meshIndex;
 
-    const Az3D::MeshStaticGroup* meshStaticGroup = resourceManager->meshStaticGroup.get();
-    const auto& mesh = meshStaticGroup->meshes[meshIndex];
+    // const Az3D::MeshStaticGroup* meshStaticGroup = resourceManager->meshStaticGroup.get();
+    const auto& mesh = resourceManager->meshStatics[meshIndex];
     uint64_t indexCount = mesh->indices.size();
 
     if (instanceCount == 0 || meshIndex == SIZE_MAX || indexCount == 0) return;
@@ -172,8 +172,8 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
 
     instanceGroup.updateBufferData();
 
-    VkBuffer vertexBuffer = mesh->vertexBufferData.buffer;
-    VkBuffer indexBuffer = mesh->indexBufferData.buffer;
+    VkBuffer vertexBuffer = resourceManager->vstaticBuffers[meshIndex]->buffer;
+    VkBuffer indexBuffer = resourceManager->istaticBuffers[meshIndex]->buffer;
 
     VkBuffer instanceBuffer = instanceGroup.bufferData.buffer;
 

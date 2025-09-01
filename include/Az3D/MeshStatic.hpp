@@ -53,11 +53,6 @@ struct MeshStatic {
     static SharedPtr<MeshStatic> loadFromOBJ(const std::string& filePath);
     static SharedPtr<MeshStatic> loadFromGLTF(const std::string& filePath);
 
-    // Mesh's device buffer data
-    AzVulk::BufferData vertexBufferData;
-    AzVulk::BufferData indexBufferData;
-    void createDeviceBuffer(const AzVulk::Device* vkDevice);
-
     // BVH data structures
     glm::vec3 meshMin = glm::vec3(FLT_MAX);
     glm::vec3 meshMax = glm::vec3(-FLT_MAX);
@@ -81,22 +76,6 @@ struct MeshStatic {
     static glm::vec3 rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
     static float sphereIntersectBox(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& boxMin, const glm::vec3& boxMax);
     static glm::vec3 sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
-};
-
-
-class MeshStaticGroup {
-public:
-    MeshStaticGroup(const AzVulk::Device* vkDevice);
-    MeshStaticGroup(const MeshStaticGroup&) = delete;
-    MeshStaticGroup& operator=(const MeshStaticGroup&) = delete;
-
-    size_t addMeshStatic(SharedPtr<MeshStatic> mesh);
-    size_t addMeshStatic(std::vector<VertexStatic>& vertices, std::vector<uint32_t>& indices);
-
-    SharedPtrVec<MeshStatic> meshes;
-
-    const AzVulk::Device* vkDevice;
-    void createDeviceBuffers();
 };
 
 }

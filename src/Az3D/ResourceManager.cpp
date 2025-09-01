@@ -10,14 +10,14 @@ ResourceManager::ResourceManager(Device* vkDevice):
 vkDevice(vkDevice) {
     textureGroup = MakeUnique<TextureGroup>(vkDevice);
     materialGroup = MakeUnique<MaterialGroup>(vkDevice);
-    meshStaticGroup = MakeUnique<MeshStaticGroup>(vkDevice);
     meshSkinnedGroup = MakeUnique<MeshSkinnedGroup>(vkDevice);
 }
 
 void ResourceManager::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
-    
-    meshStaticGroup->createDeviceBuffers();
+
+    createMeshStaticBuffers();
+
     meshSkinnedGroup->createDeviceBuffers();
 
     matDescPool.create(lDevice, { {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
@@ -50,7 +50,9 @@ size_t ResourceManager::addMaterial(std::string name, const Material& material) 
 size_t ResourceManager::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
     if (hasBVH) mesh->createBVH();
 
-    size_t index = meshStaticGroup->addMeshStatic(mesh);
+    size_t index = meshStatics.size();
+    meshStatics.push_back(mesh);
+
     meshStaticNameToIndex[name] = index;
     return index;
 }
@@ -65,7 +67,9 @@ size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bo
 
     if (hasBVH) newMesh->createBVH();
 
-    size_t index = meshStaticGroup->addMeshStatic(newMesh);
+    size_t index = meshStatics.size();
+    meshStatics.push_back(newMesh);
+
     meshStaticNameToIndex[name] = index;
     return index;
 }
@@ -109,7 +113,7 @@ Material* ResourceManager::getMaterial(std::string name) const {
 
 MeshStatic* ResourceManager::getMeshStatic(std::string name) const {
     size_t index = getMeshStaticIndex(name);
-    return index != SIZE_MAX ? meshStaticGroup->meshes[index].get() : nullptr;
+    return index != SIZE_MAX ? meshStatics[index].get() : nullptr;
 }
 
 MeshSkinned* ResourceManager::getMeshSkinned(std::string name) const {
