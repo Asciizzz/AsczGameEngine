@@ -16,9 +16,9 @@ struct TinyTexture {
     ~TinyTexture() { free(); }
 };
 
-struct TinyRig {
+struct TinyModel {
     MeshSkinned mesh;
-    RigSkeleton skeleton;
+    RigSkeleton rig;
 };
 
 
@@ -32,7 +32,7 @@ public:
     static MeshStatic loadMeshStaticFromGLTF(const std::string& filePath);
 
     // MeshSkinned loading functions
-    static TinyRig loadMeshSkinned(const std::string& filePath, bool loadSkeleton=true);
+    static TinyModel loadMeshSkinned(const std::string& filePath, bool loadRig=true);
 };
 
 } // namespace Az3D

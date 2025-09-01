@@ -51,7 +51,7 @@ void ResourceGroup::uploadAllToGPU() {
 
     createMeshStaticBuffers();
     createMeshSkinnedBuffers();
-    createSkeletonBuffers();
+    createRigBuffers();
 
 
     createMaterialBuffer();
@@ -62,7 +62,7 @@ void ResourceGroup::uploadAllToGPU() {
     createTextureDescSet();
 
     printf("Checkpoint\n");
-    createSkeletonDescSets();
+    createRigDescSets();
 }
 
 
@@ -132,7 +132,7 @@ size_t ResourceGroup::addMeshSkinned(std::string name, SharedPtr<MeshSkinned> me
 size_t ResourceGroup::addMeshSkinned(std::string name, std::string filePath) {
     std::string uniqueName = getUniqueName(name, meshSkinnedNameCounts);
     
-    TinyRig rig = TinyLoader::loadMeshSkinned(filePath, false); // Don't load skeleton for now
+    TinyModel rig = TinyLoader::loadMeshSkinned(filePath, false);
     
     size_t index = meshSkinneds.size();
     meshSkinneds.push_back(MakeShared<MeshSkinned>(std::move(rig.mesh)));
@@ -141,33 +141,44 @@ size_t ResourceGroup::addMeshSkinned(std::string name, std::string filePath) {
     return index;
 }
 
-size_t ResourceGroup::addSkeleton(std::string name, SharedPtr<RigSkeleton> skeleton) {
-    std::string uniqueName = getUniqueName(name, skeletonNameCounts);
-    
-    size_t index = skeletons.size();
-    skeletons.push_back(skeleton);
+size_t ResourceGroup::addRig(std::string name, SharedPtr<RigSkeleton> rig) {
+    std::string uniqueName = getUniqueName(name, rigNameCounts);
 
-    skeletonNameToIndex[uniqueName] = index;
+    size_t index = rigs.size();
+    rigs.push_back(rig);
+
+    rigNameToIndex[uniqueName] = index;
     return index;
 }
 
-size_t ResourceGroup::addRigged(std::string name, std::string filePath) {
+size_t ResourceGroup::addRig(std::string name, std::string filePath) {
+    std::string uniqueName = getUniqueName(name, rigNameCounts);
+
+    TinyModel model = TinyLoader::loadMeshSkinned(filePath, true);
+
+    size_t index = rigs.size();
+    rigs.push_back(MakeShared<RigSkeleton>(std::move(model.rig)));
+    rigNameToIndex[uniqueName] = index;
+    return index;
+}
+
+std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::string filePath) {
     std::string uniqueName = getUniqueName(name, meshSkinnedNameCounts);
-    std::string skeletonUniqueName = getUniqueName(name + "_skeleton", skeletonNameCounts);
-    
-    TinyRig rig = TinyLoader::loadMeshSkinned(filePath, true); // Load both mesh and skeleton
+    std::string skeletonUniqueName = getUniqueName(name + "_skeleton", rigNameCounts);
+
+    TinyModel rig = TinyLoader::loadMeshSkinned(filePath, true); // Load both mesh and skeleton
     
     // Add mesh
     size_t meshIndex = meshSkinneds.size();
     meshSkinneds.push_back(MakeShared<MeshSkinned>(std::move(rig.mesh)));
     meshSkinnedNameToIndex[uniqueName] = meshIndex;
     
-    // Add skeleton
-    size_t skeletonIndex = skeletons.size();
-    skeletons.push_back(MakeShared<RigSkeleton>(std::move(rig.skeleton)));
-    skeletonNameToIndex[skeletonUniqueName] = skeletonIndex;
+    // Add rig
+    size_t rigIndex = rigs.size();
+    rigs.push_back(MakeShared<RigSkeleton>(std::move(rig.rig)));
+    rigNameToIndex[skeletonUniqueName] = rigIndex;
 
-    return meshIndex; // Return mesh index (skeleton index can be retrieved by name if needed)
+    return { meshIndex, rigIndex };
 }
 
 size_t ResourceGroup::getTextureIndex(std::string name) const {
@@ -190,9 +201,9 @@ size_t ResourceGroup::getMeshSkinnedIndex(std::string name) const {
     return it != meshSkinnedNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
-size_t ResourceGroup::getSkeletonIndex(std::string name) const {
-    auto it = skeletonNameToIndex.find(name);
-    return it != skeletonNameToIndex.end() ? it->second : SIZE_MAX;
+size_t ResourceGroup::getRigIndex(std::string name) const {
+    auto it = rigNameToIndex.find(name);
+    return it != rigNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
 
@@ -216,9 +227,9 @@ MeshSkinned* ResourceGroup::getMeshSkinned(std::string name) const {
     return index != SIZE_MAX ? meshSkinneds[index].get() : nullptr;
 }
 
-RigSkeleton* ResourceGroup::getSkeleton(std::string name) const {
-    size_t index = getSkeletonIndex(name);
-    return index != SIZE_MAX ? skeletons[index].get() : nullptr;
+RigSkeleton* ResourceGroup::getRig(std::string name) const {
+    size_t index = getRigIndex(name);
+    return index != SIZE_MAX ? rigs[index].get() : nullptr;
 }
 
 
@@ -821,15 +832,15 @@ void ResourceGroup::createMeshSkinnedBuffers() {
 // ========================== SKELETON DATA ==================================
 // ============================================================================
 
-void ResourceGroup::createSkeletonBuffers() {
-    skeletonBuffers.clear();
+void ResourceGroup::createRigBuffers() {
+    rigBuffers.clear();
 
-    for (size_t i = 0; i < skeletons.size(); ++i) {
-        const auto* skeleton = skeletons[i].get();
+    for (size_t i = 0; i < rigs.size(); ++i) {
+        const auto* rig = rigs[i].get();
 
-        const auto& inverseBindMatrices = skeleton->inverseBindMatrices;
+        const auto& inverseBindMatrices = rig->inverseBindMatrices;
 
-        UniquePtr<BufferData> skeletonBufferData = MakeUnique<BufferData>();
+        UniquePtr<BufferData> rigBufferData = MakeUnique<BufferData>();
 
         // Upload inverse bind matrices
         BufferData stagingBuffer;
@@ -841,13 +852,13 @@ void ResourceGroup::createSkeletonBuffers() {
         stagingBuffer.createBuffer();
         stagingBuffer.mappedData(inverseBindMatrices.data());
 
-        skeletonBufferData->initVkDevice(vkDevice);
-        skeletonBufferData->setProperties(
+        rigBufferData->initVkDevice(vkDevice);
+        rigBufferData->setProperties(
             inverseBindMatrices.size() * sizeof(glm::mat4),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        skeletonBufferData->createBuffer();
+        rigBufferData->createBuffer();
 
         TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -856,55 +867,51 @@ void ResourceGroup::createSkeletonBuffers() {
         copyRegion.dstOffset = 0;
         copyRegion.size = inverseBindMatrices.size() * sizeof(glm::mat4);
 
-        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, skeletonBufferData->buffer, 1, &copyRegion);
-        skeletonBufferData->hostVisible = false;
+        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, rigBufferData->buffer, 1, &copyRegion);
+        rigBufferData->hostVisible = false;
 
         copyCmd.endAndSubmit();
 
         // Append buffer
-        skeletonBuffers.push_back(std::move(skeletonBufferData));
+        rigBuffers.push_back(std::move(rigBufferData));
     }
 }
 
-void ResourceGroup::createSkeletonDescSets() {
+void ResourceGroup::createRigDescSets() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    skeletonDescPool = MakeUnique<DescPool>();
-    skeletonDescLayout = MakeUnique<DescLayout>();
-    skeletonDescSets = MakeUnique<DescSets>();
-
-    skeletonDescPool->init(lDevice);
-    skeletonDescLayout->init(lDevice);
-    skeletonDescSets->init(lDevice);
+    rigDescPool = MakeUnique<DescPool>(lDevice);
+    rigDescLayout = MakeUnique<DescLayout>(lDevice);
+    rigDescSets = MakeUnique<DescSets>(lDevice);
 
     // Create descriptor pool and layout
-    uint32_t skeletonCount = static_cast<uint32_t>(skeletons.size());
+    uint32_t rigCount = static_cast<uint32_t>(rigs.size());
 
-    skeletonDescPool->create({
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, skeletonCount}
-    }, skeletonCount);  // maxSets should be skeletonCount, not 1
-    skeletonDescLayout->create({
+    rigDescPool->create({
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, rigCount}
+    }, rigCount);  // maxSets should be rigCount, not 1
+    rigDescLayout->create({
         DescLayout::BindInfo{
             0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             VK_SHADER_STAGE_VERTEX_BIT
         }
     });
 
-    if (skeletons.empty()) return;
+    if (rigs.empty()) return;
 
-    // Allocate multiple descriptor sets (one for each skeleton)
-    skeletonDescSets->allocate(skeletonDescPool->get(), skeletonDescLayout->get(), skeletonCount);
+    // Allocate multiple descriptor sets (one for each rig)
+    rigDescSets->allocate(rigDescPool->get(), rigDescLayout->get(), rigCount);
 
-    // Bind each skeleton buffer to its respective descriptor set
-    for (size_t i = 0; i < skeletons.size(); ++i) {
+    // Bind each rig buffer to its respective descriptor set
+    for (size_t i = 0; i < rigs.size(); ++i) {
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer               = skeletonBuffers[i]->buffer;
+        bufferInfo.buffer               = rigBuffers[i]->buffer;
         bufferInfo.offset               = 0;
         bufferInfo.range                = VK_WHOLE_SIZE;
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet          = skeletonDescSets->get(i);  // Get the i-th descriptor set
+        descriptorWrite.dstSet          = rigDescSets->get(i);  // Get the i-th descriptor set
         descriptorWrite.dstBinding      = 0;
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;

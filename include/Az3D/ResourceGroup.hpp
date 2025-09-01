@@ -33,18 +33,20 @@ public:
     size_t addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh);
     size_t addMeshSkinned(std::string name, std::string filePath);
 
-    size_t addSkeleton(std::string name, SharedPtr<RigSkeleton> skeleton);
-    size_t addRigged(std::string name, std::string filePath); // Adds both mesh and skeleton from file
+    size_t addRig(std::string name, SharedPtr<RigSkeleton> rig);
+    size_t addRig(std::string name, std::string filePath);
+
+    std::pair<size_t, size_t> addRiggedModel(std::string name, std::string filePath); // Adds both mesh and skeleton from file
 
 
     VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout->get(); }
     VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout->get(); }
-    VkDescriptorSetLayout getSkeletonDescLayout() const { return skeletonDescLayout->get(); }
+    VkDescriptorSetLayout getRigDescLayout() const { return rigDescLayout->get(); }
 
     VkDescriptorSet getMatDescSet() const { return matDescSet->get(); }
     VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
-    VkDescriptorSet getSkeletonDescSet(size_t skeletonIndex) const { 
-        return skeletonIndex < skeletons.size() ? skeletonDescSets->get(skeletonIndex) : VK_NULL_HANDLE; 
+    VkDescriptorSet getRigDescSet(size_t rigIndex) const {
+        return rigIndex < rigs.size() ? rigDescSets->get(rigIndex) : VK_NULL_HANDLE;
     }
 
 
@@ -53,13 +55,13 @@ public:
     size_t getMaterialIndex(std::string name) const;
     size_t getMeshStaticIndex(std::string name) const;
     size_t getMeshSkinnedIndex(std::string name) const;
-    size_t getSkeletonIndex(std::string name) const;
+    size_t getRigIndex(std::string name) const;
 
     Texture* getTexture(std::string name) const;
     Material* getMaterial(std::string name) const;
     MeshStatic* getMeshStatic(std::string name) const;
     MeshSkinned* getMeshSkinned(std::string name) const;
-    RigSkeleton* getSkeleton(std::string name) const;
+    RigSkeleton* getRig(std::string name) const;
 
     void uploadAllToGPU();
 
@@ -89,13 +91,13 @@ public:
     inline VkBuffer getSkinnedIndexBuffer(size_t meshIndex) const { return iskinnedBuffers[meshIndex]->buffer; }
 
     // Skeleton data - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
-    SharedPtrVec<RigSkeleton>         skeletons;
-    UniquePtrVec<AzVulk::BufferData>  skeletonBuffers;
-    UniquePtr<AzVulk::DescLayout>     skeletonDescLayout;
-    UniquePtr<AzVulk::DescPool>       skeletonDescPool;
-    UniquePtr<AzVulk::DescSets>       skeletonDescSets;
-    void createSkeletonBuffers();
-    void createSkeletonDescSets();
+    SharedPtrVec<RigSkeleton>         rigs;
+    UniquePtrVec<AzVulk::BufferData>  rigBuffers;
+    UniquePtr<AzVulk::DescLayout>     rigDescLayout;
+    UniquePtr<AzVulk::DescPool>       rigDescPool;
+    UniquePtr<AzVulk::DescSets>       rigDescSets;
+    void createRigBuffers();
+    void createRigDescSets();
 
     // Material - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
     SharedPtrVec<Material>            materials;
@@ -126,14 +128,14 @@ public:
     UnorderedMap<std::string, size_t> materialNameToIndex;
     UnorderedMap<std::string, size_t> meshStaticNameToIndex;
     UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
-    UnorderedMap<std::string, size_t> skeletonNameToIndex;
+    UnorderedMap<std::string, size_t> rigNameToIndex;
 
     // Maps to track duplicate counts for automatic renaming
     UnorderedMap<std::string, size_t> textureNameCounts;
     UnorderedMap<std::string, size_t> materialNameCounts;
     UnorderedMap<std::string, size_t> meshStaticNameCounts;
     UnorderedMap<std::string, size_t> meshSkinnedNameCounts;
-    UnorderedMap<std::string, size_t> skeletonNameCounts;
+    UnorderedMap<std::string, size_t> rigNameCounts;
 
 private:
     // Helper function to generate unique names with suffixes

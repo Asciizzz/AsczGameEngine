@@ -283,7 +283,7 @@ MeshStatic TinyLoader::loadMeshStaticFromGLTF(const std::string& filePath) {
     return meshStatic;
 }
 
-TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkeleton) {
+TinyModel TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadRig) {
     MeshSkinned meshSkinned;
     RigSkeleton rigSkeleton;
 
@@ -372,7 +372,7 @@ TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkelet
     }
 
     // Skeleton (take first skin if present, only if loadSkeleton is true)
-    if (loadSkeleton && !model.skins.empty()) {
+    if (loadRig && !model.skins.empty()) {
         const tinygltf::Skin& skin = model.skins[0];
 
         // Inverse bind matrices
@@ -432,7 +432,7 @@ TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkelet
             rigSkeleton.inverseBindMatrices.push_back(boneInverseBindMatrix);
             rigSkeleton.localBindTransforms.push_back(boneLocalBindTransform);
         }
-    } else if (loadSkeleton) {
+    } else if (loadRig) {
         // Create 1 default bone if no skeleton found but loadSkeleton is true
         rigSkeleton.names.push_back("sad_bone");
         rigSkeleton.parentIndices.push_back(-1);
@@ -440,9 +440,9 @@ TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkelet
         rigSkeleton.localBindTransforms.push_back(glm::mat4(1.0f));
     }
 
-    // Return TinyRig with mesh and skeleton
-    TinyRig rig;
+    // Return TinyModel with mesh and skeleton
+    TinyModel rig;
     rig.mesh = meshSkinned;
-    rig.skeleton = loadSkeleton ? rigSkeleton : RigSkeleton();
+    rig.rig = loadRig ? rigSkeleton : RigSkeleton();
     return rig;
 }

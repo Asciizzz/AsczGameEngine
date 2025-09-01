@@ -115,16 +115,17 @@ void Application::initComponents() {
         boundMin, boundMax
     );
 
-    resGroup->addRigged("Demo", "Assets/Characters/Selen.gltf");
+    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen.gltf");
 
 // PLAYGROUND END HERE 
 
     // Testing if reallocation going to work smoothly
     resGroup->uploadAllToGPU();
 
-    const auto& matLayout = resGroup->getMatDescLayout();
-    const auto& texLayout = resGroup->getTexDescLayout();
-    const auto& glbLayout = glbUBOManager->getDescLayout();
+    auto glbLayout = glbUBOManager->getDescLayout();
+    auto matLayout = resGroup->getMatDescLayout();
+    auto texLayout = resGroup->getTexDescLayout();
+    auto rigLayout = resGroup->getRigDescLayout();
 
     RasterCfg staticMeshConfig;
     staticMeshConfig.renderPass = renderPass;
