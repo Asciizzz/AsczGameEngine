@@ -3,6 +3,7 @@
 #include "Az3D/Texture.hpp"
 #include "Az3D/Material.hpp"
 #include "Az3D/MeshTypes.hpp"
+#include "Az3D/RigSkeleton.hpp"
 
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Descriptor.hpp"
@@ -32,12 +33,19 @@ public:
     size_t addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh);
     size_t addMeshSkinned(std::string name, std::string filePath);
 
+    size_t addSkeleton(std::string name, SharedPtr<RigSkeleton> skeleton);
+    size_t addRigged(std::string name, std::string filePath); // Adds both mesh and skeleton from file
+
 
     const VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout.get(); }
     const VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout.get(); }
+    const VkDescriptorSetLayout getSkeletonDescLayout() const { return skeletonDescLayout.get(); }
 
     const VkDescriptorSet getMatDescSet() const { return matDescSet.get(); }
     const VkDescriptorSet getTexDescSet() const { return texDescSet.get(); }
+    const VkDescriptorSet getSkeletonDescSet(size_t skeletonIndex) const { 
+        return skeletonIndex < skeletons.size() ? skeletonDescSets.get(skeletonIndex) : VK_NULL_HANDLE; 
+    }
 
 
     // String-to-index getters
@@ -45,11 +53,13 @@ public:
     size_t getMaterialIndex(std::string name) const;
     size_t getMeshStaticIndex(std::string name) const;
     size_t getMeshSkinnedIndex(std::string name) const;
+    size_t getSkeletonIndex(std::string name) const;
 
     Texture* getTexture(std::string name) const;
     Material* getMaterial(std::string name) const;
     MeshStatic* getMeshStatic(std::string name) const;
     MeshSkinned* getMeshSkinned(std::string name) const;
+    RigSkeleton* getSkeleton(std::string name) const;
 
     void uploadAllToGPU();
 
@@ -67,6 +77,15 @@ public:
     std::vector<AzVulk::BufferData> vskinnedBuffers;
     std::vector<AzVulk::BufferData> iskinnedBuffers;
     void createMeshSkinnedBuffers();
+
+    // Skeleton data (inverse bind matrices)
+    SharedPtrVec<RigSkeleton>       skeletons;
+    std::vector<AzVulk::BufferData> skeletonBuffers;
+    AzVulk::DescLayout              skeletonDescLayout;
+    AzVulk::DescPool                skeletonDescPool;
+    AzVulk::DescSets                skeletonDescSets;  // Single DescSets handling multiple sets
+    void createSkeletonBuffers();
+    void createSkeletonDescSets();
 
     // Material (some complication stopping it from being a shared_ptr)
     std::vector<Material> materials;
@@ -97,12 +116,14 @@ public:
     UnorderedMap<std::string, size_t> materialNameToIndex;
     UnorderedMap<std::string, size_t> meshStaticNameToIndex;
     UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
+    UnorderedMap<std::string, size_t> skeletonNameToIndex;
 
     // Maps to track duplicate counts for automatic renaming
     UnorderedMap<std::string, size_t> textureNameCounts;
     UnorderedMap<std::string, size_t> materialNameCounts;
     UnorderedMap<std::string, size_t> meshStaticNameCounts;
     UnorderedMap<std::string, size_t> meshSkinnedNameCounts;
+    UnorderedMap<std::string, size_t> skeletonNameCounts;
 
 private:
     // Helper function to generate unique names with suffixes

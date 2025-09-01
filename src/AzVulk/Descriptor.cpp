@@ -101,8 +101,7 @@ void DescLayout::cleanup() {
     layout = VK_NULL_HANDLE;
 }
 
-void DescLayout::create(const VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-    this->lDevice = lDevice;
+void DescLayout::create(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
     cleanup();
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
@@ -115,8 +114,7 @@ void DescLayout::create(const VkDevice lDevice, const std::vector<VkDescriptorSe
     }
 }
 
-void DescLayout::create(const VkDevice lDevice, const std::vector<BindInfo>& bindingInfos) {
-    this->lDevice = lDevice;
+void DescLayout::create(const std::vector<BindInfo>& bindingInfos) {
     cleanup();
 
     std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
@@ -175,9 +173,7 @@ void DescPool::cleanup() {
     pool = VK_NULL_HANDLE;
 }
 
-void DescPool::create(const VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
-    this->lDevice = lDevice;
-
+void DescPool::create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
     cleanup();
 
     VkDescriptorPoolCreateInfo poolInfo = {};
@@ -195,6 +191,8 @@ void DescPool::create(const VkDevice lDevice, const std::vector<VkDescriptorPool
 
 
 void DescSets::cleanup() {
+    if (pool == VK_NULL_HANDLE || sets.empty()) return;
+
     for (auto& set : sets) {
         if (set == VK_NULL_HANDLE) continue;
 
@@ -203,8 +201,32 @@ void DescSets::cleanup() {
     }
 }
 
-void DescSets::allocate(const VkDevice lDevice, const VkDescriptorPool pool, const VkDescriptorSetLayout layout, uint32_t count) {
-    this->lDevice = lDevice;
+// Move constructor and assignment operator
+DescSets::DescSets(DescSets&& other) noexcept
+: lDevice(other.lDevice), pool(other.pool), layout(other.layout), sets(std::move(other.sets)) {
+    other.lDevice = VK_NULL_HANDLE;
+    other.pool = VK_NULL_HANDLE;
+    other.layout = VK_NULL_HANDLE;
+}
+
+DescSets& DescSets::operator=(DescSets&& other) noexcept {
+    if (this != &other) {
+        cleanup(); // destroy current sets if valid
+
+        lDevice = other.lDevice;
+        pool = other.pool;
+        layout = other.layout;
+        sets = std::move(other.sets);
+
+        other.lDevice = VK_NULL_HANDLE;
+        other.pool = VK_NULL_HANDLE;
+        other.layout = VK_NULL_HANDLE;
+    }
+    return *this;
+}
+
+
+void DescSets::allocate(const VkDescriptorPool pool, const VkDescriptorSetLayout layout, uint32_t count) {
     this->pool    = pool;
     this->layout  = layout;
 

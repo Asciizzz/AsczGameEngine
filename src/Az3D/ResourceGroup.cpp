@@ -1,5 +1,6 @@
 #include "Az3D/ResourceGroup.hpp"
 #include "Az3D/TinyLoader.hpp"
+#include "Az3D/RigSkeleton.hpp"
 #include "AzVulk/Device.hpp"
 #include <iostream>
 
@@ -44,6 +45,11 @@ void ResourceGroup::cleanup() {
         if (sampler != VK_NULL_HANDLE) vkDestroySampler(lDevice, sampler, nullptr);
     }
     samplers.clear();
+
+    // Cleanup skeleton descriptor sets (order matters: sets first, then pool, then layout)
+    skeletonDescSets.cleanup();
+    skeletonDescPool.cleanup();
+    skeletonDescLayout.cleanup();
 }
 
 void ResourceGroup::uploadAllToGPU() {
@@ -51,12 +57,14 @@ void ResourceGroup::uploadAllToGPU() {
 
     createMeshStaticBuffers();
     createMeshSkinnedBuffers();
+    createSkeletonBuffers();
 
     createMaterialBuffer();
     createMaterialDescSet();
 
     createSamplers();
     createTextureDescSet();
+    createSkeletonDescSets();
 }
 
 
@@ -135,6 +143,35 @@ size_t ResourceGroup::addMeshSkinned(std::string name, std::string filePath) {
     return index;
 }
 
+size_t ResourceGroup::addSkeleton(std::string name, SharedPtr<RigSkeleton> skeleton) {
+    std::string uniqueName = getUniqueName(name, skeletonNameCounts);
+    
+    size_t index = skeletons.size();
+    skeletons.push_back(skeleton);
+    
+    skeletonNameToIndex[uniqueName] = index;
+    return index;
+}
+
+size_t ResourceGroup::addRigged(std::string name, std::string filePath) {
+    std::string uniqueName = getUniqueName(name, meshSkinnedNameCounts);
+    std::string skeletonUniqueName = getUniqueName(name + "_skeleton", skeletonNameCounts);
+    
+    TinyRig rig = TinyLoader::loadMeshSkinned(filePath, true); // Load both mesh and skeleton
+    
+    // Add mesh
+    size_t meshIndex = meshSkinneds.size();
+    meshSkinneds.push_back(rig.mesh);
+    meshSkinnedNameToIndex[uniqueName] = meshIndex;
+    
+    // Add skeleton
+    size_t skeletonIndex = skeletons.size();
+    skeletons.push_back(rig.skeleton);
+    skeletonNameToIndex[skeletonUniqueName] = skeletonIndex;
+    
+    return meshIndex; // Return mesh index (skeleton index can be retrieved by name if needed)
+}
+
 size_t ResourceGroup::getTextureIndex(std::string name) const {
     auto it = textureNameToIndex.find(name);
     return it != textureNameToIndex.end() ? it->second : SIZE_MAX;
@@ -153,6 +190,11 @@ size_t ResourceGroup::getMeshStaticIndex(std::string name) const {
 size_t ResourceGroup::getMeshSkinnedIndex(std::string name) const {
     auto it = meshSkinnedNameToIndex.find(name);
     return it != meshSkinnedNameToIndex.end() ? it->second : SIZE_MAX;
+}
+
+size_t ResourceGroup::getSkeletonIndex(std::string name) const {
+    auto it = skeletonNameToIndex.find(name);
+    return it != skeletonNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
 
@@ -174,6 +216,11 @@ MeshStatic* ResourceGroup::getMeshStatic(std::string name) const {
 MeshSkinned* ResourceGroup::getMeshSkinned(std::string name) const {
     size_t index = getMeshSkinnedIndex(name);
     return index != SIZE_MAX ? meshSkinneds[index].get() : nullptr;
+}
+
+RigSkeleton* ResourceGroup::getSkeleton(std::string name) const {
+    size_t index = getSkeletonIndex(name);
+    return index != SIZE_MAX ? skeletons[index].get() : nullptr;
 }
 
 
@@ -224,14 +271,18 @@ void ResourceGroup::createMaterialBuffer() {
 void ResourceGroup::createMaterialDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
 
+    matDescSet.init(lDevice);
+    matDescPool.init(lDevice);
+    matDescLayout.init(lDevice);
+
     // Clear existing resources
+    matDescSet.cleanup();
     matDescPool.cleanup();
     matDescLayout.cleanup();
-    matDescSet.cleanup();
 
     // Create descriptor pool and layout
-    matDescPool.create(lDevice, { {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-    matDescLayout.create(lDevice, {
+    matDescPool.create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+    matDescLayout.create({
         DescLayout::BindInfo{
             0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
@@ -239,7 +290,7 @@ void ResourceGroup::createMaterialDescSet() {
     });
 
     // Allocate descriptor set
-    matDescSet.allocate(lDevice, matDescPool.get(), matDescLayout.get(), 1);
+    matDescSet.allocate(matDescPool.get(), matDescLayout.get(), 1);
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
@@ -539,18 +590,26 @@ void ResourceGroup::createTextureDescSet() {
     uint32_t textureCount = static_cast<uint32_t>(textures.size());
     uint32_t samplerCount = static_cast<uint32_t>(samplers.size());
 
+    texDescSet.init(lDevice);
+    texDescPool.init(lDevice);
+    texDescLayout.init(lDevice);
+
+    texDescSet.cleanup();
+    texDescPool.cleanup();
+    texDescLayout.cleanup();
+
     // layout: binding 0 = images, binding 1 = samplers
-    texDescLayout.create(lDevice, {
+    texDescLayout.create({
         {0, textureCount, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT},
         {1, samplerCount, VK_DESCRIPTOR_TYPE_SAMPLER,       VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
     });
 
-    texDescPool.create(lDevice, {
+    texDescPool.create({
         {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, textureCount},
         {VK_DESCRIPTOR_TYPE_SAMPLER,       samplerCount}
     }, 1);
 
-    texDescSet.allocate(lDevice, texDescPool.get(), texDescLayout.get(), 1);
+    texDescSet.allocate(texDescPool.get(), texDescLayout.get(), 1);
 
     // Write sampled images
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
@@ -749,6 +808,104 @@ void ResourceGroup::createMeshSkinnedBuffers() {
         // Append buffers
         vskinnedBuffers.push_back(std::move(vBufferData));
         iskinnedBuffers.push_back(std::move(iBufferData));
+    }
+}
+
+// ============================================================================
+// ========================== SKELETON DATA ==================================
+// ============================================================================
+
+void ResourceGroup::createSkeletonBuffers() {
+    for (size_t i = 0; i < skeletons.size(); ++i) {
+        const auto* skeleton = skeletons[i].get();
+
+        skeleton->debugPrintHierarchy();
+
+        const auto& inverseBindMatrices = skeleton->inverseBindMatrices;
+
+        BufferData skeletonBufferData;
+
+        // Upload inverse bind matrices
+        BufferData stagingBuffer;
+        stagingBuffer.initVkDevice(vkDevice);
+        stagingBuffer.setProperties(
+            inverseBindMatrices.size() * sizeof(glm::mat4), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        stagingBuffer.createBuffer();
+        stagingBuffer.mappedData(inverseBindMatrices.data());
+
+        skeletonBufferData.initVkDevice(vkDevice);
+        skeletonBufferData.setProperties(
+            inverseBindMatrices.size() * sizeof(glm::mat4),
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+        skeletonBufferData.createBuffer();
+
+        TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = inverseBindMatrices.size() * sizeof(glm::mat4);
+
+        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, skeletonBufferData.buffer, 1, &copyRegion);
+        skeletonBufferData.hostVisible = false;
+
+        copyCmd.endAndSubmit();
+
+        // Append buffer
+        skeletonBuffers.push_back(std::move(skeletonBufferData));
+    }
+}
+
+void ResourceGroup::createSkeletonDescSets() {
+    VkDevice lDevice = vkDevice->lDevice;
+
+    skeletonDescSets.init(lDevice);
+    skeletonDescPool.init(lDevice);
+    skeletonDescLayout.init(lDevice);
+
+    skeletonDescSets.cleanup();
+    skeletonDescPool.cleanup();
+    skeletonDescLayout.cleanup();
+
+    // Create descriptor pool and layout
+    uint32_t skeletonCount = static_cast<uint32_t>(skeletons.size());
+
+    skeletonDescPool.create({
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, skeletonCount}
+    }, skeletonCount);  // maxSets should be skeletonCount, not 1
+    skeletonDescLayout.create({
+        DescLayout::BindInfo{
+            0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            VK_SHADER_STAGE_VERTEX_BIT
+        }
+    });
+
+    if (skeletons.empty()) return;
+
+    // Allocate multiple descriptor sets (one for each skeleton)
+    skeletonDescSets.allocate(skeletonDescPool.get(), skeletonDescLayout.get(), skeletonCount);
+
+    // Bind each skeleton buffer to its respective descriptor set
+    for (size_t i = 0; i < skeletons.size(); ++i) {
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer               = skeletonBuffers[i].buffer;
+        bufferInfo.offset               = 0;
+        bufferInfo.range                = VK_WHOLE_SIZE;
+
+        VkWriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet          = skeletonDescSets.get(i);  // Get the i-th descriptor set
+        descriptorWrite.dstBinding      = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo     = &bufferInfo;
+
+        vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
     }
 }
 

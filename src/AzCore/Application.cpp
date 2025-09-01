@@ -117,7 +117,7 @@ void Application::initComponents() {
         boundMin, boundMax
     );
 
-    resGroup->addMeshSkinned("Demo", "Assets/Characters/Selen.gltf");
+    resGroup->addRigged("Demo", "Assets/Characters/Selen.gltf");
 
 // PLAYGROUND END HERE 
 

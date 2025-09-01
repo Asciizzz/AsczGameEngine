@@ -31,21 +31,24 @@ void GlbUBOManager::createBufferData() {
 }
 
 void GlbUBOManager::createDescLayout() {
-    descLayout.create(vkDevice->lDevice, {
+    descLayout.init(vkDevice->lDevice);
+
+    descLayout.create({
         DescLayout::BindInfo{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
     });
 }
 
 void GlbUBOManager::createDescPool() {
-    descPool.create(vkDevice->lDevice, {
+    descPool.init(vkDevice->lDevice);
+
+    descPool.create({
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}
     }, 1);
 }
 
 void GlbUBOManager::createDescSet() {
-    VkDevice lDevice = vkDevice->lDevice;
-
-    descSet.allocate(lDevice, descPool.pool, descLayout.layout, 1);
+    descSet.init(vkDevice->lDevice);
+    descSet.allocate(descPool.pool, descLayout.layout, 1);
 
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = bufferData.buffer;
@@ -61,7 +64,7 @@ void GlbUBOManager::createDescSet() {
     write.descriptorCount = 1;
     write.pBufferInfo = &bufferInfo;
 
-    vkUpdateDescriptorSets(lDevice, 1, &write, 0, nullptr);
+    vkUpdateDescriptorSets(descSet.lDevice, 1, &write, 0, nullptr);
 }
 
 float deltaDay = 1.0f / 86400.0f;

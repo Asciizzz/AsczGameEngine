@@ -51,40 +51,39 @@ struct DescLayout {
     DescLayout() = default;
     ~DescLayout() { cleanup(); } void cleanup();
 
-    // Delete copy constructor and assignment operator
     DescLayout(const DescLayout&) = delete;
     DescLayout& operator=(const DescLayout&) = delete;
-    // Implement move constructor and move assignment operator
     DescLayout(DescLayout&& other) noexcept;
     DescLayout& operator=(DescLayout&& other) noexcept;
 
     VkDevice lDevice = VK_NULL_HANDLE;
+    void init(const VkDevice lDevice) { this->lDevice = lDevice; }
+
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
     const VkDescriptorSetLayout get() const { return layout; }
 
-    void create(const VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
-    void create(const VkDevice lDevice, const std::vector<BindInfo>& bindings);
+    void create(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+    void create(const std::vector<BindInfo>& bindings);
 
     static VkDescriptorSetLayoutBinding fastBinding(const BindInfo& binder);
 };
 
 struct DescPool {
     DescPool() = default;
-    ~DescPool() { cleanup(); }
-    void cleanup();
+    ~DescPool() { cleanup(); } void cleanup();
 
-    // Delete copy constructor and assignment operator
     DescPool(const DescPool&) = delete;
     DescPool& operator=(const DescPool&) = delete;
-    // Implement move constructor and move assignment operator
     DescPool(DescPool&& other) noexcept;
     DescPool& operator=(DescPool&& other) noexcept;
 
     VkDevice lDevice = VK_NULL_HANDLE;
+    void init(const VkDevice lDevice) { this->lDevice = lDevice; }
+
     VkDescriptorPool pool = VK_NULL_HANDLE;
     const VkDescriptorPool get() const { return pool; }
 
-    void create(const VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
+    void create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 };
 
 
@@ -92,13 +91,19 @@ struct DescSets {
     DescSets() = default;
     ~DescSets() { cleanup(); } void cleanup();
 
+    DescSets(const DescSets&) = delete;
+    DescSets& operator=(const DescSets&) = delete;
+    DescSets(DescSets&& other) noexcept;
+    DescSets& operator=(DescSets&& other) noexcept;
+
     VkDevice lDevice = VK_NULL_HANDLE;
+    void init(const VkDevice lDevice) { this->lDevice = lDevice; }
 
     VkDescriptorPool pool = VK_NULL_HANDLE;
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 
     std::vector<VkDescriptorSet> sets;
-    void allocate(const VkDevice lDevice, const VkDescriptorPool pool, const VkDescriptorSetLayout layout, uint32_t count);
+    void allocate(const VkDescriptorPool pool, const VkDescriptorSetLayout layout, uint32_t count);
 
     const VkDescriptorSet get(uint32_t index=0) const { return sets[index]; }
 };
