@@ -187,30 +187,30 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup,
 }
 
 void Renderer::drawDemoSkinned(const ResourceGroup* resGroup, RasterPipeline* rasterPipeline, const Az3D::MeshSkinned& meshSkinned) {
-    uint64_t indexCount = meshSkinned.indices.size();
-    if (indexCount == 0) return;
+    // uint64_t indexCount = meshSkinned.indices.size();
+    // if (indexCount == 0) return;
 
-    rasterPipeline->bind(commandBuffers[currentFrame]);
+    // rasterPipeline->bind(commandBuffers[currentFrame]);
 
-    // Bind descriptor sets
-    VkDescriptorSet globalSet = glbUBOManager->getDescSet();
-    VkDescriptorSet materialSet = resGroup->getMatDescSet();
-    VkDescriptorSet textureSet = resGroup->getTexDescSet();
+    // // Bind descriptor sets
+    // VkDescriptorSet globalSet = glbUBOManager->getDescSet();
+    // VkDescriptorSet materialSet = resGroup->getMatDescSet();
+    // VkDescriptorSet textureSet = resGroup->getTexDescSet();
 
-    std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
-    vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            rasterPipeline->layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
+    // std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
+    // vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //                         rasterPipeline->layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-    VkBuffer vertexBuffer = meshSkinned.vertexBufferData.buffer;
-    VkBuffer indexBuffer = meshSkinned.indexBufferData.buffer;
+    // VkBuffer vertexBuffer = meshSkinned.vertexBufferData.buffer;
+    // VkBuffer indexBuffer = meshSkinned.indexBufferData.buffer;
 
-    VkBuffer buffers[] = { vertexBuffer };
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, buffers, offsets);
+    // VkBuffer buffers[] = { vertexBuffer };
+    // VkDeviceSize offsets[] = { 0 };
+    // vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, buffers, offsets);
 
-    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    // vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, 1, 0, 0, 0);
+    // vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, 1, 0, 0, 0);
 }
 
 void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, RasterPipeline* rasterPipeline, Az3D::InstanceSkinnedGroup* instanceGroup) {

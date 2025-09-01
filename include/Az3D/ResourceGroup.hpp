@@ -2,8 +2,7 @@
 
 #include "Az3D/Texture.hpp"
 #include "Az3D/Material.hpp"
-#include "Az3D/MeshStatic.hpp"
-#include "Az3D/MeshSkinned.hpp"
+#include "Az3D/MeshTypes.hpp"
 
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Descriptor.hpp"
@@ -30,6 +29,7 @@ public:
     size_t addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH = false);
     size_t addMeshStatic(std::string name, std::string filePath, bool hasBVH = false);
 
+    size_t addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh);
     size_t addMeshSkinned(std::string name, std::string filePath);
 
 
@@ -62,6 +62,12 @@ public:
     std::vector<AzVulk::BufferData> istaticBuffers;
     void createMeshStaticBuffers();
 
+    // Mesh skinned
+    SharedPtrVec<MeshSkinned>       meshSkinneds;
+    std::vector<AzVulk::BufferData> vskinnedBuffers;
+    std::vector<AzVulk::BufferData> iskinnedBuffers;
+    void createMeshSkinnedBuffers();
+
     // Material (some complication stopping it from being a shared_ptr)
     std::vector<Material> materials;
     AzVulk::BufferData    matBuffer;
@@ -91,8 +97,6 @@ public:
     UnorderedMap<std::string, size_t> materialNameToIndex;
     UnorderedMap<std::string, size_t> meshStaticNameToIndex;
     UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
-
-    UniquePtr<MeshSkinnedGroup> meshSkinnedGroup;
 };
 
 } // namespace Az3D

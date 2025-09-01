@@ -1,4 +1,4 @@
-#include "Az3D/MeshStatic.hpp"
+#include "Az3D/MeshTypes.hpp"
 #include <algorithm>
 #include <cfloat>
 #include <queue>

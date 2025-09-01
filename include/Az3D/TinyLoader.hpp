@@ -1,8 +1,7 @@
 #pragma once
 
-#include <Az3D/MeshStatic.hpp>
-#include <Az3D/MeshSkinned.hpp>
-
+#include <Az3D/MeshTypes.hpp>
+#include <Az3D/RigSkeleton.hpp>
 
 namespace Az3D {
 
@@ -17,6 +16,12 @@ struct TinyTexture {
     ~TinyTexture() { free(); }
 };
 
+struct TinyRig {
+    SharedPtr<MeshSkinned> mesh;
+    SharedPtr<RigSkeleton> skeleton;
+};
+
+
 class TinyLoader {
 public:
     static TinyTexture loadImage(const std::string& filePath);
@@ -25,6 +30,9 @@ public:
     static SharedPtr<MeshStatic> loadMeshStatic(const std::string& filePath);
     static SharedPtr<MeshStatic> loadMeshStaticFromOBJ(const std::string& filePath);
     static SharedPtr<MeshStatic> loadMeshStaticFromGLTF(const std::string& filePath);
+
+    // MeshSkinned loading functions
+    static TinyRig loadMeshSkinned(const std::string& filePath, bool loadSkeleton=true);
 };
 
 } // namespace Az3D

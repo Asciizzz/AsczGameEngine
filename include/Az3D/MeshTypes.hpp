@@ -4,6 +4,7 @@
 
 namespace Az3D {
 
+
 // BVH structures
 struct BVHNode {
     glm::vec3 min;
@@ -35,20 +36,17 @@ struct HitInfo {
 };
 
 struct MeshStatic {
-    static constexpr size_t MAX_DEPTH = 32;
-    static constexpr size_t BIN_COUNT = 11;
-
-    // Delete copy semantics
-    MeshStatic(const MeshStatic&) = delete;
-    MeshStatic& operator=(const MeshStatic&) = delete;
-
+// The only real mesh data
     MeshStatic() = default;
     MeshStatic(std::vector<VertexStatic> vertices, std::vector<uint32_t> indices)
         : vertices(std::move(vertices)), indices(std::move(indices)) {}
 
-    // Mesh data
     std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
+
+// The rest are like, idk, mental illnesses
+    static constexpr size_t MAX_DEPTH = 32;
+    static constexpr size_t BIN_COUNT = 11;
 
     // BVH data structures
     glm::vec3 meshMin = glm::vec3(FLT_MAX);
@@ -75,4 +73,13 @@ struct MeshStatic {
     static glm::vec3 sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
 };
 
-}
+struct MeshSkinned {
+    MeshSkinned() = default;
+    MeshSkinned(std::vector<VertexSkinned> vertices, std::vector<uint32_t> indices)
+        : vertices(std::move(vertices)), indices(std::move(indices)) {}
+
+    std::vector<VertexSkinned> vertices;
+    std::vector<uint32_t> indices;
+};
+
+} // namespace Az3D

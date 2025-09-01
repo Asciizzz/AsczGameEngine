@@ -12,7 +12,6 @@ using namespace Az3D;
 
 ResourceGroup::ResourceGroup(Device* vkDevice):
 vkDevice(vkDevice) {
-    meshSkinnedGroup = MakeUnique<MeshSkinnedGroup>(vkDevice);
 
     // Create default white pixel texture manually
     TinyTexture defaultWhitePixel;
@@ -51,14 +50,13 @@ void ResourceGroup::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
 
     createMeshStaticBuffers();
+    createMeshSkinnedBuffers();
 
     createMaterialBuffer();
     createMaterialDescSet();
 
     createSamplers();
     createTextureDescSet();
-
-    meshSkinnedGroup->createDeviceBuffers();
 }
 
 
@@ -112,8 +110,20 @@ size_t ResourceGroup::addMeshStatic(std::string name, std::string filePath, bool
     return index;
 }
 
+size_t ResourceGroup::addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh) {
+    size_t index = meshSkinneds.size();
+    meshSkinneds.push_back(mesh);
+    
+    meshSkinnedNameToIndex[name] = index;
+    return index;
+}
+
 size_t ResourceGroup::addMeshSkinned(std::string name, std::string filePath) {
-    size_t index = meshSkinnedGroup->addFromGLTF(filePath);
+    TinyRig rig = TinyLoader::loadMeshSkinned(filePath, false); // Don't load skeleton for now
+    
+    size_t index = meshSkinneds.size();
+    meshSkinneds.push_back(rig.mesh);
+    
     meshSkinnedNameToIndex[name] = index;
     return index;
 }
@@ -156,7 +166,7 @@ MeshStatic* ResourceGroup::getMeshStatic(std::string name) const {
 
 MeshSkinned* ResourceGroup::getMeshSkinned(std::string name) const {
     size_t index = getMeshSkinnedIndex(name);
-    return index != SIZE_MAX ? meshSkinnedGroup->meshes[index].get() : nullptr;
+    return index != SIZE_MAX ? meshSkinneds[index].get() : nullptr;
 }
 
 
@@ -525,7 +535,7 @@ void ResourceGroup::createTextureDescSet() {
     // layout: binding 0 = images, binding 1 = samplers
     texDescLayout.create(lDevice, {
         {0, textureCount, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT},
-        {1, samplerCount, VK_DESCRIPTOR_TYPE_SAMPLER,   VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
+        {1, samplerCount, VK_DESCRIPTOR_TYPE_SAMPLER,       VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
     });
 
     texDescPool.create(lDevice, {
@@ -577,12 +587,6 @@ void ResourceGroup::createTextureDescSet() {
 // ============================================================================
 // =========================== MESH STATIC ====================================
 // ============================================================================
-
-#include "Az3D/ResourceGroup.hpp"
-
-using namespace AzVulk;
-using namespace Az3D;
-
 
 void ResourceGroup::createMeshStaticBuffers() {
     for (int i = 0; i < meshStatics.size(); ++i) {
@@ -657,5 +661,86 @@ void ResourceGroup::createMeshStaticBuffers() {
         // Append buffers
         vstaticBuffers.push_back(std::move(vBufferData));
         istaticBuffers.push_back(std::move(iBufferData));
+    }
+}
+
+
+// ============================================================================
+// =========================== MESH SKINNED ===================================
+// ============================================================================
+
+void ResourceGroup::createMeshSkinnedBuffers() {
+    for (int i = 0; i < meshSkinneds.size(); ++i) {
+        const auto* mesh = meshSkinneds[i].get();
+        const auto& vertices = mesh->vertices;
+        const auto& indices = mesh->indices;
+
+        BufferData vBufferData, iBufferData;
+
+        // Upload vertex
+        BufferData vertexStagingBuffer;
+        vertexStagingBuffer.initVkDevice(vkDevice);
+        vertexStagingBuffer.setProperties(
+            vertices.size() * sizeof(VertexSkinned), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        vertexStagingBuffer.createBuffer();
+        vertexStagingBuffer.mappedData(vertices.data());
+
+        vBufferData.initVkDevice(vkDevice);
+        vBufferData.setProperties(
+            vertices.size() * sizeof(VertexSkinned),
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+        vBufferData.createBuffer();
+
+        TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+        VkBufferCopy vertexCopyRegion{};
+        vertexCopyRegion.srcOffset = 0;
+        vertexCopyRegion.dstOffset = 0;
+        vertexCopyRegion.size = vertices.size() * sizeof(VertexSkinned);
+
+        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData.buffer, 1, &vertexCopyRegion);
+        vBufferData.hostVisible = false;
+
+        vertexCopyCmd.endAndSubmit();
+
+        // Upload index
+
+        BufferData indexStagingBuffer;
+        indexStagingBuffer.initVkDevice(vkDevice);
+        indexStagingBuffer.setProperties(
+            indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+        indexStagingBuffer.createBuffer();
+        indexStagingBuffer.mappedData(indices.data());
+
+        iBufferData.initVkDevice(vkDevice);
+        iBufferData.setProperties(
+            indices.size() * sizeof(uint32_t),
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+        iBufferData.createBuffer();
+
+        TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+        VkBufferCopy indexCopyRegion{};
+        indexCopyRegion.srcOffset = 0;
+        indexCopyRegion.dstOffset = 0;
+        indexCopyRegion.size = indices.size() * sizeof(uint32_t);
+
+        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData.buffer, 1, &indexCopyRegion);
+        iBufferData.hostVisible = false;
+
+        indexCopyCmd.endAndSubmit();
+
+
+        // Append buffers
+        vskinnedBuffers.push_back(std::move(vBufferData));
+        iskinnedBuffers.push_back(std::move(iBufferData));
     }
 }
