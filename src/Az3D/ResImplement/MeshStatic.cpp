@@ -9,9 +9,8 @@ void ResourceGroup::createMeshStaticBuffers() {
         const auto* mesh = meshStatics[i].get();
         const auto& vertices = mesh->vertices;
         const auto& indices = mesh->indices;
-        
-        SharedPtr<BufferData> vBufferData = MakeShared<BufferData>();
-        SharedPtr<BufferData> iBufferData = MakeShared<BufferData>();
+
+        BufferData vBufferData, iBufferData;
 
         // Upload vertex
         BufferData vertexStagingBuffer;
@@ -23,13 +22,13 @@ void ResourceGroup::createMeshStaticBuffers() {
         vertexStagingBuffer.createBuffer();
         vertexStagingBuffer.mappedData(vertices.data());
 
-        vBufferData->initVkDevice(vkDevice);
-        vBufferData->setProperties(
+        vBufferData.initVkDevice(vkDevice);
+        vBufferData.setProperties(
             vertices.size() * sizeof(VertexStatic),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        vBufferData->createBuffer();
+        vBufferData.createBuffer();
 
         TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -38,8 +37,8 @@ void ResourceGroup::createMeshStaticBuffers() {
         vertexCopyRegion.dstOffset = 0;
         vertexCopyRegion.size = vertices.size() * sizeof(VertexStatic);
 
-        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
-        vBufferData->hostVisible = false;
+        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData.buffer, 1, &vertexCopyRegion);
+        vBufferData.hostVisible = false;
 
         vertexCopyCmd.endAndSubmit();
 
@@ -54,13 +53,13 @@ void ResourceGroup::createMeshStaticBuffers() {
         indexStagingBuffer.createBuffer();
         indexStagingBuffer.mappedData(indices.data());
 
-        iBufferData->initVkDevice(vkDevice);
-        iBufferData->setProperties(
+        iBufferData.initVkDevice(vkDevice);
+        iBufferData.setProperties(
             indices.size() * sizeof(uint32_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        iBufferData->createBuffer();
+        iBufferData.createBuffer();
 
         TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -69,14 +68,14 @@ void ResourceGroup::createMeshStaticBuffers() {
         indexCopyRegion.dstOffset = 0;
         indexCopyRegion.size = indices.size() * sizeof(uint32_t);
 
-        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData->buffer, 1, &indexCopyRegion);
-        iBufferData->hostVisible = false;
+        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData.buffer, 1, &indexCopyRegion);
+        iBufferData.hostVisible = false;
 
         indexCopyCmd.endAndSubmit();
 
 
         // Append buffers
-        vstaticBuffers.push_back(vBufferData);
-        istaticBuffers.push_back(iBufferData);
+        vstaticBuffers.push_back(std::move(vBufferData));
+        istaticBuffers.push_back(std::move(iBufferData));
     }
 }

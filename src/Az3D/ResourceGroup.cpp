@@ -8,25 +8,39 @@ namespace Az3D {
 
 ResourceGroup::ResourceGroup(Device* vkDevice):
 vkDevice(vkDevice) {
-    textureGroup = MakeUnique<TextureGroup>(vkDevice);
     meshSkinnedGroup = MakeUnique<MeshSkinnedGroup>(vkDevice);
+    textureGroup = MakeUnique<TextureGroup>(vkDevice);
+}
+
+void ResourceGroup::cleanup() {
+    // Actually for the most part you don't have to clean up anything since they have
+    // pretty robust destructors that take care of Vulkan resource deallocation.
+
+    VkDevice lDevice = vkDevice->lDevice;
+
+    // Cleanup textures
+    for (auto& tex : textures) {
+        if (tex->view != VK_NULL_HANDLE) vkDestroyImageView(lDevice, tex->view, nullptr);
+        if (tex->image != VK_NULL_HANDLE) vkDestroyImage(lDevice, tex->image, nullptr);
+        if (tex->memory != VK_NULL_HANDLE) vkFreeMemory(lDevice, tex->memory, nullptr);
+    }
+    textures.clear();
+
+    // Cleanup textures' samplers
+    for (auto& sampler : samplers) {
+        if (sampler != VK_NULL_HANDLE) vkDestroySampler(lDevice, sampler, nullptr);
+    }
+    samplers.clear();
 }
 
 void ResourceGroup::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
 
     createMeshStaticBuffers();
+
     createMaterialBuffer();
 
     meshSkinnedGroup->createDeviceBuffers();
-
-    matDescPool.create(lDevice, { {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-    matDescLayout.create(lDevice, {
-        DescLayout::BindInfo{
-            0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
-        }
-    });
 
     createMaterialDescSet();
 

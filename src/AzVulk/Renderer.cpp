@@ -170,8 +170,8 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup,
 
     instanceGroup->updateBufferData();
 
-    VkBuffer vertexBuffer = resGroup->vstaticBuffers[meshIndex]->buffer;
-    VkBuffer indexBuffer = resGroup->istaticBuffers[meshIndex]->buffer;
+    VkBuffer vertexBuffer = resGroup->vstaticBuffers[meshIndex].buffer;
+    VkBuffer indexBuffer = resGroup->istaticBuffers[meshIndex].buffer;
 
     VkBuffer instanceBuffer = instanceGroup->bufferData.buffer;
 

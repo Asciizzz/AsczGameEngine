@@ -12,7 +12,7 @@ namespace Az3D {
 class ResourceGroup {
 public:
     ResourceGroup(AzVulk::Device* vkDevice);
-    ~ResourceGroup() = default;
+    ~ResourceGroup() { cleanup(); } void cleanup();
 
     ResourceGroup(const ResourceGroup&) = delete;
     ResourceGroup& operator=(const ResourceGroup&) = delete;
@@ -23,14 +23,17 @@ public:
     size_t addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH = false);
     size_t addMeshStatic(std::string name, std::string filePath, bool hasBVH = false);
 
-    size_t addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh);
     size_t addMeshSkinned(std::string name, std::string filePath);
 
 
     const VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout.get(); }
-    const VkDescriptorSetLayout getTexDescLayout() const { return textureGroup->getDescLayout(); }
+    // const VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout.get(); }
 
     const VkDescriptorSet getMatDescSet() const { return matDescSet.get(); }
+    // const VkDescriptorSet getTexDescSet() const { return texDescSet.get(); }
+    
+    // For the time being use this outdated version before integration complete
+    const VkDescriptorSetLayout getTexDescLayout() const { return textureGroup->getDescLayout(); }
     const VkDescriptorSet getTexDescSet() const { return textureGroup->getDescSet(); }
 
     // String-to-index getters
@@ -50,19 +53,33 @@ public:
     AzVulk::Device* vkDevice;
 
     // Mesh static
-    SharedPtrVec<MeshStatic> meshStatics;
-    SharedPtrVec<AzVulk::BufferData> vstaticBuffers;
-    SharedPtrVec<AzVulk::BufferData> istaticBuffers;
+    SharedPtrVec<MeshStatic>        meshStatics;
+    std::vector<AzVulk::BufferData> vstaticBuffers;
+    std::vector<AzVulk::BufferData> istaticBuffers;
     void createMeshStaticBuffers();
 
-    // Material
+    // Material (some complication stopping it from being a shared_ptr)
     std::vector<Material> materials;
-    AzVulk::BufferData matBuffer;
-    AzVulk::DescLayout matDescLayout;
-    AzVulk::DescPool matDescPool;
-    AzVulk::DescSets matDescSet;
+    AzVulk::BufferData    matBuffer;
+    AzVulk::DescLayout    matDescLayout;
+    AzVulk::DescPool      matDescPool;
+    AzVulk::DescSets      matDescSet;
     void createMaterialBuffer(); // One big buffer for all
     void createMaterialDescSet(); // Only need one
+
+    // Texture Sampler
+    std::vector<VkSampler> samplers;
+    void createSamplers();
+
+    // Texture Image
+    SharedPtrVec<Texture> textures;
+    AzVulk::DescLayout    texDescLayout;
+    AzVulk::DescPool      texDescPool;
+    AzVulk::DescSets      texDescSet;
+    void createTextureDescSet();
+
+    // Texture methods
+    SharedPtr<Texture> createTexture(std::string imagePath, uint32_t mipLevels = 0);
 
     // String-to-index maps
     UnorderedMap<std::string, size_t> textureNameToIndex;
@@ -70,8 +87,8 @@ public:
     UnorderedMap<std::string, size_t> meshStaticNameToIndex;
     UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
 
-    UniquePtr<TextureGroup> textureGroup;
     UniquePtr<MeshSkinnedGroup> meshSkinnedGroup;
+    UniquePtr<TextureGroup> textureGroup;
 };
 
 } // namespace Az3D

@@ -47,6 +47,21 @@ void ResourceGroup::createMaterialBuffer() {
 void ResourceGroup::createMaterialDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
 
+    // Clear existing resources
+    matDescPool.cleanup();
+    matDescLayout.cleanup();
+    matDescSet.cleanup();
+
+    // Create descriptor pool and layout
+    matDescPool.create(lDevice, { {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+    matDescLayout.create(lDevice, {
+        DescLayout::BindInfo{
+            0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
+        }
+    });
+
+    // Allocate descriptor set
     matDescSet.allocate(lDevice, matDescPool.get(), matDescLayout.get(), 1);
 
     // --- bind buffer to descriptor ---

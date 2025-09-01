@@ -1,16 +1,14 @@
-#include "Az3D/Texture.hpp"
-#include "AzVulk/Device.hpp"
-#include "AzVulk/Buffer.hpp"
+#include "Az3D/ResourceGroup.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Helpers/stb_image.h"
+
 #include <cstring>
 #include <cmath>
 #include <iostream>
 
 using namespace AzVulk;
-
-namespace Az3D {
+using namespace Az3D;
 
 TextureGroup::TextureGroup(const Device* vkDevice)
     : vkDevice(vkDevice) {
@@ -411,6 +409,3 @@ void TextureGroup::cleanupSamplers() {
     samplers.clear();
     samplerPoolCount = 0;
 }
-
-
-} // namespace Az3D
