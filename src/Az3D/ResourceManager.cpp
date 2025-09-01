@@ -9,7 +9,6 @@ namespace Az3D {
 ResourceManager::ResourceManager(Device* vkDevice):
 vkDevice(vkDevice) {
     textureGroup = MakeUnique<TextureGroup>(vkDevice);
-    materialGroup = MakeUnique<MaterialGroup>(vkDevice);
     meshSkinnedGroup = MakeUnique<MeshSkinnedGroup>(vkDevice);
 }
 
@@ -17,6 +16,7 @@ void ResourceManager::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
 
     createMeshStaticBuffers();
+    createMaterialBuffer();
 
     meshSkinnedGroup->createDeviceBuffers();
 
@@ -28,10 +28,9 @@ void ResourceManager::uploadAllToGPU() {
         }
     });
 
-    textureGroup->createDescriptorInfo();
+    createMaterialDescSet();
 
-    materialGroup->createDeviceBuffer();
-    materialGroup->createDescSet(matDescPool.get(), matDescLayout.get());
+    textureGroup->createDescriptorInfo();
 }
 
 
@@ -42,7 +41,9 @@ size_t ResourceManager::addTexture(std::string name, std::string imagePath, uint
 }
 
 size_t ResourceManager::addMaterial(std::string name, const Material& material) {
-    size_t index = materialGroup->addMaterial(material);
+    size_t index = materials.size();
+    materials.push_back(material);
+
     materialNameToIndex[name] = index;
     return index;
 }
@@ -108,7 +109,7 @@ Texture* ResourceManager::getTexture(std::string name) const {
 
 Material* ResourceManager::getMaterial(std::string name) const {
     size_t index = getMaterialIndex(name);
-    return index != SIZE_MAX ? &materialGroup->materials[index] : nullptr;
+    return index != SIZE_MAX ? const_cast<Material*>(&materials[index]) : nullptr;
 }
 
 MeshStatic* ResourceManager::getMeshStatic(std::string name) const {

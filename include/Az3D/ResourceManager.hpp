@@ -28,13 +28,22 @@ public:
 
     AzVulk::Device* vkDevice;
 
-    AzVulk::DescLayout matDescLayout;
-    AzVulk::DescPool matDescPool;
 
+    // Mesh static
     SharedPtrVec<MeshStatic> meshStatics;
     SharedPtrVec<AzVulk::BufferData> vstaticBuffers;
     SharedPtrVec<AzVulk::BufferData> istaticBuffers;
     void createMeshStaticBuffers();
+
+    // Material
+    std::vector<Material> materials;
+    AzVulk::BufferData matBuffer;
+    void createMaterialBuffer(); // One big buffer for all
+
+    AzVulk::DescLayout matDescLayout;
+    AzVulk::DescPool matDescPool;
+    AzVulk::DescSets matDescSet;
+    void createMaterialDescSet(); // Only need one
 
     void uploadAllToGPU();
 
@@ -59,7 +68,6 @@ public:
     UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
 
     UniquePtr<TextureGroup> textureGroup;
-    UniquePtr<MaterialGroup> materialGroup;
     UniquePtr<MeshSkinnedGroup> meshSkinnedGroup;
 };
 

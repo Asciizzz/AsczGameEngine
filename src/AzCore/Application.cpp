@@ -77,8 +77,6 @@ void Application::initComponents() {
 
     // Create convenient references to avoid arrow spam
     auto& resManager = *resourceManager;
-    auto& texGroup = *resManager.textureGroup;
-    auto& matGroup = *resManager.materialGroup;
     auto& glbUBOManager = *globalUBOManager;    
 
 // PLAYGROUND FROM HERE
@@ -276,8 +274,6 @@ bool Application::checkWindowResize() {
     msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
     depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
 
-    auto& texGroup = *resourceManager->textureGroup;
-    auto& matGroup = *resourceManager->materialGroup;
 
     // Recreate render pass with new settings
     auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
@@ -320,8 +316,6 @@ void Application::mainLoop() {
     auto& rendererRef = *renderer;
 
     auto& resManager = *resourceManager;
-    auto& texGroup = *resManager.textureGroup;
-    auto& matGroup = *resManager.materialGroup;
 
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing

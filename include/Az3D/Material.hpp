@@ -40,30 +40,4 @@ struct Material {
     }
 };
 
-
-// MaterialGroup - manages materials using index-based access
-class MaterialGroup {
-public:
-    MaterialGroup(const AzVulk::Device* vkDevice);
-
-    MaterialGroup(const MaterialGroup&) = delete;
-    MaterialGroup& operator=(const MaterialGroup&) = delete;
-
-    const AzVulk::Device* vkDevice;
-
-    size_t addMaterial(const Material& material);
-
-    std::vector<Material> materials;
-
-    AzVulk::BufferData bufferData;
-    void createDeviceBuffer();
-
-    AzVulk::DescSets descSet;
-    void createDescSet(const VkDescriptorPool pool, const VkDescriptorSetLayout layout);
-    VkDescriptorSet getDescSet() const { return descSet.get(); }
-
-
-    void uploadToGPU();
-};
-
 } // namespace Az3D
