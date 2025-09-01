@@ -39,12 +39,11 @@ void ResourceGroup::uploadAllToGPU() {
     createMeshStaticBuffers();
 
     createMaterialBuffer();
-
-    meshSkinnedGroup->createDeviceBuffers();
-
     createMaterialDescSet();
 
     textureGroup->createDescriptorInfo();
+    
+    meshSkinnedGroup->createDeviceBuffers();
 }
 
 
