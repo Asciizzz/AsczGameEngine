@@ -121,8 +121,8 @@ void Application::initComponents() {
 
 // PLAYGROUND END HERE 
 
-    // matGroup.uploadToGPU();
-    resGroup->uploadAllToGPU();
+    // Testing if reallocation going to work smoothly
+    for (int i = 0; i < 100; i++) resGroup->uploadAllToGPU();
 
     renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get());
 
