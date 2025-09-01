@@ -8,7 +8,7 @@ struct BufferData;
 
 // This is not gonna cut it, you gotta have to split them into parts
 
-struct DynamicDescriptor {
+struct DynamicDescriptor { // OUTDATED!
     DynamicDescriptor() = default;
     DynamicDescriptor(VkDevice lDevice) : lDevice(lDevice) {}
     void init(VkDevice lDevice) { this->lDevice = lDevice; }
@@ -28,10 +28,10 @@ struct DynamicDescriptor {
     void createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
     std::vector<VkDescriptorSet> sets;
-    const VkDescriptorSet getSet(uint32_t index) const { return sets[index]; }
+    VkDescriptorSet getSet(uint32_t index) const { return sets[index]; }
 
     VkDescriptorSet set = VK_NULL_HANDLE;
-    const VkDescriptorSet getSet() const { return set; }
+    VkDescriptorSet getSet() const { return set; }
 
     // Some really helpful functions
     static VkDescriptorSetLayoutBinding fastBinding(uint32_t binding,
@@ -60,7 +60,7 @@ struct DescLayout {
     void init(const VkDevice lDevice) { this->lDevice = lDevice; }
 
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-    const VkDescriptorSetLayout get() const { return layout; }
+    VkDescriptorSetLayout get() const { return layout; }
 
     void create(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
     void create(const std::vector<BindInfo>& bindings);
@@ -81,7 +81,7 @@ struct DescPool {
     void init(const VkDevice lDevice) { this->lDevice = lDevice; }
 
     VkDescriptorPool pool = VK_NULL_HANDLE;
-    const VkDescriptorPool get() const { return pool; }
+    VkDescriptorPool get() const { return pool; }
 
     void create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 };
@@ -107,7 +107,7 @@ struct DescSets {
     std::vector<VkDescriptorSet> sets;
     void allocate(VkDescriptorPool pool, VkDescriptorSetLayout layout, uint32_t count);
 
-    const VkDescriptorSet get(uint32_t index=0) const { return sets[index]; }
+    VkDescriptorSet get(uint32_t index=0) const { return sets[index]; }
 };
 
 }

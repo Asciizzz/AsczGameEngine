@@ -44,7 +44,7 @@ namespace AzVulk {
         VkRenderPass renderPass = VK_NULL_HANDLE;
         RenderPassConfig config;
 
-        const VkRenderPass get() const { return renderPass; }
+        VkRenderPass get() const { return renderPass; }
 
         void createRenderPass();
         void cleanup();

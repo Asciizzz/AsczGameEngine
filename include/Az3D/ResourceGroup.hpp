@@ -37,13 +37,13 @@ public:
     size_t addRigged(std::string name, std::string filePath); // Adds both mesh and skeleton from file
 
 
-    const VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout->get(); }
-    const VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout->get(); }
-    const VkDescriptorSetLayout getSkeletonDescLayout() const { return skeletonDescLayout->get(); }
+    VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout->get(); }
+    VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout->get(); }
+    VkDescriptorSetLayout getSkeletonDescLayout() const { return skeletonDescLayout->get(); }
 
-    const VkDescriptorSet getMatDescSet() const { return matDescSet->get(); }
-    const VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
-    const VkDescriptorSet getSkeletonDescSet(size_t skeletonIndex) const { 
+    VkDescriptorSet getMatDescSet() const { return matDescSet->get(); }
+    VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
+    VkDescriptorSet getSkeletonDescSet(size_t skeletonIndex) const { 
         return skeletonIndex < skeletons.size() ? skeletonDescSets->get(skeletonIndex) : VK_NULL_HANDLE; 
     }
 
