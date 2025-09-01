@@ -70,15 +70,8 @@ size_t ResourceManager::addMeshStatic(std::string name, std::string filePath, bo
     return index;
 }
 
-size_t ResourceManager::addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh) {
-    size_t index = meshSkinnedGroup->addMeshSkinned(mesh);
-    meshSkinnedNameToIndex[name] = index;
-    return index;
-}
-
 size_t ResourceManager::addMeshSkinned(std::string name, std::string filePath) {
-    auto newMesh = MeshSkinned::loadFromGLTF(filePath);
-    size_t index = meshSkinnedGroup->addMeshSkinned(newMesh);
+    size_t index = meshSkinnedGroup->addFromGLTF(filePath);
     meshSkinnedNameToIndex[name] = index;
     return index;
 }

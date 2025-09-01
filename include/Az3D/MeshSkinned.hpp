@@ -28,10 +28,6 @@ struct MeshSkinned {
     std::vector<VertexSkinned> vertices;
     std::vector<uint32_t> indices;
 
-    Skeleton skeleton; // bones + hierarchy
-
-    static SharedPtr<MeshSkinned> loadFromGLTF(const std::string& filePath);
-
     AzVulk::BufferData vertexBufferData;
     AzVulk::BufferData indexBufferData;
     AzVulk::BufferData inverseMatBufferData;
@@ -40,17 +36,19 @@ struct MeshSkinned {
     void createDeviceBuffer(const AzVulk::Device* vkDevice);
 };
 
-
 class MeshSkinnedGroup {
 public:
     MeshSkinnedGroup(const AzVulk::Device* vkDevice);
     MeshSkinnedGroup(const MeshSkinnedGroup&) = delete;
     MeshSkinnedGroup& operator=(const MeshSkinnedGroup&) = delete;
 
+    size_t addFromGLTF(const std::string& filePath);
+
     size_t addMeshSkinned(SharedPtr<MeshSkinned> mesh);
 
     // Index-based mesh storage
     SharedPtrVec<MeshSkinned> meshes;
+    SharedPtrVec<Skeleton> skeletons;
 
     const AzVulk::Device* vkDevice;
     void createDeviceBuffers();

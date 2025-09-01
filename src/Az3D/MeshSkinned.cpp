@@ -73,16 +73,80 @@ void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& access
     }
 }
 
-SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
-    auto meshSkinned = std::make_shared<MeshSkinned>();
+void MeshSkinned::createDeviceBuffer(const AzVulk::Device* vkDevice) {
+    // VERTEX BUFFER
+
+    BufferData vertexStagingBuffer;
+    vertexStagingBuffer.initVkDevice(vkDevice);
+    vertexStagingBuffer.setProperties(
+        vertices.size() * sizeof(VertexSkinned), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    vertexStagingBuffer.createBuffer();
+    vertexStagingBuffer.mappedData(vertices.data());
+
+    vertexBufferData.initVkDevice(vkDevice);
+    vertexBufferData.setProperties(
+        vertices.size() * sizeof(VertexSkinned),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    vertexBufferData.createBuffer();
+
+    TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+    VkBufferCopy vertexCopyRegion{};
+    vertexCopyRegion.srcOffset = 0;
+    vertexCopyRegion.dstOffset = 0;
+    vertexCopyRegion.size = vertices.size() * sizeof(VertexSkinned);
+
+    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vertexBufferData.buffer, 1, &vertexCopyRegion);
+    vertexBufferData.hostVisible = false;
+
+    vertexCopyCmd.endAndSubmit();
+
+    // INDEX BUFFER
+
+    BufferData indexStagingBuffer;
+    indexStagingBuffer.initVkDevice(vkDevice);
+    indexStagingBuffer.setProperties(
+        indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    indexStagingBuffer.createBuffer();
+    indexStagingBuffer.mappedData(indices.data());
+
+    indexBufferData.initVkDevice(vkDevice);
+    indexBufferData.setProperties(
+        indices.size() * sizeof(uint32_t),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    indexBufferData.createBuffer();
+
+    TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+
+    VkBufferCopy indexCopyRegion{};
+    indexCopyRegion.srcOffset = 0;
+    indexCopyRegion.dstOffset = 0;
+    indexCopyRegion.size = indices.size() * sizeof(uint32_t);
+
+    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, indexBufferData.buffer, 1, &indexCopyRegion);
+    indexBufferData.hostVisible = false;
+
+    indexCopyCmd.endAndSubmit();
+}
+
+
+size_t MeshSkinnedGroup::addFromGLTF(const std::string& filePath) {
+    SharedPtr<MeshSkinned> meshSkinned = MakeShared<MeshSkinned>();
+    SharedPtr<Skeleton> skeleton = MakeShared<Skeleton>();
 
     tinygltf::TinyGLTF loader;
     tinygltf::Model model;
     std::string err, warn;
 
-    bool ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
-
-    // Check file extension to decide parser
+    bool ok; // Check file extension to decide parser
     if (filePath.size() > 4 && filePath.substr(filePath.size() - 4) == ".glb")
         ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath); // GLB
     else
@@ -121,13 +185,13 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
         // Expand into vertices
         for (size_t i = 0; i < vertexCount; i++) {
             VertexSkinned v{};
-            v.pos_tu     = glm::vec4(positions.size() > i ? positions[i] : glm::vec3(0.0f),
-                                     uvs.size() > i ? uvs[i].x : 0.0f);
-            v.nrml_tv    = glm::vec4(normals.size() > i ? normals[i] : glm::vec3(0.0f),
-                                     uvs.size() > i ? uvs[i].y : 0.0f);
-            v.tangent    = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
-            v.boneIDs    = joints.size() > i ? joints[i] : glm::uvec4(0);
-            v.weights    = weights.size() > i ? weights[i] : glm::vec4(0,0,0,0);
+            v.pos_tu    = glm::vec4(positions.size() > i ? positions[i] : glm::vec3(0.0f),
+                                    uvs.size() > i ? uvs[i].x : 0.0f);
+            v.nrml_tv   = glm::vec4(normals.size() > i ? normals[i] : glm::vec3(0.0f),
+                                    uvs.size() > i ? uvs[i].y : 0.0f);
+            v.tangent   = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
+            v.boneIDs   = joints.size() > i ? joints[i] : glm::uvec4(0);
+            v.weights   = weights.size() > i ? weights[i] : glm::vec4(0,0,0,0);
 
             meshSkinned->vertices.push_back(v);
         }
@@ -172,10 +236,10 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
             readAccessor(model, model.accessors[skin.inverseBindMatrices], ibms);
         }
 
-        meshSkinned->skeleton.names.reserve(skin.joints.size());
-        meshSkinned->skeleton.parentIndices.reserve(skin.joints.size());
-        meshSkinned->skeleton.inverseBindMatrices.reserve(skin.joints.size());
-        meshSkinned->skeleton.localBindTransforms.reserve(skin.joints.size());
+        skeleton->names.reserve(skin.joints.size());
+        skeleton->parentIndices.reserve(skin.joints.size());
+        skeleton->inverseBindMatrices.reserve(skin.joints.size());
+        skeleton->localBindTransforms.reserve(skin.joints.size());
 
         for (size_t i = 0; i < skin.joints.size(); i++) {
             int nodeIndex = skin.joints[i];
@@ -218,84 +282,30 @@ SharedPtr<MeshSkinned> MeshSkinned::loadFromGLTF(const std::string& filePath) {
 
             glm::mat4 boneLocalPoseTransform = boneLocalBindTransform;
 
-            meshSkinned->skeleton.nameToIndex[boneName] = static_cast<int>(meshSkinned->skeleton.names.size());
+            skeleton->nameToIndex[boneName] = static_cast<int>(skeleton->names.size());
 
-            meshSkinned->skeleton.names.push_back(boneName);
-            meshSkinned->skeleton.parentIndices.push_back(boneParentIndex);
-            meshSkinned->skeleton.inverseBindMatrices.push_back(boneInverseBindMatrix);
-            meshSkinned->skeleton.localBindTransforms.push_back(boneLocalBindTransform);
+            skeleton->names.push_back(boneName);
+            skeleton->parentIndices.push_back(boneParentIndex);
+            skeleton->inverseBindMatrices.push_back(boneInverseBindMatrix);
+            skeleton->localBindTransforms.push_back(boneLocalBindTransform);
         }
+    } else {
+        // Create 1 default bone
+        skeleton->names.push_back("sad_bone");
+        skeleton->parentIndices.push_back(-1);
+        skeleton->inverseBindMatrices.push_back(glm::mat4(1.0f));
+        skeleton->localBindTransforms.push_back(glm::mat4(1.0f));
     }
 
     // TODO: load animations from model.animations if needed
 
-    // meshSkinned->skeleton.debugPrintHierarchy();
+    // skeleton.debugPrintHierarchy();
 
-    return meshSkinned;
+    skeletons.push_back(skeleton);
+    meshes.push_back(meshSkinned);
+
+    return meshes.size() - 1;
 }
-
-void MeshSkinned::createDeviceBuffer(const AzVulk::Device* vkDevice) {
-    BufferData vertexStagingBuffer;
-    vertexStagingBuffer.initVkDevice(vkDevice);
-    vertexStagingBuffer.setProperties(
-        vertices.size() * sizeof(VertexSkinned), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    vertexStagingBuffer.createBuffer();
-    vertexStagingBuffer.mappedData(vertices.data());
-
-    vertexBufferData.initVkDevice(vkDevice);
-    vertexBufferData.setProperties(
-        vertices.size() * sizeof(VertexSkinned),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-    vertexBufferData.createBuffer();
-
-    TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
-
-    VkBufferCopy vertexCopyRegion{};
-    vertexCopyRegion.srcOffset = 0;
-    vertexCopyRegion.dstOffset = 0;
-    vertexCopyRegion.size = vertices.size() * sizeof(VertexSkinned);
-
-    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vertexBufferData.buffer, 1, &vertexCopyRegion);
-    vertexBufferData.hostVisible = false;
-
-    vertexCopyCmd.endAndSubmit();
-
-
-    BufferData indexStagingBuffer;
-    indexStagingBuffer.initVkDevice(vkDevice);
-    indexStagingBuffer.setProperties(
-        indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    indexStagingBuffer.createBuffer();
-    indexStagingBuffer.mappedData(indices.data());
-
-    indexBufferData.initVkDevice(vkDevice);
-    indexBufferData.setProperties(
-        indices.size() * sizeof(uint32_t),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-    indexBufferData.createBuffer();
-
-    TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
-
-    VkBufferCopy indexCopyRegion{};
-    indexCopyRegion.srcOffset = 0;
-    indexCopyRegion.dstOffset = 0;
-    indexCopyRegion.size = indices.size() * sizeof(uint32_t);
-
-    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, indexBufferData.buffer, 1, &indexCopyRegion);
-    indexBufferData.hostVisible = false;
-
-    indexCopyCmd.endAndSubmit();
-}
-
-
 
 
 MeshSkinnedGroup::MeshSkinnedGroup(const AzVulk::Device* vkDevice) :
