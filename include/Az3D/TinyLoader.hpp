@@ -20,6 +20,11 @@ struct TinyTexture {
 class TinyLoader {
 public:
     static TinyTexture loadImage(const std::string& filePath);
+    
+    // MeshStatic loading functions
+    static SharedPtr<MeshStatic> loadMeshStatic(const std::string& filePath);
+    static SharedPtr<MeshStatic> loadMeshStaticFromOBJ(const std::string& filePath);
+    static SharedPtr<MeshStatic> loadMeshStaticFromGLTF(const std::string& filePath);
 };
 
 } // namespace Az3D

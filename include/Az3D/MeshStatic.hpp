@@ -50,8 +50,6 @@ struct MeshStatic {
     // Mesh data
     std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
-    static SharedPtr<MeshStatic> loadFromOBJ(const std::string& filePath);
-    static SharedPtr<MeshStatic> loadFromGLTF(const std::string& filePath);
 
     // BVH data structures
     glm::vec3 meshMin = glm::vec3(FLT_MAX);

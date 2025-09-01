@@ -1,4 +1,5 @@
 #include "Az3D/ResourceGroup.hpp"
+#include "Az3D/TinyLoader.hpp"
 #include "AzVulk/Device.hpp"
 #include <iostream>
 
@@ -80,13 +81,8 @@ size_t ResourceGroup::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh
     return index;
 }
 size_t ResourceGroup::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
-    // Check the extension
-    std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
-    SharedPtr<MeshStatic> newMesh;
-    if (extension == "obj" )
-        newMesh = MeshStatic::loadFromOBJ(filePath);
-    else if (extension == "gltf" || extension == "glb")
-        newMesh = MeshStatic::loadFromGLTF(filePath);
+    // Use the general purpose loader that auto-detects file type
+    SharedPtr<MeshStatic> newMesh = TinyLoader::loadMeshStatic(filePath);
 
     if (hasBVH) newMesh->createBVH();
 
