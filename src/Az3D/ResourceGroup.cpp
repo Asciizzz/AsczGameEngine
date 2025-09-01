@@ -61,10 +61,9 @@ void ResourceGroup::uploadAllToGPU() {
 
 
 size_t ResourceGroup::addTexture(std::string name, std::string imagePath, uint32_t mipLevels) {
-    // First load the image using TinyLoader
+    std::string uniqueName = getUniqueName(name, textureNameCounts);
+
     TinyTexture tinyTexture = TinyLoader::loadImage(imagePath);
-    
-    // Create texture from TinyTexture
     SharedPtr<Texture> texture = createTexture(tinyTexture, mipLevels);
 
     // If null return the default 0 index
@@ -76,55 +75,63 @@ size_t ResourceGroup::addTexture(std::string name, std::string imagePath, uint32
     size_t index = textures.size();
     textures.push_back(texture);
 
-    textureNameToIndex[name] = index;
+    textureNameToIndex[uniqueName] = index;
     return index;
 }
 
 size_t ResourceGroup::addMaterial(std::string name, const Material& material) {
+    std::string uniqueName = getUniqueName(name, materialNameCounts);
+    
     size_t index = materials.size();
     materials.push_back(material);
 
-    materialNameToIndex[name] = index;
+    materialNameToIndex[uniqueName] = index;
     return index;
 }
 
 size_t ResourceGroup::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
+    std::string uniqueName = getUniqueName(name, meshStaticNameCounts);
+    
     if (hasBVH) mesh->createBVH();
 
     size_t index = meshStatics.size();
     meshStatics.push_back(mesh);
 
-    meshStaticNameToIndex[name] = index;
+    meshStaticNameToIndex[uniqueName] = index;
     return index;
 }
 size_t ResourceGroup::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
-    // Use the general purpose loader that auto-detects file type
-    SharedPtr<MeshStatic> newMesh = TinyLoader::loadMeshStatic(filePath);
+    std::string uniqueName = getUniqueName(name, meshStaticNameCounts);
 
+    SharedPtr<MeshStatic> newMesh = TinyLoader::loadMeshStatic(filePath);
     if (hasBVH) newMesh->createBVH();
 
     size_t index = meshStatics.size();
     meshStatics.push_back(newMesh);
 
-    meshStaticNameToIndex[name] = index;
+    meshStaticNameToIndex[uniqueName] = index;
     return index;
 }
 
 size_t ResourceGroup::addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh) {
+    std::string uniqueName = getUniqueName(name, meshSkinnedNameCounts);
+
     size_t index = meshSkinneds.size();
     meshSkinneds.push_back(mesh);
     
-    meshSkinnedNameToIndex[name] = index;
+    meshSkinnedNameToIndex[uniqueName] = index;
     return index;
 }
 
 size_t ResourceGroup::addMeshSkinned(std::string name, std::string filePath) {
+    std::string uniqueName = getUniqueName(name, meshSkinnedNameCounts);
+    
     TinyRig rig = TinyLoader::loadMeshSkinned(filePath, false); // Don't load skeleton for now
     
     size_t index = meshSkinneds.size();
     meshSkinneds.push_back(rig.mesh);
     
-    meshSkinnedNameToIndex[name] = index;
+    meshSkinnedNameToIndex[uniqueName] = index;
     return index;
 }
 
@@ -743,4 +750,20 @@ void ResourceGroup::createMeshSkinnedBuffers() {
         vskinnedBuffers.push_back(std::move(vBufferData));
         iskinnedBuffers.push_back(std::move(iBufferData));
     }
+}
+
+// ============================================================================
+// ========================= HELPER FUNCTIONS =================================
+// ============================================================================
+
+std::string ResourceGroup::getUniqueName(const std::string& baseName, UnorderedMap<std::string, size_t>& nameCounts) {
+    // Check if this is the first occurrence of this base name
+    if (nameCounts.find(baseName) == nameCounts.end()) {
+        nameCounts[baseName] = 1;
+        return baseName;
+    }
+    
+    // This base name already exists, increment count and create suffixed name
+    size_t count = nameCounts[baseName]++;
+    return baseName + "_" + std::to_string(count);
 }

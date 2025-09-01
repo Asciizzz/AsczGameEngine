@@ -88,7 +88,7 @@ public:
     AzVulk::DescSets      texDescSet;
     void createTextureDescSet();
 
-    // Texture methods
+    // Useful texture methods
     SharedPtr<Texture> createTexture(const TinyTexture& tinyTexture, uint32_t mipLevels = 0);
 
 
@@ -97,6 +97,16 @@ public:
     UnorderedMap<std::string, size_t> materialNameToIndex;
     UnorderedMap<std::string, size_t> meshStaticNameToIndex;
     UnorderedMap<std::string, size_t> meshSkinnedNameToIndex;
+
+    // Maps to track duplicate counts for automatic renaming
+    UnorderedMap<std::string, size_t> textureNameCounts;
+    UnorderedMap<std::string, size_t> materialNameCounts;
+    UnorderedMap<std::string, size_t> meshStaticNameCounts;
+    UnorderedMap<std::string, size_t> meshSkinnedNameCounts;
+
+private:
+    // Helper function to generate unique names with suffixes
+    std::string getUniqueName(const std::string& baseName, UnorderedMap<std::string, size_t>& nameCounts);
 };
 
 } // namespace Az3D
