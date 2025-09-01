@@ -26,29 +26,12 @@ public:
     size_t addMeshSkinned(std::string name, SharedPtr<MeshSkinned> mesh);
     size_t addMeshSkinned(std::string name, std::string filePath);
 
-    AzVulk::Device* vkDevice;
-
-
-    // Mesh static
-    SharedPtrVec<MeshStatic> meshStatics;
-    SharedPtrVec<AzVulk::BufferData> vstaticBuffers;
-    SharedPtrVec<AzVulk::BufferData> istaticBuffers;
-    void createMeshStaticBuffers();
-
-    // Material
-    std::vector<Material> materials;
-    AzVulk::BufferData matBuffer;
-    void createMaterialBuffer(); // One big buffer for all
-
-    AzVulk::DescLayout matDescLayout;
-    AzVulk::DescPool matDescPool;
-    AzVulk::DescSets matDescSet;
-    void createMaterialDescSet(); // Only need one
-
-    void uploadAllToGPU();
 
     const VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout.get(); }
     const VkDescriptorSetLayout getTexDescLayout() const { return textureGroup->getDescLayout(); }
+
+    const VkDescriptorSet getMatDescSet() const { return matDescSet.get(); }
+    const VkDescriptorSet getTexDescSet() const { return textureGroup->getDescSet(); }
 
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
@@ -60,6 +43,26 @@ public:
     Material* getMaterial(std::string name) const;
     MeshStatic* getMeshStatic(std::string name) const;
     MeshSkinned* getMeshSkinned(std::string name) const;
+
+    void uploadAllToGPU();
+
+// private: i dont care about safety
+    AzVulk::Device* vkDevice;
+
+    // Mesh static
+    SharedPtrVec<MeshStatic> meshStatics;
+    SharedPtrVec<AzVulk::BufferData> vstaticBuffers;
+    SharedPtrVec<AzVulk::BufferData> istaticBuffers;
+    void createMeshStaticBuffers();
+
+    // Material
+    std::vector<Material> materials;
+    AzVulk::BufferData matBuffer;
+    AzVulk::DescLayout matDescLayout;
+    AzVulk::DescPool matDescPool;
+    AzVulk::DescSets matDescSet;
+    void createMaterialBuffer(); // One big buffer for all
+    void createMaterialDescSet(); // Only need one
 
     // String-to-index maps
     UnorderedMap<std::string, size_t> textureNameToIndex;

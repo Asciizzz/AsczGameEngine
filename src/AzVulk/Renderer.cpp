@@ -163,8 +163,8 @@ void Renderer::drawInstanceStaticGroup(RasterPipeline& rasterPipeline, Az3D::Ins
 
     // Bind descriptor sets once
     VkDescriptorSet globalSet = globalUBOManager->getDescSet();
-    VkDescriptorSet materialSet = resGroup->matDescSet.get();
-    VkDescriptorSet textureSet = resGroup->textureGroup->getDescSet();
+    VkDescriptorSet materialSet = resGroup->getMatDescSet();
+    VkDescriptorSet textureSet = resGroup->getTexDescSet();
 
     std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -196,8 +196,8 @@ void Renderer::drawDemoSkinned(RasterPipeline& rasterPipeline, const Az3D::MeshS
 
     // Bind descriptor sets
     VkDescriptorSet globalSet = globalUBOManager->getDescSet();
-    VkDescriptorSet materialSet = resGroup->matDescSet.get();
-    VkDescriptorSet textureSet = resGroup->textureGroup->getDescSet();
+    VkDescriptorSet materialSet = resGroup->getMatDescSet();
+    VkDescriptorSet textureSet = resGroup->getTexDescSet();
 
     std::vector<VkDescriptorSet> sets = {globalSet, materialSet, textureSet};
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
