@@ -161,8 +161,8 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup, const GlbU
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                             rPipeline->layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-    VkBuffer vertexBuffer = resGroup->vstaticBuffers[meshIndex]->buffer;
-    VkBuffer indexBuffer = resGroup->istaticBuffers[meshIndex]->buffer;
+    VkBuffer vertexBuffer = resGroup->getStaticVertexBuffer(meshIndex);
+    VkBuffer indexBuffer = resGroup->getStaticIndexBuffer(meshIndex);
 
     VkBuffer instanceBuffer = instanceGroup->bufferData.buffer;
 

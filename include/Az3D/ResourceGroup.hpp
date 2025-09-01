@@ -78,9 +78,15 @@ public:
     UniquePtrVec<AzVulk::BufferData>  iskinnedBuffers;
     void createMeshSkinnedBuffers();
 
-    // Mesh index convenient function
+    // Convenient meshes functions
     inline uint32_t getStaticIndexCount(size_t meshIndex) const { return static_cast<uint32_t>(meshStatics[meshIndex]->indices.size()); }
     inline uint32_t getSkinnedIndexCount(size_t meshIndex) const { return static_cast<uint32_t>(meshSkinneds[meshIndex]->indices.size()); }
+
+    inline VkBuffer getStaticVertexBuffer(size_t meshIndex) const { return vstaticBuffers[meshIndex]->buffer; }
+    inline VkBuffer getStaticIndexBuffer(size_t meshIndex) const { return istaticBuffers[meshIndex]->buffer; }
+
+    inline VkBuffer getSkinnedVertexBuffer(size_t meshIndex) const { return vskinnedBuffers[meshIndex]->buffer; }
+    inline VkBuffer getSkinnedIndexBuffer(size_t meshIndex) const { return iskinnedBuffers[meshIndex]->buffer; }
 
     // Skeleton data - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
     SharedPtrVec<RigSkeleton>         skeletons;
