@@ -17,8 +17,8 @@ struct TinyTexture {
 };
 
 struct TinyRig {
-    SharedPtr<MeshSkinned> mesh;
-    SharedPtr<RigSkeleton> skeleton;
+    MeshSkinned mesh;
+    RigSkeleton skeleton;
 };
 
 
@@ -27,9 +27,9 @@ public:
     static TinyTexture loadImage(const std::string& filePath);
     
     // MeshStatic loading functions
-    static SharedPtr<MeshStatic> loadMeshStatic(const std::string& filePath);
-    static SharedPtr<MeshStatic> loadMeshStaticFromOBJ(const std::string& filePath);
-    static SharedPtr<MeshStatic> loadMeshStaticFromGLTF(const std::string& filePath);
+    static MeshStatic loadMeshStatic(const std::string& filePath);
+    static MeshStatic loadMeshStaticFromOBJ(const std::string& filePath);
+    static MeshStatic loadMeshStaticFromGLTF(const std::string& filePath);
 
     // MeshSkinned loading functions
     static TinyRig loadMeshSkinned(const std::string& filePath, bool loadSkeleton=true);

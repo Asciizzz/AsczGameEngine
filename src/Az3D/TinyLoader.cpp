@@ -66,7 +66,7 @@ void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& access
 }
 
 // General purpose MeshStatic loader that auto-detects file type
-SharedPtr<MeshStatic> TinyLoader::loadMeshStatic(const std::string& filePath) {
+MeshStatic TinyLoader::loadMeshStatic(const std::string& filePath) {
     // Extract file extension
     std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
     
@@ -83,7 +83,7 @@ SharedPtr<MeshStatic> TinyLoader::loadMeshStatic(const std::string& filePath) {
 }
 
 // OBJ loader implementation using tiny_obj_loader
-SharedPtr<MeshStatic> TinyLoader::loadMeshStaticFromOBJ(const std::string& filePath) {
+MeshStatic TinyLoader::loadMeshStaticFromOBJ(const std::string& filePath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -91,7 +91,7 @@ SharedPtr<MeshStatic> TinyLoader::loadMeshStaticFromOBJ(const std::string& fileP
 
     // Load the OBJ file
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
-        return nullptr;
+        return MeshStatic();
     }
 
     std::vector<VertexStatic> vertices;
@@ -182,11 +182,11 @@ SharedPtr<MeshStatic> TinyLoader::loadMeshStaticFromOBJ(const std::string& fileP
         }
     }
 
-    return MakeShared<MeshStatic>(std::move(vertices), std::move(indices));
+    return MeshStatic(std::move(vertices), std::move(indices));
 }
 
-SharedPtr<MeshStatic> TinyLoader::loadMeshStaticFromGLTF(const std::string& filePath) {
-    auto meshStatic = std::make_shared<MeshStatic>();
+MeshStatic TinyLoader::loadMeshStaticFromGLTF(const std::string& filePath) {
+    auto meshStatic = MeshStatic();
 
     tinygltf::TinyGLTF loader;
     tinygltf::Model model;
@@ -247,7 +247,7 @@ SharedPtr<MeshStatic> TinyLoader::loadMeshStaticFromGLTF(const std::string& file
                                      uvs.size() > i ? uvs[i].y : 0.0f);
             v.tangent    = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
 
-            meshStatic->vertices.push_back(v);
+            meshStatic.vertices.push_back(v);
         }
 
         // Indices
@@ -273,7 +273,7 @@ SharedPtr<MeshStatic> TinyLoader::loadMeshStaticFromGLTF(const std::string& file
                     default:
                         throw std::runtime_error("Unsupported index component type");
                 }
-                meshStatic->indices.push_back(index + static_cast<uint32_t>(vertexOffset));
+                meshStatic.indices.push_back(index + static_cast<uint32_t>(vertexOffset));
             }
         }
 
@@ -284,8 +284,8 @@ SharedPtr<MeshStatic> TinyLoader::loadMeshStaticFromGLTF(const std::string& file
 }
 
 TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkeleton) {
-    SharedPtr<MeshSkinned> meshSkinned = MakeShared<MeshSkinned>();
-    SharedPtr<RigSkeleton> skeleton = MakeShared<RigSkeleton>();
+    MeshSkinned meshSkinned;
+    RigSkeleton rigSkeleton;
 
     tinygltf::TinyGLTF loader;
     tinygltf::Model model;
@@ -338,7 +338,7 @@ TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkelet
             v.boneIDs   = joints.size() > i ? joints[i] : glm::uvec4(0);
             v.weights   = weights.size() > i ? weights[i] : glm::vec4(0,0,0,0);
 
-            meshSkinned->vertices.push_back(v);
+            meshSkinned.vertices.push_back(v);
         }
 
         // Indices
@@ -364,7 +364,7 @@ TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkelet
                     default:
                         throw std::runtime_error("Unsupported index component type");
                 }
-                meshSkinned->indices.push_back(index + static_cast<uint32_t>(vertexOffset));
+                meshSkinned.indices.push_back(index + static_cast<uint32_t>(vertexOffset));
             }
         }
 
@@ -381,10 +381,10 @@ TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkelet
             readAccessor(model, model.accessors[skin.inverseBindMatrices], ibms);
         }
 
-        skeleton->names.reserve(skin.joints.size());
-        skeleton->parentIndices.reserve(skin.joints.size());
-        skeleton->inverseBindMatrices.reserve(skin.joints.size());
-        skeleton->localBindTransforms.reserve(skin.joints.size());
+        rigSkeleton.names.reserve(skin.joints.size());
+        rigSkeleton.parentIndices.reserve(skin.joints.size());
+        rigSkeleton.inverseBindMatrices.reserve(skin.joints.size());
+        rigSkeleton.localBindTransforms.reserve(skin.joints.size());
 
         for (size_t i = 0; i < skin.joints.size(); i++) {
             int nodeIndex = skin.joints[i];
@@ -425,24 +425,24 @@ TinyRig TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadSkelet
                 boneLocalBindTransform = t * r * s;
             }
 
-            skeleton->nameToIndex[boneName] = static_cast<int>(skeleton->names.size());
+            rigSkeleton.nameToIndex[boneName] = static_cast<int>(rigSkeleton.names.size());
 
-            skeleton->names.push_back(boneName);
-            skeleton->parentIndices.push_back(boneParentIndex);
-            skeleton->inverseBindMatrices.push_back(boneInverseBindMatrix);
-            skeleton->localBindTransforms.push_back(boneLocalBindTransform);
+            rigSkeleton.names.push_back(boneName);
+            rigSkeleton.parentIndices.push_back(boneParentIndex);
+            rigSkeleton.inverseBindMatrices.push_back(boneInverseBindMatrix);
+            rigSkeleton.localBindTransforms.push_back(boneLocalBindTransform);
         }
     } else if (loadSkeleton) {
         // Create 1 default bone if no skeleton found but loadSkeleton is true
-        skeleton->names.push_back("sad_bone");
-        skeleton->parentIndices.push_back(-1);
-        skeleton->inverseBindMatrices.push_back(glm::mat4(1.0f));
-        skeleton->localBindTransforms.push_back(glm::mat4(1.0f));
+        rigSkeleton.names.push_back("sad_bone");
+        rigSkeleton.parentIndices.push_back(-1);
+        rigSkeleton.inverseBindMatrices.push_back(glm::mat4(1.0f));
+        rigSkeleton.localBindTransforms.push_back(glm::mat4(1.0f));
     }
 
     // Return TinyRig with mesh and skeleton
     TinyRig rig;
     rig.mesh = meshSkinned;
-    rig.skeleton = loadSkeleton ? skeleton : nullptr;
+    rig.skeleton = loadSkeleton ? rigSkeleton : RigSkeleton();
     return rig;
 }

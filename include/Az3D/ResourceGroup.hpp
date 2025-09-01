@@ -37,14 +37,14 @@ public:
     size_t addRigged(std::string name, std::string filePath); // Adds both mesh and skeleton from file
 
 
-    const VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout.get(); }
-    const VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout.get(); }
-    const VkDescriptorSetLayout getSkeletonDescLayout() const { return skeletonDescLayout.get(); }
+    const VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout->get(); }
+    const VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout->get(); }
+    const VkDescriptorSetLayout getSkeletonDescLayout() const { return skeletonDescLayout->get(); }
 
-    const VkDescriptorSet getMatDescSet() const { return matDescSet.get(); }
-    const VkDescriptorSet getTexDescSet() const { return texDescSet.get(); }
+    const VkDescriptorSet getMatDescSet() const { return matDescSet->get(); }
+    const VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
     const VkDescriptorSet getSkeletonDescSet(size_t skeletonIndex) const { 
-        return skeletonIndex < skeletons.size() ? skeletonDescSets.get(skeletonIndex) : VK_NULL_HANDLE; 
+        return skeletonIndex < skeletons.size() ? skeletonDescSets->get(skeletonIndex) : VK_NULL_HANDLE; 
     }
 
 
@@ -66,45 +66,49 @@ public:
 // private: i dont care about safety
     AzVulk::Device* vkDevice;
 
-    // Mesh static
-    SharedPtrVec<MeshStatic>        meshStatics;
-    std::vector<AzVulk::BufferData> vstaticBuffers;
-    std::vector<AzVulk::BufferData> istaticBuffers;
+    // Mesh static - Resources: SharedPtr, Buffers: UniquePtr
+    SharedPtrVec<MeshStatic>          meshStatics;
+    UniquePtrVec<AzVulk::BufferData>  vstaticBuffers;
+    UniquePtrVec<AzVulk::BufferData>  istaticBuffers;
     void createMeshStaticBuffers();
 
-    // Mesh skinned
-    SharedPtrVec<MeshSkinned>       meshSkinneds;
-    std::vector<AzVulk::BufferData> vskinnedBuffers;
-    std::vector<AzVulk::BufferData> iskinnedBuffers;
+    // Mesh skinned - Resources: SharedPtr, Buffers: UniquePtr
+    SharedPtrVec<MeshSkinned>         meshSkinneds;
+    UniquePtrVec<AzVulk::BufferData>  vskinnedBuffers;
+    UniquePtrVec<AzVulk::BufferData>  iskinnedBuffers;
     void createMeshSkinnedBuffers();
 
-    // Skeleton data (inverse bind matrices)
-    SharedPtrVec<RigSkeleton>       skeletons;
-    std::vector<AzVulk::BufferData> skeletonBuffers;
-    AzVulk::DescLayout              skeletonDescLayout;
-    AzVulk::DescPool                skeletonDescPool;
-    AzVulk::DescSets                skeletonDescSets;  // Single DescSets handling multiple sets
+    // Mesh index convenient function
+    inline uint32_t getStaticIndexCount(size_t meshIndex) const { return static_cast<uint32_t>(meshStatics[meshIndex]->indices.size()); }
+    inline uint32_t getSkinnedIndexCount(size_t meshIndex) const { return static_cast<uint32_t>(meshSkinneds[meshIndex]->indices.size()); }
+
+    // Skeleton data - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
+    SharedPtrVec<RigSkeleton>         skeletons;
+    UniquePtrVec<AzVulk::BufferData>  skeletonBuffers;
+    UniquePtr<AzVulk::DescLayout>     skeletonDescLayout;
+    UniquePtr<AzVulk::DescPool>       skeletonDescPool;
+    UniquePtr<AzVulk::DescSets>       skeletonDescSets;
     void createSkeletonBuffers();
     void createSkeletonDescSets();
 
-    // Material (some complication stopping it from being a shared_ptr)
-    std::vector<Material> materials;
-    AzVulk::BufferData    matBuffer;
-    AzVulk::DescLayout    matDescLayout;
-    AzVulk::DescPool      matDescPool;
-    AzVulk::DescSets      matDescSet;
+    // Material - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
+    SharedPtrVec<Material>            materials;
+    UniquePtr<AzVulk::BufferData>     matBuffer;
+    UniquePtr<AzVulk::DescLayout>     matDescLayout;
+    UniquePtr<AzVulk::DescPool>       matDescPool;
+    UniquePtr<AzVulk::DescSets>       matDescSet;
     void createMaterialBuffer(); // One big buffer for all
     void createMaterialDescSet(); // Only need one
 
-    // Texture Sampler
-    std::vector<VkSampler> samplers;
+    // Texture Sampler - Raw handles managed manually
+    std::vector<VkSampler>            samplers;
     void createSamplers();
 
-    // Texture Image
-    SharedPtrVec<Texture> textures;
-    AzVulk::DescLayout    texDescLayout;
-    AzVulk::DescPool      texDescPool;
-    AzVulk::DescSets      texDescSet;
+    // Texture Image - Resources: SharedPtr, Descriptors: UniquePtr
+    SharedPtrVec<Texture>             textures;
+    UniquePtr<AzVulk::DescLayout>     texDescLayout;
+    UniquePtr<AzVulk::DescPool>       texDescPool;
+    UniquePtr<AzVulk::DescSets>       texDescSet;
     void createTextureDescSet();
 
     // Useful texture methods

@@ -146,7 +146,7 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup, const GlbU
 
     // const MeshStaticGroup* meshStaticGroup = resGroup->meshStaticGroup.get();
     const auto& mesh = resGroup->meshStatics[meshIndex];
-    uint64_t indexCount = mesh->indices.size();
+    uint64_t indexCount = resGroup->getStaticIndexCount(meshIndex);
 
     if (instanceCount == 0 || meshIndex == SIZE_MAX || indexCount == 0) return;
 
@@ -161,8 +161,8 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup, const GlbU
     vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                             rPipeline->layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-    VkBuffer vertexBuffer = resGroup->vstaticBuffers[meshIndex].buffer;
-    VkBuffer indexBuffer = resGroup->istaticBuffers[meshIndex].buffer;
+    VkBuffer vertexBuffer = resGroup->vstaticBuffers[meshIndex]->buffer;
+    VkBuffer indexBuffer = resGroup->istaticBuffers[meshIndex]->buffer;
 
     VkBuffer instanceBuffer = instanceGroup->bufferData.buffer;
 
@@ -179,7 +179,7 @@ void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup, const GlbU
 
 
 void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const InstanceSkinnedGroup* instanceGroup) {
-    // uint64_t indexCount = meshSkinned.indices.size();
+    // uint64_t indexCount = resGroup->getSkinnedIndexCount(meshIndex);
     // if (indexCount == 0) return;
 
     // rPipeline->bind(commandBuffers[currentFrame]);

@@ -190,15 +190,22 @@ void DescPool::create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32
 
 
 
-void DescSets::cleanup() {
-    if (pool == VK_NULL_HANDLE || sets.empty()) return;
+void DescSets::weakCleanup() {
+    sets.clear();
+
+    // This is actually insane
+    // but apparently if pool die
+    // sets die with it
+    // Why no one told me this?
+}
+void DescSets::explicitCleanup(VkDescriptorPool pool) {
+    if (pool == VK_NULL_HANDLE) return;
 
     for (auto& set : sets) {
-        if (set == VK_NULL_HANDLE) continue;
-
         vkFreeDescriptorSets(lDevice, pool, 1, &set);
-        set = VK_NULL_HANDLE;
     }
+
+    sets.clear();
 }
 
 // Move constructor and assignment operator
@@ -211,7 +218,7 @@ DescSets::DescSets(DescSets&& other) noexcept
 
 DescSets& DescSets::operator=(DescSets&& other) noexcept {
     if (this != &other) {
-        cleanup(); // destroy current sets if valid
+        explicitCleanup(pool);
 
         lDevice = other.lDevice;
         pool = other.pool;
@@ -226,11 +233,11 @@ DescSets& DescSets::operator=(DescSets&& other) noexcept {
 }
 
 
-void DescSets::allocate(const VkDescriptorPool pool, const VkDescriptorSetLayout layout, uint32_t count) {
-    this->pool    = pool;
-    this->layout  = layout;
+void DescSets::allocate(const VkDescriptorPool newPool, const VkDescriptorSetLayout newlayout, uint32_t count) {
+    explicitCleanup(pool);
 
-    cleanup();
+    pool = newPool;
+    layout = newlayout;
 
     sets.resize(count, VK_NULL_HANDLE);
 

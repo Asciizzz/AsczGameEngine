@@ -48,7 +48,7 @@ struct DescLayout {
         VkShaderStageFlags stageFlags;
     };
 
-    DescLayout() = default;
+    DescLayout(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
     ~DescLayout() { cleanup(); } void cleanup();
 
     DescLayout(const DescLayout&) = delete;
@@ -69,7 +69,7 @@ struct DescLayout {
 };
 
 struct DescPool {
-    DescPool() = default;
+    DescPool(VkDevice lDevice=VK_NULL_HANDLE) : lDevice(lDevice) {}
     ~DescPool() { cleanup(); } void cleanup();
 
     DescPool(const DescPool&) = delete;
@@ -88,8 +88,10 @@ struct DescPool {
 
 
 struct DescSets {
-    DescSets() = default;
-    ~DescSets() { cleanup(); } void cleanup();
+    DescSets(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
+    ~DescSets() { weakCleanup(); } void weakCleanup();
+
+    void explicitCleanup(VkDescriptorPool pool);
 
     DescSets(const DescSets&) = delete;
     DescSets& operator=(const DescSets&) = delete;
@@ -103,7 +105,7 @@ struct DescSets {
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 
     std::vector<VkDescriptorSet> sets;
-    void allocate(const VkDescriptorPool pool, const VkDescriptorSetLayout layout, uint32_t count);
+    void allocate(VkDescriptorPool pool, VkDescriptorSetLayout layout, uint32_t count);
 
     const VkDescriptorSet get(uint32_t index=0) const { return sets[index]; }
 };

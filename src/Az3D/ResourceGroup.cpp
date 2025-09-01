@@ -23,13 +23,10 @@ vkDevice(vkDevice) {
     
     auto defaultTexture = createTexture(defaultWhitePixel, 1);
     defaultTexture->path = "__default__";
-    textures.insert(textures.begin(), defaultTexture); // Insert at index 0
+    textures.insert(textures.begin(), std::move(defaultTexture)); // Insert at index 0 with move
 }
 
 void ResourceGroup::cleanup() {
-    // Actually for the most part you don't have to clean up anything since they have
-    // pretty robust destructors that take care of Vulkan resource deallocation.
-
     VkDevice lDevice = vkDevice->lDevice;
 
     // Cleanup textures
@@ -46,10 +43,7 @@ void ResourceGroup::cleanup() {
     }
     samplers.clear();
 
-    // Cleanup skeleton descriptor sets (order matters: sets first, then pool, then layout)
-    skeletonDescSets.cleanup();
-    skeletonDescPool.cleanup();
-    skeletonDescLayout.cleanup();
+    // Skeleton descriptor cleanup is handled automatically by SharedPtr destructors
 }
 
 void ResourceGroup::uploadAllToGPU() {
@@ -59,11 +53,15 @@ void ResourceGroup::uploadAllToGPU() {
     createMeshSkinnedBuffers();
     createSkeletonBuffers();
 
+
     createMaterialBuffer();
     createMaterialDescSet();
 
     createSamplers();
+
     createTextureDescSet();
+
+    printf("Checkpoint\n");
     createSkeletonDescSets();
 }
 
@@ -91,7 +89,7 @@ size_t ResourceGroup::addMaterial(std::string name, const Material& material) {
     std::string uniqueName = getUniqueName(name, materialNameCounts);
     
     size_t index = materials.size();
-    materials.push_back(material);
+    materials.push_back(MakeShared<Material>(material));
 
     materialNameToIndex[uniqueName] = index;
     return index;
@@ -111,11 +109,11 @@ size_t ResourceGroup::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh
 size_t ResourceGroup::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
     std::string uniqueName = getUniqueName(name, meshStaticNameCounts);
 
-    SharedPtr<MeshStatic> newMesh = TinyLoader::loadMeshStatic(filePath);
-    if (hasBVH) newMesh->createBVH();
+    MeshStatic newMesh = TinyLoader::loadMeshStatic(filePath);
+    if (hasBVH) newMesh.createBVH();
 
     size_t index = meshStatics.size();
-    meshStatics.push_back(newMesh);
+    meshStatics.push_back(MakeShared<MeshStatic>(std::move(newMesh)));
 
     meshStaticNameToIndex[uniqueName] = index;
     return index;
@@ -126,7 +124,7 @@ size_t ResourceGroup::addMeshSkinned(std::string name, SharedPtr<MeshSkinned> me
 
     size_t index = meshSkinneds.size();
     meshSkinneds.push_back(mesh);
-    
+
     meshSkinnedNameToIndex[uniqueName] = index;
     return index;
 }
@@ -137,8 +135,8 @@ size_t ResourceGroup::addMeshSkinned(std::string name, std::string filePath) {
     TinyRig rig = TinyLoader::loadMeshSkinned(filePath, false); // Don't load skeleton for now
     
     size_t index = meshSkinneds.size();
-    meshSkinneds.push_back(rig.mesh);
-    
+    meshSkinneds.push_back(MakeShared<MeshSkinned>(std::move(rig.mesh)));
+
     meshSkinnedNameToIndex[uniqueName] = index;
     return index;
 }
@@ -148,7 +146,7 @@ size_t ResourceGroup::addSkeleton(std::string name, SharedPtr<RigSkeleton> skele
     
     size_t index = skeletons.size();
     skeletons.push_back(skeleton);
-    
+
     skeletonNameToIndex[uniqueName] = index;
     return index;
 }
@@ -161,14 +159,14 @@ size_t ResourceGroup::addRigged(std::string name, std::string filePath) {
     
     // Add mesh
     size_t meshIndex = meshSkinneds.size();
-    meshSkinneds.push_back(rig.mesh);
+    meshSkinneds.push_back(MakeShared<MeshSkinned>(std::move(rig.mesh)));
     meshSkinnedNameToIndex[uniqueName] = meshIndex;
     
     // Add skeleton
     size_t skeletonIndex = skeletons.size();
-    skeletons.push_back(rig.skeleton);
+    skeletons.push_back(MakeShared<RigSkeleton>(std::move(rig.skeleton)));
     skeletonNameToIndex[skeletonUniqueName] = skeletonIndex;
-    
+
     return meshIndex; // Return mesh index (skeleton index can be retrieved by name if needed)
 }
 
@@ -205,7 +203,7 @@ Texture* ResourceGroup::getTexture(std::string name) const {
 
 Material* ResourceGroup::getMaterial(std::string name) const {
     size_t index = getMaterialIndex(name);
-    return index != SIZE_MAX ? const_cast<Material*>(&materials[index]) : nullptr;
+    return index != SIZE_MAX ? materials[index].get() : nullptr;
 }
 
 MeshStatic* ResourceGroup::getMeshStatic(std::string name) const {
@@ -240,21 +238,27 @@ void ResourceGroup::createMaterialBuffer() {
     );
     stagingBuffer.createBuffer();
 
-    stagingBuffer.uploadData(materials.data());
+    std::vector<Material> materialCopies;
+    materialCopies.reserve(materials.size());
+    for (const auto& material : materials) {
+        materialCopies.push_back(*material);
+    }
+    // Upload the data, not the pointers
+    stagingBuffer.uploadData(materialCopies.data());
 
-    // --- lDevice-local buffer (GPU only, STORAGE + DST) ---
-    matBuffer.cleanup();
-
-    matBuffer.initVkDevice(vkDevice);
-    matBuffer.setProperties(
+    // --- Device-local buffer (GPU only, STORAGE + DST) ---
+    if (!matBuffer) matBuffer = MakeUnique<BufferData>();
+    
+    matBuffer->initVkDevice(vkDevice);
+    matBuffer->setProperties(
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT |
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
-    matBuffer.createBuffer();
+    matBuffer->createBuffer();
 
-    // --- copy staging -> lDevice local ---
+    // --- copy staging -> Device local ---
     TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
     VkBufferCopy copyRegion{};
@@ -262,7 +266,7 @@ void ResourceGroup::createMaterialBuffer() {
     copyRegion.dstOffset = 0;
     copyRegion.size = bufferSize;
 
-    vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, matBuffer.buffer, 1, &copyRegion);
+    vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, matBuffer->buffer, 1, &copyRegion);
 
     copyCmd.endAndSubmit();
 }
@@ -271,18 +275,18 @@ void ResourceGroup::createMaterialBuffer() {
 void ResourceGroup::createMaterialDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    matDescSet.init(lDevice);
-    matDescPool.init(lDevice);
-    matDescLayout.init(lDevice);
-
-    // Clear existing resources
-    matDescSet.cleanup();
-    matDescPool.cleanup();
-    matDescLayout.cleanup();
+    // Create fresh UniquePtr objects (automatically cleans up any existing ones)
+    matDescSet = MakeUnique<DescSets>();
+    matDescPool = MakeUnique<DescPool>();
+    matDescLayout = MakeUnique<DescLayout>();
+    
+    matDescSet->init(lDevice);
+    matDescPool->init(lDevice);
+    matDescLayout->init(lDevice);
 
     // Create descriptor pool and layout
-    matDescPool.create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-    matDescLayout.create({
+    matDescPool->create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+    matDescLayout->create({
         DescLayout::BindInfo{
             0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
@@ -290,17 +294,17 @@ void ResourceGroup::createMaterialDescSet() {
     });
 
     // Allocate descriptor set
-    matDescSet.allocate(matDescPool.get(), matDescLayout.get(), 1);
+    matDescSet->allocate(matDescPool->get(), matDescLayout->get(), 1);
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
-    materialBufferInfo.buffer = matBuffer.buffer;
+    materialBufferInfo.buffer = matBuffer->buffer;
     materialBufferInfo.offset = 0;
     materialBufferInfo.range = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = matDescSet.get();
+    descriptorWrite.dstSet = matDescSet->get();
     descriptorWrite.dstBinding = 0;
     descriptorWrite.dstArrayElement = 0;
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -590,26 +594,26 @@ void ResourceGroup::createTextureDescSet() {
     uint32_t textureCount = static_cast<uint32_t>(textures.size());
     uint32_t samplerCount = static_cast<uint32_t>(samplers.size());
 
-    texDescSet.init(lDevice);
-    texDescPool.init(lDevice);
-    texDescLayout.init(lDevice);
+    texDescSet = MakeUnique<DescSets>();
+    texDescPool = MakeUnique<DescPool>();
+    texDescLayout = MakeUnique<DescLayout>();
 
-    texDescSet.cleanup();
-    texDescPool.cleanup();
-    texDescLayout.cleanup();
+    texDescSet->init(lDevice);
+    texDescPool->init(lDevice);
+    texDescLayout->init(lDevice);
 
     // layout: binding 0 = images, binding 1 = samplers
-    texDescLayout.create({
+    texDescLayout->create({
         {0, textureCount, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT},
         {1, samplerCount, VK_DESCRIPTOR_TYPE_SAMPLER,       VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
     });
 
-    texDescPool.create({
+    texDescPool->create({
         {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, textureCount},
         {VK_DESCRIPTOR_TYPE_SAMPLER,       samplerCount}
     }, 1);
 
-    texDescSet.allocate(texDescPool.get(), texDescLayout.get(), 1);
+    texDescSet->allocate(texDescPool->get(), texDescLayout->get(), 1);
 
     // Write sampled images
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
@@ -621,7 +625,7 @@ void ResourceGroup::createTextureDescSet() {
 
     VkWriteDescriptorSet imageWrite{};
     imageWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    imageWrite.dstSet          = texDescSet.get();
+    imageWrite.dstSet          = texDescSet->get();
     imageWrite.dstBinding      = 0;
     imageWrite.dstArrayElement = 0;
     imageWrite.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -638,7 +642,7 @@ void ResourceGroup::createTextureDescSet() {
 
     VkWriteDescriptorSet samplerWrite{};
     samplerWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    samplerWrite.dstSet          = texDescSet.get();
+    samplerWrite.dstSet          = texDescSet->get();
     samplerWrite.dstBinding      = 1;
     samplerWrite.dstArrayElement = 0;
     samplerWrite.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -660,7 +664,8 @@ void ResourceGroup::createMeshStaticBuffers() {
         const auto& vertices = mesh->vertices;
         const auto& indices = mesh->indices;
 
-        BufferData vBufferData, iBufferData;
+        UniquePtr<BufferData> vBufferData = MakeUnique<BufferData>();
+        UniquePtr<BufferData> iBufferData = MakeUnique<BufferData>();
 
         // Upload vertex
         BufferData vertexStagingBuffer;
@@ -672,13 +677,13 @@ void ResourceGroup::createMeshStaticBuffers() {
         vertexStagingBuffer.createBuffer();
         vertexStagingBuffer.mappedData(vertices.data());
 
-        vBufferData.initVkDevice(vkDevice);
-        vBufferData.setProperties(
+        vBufferData->initVkDevice(vkDevice);
+        vBufferData->setProperties(
             vertices.size() * sizeof(VertexStatic),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        vBufferData.createBuffer();
+        vBufferData->createBuffer();
 
         TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -687,8 +692,8 @@ void ResourceGroup::createMeshStaticBuffers() {
         vertexCopyRegion.dstOffset = 0;
         vertexCopyRegion.size = vertices.size() * sizeof(VertexStatic);
 
-        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData.buffer, 1, &vertexCopyRegion);
-        vBufferData.hostVisible = false;
+        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
+        vBufferData->hostVisible = false;
 
         vertexCopyCmd.endAndSubmit();
 
@@ -703,13 +708,13 @@ void ResourceGroup::createMeshStaticBuffers() {
         indexStagingBuffer.createBuffer();
         indexStagingBuffer.mappedData(indices.data());
 
-        iBufferData.initVkDevice(vkDevice);
-        iBufferData.setProperties(
+        iBufferData->initVkDevice(vkDevice);
+        iBufferData->setProperties(
             indices.size() * sizeof(uint32_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        iBufferData.createBuffer();
+        iBufferData->createBuffer();
 
         TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -718,8 +723,8 @@ void ResourceGroup::createMeshStaticBuffers() {
         indexCopyRegion.dstOffset = 0;
         indexCopyRegion.size = indices.size() * sizeof(uint32_t);
 
-        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData.buffer, 1, &indexCopyRegion);
-        iBufferData.hostVisible = false;
+        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData->buffer, 1, &indexCopyRegion);
+        iBufferData->hostVisible = false;
 
         indexCopyCmd.endAndSubmit();
 
@@ -741,7 +746,8 @@ void ResourceGroup::createMeshSkinnedBuffers() {
         const auto& vertices = mesh->vertices;
         const auto& indices = mesh->indices;
 
-        BufferData vBufferData, iBufferData;
+        UniquePtr<BufferData> vBufferData = MakeUnique<BufferData>();
+        UniquePtr<BufferData> iBufferData = MakeUnique<BufferData>();
 
         // Upload vertex
         BufferData vertexStagingBuffer;
@@ -753,13 +759,13 @@ void ResourceGroup::createMeshSkinnedBuffers() {
         vertexStagingBuffer.createBuffer();
         vertexStagingBuffer.mappedData(vertices.data());
 
-        vBufferData.initVkDevice(vkDevice);
-        vBufferData.setProperties(
+        vBufferData->initVkDevice(vkDevice);
+        vBufferData->setProperties(
             vertices.size() * sizeof(VertexSkinned),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        vBufferData.createBuffer();
+        vBufferData->createBuffer();
 
         TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -768,8 +774,8 @@ void ResourceGroup::createMeshSkinnedBuffers() {
         vertexCopyRegion.dstOffset = 0;
         vertexCopyRegion.size = vertices.size() * sizeof(VertexSkinned);
 
-        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData.buffer, 1, &vertexCopyRegion);
-        vBufferData.hostVisible = false;
+        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
+        vBufferData->hostVisible = false;
 
         vertexCopyCmd.endAndSubmit();
 
@@ -784,13 +790,13 @@ void ResourceGroup::createMeshSkinnedBuffers() {
         indexStagingBuffer.createBuffer();
         indexStagingBuffer.mappedData(indices.data());
 
-        iBufferData.initVkDevice(vkDevice);
-        iBufferData.setProperties(
+        iBufferData->initVkDevice(vkDevice);
+        iBufferData->setProperties(
             indices.size() * sizeof(uint32_t),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        iBufferData.createBuffer();
+        iBufferData->createBuffer();
 
         TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -799,8 +805,8 @@ void ResourceGroup::createMeshSkinnedBuffers() {
         indexCopyRegion.dstOffset = 0;
         indexCopyRegion.size = indices.size() * sizeof(uint32_t);
 
-        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData.buffer, 1, &indexCopyRegion);
-        iBufferData.hostVisible = false;
+        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData->buffer, 1, &indexCopyRegion);
+        iBufferData->hostVisible = false;
 
         indexCopyCmd.endAndSubmit();
 
@@ -816,14 +822,14 @@ void ResourceGroup::createMeshSkinnedBuffers() {
 // ============================================================================
 
 void ResourceGroup::createSkeletonBuffers() {
+    skeletonBuffers.clear();
+
     for (size_t i = 0; i < skeletons.size(); ++i) {
         const auto* skeleton = skeletons[i].get();
 
-        skeleton->debugPrintHierarchy();
-
         const auto& inverseBindMatrices = skeleton->inverseBindMatrices;
 
-        BufferData skeletonBufferData;
+        UniquePtr<BufferData> skeletonBufferData = MakeUnique<BufferData>();
 
         // Upload inverse bind matrices
         BufferData stagingBuffer;
@@ -835,13 +841,13 @@ void ResourceGroup::createSkeletonBuffers() {
         stagingBuffer.createBuffer();
         stagingBuffer.mappedData(inverseBindMatrices.data());
 
-        skeletonBufferData.initVkDevice(vkDevice);
-        skeletonBufferData.setProperties(
+        skeletonBufferData->initVkDevice(vkDevice);
+        skeletonBufferData->setProperties(
             inverseBindMatrices.size() * sizeof(glm::mat4),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        skeletonBufferData.createBuffer();
+        skeletonBufferData->createBuffer();
 
         TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -850,8 +856,8 @@ void ResourceGroup::createSkeletonBuffers() {
         copyRegion.dstOffset = 0;
         copyRegion.size = inverseBindMatrices.size() * sizeof(glm::mat4);
 
-        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, skeletonBufferData.buffer, 1, &copyRegion);
-        skeletonBufferData.hostVisible = false;
+        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, skeletonBufferData->buffer, 1, &copyRegion);
+        skeletonBufferData->hostVisible = false;
 
         copyCmd.endAndSubmit();
 
@@ -863,21 +869,21 @@ void ResourceGroup::createSkeletonBuffers() {
 void ResourceGroup::createSkeletonDescSets() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    skeletonDescSets.init(lDevice);
-    skeletonDescPool.init(lDevice);
-    skeletonDescLayout.init(lDevice);
+    skeletonDescPool = MakeUnique<DescPool>();
+    skeletonDescLayout = MakeUnique<DescLayout>();
+    skeletonDescSets = MakeUnique<DescSets>();
 
-    skeletonDescSets.cleanup();
-    skeletonDescPool.cleanup();
-    skeletonDescLayout.cleanup();
+    skeletonDescPool->init(lDevice);
+    skeletonDescLayout->init(lDevice);
+    skeletonDescSets->init(lDevice);
 
     // Create descriptor pool and layout
     uint32_t skeletonCount = static_cast<uint32_t>(skeletons.size());
 
-    skeletonDescPool.create({
+    skeletonDescPool->create({
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, skeletonCount}
     }, skeletonCount);  // maxSets should be skeletonCount, not 1
-    skeletonDescLayout.create({
+    skeletonDescLayout->create({
         DescLayout::BindInfo{
             0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             VK_SHADER_STAGE_VERTEX_BIT
@@ -887,18 +893,18 @@ void ResourceGroup::createSkeletonDescSets() {
     if (skeletons.empty()) return;
 
     // Allocate multiple descriptor sets (one for each skeleton)
-    skeletonDescSets.allocate(skeletonDescPool.get(), skeletonDescLayout.get(), skeletonCount);
+    skeletonDescSets->allocate(skeletonDescPool->get(), skeletonDescLayout->get(), skeletonCount);
 
     // Bind each skeleton buffer to its respective descriptor set
     for (size_t i = 0; i < skeletons.size(); ++i) {
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer               = skeletonBuffers[i].buffer;
+        bufferInfo.buffer               = skeletonBuffers[i]->buffer;
         bufferInfo.offset               = 0;
         bufferInfo.range                = VK_WHOLE_SIZE;
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet          = skeletonDescSets.get(i);  // Get the i-th descriptor set
+        descriptorWrite.dstSet          = skeletonDescSets->get(i);  // Get the i-th descriptor set
         descriptorWrite.dstBinding      = 0;
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;

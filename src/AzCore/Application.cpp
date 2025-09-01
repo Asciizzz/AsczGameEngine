@@ -122,7 +122,7 @@ void Application::initComponents() {
 // PLAYGROUND END HERE 
 
     // Testing if reallocation going to work smoothly
-    for (int i = 0; i < 100; i++) resGroup->uploadAllToGPU();
+    resGroup->uploadAllToGPU();
 
     renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get());
 
