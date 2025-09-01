@@ -141,10 +141,9 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
 
 
 void Renderer::drawInstanceStaticGroup(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const InstanceStaticGroup* instanceGroup) {
-    uint32_t instanceCount = static_cast<uint32_t>(instanceGroup->datas.size());
+    uint32_t instanceCount = static_cast<uint32_t>(instanceGroup->prevInstanceCount);
     size_t meshIndex = instanceGroup->meshIndex;
 
-    // const MeshStaticGroup* meshStaticGroup = resGroup->meshStaticGroup.get();
     const auto& mesh = resGroup->meshStatics[meshIndex];
     uint64_t indexCount = resGroup->getStaticIndexCount(meshIndex);
 
