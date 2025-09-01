@@ -29,10 +29,10 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/InstanceStatic.cpp
 
     src/Az3D/ResourceGroup.cpp
-    src/Az3D/ResourceImplementation/MeshStatic.cpp
-    # src/Az3D/ResourceImplementation/MeshSkinned.cpp
-    src/Az3D/ResourceImplementation/Material.cpp
-    src/Az3D/ResourceImplementation/Texture.cpp
+    src/Az3D/ResImplement/MeshStatic.cpp
+    # src/Az3D/ResImplement/MeshSkinned.cpp
+    src/Az3D/ResImplement/Material.cpp
+    src/Az3D/ResImplement/Texture.cpp
 
     src/AzCore/FpsManager.cpp
     src/AzCore/WindowManager.cpp
