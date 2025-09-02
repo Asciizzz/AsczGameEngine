@@ -1,5 +1,9 @@
 #include "Az3D/RigSkeleton.hpp"
 #include <iostream>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 using namespace Az3D;
 
@@ -138,26 +142,101 @@ void RigDemo::updateBuffer() {
     finalPoseBuffer.copyData(finalTransforms.data());
 }
 
+
+
+glm::mat4 RigDemo::getBindPose(size_t index) {
+    if (index >= rigSkeleton->names.size()) {
+        return glm::mat4(1.0f);
+    }
+    return rigSkeleton->localBindTransforms[index];
+}
+
 void RigDemo::funFunction(float dTime) {
-    // Rotate some bone idk
-
+    // Messed up some bone idk
     funAccumTimeValue += dTime;
-    // localPoseTransforms[0] = rigSkeleton->localBindTransforms[0] * glm::rotate(glm::mat4(1.0f), glm::radians(funAccumTimeValue), glm::vec3(0, 0, 1));
-    
-    // Lmao why?
-    // float magicValue = 1.0 - sin(funAccumTimeValue);
-    // magicValue *= 0.2;
 
-    // localPoseTransforms[110] = rigSkeleton->localBindTransforms[110] * glm::translate(glm::mat4(1.0f), glm::vec3(0, magicValue, magicValue));
+    // I know that it may looks like magic numbers right now
+    // But i can assure you, they... are indeed magic numbers lol
+    // But don't worry, this is just a playground to test out
+    // the new rigging system, once everything is implemented
+    // There will be actual robust bone handler
 
-    // localPoseTransforms[103] = glm::rotate(localPoseTransforms[102], glm::radians(90.0f * dTime), glm::vec3(0, 0, 1));
+    float partRotMax = 0.12f;
+    float partRot = partRotMax * sin(funAccumTimeValue);
 
-    // Only rotate slightly using a signed function n deg -> -n deg
+    // Extract transformation data from the mat4
+    glm::mat4 pose102 = getBindPose(102);
+    glm::mat4 pose104 = getBindPose(104);
 
-    float partRotMax = 30.0f;
-    float partRot = glm::radians(partRotMax * sin(funAccumTimeValue * 2.0f));
-    localPoseTransforms[51] = rigSkeleton->localBindTransforms[51] * glm::rotate(glm::mat4(1.0f), partRot, glm::vec3(0, 1, 0));
+    // Method 1: Using GLM decompose (if available)
+    glm::vec3 translation102, scale102, skew;
+    glm::vec4 perspective;
+    glm::quat rotation102;
+    bool decompose_success102 = glm::decompose(pose102, scale102, rotation102, translation102, skew, perspective);
 
-    // localPoseTransforms[5] = glm::rotate(rigSkeleton->localBindTransforms[5], glm::radians(funAccumTimeValue * 100.0f), glm::vec3(0, 1, 0));
+    glm::vec3 translation104, scale104;
+    glm::quat rotation104;
+    bool decompose_success104 = glm::decompose(pose104, scale104, rotation104, translation104, skew, perspective);
+
+    if (decompose_success102 && decompose_success104) {
+        // Apply your modifications
+        translation102.x += partRot;  // Add translation offset
+        translation104.x += partRot;  // Add translation offset
+
+        // Reconstruct the transformation matrices
+        glm::mat4 translationMat102 = glm::translate(glm::mat4(1.0f), translation102);
+        glm::mat4 rotationMat102 = glm::mat4_cast(rotation102);
+        glm::mat4 scaleMat102 = glm::scale(glm::mat4(1.0f), scale102);
+        
+        glm::mat4 translationMat104 = glm::translate(glm::mat4(1.0f), translation104);
+        glm::mat4 rotationMat104 = glm::mat4_cast(rotation104);
+        glm::mat4 scaleMat104 = glm::scale(glm::mat4(1.0f), scale104);
+
+        // Reconstruct final transformation matrices (TRS order)
+        localPoseTransforms[102] = translationMat102 * rotationMat102 * scaleMat102;
+        localPoseTransforms[104] = translationMat104 * rotationMat104 * scaleMat104;
+    } else {
+        // Fallback: Manual extraction (if GLM decompose fails)
+        // Extract translation (4th column)
+        glm::vec3 manual_translation102 = glm::vec3(pose102[3]);
+        glm::vec3 manual_translation104 = glm::vec3(pose104[3]);
+        
+        // Extract scale (length of first 3 columns)
+        glm::vec3 manual_scale102 = glm::vec3(
+            glm::length(glm::vec3(pose102[0])),
+            glm::length(glm::vec3(pose102[1])),
+            glm::length(glm::vec3(pose102[2]))
+        );
+        glm::vec3 manual_scale104 = glm::vec3(
+            glm::length(glm::vec3(pose104[0])),
+            glm::length(glm::vec3(pose104[1])),
+            glm::length(glm::vec3(pose104[2]))
+        );
+        
+        // Extract rotation matrix (normalize first 3 columns)
+        glm::mat3 manual_rotation102 = glm::mat3(
+            glm::vec3(pose102[0]) / manual_scale102.x,
+            glm::vec3(pose102[1]) / manual_scale102.y,
+            glm::vec3(pose102[2]) / manual_scale102.z
+        );
+        glm::mat3 manual_rotation104 = glm::mat3(
+            glm::vec3(pose104[0]) / manual_scale104.x,
+            glm::vec3(pose104[1]) / manual_scale104.y,
+            glm::vec3(pose104[2]) / manual_scale104.z
+        );
+        
+        // Apply modifications
+        manual_translation102.x += partRot;
+        manual_translation104.x += partRot;
+        
+        // Reconstruct matrices
+        localPoseTransforms[102] = glm::translate(glm::mat4(1.0f), manual_translation102) * 
+                                  glm::mat4(manual_rotation102) * 
+                                  glm::scale(glm::mat4(1.0f), manual_scale102);
+        localPoseTransforms[104] = glm::translate(glm::mat4(1.0f), manual_translation104) * 
+                                  glm::mat4(manual_rotation104) * 
+                                  glm::scale(glm::mat4(1.0f), manual_scale104);
+    }
+
     computeAllTransforms();
 }

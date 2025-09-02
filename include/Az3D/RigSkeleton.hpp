@@ -32,6 +32,7 @@ private:
 // Don't forget to delete this btw
 struct RigDemo {
     SharedPtr<RigSkeleton> rigSkeleton;
+    glm::mat4 getBindPose(size_t index);
 
     std::vector<glm::mat4> localPoseTransforms; // <- User changeable
 
@@ -56,6 +57,7 @@ struct RigDemo {
     void updateBuffer();
 
     float funAccumTimeValue = 0.0f;
+
 
     void funFunction(float dTime);
 
