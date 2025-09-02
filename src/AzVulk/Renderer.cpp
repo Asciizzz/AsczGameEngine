@@ -194,8 +194,8 @@ void Renderer::drawInstanceSkinnedGroup(const ResourceGroup* resGroup, const Glb
     // vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
     //                         rPipeline->layout, 0, static_cast<uint32_t>(sets.size()), sets.data(), 0, nullptr);
 
-    // VkBuffer vertexBuffer = meshSkinned.vertexBufferData.buffer;
-    // VkBuffer indexBuffer = meshSkinned.indexBufferData.buffer;
+    // VkBuffer vertexBuffer = rigMesh.vertexBufferData.buffer;
+    // VkBuffer indexBuffer = rigMesh.indexBufferData.buffer;
 
     // VkBuffer buffers[] = { vertexBuffer };
     // VkDeviceSize offsets[] = { 0 };

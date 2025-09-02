@@ -38,7 +38,7 @@ private:
     UniquePtr<AzVulk::RenderPass> mainRenderPass;
     
     UniquePtr<AzVulk::PipelineRaster> staticMeshPipeline;
-    UniquePtr<AzVulk::PipelineRaster> skinnedMeshPipeline;
+    UniquePtr<AzVulk::PipelineRaster> rigMeshPipeline;
     UniquePtr<AzVulk::PipelineRaster> foliagePipeline;
     UniquePtr<AzVulk::PipelineRaster> skyPipeline; // Beta, very inefficient, yet really amazing looking
 

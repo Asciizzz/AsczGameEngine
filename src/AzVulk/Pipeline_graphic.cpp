@@ -30,8 +30,8 @@ void PipelineRaster::create() {
 
     auto vstaticBind   = Az3D::VertexStatic::getBindingDescription();
     auto vstaticAttrs  = Az3D::VertexStatic::getAttributeDescriptions();
-    auto vskinnedBind  = Az3D::VertexSkinned::getBindingDescription();
-    auto vskinnedAttrs = Az3D::VertexSkinned::getAttributeDescriptions();
+    auto vrigBind  = Az3D::VertexSkinned::getBindingDescription();
+    auto vrigAttrs = Az3D::VertexSkinned::getAttributeDescriptions();
     auto instanceBind  = Az3D::InstanceStatic::getBindingDescription();
     auto instanceAttrs = Az3D::InstanceStatic::getAttributeDescriptions();
 
@@ -52,13 +52,13 @@ void PipelineRaster::create() {
         break;
 
     case RasterCfg::InputType::Skinned:
-        // bindings = { vskinnedBind, instanceBind };
-        // attrs.insert(attrs.end(), vskinnedAttrs.begin(), vskinnedAttrs.end());
+        // bindings = { vrigBind, instanceBind };
+        // attrs.insert(attrs.end(), vrigAttrs.begin(), vrigAttrs.end());
         // attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
         
         // For the time being, we will work without instancing
-        bindings = { vskinnedBind };
-        attrs.insert(attrs.end(), vskinnedAttrs.begin(), vskinnedAttrs.end());
+        bindings = { vrigBind };
+        attrs.insert(attrs.end(), vrigAttrs.begin(), vrigAttrs.end());
 
         vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
         vin.pVertexBindingDescriptions      = bindings.data();

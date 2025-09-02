@@ -139,18 +139,18 @@ void Application::initComponents() {
     staticMeshPipeline = MakeUnique<PipelineRaster>(lDevice, staticMeshConfig);
     staticMeshPipeline->create();
 
-    RasterCfg skinnedMeshConfig;
-    skinnedMeshConfig.renderPass = renderPass;
-    skinnedMeshConfig.setMSAA(msaaManager->msaaSamples);
-    skinnedMeshConfig.vertexInputType = RasterCfg::InputType::Skinned;
-    skinnedMeshConfig.setLayouts = {glbLayout, matLayout, texLayout, rigLayout};
-    skinnedMeshConfig.vertPath = "Shaders/Rasterize/MeshSkinned.vert.spv";
-    skinnedMeshConfig.fragPath = "Shaders/Rasterize/MeshSkinned.frag.spv";
-    skinnedMeshConfig.cullMode = VK_CULL_MODE_NONE;
-    // skinnedMeshConfig.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    RasterCfg rigMeshConfig;
+    rigMeshConfig.renderPass = renderPass;
+    rigMeshConfig.setMSAA(msaaManager->msaaSamples);
+    rigMeshConfig.vertexInputType = RasterCfg::InputType::Skinned;
+    rigMeshConfig.setLayouts = {glbLayout, matLayout, texLayout, rigLayout};
+    rigMeshConfig.vertPath = "Shaders/Rasterize/RigMesh.vert.spv";
+    rigMeshConfig.fragPath = "Shaders/Rasterize/RigMesh.frag.spv";
+    rigMeshConfig.cullMode = VK_CULL_MODE_NONE;
+    // rigMeshConfig.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
-    skinnedMeshPipeline = MakeUnique<PipelineRaster>(lDevice, skinnedMeshConfig);
-    skinnedMeshPipeline->create();
+    rigMeshPipeline = MakeUnique<PipelineRaster>(lDevice, rigMeshConfig);
+    rigMeshPipeline->create();
 
     RasterCfg skyConfig;
     skyConfig.renderPass = renderPass;
@@ -284,8 +284,8 @@ bool Application::checkWindowResize() {
     staticMeshPipeline->setRenderPass(renderPass);
     staticMeshPipeline->recreate();
 
-    skinnedMeshPipeline->setRenderPass(renderPass);
-    skinnedMeshPipeline->recreate();
+    rigMeshPipeline->setRenderPass(renderPass);
+    rigMeshPipeline->recreate();
 
     skyPipeline->setRenderPass(renderPass);
     skyPipeline->recreate();

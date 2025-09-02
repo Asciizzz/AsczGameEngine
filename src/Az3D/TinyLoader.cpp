@@ -283,8 +283,8 @@ MeshStatic TinyLoader::loadMeshStaticFromGLTF(const std::string& filePath) {
     return meshStatic;
 }
 
-TinyModel TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadRig) {
-    MeshSkinned meshSkinned;
+TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
+    RigMesh rigMesh;
     RigSkeleton rigSkeleton;
 
     tinygltf::TinyGLTF loader;
@@ -338,7 +338,7 @@ TinyModel TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadRig)
             v.boneIDs   = joints.size() > i ? joints[i] : glm::uvec4(0);
             v.weights   = weights.size() > i ? weights[i] : glm::vec4(0,0,0,0);
 
-            meshSkinned.vertices.push_back(v);
+            rigMesh.vertices.push_back(v);
         }
 
         // Indices
@@ -364,7 +364,7 @@ TinyModel TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadRig)
                     default:
                         throw std::runtime_error("Unsupported index component type");
                 }
-                meshSkinned.indices.push_back(index + static_cast<uint32_t>(vertexOffset));
+                rigMesh.indices.push_back(index + static_cast<uint32_t>(vertexOffset));
             }
         }
 
@@ -442,7 +442,7 @@ TinyModel TinyLoader::loadMeshSkinned(const std::string& filePath, bool loadRig)
 
     // Return TinyModel with mesh and skeleton
     TinyModel rig;
-    rig.mesh = meshSkinned;
+    rig.mesh = rigMesh;
     rig.rig = loadRig ? rigSkeleton : RigSkeleton();
     return rig;
 }

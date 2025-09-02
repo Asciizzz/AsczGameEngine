@@ -73,9 +73,9 @@ struct MeshStatic {
     static glm::vec3 sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
 };
 
-struct MeshSkinned {
-    MeshSkinned() = default;
-    MeshSkinned(std::vector<VertexSkinned> vertices, std::vector<uint32_t> indices)
+struct RigMesh {
+    RigMesh() = default;
+    RigMesh(std::vector<VertexSkinned> vertices, std::vector<uint32_t> indices)
         : vertices(std::move(vertices)), indices(std::move(indices)) {}
 
     std::vector<VertexSkinned> vertices;
