@@ -112,14 +112,14 @@ public:
     // Useful methods
     SharedPtr<Texture> createTexture(const TinyTexture& tinyTexture, uint32_t mipLevels = 0);
 
-    inline uint32_t getStaticIndexCount(size_t index) const { return static_cast<uint32_t>(staticMeshes[index]->indices.size()); }
-    inline uint32_t getRiggedIndexCount(size_t index) const { return static_cast<uint32_t>(rigMeshes[index]->indices.size()); }
+    uint32_t getStaticIndexCount(size_t index) const { return static_cast<uint32_t>(staticMeshes[index]->indices.size()); }
+    uint32_t getRiggedIndexCount(size_t index) const { return static_cast<uint32_t>(rigMeshes[index]->indices.size()); }
 
-    inline VkBuffer getStaticVertexBuffer(size_t index) const { return vstaticBuffers[index]->buffer; }
-    inline VkBuffer getStaticIndexBuffer(size_t index) const { return istaticBuffers[index]->buffer; }
+    VkBuffer getStaticVertexBuffer(size_t index) const { return vstaticBuffers[index]->buffer; }
+    VkBuffer getStaticIndexBuffer(size_t index) const { return istaticBuffers[index]->buffer; }
 
-    inline VkBuffer getRiggedVertexBuffer(size_t index) const { return vrigBuffers[index]->buffer; }
-    inline VkBuffer getRiggedIndexBuffer(size_t index) const { return irigBuffers[index]->buffer; }
+    VkBuffer getRiggedVertexBuffer(size_t index) const { return vrigBuffers[index]->buffer; }
+    VkBuffer getRiggedIndexBuffer(size_t index) const { return irigBuffers[index]->buffer; }
 
 
     // String-to-index maps

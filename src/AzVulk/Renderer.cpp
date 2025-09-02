@@ -185,12 +185,13 @@ void Renderer::drawRiggedInstanceGroup(const ResourceGroup* resGroup, const GlbU
     rPipeline->bindCmd(commandBuffers[currentFrame]);
 
     // Bind descriptor sets once
-    VkDescriptorSet globalSet = glbUBO->getDescSet();
-    VkDescriptorSet materialSet = resGroup->getMatDescSet();
-    VkDescriptorSet textureSet = resGroup->getTexDescSet();
+    VkDescriptorSet glbSet = glbUBO->getDescSet();
+    VkDescriptorSet matSet = resGroup->getMatDescSet();
+    VkDescriptorSet texSet = resGroup->getTexDescSet();
+    VkDescriptorSet rigSet = resGroup->getRigDescSet(meshIndex);
 
-    VkDescriptorSet sets[] = {globalSet, materialSet, textureSet};
-    rPipeline->bindSets(commandBuffers[currentFrame], sets, 3);
+    VkDescriptorSet sets[] = {glbSet, rigSet, matSet, texSet};
+    rPipeline->bindSets(commandBuffers[currentFrame], sets, 4);
 
     VkBuffer vertexBuffer = resGroup->getRiggedVertexBuffer(meshIndex);
     VkBuffer indexBuffer = resGroup->getRiggedIndexBuffer(meshIndex);

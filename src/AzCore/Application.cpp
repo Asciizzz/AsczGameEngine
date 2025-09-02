@@ -143,7 +143,7 @@ void Application::initComponents() {
     rigMeshConfig.renderPass = renderPass;
     rigMeshConfig.setMSAA(msaaManager->msaaSamples);
     rigMeshConfig.vertexInputType = RasterCfg::InputType::Rigged;
-    rigMeshConfig.setLayouts = {glbLayout, matLayout, texLayout, rigLayout};
+    rigMeshConfig.setLayouts = {glbLayout, rigLayout, matLayout, texLayout};
     rigMeshConfig.vertPath = "Shaders/Rasterize/RigMesh.vert.spv";
     rigMeshConfig.fragPath = "Shaders/Rasterize/RigMesh.frag.spv";
     rigMeshConfig.cullMode = VK_CULL_MODE_NONE;

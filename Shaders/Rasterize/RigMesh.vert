@@ -7,15 +7,9 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 view;
 } glb;
 
-struct Material {
-    vec4 shadingParams;
-    uvec4 texIndices;
+layout(std430, set = 1, binding = 0) buffer BoneBuffer {
+    mat4 inverseBindMatrices[];
 };
-
-layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
-    Material materials[];
-};
-
 
 layout(location = 0) in vec4 inPos_Tu;
 layout(location = 1) in vec4 inNrml_Tv;
@@ -29,7 +23,14 @@ layout(location = 1) out vec4 debugColor;
 layout(location = 2) out vec2 fragUV;
 
 void main() {
-    vec4 worldPos = mat4(1.0) * vec4(inPos_Tu.xyz, 1.0);
+    // Get the average inverse bind matrix for the bones
+    mat4 avgInverseBindMatrix = mat4(0.0);
+    for (int i = 0; i < 4; ++i) {
+        avgInverseBindMatrix += inverseBindMatrices[inBoneID[i]];
+    }
+    avgInverseBindMatrix /= 4.0;
+
+    vec4 worldPos = avgInverseBindMatrix * vec4(inPos_Tu.xyz, 1.0);
 
     vec3 normal = inNrml_Tv.xyz;
 
