@@ -52,13 +52,18 @@ vec3 boneWeightsToColor(vec4 weights) {
 void main() {
     // Get the average inverse bind matrix for the bones
     mat4 skinMatrix = mat4(0.0);
-    
+    bool hasWeights = false;
+
     for (int i = 0; i < 4; ++i) {
         uint boneID = inBoneID[i];
         float w = inWeights[i];
         
         skinMatrix += w * finalPose[boneID];
+        hasWeights = hasWeights || (w > 0.0);
     }
+
+    // In case of no weights, use identity matrix (generally won't happen)
+    skinMatrix = (hasWeights) ? skinMatrix : mat4(1.0);
 
     vec4 worldPos = skinMatrix * vec4(inPos_Tu.xyz, 1.0);
     gl_Position = glb.proj * glb.view * worldPos;
