@@ -50,6 +50,7 @@ struct RigDemo {
     void computeBone(size_t boneIndex);
 
     void computeAllTransforms();
+    void computeBoneRecursive(size_t boneIndex, std::vector<bool>& processed);
 
     void init(const AzVulk::Device* vkDevice, const SharedPtr<RigSkeleton>& skeleton);
     void updateBuffer();

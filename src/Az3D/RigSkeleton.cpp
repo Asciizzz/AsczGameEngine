@@ -33,16 +33,51 @@ void RigSkeleton::debugPrintRecursive(int boneIndex, int depth) const {
 
 
 void RigDemo::computeAllTransforms() {
+    // We need to compute transforms in dependency order (parents before children)
+    // First, identify root bones and process them recursively
+    
+    std::vector<bool> processed(rigSkeleton->names.size(), false);
+    
+    // Process all bones recursively, starting from roots
     for (size_t i = 0; i < rigSkeleton->names.size(); ++i) {
-        int parent = rigSkeleton->parentIndices[i]; 
-
-        if (parent == -1) {
-            globalPoseTransforms[i] = localPoseTransforms[i];
-        } else {
-            globalPoseTransforms[i] = globalPoseTransforms[parent] * localPoseTransforms[i];
+        if (rigSkeleton->parentIndices[i] == -1 && !processed[i]) {
+            computeBoneRecursive(i, processed);
         }
+    }
+    
+    // Handle any orphaned bones (shouldn't happen with proper hierarchy)
+    for (size_t i = 0; i < rigSkeleton->names.size(); ++i) {
+        if (!processed[i]) {
+            std::cout << "Warning: Orphaned bone " << i << " (" << rigSkeleton->names[i] << ")\n";
+            globalPoseTransforms[i] = localPoseTransforms[i];
+            finalTransforms[i] = globalPoseTransforms[i] * rigSkeleton->inverseBindMatrices[i];
+            processed[i] = true;
+        }
+    }
+}
 
-        finalTransforms[i] = globalPoseTransforms[i] * rigSkeleton->inverseBindMatrices[i];
+void RigDemo::computeBoneRecursive(size_t boneIndex, std::vector<bool>& processed) {
+    if (processed[boneIndex]) return;
+    
+    int parent = rigSkeleton->parentIndices[boneIndex];
+    
+    if (parent == -1) {
+        // Root bone
+        globalPoseTransforms[boneIndex] = localPoseTransforms[boneIndex];
+    } else {
+        // Ensure parent is computed first
+        computeBoneRecursive(parent, processed);
+        globalPoseTransforms[boneIndex] = globalPoseTransforms[parent] * localPoseTransforms[boneIndex];
+    }
+    
+    finalTransforms[boneIndex] = globalPoseTransforms[boneIndex] * rigSkeleton->inverseBindMatrices[boneIndex];
+    processed[boneIndex] = true;
+    
+    // Process all children
+    for (size_t i = 0; i < rigSkeleton->names.size(); ++i) {
+        if (rigSkeleton->parentIndices[i] == static_cast<int>(boneIndex) && !processed[i]) {
+            computeBoneRecursive(i, processed);
+        }
     }
 }
 
@@ -120,7 +155,7 @@ void RigDemo::funFunction(float dTime) {
     // Only rotate slightly using a signed function n deg -> -n deg
 
     float partRotMax = 30.0f;
-    float partRot = glm::radians(partRotMax * sin(funAccumTimeValue));
+    float partRot = glm::radians(partRotMax * sin(funAccumTimeValue * 2.0f));
     localPoseTransforms[51] = rigSkeleton->localBindTransforms[51] * glm::rotate(glm::mat4(1.0f), partRot, glm::vec3(0, 1, 0));
 
     // localPoseTransforms[5] = glm::rotate(rigSkeleton->localBindTransforms[5], glm::radians(funAccumTimeValue * 100.0f), glm::vec3(0, 1, 0));
