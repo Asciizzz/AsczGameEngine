@@ -120,7 +120,7 @@ void RigDemo::funFunction(float dTime) {
     // Only rotate slightly using a signed function n deg -> -n deg
 
     float partRotMax = 30.0f;
-    float partRot = glm::radians(partRotMax * sin(funAccumTimeValue * 0.5f));
+    float partRot = glm::radians(partRotMax * sin(funAccumTimeValue));
     localPoseTransforms[51] = rigSkeleton->localBindTransforms[51] * glm::rotate(glm::mat4(1.0f), partRot, glm::vec3(0, 1, 0));
 
     // localPoseTransforms[5] = glm::rotate(rigSkeleton->localBindTransforms[5], glm::radians(funAccumTimeValue * 100.0f), glm::vec3(0, 1, 0));
