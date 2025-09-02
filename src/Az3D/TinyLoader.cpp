@@ -409,7 +409,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                                     uvs.size() > i ? uvs[i].y : 0.0f);
             v.tangent   = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
             v.boneIDs   = joints.size() > i ? joints[i] : glm::uvec4(0);
-            v.weights   = weights.size() > i ? weights[i] : glm::vec4(1.0f,0,0,0);
+            v.weights   = weights.size() > i ? weights[i] : glm::vec4(0,0,0,0);
 
             rigMesh.vertices.push_back(v);
         }
@@ -490,6 +490,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             glm::mat4 boneLocalBindTransform = makeLocalFromNode(node);
 
             rigSkeleton.nameToIndex[boneName] = static_cast<int>(rigSkeleton.names.size());
+
             rigSkeleton.names.push_back(boneName);
             rigSkeleton.parentIndices.push_back(boneParentIndex);
             rigSkeleton.inverseBindMatrices.push_back(boneInverseBindMatrix);

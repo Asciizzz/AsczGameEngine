@@ -46,11 +46,18 @@ struct RigDemo {
 
     size_t meshIndex = 0; // Which mesh to apply this rig to
 
-    void computeAllTransforms();
-    void init(const AzVulk::Device* vkDevice, const SharedPtr<RigSkeleton>& skeleton);
-    void update();
-
     void computeBone(const std::string& boneName);
+    void computeBone(size_t boneIndex);
+
+    void computeAllTransforms();
+
+    void init(const AzVulk::Device* vkDevice, const SharedPtr<RigSkeleton>& skeleton);
+    void updateBuffer();
+
+    float funAccumTimeValue = 0.0f;
+
+    void funFunction(float dTime);
+
 };
 
 } // namespace Az3D

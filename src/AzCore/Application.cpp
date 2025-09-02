@@ -470,6 +470,11 @@ void Application::mainLoop() {
             // No need for per frame terrain update since it never moves
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
 
+            // ================= DEMO RIG WORKED HOLY SHIT ARE YOU PROUD OF ME =======================
+
+            rigDemo->funFunction(dTime);
+            rigDemo->updateBuffer();
+
             rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
 
             // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves

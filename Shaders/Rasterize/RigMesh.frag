@@ -14,6 +14,7 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
 layout(set = 2, binding = 0) uniform texture2D textures[];
 layout(set = 2, binding = 1) uniform sampler   samplers[];
 
+
 layout(location = 0) in float debugLight;
 layout(location = 1) in vec4 debugColor;
 layout(location = 2) in vec2 fragUV;
@@ -25,13 +26,13 @@ vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
 }
 
 void main() {
-    Material material = materials[4];
+    Material material = materials[3];
 
     uint albTexIndex = material.texIndices.x;
     uint albSamplerIndex = material.texIndices.y;
     vec4 texColor = getTexture(albTexIndex, albSamplerIndex, fragUV);
 
-    texColor = debugColor;
+    // texColor = debugColor;
 
     outColor = vec4(texColor.xyz, 1.0);
 }

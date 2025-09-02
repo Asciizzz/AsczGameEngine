@@ -34,16 +34,14 @@ void RigSkeleton::debugPrintRecursive(int boneIndex, int depth) const {
 
 void RigDemo::computeAllTransforms() {
     for (size_t i = 0; i < rigSkeleton->names.size(); ++i) {
-        int parent = rigSkeleton->parentIndices[i];
+        int parent = rigSkeleton->parentIndices[i]; 
+
         if (parent == -1) {
             globalPoseTransforms[i] = localPoseTransforms[i];
         } else {
             globalPoseTransforms[i] = globalPoseTransforms[parent] * localPoseTransforms[i];
         }
-    }
 
-    // Compute final transforms
-    for (size_t i = 0; i < rigSkeleton->names.size(); ++i) {
         finalTransforms[i] = globalPoseTransforms[i] * rigSkeleton->inverseBindMatrices[i];
     }
 }
@@ -71,8 +69,7 @@ void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<RigSkeleton>&
     );
     finalPoseBuffer.createBuffer();
     finalPoseBuffer.mapMemory();
-    finalPoseBuffer.copyData(finalTransforms.data());
-
+    updateBuffer();
 
     descLayout.init(vkDevice->lDevice);
     descLayout.create({
@@ -100,10 +97,24 @@ void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<RigSkeleton>&
     write.pBufferInfo = &bufferInfo;
 
     vkUpdateDescriptorSets(vkDevice->lDevice, 1, &write, 0, nullptr);
-
-    update();
 }
 
-void RigDemo::update() {
+void RigDemo::updateBuffer() {
     finalPoseBuffer.copyData(finalTransforms.data());
+}
+
+void RigDemo::funFunction(float dTime) {
+    // Rotate some bone idk
+
+    funAccumTimeValue += dTime;
+    // localPoseTransforms[0] = rigSkeleton->localBindTransforms[0] * glm::rotate(glm::mat4(1.0f), glm::radians(funAccumTimeValue), glm::vec3(0, 0, 1));
+    
+    localPoseTransforms[1] = rigSkeleton->localBindTransforms[1] * glm::translate(glm::mat4(1.0f), glm::vec3(0, sin(funAccumTimeValue) * 2.0f, 0));
+
+    // localPoseTransforms[103] = glm::rotate(localPoseTransforms[102], glm::radians(90.0f * dTime), glm::vec3(0, 0, 1));
+
+    // localPoseTransforms[1] = rigSkeleton->localBindTransforms[1] * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -funAccumTimeValue));
+
+    // localPoseTransforms[5] = glm::rotate(rigSkeleton->localBindTransforms[5], glm::radians(funAccumTimeValue * 100.0f), glm::vec3(0, 1, 0));
+    computeAllTransforms();
 }
