@@ -34,8 +34,6 @@ struct StaticInstanceGroup {
 
     StaticInstanceGroup(const StaticInstanceGroup&) = delete;
     StaticInstanceGroup& operator=(const StaticInstanceGroup&) = delete;
-    StaticInstanceGroup(StaticInstanceGroup&&) noexcept = default;
-    StaticInstanceGroup& operator=(StaticInstanceGroup&&) noexcept = default;
 
     size_t prevInstanceCount = 0;
     std::vector<StaticInstance> datas;

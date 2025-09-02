@@ -3,23 +3,6 @@
 
 using namespace Az3D;
 
-// Compute all global bone transforms
-std::vector<glm::mat4> RigSkeleton::computeGlobalTransforms(const std::vector<glm::mat4>& localPoseTransforms) const {
-    std::vector<glm::mat4> globalTransforms(names.size());
-    for (size_t i = 0; i < names.size(); i++) {
-        int parent = parentIndices[i];
-        if (parent == -1) {
-            globalTransforms[i] = localPoseTransforms[i];
-        } else {
-            globalTransforms[i] = globalTransforms[parent] * localPoseTransforms[i];
-        }
-    }
-    return globalTransforms;
-}
-
-std::vector<glm::mat4> RigSkeleton::copyLocalBindToPoseTransforms() const {
-    return localBindTransforms;
-}
 
 void RigSkeleton::debugPrintHierarchy() const {
     for (size_t i = 0; i < names.size(); i++) {
@@ -44,6 +27,24 @@ void RigSkeleton::debugPrintRecursive(int boneIndex, int depth) const {
     for (size_t i = 0; i < names.size(); i++) {
         if (parentIndices[i] == boneIndex) {
             debugPrintRecursive(static_cast<int>(i), depth + 1);
+        }
+    }
+}
+
+
+// Compute all global bone transforms
+void RigDemo::computeGlobalTransforms() {
+    if (globalPoseTransforms.size() != rigSkeleton->names.size()) {
+        localPoseTransforms.resize(rigSkeleton->names.size());
+        globalPoseTransforms.resize(rigSkeleton->names.size());
+    }
+
+    for (size_t i = 0; i < rigSkeleton->names.size(); i++) {
+        int parent = rigSkeleton->parentIndices[i];
+        if (parent == -1) {
+            globalPoseTransforms[i] = localPoseTransforms[i];
+        } else {
+            globalPoseTransforms[i] = globalPoseTransforms[parent] * localPoseTransforms[i];
         }
     }
 }

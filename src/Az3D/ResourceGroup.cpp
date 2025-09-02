@@ -677,7 +677,7 @@ void ResourceGroup::createStaticMeshBuffers() {
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         vertexStagingBuffer.createBuffer();
-        vertexStagingBuffer.mappedData(vertices.data());
+        vertexStagingBuffer.mapAndCopy(vertices.data());
 
         vBufferData->initVkDevice(vkDevice);
         vBufferData->setProperties(
@@ -708,7 +708,7 @@ void ResourceGroup::createStaticMeshBuffers() {
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         indexStagingBuffer.createBuffer();
-        indexStagingBuffer.mappedData(indices.data());
+        indexStagingBuffer.mapAndCopy(indices.data());
 
         iBufferData->initVkDevice(vkDevice);
         iBufferData->setProperties(
@@ -759,7 +759,7 @@ void ResourceGroup::createRigMeshBuffers() {
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         vertexStagingBuffer.createBuffer();
-        vertexStagingBuffer.mappedData(vertices.data());
+        vertexStagingBuffer.mapAndCopy(vertices.data());
 
         vBufferData->initVkDevice(vkDevice);
         vBufferData->setProperties(
@@ -790,7 +790,7 @@ void ResourceGroup::createRigMeshBuffers() {
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         indexStagingBuffer.createBuffer();
-        indexStagingBuffer.mappedData(indices.data());
+        indexStagingBuffer.mapAndCopy(indices.data());
 
         iBufferData->initVkDevice(vkDevice);
         iBufferData->setProperties(
@@ -841,7 +841,7 @@ void ResourceGroup::createRigBuffers() {
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         stagingBuffer.createBuffer();
-        stagingBuffer.mappedData(inverseBindMatrices.data());
+        stagingBuffer.mapAndCopy(inverseBindMatrices.data());
 
         rigInvMatBuffer->initVkDevice(vkDevice);
         rigInvMatBuffer->setProperties(

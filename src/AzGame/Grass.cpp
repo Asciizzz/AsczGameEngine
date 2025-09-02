@@ -585,7 +585,7 @@ void Grass::updateGrassInstancesCPU() {
 
 void Grass::updateGrassInstancesGPU() {
     // // Mapped the time
-    // grassUniformBuffer.mappedData(&windTime);
+    // grassUniformBuffer.mapAndCopy(&windTime);
 
     // grassComputeTask.dispatchAsync(static_cast<uint32_t>(fixedMat4.size()), 128);
 

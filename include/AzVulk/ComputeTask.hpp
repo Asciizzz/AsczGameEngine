@@ -211,7 +211,7 @@ public:
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             staging.createBuffer();
-            staging.mappedData(src);
+            staging.mapAndCopy(src);
 
             // 2. Create lDevice-local buffer for GPU compute
             buf.setProperties(
@@ -251,7 +251,7 @@ public:
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             buf.createBuffer();
-            buf.mappedData(src);
+            buf.mapAndCopy(src);
         }
     }
 
@@ -266,7 +266,7 @@ public:
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         staging.createBuffer();
-        staging.mappedData(srcData);
+        staging.mapAndCopy(srcData);
 
         // 2. Create lDevice-local buffer
         deviceBuf.setProperties(
@@ -319,7 +319,7 @@ public:
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         buf.createBuffer();
-        buf.mappedData(src);
+        buf.mapAndCopy(src);
     };
 
 private:

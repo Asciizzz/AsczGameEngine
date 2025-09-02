@@ -44,7 +44,7 @@ void StaticInstanceGroup::recreateBufferData() {
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
     bufferData.createBuffer();
-    bufferData.mappedData(datas.data());
+    bufferData.mapAndCopy(datas.data());
 
     prevInstanceCount = datas.size();
 }
@@ -54,5 +54,5 @@ void StaticInstanceGroup::updateBufferData() {
 
     if (prevInstanceCount != datas.size()) recreateBufferData();
 
-    bufferData.mappedData(datas.data());
+    bufferData.mapAndCopy(datas.data());
 }

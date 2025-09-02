@@ -61,8 +61,13 @@ namespace AzVulk {
         }
 
         template<typename T>
-        void mappedData(const T* data) {
-            mapMemory();
+        void copyData(const T* data) {
+            memcpy(mapped, data, dataSize);
+        }
+
+        template<typename T>
+        void mapAndCopy(const T* data) {
+            if (!mapped) vkMapMemory(vkDevice->lDevice, memory, 0, dataSize, 0, &mapped);
             memcpy(mapped, data, dataSize);
         }
 
