@@ -176,7 +176,9 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
 
 // No instance buffer data yet
-void Renderer::drawRiggedInstanceGroup(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, size_t meshIndex) {
+void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, Az3D::RigDemo* demo) {
+    size_t meshIndex = demo->meshIndex;
+
     const auto& mesh = resGroup->rigMeshes[meshIndex];
     uint32_t indexCount = resGroup->getRiggedIndexCount(meshIndex);
 
@@ -186,7 +188,7 @@ void Renderer::drawRiggedInstanceGroup(const ResourceGroup* resGroup, const GlbU
     VkDescriptorSet glbSet = glbUBO->getDescSet();
     VkDescriptorSet matSet = resGroup->getMatDescSet();
     VkDescriptorSet texSet = resGroup->getTexDescSet();
-    VkDescriptorSet rigSet = resGroup->getRigSkeleDescSet(meshIndex);
+    VkDescriptorSet rigSet = demo->descSet.get();
 
     VkDescriptorSet sets[] = {glbSet, matSet, texSet, rigSet};
     rPipeline->bindSets(cmdBuffers[currentFrame], sets, 4);

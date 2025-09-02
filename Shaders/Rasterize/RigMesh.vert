@@ -7,8 +7,8 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 view;
 } glb;
 
-layout(std430, set = 3, binding = 0) readonly buffer BoneBuffer {
-    mat4 inverseBindMatrices[];
+layout(std430, set = 3, binding = 0) readonly buffer RigBuffer {
+    mat4 finalPose[];
 };
 
 layout(location = 0) in vec4 inPos_Tu;
@@ -51,14 +51,17 @@ vec3 boneWeightsToColor(vec4 weights) {
 
 void main() {
     // Get the average inverse bind matrix for the bones
-    mat4 avgInverseBindMatrix = mat4(0.0);
+    mat4 skinMatrix = mat4(0.0);
+    
     for (int i = 0; i < 4; ++i) {
-        avgInverseBindMatrix += inverseBindMatrices[inBoneID[i]];
+        uint boneID = inBoneID[i];
+        float w = inWeights[i];
+        
+        skinMatrix += w * finalPose[boneID];
     }
-    avgInverseBindMatrix /= 4.0;
 
-    // vec4 worldPos = avgInverseBindMatrix * vec4(inPos_Tu.xyz, 1.0);
-    vec4 worldPos = vec4(inPos_Tu.xyz, 1.0);
+    vec4 worldPos = skinMatrix * vec4(inPos_Tu.xyz, 1.0);
+    gl_Position = glb.proj * glb.view * worldPos;
 
     vec3 normal = inNrml_Tv.xyz;
 
@@ -68,5 +71,4 @@ void main() {
 
     fragUV = vec2(inPos_Tu.w, inNrml_Tv.w);
 
-    gl_Position = glb.proj * glb.view * worldPos;
 }

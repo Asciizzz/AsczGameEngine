@@ -16,10 +16,43 @@
 #include <array>
 #include <algorithm>
 #include <cctype>
+#include <cstring>
+#include <unordered_map>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace Az3D;
+
+// Custom image loading callback for tinygltf since we disabled STB_IMAGE
+bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err,
+                   std::string* warn, int req_width, int req_height,
+                   const unsigned char* bytes, int size, void* user_data) {
+    (void)image_idx;
+    (void)req_width;
+    (void)req_height;
+    (void)user_data;
+
+    int width, height, channels;
+    unsigned char* data = stbi_load_from_memory(bytes, size, &width, &height, &channels, 0);
+    
+    if (!data) {
+        if (err) {
+            *err = "Failed to load image data from memory";
+        }
+        return false;
+    }
+
+    image->width = width;
+    image->height = height;
+    image->component = channels;
+    image->bits = 8;  // stbi always loads 8-bit per channel
+    image->pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+    image->image.resize(width * height * channels);
+    std::memcpy(&image->image[0], data, width * height * channels);
+    
+    stbi_image_free(data);
+    return true;
+}
 
 void TinyTexture::free() {
     if (data) {
@@ -189,6 +222,7 @@ StaticMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
     auto staticMesh = StaticMesh();
 
     tinygltf::TinyGLTF loader;
+    loader.SetImageLoader(LoadImageData, nullptr);
     tinygltf::Model model;
     std::string err, warn;
 
@@ -283,11 +317,50 @@ StaticMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
     return staticMesh;
 }
 
+
+
+
+
+
+
+// Utility: make local transform from a glTF node
+static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
+    if (node.matrix.size() == 16) {
+        // Read as double then cast to float (column-major)
+        glm::dmat4 dm = glm::make_mat4x4<double>(node.matrix.data());
+        return glm::mat4(dm);
+    } else {
+        // Default TRS
+        glm::dvec3 t(0.0);
+        if (node.translation.size() == 3)
+            t = { node.translation[0], node.translation[1], node.translation[2] };
+
+        glm::dquat q(1.0, 0.0, 0.0, 0.0); // w,x,y,z
+        if (node.rotation.size() == 4)
+            q = { node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2] };
+
+        glm::dvec3 s(1.0);
+        if (node.scale.size() == 3) {
+            // Guard against bad export zero-scale
+            double sx = (node.scale[0] == 0.0) ? 1.0 : node.scale[0];
+            double sy = (node.scale[1] == 0.0) ? 1.0 : node.scale[1];
+            double sz = (node.scale[2] == 0.0) ? 1.0 : node.scale[2];
+            s = { sx, sy, sz };
+        }
+
+        glm::dmat4 M = glm::translate(glm::dmat4(1.0), t)
+                     * glm::mat4_cast(q)
+                     * glm::scale(glm::dmat4(1.0), s);
+        return glm::mat4(M);
+    }
+}
+
 TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
     RigMesh rigMesh;
     RigSkeleton rigSkeleton;
 
     tinygltf::TinyGLTF loader;
+    loader.SetImageLoader(LoadImageData, nullptr);
     tinygltf::Model model;
     std::string err, warn;
 
@@ -336,7 +409,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                                     uvs.size() > i ? uvs[i].y : 0.0f);
             v.tangent   = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
             v.boneIDs   = joints.size() > i ? joints[i] : glm::uvec4(0);
-            v.weights   = weights.size() > i ? weights[i] : glm::vec4(0,0,0,0);
+            v.weights   = weights.size() > i ? weights[i] : glm::vec4(1.0f,0,0,0);
 
             rigMesh.vertices.push_back(v);
         }
@@ -371,9 +444,15 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         vertexOffset += vertexCount;
     }
 
-    // Skeleton (take first skin if present, only if loadSkeleton is true)
+    // Skeleton (take first skin if present, only if loadRig is true)
     if (loadRig && !model.skins.empty()) {
         const tinygltf::Skin& skin = model.skins[0];
+
+        // Create mapping from global node index to local bone index
+        std::unordered_map<int, int> nodeIndexToBoneIndex;
+        for (size_t i = 0; i < skin.joints.size(); i++) {
+            nodeIndexToBoneIndex[skin.joints[i]] = static_cast<int>(i);
+        }
 
         // Inverse bind matrices
         std::vector<glm::mat4> ibms;
@@ -392,13 +471,12 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
 
             std::string boneName = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
 
-            // Fill parent index: if node has a parent that's also a joint, link it
+            // Find parent index (only if parent is also a joint)
             int boneParentIndex = -1;
             for (size_t p = 0; p < model.nodes.size(); p++) {
                 const auto& parent = model.nodes[p];
                 for (int childIdx : parent.children) {
                     if (childIdx == nodeIndex) {
-                        // Check if parent is part of this skin
                         auto it = std::find(skin.joints.begin(), skin.joints.end(), p);
                         if (it != skin.joints.end()) {
                             boneParentIndex = static_cast<int>(std::distance(skin.joints.begin(), it));
@@ -409,31 +487,30 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
 
             glm::mat4 boneInverseBindMatrix = (ibms.size() > i) ? ibms[i] : glm::mat4(1.0f);
 
-            glm::mat4 boneLocalBindTransform;
-            if (node.matrix.size() == 16) {
-                boneLocalBindTransform = glm::make_mat4(node.matrix.data());
-            } else {
-                glm::mat4 t = glm::translate(glm::mat4(1.0f),
-                                            node.translation.size() ? glm::vec3(node.translation[0], node.translation[1], node.translation[2]) : glm::vec3(0));
-                glm::mat4 r = glm::mat4(1.0f);
-                if (node.rotation.size() == 4) {
-                    glm::quat q(node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2]);
-                    r = glm::mat4_cast(q);
-                }
-                glm::mat4 s = glm::scale(glm::mat4(1.0f),
-                                        node.scale.size() ? glm::vec3(node.scale[0], node.scale[1], node.scale[2]) : glm::vec3(1));
-                boneLocalBindTransform = t * r * s;
-            }
+            glm::mat4 boneLocalBindTransform = makeLocalFromNode(node);
 
             rigSkeleton.nameToIndex[boneName] = static_cast<int>(rigSkeleton.names.size());
-
             rigSkeleton.names.push_back(boneName);
             rigSkeleton.parentIndices.push_back(boneParentIndex);
             rigSkeleton.inverseBindMatrices.push_back(boneInverseBindMatrix);
             rigSkeleton.localBindTransforms.push_back(boneLocalBindTransform);
         }
+
+        // Now remap bone IDs in vertices from global node indices to local bone indices
+        for (auto& vertex : rigMesh.vertices) {
+            for (int j = 0; j < 4; j++) {
+                int globalBoneId = vertex.boneIDs[j];
+                auto it = nodeIndexToBoneIndex.find(globalBoneId);
+                if (it != nodeIndexToBoneIndex.end()) {
+                    vertex.boneIDs[j] = it->second;  // Remap to local bone index
+                } else {
+                    // If bone ID not found in skeleton, set to 0 (fallback)
+                    vertex.boneIDs[j] = 0;
+                }
+            }
+        }
     } else if (loadRig) {
-        // Create 1 default bone if no skeleton found but loadSkeleton is true
+        // Fallback skeleton with 1 bone
         rigSkeleton.names.push_back("sad_bone");
         rigSkeleton.parentIndices.push_back(-1);
         rigSkeleton.inverseBindMatrices.push_back(glm::mat4(1.0f));
@@ -446,3 +523,22 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
     rig.rig = loadRig ? rigSkeleton : RigSkeleton();
     return rig;
 }
+
+/*
+// Debug:
+
+ID[122] - w[1], ID[122] - w[0], ID[31612] - w[0], ID[31612] - w[0],
+ID[122] - w[1], ID[31612] - w[0], ID[31612] - w[0], ID[31612] - w[0],
+ID[31612] - w[0.571477], ID[31612] - w[0.428523], ID[31612] - w[0], ID[31612] - w[0],
+ID[31612] - w[0.571477], ID[31612] - w[0.428523], ID[31612] - w[0], ID[31612] - w[0],
+ID[31612] - w[0.570998], ID[31612] - w[0.429002], ID[31612] - w[0], ID[31612] - w[0],
+ID[31612] - w[0.570998], ID[31612] - w[0.429002], ID[31612] - w[0], ID[30584] - w[0],
+ID[31612] - w[0.516174], ID[31612] - w[0.483826], ID[30584] - w[0], ID[30584] - w[0],
+ID[31612] - w[0.516174], ID[30584] - w[0.483826], ID[30584] - w[0], ID[30208] - w[0],
+ID[30584] - w[0.800001], ID[30584] - w[0.199999], ID[30208] - w[0], ID[30584] - w[0],
+ID[30584] - w[0.800001], ID[30208] - w[0.199999], ID[30584] - w[0], ID[30584] - w[0],
+
+DANGER DANGER!!! WHY IS THERE BONE ID THE SIZE OF 1500 PEOPLE WHILE THE MAX BONE COUNT IS JUST 126 IN MY MODEL
+
+
+*/

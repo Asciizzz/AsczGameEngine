@@ -115,7 +115,11 @@ void Application::initComponents() {
         boundMin, boundMax
     );
 
-    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen.gltf");
+    resGroup->addRiggedModel("Demo", "Assets/Characters/NewSelen.gltf");
+
+    rigDemo = MakeUnique<Az3D::RigDemo>();
+    rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
+    rigDemo->meshIndex = 0;
 
 // PLAYGROUND END HERE 
 
@@ -466,7 +470,7 @@ void Application::mainLoop() {
             // No need for per frame terrain update since it never moves
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
 
-            rendererRef.drawRiggedInstanceGroup(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), 0);
+            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
 
             // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
             // rendererRef.drawStaticInstanceGroup(resGroup.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);

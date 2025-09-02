@@ -564,7 +564,7 @@ SharedPtr<Texture> ResourceGroup::createTexture(const TinyTexture& tinyTexture, 
 void ResourceGroup::createSamplers() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    for (uint32_t i = 0; i < 5; i++) {
+    for (uint32_t i = 0; i < 5; ++i) {
         VkSamplerAddressMode addressMode = static_cast<VkSamplerAddressMode>(i);
 
         // Skip all complex extension needing classes
@@ -619,7 +619,7 @@ void ResourceGroup::createTextureDescSet() {
 
     // Write sampled images
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
-    for (uint32_t i = 0; i < textureCount; i++) {
+    for (uint32_t i = 0; i < textureCount; ++i) {
         imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfos[i].imageView   = textures[i]->view;
         imageInfos[i].sampler     = VK_NULL_HANDLE;
@@ -636,7 +636,7 @@ void ResourceGroup::createTextureDescSet() {
 
     // Write samplers
     std::vector<VkDescriptorImageInfo> samplerInfos(samplers.size());
-    for (uint32_t i = 0; i < samplers.size(); i++) {
+    for (uint32_t i = 0; i < samplers.size(); ++i) {
         samplerInfos[i].sampler     = samplers[i];
         samplerInfos[i].imageView   = VK_NULL_HANDLE;
         samplerInfos[i].imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -878,10 +878,7 @@ void ResourceGroup::createRigSkeleDescSets() {
     // Create shared descriptor pool and layout
     rigSkeleDescPool->create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
     rigSkeleDescLayout->create({
-        DescLayout::BindInfo{
-            0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_SHADER_STAGE_VERTEX_BIT
-        }
+        DescLayout::BindInfo{0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
     });
 
     if (rigSkeletons.empty()) return;
