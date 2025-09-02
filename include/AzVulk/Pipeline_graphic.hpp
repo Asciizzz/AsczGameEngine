@@ -20,7 +20,7 @@ struct RasterCfg {
     enum class InputType {
         None    = 0,
         Static  = 1,
-        Skinned = 2
+        Rigged = 2
     } vertexInputType = InputType::Static;
 
     // defaults

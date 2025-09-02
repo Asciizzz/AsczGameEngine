@@ -41,7 +41,7 @@ struct Transform {
 // Note: 0 handedness for no normal map
 
 
-struct VertexStatic {
+struct StaticVertex {
     // Compact 48 byte data layout
 
     // Position on XYZ and Texture U on W
@@ -51,8 +51,8 @@ struct VertexStatic {
     // Tangent XYZ and handedness on W
     glm::vec4 tangent = glm::vec4(0.0f);
 
-    VertexStatic() = default;
-    VertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
+    StaticVertex() = default;
+    StaticVertex(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
         pos_tu = glm::vec4(pos, uv.x);
         nrml_tv = glm::vec4(nrml, uv.y);
         tangent = tang;
@@ -71,7 +71,7 @@ struct VertexStatic {
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
 
-struct VertexSkinned {
+struct RigVertex {
     // 80 bytes of data
 
     glm::vec4 pos_tu = glm::vec4(0.0f);
@@ -81,7 +81,7 @@ struct VertexSkinned {
     glm::uvec4 boneIDs = glm::uvec4(0);
     glm::vec4 weights = glm::vec4(0.0f);
 
-    VertexSkinned() = default;
+    RigVertex() = default;
 
     // Standard vertex data
 

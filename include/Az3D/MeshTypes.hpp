@@ -35,13 +35,13 @@ struct HitInfo {
     uint32_t materialId = 0;
 };
 
-struct MeshStatic {
+struct StaticMesh {
 // The only real mesh data
-    MeshStatic() = default;
-    MeshStatic(std::vector<VertexStatic> vertices, std::vector<uint32_t> indices)
+    StaticMesh() = default;
+    StaticMesh(std::vector<StaticVertex> vertices, std::vector<uint32_t> indices)
         : vertices(std::move(vertices)), indices(std::move(indices)) {}
 
-    std::vector<VertexStatic> vertices;
+    std::vector<StaticVertex> vertices;
     std::vector<uint32_t> indices;
 
 // The rest are like, idk, mental illnesses
@@ -75,10 +75,10 @@ struct MeshStatic {
 
 struct RigMesh {
     RigMesh() = default;
-    RigMesh(std::vector<VertexSkinned> vertices, std::vector<uint32_t> indices)
+    RigMesh(std::vector<RigVertex> vertices, std::vector<uint32_t> indices)
         : vertices(std::move(vertices)), indices(std::move(indices)) {}
 
-    std::vector<VertexSkinned> vertices;
+    std::vector<RigVertex> vertices;
     std::vector<uint32_t> indices;
 };
 

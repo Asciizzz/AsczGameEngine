@@ -28,12 +28,12 @@ void PipelineRaster::create() {
     std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<VkVertexInputAttributeDescription> attrs;
 
-    auto vstaticBind   = Az3D::VertexStatic::getBindingDescription();
-    auto vstaticAttrs  = Az3D::VertexStatic::getAttributeDescriptions();
-    auto vrigBind  = Az3D::VertexSkinned::getBindingDescription();
-    auto vrigAttrs = Az3D::VertexSkinned::getAttributeDescriptions();
-    auto instanceBind  = Az3D::InstanceStatic::getBindingDescription();
-    auto instanceAttrs = Az3D::InstanceStatic::getAttributeDescriptions();
+    auto vstaticBind   = Az3D::StaticVertex::getBindingDescription();
+    auto vstaticAttrs  = Az3D::StaticVertex::getAttributeDescriptions();
+    auto vriggedBind  = Az3D::RigVertex::getBindingDescription();
+    auto vriggedAttrs = Az3D::RigVertex::getAttributeDescriptions();
+    auto instanceBind  = Az3D::StaticInstance::getBindingDescription();
+    auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
 
     switch (cfg.vertexInputType) {
     case RasterCfg::InputType::None:
@@ -51,14 +51,14 @@ void PipelineRaster::create() {
         vin.pVertexAttributeDescriptions    = attrs.data();
         break;
 
-    case RasterCfg::InputType::Skinned:
-        // bindings = { vrigBind, instanceBind };
-        // attrs.insert(attrs.end(), vrigAttrs.begin(), vrigAttrs.end());
+    case RasterCfg::InputType::Rigged:
+        // bindings = { vriggedBind, instanceBind };
+        // attrs.insert(attrs.end(), vriggedAttrs.begin(), vriggedAttrs.end());
         // attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
         
         // For the time being, we will work without instancing
-        bindings = { vrigBind };
-        attrs.insert(attrs.end(), vrigAttrs.begin(), vrigAttrs.end());
+        bindings = { vriggedBind };
+        attrs.insert(attrs.end(), vriggedAttrs.begin(), vriggedAttrs.end());
 
         vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
         vin.pVertexBindingDescriptions      = bindings.data();

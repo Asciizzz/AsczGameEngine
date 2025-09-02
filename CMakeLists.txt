@@ -21,10 +21,10 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/Camera.cpp
     src/Az3D/GlobalUBO.cpp
     src/Az3D/VertexTypes.cpp
-    src/Az3D/MeshStatic_BVH.cpp
+    src/Az3D/StaticMesh_BVH.cpp
     src/Az3D/RigSkeleton.cpp
     src/Az3D/Material.cpp
-    src/Az3D/InstanceStatic.cpp
+    src/Az3D/StaticInstance.cpp
     src/Az3D/TinyLoader.cpp
 
     src/Az3D/ResourceGroup.cpp

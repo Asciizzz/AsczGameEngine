@@ -26,10 +26,10 @@ class TinyLoader {
 public:
     static TinyTexture loadImage(const std::string& filePath);
     
-    // MeshStatic loading functions
-    static MeshStatic loadMeshStatic(const std::string& filePath);
-    static MeshStatic loadMeshStaticFromOBJ(const std::string& filePath);
-    static MeshStatic loadMeshStaticFromGLTF(const std::string& filePath);
+    // StaticMesh loading functions
+    static StaticMesh loadStaticMesh(const std::string& filePath);
+    static StaticMesh loadStaticMeshFromOBJ(const std::string& filePath);
+    static StaticMesh loadStaticMeshFromGLTF(const std::string& filePath);
 
     // RigMesh loading functions
     static TinyModel loadRigMesh(const std::string& filePath, bool loadRig=true);

@@ -49,7 +49,7 @@ void ResourceGroup::cleanup() {
 void ResourceGroup::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    createMeshStaticBuffers();
+    createStaticMeshBuffers();
     createRigMeshBuffers();
     createRigBuffers();
 
@@ -95,27 +95,27 @@ size_t ResourceGroup::addMaterial(std::string name, const Material& material) {
     return index;
 }
 
-size_t ResourceGroup::addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH) {
-    std::string uniqueName = getUniqueName(name, meshStaticNameCounts);
+size_t ResourceGroup::addStaticMesh(std::string name, SharedPtr<StaticMesh> mesh, bool hasBVH) {
+    std::string uniqueName = getUniqueName(name, staticMeshNameCounts);
     
     if (hasBVH) mesh->createBVH();
 
-    size_t index = meshStatics.size();
-    meshStatics.push_back(mesh);
+    size_t index = staticMeshes.size();
+    staticMeshes.push_back(mesh);
 
-    meshStaticNameToIndex[uniqueName] = index;
+    staticMeshNameToIndex[uniqueName] = index;
     return index;
 }
-size_t ResourceGroup::addMeshStatic(std::string name, std::string filePath, bool hasBVH) {
-    std::string uniqueName = getUniqueName(name, meshStaticNameCounts);
+size_t ResourceGroup::addStaticMesh(std::string name, std::string filePath, bool hasBVH) {
+    std::string uniqueName = getUniqueName(name, staticMeshNameCounts);
 
-    MeshStatic newMesh = TinyLoader::loadMeshStatic(filePath);
+    StaticMesh newMesh = TinyLoader::loadStaticMesh(filePath);
     if (hasBVH) newMesh.createBVH();
 
-    size_t index = meshStatics.size();
-    meshStatics.push_back(MakeShared<MeshStatic>(std::move(newMesh)));
+    size_t index = staticMeshes.size();
+    staticMeshes.push_back(MakeShared<StaticMesh>(std::move(newMesh)));
 
-    meshStaticNameToIndex[uniqueName] = index;
+    staticMeshNameToIndex[uniqueName] = index;
     return index;
 }
 
@@ -191,9 +191,9 @@ size_t ResourceGroup::getMaterialIndex(std::string name) const {
     return it != materialNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
-size_t ResourceGroup::getMeshStaticIndex(std::string name) const {
-    auto it = meshStaticNameToIndex.find(name);
-    return it != meshStaticNameToIndex.end() ? it->second : SIZE_MAX;
+size_t ResourceGroup::getStaticMeshIndex(std::string name) const {
+    auto it = staticMeshNameToIndex.find(name);
+    return it != staticMeshNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
 size_t ResourceGroup::getRigMeshIndex(std::string name) const {
@@ -217,9 +217,9 @@ Material* ResourceGroup::getMaterial(std::string name) const {
     return index != SIZE_MAX ? materials[index].get() : nullptr;
 }
 
-MeshStatic* ResourceGroup::getMeshStatic(std::string name) const {
-    size_t index = getMeshStaticIndex(name);
-    return index != SIZE_MAX ? meshStatics[index].get() : nullptr;
+StaticMesh* ResourceGroup::getStaticMesh(std::string name) const {
+    size_t index = getStaticMeshIndex(name);
+    return index != SIZE_MAX ? staticMeshes[index].get() : nullptr;
 }
 
 RigMesh* ResourceGroup::getRigMesh(std::string name) const {
@@ -669,9 +669,9 @@ void ResourceGroup::createTextureDescSet() {
 // =========================== MESH STATIC ====================================
 // ============================================================================
 
-void ResourceGroup::createMeshStaticBuffers() {
-    for (int i = 0; i < meshStatics.size(); ++i) {
-        const auto* mesh = meshStatics[i].get();
+void ResourceGroup::createStaticMeshBuffers() {
+    for (int i = 0; i < staticMeshes.size(); ++i) {
+        const auto* mesh = staticMeshes[i].get();
         const auto& vertices = mesh->vertices;
         const auto& indices = mesh->indices;
 
@@ -682,7 +682,7 @@ void ResourceGroup::createMeshStaticBuffers() {
         BufferData vertexStagingBuffer;
         vertexStagingBuffer.initVkDevice(vkDevice);
         vertexStagingBuffer.setProperties(
-            vertices.size() * sizeof(VertexStatic), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            vertices.size() * sizeof(StaticVertex), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         vertexStagingBuffer.createBuffer();
@@ -690,7 +690,7 @@ void ResourceGroup::createMeshStaticBuffers() {
 
         vBufferData->initVkDevice(vkDevice);
         vBufferData->setProperties(
-            vertices.size() * sizeof(VertexStatic),
+            vertices.size() * sizeof(StaticVertex),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
@@ -701,7 +701,7 @@ void ResourceGroup::createMeshStaticBuffers() {
         VkBufferCopy vertexCopyRegion{};
         vertexCopyRegion.srcOffset = 0;
         vertexCopyRegion.dstOffset = 0;
-        vertexCopyRegion.size = vertices.size() * sizeof(VertexStatic);
+        vertexCopyRegion.size = vertices.size() * sizeof(StaticVertex);
 
         vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
         vBufferData->hostVisible = false;
@@ -764,7 +764,7 @@ void ResourceGroup::createRigMeshBuffers() {
         BufferData vertexStagingBuffer;
         vertexStagingBuffer.initVkDevice(vkDevice);
         vertexStagingBuffer.setProperties(
-            vertices.size() * sizeof(VertexSkinned), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            vertices.size() * sizeof(RigVertex), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         vertexStagingBuffer.createBuffer();
@@ -772,7 +772,7 @@ void ResourceGroup::createRigMeshBuffers() {
 
         vBufferData->initVkDevice(vkDevice);
         vBufferData->setProperties(
-            vertices.size() * sizeof(VertexSkinned),
+            vertices.size() * sizeof(RigVertex),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
@@ -783,7 +783,7 @@ void ResourceGroup::createRigMeshBuffers() {
         VkBufferCopy vertexCopyRegion{};
         vertexCopyRegion.srcOffset = 0;
         vertexCopyRegion.dstOffset = 0;
-        vertexCopyRegion.size = vertices.size() * sizeof(VertexSkinned);
+        vertexCopyRegion.size = vertices.size() * sizeof(RigVertex);
 
         vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
         vBufferData->hostVisible = false;

@@ -27,8 +27,8 @@ public:
     size_t addTexture(std::string name, std::string imagePath, uint32_t mipLevels = 0);
     size_t addMaterial(std::string name, const Material& material);
 
-    size_t addMeshStatic(std::string name, SharedPtr<MeshStatic> mesh, bool hasBVH = false);
-    size_t addMeshStatic(std::string name, std::string filePath, bool hasBVH = false);
+    size_t addStaticMesh(std::string name, SharedPtr<StaticMesh> mesh, bool hasBVH = false);
+    size_t addStaticMesh(std::string name, std::string filePath, bool hasBVH = false);
 
     size_t addRigMesh(std::string name, SharedPtr<RigMesh> mesh);
     size_t addRigMesh(std::string name, std::string filePath);
@@ -53,13 +53,13 @@ public:
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
     size_t getMaterialIndex(std::string name) const;
-    size_t getMeshStaticIndex(std::string name) const;
+    size_t getStaticMeshIndex(std::string name) const;
     size_t getRigMeshIndex(std::string name) const;
     size_t getRigIndex(std::string name) const;
 
     Texture* getTexture(std::string name) const;
     Material* getMaterial(std::string name) const;
-    MeshStatic* getMeshStatic(std::string name) const;
+    StaticMesh* getStaticMesh(std::string name) const;
     RigMesh* getRigMesh(std::string name) const;
     RigSkeleton* getRig(std::string name) const;
 
@@ -69,26 +69,16 @@ public:
     AzVulk::Device* vkDevice;
 
     // Mesh static - Resources: SharedPtr, Buffers: UniquePtr
-    SharedPtrVec<MeshStatic>          meshStatics;
+    SharedPtrVec<StaticMesh>          staticMeshes;
     UniquePtrVec<AzVulk::BufferData>  vstaticBuffers;
     UniquePtrVec<AzVulk::BufferData>  istaticBuffers;
-    void createMeshStaticBuffers();
+    void createStaticMeshBuffers();
 
     // Mesh rig - Resources: SharedPtr, Buffers: UniquePtr
     SharedPtrVec<RigMesh>             rigMeshes;
     UniquePtrVec<AzVulk::BufferData>  vrigBuffers;
     UniquePtrVec<AzVulk::BufferData>  irigBuffers;
     void createRigMeshBuffers();
-
-    // Convenient meshes functions
-    inline uint32_t getStaticIndexCount(size_t index) const { return static_cast<uint32_t>(meshStatics[index]->indices.size()); }
-    inline uint32_t getSkinnedIndexCount(size_t index) const { return static_cast<uint32_t>(rigMeshes[index]->indices.size()); }
-
-    inline VkBuffer getStaticVertexBuffer(size_t index) const { return vstaticBuffers[index]->buffer; }
-    inline VkBuffer getStaticIndexBuffer(size_t index) const { return istaticBuffers[index]->buffer; }
-
-    inline VkBuffer getSkinnedVertexBuffer(size_t index) const { return vrigBuffers[index]->buffer; }
-    inline VkBuffer getSkinnedIndexBuffer(size_t index) const { return irigBuffers[index]->buffer; }
 
     // Skeleton data - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
     SharedPtrVec<RigSkeleton>         rigSkeletons;
@@ -119,21 +109,30 @@ public:
     UniquePtr<AzVulk::DescSets>       texDescSet;
     void createTextureDescSet();
 
-    // Useful texture methods
+    // Useful methods
     SharedPtr<Texture> createTexture(const TinyTexture& tinyTexture, uint32_t mipLevels = 0);
+
+    inline uint32_t getStaticIndexCount(size_t index) const { return static_cast<uint32_t>(staticMeshes[index]->indices.size()); }
+    inline uint32_t getRiggedIndexCount(size_t index) const { return static_cast<uint32_t>(rigMeshes[index]->indices.size()); }
+
+    inline VkBuffer getStaticVertexBuffer(size_t index) const { return vstaticBuffers[index]->buffer; }
+    inline VkBuffer getStaticIndexBuffer(size_t index) const { return istaticBuffers[index]->buffer; }
+
+    inline VkBuffer getRiggedVertexBuffer(size_t index) const { return vrigBuffers[index]->buffer; }
+    inline VkBuffer getRiggedIndexBuffer(size_t index) const { return irigBuffers[index]->buffer; }
 
 
     // String-to-index maps
     UnorderedMap<std::string, size_t> textureNameToIndex;
     UnorderedMap<std::string, size_t> materialNameToIndex;
-    UnorderedMap<std::string, size_t> meshStaticNameToIndex;
+    UnorderedMap<std::string, size_t> staticMeshNameToIndex;
     UnorderedMap<std::string, size_t> rigMeshNameToIndex;
     UnorderedMap<std::string, size_t> rigNameToIndex;
 
     // Maps to track duplicate counts for automatic renaming
     UnorderedMap<std::string, size_t> textureNameCounts;
     UnorderedMap<std::string, size_t> materialNameCounts;
-    UnorderedMap<std::string, size_t> meshStaticNameCounts;
+    UnorderedMap<std::string, size_t> staticMeshNameCounts;
     UnorderedMap<std::string, size_t> rigMeshNameCounts;
     UnorderedMap<std::string, size_t> rigNameCounts;
 

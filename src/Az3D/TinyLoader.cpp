@@ -65,8 +65,8 @@ void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& access
     }
 }
 
-// General purpose MeshStatic loader that auto-detects file type
-MeshStatic TinyLoader::loadMeshStatic(const std::string& filePath) {
+// General purpose StaticMesh loader that auto-detects file type
+StaticMesh TinyLoader::loadStaticMesh(const std::string& filePath) {
     // Extract file extension
     std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
     
@@ -74,16 +74,16 @@ MeshStatic TinyLoader::loadMeshStatic(const std::string& filePath) {
     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
     
     if (extension == "obj") {
-        return loadMeshStaticFromOBJ(filePath);
+        return loadStaticMeshFromOBJ(filePath);
     } else if (extension == "gltf" || extension == "glb") {
-        return loadMeshStaticFromGLTF(filePath);
+        return loadStaticMeshFromGLTF(filePath);
     } else {
-        throw std::runtime_error("Unsupported MeshStatic file format: " + extension);
+        throw std::runtime_error("Unsupported StaticMesh file format: " + extension);
     }
 }
 
 // OBJ loader implementation using tiny_obj_loader
-MeshStatic TinyLoader::loadMeshStaticFromOBJ(const std::string& filePath) {
+StaticMesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -91,10 +91,10 @@ MeshStatic TinyLoader::loadMeshStaticFromOBJ(const std::string& filePath) {
 
     // Load the OBJ file
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
-        return MeshStatic();
+        return StaticMesh();
     }
 
-    std::vector<VertexStatic> vertices;
+    std::vector<StaticVertex> vertices;
     std::vector<uint32_t> indices;
     UnorderedMap<size_t, uint32_t> uniqueVertices;
 
@@ -104,7 +104,7 @@ MeshStatic TinyLoader::loadMeshStaticFromOBJ(const std::string& filePath) {
     };
 
     // Full-attribute hash (position + normal + texcoord)
-    auto hashVertex = [&](const VertexStatic& v) -> size_t {
+    auto hashVertex = [&](const StaticVertex& v) -> size_t {
         size_t seed = 0;
         hash_combine(seed, std::hash<float>{}(v.pos_tu.x));
         hash_combine(seed, std::hash<float>{}(v.pos_tu.y));
@@ -121,11 +121,11 @@ MeshStatic TinyLoader::loadMeshStaticFromOBJ(const std::string& filePath) {
 
     for (const auto& shape : shapes) {
         for (size_t f = 0; f < shape.mesh.indices.size(); f += 3) {
-            std::vector<VertexStatic> triangle(3);
+            std::vector<StaticVertex> triangle(3);
 
             for (int v = 0; v < 3; v++) {
                 const auto& index = shape.mesh.indices[f + v];
-                VertexStatic& vertex = triangle[v];
+                StaticVertex& vertex = triangle[v];
 
                 // Position
                 if (index.vertex_index >= 0) {
@@ -182,11 +182,11 @@ MeshStatic TinyLoader::loadMeshStaticFromOBJ(const std::string& filePath) {
         }
     }
 
-    return MeshStatic(std::move(vertices), std::move(indices));
+    return StaticMesh(std::move(vertices), std::move(indices));
 }
 
-MeshStatic TinyLoader::loadMeshStaticFromGLTF(const std::string& filePath) {
-    auto meshStatic = MeshStatic();
+StaticMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
+    auto staticMesh = StaticMesh();
 
     tinygltf::TinyGLTF loader;
     tinygltf::Model model;
@@ -240,14 +240,14 @@ MeshStatic TinyLoader::loadMeshStaticFromGLTF(const std::string& filePath) {
 
         // Expand into vertices
         for (size_t i = 0; i < vertexCount; i++) {
-            VertexStatic v{};
+            StaticVertex v{};
             v.pos_tu     = glm::vec4(positions.size() > i ? positions[i] : glm::vec3(0.0f),
                                      uvs.size() > i ? uvs[i].x : 0.0f);
             v.nrml_tv    = glm::vec4(normals.size() > i ? normals[i] : glm::vec3(0.0f),
                                      uvs.size() > i ? uvs[i].y : 0.0f);
             v.tangent    = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
 
-            meshStatic.vertices.push_back(v);
+            staticMesh.vertices.push_back(v);
         }
 
         // Indices
@@ -273,14 +273,14 @@ MeshStatic TinyLoader::loadMeshStaticFromGLTF(const std::string& filePath) {
                     default:
                         throw std::runtime_error("Unsupported index component type");
                 }
-                meshStatic.indices.push_back(index + static_cast<uint32_t>(vertexOffset));
+                staticMesh.indices.push_back(index + static_cast<uint32_t>(vertexOffset));
             }
         }
 
         vertexOffset += vertexCount;
     }
 
-    return meshStatic;
+    return staticMesh;
 }
 
 TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
@@ -329,7 +329,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
 
         // Expand into vertices
         for (size_t i = 0; i < vertexCount; i++) {
-            VertexSkinned v{};
+            RigVertex v{};
             v.pos_tu    = glm::vec4(positions.size() > i ? positions[i] : glm::vec3(0.0f),
                                     uvs.size() > i ? uvs[i].x : 0.0f);
             v.nrml_tv   = glm::vec4(normals.size() > i ? normals[i] : glm::vec3(0.0f),

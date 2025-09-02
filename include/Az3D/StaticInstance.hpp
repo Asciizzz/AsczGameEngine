@@ -10,8 +10,8 @@
 namespace Az3D {
 
 // Dynamic, per-frame object data
-struct InstanceStatic {
-    InstanceStatic() = default;
+struct StaticInstance {
+    StaticInstance() = default;
 
     glm::uvec4 properties = glm::uvec4(0); // materialIndex, indicator, empty, empty
     glm::vec4 trformT_S = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Translation (x,y,z) and Scale (w)
@@ -29,17 +29,17 @@ struct InstanceStatic {
 };
 
 
-struct InstanceStaticGroup {
-    InstanceStaticGroup() = default;
+struct StaticInstanceGroup {
+    StaticInstanceGroup() = default;
 
-    InstanceStaticGroup(const InstanceStaticGroup&) = delete;
-    InstanceStaticGroup& operator=(const InstanceStaticGroup&) = delete;
-    InstanceStaticGroup(InstanceStaticGroup&&) noexcept = default;
-    InstanceStaticGroup& operator=(InstanceStaticGroup&&) noexcept = default;
+    StaticInstanceGroup(const StaticInstanceGroup&) = delete;
+    StaticInstanceGroup& operator=(const StaticInstanceGroup&) = delete;
+    StaticInstanceGroup(StaticInstanceGroup&&) noexcept = default;
+    StaticInstanceGroup& operator=(StaticInstanceGroup&&) noexcept = default;
 
     size_t prevInstanceCount = 0;
-    std::vector<InstanceStatic> datas;
-    size_t addInstance(const InstanceStatic& data);
+    std::vector<StaticInstance> datas;
+    size_t addInstance(const StaticInstance& data);
 
     AzVulk::BufferData bufferData;
     void initVkDevice(const AzVulk::Device* vkDevice);

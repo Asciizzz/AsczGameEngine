@@ -7,8 +7,8 @@
 
 #include "Az3D/GlobalUBO.hpp"
 #include "Az3D/ResourceGroup.hpp"
-#include "Az3D/InstanceStatic.hpp"
-#include "Az3D/InstanceSkinned.hpp"
+#include "Az3D/StaticInstance.hpp"
+#include "Az3D/RigInstance.hpp"
 
 
 namespace AzVulk {
@@ -25,10 +25,10 @@ namespace AzVulk {
         uint32_t beginFrame(VkRenderPass renderPass, bool hasMSAA);
 
         // Body
-        void drawInstanceStaticGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::InstanceStaticGroup* instanceGroup);
-        // void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::InstanceSkinnedGroup* instanceGroup);
+        void drawStaticInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::StaticInstanceGroup* instanceGroup);
+        // void drawRiggedInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::RigInstanceGroup* instanceGroup);
         
-        void drawInstanceSkinnedGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t meshIndex);
+        void drawRiggedInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t meshIndex);
 
         void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline);
 

@@ -7,16 +7,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include <Az3D/InstanceStatic.hpp>
+#include <Az3D/StaticInstance.hpp>
 #include <AzVulk/ComputeTask.hpp>
 
 // Forward declarations
 namespace Az3D {
 struct ResourceGroup;
-struct MeshStaticGroup;
+struct StaticMeshGroup;
 
 struct Transform;
-struct VertexStatic;
+struct StaticVertex;
 }
 
 namespace AzVulk {
@@ -95,7 +95,7 @@ struct WindUBO {
 
 class Grass {
 public:
-    using InstanceStatic = Az3D::InstanceStatic;
+    using StaticInstance = Az3D::StaticInstance;
 
     explicit Grass(const GrassConfig& config);
     ~Grass();
@@ -127,7 +127,7 @@ public:
 
     std::vector<glm::vec4> fixedColor;
     std::vector<Az3D::Transform> baseTransform;
-    std::vector<InstanceStatic> grassData3Ds;
+    std::vector<StaticInstance> grassData3Ds;
 
     // Grass buffer
     AzVulk::BufferData fixedMat4Buffer;
@@ -135,7 +135,7 @@ public:
     AzVulk::BufferData grassMat4Buffer;
     AzVulk::BufferData grassUniformBuffer;
 
-    std::vector<InstanceStatic> terrainData3Ds;
+    std::vector<StaticInstance> terrainData3Ds;
 
     // Resource indices
     size_t grassMeshIndex = 0;
@@ -149,8 +149,8 @@ public:
     const AzVulk::Device* vkDevice = nullptr;
 
     // Model Group
-    Az3D::InstanceStaticGroup grassInstanceGroup;
-    Az3D::InstanceStaticGroup terrainInstanceGroup;
+    Az3D::StaticInstanceGroup grassInstanceGroup;
+    Az3D::StaticInstanceGroup terrainInstanceGroup;
 
     // Compute Task
     AzVulk::ComputeTask grassComputeTask;

@@ -24,7 +24,7 @@ namespace AzGame {
                 std::string fullPath = "Assets/Platformer/" + mesh.second;
 
                 // Short hand name -----------------------------------Full name and Full path
-                platformerMeshIndices[mesh.first] = resGroup->addMeshStatic(fullName, fullPath, true);
+                platformerMeshIndices[mesh.first] = resGroup->addStaticMesh(fullName, fullPath, true);
             }
 
             // Initialized world model group
@@ -80,7 +80,7 @@ namespace AzGame {
             Az3D::Transform trform;
             trform.pos = glm::vec3(gx, gy, gz);
 
-            Az3D::InstanceStatic data;
+            Az3D::StaticInstance data;
             data.setTransform(trform.pos, trform.rot, 1.0f);
             data.properties.x = static_cast<int>(materialIndex);
 

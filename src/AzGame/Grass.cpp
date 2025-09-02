@@ -115,7 +115,7 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     glm::vec3 g_pos11 = Transform::rotate(g_pos3, g_normal, glm::radians(240.0f));
     glm::vec3 g_pos12 = Transform::rotate(g_pos4, g_normal, glm::radians(240.0f));
 
-    std::vector<VertexStatic> grassVertices = {
+    std::vector<StaticVertex> grassVertices = {
         {g_pos1, g_normal, g_uv01},
         {g_pos2, g_normal, g_uv11},
         {g_pos3, g_normal, g_uv10},
@@ -139,8 +139,8 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     };
 
     // Create mesh
-    UniquePtr<MeshStatic> grassMesh = MakeUnique<MeshStatic>(std::move(grassVertices), std::move(grassIndices));
-    grassMeshIndex = resGroup.addMeshStatic("GrassMesh", std::move(grassMesh));
+    UniquePtr<StaticMesh> grassMesh = MakeUnique<StaticMesh>(std::move(grassVertices), std::move(grassIndices));
+    grassMeshIndex = resGroup.addStaticMesh("GrassMesh", std::move(grassMesh));
 
     // Create material
     Az3D::Material grassMaterial;
@@ -174,7 +174,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     glm::vec3 g_pos7 = Transform::rotate(g_pos3, g_normal, glm::radians(90.0f));
     glm::vec3 g_pos8 = Transform::rotate(g_pos4, g_normal, glm::radians(90.0f));
 
-    std::vector<VertexStatic> grassVertices = {
+    std::vector<StaticVertex> grassVertices = {
         {g_pos1, g_normal, g_uv01},
         {g_pos2, g_normal, g_uv11},
         {g_pos3, g_normal, g_uv10},
@@ -192,8 +192,8 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     };
 
     // Create mesh
-    UniquePtr<MeshStatic> grassMesh = MakeUnique<MeshStatic>(std::move(grassVertices), std::move(grassIndices));
-    grassMeshIndex = resGroup.addMeshStatic("GrassMesh", std::move(grassMesh));
+    UniquePtr<StaticMesh> grassMesh = MakeUnique<StaticMesh>(std::move(grassVertices), std::move(grassIndices));
+    grassMeshIndex = resGroup.addStaticMesh("GrassMesh", std::move(grassMesh));
 
     // Create material
     Az3D::Material grassMaterial;
@@ -338,7 +338,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 float phaseOffset = rnd_phase(generator);
                 
                 // Create regular instance for rendering
-                InstanceStatic grassInstance;
+                StaticInstance grassInstance;
                 grassInstance.setTransform(grassTrform.pos, grassTrform.rot, grassTrform.scl);
                 grassInstance.multColor = grassColor;
                 grassInstance.properties.x = grassMaterialIndex;
@@ -360,7 +360,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
 }
 
 void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
-    std::vector<VertexStatic> terrainVertices;
+    std::vector<StaticVertex> terrainVertices;
     std::vector<uint32_t> terrainIndices;
 
     // Generate vertices
@@ -389,7 +389,7 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
             glm::vec2 uv(static_cast<float>(x) / (config.worldSizeX - 1), 
                         static_cast<float>(z) / (config.worldSizeZ - 1));
 
-            terrainVertices.push_back(VertexStatic{glm::vec3(worldX, worldY, worldZ), normal, uv});
+            terrainVertices.push_back(StaticVertex{glm::vec3(worldX, worldY, worldZ), normal, uv});
         }
     }
     
@@ -412,16 +412,16 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
     }
     
     // Create terrain mesh and material
-    UniquePtr<MeshStatic> terrainMesh = MakeUnique<MeshStatic>(std::move(terrainVertices), std::move(terrainIndices));
+    UniquePtr<StaticMesh> terrainMesh = MakeUnique<StaticMesh>(std::move(terrainVertices), std::move(terrainIndices));
 
-    terrainMeshIndex = resGroup.addMeshStatic("TerrainMesh", std::move(terrainMesh), true);
+    terrainMeshIndex = resGroup.addStaticMesh("TerrainMesh", std::move(terrainMesh), true);
 
     Material terrainMaterial;
     terrainMaterial.setShadingParams(true, 0, 0.2f, 0.0f);
     terrainMaterialIndex = resGroup.addMaterial("TerrainMaterial", terrainMaterial);
 
     // Create terrain instance
-    InstanceStatic terrainData;
+    StaticInstance terrainData;
     terrainData.multColor = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
     terrainData.properties.x = terrainMaterialIndex;
 

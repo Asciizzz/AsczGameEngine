@@ -12,7 +12,7 @@ using HitInfo = Az3D::HitInfo;
 
 class ParticleManager {
 public:
-    using InstanceStatic = Az3D::InstanceStatic;
+    using StaticInstance = Az3D::StaticInstance;
 
     ParticleManager() = default;
     ~ParticleManager() = default;
@@ -22,13 +22,13 @@ public:
 
     size_t particleCount = 0;
     std::vector<Az3D::Transform> particles; // Only store transforms, not full models
-    std::vector<InstanceStatic> particles_data;
+    std::vector<StaticInstance> particles_data;
     std::vector<glm::vec3> particles_velocity;
     std::vector<glm::vec3> particles_angular_velocity; // For rotation
     std::vector<short> particles_special; // Cool rare 1% drop particles
     std::vector<float> particles_rainbow; // Special scalar value for all special particles (not just rainbow)
 
-    Az3D::InstanceStaticGroup instanceGroup;
+    Az3D::StaticInstanceGroup instanceGroup;
 
     std::vector<glm::vec3> rainbow_colors = {
         glm::vec3(1.0f, 0.2f, 0.2f), // Red
@@ -173,7 +173,7 @@ public:
 
         materialIndex = resGroup->addMaterial("Particle", material);
 
-        size_t meshIndex = resGroup->addMeshStatic("Particle", "Assets/Shapes/Icosphere.obj", false);
+        size_t meshIndex = resGroup->addStaticMesh("Particle", "Assets/Shapes/Icosphere.obj", false);
 
         instanceGroup.initVkDevice(vkDevice);
         instanceGroup.meshIndex = meshIndex;
@@ -225,7 +225,7 @@ public:
             particles_velocity[i] = randomDirection();
 
             // Generate data
-            InstanceStatic particleData;
+            StaticInstance particleData;
             particleData.setTransform(particles[i].pos, particles[i].rot, display_r);
             particleData.multColor = glm::vec4(1.0f);
             particleData.properties.x = static_cast<int>(materialIndex);
@@ -358,7 +358,7 @@ public:
         instanceGroup.datas = particles_data;
     }
 
-    void updatePhysic(float dTime, const Az3D::MeshStatic* mesh, const glm::mat4& meshModelMat4) {
+    void updatePhysic(float dTime, const Az3D::StaticMesh* mesh, const glm::mat4& meshModelMat4) {
         std::vector<size_t> indices(particleCount);
         std::iota(indices.begin(), indices.end(), 0);
 
@@ -489,7 +489,7 @@ public:
             }
 
 
-            InstanceStatic data;
+            StaticInstance data;
             data.setTransform(particles[p].pos, particles[p].rot, display_r);
             data.multColor = glm::vec4(particleColor, 1.0f);
             data.properties.x = static_cast<int>(materialIndex);

@@ -47,35 +47,35 @@ void Transform::reset() {
 
 // Static Vertex implementation
 
-void VertexStatic::setPosition(const glm::vec3& position) {
+void StaticVertex::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
 }
-void VertexStatic::setNormal(const glm::vec3& normal) {
+void StaticVertex::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
 }
-void VertexStatic::setTextureUV(const glm::vec2& uv) {
+void StaticVertex::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
 }
 
-VkVertexInputBindingDescription VertexStatic::getBindingDescription() {
+VkVertexInputBindingDescription StaticVertex::getBindingDescription() {
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding   = 0;
-    bindingDescription.stride    = sizeof(VertexStatic);
+    bindingDescription.stride    = sizeof(StaticVertex);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     return bindingDescription;
 }
 
-std::vector<VkVertexInputAttributeDescription> VertexStatic::getAttributeDescriptions() {
+std::vector<VkVertexInputAttributeDescription> StaticVertex::getAttributeDescriptions() {
     std::vector<VkVertexInputAttributeDescription> attribs(3);
 
-    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, pos_tu)};
-    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, nrml_tv)};
-    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, tangent)};
+    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, pos_tu)};
+    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, nrml_tv)};
+    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, tangent)};
 
     return attribs;
 }
@@ -83,37 +83,37 @@ std::vector<VkVertexInputAttributeDescription> VertexStatic::getAttributeDescrip
 
 
 // Skinning vertex data
-void VertexSkinned::setPosition(const glm::vec3& position) {
+void RigVertex::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
 }
-void VertexSkinned::setNormal(const glm::vec3& normal) {
+void RigVertex::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
 }
-void VertexSkinned::setTextureUV(const glm::vec2& uv) {
+void RigVertex::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
 }
 
-VkVertexInputBindingDescription VertexSkinned::getBindingDescription() {
+VkVertexInputBindingDescription RigVertex::getBindingDescription() {
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding   = 0;
-    bindingDescription.stride    = sizeof(VertexSkinned);
+    bindingDescription.stride    = sizeof(RigVertex);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     return bindingDescription;
 }
 
-std::vector<VkVertexInputAttributeDescription> VertexSkinned::getAttributeDescriptions() {
+std::vector<VkVertexInputAttributeDescription> RigVertex::getAttributeDescriptions() {
     std::vector<VkVertexInputAttributeDescription> attribs(5);
 
-    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, pos_tu)};
-    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, nrml_tv)};
-    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, tangent)};
-    attribs[3] = {3, 0, VK_FORMAT_R32G32B32A32_UINT,   offsetof(VertexSkinned, boneIDs)};
-    attribs[4] = {4, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexSkinned, weights)};
+    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, pos_tu)};
+    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, nrml_tv)};
+    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, tangent)};
+    attribs[3] = {3, 0, VK_FORMAT_R32G32B32A32_UINT,   offsetof(RigVertex, boneIDs)};
+    attribs[4] = {4, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, weights)};
 
     return attribs;
 }

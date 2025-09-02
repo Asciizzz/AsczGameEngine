@@ -1,8 +1,8 @@
 @echo off
 
 REM Static mesh rasterization shaders
-glslc Shaders/Rasterize/MeshStatic.vert -o Shaders/Rasterize/MeshStatic.vert.spv
-glslc Shaders/Rasterize/MeshStatic.frag -o Shaders/Rasterize/MeshStatic.frag.spv
+glslc Shaders/Rasterize/StaticMesh.vert -o Shaders/Rasterize/StaticMesh.vert.spv
+glslc Shaders/Rasterize/StaticMesh.frag -o Shaders/Rasterize/StaticMesh.frag.spv
 
 REM Skinning shaders
 glslc Shaders/Rasterize/RigMesh.vert -o Shaders/Rasterize/RigMesh.vert.spv

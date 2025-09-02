@@ -7,7 +7,7 @@ using namespace Az3D;
 
 // BVH Construction
 
-void MeshStatic::createBVH() {
+void StaticMesh::createBVH() {
     hasBVH = true;
 
     if (indices.empty()) return;
@@ -56,7 +56,7 @@ void MeshStatic::createBVH() {
     buildBVH();
 }
 
-void MeshStatic::buildBVH() {
+void StaticMesh::buildBVH() {
     std::queue<size_t> queue;
     queue.push(0);
 
@@ -182,7 +182,7 @@ void MeshStatic::buildBVH() {
 
 // BVH Traversal
 
-HitInfo MeshStatic::closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const glm::mat4& modelMat4) const {
+HitInfo StaticMesh::closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const glm::mat4& modelMat4) const {
     HitInfo hit;
     if (!hasBVH || nodes.empty()) {
         return hit; // No BVH available
@@ -293,7 +293,7 @@ HitInfo MeshStatic::closestHit(const glm::vec3& origin, const glm::vec3& directi
     return hit;
 }
 
-HitInfo MeshStatic::closestHit(const glm::vec3& sphere_origin, float sphere_radius, const glm::mat4& modelMat4) const {
+HitInfo StaticMesh::closestHit(const glm::vec3& sphere_origin, float sphere_radius, const glm::mat4& modelMat4) const {
     HitInfo hit;
     if (!hasBVH || nodes.empty()) { return hit; }
     
@@ -373,9 +373,9 @@ HitInfo MeshStatic::closestHit(const glm::vec3& sphere_origin, float sphere_radi
     size_t idx2 = indices[hitIdx * 3 + 2];
     
     // Retrieve the hit normal
-    const VertexStatic& vrtx0 = vertices[idx0];
-    const VertexStatic& vrtx1 = vertices[idx1];
-    const VertexStatic& vrtx2 = vertices[idx2];
+    const StaticVertex& vrtx0 = vertices[idx0];
+    const StaticVertex& vrtx1 = vertices[idx1];
+    const StaticVertex& vrtx2 = vertices[idx2];
     hit.nrml =  vrtx0.getNormal() * hit.prop.x +
                 vrtx1.getNormal() * hit.prop.y +
                 vrtx2.getNormal() * (1.0f - hit.prop.x - hit.prop.y);
@@ -397,7 +397,7 @@ HitInfo MeshStatic::closestHit(const glm::vec3& sphere_origin, float sphere_radi
 }
 
 // Helper functions - exact copies from original Map.hpp
-float MeshStatic::rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
+float StaticMesh::rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
                             const glm::vec3& boxMin, const glm::vec3& boxMax) {
     glm::vec3 invDir = 1.0f / rayDirection;
     glm::vec3 t0 = (boxMin - rayOrigin) * invDir;
@@ -427,7 +427,7 @@ float MeshStatic::rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& r
     return tMin;
 }
 
-glm::vec3 MeshStatic::rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
+glm::vec3 StaticMesh::rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection,
                                     const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
     glm::vec3 e1 = v1 - v0;
     glm::vec3 e2 = v2 - v0;
@@ -450,7 +450,7 @@ glm::vec3 MeshStatic::rayIntersectTriangle(const glm::vec3& rayOrigin, const glm
     return t > 0.0f ? glm::vec3(u, v, t) : glm::vec3(-1.0f);
 }
 
-float MeshStatic::sphereIntersectBox( const glm::vec3& sphereOrigin, float sphereRadius,
+float StaticMesh::sphereIntersectBox( const glm::vec3& sphereOrigin, float sphereRadius,
                                 const glm::vec3& boxMin, const glm::vec3& boxMax) {
     glm::vec3 closestPoint = glm::clamp(sphereOrigin, boxMin, boxMax);
 
@@ -462,7 +462,7 @@ float MeshStatic::sphereIntersectBox( const glm::vec3& sphereOrigin, float spher
     return intersect ? glm::sqrt(distSqr) : -1.0f;
 }
 
-glm::vec3 MeshStatic::sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius,
+glm::vec3 StaticMesh::sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius,
                                         const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
     // Compute triangle normal
     glm::vec3 edge1 = v1 - v0;

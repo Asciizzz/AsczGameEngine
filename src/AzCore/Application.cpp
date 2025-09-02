@@ -101,8 +101,8 @@ void Application::initComponents() {
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
 
-    glm::vec3 boundMin = resGroup->getMeshStatic("TerrainMesh")->nodes[0].min;
-    glm::vec3 boundMax = resGroup->getMeshStatic("TerrainMesh")->nodes[0].max;
+    glm::vec3 boundMin = resGroup->getStaticMesh("TerrainMesh")->nodes[0].min;
+    glm::vec3 boundMax = resGroup->getStaticMesh("TerrainMesh")->nodes[0].max;
     float totalHeight = abs(boundMax.y - boundMin.y);
     boundMin.y -= totalHeight * 2.5f;
     boundMax.y += totalHeight * 12.5f;
@@ -133,8 +133,8 @@ void Application::initComponents() {
     staticMeshConfig.setMSAA(msaaManager->msaaSamples);
     staticMeshConfig.vertexInputType = RasterCfg::InputType::Static;
     staticMeshConfig.setLayouts = {glbLayout, matLayout, texLayout};
-    staticMeshConfig.vertPath = "Shaders/Rasterize/MeshStatic.vert.spv";
-    staticMeshConfig.fragPath = "Shaders/Rasterize/MeshStatic.frag.spv";
+    staticMeshConfig.vertPath = "Shaders/Rasterize/StaticMesh.vert.spv";
+    staticMeshConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
 
     staticMeshPipeline = MakeUnique<PipelineRaster>(lDevice, staticMeshConfig);
     staticMeshPipeline->create();
@@ -142,7 +142,7 @@ void Application::initComponents() {
     RasterCfg rigMeshConfig;
     rigMeshConfig.renderPass = renderPass;
     rigMeshConfig.setMSAA(msaaManager->msaaSamples);
-    rigMeshConfig.vertexInputType = RasterCfg::InputType::Skinned;
+    rigMeshConfig.vertexInputType = RasterCfg::InputType::Rigged;
     rigMeshConfig.setLayouts = {glbLayout, matLayout, texLayout, rigLayout};
     rigMeshConfig.vertPath = "Shaders/Rasterize/RigMesh.vert.spv";
     rigMeshConfig.fragPath = "Shaders/Rasterize/RigMesh.frag.spv";
@@ -175,8 +175,8 @@ void Application::initComponents() {
     foliageConfig.setMSAA(msaaManager->msaaSamples);
     foliageConfig.vertexInputType = RasterCfg::InputType::Static;
     foliageConfig.setLayouts = {glbLayout, matLayout, texLayout};
-    foliageConfig.vertPath = "Shaders/Rasterize/MeshStatic.vert.spv";
-    foliageConfig.fragPath = "Shaders/Rasterize/MeshStatic.frag.spv";
+    foliageConfig.vertPath = "Shaders/Rasterize/StaticMesh.vert.spv";
+    foliageConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
 
     // No backface culling
     foliageConfig.cullMode = VK_CULL_MODE_NONE;
@@ -429,7 +429,7 @@ void Application::mainLoop() {
 
                 // Teleport every particle to the current location
                 std::vector<Transform>& particles = particleManager->particles;
-                std::vector<InstanceStatic>& particlesData = particleManager->particles_data;
+                std::vector<StaticInstance>& particlesData = particleManager->particles_data;
 
                 std::vector<size_t> indices(particles.size());
                 std::iota(indices.begin(), indices.end(), 0);
@@ -447,7 +447,7 @@ void Application::mainLoop() {
         }
 
         if (particlePhysicsEnabled) {
-            particleManager->updatePhysic(dTime, resGroup->getMeshStatic("TerrainMesh"), glm::mat4(1.0f));
+            particleManager->updatePhysic(dTime, resGroup->getStaticMesh("TerrainMesh"), glm::mat4(1.0f));
         };
         particleManager->updateRender();
 
@@ -464,14 +464,16 @@ void Application::mainLoop() {
             // Draw grass system
 
             // No need for per frame terrain update since it never moves
-            rendererRef.drawInstanceStaticGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
+            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
+
+            rendererRef.drawRiggedInstanceGroup(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), 0);
 
             // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
-            // rendererRef.drawInstanceStaticGroup(resGroup.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
+            // rendererRef.drawStaticInstanceGroup(resGroup.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
 
             // Draw the particles
-            particleManager->instanceGroup.updateBufferData();
-            rendererRef.drawInstanceStaticGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &particleManager->instanceGroup);
+            // particleManager->instanceGroup.updateBufferData();
+            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };
