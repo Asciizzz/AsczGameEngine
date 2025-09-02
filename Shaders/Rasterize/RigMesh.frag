@@ -7,12 +7,12 @@ struct Material {
     uvec4 texIndices;    // albedo, albedoSampler, normal, normalSampler
 };
 
-layout(std430, set = 2, binding = 0) readonly buffer MaterialBuffer {
+layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
     Material materials[];
 };
 
-layout(set = 3, binding = 0) uniform texture2D textures[];
-layout(set = 3, binding = 1) uniform sampler   samplers[];
+layout(set = 2, binding = 0) uniform texture2D textures[];
+layout(set = 2, binding = 1) uniform sampler   samplers[];
 
 layout(location = 0) in float debugLight;
 layout(location = 1) in vec4 debugColor;

@@ -107,7 +107,9 @@ struct DescSets {
     std::vector<VkDescriptorSet> sets;
     void allocate(VkDescriptorPool pool, VkDescriptorSetLayout layout, uint32_t count);
 
-    VkDescriptorSet get(uint32_t index=0) const { return sets[index]; }
+    VkDescriptorSet get(uint32_t index=0) const {
+        return index < sets.size() ? sets[index] : VK_NULL_HANDLE;
+    }
 };
 
 }

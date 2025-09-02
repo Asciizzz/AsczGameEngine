@@ -38,17 +38,15 @@ public:
 
     std::pair<size_t, size_t> addRiggedModel(std::string name, std::string filePath); // Adds both mesh and skeleton from file
 
-
+    // Descriptor's getters
     VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout->get(); }
-    VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout->get(); }
-    VkDescriptorSetLayout getRigDescLayout() const { return rigSkeleDescLayout->get(); }
-
     VkDescriptorSet getMatDescSet() const { return matDescSet->get(); }
+    
+    VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout->get(); }
     VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
-    VkDescriptorSet getRigDescSet(size_t index) const {
-        return index < rigSkeletons.size() ? rigSkeleDescSets->get(index) : VK_NULL_HANDLE;
-    }
 
+    VkDescriptorSetLayout getRigDescLayout() const { return rigSkeleDescLayout->get(); }
+    VkDescriptorSet getRigSkeleDescSet(size_t index) const { return rigSkeleDescSets[index]->get(); }
 
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
@@ -85,9 +83,9 @@ public:
     UniquePtrVec<AzVulk::BufferData>  rigSkeleInvMatBuffers; // Additional buffers in the future
     UniquePtr<AzVulk::DescLayout>     rigSkeleDescLayout;
     UniquePtr<AzVulk::DescPool>       rigSkeleDescPool;
-    UniquePtr<AzVulk::DescSets>       rigSkeleDescSets;
+    UniquePtrVec<AzVulk::DescSets>    rigSkeleDescSets; // Wrong, but we'll live with it for now
     void createRigBuffers();
-    void createRigDescSets();
+    void createRigSkeleDescSets();
 
     // Material - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
     SharedPtrVec<Material>            materials;

@@ -27,15 +27,15 @@ Renderer::~Renderer() {
 }
 
 void Renderer::createCommandBuffers() {
-    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    cmdBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = vkDevice->graphicsPoolWrapper.pool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
+    allocInfo.commandBufferCount = (uint32_t) cmdBuffers.size();
 
-    if (vkAllocateCommandBuffers(vkDevice->lDevice, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(vkDevice->lDevice, &allocInfo, cmdBuffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
@@ -95,7 +95,7 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    if (vkBeginCommandBuffer(commandBuffers[currentFrame], &beginInfo) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(cmdBuffers[currentFrame], &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
@@ -120,7 +120,7 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
     renderPassInfo.clearValueCount = clearValueCount;
     renderPassInfo.pClearValues = clearValues.data();
 
-    vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmdBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -129,12 +129,12 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
     viewport.height = static_cast<float>(swapChain->extent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffers[currentFrame], 0, 1, &viewport);
+    vkCmdSetViewport(cmdBuffers[currentFrame], 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = swapChain->extent;
-    vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
+    vkCmdSetScissor(cmdBuffers[currentFrame], 0, 1, &scissor);
 
     return imageIndex;
 }
@@ -149,15 +149,13 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
     if (instanceCount == 0 || meshIndex == SIZE_MAX || indexCount == 0) return;
 
-    rPipeline->bindCmd(commandBuffers[currentFrame]);
+    rPipeline->bindCmd(cmdBuffers[currentFrame]);
 
-    // Bind descriptor sets once
     VkDescriptorSet globalSet = glbUBO->getDescSet();
     VkDescriptorSet materialSet = resGroup->getMatDescSet();
     VkDescriptorSet textureSet = resGroup->getTexDescSet();
-
     VkDescriptorSet sets[] = {globalSet, materialSet, textureSet};
-    rPipeline->bindSets(commandBuffers[currentFrame], sets, 3);
+    rPipeline->bindSets(cmdBuffers[currentFrame], sets, 3);
 
     VkBuffer vertexBuffer = resGroup->getStaticVertexBuffer(meshIndex);
     VkBuffer indexBuffer = resGroup->getStaticIndexBuffer(meshIndex);
@@ -166,11 +164,11 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
     VkBuffer buffers[] = { vertexBuffer, instanceBuffer };
     VkDeviceSize offsets[] = { 0, 0 };
-    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 2, buffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindVertexBuffers(cmdBuffers[currentFrame], 0, 2, buffers, offsets);
+    vkCmdBindIndexBuffer(cmdBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
     // Draw all instances
-    vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
+    vkCmdDrawIndexed(cmdBuffers[currentFrame], indexCount, instanceCount, 0, 0, 0);
 }
 
 
@@ -182,16 +180,16 @@ void Renderer::drawRiggedInstanceGroup(const ResourceGroup* resGroup, const GlbU
     const auto& mesh = resGroup->rigMeshes[meshIndex];
     uint32_t indexCount = resGroup->getRiggedIndexCount(meshIndex);
 
-    rPipeline->bindCmd(commandBuffers[currentFrame]);
+    rPipeline->bindCmd(cmdBuffers[currentFrame]);
 
     // Bind descriptor sets once
     VkDescriptorSet glbSet = glbUBO->getDescSet();
     VkDescriptorSet matSet = resGroup->getMatDescSet();
     VkDescriptorSet texSet = resGroup->getTexDescSet();
-    VkDescriptorSet rigSet = resGroup->getRigDescSet(meshIndex);
+    VkDescriptorSet rigSet = resGroup->getRigSkeleDescSet(meshIndex);
 
-    VkDescriptorSet sets[] = {glbSet, rigSet, matSet, texSet};
-    rPipeline->bindSets(commandBuffers[currentFrame], sets, 4);
+    VkDescriptorSet sets[] = {glbSet, matSet, texSet, rigSet};
+    rPipeline->bindSets(cmdBuffers[currentFrame], sets, 4);
 
     VkBuffer vertexBuffer = resGroup->getRiggedVertexBuffer(meshIndex);
     VkBuffer indexBuffer = resGroup->getRiggedIndexBuffer(meshIndex);
@@ -200,25 +198,25 @@ void Renderer::drawRiggedInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
     VkBuffer buffers[] = { vertexBuffer };
     VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, buffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindVertexBuffers(cmdBuffers[currentFrame], 0, 1, buffers, offsets);
+    vkCmdBindIndexBuffer(cmdBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
     // Draw all instances
-    vkCmdDrawIndexed(commandBuffers[currentFrame], indexCount, 1, 0, 0, 0);
+    vkCmdDrawIndexed(cmdBuffers[currentFrame], indexCount, 1, 0, 0, 0);
 }
 
 
 // Sky rendering using dedicated sky pipeline
 void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) {
     // Bind sky pipeline
-    skyPipeline->bindCmd(commandBuffers[currentFrame]);
+    skyPipeline->bindCmd(cmdBuffers[currentFrame]);
 
     // Bind only the global descriptor set (set 0) for sky
     VkDescriptorSet globalSet = glbUBO->getDescSet();
-    skyPipeline->bindSets(commandBuffers[currentFrame], &globalSet, 1);
+    skyPipeline->bindSets(cmdBuffers[currentFrame], &globalSet, 1);
 
     // Draw fullscreen triangle (3 vertices, no input)
-    vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
+    vkCmdDraw(cmdBuffers[currentFrame], 3, 1, 0, 0);
 }
 
 
@@ -226,9 +224,9 @@ void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* 
 void Renderer::endFrame(uint32_t imageIndex) {
     if (imageIndex == UINT32_MAX) return;
 
-    vkCmdEndRenderPass(commandBuffers[currentFrame]);
+    vkCmdEndRenderPass(cmdBuffers[currentFrame]);
 
-    if (vkEndCommandBuffer(commandBuffers[currentFrame]) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(cmdBuffers[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
 
@@ -243,7 +241,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     submit.pWaitSemaphores      = waitSemaphores;
     submit.pWaitDstStageMask    = &waitStage;
     submit.commandBufferCount   = 1;
-    submit.pCommandBuffers      = &commandBuffers[currentFrame];
+    submit.pCommandBuffers      = &cmdBuffers[currentFrame];
     submit.signalSemaphoreCount = 1;
     submit.pSignalSemaphores    = signalSemaphores;
 

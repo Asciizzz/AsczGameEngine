@@ -62,7 +62,7 @@ void ResourceGroup::uploadAllToGPU() {
     createTextureDescSet();
 
     printf("Checkpoint\n");
-    createRigDescSets();
+    createRigSkeleDescSets();
 }
 
 
@@ -286,14 +286,9 @@ void ResourceGroup::createMaterialBuffer() {
 void ResourceGroup::createMaterialDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    // Create fresh UniquePtr objects (automatically cleans up any existing ones)
-    matDescSet = MakeUnique<DescSets>();
-    matDescPool = MakeUnique<DescPool>();
-    matDescLayout = MakeUnique<DescLayout>();
-    
-    matDescSet->init(lDevice);
-    matDescPool->init(lDevice);
-    matDescLayout->init(lDevice);
+    matDescSet = MakeUnique<DescSets>(lDevice);
+    matDescPool = MakeUnique<DescPool>(lDevice);
+    matDescLayout = MakeUnique<DescLayout>(lDevice);
 
     // Create descriptor pool and layout
     matDescPool->create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
@@ -605,13 +600,9 @@ void ResourceGroup::createTextureDescSet() {
     uint32_t textureCount = static_cast<uint32_t>(textures.size());
     uint32_t samplerCount = static_cast<uint32_t>(samplers.size());
 
-    texDescSet = MakeUnique<DescSets>();
-    texDescPool = MakeUnique<DescPool>();
-    texDescLayout = MakeUnique<DescLayout>();
-
-    texDescSet->init(lDevice);
-    texDescPool->init(lDevice);
-    texDescLayout->init(lDevice);
+    texDescSet = MakeUnique<DescSets>(lDevice);
+    texDescPool = MakeUnique<DescPool>(lDevice);
+    texDescLayout = MakeUnique<DescLayout>(lDevice);
 
     // layout: binding 0 = images, binding 1 = samplers
     texDescLayout->create({
@@ -877,19 +868,15 @@ void ResourceGroup::createRigBuffers() {
     }
 }
 
-void ResourceGroup::createRigDescSets() {
+void ResourceGroup::createRigSkeleDescSets() {
     VkDevice lDevice = vkDevice->lDevice;
 
     rigSkeleDescPool = MakeUnique<DescPool>(lDevice);
     rigSkeleDescLayout = MakeUnique<DescLayout>(lDevice);
-    rigSkeleDescSets = MakeUnique<DescSets>(lDevice);
+    rigSkeleDescSets.clear();
 
-    // Create descriptor pool and layout
-    uint32_t rigCount = static_cast<uint32_t>(rigSkeletons.size());
-
-    rigSkeleDescPool->create({
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, rigCount}
-    }, rigCount);  // maxSets should be rigCount, not 1
+    // Create shared descriptor pool and layout
+    rigSkeleDescPool->create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
     rigSkeleDescLayout->create({
         DescLayout::BindInfo{
             0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -899,8 +886,12 @@ void ResourceGroup::createRigDescSets() {
 
     if (rigSkeletons.empty()) return;
 
-    // Allocate multiple descriptor sets (one for each rig)
-    rigSkeleDescSets->allocate(rigSkeleDescPool->get(), rigSkeleDescLayout->get(), rigCount);
+    uint32_t rigCount = static_cast<uint32_t>(rigSkeletons.size());
+    rigSkeleDescSets.resize(rigCount);
+    for (size_t i = 0; i < rigCount; ++i) {
+        rigSkeleDescSets[i] = MakeUnique<DescSets>(lDevice);
+        rigSkeleDescSets[i]->allocate(rigSkeleDescPool->get(), rigSkeleDescLayout->get(), 1);
+    }
 
     // Bind each rig buffer to its respective descriptor set
     for (size_t i = 0; i < rigSkeletons.size(); ++i) {
@@ -911,7 +902,7 @@ void ResourceGroup::createRigDescSets() {
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet          = rigSkeleDescSets->get(i);  // Get the i-th descriptor set
+        descriptorWrite.dstSet          = rigSkeleDescSets[i]->get();  // Get the i-th descriptor set
         descriptorWrite.dstBinding      = 0;
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;

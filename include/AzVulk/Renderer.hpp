@@ -43,7 +43,7 @@ namespace AzVulk {
 
         // Command recording
         VkCommandPool commandPool = VK_NULL_HANDLE;
-        std::vector<VkCommandBuffer> commandBuffers;
+        std::vector<VkCommandBuffer> cmdBuffers;
         
         // Synchronization objects
         std::vector<VkSemaphore> imageAvailableSemaphores; // Per MAX_FRAMES_IN_FLIGHT
