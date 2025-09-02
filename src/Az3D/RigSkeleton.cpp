@@ -109,11 +109,19 @@ void RigDemo::funFunction(float dTime) {
     funAccumTimeValue += dTime;
     // localPoseTransforms[0] = rigSkeleton->localBindTransforms[0] * glm::rotate(glm::mat4(1.0f), glm::radians(funAccumTimeValue), glm::vec3(0, 0, 1));
     
-    localPoseTransforms[1] = rigSkeleton->localBindTransforms[1] * glm::translate(glm::mat4(1.0f), glm::vec3(0, sin(funAccumTimeValue) * 2.0f, 0));
+    // Lmao why?
+    // float magicValue = 1.0 - sin(funAccumTimeValue);
+    // magicValue *= 0.2;
+
+    // localPoseTransforms[110] = rigSkeleton->localBindTransforms[110] * glm::translate(glm::mat4(1.0f), glm::vec3(0, magicValue, magicValue));
 
     // localPoseTransforms[103] = glm::rotate(localPoseTransforms[102], glm::radians(90.0f * dTime), glm::vec3(0, 0, 1));
 
-    // localPoseTransforms[1] = rigSkeleton->localBindTransforms[1] * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -funAccumTimeValue));
+    // Only rotate slightly using a signed function n deg -> -n deg
+
+    float partRotMax = 30.0f;
+    float partRot = glm::radians(partRotMax * sin(funAccumTimeValue * 0.5f));
+    localPoseTransforms[51] = rigSkeleton->localBindTransforms[51] * glm::rotate(glm::mat4(1.0f), partRot, glm::vec3(0, 1, 0));
 
     // localPoseTransforms[5] = glm::rotate(rigSkeleton->localBindTransforms[5], glm::radians(funAccumTimeValue * 100.0f), glm::vec3(0, 1, 0));
     computeAllTransforms();

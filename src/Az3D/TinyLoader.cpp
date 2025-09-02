@@ -374,6 +374,32 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
 
     if (model.meshes.empty()) throw std::runtime_error("GLTF has no meshes: " + filePath);
 
+    // Create bone mapping FIRST if we have a skeleton
+    std::unordered_map<int, int> nodeIndexToBoneIndex;
+    if (loadRig && !model.skins.empty()) {
+        const tinygltf::Skin& skin = model.skins[0];
+        std::cout << "Creating bone mapping for " << skin.joints.size() << " joints:\n";
+        
+        // Debug: print all joints to understand the mapping
+        std::cout << "Joint node indices in skin: ";
+        for (size_t i = 0; i < skin.joints.size(); i++) {
+            std::cout << skin.joints[i] << " ";
+        }
+        std::cout << "\n";
+        
+        for (size_t i = 0; i < skin.joints.size(); i++) {
+            nodeIndexToBoneIndex[skin.joints[i]] = static_cast<int>(i);
+            const auto& node = model.nodes[skin.joints[i]];
+            std::string boneName = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
+            std::cout << "  Global node " << skin.joints[i] << " (" << boneName << ") -> Local bone " << i << "\n";
+        }
+        std::cout << "\n";
+        
+        // Debug: Check if joint data actually makes sense
+        std::cout << "Total nodes in model: " << model.nodes.size() << "\n";
+        std::cout << "Max joint index in skin: " << *std::max_element(skin.joints.begin(), skin.joints.end()) << "\n";
+    }
+
     const tinygltf::Mesh& mesh = model.meshes[0];
     size_t vertexOffset = 0;
 
@@ -395,8 +421,58 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             readAccessor(model, model.accessors[primitive.attributes.at("TANGENT")], tangents);
         if (primitive.attributes.count("TEXCOORD_0"))
             readAccessor(model, model.accessors[primitive.attributes.at("TEXCOORD_0")], uvs);
-        if (primitive.attributes.count("JOINTS_0"))
-            readAccessor(model, model.accessors[primitive.attributes.at("JOINTS_0")], joints);
+        
+        // Read joint indices with proper component type handling
+        if (primitive.attributes.count("JOINTS_0")) {
+            const auto& jointsAccessor = model.accessors[primitive.attributes.at("JOINTS_0")];
+            const auto& jointsBufferView = model.bufferViews[jointsAccessor.bufferView];
+            const auto& jointsBuffer = model.buffers[jointsBufferView.buffer];
+            const unsigned char* dataPtr = jointsBuffer.data.data() + jointsBufferView.byteOffset + jointsAccessor.byteOffset;
+            size_t stride = jointsAccessor.ByteStride(jointsBufferView);
+            
+            std::cout << "Joint accessor info:\n";
+            std::cout << "  Component type: " << jointsAccessor.componentType << " (UBYTE=5121, USHORT=5123, UINT=5125)\n";
+            std::cout << "  Count: " << jointsAccessor.count << "\n";
+            std::cout << "  Type: " << jointsAccessor.type << "\n";
+            std::cout << "  Stride: " << stride << "\n";
+            
+            joints.resize(jointsAccessor.count);
+            
+            for (size_t i = 0; i < jointsAccessor.count; i++) {
+                const unsigned char* vertexDataPtr = dataPtr + stride * i;
+                glm::uvec4 jointIndices(0);
+                
+                switch (jointsAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+                        const uint8_t* indices = reinterpret_cast<const uint8_t*>(vertexDataPtr);
+                        jointIndices = glm::uvec4(indices[0], indices[1], indices[2], indices[3]);
+                        break;
+                    }
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+                        const uint16_t* indices = reinterpret_cast<const uint16_t*>(vertexDataPtr);
+                        jointIndices = glm::uvec4(indices[0], indices[1], indices[2], indices[3]);
+                        break;
+                    }
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: {
+                        const uint32_t* indices = reinterpret_cast<const uint32_t*>(vertexDataPtr);
+                        jointIndices = glm::uvec4(indices[0], indices[1], indices[2], indices[3]);
+                        break;
+                    }
+                    default:
+                        throw std::runtime_error("Unsupported joint component type: " + std::to_string(jointsAccessor.componentType));
+                }
+                
+                joints[i] = jointIndices;
+                
+                // Debug: Print first few joint indices to see what we're getting
+                if (i < 5) {
+                    std::cout << "  Raw vertex " << i << " joints: [" 
+                              << jointIndices.x << ", " << jointIndices.y << ", " 
+                              << jointIndices.z << ", " << jointIndices.w << "]\n";
+                }
+            }
+        }
+        
         if (primitive.attributes.count("WEIGHTS_0"))
             readAccessor(model, model.accessors[primitive.attributes.at("WEIGHTS_0")], weights);
 
@@ -408,10 +484,78 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             v.nrml_tv   = glm::vec4(normals.size() > i ? normals[i] : glm::vec3(0.0f),
                                     uvs.size() > i ? uvs[i].y : 0.0f);
             v.tangent   = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
-            v.boneIDs   = joints.size() > i ? joints[i] : glm::uvec4(0);
-            v.weights   = weights.size() > i ? weights[i] : glm::vec4(0,0,0,0);
-
+            
+            // Initialize bone data
+            glm::uvec4 originalJoints = joints.size() > i ? joints[i] : glm::uvec4(0);
+            glm::vec4 originalWeights = weights.size() > i ? weights[i] : glm::vec4(0,0,0,0);
+            
+            // Normalize weights to ensure they sum to 1.0
+            float weightSum = originalWeights.x + originalWeights.y + originalWeights.z + originalWeights.w;
+            if (weightSum > 1e-6f) {
+                originalWeights /= weightSum;
+            } else {
+                // If all weights are zero, assign full weight to bone 0
+                originalWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                originalJoints = glm::uvec4(0, 0, 0, 0);
+            }
+            
+            // Remap bone IDs if we have the mapping
+            glm::uvec4 remappedJoints = originalJoints;
+            glm::vec4 validWeights = originalWeights;
+            
+            if (!nodeIndexToBoneIndex.empty()) {
+                // Reset for remapping
+                remappedJoints = glm::uvec4(0);
+                validWeights = glm::vec4(0.0f);
+                float newWeightSum = 0.0f;
+                
+                for (int j = 0; j < 4; j++) {
+                    uint32_t globalBoneId = originalJoints[j];
+                    float weight = originalWeights[j];
+                    
+                    if (weight > 1e-6f) { // Only process non-zero weights
+                        auto it = nodeIndexToBoneIndex.find(globalBoneId);
+                        if (it != nodeIndexToBoneIndex.end()) {
+                            // Valid bone mapping found
+                            remappedJoints[j] = static_cast<uint32_t>(it->second);
+                            validWeights[j] = weight;
+                            newWeightSum += weight;
+                        } else {
+                            // Invalid bone ID - this is a problem!
+                            std::cout << "WARNING: Vertex " << i << " references unmapped bone ID " << globalBoneId << std::endl;
+                            // Assign weight to root bone (bone 0) as fallback
+                            remappedJoints[j] = 0;
+                            validWeights[j] = weight;
+                            newWeightSum += weight;
+                        }
+                    }
+                }
+                
+                // Ensure weights still sum to 1.0 after remapping
+                if (newWeightSum > 1e-6f) {
+                    validWeights /= newWeightSum;
+                } else {
+                    // Emergency fallback: assign to bone 0
+                    validWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                    remappedJoints = glm::uvec4(0, 0, 0, 0);
+                }
+            }
+            
+            v.boneIDs = remappedJoints;
+            v.weights = validWeights;
+            
             rigMesh.vertices.push_back(v);
+
+            // Debug output for first few vertices
+            if (i < 10) {
+                std::cout << "Vertex " << i << ": ";
+                for (size_t j = 0; j < 4; j++) {
+                    if (v.weights[j] > 1e-6f) {
+                        std::cout << "Bone[" << v.boneIDs[j] << "]:Weight[" << v.weights[j] << "] ";
+                    }
+                }
+                std::cout << std::endl;
+            }
         }
 
         // Indices
@@ -447,12 +591,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
     // Skeleton (take first skin if present, only if loadRig is true)
     if (loadRig && !model.skins.empty()) {
         const tinygltf::Skin& skin = model.skins[0];
-
-        // Create mapping from global node index to local bone index
-        std::unordered_map<int, int> nodeIndexToBoneIndex;
-        for (size_t i = 0; i < skin.joints.size(); i++) {
-            nodeIndexToBoneIndex[skin.joints[i]] = static_cast<int>(i);
-        }
 
         // Inverse bind matrices
         std::vector<glm::mat4> ibms;
@@ -495,20 +633,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             rigSkeleton.parentIndices.push_back(boneParentIndex);
             rigSkeleton.inverseBindMatrices.push_back(boneInverseBindMatrix);
             rigSkeleton.localBindTransforms.push_back(boneLocalBindTransform);
-        }
-
-        // Now remap bone IDs in vertices from global node indices to local bone indices
-        for (auto& vertex : rigMesh.vertices) {
-            for (int j = 0; j < 4; j++) {
-                int globalBoneId = vertex.boneIDs[j];
-                auto it = nodeIndexToBoneIndex.find(globalBoneId);
-                if (it != nodeIndexToBoneIndex.end()) {
-                    vertex.boneIDs[j] = it->second;  // Remap to local bone index
-                } else {
-                    // If bone ID not found in skeleton, set to 0 (fallback)
-                    vertex.boneIDs[j] = 0;
-                }
-            }
         }
     } else if (loadRig) {
         // Fallback skeleton with 1 bone
