@@ -146,7 +146,6 @@ bool readJointIndices(const tinygltf::Model& model, int accessorIndex, std::vect
                 stride = 16; // VEC4 of ints
                 break;
             default:
-                std::cout << "ERROR: Unsupported joint component type: " << accessor.componentType << std::endl;
                 return false;
         }
     }
@@ -174,7 +173,6 @@ bool readJointIndices(const tinygltf::Model& model, int accessorIndex, std::vect
                 break;
             }
             default:
-                std::cout << "ERROR: Unsupported joint component type in processing: " << accessor.componentType << std::endl;
                 return false;
         }
         
@@ -492,9 +490,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
     if (loadRig && !model.skins.empty()) {
         const tinygltf::Skin& skin = model.skins[0];
         
-        std::cout << "=== BUILDING SKELETON ===\n";
-        std::cout << "Found skin with " << skin.joints.size() << " joints\n";
-        
         // Create the node-to-bone mapping
         for (size_t i = 0; i < skin.joints.size(); i++) {
             nodeIndexToBoneIndex[skin.joints[i]] = static_cast<int>(i);
@@ -506,9 +501,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             if (!readAccessorSafe(model, skin.inverseBindMatrices, inverseBindMatrices)) {
                 throw std::runtime_error("Failed to read inverse bind matrices");
             }
-            std::cout << "Loaded " << inverseBindMatrices.size() << " inverse bind matrices\n";
         } else {
-            std::cout << "No inverse bind matrices - using identity matrices\n";
             inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f));
         }
         
@@ -561,16 +554,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             }
             
             rigSkeleton.parentIndices[i] = parentBoneIndex;
-            
-            std::cout << "Bone " << i << " (" << rigSkeleton.names[i] << ") parent: ";
-            if (parentBoneIndex == -1) {
-                std::cout << "ROOT\n";
-            } else {
-                std::cout << parentBoneIndex << " (" << rigSkeleton.names[parentBoneIndex] << ")\n";
-            }
         }
-        
-        std::cout << "=== SKELETON COMPLETE ===\n\n";
     }
 
     const tinygltf::Mesh& mesh = model.meshes[0];
@@ -579,9 +563,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
     // Mesh processing with rigorous validation
     for (const auto& primitive : mesh.primitives) {
         size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
-        
-        std::cout << "=== PROCESSING PRIMITIVE ===\n";
-        std::cout << "Vertex count: " << vertexCount << "\n";
 
         std::vector<glm::vec3> positions, normals;
         std::vector<glm::vec4> tangents, weights;
@@ -604,8 +585,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         
         // Read skinning data with robust error handling
         if (loadRig && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0")) {
-            std::cout << "Reading skinning data...\n";
-            
             if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
                 throw std::runtime_error("Failed to read joint indices");
             }
@@ -613,8 +592,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), weights)) {
                 throw std::runtime_error("Failed to read bone weights");
             }
-            
-            std::cout << "Read " << joints.size() << " joint sets and " << weights.size() << " weight sets\n";
         }
 
         // Build vertices with thorough validation
@@ -670,17 +647,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                         rootDependentVertices++;
                     }
                 }
-                
-                // Debug sample output
-                if (i < 5) {
-                    std::cout << "Vertex " << i << ": ";
-                    for (int j = 0; j < 4; j++) {
-                        if (vertex.weights[j] > 0.0f) {
-                            std::cout << "Bone[" << vertex.boneIDs[j] << "]:Weight[" << vertex.weights[j] << "] ";
-                        }
-                    }
-                    std::cout << "\n";
-                }
             } else {
                 // No rigging - bind to root
                 vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
@@ -689,9 +655,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             
             rigMesh.vertices.push_back(vertex);
         }
-        
-        std::cout << "Problem vertices fixed: " << problemVertices << "\n";
-        std::cout << "Root-dependent vertices: " << rootDependentVertices << "\n";
 
         // Handle indices
         if (primitive.indices >= 0) {
@@ -722,10 +685,6 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
 
         vertexOffset += vertexCount;
     }
-
-    std::cout << "=== MESH COMPLETE ===\n";
-    std::cout << "Total vertices: " << rigMesh.vertices.size() << "\n";
-    std::cout << "Total indices: " << rigMesh.indices.size() << "\n\n";
 
     return TinyModel{rigMesh, rigSkeleton};
 }

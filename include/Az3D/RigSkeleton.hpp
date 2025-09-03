@@ -58,8 +58,39 @@ struct RigDemo {
 
     float funAccumTimeValue = 0.0f;
 
+    struct FunParams {
+        std::vector<float> customFloat;
+        std::vector<glm::vec2> customVec2;
+        std::vector<glm::vec3> customVec3;
+        std::vector<glm::vec4> customVec4;
+        std::vector<glm::mat4> customMat4;
 
-    void funFunction(float dTime);
+        size_t add(float f) {
+            customFloat.push_back(f);
+            return customFloat.size() - 1;
+        }
+
+        size_t add(const glm::vec2& v) {
+            customVec2.push_back(v);
+            return customVec2.size() - 1;
+        }
+
+        size_t add(const glm::vec3& v) {
+            customVec3.push_back(v);
+            return customVec3.size() - 1;
+        }
+
+        size_t add(const glm::vec4& v) {
+            customVec4.push_back(v);
+            return customVec4.size() - 1;
+        }
+
+        size_t add(const glm::mat4& m) {
+            customMat4.push_back(m);
+            return customMat4.size() - 1;
+        }
+    };
+    void funFunction(const FunParams& params);
 
 };
 

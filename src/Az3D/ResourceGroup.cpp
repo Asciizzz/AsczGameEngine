@@ -51,17 +51,14 @@ void ResourceGroup::uploadAllToGPU() {
 
     createStaticMeshBuffers();
     createRigMeshBuffers();
-    createRigBuffers();
-
+    createRigSkeleBuffers();
 
     createMaterialBuffer();
     createMaterialDescSet();
 
-    createSamplers();
-
+    createTextureSamplers();
     createTextureDescSet();
 
-    printf("Checkpoint\n");
     createRigSkeleDescSets();
 }
 
@@ -561,7 +558,7 @@ SharedPtr<Texture> ResourceGroup::createTexture(const TinyTexture& tinyTexture, 
 
 
 // --- Shared Samplers ---
-void ResourceGroup::createSamplers() {
+void ResourceGroup::createTextureSamplers() {
     VkDevice lDevice = vkDevice->lDevice;
 
     for (uint32_t i = 0; i < 5; ++i) {
@@ -823,7 +820,7 @@ void ResourceGroup::createRigMeshBuffers() {
 // ========================== SKELETON DATA ==================================
 // ============================================================================
 
-void ResourceGroup::createRigBuffers() {
+void ResourceGroup::createRigSkeleBuffers() {
     rigSkeleInvMatBuffers.clear();
 
     for (size_t i = 0; i < rigSkeletons.size(); ++i) {

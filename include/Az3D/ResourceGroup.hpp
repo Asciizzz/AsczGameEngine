@@ -84,7 +84,7 @@ public:
     UniquePtr<AzVulk::DescLayout>     rigSkeleDescLayout;
     UniquePtr<AzVulk::DescPool>       rigSkeleDescPool;
     UniquePtrVec<AzVulk::DescSets>    rigSkeleDescSets; // Wrong, but we'll live with it for now
-    void createRigBuffers();
+    void createRigSkeleBuffers();
     void createRigSkeleDescSets();
 
     // Material - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
@@ -98,7 +98,7 @@ public:
 
     // Texture Sampler - Raw handles managed manually
     std::vector<VkSampler>            samplers;
-    void createSamplers();
+    void createTextureSamplers();
 
     // Texture Image - Resources: SharedPtr, Descriptors: UniquePtr
     SharedPtrVec<Texture>             textures;

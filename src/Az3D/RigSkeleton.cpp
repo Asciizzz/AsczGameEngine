@@ -7,6 +7,62 @@
 
 using namespace Az3D;
 
+// Local transform structure for TRS manipulation
+struct FunTransform {
+    glm::vec3 translation{0.0f};
+    glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
+    glm::vec3 scale{1.0f};
+    
+    FunTransform() = default;
+    FunTransform(const glm::vec3& t, const glm::quat& r, const glm::vec3& s) 
+        : translation(t), rotation(r), scale(s) {}
+};
+
+// Extract TRS components from a matrix
+FunTransform extractTransform(const glm::mat4& matrix) {
+    FunTransform transform;
+    
+    // Try GLM decompose first
+    glm::vec3 skew;
+    glm::vec4 perspective;
+    bool decompose_success = glm::decompose(matrix, transform.scale, transform.rotation, 
+                                          transform.translation, skew, perspective);
+    
+    if (!decompose_success) {
+        // Fallback: Manual extraction
+        transform.translation = glm::vec3(matrix[3]);
+        
+        // Extract scale (length of first 3 columns)
+        transform.scale = glm::vec3(
+            glm::length(glm::vec3(matrix[0])),
+            glm::length(glm::vec3(matrix[1])),
+            glm::length(glm::vec3(matrix[2]))
+        );
+        
+        // Extract rotation matrix (normalize first 3 columns)
+        glm::mat3 rotationMatrix = glm::mat3(
+            glm::vec3(matrix[0]) / transform.scale.x,
+            glm::vec3(matrix[1]) / transform.scale.y,
+            glm::vec3(matrix[2]) / transform.scale.z
+        );
+        
+        // Convert rotation matrix to quaternion
+        transform.rotation = glm::quat_cast(rotationMatrix);
+    }
+    
+    return transform;
+}
+
+// Create matrix from TRS components
+glm::mat4 constructMatrix(const FunTransform& transform) {
+    glm::mat4 translationMat = glm::translate(glm::mat4(1.0f), transform.translation);
+    glm::mat4 rotationMat = glm::mat4_cast(transform.rotation);
+    glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), transform.scale);
+    
+    // TRS order: Translation * Rotation * Scale
+    return translationMat * rotationMat * scaleMat;
+}
+
 
 void RigSkeleton::debugPrintHierarchy() const {
     for (size_t i = 0; i < names.size(); ++i) {
@@ -18,7 +74,13 @@ void RigSkeleton::debugPrintHierarchy() const {
 
 void RigSkeleton::debugPrintRecursive(int boneIndex, int depth) const {
     // Indentation
-    for (int i = 0; i < depth; ++i) std::cout << "| ";
+    for (int i = 0; i <= depth; ++i) {
+        std::string depthString;
+        depthString = depth < 10 ? " " + std::to_string(depth) :
+                                    std::to_string(depth);
+
+        std::cout << (i == 0 ? depthString : "|") << " ";
+    }
 
     // Print this bone
     std::cout << "| " << names[boneIndex] << " (index " << boneIndex << ")";
@@ -151,9 +213,11 @@ glm::mat4 RigDemo::getBindPose(size_t index) {
     return rigSkeleton->localBindTransforms[index];
 }
 
-void RigDemo::funFunction(float dTime) {
+void RigDemo::funFunction(const FunParams& params) {
     // Messed up some bone idk
-    funAccumTimeValue += dTime;
+    funAccumTimeValue += params.customFloat[0];
+
+    glm::vec3 cameraPos = glm::vec3(params.customVec4[0]);
 
     // I know that it may looks like magic numbers right now
     // But i can assure you, they... are indeed magic numbers lol
@@ -161,81 +225,53 @@ void RigDemo::funFunction(float dTime) {
     // the new rigging system, once everything is implemented
     // There will be actual robust bone handler
 
-    float partRotMax = 0.12f;
-    float partRot = partRotMax * sin(funAccumTimeValue);
 
-    // Extract transformation data from the mat4
-    glm::mat4 pose102 = getBindPose(102);
-    glm::mat4 pose104 = getBindPose(104);
+    // Move eyes from left to right (index 102 - left and 104 - right)
+    float partMove1 = 0.12f * sin(funAccumTimeValue);
 
-    // Method 1: Using GLM decompose (if available)
-    glm::vec3 translation102, scale102, skew;
-    glm::vec4 perspective;
-    glm::quat rotation102;
-    bool decompose_success102 = glm::decompose(pose102, scale102, rotation102, translation102, skew, perspective);
+    FunTransform transform102 = extractTransform(getBindPose(102));
+    FunTransform transform104 = extractTransform(getBindPose(104));
 
-    glm::vec3 translation104, scale104;
-    glm::quat rotation104;
-    bool decompose_success104 = glm::decompose(pose104, scale104, rotation104, translation104, skew, perspective);
+    transform102.translation.y += partMove1;
+    transform104.translation.y += partMove1;
 
-    if (decompose_success102 && decompose_success104) {
-        // Apply your modifications
-        translation102.x += partRot;  // Add translation offset
-        translation104.x += partRot;  // Add translation offset
+    localPoseTransforms[102] = constructMatrix(transform102);
+    localPoseTransforms[104] = constructMatrix(transform104);
 
-        // Reconstruct the transformation matrices
-        glm::mat4 translationMat102 = glm::translate(glm::mat4(1.0f), translation102);
-        glm::mat4 rotationMat102 = glm::mat4_cast(rotation102);
-        glm::mat4 scaleMat102 = glm::scale(glm::mat4(1.0f), scale102);
-        
-        glm::mat4 translationMat104 = glm::translate(glm::mat4(1.0f), translation104);
-        glm::mat4 rotationMat104 = glm::mat4_cast(rotation104);
-        glm::mat4 scaleMat104 = glm::scale(glm::mat4(1.0f), scale104);
+    // Rotate spine (index 1)
+    float partRot1 = 30.0f * sin(funAccumTimeValue);
 
-        // Reconstruct final transformation matrices (TRS order)
-        localPoseTransforms[102] = translationMat102 * rotationMat102 * scaleMat102;
-        localPoseTransforms[104] = translationMat104 * rotationMat104 * scaleMat104;
-    } else {
-        // Fallback: Manual extraction (if GLM decompose fails)
-        // Extract translation (4th column)
-        glm::vec3 manual_translation102 = glm::vec3(pose102[3]);
-        glm::vec3 manual_translation104 = glm::vec3(pose104[3]);
-        
-        // Extract scale (length of first 3 columns)
-        glm::vec3 manual_scale102 = glm::vec3(
-            glm::length(glm::vec3(pose102[0])),
-            glm::length(glm::vec3(pose102[1])),
-            glm::length(glm::vec3(pose102[2]))
-        );
-        glm::vec3 manual_scale104 = glm::vec3(
-            glm::length(glm::vec3(pose104[0])),
-            glm::length(glm::vec3(pose104[1])),
-            glm::length(glm::vec3(pose104[2]))
-        );
-        
-        // Extract rotation matrix (normalize first 3 columns)
-        glm::mat3 manual_rotation102 = glm::mat3(
-            glm::vec3(pose102[0]) / manual_scale102.x,
-            glm::vec3(pose102[1]) / manual_scale102.y,
-            glm::vec3(pose102[2]) / manual_scale102.z
-        );
-        glm::mat3 manual_rotation104 = glm::mat3(
-            glm::vec3(pose104[0]) / manual_scale104.x,
-            glm::vec3(pose104[1]) / manual_scale104.y,
-            glm::vec3(pose104[2]) / manual_scale104.z
-        );
-        
-        // Apply modifications
-        manual_translation102.x += partRot;
-        manual_translation104.x += partRot;
-        
-        // Reconstruct matrices
-        localPoseTransforms[102] = glm::translate(glm::mat4(1.0f), manual_translation102) * 
-                                  glm::mat4(manual_rotation102) * 
-                                  glm::scale(glm::mat4(1.0f), manual_scale102);
-        localPoseTransforms[104] = glm::translate(glm::mat4(1.0f), manual_translation104) * 
-                                  glm::mat4(manual_rotation104) * 
-                                  glm::scale(glm::mat4(1.0f), manual_scale104);
+    FunTransform transform1 = extractTransform(getBindPose(1));
+    transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRot1), glm::vec3(1,0,0));
+
+    localPoseTransforms[1] = constructMatrix(transform1);
+
+    // Rotate shoulders (index 3 - left, index 27 - right)
+    float partRot2 = 25.0f * sin(funAccumTimeValue) - 15.0f;
+
+    FunTransform transform3 = extractTransform(getBindPose(3));
+    FunTransform transform27 = extractTransform(getBindPose(27));
+
+    transform3.rotation = glm::rotate(transform3.rotation, glm::radians(partRot2), glm::vec3(1,0,0));
+    transform27.rotation = glm::rotate(transform27.rotation, glm::radians(partRot2), glm::vec3(1,0,0));
+
+    localPoseTransforms[3] = constructMatrix(transform3);
+    localPoseTransforms[27] = constructMatrix(transform27);
+
+    // Tail (index 110) rotate the same way with the spine
+    float partRot3 = 30.0f * sin(funAccumTimeValue);
+
+    FunTransform transform110 = extractTransform(getBindPose(110));
+    transform110.rotation = glm::rotate(transform110.rotation, glm::radians(partRot3), glm::vec3(1,0,0));
+
+    localPoseTransforms[110] = constructMatrix(transform110);
+
+    // Index 111 -> 117 has custom rotate script
+    for (int i = 111; i <= 117; ++i) {
+        FunTransform transform = extractTransform(getBindPose(i));
+        float partRot = -20.0f * sin(funAccumTimeValue + i);
+        transform.rotation = glm::rotate(transform.rotation, glm::radians(partRot), glm::vec3(1,0,0));
+        localPoseTransforms[i] = constructMatrix(transform);
     }
 
     computeAllTransforms();

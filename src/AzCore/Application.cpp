@@ -472,7 +472,11 @@ void Application::mainLoop() {
 
             // ================= DEMO RIG WORKED HOLY SHIT ARE YOU PROUD OF ME =======================
 
-            rigDemo->funFunction(dTime);
+            RigDemo::FunParams funParams;
+            funParams.add(dTime);
+            funParams.add(camera->pos);
+
+            rigDemo->funFunction(funParams);
             rigDemo->updateBuffer();
 
             rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
