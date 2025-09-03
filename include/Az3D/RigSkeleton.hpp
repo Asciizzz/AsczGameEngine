@@ -90,6 +90,7 @@ struct RigDemo {
             return customMat4.size() - 1;
         }
     };
+
     void funFunction(const FunParams& params);
 
 };

@@ -218,6 +218,8 @@ void RigDemo::funFunction(const FunParams& params) {
     float dTime = params.customFloat[0];
     funAccumTimeValue += dTime;
 
+    float sinAccum = sin(funAccumTimeValue);
+
     glm::vec3 cameraPos = glm::vec3(params.customVec4[0]);
 
     // I know that it may looks like magic numbers right now
@@ -226,6 +228,44 @@ void RigDemo::funFunction(const FunParams& params) {
     // the new rigging system, once everything is implemented
     // There will be actual robust bone handler
 
+    // Rotate (index 2)
+    float partRotSpine = 10.0f * sinAccum;
+    FunTransform transform1 = extractTransform(getBindPose(2));
+    transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
+
+    localPoseTransforms[2] = constructMatrix(transform1);
+
+    // Rotate back pack (index 76) opposite from spine
+    float partRotBackPack = -5.0f * sinAccum;
+    FunTransform transform76 = extractTransform(getBindPose(76));
+    transform76.rotation = glm::rotate(transform76.rotation, glm::radians(partRotBackPack), glm::vec3(1,0,0));
+
+    localPoseTransforms[76] = constructMatrix(transform76);
+
+    // Rotate chest (index 3)
+    float partRotChest = 15.0f * sinAccum;
+    FunTransform transform3 = extractTransform(getBindPose(3));
+
+    glm::vec3 t3normal = glm::normalize(glm::vec3(0.2, 1.0, 0.0));
+    transform3.rotation = glm::rotate(transform3.rotation, glm::radians(partRotChest), t3normal);
+
+    localPoseTransforms[3] = constructMatrix(transform3);
+
+    // Rotate shoulder (right 24 left 50)
+    float partRotShoulder1 = 18.0f * sinAccum - 10.0f;
+    float partRotShoulder2 = 18.0f * sin(1.1f * funAccumTimeValue) - 10.0f;
+    FunTransform transform24 = extractTransform(getBindPose(24));
+    FunTransform transform50 = extractTransform(getBindPose(50));
+    transform24.rotation = glm::rotate(transform24.rotation, glm::radians(partRotShoulder1), glm::vec3(1,0,0));
+    transform50.rotation = glm::rotate(transform50.rotation, glm::radians(partRotShoulder2), glm::vec3(1,0,0));
+
+    // transform24.translation = glm::vec3(-0.15f * sinAccum, 0.0f, 0.0f);
+    // transform50.translation = glm::vec3(+0.15f * sinAccum, 0.0f, 0.0f);
+
+    localPoseTransforms[24] = constructMatrix(transform24);
+    localPoseTransforms[50] = constructMatrix(transform50);
+
+    /*
     // Move eyes from left to right (index 102 - left and 104 - right)
     float partMoveEye = 0.12f * sin(funAccumTimeValue);
     FunTransform transform102 = extractTransform(getBindPose(102));
@@ -276,6 +316,8 @@ void RigDemo::funFunction(const FunParams& params) {
 
         localPoseTransforms[i] = constructMatrix(transform);
     }
+    */
 
     computeAllTransforms();
+
 }
