@@ -59,9 +59,11 @@ void main() {
     vec4 worldPos = skinMat4 * vec4(inPos_Tu.xyz, 1.0);
     gl_Position = glb.proj * glb.view * worldPos;
 
-    vec3 normal = inNrml_Tv.xyz;
+    // Transform normal correctly using inverse transpose of the upper 3x3 matrix
+    mat3 normalMatrix = transpose(inverse(mat3(skinMat4)));
+    vec3 normal = normalize(normalMatrix * inNrml_Tv.xyz);
 
-    debugLight = dot(normal, normalize(vec3(0.0, 1.0, 1.0)));
+    debugLight = dot(normal, normalize(vec3(1.0, 1.0, 1.0)));
 
     debugColor = vec4(boneWeightsToColor(inWeights), 1.0);
 

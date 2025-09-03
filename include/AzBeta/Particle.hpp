@@ -168,7 +168,7 @@ public:
         size_t textureIndex = resGroup->addTexture("Alb_Particle", "Assets/Textures/Selen.png");
 
         Az3D::Material material;
-        material.setShadingParams(true, 0, 0.0f, 0.0f);
+        material.setShadingParams(true, 2, 0.0f, 0.0f);
         material.setAlbedoTexture(textureIndex);
 
         materialIndex = resGroup->addMaterial("Particle", material);

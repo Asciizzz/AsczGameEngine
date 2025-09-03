@@ -227,42 +227,44 @@ void RigDemo::funFunction(const FunParams& params) {
 
 
     // Move eyes from left to right (index 102 - left and 104 - right)
-    float partMove1 = 0.12f * sin(funAccumTimeValue);
-
+    float partMoveEye = 0.12f * sin(funAccumTimeValue);
     FunTransform transform102 = extractTransform(getBindPose(102));
     FunTransform transform104 = extractTransform(getBindPose(104));
-
-    transform102.translation.y += partMove1;
-    transform104.translation.y += partMove1;
+    transform102.translation.y += partMoveEye;
+    transform104.translation.y += partMoveEye;
 
     localPoseTransforms[102] = constructMatrix(transform102);
     localPoseTransforms[104] = constructMatrix(transform104);
 
     // Rotate spine (index 1)
-    float partRot1 = 30.0f * sin(funAccumTimeValue);
-
+    float partRotSpine = 30.0f * sin(funAccumTimeValue);
     FunTransform transform1 = extractTransform(getBindPose(1));
-    transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRot1), glm::vec3(1,0,0));
+    transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
 
     localPoseTransforms[1] = constructMatrix(transform1);
 
     // Rotate shoulders (index 3 - left, index 27 - right)
-    float partRot2 = 25.0f * sin(funAccumTimeValue) - 15.0f;
-
+    float partRotShoulder1 = 25.0f * sin(funAccumTimeValue) - 15.0f;
+    float partRotShoulder2 = 25.0f * sin(funAccumTimeValue * 1.1) - 15.0f;
     FunTransform transform3 = extractTransform(getBindPose(3));
     FunTransform transform27 = extractTransform(getBindPose(27));
-
-    transform3.rotation = glm::rotate(transform3.rotation, glm::radians(partRot2), glm::vec3(1,0,0));
-    transform27.rotation = glm::rotate(transform27.rotation, glm::radians(partRot2), glm::vec3(1,0,0));
+    transform3.rotation = glm::rotate(transform3.rotation, glm::radians(partRotShoulder1), glm::vec3(1,0,0));
+    transform27.rotation = glm::rotate(transform27.rotation, glm::radians(partRotShoulder2), glm::vec3(1,0,0));
 
     localPoseTransforms[3] = constructMatrix(transform3);
     localPoseTransforms[27] = constructMatrix(transform27);
 
-    // Tail (index 110) rotate the same way with the spine
-    float partRot3 = 30.0f * sin(funAccumTimeValue);
+    // Neck (index 51) rotate same way as spine but WAY more subtle
+    float partRotNeck = partRotSpine * 0.4f * sin(funAccumTimeValue * 1.5f);
+    FunTransform transform51 = extractTransform(getBindPose(51));
+    transform51.rotation = glm::rotate(transform51.rotation, glm::radians(partRotNeck), glm::vec3(1,0,0));
 
+    localPoseTransforms[51] = constructMatrix(transform51);
+
+    // Tail (index 110) rotate same way as spine
+    float partRotTail = 30.0f * sin(funAccumTimeValue);
     FunTransform transform110 = extractTransform(getBindPose(110));
-    transform110.rotation = glm::rotate(transform110.rotation, glm::radians(partRot3), glm::vec3(1,0,0));
+    transform110.rotation = glm::rotate(transform110.rotation, glm::radians(partRotTail), glm::vec3(1,0,0));
 
     localPoseTransforms[110] = constructMatrix(transform110);
 
@@ -271,6 +273,7 @@ void RigDemo::funFunction(const FunParams& params) {
         FunTransform transform = extractTransform(getBindPose(i));
         float partRot = -20.0f * sin(funAccumTimeValue + i);
         transform.rotation = glm::rotate(transform.rotation, glm::radians(partRot), glm::vec3(1,0,0));
+
         localPoseTransforms[i] = constructMatrix(transform);
     }
 

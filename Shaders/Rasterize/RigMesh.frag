@@ -21,6 +21,15 @@ layout(location = 2) in vec2 fragUV;
 
 layout(location = 0) out vec4 outColor;
 
+float applyToonShading(float value, uint toonLevel) {
+    float level = float(toonLevel);
+    float bands = level + 1.0;
+    float quantized = floor(value * bands + 0.5) / bands;
+    float useToon = step(1.0, level);
+    float result = mix(value, quantized, useToon);
+    return clamp(result, 0.0, 1.0);
+}
+
 vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
     return texture(sampler2D(textures[nonuniformEXT(texIndex)], samplers[addressMode]), uv);
 }
@@ -33,6 +42,11 @@ void main() {
     vec4 texColor = getTexture(albTexIndex, albSamplerIndex, fragUV);
 
     // texColor = debugColor;
+    uint toonLevel = uint(material.shadingParams.y);
+    float finalLight = applyToonShading(debugLight, toonLevel);
+    finalLight = 0.3 + finalLight * 0.7; // Ambient
 
-    outColor = vec4(texColor.xyz, 1.0);
+    vec3 finalColor = texColor.xyz * finalLight;
+
+    outColor = vec4(finalColor, 1.0);
 }
