@@ -35,7 +35,7 @@ vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
 }
 
 void main() {
-    Material material = materials[3];
+    Material material = materials[1];
 
     uint albTexIndex = material.texIndices.x;
     uint albSamplerIndex = material.texIndices.y;

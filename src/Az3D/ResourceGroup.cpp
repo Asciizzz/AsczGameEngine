@@ -24,6 +24,11 @@ vkDevice(vkDevice) {
     auto defaultTexture = createTexture(defaultWhitePixel, 1);
     defaultTexture->path = "__default__";
     textures.insert(textures.begin(), std::move(defaultTexture)); // Insert at index 0 with move
+
+    Material defaultMaterial;
+    defaultMaterial.setShadingParams(true, 0, 0.0f, 0.0f);
+    defaultMaterial.setAlbedoTexture(0, TAddressMode::Repeat);
+    materials.push_back(MakeShared<Material>(std::move(defaultMaterial)));
 }
 
 void ResourceGroup::cleanup() {

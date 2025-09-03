@@ -557,133 +557,172 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         }
     }
 
-    const tinygltf::Mesh& mesh = model.meshes[0];
-    size_t vertexOffset = 0;
+    // ROBUST MESH COMBINE SYSTEM - Process ALL meshes with continuous indexing
+    size_t totalVertexCount = 0;
+    size_t totalIndexCount = 0;
+    
+    // First pass: Calculate total counts for efficient memory allocation
+    for (const auto& mesh : model.meshes) {
+        for (const auto& primitive : mesh.primitives) {
+            if (!primitive.attributes.count("POSITION")) {
+                throw std::runtime_error("Primitive missing POSITION attribute");
+            }
+            
+            size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
+            totalVertexCount += vertexCount;
+            
+            if (primitive.indices >= 0) {
+                totalIndexCount += model.accessors[primitive.indices].count;
+            }
+        }
+    }
+    
+    // Pre-allocate for optimal performance
+    rigMesh.vertices.reserve(totalVertexCount);
+    rigMesh.indices.reserve(totalIndexCount);
+    
+    size_t globalVertexOffset = 0;
+    
+    // Second pass: Process all meshes and primitives with continuous indexing
+    for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
+        const tinygltf::Mesh& mesh = model.meshes[meshIndex];
+        
+        for (size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); primitiveIndex++) {
+            const auto& primitive = mesh.primitives[primitiveIndex];
+            
+            // Validate required attributes
+            if (!primitive.attributes.count("POSITION")) {
+                throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                        std::to_string(primitiveIndex) + "] missing POSITION attribute");
+            }
+            
+            size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
+            
+            std::vector<glm::vec3> positions, normals;
+            std::vector<glm::vec4> tangents, weights;
+            std::vector<glm::vec2> uvs;
+            std::vector<glm::uvec4> joints;
 
-    // Mesh processing with rigorous validation
-    for (const auto& primitive : mesh.primitives) {
-        size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
-
-        std::vector<glm::vec3> positions, normals;
-        std::vector<glm::vec4> tangents, weights;
-        std::vector<glm::vec2> uvs;
-        std::vector<glm::uvec4> joints;
-
-        // Read standard attributes
-        if (primitive.attributes.count("POSITION")) {
+            // Read standard attributes with validation
             readAccessor(model, model.accessors[primitive.attributes.at("POSITION")], positions);
-        }
-        if (primitive.attributes.count("NORMAL")) {
-            readAccessor(model, model.accessors[primitive.attributes.at("NORMAL")], normals);
-        }
-        if (primitive.attributes.count("TANGENT")) {
-            readAccessor(model, model.accessors[primitive.attributes.at("TANGENT")], tangents);
-        }
-        if (primitive.attributes.count("TEXCOORD_0")) {
-            readAccessor(model, model.accessors[primitive.attributes.at("TEXCOORD_0")], uvs);
-        }
-        
-        // Read skinning data with robust error handling
-        if (loadRig && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0")) {
-            if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
-                throw std::runtime_error("Failed to read joint indices");
+            
+            if (primitive.attributes.count("NORMAL")) {
+                readAccessor(model, model.accessors[primitive.attributes.at("NORMAL")], normals);
+            }
+            if (primitive.attributes.count("TANGENT")) {
+                readAccessor(model, model.accessors[primitive.attributes.at("TANGENT")], tangents);
+            }
+            if (primitive.attributes.count("TEXCOORD_0")) {
+                readAccessor(model, model.accessors[primitive.attributes.at("TEXCOORD_0")], uvs);
             }
             
-            if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), weights)) {
-                throw std::runtime_error("Failed to read bone weights");
-            }
-        }
-
-        // Build vertices with thorough validation
-        int problemVertices = 0;
-        int rootDependentVertices = 0;
-        
-        for (size_t i = 0; i < vertexCount; i++) {
-            RigVertex vertex{};
-            
-            vertex.pos_tu = glm::vec4(
-                positions.size() > i ? positions[i] : glm::vec3(0.0f),
-                uvs.size() > i ? uvs[i].x : 0.0f
-            );
-            vertex.nrml_tv = glm::vec4(
-                normals.size() > i ? normals[i] : glm::vec3(0.0f),
-                uvs.size() > i ? uvs[i].y : 0.0f
-            );
-            vertex.tangent = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
-            
-            if (loadRig && joints.size() > i && weights.size() > i) {
-                glm::uvec4 jointIds = joints[i];
-                glm::vec4 boneWeights = weights[i];
-                
-                // Validate joint indices are within skeleton range
-                bool hasInvalidJoint = false;
-                for (int j = 0; j < 4; j++) {
-                    if (boneWeights[j] > 0.0f && jointIds[j] >= rigSkeleton.names.size()) {
-                        hasInvalidJoint = true;
-                        problemVertices++;
-                        break;
-                    }
+            // Read skinning data with robust error handling
+            if (loadRig && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0")) {
+                if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
+                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                            std::to_string(primitiveIndex) + "] failed to read joint indices");
                 }
                 
-                if (hasInvalidJoint) {
-                    // Set to rest pose (root bone only)
+                if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), weights)) {
+                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                            std::to_string(primitiveIndex) + "] failed to read bone weights");
+                }
+            }
+
+            // Build vertices with thorough validation
+            int problemVertices = 0;
+            int rootDependentVertices = 0;
+            
+            for (size_t i = 0; i < vertexCount; i++) {
+                RigVertex vertex{};
+                
+                vertex.pos_tu = glm::vec4(
+                    positions.size() > i ? positions[i] : glm::vec3(0.0f),
+                    uvs.size() > i ? uvs[i].x : 0.0f
+                );
+                vertex.nrml_tv = glm::vec4(
+                    normals.size() > i ? normals[i] : glm::vec3(0.0f),
+                    uvs.size() > i ? uvs[i].y : 0.0f
+                );
+                vertex.tangent = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
+                
+                if (loadRig && joints.size() > i && weights.size() > i) {
+                    glm::uvec4 jointIds = joints[i];
+                    glm::vec4 boneWeights = weights[i];
+                    
+                    // Validate joint indices are within skeleton range
+                    bool hasInvalidJoint = false;
+                    for (int j = 0; j < 4; j++) {
+                        if (boneWeights[j] > 0.0f && jointIds[j] >= rigSkeleton.names.size()) {
+                            hasInvalidJoint = true;
+                            problemVertices++;
+                            break;
+                        }
+                    }
+                    
+                    if (hasInvalidJoint) {
+                        // Set to rest pose (root bone only)
+                        vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
+                        vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                    } else {
+                        // Normalize weights to ensure they sum to 1.0
+                        float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
+                        if (weightSum > 0.0f) {
+                            boneWeights /= weightSum;
+                        } else {
+                            boneWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                            jointIds = glm::uvec4(0, 0, 0, 0);
+                        }
+                        
+                        vertex.boneIDs = glm::ivec4(jointIds);
+                        vertex.weights = boneWeights;
+                        
+                        // Check for root dependency
+                        if (boneWeights.x > 0.99f && jointIds.x == 0) {
+                            rootDependentVertices++;
+                        }
+                    }
+                } else {
+                    // No rigging - bind to root
                     vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
                     vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-                } else {
-                    // Normalize weights to ensure they sum to 1.0
-                    float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
-                    if (weightSum > 0.0f) {
-                        boneWeights /= weightSum;
-                    } else {
-                        boneWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-                        jointIds = glm::uvec4(0, 0, 0, 0);
+                }
+                
+                rigMesh.vertices.push_back(vertex);
+            }
+
+            // Handle indices with continuous offset tracking
+            if (primitive.indices >= 0) {
+                const auto& indexAccessor = model.accessors[primitive.indices];
+                const auto& indexBufferView = model.bufferViews[indexAccessor.bufferView];
+                const auto& indexBuffer = model.buffers[indexBufferView.buffer];
+                const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+                size_t stride = indexAccessor.ByteStride(indexBufferView);
+
+                for (size_t i = 0; i < indexAccessor.count; i++) {
+                    uint32_t index = 0;
+                    switch (indexAccessor.componentType) {
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                            index = *((uint8_t*)(dataPtr + stride * i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                            index = *((uint16_t*)(dataPtr + stride * i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                            index = *((uint32_t*)(dataPtr + stride * i));
+                            break;
+                        default:
+                            throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                                    std::to_string(primitiveIndex) + "] unsupported index component type");
                     }
                     
-                    vertex.boneIDs = glm::ivec4(jointIds);
-                    vertex.weights = boneWeights;
-                    
-                    // Check for root dependency
-                    if (boneWeights.x > 0.99f && jointIds.x == 0) {
-                        rootDependentVertices++;
-                    }
+                    // Apply global vertex offset for continuous indexing across all meshes
+                    rigMesh.indices.push_back(index + static_cast<uint32_t>(globalVertexOffset));
                 }
-            } else {
-                // No rigging - bind to root
-                vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
-                vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
             }
-            
-            rigMesh.vertices.push_back(vertex);
+
+            globalVertexOffset += vertexCount;
         }
-
-        // Handle indices
-        if (primitive.indices >= 0) {
-            const auto& indexAccessor = model.accessors[primitive.indices];
-            const auto& indexBufferView = model.bufferViews[indexAccessor.bufferView];
-            const auto& indexBuffer = model.buffers[indexBufferView.buffer];
-            const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
-            size_t stride = indexAccessor.ByteStride(indexBufferView);
-
-            for (size_t i = 0; i < indexAccessor.count; i++) {
-                uint32_t index = 0;
-                switch (indexAccessor.componentType) {
-                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                        index = *((uint8_t*)(dataPtr + stride * i));
-                        break;
-                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                        index = *((uint16_t*)(dataPtr + stride * i));
-                        break;
-                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                        index = *((uint32_t*)(dataPtr + stride * i));
-                        break;
-                    default:
-                        throw std::runtime_error("Unsupported index component type");
-                }
-                rigMesh.indices.push_back(index + static_cast<uint32_t>(vertexOffset));
-            }
-        }
-
-        vertexOffset += vertexCount;
     }
 
     return TinyModel{rigMesh, rigSkeleton};

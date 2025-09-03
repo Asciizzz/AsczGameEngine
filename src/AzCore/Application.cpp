@@ -12,6 +12,7 @@ const bool enableValidationLayers = true;
 #endif
 
 // You're welcome
+using namespace AzGame;
 using namespace AzVulk;
 using namespace AzBeta;
 using namespace AzCore;
@@ -79,7 +80,7 @@ void Application::initComponents() {
 // PLAYGROUND FROM HERE
 
     // Set up advanced grass system with terrain generation
-    AzGame::GrassConfig grassConfig;
+    GrassConfig grassConfig;
     grassConfig.worldSizeX = 170;
     grassConfig.worldSizeZ = 170;
     grassConfig.baseDensity = 6;
@@ -89,14 +90,27 @@ void Application::initComponents() {
     grassConfig.enableWind = true;
     grassConfig.falloffRadius = 25.0f;
     grassConfig.influenceFactor = 0.02f;
-    
+
+    // The genesis model
+    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen.gltf");
+    Material material;
+    material.setShadingParams(true, 2, 0.0f, 0.0f);
+    material.setAlbedoTexture(
+        resGroup->addTexture("Genesis_Alb", "Assets/Textures/Selen.png")
+    , TAddressMode::Repeat);
+    resGroup->addMaterial("Genesis", material);
+
+    rigDemo = MakeUnique<Az3D::RigDemo>();
+    rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
+    rigDemo->meshIndex = 0;
+
+
     // Initialize grass system
-    grassSystem = MakeUnique<AzGame::Grass>(grassConfig);
+    grassSystem = MakeUnique<Grass>(grassConfig);
     grassSystem->initialize(*resGroup, vkDevice.get());
 
-
     // Initialized world
-    newWorld = MakeUnique<AzGame::World>(resGroup.get(), vkDevice.get());
+    newWorld = MakeUnique<World>(resGroup.get(), vkDevice.get());
 
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
@@ -114,12 +128,6 @@ void Application::initComponents() {
         0.5f, // Display radius
         boundMin, boundMax
     );
-
-    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen.gltf");
-
-    rigDemo = MakeUnique<Az3D::RigDemo>();
-    rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
-    rigDemo->meshIndex = 0;
 
 // PLAYGROUND END HERE 
 
