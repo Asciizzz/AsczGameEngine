@@ -228,6 +228,7 @@ void RigDemo::funFunction(const FunParams& params) {
     // the new rigging system, once everything is implemented
     // There will be actual robust bone handler
 
+    /*
     // Rotate (index 2)
     float partRotSpine = 10.0f * sinAccum;
     FunTransform transform1 = extractTransform(getBindPose(2));
@@ -264,8 +265,9 @@ void RigDemo::funFunction(const FunParams& params) {
 
     localPoseTransforms[24] = constructMatrix(transform24);
     localPoseTransforms[50] = constructMatrix(transform50);
+    //*/
 
-    /*
+    //*
     // Move eyes from left to right (index 102 - left and 104 - right)
     float partMoveEye = 0.12f * sin(funAccumTimeValue);
     FunTransform transform102 = extractTransform(getBindPose(102));
@@ -316,7 +318,7 @@ void RigDemo::funFunction(const FunParams& params) {
 
         localPoseTransforms[i] = constructMatrix(transform);
     }
-    */
+    //*/
 
     computeAllTransforms();
 
