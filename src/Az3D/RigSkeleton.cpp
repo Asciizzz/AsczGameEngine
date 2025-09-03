@@ -215,7 +215,8 @@ glm::mat4 RigDemo::getBindPose(size_t index) {
 
 void RigDemo::funFunction(const FunParams& params) {
     // Messed up some bone idk
-    funAccumTimeValue += params.customFloat[0];
+    float dTime = params.customFloat[0];
+    funAccumTimeValue += dTime;
 
     glm::vec3 cameraPos = glm::vec3(params.customVec4[0]);
 
@@ -224,7 +225,6 @@ void RigDemo::funFunction(const FunParams& params) {
     // But don't worry, this is just a playground to test out
     // the new rigging system, once everything is implemented
     // There will be actual robust bone handler
-
 
     // Move eyes from left to right (index 102 - left and 104 - right)
     float partMoveEye = 0.12f * sin(funAccumTimeValue);

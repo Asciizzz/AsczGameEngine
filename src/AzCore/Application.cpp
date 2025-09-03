@@ -115,7 +115,7 @@ void Application::initComponents() {
         boundMin, boundMax
     );
 
-    resGroup->addRiggedModel("Demo", "Assets/Characters/NewSelen.gltf");
+    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen.gltf");
 
     rigDemo = MakeUnique<Az3D::RigDemo>();
     rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
