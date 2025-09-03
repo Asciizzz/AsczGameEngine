@@ -19,6 +19,11 @@ struct TinyTexture {
 struct TinyModel {
     RigMesh mesh;
     RigSkeleton rig;
+
+    struct Index {
+        size_t mesh = 0;
+        size_t rig = 0;
+    } index;
 };
 
 

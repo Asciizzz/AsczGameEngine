@@ -14,7 +14,7 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 
 struct Material {
     vec4  shadingParams; // <shadingFlag, toonLevel, normalBlend, discardThreshold>
-    uvec4 texIndices;    // x: albedo, y: normal, z/w: reserved
+    uvec4 texIndices;    // <albedo, albedoAddressMode, normal, normalAddressMode>
 };
 
 layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {

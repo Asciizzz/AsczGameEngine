@@ -165,7 +165,8 @@ public:
 
         this->display_r = display_r;
 
-        size_t textureIndex = resGroup->addTexture("Alb_Particle", "Assets/Textures/Selen.png");
+        // size_t textureIndex = resGroup->addTexture("Alb_Particle", "Assets/Textures/Selen.png");
+        size_t textureIndex = 0;
 
         Az3D::Material material;
         material.setShadingParams(true, 2, 0.0f, 0.0f);

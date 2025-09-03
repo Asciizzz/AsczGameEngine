@@ -92,11 +92,11 @@ void Application::initComponents() {
     grassConfig.influenceFactor = 0.02f;
 
     // The genesis model
-    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen.gltf");
+    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen/Selen.gltf");
     Material material;
     material.setShadingParams(true, 2, 0.0f, 0.0f);
     material.setAlbedoTexture(
-        resGroup->addTexture("Genesis_Alb", "Assets/Textures/Selen.png")
+        resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Selen.png")
     , TAddressMode::Repeat);
     resGroup->addMaterial("Genesis", material);
 
