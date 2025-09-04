@@ -4,7 +4,7 @@
 
 using namespace Az3D;
 
-void Skeleton::debugPrintHierarchy() const {
+void TinySkeleton::debugPrintHierarchy() const {
     std::cout << "Skeleton Hierarchy (" << names.size() << " bones):\n";
     std::cout << std::string(50, '=') << "\n";
     
@@ -18,7 +18,7 @@ void Skeleton::debugPrintHierarchy() const {
     std::cout << std::string(50, '=') << "\n";
 }
 
-void Skeleton::debugPrintRecursive(int boneIndex, int depth) const {
+void TinySkeleton::debugPrintRecursive(int boneIndex, int depth) const {
     if (boneIndex < 0 || boneIndex >= static_cast<int>(names.size())) {
         return;
     }

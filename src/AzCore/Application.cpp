@@ -93,7 +93,7 @@ void Application::initComponents() {
 
     // The genesis model
     resGroup->addRiggedModel("Demo", "Assets/Characters/Selen/Selen.gltf");
-    Material material;
+    TinyMaterial material;
     material.setShadingParams(true, 2, 0.0f, 0.0f);
     material.setAlbedoTexture(
         resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Selen.png")

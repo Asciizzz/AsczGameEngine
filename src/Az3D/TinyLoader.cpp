@@ -55,9 +55,9 @@ bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err
     return true;
 }
 
-Texture TinyLoader::loadImage(const std::string& filePath) {
-    Texture texture = {};
-    
+TinyTexture TinyLoader::loadImage(const std::string& filePath) {
+    TinyTexture texture = {};
+
     // Load image using stbi
     uint8_t* stbiData = stbi_load(
         filePath.c_str(),
@@ -210,7 +210,7 @@ void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& access
 }
 
 
-Mesh TinyLoader::loadStaticMesh(const std::string& filePath) {
+TinyMesh TinyLoader::loadStaticMesh(const std::string& filePath) {
     // Extract file extension
     std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
     
@@ -222,12 +222,12 @@ Mesh TinyLoader::loadStaticMesh(const std::string& filePath) {
     } else if (extension == "gltf" || extension == "glb") {
         return loadStaticMeshFromGLTF(filePath);
     } else {
-        throw std::runtime_error("Unsupported Mesh file format: " + extension);
+        throw std::runtime_error("Unsupported TinyMesh file format: " + extension);
     }
 }
 
 // OBJ loader implementation using tiny_obj_loader
-Mesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
+TinyMesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -235,7 +235,7 @@ Mesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
 
     // Load the OBJ file
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
-        return Mesh(); // Return empty mesh on failure
+        return TinyMesh(); // Return empty mesh on failure
     }
 
     std::vector<StaticVertex> vertices;
@@ -280,7 +280,7 @@ Mesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
                     });
                 }
 
-                // Texture coordinates
+                // TinyTexture coordinates
                 if (index.texcoord_index >= 0) {
                     vertex.setTextureUV({
                         attrib.texcoords[2 * index.texcoord_index + 0],
@@ -326,10 +326,10 @@ Mesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
         }
     }
 
-    return Mesh(vertices, indices);
+    return TinyMesh(vertices, indices);
 }
 
-Mesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
+TinyMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
     std::vector<StaticVertex> vertices;
     std::vector<uint32_t> indices;
 
@@ -426,7 +426,7 @@ Mesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
         vertexOffset += vertexCount;
     }
 
-    return Mesh(vertices, indices);
+    return TinyMesh(vertices, indices);
 }
 
 
@@ -476,7 +476,7 @@ TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
 
     std::vector<RigVertex> vertices;
     std::vector<uint32_t> indices;
-    Skeleton skeleton;
+    TinySkeleton skeleton;
 
     bool ok;
     if (filePath.find(".glb") != std::string::npos) {
@@ -628,12 +628,12 @@ TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             // Read skinning data with robust error handling
             if (loadRig && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0")) {
                 if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
-                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                    throw std::runtime_error("TinyMesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                             std::to_string(primitiveIndex) + "] failed to read joint indices");
                 }
                 
                 if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), weights)) {
-                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                    throw std::runtime_error("TinyMesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                             std::to_string(primitiveIndex) + "] failed to read bone weights");
                 }
             }
@@ -721,7 +721,7 @@ TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                             index = *((uint32_t*)(dataPtr + stride * i));
                             break;
                         default:
-                            throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                            throw std::runtime_error("TinyMesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                                     std::to_string(primitiveIndex) + "] unsupported index component type");
                     }
                     
@@ -734,5 +734,5 @@ TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         }
     }
 
-    return TempModel{Mesh(vertices, indices), skeleton};
+    return TempModel{TinyMesh(vertices, indices), skeleton};
 }

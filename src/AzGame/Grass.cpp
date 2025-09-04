@@ -139,11 +139,11 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     };
 
     // Create mesh
-    SharedPtr<Mesh> grassMesh = MakeShared<Mesh>(grassVertices, grassIndices);
+    SharedPtr<TinyMesh> grassMesh = MakeShared<TinyMesh>(grassVertices, grassIndices);
     grassMeshIndex = resGroup.addMesh("GrassMesh", grassMesh);
 
     // Create material
-    Az3D::Material grassMaterial;
+    Az3D::TinyMaterial grassMaterial;
     grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
     grassMaterial.setAlbedoTexture(
         resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
@@ -192,11 +192,11 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     };
 
     // Create mesh
-    SharedPtr<Mesh> grassMesh = MakeShared<Mesh>(grassVertices, grassIndices);
+    SharedPtr<TinyMesh> grassMesh = MakeShared<TinyMesh>(grassVertices, grassIndices);
     grassMeshIndex = resGroup.addMesh("GrassMesh", grassMesh);
 
     // Create material
-    Az3D::Material grassMaterial;
+    Az3D::TinyMaterial grassMaterial;
     grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
     grassMaterial.setAlbedoTexture(
         resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
@@ -412,11 +412,11 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
     }
     
     // Create terrain mesh and material
-    SharedPtr<Mesh> terrainMesh = MakeShared<Mesh>(terrainVertices, terrainIndices);
+    SharedPtr<TinyMesh> terrainMesh = MakeShared<TinyMesh>(terrainVertices, terrainIndices);
 
     terrainMeshIndex = resGroup.addMesh("TerrainMesh", terrainMesh);
 
-    Material terrainMaterial;
+    TinyMaterial terrainMaterial;
     terrainMaterial.setShadingParams(true, 0, 0.2f, 0.0f);
     terrainMaterialIndex = resGroup.addMaterial("TerrainMaterial", terrainMaterial);
 

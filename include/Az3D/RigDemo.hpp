@@ -10,7 +10,7 @@ namespace Az3D {
 
 // Demo/testing struct that does fun things with the skeleton
 struct RigDemo {
-    SharedPtr<Skeleton> skeleton;
+    SharedPtr<TinySkeleton> skeleton;
     glm::mat4 getBindPose(size_t index);
 
     std::vector<glm::mat4> localPoseTransforms; // <- User changeable
@@ -24,7 +24,7 @@ struct RigDemo {
     AzVulk::DescPool   descPool;
     AzVulk::DescSets   descSet;
 
-    size_t meshIndex = 0; // Which mesh to apply this rig to
+    size_t meshIndex = 0; // Which mesh to apply this skeleton to
 
     void computeBone(const std::string& boneName);
     void computeBone(size_t boneIndex);
@@ -32,7 +32,7 @@ struct RigDemo {
     void computeAllTransforms();
     void computeBoneRecursive(size_t boneIndex, std::vector<bool>& processed);
 
-    void init(const AzVulk::Device* vkDevice, const SharedPtr<Skeleton>& skeleton);
+    void init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>& skeleton);
     void updateBuffer();
 
     float funAccumTimeValue = 0.0f;

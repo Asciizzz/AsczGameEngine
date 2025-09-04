@@ -22,29 +22,6 @@ namespace Az3D {
 struct BVHNode;
 struct HitInfo;
 
-// ============================================================================
-// MESH STRUCTURES
-// ============================================================================
-
-// Uniform mesh structure that holds raw data only
-struct Mesh {
-    std::vector<uint8_t> vertexData;
-    std::vector<uint32_t> indices;
-    VertexLayout layout;
-
-    Mesh() = default;
-
-    template<typename VertexT>
-    Mesh(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx) {
-        layout = VertexT::getLayout();
-        indices = idx;
-        vertexData.resize(verts.size() * sizeof(VertexT));
-        std::memcpy(vertexData.data(), verts.data(), vertexData.size());
-    }
-
-    size_t vertexCount() const { return vertexData.size() / layout.stride; }
-};
-
 // BVH structures (deprecated - to be reimplemented later)
 struct BVHNode {
     glm::vec3 min;
@@ -76,6 +53,34 @@ struct HitInfo {
 };
 
 // ============================================================================
+// MESH STRUCTURES
+// ============================================================================
+
+// Uniform mesh structure that holds raw data only
+struct TinyMesh {
+    std::vector<uint8_t> vertexData;
+    std::vector<uint32_t> indices;
+    VertexLayout layout;
+
+    TinyMesh() = default;
+
+    template<typename VertexT>
+    TinyMesh(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx) {
+        create(verts, idx);
+    }
+
+    template<typename VertexT>
+    void create(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx) {
+        layout = VertexT::getLayout();
+        indices = idx;
+        vertexData.resize(verts.size() * sizeof(VertexT));
+        std::memcpy(vertexData.data(), verts.data(), vertexData.size());
+    }
+
+    size_t vertexCount() const { return vertexData.size() / layout.stride; }
+};
+
+// ============================================================================
 // MATERIAL STRUCTURES
 // ============================================================================
 
@@ -85,11 +90,11 @@ enum class TAddressMode {
     ClampToBorder = 2
 };
 
-struct Material {
+struct TinyMaterial {
     glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
     glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albedo>, <normal>, <metallic>, <unsure>
 
-    Material() = default;
+    TinyMaterial() = default;
 
     void setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold) {
         shadingParams.x = shading ? 1.0f : 0.0f;
@@ -114,7 +119,7 @@ struct Material {
 // ============================================================================
 
 // Raw texture data (no Vulkan handles)
-struct Texture {
+struct TinyTexture {
     int width = 0;
     int height = 0;
     int channels = 0;
@@ -129,16 +134,16 @@ struct Texture {
     }
     
     // Copy constructor and assignment to prevent double deletion
-    Texture(const Texture& other) = delete;
-    Texture& operator=(const Texture& other) = delete;
-    
+    TinyTexture(const TinyTexture& other) = delete;
+    TinyTexture& operator=(const TinyTexture& other) = delete;
+
     // Move constructor and assignment
-    Texture(Texture&& other) noexcept 
+    TinyTexture(TinyTexture&& other) noexcept
         : width(other.width), height(other.height), channels(other.channels), data(other.data) {
         other.data = nullptr;
     }
-    
-    Texture& operator=(Texture&& other) noexcept {
+
+    TinyTexture& operator=(TinyTexture&& other) noexcept {
         if (this != &other) {
             free();
             width = other.width;
@@ -150,8 +155,8 @@ struct Texture {
         return *this;
     }
     
-    Texture() = default;
-    ~Texture() { free(); }
+    TinyTexture() = default;
+    ~TinyTexture() { free(); }
 };
 
 // Vulkan texture resource (image + view + memory only)
@@ -165,7 +170,7 @@ struct TextureVK {
 // SKELETON STRUCTURES
 // ============================================================================
 
-struct Skeleton {
+struct TinySkeleton {
     // Bone SoA
     std::vector<std::string> names;
     std::vector<int> parentIndices;
@@ -185,11 +190,11 @@ private:
 // ============================================================================
 
 struct TinyModel {
-    std::vector<Mesh> meshes;
-    std::vector<Material> materials;
-    std::vector<Texture> textures;
-    Skeleton skeleton;
-    
+    std::vector<TinyMesh> meshes;
+    std::vector<TinyMaterial> materials;
+    std::vector<TinyTexture> textures;
+    TinySkeleton skeleton;
+
     // Future: animations, submesh info, etc.
 };
 

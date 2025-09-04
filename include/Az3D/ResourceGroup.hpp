@@ -17,12 +17,12 @@ public:
     ResourceGroup& operator=(const ResourceGroup&) = delete;
 
     size_t addTexture(std::string name, std::string imagePath, uint32_t mipLevels = 0);
-    size_t addMaterial(std::string name, const Material& material);
+    size_t addMaterial(std::string name, const TinyMaterial& material);
 
-    size_t addMesh(std::string name, SharedPtr<Mesh> mesh);
+    size_t addMesh(std::string name, SharedPtr<TinyMesh> mesh);
     size_t addMesh(std::string name, std::string filePath);
 
-    size_t addRig(std::string name, SharedPtr<Skeleton> rig);
+    size_t addRig(std::string name, SharedPtr<TinySkeleton> skeleton);
     size_t addRig(std::string name, std::string filePath);
 
     std::pair<size_t, size_t> addRiggedModel(std::string name, std::string filePath); // Adds both mesh and skeleton from file
@@ -43,10 +43,10 @@ public:
     size_t getMeshIndex(std::string name) const;
     size_t getRigIndex(std::string name) const;
 
-    Texture* getTexture(std::string name) const;
-    Material* getMaterial(std::string name) const;
-    Mesh* getMesh(std::string name) const;
-    Skeleton* getRig(std::string name) const;
+    TinyMesh* getMesh(std::string name) const;
+    TinyMaterial* getMaterial(std::string name) const;
+    TinyTexture* getTexture(std::string name) const;
+    TinySkeleton* getSkeleton(std::string name) const;
 
     TextureVK* getTextureVK(std::string name) const;
 
@@ -56,13 +56,13 @@ public:
     AzVulk::Device* vkDevice;
 
     // Mesh - Resources: SharedPtr, Buffers: UniquePtr
-    SharedPtrVec<Mesh>                meshes;
+    SharedPtrVec<TinyMesh>            meshes;
     UniquePtrVec<AzVulk::BufferData>  vertexBuffers;
     UniquePtrVec<AzVulk::BufferData>  indexBuffers;
     void createMeshBuffers();
 
     // Skeleton data - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
-    SharedPtrVec<Skeleton>            skeletons;
+    SharedPtrVec<TinySkeleton>        skeletons;
     UniquePtrVec<AzVulk::BufferData>  skeleInvMatBuffers; // Additional buffers in the future
     UniquePtr<AzVulk::DescLayout>     skeleDescLayout;
     UniquePtr<AzVulk::DescPool>       skeleDescPool;
@@ -71,7 +71,7 @@ public:
     void createRigSkeleDescSets();
 
     // Material - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
-    SharedPtrVec<Material>            materials;
+    SharedPtrVec<TinyMaterial>        materials;
     UniquePtr<AzVulk::BufferData>     matBuffer;
     UniquePtr<AzVulk::DescLayout>     matDescLayout;
     UniquePtr<AzVulk::DescPool>       matDescPool;
@@ -84,7 +84,7 @@ public:
     void createTextureSamplers();
 
     // Texture Image - Resources: SharedPtr, Descriptors: UniquePtr
-    SharedPtrVec<Texture>             textures;
+    SharedPtrVec<TinyTexture>         textures;
     SharedPtrVec<TextureVK>           textureVKs;
     UniquePtr<AzVulk::DescLayout>     texDescLayout;
     UniquePtr<AzVulk::DescPool>       texDescPool;
@@ -92,7 +92,7 @@ public:
     void createTextureDescSet();
 
     // Useful methods
-    SharedPtr<TextureVK> createTextureVK(const Texture& texture, uint32_t mipLevels = 0);
+    SharedPtr<TextureVK> createTextureVK(const TinyTexture& texture, uint32_t mipLevels = 0);
 
     uint32_t getIndexCount(size_t index) const { return static_cast<uint32_t>(meshes[index]->indices.size()); }
 
