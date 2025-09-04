@@ -146,8 +146,7 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     Az3D::Material grassMaterial;
     grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
     grassMaterial.setAlbedoTexture(
-        0,
-        // resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
+        resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
         Az3D::TAddressMode::ClampToEdge
     );
 
@@ -200,8 +199,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     Az3D::Material grassMaterial;
     grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
     grassMaterial.setAlbedoTexture(
-        // resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
-        0,
+        resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
         Az3D::TAddressMode::ClampToEdge
     );
 
