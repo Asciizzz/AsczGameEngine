@@ -151,25 +151,25 @@ size_t ResourceGroup::addRig(std::string name, std::string filePath) {
     return index;
 }
 
-// std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::string filePath) {
-//     std::string uniqueName = getUniqueName(name, meshNameCounts);
-//     std::string skeletonUniqueName = getUniqueName(name + "_skeleton", rigNameCounts);
+std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::string filePath) {
+    std::string uniqueName = getUniqueName(name, meshNameCounts);
+    std::string skeletonUniqueName = getUniqueName(name + "_skeleton", rigNameCounts);
 
-//     TinyModel rig = TinyLoader::loadRigMesh(filePath, true); // Load both mesh and skeleton
+    TinyModel rig = TinyLoader::loadRigMesh(filePath, true); // Load both mesh and skeleton
     
-//     // Add mesh - convert RigVertex to unified mesh
-//     SharedPtr<Mesh> mesh = MakeShared<Mesh>(Mesh::create(rig.mesh.vertices, rig.mesh.indices));
-//     size_t meshIndex = meshes.size();
-//     meshes.push_back(mesh);
-//     meshNameToIndex[uniqueName] = meshIndex;
+    // Add mesh - convert RigVertex to unified mesh
+    SharedPtr<Mesh> mesh = MakeShared<Mesh>(std::move(rig.mesh));
+    size_t meshIndex = meshes.size();
+    meshes.push_back(mesh);
+    meshNameToIndex[uniqueName] = meshIndex;
     
-//     // Add rig
-//     size_t rigIndex = rigSkeletons.size();
-//     rigSkeletons.push_back(MakeShared<RigSkeleton>(std::move(rig.rig)));
-//     rigNameToIndex[skeletonUniqueName] = rigIndex;
+    // Add rig
+    size_t rigIndex = rigSkeletons.size();
+    rigSkeletons.push_back(MakeShared<RigSkeleton>(std::move(rig.rig)));
+    rigNameToIndex[skeletonUniqueName] = rigIndex;
 
-//     return { meshIndex, rigIndex };
-// }
+    return { meshIndex, rigIndex };
+}
 
 size_t ResourceGroup::getTextureIndex(std::string name) const {
     auto it = textureNameToIndex.find(name);

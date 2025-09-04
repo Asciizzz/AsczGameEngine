@@ -28,7 +28,7 @@ public:
     size_t addRig(std::string name, SharedPtr<RigSkeleton> rig);
     size_t addRig(std::string name, std::string filePath);
 
-    // std::pair<size_t, size_t> addRiggedModel(std::string name, std::string filePath); // Adds both mesh and skeleton from file
+    std::pair<size_t, size_t> addRiggedModel(std::string name, std::string filePath); // Adds both mesh and skeleton from file
 
     // Descriptor's getters
     VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout->get(); }

@@ -92,17 +92,17 @@ void Application::initComponents() {
     grassConfig.influenceFactor = 0.02f;
 
     // The genesis model
-    // resGroup->addRiggedModel("Demo", "Assets/Characters/Selen/Selen.gltf");
-    // Material material;
-    // material.setShadingParams(true, 2, 0.0f, 0.0f);
-    // material.setAlbedoTexture(
-    //     resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Selen.png")
-    // , TAddressMode::Repeat);
-    // resGroup->addMaterial("Genesis", material);
+    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen/Selen.gltf");
+    Material material;
+    material.setShadingParams(true, 2, 0.0f, 0.0f);
+    material.setAlbedoTexture(
+        resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Selen.png")
+    , TAddressMode::Repeat);
+    resGroup->addMaterial("Genesis", material);
 
-    // rigDemo = MakeUnique<Az3D::RigDemo>();
-    // rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
-    // rigDemo->meshIndex = 0;
+    rigDemo = MakeUnique<Az3D::RigDemo>();
+    rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
+    rigDemo->meshIndex = 0;
 
 
     // Initialize grass system
@@ -471,17 +471,17 @@ void Application::mainLoop() {
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
             // ================= DEMO RIG WORKED HOLY SHIT ARE YOU PROUD OF ME =======================
 
-            // RigDemo::FunParams funParams;
-            // funParams.add(dTime);
-            // funParams.add(camera->pos);
+            RigDemo::FunParams funParams;
+            funParams.add(dTime);
+            funParams.add(camera->pos);
 
-            // rigDemo->funFunction(funParams);
-            // rigDemo->updateBuffer();
+            rigDemo->funFunction(funParams);
+            rigDemo->updateBuffer();
 
-            // rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
+            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
 
             // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
-            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
+            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
 
             // Draw the particles
             // particleManager->instanceGroup.updateBufferData();
