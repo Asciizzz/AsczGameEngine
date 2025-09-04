@@ -118,7 +118,7 @@ void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>
 
     this->skeleton = skeleton;
 
-    skeleton->debugPrintHierarchy();
+    // skeleton->debugPrintHierarchy();
 
     localPoseTransforms.resize(skeleton->names.size());
     globalPoseTransforms.resize(skeleton->names.size());

@@ -8,7 +8,7 @@
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-// Prevent TinyGLTF from including its own STB image since we already have it
+
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE  
 #include "Helpers/tiny_gltf.h"
@@ -17,10 +17,10 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
-#include <unordered_map>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+
+#include <iostream>
 
 using namespace Az3D;
 
@@ -210,7 +210,7 @@ void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& access
 }
 
 
-TinyMesh TinyLoader::loadStaticMesh(const std::string& filePath) {
+TinySubmesh TinyLoader::loadStaticMesh(const std::string& filePath) {
     // Extract file extension
     std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
     
@@ -222,12 +222,12 @@ TinyMesh TinyLoader::loadStaticMesh(const std::string& filePath) {
     } else if (extension == "gltf" || extension == "glb") {
         return loadStaticMeshFromGLTF(filePath);
     } else {
-        throw std::runtime_error("Unsupported TinyMesh file format: " + extension);
+        throw std::runtime_error("Unsupported TinySubmesh file format: " + extension);
     }
 }
 
 // OBJ loader implementation using tiny_obj_loader
-TinyMesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
+TinySubmesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -235,7 +235,7 @@ TinyMesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
 
     // Load the OBJ file
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
-        return TinyMesh(); // Return empty mesh on failure
+        return TinySubmesh(); // Return empty mesh on failure
     }
 
     std::vector<StaticVertex> vertices;
@@ -326,10 +326,10 @@ TinyMesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
         }
     }
 
-    return TinyMesh(vertices, indices);
+    return TinySubmesh(vertices, indices);
 }
 
-TinyMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
+TinySubmesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
     std::vector<StaticVertex> vertices;
     std::vector<uint32_t> indices;
 
@@ -426,7 +426,7 @@ TinyMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
         vertexOffset += vertexCount;
     }
 
-    return TinyMesh(vertices, indices);
+    return TinySubmesh(vertices, indices);
 }
 
 
@@ -467,7 +467,7 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
     }
 }
 
-TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
+TempModel TinyLoader::loadTempModel(const std::string& filePath, bool loadRig) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err, warn;
@@ -628,12 +628,12 @@ TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             // Read skinning data with robust error handling
             if (loadRig && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0")) {
                 if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
-                    throw std::runtime_error("TinyMesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                             std::to_string(primitiveIndex) + "] failed to read joint indices");
                 }
                 
                 if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), weights)) {
-                    throw std::runtime_error("TinyMesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                             std::to_string(primitiveIndex) + "] failed to read bone weights");
                 }
             }
@@ -721,7 +721,7 @@ TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                             index = *((uint32_t*)(dataPtr + stride * i));
                             break;
                         default:
-                            throw std::runtime_error("TinyMesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                            throw std::runtime_error("TinySubmesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                                     std::to_string(primitiveIndex) + "] unsupported index component type");
                     }
                     
@@ -734,5 +734,324 @@ TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         }
     }
 
-    return TempModel{TinyMesh(vertices, indices), skeleton};
+    return TempModel{TinySubmesh(vertices, indices), skeleton};
+}
+
+TinyModel TinyLoader::loadModel(const std::string& filePath) {
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err, warn;
+
+    loader.SetImageLoader(LoadImageData, nullptr);
+
+    TinyModel result;
+
+    bool ok;
+    if (filePath.find(".glb") != std::string::npos) {
+        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);  // GLB
+    } else {
+        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
+    }
+
+    if (!ok) {
+        throw std::runtime_error("GLTF load error: " + err);
+    }
+
+    if (model.meshes.empty()) {
+        throw std::runtime_error("GLTF has no meshes: " + filePath);
+    }
+
+    // Load textures directly without any defaults
+    result.textures.reserve(model.images.size());
+    for (const auto& image : model.images) {
+        TinyTexture texture;
+        texture.width = image.width;
+        texture.height = image.height;
+        // texture.channels = image.component; // Number of channels
+        texture.channels = 4; // Force to 4 channels since we used STBI_rgb_alpha
+        texture.data = image.image;
+        result.textures.push_back(std::move(texture));
+    }
+
+    // Load materials directly without any defaults
+    result.materials.reserve(model.materials.size());
+    for (const auto& gltfMaterial : model.materials) {
+        TinyMaterial material;
+        
+        // Handle albedo texture
+        if (gltfMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+            int texIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+            if (texIndex < static_cast<int>(model.textures.size())) {
+                int imageIndex = model.textures[texIndex].source;
+                if (imageIndex >= 0 && imageIndex < static_cast<int>(model.images.size())) {
+                    material.albTexture = imageIndex;
+                }
+            }
+        }
+        
+        // Handle normal texture
+        if (gltfMaterial.normalTexture.index >= 0) {
+            int texIndex = gltfMaterial.normalTexture.index;
+            if (texIndex < static_cast<int>(model.textures.size())) {
+                int imageIndex = model.textures[texIndex].source;
+                if (imageIndex >= 0 && imageIndex < static_cast<int>(model.images.size())) {
+                    material.nrmlTexture = imageIndex;
+                }
+            }
+        }
+        
+        result.materials.push_back(material);
+    }
+
+    // Build skeleton if present
+    std::unordered_map<int, int> nodeIndexToBoneIndex;
+    
+    if (!model.skins.empty()) {
+        const tinygltf::Skin& skin = model.skins[0];
+        
+        // Create the node-to-bone mapping
+        for (size_t i = 0; i < skin.joints.size(); i++) {
+            nodeIndexToBoneIndex[skin.joints[i]] = static_cast<int>(i);
+        }
+        
+        // Load inverse bind matrices
+        std::vector<glm::mat4> inverseBindMatrices;
+        if (skin.inverseBindMatrices >= 0) {
+            if (!readAccessorSafe(model, skin.inverseBindMatrices, inverseBindMatrices)) {
+                throw std::runtime_error("Failed to read inverse bind matrices");
+            }
+        } else {
+            inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f));
+        }
+        
+        // Build skeleton structure
+        result.skeleton.names.reserve(skin.joints.size());
+        result.skeleton.parentIndices.reserve(skin.joints.size());
+        result.skeleton.inverseBindMatrices.reserve(skin.joints.size());
+        result.skeleton.localBindTransforms.reserve(skin.joints.size());
+        
+        // First pass: gather bone data
+        for (size_t i = 0; i < skin.joints.size(); i++) {
+            int nodeIndex = skin.joints[i];
+            
+            if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size())) {
+                throw std::runtime_error("Invalid joint node index: " + std::to_string(nodeIndex));
+            }
+            
+            const auto& node = model.nodes[nodeIndex];
+            std::string boneName = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
+            
+            result.skeleton.names.push_back(boneName);
+            result.skeleton.parentIndices.push_back(-1); // Will be fixed in second pass
+            result.skeleton.inverseBindMatrices.push_back(inverseBindMatrices.size() > i ? inverseBindMatrices[i] : glm::mat4(1.0f));
+            result.skeleton.localBindTransforms.push_back(makeLocalFromNode(node));
+            result.skeleton.nameToIndex[boneName] = static_cast<int>(i);
+        }
+        
+        // Second pass: fix parent relationships
+        for (size_t i = 0; i < skin.joints.size(); i++) {
+            int nodeIndex = skin.joints[i];
+            int parentBoneIndex = -1;
+            
+            // Find which node is the parent of this node
+            for (size_t nodeIdx = 0; nodeIdx < model.nodes.size(); nodeIdx++) {
+                const auto& candidateParent = model.nodes[nodeIdx];
+                
+                // Check if this node is a child of candidateParent
+                for (int childIdx : candidateParent.children) {
+                    if (childIdx == nodeIndex) {
+                        // Found parent, check if it's also in the skeleton
+                        auto it = nodeIndexToBoneIndex.find(static_cast<int>(nodeIdx));
+                        if (it != nodeIndexToBoneIndex.end()) {
+                            parentBoneIndex = it->second;
+                        }
+                        break;
+                    }
+                }
+                
+                if (parentBoneIndex != -1) break;
+            }
+            
+            result.skeleton.parentIndices[i] = parentBoneIndex;
+        }
+    }
+
+    // Process each mesh and each primitive as separate submeshes
+    result.meshes.reserve(model.meshes.size() * 2); // Rough estimate
+    
+    for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
+        const tinygltf::Mesh& mesh = model.meshes[meshIndex];
+        
+        for (size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); primitiveIndex++) {
+            const auto& primitive = mesh.primitives[primitiveIndex];
+            
+            // Validate required attributes
+            if (!primitive.attributes.count("POSITION")) {
+                throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                        std::to_string(primitiveIndex) + "] missing POSITION attribute");
+            }
+            
+            size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
+            
+            std::vector<glm::vec3> positions, normals;
+            std::vector<glm::vec4> tangents, weights;
+            std::vector<glm::vec2> uvs;
+            std::vector<glm::uvec4> joints;
+
+            // Read standard attributes with validation
+            readAccessor(model, model.accessors[primitive.attributes.at("POSITION")], positions);
+            
+            if (primitive.attributes.count("NORMAL")) {
+                readAccessor(model, model.accessors[primitive.attributes.at("NORMAL")], normals);
+            }
+            if (primitive.attributes.count("TANGENT")) {
+                readAccessor(model, model.accessors[primitive.attributes.at("TANGENT")], tangents);
+            }
+            if (primitive.attributes.count("TEXCOORD_0")) {
+                readAccessor(model, model.accessors[primitive.attributes.at("TEXCOORD_0")], uvs);
+            }
+            
+            // Read skinning data with robust error handling
+            bool hasRigging = !result.skeleton.names.empty() && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0");
+            if (hasRigging) {
+                if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
+                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                            std::to_string(primitiveIndex) + "] failed to read joint indices");
+                }
+                
+                if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), weights)) {
+                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                            std::to_string(primitiveIndex) + "] failed to read bone weights");
+                }
+            }
+
+            // Determine vertex type and build vertices
+            std::vector<uint32_t> indices;
+            TinySubmesh submesh;
+            
+            if (hasRigging) {
+                // Build rigged vertices
+                std::vector<RigVertex> vertices;
+                vertices.reserve(vertexCount);
+                
+                for (size_t i = 0; i < vertexCount; i++) {
+                    RigVertex vertex{};
+                    
+                    vertex.pos_tu = glm::vec4(
+                        positions.size() > i ? positions[i] : glm::vec3(0.0f),
+                        uvs.size() > i ? uvs[i].x : 0.0f
+                    );
+                    vertex.nrml_tv = glm::vec4(
+                        normals.size() > i ? normals[i] : glm::vec3(0.0f),
+                        uvs.size() > i ? uvs[i].y : 0.0f
+                    );
+                    vertex.tangent = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
+                    
+                    if (joints.size() > i && weights.size() > i) {
+                        glm::uvec4 jointIds = joints[i];
+                        glm::vec4 boneWeights = weights[i];
+                        
+                        // Validate joint indices are within skeleton range
+                        bool hasInvalidJoint = false;
+                        for (int j = 0; j < 4; j++) {
+                            if (boneWeights[j] > 0.0f && jointIds[j] >= result.skeleton.names.size()) {
+                                hasInvalidJoint = true;
+                                break;
+                            }
+                        }
+                        
+                        if (hasInvalidJoint) {
+                            // Set to rest pose (root bone only)
+                            vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
+                            vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                        } else {
+                            // Normalize weights to ensure they sum to 1.0
+                            float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
+                            if (weightSum > 0.0f) {
+                                boneWeights /= weightSum;
+                            } else {
+                                boneWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                                jointIds = glm::uvec4(0, 0, 0, 0);
+                            }
+                            
+                            vertex.boneIDs = glm::ivec4(jointIds);
+                            vertex.weights = boneWeights;
+                        }
+                    } else {
+                        // No rigging - bind to root
+                        vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
+                        vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+                    }
+                    
+                    vertices.push_back(vertex);
+                }
+                
+                submesh.create(vertices, indices);
+            } else {
+                // Build static vertices
+                std::vector<StaticVertex> vertices;
+                vertices.reserve(vertexCount);
+                
+                for (size_t i = 0; i < vertexCount; i++) {
+                    StaticVertex vertex{};
+                    
+                    vertex.pos_tu = glm::vec4(
+                        positions.size() > i ? positions[i] : glm::vec3(0.0f),
+                        uvs.size() > i ? uvs[i].x : 0.0f
+                    );
+                    vertex.nrml_tv = glm::vec4(
+                        normals.size() > i ? normals[i] : glm::vec3(0.0f),
+                        uvs.size() > i ? uvs[i].y : 0.0f
+                    );
+                    vertex.tangent = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
+                    
+                    vertices.push_back(vertex);
+                }
+                
+                submesh.create(vertices, indices);
+            }
+
+            // Handle indices
+            if (primitive.indices >= 0) {
+                const auto& indexAccessor = model.accessors[primitive.indices];
+                const auto& indexBufferView = model.bufferViews[indexAccessor.bufferView];
+                const auto& indexBuffer = model.buffers[indexBufferView.buffer];
+                const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+                size_t stride = indexAccessor.ByteStride(indexBufferView);
+
+                indices.reserve(indexAccessor.count);
+                for (size_t i = 0; i < indexAccessor.count; i++) {
+                    uint32_t index = 0;
+                    switch (indexAccessor.componentType) {
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                            index = *((uint8_t*)(dataPtr + stride * i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                            index = *((uint16_t*)(dataPtr + stride * i));
+                            break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                            index = *((uint32_t*)(dataPtr + stride * i));
+                            break;
+                        default:
+                            throw std::runtime_error("TinySubmesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                                    std::to_string(primitiveIndex) + "] unsupported index component type");
+                    }
+                    
+                    indices.push_back(index);
+                }
+                
+                submesh.indices = indices;
+            }
+
+            // Set material index (-1 if no material assigned)
+            if (primitive.material >= 0 && primitive.material < static_cast<int>(result.materials.size())) {
+                submesh.matIndex = primitive.material;
+            }
+            // else matIndex remains -1 (default)
+
+            result.meshes.push_back(std::move(submesh));
+        }
+    }
+
+    return result;
 }

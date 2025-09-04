@@ -5,7 +5,7 @@
 namespace Az3D {
 
 struct TempModel {
-    TinyMesh mesh;
+    TinySubmesh mesh;
     TinySkeleton skeleton;
 };
 
@@ -15,12 +15,15 @@ public:
     static TinyTexture loadImage(const std::string& filePath);
 
     // StaticMesh loading functions
-    static TinyMesh loadStaticMesh(const std::string& filePath);
-    static TinyMesh loadStaticMeshFromOBJ(const std::string& filePath);
-    static TinyMesh loadStaticMeshFromGLTF(const std::string& filePath);
+    static TinySubmesh loadStaticMesh(const std::string& filePath);
+    static TinySubmesh loadStaticMeshFromOBJ(const std::string& filePath);
+    static TinySubmesh loadStaticMeshFromGLTF(const std::string& filePath);
 
-    // RigMesh loading functions
-    static TempModel loadRigMesh(const std::string& filePath, bool loadRig=true);
+    // Temporary model for soon-to-be-legacy resource structure
+    static TempModel loadTempModel(const std::string& filePath, bool loadRig=true);
+
+    // True implementation that we will use in the future
+    static TinyModel loadModel(const std::string& filePath);
 };
 
 } // namespace Az3D

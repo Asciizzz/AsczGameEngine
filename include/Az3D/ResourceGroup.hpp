@@ -7,6 +7,18 @@
 
 namespace Az3D {
 
+// Vulkan texture resource (image + view + memory only)
+struct TextureVK {
+    VkImage image         = VK_NULL_HANDLE;
+    VkImageView view      = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+};
+
+struct MaterialVK {
+    glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
+    glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albedo>, <normal>, <metallic>, <unsure>
+};
+
 // All these resource are static and fixed, created upon load
 class ResourceGroup {
 public:
@@ -19,7 +31,7 @@ public:
     size_t addTexture(std::string name, std::string imagePath, uint32_t mipLevels = 0);
     size_t addMaterial(std::string name, const TinyMaterial& material);
 
-    size_t addMesh(std::string name, SharedPtr<TinyMesh> mesh);
+    size_t addMesh(std::string name, SharedPtr<TinySubmesh> mesh);
     size_t addMesh(std::string name, std::string filePath);
 
     size_t addRig(std::string name, SharedPtr<TinySkeleton> skeleton);
@@ -43,7 +55,7 @@ public:
     size_t getMeshIndex(std::string name) const;
     size_t getRigIndex(std::string name) const;
 
-    TinyMesh* getMesh(std::string name) const;
+    TinySubmesh* getMesh(std::string name) const;
     TinyMaterial* getMaterial(std::string name) const;
     TinyTexture* getTexture(std::string name) const;
     TinySkeleton* getSkeleton(std::string name) const;
@@ -56,7 +68,7 @@ public:
     AzVulk::Device* vkDevice;
 
     // Mesh - Resources: SharedPtr, Buffers: UniquePtr
-    SharedPtrVec<TinyMesh>            meshes;
+    SharedPtrVec<TinySubmesh>            meshes;
     UniquePtrVec<AzVulk::BufferData>  vertexBuffers;
     UniquePtrVec<AzVulk::BufferData>  indexBuffers;
     void createMeshBuffers();

@@ -57,15 +57,17 @@ struct HitInfo {
 // ============================================================================
 
 // Uniform mesh structure that holds raw data only
-struct TinyMesh {
+struct TinySubmesh {
     std::vector<uint8_t> vertexData;
     std::vector<uint32_t> indices;
+    int matIndex = -1;
+
     VertexLayout layout;
 
-    TinyMesh() = default;
+    TinySubmesh() = default;
 
     template<typename VertexT>
-    TinyMesh(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx) {
+    TinySubmesh(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx) {
         create(verts, idx);
     }
 
@@ -91,14 +93,19 @@ enum class TAddressMode {
 };
 
 struct TinyMaterial {
-    glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-    glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albedo>, <normal>, <metallic>, <unsure>
+    bool shading = true;
+    int toonLevel = 0;
+
+    // Some debug values
+    float normalBlend = 0.0f;
+    float discardThreshold = 0.0f;
+
+    int albTexture = -1;
+    int nrmlTexture = -1;
+
+    TAddressMode addressMode = TAddressMode::Repeat;
 
     TinyMaterial() = default;
-
-    void setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold);
-    void setAlbedoTexture(int index, TAddressMode addressMode = TAddressMode::Repeat);
-    void setNormalTexture(int index, TAddressMode addressMode = TAddressMode::Repeat);
 };
 
 // ============================================================================
@@ -125,13 +132,6 @@ struct TinyTexture {
     ~TinyTexture() = default;
 };
 
-// Vulkan texture resource (image + view + memory only)
-struct TextureVK {
-    VkImage image         = VK_NULL_HANDLE;
-    VkImageView view      = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-};
-
 // ============================================================================
 // SKELETON STRUCTURES
 // ============================================================================
@@ -156,10 +156,13 @@ private:
 // ============================================================================
 
 struct TinyModel {
-    std::vector<TinyMesh> meshes;
+    std::vector<TinySubmesh> meshes;
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
     TinySkeleton skeleton;
+
+    // Debug function to print model information
+    void printDebug() const;
 
     // Future: animations, submesh info, etc.
 };

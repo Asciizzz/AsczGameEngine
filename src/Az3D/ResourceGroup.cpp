@@ -26,8 +26,6 @@ vkDevice(vkDevice) {
     textureVKs.insert(textureVKs.begin(), std::move(defaultTextureVK));
 
     TinyMaterial defaultMaterial;
-    defaultMaterial.setShadingParams(true, 0, 0.0f, 0.0f);
-    defaultMaterial.setAlbedoTexture(0, TAddressMode::Repeat);
     materials.push_back(MakeShared<TinyMaterial>(std::move(defaultMaterial)));
 }
 
@@ -98,7 +96,7 @@ size_t ResourceGroup::addMaterial(std::string name, const TinyMaterial& material
     return index;
 }
 
-size_t ResourceGroup::addMesh(std::string name, SharedPtr<TinyMesh> mesh) {
+size_t ResourceGroup::addMesh(std::string name, SharedPtr<TinySubmesh> mesh) {
     std::string uniqueName = getUniqueName(name, meshNameCounts);
     
     size_t index = meshes.size();
@@ -120,7 +118,7 @@ size_t ResourceGroup::addMesh(std::string name, std::string filePath) {
     // vertices = newMesh.vertices;
     // indices = newMesh.indices;
     
-    SharedPtr<TinyMesh> mesh = MakeShared<TinyMesh>(vertices, indices);
+    SharedPtr<TinySubmesh> mesh = MakeShared<TinySubmesh>(vertices, indices);
     
     size_t index = meshes.size();
     meshes.push_back(mesh);
@@ -142,7 +140,7 @@ size_t ResourceGroup::addRig(std::string name, SharedPtr<TinySkeleton> skeleton)
 size_t ResourceGroup::addRig(std::string name, std::string filePath) {
     std::string uniqueName = getUniqueName(name, rigNameCounts);
 
-    TempModel model = TinyLoader::loadRigMesh(filePath, true);
+    TempModel model = TinyLoader::loadTempModel(filePath, true);
 
     size_t index = skeletons.size();
     skeletons.push_back(MakeShared<TinySkeleton>(std::move(model.skeleton)));
@@ -154,10 +152,10 @@ std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::s
     std::string uniqueName = getUniqueName(name, meshNameCounts);
     std::string skeletonUniqueName = getUniqueName(name + "_skeleton", rigNameCounts);
 
-    TempModel skeleton = TinyLoader::loadRigMesh(filePath, true); // Load both mesh and skeleton
+    TempModel skeleton = TinyLoader::loadTempModel(filePath, true); // Load both mesh and skeleton
     
     // Add mesh - convert RigVertex to unified mesh
-    SharedPtr<TinyMesh> mesh = MakeShared<TinyMesh>(std::move(skeleton.mesh));
+    SharedPtr<TinySubmesh> mesh = MakeShared<TinySubmesh>(std::move(skeleton.mesh));
     size_t meshIndex = meshes.size();
     meshes.push_back(mesh);
     meshNameToIndex[uniqueName] = meshIndex;
@@ -201,7 +199,7 @@ TinyMaterial* ResourceGroup::getMaterial(std::string name) const {
     return index != SIZE_MAX ? materials[index].get() : nullptr;
 }
 
-TinyMesh* ResourceGroup::getMesh(std::string name) const {
+TinySubmesh* ResourceGroup::getMesh(std::string name) const {
     size_t index = getMeshIndex(name);
     return index != SIZE_MAX ? meshes[index].get() : nullptr;
 }
@@ -233,13 +231,33 @@ void ResourceGroup::createMaterialBuffer() {
     );
     stagingBuffer.createBuffer();
 
-    std::vector<TinyMaterial> materialCopies;
-    materialCopies.reserve(materials.size());
-    for (const auto& material : materials) {
-        materialCopies.push_back(*material);
+    std::vector<MaterialVK> materialVKs(materials.size());
+    for (size_t i = 0; i < materials.size(); ++i) {
+
+        MaterialVK mVK;
+        const TinyMaterial& m = *materials[i];
+
+        mVK.shadingParams = glm::vec4(
+            m.shading ? 1.0f : 0.0f,
+            static_cast<float>(m.toonLevel),
+            m.normalBlend,
+            m.discardThreshold
+        );
+
+        bool hasAlb = (m.albTexture >= 0 && m.albTexture < static_cast<int>(textures.size()));
+        bool hasNrml = (m.nrmlTexture >= 0 && m.nrmlTexture < static_cast<int>(textures.size()));
+
+        mVK.texIndices = glm::uvec4(
+            hasAlb ? static_cast<uint32_t>(m.albTexture) : 0,
+            static_cast<uint32_t>(m.addressMode),
+            hasNrml ? static_cast<uint32_t>(m.nrmlTexture) : 0,
+            static_cast<uint32_t>(m.addressMode)
+        );
+
+        materialVKs[i] = mVK;
     }
     // Upload the data, not the pointers
-    stagingBuffer.uploadData(materialCopies.data());
+    stagingBuffer.uploadData(materialVKs.data());
 
     // --- Device-local buffer (GPU only, STORAGE + DST) ---
     if (!matBuffer) matBuffer = MakeUnique<BufferData>();

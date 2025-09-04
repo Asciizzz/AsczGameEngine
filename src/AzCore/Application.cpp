@@ -2,6 +2,8 @@
 
 #include "AzVulk/ComputeTask.hpp"
 
+#include "Az3D/TinyLoader.hpp"
+
 #include <iostream>
 #include <random>
 
@@ -94,15 +96,16 @@ void Application::initComponents() {
     // The genesis model
     resGroup->addRiggedModel("Demo", "Assets/Characters/Selen/Selen.gltf");
     TinyMaterial material;
-    material.setShadingParams(true, 2, 0.0f, 0.0f);
-    material.setAlbedoTexture(
-        resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Selen.png")
-    , TAddressMode::Repeat);
+    material.toonLevel = 2;
+    material.albTexture = resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Image.png");
     resGroup->addMaterial("Genesis", material);
 
     rigDemo = MakeUnique<Az3D::RigDemo>();
     rigDemo->init(vkDevice.get(), resGroup->skeletons[0]);
     rigDemo->meshIndex = 0;
+
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Selen/Selen.gltf");
+    testModel.printDebug();
 
 
     // Initialize grass system
@@ -476,8 +479,8 @@ void Application::mainLoop() {
 
             rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
 
-            // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
-            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
+            grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
+            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
 
             // Draw the particles
             // particleManager->instanceGroup.updateBufferData();

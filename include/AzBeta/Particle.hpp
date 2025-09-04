@@ -169,8 +169,8 @@ public:
         size_t textureIndex = 0;
 
         Az3D::TinyMaterial material;
-        material.setShadingParams(true, 2, 0.0f, 0.0f);
-        material.setAlbedoTexture(textureIndex);
+        material.toonLevel = 2;
+        material.albTexture = textureIndex;
 
         materialIndex = resGroup->addMaterial("Particle", material);
 
@@ -359,7 +359,7 @@ public:
         instanceGroup.datas = particles_data;
     }
 
-    void updatePhysic(float dTime, const Az3D::TinyMesh* mesh, const glm::mat4& meshModelMat4) {
+    void updatePhysic(float dTime, const Az3D::TinySubmesh* mesh, const glm::mat4& meshModelMat4) {
         std::vector<size_t> indices(particleCount);
         std::iota(indices.begin(), indices.end(), 0);
 

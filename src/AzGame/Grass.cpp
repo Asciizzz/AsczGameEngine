@@ -139,16 +139,14 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     };
 
     // Create mesh
-    SharedPtr<TinyMesh> grassMesh = MakeShared<TinyMesh>(grassVertices, grassIndices);
+    SharedPtr<TinySubmesh> grassMesh = MakeShared<TinySubmesh>(grassVertices, grassIndices);
     grassMeshIndex = resGroup.addMesh("GrassMesh", grassMesh);
 
     // Create material
     Az3D::TinyMaterial grassMaterial;
-    grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
-    grassMaterial.setAlbedoTexture(
-        resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
-        Az3D::TAddressMode::ClampToEdge
-    );
+    grassMaterial.discardThreshold = 0.9f;
+    grassMaterial.addressMode = TAddressMode::ClampToEdge;
+    grassMaterial.albTexture = resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png");
 
     grassMaterialIndex = resGroup.addMaterial("GrassMaterial", grassMaterial);
 }
@@ -192,16 +190,14 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     };
 
     // Create mesh
-    SharedPtr<TinyMesh> grassMesh = MakeShared<TinyMesh>(grassVertices, grassIndices);
+    SharedPtr<TinySubmesh> grassMesh = MakeShared<TinySubmesh>(grassVertices, grassIndices);
     grassMeshIndex = resGroup.addMesh("GrassMesh", grassMesh);
 
     // Create material
     Az3D::TinyMaterial grassMaterial;
-    grassMaterial.setShadingParams(true, 0, 0.5f, 0.9f);
-    grassMaterial.setAlbedoTexture(
-        resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png"),
-        Az3D::TAddressMode::ClampToEdge
-    );
+    grassMaterial.discardThreshold = 0.9f;
+    grassMaterial.addressMode = TAddressMode::ClampToEdge;
+    grassMaterial.albTexture = resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png");
 
     grassMaterialIndex = resGroup.addMaterial("GrassMaterial", grassMaterial);
 }
@@ -412,12 +408,11 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
     }
     
     // Create terrain mesh and material
-    SharedPtr<TinyMesh> terrainMesh = MakeShared<TinyMesh>(terrainVertices, terrainIndices);
+    SharedPtr<TinySubmesh> terrainMesh = MakeShared<TinySubmesh>(terrainVertices, terrainIndices);
 
     terrainMeshIndex = resGroup.addMesh("TerrainMesh", terrainMesh);
 
     TinyMaterial terrainMaterial;
-    terrainMaterial.setShadingParams(true, 0, 0.2f, 0.0f);
     terrainMaterialIndex = resGroup.addMaterial("TerrainMaterial", terrainMaterial);
 
     // Create terrain instance

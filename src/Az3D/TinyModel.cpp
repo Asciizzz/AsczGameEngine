@@ -5,27 +5,6 @@
 using namespace Az3D;
 
 // ============================================================================
-// MATERIAL IMPLEMENTATIONS
-// ============================================================================
-
-void TinyMaterial::setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold) {
-    shadingParams.x = shading ? 1.0f : 0.0f;
-    shadingParams.y = static_cast<float>(toonLevel);
-    shadingParams.z = normalBlend;
-    shadingParams.w = discardThreshold;
-}
-
-void TinyMaterial::setAlbedoTexture(int index, TAddressMode addressMode) {
-    texIndices.x = index;
-    texIndices.y = static_cast<uint32_t>(addressMode);
-}
-
-void TinyMaterial::setNormalTexture(int index, TAddressMode addressMode) {
-    texIndices.z = index;
-    texIndices.w = static_cast<uint32_t>(addressMode);
-}
-
-// ============================================================================
 // SKELETON IMPLEMENTATIONS
 // ============================================================================
 
@@ -70,4 +49,63 @@ void TinySkeleton::debugPrintRecursive(int boneIndex, int depth) const {
             debugPrintRecursive(i, depth + 1);
         }
     }
+}
+
+// ============================================================================
+// MODEL IMPLEMENTATIONS
+// ============================================================================
+
+void TinyModel::printDebug() const {
+    std::cout << "TinyModel Debug Information\n";
+    std::cout << std::string(60, '=') << "\n";
+    
+    // Print mesh information
+    std::cout << "Meshes: " << meshes.size() << "\n";
+    std::cout << std::string(30, '-') << "\n";
+    for (size_t i = 0; i < meshes.size(); ++i) {
+        const auto& mesh = meshes[i];
+        std::cout << "  Mesh[" << i << "]: "
+                  << mesh.vertexCount() << " verts, "
+                  << mesh.indices.size() << " idxs, "
+                  << "matIdx: : " << mesh.matIndex << "\n";
+    }
+    
+    // Print material information
+    std::cout << "\nMaterials: " << materials.size() << "\n";
+    std::cout << std::string(30, '-') << "\n";
+    for (size_t i = 0; i < materials.size(); ++i) {
+        const auto& material = materials[i];
+        std::cout << "  Material[" << i << "]: "
+                  << "albIdx: " << material.albTexture << ", "
+                  << "nrmlIdx: " << material.nrmlTexture << "\n";
+    }
+    
+    // Print texture information
+    std::cout << "\nTextures: " << textures.size() << "\n";
+    std::cout << std::string(30, '-') << "\n";
+    for (size_t i = 0; i < textures.size(); ++i) {
+        const auto& texture = textures[i];
+        std::cout << "  Texture[" << i << "]: "
+                  << texture.width << "x" << texture.height 
+                  << " (" << texture.channels << " channels)\n";
+    }
+    
+    // Print skeleton information
+    std::cout << "\nSkeleton: " << skeleton.names.size() << " bones\n";
+    std::cout << std::string(30, '-') << "\n";
+    if (!skeleton.names.empty()) {
+        std::cout << "  Bones: ";
+        for (size_t i = 0; i < std::min(size_t(5), skeleton.names.size()); ++i) {
+            std::cout << skeleton.names[i];
+            if (i < std::min(size_t(5), skeleton.names.size()) - 1) std::cout << ", ";
+        }
+        if (skeleton.names.size() > 5) {
+            std::cout << "... (+" << (skeleton.names.size() - 5) << " more)";
+        }
+        std::cout << "\n";
+    } else {
+        std::cout << "  No skeleton data\n";
+    }
+    
+    std::cout << std::string(60, '=') << "\n";
 }
