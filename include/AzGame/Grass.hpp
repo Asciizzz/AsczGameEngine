@@ -16,7 +16,7 @@ struct ResourceGroup;
 struct StaticMeshGroup;
 
 struct Transform;
-struct StaticVertex;
+struct VertexStatic;
 }
 
 namespace AzVulk {

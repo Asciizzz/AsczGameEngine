@@ -111,7 +111,7 @@ size_t ResourceGroup::addMesh(std::string name, std::string filePath) {
 
     // For now, assume we're loading a static mesh
     // TODO: Add logic to determine mesh type from file
-    std::vector<StaticVertex> vertices;
+    std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
     // Load using TinyLoader (this will need to be updated)
     // StaticMesh newMesh = TinyLoader::loadStaticMesh(filePath);
@@ -154,7 +154,7 @@ std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::s
 
     TempModel skeleton = TinyLoader::loadTempModel(filePath, true); // Load both mesh and skeleton
     
-    // Add mesh - convert RigVertex to unified mesh
+    // Add mesh - convert VertexRig to unified mesh
     SharedPtr<TinySubmesh> mesh = MakeShared<TinySubmesh>(std::move(skeleton.mesh));
     size_t meshIndex = meshes.size();
     meshes.push_back(mesh);

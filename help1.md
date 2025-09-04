@@ -29,7 +29,7 @@ struct VertexLayout {
 };
 ```
 
-Now your `StaticVertex::getLayout()` and `RigVertex::getLayout()` provide layouts that pipelines can use.
+Now your `VertexStatic::getLayout()` and `VertexRig::getLayout()` provide layouts that pipelines can use.
 
 ---
 
@@ -67,12 +67,12 @@ When you decide to render static vs rigged meshes, you choose layouts **at pipel
 
 ```cpp
 // For static pipeline
-VertexLayout staticLayout = StaticVertex::getLayout();
+VertexLayout staticLayout = VertexStatic::getLayout();
 auto bindingDesc = staticLayout.getBindingDescription();
 auto attrDescs  = staticLayout.getAttributeDescriptions();
 
 // For rigged pipeline
-VertexLayout rigLayout = RigVertex::getLayout();
+VertexLayout rigLayout = VertexRig::getLayout();
 auto rigBindingDesc = rigLayout.getBindingDescription();
 auto rigAttrDescs   = rigLayout.getAttributeDescriptions();
 

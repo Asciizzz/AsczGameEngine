@@ -238,7 +238,7 @@ TinySubmesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
         return TinySubmesh(); // Return empty mesh on failure
     }
 
-    std::vector<StaticVertex> vertices;
+    std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
     UnorderedMap<size_t, uint32_t> uniqueVertices;
 
@@ -248,7 +248,7 @@ TinySubmesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
     };
 
     // Full-attribute hash (position + normal + texcoord)
-    auto hashVertex = [&](const StaticVertex& v) -> size_t {
+    auto hashVertex = [&](const VertexStatic& v) -> size_t {
         size_t seed = 0;
         hash_combine(seed, std::hash<float>{}(v.pos_tu.x));
         hash_combine(seed, std::hash<float>{}(v.pos_tu.y));
@@ -265,11 +265,11 @@ TinySubmesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
 
     for (const auto& shape : shapes) {
         for (size_t f = 0; f < shape.mesh.indices.size(); f += 3) {
-            std::vector<StaticVertex> triangle(3);
+            std::vector<VertexStatic> triangle(3);
 
             for (int v = 0; v < 3; v++) {
                 const auto& index = shape.mesh.indices[f + v];
-                StaticVertex& vertex = triangle[v];
+                VertexStatic& vertex = triangle[v];
 
                 // Position
                 if (index.vertex_index >= 0) {
@@ -330,7 +330,7 @@ TinySubmesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
 }
 
 TinySubmesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
-    std::vector<StaticVertex> vertices;
+    std::vector<VertexStatic> vertices;
     std::vector<uint32_t> indices;
 
     tinygltf::TinyGLTF loader;
@@ -386,7 +386,7 @@ TinySubmesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
 
         // Expand into vertices
         for (size_t i = 0; i < vertexCount; i++) {
-            StaticVertex v{};
+            VertexStatic v{};
             v.pos_tu     = glm::vec4(positions.size() > i ? positions[i] : glm::vec3(0.0f),
                                      uvs.size() > i ? uvs[i].x : 0.0f);
             v.nrml_tv    = glm::vec4(normals.size() > i ? normals[i] : glm::vec3(0.0f),
@@ -474,7 +474,7 @@ TempModel TinyLoader::loadTempModel(const std::string& filePath, bool loadRig) {
 
     loader.SetImageLoader(LoadImageData, nullptr);
 
-    std::vector<RigVertex> vertices;
+    std::vector<VertexRig> vertices;
     std::vector<uint32_t> indices;
     TinySkeleton skeleton;
 
@@ -643,7 +643,7 @@ TempModel TinyLoader::loadTempModel(const std::string& filePath, bool loadRig) {
             int rootDependentVertices = 0;
             
             for (size_t i = 0; i < vertexCount; i++) {
-                RigVertex vertex{};
+                VertexRig vertex{};
                 
                 vertex.pos_tu = glm::vec4(
                     positions.size() > i ? positions[i] : glm::vec3(0.0f),
@@ -935,11 +935,11 @@ TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& 
             
             if (hasRigging) {
                 // Build rigged vertices
-                std::vector<RigVertex> vertices;
+                std::vector<VertexRig> vertices;
                 vertices.reserve(vertexCount);
                 
                 for (size_t i = 0; i < vertexCount; i++) {
-                    RigVertex vertex{};
+                    VertexRig vertex{};
                     
                     vertex.pos_tu = glm::vec4(
                         positions.size() > i ? positions[i] : glm::vec3(0.0f),
@@ -993,11 +993,11 @@ TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& 
                 submesh.create(vertices, indices);
             } else {
                 // Build static vertices
-                std::vector<StaticVertex> vertices;
+                std::vector<VertexStatic> vertices;
                 vertices.reserve(vertexCount);
                 
                 for (size_t i = 0; i < vertexCount; i++) {
-                    StaticVertex vertex{};
+                    VertexStatic vertex{};
                     
                     vertex.pos_tu = glm::vec4(
                         positions.size() > i ? positions[i] : glm::vec3(0.0f),

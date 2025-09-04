@@ -69,28 +69,28 @@ void Transform::reset() {
 
 // Static Vertex implementation
 
-void StaticVertex::setPosition(const glm::vec3& position) {
+void VertexStatic::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
 }
-void StaticVertex::setNormal(const glm::vec3& normal) {
+void VertexStatic::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
 }
-void StaticVertex::setTextureUV(const glm::vec2& uv) {
+void VertexStatic::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
 }
 
-VertexLayout StaticVertex::getLayout() {
+VertexLayout VertexStatic::getLayout() {
     VertexLayout layout;
-    layout.stride = sizeof(StaticVertex);
+    layout.stride = sizeof(VertexStatic);
     layout.attributes = {
-        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, pos_tu)},
-        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, nrml_tv)},
-        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, tangent)}
+        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, pos_tu)},
+        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, nrml_tv)},
+        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, tangent)}
     };
     return layout;
 }
@@ -98,30 +98,30 @@ VertexLayout StaticVertex::getLayout() {
 
 
 // Skinning vertex data
-void RigVertex::setPosition(const glm::vec3& position) {
+void VertexRig::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
 }
-void RigVertex::setNormal(const glm::vec3& normal) {
+void VertexRig::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
 }
-void RigVertex::setTextureUV(const glm::vec2& uv) {
+void VertexRig::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
 }
 
-VertexLayout RigVertex::getLayout() {
+VertexLayout VertexRig::getLayout() {
     VertexLayout layout;
-    layout.stride = sizeof(RigVertex);
+    layout.stride = sizeof(VertexRig);
     layout.attributes = {
-        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, pos_tu)},
-        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, nrml_tv)},
-        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, tangent)},
-        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(RigVertex, boneIDs)},
-        {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, weights)}
+        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, pos_tu)},
+        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, nrml_tv)},
+        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, tangent)},
+        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(VertexRig, boneIDs)},
+        {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, weights)}
     };
     return layout;
 }

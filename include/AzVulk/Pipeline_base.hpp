@@ -40,6 +40,11 @@ public:
         vkCmdPushConstants(cmd, layout, stageFlags, offset, sizeof(T), data);
     }
 
+    template<typename T>
+    void pushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, const T& data) const {
+        vkCmdPushConstants(cmd, layout, stageFlags, offset, sizeof(T), &data);
+    }
+
     VkDevice lDevice = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout layout = VK_NULL_HANDLE;

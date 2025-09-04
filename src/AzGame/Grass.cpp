@@ -115,7 +115,7 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     glm::vec3 g_pos11 = Transform::rotate(g_pos3, g_normal, glm::radians(240.0f));
     glm::vec3 g_pos12 = Transform::rotate(g_pos4, g_normal, glm::radians(240.0f));
 
-    std::vector<StaticVertex> grassVertices = {
+    std::vector<VertexStatic> grassVertices = {
         {g_pos1, g_normal, g_uv01},
         {g_pos2, g_normal, g_uv11},
         {g_pos3, g_normal, g_uv10},
@@ -172,7 +172,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     glm::vec3 g_pos7 = Transform::rotate(g_pos3, g_normal, glm::radians(90.0f));
     glm::vec3 g_pos8 = Transform::rotate(g_pos4, g_normal, glm::radians(90.0f));
 
-    std::vector<StaticVertex> grassVertices = {
+    std::vector<VertexStatic> grassVertices = {
         {g_pos1, g_normal, g_uv01},
         {g_pos2, g_normal, g_uv11},
         {g_pos3, g_normal, g_uv10},
@@ -356,7 +356,7 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
 }
 
 void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
-    std::vector<StaticVertex> terrainVertices;
+    std::vector<VertexStatic> terrainVertices;
     std::vector<uint32_t> terrainIndices;
 
     // Generate vertices
@@ -385,7 +385,7 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
             glm::vec2 uv(static_cast<float>(x) / (config.worldSizeX - 1), 
                         static_cast<float>(z) / (config.worldSizeZ - 1));
 
-            terrainVertices.push_back(StaticVertex{glm::vec3(worldX, worldY, worldZ), normal, uv});
+            terrainVertices.push_back(VertexStatic{glm::vec3(worldX, worldY, worldZ), normal, uv});
         }
     }
     

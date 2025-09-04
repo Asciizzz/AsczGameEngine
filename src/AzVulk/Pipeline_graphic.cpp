@@ -28,8 +28,8 @@ void PipelineRaster::create() {
     std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<VkVertexInputAttributeDescription> attrs;
 
-    auto vstaticLayout = Az3D::StaticVertex::getLayout();
-    auto vriggedLayout = Az3D::RigVertex::getLayout();
+    auto vstaticLayout = Az3D::VertexStatic::getLayout();
+    auto vriggedLayout = Az3D::VertexRig::getLayout();
     auto instanceBind  = Az3D::StaticInstance::getBindingDescription();
     auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
 
