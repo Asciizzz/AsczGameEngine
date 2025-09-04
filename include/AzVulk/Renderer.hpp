@@ -8,7 +8,8 @@
 #include "Az3D/GlobalUBO.hpp"
 #include "Az3D/ResourceGroup.hpp"
 #include "Az3D/StaticInstance.hpp"
-#include "Az3D/SkeletonDemo.hpp"
+
+#include "Az3D/RigDemo.hpp"
 
 
 namespace AzVulk {
