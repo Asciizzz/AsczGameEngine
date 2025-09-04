@@ -142,7 +142,7 @@ size_t ResourceGroup::addRig(std::string name, SharedPtr<Skeleton> rig) {
 size_t ResourceGroup::addRig(std::string name, std::string filePath) {
     std::string uniqueName = getUniqueName(name, rigNameCounts);
 
-    TinyModel model = TinyLoader::loadRigMesh(filePath, true);
+    TempModel model = TinyLoader::loadRigMesh(filePath, true);
 
     size_t index = skeletons.size();
     skeletons.push_back(MakeShared<Skeleton>(std::move(model.rig)));
@@ -154,7 +154,7 @@ std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::s
     std::string uniqueName = getUniqueName(name, meshNameCounts);
     std::string skeletonUniqueName = getUniqueName(name + "_skeleton", rigNameCounts);
 
-    TinyModel rig = TinyLoader::loadRigMesh(filePath, true); // Load both mesh and skeleton
+    TempModel rig = TinyLoader::loadRigMesh(filePath, true); // Load both mesh and skeleton
     
     // Add mesh - convert RigVertex to unified mesh
     SharedPtr<Mesh> mesh = MakeShared<Mesh>(std::move(rig.mesh));

@@ -467,7 +467,7 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
     }
 }
 
-TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
+TempModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err, warn;
@@ -734,5 +734,5 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         }
     }
 
-    return TinyModel{Mesh(vertices, indices), skeleton};
+    return TempModel{Mesh(vertices, indices), skeleton};
 }

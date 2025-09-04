@@ -184,7 +184,7 @@ private:
 // MODEL STRUCTURE
 // ============================================================================
 
-struct Model {
+struct TinyModel {
     std::vector<Mesh> meshes;
     std::vector<Material> materials;
     std::vector<Texture> textures;

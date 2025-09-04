@@ -1,10 +1,10 @@
 #pragma once
 
-#include <Az3D/Model.hpp>
+#include <Az3D/TinyModel.hpp>
 
 namespace Az3D {
 
-struct TinyModel {
+struct TempModel {
     Mesh mesh;
     Skeleton rig;
 
@@ -25,7 +25,7 @@ public:
     static Mesh loadStaticMeshFromGLTF(const std::string& filePath);
 
     // RigMesh loading functions
-    static TinyModel loadRigMesh(const std::string& filePath, bool loadRig=true);
+    static TempModel loadRigMesh(const std::string& filePath, bool loadRig=true);
 };
 
 } // namespace Az3D
