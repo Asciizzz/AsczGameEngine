@@ -2,6 +2,10 @@
 #extension GL_EXT_nonuniform_qualifier : require      // for nonuniformEXT()
 #extension GL_EXT_samplerless_texture_functions : enable // sometimes required by toolchains; optional
 
+layout(push_constant) uniform PushConstant {
+    vec4 properties;
+} pushConstant;
+
 struct Material {
     vec4  shadingParams; // shadingFlag, toonLevel, normalBlend, discardThreshold
     uvec4 texIndices;    // albedo, albedoSampler, normal, normalSampler
@@ -35,7 +39,7 @@ vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
 }
 
 void main() {
-    Material material = materials[1];
+    Material material = materials[uint(pushConstant.properties.x)];
 
     uint albTexIndex = material.texIndices.x;
     uint albSamplerIndex = material.texIndices.y;

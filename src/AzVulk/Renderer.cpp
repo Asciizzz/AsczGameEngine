@@ -199,6 +199,8 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
     VkDescriptorSet sets[] = {glbSet, matSet, texSet, rigSet};
     rPipeline->bindSets(cmdBuffers[currentFrame], sets, 4);
 
+    pushConstants(rPipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::vec4(2.0f, 0.0f, 0.0f, 0.0f));
+
     VkBuffer vertexBuffer = resGroup->getVertexBuffer(meshIndex);
     VkBuffer indexBuffer = resGroup->getIndexBuffer(meshIndex);
 
