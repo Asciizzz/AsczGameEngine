@@ -28,22 +28,17 @@ namespace AzVulk {
         // Frame tracking
         uint32_t getCurrentFrame() const { return currentFrame; }
 
-        void bindDescSet(const PipelineRaster* pipeline, VkDescriptorSet* sets, uint32_t count) const {
-            vkCmdBindDescriptorSets(cmdBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, count, sets, 0, nullptr);
-        }
+        void bindDescSet(const PipelineRaster* pipeline, VkDescriptorSet* sets, uint32_t count) const;
 
-        // Body
-        void drawStaticInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::StaticInstanceGroup* instanceGroup);
-        // void drawRiggedInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::RigInstanceGroup* instanceGroup);
+        void drawStaticInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::StaticInstanceGroup* instanceGroup) const;
+        // void drawRiggedInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::RigInstanceGroup* instanceGroup) const;
         
-        void drawDemoRig(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, Az3D::RigDemo* demo);
+        void drawDemoRig(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, Az3D::RigDemo* demo) const;
 
-        void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline);
+        void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const;
 
-        // Conclusion
         void endFrame(uint32_t imageIndex);
 
-        // Thank's for attending my Ted-Talk
 
         // Component references
         Device* vkDevice;

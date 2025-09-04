@@ -144,7 +144,7 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
 }
 
 
-void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const StaticInstanceGroup* instanceGroup) {
+void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const StaticInstanceGroup* instanceGroup) const {
     uint32_t instanceCount = static_cast<uint32_t>(instanceGroup->prevInstanceCount);
     size_t meshIndex = instanceGroup->meshIndex;
 
@@ -180,7 +180,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
 
 // No instance buffer data yet
-void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, Az3D::RigDemo* demo) {
+void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, Az3D::RigDemo* demo) const {
     size_t meshIndex = demo->meshIndex;
 
     const auto& mesh = resGroup->meshes[meshIndex];
@@ -217,7 +217,7 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
 
 
 // Sky rendering using dedicated sky pipeline
-void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) {
+void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const {
     // Bind sky pipeline
     skyPipeline->bindCmd(cmdBuffers[currentFrame]);
 
