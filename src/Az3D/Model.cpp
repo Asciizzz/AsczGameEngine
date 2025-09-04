@@ -2,7 +2,7 @@
 #include <iostream>
 #include <iomanip>
 
-namespace Az3D {
+using namespace Az3D;
 
 void Skeleton::debugPrintHierarchy() const {
     std::cout << "Skeleton Hierarchy (" << names.size() << " bones):\n";
@@ -46,5 +46,3 @@ void Skeleton::debugPrintRecursive(int boneIndex, int depth) const {
         }
     }
 }
-
-} // namespace Az3D
