@@ -3,7 +3,7 @@
 #extension GL_EXT_samplerless_texture_functions : enable // sometimes required by toolchains; optional
 
 layout(push_constant) uniform PushConstant {
-    vec4 properties;
+    uvec4 properties;
 } pushConstant;
 
 struct Material {
@@ -39,7 +39,7 @@ vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
 }
 
 void main() {
-    Material material = materials[uint(pushConstant.properties.x)];
+    Material material = materials[pushConstant.properties.x];
 
     uint albTexIndex = material.texIndices.x;
     uint albSamplerIndex = material.texIndices.y;

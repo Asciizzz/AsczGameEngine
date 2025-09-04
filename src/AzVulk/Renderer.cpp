@@ -161,10 +161,6 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     VkDescriptorSet sets[] = {globalSet, materialSet, textureSet};
     rPipeline->bindSets(cmdBuffers[currentFrame], sets, 3);
 
-    rPipeline->pushConstants(
-        cmdBuffers[currentFrame], VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)
-    );
-
     VkBuffer vertexBuffer = resGroup->getVertexBuffer(meshIndex);
     VkBuffer indexBuffer = resGroup->getIndexBuffer(meshIndex);
 
@@ -202,7 +198,7 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
     rPipeline->bindSets(cmdBuffers[currentFrame], sets, 4);
 
     rPipeline->pushConstants(
-        cmdBuffers[currentFrame], VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)
+        cmdBuffers[currentFrame], VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(1,0,0,0)
     );
 
     VkBuffer vertexBuffer = resGroup->getVertexBuffer(meshIndex);

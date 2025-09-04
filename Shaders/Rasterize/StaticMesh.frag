@@ -2,11 +2,6 @@
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_samplerless_texture_functions : enable
 
-// Push constants demo - RGBA color multiplier
-layout(push_constant) uniform PushDemo {
-    vec4 color; // RGBA color that will be multiplied with the final result
-} pushDemo;
-
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
@@ -93,5 +88,5 @@ void main() {
     vec3 finalRGB   = texColor.rgb * fragMultColor.rgb * lightFactor;
 
     // Apply push constant demo color multiplication
-    outColor = vec4(finalRGB, finalAlpha) * pushDemo.color;
+    outColor = vec4(finalRGB, finalAlpha);
 }
