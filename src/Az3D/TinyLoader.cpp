@@ -737,7 +737,7 @@ TempModel TinyLoader::loadTempModel(const std::string& filePath, bool loadRig) {
     return TempModel{TinySubmesh(vertices, indices), skeleton};
 }
 
-TinyModel TinyLoader::loadModel(const std::string& filePath) {
+TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& options) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err, warn;
@@ -761,52 +761,56 @@ TinyModel TinyLoader::loadModel(const std::string& filePath) {
         throw std::runtime_error("GLTF has no meshes: " + filePath);
     }
 
-    // Load textures directly without any defaults
-    result.textures.reserve(model.images.size());
-    for (const auto& image : model.images) {
-        TinyTexture texture;
-        texture.width = image.width;
-        texture.height = image.height;
-        // texture.channels = image.component; // Number of channels
-        texture.channels = 4; // Force to 4 channels since we used STBI_rgb_alpha
-        texture.data = image.image;
-        result.textures.push_back(std::move(texture));
+    // Load textures only if requested
+    if (options.loadTextures) {
+        result.textures.reserve(model.images.size());
+        for (const auto& image : model.images) {
+            TinyTexture texture;
+            texture.width = image.width;
+            texture.height = image.height;
+            // texture.channels = image.component; // Number of channels
+            texture.channels = 4; // Force to 4 channels since we used STBI_rgb_alpha
+            texture.data = image.image;
+            result.textures.push_back(std::move(texture));
+        }
     }
 
-    // Load materials directly without any defaults
-    result.materials.reserve(model.materials.size());
-    for (const auto& gltfMaterial : model.materials) {
-        TinyMaterial material;
-        
-        // Handle albedo texture
-        if (gltfMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-            int texIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-            if (texIndex < static_cast<int>(model.textures.size())) {
-                int imageIndex = model.textures[texIndex].source;
-                if (imageIndex >= 0 && imageIndex < static_cast<int>(model.images.size())) {
-                    material.albTexture = imageIndex;
+    // Load materials only if requested
+    if (options.loadMaterials) {
+        result.materials.reserve(model.materials.size());
+        for (const auto& gltfMaterial : model.materials) {
+            TinyMaterial material;
+            
+            // Handle albedo texture (only if textures are also being loaded)
+            if (options.loadTextures && gltfMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+                int texIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+                if (texIndex < static_cast<int>(model.textures.size())) {
+                    int imageIndex = model.textures[texIndex].source;
+                    if (imageIndex >= 0 && imageIndex < static_cast<int>(model.images.size())) {
+                        material.albTexture = imageIndex;
+                    }
                 }
             }
-        }
-        
-        // Handle normal texture
-        if (gltfMaterial.normalTexture.index >= 0) {
-            int texIndex = gltfMaterial.normalTexture.index;
-            if (texIndex < static_cast<int>(model.textures.size())) {
-                int imageIndex = model.textures[texIndex].source;
-                if (imageIndex >= 0 && imageIndex < static_cast<int>(model.images.size())) {
-                    material.nrmlTexture = imageIndex;
+            
+            // Handle normal texture (only if textures are also being loaded)
+            if (options.loadTextures && gltfMaterial.normalTexture.index >= 0) {
+                int texIndex = gltfMaterial.normalTexture.index;
+                if (texIndex < static_cast<int>(model.textures.size())) {
+                    int imageIndex = model.textures[texIndex].source;
+                    if (imageIndex >= 0 && imageIndex < static_cast<int>(model.images.size())) {
+                        material.nrmlTexture = imageIndex;
+                    }
                 }
             }
+            
+            result.materials.push_back(material);
         }
-        
-        result.materials.push_back(material);
     }
 
-    // Build skeleton if present
+    // Build skeleton only if requested
     std::unordered_map<int, int> nodeIndexToBoneIndex;
     
-    if (!model.skins.empty()) {
+    if (options.loadSkeleton && !model.skins.empty()) {
         const tinygltf::Skin& skin = model.skins[0];
         
         // Create the node-to-bone mapping
@@ -912,7 +916,7 @@ TinyModel TinyLoader::loadModel(const std::string& filePath) {
             }
             
             // Read skinning data with robust error handling
-            bool hasRigging = !result.skeleton.names.empty() && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0");
+            bool hasRigging = options.loadSkeleton && !result.skeleton.names.empty() && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0");
             if (hasRigging) {
                 if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
                     throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
@@ -1043,8 +1047,8 @@ TinyModel TinyLoader::loadModel(const std::string& filePath) {
                 submesh.indices = indices;
             }
 
-            // Set material index (-1 if no material assigned)
-            if (primitive.material >= 0 && primitive.material < static_cast<int>(result.materials.size())) {
+            // Set material index (-1 if no material assigned or materials not loaded)
+            if (options.loadMaterials && primitive.material >= 0 && primitive.material < static_cast<int>(result.materials.size())) {
                 submesh.matIndex = primitive.material;
             }
             // else matIndex remains -1 (default)

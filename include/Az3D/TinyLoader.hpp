@@ -12,6 +12,13 @@ struct TempModel {
 
 class TinyLoader {
 public:
+    struct LoadOptions {
+        bool loadMaterials = true;
+        bool loadTextures = true;
+        bool loadSkeleton = true;
+    };
+
+
     static TinyTexture loadImage(const std::string& filePath);
 
     // StaticMesh loading functions
@@ -20,10 +27,10 @@ public:
     static TinySubmesh loadStaticMeshFromGLTF(const std::string& filePath);
 
     // Temporary model for soon-to-be-legacy resource structure
-    static TempModel loadTempModel(const std::string& filePath, bool loadRig=true);
+    static TempModel loadTempModel(const std::string& filePath, bool loadRig = false);
 
     // True implementation that we will use in the future
-    static TinyModel loadModel(const std::string& filePath);
+    static TinyModel loadModel(const std::string& filePath, const LoadOptions& options = LoadOptions());
 };
 
 } // namespace Az3D
