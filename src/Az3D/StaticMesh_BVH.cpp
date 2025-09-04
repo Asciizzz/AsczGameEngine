@@ -1,4 +1,4 @@
-#include "Az3D/MeshTypes.hpp"
+#include "Az3D/Model.hpp"
 #include <algorithm>
 #include <cfloat>
 #include <queue>

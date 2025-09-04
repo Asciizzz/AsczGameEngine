@@ -101,7 +101,7 @@ void Application::initComponents() {
     resGroup->addMaterial("Genesis", material);
 
     rigDemo = MakeUnique<Az3D::RigDemo>();
-    rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
+    rigDemo->init(vkDevice.get(), resGroup->skeletons[0]);
     rigDemo->meshIndex = 0;
 
 

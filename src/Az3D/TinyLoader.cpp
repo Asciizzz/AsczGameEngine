@@ -476,7 +476,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
 
     std::vector<RigVertex> vertices;
     std::vector<uint32_t> indices;
-    RigSkeleton rigSkeleton;
+    Skeleton skeleton;
 
     bool ok;
     if (filePath.find(".glb") != std::string::npos) {
@@ -515,10 +515,10 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         }
         
         // Build skeleton structure
-        rigSkeleton.names.reserve(skin.joints.size());
-        rigSkeleton.parentIndices.reserve(skin.joints.size());
-        rigSkeleton.inverseBindMatrices.reserve(skin.joints.size());
-        rigSkeleton.localBindTransforms.reserve(skin.joints.size());
+        skeleton.names.reserve(skin.joints.size());
+        skeleton.parentIndices.reserve(skin.joints.size());
+        skeleton.inverseBindMatrices.reserve(skin.joints.size());
+        skeleton.localBindTransforms.reserve(skin.joints.size());
         
         // First pass: gather bone data
         for (size_t i = 0; i < skin.joints.size(); i++) {
@@ -531,11 +531,11 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
             const auto& node = model.nodes[nodeIndex];
             std::string boneName = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
             
-            rigSkeleton.names.push_back(boneName);
-            rigSkeleton.parentIndices.push_back(-1); // Will be fixed in second pass
-            rigSkeleton.inverseBindMatrices.push_back(inverseBindMatrices.size() > i ? inverseBindMatrices[i] : glm::mat4(1.0f));
-            rigSkeleton.localBindTransforms.push_back(makeLocalFromNode(node));
-            rigSkeleton.nameToIndex[boneName] = static_cast<int>(i);
+            skeleton.names.push_back(boneName);
+            skeleton.parentIndices.push_back(-1); // Will be fixed in second pass
+            skeleton.inverseBindMatrices.push_back(inverseBindMatrices.size() > i ? inverseBindMatrices[i] : glm::mat4(1.0f));
+            skeleton.localBindTransforms.push_back(makeLocalFromNode(node));
+            skeleton.nameToIndex[boneName] = static_cast<int>(i);
         }
         
         // Second pass: fix parent relationships
@@ -562,7 +562,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                 if (parentBoneIndex != -1) break;
             }
             
-            rigSkeleton.parentIndices[i] = parentBoneIndex;
+            skeleton.parentIndices[i] = parentBoneIndex;
         }
     }
 
@@ -662,7 +662,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                     // Validate joint indices are within skeleton range
                     bool hasInvalidJoint = false;
                     for (int j = 0; j < 4; j++) {
-                        if (boneWeights[j] > 0.0f && jointIds[j] >= rigSkeleton.names.size()) {
+                        if (boneWeights[j] > 0.0f && jointIds[j] >= skeleton.names.size()) {
                             hasInvalidJoint = true;
                             problemVertices++;
                             break;
@@ -734,5 +734,5 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         }
     }
 
-    return TinyModel{Mesh(vertices, indices), rigSkeleton};
+    return TinyModel{Mesh(vertices, indices), skeleton};
 }

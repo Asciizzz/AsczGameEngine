@@ -1,11 +1,6 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <unordered_map>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
+#include "Az3D/Model.hpp"
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 
@@ -13,25 +8,9 @@
 
 namespace Az3D {
 
-struct RigSkeleton {
-    // Bone SoA
-    std::vector<std::string> names;
-    std::vector<int> parentIndices;
-    std::vector<glm::mat4> inverseBindMatrices;
-    std::vector<glm::mat4> localBindTransforms;
-
-    std::unordered_map<std::string, int> nameToIndex;
-
-    void debugPrintHierarchy() const;
-
-private:
-    void debugPrintRecursive(int boneIndex, int depth) const;
-};
-
-// I am way too tired
-// Don't forget to delete this btw
+// Demo/testing struct that does fun things with the skeleton
 struct RigDemo {
-    SharedPtr<RigSkeleton> rigSkeleton;
+    SharedPtr<Skeleton> skeleton;
     glm::mat4 getBindPose(size_t index);
 
     std::vector<glm::mat4> localPoseTransforms; // <- User changeable
@@ -53,7 +32,7 @@ struct RigDemo {
     void computeAllTransforms();
     void computeBoneRecursive(size_t boneIndex, std::vector<bool>& processed);
 
-    void init(const AzVulk::Device* vkDevice, const SharedPtr<RigSkeleton>& skeleton);
+    void init(const AzVulk::Device* vkDevice, const SharedPtr<Skeleton>& skeleton);
     void updateBuffer();
 
     float funAccumTimeValue = 0.0f;

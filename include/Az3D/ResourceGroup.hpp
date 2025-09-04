@@ -1,9 +1,6 @@
 #pragma once
 
-#include "Az3D/Texture.hpp"
-#include "Az3D/Material.hpp"
-#include "Az3D/MeshTypes.hpp"
-#include "Az3D/RigSkeleton.hpp"
+#include "Az3D/Model.hpp"
 
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Descriptor.hpp"
@@ -25,7 +22,7 @@ public:
     size_t addMesh(std::string name, SharedPtr<Mesh> mesh);
     size_t addMesh(std::string name, std::string filePath);
 
-    size_t addRig(std::string name, SharedPtr<RigSkeleton> rig);
+    size_t addRig(std::string name, SharedPtr<Skeleton> rig);
     size_t addRig(std::string name, std::string filePath);
 
     std::pair<size_t, size_t> addRiggedModel(std::string name, std::string filePath); // Adds both mesh and skeleton from file
@@ -37,8 +34,8 @@ public:
     VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout->get(); }
     VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
 
-    VkDescriptorSetLayout getRigDescLayout() const { return rigSkeleDescLayout->get(); }
-    VkDescriptorSet getRigSkeleDescSet(size_t index) const { return rigSkeleDescSets[index]->get(); }
+    VkDescriptorSetLayout getRigDescLayout() const { return skeleDescLayout->get(); }
+    VkDescriptorSet getRigSkeleDescSet(size_t index) const { return skeleDescSets[index]->get(); }
 
     // String-to-index getters
     size_t getTextureIndex(std::string name) const;
@@ -49,7 +46,7 @@ public:
     Texture* getTexture(std::string name) const;
     Material* getMaterial(std::string name) const;
     Mesh* getMesh(std::string name) const;
-    RigSkeleton* getRig(std::string name) const;
+    Skeleton* getRig(std::string name) const;
 
     TextureVK* getTextureVK(std::string name) const;
 
@@ -65,11 +62,11 @@ public:
     void createMeshBuffers();
 
     // Skeleton data - Resources: SharedPtr, Buffers & Descriptors: UniquePtr
-    SharedPtrVec<RigSkeleton>         rigSkeletons;
-    UniquePtrVec<AzVulk::BufferData>  rigSkeleInvMatBuffers; // Additional buffers in the future
-    UniquePtr<AzVulk::DescLayout>     rigSkeleDescLayout;
-    UniquePtr<AzVulk::DescPool>       rigSkeleDescPool;
-    UniquePtrVec<AzVulk::DescSets>    rigSkeleDescSets; // Wrong, but we'll live with it for now
+    SharedPtrVec<Skeleton>            skeletons;
+    UniquePtrVec<AzVulk::BufferData>  skeleInvMatBuffers; // Additional buffers in the future
+    UniquePtr<AzVulk::DescLayout>     skeleDescLayout;
+    UniquePtr<AzVulk::DescPool>       skeleDescPool;
+    UniquePtrVec<AzVulk::DescSets>    skeleDescSets; // Wrong, but we'll live with it for now
     void createRigSkeleBuffers();
     void createRigSkeleDescSets();
 

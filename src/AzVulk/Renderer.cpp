@@ -180,7 +180,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
 
 // No instance buffer data yet
-void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, Az3D::RigDemo* demo) {
+void AzVulk::Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, Az3D::RigDemo* demo) {
     size_t meshIndex = demo->meshIndex;
 
     const auto& mesh = resGroup->meshes[meshIndex];

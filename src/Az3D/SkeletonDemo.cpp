@@ -1,4 +1,4 @@
-#include "Az3D/RigSkeleton.hpp"
+#include "Az3D/SkeletonDemo.hpp"
 #include <iostream>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -64,59 +64,25 @@ glm::mat4 constructMatrix(const FunTransform& transform) {
 }
 
 
-void RigSkeleton::debugPrintHierarchy() const {
-    for (size_t i = 0; i < names.size(); ++i) {
-        if (parentIndices[i] == -1) {
-            debugPrintRecursive(static_cast<int>(i), 0);
-        }
-    }
-}
-
-void RigSkeleton::debugPrintRecursive(int boneIndex, int depth) const {
-    // Indentation
-    for (int i = 0; i <= depth; ++i) {
-        std::string depthString;
-        depthString = depth < 10 ? " " + std::to_string(depth) :
-                                    std::to_string(depth);
-
-        std::cout << (i == 0 ? depthString : "|") << " ";
-    }
-
-    // Print this bone
-    std::cout << "| " << names[boneIndex] << " (index " << boneIndex << ")";
-    if (parentIndices[boneIndex] != -1) {
-        std::cout << " [parent " << parentIndices[boneIndex] << "]";
-    }
-    std::cout << "\n";
-
-    // Recurse into children
-    for (size_t i = 0; i < names.size(); ++i) {
-        if (parentIndices[i] == boneIndex) {
-            debugPrintRecursive(static_cast<int>(i), depth + 1);
-        }
-    }
-}
-
-
 void RigDemo::computeAllTransforms() {
     // We need to compute transforms in dependency order (parents before children)
     // First, identify root bones and process them recursively
     
-    std::vector<bool> processed(rigSkeleton->names.size(), false);
+    std::vector<bool> processed(skeleton->names.size(), false);
     
     // Process all bones recursively, starting from roots
-    for (size_t i = 0; i < rigSkeleton->names.size(); ++i) {
-        if (rigSkeleton->parentIndices[i] == -1 && !processed[i]) {
+    for (size_t i = 0; i < skeleton->names.size(); ++i) {
+        if (skeleton->parentIndices[i] == -1 && !processed[i]) {
             computeBoneRecursive(i, processed);
         }
     }
     
     // Handle any orphaned bones (shouldn't happen with proper hierarchy)
-    for (size_t i = 0; i < rigSkeleton->names.size(); ++i) {
+    for (size_t i = 0; i < skeleton->names.size(); ++i) {
         if (!processed[i]) {
-            std::cout << "Warning: Orphaned bone " << i << " (" << rigSkeleton->names[i] << ")\n";
+            std::cout << "Warning: Orphaned bone " << i << " (" << skeleton->names[i] << ")\n";
             globalPoseTransforms[i] = localPoseTransforms[i];
-            finalTransforms[i] = globalPoseTransforms[i] * rigSkeleton->inverseBindMatrices[i];
+            finalTransforms[i] = globalPoseTransforms[i] * skeleton->inverseBindMatrices[i];
             processed[i] = true;
         }
     }
@@ -125,7 +91,7 @@ void RigDemo::computeAllTransforms() {
 void RigDemo::computeBoneRecursive(size_t boneIndex, std::vector<bool>& processed) {
     if (processed[boneIndex]) return;
     
-    int parent = rigSkeleton->parentIndices[boneIndex];
+    int parent = skeleton->parentIndices[boneIndex];
     
     if (parent == -1) {
         // Root bone
@@ -136,21 +102,21 @@ void RigDemo::computeBoneRecursive(size_t boneIndex, std::vector<bool>& processe
         globalPoseTransforms[boneIndex] = globalPoseTransforms[parent] * localPoseTransforms[boneIndex];
     }
     
-    finalTransforms[boneIndex] = globalPoseTransforms[boneIndex] * rigSkeleton->inverseBindMatrices[boneIndex];
+    finalTransforms[boneIndex] = globalPoseTransforms[boneIndex] * skeleton->inverseBindMatrices[boneIndex];
     processed[boneIndex] = true;
     
     // Process all children
-    for (size_t i = 0; i < rigSkeleton->names.size(); ++i) {
-        if (rigSkeleton->parentIndices[i] == static_cast<int>(boneIndex) && !processed[i]) {
+    for (size_t i = 0; i < skeleton->names.size(); ++i) {
+        if (skeleton->parentIndices[i] == static_cast<int>(boneIndex) && !processed[i]) {
             computeBoneRecursive(i, processed);
         }
     }
 }
 
-void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<RigSkeleton>& skeleton) {
+void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<Skeleton>& skeleton) {
     using namespace AzVulk;
 
-    rigSkeleton = skeleton;
+    this->skeleton = skeleton;
 
     skeleton->debugPrintHierarchy();
 
@@ -207,10 +173,10 @@ void RigDemo::updateBuffer() {
 
 
 glm::mat4 RigDemo::getBindPose(size_t index) {
-    if (index >= rigSkeleton->names.size()) {
+    if (index >= skeleton->names.size()) {
         return glm::mat4(1.0f);
     }
-    return rigSkeleton->localBindTransforms[index];
+    return skeleton->localBindTransforms[index];
 }
 
 void RigDemo::funFunction(const FunParams& params) {

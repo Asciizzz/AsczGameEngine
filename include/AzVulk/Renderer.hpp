@@ -9,6 +9,7 @@
 #include "Az3D/ResourceGroup.hpp"
 #include "Az3D/StaticInstance.hpp"
 #include "Az3D/RigInstance.hpp"
+#include "Az3D/SkeletonDemo.hpp"
 
 
 namespace AzVulk {

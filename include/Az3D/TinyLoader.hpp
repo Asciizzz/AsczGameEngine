@@ -1,14 +1,12 @@
 #pragma once
 
-#include <Az3D/MeshTypes.hpp>
-#include <Az3D/RigSkeleton.hpp>
-#include <Az3D/Texture.hpp>
+#include <Az3D/Model.hpp>
 
 namespace Az3D {
 
 struct TinyModel {
     Mesh mesh;
-    RigSkeleton rig;
+    Skeleton rig;
 
     struct Index {
         size_t mesh = 0;
