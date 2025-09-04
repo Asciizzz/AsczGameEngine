@@ -83,9 +83,9 @@ void Application::initComponents() {
 
     // Set up advanced grass system with terrain generation
     GrassConfig grassConfig;
-    grassConfig.worldSizeX = 170;
-    grassConfig.worldSizeZ = 170;
-    grassConfig.baseDensity = 6;
+    grassConfig.worldSizeX = 120;
+    grassConfig.worldSizeZ = 120;
+    grassConfig.baseDensity = 3;
     grassConfig.heightVariance = 26.9f;
     grassConfig.lowVariance = 0.1f;
     grassConfig.numHeightNodes = 750;
@@ -97,7 +97,7 @@ void Application::initComponents() {
     resGroup->addRiggedModel("Demo", "Assets/Characters/Spy/Spy.gltf");
     TinyMaterial material;
     material.toonLevel = 2;
-    material.albTexture = resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Image.png");
+    material.albTexture = resGroup->addTexture("Genesis_Alb", "Assets/Characters/Spy/Spy_red.png");
     resGroup->addMaterial("Genesis", material);
 
     rigDemo = MakeUnique<Az3D::RigDemo>();
