@@ -18,7 +18,7 @@ vkDevice(vkDevice) {
     defaultWhitePixel.width = 1;
     defaultWhitePixel.height = 1;
     defaultWhitePixel.channels = 4;
-    defaultWhitePixel.data = new uint8_t[4]{255, 255, 255, 255}; // White pixel
+    defaultWhitePixel.data = {255, 255, 255, 255}; // White pixel
     
     auto defaultTexturePtr = MakeShared<TinyTexture>(std::move(defaultWhitePixel));
     auto defaultTextureVK = createTextureVK(*defaultTexturePtr, 1);
@@ -498,13 +498,13 @@ SharedPtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, 
         TextureVK textureVK;
 
         // Use the provided TinyTexture data
-        uint8_t* pixels = texture.data;
+        const uint8_t* pixels = texture.data.data();
         int width = texture.width;
         int height = texture.height;
 
         VkDeviceSize imageSize = width * height * 4; // Force 4 channels (RGBA)
 
-        if (!pixels) throw std::runtime_error("Failed to load texture from TinyTexture");
+        if (texture.data.empty()) throw std::runtime_error("Failed to load texture from TinyTexture");
 
         // Dynamic mipmap levels (if not provided)
         mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1) * !mipLevels;

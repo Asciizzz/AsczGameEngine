@@ -96,22 +96,9 @@ struct TinyMaterial {
 
     TinyMaterial() = default;
 
-    void setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold) {
-        shadingParams.x = shading ? 1.0f : 0.0f;
-        shadingParams.y = static_cast<float>(toonLevel);
-        shadingParams.z = normalBlend;
-        shadingParams.w = discardThreshold;
-    }
-
-    void setAlbedoTexture(int index, TAddressMode addressMode = TAddressMode::Repeat) {
-        texIndices.x = index;
-        texIndices.y = static_cast<uint32_t>(addressMode);
-    }
-
-    void setNormalTexture(int index, TAddressMode addressMode = TAddressMode::Repeat) {
-        texIndices.z = index;
-        texIndices.w = static_cast<uint32_t>(addressMode);
-    }
+    void setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold);
+    void setAlbedoTexture(int index, TAddressMode addressMode = TAddressMode::Repeat);
+    void setNormalTexture(int index, TAddressMode addressMode = TAddressMode::Repeat);
 };
 
 // ============================================================================
@@ -123,40 +110,19 @@ struct TinyTexture {
     int width = 0;
     int height = 0;
     int channels = 0;
-    uint8_t* data = nullptr;
+    std::vector<uint8_t> data;
 
-    // Free using delete[] since we allocate with new[]
-    void free() {
-        if (data) {
-            delete[] data;
-            data = nullptr;
-        }
-    }
+    TinyTexture() = default;
     
-    // Copy constructor and assignment to prevent double deletion
-    TinyTexture(const TinyTexture& other) = delete;
-    TinyTexture& operator=(const TinyTexture& other) = delete;
+    // Copy constructor and assignment are now allowed with vector
+    TinyTexture(const TinyTexture& other) = default;
+    TinyTexture& operator=(const TinyTexture& other) = default;
 
     // Move constructor and assignment
-    TinyTexture(TinyTexture&& other) noexcept
-        : width(other.width), height(other.height), channels(other.channels), data(other.data) {
-        other.data = nullptr;
-    }
-
-    TinyTexture& operator=(TinyTexture&& other) noexcept {
-        if (this != &other) {
-            free();
-            width = other.width;
-            height = other.height;
-            channels = other.channels;
-            data = other.data;
-            other.data = nullptr;
-        }
-        return *this;
-    }
+    TinyTexture(TinyTexture&& other) noexcept = default;
+    TinyTexture& operator=(TinyTexture&& other) noexcept = default;
     
-    TinyTexture() = default;
-    ~TinyTexture() { free(); }
+    ~TinyTexture() = default;
 };
 
 // Vulkan texture resource (image + view + memory only)

@@ -4,6 +4,31 @@
 
 using namespace Az3D;
 
+// ============================================================================
+// MATERIAL IMPLEMENTATIONS
+// ============================================================================
+
+void TinyMaterial::setShadingParams(bool shading, int toonLevel, float normalBlend, float discardThreshold) {
+    shadingParams.x = shading ? 1.0f : 0.0f;
+    shadingParams.y = static_cast<float>(toonLevel);
+    shadingParams.z = normalBlend;
+    shadingParams.w = discardThreshold;
+}
+
+void TinyMaterial::setAlbedoTexture(int index, TAddressMode addressMode) {
+    texIndices.x = index;
+    texIndices.y = static_cast<uint32_t>(addressMode);
+}
+
+void TinyMaterial::setNormalTexture(int index, TAddressMode addressMode) {
+    texIndices.z = index;
+    texIndices.w = static_cast<uint32_t>(addressMode);
+}
+
+// ============================================================================
+// SKELETON IMPLEMENTATIONS
+// ============================================================================
+
 void TinySkeleton::debugPrintHierarchy() const {
     std::cout << "Skeleton Hierarchy (" << names.size() << " bones):\n";
     std::cout << std::string(50, '=') << "\n";

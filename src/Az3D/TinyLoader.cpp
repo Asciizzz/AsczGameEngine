@@ -73,14 +73,14 @@ TinyTexture TinyLoader::loadImage(const std::string& filePath) {
         texture.width = 0;
         texture.height = 0;
         texture.channels = 0;
-        texture.data = nullptr;
+        texture.data.clear();
         return texture;
     }
     
-    // Copy data to our own allocation
+    // Copy data to our own vector
     size_t dataSize = texture.width * texture.height * 4; // STBI_rgb_alpha = 4 channels
-    texture.data = new uint8_t[dataSize];
-    std::memcpy(texture.data, stbiData, dataSize);
+    texture.data.resize(dataSize);
+    std::memcpy(texture.data.data(), stbiData, dataSize);
     texture.channels = 4; // Force to 4 channels since we used STBI_rgb_alpha
     
     // Free stbi allocated memory
