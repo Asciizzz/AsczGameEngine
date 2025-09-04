@@ -457,19 +457,15 @@ void Application::mainLoop() {
         
         uint32_t imageIndex = rendererRef.beginFrame(mainRenderPass->get(), msaaManager->hasMSAA);
         if (imageIndex != UINT32_MAX) {
-            // Get the current frame index from renderer for UBO synchronization
+            // Update global UBO buffer from frame index
             uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
-            
-            // Update UBO for the current frame
             glbUBOManager->updateUBO(camRef, currentFrameIndex);
+
             // First: render sky background with dedicated pipeline
             rendererRef.drawSky(glbUBOManager.get(), skyPipeline.get());
 
             // Draw grass system
-
-            // No need for per frame terrain update since it never moves
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
-            // ================= DEMO RIG WORKED HOLY SHIT ARE YOU PROUD OF ME =======================
 
             RigDemo::FunParams funParams;
             funParams.add(dTime);

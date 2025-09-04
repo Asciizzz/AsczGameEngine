@@ -220,7 +220,7 @@ void RigDemo::funFunction(const FunParams& params) {
 
     float sinAccum = sin(funAccumTimeValue);
 
-    glm::vec3 cameraPos = glm::vec3(params.customVec4[0]);
+    // glm::vec3 cameraPos = glm::vec3(params.customVec4[0]);
 
     // I know that it may looks like magic numbers right now
     // But i can assure you, they... are indeed magic numbers lol
@@ -269,7 +269,7 @@ void RigDemo::funFunction(const FunParams& params) {
 
     //*
     // Move eyes from left to right (index 102 - left and 104 - right)
-    float partMoveEye = 0.12f * sin(funAccumTimeValue);
+    float partMoveEye = 0.12f * sinAccum;
     FunTransform transform102 = extractTransform(getBindPose(102));
     FunTransform transform104 = extractTransform(getBindPose(104));
     transform102.translation.y += partMoveEye;
@@ -279,14 +279,14 @@ void RigDemo::funFunction(const FunParams& params) {
     localPoseTransforms[104] = constructMatrix(transform104);
 
     // Rotate spine (index 1)
-    float partRotSpine = 30.0f * sin(funAccumTimeValue);
+    float partRotSpine = 30.0f * sinAccum;
     FunTransform transform1 = extractTransform(getBindPose(1));
     transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
 
     localPoseTransforms[1] = constructMatrix(transform1);
 
     // Rotate shoulders (index 3 - left, index 27 - right)
-    float partRotShoulder1 = 25.0f * sin(funAccumTimeValue) - 15.0f;
+    float partRotShoulder1 = 25.0f * sinAccum - 15.0f;
     float partRotShoulder2 = 25.0f * sin(funAccumTimeValue * 1.1) - 15.0f;
     FunTransform transform3 = extractTransform(getBindPose(3));
     FunTransform transform27 = extractTransform(getBindPose(27));
@@ -304,7 +304,7 @@ void RigDemo::funFunction(const FunParams& params) {
     localPoseTransforms[51] = constructMatrix(transform51);
 
     // Tail (index 110) rotate same way as spine
-    float partRotTail = 30.0f * sin(funAccumTimeValue);
+    float partRotTail = 30.0f * sinAccum;
     FunTransform transform110 = extractTransform(getBindPose(110));
     transform110.rotation = glm::rotate(transform110.rotation, glm::radians(partRotTail), glm::vec3(1,0,0));
 

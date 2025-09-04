@@ -16,22 +16,6 @@ struct VkVertexInputAttributeDescription;
 
 namespace Az3D {
 
-// Forward declarations
-struct VertexAttribute {
-    uint32_t location;
-    uint32_t format;    // VkFormat
-    uint32_t offset;
-};
-
-struct VertexLayout {
-    uint32_t stride;
-    std::vector<VertexAttribute> attributes;
-
-    // Utility to generate Vulkan descriptions once
-    VkVertexInputBindingDescription getBindingDescription() const;
-    std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() const;
-};
-
 // Transform structure
 struct Transform {
     glm::vec3 pos{0.0f};
@@ -58,16 +42,28 @@ struct Transform {
 
 // Note: 0 handedness for no normal map
 
+// Forward declarations
+struct VertexAttribute {
+    uint32_t location;
+    uint32_t format;    // VkFormat
+    uint32_t offset;
+};
+
+struct VertexLayout {
+    uint32_t stride;
+    std::vector<VertexAttribute> attributes;
+
+    // Utility to generate Vulkan descriptions once
+    VkVertexInputBindingDescription getBindingDescription() const;
+    std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() const;
+};
 
 struct StaticVertex {
     // Compact 48 byte data layout
 
-    // Position on XYZ and Texture U on W
-    glm::vec4 pos_tu = glm::vec4(0.0f);
-    // Normal on XYZ and Texture V on W
-    glm::vec4 nrml_tv = glm::vec4(0.0f);
-    // Tangent XYZ and handedness on W
-    glm::vec4 tangent = glm::vec4(0.0f);
+    glm::vec4 pos_tu  = glm::vec4(0.0f); // Position XYZ - Texture U on W
+    glm::vec4 nrml_tv = glm::vec4(0.0f); // Normal XYZ - Texture V on W
+    glm::vec4 tangent = glm::vec4(0.0f); // Tangent XYZ - Handedness on W
 
     StaticVertex() = default;
     StaticVertex(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
