@@ -155,12 +155,11 @@ private:
 // MODEL STRUCTURE
 // ============================================================================
 
-struct TinyOptions {
-    bool loadMaterials = true;
-    bool loadTextures = true;
-    bool loadSkeleton = true;
-};
-
+// Submeshes exist, but Mesh does not.
+// In the context of a game engine, a file like
+// "man_riding_a_car_with_his_dog_inside.glb" makes no sense.
+// Game objects should stay atomic: each model represents
+// a single entity or object in the game world.
 struct TinyModel {
     std::vector<TinySubmesh> submeshes;
     std::vector<TinyMaterial> materials;
@@ -174,8 +173,9 @@ struct TinyModel {
     // Future: animations
 };
 
-struct TinyModelPtr {
-    std::vector<size_t> meshIndices;
+// Index pointing to certain Vulkan elements
+struct TinyModelVkPtr {
+    std::vector<size_t> submeshIndices;
     std::vector<size_t> materialIndices;
     std::vector<size_t> textureIndices;
     size_t skeletonIndex = -1;
