@@ -877,7 +877,7 @@ TinyModel TinyLoader::loadModel(const std::string& filePath) {
     }
 
     // Process each mesh and each primitive as separate submeshes
-    result.meshes.reserve(model.meshes.size() * 2); // Rough estimate
+    result.submeshes.reserve(model.meshes.size() * 2); // Rough estimate
     
     for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& mesh = model.meshes[meshIndex];
@@ -1049,7 +1049,7 @@ TinyModel TinyLoader::loadModel(const std::string& filePath) {
             }
             // else matIndex remains -1 (default)
 
-            result.meshes.push_back(std::move(submesh));
+            result.submeshes.push_back(std::move(submesh));
         }
     }
 

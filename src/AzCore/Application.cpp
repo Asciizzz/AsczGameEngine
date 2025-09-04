@@ -94,7 +94,7 @@ void Application::initComponents() {
     grassConfig.influenceFactor = 0.02f;
 
     // The genesis model
-    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen/Selen.gltf");
+    resGroup->addRiggedModel("Demo", "Assets/Characters/Spy/Spy.gltf");
     TinyMaterial material;
     material.toonLevel = 2;
     material.albTexture = resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Image.png");
@@ -104,7 +104,8 @@ void Application::initComponents() {
     rigDemo->init(vkDevice.get(), resGroup->skeletons[0]);
     rigDemo->meshIndex = 0;
 
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Selen/Selen.gltf");
+    // THE ENEMY SPY HAS BREACHED THE PERIMETER
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf");
     testModel.printDebug();
 
 

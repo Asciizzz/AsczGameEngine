@@ -60,10 +60,10 @@ void TinyModel::printDebug() const {
     std::cout << std::string(60, '=') << "\n";
     
     // Print mesh information
-    std::cout << "Meshes: " << meshes.size() << "\n";
+    std::cout << "Meshes: " << submeshes.size() << "\n";
     std::cout << std::string(30, '-') << "\n";
-    for (size_t i = 0; i < meshes.size(); ++i) {
-        const auto& mesh = meshes[i];
+    for (size_t i = 0; i < submeshes.size(); ++i) {
+        const auto& mesh = submeshes[i];
         std::cout << "  Mesh[" << i << "]: "
                   << mesh.vertexCount() << " verts, "
                   << mesh.indices.size() << " idxs, "

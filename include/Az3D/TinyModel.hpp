@@ -155,16 +155,30 @@ private:
 // MODEL STRUCTURE
 // ============================================================================
 
+struct TinyOptions {
+    bool loadMaterials = true;
+    bool loadTextures = true;
+    bool loadSkeleton = true;
+};
+
 struct TinyModel {
-    std::vector<TinySubmesh> meshes;
+    std::vector<TinySubmesh> submeshes;
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
     TinySkeleton skeleton;
 
-    // Debug function to print model information
+    TinyModel() = default;
+
     void printDebug() const;
 
-    // Future: animations, submesh info, etc.
+    // Future: animations
+};
+
+struct TinyModelPtr {
+    std::vector<size_t> meshIndices;
+    std::vector<size_t> materialIndices;
+    std::vector<size_t> textureIndices;
+    size_t skeletonIndex = -1;
 };
 
 } // namespace Az3D
