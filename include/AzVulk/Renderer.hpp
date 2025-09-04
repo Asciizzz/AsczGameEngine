@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <glm/glm.hpp>
 
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_include.hpp"
@@ -14,7 +15,21 @@
 namespace AzVulk {
 
     struct PushDemo {
-        // ...
+        glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // RGBA color (white by default)
+        
+        // Constructor for easy color setting
+        PushDemo() = default;
+        PushDemo(float r, float g, float b, float a = 1.0f) : color(r, g, b, a) {}
+        PushDemo(const glm::vec4& rgba) : color(rgba) {}
+        
+        // Helper methods
+        void setColor(float r, float g, float b, float a = 1.0f) {
+            color = glm::vec4(r, g, b, a);
+        }
+        
+        void setColor(const glm::vec3& rgb, float a = 1.0f) {
+            color = glm::vec4(rgb, a);
+        }
     };
 
     class Renderer {
@@ -47,6 +62,11 @@ namespace AzVulk {
         
         void pushConstants(const PipelineRaster* pipeline, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues) {
             pipeline->pushConstants(cmdBuffers[currentFrame], stageFlags, offset, size, pValues);
+        }
+
+        // Push demo helper - specifically for PushDemo color
+        void pushDemoColor(const PipelineRaster* pipeline, const PushDemo& demo) {
+            pushConstants(pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, demo);
         }
 
         // Conclusion
