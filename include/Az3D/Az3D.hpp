@@ -5,5 +5,4 @@
 #include "Az3D/Model.hpp"
 #include "Az3D/SkeletonDemo.hpp"
 #include "Az3D/StaticInstance.hpp"
-#include "Az3D/RigInstance.hpp"
 #include "Az3D/ResourceGroup.hpp"
