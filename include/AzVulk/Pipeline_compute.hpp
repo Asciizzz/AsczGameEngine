@@ -6,6 +6,7 @@ namespace AzVulk {
 
 struct ComputePipelineConfig {
     std::vector<VkDescriptorSetLayout> setLayouts;
+    std::vector<VkPushConstantRange> pushConstantRanges;
     std::string compPath;
 };
 

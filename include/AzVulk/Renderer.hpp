@@ -11,9 +11,12 @@
 
 #include "Az3D/RigDemo.hpp"
 
-
 namespace AzVulk {
-    class DepthManager; // Forward declaration
+
+    struct PushDemo {
+        // ...
+    };
+
     class Renderer {
     public:
         Renderer(Device* vkDevice, SwapChain* swapChain);
@@ -35,6 +38,16 @@ namespace AzVulk {
         void drawDemoRig(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, Az3D::RigDemo* demo);
 
         void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline);
+
+        // Push constants helper
+        template<typename T>
+        void pushConstants(const PipelineRaster* pipeline, VkShaderStageFlags stageFlags, uint32_t offset, const T& data) {
+            pipeline->pushConstants(cmdBuffers[currentFrame], stageFlags, offset, sizeof(T), &data);
+        }
+        
+        void pushConstants(const PipelineRaster* pipeline, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues) {
+            pipeline->pushConstants(cmdBuffers[currentFrame], stageFlags, offset, size, pValues);
+        }
 
         // Conclusion
         void endFrame(uint32_t imageIndex);

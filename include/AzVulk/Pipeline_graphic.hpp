@@ -15,6 +15,7 @@ struct RasterCfg {
     }
 
     std::vector<VkDescriptorSetLayout> setLayouts;
+    std::vector<VkPushConstantRange> pushConstantRanges;
 
     // special
     enum class InputType {
@@ -56,6 +57,7 @@ public:
     void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
     void setMsaa(VkSampleCountFlagBits s) { cfg.msaaSamples = s; }
     void setDescLayouts(const std::vector<VkDescriptorSetLayout>& layouts) { cfg.setLayouts = layouts; }
+    void setPushConstantRanges(const std::vector<VkPushConstantRange>& ranges) { cfg.pushConstantRanges = ranges; }
 
     void create() override;
     void recreate() override { cleanup(); create(); }

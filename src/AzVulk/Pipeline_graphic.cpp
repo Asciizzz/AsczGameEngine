@@ -121,6 +121,8 @@ void PipelineRaster::create() {
     VkPipelineLayoutCreateInfo lci{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     lci.setLayoutCount = static_cast<uint32_t>(cfg.setLayouts.size());
     lci.pSetLayouts    = cfg.setLayouts.data();
+    lci.pushConstantRangeCount = static_cast<uint32_t>(cfg.pushConstantRanges.size());
+    lci.pPushConstantRanges    = cfg.pushConstantRanges.data();
     if (vkCreatePipelineLayout(lDevice, &lci, nullptr, &layout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout (graphics)");
 

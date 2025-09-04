@@ -28,6 +28,11 @@ public:
 
     virtual void bindCmd(VkCommandBuffer cmd) const = 0;
     virtual void bindSets(VkCommandBuffer cmd, VkDescriptorSet* sets, uint32_t count) const = 0;
+    
+    // Push constants support
+    void pushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues) const {
+        vkCmdPushConstants(cmd, layout, stageFlags, offset, size, pValues);
+    }
 
     VkDevice lDevice = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
