@@ -4,6 +4,28 @@
 
 using namespace Az3D;
 
+// VertexLayout implementation
+VkVertexInputBindingDescription VertexLayout::getBindingDescription() const {
+    VkVertexInputBindingDescription binding{};
+    binding.binding = 0;
+    binding.stride = stride;
+    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return binding;
+}
+
+std::vector<VkVertexInputAttributeDescription> VertexLayout::getAttributeDescriptions() const {
+    std::vector<VkVertexInputAttributeDescription> descs;
+    for (const auto& attr : attributes) {
+        VkVertexInputAttributeDescription d{};
+        d.binding = 0;
+        d.location = attr.location;
+        d.format = static_cast<VkFormat>(attr.format);
+        d.offset = attr.offset;
+        descs.push_back(d);
+    }
+    return descs;
+}
+
 void Transform::translate(const glm::vec3& translation) {
     this->pos += translation;
 }
@@ -62,22 +84,15 @@ void StaticVertex::setTextureUV(const glm::vec2& uv) {
     nrml_tv.w = uv.y;
 }
 
-VkVertexInputBindingDescription StaticVertex::getBindingDescription() {
-    VkVertexInputBindingDescription bindingDescription{};
-    bindingDescription.binding   = 0;
-    bindingDescription.stride    = sizeof(StaticVertex);
-    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    return bindingDescription;
-}
-
-std::vector<VkVertexInputAttributeDescription> StaticVertex::getAttributeDescriptions() {
-    std::vector<VkVertexInputAttributeDescription> attribs(3);
-
-    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, pos_tu)};
-    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, nrml_tv)};
-    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, tangent)};
-
-    return attribs;
+VertexLayout StaticVertex::getLayout() {
+    VertexLayout layout;
+    layout.stride = sizeof(StaticVertex);
+    layout.attributes = {
+        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, pos_tu)},
+        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, nrml_tv)},
+        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticVertex, tangent)}
+    };
+    return layout;
 }
 
 
@@ -98,22 +113,15 @@ void RigVertex::setTextureUV(const glm::vec2& uv) {
     nrml_tv.w = uv.y;
 }
 
-VkVertexInputBindingDescription RigVertex::getBindingDescription() {
-    VkVertexInputBindingDescription bindingDescription{};
-    bindingDescription.binding   = 0;
-    bindingDescription.stride    = sizeof(RigVertex);
-    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    return bindingDescription;
-}
-
-std::vector<VkVertexInputAttributeDescription> RigVertex::getAttributeDescriptions() {
-    std::vector<VkVertexInputAttributeDescription> attribs(5);
-
-    attribs[0] = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, pos_tu)};
-    attribs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, nrml_tv)};
-    attribs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, tangent)};
-    attribs[3] = {3, 0, VK_FORMAT_R32G32B32A32_UINT,   offsetof(RigVertex, boneIDs)};
-    attribs[4] = {4, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, weights)};
-
-    return attribs;
+VertexLayout RigVertex::getLayout() {
+    VertexLayout layout;
+    layout.stride = sizeof(RigVertex);
+    layout.attributes = {
+        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, pos_tu)},
+        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, nrml_tv)},
+        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, tangent)},
+        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(RigVertex, boneIDs)},
+        {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(RigVertex, weights)}
+    };
+    return layout;
 }

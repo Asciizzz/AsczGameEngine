@@ -1,11 +1,36 @@
 #pragma once
 
 #include "Az3D/VertexTypes.hpp"
+#include <cstdint>
+#include <vector>
+#include <cstring>
 
 namespace Az3D {
 
+// Forward declarations
+struct BVHNode;
+struct HitInfo;
 
-// BVH structures
+// Uniform mesh structure that holds raw data only
+struct Mesh {
+    std::vector<uint8_t> vertexData;
+    std::vector<uint32_t> indices;
+    VertexLayout layout;
+
+    Mesh() = default;
+
+    template<typename VertexT>
+    Mesh(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx) {
+        layout = VertexT::getLayout();
+        indices = idx;
+        vertexData.resize(verts.size() * sizeof(VertexT));
+        std::memcpy(vertexData.data(), verts.data(), vertexData.size());
+    }
+
+    size_t vertexCount() const { return vertexData.size() / layout.stride; }
+};
+
+// BVH structures (deprecated - to be reimplemented later)
 struct BVHNode {
     glm::vec3 min;
     glm::vec3 max;
@@ -33,53 +58,6 @@ struct HitInfo {
     glm::vec3 vrtx = glm::vec3(0.0f);
     glm::vec3 nrml = glm::vec3(0.0f);
     uint32_t materialId = 0;
-};
-
-struct StaticMesh {
-// The only real mesh data
-    StaticMesh() = default;
-    StaticMesh(std::vector<StaticVertex> vertices, std::vector<uint32_t> indices)
-        : vertices(std::move(vertices)), indices(std::move(indices)) {}
-
-    std::vector<StaticVertex> vertices;
-    std::vector<uint32_t> indices;
-
-// The rest are like, idk, mental illnesses
-    static constexpr size_t MAX_DEPTH = 32;
-    static constexpr size_t BIN_COUNT = 11;
-
-    // BVH data structures
-    glm::vec3 meshMin = glm::vec3(FLT_MAX);
-    glm::vec3 meshMax = glm::vec3(-FLT_MAX);
-
-    bool hasBVH = false;
-    std::vector<BVHNode> nodes;
-    std::vector<size_t> sortedIndices; // For BVH traversal
-    std::vector<glm::vec3> unsortedABmin;
-    std::vector<glm::vec3> unsortedABmax;
-    std::vector<glm::vec3> unsortedCenters;
-    size_t indexCount = 0; // Number of indices in the mesh
-
-    // BVH methods (implemented in Mesh_BVH.cpp)
-    void createBVH();
-    void buildBVH();
-    HitInfo closestHit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance, const glm::mat4& modelMat4) const;
-    HitInfo closestHit(const glm::vec3& center, float radius, const glm::mat4& modelMat4) const;
-
-    // Helper methods for BVH (implemented in Mesh_BVH.cpp)
-    static float rayIntersectBox(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& boxMin, const glm::vec3& boxMax);
-    static glm::vec3 rayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
-    static float sphereIntersectBox(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& boxMin, const glm::vec3& boxMax);
-    static glm::vec3 sphereIntersectTriangle(const glm::vec3& sphereOrigin, float sphereRadius, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
-};
-
-struct RigMesh {
-    RigMesh() = default;
-    RigMesh(std::vector<RigVertex> vertices, std::vector<uint32_t> indices)
-        : vertices(std::move(vertices)), indices(std::move(indices)) {}
-
-    std::vector<RigVertex> vertices;
-    std::vector<uint32_t> indices;
 };
 
 } // namespace Az3D

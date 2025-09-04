@@ -92,42 +92,39 @@ void Application::initComponents() {
     grassConfig.influenceFactor = 0.02f;
 
     // The genesis model
-    resGroup->addRiggedModel("Demo", "Assets/Characters/Selen/Selen.gltf");
-    Material material;
-    material.setShadingParams(true, 2, 0.0f, 0.0f);
-    material.setAlbedoTexture(
-        resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Selen.png")
-    , TAddressMode::Repeat);
-    resGroup->addMaterial("Genesis", material);
+    // resGroup->addRiggedModel("Demo", "Assets/Characters/Selen/Selen.gltf");
+    // Material material;
+    // material.setShadingParams(true, 2, 0.0f, 0.0f);
+    // material.setAlbedoTexture(
+    //     resGroup->addTexture("Genesis_Alb", "Assets/Characters/Selen/Selen.png")
+    // , TAddressMode::Repeat);
+    // resGroup->addMaterial("Genesis", material);
 
-    rigDemo = MakeUnique<Az3D::RigDemo>();
-    rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
-    rigDemo->meshIndex = 0;
+    // rigDemo = MakeUnique<Az3D::RigDemo>();
+    // rigDemo->init(vkDevice.get(), resGroup->rigSkeletons[0]);
+    // rigDemo->meshIndex = 0;
 
 
     // Initialize grass system
     grassSystem = MakeUnique<Grass>(grassConfig);
     grassSystem->initialize(*resGroup, vkDevice.get());
 
-    // Initialized world
-    newWorld = MakeUnique<World>(resGroup.get(), vkDevice.get());
-
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
 
-    glm::vec3 boundMin = resGroup->getStaticMesh("TerrainMesh")->nodes[0].min;
-    glm::vec3 boundMax = resGroup->getStaticMesh("TerrainMesh")->nodes[0].max;
-    float totalHeight = abs(boundMax.y - boundMin.y);
-    boundMin.y -= totalHeight * 2.5f;
-    boundMax.y += totalHeight * 12.5f;
+    // glm::vec3 boundMin = resGroup->getStaticMesh("TerrainMesh")->nodes[0].min;
+    // glm::vec3 boundMax = resGroup->getStaticMesh("TerrainMesh")->nodes[0].max;
+    // float totalHeight = abs(boundMax.y - boundMin.y);
+    // boundMin.y -= totalHeight * 2.5f;
+    // boundMax.y += totalHeight * 12.5f;
 
-    particleManager->initialize(
-        resGroup.get(), vkDevice.get(),
-        5000, // Count
-        0.5f, // Radius
-        0.5f, // Display radius
-        boundMin, boundMax
-    );
+    // particleManager->initialize(
+    //     resGroup.get(), vkDevice.get(),
+    //     5000, // Count
+    //     0.5f, // Radius
+    //     0.5f, // Display radius
+    //     boundMin, boundMax
+    // );
 
 // PLAYGROUND END HERE 
 
@@ -419,17 +416,7 @@ void Application::mainLoop() {
             grassSystem->updateWindAnimation(dTime, use_gpu);
         }
 
-        // Place platform in the world
-        static bool hold_g = false;
-        if (k_state[SDL_SCANCODE_G] && !hold_g) {
-            newWorld->placePlatformGrid("Ground_x2", camRef.pos);
-
-            hold_g = true;
-        } else if (!k_state[SDL_SCANCODE_G]) {
-            hold_g = false;
-        }
-
-        // Place platform in the world
+        // Particle physics toggle and teleport
         static bool hold_p = false;
         static bool particlePhysicsEnabled = false;
         if (k_state[SDL_SCANCODE_P] && !hold_p) {
@@ -459,7 +446,7 @@ void Application::mainLoop() {
         }
 
         if (particlePhysicsEnabled) {
-            particleManager->updatePhysic(dTime, resGroup->getStaticMesh("TerrainMesh"), glm::mat4(1.0f));
+            // particleManager->updatePhysic(dTime, resGroup->getStaticMesh("TerrainMesh"), glm::mat4(1.0f));
         };
         particleManager->updateRender();
 
@@ -480,14 +467,14 @@ void Application::mainLoop() {
 
             // ================= DEMO RIG WORKED HOLY SHIT ARE YOU PROUD OF ME =======================
 
-            RigDemo::FunParams funParams;
-            funParams.add(dTime);
-            funParams.add(camera->pos);
+            // RigDemo::FunParams funParams;
+            // funParams.add(dTime);
+            // funParams.add(camera->pos);
 
-            rigDemo->funFunction(funParams);
-            rigDemo->updateBuffer();
+            // rigDemo->funFunction(funParams);
+            // rigDemo->updateBuffer();
 
-            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
+            // rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
 
             // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
             // rendererRef.drawStaticInstanceGroup(resGroup.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);

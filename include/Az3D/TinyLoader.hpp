@@ -17,7 +17,7 @@ struct TinyTexture {
 };
 
 struct TinyModel {
-    RigMesh mesh;
+    Mesh mesh;
     RigSkeleton rig;
 
     struct Index {
@@ -32,9 +32,9 @@ public:
     static TinyTexture loadImage(const std::string& filePath);
     
     // StaticMesh loading functions
-    static StaticMesh loadStaticMesh(const std::string& filePath);
-    static StaticMesh loadStaticMeshFromOBJ(const std::string& filePath);
-    static StaticMesh loadStaticMeshFromGLTF(const std::string& filePath);
+    static Mesh loadStaticMesh(const std::string& filePath);
+    static Mesh loadStaticMeshFromOBJ(const std::string& filePath);
+    static Mesh loadStaticMeshFromGLTF(const std::string& filePath);
 
     // RigMesh loading functions
     static TinyModel loadRigMesh(const std::string& filePath, bool loadRig=true);

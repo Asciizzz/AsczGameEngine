@@ -139,8 +139,8 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     };
 
     // Create mesh
-    UniquePtr<StaticMesh> grassMesh = MakeUnique<StaticMesh>(std::move(grassVertices), std::move(grassIndices));
-    grassMeshIndex = resGroup.addStaticMesh("GrassMesh", std::move(grassMesh));
+    SharedPtr<Mesh> grassMesh = MakeShared<Mesh>(grassVertices, grassIndices);
+    grassMeshIndex = resGroup.addMesh("GrassMesh", grassMesh);
 
     // Create material
     Az3D::Material grassMaterial;
@@ -192,8 +192,8 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     };
 
     // Create mesh
-    UniquePtr<StaticMesh> grassMesh = MakeUnique<StaticMesh>(std::move(grassVertices), std::move(grassIndices));
-    grassMeshIndex = resGroup.addStaticMesh("GrassMesh", std::move(grassMesh));
+    SharedPtr<Mesh> grassMesh = MakeShared<Mesh>(grassVertices, grassIndices);
+    grassMeshIndex = resGroup.addMesh("GrassMesh", grassMesh);
 
     // Create material
     Az3D::Material grassMaterial;
@@ -412,9 +412,9 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
     }
     
     // Create terrain mesh and material
-    UniquePtr<StaticMesh> terrainMesh = MakeUnique<StaticMesh>(std::move(terrainVertices), std::move(terrainIndices));
+    SharedPtr<Mesh> terrainMesh = MakeShared<Mesh>(terrainVertices, terrainIndices);
 
-    terrainMeshIndex = resGroup.addStaticMesh("TerrainMesh", std::move(terrainMesh), true);
+    terrainMeshIndex = resGroup.addMesh("TerrainMesh", terrainMesh);
 
     Material terrainMaterial;
     terrainMaterial.setShadingParams(true, 0, 0.2f, 0.0f);

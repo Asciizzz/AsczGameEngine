@@ -54,8 +54,7 @@ void ResourceGroup::cleanup() {
 void ResourceGroup::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    createStaticMeshBuffers();
-    createRigMeshBuffers();
+    createMeshBuffers();
     createRigSkeleBuffers();
 
     createMaterialBuffer();
@@ -97,49 +96,34 @@ size_t ResourceGroup::addMaterial(std::string name, const Material& material) {
     return index;
 }
 
-size_t ResourceGroup::addStaticMesh(std::string name, SharedPtr<StaticMesh> mesh, bool hasBVH) {
-    std::string uniqueName = getUniqueName(name, staticMeshNameCounts);
+size_t ResourceGroup::addMesh(std::string name, SharedPtr<Mesh> mesh) {
+    std::string uniqueName = getUniqueName(name, meshNameCounts);
     
-    if (hasBVH) mesh->createBVH();
+    size_t index = meshes.size();
+    meshes.push_back(mesh);
 
-    size_t index = staticMeshes.size();
-    staticMeshes.push_back(mesh);
-
-    staticMeshNameToIndex[uniqueName] = index;
-    return index;
-}
-size_t ResourceGroup::addStaticMesh(std::string name, std::string filePath, bool hasBVH) {
-    std::string uniqueName = getUniqueName(name, staticMeshNameCounts);
-
-    StaticMesh newMesh = TinyLoader::loadStaticMesh(filePath);
-    if (hasBVH) newMesh.createBVH();
-
-    size_t index = staticMeshes.size();
-    staticMeshes.push_back(MakeShared<StaticMesh>(std::move(newMesh)));
-
-    staticMeshNameToIndex[uniqueName] = index;
+    meshNameToIndex[uniqueName] = index;
     return index;
 }
 
-size_t ResourceGroup::addRigMesh(std::string name, SharedPtr<RigMesh> mesh) {
-    std::string uniqueName = getUniqueName(name, rigMeshNameCounts);
+size_t ResourceGroup::addMesh(std::string name, std::string filePath) {
+    std::string uniqueName = getUniqueName(name, meshNameCounts);
 
-    size_t index = rigMeshes.size();
-    rigMeshes.push_back(mesh);
-
-    rigMeshNameToIndex[uniqueName] = index;
-    return index;
-}
-
-size_t ResourceGroup::addRigMesh(std::string name, std::string filePath) {
-    std::string uniqueName = getUniqueName(name, rigMeshNameCounts);
+    // For now, assume we're loading a static mesh
+    // TODO: Add logic to determine mesh type from file
+    std::vector<StaticVertex> vertices;
+    std::vector<uint32_t> indices;
+    // Load using TinyLoader (this will need to be updated)
+    // StaticMesh newMesh = TinyLoader::loadStaticMesh(filePath);
+    // vertices = newMesh.vertices;
+    // indices = newMesh.indices;
     
-    TinyModel rig = TinyLoader::loadRigMesh(filePath, false);
+    SharedPtr<Mesh> mesh = MakeShared<Mesh>(vertices, indices);
     
-    size_t index = rigMeshes.size();
-    rigMeshes.push_back(MakeShared<RigMesh>(std::move(rig.mesh)));
+    size_t index = meshes.size();
+    meshes.push_back(mesh);
 
-    rigMeshNameToIndex[uniqueName] = index;
+    meshNameToIndex[uniqueName] = index;
     return index;
 }
 
@@ -164,24 +148,25 @@ size_t ResourceGroup::addRig(std::string name, std::string filePath) {
     return index;
 }
 
-std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::string filePath) {
-    std::string uniqueName = getUniqueName(name, rigMeshNameCounts);
-    std::string skeletonUniqueName = getUniqueName(name + "_skeleton", rigNameCounts);
+// std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::string filePath) {
+//     std::string uniqueName = getUniqueName(name, meshNameCounts);
+//     std::string skeletonUniqueName = getUniqueName(name + "_skeleton", rigNameCounts);
 
-    TinyModel rig = TinyLoader::loadRigMesh(filePath, true); // Load both mesh and skeleton
+//     TinyModel rig = TinyLoader::loadRigMesh(filePath, true); // Load both mesh and skeleton
     
-    // Add mesh
-    size_t meshIndex = rigMeshes.size();
-    rigMeshes.push_back(MakeShared<RigMesh>(std::move(rig.mesh)));
-    rigMeshNameToIndex[uniqueName] = meshIndex;
+//     // Add mesh - convert RigVertex to unified mesh
+//     SharedPtr<Mesh> mesh = MakeShared<Mesh>(Mesh::create(rig.mesh.vertices, rig.mesh.indices));
+//     size_t meshIndex = meshes.size();
+//     meshes.push_back(mesh);
+//     meshNameToIndex[uniqueName] = meshIndex;
     
-    // Add rig
-    size_t rigIndex = rigSkeletons.size();
-    rigSkeletons.push_back(MakeShared<RigSkeleton>(std::move(rig.rig)));
-    rigNameToIndex[skeletonUniqueName] = rigIndex;
+//     // Add rig
+//     size_t rigIndex = rigSkeletons.size();
+//     rigSkeletons.push_back(MakeShared<RigSkeleton>(std::move(rig.rig)));
+//     rigNameToIndex[skeletonUniqueName] = rigIndex;
 
-    return { meshIndex, rigIndex };
-}
+//     return { meshIndex, rigIndex };
+// }
 
 size_t ResourceGroup::getTextureIndex(std::string name) const {
     auto it = textureNameToIndex.find(name);
@@ -193,14 +178,9 @@ size_t ResourceGroup::getMaterialIndex(std::string name) const {
     return it != materialNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
-size_t ResourceGroup::getStaticMeshIndex(std::string name) const {
-    auto it = staticMeshNameToIndex.find(name);
-    return it != staticMeshNameToIndex.end() ? it->second : SIZE_MAX;
-}
-
-size_t ResourceGroup::getRigMeshIndex(std::string name) const {
-    auto it = rigMeshNameToIndex.find(name);
-    return it != rigMeshNameToIndex.end() ? it->second : SIZE_MAX;
+size_t ResourceGroup::getMeshIndex(std::string name) const {
+    auto it = meshNameToIndex.find(name);
+    return it != meshNameToIndex.end() ? it->second : SIZE_MAX;
 }
 
 size_t ResourceGroup::getRigIndex(std::string name) const {
@@ -219,14 +199,9 @@ Material* ResourceGroup::getMaterial(std::string name) const {
     return index != SIZE_MAX ? materials[index].get() : nullptr;
 }
 
-StaticMesh* ResourceGroup::getStaticMesh(std::string name) const {
-    size_t index = getStaticMeshIndex(name);
-    return index != SIZE_MAX ? staticMeshes[index].get() : nullptr;
-}
-
-RigMesh* ResourceGroup::getRigMesh(std::string name) const {
-    size_t index = getRigMeshIndex(name);
-    return index != SIZE_MAX ? rigMeshes[index].get() : nullptr;
+Mesh* ResourceGroup::getMesh(std::string name) const {
+    size_t index = getMeshIndex(name);
+    return index != SIZE_MAX ? meshes[index].get() : nullptr;
 }
 
 RigSkeleton* ResourceGroup::getRig(std::string name) const {
@@ -662,28 +637,28 @@ void ResourceGroup::createTextureDescSet() {
 // =========================== MESH STATIC ====================================
 // ============================================================================
 
-void ResourceGroup::createStaticMeshBuffers() {
-    for (int i = 0; i < staticMeshes.size(); ++i) {
-        const auto* mesh = staticMeshes[i].get();
-        const auto& vertices = mesh->vertices;
+void ResourceGroup::createMeshBuffers() {
+    for (int i = 0; i < meshes.size(); ++i) {
+        const auto* mesh = meshes[i].get();
+        const auto& vertexData = mesh->vertexData;
         const auto& indices = mesh->indices;
 
         UniquePtr<BufferData> vBufferData = MakeUnique<BufferData>();
         UniquePtr<BufferData> iBufferData = MakeUnique<BufferData>();
 
-        // Upload vertex
+        // Upload vertex data
         BufferData vertexStagingBuffer;
         vertexStagingBuffer.initVkDevice(vkDevice);
         vertexStagingBuffer.setProperties(
-            vertices.size() * sizeof(StaticVertex), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            vertexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         vertexStagingBuffer.createBuffer();
-        vertexStagingBuffer.mapAndCopy(vertices.data());
+        vertexStagingBuffer.mapAndCopy(vertexData.data());
 
         vBufferData->initVkDevice(vkDevice);
         vBufferData->setProperties(
-            vertices.size() * sizeof(StaticVertex),
+            vertexData.size(),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
@@ -694,15 +669,14 @@ void ResourceGroup::createStaticMeshBuffers() {
         VkBufferCopy vertexCopyRegion{};
         vertexCopyRegion.srcOffset = 0;
         vertexCopyRegion.dstOffset = 0;
-        vertexCopyRegion.size = vertices.size() * sizeof(StaticVertex);
+        vertexCopyRegion.size = vertexData.size();
 
         vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
         vBufferData->hostVisible = false;
 
         vertexCopyCmd.endAndSubmit();
 
-        // Upload index
-
+        // Upload index data
         BufferData indexStagingBuffer;
         indexStagingBuffer.initVkDevice(vkDevice);
         indexStagingBuffer.setProperties(
@@ -732,10 +706,9 @@ void ResourceGroup::createStaticMeshBuffers() {
 
         indexCopyCmd.endAndSubmit();
 
-
         // Append buffers
-        vstaticBuffers.push_back(std::move(vBufferData));
-        istaticBuffers.push_back(std::move(iBufferData));
+        vertexBuffers.push_back(std::move(vBufferData));
+        indexBuffers.push_back(std::move(iBufferData));
     }
 }
 
@@ -743,83 +716,6 @@ void ResourceGroup::createStaticMeshBuffers() {
 // ============================================================================
 // =========================== MESH SKINNED ===================================
 // ============================================================================
-
-void ResourceGroup::createRigMeshBuffers() {
-    for (int i = 0; i < rigMeshes.size(); ++i) {
-        const auto* mesh = rigMeshes[i].get();
-        const auto& vertices = mesh->vertices;
-        const auto& indices = mesh->indices;
-
-        UniquePtr<BufferData> vBufferData = MakeUnique<BufferData>();
-        UniquePtr<BufferData> iBufferData = MakeUnique<BufferData>();
-
-        // Upload vertex
-        BufferData vertexStagingBuffer;
-        vertexStagingBuffer.initVkDevice(vkDevice);
-        vertexStagingBuffer.setProperties(
-            vertices.size() * sizeof(RigVertex), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        vertexStagingBuffer.createBuffer();
-        vertexStagingBuffer.mapAndCopy(vertices.data());
-
-        vBufferData->initVkDevice(vkDevice);
-        vBufferData->setProperties(
-            vertices.size() * sizeof(RigVertex),
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-        vBufferData->createBuffer();
-
-        TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
-
-        VkBufferCopy vertexCopyRegion{};
-        vertexCopyRegion.srcOffset = 0;
-        vertexCopyRegion.dstOffset = 0;
-        vertexCopyRegion.size = vertices.size() * sizeof(RigVertex);
-
-        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
-        vBufferData->hostVisible = false;
-
-        vertexCopyCmd.endAndSubmit();
-
-        // Upload index
-
-        BufferData indexStagingBuffer;
-        indexStagingBuffer.initVkDevice(vkDevice);
-        indexStagingBuffer.setProperties(
-            indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        indexStagingBuffer.createBuffer();
-        indexStagingBuffer.mapAndCopy(indices.data());
-
-        iBufferData->initVkDevice(vkDevice);
-        iBufferData->setProperties(
-            indices.size() * sizeof(uint32_t),
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-        iBufferData->createBuffer();
-
-        TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
-
-        VkBufferCopy indexCopyRegion{};
-        indexCopyRegion.srcOffset = 0;
-        indexCopyRegion.dstOffset = 0;
-        indexCopyRegion.size = indices.size() * sizeof(uint32_t);
-
-        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData->buffer, 1, &indexCopyRegion);
-        iBufferData->hostVisible = false;
-
-        indexCopyCmd.endAndSubmit();
-
-
-        // Append buffers
-        vrigBuffers.push_back(std::move(vBufferData));
-        irigBuffers.push_back(std::move(iBufferData));
-    }
-}
 
 // ============================================================================
 // ========================== SKELETON DATA ==================================

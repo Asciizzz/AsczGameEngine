@@ -6,6 +6,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <vector>
+#include <cstdint>
 
 #include "Helpers/Templates.hpp"
 
@@ -13,6 +15,22 @@ struct VkVertexInputBindingDescription;
 struct VkVertexInputAttributeDescription;
 
 namespace Az3D {
+
+// Forward declarations
+struct VertexAttribute {
+    uint32_t location;
+    uint32_t format;    // VkFormat
+    uint32_t offset;
+};
+
+struct VertexLayout {
+    uint32_t stride;
+    std::vector<VertexAttribute> attributes;
+
+    // Utility to generate Vulkan descriptions once
+    VkVertexInputBindingDescription getBindingDescription() const;
+    std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() const;
+};
 
 // Transform structure
 struct Transform {
@@ -66,9 +84,8 @@ struct StaticVertex {
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
     glm::vec2 getTextureUV() const { return {pos_tu.w, nrml_tv.w}; }
 
-    // Vulkan binding description for rendering
-    static VkVertexInputBindingDescription getBindingDescription();
-    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+    // Returns layout that can be used for pipeline creation
+    static VertexLayout getLayout();
 };
 
 struct RigVertex {
@@ -93,9 +110,8 @@ struct RigVertex {
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
     glm::vec2 getTextureUV() const { return {pos_tu.w, nrml_tv.w}; };
 
-    // Vulkan binding description for rendering
-    static VkVertexInputBindingDescription getBindingDescription();
-    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+    // Returns layout that can be used for pipeline creation
+    static VertexLayout getLayout();
 };
 
-}
+} // namespace Az3D

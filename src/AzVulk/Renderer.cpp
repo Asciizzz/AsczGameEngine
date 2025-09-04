@@ -144,8 +144,8 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     uint32_t instanceCount = static_cast<uint32_t>(instanceGroup->prevInstanceCount);
     size_t meshIndex = instanceGroup->meshIndex;
 
-    const auto& mesh = resGroup->staticMeshes[meshIndex];
-    uint32_t indexCount = resGroup->getStaticIndexCount(meshIndex);
+    const auto& mesh = resGroup->meshes[meshIndex];
+    uint32_t indexCount = resGroup->getIndexCount(meshIndex);
 
     if (instanceCount == 0 || meshIndex == SIZE_MAX || indexCount == 0) return;
 
@@ -157,8 +157,8 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     VkDescriptorSet sets[] = {globalSet, materialSet, textureSet};
     rPipeline->bindSets(cmdBuffers[currentFrame], sets, 3);
 
-    VkBuffer vertexBuffer = resGroup->getStaticVertexBuffer(meshIndex);
-    VkBuffer indexBuffer = resGroup->getStaticIndexBuffer(meshIndex);
+    VkBuffer vertexBuffer = resGroup->getVertexBuffer(meshIndex);
+    VkBuffer indexBuffer = resGroup->getIndexBuffer(meshIndex);
 
     VkBuffer instanceBuffer = instanceGroup->bufferData.buffer;
 
@@ -179,8 +179,8 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, Az3D::RigDemo* demo) {
     size_t meshIndex = demo->meshIndex;
 
-    const auto& mesh = resGroup->rigMeshes[meshIndex];
-    uint32_t indexCount = resGroup->getRiggedIndexCount(meshIndex);
+    const auto& mesh = resGroup->meshes[meshIndex];
+    uint32_t indexCount = resGroup->getIndexCount(meshIndex);
 
     rPipeline->bindCmd(cmdBuffers[currentFrame]);
 
@@ -193,8 +193,8 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
     VkDescriptorSet sets[] = {glbSet, matSet, texSet, rigSet};
     rPipeline->bindSets(cmdBuffers[currentFrame], sets, 4);
 
-    VkBuffer vertexBuffer = resGroup->getRiggedVertexBuffer(meshIndex);
-    VkBuffer indexBuffer = resGroup->getRiggedIndexBuffer(meshIndex);
+    VkBuffer vertexBuffer = resGroup->getVertexBuffer(meshIndex);
+    VkBuffer indexBuffer = resGroup->getIndexBuffer(meshIndex);
 
     // VkBuffer instanceBuffer = instanceGroup->bufferData.buffer;
 

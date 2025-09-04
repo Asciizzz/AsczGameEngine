@@ -202,8 +202,8 @@ void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& access
     }
 }
 
-// General purpose StaticMesh loader that auto-detects file type
-StaticMesh TinyLoader::loadStaticMesh(const std::string& filePath) {
+
+Mesh TinyLoader::loadStaticMesh(const std::string& filePath) {
     // Extract file extension
     std::string extension = filePath.substr(filePath.find_last_of(".") + 1);
     
@@ -215,12 +215,12 @@ StaticMesh TinyLoader::loadStaticMesh(const std::string& filePath) {
     } else if (extension == "gltf" || extension == "glb") {
         return loadStaticMeshFromGLTF(filePath);
     } else {
-        throw std::runtime_error("Unsupported StaticMesh file format: " + extension);
+        throw std::runtime_error("Unsupported Mesh file format: " + extension);
     }
 }
 
 // OBJ loader implementation using tiny_obj_loader
-StaticMesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
+Mesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -228,7 +228,7 @@ StaticMesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
 
     // Load the OBJ file
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
-        return StaticMesh();
+        return Mesh(); // Return empty mesh on failure
     }
 
     std::vector<StaticVertex> vertices;
@@ -319,11 +319,12 @@ StaticMesh TinyLoader::loadStaticMeshFromOBJ(const std::string& filePath) {
         }
     }
 
-    return StaticMesh(std::move(vertices), std::move(indices));
+    return Mesh(vertices, indices);
 }
 
-StaticMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
-    auto staticMesh = StaticMesh();
+Mesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
+    std::vector<StaticVertex> vertices;
+    std::vector<uint32_t> indices;
 
     tinygltf::TinyGLTF loader;
     loader.SetImageLoader(LoadImageData, nullptr);
@@ -385,7 +386,7 @@ StaticMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
                                      uvs.size() > i ? uvs[i].y : 0.0f);
             v.tangent    = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
 
-            staticMesh.vertices.push_back(v);
+            vertices.push_back(v);
         }
 
         // Indices
@@ -411,14 +412,14 @@ StaticMesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
                     default:
                         throw std::runtime_error("Unsupported index component type");
                 }
-                staticMesh.indices.push_back(index + static_cast<uint32_t>(vertexOffset));
+                indices.push_back(index + static_cast<uint32_t>(vertexOffset));
             }
         }
 
         vertexOffset += vertexCount;
     }
 
-    return staticMesh;
+    return Mesh(vertices, indices);
 }
 
 
@@ -466,7 +467,8 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
 
     loader.SetImageLoader(LoadImageData, nullptr);
 
-    RigMesh rigMesh;
+    std::vector<RigVertex> vertices;
+    std::vector<uint32_t> indices;
     RigSkeleton rigSkeleton;
 
     bool ok;
@@ -578,8 +580,8 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
     }
     
     // Pre-allocate for optimal performance
-    rigMesh.vertices.reserve(totalVertexCount);
-    rigMesh.indices.reserve(totalIndexCount);
+    vertices.reserve(totalVertexCount);
+    indices.reserve(totalIndexCount);
     
     size_t globalVertexOffset = 0;
     
@@ -688,7 +690,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                     vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
                 }
                 
-                rigMesh.vertices.push_back(vertex);
+                vertices.push_back(vertex);
             }
 
             // Handle indices with continuous offset tracking
@@ -717,7 +719,7 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
                     }
                     
                     // Apply global vertex offset for continuous indexing across all meshes
-                    rigMesh.indices.push_back(index + static_cast<uint32_t>(globalVertexOffset));
+                    indices.push_back(index + static_cast<uint32_t>(globalVertexOffset));
                 }
             }
 
@@ -725,5 +727,5 @@ TinyModel TinyLoader::loadRigMesh(const std::string& filePath, bool loadRig) {
         }
     }
 
-    return TinyModel{rigMesh, rigSkeleton};
+    return TinyModel{Mesh(vertices, indices), rigSkeleton};
 }

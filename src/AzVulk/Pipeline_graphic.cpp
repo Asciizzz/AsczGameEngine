@@ -28,10 +28,8 @@ void PipelineRaster::create() {
     std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<VkVertexInputAttributeDescription> attrs;
 
-    auto vstaticBind   = Az3D::StaticVertex::getBindingDescription();
-    auto vstaticAttrs  = Az3D::StaticVertex::getAttributeDescriptions();
-    auto vriggedBind  = Az3D::RigVertex::getBindingDescription();
-    auto vriggedAttrs = Az3D::RigVertex::getAttributeDescriptions();
+    auto vstaticLayout = Az3D::StaticVertex::getLayout();
+    auto vriggedLayout = Az3D::RigVertex::getLayout();
     auto instanceBind  = Az3D::StaticInstance::getBindingDescription();
     auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
 
@@ -41,29 +39,35 @@ void PipelineRaster::create() {
         break;
 
     case RasterCfg::InputType::Static:
-        bindings = { vstaticBind, instanceBind };
-        attrs.insert(attrs.end(), vstaticAttrs.begin(), vstaticAttrs.end());
-        attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
+        {
+            auto staticBind = vstaticLayout.getBindingDescription();
+            auto staticAttrs = vstaticLayout.getAttributeDescriptions();
+            
+            bindings = { staticBind, instanceBind };
+            attrs.insert(attrs.end(), staticAttrs.begin(), staticAttrs.end());
+            attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
 
-        vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
-        vin.pVertexBindingDescriptions      = bindings.data();
-        vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-        vin.pVertexAttributeDescriptions    = attrs.data();
+            vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
+            vin.pVertexBindingDescriptions      = bindings.data();
+            vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+            vin.pVertexAttributeDescriptions    = attrs.data();
+        }
         break;
 
     case RasterCfg::InputType::Rigged:
-        // bindings = { vriggedBind, instanceBind };
-        // attrs.insert(attrs.end(), vriggedAttrs.begin(), vriggedAttrs.end());
-        // attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
-        
-        // For the time being, we will work without instancing
-        bindings = { vriggedBind };
-        attrs.insert(attrs.end(), vriggedAttrs.begin(), vriggedAttrs.end());
+        {
+            auto riggedBind = vriggedLayout.getBindingDescription();
+            auto riggedAttrs = vriggedLayout.getAttributeDescriptions();
+            
+            // For the time being, we will work without instancing
+            bindings = { riggedBind };
+            attrs.insert(attrs.end(), riggedAttrs.begin(), riggedAttrs.end());
 
-        vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
-        vin.pVertexBindingDescriptions      = bindings.data();
-        vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-        vin.pVertexAttributeDescriptions    = attrs.data();
+            vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
+            vin.pVertexBindingDescriptions      = bindings.data();
+            vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+            vin.pVertexAttributeDescriptions    = attrs.data();
+        }
         break;
     }
 

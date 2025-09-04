@@ -174,7 +174,7 @@ public:
 
         materialIndex = resGroup->addMaterial("Particle", material);
 
-        size_t meshIndex = resGroup->addStaticMesh("Particle", "Assets/Shapes/Icosphere.obj", false);
+        size_t meshIndex = resGroup->addMesh("Particle", "Assets/Shapes/Icosphere.obj");
 
         instanceGroup.initVkDevice(vkDevice);
         instanceGroup.meshIndex = meshIndex;
@@ -359,12 +359,14 @@ public:
         instanceGroup.datas = particles_data;
     }
 
-    void updatePhysic(float dTime, const Az3D::StaticMesh* mesh, const glm::mat4& meshModelMat4) {
+    void updatePhysic(float dTime, const Az3D::Mesh* mesh, const glm::mat4& meshModelMat4) {
         std::vector<size_t> indices(particleCount);
         std::iota(indices.begin(), indices.end(), 0);
 
         glm::vec3 boundMin = spatialGrid.gridMin;
         glm::vec3 boundMax = spatialGrid.gridMax;
+
+        /*
 
         // Parallel update of all particles
         std::for_each(std::execution::par_unseq, indices.begin(), indices.end(), [&](size_t p) {
@@ -446,6 +448,8 @@ public:
             glm::quat rotation = glm::angleAxis(speed * dTime * 2.0f, direction);
             particles[p].rotate(rotation);
         });
+
+        */
 
         // Handle particle-to-particle collisions after position updates
         handleParticleCollisions();

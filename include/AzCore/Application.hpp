@@ -7,7 +7,6 @@
 #include "AzBeta/AzBeta.hpp"
 
 #include "AzGame/Grass.hpp"
-#include "AzGame/World.hpp"
 
 
 class Application {
@@ -55,7 +54,6 @@ private:
 
     // Some cool game element demos
     UniquePtr<AzGame::Grass> grassSystem;
-    UniquePtr<AzGame::World> newWorld;
 
     UniquePtr<AzBeta::ParticleManager> particleManager;
 
