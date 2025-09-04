@@ -74,6 +74,7 @@ void Renderer::createSyncObjects() {
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
 uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
+    // Wait for the current frame's fence
     vkWaitForFences(vkDevice->lDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex = UINT32_MAX;
@@ -85,13 +86,16 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
     if (acquire != VK_SUCCESS && acquire != VK_SUBOPTIMAL_KHR)
         throw std::runtime_error("failed to acquire swapchain image");
 
-    // If that image is already in flight, wait for its fence
+    // CRITICAL: If this image is still being used by another frame, wait for that frame's completion
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
         vkWaitForFences(vkDevice->lDevice, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
     }
-    imagesInFlight[imageIndex] = inFlightFences[currentFrame];
-
+    
+    // Reset the current frame's fence ONLY after we're sure the image is free
     vkResetFences(vkDevice->lDevice, 1, &inFlightFences[currentFrame]);
+    
+    // Now assign this image to the current frame
+    imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -151,7 +155,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
     rPipeline->bindCmd(cmdBuffers[currentFrame]);
 
-    VkDescriptorSet globalSet = glbUBO->getDescSet();
+    VkDescriptorSet globalSet = glbUBO->getDescSet(currentFrame);
     VkDescriptorSet materialSet = resGroup->getMatDescSet();
     VkDescriptorSet textureSet = resGroup->getTexDescSet();
     VkDescriptorSet sets[] = {globalSet, materialSet, textureSet};
@@ -185,7 +189,7 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
     rPipeline->bindCmd(cmdBuffers[currentFrame]);
 
     // Bind descriptor sets once
-    VkDescriptorSet glbSet = glbUBO->getDescSet();
+    VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
     VkDescriptorSet matSet = resGroup->getMatDescSet();
     VkDescriptorSet texSet = resGroup->getTexDescSet();
     VkDescriptorSet rigSet = demo->descSet.get();
@@ -214,7 +218,7 @@ void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* 
     skyPipeline->bindCmd(cmdBuffers[currentFrame]);
 
     // Bind only the global descriptor set (set 0) for sky
-    VkDescriptorSet globalSet = glbUBO->getDescSet();
+    VkDescriptorSet globalSet = glbUBO->getDescSet(currentFrame);
     skyPipeline->bindSets(cmdBuffers[currentFrame], &globalSet, 1);
 
     // Draw fullscreen triangle (3 vertices, no input)

@@ -40,22 +40,23 @@ public:
 
     GlobalUBO ubo;
 
-    AzVulk::BufferData bufferData;
+    static const int MAX_FRAMES_IN_FLIGHT = 2; // Must match Renderer
+    std::vector<AzVulk::BufferData> bufferData; // Per-frame buffers
     void createBufferData();
 
     AzVulk::DescLayout descLayout;
     AzVulk::DescPool descPool;
-    AzVulk::DescSets descSet; // Only need 1 set for global UBO
+    std::vector<AzVulk::DescSets> descSets; // Per-frame descriptor sets
 
     void createDescLayout();
     void createDescPool();
     void createDescSet();
 
-    VkDescriptorSet getDescSet() const { return descSet.get(); }
+    VkDescriptorSet getDescSet(uint32_t frameIndex) const { return descSets[frameIndex].get(); }
     VkDescriptorSetLayout getDescLayout() const { return descLayout.get(); }
 
 // Functionalities
-    void updateUBO(const Camera& camera);
+    void updateUBO(const Camera& camera, uint32_t frameIndex);
 };
 
 }

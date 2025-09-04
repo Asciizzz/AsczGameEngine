@@ -452,11 +452,16 @@ void Application::mainLoop() {
 
 // =================================
 
+            grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
         // Use the new explicit rendering interface
-        glbUBOManager->updateUBO(camRef);
-
+        
         uint32_t imageIndex = rendererRef.beginFrame(mainRenderPass->get(), msaaManager->hasMSAA);
         if (imageIndex != UINT32_MAX) {
+            // Get the current frame index from renderer for UBO synchronization
+            uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
+            
+            // Update UBO for the current frame
+            glbUBOManager->updateUBO(camRef, currentFrameIndex);
             // First: render sky background with dedicated pipeline
             rendererRef.drawSky(glbUBOManager.get(), skyPipeline.get());
 
@@ -475,7 +480,7 @@ void Application::mainLoop() {
 
             // rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
 
-            grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
+            // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
 
             // Draw the particles

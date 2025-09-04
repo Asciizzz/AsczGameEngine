@@ -23,6 +23,9 @@ namespace AzVulk {
 
         // Introduction
         uint32_t beginFrame(VkRenderPass renderPass, bool hasMSAA);
+        
+        // Frame tracking
+        uint32_t getCurrentFrame() const { return currentFrame; }
 
         // Body
         void drawStaticInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::StaticInstanceGroup* instanceGroup);
