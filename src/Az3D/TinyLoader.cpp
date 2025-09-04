@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 using namespace Az3D;
 
@@ -54,16 +55,11 @@ bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err
     return true;
 }
 
-void TinyTexture::free() {
-    if (data) {
-        stbi_image_free(data);
-        data = nullptr;
-    }
-}
-
-TinyTexture TinyLoader::loadImage(const std::string& filePath) {
-    TinyTexture texture = {};
-    texture.data = stbi_load(
+Texture TinyLoader::loadImage(const std::string& filePath) {
+    Texture texture = {};
+    
+    // Load image using stbi
+    uint8_t* stbiData = stbi_load(
         filePath.c_str(),
         &texture.width,
         &texture.height,
@@ -72,12 +68,23 @@ TinyTexture TinyLoader::loadImage(const std::string& filePath) {
     );
     
     // Check if loading failed
-    if (!texture.data) {
+    if (!stbiData) {
         // Reset dimensions if loading failed
         texture.width = 0;
         texture.height = 0;
         texture.channels = 0;
+        texture.data = nullptr;
+        return texture;
     }
+    
+    // Copy data to our own allocation
+    size_t dataSize = texture.width * texture.height * 4; // STBI_rgb_alpha = 4 channels
+    texture.data = new uint8_t[dataSize];
+    std::memcpy(texture.data, stbiData, dataSize);
+    texture.channels = 4; // Force to 4 channels since we used STBI_rgb_alpha
+    
+    // Free stbi allocated memory
+    stbi_image_free(stbiData);
     
     return texture;
 }

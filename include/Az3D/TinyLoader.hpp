@@ -2,19 +2,9 @@
 
 #include <Az3D/MeshTypes.hpp>
 #include <Az3D/RigSkeleton.hpp>
+#include <Az3D/Texture.hpp>
 
 namespace Az3D {
-
-struct TinyTexture {
-    int width = 0;
-    int height = 0;
-    int channels = 0;
-    uint8_t* data = nullptr;
-
-    // Free using stbi_image_free since data is allocated by stbi_load
-    void free();
-    ~TinyTexture() { free(); }
-};
 
 struct TinyModel {
     Mesh mesh;
@@ -29,7 +19,7 @@ struct TinyModel {
 
 class TinyLoader {
 public:
-    static TinyTexture loadImage(const std::string& filePath);
+    static Texture loadImage(const std::string& filePath);
     
     // StaticMesh loading functions
     static Mesh loadStaticMesh(const std::string& filePath);

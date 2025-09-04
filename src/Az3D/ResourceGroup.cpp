@@ -15,15 +15,16 @@ ResourceGroup::ResourceGroup(Device* vkDevice):
 vkDevice(vkDevice) {
 
     // Create default white pixel texture manually
-    TinyTexture defaultWhitePixel;
+    Texture defaultWhitePixel;
     defaultWhitePixel.width = 1;
     defaultWhitePixel.height = 1;
     defaultWhitePixel.channels = 4;
     defaultWhitePixel.data = new uint8_t[4]{255, 255, 255, 255}; // White pixel
     
-    auto defaultTexture = createTexture(defaultWhitePixel, 1);
-    defaultTexture->path = "__default__";
-    textures.insert(textures.begin(), std::move(defaultTexture)); // Insert at index 0 with move
+    auto defaultTexturePtr = MakeShared<Texture>(std::move(defaultWhitePixel));
+    auto defaultTextureVK = createTextureVK(*defaultTexturePtr, 1);
+    textures.insert(textures.begin(), std::move(defaultTexturePtr)); // Insert at index 0 with move
+    textureVKs.insert(textureVKs.begin(), std::move(defaultTextureVK));
 
     Material defaultMaterial;
     defaultMaterial.setShadingParams(true, 0, 0.0f, 0.0f);
@@ -34,12 +35,15 @@ vkDevice(vkDevice) {
 void ResourceGroup::cleanup() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    // Cleanup textures
-    for (auto& tex : textures) {
-        if (tex->view != VK_NULL_HANDLE) vkDestroyImageView(lDevice, tex->view, nullptr);
-        if (tex->image != VK_NULL_HANDLE) vkDestroyImage(lDevice, tex->image, nullptr);
-        if (tex->memory != VK_NULL_HANDLE) vkFreeMemory(lDevice, tex->memory, nullptr);
+    // Cleanup texture VK resources first
+    for (auto& texVK : textureVKs) {
+        if (texVK->view != VK_NULL_HANDLE) vkDestroyImageView(lDevice, texVK->view, nullptr);
+        if (texVK->image != VK_NULL_HANDLE) vkDestroyImage(lDevice, texVK->image, nullptr);
+        if (texVK->memory != VK_NULL_HANDLE) vkFreeMemory(lDevice, texVK->memory, nullptr);
     }
+    textureVKs.clear();
+    
+    // Then cleanup raw texture data
     textures.clear();
 
     // Cleanup textures' samplers
@@ -70,17 +74,16 @@ void ResourceGroup::uploadAllToGPU() {
 size_t ResourceGroup::addTexture(std::string name, std::string imagePath, uint32_t mipLevels) {
     std::string uniqueName = getUniqueName(name, textureNameCounts);
 
-    TinyTexture tinyTexture = TinyLoader::loadImage(imagePath);
-    SharedPtr<Texture> texture = createTexture(tinyTexture, mipLevels);
+    Texture texture = TinyLoader::loadImage(imagePath);
+    SharedPtr<Texture> texturePtr = MakeShared<Texture>(std::move(texture));
+    SharedPtr<TextureVK> textureVK = createTextureVK(*texturePtr, mipLevels);
 
     // If null return the default 0 index
-    if (!texture) return 0;
-
-    // Set the texture path
-    texture->path = imagePath;
+    if (!textureVK) return 0;
 
     size_t index = textures.size();
-    textures.push_back(texture);
+    textures.push_back(texturePtr);
+    textureVKs.push_back(textureVK);
 
     textureNameToIndex[uniqueName] = index;
     return index;
@@ -207,6 +210,11 @@ Mesh* ResourceGroup::getMesh(std::string name) const {
 RigSkeleton* ResourceGroup::getRig(std::string name) const {
     size_t index = getRigIndex(name);
     return index != SIZE_MAX ? rigSkeletons[index].get() : nullptr;
+}
+
+TextureVK* ResourceGroup::getTextureVK(std::string name) const {
+    size_t index = getTextureIndex(name);
+    return index != SIZE_MAX ? textureVKs[index].get() : nullptr;
 }
 
 
@@ -486,18 +494,18 @@ void generateMipmapsImpl(AzVulk::Device* vkDevice, VkImage image, VkFormat image
 // ========================= TEXTURES =========================================
 // ============================================================================
 
-SharedPtr<Texture> ResourceGroup::createTexture(const TinyTexture& tinyTexture, uint32_t mipLevels) {
+SharedPtr<TextureVK> ResourceGroup::createTextureVK(const Texture& texture, uint32_t mipLevels) {
     try {
-        Texture texture;
+        TextureVK textureVK;
 
-        // Use the provided TinyTexture data
-        uint8_t* pixels = tinyTexture.data;
-        int width = tinyTexture.width;
-        int height = tinyTexture.height;
+        // Use the provided Texture data
+        uint8_t* pixels = texture.data;
+        int width = texture.width;
+        int height = texture.height;
 
         VkDeviceSize imageSize = width * height * 4; // Force 4 channels (RGBA)
 
-        if (!pixels) throw std::runtime_error("Failed to load texture from TinyTexture");
+        if (!pixels) throw std::runtime_error("Failed to load texture from Texture");
 
         // Dynamic mipmap levels (if not provided)
         mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1) * !mipLevels;
@@ -512,23 +520,23 @@ SharedPtr<Texture> ResourceGroup::createTexture(const TinyTexture& tinyTexture, 
         stagingBuffer.createBuffer();
         stagingBuffer.uploadData(pixels);
 
-        // Note: TinyTexture cleanup is handled by caller
+        // Note: Texture cleanup is handled by caller
 
         // Create texture image
         createImageImpl(vkDevice, width, height, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, texture.image, texture.memory);
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureVK.image, textureVK.memory);
 
         // Transfer data and generate mipmaps
-        transitionImageLayoutImpl(vkDevice, texture.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
+        transitionImageLayoutImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-        copyBufferToImageImpl(vkDevice, stagingBuffer.buffer, texture.image, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-        generateMipmapsImpl(vkDevice, texture.image, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
+        copyBufferToImageImpl(vkDevice, stagingBuffer.buffer, textureVK.image, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        generateMipmapsImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
 
         // Create image view
-        createImageViewImpl(vkDevice, texture.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, texture.view);
+        createImageViewImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, textureVK.view);
 
-        return MakeShared<Texture>(texture);
+        return MakeShared<TextureVK>(textureVK);
 
     } catch (const std::exception& e) {
         std::cout << "Application error: " << e.what() << std::endl;
@@ -574,7 +582,7 @@ void ResourceGroup::createTextureSamplers() {
 
 void ResourceGroup::createTextureDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
-    uint32_t textureCount = static_cast<uint32_t>(textures.size());
+    uint32_t textureCount = static_cast<uint32_t>(textureVKs.size());
     uint32_t samplerCount = static_cast<uint32_t>(samplers.size());
 
     texDescSet = MakeUnique<DescSets>(lDevice);
@@ -598,7 +606,7 @@ void ResourceGroup::createTextureDescSet() {
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
     for (uint32_t i = 0; i < textureCount; ++i) {
         imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfos[i].imageView   = textures[i]->view;
+        imageInfos[i].imageView   = textureVKs[i]->view;
         imageInfos[i].sampler     = VK_NULL_HANDLE;
     }
 

@@ -8,11 +8,6 @@
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 
-// Forward declaration
-namespace Az3D {
-    struct TinyTexture;
-}
-
 namespace Az3D {
 
 // All these resource are static and fixed, created upon load
@@ -56,6 +51,8 @@ public:
     Mesh* getMesh(std::string name) const;
     RigSkeleton* getRig(std::string name) const;
 
+    TextureVK* getTextureVK(std::string name) const;
+
     void uploadAllToGPU();
 
 // private: i dont care about safety
@@ -91,13 +88,14 @@ public:
 
     // Texture Image - Resources: SharedPtr, Descriptors: UniquePtr
     SharedPtrVec<Texture>             textures;
+    SharedPtrVec<TextureVK>           textureVKs;
     UniquePtr<AzVulk::DescLayout>     texDescLayout;
     UniquePtr<AzVulk::DescPool>       texDescPool;
     UniquePtr<AzVulk::DescSets>       texDescSet;
     void createTextureDescSet();
 
     // Useful methods
-    SharedPtr<Texture> createTexture(const TinyTexture& tinyTexture, uint32_t mipLevels = 0);
+    SharedPtr<TextureVK> createTextureVK(const Texture& texture, uint32_t mipLevels = 0);
 
     uint32_t getIndexCount(size_t index) const { return static_cast<uint32_t>(meshes[index]->indices.size()); }
 
