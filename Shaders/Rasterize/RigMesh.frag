@@ -20,8 +20,7 @@ layout(set = 2, binding = 1) uniform sampler   samplers[];
 
 
 layout(location = 0) in float debugLight;
-layout(location = 1) in vec4 debugColor;
-layout(location = 2) in vec2 fragUV;
+layout(location = 1) in vec2 fragUV;
 
 layout(location = 0) out vec4 outColor;
 

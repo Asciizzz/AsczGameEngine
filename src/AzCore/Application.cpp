@@ -83,7 +83,7 @@ void Application::initComponents() {
 
     // THE ENEMY SPY HAS BREACHED THE PERIMETER
     TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf");
-    testModel.printDebug();
+    testModel.skeleton.debugPrintHierarchy();
 
     resGroup->addModel(testModel);
 
