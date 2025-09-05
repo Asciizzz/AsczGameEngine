@@ -81,6 +81,12 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
+    // THE ENEMY SPY HAS BREACHED THE PERIMETER
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf");
+    testModel.printDebug();
+
+    resGroup->addModel(testModel);
+
     // Set up advanced grass system with terrain generation
     GrassConfig grassConfig;
     grassConfig.worldSizeX = 120;
@@ -98,12 +104,6 @@ void Application::initComponents() {
 
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
-
-    // THE ENEMY SPY HAS BREACHED THE PERIMETER
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf");
-    testModel.printDebug();
-
-    resGroup->addModel(testModel);
 
     // glm::vec3 boundMin = resGroup->getStaticMesh("TerrainMesh")->nodes[0].min;
     // glm::vec3 boundMax = resGroup->getStaticMesh("TerrainMesh")->nodes[0].max;
@@ -469,14 +469,14 @@ void Application::mainLoop() {
             // Draw grass system
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
 
-            // RigDemo::FunParams funParams;
-            // funParams.add(dTime);
-            // funParams.add(camera->pos);
+            RigDemo::FunParams funParams;
+            funParams.add(dTime);
+            funParams.add(camera->pos);
 
-            // rigDemo->funFunction(funParams);
-            // rigDemo->updateBuffer();
+            rigDemo->funFunction(funParams);
+            rigDemo->updateBuffer();
 
-            // rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
+            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
 
             grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
