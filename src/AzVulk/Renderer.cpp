@@ -162,7 +162,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     const auto& modelVK = resGroup->modelVKs[modelIndex];
 
     // Draw submeshes
-    for (size_t i = 0; i < modelVK.submeshVK_indices.size(); ++i) {
+    for (size_t i = 0; i < modelVK.submeshCount(); ++i) {
         uint32_t indexCount = modelVK.submesh_indexCounts[i];
         if (indexCount == 0) continue;
 
@@ -172,8 +172,8 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
         // Push constants: material index (for array indexing in shader)
         rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex,0,0,0));
 
-        VkBuffer vertexBuffer = resGroup->subMeshVertexBuffers[submeshIndex]->get();
-        VkBuffer indexBuffer = resGroup->subMeshIndexBuffers[submeshIndex]->get();
+        VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
+        VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
 
         VkBuffer instanceBuffer = instanceGroup->bufferData.get();
 
@@ -228,25 +228,6 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
         // Draw all submesh instances
         vkCmdDrawIndexed(currentCmd, indexCount, 1, 0, 0, 0);
     }
-
-    // rPipeline->pushConstants(
-    //     cmdBuffers[currentFrame], VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(1,0,0,0)
-    // );
-
-    // VkBuffer vertexBuffer = resGroup->getVertexBuffer(meshIndex);
-    // VkBuffer indexBuffer = resGroup->getIndexBuffer(meshIndex);
-
-    // // VkBuffer instanceBuffer = instanceGroup->bufferData.buffer;
-
-    // VkBuffer buffers[] = { vertexBuffer };
-    // VkDeviceSize offsets[] = { 0 };
-    // vkCmdBindVertexBuffers(cmdBuffers[currentFrame], 0, 1, buffers, offsets);
-    // vkCmdBindIndexBuffer(cmdBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-    // // Draw all instances
-    // vkCmdDrawIndexed(cmdBuffers[currentFrame], indexCount, 1, 0, 0, 0);
-
-
 }
 
 

@@ -22,10 +22,13 @@ struct MaterialVK {
 // Index pointing to certain Vulkan elements
 struct TinyModelVK {
     std::vector<size_t> submeshVK_indices;
-    std::vector<uint32_t> submesh_indexCounts; // Cached index counts for each submesh
 
     std::vector<uint32_t> materialVK_indices;
     size_t skeletonIndex = -1;
+
+    // Some helpers
+    std::vector<uint32_t> submesh_indexCounts; // Cached index counts for each submesh
+    size_t submeshCount() const { return submeshVK_indices.size(); }
 };
 
 // All these resource are static and fixed, created upon load
@@ -67,6 +70,8 @@ public:
     UniquePtrVec<AzVulk::BufferData>  subMeshVertexBuffers;
     UniquePtrVec<AzVulk::BufferData>  subMeshIndexBuffers;
     size_t addSubmeshBuffers(const TinySubmesh& submesh);
+    VkBuffer getSubmeshVertexBuffer(size_t submeshVK_index) const;
+    VkBuffer getSubmeshIndexBuffer(size_t submeshVK_index) const;
 
     SharedPtrVec<TinySkeleton>        skeletons;
     UniquePtrVec<AzVulk::BufferData>  skeleInvMatBuffers; // Additional buffers in the future

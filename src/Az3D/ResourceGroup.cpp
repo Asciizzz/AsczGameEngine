@@ -615,6 +615,14 @@ size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
     return subMeshVertexBuffers.size() - 1; // Return index of newly added buffers
 }
 
+VkBuffer ResourceGroup::getSubmeshVertexBuffer(size_t submeshVK_index) const {
+    return subMeshVertexBuffers[submeshVK_index]->get();
+}
+
+VkBuffer ResourceGroup::getSubmeshIndexBuffer(size_t submeshVK_index) const {
+    return subMeshIndexBuffers[submeshVK_index]->get();
+}
+
 // ============================================================================
 // ========================== SKELETON DATA ==================================
 // ============================================================================
