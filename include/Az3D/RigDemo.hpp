@@ -24,7 +24,7 @@ struct RigDemo {
     AzVulk::DescPool   descPool;
     AzVulk::DescSets   descSet;
 
-    size_t meshIndex = 0; // Which mesh to apply this skeleton to
+    size_t modelIndex = 0; // Which model to apply this skeleton to
 
     void computeBone(const std::string& boneName);
     void computeBone(size_t boneIndex);
@@ -32,7 +32,7 @@ struct RigDemo {
     void computeAllTransforms();
     void computeBoneRecursive(size_t boneIndex, std::vector<bool>& processed);
 
-    void init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>& skeleton);
+    void init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>& skeleton, size_t modelIndex);
     void updateBuffer();
 
     float funAccumTimeValue = 0.0f;

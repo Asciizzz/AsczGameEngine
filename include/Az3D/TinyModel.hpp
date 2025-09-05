@@ -67,16 +67,17 @@ struct TinySubmesh {
     TinySubmesh() = default;
 
     template<typename VertexT>
-    TinySubmesh(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx) {
-        create(verts, idx);
+    TinySubmesh(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx, int matIdx = -1) {
+        create(verts, idx, matIdx);
     }
 
     template<typename VertexT>
-    void create(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx) {
+    void create(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx, int matIdx = -1) {
         layout = VertexT::getLayout();
         indices = idx;
         vertexData.resize(verts.size() * sizeof(VertexT));
         std::memcpy(vertexData.data(), verts.data(), vertexData.size());
+        matIndex = matIdx;
     }
 
     size_t vertexCount() const { return vertexData.size() / layout.stride; }
@@ -120,15 +121,6 @@ struct TinyTexture {
     std::vector<uint8_t> data;
 
     TinyTexture() = default;
-    
-    // Copy constructor and assignment are now allowed with vector
-    TinyTexture(const TinyTexture& other) = default;
-    TinyTexture& operator=(const TinyTexture& other) = default;
-
-    // Move constructor and assignment
-    TinyTexture(TinyTexture&& other) noexcept = default;
-    TinyTexture& operator=(TinyTexture&& other) noexcept = default;
-    
     ~TinyTexture() = default;
 };
 
@@ -169,6 +161,8 @@ struct TinyModel {
     TinyModel() = default;
 
     void printDebug() const;
+
+    uint32_t getSubmeshIndexCount(size_t index) const;
 
     // Future: animations
 };

@@ -138,13 +138,8 @@ public:
     std::vector<StaticInstance> terrainData3Ds;
 
     // Resource indices
-    size_t grassMeshIndex = 0;
-    size_t grassMaterialIndex = 0;
-    size_t grassModelHash = 0;
-
-    size_t terrainMeshIndex = 0;
-    size_t terrainMaterialIndex = 0;
-    size_t terrainModelHash = 0;
+    size_t grassModelIndex = 0;
+    size_t terrainModelIndex = 0;
 
     const AzVulk::Device* vkDevice = nullptr;
 

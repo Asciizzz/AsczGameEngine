@@ -14,14 +14,12 @@ VkVertexInputBindingDescription StaticInstance::getBindingDescription() {
 }
 
 std::vector<VkVertexInputAttributeDescription> StaticInstance::getAttributeDescriptions() {
-    std::vector<VkVertexInputAttributeDescription> attribs(4);
+    std::vector<VkVertexInputAttributeDescription> attribs(3);
 
-    attribs[0] = {3, 1, VK_FORMAT_R32G32B32A32_UINT, offsetof(StaticInstance, properties)};
+    attribs[0] = {3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, trformT_S)};
+    attribs[1] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, trformR)};
 
-    attribs[1] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, trformT_S)};
-    attribs[2] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, trformR)};
-
-    attribs[3] = {6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, multColor)};
+    attribs[2] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, multColor)};
 
     return attribs;
 }

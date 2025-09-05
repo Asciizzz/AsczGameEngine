@@ -3,6 +3,8 @@
 #include "Az3D/Az3D.hpp"
 #include "AzVulk/AzVulk.hpp"
 
+#include "Az3D/TinyLoader.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -32,10 +34,10 @@ bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::Device* vkDevice) 
 
     // grassInstanceGroup.init("GrassField", vkDevice);
     grassInstanceGroup.initVkDevice(vkDevice);
-    grassInstanceGroup.meshIndex = grassMeshIndex;
+    grassInstanceGroup.modelIndex = grassModelIndex;
 
     terrainInstanceGroup.initVkDevice(vkDevice);
-    terrainInstanceGroup.meshIndex = terrainMeshIndex;
+    terrainInstanceGroup.modelIndex = terrainModelIndex;
 
     setupComputeShaders();
 
@@ -138,17 +140,23 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
         8, 9, 10, 10, 11, 8,
     };
 
-    // Create mesh
-    SharedPtr<TinySubmesh> grassMesh = MakeShared<TinySubmesh>(grassVertices, grassIndices);
-    grassMeshIndex = resGroup.addMesh("GrassMesh", grassMesh);
+    // Create empty model
+    TinyModel grassModel;
 
-    // Create material
-    Az3D::TinyMaterial grassMaterial;
+    // Create mesh
+    TinySubmesh grassSubmesh = TinySubmesh(grassVertices, grassIndices, 0);
+
+    TinyTexture grassTexture = TinyLoader::loadImage("Assets/Textures/Grass.png");
+    TinyMaterial grassMaterial;
     grassMaterial.discardThreshold = 0.9f;
     grassMaterial.addressMode = TAddressMode::ClampToEdge;
-    grassMaterial.albTexture = resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png");
+    grassMaterial.albTexture = 0; // First texture
 
-    grassMaterialIndex = resGroup.addMaterial("GrassMaterial", grassMaterial);
+    grassModel.submeshes.push_back(grassSubmesh);
+    grassModel.materials.push_back(grassMaterial);
+    grassModel.textures.push_back(grassTexture);
+
+    grassModelIndex = resGroup.addModel(grassModel);
 }
 
 
@@ -189,17 +197,25 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
         4, 5, 6, 6, 7, 4
     };
 
-    // Create mesh
-    SharedPtr<TinySubmesh> grassMesh = MakeShared<TinySubmesh>(grassVertices, grassIndices);
-    grassMeshIndex = resGroup.addMesh("GrassMesh", grassMesh);
+    // Create empty model
+    TinyModel grassModel;
 
-    // Create material
-    Az3D::TinyMaterial grassMaterial;
+    // Create mesh
+    TinySubmesh grassSubmesh = TinySubmesh(grassVertices, grassIndices, 0);
+
+    TinyTexture grassTexture = TinyLoader::loadImage("Assets/Textures/Grass.png");
+    TinyMaterial grassMaterial;
     grassMaterial.discardThreshold = 0.9f;
     grassMaterial.addressMode = TAddressMode::ClampToEdge;
-    grassMaterial.albTexture = resGroup.addTexture("GrassTexture", "Assets/Textures/Grass.png");
+    grassMaterial.albTexture = 0; // First texture
 
-    grassMaterialIndex = resGroup.addMaterial("GrassMaterial", grassMaterial);
+    grassModel.submeshes.push_back(grassSubmesh);
+    grassModel.materials.push_back(grassMaterial);
+    grassModel.textures.push_back(grassTexture);
+
+    grassModel.printDebug();
+
+    grassModelIndex = resGroup.addModel(grassModel);
 }
 
 void Grass::generateGrassInstances(std::mt19937& generator) {
@@ -337,7 +353,6 @@ void Grass::generateGrassInstances(std::mt19937& generator) {
                 StaticInstance grassInstance;
                 grassInstance.setTransform(grassTrform.pos, grassTrform.rot, grassTrform.scl);
                 grassInstance.multColor = grassColor;
-                grassInstance.properties.x = grassMaterialIndex;
 
                 // Store wind properties
 
@@ -407,18 +422,25 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
         }
     }
     
-    // Create terrain mesh and material
-    SharedPtr<TinySubmesh> terrainMesh = MakeShared<TinySubmesh>(terrainVertices, terrainIndices);
+    // SharedPtr<TinySubmesh> terrainMesh = MakeShared<TinySubmesh>(terrainVertices, terrainIndices);
 
-    terrainMeshIndex = resGroup.addMesh("TerrainMesh", terrainMesh);
+    // terrainMeshIndex = resGroup.addMesh("TerrainMesh", terrainMesh);
 
-    TinyMaterial terrainMaterial;
-    terrainMaterialIndex = resGroup.addMaterial("TerrainMaterial", terrainMaterial);
+    // TinyMaterial terrainMaterial;
+    // terrainMaterialIndex = resGroup.addMaterial("TerrainMaterial", terrainMaterial);
+
+        // Create empty model
+    TinyModel terrainModel;
+
+    // Create mesh
+    TinySubmesh terrainSubmesh = TinySubmesh(terrainVertices, terrainIndices);
+    terrainModel.submeshes.push_back(terrainSubmesh);
+
+    terrainModelIndex = resGroup.addModel(terrainModel);
 
     // Create terrain instance
     StaticInstance terrainData;
     terrainData.multColor = glm::vec4(0.3411f, 0.5157f, 0.1549f, 1.0f);
-    terrainData.properties.x = terrainMaterialIndex;
 
     terrainData3Ds.push_back(terrainData);
 }

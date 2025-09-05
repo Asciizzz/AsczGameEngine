@@ -10,24 +10,7 @@ using namespace Az3D;
 // ======================= General resource group stuff =======================
 // ============================================================================
 
-ResourceGroup::ResourceGroup(Device* vkDevice):
-vkDevice(vkDevice) {
-
-    // Create default white pixel texture manually
-    TinyTexture defaultWhitePixel;
-    defaultWhitePixel.width = 1;
-    defaultWhitePixel.height = 1;
-    defaultWhitePixel.channels = 4;
-    defaultWhitePixel.data = {255, 255, 255, 255}; // White pixel
-    
-    auto defaultTexturePtr = MakeShared<TinyTexture>(std::move(defaultWhitePixel));
-    auto defaultTextureVK = createTextureVK(*defaultTexturePtr, 1);
-    textures.insert(textures.begin(), std::move(defaultTexturePtr)); // Insert at index 0 with move
-    textureVKs.insert(textureVKs.begin(), std::move(defaultTextureVK));
-
-    TinyMaterial defaultMaterial;
-    materials.push_back(MakeShared<TinyMaterial>(std::move(defaultMaterial)));
-}
+ResourceGroup::ResourceGroup(Device* vkDevice): vkDevice(vkDevice) {}
 
 void ResourceGroup::cleanup() {
     VkDevice lDevice = vkDevice->lDevice;
@@ -39,24 +22,18 @@ void ResourceGroup::cleanup() {
         if (texVK->memory != VK_NULL_HANDLE) vkFreeMemory(lDevice, texVK->memory, nullptr);
     }
     textureVKs.clear();
-    
-    // Then cleanup raw texture data
-    textures.clear();
 
     // Cleanup textures' samplers
     for (auto& sampler : samplers) {
         if (sampler != VK_NULL_HANDLE) vkDestroySampler(lDevice, sampler, nullptr);
     }
     samplers.clear();
-
-    // Skeleton descriptor cleanup is handled automatically by SharedPtr destructors
 }
 
 void ResourceGroup::uploadAllToGPU() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    createMeshBuffers();
-    createRigSkeleBuffers();
+    createComponentVKsFromModels();
 
     createMaterialBuffer();
     createMaterialDescSet();
@@ -64,154 +41,88 @@ void ResourceGroup::uploadAllToGPU() {
     createTextureSamplers();
     createTextureDescSet();
 
+    createRigSkeleBuffers();
     createRigSkeleDescSets();
 }
 
-
-size_t ResourceGroup::addTexture(std::string name, std::string imagePath, uint32_t mipLevels) {
-    std::string uniqueName = getUniqueName(name, textureNameCounts);
-
-    TinyTexture texture = TinyLoader::loadImage(imagePath);
-    SharedPtr<TinyTexture> texturePtr = MakeShared<TinyTexture>(std::move(texture));
-    SharedPtr<TextureVK> textureVK = createTextureVK(*texturePtr, mipLevels);
-
-    // If null return the default 0 index
-    if (!textureVK) return 0;
-
-    size_t index = textures.size();
-    textures.push_back(texturePtr);
-    textureVKs.push_back(textureVK);
-
-    textureNameToIndex[uniqueName] = index;
-    return index;
-}
-
-size_t ResourceGroup::addMaterial(std::string name, const TinyMaterial& material) {
-    std::string uniqueName = getUniqueName(name, materialNameCounts);
-    
-    size_t index = materials.size();
-    materials.push_back(MakeShared<TinyMaterial>(material));
-
-    materialNameToIndex[uniqueName] = index;
-    return index;
-}
-
-size_t ResourceGroup::addMesh(std::string name, SharedPtr<TinySubmesh> mesh) {
-    std::string uniqueName = getUniqueName(name, meshNameCounts);
-    
-    size_t index = meshes.size();
-    meshes.push_back(mesh);
-
-    meshNameToIndex[uniqueName] = index;
-    return index;
-}
-
-size_t ResourceGroup::addMesh(std::string name, std::string filePath) {
-    std::string uniqueName = getUniqueName(name, meshNameCounts);
-
-    // For now, assume we're loading a static mesh
-    // TODO: Add logic to determine mesh type from file
-    std::vector<VertexStatic> vertices;
-    std::vector<uint32_t> indices;
-    // Load using TinyLoader (this will need to be updated)
-    // StaticMesh newMesh = TinyLoader::loadStaticMesh(filePath);
-    // vertices = newMesh.vertices;
-    // indices = newMesh.indices;
-    
-    SharedPtr<TinySubmesh> mesh = MakeShared<TinySubmesh>(vertices, indices);
-    
-    size_t index = meshes.size();
-    meshes.push_back(mesh);
-
-    meshNameToIndex[uniqueName] = index;
-    return index;
-}
-
-size_t ResourceGroup::addRig(std::string name, SharedPtr<TinySkeleton> skeleton) {
-    std::string uniqueName = getUniqueName(name, rigNameCounts);
-
-    size_t index = skeletons.size();
-    skeletons.push_back(skeleton);
-
-    rigNameToIndex[uniqueName] = index;
-    return index;
-}
-
-size_t ResourceGroup::addRig(std::string name, std::string filePath) {
-    std::string uniqueName = getUniqueName(name, rigNameCounts);
-
-    TempModel model = TinyLoader::loadTempModel(filePath, true);
-
-    size_t index = skeletons.size();
-    skeletons.push_back(MakeShared<TinySkeleton>(std::move(model.skeleton)));
-    rigNameToIndex[uniqueName] = index;
-    return index;
-}
-
-std::pair<size_t, size_t> ResourceGroup::addRiggedModel(std::string name, std::string filePath) {
-    std::string uniqueName = getUniqueName(name, meshNameCounts);
-    std::string skeletonUniqueName = getUniqueName(name + "_skeleton", rigNameCounts);
-
-    TempModel skeleton = TinyLoader::loadTempModel(filePath, true); // Load both mesh and skeleton
-    
-    // Add mesh - convert VertexRig to unified mesh
-    SharedPtr<TinySubmesh> mesh = MakeShared<TinySubmesh>(std::move(skeleton.mesh));
-    size_t meshIndex = meshes.size();
-    meshes.push_back(mesh);
-    meshNameToIndex[uniqueName] = meshIndex;
-    
-    // Add skeleton
-    size_t rigIndex = skeletons.size();
-    skeletons.push_back(MakeShared<TinySkeleton>(std::move(skeleton.skeleton)));
-    rigNameToIndex[skeletonUniqueName] = rigIndex;
-
-    return { meshIndex, rigIndex };
-}
-
-size_t ResourceGroup::getTextureIndex(std::string name) const {
-    auto it = textureNameToIndex.find(name);
-    return it != textureNameToIndex.end() ? it->second : SIZE_MAX;
-}
-
-size_t ResourceGroup::getMaterialIndex(std::string name) const {
-    auto it = materialNameToIndex.find(name);
-    return it != materialNameToIndex.end() ? it->second : SIZE_MAX;
-}
-
-size_t ResourceGroup::getMeshIndex(std::string name) const {
-    auto it = meshNameToIndex.find(name);
-    return it != meshNameToIndex.end() ? it->second : SIZE_MAX;
-}
-
-size_t ResourceGroup::getRigIndex(std::string name) const {
-    auto it = rigNameToIndex.find(name);
-    return it != rigNameToIndex.end() ? it->second : SIZE_MAX;
-}
+// ===========================================================================
+// Special function to convert TinyModel to Vulkan resources with lookup table
+// ===========================================================================
 
 
-TinyTexture* ResourceGroup::getTexture(std::string name) const {
-    size_t index = getTextureIndex(name);
-    return index != SIZE_MAX ? textures[index].get() : nullptr;
-}
+void ResourceGroup::createComponentVKsFromModels() {
+    // Create default texture and material
+    MaterialVK defaultMat{};
+    materialVKs.push_back(defaultMat);
 
-TinyMaterial* ResourceGroup::getMaterial(std::string name) const {
-    size_t index = getMaterialIndex(name);
-    return index != SIZE_MAX ? materials[index].get() : nullptr;
-}
+    TinyTexture defaultTex;
+    defaultTex.width = 1;
+    defaultTex.height = 1;
+    defaultTex.channels = 4;
+    defaultTex.data = { 255, 255, 255, 255 }; // White pixel
+    auto defaultTexVK = createTextureVK(defaultTex);
+    textureVKs.push_back(std::move(defaultTexVK));
 
-TinySubmesh* ResourceGroup::getMesh(std::string name) const {
-    size_t index = getMeshIndex(name);
-    return index != SIZE_MAX ? meshes[index].get() : nullptr;
-}
+    for (auto& model : models) {
+        TinyModelVK modelVK;
 
-TinySkeleton* ResourceGroup::getSkeleton(std::string name) const {
-    size_t index = getRigIndex(name);
-    return index != SIZE_MAX ? skeletons[index].get() : nullptr;
-}
+        std::vector<size_t> tempGlobalTextures; // A temporary list to convert local to global indices
+        for (const auto& texture : model.textures) {
+            auto texVK = createTextureVK(texture);
+            tempGlobalTextures.push_back(textureVKs.size());
+            textureVKs.push_back(std::move(texVK));
+        }
 
-TextureVK* ResourceGroup::getTextureVK(std::string name) const {
-    size_t index = getTextureIndex(name);
-    return index != SIZE_MAX ? textureVKs[index].get() : nullptr;
+        std::vector<size_t> tempGlobalMaterials; // A temporary list to convert local to global indices
+        for (const auto& material : model.materials) {
+            MaterialVK matVK{};
+
+            // Shading params
+            matVK.shadingParams.x = material.shading ? 1.0f : 0.0f;
+            matVK.shadingParams.y = static_cast<float>(material.toonLevel);
+            matVK.shadingParams.z = material.normalBlend;
+            matVK.shadingParams.w = material.discardThreshold;
+
+            // Texture address mode
+            matVK.texIndices.x = static_cast<uint32_t>(material.addressMode);
+
+            // Texture indices
+            bool validAlbTex = material.albTexture >= 0 && material.albTexture < static_cast<int>(model.textures.size());
+            matVK.texIndices.y = validAlbTex ? static_cast<uint32_t>(tempGlobalTextures[material.albTexture]) : 0;
+
+            bool validNrmlTex = material.nrmlTexture >= 0 && material.nrmlTexture < static_cast<int>(model.textures.size());
+            matVK.texIndices.z = validNrmlTex ? static_cast<uint32_t>(tempGlobalTextures[material.nrmlTexture]) : 0;
+
+            tempGlobalMaterials.push_back(materialVKs.size());
+            materialVKs.push_back(matVK);
+        }
+
+        for (size_t i = 0; i < model.submeshes.size(); ++i) {
+            const auto& submesh = model.submeshes[i];
+
+            size_t submeshVK_index = addSubmeshBuffers(submesh);
+            modelVK.submeshVK_indices.push_back(submeshVK_index);
+            
+            uint32_t indexCount = submesh.indices.size();
+            modelVK.submesh_indexCounts.push_back(indexCount);
+
+            int localMatIndex = model.submeshes[i].matIndex;
+
+            bool validMat = localMatIndex >= 0 && localMatIndex < static_cast<int>(model.materials.size());
+            size_t globalMatIndex = validMat ? tempGlobalMaterials[localMatIndex] : 0;
+            modelVK.materialVK_indices.push_back(globalMatIndex);
+        }
+
+        modelVK.skeletonIndex = -1;
+        if (model.skeleton.names.size() > 0) {
+            // Create skeleton
+            SharedPtr<TinySkeleton> skeleton = std::make_shared<TinySkeleton>(model.skeleton);
+            modelVK.skeletonIndex = skeletons.size();
+            skeletons.push_back(skeleton);
+        }
+
+        modelVKs.push_back(modelVK);
+    }
 }
 
 
@@ -220,7 +131,7 @@ TextureVK* ResourceGroup::getTextureVK(std::string name) const {
 // ============================================================================
 
 void ResourceGroup::createMaterialBuffer() {
-    VkDeviceSize bufferSize = sizeof(TinyMaterial) * materials.size();
+    VkDeviceSize bufferSize = sizeof(MaterialVK) * materialVKs.size();
 
     // --- staging buffer (CPU visible) ---
     BufferData stagingBuffer;
@@ -231,11 +142,6 @@ void ResourceGroup::createMaterialBuffer() {
     );
     stagingBuffer.createBuffer();
 
-    std::vector<MaterialVK> materialVKs(materials.size());
-    for (size_t i = 0; i < materials.size(); ++i) {
-        materialVKs[i].fromTinyMaterial(*materials[i]);
-    }
-    // Upload the data, not the pointers
     stagingBuffer.uploadData(materialVKs.data());
 
     // --- Device-local buffer (GPU only, STORAGE + DST) ---
@@ -490,54 +396,48 @@ void generateMipmapsImpl(AzVulk::Device* vkDevice, VkImage image, VkFormat image
 // ========================= TEXTURES =========================================
 // ============================================================================
 
-SharedPtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, uint32_t mipLevels) {
-    try {
-        TextureVK textureVK;
+UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, uint32_t mipLevels) {
+    TextureVK textureVK;
 
-        // Use the provided TinyTexture data
-        const uint8_t* pixels = texture.data.data();
-        int width = texture.width;
-        int height = texture.height;
+    // Use the provided TinyTexture data
+    const uint8_t* pixels = texture.data.data();
+    int width = texture.width;
+    int height = texture.height;
 
-        VkDeviceSize imageSize = width * height * 4; // Force 4 channels (RGBA)
+    VkDeviceSize imageSize = width * height * 4; // Force 4 channels (RGBA)
 
-        if (texture.data.empty()) throw std::runtime_error("Failed to load texture from TinyTexture");
+    if (texture.data.empty()) throw std::runtime_error("Failed to load texture from TinyTexture");
 
-        // Dynamic mipmap levels (if not provided)
-        mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1) * !mipLevels;
+    // Dynamic mipmap levels (if not provided)
+    mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1) * !mipLevels;
 
 
-        BufferData stagingBuffer;
-        stagingBuffer.initVkDevice(vkDevice);
-        stagingBuffer.setProperties(
-            imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        stagingBuffer.createBuffer();
-        stagingBuffer.uploadData(pixels);
+    BufferData stagingBuffer;
+    stagingBuffer.initVkDevice(vkDevice);
+    stagingBuffer.setProperties(
+        imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    stagingBuffer.createBuffer();
+    stagingBuffer.uploadData(pixels);
 
-        // Note: TinyTexture cleanup is handled by caller
+    // Note: TinyTexture cleanup is handled by caller
 
-        // Create texture image
-        createImageImpl(vkDevice, width, height, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureVK.image, textureVK.memory);
+    // Create texture image
+    createImageImpl(vkDevice, width, height, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureVK.image, textureVK.memory);
 
-        // Transfer data and generate mipmaps
-        transitionImageLayoutImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
-                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-        copyBufferToImageImpl(vkDevice, stagingBuffer.buffer, textureVK.image, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-        generateMipmapsImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
+    // Transfer data and generate mipmaps
+    transitionImageLayoutImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+    copyBufferToImageImpl(vkDevice, stagingBuffer.buffer, textureVK.image, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    generateMipmapsImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
 
-        // Create image view
-        createImageViewImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, textureVK.view);
+    // Create image view
+    createImageViewImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, textureVK.view);
 
-        return MakeShared<TextureVK>(textureVK);
-
-    } catch (const std::exception& e) {
-        std::cout << "Application error: " << e.what() << std::endl;
-        return nullptr; // Return default texture index on failure
-    }
+    return MakeUnique<TextureVK>(textureVK);
 }
 
 
@@ -641,79 +541,78 @@ void ResourceGroup::createTextureDescSet() {
 // =========================== MESH STATIC ====================================
 // ============================================================================
 
-void ResourceGroup::createMeshBuffers() {
-    for (int i = 0; i < meshes.size(); ++i) {
-        const auto* mesh = meshes[i].get();
-        const auto& vertexData = mesh->vertexData;
-        const auto& indices = mesh->indices;
+size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
+    const auto& vertexData = submesh.vertexData;
+    const auto& indices = submesh.indices;
 
-        UniquePtr<BufferData> vBufferData = MakeUnique<BufferData>();
-        UniquePtr<BufferData> iBufferData = MakeUnique<BufferData>();
+    UniquePtr<BufferData> vBufferData = MakeUnique<BufferData>();
+    UniquePtr<BufferData> iBufferData = MakeUnique<BufferData>();
 
-        // Upload vertex data
-        BufferData vertexStagingBuffer;
-        vertexStagingBuffer.initVkDevice(vkDevice);
-        vertexStagingBuffer.setProperties(
-            vertexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        vertexStagingBuffer.createBuffer();
-        vertexStagingBuffer.mapAndCopy(vertexData.data());
+    // Upload vertex data
+    BufferData vertexStagingBuffer;
+    vertexStagingBuffer.initVkDevice(vkDevice);
+    vertexStagingBuffer.setProperties(
+        vertexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    vertexStagingBuffer.createBuffer();
+    vertexStagingBuffer.mapAndCopy(vertexData.data());
 
-        vBufferData->initVkDevice(vkDevice);
-        vBufferData->setProperties(
-            vertexData.size(),
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-        vBufferData->createBuffer();
+    vBufferData->initVkDevice(vkDevice);
+    vBufferData->setProperties(
+        vertexData.size(),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    vBufferData->createBuffer();
 
-        TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+    TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
-        VkBufferCopy vertexCopyRegion{};
-        vertexCopyRegion.srcOffset = 0;
-        vertexCopyRegion.dstOffset = 0;
-        vertexCopyRegion.size = vertexData.size();
+    VkBufferCopy vertexCopyRegion{};
+    vertexCopyRegion.srcOffset = 0;
+    vertexCopyRegion.dstOffset = 0;
+    vertexCopyRegion.size = vertexData.size();
 
-        vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
-        vBufferData->hostVisible = false;
+    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
+    vBufferData->hostVisible = false;
 
-        vertexCopyCmd.endAndSubmit();
+    vertexCopyCmd.endAndSubmit();
 
-        // Upload index data
-        BufferData indexStagingBuffer;
-        indexStagingBuffer.initVkDevice(vkDevice);
-        indexStagingBuffer.setProperties(
-            indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        indexStagingBuffer.createBuffer();
-        indexStagingBuffer.mapAndCopy(indices.data());
+    // Upload index data
+    BufferData indexStagingBuffer;
+    indexStagingBuffer.initVkDevice(vkDevice);
+    indexStagingBuffer.setProperties(
+        indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+    indexStagingBuffer.createBuffer();
+    indexStagingBuffer.mapAndCopy(indices.data());
 
-        iBufferData->initVkDevice(vkDevice);
-        iBufferData->setProperties(
-            indices.size() * sizeof(uint32_t),
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-        iBufferData->createBuffer();
+    iBufferData->initVkDevice(vkDevice);
+    iBufferData->setProperties(
+        indices.size() * sizeof(uint32_t),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    iBufferData->createBuffer();
 
-        TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
+    TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
-        VkBufferCopy indexCopyRegion{};
-        indexCopyRegion.srcOffset = 0;
-        indexCopyRegion.dstOffset = 0;
-        indexCopyRegion.size = indices.size() * sizeof(uint32_t);
+    VkBufferCopy indexCopyRegion{};
+    indexCopyRegion.srcOffset = 0;
+    indexCopyRegion.dstOffset = 0;
+    indexCopyRegion.size = indices.size() * sizeof(uint32_t);
 
-        vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData->buffer, 1, &indexCopyRegion);
-        iBufferData->hostVisible = false;
+    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData->buffer, 1, &indexCopyRegion);
+    iBufferData->hostVisible = false;
 
-        indexCopyCmd.endAndSubmit();
+    indexCopyCmd.endAndSubmit();
 
-        // Append buffers
-        vertexBuffers.push_back(std::move(vBufferData));
-        indexBuffers.push_back(std::move(iBufferData));
-    }
+    // Append buffers
+    subMeshVertexBuffers.push_back(std::move(vBufferData));
+    subMeshIndexBuffers.push_back(std::move(iBufferData));
+
+    return subMeshVertexBuffers.size() - 1; // Return index of newly added buffers
 }
 
 // ============================================================================
@@ -805,20 +704,4 @@ void ResourceGroup::createRigSkeleDescSets() {
 
         vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
     }
-}
-
-// ============================================================================
-// ========================= HELPER FUNCTIONS =================================
-// ============================================================================
-
-std::string ResourceGroup::getUniqueName(const std::string& baseName, UnorderedMap<std::string, size_t>& nameCounts) {
-    // Check if this is the first occurrence of this base name
-    if (nameCounts.find(baseName) == nameCounts.end()) {
-        nameCounts[baseName] = 1;
-        return baseName;
-    }
-    
-    // This base name already exists, increment count and create suffixed name
-    size_t count = nameCounts[baseName]++;
-    return baseName + "_" + std::to_string(count);
 }

@@ -17,8 +17,7 @@ public:
     ParticleManager() = default;
     ~ParticleManager() = default;
 
-    size_t modelHash = 0;
-    size_t materialIndex = 0;
+    size_t modelIndex = 0;
 
     size_t particleCount = 0;
     std::vector<Az3D::Transform> particles; // Only store transforms, not full models
@@ -165,19 +164,18 @@ public:
 
         this->display_r = display_r;
 
-        // size_t textureIndex = resGroup->addTexture("Alb_Particle", "Assets/Textures/Selen.png");
-        size_t textureIndex = 0;
+        Az3D::TinyModel particleModel;
+        
+        Az3D::TinySubmesh submesh = Az3D::TinyLoader::loadStaticMeshFromOBJ("Assets/Shapes/Icosphere.obj");
+
+        Az3D::TinyTexture texture = Az3D::TinyLoader::loadImage("Assets/Textures/Selen.png");
 
         Az3D::TinyMaterial material;
         material.toonLevel = 2;
-        material.albTexture = textureIndex;
-
-        materialIndex = resGroup->addMaterial("Particle", material);
-
-        size_t meshIndex = resGroup->addMesh("Particle", "Assets/Shapes/Icosphere.obj");
+        material.albTexture = 0;
 
         instanceGroup.initVkDevice(vkDevice);
-        instanceGroup.meshIndex = meshIndex;
+        instanceGroup.modelIndex = resGroup->addModel(particleModel);
 
         particleCount = count;
         radius = r;
@@ -229,7 +227,6 @@ public:
             StaticInstance particleData;
             particleData.setTransform(particles[i].pos, particles[i].rot, display_r);
             particleData.multColor = glm::vec4(1.0f);
-            particleData.properties.x = static_cast<int>(materialIndex);
 
             particles_data[i] = particleData;
 
@@ -497,7 +494,6 @@ public:
             StaticInstance data;
             data.setTransform(particles[p].pos, particles[p].rot, display_r);
             data.multColor = glm::vec4(particleColor, 1.0f);
-            data.properties.x = static_cast<int>(materialIndex);
 
             particles_data[p] = data;
         });

@@ -13,7 +13,6 @@ namespace Az3D {
 struct StaticInstance {
     StaticInstance() = default;
 
-    glm::uvec4 properties = glm::uvec4(0); // materialIndex, indicator, empty, empty
     glm::vec4 trformT_S = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Translation (x,y,z) and Scale (w)
     glm::quat trformR = glm::quat(1.0f, 0.0f, 0.0f, 0.0f); // Rotation (w,x,y,z), basically a vec4
 
@@ -35,7 +34,7 @@ struct StaticInstanceGroup {
     StaticInstanceGroup(const StaticInstanceGroup&) = delete;
     StaticInstanceGroup& operator=(const StaticInstanceGroup&) = delete;
 
-    size_t prevInstanceCount = 0;
+    uint32_t prevInstanceCount = 0;
     std::vector<StaticInstance> datas;
     size_t addInstance(const StaticInstance& data);
 
@@ -44,7 +43,7 @@ struct StaticInstanceGroup {
     void recreateBufferData();
     void updateBufferData();
 
-    uint32_t meshIndex = SIZE_MAX; // We only need this value
+    uint32_t modelIndex = 0;
 };
 
 } // namespace Az3D

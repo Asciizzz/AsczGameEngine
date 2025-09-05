@@ -12,6 +12,10 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     vec4 cameraUp;       // xyz: up, w: far
 } glb;
 
+layout(push_constant) uniform PushConstant {
+    uvec4 properties;
+} pushConstant;
+
 struct Material {
     vec4  shadingParams; // <shadingFlag, toonLevel, normalBlend, discardThreshold>
     uvec4 texIndices;    // <addressMode, albedo, normal, unused>
@@ -24,12 +28,11 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
 layout(set = 2, binding = 0) uniform texture2D textures[];
 layout(set = 2, binding = 1) uniform sampler   samplers[];
 
-layout(location = 0) in flat uvec4 fragProperties;
-layout(location = 1) in vec4 fragMultColor;
-layout(location = 2) in vec2 fragUV;
-layout(location = 3) in vec3 fragWorldPos;
-layout(location = 4) in vec3 fragWorldNrml;
-layout(location = 5) in vec4 fragTangent;
+layout(location = 0) in vec4 fragMultColor;
+layout(location = 1) in vec2 fragUV;
+layout(location = 2) in vec3 fragWorldPos;
+layout(location = 3) in vec3 fragWorldNrml;
+layout(location = 4) in vec4 fragTangent;
 
 layout(location = 0) out vec4 outColor;
 
@@ -48,7 +51,7 @@ vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
 
 
 void main() {
-    Material material = materials[fragProperties.x];
+    Material material = materials[pushConstant.properties.x];
     
     uint addressMode = material.texIndices.x;
 

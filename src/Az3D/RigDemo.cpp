@@ -113,10 +113,11 @@ void RigDemo::computeBoneRecursive(size_t boneIndex, std::vector<bool>& processe
     }
 }
 
-void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>& skeleton) {
+void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>& skeleton, size_t modelIndex) {
     using namespace AzVulk;
 
     this->skeleton = skeleton;
+    this->modelIndex = modelIndex;
 
     // skeleton->debugPrintHierarchy();
 

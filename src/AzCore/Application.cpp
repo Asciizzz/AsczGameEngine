@@ -93,28 +93,17 @@ void Application::initComponents() {
     grassConfig.falloffRadius = 25.0f;
     grassConfig.influenceFactor = 0.02f;
 
-    // The genesis model
-    resGroup->addRiggedModel("Demo", "Assets/Characters/Spy/Spy.gltf");
-    TinyMaterial material;
-    material.toonLevel = 2;
-    material.albTexture = resGroup->addTexture("Genesis_Alb", "Assets/Characters/Spy/Spy_red.png");
-    resGroup->addMaterial("Genesis", material);
-
-    rigDemo = MakeUnique<Az3D::RigDemo>();
-    rigDemo->init(vkDevice.get(), resGroup->skeletons[0]);
-    rigDemo->meshIndex = 0;
-
-    // THE ENEMY SPY HAS BREACHED THE PERIMETER
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf");
-    testModel.printDebug();
-
-
-    // Initialize grass system
     grassSystem = MakeUnique<Grass>(grassConfig);
     grassSystem->initialize(*resGroup, vkDevice.get());
 
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
+
+    // THE ENEMY SPY HAS BREACHED THE PERIMETER
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf");
+    testModel.printDebug();
+
+    resGroup->addModel(testModel);
 
     // glm::vec3 boundMin = resGroup->getStaticMesh("TerrainMesh")->nodes[0].min;
     // glm::vec3 boundMax = resGroup->getStaticMesh("TerrainMesh")->nodes[0].max;
@@ -133,6 +122,9 @@ void Application::initComponents() {
 // PLAYGROUND END HERE 
 
     resGroup->uploadAllToGPU();
+
+    rigDemo = MakeUnique<Az3D::RigDemo>();
+    rigDemo->init(vkDevice.get(), resGroup->skeletons[0], 0); // Skeleton 0, Model 0
 
     auto glbLayout = glbUBOManager->getDescLayout();
     auto matLayout = resGroup->getMatDescLayout();
@@ -434,43 +426,43 @@ void Application::mainLoop() {
             grassSystem->updateWindAnimation(dTime, use_gpu);
         }
 
-        // Particle physics toggle and teleport
-        static bool hold_p = false;
-        static bool particlePhysicsEnabled = false;
-        if (k_state[SDL_SCANCODE_P] && !hold_p) {
-            // Toggle particle physics
-            if (!k_state[SDL_SCANCODE_LSHIFT]) { 
-                particlePhysicsEnabled = !particlePhysicsEnabled;
-            } else {
-                particlePhysicsEnabled = false;
+        // // Particle physics toggle and teleport
+        // static bool hold_p = false;
+        // static bool particlePhysicsEnabled = false;
+        // if (k_state[SDL_SCANCODE_P] && !hold_p) {
+        //     // Toggle particle physics
+        //     if (!k_state[SDL_SCANCODE_LSHIFT]) { 
+        //         particlePhysicsEnabled = !particlePhysicsEnabled;
+        //     } else {
+        //         particlePhysicsEnabled = false;
 
-                // Teleport every particle to the current location
-                std::vector<Transform>& particles = particleManager->particles;
-                std::vector<StaticInstance>& particlesData = particleManager->particles_data;
+        //         // Teleport every particle to the current location
+        //         std::vector<Transform>& particles = particleManager->particles;
+        //         std::vector<StaticInstance>& particlesData = particleManager->particles_data;
 
-                std::vector<size_t> indices(particles.size());
-                std::iota(indices.begin(), indices.end(), 0);
+        //         std::vector<size_t> indices(particles.size());
+        //         std::iota(indices.begin(), indices.end(), 0);
 
-                std::for_each(indices.begin(), indices.end(), [&](size_t i) {
-                    particles[i].pos = camRef.pos;
+        //         std::for_each(indices.begin(), indices.end(), [&](size_t i) {
+        //             particles[i].pos = camRef.pos;
 
-                    particlesData[i].setTransform(particles[i].pos, particles[i].rot);
-                });
-            }
+        //             particlesData[i].setTransform(particles[i].pos, particles[i].rot);
+        //         });
+        //     }
 
-            hold_p = true;
-        } else if (!k_state[SDL_SCANCODE_P]) {
-            hold_p = false;
-        }
+        //     hold_p = true;
+        // } else if (!k_state[SDL_SCANCODE_P]) {
+        //     hold_p = false;
+        // }
 
-        if (particlePhysicsEnabled) {
-            // particleManager->updatePhysic(dTime, resGroup->getStaticMesh("TerrainMesh"), glm::mat4(1.0f));
-        };
-        particleManager->updateRender();
+        // if (particlePhysicsEnabled) {
+        //     // particleManager->updatePhysic(dTime, resGroup->getStaticMesh("TerrainMesh"), glm::mat4(1.0f));
+        // };
+        // particleManager->updateRender();
 
 // =================================
 
-            grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
+        // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
         // Use the new explicit rendering interface
         
         uint32_t imageIndex = rendererRef.beginFrame(mainRenderPass->get(), msaaManager->hasMSAA);
@@ -485,14 +477,14 @@ void Application::mainLoop() {
             // Draw grass system
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
 
-            RigDemo::FunParams funParams;
-            funParams.add(dTime);
-            funParams.add(camera->pos);
+            // RigDemo::FunParams funParams;
+            // funParams.add(dTime);
+            // funParams.add(camera->pos);
 
-            rigDemo->funFunction(funParams);
-            rigDemo->updateBuffer();
+            // rigDemo->funFunction(funParams);
+            // rigDemo->updateBuffer();
 
-            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
+            // rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
 
             grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
