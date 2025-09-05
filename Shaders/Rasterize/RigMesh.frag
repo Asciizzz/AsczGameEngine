@@ -8,7 +8,7 @@ layout(push_constant) uniform PushConstant {
 
 struct Material {
     vec4  shadingParams; // shadingFlag, toonLevel, normalBlend, discardThreshold
-    uvec4 texIndices;    // albedo, albedoSampler, normal, normalSampler
+    uvec4 texIndices;    // addressMode, albedo, normal, unused
 };
 
 layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
@@ -41,11 +41,16 @@ vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
 void main() {
     Material material = materials[pushConstant.properties.x];
 
-    uint albTexIndex = material.texIndices.x;
-    uint albSamplerIndex = material.texIndices.y;
-    vec4 texColor = getTexture(albTexIndex, albSamplerIndex, fragUV);
+    uint addressMode = material.texIndices.x;
 
-    // texColor = debugColor;
+    // Albedo texture
+    uint albTexIndex = material.texIndices.y;
+    vec4 texColor = getTexture(albTexIndex, addressMode, fragUV);
+
+    // Discard low opacity fragments
+    float discardThreshold = material.shadingParams.w;
+    if (texColor.a < discardThreshold) { discard; }
+
     uint toonLevel = uint(material.shadingParams.y);
     float finalLight = applyToonShading(debugLight, toonLevel);
     finalLight = 0.3 + finalLight * 0.7; // Ambient

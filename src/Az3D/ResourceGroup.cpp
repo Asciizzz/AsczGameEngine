@@ -233,28 +233,7 @@ void ResourceGroup::createMaterialBuffer() {
 
     std::vector<MaterialVK> materialVKs(materials.size());
     for (size_t i = 0; i < materials.size(); ++i) {
-
-        MaterialVK mVK;
-        const TinyMaterial& m = *materials[i];
-
-        mVK.shadingParams = glm::vec4(
-            m.shading ? 1.0f : 0.0f,
-            static_cast<float>(m.toonLevel),
-            m.normalBlend,
-            m.discardThreshold
-        );
-
-        bool hasAlb = (m.albTexture >= 0 && m.albTexture < static_cast<int>(textures.size()));
-        bool hasNrml = (m.nrmlTexture >= 0 && m.nrmlTexture < static_cast<int>(textures.size()));
-
-        mVK.texIndices = glm::uvec4(
-            hasAlb ? static_cast<uint32_t>(m.albTexture) : 0,
-            static_cast<uint32_t>(m.addressMode),
-            hasNrml ? static_cast<uint32_t>(m.nrmlTexture) : 0,
-            static_cast<uint32_t>(m.addressMode)
-        );
-
-        materialVKs[i] = mVK;
+        materialVKs[i].fromTinyMaterial(*materials[i]);
     }
     // Upload the data, not the pointers
     stagingBuffer.uploadData(materialVKs.data());

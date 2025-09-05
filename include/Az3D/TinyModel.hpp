@@ -173,12 +173,4 @@ struct TinyModel {
     // Future: animations
 };
 
-// Index pointing to certain Vulkan elements
-struct TinyModelVkPtr {
-    std::vector<size_t> submeshIndices;
-    std::vector<size_t> materialIndices;
-    std::vector<size_t> textureIndices;
-    size_t skeletonIndex = -1;
-};
-
 } // namespace Az3D

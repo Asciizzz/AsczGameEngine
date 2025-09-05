@@ -14,7 +14,7 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 
 struct Material {
     vec4  shadingParams; // <shadingFlag, toonLevel, normalBlend, discardThreshold>
-    uvec4 texIndices;    // <albedo, albedoAddressMode, normal, normalAddressMode>
+    uvec4 texIndices;    // <addressMode, albedo, normal, unused>
 };
 
 layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
@@ -49,11 +49,12 @@ vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
 
 void main() {
     Material material = materials[fragProperties.x];
+    
+    uint addressMode = material.texIndices.x;
 
     // Albedo texture
-    uint albTexIndex = material.texIndices.x;
-    uint albTexMode = material.texIndices.y;
-    vec4 texColor = getTexture(albTexIndex, albTexMode, fragUV);
+    uint albTexIndex = material.texIndices.y;
+    vec4 texColor = getTexture(albTexIndex, addressMode, fragUV);
 
     // Discard low opacity fragments
     float discardThreshold = material.shadingParams.w;
@@ -61,8 +62,7 @@ void main() {
 
     // Normal mapping
     uint nrmlTexIndex = material.texIndices.z;
-    uint nrmlTexMode = material.texIndices.w;
-    vec3 mapNrml = getTexture(nrmlTexIndex, nrmlTexMode, fragUV).xyz * 2.0 - 1.0;
+    vec3 mapNrml = getTexture(nrmlTexIndex, addressMode, fragUV).xyz * 2.0 - 1.0;
 
     vec3 bitangent = cross(fragWorldNrml, fragTangent.xyz) * fragTangent.w;
     mat3 TBN = mat3(fragTangent.xyz, bitangent, fragWorldNrml);

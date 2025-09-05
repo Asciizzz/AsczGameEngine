@@ -16,7 +16,26 @@ struct TextureVK {
 
 struct MaterialVK {
     glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-    glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albedo>, <normal>, <metallic>, <unsure>
+    glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <addressMode, albTexIndex, nrmlTexIndex, unused>
+
+    void fromTinyMaterial(const TinyMaterial& mat) {
+        shadingParams.x = mat.shading ? 1.0f : 0.0f;
+        shadingParams.y = static_cast<float>(mat.toonLevel);
+        shadingParams.z = mat.normalBlend;
+        shadingParams.w = mat.discardThreshold;
+
+        texIndices.x = static_cast<uint32_t>(mat.addressMode);
+        texIndices.y = mat.albTexture >= 0 ? static_cast<uint32_t>(mat.albTexture) : 0;
+        texIndices.z = mat.nrmlTexture >= 0 ? static_cast<uint32_t>(mat.nrmlTexture) : 0;
+    }
+};
+
+// Index pointing to certain Vulkan elements
+struct TinyModelVK {
+    std::vector<size_t> submeshIndices;
+    std::vector<size_t> materialIndices;
+    std::vector<size_t> textureIndices;
+    size_t skeletonIndex = -1;
 };
 
 // All these resource are static and fixed, created upon load
