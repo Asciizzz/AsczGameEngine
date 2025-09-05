@@ -140,11 +140,7 @@ void Application::initComponents() {
     staticMeshConfig.setLayouts = {glbLayout, matLayout, texLayout};
     staticMeshConfig.vertPath = "Shaders/Rasterize/StaticMesh.vert.spv";
     staticMeshConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
-    
-    // Add push constant range for PushDemo (16 bytes for glm::vec4 color)
-    staticMeshConfig.pushConstantRanges = {
-        {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16}
-    };
+    staticMeshConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
 
     staticMeshPipeline = MakeUnique<PipelineRaster>(lDevice, staticMeshConfig);
     staticMeshPipeline->create();
@@ -157,11 +153,7 @@ void Application::initComponents() {
     rigMeshConfig.vertPath = "Shaders/Rasterize/RigMesh.vert.spv";
     rigMeshConfig.fragPath = "Shaders/Rasterize/RigMesh.frag.spv";
     rigMeshConfig.cullMode = VK_CULL_MODE_NONE;
-    
-    // Add push constant range for RigMesh shaders
-    rigMeshConfig.pushConstantRanges = {
-        {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16}
-    };
+    rigMeshConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
 
     rigMeshPipeline = MakeUnique<PipelineRaster>(lDevice, rigMeshConfig);
     rigMeshPipeline->create();
