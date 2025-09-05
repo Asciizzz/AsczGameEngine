@@ -213,8 +213,6 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     grassModel.materials.push_back(grassMaterial);
     grassModel.textures.push_back(grassTexture);
 
-    grassModel.printDebug();
-
     grassModelIndex = resGroup.addModel(grassModel);
 }
 

@@ -55,6 +55,11 @@ void TinySkeleton::debugPrintRecursive(int boneIndex, int depth) const {
 // MODEL IMPLEMENTATIONS
 // ============================================================================
 
+uint32_t TinyModel::getSubmeshIndexCount(size_t index) const {
+    if (index >= submeshes.size()) return 0;
+    return static_cast<uint32_t>(submeshes[index].indices.size());
+}
+
 void TinyModel::printDebug() const {
     std::cout << "TinyModel Debug Information\n";
     std::cout << std::string(60, '=') << "\n";
