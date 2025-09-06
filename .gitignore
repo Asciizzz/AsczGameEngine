@@ -3,6 +3,8 @@ AsczGame_Release/
 AsczGame_Debug/
 
 .backup/
+.vscode/
+.heavy/
 
 GovernmentData/
 US_SocialSecurity_Lists/
@@ -14,4 +16,3 @@ guide.md
 
 # Custom binary files for my game
 *.ascz
-.vscode/

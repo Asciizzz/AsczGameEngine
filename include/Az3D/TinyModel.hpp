@@ -18,10 +18,6 @@
 
 namespace Az3D {
 
-// Forward declarations
-struct BVHNode;
-struct HitInfo;
-
 // BVH structures (deprecated - to be reimplemented later)
 struct BVHNode {
     glm::vec3 min;
@@ -52,9 +48,6 @@ struct HitInfo {
     uint32_t materialId = 0;
 };
 
-// ============================================================================
-// MESH STRUCTURES
-// ============================================================================
 
 // Uniform mesh structure that holds raw data only
 struct TinySubmesh {
@@ -83,9 +76,6 @@ struct TinySubmesh {
     size_t vertexCount() const { return vertexData.size() / layout.stride; }
 };
 
-// ============================================================================
-// MATERIAL STRUCTURES
-// ============================================================================
 
 enum class TAddressMode {
     Repeat        = 0,
@@ -105,13 +95,8 @@ struct TinyMaterial {
     int nrmlTexture = -1;
 
     TAddressMode addressMode = TAddressMode::Repeat;
-
-    TinyMaterial() = default;
 };
 
-// ============================================================================
-// TEXTURE STRUCTURES
-// ============================================================================
 
 // Raw texture data (no Vulkan handles)
 struct TinyTexture {
@@ -119,14 +104,7 @@ struct TinyTexture {
     int height = 0;
     int channels = 0;
     std::vector<uint8_t> data;
-
-    TinyTexture() = default;
-    ~TinyTexture() = default;
 };
-
-// ============================================================================
-// SKELETON STRUCTURES
-// ============================================================================
 
 struct TinySkeleton {
     // Bone SoA
@@ -142,10 +120,6 @@ struct TinySkeleton {
 private:
     void debugPrintRecursive(int boneIndex, int depth) const;
 };
-
-// ============================================================================
-// MODEL STRUCTURE
-// ============================================================================
 
 // Submeshes exist, but Mesh does not.
 // In the context of a game engine, a file like

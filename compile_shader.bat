@@ -12,6 +12,9 @@ REM Inefficient but really cool sky shaders
 glslc Shaders/Sky/sky.vert -o Shaders/Sky/sky.vert.spv
 glslc Shaders/Sky/sky.frag -o Shaders/Sky/sky.frag.spv
 
+REM Single instance shader
+glslc Shaders/Rasterize/StaticSingle.vert -o Shaders/Rasterize/StaticSingle.vert.spv
+
 REM Compute shaders
 glslc Shaders/Compute/test.comp -o Shaders/Compute/test.comp.spv
 glslc Shaders/Compute/grass.comp -o Shaders/Compute/grass.comp.spv

@@ -31,8 +31,9 @@ namespace AzVulk {
         void bindDescSet(const PipelineRaster* pipeline, VkDescriptorSet* sets, uint32_t count) const;
 
         void drawStaticInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::StaticInstanceGroup* instanceGroup) const;
-        // void drawRiggedInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::RigInstanceGroup* instanceGroup) const;
         
+        void drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t modelIndex) const;
+
         void drawDemoRig(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, Az3D::RigDemo* demo) const;
 
         void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const;

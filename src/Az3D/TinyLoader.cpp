@@ -935,9 +935,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
         }
     }
 
-    printf("OBJ loader: Loaded %zu submeshes, %zu materials, %zu textures\n", 
-           result.submeshes.size(), result.materials.size(), result.textures.size());
-
     return result;
 }
 

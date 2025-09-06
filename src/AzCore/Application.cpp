@@ -83,14 +83,17 @@ void Application::initComponents() {
 
     TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Umamusume/SilenceSuzuka.gltf");
     for (auto& mat : testModel.materials) {
-        // mat.shading = false; // No lighting for for highly stylized look
-        mat.toonLevel = 1;
+        mat.shading = false; // No lighting for for highly stylized look
+        // mat.toonLevel = 1;
     }
-
     // testModel.printDebug();
     testModel.skeleton.debugPrintHierarchy();
-
     resGroup->addModel(testModel);
+
+    // Testing out .obj model loading
+    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Stronghold/Stronghold.obj");
+    testObjModel.printDebug();
+    resGroup->addModel(testObjModel);
 
     // Set up advanced grass system with terrain generation
     GrassConfig grassConfig;
@@ -200,6 +203,22 @@ void Application::initComponents() {
 
     foliagePipeline = MakeUnique<PipelineRaster>(lDevice, foliageConfig);
     foliagePipeline->create();
+
+    RasterCfg singleConfig;
+    singleConfig.renderPass = renderPass;
+    singleConfig.setMSAA(msaaManager->msaaSamples);
+    singleConfig.vertexInputType = RasterCfg::InputType::Single;
+    singleConfig.setLayouts = {glbLayout, matLayout, texLayout};
+    singleConfig.vertPath = "Shaders/Rasterize/StaticSingle.vert.spv";
+    singleConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
+
+    // Add push constant range for PushDemo (same as static mesh)
+    singleConfig.pushConstantRanges = {
+        {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16}
+    };
+
+    singlePipeline = MakeUnique<PipelineRaster>(lDevice, singleConfig);
+    singlePipeline->create();
 }
 
 void Application::featuresTestingGround() {
@@ -485,6 +504,8 @@ void Application::mainLoop() {
             rigDemo->updateBuffer();
 
             rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
+
+            rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), singlePipeline.get(), 1);
 
             // Draw the particles
             // particleManager->instanceGroup.updateBufferData();

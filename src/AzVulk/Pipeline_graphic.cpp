@@ -69,6 +69,24 @@ void PipelineRaster::create() {
             vin.pVertexAttributeDescriptions    = attrs.data();
         }
         break;
+
+    // Debug input types
+
+        case RasterCfg::InputType::Single:
+        {
+            auto singleBind = vstaticLayout.getBindingDescription();
+            auto singleAttrs = vstaticLayout.getAttributeDescriptions();
+
+            // For the time being, we will work without instancing
+            bindings = { singleBind };
+            attrs.insert(attrs.end(), singleAttrs.begin(), singleAttrs.end());
+
+            vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
+            vin.pVertexBindingDescriptions      = bindings.data();
+            vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+            vin.pVertexAttributeDescriptions    = attrs.data();
+        }
+        break;
     }
 
     VkPipelineInputAssemblyStateCreateInfo ia{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };

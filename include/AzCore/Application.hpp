@@ -40,6 +40,7 @@ private:
     UniquePtr<AzVulk::PipelineRaster> rigMeshPipeline;
     UniquePtr<AzVulk::PipelineRaster> foliagePipeline;
     UniquePtr<AzVulk::PipelineRaster> skyPipeline; // Beta, very inefficient, yet really amazing looking
+    UniquePtr<AzVulk::PipelineRaster> singlePipeline; // Debugging purposes
 
     // More Vulkan ceremony
     UniquePtr<AzVulk::DepthManager> depthManager;
