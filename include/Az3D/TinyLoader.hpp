@@ -15,15 +15,13 @@ public:
 
     static TinyTexture loadImage(const std::string& filePath);
 
-    // StaticMesh loading functions
-    static TinySubmesh loadStaticMesh(const std::string& filePath);
-    static TinySubmesh loadStaticMeshFromOBJ(const std::string& filePath);
-    static TinySubmesh loadStaticMeshFromGLTF(const std::string& filePath);
-
     // True implementation that we will use in the future
     static TinyModel loadModel(const std::string& filePath, const LoadOptions& options = LoadOptions());
 
-    // Utility: sanitize any name to ASCII-safe identifier with custom prefix
+private:
+    static TinyModel loadModelFromGLTF(const std::string& filePath, const LoadOptions& options);
+    static TinyModel loadModelFromOBJ(const std::string& filePath, const LoadOptions& options);
+
     static std::string sanitizeAsciiz(const std::string& originalName, const std::string& key, size_t fallbackIndex = 0);
 };
 

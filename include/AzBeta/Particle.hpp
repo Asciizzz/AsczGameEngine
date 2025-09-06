@@ -166,7 +166,7 @@ public:
 
         Az3D::TinyModel particleModel;
         
-        Az3D::TinySubmesh submesh = Az3D::TinyLoader::loadStaticMeshFromOBJ("Assets/Shapes/Icosphere.obj");
+        Az3D::TinySubmesh submesh = Az3D::TinyLoader::loadModel("Assets/Shapes/Icosphere.obj").submeshes[0];
 
         Az3D::TinyTexture texture = Az3D::TinyLoader::loadImage("Assets/Textures/Selen.png");
 
