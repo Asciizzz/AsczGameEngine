@@ -429,11 +429,61 @@ TinySubmesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
     return TinySubmesh(vertices, indices);
 }
 
+// ============================================================================
+// ===================== TinyLoader Implementation ===========================
+// ============================================================================
 
-
-
-
-
+std::string TinyLoader::sanitizeAsciiz(const std::string& originalName, const std::string& key, size_t fallbackIndex) {
+    if (originalName.empty()) {
+        return key + "_" + std::to_string(fallbackIndex);
+    }
+    
+    // Check if name is already ASCII-safe (letters, numbers, underscore)
+    bool isAsciiSafe = true;
+    for (char c : originalName) {
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
+            isAsciiSafe = false;
+            break;
+        }
+    }
+    
+    if (isAsciiSafe && !originalName.empty() && !std::isdigit(originalName[0])) {
+        // Name is already safe and doesn't start with a digit
+        return originalName;
+    }
+    
+    // Generate hash from original name for uniqueness
+    std::hash<std::string> hasher;
+    size_t nameHash = hasher(originalName);
+    
+    // Create ASCII-safe identifier
+    std::string safeName = key + "_";
+    
+    // Try to preserve recognizable ASCII parts
+    for (char c : originalName) {
+        if (std::isalnum(static_cast<unsigned char>(c))) {
+            safeName += c;
+            if (safeName.length() > 30) break; // Limit length (increased for longer keys)
+        }
+    }
+    
+    // If no ASCII chars were preserved, use the fallback index
+    if (safeName == key + "_") {
+        safeName += std::to_string(fallbackIndex);
+    }
+    
+    // Add hash suffix for uniqueness (truncated to 4 hex digits)
+    char hashHex[8];
+    snprintf(hashHex, sizeof(hashHex), "%04X", static_cast<unsigned int>(nameHash & 0xFFFF));
+    safeName += "_0x" + std::string(hashHex);
+    
+    // Ensure it doesn't start with a digit
+    if (!safeName.empty() && std::isdigit(safeName[0])) {
+        safeName = key + "_" + safeName;
+    }
+    
+    return safeName;
+}
 
 // Utility: make local transform from a glTF node
 static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
@@ -573,7 +623,8 @@ TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& 
             }
             
             const auto& node = model.nodes[nodeIndex];
-            std::string boneName = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
+            std::string originalName = node.name.empty() ? "" : node.name;
+            std::string boneName = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
             
             result.skeleton.names.push_back(boneName);
             result.skeleton.parentIndices.push_back(-1); // Will be fixed in second pass

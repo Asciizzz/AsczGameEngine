@@ -83,7 +83,7 @@ void Application::initComponents() {
 
     TinyModel testModel = TinyLoader::loadModel("Assets/Characters/MikuMesmerizer/Miku.gltf", TinyLoader::LoadOptions{true, true, true});
     for (auto& mat : testModel.materials) {
-        mat.shading = false; // No lighting for for highly stylized look
+        // mat.shading = false; // No lighting for for highly stylized look
     }
 
     // testModel.printDebug();

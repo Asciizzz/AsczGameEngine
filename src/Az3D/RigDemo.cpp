@@ -195,13 +195,17 @@ void RigDemo::funFunction(const FunParams& params) {
     // the new rigging system, once everything is implemented
     // There will be actual robust bone handler
 
+    // Rotate root
+    FunTransform transform0 = extractTransform(getBindPose(0));
+    transform0.rotation = glm::rotate(transform0.rotation, glm::radians(90.0f), glm::vec3(1,0,0));
+    localPoseTransforms[0] = constructMatrix(transform0);
 
     // Rotate (index 2)
-    float partRotSpine = 10.0f * sinAccum + 90.0f;
-    FunTransform transform1 = extractTransform(getBindPose(2));
+    float partRotSpine = 10.0f * sinAccum;
+    FunTransform transform1 = extractTransform(getBindPose(4));
     transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
 
-    localPoseTransforms[2] = constructMatrix(transform1);
+    localPoseTransforms[4] = constructMatrix(transform1);
 
     /*
     // Rotate (index 2)
