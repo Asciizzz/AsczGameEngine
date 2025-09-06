@@ -456,8 +456,8 @@ UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, 
     if (texture.data.empty()) throw std::runtime_error("Failed to load texture from TinyTexture");
 
     // Dynamic mipmap levels (if not provided)
-    // mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1) * !mipLevels;
-    mipLevels = 1;
+    mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1) * !mipLevels;
+    // mipLevels = 1;
 
     BufferData stagingBuffer;
     stagingBuffer.initVkDevice(vkDevice);
