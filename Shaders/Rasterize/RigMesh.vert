@@ -19,7 +19,7 @@ layout(location = 4) in vec4 inWeights;
 
 // No instance data yet, i am scratching my head here
 layout(location = 0) out float debugLight;
-layout(location = 1) out vec2 fragUV;
+layout(location = 1) out vec2 fragTexUV;
 
 
 void main() {
@@ -51,5 +51,5 @@ void main() {
     gl_Position = glb.proj * glb.view * worldPos;
 
     debugLight = dot(normal, normalize(vec3(1.0, 1.0, 1.0)));
-    fragUV = vec2(inPos_Tu.w, inNrml_Tv.w);
+    fragTexUV = vec2(inPos_Tu.w, inNrml_Tv.w);
 }

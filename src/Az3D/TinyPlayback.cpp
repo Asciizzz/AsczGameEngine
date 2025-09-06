@@ -36,6 +36,9 @@ void TinyPlayback::setSkeleton(const TinySkeleton& skel) {
     bindPose.resize(skeleton->names.size());
     boneMatrices.resize(skeleton->names.size());
     
+    // Initialize blend state arrays
+    blendState.fromPose.resize(skeleton->names.size());
+    
     // Initialize bind pose from skeleton's local bind transforms
     for (size_t i = 0; i < skeleton->names.size(); ++i) {
         const glm::mat4& localTransform = skeleton->localBindTransforms[i];
@@ -69,7 +72,19 @@ void TinyPlayback::setSkeleton(const TinySkeleton& skel) {
     computeBoneMatrices();
 }
 
-void TinyPlayback::playAnimation(const TinyAnimation& anim, bool loop, float speed) {
+void TinyPlayback::playAnimation(const TinyAnimation& anim, bool loop, float speed, float transitionTime) {
+    // If we're currently playing something, start a smooth transition
+    // If this is the same animation, ignore
+    if (&anim == primaryState.animation) {
+        return;
+    }
+    
+    if (primaryState.playing && primaryState.animation) {
+        blendState.startTransition(currentPose, transitionTime);
+    } else {
+        blendState.reset();
+    }
+    
     primaryState.animation = &anim;
     primaryState.currentTime = 0.0f;
     primaryState.playing = true;
@@ -94,7 +109,19 @@ void TinyPlayback::resumeAnimation() {
 }
 
 void TinyPlayback::update(float deltaTime) {
-    if (!primaryState.playing || !primaryState.animation || !skeleton) {
+    if (!skeleton) return;
+    
+    // Update blend state if we're transitioning
+    if (blendState.isBlending()) {
+        blendState.transitionTime += deltaTime;
+        
+        // Check if blend is complete
+        if (blendState.transitionTime >= blendState.transitionDuration) {
+            blendState.reset();
+        }
+    }
+    
+    if (!primaryState.playing || !primaryState.animation) {
         return;
     }
     
@@ -112,7 +139,22 @@ void TinyPlayback::update(float deltaTime) {
     }
     
     // Sample animation at current time
-    sampleAnimation(*primaryState.animation, primaryState.currentTime, currentPose);
+    std::vector<BonePose> targetPose;
+    targetPose.resize(currentPose.size());
+    sampleAnimation(*primaryState.animation, primaryState.currentTime, targetPose);
+    
+    // Apply blending if transitioning
+    if (blendState.isBlending()) {
+        float blendFactor = blendState.getBlendFactor();
+
+        // Blend from the previous pose to the new pose
+        for (size_t i = 0; i < currentPose.size() && i < blendState.fromPose.size(); ++i) {
+            currentPose[i] = BonePose::lerp(blendState.fromPose[i], targetPose[i], blendFactor);
+        }
+    } else {
+        // No blending, use target pose directly
+        currentPose = targetPose;
+    }
     
     // Compute final bone matrices
     computeBoneMatrices();

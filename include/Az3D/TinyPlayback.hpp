@@ -4,6 +4,7 @@
 #include "Az3D/TinyAnimation.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <vector>
 
 namespace Az3D {
@@ -36,6 +37,34 @@ struct AnimationState {
     }
 };
 
+// Animation transition/blending state
+struct BlendState {
+    std::vector<BonePose> fromPose;  // Pose we're transitioning from
+    float transitionTime = 0.0f;     // Current transition time
+    float transitionDuration = 0.3f; // How long to blend (in seconds)
+    bool blending = false;            // Whether we're currently blending
+    
+    void startTransition(const std::vector<BonePose>& currentPose, float duration = 0.3f) {
+        fromPose = currentPose;
+        transitionTime = 0.0f;
+        transitionDuration = duration;
+        blending = true;
+    }
+    
+    void reset() {
+        blending = false;
+        transitionTime = 0.0f;
+    }
+    
+    // Get blend factor (0.0 = fully fromPose, 1.0 = fully target)
+    float getBlendFactor() const {
+        if (!blending || transitionDuration <= 0.0f) return 1.0f;
+        return glm::clamp(transitionTime / transitionDuration, 0.0f, 1.0f);
+    }
+    
+    bool isBlending() const { return blending; }
+};
+
 class TinyPlayback {
 public:
     const TinySkeleton* skeleton = nullptr;
@@ -44,12 +73,13 @@ public:
     std::vector<glm::mat4> boneMatrices;    // Final matrices for GPU
     
     AnimationState primaryState;  // Main animation
+    BlendState blendState;         // Animation transition/blending
 
     // Initialize with a skeleton
     void setSkeleton(const TinySkeleton& skel);
     
     // Animation control
-    void playAnimation(const TinyAnimation& anim, bool loop = true, float speed = 1.0f);
+    void playAnimation(const TinyAnimation& anim, bool loop = true, float speed = 1.0f, float transitionTime = 0.3f);
     void stopAnimation();
     void pauseAnimation();
     void resumeAnimation();

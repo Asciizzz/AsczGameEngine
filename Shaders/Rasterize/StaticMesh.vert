@@ -16,7 +16,7 @@ layout(location = 4) in vec4 trformR;
 layout(location = 5) in vec4 multColor;
 
 layout(location = 0) out vec4 fragMultColor;
-layout(location = 1) out vec2 fragUV;
+layout(location = 1) out vec2 fragTexUV;
 layout(location = 2) out vec3 fragWorldPos;
 layout(location = 3) out vec3 fragWorldNrml;
 layout(location = 4) out vec4 fragTangent;
@@ -40,7 +40,7 @@ void main() {
     gl_Position = glb.proj * glb.view * vec4(worldPos, 1.0);
 
     fragWorldPos = worldPos.xyz;
-    fragUV = vec2(inPos_Tu.w, inNrml_Tv.w);
+    fragTexUV = vec2(inPos_Tu.w, inNrml_Tv.w);
     fragMultColor = multColor;
 
     // Assume normalized by default

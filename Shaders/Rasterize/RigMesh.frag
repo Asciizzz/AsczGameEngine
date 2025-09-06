@@ -20,7 +20,7 @@ layout(set = 2, binding = 1) uniform sampler   samplers[];
 
 
 layout(location = 0) in float debugLight;
-layout(location = 1) in vec2 fragUV;
+layout(location = 1) in vec2 fragTexUV;
 
 layout(location = 0) out vec4 outColor;
 
@@ -44,7 +44,7 @@ void main() {
 
     // Albedo texture
     uint albTexIndex = material.texIndices.y;
-    vec4 texColor = getTexture(albTexIndex, addressMode, fragUV);
+    vec4 texColor = getTexture(albTexIndex, addressMode, fragTexUV);
 
     // Discard low opacity fragments
     float discardThreshold = material.shadingParams.w;

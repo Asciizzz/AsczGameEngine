@@ -29,7 +29,7 @@ layout(set = 2, binding = 0) uniform texture2D textures[];
 layout(set = 2, binding = 1) uniform sampler   samplers[];
 
 layout(location = 0) in vec4 fragMultColor;
-layout(location = 1) in vec2 fragUV;
+layout(location = 1) in vec2 fragTexUV;
 layout(location = 2) in vec3 fragWorldPos;
 layout(location = 3) in vec3 fragWorldNrml;
 layout(location = 4) in vec4 fragTangent;
@@ -57,7 +57,7 @@ void main() {
 
     // Albedo texture
     uint albTexIndex = material.texIndices.y;
-    vec4 texColor = getTexture(albTexIndex, addressMode, fragUV);
+    vec4 texColor = getTexture(albTexIndex, addressMode, fragTexUV);
 
     // Discard low opacity fragments
     float discardThreshold = material.shadingParams.w;
@@ -65,7 +65,7 @@ void main() {
 
     // Normal mapping
     uint nrmlTexIndex = material.texIndices.z;
-    vec3 mapNrml = getTexture(nrmlTexIndex, addressMode, fragUV).xyz * 2.0 - 1.0;
+    vec3 mapNrml = getTexture(nrmlTexIndex, addressMode, fragTexUV).xyz * 2.0 - 1.0;
 
     vec3 bitangent = cross(fragWorldNrml, fragTangent.xyz) * fragTangent.w;
     mat3 TBN = mat3(fragTangent.xyz, bitangent, fragWorldNrml);
