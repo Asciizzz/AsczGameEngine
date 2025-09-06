@@ -23,23 +23,33 @@ layout(location = 1) out vec2 fragUV;
 
 
 void main() {
-    // Get the average inverse bind matrix for the bones
-    mat4 skinMat4 = inWeights[0] * finalPose[inBoneID[0]] +
-                    inWeights[1] * finalPose[inBoneID[1]] +
-                    inWeights[2] * finalPose[inBoneID[2]] +
-                    inWeights[3] * finalPose[inBoneID[3]];
+    // --- Apply morph targets ---
+    vec3 basePos   = inPos_Tu.xyz;
+    vec3 baseNormal = inNrml_Tv.xyz;
 
-    bool validMat = skinMat4 != mat4(0.0);
-    skinMat4 = validMat ? skinMat4 : mat4(1.0);
+    // basePos   += morphWeights[0] * morphPosDelta0;
+    // baseNormal += morphWeights[0] * morphNrmlDelta0;
+    // basePos   += morphWeights[1] * morphPosDelta1;
+    // baseNormal += morphWeights[1] * morphNrmlDelta1;
 
-    vec4 worldPos = skinMat4 * vec4(inPos_Tu.xyz, 1.0);
+    // --- Skinning ---
+    vec4 skinnedPos = vec4(0.0);
+    vec3 skinnedNormal = vec3(0.0);
+
+    for (uint i = 0; i < 4; ++i) {
+        uint id = inBoneID[i];
+        float w = inWeights[i];
+        mat4 boneMat = finalPose[id];
+
+        skinnedPos    += w * (boneMat * vec4(basePos, 1.0));
+        skinnedNormal += w * mat3(boneMat) * baseNormal;
+    }
+
+    vec4 worldPos = skinnedPos;
+    vec3 normal   = normalize(skinnedNormal);
+
     gl_Position = glb.proj * glb.view * worldPos;
-
-    // Transform normal correctly using inverse transpose of the upper 3x3 matrix
-    mat3 normalMatrix = transpose(inverse(mat3(skinMat4)));
-    vec3 normal = normalize(normalMatrix * inNrml_Tv.xyz);
 
     debugLight = dot(normal, normalize(vec3(1.0, 1.0, 1.0)));
     fragUV = vec2(inPos_Tu.w, inNrml_Tv.w);
-
 }
