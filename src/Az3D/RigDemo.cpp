@@ -69,7 +69,7 @@ void RigDemo::updatePlayback(float dTime) {
     playback.update(dTime);
 }
 
-void RigDemo::playAnimation(size_t animIndex) {
+void RigDemo::playAnimation(size_t animIndex, bool loop, float speed, float transitionTime) {
     if (!model || model->animations.empty()) {
         return;
     }
@@ -81,5 +81,5 @@ void RigDemo::playAnimation(size_t animIndex) {
     }
 
     const auto& animation = model->animations[animIndex];
-    playback.playAnimation(animation, true, 1.0f);
+    playback.playAnimation(animation, loop, speed, transitionTime);
 }

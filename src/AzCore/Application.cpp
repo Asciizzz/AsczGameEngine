@@ -486,16 +486,24 @@ void Application::mainLoop() {
         // };
         // particleManager->updateRender();
 
-        // Press 0 - 9 to switch animation
+        
         if (k_state[SDL_SCANCODE_0]) rigDemo.playAnimation(0);
+        // Crouch walking
         if (k_state[SDL_SCANCODE_1]) rigDemo.playAnimation(1);
+        // Crouching
         if (k_state[SDL_SCANCODE_2]) rigDemo.playAnimation(2);
+        // Dancing
         if (k_state[SDL_SCANCODE_3]) rigDemo.playAnimation(3);
-        if (k_state[SDL_SCANCODE_4]) rigDemo.playAnimation(4);
+        // Very quick and painful death
+        if (k_state[SDL_SCANCODE_4]) rigDemo.playAnimation(4, false, 1.5f, 0.1f);
+        // Driving
         if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(5);
         if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(6);
         if (k_state[SDL_SCANCODE_7]) rigDemo.playAnimation(7);
-        if (k_state[SDL_SCANCODE_8]) rigDemo.playAnimation(8);
+
+        // Sprinting
+        if (k_state[SDL_SCANCODE_8]) rigDemo.playAnimation(38);
+        
         if (k_state[SDL_SCANCODE_9]) rigDemo.playAnimation(9);
 
 // =================================

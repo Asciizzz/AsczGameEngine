@@ -56,7 +56,7 @@ void main() {
     
     // Ambient
     // finalLight = 0.3 + finalLight * 0.7;
-    finalLight = 0.7 + finalLight * 0.3;
+    finalLight = 0.5 + finalLight * 0.5;
 
     // Check if shading is disabled
     bool shadingFlag = material.shadingParams.x > 0.5;

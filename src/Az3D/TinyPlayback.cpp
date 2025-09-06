@@ -134,8 +134,12 @@ void TinyPlayback::update(float deltaTime) {
             primaryState.currentTime = std::fmod(primaryState.currentTime, primaryState.animation->duration);
         } else {
             primaryState.currentTime = primaryState.animation->duration;
-            primaryState.playing = false;
+            // primaryState.playing = false;
         }
+    }
+
+    if (primaryState.currentTime == primaryState.animation->duration) {
+        return; // The animation technically still playing
     }
     
     // Sample animation at current time
