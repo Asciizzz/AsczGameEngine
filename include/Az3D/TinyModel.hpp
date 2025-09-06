@@ -17,6 +17,8 @@ struct TinyModel {
 
     void printDebug() const;
     uint32_t getSubmeshIndexCount(size_t index) const;
+
+    void printAnimationList() const;
 };
 
 } // namespace Az3D

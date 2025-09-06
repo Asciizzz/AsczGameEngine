@@ -51,7 +51,7 @@ struct RigDemo {
     void updateBuffer();
     void updatePlayback(float dTime);
 
-    void playAnimation();
+    void playAnimation(size_t animIndex=0);
 };
 
 } // namespace Az3D

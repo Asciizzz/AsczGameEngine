@@ -88,8 +88,10 @@ void Application::initComponents() {
         mat.toonLevel = 4;
     }
 
+    testModel.printAnimationList();
+
     rigDemo.init(vkDevice.get(), testModel, 0);
-    rigDemo.playAnimation();
+    rigDemo.playAnimation(3);
 
     resGroup->addModel(testModel);
 

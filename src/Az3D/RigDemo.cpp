@@ -69,12 +69,17 @@ void RigDemo::updatePlayback(float dTime) {
     playback.update(dTime);
 }
 
-void RigDemo::playAnimation() {
+void RigDemo::playAnimation(size_t animIndex) {
     if (!model || model->animations.empty()) {
         return;
     }
-    
-    // Use the first available animation (you can change the index as needed)
-    const auto& animation = model->animations[1];
+
+    // Use the specified animation index
+    if (animIndex >= model->animations.size()) {
+        std::cerr << "Invalid animation index: " << animIndex << "\n";
+        return;
+    }
+
+    const auto& animation = model->animations[animIndex];
     playback.playAnimation(animation, true, 1.0f);
 }
