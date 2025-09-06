@@ -14,7 +14,7 @@ void TinySkeleton::debugPrintHierarchy() const {
             debugPrintRecursive(i, 0);
         }
     }
-    
+
     std::cout << std::string(50, '=') << "\n";
 }
 

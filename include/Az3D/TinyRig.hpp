@@ -19,4 +19,10 @@ private:
     void debugPrintRecursive(int boneIndex, int depth) const;
 };
 
+
+
+struct TinyAnimation {
+
+};
+
 }
