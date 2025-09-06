@@ -226,18 +226,18 @@ void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3
 
 
 // No instance buffer data yet
-void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, Az3D::RigDemo* demo) const {
+void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const Az3D::RigDemo& demo) const {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     rPipeline->bindCmd(currentCmd);
 
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
     VkDescriptorSet matSet = resGroup->getMatDescSet();
     VkDescriptorSet texSet = resGroup->getTexDescSet();
-    VkDescriptorSet rigSet = demo->descSet.get();
+    VkDescriptorSet rigSet = demo.descSet.get();
     VkDescriptorSet sets[] = {glbSet, matSet, texSet, rigSet};
     rPipeline->bindSets(currentCmd, sets, 4);
 
-    size_t modelIndex = demo->modelIndex;
+    size_t modelIndex = demo.modelIndex;
     const auto& modelVK = resGroup->modelVKs[modelIndex];
 
     // Draw submeshes

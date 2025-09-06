@@ -100,7 +100,7 @@ void TinyPlayback::update(float deltaTime) {
     
     // Update time
     primaryState.currentTime += deltaTime * primaryState.speed;
-    
+
     // Handle looping
     if (primaryState.currentTime >= primaryState.animation->duration) {
         if (primaryState.looping) {
@@ -186,7 +186,7 @@ void TinyPlayback::computeBoneMatrices() {
     
     for (size_t i = 0; i < skeleton->names.size(); ++i) {
         glm::mat4 localTransform = currentPose[i].toMatrix();
-        
+
         int parentIndex = skeleton->parentIndices[i];
         if (parentIndex >= 0) {
             // Multiply by parent's world transform
@@ -229,9 +229,7 @@ T TinyPlayback::interpolateValues(const std::vector<T>& values, const std::vecto
         }
     }
     
-    if (values.size() == 1) {
-        return values[0];
-    }
+    if (values.size() == 1) { return values[0]; }
     
     // Find the keyframe interval
     auto it = std::lower_bound(times.begin(), times.end(), time);

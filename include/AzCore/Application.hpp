@@ -58,7 +58,7 @@ private:
 
     UniquePtr<AzBeta::ParticleManager> particleManager;
 
-    UniquePtr<Az3D::RigDemo> rigDemo;
+    Az3D::RigDemo rigDemo;
 
     // Window metadata
     const char* appTitle;

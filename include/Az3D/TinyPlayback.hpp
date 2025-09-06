@@ -37,16 +37,14 @@ struct AnimationState {
 };
 
 class TinyPlayback {
-private:
+public:
     const TinySkeleton* skeleton = nullptr;
     std::vector<BonePose> currentPose;      // Current pose for each bone
     std::vector<BonePose> bindPose;         // Default/bind pose for each bone
     std::vector<glm::mat4> boneMatrices;    // Final matrices for GPU
     
     AnimationState primaryState;  // Main animation
-    // Future: secondary states for blending
-    
-public:
+
     // Initialize with a skeleton
     void setSkeleton(const TinySkeleton& skel);
     
@@ -90,7 +88,7 @@ private:
     // Generic interpolation for any type
     template<typename T>
     T interpolateValues(const std::vector<T>& values, const std::vector<float>& times, 
-                       float time, TinyAnimationSampler::InterpolationType interp);
+                        float time, TinyAnimationSampler::InterpolationType interp);
 };
 
 }

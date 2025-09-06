@@ -87,34 +87,10 @@ void Application::initComponents() {
         // mat.shading = false; // No lighting for for highly stylized look
         mat.toonLevel = 4;
     }
-    // testModel.printDebug();
-    testModel.skeleton.debugPrintHierarchy();
-    
-    // Test animation playback system
-    if (!testModel.animations.empty()) {
-        TinyPlayback animPlayer;
-        animPlayer.setSkeleton(testModel.skeleton);
-        
-        // Play the first animation
-        const TinyAnimation& firstAnim = testModel.animations[0];
-        std::cout << "\n=== Testing Animation Playback ===\n";
-        std::cout << "Playing animation: \"" << firstAnim.name << "\" (Duration: " << firstAnim.duration << "s)\n";
-        
-        animPlayer.playAnimation(firstAnim, true, 1.0f);
-        
-        // Sample a few frames to show it's working
-        for (int i = 0; i <= 10; ++i) {
-            float progress = i / 10.0f;
-            animPlayer.setAnimationProgress(progress);
-            
-            std::cout << "Frame " << i << " (Progress: " << (progress * 100.0f) << "%): ";
-            std::cout << "Time = " << animPlayer.getCurrentTime() << "s\n";
-        }
-        
-        std::cout << "Animation system test complete!\n";
-        std::cout << std::string(40, '=') << "\n\n";
-    }
-    
+
+    rigDemo.init(vkDevice.get(), testModel, 0);
+    rigDemo.playAnimation();
+
     resGroup->addModel(testModel);
 
     TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Tow.obj");
@@ -156,9 +132,6 @@ void Application::initComponents() {
 // PLAYGROUND END HERE 
 
     resGroup->uploadAllToGPU();
-
-    rigDemo = MakeUnique<Az3D::RigDemo>();
-    rigDemo->init(vkDevice.get(), testModel.skeleton, 0); // Skeleton 0, Model 0
 
 
     auto glbLayout = glbUBOManager->getDescLayout();
@@ -530,14 +503,9 @@ void Application::mainLoop() {
             // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
             // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
 
-            RigDemo::FunParams funParams;
-            funParams.add(dTime);
-            funParams.add(camera->pos);
+            rigDemo.update(dTime);
 
-            rigDemo->funFunction(funParams);
-            rigDemo->updateBuffer();
-
-            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
+            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo);
 
             rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), singlePipeline.get(), 1);
 
