@@ -17,15 +17,19 @@ struct RasterCfg {
     std::vector<VkDescriptorSetLayout> setLayouts;
     std::vector<VkPushConstantRange> pushConstantRanges;
 
-    // special
-    enum class InputType {
-        None   = 0,
-        Static = 1,
-        Rigged = 2,
+    // legacy vertex input config
+    // enum class InputType {
+    //     None   = 0,
+    //     Static = 1,
+    //     Rigged = 2,
 
-        // The rest are debug-only
-        Single = 3
-    } vertexInputType = InputType::Static;
+    //     // The rest are debug-only
+    //     Single = 3
+    // } vertexInputType = InputType::Static;
+
+    std::vector<VkVertexInputBindingDescription> bindings;
+    std::vector<std::vector<VkVertexInputAttributeDescription>> attributes;
+
 
     // defaults
     VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;

@@ -95,6 +95,12 @@ VertexLayout VertexStatic::getLayout() {
     return layout;
 }
 
+VkVertexInputBindingDescription VertexStatic::getBindingDescription() {
+    return getLayout().getBindingDescription();
+}
+std::vector<VkVertexInputAttributeDescription> VertexStatic::getAttributeDescriptions() {
+    return getLayout().getAttributeDescriptions();
+}
 
 
 // Skinning vertex data
@@ -124,4 +130,11 @@ VertexLayout VertexRig::getLayout() {
         {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, weights)}
     };
     return layout;
+}
+
+VkVertexInputBindingDescription VertexRig::getBindingDescription() {
+    return getLayout().getBindingDescription();
+}
+std::vector<VkVertexInputAttributeDescription> VertexRig::getAttributeDescriptions() {
+    return getLayout().getAttributeDescriptions();
 }

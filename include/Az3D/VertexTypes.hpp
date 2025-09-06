@@ -82,6 +82,8 @@ struct VertexStatic {
 
     // Returns layout that can be used for pipeline creation
     static VertexLayout getLayout();
+    static VkVertexInputBindingDescription getBindingDescription();
+    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
 
 struct VertexRig {
@@ -108,6 +110,8 @@ struct VertexRig {
 
     // Returns layout that can be used for pipeline creation
     static VertexLayout getLayout();
+    static VkVertexInputBindingDescription getBindingDescription();
+    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
 
 } // namespace Az3D

@@ -142,10 +142,20 @@ void Application::initComponents() {
 
     // Create raster pipeline configurations
 
+    auto vstaticBindingDescription = Az3D::VertexStatic::getBindingDescription();
+    auto vstaticAttributeDescriptions = Az3D::VertexStatic::getAttributeDescriptions();
+
+    auto vriggedBindingDescription = Az3D::VertexRig::getBindingDescription();
+    auto vriggedAttributeDescriptions = Az3D::VertexRig::getAttributeDescriptions();
+
+    auto instanceBindingDescription = Az3D::StaticInstance::getBindingDescription();
+    auto instanceAttributeDescriptions = Az3D::StaticInstance::getAttributeDescriptions();
+
     RasterCfg staticMeshConfig;
     staticMeshConfig.renderPass = renderPass;
     staticMeshConfig.setMSAA(msaaManager->msaaSamples);
-    staticMeshConfig.vertexInputType = RasterCfg::InputType::Static;
+    staticMeshConfig.bindings = { vstaticBindingDescription, instanceBindingDescription };
+    staticMeshConfig.attributes = { vstaticAttributeDescriptions, instanceAttributeDescriptions };
     staticMeshConfig.setLayouts = {glbLayout, matLayout, texLayout};
     staticMeshConfig.vertPath = "Shaders/Rasterize/StaticMesh.vert.spv";
     staticMeshConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
@@ -157,7 +167,8 @@ void Application::initComponents() {
     RasterCfg rigMeshConfig;
     rigMeshConfig.renderPass = renderPass;
     rigMeshConfig.setMSAA(msaaManager->msaaSamples);
-    rigMeshConfig.vertexInputType = RasterCfg::InputType::Rigged;
+    rigMeshConfig.bindings = { vriggedBindingDescription };
+    rigMeshConfig.attributes = { vriggedAttributeDescriptions };
     rigMeshConfig.setLayouts = {glbLayout, matLayout, texLayout, rigLayout};
     rigMeshConfig.vertPath = "Shaders/Rasterize/RigMesh.vert.spv";
     rigMeshConfig.fragPath = "Shaders/Rasterize/RigMesh.frag.spv";
@@ -170,7 +181,6 @@ void Application::initComponents() {
     RasterCfg skyConfig;
     skyConfig.renderPass = renderPass;
     skyConfig.setMSAA(msaaManager->msaaSamples);
-    skyConfig.vertexInputType = RasterCfg::InputType::None;
     skyConfig.setLayouts = {glbLayout};
     skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
     skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
@@ -188,7 +198,8 @@ void Application::initComponents() {
     RasterCfg foliageConfig;
     foliageConfig.renderPass = renderPass;
     foliageConfig.setMSAA(msaaManager->msaaSamples);
-    foliageConfig.vertexInputType = RasterCfg::InputType::Static;
+    foliageConfig.bindings = { vstaticBindingDescription, instanceBindingDescription };
+    foliageConfig.attributes = { vstaticAttributeDescriptions, instanceAttributeDescriptions };
     foliageConfig.setLayouts = {glbLayout, matLayout, texLayout};
     foliageConfig.vertPath = "Shaders/Rasterize/StaticMesh.vert.spv";
     foliageConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
@@ -207,7 +218,8 @@ void Application::initComponents() {
     RasterCfg singleConfig;
     singleConfig.renderPass = renderPass;
     singleConfig.setMSAA(msaaManager->msaaSamples);
-    singleConfig.vertexInputType = RasterCfg::InputType::Single;
+    singleConfig.bindings = { vstaticBindingDescription };
+    singleConfig.attributes = { vstaticAttributeDescriptions };
     singleConfig.setLayouts = {glbLayout, matLayout, texLayout};
     singleConfig.vertPath = "Shaders/Rasterize/StaticSingle.vert.spv";
     singleConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";

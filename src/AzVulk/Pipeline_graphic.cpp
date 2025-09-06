@@ -25,9 +25,26 @@ void PipelineRaster::create() {
 
     // 2. Vertex input
     VkPipelineVertexInputStateCreateInfo vin{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    std::vector<VkVertexInputBindingDescription> bindings;
+    std::vector<VkVertexInputBindingDescription> bindings = cfg.bindings;
     std::vector<VkVertexInputAttributeDescription> attrs;
+    for (const auto& attrList : cfg.attributes) {
+        attrs.insert(attrs.end(), attrList.begin(), attrList.end());
+    }
 
+    if (bindings.empty() || attrs.empty()) {
+        // No vertex input
+        vin.vertexBindingDescriptionCount   = 0;
+        vin.pVertexBindingDescriptions      = nullptr;
+        vin.vertexAttributeDescriptionCount = 0;
+        vin.pVertexAttributeDescriptions    = nullptr;
+    } else {
+        vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
+        vin.pVertexBindingDescriptions      = bindings.data();
+        vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
+        vin.pVertexAttributeDescriptions    = attrs.data();
+    }
+
+    /* Deprecated
     auto vstaticLayout = Az3D::VertexStatic::getLayout();
     auto vriggedLayout = Az3D::VertexRig::getLayout();
     auto instanceBind  = Az3D::StaticInstance::getBindingDescription();
@@ -88,6 +105,7 @@ void PipelineRaster::create() {
         }
         break;
     }
+    */
 
     VkPipelineInputAssemblyStateCreateInfo ia{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
