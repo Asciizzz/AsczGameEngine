@@ -81,8 +81,12 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    // THE ENEMY SPY HAS BREACHED THE PERIMETER
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf");
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/MikuMesmerizer/Miku.gltf", TinyLoader::LoadOptions{true, true, true});
+    for (auto& mat : testModel.materials) {
+        mat.shading = false; // No lighting for for highly stylized look
+    }
+
+    // testModel.printDebug();
     testModel.skeleton.debugPrintHierarchy();
 
     resGroup->addModel(testModel);
@@ -125,6 +129,7 @@ void Application::initComponents() {
 
     rigDemo = MakeUnique<Az3D::RigDemo>();
     rigDemo->init(vkDevice.get(), resGroup->skeletons[0], 0); // Skeleton 0, Model 0
+
 
     auto glbLayout = glbUBOManager->getDescLayout();
     auto matLayout = resGroup->getMatDescLayout();
@@ -467,7 +472,9 @@ void Application::mainLoop() {
             rendererRef.drawSky(glbUBOManager.get(), skyPipeline.get());
 
             // Draw grass system
-            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
+            // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
+            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
+            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
 
             RigDemo::FunParams funParams;
             funParams.add(dTime);
@@ -477,9 +484,6 @@ void Application::mainLoop() {
             rigDemo->updateBuffer();
 
             rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo.get());
-
-            grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
-            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
 
             // Draw the particles
             // particleManager->instanceGroup.updateBufferData();
@@ -499,7 +503,10 @@ void Application::mainLoop() {
                                     " | " + std::to_string(static_cast<int>(fpsRef.frameTimeMs * 10) / 10.0f) + "ms" +
                                     " | Pos: "+ std::to_string(camRef.pos.x) + ", " +
                                                 std::to_string(camRef.pos.y) + ", " +
-                                                std::to_string(camRef.pos.z);
+                                                std::to_string(camRef.pos.z) + " | " +
+                                    " | Forward: " + std::to_string(static_cast<int>(camRef.forward.x * 100) / 100.0f) + ", " +
+                                                    std::to_string(static_cast<int>(camRef.forward.y * 100) / 100.0f) + ", " +
+                                                    std::to_string(static_cast<int>(camRef.forward.z * 100) / 100.0f);
             SDL_SetWindowTitle(winManager.window, fpsText.c_str());
             lastFpsOutput = now;
         }

@@ -97,6 +97,7 @@ void ResourceGroup::createComponentVKsFromModels() {
             materialVKs.push_back(matVK);
         }
 
+
         for (size_t i = 0; i < model.submeshes.size(); ++i) {
             const auto& submesh = model.submeshes[i];
 
@@ -396,21 +397,66 @@ void generateMipmapsImpl(AzVulk::Device* vkDevice, VkImage image, VkFormat image
 // ========================= TEXTURES =========================================
 // ============================================================================
 
+// Helper function to get Vulkan format based on channel count
+// Note: Uses formats that are widely supported by Vulkan implementations
+VkFormat getVulkanFormatFromChannels(int channels) {
+    switch (channels) {
+        case 1: return VK_FORMAT_R8_UNORM;          // Grayscale (UNORM more widely supported than SRGB for single channel)
+        case 2: return VK_FORMAT_R8G8_UNORM;        // Grayscale + Alpha
+        case 3: return VK_FORMAT_R8G8B8A8_SRGB;     // Convert RGB to RGBA (RGB not universally supported)
+        case 4: return VK_FORMAT_R8G8B8A8_SRGB;     // RGBA
+        default: 
+            printf("Warning: Unsupported channel count %d, defaulting to RGBA\n", channels);
+            return VK_FORMAT_R8G8B8A8_SRGB;
+    }
+}
+
+// Helper function to convert texture data to match Vulkan format requirements
+std::vector<uint8_t> convertTextureDataForVulkan(const TinyTexture& texture) {
+    int width = texture.width;
+    int height = texture.height;
+    int channels = texture.channels;
+    const uint8_t* srcData = texture.data.data();
+    
+    if (channels == 3) {
+        // Convert RGB to RGBA by adding alpha channel
+        size_t pixelCount = width * height;
+        std::vector<uint8_t> convertedData(pixelCount * 4);
+        
+        for (size_t i = 0; i < pixelCount; ++i) {
+            convertedData[i * 4 + 0] = srcData[i * 3 + 0]; // R
+            convertedData[i * 4 + 1] = srcData[i * 3 + 1]; // G
+            convertedData[i * 4 + 2] = srcData[i * 3 + 2]; // B
+            convertedData[i * 4 + 3] = 255;                // A (fully opaque)
+        }
+        
+        return convertedData;
+    } else {
+        // For 1, 2, or 4 channels, use data as-is
+        return std::vector<uint8_t>(srcData, srcData + texture.data.size());
+    }
+}
+
 UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, uint32_t mipLevels) {
     TextureVK textureVK;
 
     // Use the provided TinyTexture data
-    const uint8_t* pixels = texture.data.data();
     int width = texture.width;
     int height = texture.height;
+    int channels = texture.channels;
 
-    VkDeviceSize imageSize = width * height * 4; // Force 4 channels (RGBA)
+    // Get appropriate Vulkan format and convert data if needed
+    VkFormat textureFormat = getVulkanFormatFromChannels(channels);
+    std::vector<uint8_t> vulkanData = convertTextureDataForVulkan(texture);
+    
+    // Calculate image size based on Vulkan format requirements
+    int vulkanChannels = (channels == 3) ? 4 : channels; // RGB becomes RGBA
+    VkDeviceSize imageSize = width * height * vulkanChannels;
 
     if (texture.data.empty()) throw std::runtime_error("Failed to load texture from TinyTexture");
 
     // Dynamic mipmap levels (if not provided)
     mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1) * !mipLevels;
-
 
     BufferData stagingBuffer;
     stagingBuffer.initVkDevice(vkDevice);
@@ -419,23 +465,23 @@ UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, 
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
     stagingBuffer.createBuffer();
-    stagingBuffer.uploadData(pixels);
+    stagingBuffer.uploadData(vulkanData.data());
 
     // Note: TinyTexture cleanup is handled by caller
 
-    // Create texture image
-    createImageImpl(vkDevice, width, height, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+    // Create texture image with proper format
+    createImageImpl(vkDevice, width, height, mipLevels, textureFormat, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureVK.image, textureVK.memory);
 
-    // Transfer data and generate mipmaps
-    transitionImageLayoutImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, 
+    // Transfer data and generate mipmaps with proper format
+    transitionImageLayoutImpl(vkDevice, textureVK.image, textureFormat, VK_IMAGE_LAYOUT_UNDEFINED, 
                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
     copyBufferToImageImpl(vkDevice, stagingBuffer.buffer, textureVK.image, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-    generateMipmapsImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
+    generateMipmapsImpl(vkDevice, textureVK.image, textureFormat, width, height, mipLevels);
 
-    // Create image view
-    createImageViewImpl(vkDevice, textureVK.image, VK_FORMAT_R8G8B8A8_SRGB, mipLevels, textureVK.view);
+    // Create image view with proper format
+    createImageViewImpl(vkDevice, textureVK.image, textureFormat, mipLevels, textureVK.view);
 
     return MakeUnique<TextureVK>(textureVK);
 }

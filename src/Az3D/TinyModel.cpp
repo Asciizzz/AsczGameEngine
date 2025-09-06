@@ -33,8 +33,7 @@ void TinySkeleton::debugPrintRecursive(int boneIndex, int depth) const {
     }
     
     // Print bone info
-    std::cout << "[" << std::setw(2) << boneIndex << "] " 
-              << names[boneIndex];
+    std::cout << "[" << boneIndex << "] " << names[boneIndex];
     
     if (parentIndices[boneIndex] != -1) {
         std::cout << " (parent: " << parentIndices[boneIndex] << ")";
@@ -61,8 +60,8 @@ uint32_t TinyModel::getSubmeshIndexCount(size_t index) const {
 }
 
 void TinyModel::printDebug() const {
-    std::cout << "TinyModel Debug Information\n";
-    std::cout << std::string(60, '=') << "\n";
+    std::cout << "TinyModel Information\n";
+    std::cout << std::string(50, '=') << "\n";
     
     // Print mesh information
     std::cout << "Meshes: " << submeshes.size() << "\n";

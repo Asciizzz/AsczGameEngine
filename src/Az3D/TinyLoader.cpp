@@ -58,13 +58,13 @@ bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err
 TinyTexture TinyLoader::loadImage(const std::string& filePath) {
     TinyTexture texture = {};
 
-    // Load image using stbi
+    // Load image using stbi with original channel count
     uint8_t* stbiData = stbi_load(
         filePath.c_str(),
         &texture.width,
         &texture.height,
         &texture.channels,
-        STBI_rgb_alpha
+        0  // Don't force channel conversion, preserve original format
     );
     
     // Check if loading failed
@@ -77,11 +77,10 @@ TinyTexture TinyLoader::loadImage(const std::string& filePath) {
         return texture;
     }
     
-    // Copy data to our own vector
-    size_t dataSize = texture.width * texture.height * 4; // STBI_rgb_alpha = 4 channels
+    // Copy data to our own vector with actual channel count
+    size_t dataSize = texture.width * texture.height * texture.channels;
     texture.data.resize(dataSize);
     std::memcpy(texture.data.data(), stbiData, dataSize);
-    texture.channels = 4; // Force to 4 channels since we used STBI_rgb_alpha
     
     // Free stbi allocated memory
     stbi_image_free(stbiData);
@@ -335,6 +334,7 @@ TinySubmesh TinyLoader::loadStaticMeshFromGLTF(const std::string& filePath) {
 
     tinygltf::TinyGLTF loader;
     loader.SetImageLoader(LoadImageData, nullptr);
+    loader.SetPreserveImageChannels(true);  // Preserve original channel count
     tinygltf::Model model;
     std::string err, warn;
 
@@ -467,282 +467,13 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
     }
 }
 
-TempModel TinyLoader::loadTempModel(const std::string& filePath, bool loadRig) {
-    tinygltf::Model model;
-    tinygltf::TinyGLTF loader;
-    std::string err, warn;
-
-    loader.SetImageLoader(LoadImageData, nullptr);
-
-    std::vector<VertexRig> vertices;
-    std::vector<uint32_t> indices;
-    TinySkeleton skeleton;
-
-    bool ok;
-    if (filePath.find(".glb") != std::string::npos) {
-        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);  // GLB
-    } else {
-        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
-    }
-
-    if (!ok) {
-        throw std::runtime_error("GLTF load error: " + err);
-    }
-
-    if (model.meshes.empty()) {
-        throw std::runtime_error("GLTF has no meshes: " + filePath);
-    }
-
-    // Build skeleton first if we need it
-    std::unordered_map<int, int> nodeIndexToBoneIndex;
-    
-    if (loadRig && !model.skins.empty()) {
-        const tinygltf::Skin& skin = model.skins[0];
-        
-        // Create the node-to-bone mapping
-        for (size_t i = 0; i < skin.joints.size(); i++) {
-            nodeIndexToBoneIndex[skin.joints[i]] = static_cast<int>(i);
-        }
-        
-        // Load inverse bind matrices
-        std::vector<glm::mat4> inverseBindMatrices;
-        if (skin.inverseBindMatrices >= 0) {
-            if (!readAccessorSafe(model, skin.inverseBindMatrices, inverseBindMatrices)) {
-                throw std::runtime_error("Failed to read inverse bind matrices");
-            }
-        } else {
-            inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f));
-        }
-        
-        // Build skeleton structure
-        skeleton.names.reserve(skin.joints.size());
-        skeleton.parentIndices.reserve(skin.joints.size());
-        skeleton.inverseBindMatrices.reserve(skin.joints.size());
-        skeleton.localBindTransforms.reserve(skin.joints.size());
-        
-        // First pass: gather bone data
-        for (size_t i = 0; i < skin.joints.size(); i++) {
-            int nodeIndex = skin.joints[i];
-            
-            if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size())) {
-                throw std::runtime_error("Invalid joint node index: " + std::to_string(nodeIndex));
-            }
-            
-            const auto& node = model.nodes[nodeIndex];
-            std::string boneName = node.name.empty() ? ("bone_" + std::to_string(i)) : node.name;
-            
-            skeleton.names.push_back(boneName);
-            skeleton.parentIndices.push_back(-1); // Will be fixed in second pass
-            skeleton.inverseBindMatrices.push_back(inverseBindMatrices.size() > i ? inverseBindMatrices[i] : glm::mat4(1.0f));
-            skeleton.localBindTransforms.push_back(makeLocalFromNode(node));
-            skeleton.nameToIndex[boneName] = static_cast<int>(i);
-        }
-        
-        // Second pass: fix parent relationships
-        for (size_t i = 0; i < skin.joints.size(); i++) {
-            int nodeIndex = skin.joints[i];
-            int parentBoneIndex = -1;
-            
-            // Find which node is the parent of this node
-            for (size_t nodeIdx = 0; nodeIdx < model.nodes.size(); nodeIdx++) {
-                const auto& candidateParent = model.nodes[nodeIdx];
-                
-                // Check if this node is a child of candidateParent
-                for (int childIdx : candidateParent.children) {
-                    if (childIdx == nodeIndex) {
-                        // Found parent, check if it's also in the skeleton
-                        auto it = nodeIndexToBoneIndex.find(static_cast<int>(nodeIdx));
-                        if (it != nodeIndexToBoneIndex.end()) {
-                            parentBoneIndex = it->second;
-                        }
-                        break;
-                    }
-                }
-                
-                if (parentBoneIndex != -1) break;
-            }
-            
-            skeleton.parentIndices[i] = parentBoneIndex;
-        }
-    }
-
-    // ROBUST MESH COMBINE SYSTEM - Process ALL meshes with continuous indexing
-    size_t totalVertexCount = 0;
-    size_t totalIndexCount = 0;
-    
-    // First pass: Calculate total counts for efficient memory allocation
-    for (const auto& mesh : model.meshes) {
-        for (const auto& primitive : mesh.primitives) {
-            if (!primitive.attributes.count("POSITION")) {
-                throw std::runtime_error("Primitive missing POSITION attribute");
-            }
-            
-            size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
-            totalVertexCount += vertexCount;
-            
-            if (primitive.indices >= 0) {
-                totalIndexCount += model.accessors[primitive.indices].count;
-            }
-        }
-    }
-    
-    // Pre-allocate for optimal performance
-    vertices.reserve(totalVertexCount);
-    indices.reserve(totalIndexCount);
-    
-    size_t globalVertexOffset = 0;
-    
-    // Second pass: Process all meshes and primitives with continuous indexing
-    for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
-        const tinygltf::Mesh& mesh = model.meshes[meshIndex];
-        
-        for (size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); primitiveIndex++) {
-            const auto& primitive = mesh.primitives[primitiveIndex];
-            
-            // Validate required attributes
-            if (!primitive.attributes.count("POSITION")) {
-                throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
-                                        std::to_string(primitiveIndex) + "] missing POSITION attribute");
-            }
-            
-            size_t vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
-            
-            std::vector<glm::vec3> positions, normals;
-            std::vector<glm::vec4> tangents, weights;
-            std::vector<glm::vec2> uvs;
-            std::vector<glm::uvec4> joints;
-
-            // Read standard attributes with validation
-            readAccessor(model, model.accessors[primitive.attributes.at("POSITION")], positions);
-            
-            if (primitive.attributes.count("NORMAL")) {
-                readAccessor(model, model.accessors[primitive.attributes.at("NORMAL")], normals);
-            }
-            if (primitive.attributes.count("TANGENT")) {
-                readAccessor(model, model.accessors[primitive.attributes.at("TANGENT")], tangents);
-            }
-            if (primitive.attributes.count("TEXCOORD_0")) {
-                readAccessor(model, model.accessors[primitive.attributes.at("TEXCOORD_0")], uvs);
-            }
-            
-            // Read skinning data with robust error handling
-            if (loadRig && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0")) {
-                if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
-                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
-                                            std::to_string(primitiveIndex) + "] failed to read joint indices");
-                }
-                
-                if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), weights)) {
-                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
-                                            std::to_string(primitiveIndex) + "] failed to read bone weights");
-                }
-            }
-
-            // Build vertices with thorough validation
-            int problemVertices = 0;
-            int rootDependentVertices = 0;
-            
-            for (size_t i = 0; i < vertexCount; i++) {
-                VertexRig vertex{};
-                
-                vertex.pos_tu = glm::vec4(
-                    positions.size() > i ? positions[i] : glm::vec3(0.0f),
-                    uvs.size() > i ? uvs[i].x : 0.0f
-                );
-                vertex.nrml_tv = glm::vec4(
-                    normals.size() > i ? normals[i] : glm::vec3(0.0f),
-                    uvs.size() > i ? uvs[i].y : 0.0f
-                );
-                vertex.tangent = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
-                
-                if (loadRig && joints.size() > i && weights.size() > i) {
-                    glm::uvec4 jointIds = joints[i];
-                    glm::vec4 boneWeights = weights[i];
-                    
-                    // Validate joint indices are within skeleton range
-                    bool hasInvalidJoint = false;
-                    for (int j = 0; j < 4; j++) {
-                        if (boneWeights[j] > 0.0f && jointIds[j] >= skeleton.names.size()) {
-                            hasInvalidJoint = true;
-                            problemVertices++;
-                            break;
-                        }
-                    }
-                    
-                    if (hasInvalidJoint) {
-                        // Set to rest pose (root bone only)
-                        vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
-                        vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-                    } else {
-                        // Normalize weights to ensure they sum to 1.0
-                        float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
-                        if (weightSum > 0.0f) {
-                            boneWeights /= weightSum;
-                        } else {
-                            boneWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-                            jointIds = glm::uvec4(0, 0, 0, 0);
-                        }
-                        
-                        vertex.boneIDs = glm::ivec4(jointIds);
-                        vertex.weights = boneWeights;
-                        
-                        // Check for root dependency
-                        if (boneWeights.x > 0.99f && jointIds.x == 0) {
-                            rootDependentVertices++;
-                        }
-                    }
-                } else {
-                    // No rigging - bind to root
-                    vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
-                    vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-                }
-                
-                vertices.push_back(vertex);
-            }
-
-            // Handle indices with continuous offset tracking
-            if (primitive.indices >= 0) {
-                const auto& indexAccessor = model.accessors[primitive.indices];
-                const auto& indexBufferView = model.bufferViews[indexAccessor.bufferView];
-                const auto& indexBuffer = model.buffers[indexBufferView.buffer];
-                const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
-                size_t stride = indexAccessor.ByteStride(indexBufferView);
-
-                for (size_t i = 0; i < indexAccessor.count; i++) {
-                    uint32_t index = 0;
-                    switch (indexAccessor.componentType) {
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                            index = *((uint8_t*)(dataPtr + stride * i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                            index = *((uint16_t*)(dataPtr + stride * i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                            index = *((uint32_t*)(dataPtr + stride * i));
-                            break;
-                        default:
-                            throw std::runtime_error("TinySubmesh[" + std::to_string(meshIndex) + "] Primitive[" + 
-                                                    std::to_string(primitiveIndex) + "] unsupported index component type");
-                    }
-                    
-                    // Apply global vertex offset for continuous indexing across all meshes
-                    indices.push_back(index + static_cast<uint32_t>(globalVertexOffset));
-                }
-            }
-
-            globalVertexOffset += vertexCount;
-        }
-    }
-
-    return TempModel{TinySubmesh(vertices, indices), skeleton};
-}
-
 TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& options) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err, warn;
 
     loader.SetImageLoader(LoadImageData, nullptr);
+    loader.SetPreserveImageChannels(true);  // Preserve original channel count
 
     TinyModel result;
 
@@ -768,8 +499,7 @@ TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& 
             TinyTexture texture;
             texture.width = image.width;
             texture.height = image.height;
-            // texture.channels = image.component; // Number of channels
-            texture.channels = 4; // Force to 4 channels since we used STBI_rgb_alpha
+            texture.channels = image.component;
             texture.data = image.image;
             result.textures.push_back(std::move(texture));
         }

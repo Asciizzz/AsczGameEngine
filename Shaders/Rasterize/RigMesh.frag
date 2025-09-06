@@ -50,9 +50,16 @@ void main() {
     float discardThreshold = material.shadingParams.w;
     if (texColor.a < discardThreshold) { discard; }
 
+    // Apply toon shading
     uint toonLevel = uint(material.shadingParams.y);
     float finalLight = applyToonShading(debugLight, toonLevel);
-    finalLight = 0.3 + finalLight * 0.7; // Ambient
+    
+    // Ambient
+    finalLight = 0.3 + finalLight * 0.7;
+
+    // Check if shading is disabled
+    bool shadingFlag = material.shadingParams.x > 0.5;
+    finalLight = shadingFlag ? finalLight : 1.0;
 
     vec3 finalColor = texColor.xyz * finalLight;
 
