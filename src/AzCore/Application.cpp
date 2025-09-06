@@ -95,7 +95,7 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Tow.obj");
+    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Town.obj");
     // testObjModel.printDebug();
     resGroup->addModel(testObjModel);
 
@@ -485,6 +485,18 @@ void Application::mainLoop() {
         //     // particleManager->updatePhysic(dTime, resGroup->getStaticMesh("TerrainMesh"), glm::mat4(1.0f));
         // };
         // particleManager->updateRender();
+
+        // Press 0 - 9 to switch animation
+        if (k_state[SDL_SCANCODE_0]) rigDemo.playAnimation(0);
+        if (k_state[SDL_SCANCODE_1]) rigDemo.playAnimation(1);
+        if (k_state[SDL_SCANCODE_2]) rigDemo.playAnimation(2);
+        if (k_state[SDL_SCANCODE_3]) rigDemo.playAnimation(3);
+        if (k_state[SDL_SCANCODE_4]) rigDemo.playAnimation(4);
+        if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(5);
+        if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(6);
+        if (k_state[SDL_SCANCODE_7]) rigDemo.playAnimation(7);
+        if (k_state[SDL_SCANCODE_8]) rigDemo.playAnimation(8);
+        if (k_state[SDL_SCANCODE_9]) rigDemo.playAnimation(9);
 
 // =================================
 
