@@ -221,6 +221,26 @@ void RigDemo::funFunction(const FunParams& params) {
     localPoseTransforms[shoulderLeftIndex] = constructMatrix(transformShoulderLeft);
     localPoseTransforms[shoulderRightIndex] = constructMatrix(transformShoulderRight);
 
+
+    
+    // Rotate tail 
+    size_t tailRootIndex = 403;
+    size_t tailEndIndex = 409;
+    
+    float partRotTail = 30.0f * sinAccum;
+    FunTransform transformTailRoot = extractTransform(getBindPose(tailRootIndex));
+    transformTailRoot.rotation = glm::rotate(transformTailRoot.rotation, glm::radians(partRotTail), glm::vec3(1,0,0));
+
+    localPoseTransforms[tailRootIndex] = constructMatrix(transformTailRoot);
+
+    for (int i = tailRootIndex + 1; i <= tailEndIndex; ++i) {
+        FunTransform transform = extractTransform(getBindPose(i));
+        float partRot = -5.0f * sin(funAccumTimeValue + i) + 10.0f;
+        transform.rotation = glm::rotate(transform.rotation, glm::radians(partRot), glm::vec3(1,0,0));
+
+        localPoseTransforms[i] = constructMatrix(transform);
+    }
+
     /*
     // Rotate (index 2)
     float partRotSpine = 10.0f * sinAccum;
