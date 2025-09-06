@@ -29,6 +29,9 @@ void main() {
                     inWeights[2] * finalPose[inBoneID[2]] +
                     inWeights[3] * finalPose[inBoneID[3]];
 
+    bool validMat = skinMat4 != mat4(0.0);
+    skinMat4 = validMat ? skinMat4 : mat4(1.0);
+
     vec4 worldPos = skinMat4 * vec4(inPos_Tu.xyz, 1.0);
     gl_Position = glb.proj * glb.view * worldPos;
 

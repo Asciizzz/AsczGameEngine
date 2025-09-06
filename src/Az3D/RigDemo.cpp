@@ -201,15 +201,16 @@ void RigDemo::funFunction(const FunParams& params) {
     // localPoseTransforms[0] = constructMatrix(transform0);
 
     // Rotate spine
+    size_t spineIndex = 106;
     float partRotSpine = 10.0f * sinAccum;
-    FunTransform transform1 = extractTransform(getBindPose(3));
+    FunTransform transform1 = extractTransform(getBindPose(spineIndex));
     transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
 
-    localPoseTransforms[3] = constructMatrix(transform1);
+    localPoseTransforms[spineIndex] = constructMatrix(transform1);
 
     // Rotate shoulder (right 168 left 130)
-    size_t shoulderLeftIndex = 130;
-    size_t shoulderRightIndex = 168;
+    size_t shoulderLeftIndex = 298;
+    size_t shoulderRightIndex = 341;
     float partRotShoulderLeft = 18.0f * sinAccum - 10.0f;
     float partRotShoulderRight = 18.0f * sin(1.1f * funAccumTimeValue) - 10.0f;
     FunTransform transformShoulderLeft = extractTransform(getBindPose(shoulderLeftIndex));
