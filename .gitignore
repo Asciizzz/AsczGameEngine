@@ -2,8 +2,8 @@ build/
 AsczGame_Release/
 AsczGame_Debug/
 
-.backup/
 .vscode/
+.backup/
 .heavy/
 
 GovernmentData/
