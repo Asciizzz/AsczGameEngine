@@ -325,7 +325,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
     }
 
     // Load textures only if requested
-    if (options.loadTextures) {
+    if (options.loadTextures && options.loadMaterials) {
         result.textures.reserve(model.images.size());
         for (const auto& image : model.images) {
             TinyTexture texture;
@@ -627,106 +627,318 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
 
 // OBJ loader implementation using tiny_obj_loader
 TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOptions& options) {
-    // tinyobj::attrib_t attrib;
-    // std::vector<tinyobj::shape_t> shapes;
-    // std::vector<tinyobj::material_t> materials;
-    // std::string warn, err;
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
 
-    // // Load the OBJ file
-    // if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str())) {
-    //     return TinySubmesh(); // Return empty mesh on failure
-    // }
+    // Extract directory path for relative texture paths
+    std::string basePath = filePath.substr(0, filePath.find_last_of("/\\") + 1);
 
-    // std::vector<VertexStatic> vertices;
-    // std::vector<uint32_t> indices;
-    // UnorderedMap<size_t, uint32_t> uniqueVertices;
+    // Load the OBJ file
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str(), basePath.c_str())) {
+        throw std::runtime_error("OBJ load error: " + err);
+    }
 
-    // // Hash combine utility
-    // auto hash_combine = [](std::size_t& seed, std::size_t hash) {
-    //     seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    // };
+    if (!warn.empty()) {
+        printf("OBJ loader warning: %s\n", warn.c_str());
+    }
 
-    // // Full-attribute hash (position + normal + texcoord)
-    // auto hashVertex = [&](const VertexStatic& v) -> size_t {
-    //     size_t seed = 0;
-    //     hash_combine(seed, std::hash<float>{}(v.pos_tu.x));
-    //     hash_combine(seed, std::hash<float>{}(v.pos_tu.y));
-    //     hash_combine(seed, std::hash<float>{}(v.pos_tu.z));
-    //     hash_combine(seed, std::hash<float>{}(v.nrml_tv.x));
-    //     hash_combine(seed, std::hash<float>{}(v.nrml_tv.y));
-    //     hash_combine(seed, std::hash<float>{}(v.nrml_tv.z));
-    //     hash_combine(seed, std::hash<float>{}(v.pos_tu.w));
-    //     hash_combine(seed, std::hash<float>{}(v.nrml_tv.w));
-    //     return seed;
-    // };
+    TinyModel result;
 
-    // bool hasNormals = !attrib.normals.empty();
+    // Load textures if requested
+    // If no materials are loaded, skip texture loading
+    if (options.loadTextures && options.loadMaterials) {
+        std::unordered_map<std::string, int> texturePathToIndex;
+        
+        for (const auto& material : materials) {
+            // Check diffuse texture
+            if (!material.diffuse_texname.empty()) {
+                std::string texturePath = basePath + material.diffuse_texname;
+                if (texturePathToIndex.find(texturePath) == texturePathToIndex.end()) {
+                    try {
+                        TinyTexture texture = loadImage(texturePath);
+                        if (!texture.data.empty()) {
+                            texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                            result.textures.push_back(std::move(texture));
+                            printf("Loaded texture: %s\n", texturePath.c_str());
+                        }
+                    } catch (const std::exception& e) {
+                        printf("Failed to load texture %s: %s\n", texturePath.c_str(), e.what());
+                    }
+                }
+            }
+            
+            // Check normal map texture
+            if (!material.normal_texname.empty()) {
+                std::string texturePath = basePath + material.normal_texname;
+                if (texturePathToIndex.find(texturePath) == texturePathToIndex.end()) {
+                    try {
+                        TinyTexture texture = loadImage(texturePath);
+                        if (!texture.data.empty()) {
+                            texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                            result.textures.push_back(std::move(texture));
+                            printf("Loaded normal map: %s\n", texturePath.c_str());
+                        }
+                    } catch (const std::exception& e) {
+                        printf("Failed to load normal map %s: %s\n", texturePath.c_str(), e.what());
+                    }
+                }
+            }
+        }
+    }
 
-    // for (const auto& shape : shapes) {
-    //     for (size_t f = 0; f < shape.mesh.indices.size(); f += 3) {
-    //         std::vector<VertexStatic> triangle(3);
+    // Load materials if requested
+    if (options.loadMaterials) {
+        result.materials.reserve(materials.size());
+        
+        for (size_t i = 0; i < materials.size(); i++) {
+            const auto& objMaterial = materials[i];
+            TinyMaterial material;
+            
+            // TinyMaterial doesn't store names, so we'll just use indices for material tracking
+            
+            if (options.loadTextures) {
+                // Handle diffuse texture
+                if (!objMaterial.diffuse_texname.empty()) {
+                    std::string texturePath = basePath + objMaterial.diffuse_texname;
+                    for (size_t texIndex = 0; texIndex < result.textures.size(); texIndex++) {
+                        // Simple check - you might want to store the original path in TinyTexture for exact matching
+                        if (texturePath.find(objMaterial.diffuse_texname) != std::string::npos) {
+                            material.albTexture = static_cast<int>(texIndex);
+                            break;
+                        }
+                    }
+                }
+                
+                // Handle normal texture
+                if (!objMaterial.normal_texname.empty()) {
+                    std::string texturePath = basePath + objMaterial.normal_texname;
+                    for (size_t texIndex = 0; texIndex < result.textures.size(); texIndex++) {
+                        // Simple check - you might want to store the original path in TinyTexture for exact matching
+                        if (texturePath.find(objMaterial.normal_texname) != std::string::npos) {
+                            material.nrmlTexture = static_cast<int>(texIndex);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            result.materials.push_back(material);
+        }
+    }
 
-    //         for (int v = 0; v < 3; v++) {
-    //             const auto& index = shape.mesh.indices[f + v];
-    //             VertexStatic& vertex = triangle[v];
+    // Hash combine utility
+    auto hash_combine = [](std::size_t& seed, std::size_t hash) {
+        seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    };
 
-    //             // Position
-    //             if (index.vertex_index >= 0) {
-    //                 vertex.setPosition({
-    //                     attrib.vertices[3 * index.vertex_index + 0],
-    //                     attrib.vertices[3 * index.vertex_index + 1],
-    //                     attrib.vertices[3 * index.vertex_index + 2]
-    //                 });
-    //             }
+    // Full-attribute hash (position + normal + texcoord)
+    auto hashVertex = [&](const VertexStatic& v) -> size_t {
+        size_t seed = 0;
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.x));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.y));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.z));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.x));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.y));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.z));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.w));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.w));
+        return seed;
+    };
 
-    //             // TinyTexture coordinates
-    //             if (index.texcoord_index >= 0) {
-    //                 vertex.setTextureUV({
-    //                     attrib.texcoords[2 * index.texcoord_index + 0],
-    //                     1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V
-    //                 });
-    //             } else {
-    //                 vertex.setTextureUV({ 0.0f, 0.0f });
-    //             }
+    bool hasNormals = !attrib.normals.empty();
 
-    //             // Normals
-    //             if (hasNormals && index.normal_index >= 0) {
-    //                 vertex.setNormal({
-    //                     attrib.normals[3 * index.normal_index + 0],
-    //                     attrib.normals[3 * index.normal_index + 1],
-    //                     attrib.normals[3 * index.normal_index + 2]
-    //                 });
-    //             }
-    //         }
+    // Process each shape as a separate submesh
+    result.submeshes.reserve(shapes.size());
+    
+    for (size_t shapeIndex = 0; shapeIndex < shapes.size(); shapeIndex++) {
+        const auto& shape = shapes[shapeIndex];
+        
+        std::vector<VertexStatic> vertices;
+        std::vector<uint32_t> indices;
+        std::unordered_map<size_t, uint32_t> uniqueVertices;
 
-    //         // Generate face normal if needed
-    //         if (!hasNormals) {
-    //             glm::vec3 edge1 = triangle[1].getPosition() - triangle[0].getPosition();
-    //             glm::vec3 edge2 = triangle[2].getPosition() - triangle[0].getPosition();
-    //             glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+        // Group faces by material
+        std::unordered_map<int, std::vector<size_t>> materialToFaces;
+        
+        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+            int materialId = shape.mesh.material_ids.size() > f ? shape.mesh.material_ids[f] : -1;
+            materialToFaces[materialId].push_back(f);
+        }
 
-    //             triangle[0].setNormal(faceNormal);
-    //             triangle[1].setNormal(faceNormal);
-    //             triangle[2].setNormal(faceNormal);
-    //         }
+        // Process each material group as a separate submesh
+        for (const auto& [materialId, faceIndices] : materialToFaces) {
+            vertices.clear();
+            indices.clear();
+            uniqueVertices.clear();
 
-    //         // Deduplicate and add vertices
-    //         for (const auto& vertex : triangle) {
-    //             size_t vertexHash = hashVertex(vertex);
-    //             auto it = uniqueVertices.find(vertexHash);
-    //             if (it == uniqueVertices.end()) {
-    //                 uniqueVertices[vertexHash] = static_cast<uint32_t>(vertices.size());
-    //                 vertices.push_back(vertex);
-    //                 indices.push_back(static_cast<uint32_t>(vertices.size() - 1));
-    //             } else {
-    //                 indices.push_back(it->second);
-    //             }
-    //         }
-    //     }
-    // }
+            size_t indexOffset = 0;
+            for (size_t faceIdx : faceIndices) {
+                size_t fv = shape.mesh.num_face_vertices[faceIdx];
+                
+                // Process each triangle (assuming triangulated mesh)
+                for (size_t v = 0; v < fv; v++) {
+                    const auto& index = shape.mesh.indices[indexOffset + v];
+                    VertexStatic vertex{};
 
-    // return TinySubmesh(vertices, indices);
-    return TinyModel(); // Placeholder until OBJ loader is implemented
+                    // Position
+                    if (index.vertex_index >= 0) {
+                        vertex.pos_tu = glm::vec4(
+                            attrib.vertices[3 * index.vertex_index + 0],
+                            attrib.vertices[3 * index.vertex_index + 1],
+                            attrib.vertices[3 * index.vertex_index + 2],
+                            0.0f  // UV.x will be set below
+                        );
+                    }
+
+                    // Texture coordinates
+                    if (index.texcoord_index >= 0) {
+                        vertex.pos_tu.w = attrib.texcoords[2 * index.texcoord_index + 0];  // U
+                        vertex.nrml_tv.w = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];  // V (flipped)
+                    } else {
+                        vertex.pos_tu.w = 0.0f;  // U
+                        vertex.nrml_tv.w = 0.0f;  // V
+                    }
+
+                    // Normals
+                    if (hasNormals && index.normal_index >= 0) {
+                        vertex.nrml_tv = glm::vec4(
+                            attrib.normals[3 * index.normal_index + 0],
+                            attrib.normals[3 * index.normal_index + 1],
+                            attrib.normals[3 * index.normal_index + 2],
+                            vertex.nrml_tv.w  // Preserve V coordinate
+                        );
+                    }
+
+                    // Deduplicate and add vertex
+                    size_t vertexHash = hashVertex(vertex);
+                    auto it = uniqueVertices.find(vertexHash);
+                    if (it == uniqueVertices.end()) {
+                        uniqueVertices[vertexHash] = static_cast<uint32_t>(vertices.size());
+                        vertices.push_back(vertex);
+                        indices.push_back(static_cast<uint32_t>(vertices.size() - 1));
+                    } else {
+                        indices.push_back(it->second);
+                    }
+                }
+                
+                indexOffset += fv;
+            }
+
+            // Generate face normals if no normals provided
+            if (!hasNormals && indices.size() >= 3) {
+                for (size_t i = 0; i < indices.size(); i += 3) {
+                    if (i + 2 < indices.size()) {
+                        glm::vec3 v0 = glm::vec3(vertices[indices[i]].pos_tu);
+                        glm::vec3 v1 = glm::vec3(vertices[indices[i + 1]].pos_tu);
+                        glm::vec3 v2 = glm::vec3(vertices[indices[i + 2]].pos_tu);
+                        
+                        glm::vec3 edge1 = v1 - v0;
+                        glm::vec3 edge2 = v2 - v0;
+                        glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
+                        vertices[indices[i]].nrml_tv.x = faceNormal.x;
+                        vertices[indices[i]].nrml_tv.y = faceNormal.y;
+                        vertices[indices[i]].nrml_tv.z = faceNormal.z;
+                        
+                        vertices[indices[i + 1]].nrml_tv.x = faceNormal.x;
+                        vertices[indices[i + 1]].nrml_tv.y = faceNormal.y;
+                        vertices[indices[i + 1]].nrml_tv.z = faceNormal.z;
+                        
+                        vertices[indices[i + 2]].nrml_tv.x = faceNormal.x;
+                        vertices[indices[i + 2]].nrml_tv.y = faceNormal.y;
+                        vertices[indices[i + 2]].nrml_tv.z = faceNormal.z;
+                    }
+                }
+            }
+
+            // Create submesh if we have geometry
+            if (!vertices.empty() && !indices.empty()) {
+                TinySubmesh submesh;
+                submesh.create(vertices, indices);
+                
+                // Set material index if materials are loaded and valid
+                if (options.loadMaterials && materialId >= 0 && materialId < static_cast<int>(result.materials.size())) {
+                    submesh.matIndex = materialId;
+                } else {
+                    submesh.matIndex = -1;  // No material
+                }
+                
+                result.submeshes.push_back(std::move(submesh));
+            }
+        }
+    }
+
+    // If no submeshes were created (no materials), create one big submesh
+    if (result.submeshes.empty() && !shapes.empty()) {
+        std::vector<VertexStatic> vertices;
+        std::vector<uint32_t> indices;
+        std::unordered_map<size_t, uint32_t> uniqueVertices;
+
+        for (const auto& shape : shapes) {
+            size_t indexOffset = 0;
+            for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+                size_t fv = shape.mesh.num_face_vertices[f];
+                
+                for (size_t v = 0; v < fv; v++) {
+                    const auto& index = shape.mesh.indices[indexOffset + v];
+                    VertexStatic vertex{};
+
+                    // Position
+                    if (index.vertex_index >= 0) {
+                        vertex.pos_tu = glm::vec4(
+                            attrib.vertices[3 * index.vertex_index + 0],
+                            attrib.vertices[3 * index.vertex_index + 1],
+                            attrib.vertices[3 * index.vertex_index + 2],
+                            0.0f
+                        );
+                    }
+
+                    // Texture coordinates
+                    if (index.texcoord_index >= 0) {
+                        vertex.pos_tu.w = attrib.texcoords[2 * index.texcoord_index + 0];
+                        vertex.nrml_tv.w = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];
+                    }
+
+                    // Normals
+                    if (hasNormals && index.normal_index >= 0) {
+                        vertex.nrml_tv = glm::vec4(
+                            attrib.normals[3 * index.normal_index + 0],
+                            attrib.normals[3 * index.normal_index + 1],
+                            attrib.normals[3 * index.normal_index + 2],
+                            vertex.nrml_tv.w
+                        );
+                    }
+
+                    // Deduplicate and add vertex
+                    size_t vertexHash = hashVertex(vertex);
+                    auto it = uniqueVertices.find(vertexHash);
+                    if (it == uniqueVertices.end()) {
+                        uniqueVertices[vertexHash] = static_cast<uint32_t>(vertices.size());
+                        vertices.push_back(vertex);
+                        indices.push_back(static_cast<uint32_t>(vertices.size() - 1));
+                    } else {
+                        indices.push_back(it->second);
+                    }
+                }
+                
+                indexOffset += fv;
+            }
+        }
+
+        if (!vertices.empty() && !indices.empty()) {
+            TinySubmesh submesh;
+            submesh.create(vertices, indices);
+            submesh.matIndex = -1;  // No material
+            result.submeshes.push_back(std::move(submesh));
+        }
+    }
+
+    printf("OBJ loader: Loaded %zu submeshes, %zu materials, %zu textures\n", 
+           result.submeshes.size(), result.materials.size(), result.textures.size());
+
+    return result;
 }
 
 
