@@ -7,17 +7,6 @@
 
 using namespace Az3D;
 
-// Local transform structure for TRS manipulation
-struct FunTransform {
-    glm::vec3 translation{0.0f};
-    glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
-    glm::vec3 scale{1.0f};
-    
-    FunTransform() = default;
-    FunTransform(const glm::vec3& t, const glm::quat& r, const glm::vec3& s) 
-        : translation(t), rotation(r), scale(s) {}
-};
-
 // Extract TRS components from a matrix
 FunTransform extractTransform(const glm::mat4& matrix) {
     FunTransform transform;
@@ -129,6 +118,22 @@ void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>
 
     computeAllTransforms();
 
+    size_t n = localPoseTransforms.size();
+    states.resize(n);
+    for (size_t i = 0; i < n; ++i) {
+        FunTransform bt = extractTransform(localPoseTransforms[i]);
+        states[i].localTransform = bt;
+        states[i].angVel = glm::vec3(0.0f);
+
+        // Tweak default param per bone type heuristically
+        states[i].stiffness = 50.0f;
+        states[i].damping   = 8.0f;
+        states[i].inertia   = 1.0f;
+        states[i].maxAngVel = 30.0f;
+    }
+
+
+
     finalPoseBuffer.initVkDevice(vkDevice);
 
     finalPoseBuffer.setProperties(
@@ -180,20 +185,115 @@ glm::mat4 RigDemo::getBindPose(size_t index) {
     return skeleton->localBindTransforms[index];
 }
 
+
+
+
+
+// Convert a small angular velocity vector (omega) into a quaternion delta for dt.
+// Uses the approximation q ~= exp(0.5 * dt * [0, omega]), but implemented robustly.
+inline glm::quat smallAngVelToQuat(const glm::vec3& omega, float dt) {
+    // We want quaternion dq such that dq * q applies rotation of angle = |omega|*dt around axis = normalized(omega)
+    glm::vec3 v = omega * (0.5f * dt); // factor 0.5 comes from quaternion exp properties
+    float angle = glm::length(v);
+    if (angle < 1e-8f) {
+        // linear approx: q ~ [1, v]
+        return glm::quat(1.0f, v.x, v.y, v.z);
+    } else {
+        glm::vec3 axis = v / angle;
+        // note: the quaternion representing rotation by theta is angleAxis(theta, axis)
+        // our quaternion should represent rotation by 2*angle because of the earlier factor
+        return glm::angleAxis(2.0f * angle, axis);
+    }
+}
+
+inline void quatToAxisAngleSigned(const glm::quat& q, glm::vec3& outAxis, float& outAngle) {
+    // ensure normalized
+    glm::quat qq = glm::normalize(q);
+    outAngle = 2.0f * std::acos(glm::clamp(qq.w, -1.0f, 1.0f)); // [0, 2pi]
+    float s = std::sqrt(1.0f - qq.w * qq.w);
+    if (s < 1e-6f) {
+        // angle is ~0 -> arbitrary axis
+        outAxis = glm::vec3(1,0,0);
+    } else {
+        outAxis = glm::vec3(qq.x, qq.y, qq.z) / s;
+    }
+    // Make angle signed in [-pi, pi] for shortest path
+    if (outAngle > glm::pi<float>()) outAngle -= 2.0f * glm::pi<float>();
+}
+
+
+
 void RigDemo::funFunction(const FunParams& params) {
     // Messed up some bone idk
     float dTime = params.customFloat[0];
     funAccumTimeValue += dTime;
 
+    size_t boneCount = skeleton->names.size();
+
+    std::vector<FunTransform> localTransforms(boneCount);
+    for (size_t i = 0; i < boneCount; ++i) {
+        localTransforms[i] = extractTransform(localPoseTransforms[i]);
+    }
+
+    for (size_t i = 0; i < boneCount; ++i) {
+        BonePhysicsState& st = states[i];
+        FunTransform& target = localTransforms[i]; // target local orientation
+
+        // Current and target quaternions (local)
+        glm::quat qCurr = st.localTransform.rotation;
+        glm::quat qTarget = target.rotation;
+
+        // qErr = qTarget * inverse(qCurr)  => rotation to apply to current to reach target
+        glm::quat qErr = qTarget * glm::inverse(qCurr);
+
+        // axis-angle signed
+        glm::vec3 axis;
+        float angle;
+        quatToAxisAngleSigned(qErr, axis, angle);
+
+        // Spring torque approximated as vector: axis * (angle * stiffness)
+        glm::vec3 springTorque = axis * (angle * st.stiffness);
+
+        // Damping torque
+        glm::vec3 dampingTorque = - st.damping * st.angVel;
+
+        // Net torque -> angular acceleration
+        glm::vec3 netTorque = springTorque + dampingTorque;
+        glm::vec3 angAccel = netTorque / st.inertia;
+
+        // Semi-implicit Euler integration for angular velocity
+        st.angVel += angAccel * dTime;
+
+        // clamp angular velocity magnitude
+        float mag = glm::length(st.angVel);
+        if (mag > st.maxAngVel) {
+            st.angVel *= (st.maxAngVel / mag);
+        }
+
+        // Integrate rotation using small-angle quaternion
+        glm::quat dq = smallAngVelToQuat(st.angVel, dTime);
+        st.localTransform.rotation = glm::normalize(dq * st.localTransform.rotation);
+
+        // Optional angular limit relative to bind
+        if (st.useLimit) {
+            glm::quat qRel = glm::inverse(qTarget) * st.localTransform.rotation; // rotation from bind->current
+            glm::vec3 aaxis;
+            float aangle;
+            quatToAxisAngleSigned(qRel, aaxis, aangle);
+            float limitRad = glm::radians(st.limitAngleDegrees);
+            if (std::abs(aangle) > limitRad && limitRad > 1e-6f) {
+                // bring it back toward bind by slerp ratio
+                float ratio = limitRad / std::abs(aangle);
+                st.localTransform.rotation = glm::slerp(qTarget, st.localTransform.rotation, ratio);
+                st.angVel *= 0.5f; // damp when hitting limit
+            }
+        }
+
+        localPoseTransforms[i] = constructMatrix(st.localTransform);
+    } // end bones loop
+
+    
     float sinAccum = sin(funAccumTimeValue);
-
-    // glm::vec3 cameraPos = glm::vec3(params.customVec4[0]);
-
-    // I know that it may looks like magic numbers right now
-    // But i can assure you, they... are indeed magic numbers lol
-    // But don't worry, this is just a playground to test out
-    // the new rigging system, once everything is implemented
-    // There will be actual robust bone handler
 
     // // Rotate root (for weird ass model that is rotated 90 degree)
     // FunTransform transform0 = extractTransform(getBindPose(0));
@@ -201,45 +301,45 @@ void RigDemo::funFunction(const FunParams& params) {
     // localPoseTransforms[0] = constructMatrix(transform0);
 
     // Rotate spine
-    size_t spineIndex = 106;
-    float partRotSpine = 10.0f * sinAccum;
-    FunTransform transform1 = extractTransform(getBindPose(spineIndex));
-    transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
+    // size_t spineIndex = 106;
+    // float partRotSpine = 10.0f * sinAccum;
+    // FunTransform transform1 = extractTransform(getBindPose(spineIndex));
+    // transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
 
-    localPoseTransforms[spineIndex] = constructMatrix(transform1);
+    // localPoseTransforms[spineIndex] = constructMatrix(transform1);
 
-    // Rotate shoulder (right 168 left 130)
-    size_t shoulderLeftIndex = 298;
-    size_t shoulderRightIndex = 341;
-    float partRotShoulderLeft = 28.0f * sinAccum - 10.0f;
-    float partRotShoulderRight = 18.0f * sin(1.1f * funAccumTimeValue) - 10.0f;
-    FunTransform transformShoulderLeft = extractTransform(getBindPose(shoulderLeftIndex));
-    FunTransform transformShoulderRight = extractTransform(getBindPose(shoulderRightIndex));
-    transformShoulderLeft.rotation = glm::rotate(transformShoulderLeft.rotation, glm::radians(partRotShoulderLeft), glm::vec3(1,0,0));
-    transformShoulderRight.rotation = glm::rotate(transformShoulderRight.rotation, glm::radians(partRotShoulderRight), glm::vec3(0,1,0));
+    // // Rotate shoulder (right 168 left 130)
+    // size_t shoulderLeftIndex = 298;
+    // size_t shoulderRightIndex = 341;
+    // float partRotShoulderLeft = 28.0f * sinAccum - 10.0f;
+    // float partRotShoulderRight = 18.0f * sin(1.1f * funAccumTimeValue) - 10.0f;
+    // FunTransform transformShoulderLeft = extractTransform(getBindPose(shoulderLeftIndex));
+    // FunTransform transformShoulderRight = extractTransform(getBindPose(shoulderRightIndex));
+    // transformShoulderLeft.rotation = glm::rotate(transformShoulderLeft.rotation, glm::radians(partRotShoulderLeft), glm::vec3(1,0,0));
+    // transformShoulderRight.rotation = glm::rotate(transformShoulderRight.rotation, glm::radians(partRotShoulderRight), glm::vec3(0,1,0));
 
-    // localPoseTransforms[shoulderLeftIndex] = constructMatrix(transformShoulderLeft);
-    localPoseTransforms[shoulderRightIndex] = constructMatrix(transformShoulderRight);
+    // // localPoseTransforms[shoulderLeftIndex] = constructMatrix(transformShoulderLeft);
+    // localPoseTransforms[shoulderRightIndex] = constructMatrix(transformShoulderRight);
 
 
     
-    // Rotate tail 
-    size_t tailRootIndex = 403;
-    size_t tailEndIndex = 409;
+    // // Rotate tail 
+    // size_t tailRootIndex = 403;
+    // size_t tailEndIndex = 409;
     
-    float partRotTail = 30.0f * sinAccum;
-    FunTransform transformTailRoot = extractTransform(getBindPose(tailRootIndex));
-    transformTailRoot.rotation = glm::rotate(transformTailRoot.rotation, glm::radians(partRotTail), glm::vec3(1,0,0));
+    // float partRotTail = 30.0f * sinAccum;
+    // FunTransform transformTailRoot = extractTransform(getBindPose(tailRootIndex));
+    // transformTailRoot.rotation = glm::rotate(transformTailRoot.rotation, glm::radians(partRotTail), glm::vec3(1,0,0));
 
-    localPoseTransforms[tailRootIndex] = constructMatrix(transformTailRoot);
+    // localPoseTransforms[tailRootIndex] = constructMatrix(transformTailRoot);
 
-    for (int i = tailRootIndex + 1; i <= tailEndIndex; ++i) {
-        FunTransform transform = extractTransform(getBindPose(i));
-        float partRot = -5.0f * sin(funAccumTimeValue + i) + 10.0f;
-        transform.rotation = glm::rotate(transform.rotation, glm::radians(partRot), glm::vec3(1,0,0));
+    // for (int i = tailRootIndex + 1; i <= tailEndIndex; ++i) {
+    //     FunTransform transform = extractTransform(getBindPose(i));
+    //     float partRot = -5.0f * sin(funAccumTimeValue + i) + 10.0f;
+    //     transform.rotation = glm::rotate(transform.rotation, glm::radians(partRot), glm::vec3(1,0,0));
 
-        localPoseTransforms[i] = constructMatrix(transform);
-    }
+    //     localPoseTransforms[i] = constructMatrix(transform);
+    // }
 
     /*
     // Rotate (index 2)

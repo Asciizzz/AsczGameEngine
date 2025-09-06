@@ -81,7 +81,7 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Umamusume/SilenceSuzuka.glb");
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Umamusume/OguriCap.glb");
     for (auto& mat : testModel.materials) {
         mat.shading = false; // No lighting for for highly stylized look
         // mat.toonLevel = 1;
@@ -90,7 +90,7 @@ void Application::initComponents() {
     testModel.skeleton.debugPrintHierarchy();
     resGroup->addModel(testModel);
 
-    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Town.obj");
+    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Tow.obj");
     // testObjModel.printDebug();
     resGroup->addModel(testObjModel);
 
