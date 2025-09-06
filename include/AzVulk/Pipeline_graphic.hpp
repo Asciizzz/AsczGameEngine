@@ -32,7 +32,7 @@ struct RasterCfg {
 
 
     // defaults
-    VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+    VkCullModeFlags cullMode            = VK_CULL_MODE_BACK_BIT;
     VkBool32        depthTestEnable     = VK_TRUE;
     VkBool32        depthWriteEnable    = VK_TRUE;
     VkBool32        blendEnable         = VK_FALSE;

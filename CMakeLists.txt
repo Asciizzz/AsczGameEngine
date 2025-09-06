@@ -23,6 +23,7 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/VertexTypes.cpp
     # src/Az3D/StaticMesh_BVH.cpp
     src/Az3D/TinyModel.cpp
+    src/Az3D/TinyRig.cpp
     src/Az3D/TinyLoader.cpp
     src/Az3D/StaticInstance.cpp
     src/Az3D/RigDemo.cpp

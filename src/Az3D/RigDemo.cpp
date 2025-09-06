@@ -57,21 +57,21 @@ void RigDemo::computeAllTransforms() {
     // We need to compute transforms in dependency order (parents before children)
     // First, identify root bones and process them recursively
     
-    std::vector<bool> processed(skeleton->names.size(), false);
+    std::vector<bool> processed(skeleton.names.size(), false);
     
     // Process all bones recursively, starting from roots
-    for (size_t i = 0; i < skeleton->names.size(); ++i) {
-        if (skeleton->parentIndices[i] == -1 && !processed[i]) {
+    for (size_t i = 0; i < skeleton.names.size(); ++i) {
+        if (skeleton.parentIndices[i] == -1 && !processed[i]) {
             computeBoneRecursive(i, processed);
         }
     }
     
     // Handle any orphaned bones (shouldn't happen with proper hierarchy)
-    for (size_t i = 0; i < skeleton->names.size(); ++i) {
+    for (size_t i = 0; i < skeleton.names.size(); ++i) {
         if (!processed[i]) {
-            std::cout << "Warning: Orphaned bone " << i << " (" << skeleton->names[i] << ")\n";
+            std::cout << "Warning: Orphaned bone " << i << " (" << skeleton.names[i] << ")\n";
             globalPoseTransforms[i] = localPoseTransforms[i];
-            finalTransforms[i] = globalPoseTransforms[i] * skeleton->inverseBindMatrices[i];
+            finalTransforms[i] = globalPoseTransforms[i] * skeleton.inverseBindMatrices[i];
             processed[i] = true;
         }
     }
@@ -80,7 +80,7 @@ void RigDemo::computeAllTransforms() {
 void RigDemo::computeBoneRecursive(size_t boneIndex, std::vector<bool>& processed) {
     if (processed[boneIndex]) return;
     
-    int parent = skeleton->parentIndices[boneIndex];
+    int parent = skeleton.parentIndices[boneIndex];
     
     if (parent == -1) {
         // Root bone
@@ -91,30 +91,30 @@ void RigDemo::computeBoneRecursive(size_t boneIndex, std::vector<bool>& processe
         globalPoseTransforms[boneIndex] = globalPoseTransforms[parent] * localPoseTransforms[boneIndex];
     }
     
-    finalTransforms[boneIndex] = globalPoseTransforms[boneIndex] * skeleton->inverseBindMatrices[boneIndex];
+    finalTransforms[boneIndex] = globalPoseTransforms[boneIndex] * skeleton.inverseBindMatrices[boneIndex];
     processed[boneIndex] = true;
     
     // Process all children
-    for (size_t i = 0; i < skeleton->names.size(); ++i) {
-        if (skeleton->parentIndices[i] == static_cast<int>(boneIndex) && !processed[i]) {
+    for (size_t i = 0; i < skeleton.names.size(); ++i) {
+        if (skeleton.parentIndices[i] == static_cast<int>(boneIndex) && !processed[i]) {
             computeBoneRecursive(i, processed);
         }
     }
 }
 
-void RigDemo::init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>& skeleton, size_t modelIndex) {
+void RigDemo::init(const AzVulk::Device* vkDevice, const TinySkeleton& skeleton, size_t modelIndex) {
     using namespace AzVulk;
 
     this->skeleton = skeleton;
     this->modelIndex = modelIndex;
 
-    // skeleton->debugPrintHierarchy();
+    // skeleton.debugPrintHierarchy();
 
-    localPoseTransforms.resize(skeleton->names.size());
-    globalPoseTransforms.resize(skeleton->names.size());
-    finalTransforms.resize(skeleton->names.size());
+    localPoseTransforms.resize(skeleton.names.size());
+    globalPoseTransforms.resize(skeleton.names.size());
+    finalTransforms.resize(skeleton.names.size());
     
-    localPoseTransforms = skeleton->localBindTransforms;
+    localPoseTransforms = skeleton.localBindTransforms;
 
     computeAllTransforms();
 
@@ -179,10 +179,10 @@ void RigDemo::updateBuffer() {
 
 
 glm::mat4 RigDemo::getBindPose(size_t index) {
-    if (index >= skeleton->names.size()) {
+    if (index >= skeleton.names.size()) {
         return glm::mat4(1.0f);
     }
-    return skeleton->localBindTransforms[index];
+    return skeleton.localBindTransforms[index];
 }
 
 
@@ -228,8 +228,10 @@ void RigDemo::funFunction(const FunParams& params) {
     float dTime = params.customFloat[0];
     funAccumTimeValue += dTime;
 
-    size_t boneCount = skeleton->names.size();
+    size_t boneCount = skeleton.names.size();
 
+    return;
+    /*
     std::vector<FunTransform> localTransforms(boneCount);
     for (size_t i = 0; i < boneCount; ++i) {
         localTransforms[i] = extractTransform(localPoseTransforms[i]);
@@ -292,6 +294,7 @@ void RigDemo::funFunction(const FunParams& params) {
         localPoseTransforms[i] = constructMatrix(st.localTransform);
     } // end bones loop
 
+    */
     
     float sinAccum = sin(funAccumTimeValue);
 
@@ -301,45 +304,45 @@ void RigDemo::funFunction(const FunParams& params) {
     // localPoseTransforms[0] = constructMatrix(transform0);
 
     // Rotate spine
-    // size_t spineIndex = 106;
-    // float partRotSpine = 10.0f * sinAccum;
-    // FunTransform transform1 = extractTransform(getBindPose(spineIndex));
-    // transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
+    size_t spineIndex = 86;
+    float partRotSpine = 20.0f * sinAccum;
+    FunTransform transform1 = extractTransform(getBindPose(spineIndex));
+    transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(0,1,0));
 
-    // localPoseTransforms[spineIndex] = constructMatrix(transform1);
+    localPoseTransforms[spineIndex] = constructMatrix(transform1);
 
-    // // Rotate shoulder (right 168 left 130)
-    // size_t shoulderLeftIndex = 298;
-    // size_t shoulderRightIndex = 341;
-    // float partRotShoulderLeft = 28.0f * sinAccum - 10.0f;
-    // float partRotShoulderRight = 18.0f * sin(1.1f * funAccumTimeValue) - 10.0f;
-    // FunTransform transformShoulderLeft = extractTransform(getBindPose(shoulderLeftIndex));
-    // FunTransform transformShoulderRight = extractTransform(getBindPose(shoulderRightIndex));
-    // transformShoulderLeft.rotation = glm::rotate(transformShoulderLeft.rotation, glm::radians(partRotShoulderLeft), glm::vec3(1,0,0));
-    // transformShoulderRight.rotation = glm::rotate(transformShoulderRight.rotation, glm::radians(partRotShoulderRight), glm::vec3(0,1,0));
+    // Rotate shoulder (right 168 left 130)
+    size_t shoulderLeftIndex = 280;
+    size_t shoulderRightIndex = 327;
+    float partRotShoulderLeft = 28.0f * sinAccum - 10.0f;
+    float partRotShoulderRight = 18.0f * sin(1.1f * funAccumTimeValue) - 10.0f;
+    FunTransform transformShoulderLeft = extractTransform(getBindPose(shoulderLeftIndex));
+    FunTransform transformShoulderRight = extractTransform(getBindPose(shoulderRightIndex));
+    transformShoulderLeft.rotation = glm::rotate(transformShoulderLeft.rotation, glm::radians(partRotShoulderLeft), glm::vec3(1,0,0));
+    transformShoulderRight.rotation = glm::rotate(transformShoulderRight.rotation, glm::radians(partRotShoulderRight), glm::vec3(1,0,0));
 
-    // // localPoseTransforms[shoulderLeftIndex] = constructMatrix(transformShoulderLeft);
-    // localPoseTransforms[shoulderRightIndex] = constructMatrix(transformShoulderRight);
+    localPoseTransforms[shoulderLeftIndex] = constructMatrix(transformShoulderLeft);
+    localPoseTransforms[shoulderRightIndex] = constructMatrix(transformShoulderRight);
 
 
     
-    // // Rotate tail 
-    // size_t tailRootIndex = 403;
-    // size_t tailEndIndex = 409;
+    // Rotate tail 
+    size_t tailRootIndex = 403;
+    size_t tailEndIndex = 409;
     
-    // float partRotTail = 30.0f * sinAccum;
-    // FunTransform transformTailRoot = extractTransform(getBindPose(tailRootIndex));
-    // transformTailRoot.rotation = glm::rotate(transformTailRoot.rotation, glm::radians(partRotTail), glm::vec3(1,0,0));
+    float partRotTail = 30.0f * sinAccum;
+    FunTransform transformTailRoot = extractTransform(getBindPose(tailRootIndex));
+    transformTailRoot.rotation = glm::rotate(transformTailRoot.rotation, glm::radians(partRotTail), glm::vec3(1,0,0));
 
-    // localPoseTransforms[tailRootIndex] = constructMatrix(transformTailRoot);
+    localPoseTransforms[tailRootIndex] = constructMatrix(transformTailRoot);
 
-    // for (int i = tailRootIndex + 1; i <= tailEndIndex; ++i) {
-    //     FunTransform transform = extractTransform(getBindPose(i));
-    //     float partRot = -5.0f * sin(funAccumTimeValue + i) + 10.0f;
-    //     transform.rotation = glm::rotate(transform.rotation, glm::radians(partRot), glm::vec3(1,0,0));
+    for (int i = tailRootIndex + 1; i <= tailEndIndex; ++i) {
+        FunTransform transform = extractTransform(getBindPose(i));
+        float partRot = -5.0f * sin(funAccumTimeValue + i) + 10.0f;
+        transform.rotation = glm::rotate(transform.rotation, glm::radians(partRot), glm::vec3(1,0,0));
 
-    //     localPoseTransforms[i] = constructMatrix(transform);
-    // }
+        localPoseTransforms[i] = constructMatrix(transform);
+    }
 
     /*
     // Rotate (index 2)

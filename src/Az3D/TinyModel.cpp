@@ -4,56 +4,6 @@
 
 using namespace Az3D;
 
-// ============================================================================
-// SKELETON IMPLEMENTATIONS
-// ============================================================================
-
-void TinySkeleton::debugPrintHierarchy() const {
-    std::cout << "Skeleton Hierarchy (" << names.size() << " bones):\n";
-    std::cout << std::string(50, '=') << "\n";
-    
-    // Find root bones (those with parent index -1)
-    for (int i = 0; i < static_cast<int>(names.size()); ++i) {
-        if (parentIndices[i] == -1) {
-            debugPrintRecursive(i, 0);
-        }
-    }
-    
-    std::cout << std::string(50, '=') << "\n";
-}
-
-void TinySkeleton::debugPrintRecursive(int boneIndex, int depth) const {
-    if (boneIndex < 0 || boneIndex >= static_cast<int>(names.size())) {
-        return;
-    }
-    
-    // Print indentation
-    for (int i = 0; i < depth; ++i) {
-        std::cout << "  ";
-    }
-    
-    // Print bone info
-    std::cout << "[" << boneIndex << "] " << names[boneIndex];
-    
-    if (parentIndices[boneIndex] != -1) {
-        std::cout << " (parent: " << parentIndices[boneIndex] << ")";
-    } else {
-        std::cout << " (root)";
-    }
-    std::cout << "\n";
-    
-    // Print children
-    for (int i = 0; i < static_cast<int>(names.size()); ++i) {
-        if (parentIndices[i] == boneIndex) {
-            debugPrintRecursive(i, depth + 1);
-        }
-    }
-}
-
-// ============================================================================
-// MODEL IMPLEMENTATIONS
-// ============================================================================
-
 uint32_t TinyModel::getSubmeshIndexCount(size_t index) const {
     if (index >= submeshes.size()) return 0;
     return static_cast<uint32_t>(submeshes[index].indices.size());
@@ -73,7 +23,7 @@ void TinyModel::printDebug() const {
                   << mesh.indices.size() << " idxs, "
                   << "matIdx: : " << mesh.matIndex << "\n";
     }
-    
+
     // Print material information
     std::cout << "\nMaterials: " << materials.size() << "\n";
     std::cout << std::string(30, '-') << "\n";

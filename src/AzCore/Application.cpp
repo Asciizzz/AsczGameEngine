@@ -81,10 +81,10 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Umamusume/OguriCap.glb");
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/StandardAnimation.glb");
     for (auto& mat : testModel.materials) {
-        mat.shading = false; // No lighting for for highly stylized look
-        // mat.toonLevel = 1;
+        // mat.shading = false; // No lighting for for highly stylized look
+        mat.toonLevel = 4;
     }
     // testModel.printDebug();
     testModel.skeleton.debugPrintHierarchy();
@@ -131,7 +131,7 @@ void Application::initComponents() {
     resGroup->uploadAllToGPU();
 
     rigDemo = MakeUnique<Az3D::RigDemo>();
-    rigDemo->init(vkDevice.get(), resGroup->skeletons[0], 0); // Skeleton 0, Model 0
+    rigDemo->init(vkDevice.get(), testModel.skeleton, 0); // Skeleton 0, Model 0
 
 
     auto glbLayout = glbUBOManager->getDescLayout();
@@ -171,7 +171,7 @@ void Application::initComponents() {
     rigMeshConfig.setLayouts = {glbLayout, matLayout, texLayout, rigLayout};
     rigMeshConfig.vertPath = "Shaders/Rasterize/RigMesh.vert.spv";
     rigMeshConfig.fragPath = "Shaders/Rasterize/RigMesh.frag.spv";
-    rigMeshConfig.cullMode = VK_CULL_MODE_NONE;
+    rigMeshConfig.cullMode = VK_CULL_MODE_BACK_BIT;
     rigMeshConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
 
     rigMeshPipeline = MakeUnique<PipelineRaster>(lDevice, rigMeshConfig);
@@ -308,7 +308,8 @@ bool Application::checkWindowResize() {
 
     // Recreate render pass with new settings
     auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapChain->imageFormat, msaaManager->msaaSamples);
+        swapChain->imageFormat, msaaManager->msaaSamples
+    );
     mainRenderPass->recreate(newRenderPassConfig);
 
     VkRenderPass renderPass = mainRenderPass->get();
@@ -331,6 +332,9 @@ bool Application::checkWindowResize() {
 
     foliagePipeline->setRenderPass(renderPass);
     foliagePipeline->recreate();
+
+    singlePipeline->setRenderPass(renderPass);
+    singlePipeline->recreate();
 
     return true;
 }

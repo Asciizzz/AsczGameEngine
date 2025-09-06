@@ -33,7 +33,7 @@ struct BonePhysicsState {
 
 // Demo/testing struct that does fun things with the skeleton
 struct RigDemo {
-    SharedPtr<TinySkeleton> skeleton;
+    TinySkeleton skeleton;
     glm::mat4 getBindPose(size_t index);
 
     std::vector<glm::mat4> localPoseTransforms; // <- User changeable
@@ -57,7 +57,7 @@ struct RigDemo {
     void computeAllTransforms();
     void computeBoneRecursive(size_t boneIndex, std::vector<bool>& processed);
 
-    void init(const AzVulk::Device* vkDevice, const SharedPtr<TinySkeleton>& skeleton, size_t modelIndex);
+    void init(const AzVulk::Device* vkDevice, const TinySkeleton& skeleton, size_t modelIndex);
     void updateBuffer();
 
     float funAccumTimeValue = 0.0f;
