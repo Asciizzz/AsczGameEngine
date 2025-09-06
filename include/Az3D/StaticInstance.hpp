@@ -5,7 +5,6 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "AzVulk/Buffer.hpp"
-#include "Helpers/AzPair.hpp"
 
 namespace Az3D {
 
