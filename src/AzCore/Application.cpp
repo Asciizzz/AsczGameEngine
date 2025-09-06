@@ -3,6 +3,7 @@
 #include "AzVulk/ComputeTask.hpp"
 
 #include "Az3D/TinyLoader.hpp"
+#include "Az3D/TinyPlayback.hpp"
 
 #include <iostream>
 #include <random>
@@ -88,6 +89,31 @@ void Application::initComponents() {
     }
     // testModel.printDebug();
     testModel.skeleton.debugPrintHierarchy();
+    
+    // Test animation playback system
+    if (!testModel.animations.empty()) {
+        TinyPlayback animPlayer;
+        animPlayer.setSkeleton(testModel.skeleton);
+        
+        // Play the first animation
+        const TinyAnimation& firstAnim = testModel.animations[0];
+        std::cout << "\n=== Testing Animation Playback ===\n";
+        std::cout << "Playing animation: \"" << firstAnim.name << "\" (Duration: " << firstAnim.duration << "s)\n";
+        
+        animPlayer.playAnimation(firstAnim, true, 1.0f);
+        
+        // Sample a few frames to show it's working
+        for (int i = 0; i <= 10; ++i) {
+            float progress = i / 10.0f;
+            animPlayer.setAnimationProgress(progress);
+            
+            std::cout << "Frame " << i << " (Progress: " << (progress * 100.0f) << "%): ";
+            std::cout << "Time = " << animPlayer.getCurrentTime() << "s\n";
+        }
+        
+        std::cout << "Animation system test complete!\n";
+        std::cout << std::string(40, '=') << "\n\n";
+    }
     
     resGroup->addModel(testModel);
 
