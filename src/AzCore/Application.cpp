@@ -88,6 +88,12 @@ void Application::initComponents() {
     }
     // testModel.printDebug();
     testModel.skeleton.debugPrintHierarchy();
+    
+    // Print animation debug info
+    for (const auto& animation : testModel.animations) {
+        animation.printDebug(testModel.skeleton.names);
+    }
+    
     resGroup->addModel(testModel);
 
     TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Tow.obj");
