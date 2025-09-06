@@ -89,7 +89,7 @@ struct TinyMaterial {
 
     // Some debug values
     float normalBlend = 0.0f;
-    float discardThreshold = 0.0f;
+    float discardThreshold = 0.01f;
 
     int albTexture = -1;
     int nrmlTexture = -1;

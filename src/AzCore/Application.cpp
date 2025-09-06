@@ -90,8 +90,7 @@ void Application::initComponents() {
     testModel.skeleton.debugPrintHierarchy();
     resGroup->addModel(testModel);
 
-    // Testing out .obj model loading
-    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Stronghold/Stronghold.obj");
+    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Town.obj");
     testObjModel.printDebug();
     resGroup->addModel(testObjModel);
 
