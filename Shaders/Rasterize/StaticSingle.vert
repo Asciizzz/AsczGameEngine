@@ -18,16 +18,13 @@ layout(location = 4) out vec4 fragTangent;
 
 
 void main() {
-    vec3 worldPos = inPos_Tu.xyz;
-    gl_Position = glb.proj * glb.view * vec4(worldPos, 1.0);
+    gl_Position = glb.proj * glb.view * vec4(inPos_Tu.xyz, 1.0);
 
-    fragWorldPos = worldPos.xyz;
+    fragWorldPos = inPos_Tu.xyz;
     fragUV = vec2(inPos_Tu.w, inNrml_Tv.w);
-    fragMultColor = vec4(1.0); // White by default
+    fragMultColor = vec4(1.0);
 
-    // Assume normalized by default
-    vec3 newNormal = mat3(1.0) * inNrml_Tv.xyz;
-    fragWorldNrml = newNormal;
+    fragWorldNrml = inNrml_Tv.xyz;
 
     // Same thing
     fragTangent = vec4(mat3(1.0) * inTangent.xyz, inTangent.w);
