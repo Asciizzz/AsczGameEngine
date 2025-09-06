@@ -614,6 +614,129 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
         }
     }
 
+    // Load animations only if skeleton is loaded and animations exist
+    if (options.loadSkeleton && !result.skeleton.names.empty() && !model.animations.empty()) {
+        result.animations.reserve(model.animations.size());
+        
+        for (size_t animIndex = 0; animIndex < model.animations.size(); animIndex++) {
+            const tinygltf::Animation& gltfAnim = model.animations[animIndex];
+            TinyAnimation tinyAnim;
+            
+            // Set animation name (use index as fallback)
+            tinyAnim.name = gltfAnim.name.empty() ? 
+                ("Animation_" + std::to_string(animIndex)) : gltfAnim.name;
+            
+            // Load samplers first
+            tinyAnim.samplers.reserve(gltfAnim.samplers.size());
+            for (const auto& gltfSampler : gltfAnim.samplers) {
+                TinyAnimationSampler sampler;
+                
+                // Read time values (input)
+                if (gltfSampler.input >= 0) {
+                    if (!readAccessorSafe(model, gltfSampler.input, sampler.inputTimes)) {
+                        std::cerr << "Warning: Failed to read animation sampler input times for animation: " 
+                                  << tinyAnim.name << std::endl;
+                        continue;
+                    }
+                }
+                
+                // Set interpolation type
+                if (gltfSampler.interpolation == "STEP") {
+                    sampler.interpolation = TinyAnimationSampler::InterpolationType::Step;
+                } else if (gltfSampler.interpolation == "CUBICSPLINE") {
+                    sampler.interpolation = TinyAnimationSampler::InterpolationType::CubicSpline;
+                } else {
+                    sampler.interpolation = TinyAnimationSampler::InterpolationType::Linear;
+                }
+                
+                // Note: We don't read output values here since we don't know the target path yet
+                // The output will be read when processing channels
+                
+                tinyAnim.samplers.push_back(std::move(sampler));
+            }
+            
+            // Load channels and read appropriate output data
+            tinyAnim.channels.reserve(gltfAnim.channels.size());
+            for (const auto& gltfChannel : gltfAnim.channels) {
+                TinyAnimationChannel channel;
+                
+                // Set sampler index
+                channel.samplerIndex = gltfChannel.sampler;
+                if (channel.samplerIndex < 0 || channel.samplerIndex >= static_cast<int>(tinyAnim.samplers.size())) {
+                    std::cerr << "Warning: Invalid sampler index in animation channel: " 
+                              << tinyAnim.name << std::endl;
+                    continue;
+                }
+                
+                // Find target bone index
+                if (gltfChannel.target_node >= 0) {
+                    auto it = nodeIndexToBoneIndex.find(gltfChannel.target_node);
+                    if (it != nodeIndexToBoneIndex.end()) {
+                        channel.targetBoneIndex = it->second;
+                    } else {
+                        // Node is not part of the skeleton - skip this channel
+                        std::cerr << "Warning: Animation channel targets node not in skeleton: " 
+                                  << gltfChannel.target_node << " in animation: " << tinyAnim.name << std::endl;
+                        continue;
+                    }
+                }
+                
+                // Set target path and read corresponding output data
+                TinyAnimationSampler& sampler = tinyAnim.samplers[channel.samplerIndex];
+                const tinygltf::AnimationSampler& gltfSampler = gltfAnim.samplers[channel.samplerIndex];
+                
+                if (gltfChannel.target_path == "translation") {
+                    channel.targetPath = TinyAnimationChannel::TargetPath::Translation;
+                    if (gltfSampler.output >= 0) {
+                        if (!readAccessorSafe(model, gltfSampler.output, sampler.translations)) {
+                            std::cerr << "Warning: Failed to read translation data for animation: " 
+                                      << tinyAnim.name << std::endl;
+                            continue;
+                        }
+                    }
+                } else if (gltfChannel.target_path == "rotation") {
+                    channel.targetPath = TinyAnimationChannel::TargetPath::Rotation;
+                    if (gltfSampler.output >= 0) {
+                        if (!readAccessorSafe(model, gltfSampler.output, sampler.rotations)) {
+                            std::cerr << "Warning: Failed to read rotation data for animation: " 
+                                      << tinyAnim.name << std::endl;
+                            continue;
+                        }
+                    }
+                } else if (gltfChannel.target_path == "scale") {
+                    channel.targetPath = TinyAnimationChannel::TargetPath::Scale;
+                    if (gltfSampler.output >= 0) {
+                        if (!readAccessorSafe(model, gltfSampler.output, sampler.scales)) {
+                            std::cerr << "Warning: Failed to read scale data for animation: " 
+                                      << tinyAnim.name << std::endl;
+                            continue;
+                        }
+                    }
+                } else if (gltfChannel.target_path == "weights") {
+                    channel.targetPath = TinyAnimationChannel::TargetPath::Weights;
+                    if (gltfSampler.output >= 0) {
+                        if (!readAccessorSafe(model, gltfSampler.output, sampler.weights)) {
+                            std::cerr << "Warning: Failed to read weights data for animation: " 
+                                      << tinyAnim.name << std::endl;
+                            continue;
+                        }
+                    }
+                } else {
+                    std::cerr << "Warning: Unsupported animation target path: " 
+                              << gltfChannel.target_path << " in animation: " << tinyAnim.name << std::endl;
+                    continue;
+                }
+                
+                tinyAnim.channels.push_back(std::move(channel));
+            }
+            
+            // Compute animation duration and add to name mapping
+            tinyAnim.computeDuration();
+            result.nameToAnimationIndex[tinyAnim.name] = static_cast<int>(result.animations.size());
+            result.animations.push_back(std::move(tinyAnim));
+        }
+    }
+
     return result;
 }
 

@@ -1,4 +1,4 @@
-#include "Az3D/TinyRig.hpp"
+#include "Az3D/TinySkeleton.hpp"
 #include <iostream>
 #include <iomanip>
 

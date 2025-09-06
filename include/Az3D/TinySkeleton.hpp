@@ -1,6 +1,11 @@
 #pragma once
 
-#include <Az3D/VertexTypes.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <cstdint>
+
+#include "Helpers/Templates.hpp"
 
 namespace Az3D {
 
@@ -17,12 +22,6 @@ struct TinySkeleton {
 
 private:
     void debugPrintRecursive(int boneIndex, int depth) const;
-};
-
-
-
-struct TinyAnimation {
-
 };
 
 }
