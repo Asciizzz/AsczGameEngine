@@ -81,7 +81,7 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Umamusume/SilenceSuzuka.gltf");
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Umamusume/SilenceSuzuka.glb");
     for (auto& mat : testModel.materials) {
         mat.shading = false; // No lighting for for highly stylized look
         // mat.toonLevel = 1;
@@ -91,7 +91,7 @@ void Application::initComponents() {
     resGroup->addModel(testModel);
 
     TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Town.obj");
-    testObjModel.printDebug();
+    // testObjModel.printDebug();
     resGroup->addModel(testObjModel);
 
     // Set up advanced grass system with terrain generation
