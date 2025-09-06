@@ -1,6 +1,7 @@
-#include "Az3D/TinyRig.hpp"
+#include "Az3D/TinySkeleton.hpp"
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 using namespace Az3D;
 
