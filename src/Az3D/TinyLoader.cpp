@@ -618,6 +618,15 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
 }
 
 
+// Helper function to create a default 1x1 white texture
+TinyTexture createDefaultTexture() {
+    TinyTexture defaultTexture;
+    defaultTexture.width = 1;
+    defaultTexture.height = 1;
+    defaultTexture.channels = 3;
+    defaultTexture.data = { 255, 255, 255 }; // White pixel
+    return defaultTexture;
+}
 
 // OBJ loader implementation using tiny_obj_loader
 TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOptions& options) {
@@ -655,10 +664,10 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                         if (!texture.data.empty()) {
                             texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
                             result.textures.push_back(std::move(texture));
-                            printf("Loaded texture: %s\n", texturePath.c_str());
                         }
                     } catch (const std::exception& e) {
-                        printf("Failed to load texture %s: %s\n", texturePath.c_str(), e.what());
+                        texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                        result.textures.push_back(createDefaultTexture());
                     }
                 }
             }
@@ -672,10 +681,10 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                         if (!texture.data.empty()) {
                             texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
                             result.textures.push_back(std::move(texture));
-                            printf("Loaded normal map: %s\n", texturePath.c_str());
                         }
                     } catch (const std::exception& e) {
-                        printf("Failed to load normal map %s: %s\n", texturePath.c_str(), e.what());
+                        texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                        result.textures.push_back(createDefaultTexture());
                     }
                 }
             }
@@ -693,12 +702,8 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
             
             // Map OBJ material index to result material index
             objMaterialIdToResultIndex[static_cast<int>(i)] = static_cast<int>(result.materials.size());
-            printf("Material mapping: OBJ[%d] -> Result[%d] (name: %s)\n", 
-                   (int)i, (int)result.materials.size(), 
-                   i < materials.size() ? "loaded" : "unknown");
-            
+
             // TinyMaterial doesn't store names, so we'll just use indices for material tracking
-            
             if (options.loadTextures) {
                 // Handle diffuse texture
                 if (!objMaterial.diffuse_texname.empty()) {
@@ -706,9 +711,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                     auto it = texturePathToIndex.find(texturePath);
                     if (it != texturePathToIndex.end()) {
                         material.albTexture = it->second;
-                        printf("  -> Mapped diffuse texture '%s' to index %d\n", objMaterial.diffuse_texname.c_str(), it->second);
-                    } else {
-                        printf("  -> Diffuse texture '%s' not found in loaded textures\n", objMaterial.diffuse_texname.c_str());
                     }
                 }
                 
@@ -718,9 +720,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                     auto it = texturePathToIndex.find(texturePath);
                     if (it != texturePathToIndex.end()) {
                         material.nrmlTexture = it->second;
-                        printf("  -> Mapped normal texture '%s' to index %d\n", objMaterial.normal_texname.c_str(), it->second);
-                    } else {
-                        printf("  -> Normal texture '%s' not found in loaded textures\n", objMaterial.normal_texname.c_str());
                     }
                 }
             }
@@ -770,9 +769,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
             if (faceMaterialId != currentMaterialId) {
                 // Save previous submesh if it has geometry
                 if (!vertices.empty() && !indices.empty()) {
-                    printf("Creating submesh with material %d (%d vertices, %d indices)\n", 
-                           currentMaterialId, (int)vertices.size(), (int)indices.size());
-                           
                     // Generate face normals if no normals provided
                     if (!hasNormals && indices.size() >= 3) {
                         for (size_t i = 0; i < indices.size(); i += 3) {
@@ -808,16 +804,9 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                         auto it = objMaterialIdToResultIndex.find(currentMaterialId);
                         if (it != objMaterialIdToResultIndex.end()) {
                             submesh.matIndex = it->second;
-                            printf("  -> Mapped OBJ material %d to result index %d\n", currentMaterialId, it->second);
-                        } else {
-                            submesh.matIndex = -1;  // Material not found
-                            printf("  -> Material %d not found in mapping!\n", currentMaterialId);
                         }
-                    } else {
-                        submesh.matIndex = -1;  // No material
-                        printf("  -> No material (loadMaterials=%d, materialId=%d)\n", options.loadMaterials, currentMaterialId);
                     }
-                    
+
                     result.submeshes.push_back(std::move(submesh));
                 }
                 
@@ -825,7 +814,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                 vertices.clear();
                 indices.clear();
                 currentMaterialId = faceMaterialId;
-                printf("Starting new submesh for material %d\n", currentMaterialId);
             }
             
             // Process face vertices - allow repetition for legacy OBJ compatibility

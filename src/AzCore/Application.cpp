@@ -202,11 +202,7 @@ void Application::initComponents() {
     foliageConfig.setLayouts = {glbLayout, matLayout, texLayout};
     foliageConfig.vertPath = "Shaders/Rasterize/StaticMesh.vert.spv";
     foliageConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
-
-    // Add push constant range for PushDemo (same as static mesh)
-    foliageConfig.pushConstantRanges = {
-        {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16}
-    };
+    foliageConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
 
     // No backface culling
     foliageConfig.cullMode = VK_CULL_MODE_NONE;
@@ -222,11 +218,7 @@ void Application::initComponents() {
     singleConfig.setLayouts = {glbLayout, matLayout, texLayout};
     singleConfig.vertPath = "Shaders/Rasterize/StaticSingle.vert.spv";
     singleConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
-
-    // Add push constant range for PushDemo (same as static mesh)
-    singleConfig.pushConstantRanges = {
-        {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16}
-    };
+    singleConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
 
     singlePipeline = MakeUnique<PipelineRaster>(lDevice, singleConfig);
     singlePipeline->create();

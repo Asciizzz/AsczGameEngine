@@ -97,7 +97,7 @@ public:
     void createTextureDescSet();
 
     // Useful methods
-    UniquePtr<TextureVK> createTextureVK(const TinyTexture& texture, uint32_t mipLevels = 0);
+    UniquePtr<TextureVK> createTextureVK(const TinyTexture& texture);
 };
 
 } // namespace Az3D

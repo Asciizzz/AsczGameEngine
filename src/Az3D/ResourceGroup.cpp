@@ -437,7 +437,7 @@ std::vector<uint8_t> convertTextureDataForVulkan(const TinyTexture& texture) {
     }
 }
 
-UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, uint32_t mipLevels) {
+UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture) {
     TextureVK textureVK;
 
     // Use the provided TinyTexture data
@@ -455,9 +455,8 @@ UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, 
 
     if (texture.data.empty()) throw std::runtime_error("Failed to load texture from TinyTexture");
 
-    // Dynamic mipmap levels (if not provided)
-    mipLevels += (static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1) * !mipLevels;
-    // mipLevels = 1;
+    // Dynamic mipmap levels
+    uint32_t mipLevels = static_cast<uint32_t>(floor(log2(std::max(width, height)))) + 1;
 
     BufferData stagingBuffer;
     stagingBuffer.initVkDevice(vkDevice);
@@ -492,6 +491,10 @@ UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture, 
 void ResourceGroup::createTextureSamplers() {
     VkDevice lDevice = vkDevice->lDevice;
 
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(vkDevice->pDevice, &properties);
+    float maxAnisotropy = fminf(16.0f, properties.limits.maxSamplerAnisotropy);
+
     for (uint32_t i = 0; i < 5; ++i) {
         VkSamplerAddressMode addressMode = static_cast<VkSamplerAddressMode>(i);
 
@@ -502,16 +505,21 @@ void ResourceGroup::createTextureSamplers() {
         }
 
         VkSamplerCreateInfo sci{};
-        sci.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sci.magFilter    = VK_FILTER_LINEAR;
-        sci.minFilter    = VK_FILTER_LINEAR;
-        sci.mipmapMode   = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sci.addressModeU = addressMode;
-        sci.addressModeV = addressMode;
-        sci.addressModeW = addressMode;
+        sci.sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sci.magFilter        = VK_FILTER_LINEAR;
+        sci.minFilter        = VK_FILTER_LINEAR;
+        sci.mipmapMode       = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+        sci.addressModeU     = addressMode;
+        sci.addressModeV     = addressMode;
+        sci.addressModeW     = addressMode;
+
         sci.anisotropyEnable = VK_TRUE;
-        sci.maxAnisotropy    = 16.0f;
+        sci.maxAnisotropy    = maxAnisotropy;
+        sci.mipLodBias       = 0.5f; // Sharper mipmaps
+
         sci.borderColor      = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+
         sci.unnormalizedCoordinates = VK_FALSE;
 
         VkSampler sampler;
