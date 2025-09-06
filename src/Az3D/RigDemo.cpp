@@ -195,17 +195,30 @@ void RigDemo::funFunction(const FunParams& params) {
     // the new rigging system, once everything is implemented
     // There will be actual robust bone handler
 
-    // Rotate root
-    FunTransform transform0 = extractTransform(getBindPose(0));
-    transform0.rotation = glm::rotate(transform0.rotation, glm::radians(90.0f), glm::vec3(1,0,0));
-    localPoseTransforms[0] = constructMatrix(transform0);
+    // // Rotate root (for weird ass model that is rotated 90 degree)
+    // FunTransform transform0 = extractTransform(getBindPose(0));
+    // transform0.rotation = glm::rotate(transform0.rotation, glm::radians(90.0f), glm::vec3(1,0,0));
+    // localPoseTransforms[0] = constructMatrix(transform0);
 
-    // Rotate (index 2)
+    // Rotate spine
     float partRotSpine = 10.0f * sinAccum;
-    FunTransform transform1 = extractTransform(getBindPose(4));
+    FunTransform transform1 = extractTransform(getBindPose(3));
     transform1.rotation = glm::rotate(transform1.rotation, glm::radians(partRotSpine), glm::vec3(1,0,0));
 
-    localPoseTransforms[4] = constructMatrix(transform1);
+    localPoseTransforms[3] = constructMatrix(transform1);
+
+    // Rotate shoulder (right 168 left 130)
+    size_t shoulderLeftIndex = 130;
+    size_t shoulderRightIndex = 168;
+    float partRotShoulderLeft = 18.0f * sinAccum - 10.0f;
+    float partRotShoulderRight = 18.0f * sin(1.1f * funAccumTimeValue) - 10.0f;
+    FunTransform transformShoulderLeft = extractTransform(getBindPose(shoulderLeftIndex));
+    FunTransform transformShoulderRight = extractTransform(getBindPose(shoulderRightIndex));
+    transformShoulderLeft.rotation = glm::rotate(transformShoulderLeft.rotation, glm::radians(partRotShoulderLeft), glm::vec3(1,0,0));
+    transformShoulderRight.rotation = glm::rotate(transformShoulderRight.rotation, glm::radians(partRotShoulderRight), glm::vec3(1,0,0));
+
+    localPoseTransforms[shoulderLeftIndex] = constructMatrix(transformShoulderLeft);
+    localPoseTransforms[shoulderRightIndex] = constructMatrix(transformShoulderRight);
 
     /*
     // Rotate (index 2)
