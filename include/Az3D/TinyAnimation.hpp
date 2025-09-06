@@ -58,6 +58,7 @@ struct TinyAnimation {
     // Helper methods
     void computeDuration();
     int findChannelForBone(int boneIndex, TinyAnimationChannel::TargetPath path) const;
+    void printDebug(const std::vector<std::string>& boneNames = {}) const;
 };
 
 }

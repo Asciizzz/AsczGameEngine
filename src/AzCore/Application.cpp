@@ -86,8 +86,12 @@ void Application::initComponents() {
         // mat.shading = false; // No lighting for for highly stylized look
         mat.toonLevel = 4;
     }
-    // testModel.printDebug();
-    testModel.skeleton.debugPrintHierarchy();
+
+    // for (const auto& anim : testModel.animations) {
+    //     anim.printDebug(testModel.skeleton.names);
+    // }
+
+    // testModel.skeleton.debugPrintHierarchy();
     resGroup->addModel(testModel);
 
     TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Tow.obj");
