@@ -147,9 +147,10 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     TinySubmesh grassSubmesh = TinySubmesh(grassVertices, grassIndices, 0);
 
     TinyTexture grassTexture = TinyLoader::loadImage("Assets/Textures/Grass.png");
+    grassTexture.addressMode = TinyTexture::AddressMode::ClampToEdge;
+
     TinyMaterial grassMaterial;
     grassMaterial.discardThreshold = 0.9f;
-    grassMaterial.addressMode = TAddressMode::ClampToEdge;
     grassMaterial.albTexture = 0; // First texture
 
     grassModel.submeshes.push_back(grassSubmesh);
@@ -204,9 +205,10 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     TinySubmesh grassSubmesh = TinySubmesh(grassVertices, grassIndices, 0);
 
     TinyTexture grassTexture = TinyLoader::loadImage("Assets/Textures/Grass.png");
+    grassTexture.addressMode = TinyTexture::AddressMode::ClampToEdge;
+    
     TinyMaterial grassMaterial;
     grassMaterial.discardThreshold = 0.9f;
-    grassMaterial.addressMode = TAddressMode::ClampToEdge;
     grassMaterial.albTexture = 0; // First texture
 
     grassModel.submeshes.push_back(grassSubmesh);

@@ -18,7 +18,7 @@ layout(push_constant) uniform PushConstant {
 
 struct Material {
     vec4  shadingParams; // <shadingFlag, toonLevel, normalBlend, discardThreshold>
-    uvec4 texIndices;    // <addressMode, albedo, normal, unused>
+    uvec4 texIndices;    // <albedo, normal, unused, unused>
 };
 
 layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
@@ -26,7 +26,10 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
 };
 
 layout(set = 2, binding = 0) uniform texture2D textures[];
-layout(set = 2, binding = 1) uniform sampler   samplers[];
+layout(std430, set = 2, binding = 1) readonly buffer SamplerIndexBuffer {
+    uint samplerIndices[];
+};
+layout(set = 2, binding = 2) uniform sampler samplers[];
 
 layout(location = 0) in vec4 fragMultColor;
 layout(location = 1) in vec2 fragTexUV;
@@ -45,27 +48,26 @@ float applyToonShading(float value, uint toonLevel) {
     return clamp(result, 0.0, 1.0);
 }
 
-vec4 getTexture(uint texIndex, uint addressMode, vec2 uv) {
-    return texture(sampler2D(textures[nonuniformEXT(texIndex)], samplers[addressMode]), uv);
+vec4 getTexture(uint texIndex, vec2 uv) {
+    uint samplerIndex = samplerIndices[texIndex];
+    return texture(sampler2D(textures[nonuniformEXT(texIndex)], samplers[samplerIndex]), uv);
 }
 
 
 void main() {
     Material material = materials[pushConstant.properties.x];
-    
-    uint addressMode = material.texIndices.x;
 
-    // Albedo texture
-    uint albTexIndex = material.texIndices.y;
-    vec4 texColor = getTexture(albTexIndex, addressMode, fragTexUV);
+    // Albedo texture - texIndices.x now contains albedo texture index
+    uint albTexIndex = material.texIndices.x;
+    vec4 texColor = getTexture(albTexIndex, fragTexUV);
 
     // Discard low opacity fragments
     float discardThreshold = material.shadingParams.w;
     if (texColor.a < discardThreshold) { discard; }
 
-    // Normal mapping
-    uint nrmlTexIndex = material.texIndices.z;
-    vec3 mapNrml = getTexture(nrmlTexIndex, addressMode, fragTexUV).xyz * 2.0 - 1.0;
+    // Normal mapping - texIndices.y now contains normal texture index
+    uint nrmlTexIndex = material.texIndices.y;
+    vec3 mapNrml = getTexture(nrmlTexIndex, fragTexUV).xyz * 2.0 - 1.0;
 
     vec3 bitangent = cross(fragWorldNrml, fragTangent.xyz) * fragTangent.w;
     mat3 TBN = mat3(fragTangent.xyz, bitangent, fragWorldNrml);

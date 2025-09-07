@@ -320,13 +320,43 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
 
     // Load textures only if requested
     if (options.loadTextures && options.loadMaterials) {
-        result.textures.reserve(model.images.size());
-        for (const auto& image : model.images) {
+        result.textures.reserve(model.textures.size());
+        for (const auto& gltfTexture : model.textures) {
             TinyTexture texture;
-            texture.width = image.width;
-            texture.height = image.height;
-            texture.channels = image.component;
-            texture.data = image.image;
+            
+            // Load image data
+            if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
+                const auto& image = model.images[gltfTexture.source];
+                texture.width = image.width;
+                texture.height = image.height;
+                texture.channels = image.component;
+                texture.data = image.image;
+            }
+            
+            // Load sampler settings (address mode)
+            texture.addressMode = TinyTexture::AddressMode::Repeat; // Default
+            if (gltfTexture.sampler >= 0 && gltfTexture.sampler < static_cast<int>(model.samplers.size())) {
+                const auto& sampler = model.samplers[gltfTexture.sampler];
+                
+                // Convert GLTF wrap modes to our AddressMode enum
+                // GLTF uses the same values for both wrapS and wrapT, so we'll use wrapS
+                switch (sampler.wrapS) {
+                    case TINYGLTF_TEXTURE_WRAP_REPEAT:
+                        texture.addressMode = TinyTexture::AddressMode::Repeat;
+                        break;
+                    case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+                        texture.addressMode = TinyTexture::AddressMode::ClampToEdge;
+                        break;
+                    case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+                        // We don't have MirroredRepeat, fallback to Repeat
+                        texture.addressMode = TinyTexture::AddressMode::Repeat;
+                        break;
+                    default:
+                        texture.addressMode = TinyTexture::AddressMode::Repeat;
+                        break;
+                }
+            }
+            
             result.textures.push_back(std::move(texture));
         }
     }
@@ -340,22 +370,16 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             // Handle albedo texture (only if textures are also being loaded)
             if (options.loadTextures && gltfMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0) {
                 int texIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-                if (texIndex < static_cast<int>(model.textures.size())) {
-                    int imageIndex = model.textures[texIndex].source;
-                    if (imageIndex >= 0 && imageIndex < static_cast<int>(model.images.size())) {
-                        material.albTexture = imageIndex;
-                    }
+                if (texIndex >= 0 && texIndex < static_cast<int>(result.textures.size())) {
+                    material.albTexture = texIndex;
                 }
             }
             
             // Handle normal texture (only if textures are also being loaded)
             if (options.loadTextures && gltfMaterial.normalTexture.index >= 0) {
                 int texIndex = gltfMaterial.normalTexture.index;
-                if (texIndex < static_cast<int>(model.textures.size())) {
-                    int imageIndex = model.textures[texIndex].source;
-                    if (imageIndex >= 0 && imageIndex < static_cast<int>(model.images.size())) {
-                        material.nrmlTexture = imageIndex;
-                    }
+                if (texIndex >= 0 && texIndex < static_cast<int>(result.textures.size())) {
+                    material.nrmlTexture = texIndex;
                 }
             }
             

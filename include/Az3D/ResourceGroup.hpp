@@ -16,7 +16,7 @@ struct TextureVK {
 
 struct MaterialVK {
     glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
-    glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <addressMode, albTexIndex, nrmlTexIndex, unused>
+    glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albTexIndex, nrmlTexIndex, unused, unused>
 };
 
 // Index pointing to certain Vulkan elements
@@ -82,6 +82,7 @@ public:
     std::vector<TinyModel>            models;
     std::vector<TinyModelVK>          modelVKs; // Contain indices to vulkan resources
     std::vector<MaterialVK>           materialVKs; // Very different from TinyMaterial
+    
     UniquePtrVec<TextureVK>           textureVKs;
 
     UniquePtrVec<AzVulk::BufferData>  subMeshVertexBuffers;
@@ -107,6 +108,10 @@ public:
 
     std::vector<VkSampler>            samplers;
     void createTextureSamplers();
+
+    std::vector<uint32_t>             texSamplerIndices; // Per-texture sampler index (maps to samplers array)
+    UniquePtr<AzVulk::BufferData>     texSamplerBuffer; // Buffer containing sampler indices for each texture
+    void createTexSamplerBuffer(); // Create buffer for texture sampler indices
 
     UniquePtr<AzVulk::DescLayout>     texDescLayout;
     UniquePtr<AzVulk::DescPool>       texDescPool;

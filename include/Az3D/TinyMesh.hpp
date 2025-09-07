@@ -65,13 +65,6 @@ struct TinySubmesh {
     size_t vertexCount() const { return vertexData.size() / layout.stride; }
 };
 
-
-enum class TAddressMode {
-    Repeat        = 0,
-    ClampToEdge   = 1,
-    ClampToBorder = 2
-};
-
 struct TinyMaterial {
     bool shading = true;
     int toonLevel = 0;
@@ -82,8 +75,6 @@ struct TinyMaterial {
 
     int albTexture = -1;
     int nrmlTexture = -1;
-
-    TAddressMode addressMode = TAddressMode::Repeat;
 };
 
 
@@ -93,6 +84,12 @@ struct TinyTexture {
     int height = 0;
     int channels = 0;
     std::vector<uint8_t> data;
+
+    enum class AddressMode {
+        Repeat        = 0,
+        ClampToEdge   = 1,
+        ClampToBorder = 2
+    } addressMode = AddressMode::Repeat;
 };
 
 } // namespace Az3D
