@@ -110,8 +110,8 @@ public:
     void createTextureSamplers();
 
     std::vector<uint32_t>             texSamplerIndices; // Per-texture sampler index (maps to samplers array)
-    UniquePtr<AzVulk::BufferData>     texSamplerBuffer; // Buffer containing sampler indices for each texture
-    void createTexSamplerBuffer(); // Create buffer for texture sampler indices
+    UniquePtr<AzVulk::BufferData>     textSampIdxBuffer; // Buffer containing sampler indices for each texture
+    void createTexSampIdxBuffer(); // Create buffer for texture sampler indices
 
     UniquePtr<AzVulk::DescLayout>     texDescLayout;
     UniquePtr<AzVulk::DescPool>       texDescPool;

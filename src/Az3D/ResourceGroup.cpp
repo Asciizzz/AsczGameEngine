@@ -44,7 +44,7 @@ void ResourceGroup::uploadAllToGPU() {
     createMaterialDescSet();
 
     createTextureSamplers();
-    createTexSamplerBuffer();
+    createTexSampIdxBuffer();
     createTextureDescSet();
 
     createRigSkeleBuffers();
@@ -523,15 +523,13 @@ void ResourceGroup::createTextureSamplers() {
     vkGetPhysicalDeviceProperties(vkDevice->pDevice, &properties);
     float maxAnisotropy = fminf(16.0f, properties.limits.maxSamplerAnisotropy);
 
-    for (uint32_t i = 0; i < 5; ++i) {
-        VkSamplerAddressMode addressMode = static_cast<VkSamplerAddressMode>(i);
+    VkSamplerAddressMode addressModes[] = {
+        VK_SAMPLER_ADDRESS_MODE_REPEAT,         // 0
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  // 1
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER // 2
+    };
 
-        // Skip all complex extension needing classes
-        if (addressMode == VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT ||
-            addressMode == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE) {
-            continue;
-        }
-
+    for (const auto& addressMode : addressModes) {
         VkSamplerCreateInfo sci{};
         sci.sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         sci.magFilter        = VK_FILTER_LINEAR;
@@ -541,7 +539,7 @@ void ResourceGroup::createTextureSamplers() {
         sci.addressModeU     = addressMode;
         sci.addressModeV     = addressMode;
         sci.addressModeW     = addressMode;
-
+        
         sci.anisotropyEnable = VK_TRUE;
         sci.maxAnisotropy    = maxAnisotropy;
         sci.mipLodBias       = 0.5f; // Sharper mipmaps
@@ -559,7 +557,7 @@ void ResourceGroup::createTextureSamplers() {
     }
 }
 
-void ResourceGroup::createTexSamplerBuffer() {
+void ResourceGroup::createTexSampIdxBuffer() {
     VkDeviceSize bufferSize = sizeof(uint32_t) * texSamplerIndices.size();
 
     // --- staging buffer (CPU visible) ---
@@ -573,16 +571,16 @@ void ResourceGroup::createTexSamplerBuffer() {
     stagingBuffer.uploadData(texSamplerIndices.data());
 
     // --- Device-local buffer (GPU only, STORAGE + DST) ---
-    if (!texSamplerBuffer) texSamplerBuffer = MakeUnique<BufferData>();
+    if (!textSampIdxBuffer) textSampIdxBuffer = MakeUnique<BufferData>();
     
-    texSamplerBuffer->initVkDevice(vkDevice);
-    texSamplerBuffer->setProperties(
+    textSampIdxBuffer->initVkDevice(vkDevice);
+    textSampIdxBuffer->setProperties(
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT |
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
-    texSamplerBuffer->createBuffer();
+    textSampIdxBuffer->createBuffer();
 
     // --- copy staging -> Device local ---
     TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
@@ -592,7 +590,7 @@ void ResourceGroup::createTexSamplerBuffer() {
     copyRegion.dstOffset = 0;
     copyRegion.size = bufferSize;
 
-    vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, texSamplerBuffer->buffer, 1, &copyRegion);
+    vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, textSampIdxBuffer->buffer, 1, &copyRegion);
 
     copyCmd.endAndSubmit();
 }
@@ -638,6 +636,22 @@ void ResourceGroup::createTextureDescSet() {
     imageWrite.descriptorCount = textureCount;
     imageWrite.pImageInfo      = imageInfos.data();
 
+    
+    // Write sampler indices buffer
+    VkDescriptorBufferInfo texSampIdxBufferInfo{};
+    texSampIdxBufferInfo.buffer = textSampIdxBuffer->buffer;
+    texSampIdxBufferInfo.offset = 0;
+    texSampIdxBufferInfo.range = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet texSampIdxBufferWrite{};
+    texSampIdxBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    texSampIdxBufferWrite.dstSet = texDescSet->get();
+    texSampIdxBufferWrite.dstBinding = 1;
+    texSampIdxBufferWrite.dstArrayElement = 0;
+    texSampIdxBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    texSampIdxBufferWrite.descriptorCount = 1;
+    texSampIdxBufferWrite.pBufferInfo = &texSampIdxBufferInfo;
+
     // Write samplers
     std::vector<VkDescriptorImageInfo> samplerInfos(samplers.size());
     for (uint32_t i = 0; i < samplers.size(); ++i) {
@@ -649,28 +663,13 @@ void ResourceGroup::createTextureDescSet() {
     VkWriteDescriptorSet samplerWrite{};
     samplerWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     samplerWrite.dstSet          = texDescSet->get();
-    samplerWrite.dstBinding      = 2; // Changed from 1 to 2
+    samplerWrite.dstBinding      = 2;
     samplerWrite.dstArrayElement = 0;
     samplerWrite.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
     samplerWrite.descriptorCount = static_cast<uint32_t>(samplerInfos.size());
     samplerWrite.pImageInfo      = samplerInfos.data();
 
-    // Write sampler indices buffer
-    VkDescriptorBufferInfo samplerBufferInfo{};
-    samplerBufferInfo.buffer = texSamplerBuffer->buffer;
-    samplerBufferInfo.offset = 0;
-    samplerBufferInfo.range = VK_WHOLE_SIZE;
-
-    VkWriteDescriptorSet samplerBufferWrite{};
-    samplerBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    samplerBufferWrite.dstSet = texDescSet->get();
-    samplerBufferWrite.dstBinding = 1; // Binding 1 for sampler indices buffer
-    samplerBufferWrite.dstArrayElement = 0;
-    samplerBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    samplerBufferWrite.descriptorCount = 1;
-    samplerBufferWrite.pBufferInfo = &samplerBufferInfo;
-
-    std::vector<VkWriteDescriptorSet> writes = {imageWrite, samplerBufferWrite, samplerWrite};
+    std::vector<VkWriteDescriptorSet> writes = {imageWrite, texSampIdxBufferWrite, samplerWrite};
     vkUpdateDescriptorSets(lDevice, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
 
