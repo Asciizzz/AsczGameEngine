@@ -6,6 +6,11 @@
 using namespace AzVulk;
 using namespace Az3D;
 
+
+ModelVK::ModelVK(const AzVulk::Device* vkDevice, const TinyModel& model) {
+    
+}
+
 // ============================================================================
 // ======================= General resource group stuff =======================
 // ============================================================================

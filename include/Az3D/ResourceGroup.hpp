@@ -31,6 +31,23 @@ struct TinyModelVK {
     size_t submeshCount() const { return submeshVK_indices.size(); }
 };
 
+// Beta, model VK self contains all relavent components
+struct ModelVK {
+    std::vector<AzVulk::BufferData> submeshVertexBuffers;
+    std::vector<AzVulk::BufferData> submeshIndexBuffers;
+
+    AzVulk::BufferData matBuffer;
+    AzVulk::DescSets matDescSet;
+
+    std::vector<TextureVK> textureVKs;
+    AzVulk::DescSets texDescSet;
+
+    std::vector<TinySkeleton> skeletons;
+    std::vector<TinyAnimation> animations;
+
+    ModelVK(const AzVulk::Device* vkDevice, const TinyModel& model);
+};
+
 // All these resource are static and fixed, created upon load
 class ResourceGroup {
 public:

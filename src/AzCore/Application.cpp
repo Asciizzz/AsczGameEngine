@@ -496,10 +496,10 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_3]) rigDemo.playAnimation(3);
         // Very quick and painful death
         if (k_state[SDL_SCANCODE_4]) rigDemo.playAnimation(4, false, 1.5f, 0.1f);
-        // Driving
-        if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(5);
-        if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(6);
-        if (k_state[SDL_SCANCODE_7]) rigDemo.playAnimation(7);
+        // Punches
+        if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(24, true, 1.5f, 0.1f);
+        if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(25, false, 1.5f, 0.1f);
+        if (k_state[SDL_SCANCODE_7]) rigDemo.playAnimation(26, true, 1.5f, 0.1f);
 
         // Sprinting
         if (k_state[SDL_SCANCODE_8]) rigDemo.playAnimation(38);
