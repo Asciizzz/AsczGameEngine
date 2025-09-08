@@ -43,7 +43,7 @@ struct PipelineAsset {
     
     // Push constants
     struct PushConstant {
-        std::string stages = "Fragment";
+        std::vector<std::string> stages = {"Fragment"};
         uint32_t offset = 0;
         uint32_t size = 0;
     };
@@ -115,7 +115,7 @@ private:
     BlendMode parseBlendMode(const std::string& str) const;
     VkCompareOp parseCompareOp(const std::string& str) const;
     VkPolygonMode parsePolygonMode(const std::string& str) const;
-    VkShaderStageFlags parseShaderStages(const std::string& str) const;
+    VkShaderStageFlags parseShaderStages(const std::vector<std::string>& stages) const;
 };
 
 // Utility macros for easier access - now require a manager instance

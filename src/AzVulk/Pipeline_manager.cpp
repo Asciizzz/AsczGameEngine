@@ -250,7 +250,18 @@ bool PipelineManager::loadPipelinesFromJson(const std::string& jsonFilePath) {
                                         auto& pcObj = pcJson.objectValue;
                                         
                                         if (pcObj.find("stages") != pcObj.end()) {
-                                            pc.stages = pcObj.at("stages").stringValue;
+                                            const auto& stagesJson = pcObj.at("stages");
+                                            if (stagesJson.type == SimpleJson::JsonValue::ARRAY) {
+                                                // Handle array of stage strings
+                                                for (const auto& stageJson : stagesJson.arrayValue) {
+                                                    if (stageJson.type == SimpleJson::JsonValue::STRING) {
+                                                        pc.stages.push_back(stageJson.stringValue);
+                                                    }
+                                                }
+                                            } else if (stagesJson.type == SimpleJson::JsonValue::STRING) {
+                                                // Handle single string for backward compatibility
+                                                pc.stages.push_back(stagesJson.stringValue);
+                                            }
                                         }
                                         if (pcObj.find("offset") != pcObj.end()) {
                                             pc.offset = static_cast<uint32_t>(pcObj.at("offset").numberValue);
@@ -462,10 +473,21 @@ VkPolygonMode PipelineManager::parsePolygonMode(const std::string& str) const {
     return VK_POLYGON_MODE_FILL;
 }
 
-VkShaderStageFlags PipelineManager::parseShaderStages(const std::string& str) const {
-    if (str == "Vertex") return VK_SHADER_STAGE_VERTEX_BIT;
-    if (str == "Fragment") return VK_SHADER_STAGE_FRAGMENT_BIT;
-    if (str == "Compute") return VK_SHADER_STAGE_COMPUTE_BIT;
-    if (str == "All") return VK_SHADER_STAGE_ALL;
-    return VK_SHADER_STAGE_FRAGMENT_BIT;
+VkShaderStageFlags PipelineManager::parseShaderStages(const std::vector<std::string>& stages) const {
+    VkShaderStageFlags result = 0;
+    
+    for (const auto& stage : stages) {
+        if (stage == "Vertex") result |= VK_SHADER_STAGE_VERTEX_BIT;
+        else if (stage == "Fragment") result |= VK_SHADER_STAGE_FRAGMENT_BIT;
+        else if (stage == "Compute") result |= VK_SHADER_STAGE_COMPUTE_BIT;
+        else if (stage == "Geometry") result |= VK_SHADER_STAGE_GEOMETRY_BIT;
+        else if (stage == "TessellationControl") result |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        else if (stage == "TessellationEvaluation") result |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        else if (stage == "All") result |= VK_SHADER_STAGE_ALL;
+    }
+    
+    // Default to Fragment if no valid stages found
+    if (result == 0) result = VK_SHADER_STAGE_FRAGMENT_BIT;
+    
+    return result;
 }

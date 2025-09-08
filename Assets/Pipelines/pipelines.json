@@ -27,7 +27,7 @@
       "descriptorLayouts": ["global", "material", "texture"],
       "pushConstants": [
         {
-          "stages": "Fragment",
+          "stages": ["Fragment"],
           "offset": 0,
           "size": 16
         }
@@ -42,7 +42,7 @@
       "descriptorLayouts": ["global", "material", "texture", "rig"],
       "pushConstants": [
         {
-          "stages": "Fragment",
+          "stages": ["Fragment"],
           "offset": 0,
           "size": 16
         }
@@ -69,7 +69,7 @@
       "descriptorLayouts": ["global", "material", "texture"],
       "pushConstants": [
         {
-          "stages": "Fragment",
+          "stages": ["Fragment"],
           "offset": 0,
           "size": 16
         }
@@ -84,7 +84,7 @@
       "descriptorLayouts": ["global", "material", "texture"],
       "pushConstants": [
         {
-          "stages": "Fragment",
+          "stages": ["Fragment"],
           "offset": 0,
           "size": 16
         }
