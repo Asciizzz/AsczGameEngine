@@ -1,4 +1,4 @@
-#include "TinyPlayback.hpp"
+#include "Tiny3D/TinyPlayback.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>

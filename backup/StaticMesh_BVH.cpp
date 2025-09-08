@@ -1,4 +1,4 @@
-#include "TinyModel.hpp"
+#include "Tiny3D/TinyModel.hpp"
 #include <algorithm>
 #include <cfloat>
 #include <queue>

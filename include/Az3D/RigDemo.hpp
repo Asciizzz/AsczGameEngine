@@ -1,7 +1,7 @@
 #pragma once
 
-#include "TinyModel.hpp"
-#include "TinyPlayback.hpp"
+#include "Tiny3D/TinyModel.hpp"
+#include "Tiny3D/TinyPlayback.hpp"
 
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Descriptor.hpp"

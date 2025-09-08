@@ -3,8 +3,8 @@
 #include "AzVulk/ComputeTask.hpp"
 #include "AzVulk/Pipeline_manager.hpp"
 
-#include "TinyLoader.hpp"
-#include "TinyPlayback.hpp"
+#include "Tiny3D/TinyLoader.hpp"
+#include "Tiny3D/TinyPlayback.hpp"
 
 #include <iostream>
 #include <random>
@@ -383,12 +383,10 @@ void Application::mainLoop() {
         // };
         // particleManager->updateRender();
 
-        
-        if (k_state[SDL_SCANCODE_0]) rigDemo.playAnimation(0);
         // Crouch walking
-        if (k_state[SDL_SCANCODE_1]) rigDemo.playAnimation(1);
+        if (k_state[SDL_SCANCODE_1]) rigDemo.playAnimation(0);
         // Crouching
-        if (k_state[SDL_SCANCODE_2]) rigDemo.playAnimation(2);
+        if (k_state[SDL_SCANCODE_2]) rigDemo.playAnimation(1);
         // Dancing
         if (k_state[SDL_SCANCODE_3]) rigDemo.playAnimation(3);
         // Very quick and painful death
@@ -398,10 +396,13 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(25, false, 3.5f, 0.1f);
         if (k_state[SDL_SCANCODE_7]) rigDemo.playAnimation(26, true, 3.5f, 0.1f);
 
+        // Idle
+        if (k_state[SDL_SCANCODE_8]) rigDemo.playAnimation(9, true, 1.0f, 0.2f);
+
         // Sprinting
-        if (k_state[SDL_SCANCODE_8]) rigDemo.playAnimation(38);
-        
-        if (k_state[SDL_SCANCODE_9]) rigDemo.playAnimation(9);
+        if (k_state[SDL_SCANCODE_9]) rigDemo.playAnimation(38, true, 1.5f, 0.1f);
+        // Walking
+        if (k_state[SDL_SCANCODE_0]) rigDemo.playAnimation(45, true, 1.5f, 0.2f);
 
 // =================================
 

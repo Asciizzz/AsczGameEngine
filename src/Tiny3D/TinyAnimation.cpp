@@ -1,4 +1,4 @@
-#include "TinyAnimation.hpp"
+#include "Tiny3D/TinyAnimation.hpp"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>

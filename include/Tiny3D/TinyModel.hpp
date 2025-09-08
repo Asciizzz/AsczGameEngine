@@ -1,8 +1,8 @@
 #pragma once
 
-#include "TinyMesh.hpp"
-#include "TinySkeleton.hpp"
-#include "TinyAnimation.hpp"
+#include "Tiny3D/TinyMesh.hpp"
+#include "Tiny3D/TinySkeleton.hpp"
+#include "Tiny3D/TinyAnimation.hpp"
 
 struct TinyModel {
     std::vector<TinySubmesh> submeshes;

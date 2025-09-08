@@ -1,4 +1,4 @@
-#include "TinyLoader.hpp"
+#include "Tiny3D/TinyLoader.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Helpers/stb_image.h"
@@ -616,7 +616,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                             index = *((uint32_t*)(dataPtr + stride * i));
                             break;
                         default:
-                            throw std::runtime_error("TinySubmesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                            throw std::runtime_error("Tiny3D/TinySubmesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                                     std::to_string(primitiveIndex) + "] unsupported index component type");
                     }
                     

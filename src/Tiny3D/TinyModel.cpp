@@ -1,4 +1,4 @@
-#include "TinyModel.hpp"
+#include "Tiny3D/TinyModel.hpp"
 #include <iostream>
 #include <iomanip>
 
@@ -8,7 +8,7 @@ uint32_t TinyModel::getSubmeshIndexCount(size_t index) const {
 }
 
 void TinyModel::printDebug() const {
-    std::cout << "TinyModel Information\n";
+    std::cout << "Tiny3D/TinyModel Information\n";
     std::cout << std::string(50, '=') << "\n";
     
     // Print mesh information
