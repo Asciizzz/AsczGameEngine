@@ -1,4 +1,4 @@
-#include "Az3D/TinyPlayback.hpp"
+#include "TinyPlayback.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>
@@ -6,8 +6,6 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
-
-using namespace Az3D;
 
 // ==================== BonePose Implementation ====================
 

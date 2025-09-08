@@ -1,4 +1,4 @@
-#include "Az3D/TinyLoader.hpp"
+#include "TinyLoader.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Helpers/stb_image.h"
@@ -21,8 +21,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
-
-using namespace Az3D;
 
 // Custom image loading callback for tinygltf since we disabled STB_IMAGE
 bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err,

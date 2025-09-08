@@ -4,28 +4,6 @@
 
 using namespace Az3D;
 
-// VertexLayout implementation
-VkVertexInputBindingDescription VertexLayout::getBindingDescription() const {
-    VkVertexInputBindingDescription binding{};
-    binding.binding = 0;
-    binding.stride = stride;
-    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    return binding;
-}
-
-std::vector<VkVertexInputAttributeDescription> VertexLayout::getAttributeDescriptions() const {
-    std::vector<VkVertexInputAttributeDescription> descs;
-    for (const auto& attr : attributes) {
-        VkVertexInputAttributeDescription d{};
-        d.binding = 0;
-        d.location = attr.location;
-        d.format = static_cast<VkFormat>(attr.format);
-        d.offset = attr.offset;
-        descs.push_back(d);
-    }
-    return descs;
-}
-
 void Transform::translate(const glm::vec3& translation) {
     this->pos += translation;
 }
@@ -65,6 +43,29 @@ void Transform::reset() {
     pos = glm::vec3(0.0f);
     rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     scl = 1.0f;
+}
+
+// VertexLayout implementation
+
+VkVertexInputBindingDescription VertexLayout::getBindingDescription() const {
+    VkVertexInputBindingDescription binding{};
+    binding.binding = 0;
+    binding.stride = stride;
+    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return binding;
+}
+
+std::vector<VkVertexInputAttributeDescription> VertexLayout::getAttributeDescriptions() const {
+    std::vector<VkVertexInputAttributeDescription> descs;
+    for (const auto& attr : attributes) {
+        VkVertexInputAttributeDescription d{};
+        d.binding = 0;
+        d.location = attr.location;
+        d.format = static_cast<VkFormat>(attr.format);
+        d.offset = attr.offset;
+        descs.push_back(d);
+    }
+    return descs;
 }
 
 // Static Vertex implementation

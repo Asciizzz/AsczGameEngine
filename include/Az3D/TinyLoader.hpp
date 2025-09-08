@@ -1,8 +1,6 @@
 #pragma once
 
-#include <Az3D/TinyModel.hpp>
-
-namespace Az3D {
+#include "TinyModel.hpp"
 
 class TinyLoader {
 public:
@@ -11,7 +9,6 @@ public:
         bool loadTextures = true;
         bool loadSkeleton = true;
     };
-
 
     static TinyTexture loadImage(const std::string& filePath);
 
@@ -24,5 +21,3 @@ private:
 
     static std::string sanitizeAsciiz(const std::string& originalName, const std::string& key, size_t fallbackIndex = 0);
 };
-
-} // namespace Az3D

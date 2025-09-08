@@ -8,8 +8,6 @@
 
 #include "Helpers/Templates.hpp"
 
-namespace Az3D {
-
 struct TinyAnimationSampler {
     std::vector<float> inputTimes;        // Time values (in seconds)
     std::vector<glm::vec3> translations;  // Translation values (if target_path is "translation")
@@ -59,5 +57,3 @@ struct TinyAnimation {
     int findChannelForBone(int boneIndex, TinyAnimationChannel::TargetPath path) const;
     void printDebug(const std::vector<std::string>& boneNames = {}) const;
 };
-
-}

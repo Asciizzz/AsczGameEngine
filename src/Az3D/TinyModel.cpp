@@ -1,8 +1,6 @@
-#include "Az3D/TinyModel.hpp"
+#include "TinyModel.hpp"
 #include <iostream>
 #include <iomanip>
-
-using namespace Az3D;
 
 uint32_t TinyModel::getSubmeshIndexCount(size_t index) const {
     if (index >= submeshes.size()) return 0;

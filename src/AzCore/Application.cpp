@@ -3,8 +3,8 @@
 #include "AzVulk/ComputeTask.hpp"
 #include "AzVulk/Pipeline_manager.hpp"
 
-#include "Az3D/TinyLoader.hpp"
-#include "Az3D/TinyPlayback.hpp"
+#include "TinyLoader.hpp"
+#include "TinyPlayback.hpp"
 
 #include <iostream>
 #include <random>
@@ -168,7 +168,7 @@ void Application::initComponents() {
     namedVertexInputs["None"] = noneInput;
     
     // Static - single static mesh
-    auto vstaticLayout = Az3D::VertexStatic::getLayout();
+    auto vstaticLayout = VertexStatic::getLayout();
     auto vstaticBind = vstaticLayout.getBindingDescription();
     auto vstaticAttrs = vstaticLayout.getAttributeDescriptions();
 
@@ -181,7 +181,7 @@ void Application::initComponents() {
     namedVertexInputs["StaticInstanced"] = vstaticInstancedInput;
     
     // Rigged - rigged mesh for skeletal animation
-    auto vriggedLayout = Az3D::VertexRig::getLayout();
+    auto vriggedLayout = VertexRig::getLayout();
     auto vriggedBind = vriggedLayout.getBindingDescription();
     auto vriggedAttrs = vriggedLayout.getAttributeDescriptions();
     AzVulk::NamedVertexInput vriggedInput;
@@ -394,9 +394,9 @@ void Application::mainLoop() {
         // Very quick and painful death
         if (k_state[SDL_SCANCODE_4]) rigDemo.playAnimation(4, false, 1.5f, 0.1f);
         // Punches
-        if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(24, true, 1.5f, 0.1f);
-        if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(25, false, 1.5f, 0.1f);
-        if (k_state[SDL_SCANCODE_7]) rigDemo.playAnimation(26, true, 1.5f, 0.1f);
+        if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(24, true, 3.5f, 0.1f);
+        if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(25, false, 3.5f, 0.1f);
+        if (k_state[SDL_SCANCODE_7]) rigDemo.playAnimation(26, true, 3.5f, 0.1f);
 
         // Sprinting
         if (k_state[SDL_SCANCODE_8]) rigDemo.playAnimation(38);

@@ -1,13 +1,7 @@
 #pragma once
 
-#include "Az3D/TinySkeleton.hpp"
-#include "Az3D/TinyAnimation.hpp"
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <vector>
-
-namespace Az3D {
+#include "TinySkeleton.hpp"
+#include "TinyAnimation.hpp"
 
 // Represents the current pose of a single bone
 struct BonePose {
@@ -120,5 +114,3 @@ private:
     T interpolateValues(const std::vector<T>& values, const std::vector<float>& times, 
                         float time, TinyAnimationSampler::InterpolationType interp);
 };
-
-}

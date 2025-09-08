@@ -10,9 +10,10 @@
 struct VkVertexInputBindingDescription;
 struct VkVertexInputAttributeDescription;
 
+// Transform structure
+
 namespace Az3D {
 
-// Transform structure
 struct Transform {
     glm::vec3 pos{0.0f};
     glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
@@ -35,6 +36,8 @@ struct Transform {
         return rotation * point;
     }
 };
+
+} // Namespace Az3D
 
 // Note: 0 handedness for no normal map
 
@@ -109,5 +112,3 @@ struct VertexRig {
     static VkVertexInputBindingDescription getBindingDescription();
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
-
-} // namespace Az3D

@@ -3,7 +3,7 @@
 #include "Az3D/Az3D.hpp"
 #include "AzVulk/AzVulk.hpp"
 
-#include "Az3D/TinyLoader.hpp"
+#include "TinyLoader.hpp"
 
 #include <iostream>
 #include <fstream>

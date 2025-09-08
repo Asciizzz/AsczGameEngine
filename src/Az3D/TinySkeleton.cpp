@@ -1,8 +1,6 @@
-#include "Az3D/TinySkeleton.hpp"
+#include "TinySkeleton.hpp"
 #include <iostream>
 #include <iomanip>
-
-using namespace Az3D;
 
 void TinySkeleton::debugPrintHierarchy() const {
     std::cout << "Skeleton Hierarchy (" << names.size() << " bones):\n";

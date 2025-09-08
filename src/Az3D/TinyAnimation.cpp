@@ -1,9 +1,7 @@
-#include "Az3D/TinyAnimation.hpp"
+#include "TinyAnimation.hpp"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
-
-using namespace Az3D;
 
 void TinyAnimation::computeDuration() {
     duration = 0.0f;

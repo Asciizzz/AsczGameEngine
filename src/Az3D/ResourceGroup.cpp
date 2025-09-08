@@ -1,5 +1,5 @@
 #include "Az3D/ResourceGroup.hpp"
-#include "Az3D/TinyLoader.hpp"
+#include "TinyLoader.hpp"
 #include "AzVulk/Device.hpp"
 #include <iostream>
 

@@ -1,4 +1,4 @@
-#include "Az3D/TinyModel.hpp"
+#include "TinyModel.hpp"
 #include <algorithm>
 #include <cfloat>
 #include <queue>

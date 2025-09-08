@@ -7,8 +7,6 @@
 
 #include "Helpers/Templates.hpp"
 
-namespace Az3D {
-
 struct TinySkeleton {
     // Bone SoA
     std::vector<std::string> names;
@@ -23,5 +21,3 @@ struct TinySkeleton {
 private:
     void debugPrintRecursive(int boneIndex, int depth) const;
 };
-
-}

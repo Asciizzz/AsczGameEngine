@@ -7,9 +7,6 @@
 
 namespace AzBeta {
 
-// Use the HitInfo from Az3D namespace
-using HitInfo = Az3D::HitInfo;
-
 class ParticleManager {
 public:
     using StaticInstance = Az3D::StaticInstance;
@@ -164,13 +161,13 @@ public:
 
         this->display_r = display_r;
 
-        Az3D::TinyModel particleModel;
-        
-        Az3D::TinySubmesh submesh = Az3D::TinyLoader::loadModel("Assets/Shapes/Icosphere.obj").submeshes[0];
+        TinyModel particleModel;
 
-        Az3D::TinyTexture texture = Az3D::TinyLoader::loadImage("Assets/Textures/Selen.png");
+        TinySubmesh submesh = TinyLoader::loadModel("Assets/Shapes/Icosphere.obj").submeshes[0];
 
-        Az3D::TinyMaterial material;
+        TinyTexture texture = TinyLoader::loadImage("Assets/Textures/Selen.png");
+
+        TinyMaterial material;
         material.toonLevel = 2;
         material.albTexture = 0;
 
@@ -356,7 +353,7 @@ public:
         instanceGroup.datas = particles_data;
     }
 
-    void updatePhysic(float dTime, const Az3D::TinySubmesh* mesh, const glm::mat4& meshModelMat4) {
+    void updatePhysic(float dTime, const TinySubmesh* mesh, const glm::mat4& meshModelMat4) {
         std::vector<size_t> indices(particleCount);
         std::iota(indices.begin(), indices.end(), 0);
 

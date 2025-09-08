@@ -1,10 +1,8 @@
 #pragma once
 
-#include "Az3D/TinyMesh.hpp"
-#include "Az3D/TinySkeleton.hpp"
-#include "Az3D/TinyAnimation.hpp"
-
-namespace Az3D {
+#include "TinyMesh.hpp"
+#include "TinySkeleton.hpp"
+#include "TinyAnimation.hpp"
 
 struct TinyModel {
     std::vector<TinySubmesh> submeshes;
@@ -20,5 +18,3 @@ struct TinyModel {
 
     void printAnimationList() const;
 };
-
-} // namespace Az3D

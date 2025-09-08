@@ -3,9 +3,6 @@
 #include "Az3D/VertexTypes.hpp"
 #include <string>
 
-
-namespace Az3D {
-
 // BVH structures (deprecated - to be reimplemented later)
 
 struct BVHNode {
@@ -91,5 +88,3 @@ struct TinyTexture {
         ClampToBorder = 2
     } addressMode = AddressMode::Repeat;
 };
-
-} // namespace Az3D

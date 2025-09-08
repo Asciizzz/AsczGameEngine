@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Az3D/TinyModel.hpp"
+#include "TinyModel.hpp"
 
 #include "AzVulk/Buffer.hpp"
 #include "AzVulk/Descriptor.hpp"
