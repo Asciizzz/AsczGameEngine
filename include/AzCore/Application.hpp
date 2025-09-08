@@ -23,41 +23,29 @@ public:
     void run();
 
 private:
-    // Core components
     UniquePtr<AzCore::WindowManager> windowManager;
     UniquePtr<AzCore::FpsManager> fpsManager;
-    UniquePtr<Az3D::Camera> camera;
 
-    // Vulkan: OpenGL's ambitious cousin
     UniquePtr<AzVulk::Instance> vkInstance;
     UniquePtr<AzVulk::Device> vkDevice;
     UniquePtr<AzVulk::SwapChain> swapChain;
 
-    // Render pass - shared between pipelines
     UniquePtr<AzVulk::RenderPass> mainRenderPass;
-    
-    // Pipeline management system
-    UniquePtr<AzVulk::PipelineManager> pipelineManager;
-    
-    // Note: Individual pipelines are now managed by PipelineManager
-    // Access them using pipelineManager->getPipeline("PipelineName")
 
-    // More Vulkan ceremony
+    UniquePtr<AzVulk::PipelineManager> pipelineManager;
+
     UniquePtr<AzVulk::DepthManager> depthManager;
     UniquePtr<AzVulk::MSAAManager> msaaManager;
     UniquePtr<AzVulk::Renderer> renderer;
-    
-    // Global UBO Data
+
+    UniquePtr<Az3D::Camera> camera;
     UniquePtr<Az3D::GlbUBOManager> glbUBOManager;
 
-    // Az3D resource management and model manager
     UniquePtr<Az3D::ResourceGroup> resGroup;
 
     // Some cool game element demos
     UniquePtr<AzGame::Grass> grassSystem;
-
     UniquePtr<AzBeta::ParticleManager> particleManager;
-
     Az3D::RigDemo rigDemo;
 
     // Window metadata

@@ -178,6 +178,7 @@ bool PipelineManager::loadPipelinesFromJson(const std::string& jsonFilePath) {
                     for (const auto& [name, prototypeJson] : prototypesObj.objectValue) {
                         PipelineAsset asset;
                         asset.name = name;
+                        asset.isPrototype = true;
                         // Parse prototype configuration...
                         // (Implementation similar to pipeline parsing below)
                         RasterCfg config = parseRasterConfig(asset);
@@ -417,9 +418,7 @@ RasterCfg PipelineManager::parseRasterConfig(const PipelineAsset& asset) const {
     // Apply asset-specific configuration
     if (!asset.vertexShader.empty() && !asset.fragmentShader.empty()) {
         config.withShaders(asset.vertexShader, asset.fragmentShader);
-    } else {
-        printf("Warning: Pipeline '%s' has missing shader paths! Vertex: '%s', Fragment: '%s'\n",
-                asset.name.c_str(), asset.vertexShader.c_str(), asset.fragmentShader.c_str());
+    } else if (!asset.isPrototype) {
         printf("Warning: Pipeline '%s' has missing shader paths! Vertex: '%s', Fragment: '%s'\n",
                 asset.name.c_str(), asset.vertexShader.c_str(), asset.fragmentShader.c_str());
     }

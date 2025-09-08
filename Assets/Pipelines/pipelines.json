@@ -1,94 +1,86 @@
 {
-  "prototypes": {
-    "OpaqueBase": {
-      "depthTest": true,
-      "depthWrite": true,
-      "blendMode": "None",
-      "cullMode": "Back",
-      "depthCompare": "Less",
-      "polygonMode": "Fill"
-    },
-    "TransparentBase": {
-      "depthTest": true,
-      "depthWrite": false,
-      "blendMode": "Alpha",
-      "cullMode": "None",
-      "depthCompare": "Less",
-      "polygonMode": "Fill"
-    }
-  },
-  "pipelines": [
-    {
-      "name": "StaticMesh",
-      "inheritsFrom": "OpaqueBase",
-      "vertexShader": "Shaders/Rasterize/StaticMesh.vert.spv",
-      "fragmentShader": "Shaders/Rasterize/StaticMesh.frag.spv",
-      "vertexInput": "StaticInstanced",
-      "descriptorLayouts": ["global", "material", "texture"],
-      "pushConstants": [
-        {
-          "stages": ["Fragment"],
-          "offset": 0,
-          "size": 16
+    "prototypes": {
+        "OpaqueBase": {
+            "depthTest": true,
+            "depthWrite": true,
+            "blendMode": "None",
+            "cullMode": "Back",
+            "depthCompare": "Less",
+            "polygonMode": "Fill"
+        },
+        "TransparentBase": {
+            "depthTest": true,
+            "depthWrite": false,
+            "blendMode": "Alpha",
+            "cullMode": "None",
+            "depthCompare": "Less",
+            "polygonMode": "Fill"
         }
-      ]
     },
-    {
-      "name": "RiggedMesh", 
-      "inheritsFrom": "OpaqueBase",
-      "vertexShader": "Shaders/Rasterize/RigMesh.vert.spv",
-      "fragmentShader": "Shaders/Rasterize/RigMesh.frag.spv",
-      "vertexInput": "Rigged",
-      "descriptorLayouts": ["global", "material", "texture", "rig"],
-      "pushConstants": [
+    "pipelines": [
         {
-          "stages": ["Fragment"],
-          "offset": 0,
-          "size": 16
-        }
-      ]
-    },
-    {
-      "name": "Sky",
-      "vertexShader": "Shaders/Sky/sky.vert.spv", 
-      "fragmentShader": "Shaders/Sky/sky.frag.spv",
-      "vertexInput": "None",
-      "cullMode": "None",
-      "depthTest": false,
-      "depthWrite": false,
-      "blendMode": "None",
-      "descriptorLayouts": ["global"]
-    },
-    {
-      "name": "Foliage",
-      "inheritsFrom": "OpaqueBase", 
-      "vertexShader": "Shaders/Rasterize/StaticMesh.vert.spv",
-      "fragmentShader": "Shaders/Rasterize/StaticMesh.frag.spv",
-      "vertexInput": "StaticInstanced",
-      "cullMode": "None",
-      "descriptorLayouts": ["global", "material", "texture"],
-      "pushConstants": [
+            "name": "StaticMesh",
+            "inheritsFrom": "OpaqueBase",
+            "vertexShader": "Shaders/Rasterize/StaticMesh.vert.spv",
+            "fragmentShader": "Shaders/Rasterize/StaticMesh.frag.spv",
+            "vertexInput": "StaticInstanced",
+            "descriptorLayouts": [ "global", "material", "texture" ],
+            "pushConstants": [ {
+                "stages": [ "Fragment" ],
+                "offset": 0,
+                "size": 16
+            } ]
+        },
         {
-          "stages": ["Fragment"],
-          "offset": 0,
-          "size": 16
-        }
-      ]
-    },
-    {
-      "name": "Single",
-      "inheritsFrom": "OpaqueBase",
-      "vertexShader": "Shaders/Rasterize/StaticSingle.vert.spv",
-      "fragmentShader": "Shaders/Rasterize/StaticMesh.frag.spv", 
-      "vertexInput": "Single",
-      "descriptorLayouts": ["global", "material", "texture"],
-      "pushConstants": [
+            "name": "RiggedMesh",
+            "inheritsFrom": "OpaqueBase",
+            "vertexShader": "Shaders/Rasterize/RigMesh.vert.spv",
+            "fragmentShader": "Shaders/Rasterize/RigMesh.frag.spv",
+            "vertexInput": "Rigged",
+            "descriptorLayouts": [ "global", "material", "texture", "rig" ],
+            "pushConstants": [ {
+                "stages": [ "Fragment" ],
+                "offset": 0,
+                "size": 16
+            } ]
+        },
         {
-          "stages": ["Fragment"],
-          "offset": 0,
-          "size": 16
+            "name": "Sky",
+            "vertexShader": "Shaders/Sky/sky.vert.spv",
+            "fragmentShader": "Shaders/Sky/sky.frag.spv",
+            "vertexInput": "None",
+            "cullMode": "None",
+            "depthTest": false,
+            "depthWrite": false,
+            "blendMode": "None",
+            "descriptorLayouts": [ "global" ]
+        },
+        {
+            "name": "Foliage",
+            "inheritsFrom": "OpaqueBase",
+            "vertexShader": "Shaders/Rasterize/StaticMesh.vert.spv",
+            "fragmentShader": "Shaders/Rasterize/StaticMesh.frag.spv",
+            "vertexInput": "StaticInstanced",
+            "cullMode": "None",
+            "descriptorLayouts": [ "global", "material", "texture" ],
+            "pushConstants": [ {
+                "stages": [ "Fragment" ],
+                "offset": 0,
+                "size": 16
+            } ]
+        },
+        {
+            "name": "Single",
+            "inheritsFrom": "OpaqueBase",
+            "vertexShader": "Shaders/Rasterize/StaticSingle.vert.spv",
+            "fragmentShader": "Shaders/Rasterize/StaticMesh.frag.spv",
+            "vertexInput": "Single",
+            "descriptorLayouts": [ "global", "material", "texture" ],
+            "pushConstants": [ {
+                "stages": [ "Fragment" ],
+                "offset": 0,
+                "size": 16
+            } ]
         }
-      ]
-    }
-  ]
+    ]
 }

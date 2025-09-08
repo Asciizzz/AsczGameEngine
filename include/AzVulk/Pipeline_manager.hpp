@@ -17,6 +17,8 @@ struct NamedVertexInput {
 
 // JSON asset structure for pipeline definition
 struct PipelineAsset {
+    bool isPrototype = false;
+
     std::string name;
     std::string inheritsFrom = "";  // Optional prototype inheritance
     

@@ -96,7 +96,7 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Town.obj");
+    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Tow.obj");
     // testObjModel.printDebug();
     resGroup->addModel(testObjModel);
 
@@ -206,69 +206,7 @@ void Application::initComponents() {
     PIPELINE_INIT(pipelineManager.get(), lDevice, renderPass, msaaManager->msaaSamples, namedLayouts, namedVertexInputs);
 }
 
-void Application::featuresTestingGround() {
-
-    size_t dataCount = 120;
-
-    std::vector<glm::mat4> dataA(dataCount); // Result mat4x4
-    std::vector<glm::mat4> dataB(dataCount); // Data mat4x4 1
-    std::vector<glm::mat4> dataC(dataCount); // Data mat4x4 2
-    std::vector<float> dataD(dataCount);     // Data float
-    float scalarE = 2.0f;                    // Data scalar
-
-    for (size_t i = 0; i < dataCount; ++i) {
-        dataB[i] = glm::mat4(static_cast<float>(rand()) / RAND_MAX);
-        dataC[i] = glm::mat4(static_cast<float>(rand()) / RAND_MAX);
-        dataD[i] = static_cast<float>(rand()) / RAND_MAX;
-    }
-
-    // Measure CPU time
-    auto cpuStart = std::chrono::high_resolution_clock::now();
-
-    for (size_t i = 0; i < dataCount; ++i) {
-        dataA[i] = (dataB[i] * dataC[i]) * dataD[i] * scalarE;
-    }
-
-    auto cpuEnd = std::chrono::high_resolution_clock::now();
-    double cpuDuration = std::chrono::duration<double, std::milli>(cpuEnd - cpuStart).count();
-
-    std::cout << "CPU elapsed time: " << cpuDuration << " ms\n";
-
-
-    auto gpuStart = std::chrono::high_resolution_clock::now();
-
-    // Create buffer
-    BufferData bufA(vkDevice.get()), bufB(vkDevice.get()), bufC(vkDevice.get()), bufD(vkDevice.get()), bufE(vkDevice.get());
-
-    ComputeTask::makeStorageBuffer(bufA, dataA.data(), sizeof(glm::mat4) * dataCount);
-    ComputeTask::makeStorageBuffer(bufB, dataB.data(), sizeof(glm::mat4) * dataCount);
-    ComputeTask::makeStorageBuffer(bufC, dataC.data(), sizeof(glm::mat4) * dataCount);
-    ComputeTask::makeStorageBuffer(bufD, dataD.data(), sizeof(float)     * dataCount);
-    ComputeTask::makeUniformBuffer(bufE, &scalarE, sizeof(float));
-
-    ComputeTask compTask(vkDevice.get(), "Shaders/Compute/test.comp.spv");
-    compTask.addStorageBuffer(bufA, 0);
-    compTask.addStorageBuffer(bufB, 1);
-    compTask.addStorageBuffer(bufC, 2);
-    compTask.addStorageBuffer(bufD, 3);
-    compTask.addUniformBuffer(bufE, 4);
-    compTask.create();
-
-    compTask.dispatchAsync(static_cast<uint32_t>(dataCount), 512);
-
-    // Get the result
-    // glm::mat4* finalA = reinterpret_cast<glm::mat4*>(bufA.mapped);
-    // // Copy the result to dataD
-    // std::memcpy(dataA.data(), finalA, dataCount * sizeof(glm::mat4));
-    ComputeTask::fetchResults(bufA, dataA.data(), sizeof(glm::mat4) * dataCount);
-
-    auto gpuEnd = std::chrono::high_resolution_clock::now();
-    double gpuDuration = std::chrono::duration<double, std::milli>(gpuEnd - gpuStart).count();
-
-    std::cout << "GPU elapsed time: " << gpuDuration << " ms\n";
-
-    // Automatic cleanup
-}
+void Application::featuresTestingGround() {}
 
 bool Application::checkWindowResize() {
     if (!windowManager->resizedFlag && !renderer->framebufferResized) return false;
