@@ -6,68 +6,6 @@
 
 using namespace AzVulk;
 
-// Implementation of fluent API methods
-RasterCfg& RasterCfg::withVertexInput(VertexInput inputType) {
-    // Clear existing configurations
-    bindings.clear();
-    attributes.clear();
-
-    switch (inputType) {
-    case VertexInput::None:
-        // No vertex input - for full screen quads, etc.
-        break;
-
-    case VertexInput::Static:
-        {
-            auto staticLayout = Az3D::VertexStatic::getLayout();
-            auto staticBind = staticLayout.getBindingDescription();
-            auto staticAttrs = staticLayout.getAttributeDescriptions();
-            
-            bindings = { staticBind };
-            attributes = { staticAttrs };
-        }
-        break;
-
-    case VertexInput::StaticInstanced:
-        {
-            auto staticLayout = Az3D::VertexStatic::getLayout();
-            auto staticBind = staticLayout.getBindingDescription();
-            auto staticAttrs = staticLayout.getAttributeDescriptions();
-            
-            auto instanceBind = Az3D::StaticInstance::getBindingDescription();
-            auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
-            
-            bindings = { staticBind, instanceBind };
-            attributes = { staticAttrs, instanceAttrs };
-        }
-        break;
-
-    case VertexInput::Rigged:
-        {
-            auto riggedLayout = Az3D::VertexRig::getLayout();
-            auto riggedBind = riggedLayout.getBindingDescription();
-            auto riggedAttrs = riggedLayout.getAttributeDescriptions();
-            
-            bindings = { riggedBind };
-            attributes = { riggedAttrs };
-        }
-        break;
-
-    case VertexInput::Single:
-        {
-            auto singleLayout = Az3D::VertexStatic::getLayout();
-            auto singleBind = singleLayout.getBindingDescription();
-            auto singleAttrs = singleLayout.getAttributeDescriptions();
-            
-            bindings = { singleBind };
-            attributes = { singleAttrs };
-        }
-        break;
-    }
-
-    return *this;
-}
-
 RasterCfg& RasterCfg::withBlending(BlendMode mode) {
     switch (mode) {
     case BlendMode::None:

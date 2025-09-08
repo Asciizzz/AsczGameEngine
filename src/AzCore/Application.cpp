@@ -493,7 +493,6 @@ void Application::mainLoop() {
             // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->terrainInstanceGroup);
 
             rigDemo.update(dTime);
-
             rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "RiggedMesh"), rigDemo);
 
             rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Single"), 1);

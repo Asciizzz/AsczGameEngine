@@ -4,15 +4,6 @@
 
 namespace AzVulk {
 
-// Enhanced enums for fluent API
-enum class VertexInput {
-    None,
-    Static,
-    StaticInstanced, 
-    Rigged,
-    Single
-};
-
 enum class CullMode {
     None = VK_CULL_MODE_NONE,
     Front = VK_CULL_MODE_FRONT_BIT,
@@ -73,9 +64,6 @@ struct RasterCfg {
         return *this;
     }
 
-    // Vertex input configuration
-    RasterCfg& withVertexInput(VertexInput inputType);
-    
     // Direct vertex input configuration from named inputs
     RasterCfg& withVertexInput(const std::vector<VkVertexInputBindingDescription>& inputBindings,
                                const std::vector<std::vector<VkVertexInputAttributeDescription>>& inputAttributes) {
