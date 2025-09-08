@@ -15,7 +15,15 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 set(SDL2_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include/SDL2")
-set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
+
+# Set SDL2 library path based on target architecture
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # 64-bit
+    set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
+else()
+    # 32-bit
+    set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib32/SDL2.lib")
+endif()
 
 file(GLOB_RECURSE SRC_FILES
     src/Az3D/Camera.cpp
@@ -135,16 +143,29 @@ add_custom_command(TARGET AsczGame POST_BUILD
 # Copy DLLs only for Release builds (for portability)
 if(WIN32)
     # Copy SDL2.dll from Vulkan SDK
-    find_file(SDL2_DLL 
-        NAMES "SDL2.dll"
-        PATHS 
-            "$ENV{VULKAN_SDK}/Bin"
-            "$ENV{VULKAN_SDK}/Lib"
-            "$ENV{VULKAN_SDK}/Bin32"
-            "${SDL2_INCLUDE_DIR}/../Lib"
-            "${SDL2_INCLUDE_DIR}/../Bin"
-        NO_DEFAULT_PATH
-    )
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        # 64-bit
+        find_file(SDL2_DLL 
+            NAMES "SDL2.dll"
+            PATHS 
+                "$ENV{VULKAN_SDK}/Bin"
+                "$ENV{VULKAN_SDK}/Lib"
+                "${SDL2_INCLUDE_DIR}/../Bin"
+                "${SDL2_INCLUDE_DIR}/../Lib"
+            NO_DEFAULT_PATH
+        )
+    else()
+        # 32-bit
+        find_file(SDL2_DLL 
+            NAMES "SDL2.dll"
+            PATHS 
+                "$ENV{VULKAN_SDK}/Bin32"
+                "$ENV{VULKAN_SDK}/Lib32"
+                "${SDL2_INCLUDE_DIR}/../Bin32"
+                "${SDL2_INCLUDE_DIR}/../Lib32"
+            NO_DEFAULT_PATH
+        )
+    endif()
     
     if(SDL2_DLL)
         add_custom_command(TARGET AsczGame POST_BUILD
