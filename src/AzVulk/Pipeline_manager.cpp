@@ -308,7 +308,8 @@ void PipelineManager::initializePipelines(
     VkDevice device,
     VkRenderPass renderPass,
     VkSampleCountFlagBits msaa,
-    const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts
+    const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts,
+    const std::unordered_map<std::string, NamedVertexInput>& namedVertexInputs
 ) {
     // Create all pipeline instances
     for (const auto& [name, config] : pipelineConfigs) {
@@ -333,6 +334,15 @@ void PipelineManager::initializePipelines(
                 } else {
                     printf("Warning: Layout '%s' not found in named layouts for pipeline '%s'\n", layoutName.c_str(), name.c_str());
                 }
+            }
+            
+            // Apply vertex input from named inputs - same pattern as layouts
+            auto vertexInputIt = namedVertexInputs.find(asset.vertexInput);
+            if (vertexInputIt != namedVertexInputs.end()) {
+                pipelineConfig.withVertexInput(vertexInputIt->second.bindings, vertexInputIt->second.attributes);
+            } else {
+                printf("Warning: Vertex input '%s' not found in named vertex inputs for pipeline '%s'\n", 
+                       asset.vertexInput.c_str(), name.c_str());
             }
         } else {
             printf("Warning: Asset configuration not found for pipeline '%s'\n", name.c_str());
@@ -403,7 +413,6 @@ RasterCfg PipelineManager::parseRasterConfig(const PipelineAsset& asset) const {
                 asset.name.c_str(), asset.vertexShader.c_str(), asset.fragmentShader.c_str());
     }
     
-    config.withVertexInput(parseVertexInput(asset.vertexInput));
     config.withDepthTest(asset.depthTest);
     config.withDepthWrite(asset.depthWrite);
     config.withCulling(parseCullMode(asset.cullMode));
@@ -418,15 +427,6 @@ RasterCfg PipelineManager::parseRasterConfig(const PipelineAsset& asset) const {
 }
 
 // Parser implementations
-VertexInput PipelineManager::parseVertexInput(const std::string& str) const {
-    if (str == "None") return VertexInput::None;
-    if (str == "Static") return VertexInput::Static;
-    if (str == "StaticInstanced") return VertexInput::StaticInstanced;
-    if (str == "Rigged") return VertexInput::Rigged;
-    if (str == "Single") return VertexInput::Single;
-    return VertexInput::StaticInstanced;
-}
-
 CullMode PipelineManager::parseCullMode(const std::string& str) const {
     if (str == "None") return CullMode::None;
     if (str == "Front") return CullMode::Front;

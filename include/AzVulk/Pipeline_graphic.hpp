@@ -75,6 +75,14 @@ struct RasterCfg {
 
     // Vertex input configuration
     RasterCfg& withVertexInput(VertexInput inputType);
+    
+    // Direct vertex input configuration from named inputs
+    RasterCfg& withVertexInput(const std::vector<VkVertexInputBindingDescription>& inputBindings,
+                               const std::vector<std::vector<VkVertexInputAttributeDescription>>& inputAttributes) {
+        bindings = inputBindings;
+        attributes = inputAttributes;
+        return *this;
+    }
 
     // Depth testing
     RasterCfg& withDepthTest(bool enable, VkCompareOp compareOp = VK_COMPARE_OP_LESS) {

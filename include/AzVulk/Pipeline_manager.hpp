@@ -8,67 +8,11 @@
 
 namespace AzVulk {
 
-// Forward declaration
-struct PipelineAsset;
 
-// Pipeline manager class for handling all pipeline configurations
-class PipelineManager {
-public:
-    PipelineManager() = default;
-
-    ~PipelineManager() { clear(); }
-    void clear();
-    
-    // Remove copy/move constructors to prevent issues
-    PipelineManager(const PipelineManager&) = delete;
-    PipelineManager& operator=(const PipelineManager&) = delete;
-
-    // Load all pipeline configurations from JSON files
-    bool loadPipelinesFromJson(const std::string& jsonFilePath);
-    
-    // Get a pipeline configuration by name
-    RasterCfg getPipelineConfig(const std::string& name) const;
-    
-    // Check if a pipeline exists
-    bool hasPipeline(const std::string& name) const;
-    
-    // Get all available pipeline names
-    std::vector<std::string> getAllPipelineNames() const;
-    
-    // Initialize all pipelines with common Vulkan objects
-    void initializePipelines(
-        VkDevice device,
-        VkRenderPass renderPass,
-        VkSampleCountFlagBits msaa,
-        const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts
-    );
-    
-    // Get a pipeline instance by name
-    PipelineRaster* getPipeline(const std::string& name) const;
-    
-    // Check if a pipeline instance exists
-    bool hasPipelineInstance(const std::string& name) const;
-    
-    // Recreate all pipelines (for window resize, etc.)
-    void recreateAllPipelines(VkRenderPass newRenderPass);
-
-private:
-    // Storage for configurations
-    std::unordered_map<std::string, RasterCfg> pipelineConfigs;
-    std::unordered_map<std::string, RasterCfg> prototypes;
-    std::unordered_map<std::string, PipelineAsset> pipelineAssets;  // Store the original asset data
-    
-    // Storage for actual pipeline instances
-    std::unordered_map<std::string, std::unique_ptr<PipelineRaster>> pipelineInstances;
-    
-    // JSON parsing helpers
-    RasterCfg parseRasterConfig(const PipelineAsset& asset) const;
-    VertexInput parseVertexInput(const std::string& str) const;
-    CullMode parseCullMode(const std::string& str) const;
-    BlendMode parseBlendMode(const std::string& str) const;
-    VkCompareOp parseCompareOp(const std::string& str) const;
-    VkPolygonMode parsePolygonMode(const std::string& str) const;
-    VkShaderStageFlags parseShaderStages(const std::string& str) const;
+// Structure for named vertex input configurations
+struct NamedVertexInput {
+    std::vector<VkVertexInputBindingDescription> bindings;
+    std::vector<std::vector<VkVertexInputAttributeDescription>> attributes;
 };
 
 // JSON asset structure for pipeline definition
@@ -114,10 +58,70 @@ struct PipelineAsset {
     std::vector<std::string> descriptorLayouts;  // e.g., ["global", "material", "texture"]
 };
 
+// Pipeline manager class for handling all pipeline configurations
+class PipelineManager {
+public:
+    PipelineManager() = default;
+
+    ~PipelineManager() { clear(); }
+    void clear();
+    
+    // Remove copy/move constructors to prevent issues
+    PipelineManager(const PipelineManager&) = delete;
+    PipelineManager& operator=(const PipelineManager&) = delete;
+
+    // Load all pipeline configurations from JSON files
+    bool loadPipelinesFromJson(const std::string& jsonFilePath);
+    
+    // Get a pipeline configuration by name
+    RasterCfg getPipelineConfig(const std::string& name) const;
+    
+    // Check if a pipeline exists
+    bool hasPipeline(const std::string& name) const;
+    
+    // Get all available pipeline names
+    std::vector<std::string> getAllPipelineNames() const;
+    
+    // Initialize all pipelines with common Vulkan objects
+    void initializePipelines(
+        VkDevice device,
+        VkRenderPass renderPass,
+        VkSampleCountFlagBits msaa,
+        const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts,
+        const std::unordered_map<std::string, NamedVertexInput>& namedVertexInputs
+    );
+    
+    // Get a pipeline instance by name
+    PipelineRaster* getPipeline(const std::string& name) const;
+    
+    // Check if a pipeline instance exists
+    bool hasPipelineInstance(const std::string& name) const;
+    
+    // Recreate all pipelines (for window resize, etc.)
+    void recreateAllPipelines(VkRenderPass newRenderPass);
+
+private:
+    // Storage for configurations
+    std::unordered_map<std::string, RasterCfg> pipelineConfigs;
+    std::unordered_map<std::string, RasterCfg> prototypes;
+    std::unordered_map<std::string, PipelineAsset> pipelineAssets;  // Store the original asset data
+    
+    // Storage for actual pipeline instances
+    std::unordered_map<std::string, std::unique_ptr<PipelineRaster>> pipelineInstances;
+    
+    // JSON parsing helpers
+    RasterCfg parseRasterConfig(const PipelineAsset& asset) const;
+    CullMode parseCullMode(const std::string& str) const;
+    BlendMode parseBlendMode(const std::string& str) const;
+    VkCompareOp parseCompareOp(const std::string& str) const;
+    VkPolygonMode parsePolygonMode(const std::string& str) const;
+    VkShaderStageFlags parseShaderStages(const std::string& str) const;
+};
+
 // Utility macros for easier access - now require a manager instance
 #define PIPELINE_GET(manager, name) (manager)->getPipelineConfig(name)
 #define PIPELINE_INSTANCE(manager, name) (manager)->getPipeline(name)
-#define PIPELINE_INIT(manager, device, renderPass, msaa, namedLayouts) \
-    (manager)->initializePipelines(device, renderPass, msaa, namedLayouts)
+#define PIPELINE_INIT(manager, device, renderPass, msaa, namedLayouts, namedVertexInputs) \
+    (manager)->initializePipelines(device, renderPass, msaa, namedLayouts, namedVertexInputs)
 
 } // namespace AzVulk
