@@ -36,11 +36,11 @@ private:
     // Render pass - shared between pipelines
     UniquePtr<AzVulk::RenderPass> mainRenderPass;
     
-    UniquePtr<AzVulk::PipelineRaster> staticMeshPipeline;
-    UniquePtr<AzVulk::PipelineRaster> rigMeshPipeline;
-    UniquePtr<AzVulk::PipelineRaster> foliagePipeline;
-    UniquePtr<AzVulk::PipelineRaster> skyPipeline; // Beta, very inefficient, yet really amazing looking
-    UniquePtr<AzVulk::PipelineRaster> singlePipeline; // Debugging purposes
+    // Pipeline management system
+    UniquePtr<AzVulk::PipelineManager> pipelineManager;
+    
+    // Note: Individual pipelines are now managed by PipelineManager
+    // Access them using pipelineManager->getPipeline("PipelineName")
 
     // More Vulkan ceremony
     UniquePtr<AzVulk::DepthManager> depthManager;

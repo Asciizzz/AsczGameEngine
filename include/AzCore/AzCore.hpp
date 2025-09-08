@@ -1,4 +1,4 @@
 #pragma once
 
-#include "AzCore/WindowManager.hpp"
 #include "AzCore/FpsManager.hpp"
+#include "AzCore/WindowManager.hpp"

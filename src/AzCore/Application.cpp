@@ -1,6 +1,7 @@
 #include "AzCore/Application.hpp"
 
 #include "AzVulk/ComputeTask.hpp"
+#include "AzVulk/Pipeline_manager.hpp"
 
 #include "Az3D/TinyLoader.hpp"
 #include "Az3D/TinyPlayback.hpp"
@@ -95,7 +96,7 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Ton.obj");
+    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Town.obj");
     // testObjModel.printDebug();
     resGroup->addModel(testObjModel);
 
@@ -143,87 +144,31 @@ void Application::initComponents() {
 
     // Create raster pipeline configurations
 
-    auto vstaticBindingDescription = Az3D::VertexStatic::getBindingDescription();
-    auto vstaticAttributeDescriptions = Az3D::VertexStatic::getAttributeDescriptions();
+    // Create pipeline manager
+    pipelineManager = MakeUnique<PipelineManager>();
+    
+    // Load pipeline configurations from JSON
+    if (!pipelineManager->loadPipelinesFromJson("Assets/Pipelines/pipelines.json")) {
+        std::cout << "Warning: Could not load pipeline JSON, using defaults" << std::endl;
+    }
 
-    auto vriggedBindingDescription = Az3D::VertexRig::getBindingDescription();
-    auto vriggedAttributeDescriptions = Az3D::VertexRig::getAttributeDescriptions();
+    // Print available pipelines
+    auto pipelineNames = pipelineManager->getAllPipelineNames();
+    std::cout << "Available pipelines: ";
+    for (const auto& name : pipelineNames) {
+        std::cout << name << " ";
+    }
+    std::cout << std::endl;
 
-    auto instanceBindingDescription = Az3D::StaticInstance::getBindingDescription();
-    auto instanceAttributeDescriptions = Az3D::StaticInstance::getAttributeDescriptions();
-
-    RasterCfg staticMeshConfig;
-    staticMeshConfig.renderPass = renderPass;
-    staticMeshConfig.setMSAA(msaaManager->msaaSamples);
-    staticMeshConfig.bindings = { vstaticBindingDescription, instanceBindingDescription };
-    staticMeshConfig.attributes = { vstaticAttributeDescriptions, instanceAttributeDescriptions };
-    staticMeshConfig.setLayouts = {glbLayout, matLayout, texLayout};
-    staticMeshConfig.vertPath = "Shaders/Rasterize/StaticMesh.vert.spv";
-    staticMeshConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
-    staticMeshConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
-
-    staticMeshPipeline = MakeUnique<PipelineRaster>(lDevice, staticMeshConfig);
-    staticMeshPipeline->create();
-
-    RasterCfg rigMeshConfig;
-    rigMeshConfig.renderPass = renderPass;
-    rigMeshConfig.setMSAA(msaaManager->msaaSamples);
-    rigMeshConfig.bindings = { vriggedBindingDescription };
-    rigMeshConfig.attributes = { vriggedAttributeDescriptions };
-    rigMeshConfig.setLayouts = {glbLayout, matLayout, texLayout, rigLayout};
-    rigMeshConfig.vertPath = "Shaders/Rasterize/RigMesh.vert.spv";
-    rigMeshConfig.fragPath = "Shaders/Rasterize/RigMesh.frag.spv";
-    rigMeshConfig.cullMode = VK_CULL_MODE_BACK_BIT;
-    rigMeshConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
-
-    rigMeshPipeline = MakeUnique<PipelineRaster>(lDevice, rigMeshConfig);
-    rigMeshPipeline->create();
-
-    RasterCfg skyConfig;
-    skyConfig.renderPass = renderPass;
-    skyConfig.setMSAA(msaaManager->msaaSamples);
-    skyConfig.setLayouts = {glbLayout};
-    skyConfig.vertPath = "Shaders/Sky/sky.vert.spv";
-    skyConfig.fragPath = "Shaders/Sky/sky.frag.spv";
-
-    skyConfig.cullMode = VK_CULL_MODE_NONE;           // No culling for fullscreen quad
-    skyConfig.depthTestEnable = VK_FALSE;             // Sky is always furthest
-    skyConfig.depthWriteEnable = VK_FALSE;            // Don't write depth
-    skyConfig.depthCompareOp = VK_COMPARE_OP_ALWAYS;  // Always pass depth test
-    skyConfig.blendEnable = VK_FALSE;                 // No blending needed
-
-    skyPipeline = MakeUnique<PipelineRaster>(lDevice, skyConfig);
-    skyPipeline->create();
-
-
-    RasterCfg foliageConfig;
-    foliageConfig.renderPass = renderPass;
-    foliageConfig.setMSAA(msaaManager->msaaSamples);
-    foliageConfig.bindings = { vstaticBindingDescription, instanceBindingDescription };
-    foliageConfig.attributes = { vstaticAttributeDescriptions, instanceAttributeDescriptions };
-    foliageConfig.setLayouts = {glbLayout, matLayout, texLayout};
-    foliageConfig.vertPath = "Shaders/Rasterize/StaticMesh.vert.spv";
-    foliageConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
-    foliageConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
-
-    // No backface culling
-    foliageConfig.cullMode = VK_CULL_MODE_NONE;
-
-    foliagePipeline = MakeUnique<PipelineRaster>(lDevice, foliageConfig);
-    foliagePipeline->create();
-
-    RasterCfg singleConfig;
-    singleConfig.renderPass = renderPass;
-    singleConfig.setMSAA(msaaManager->msaaSamples);
-    singleConfig.bindings = { vstaticBindingDescription };
-    singleConfig.attributes = { vstaticAttributeDescriptions };
-    singleConfig.setLayouts = {glbLayout, matLayout, texLayout};
-    singleConfig.vertPath = "Shaders/Rasterize/StaticSingle.vert.spv";
-    singleConfig.fragPath = "Shaders/Rasterize/StaticMesh.frag.spv";
-    singleConfig.pushConstantRanges = { {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16} };
-
-    singlePipeline = MakeUnique<PipelineRaster>(lDevice, singleConfig);
-    singlePipeline->create();
+    // Initialize all pipelines with the manager using named layouts
+    std::unordered_map<std::string, VkDescriptorSetLayout> namedLayouts = {
+        {"global", glbLayout},
+        {"material", matLayout}, 
+        {"texture", texLayout},
+        {"rig", rigLayout}
+    };
+    
+    PIPELINE_INIT(pipelineManager.get(), lDevice, renderPass, msaaManager->msaaSamples, namedLayouts);
 }
 
 void Application::featuresTestingGround() {
@@ -322,21 +267,8 @@ bool Application::checkWindowResize() {
         msaaManager->colorImageView
     );
 
-    // No need to change layout
-    staticMeshPipeline->setRenderPass(renderPass);
-    staticMeshPipeline->recreate();
-
-    rigMeshPipeline->setRenderPass(renderPass);
-    rigMeshPipeline->recreate();
-
-    skyPipeline->setRenderPass(renderPass);
-    skyPipeline->recreate();
-
-    foliagePipeline->setRenderPass(renderPass);
-    foliagePipeline->recreate();
-
-    singlePipeline->setRenderPass(renderPass);
-    singlePipeline->recreate();
+    // Recreate all pipelines with new render pass - using instance
+    pipelineManager->recreateAllPipelines(renderPass);
 
     return true;
 }
@@ -518,22 +450,22 @@ void Application::mainLoop() {
             glbUBOManager->updateUBO(camRef, currentFrameIndex);
 
             // First: render sky background with dedicated pipeline
-            rendererRef.drawSky(glbUBOManager.get(), skyPipeline.get());
+            rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
             // Draw grass system
             // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
-            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), foliagePipeline.get(), &grassSystem->grassInstanceGroup);
-            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &grassSystem->terrainInstanceGroup);
+            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Foliage"), &grassSystem->grassInstanceGroup);
+            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->terrainInstanceGroup);
 
             rigDemo.update(dTime);
 
-            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), rigMeshPipeline.get(), rigDemo);
+            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "RiggedMesh"), rigDemo);
 
-            rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), singlePipeline.get(), 1);
+            rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Single"), 1);
 
             // Draw the particles
             // particleManager->instanceGroup.updateBufferData();
-            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), staticMeshPipeline.get(), &particleManager->instanceGroup);
+            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);
         };
@@ -561,6 +493,4 @@ void Application::mainLoop() {
     vkDeviceWaitIdle(vkDevice->lDevice);
 }
 
-void Application::cleanup() {
-
-}
+void Application::cleanup() {}

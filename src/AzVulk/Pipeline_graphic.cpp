@@ -6,8 +6,114 @@
 
 using namespace AzVulk;
 
+// Implementation of fluent API methods
+RasterCfg& RasterCfg::withVertexInput(VertexInput inputType) {
+    // Clear existing configurations
+    bindings.clear();
+    attributes.clear();
+
+    switch (inputType) {
+    case VertexInput::None:
+        // No vertex input - for full screen quads, etc.
+        break;
+
+    case VertexInput::Static:
+        {
+            auto staticLayout = Az3D::VertexStatic::getLayout();
+            auto staticBind = staticLayout.getBindingDescription();
+            auto staticAttrs = staticLayout.getAttributeDescriptions();
+            
+            bindings = { staticBind };
+            attributes = { staticAttrs };
+        }
+        break;
+
+    case VertexInput::StaticInstanced:
+        {
+            auto staticLayout = Az3D::VertexStatic::getLayout();
+            auto staticBind = staticLayout.getBindingDescription();
+            auto staticAttrs = staticLayout.getAttributeDescriptions();
+            
+            auto instanceBind = Az3D::StaticInstance::getBindingDescription();
+            auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
+            
+            bindings = { staticBind, instanceBind };
+            attributes = { staticAttrs, instanceAttrs };
+        }
+        break;
+
+    case VertexInput::Rigged:
+        {
+            auto riggedLayout = Az3D::VertexRig::getLayout();
+            auto riggedBind = riggedLayout.getBindingDescription();
+            auto riggedAttrs = riggedLayout.getAttributeDescriptions();
+            
+            bindings = { riggedBind };
+            attributes = { riggedAttrs };
+        }
+        break;
+
+    case VertexInput::Single:
+        {
+            auto singleLayout = Az3D::VertexStatic::getLayout();
+            auto singleBind = singleLayout.getBindingDescription();
+            auto singleAttrs = singleLayout.getAttributeDescriptions();
+            
+            bindings = { singleBind };
+            attributes = { singleAttrs };
+        }
+        break;
+    }
+
+    return *this;
+}
+
+RasterCfg& RasterCfg::withBlending(BlendMode mode) {
+    switch (mode) {
+    case BlendMode::None:
+        blendEnable = VK_FALSE;
+        break;
+
+    case BlendMode::Alpha:
+        blendEnable = VK_TRUE;
+        srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendOp = VK_BLEND_OP_ADD;
+        srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        alphaBlendOp = VK_BLEND_OP_ADD;
+        break;
+
+    case BlendMode::Additive:
+        blendEnable = VK_TRUE;
+        srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendOp = VK_BLEND_OP_ADD;
+        srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        alphaBlendOp = VK_BLEND_OP_ADD;
+        break;
+
+    case BlendMode::Multiply:
+        blendEnable = VK_TRUE;
+        srcColorBlendFactor = VK_BLEND_FACTOR_DST_COLOR;
+        dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendOp = VK_BLEND_OP_ADD;
+        srcAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+        dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        alphaBlendOp = VK_BLEND_OP_ADD;
+        break;
+    }
+
+    return *this;
+}
+
 void PipelineRaster::create() {
-    // 1. Shader modules
+    // 1. Shader modules - check for empty paths
+    if (cfg.vertPath.empty() || cfg.fragPath.empty()) {
+        throw std::runtime_error("Pipeline has empty shader paths! Vertex: '" + cfg.vertPath + "', Fragment: '" + cfg.fragPath + "'");
+    }
+    
     auto vertCode = readFile(cfg.vertPath);
     auto fragCode = readFile(cfg.fragPath);
     VkShaderModule vert = createModule(vertCode);
