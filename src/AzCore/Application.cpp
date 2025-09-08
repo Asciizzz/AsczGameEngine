@@ -152,14 +152,6 @@ void Application::initComponents() {
         std::cout << "Warning: Could not load pipeline JSON, using defaults" << std::endl;
     }
 
-    // Print available pipelines
-    auto pipelineNames = pipelineManager->getAllPipelineNames();
-    std::cout << "Available pipelines: ";
-    for (const auto& name : pipelineNames) {
-        std::cout << name << " ";
-    }
-    std::cout << std::endl;
-
     // Initialize all pipelines with the manager using named layouts
     UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
         {"global", glbLayout},

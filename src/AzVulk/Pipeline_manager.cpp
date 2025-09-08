@@ -179,8 +179,7 @@ bool PipelineManager::loadPipelinesFromJson(const std::string& jsonFilePath) {
                         PipelineAsset asset;
                         asset.name = name;
                         asset.isPrototype = true;
-                        // Parse prototype configuration...
-                        // (Implementation similar to pipeline parsing below)
+
                         RasterCfg config = parseRasterConfig(asset);
                         prototypes[name] = config;
                     }
