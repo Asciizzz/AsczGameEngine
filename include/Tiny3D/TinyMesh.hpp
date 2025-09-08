@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Az3D/VertexTypes.hpp"
+#include "TinyVertex.hpp"
 #include <string>
 
 // BVH structures (deprecated - to be reimplemented later)

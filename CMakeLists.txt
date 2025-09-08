@@ -20,15 +20,17 @@ set(SDL2_LIBRARY "$ENV{VULKAN_SDK}/Lib/SDL2.lib")
 file(GLOB_RECURSE SRC_FILES
     src/Az3D/Camera.cpp
     src/Az3D/GlobalUBO.cpp
-    src/Az3D/VertexTypes.cpp
+    
+    src/Tiny3D/TinyVertex.cpp
+    src/Tiny3D/TinyModel.cpp
+    src/Tiny3D/TinySkeleton.cpp
+    src/Tiny3D/TinyAnimation.cpp
+    src/Tiny3D/TinyPlayback.cpp
+    src/Tiny3D/TinyLoader.cpp
+    
     # src/Az3D/StaticMesh_BVH.cpp
-    src/Az3D/TinyModel.cpp
-    src/Az3D/TinySkeleton.cpp
-    src/Az3D/TinyAnimation.cpp
-    src/Az3D/TinyPlayback.cpp
-    src/Az3D/TinyLoader.cpp
-    src/Az3D/StaticInstance.cpp
     src/Az3D/RigDemo.cpp
+    src/Az3D/StaticInstance.cpp
 
     src/Az3D/ResourceGroup.cpp
 
@@ -72,10 +74,12 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/Helpers
 
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/AzBeta
     ${CMAKE_SOURCE_DIR}/include/AzCore
     ${CMAKE_SOURCE_DIR}/include/AzVulk
+    ${CMAKE_SOURCE_DIR}/include/Tiny3D
     ${CMAKE_SOURCE_DIR}/include/Az3D
+
+    ${CMAKE_SOURCE_DIR}/include/AzBeta
     ${CMAKE_SOURCE_DIR}/include/AzGame
 )
 

@@ -1,4 +1,4 @@
-#include "Az3D/VertexTypes.hpp"
+#include "TinyVertex.hpp"
 
 #include <vulkan/vulkan.h>
 
