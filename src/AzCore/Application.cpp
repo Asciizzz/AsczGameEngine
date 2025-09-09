@@ -155,11 +155,11 @@ void Application::initComponents() {
     };
     
     // Create named vertex inputs
-    UnorderedMap<std::string, AzVulk::NamedVertexInput> namedVertexInputs;
+    UnorderedMap<std::string, VertexInputVK> vertexInputVKs;
     
     // None - no vertex input (for fullscreen quads, etc.)
-    AzVulk::NamedVertexInput noneInput;
-    namedVertexInputs["None"] = noneInput;
+    VertexInputVK noneInput;
+    vertexInputVKs["None"] = noneInput;
     
     // Static - single static mesh
     auto vstaticLayout = TinyVertexStatic::getLayout();
@@ -169,27 +169,27 @@ void Application::initComponents() {
     // StaticInstanced - static mesh with instancing
     auto instanceBind = Az3D::StaticInstance::getBindingDescription();
     auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
-    AzVulk::NamedVertexInput vstaticInstancedInput;
-    vstaticInstancedInput.bindings = {vstaticBind, instanceBind};
-    vstaticInstancedInput.attributes = {vstaticAttrs, instanceAttrs};
-    namedVertexInputs["StaticInstanced"] = vstaticInstancedInput;
+    VertexInputVK vstaticInstancedInput = VertexInputVK()
+    .setBindings({vstaticBind, instanceBind})
+    .setAttributes({vstaticAttrs, instanceAttrs});
+    vertexInputVKs["StaticInstanced"] = vstaticInstancedInput;
     
     // Rigged - rigged mesh for skeletal animation
     auto vriggedLayout = TinyVertexRig::getLayout();
     auto vriggedBind = vriggedLayout.getBindingDescription();
     auto vriggedAttrs = vriggedLayout.getAttributeDescriptions();
-    AzVulk::NamedVertexInput vriggedInput;
-    vriggedInput.bindings = {vriggedBind};
-    vriggedInput.attributes = {vriggedAttrs};
-    namedVertexInputs["Rigged"] = vriggedInput;
+    VertexInputVK vriggedInput = VertexInputVK()
+    .setBindings({ vriggedBind })
+    .setAttributes({ vriggedAttrs });
+    vertexInputVKs["Rigged"] = vriggedInput;
 
     // Single - single static mesh (alias for Static)
-    AzVulk::NamedVertexInput vsingleInput;
-    vsingleInput.bindings = {vstaticBind};
-    vsingleInput.attributes = {vstaticAttrs};
-    namedVertexInputs["Single"] = vsingleInput;
+    VertexInputVK vsingleInput = VertexInputVK()
+    .setBindings({ vstaticBind })
+    .setAttributes({ vstaticAttrs });
+    vertexInputVKs["Single"] = vsingleInput;
 
-    PIPELINE_INIT(pipelineManager.get(), lDevice, renderPass, msaaManager->msaaSamples, namedLayouts, namedVertexInputs);
+    PIPELINE_INIT(pipelineManager.get(), lDevice, renderPass, msaaManager->msaaSamples, namedLayouts, vertexInputVKs);
 }
 
 void Application::featuresTestingGround() {}

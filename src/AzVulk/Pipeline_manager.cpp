@@ -320,7 +320,7 @@ void PipelineManager::initializePipelines(
     VkRenderPass renderPass,
     VkSampleCountFlagBits msaa,
     const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts,
-    const std::unordered_map<std::string, NamedVertexInput>& namedVertexInputs
+    const std::unordered_map<std::string, VertexInputVK>& namedVertexInputs
 ) {
     // Create all pipeline instances
     for (const auto& [name, config] : pipelineConfigs) {

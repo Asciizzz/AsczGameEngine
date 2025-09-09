@@ -10,9 +10,18 @@ namespace AzVulk {
 
 
 // Structure for named vertex input configurations
-struct NamedVertexInput {
+struct VertexInputVK {
     std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<std::vector<VkVertexInputAttributeDescription>> attributes;
+
+    VertexInputVK& setBindings(const std::vector<VkVertexInputBindingDescription>& binds) {
+        bindings = binds;
+        return *this;
+    }
+    VertexInputVK& setAttributes(const std::vector<std::vector<VkVertexInputAttributeDescription>>& attrs) {
+        attributes = attrs;
+        return *this;
+    }
 };
 
 // JSON asset structure for pipeline definition
@@ -90,7 +99,7 @@ public:
         VkRenderPass renderPass,
         VkSampleCountFlagBits msaa,
         const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts,
-        const std::unordered_map<std::string, NamedVertexInput>& namedVertexInputs
+        const std::unordered_map<std::string, VertexInputVK>& namedVertexInputs
     );
     
     // Get a pipeline instance by name
