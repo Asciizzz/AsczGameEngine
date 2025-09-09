@@ -520,15 +520,13 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 for (size_t i = 0; i < vertexCount; i++) {
                     TinyVertexRig vertex{};
 
-                    vertex.pos_tu = glm::vec4(
-                        positions.size() > i ? positions[i] : glm::vec3(0.0f),
-                        uvs.size() > i ? uvs[i].x : 0.0f
-                    );
-                    vertex.nrml_tv = glm::vec4(
-                        normals.size() > i ? normals[i] : glm::vec3(0.0f),
-                        uvs.size() > i ? uvs[i].y : 0.0f
-                    );
-                    vertex.tangent = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
+                    glm::vec3 pos = positions.size() > i ? positions[i] : glm::vec3(0.0f);
+                    glm::vec3 nrml = normals.size() > i ? normals[i] : glm::vec3(0.0f);
+                    glm::vec2 texUV = uvs.size() > i ? uvs[i] : glm::vec2(0.0f);
+                    glm::vec4 tang = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
+                    glm::uvec4 jointIds = joints.size() > i ? joints[i] : glm::uvec4(0,0,0,0);
+
+                    vertex.setPosition(pos).setNormal(nrml).setTextureUV(texUV).setTangent(tang);
 
                     if (joints.size() > i && weights.size() > i) {
                         glm::uvec4 jointIds = joints[i];

@@ -70,19 +70,26 @@ std::vector<VkVertexInputAttributeDescription> TinyVertexLayout::getAttributeDes
 
 // Static Vertex implementation
 
-void TinyVertexStatic::setPosition(const glm::vec3& position) {
+TinyVertexStatic& TinyVertexStatic::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
+    return *this;
 }
-void TinyVertexStatic::setNormal(const glm::vec3& normal) {
+TinyVertexStatic& TinyVertexStatic::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
+    return *this;
 }
-void TinyVertexStatic::setTextureUV(const glm::vec2& uv) {
+TinyVertexStatic& TinyVertexStatic::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
+    return *this;
+}
+TinyVertexStatic& TinyVertexStatic::setTangent(const glm::vec4& tang) {
+    tangent = tang;
+    return *this;
 }
 
 TinyVertexLayout TinyVertexStatic::getLayout() {
@@ -105,19 +112,26 @@ std::vector<VkVertexInputAttributeDescription> TinyVertexStatic::getAttributeDes
 
 
 // Skinning vertex data
-void TinyVertexRig::setPosition(const glm::vec3& position) {
+TinyVertexRig& TinyVertexRig::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
+    return *this;
 }
-void TinyVertexRig::setNormal(const glm::vec3& normal) {
+TinyVertexRig& TinyVertexRig::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
+    return *this;
 }
-void TinyVertexRig::setTextureUV(const glm::vec2& uv) {
+TinyVertexRig& TinyVertexRig::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
+    return *this;
+}
+TinyVertexRig& TinyVertexRig::setTangent(const glm::vec4& tang) {
+    tangent = tang;
+    return *this;
 }
 
 TinyVertexLayout TinyVertexRig::getLayout() {

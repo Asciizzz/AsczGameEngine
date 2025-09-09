@@ -70,9 +70,10 @@ struct TinyVertexStatic {
         tangent = tang;
     }
 
-    void setPosition(const glm::vec3& position);
-    void setNormal(const glm::vec3& normal);
-    void setTextureUV(const glm::vec2& uv);
+    TinyVertexStatic& setPosition(const glm::vec3& position);
+    TinyVertexStatic& setNormal(const glm::vec3& normal);
+    TinyVertexStatic& setTextureUV(const glm::vec2& uv);
+    TinyVertexStatic& setTangent(const glm::vec4& tang);
 
     glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
@@ -98,9 +99,12 @@ struct TinyVertexRig {
 
     // Standard vertex data
 
-    void setPosition(const glm::vec3& position);
-    void setNormal(const glm::vec3& normal);
-    void setTextureUV(const glm::vec2& uv);
+    TinyVertexRig& setPosition(const glm::vec3& position);
+    TinyVertexRig& setNormal(const glm::vec3& normal);
+    TinyVertexRig& setTextureUV(const glm::vec2& uv);
+    TinyVertexRig& setTangent(const glm::vec4& tangent);
+    TinyVertexRig& setBoneIDs(const glm::uvec4& ids);
+    TinyVertexRig& setWeights(const glm::vec4& weights);
 
     glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
