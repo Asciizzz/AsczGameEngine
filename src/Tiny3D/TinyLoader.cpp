@@ -529,7 +529,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                     glm::vec3 nrml = normals.size() > i ? normals[i] : glm::vec3(0.0f);
                     glm::vec2 texUV = uvs.size() > i ? uvs[i] : glm::vec2(0.0f);
                     glm::vec4 tang = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
-                    glm::uvec4 jointIds = joints.size() > i ? joints[i] : glm::uvec4(0,0,0,0);
 
                     vertex.setPosition(pos).setNormal(nrml).setTextureUV(texUV).setTangent(tang);
 
