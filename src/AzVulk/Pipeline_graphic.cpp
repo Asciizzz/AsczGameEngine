@@ -89,8 +89,8 @@ void PipelineRaster::create() {
     }
 
     /* Deprecated
-    auto vstaticLayout = Az3D::VertexStatic::getLayout();
-    auto vriggedLayout = Az3D::VertexRig::getLayout();
+    auto vstaticLayout = Az3D::TinyVertexStatic::getLayout();
+    auto vriggedLayout = Az3D::TinyVertexRig::getLayout();
     auto instanceBind  = Az3D::StaticInstance::getBindingDescription();
     auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
 

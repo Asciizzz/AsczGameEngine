@@ -45,9 +45,9 @@ void Transform::reset() {
     scl = 1.0f;
 }
 
-// VertexLayout implementation
+// TinyVertexLayout implementation
 
-VkVertexInputBindingDescription VertexLayout::getBindingDescription() const {
+VkVertexInputBindingDescription TinyVertexLayout::getBindingDescription() const {
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
     binding.stride = stride;
@@ -55,7 +55,7 @@ VkVertexInputBindingDescription VertexLayout::getBindingDescription() const {
     return binding;
 }
 
-std::vector<VkVertexInputAttributeDescription> VertexLayout::getAttributeDescriptions() const {
+std::vector<VkVertexInputAttributeDescription> TinyVertexLayout::getAttributeDescriptions() const {
     std::vector<VkVertexInputAttributeDescription> descs;
     for (const auto& attr : attributes) {
         VkVertexInputAttributeDescription d{};
@@ -70,72 +70,72 @@ std::vector<VkVertexInputAttributeDescription> VertexLayout::getAttributeDescrip
 
 // Static Vertex implementation
 
-void VertexStatic::setPosition(const glm::vec3& position) {
+void TinyVertexStatic::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
 }
-void VertexStatic::setNormal(const glm::vec3& normal) {
+void TinyVertexStatic::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
 }
-void VertexStatic::setTextureUV(const glm::vec2& uv) {
+void TinyVertexStatic::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
 }
 
-VertexLayout VertexStatic::getLayout() {
-    VertexLayout layout;
-    layout.stride = sizeof(VertexStatic);
+TinyVertexLayout TinyVertexStatic::getLayout() {
+    TinyVertexLayout layout;
+    layout.stride = sizeof(TinyVertexStatic);
     layout.attributes = {
-        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, pos_tu)},
-        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, nrml_tv)},
-        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexStatic, tangent)}
+        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexStatic, pos_tu)},
+        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexStatic, nrml_tv)},
+        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexStatic, tangent)}
     };
     return layout;
 }
 
-VkVertexInputBindingDescription VertexStatic::getBindingDescription() {
+VkVertexInputBindingDescription TinyVertexStatic::getBindingDescription() {
     return getLayout().getBindingDescription();
 }
-std::vector<VkVertexInputAttributeDescription> VertexStatic::getAttributeDescriptions() {
+std::vector<VkVertexInputAttributeDescription> TinyVertexStatic::getAttributeDescriptions() {
     return getLayout().getAttributeDescriptions();
 }
 
 
 // Skinning vertex data
-void VertexRig::setPosition(const glm::vec3& position) {
+void TinyVertexRig::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
 }
-void VertexRig::setNormal(const glm::vec3& normal) {
+void TinyVertexRig::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
 }
-void VertexRig::setTextureUV(const glm::vec2& uv) {
+void TinyVertexRig::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
 }
 
-VertexLayout VertexRig::getLayout() {
-    VertexLayout layout;
-    layout.stride = sizeof(VertexRig);
+TinyVertexLayout TinyVertexRig::getLayout() {
+    TinyVertexLayout layout;
+    layout.stride = sizeof(TinyVertexRig);
     layout.attributes = {
-        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, pos_tu)},
-        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, nrml_tv)},
-        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, tangent)},
-        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(VertexRig, boneIDs)},
-        {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexRig, weights)}
+        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, pos_tu)},
+        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, nrml_tv)},
+        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, tangent)},
+        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(TinyVertexRig, boneIDs)},
+        {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, weights)}
     };
     return layout;
 }
 
-VkVertexInputBindingDescription VertexRig::getBindingDescription() {
+VkVertexInputBindingDescription TinyVertexRig::getBindingDescription() {
     return getLayout().getBindingDescription();
 }
-std::vector<VkVertexInputAttributeDescription> VertexRig::getAttributeDescriptions() {
+std::vector<VkVertexInputAttributeDescription> TinyVertexRig::getAttributeDescriptions() {
     return getLayout().getAttributeDescriptions();
 }

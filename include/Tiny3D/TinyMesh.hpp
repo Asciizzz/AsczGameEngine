@@ -36,7 +36,7 @@ struct HitInfo {
 
 // Uniform mesh structure that holds raw data only
 struct TinySubmesh {
-    VertexLayout layout;
+    TinyVertexLayout layout;
     enum class IndexType {
         Uint8,
         Uint16,

@@ -39,16 +39,14 @@ struct Transform {
 
 } // Namespace Az3D
 
-// Forward declarations
-struct VertexAttribute {
-    uint32_t location;
-    uint32_t format;    // VkFormat
-    uint32_t offset;
-};
-
-struct VertexLayout {
+struct TinyVertexLayout {
     uint32_t stride;
-    std::vector<VertexAttribute> attributes;
+    struct Attribute {
+        uint32_t location;
+        uint32_t format;
+        uint32_t offset;
+    };
+    std::vector<Attribute> attributes;
 
     // Utility to generate Vulkan descriptions once
     VkVertexInputBindingDescription getBindingDescription() const;
@@ -57,7 +55,7 @@ struct VertexLayout {
 
 
 
-struct VertexStatic {
+struct TinyVertexStatic {
     // Compact 48 byte data layout
     // Note: 0 handedness for no normal map
 
@@ -65,8 +63,8 @@ struct VertexStatic {
     glm::vec4 nrml_tv = glm::vec4(0.0f); // Normal XYZ - Texture V on W
     glm::vec4 tangent = glm::vec4(0.0f); // Tangent XYZ - Handedness on W
 
-    VertexStatic() = default;
-    VertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
+    TinyVertexStatic() = default;
+    TinyVertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
         pos_tu = glm::vec4(pos, uv.x);
         nrml_tv = glm::vec4(nrml, uv.y);
         tangent = tang;
@@ -81,12 +79,12 @@ struct VertexStatic {
     glm::vec2 getTextureUV() const { return {pos_tu.w, nrml_tv.w}; }
 
     // Returns layout that can be used for pipeline creation
-    static VertexLayout getLayout();
+    static TinyVertexLayout getLayout();
     static VkVertexInputBindingDescription getBindingDescription();
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };
 
-struct VertexRig {
+struct TinyVertexRig {
     // Compact 80 bytes of data
 
     glm::vec4 pos_tu = glm::vec4(0.0f);
@@ -96,7 +94,7 @@ struct VertexRig {
     glm::uvec4 boneIDs = glm::uvec4(0);
     glm::vec4 weights = glm::vec4(0.0f);
 
-    VertexRig() = default;
+    TinyVertexRig() = default;
 
     // Standard vertex data
 
@@ -109,7 +107,7 @@ struct VertexRig {
     glm::vec2 getTextureUV() const { return {pos_tu.w, nrml_tv.w}; };
 
     // Returns layout that can be used for pipeline creation
-    static VertexLayout getLayout();
+    static TinyVertexLayout getLayout();
     static VkVertexInputBindingDescription getBindingDescription();
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 };

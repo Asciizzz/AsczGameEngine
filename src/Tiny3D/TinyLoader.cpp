@@ -514,11 +514,11 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             
             if (hasRigging) {
                 // Build rigged vertices
-                std::vector<VertexRig> vertices;
+                std::vector<TinyVertexRig> vertices;
                 vertices.reserve(vertexCount);
                 
                 for (size_t i = 0; i < vertexCount; i++) {
-                    VertexRig vertex{};
+                    TinyVertexRig vertex{};
 
                     vertex.pos_tu = glm::vec4(
                         positions.size() > i ? positions[i] : glm::vec3(0.0f),
@@ -572,11 +572,11 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 submesh.setVertices(vertices);
             } else {
                 // Build static vertices
-                std::vector<VertexStatic> vertices;
+                std::vector<TinyVertexStatic> vertices;
                 vertices.reserve(vertexCount);
 
                 for (size_t i = 0; i < vertexCount; i++) {
-                    VertexStatic vertex{};
+                    TinyVertexStatic vertex{};
 
                     vertex.pos_tu = glm::vec4(
                         positions.size() > i ? positions[i] : glm::vec3(0.0f),
@@ -889,7 +889,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
     };
 
     // Full-attribute hash (position + normal + texcoord)
-    auto hashVertex = [&](const VertexStatic& v) -> size_t {
+    auto hashVertex = [&](const TinyVertexStatic& v) -> size_t {
         size_t seed = 0;
         hash_combine(seed, std::hash<float>{}(v.pos_tu.x));
         hash_combine(seed, std::hash<float>{}(v.pos_tu.y));
@@ -911,7 +911,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
         const auto& shape = shapes[shapeIndex];
 
         // Process faces sequentially, creating new submesh when material changes
-        std::vector<VertexStatic> vertices;
+        std::vector<TinyVertexStatic> vertices;
         std::vector<uint32_t> indices;
         int currentMaterialId = -2; // Start with invalid material to force first submesh creation
         
@@ -974,7 +974,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
             // Process face vertices - allow repetition for legacy OBJ compatibility
             for (size_t v = 0; v < fv; v++) {
                 const auto& index = shape.mesh.indices[indexOffset + v];
-                VertexStatic vertex{};
+                TinyVertexStatic vertex{};
 
                 // Position
                 if (index.vertex_index >= 0) {
@@ -1063,7 +1063,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
 
     // If no submeshes were created (no materials), create one big submesh
     if (result.submeshes.empty() && !shapes.empty()) {
-        std::vector<VertexStatic> vertices;
+        std::vector<TinyVertexStatic> vertices;
         std::vector<uint32_t> indices;
         std::unordered_map<size_t, uint32_t> uniqueVertices;
 
@@ -1074,7 +1074,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                 
                 for (size_t v = 0; v < fv; v++) {
                     const auto& index = shape.mesh.indices[indexOffset + v];
-                    VertexStatic vertex{};
+                    TinyVertexStatic vertex{};
 
                     // Position
                     if (index.vertex_index >= 0) {

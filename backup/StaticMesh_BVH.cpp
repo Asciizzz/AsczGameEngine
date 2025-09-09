@@ -373,9 +373,9 @@ HitInfo StaticMesh::closestHit(const glm::vec3& sphere_origin, float sphere_radi
     size_t idx2 = indices[hitIdx * 3 + 2];
     
     // Retrieve the hit normal
-    const VertexStatic& vrtx0 = vertices[idx0];
-    const VertexStatic& vrtx1 = vertices[idx1];
-    const VertexStatic& vrtx2 = vertices[idx2];
+    const TinyVertexStatic& vrtx0 = vertices[idx0];
+    const TinyVertexStatic& vrtx1 = vertices[idx1];
+    const TinyVertexStatic& vrtx2 = vertices[idx2];
     hit.nrml =  vrtx0.getNormal() * hit.prop.x +
                 vrtx1.getNormal() * hit.prop.y +
                 vrtx2.getNormal() * (1.0f - hit.prop.x - hit.prop.y);

@@ -168,7 +168,7 @@ void Application::initComponents() {
     namedVertexInputs["None"] = noneInput;
     
     // Static - single static mesh
-    auto vstaticLayout = VertexStatic::getLayout();
+    auto vstaticLayout = TinyVertexStatic::getLayout();
     auto vstaticBind = vstaticLayout.getBindingDescription();
     auto vstaticAttrs = vstaticLayout.getAttributeDescriptions();
 
@@ -181,7 +181,7 @@ void Application::initComponents() {
     namedVertexInputs["StaticInstanced"] = vstaticInstancedInput;
     
     // Rigged - rigged mesh for skeletal animation
-    auto vriggedLayout = VertexRig::getLayout();
+    auto vriggedLayout = TinyVertexRig::getLayout();
     auto vriggedBind = vriggedLayout.getBindingDescription();
     auto vriggedAttrs = vriggedLayout.getAttributeDescriptions();
     AzVulk::NamedVertexInput vriggedInput;
