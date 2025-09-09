@@ -401,9 +401,9 @@ void Application::mainLoop() {
             rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
             // Draw grass system
-            // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
-            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Foliage"), &grassSystem->grassInstanceGroup);
-            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->terrainInstanceGroup);
+            grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
+            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Foliage"), &grassSystem->grassInstanceGroup);
+            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->terrainInstanceGroup);
 
             rigDemo.update(dTime);
             rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "RiggedMesh"), rigDemo);
