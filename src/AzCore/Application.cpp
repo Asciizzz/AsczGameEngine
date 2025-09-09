@@ -83,7 +83,7 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Test/Animation.glb");
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Test/fox.glb");
     for (auto& mat : testModel.materials) {
         // mat.shading = false; // No lighting for for highly stylized look
         mat.toonLevel = 4;
@@ -385,24 +385,12 @@ void Application::mainLoop() {
 
         // Crouch walking
         if (k_state[SDL_SCANCODE_1]) rigDemo.playAnimation(0);
-        // Crouching
         if (k_state[SDL_SCANCODE_2]) rigDemo.playAnimation(1);
-        // Dancing
-        if (k_state[SDL_SCANCODE_3]) rigDemo.playAnimation(3);
-        // Very quick and painful death
-        if (k_state[SDL_SCANCODE_4]) rigDemo.playAnimation(4, false, 1.5f, 0.1f);
-        // Punches
-        if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(24, true, 3.5f, 0.1f);
-        if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(25, false, 3.5f, 0.1f);
-        if (k_state[SDL_SCANCODE_7]) rigDemo.playAnimation(26, true, 3.5f, 0.1f);
+        if (k_state[SDL_SCANCODE_3]) rigDemo.playAnimation(2);
+        if (k_state[SDL_SCANCODE_4]) rigDemo.playAnimation(3);
+        if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(4);
+        if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(5);
 
-        // Idle
-        if (k_state[SDL_SCANCODE_8]) rigDemo.playAnimation(9, true, 1.0f, 0.2f);
-
-        // Sprinting
-        if (k_state[SDL_SCANCODE_9]) rigDemo.playAnimation(38, true, 1.5f, 0.1f);
-        // Walking
-        if (k_state[SDL_SCANCODE_0]) rigDemo.playAnimation(45, true, 1.5f, 0.2f);
 
 // =================================
 
