@@ -6,11 +6,6 @@
 using namespace AzVulk;
 using namespace Az3D;
 
-
-ModelVK::ModelVK(const AzVulk::Device* vkDevice, const TinyModel& model) {
-    
-}
-
 // ============================================================================
 // ======================= General resource group stuff =======================
 // ============================================================================
@@ -72,7 +67,7 @@ void ResourceGroup::createComponentVKsFromModels() {
     texSamplerIndices.push_back(0); // Default texture uses Repeat sampler (index 0)
 
     for (auto& model : models) {
-        TinyModelVK modelVK;
+        ModelVK modelVK;
 
         std::vector<size_t> tempGlobalTextures; // A temporary list to convert local to global indices
         for (const auto& texture : model.textures) {
@@ -129,7 +124,7 @@ void ResourceGroup::createComponentVKsFromModels() {
         for (size_t i = 0; i < model.submeshes.size(); ++i) {
             const auto& submesh = model.submeshes[i];
 
-            size_t submeshVK_index = addSubmeshBuffers(submesh);
+            size_t submeshVK_index = addSubmeshVK(submesh);
             modelVK.submeshVK_indices.push_back(submeshVK_index);
             
             uint32_t indexCount = static_cast<uint32_t>(submesh.indexCount);
@@ -678,12 +673,12 @@ void ResourceGroup::createTextureDescSet() {
 // =========================== MESH STATIC ====================================
 // ============================================================================
 
-size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
+size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     const auto& vertexData = submesh.vertexData;
     const auto& indexData = submesh.indexData;
 
-    UniquePtr<BufferData> vBufferData = MakeUnique<BufferData>();
-    UniquePtr<BufferData> iBufferData = MakeUnique<BufferData>();
+    BufferData vBufferData;
+    BufferData iBufferData;
 
     // Upload vertex data
     BufferData vertexStagingBuffer;
@@ -695,13 +690,13 @@ size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
     vertexStagingBuffer.createBuffer();
     vertexStagingBuffer.mapAndCopy(vertexData.data());
 
-    vBufferData->initVkDevice(vkDevice);
-    vBufferData->setProperties(
+    vBufferData.initVkDevice(vkDevice);
+    vBufferData.setProperties(
         vertexData.size(),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
-    vBufferData->createBuffer();
+    vBufferData.createBuffer();
 
     TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -710,8 +705,8 @@ size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
     vertexCopyRegion.dstOffset = 0;
     vertexCopyRegion.size = vertexData.size();
 
-    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData->buffer, 1, &vertexCopyRegion);
-    vBufferData->hostVisible = false;
+    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData.buffer, 1, &vertexCopyRegion);
+    vBufferData.hostVisible = false;
 
     vertexCopyCmd.endAndSubmit();
 
@@ -725,13 +720,13 @@ size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
     indexStagingBuffer.createBuffer();
     indexStagingBuffer.mapAndCopy(indexData.data());
 
-    iBufferData->initVkDevice(vkDevice);
-    iBufferData->setProperties(
+    iBufferData.initVkDevice(vkDevice);
+    iBufferData.setProperties(
         indexData.size(),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
-    iBufferData->createBuffer();
+    iBufferData.createBuffer();
 
     TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -740,24 +735,34 @@ size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
     indexCopyRegion.dstOffset = 0;
     indexCopyRegion.size = indexData.size();
 
-    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData->buffer, 1, &indexCopyRegion);
-    iBufferData->hostVisible = false;
+    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData.buffer, 1, &indexCopyRegion);
+    iBufferData.hostVisible = false;
 
     indexCopyCmd.endAndSubmit();
 
     // Append buffers
-    subMeshVertexBuffers.push_back(std::move(vBufferData));
-    subMeshIndexBuffers.push_back(std::move(iBufferData));
+    UniquePtr<SubmeshVK> submeshVK = MakeUnique<SubmeshVK>();
+    submeshVK->vertexBuffer = std::move(vBufferData);
+    submeshVK->indexBuffer  = std::move(iBufferData);
+    switch (submesh.indexType) {
+        case TinySubmesh::IndexType::Uint8:  submeshVK->indexType = VK_INDEX_TYPE_UINT8;  break;
+        case TinySubmesh::IndexType::Uint16: submeshVK->indexType = VK_INDEX_TYPE_UINT16; break;
+        case TinySubmesh::IndexType::Uint32: submeshVK->indexType = VK_INDEX_TYPE_UINT32; break;
+        default: throw std::runtime_error("Unsupported index type in submesh");
+    }
 
-    return subMeshVertexBuffers.size() - 1; // Return index of newly added buffers
+    submeshVKs.push_back(std::move(submeshVK));
+    return submeshVKs.size() - 1; // Return index of newly added buffers
 }
 
 VkBuffer ResourceGroup::getSubmeshVertexBuffer(size_t submeshVK_index) const {
-    return subMeshVertexBuffers[submeshVK_index]->get();
+    return submeshVKs[submeshVK_index]->vertexBuffer.get();
 }
-
 VkBuffer ResourceGroup::getSubmeshIndexBuffer(size_t submeshVK_index) const {
-    return subMeshIndexBuffers[submeshVK_index]->get();
+    return submeshVKs[submeshVK_index]->indexBuffer.get();
+}
+VkIndexType ResourceGroup::getSubmeshIndexType(size_t submeshVK_index) const {
+    return submeshVKs[submeshVK_index]->indexType;
 }
 
 // ============================================================================

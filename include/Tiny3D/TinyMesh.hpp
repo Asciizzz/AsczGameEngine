@@ -34,7 +34,6 @@ struct HitInfo {
     uint32_t materialId = 0;
 };
 
-
 // Uniform mesh structure that holds raw data only
 struct TinySubmesh {
     VertexLayout layout;

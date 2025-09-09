@@ -39,8 +39,6 @@ struct Transform {
 
 } // Namespace Az3D
 
-// Note: 0 handedness for no normal map
-
 // Forward declarations
 struct VertexAttribute {
     uint32_t location;
@@ -57,8 +55,11 @@ struct VertexLayout {
     std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() const;
 };
 
+
+
 struct VertexStatic {
     // Compact 48 byte data layout
+    // Note: 0 handedness for no normal map
 
     glm::vec4 pos_tu  = glm::vec4(0.0f); // Position XYZ - Texture U on W
     glm::vec4 nrml_tv = glm::vec4(0.0f); // Normal XYZ - Texture V on W
@@ -86,7 +87,7 @@ struct VertexStatic {
 };
 
 struct VertexRig {
-    // 80 bytes of data
+    // Compact 80 bytes of data
 
     glm::vec4 pos_tu = glm::vec4(0.0f);
     glm::vec4 nrml_tv = glm::vec4(0.0f);

@@ -458,16 +458,18 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             result.skeleton.parentIndices[i] = parentBoneIndex;
         }
     }
-
-    // Process each mesh and each primitive as separate submeshes
-    result.submeshes.reserve(model.meshes.size() * 2); // Rough estimate
     
+    // Model are not allowed to mix between rigged and non-rigged
+    bool hasRigging = options.loadSkeleton && !result.skeleton.names.empty();
+
     for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& mesh = model.meshes[meshIndex];
+
+        // Unstack Mesh into separate submeshes (primitives)
         
         for (size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); primitiveIndex++) {
             const auto& primitive = mesh.primitives[primitiveIndex];
-            
+
             // Validate required attributes
             if (!primitive.attributes.count("POSITION")) {
                 throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
@@ -495,7 +497,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             }
             
             // Read skinning data with robust error handling
-            bool hasRigging = options.loadSkeleton && !result.skeleton.names.empty() && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0");
             if (hasRigging) {
                 if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
                     throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
@@ -509,7 +510,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             }
 
             // Determine vertex type and build vertices
-            std::vector<uint32_t> indices;
             TinySubmesh submesh;
             
             if (hasRigging) {
@@ -519,7 +519,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 
                 for (size_t i = 0; i < vertexCount; i++) {
                     VertexRig vertex{};
-                    
+
                     vertex.pos_tu = glm::vec4(
                         positions.size() > i ? positions[i] : glm::vec3(0.0f),
                         uvs.size() > i ? uvs[i].x : 0.0f
@@ -529,11 +529,11 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                         uvs.size() > i ? uvs[i].y : 0.0f
                     );
                     vertex.tangent = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
-                    
+
                     if (joints.size() > i && weights.size() > i) {
                         glm::uvec4 jointIds = joints[i];
                         glm::vec4 boneWeights = weights[i];
-                        
+
                         // Validate joint indices are within skeleton range
                         bool hasInvalidJoint = false;
                         for (int j = 0; j < 4; j++) {
@@ -542,7 +542,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                                 break;
                             }
                         }
-                        
+
                         if (hasInvalidJoint) {
                             // Set to rest pose (root bone only)
                             vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
@@ -556,7 +556,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                                 boneWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
                                 jointIds = glm::uvec4(0, 0, 0, 0);
                             }
-                            
+
                             vertex.boneIDs = glm::ivec4(jointIds);
                             vertex.weights = boneWeights;
                         }
@@ -565,19 +565,19 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                         vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
                         vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
                     }
-                    
+
                     vertices.push_back(vertex);
                 }
-                
+
                 submesh.setVertex(vertices);
             } else {
                 // Build static vertices
                 std::vector<VertexStatic> vertices;
                 vertices.reserve(vertexCount);
-                
+
                 for (size_t i = 0; i < vertexCount; i++) {
                     VertexStatic vertex{};
-                    
+
                     vertex.pos_tu = glm::vec4(
                         positions.size() > i ? positions[i] : glm::vec3(0.0f),
                         uvs.size() > i ? uvs[i].x : 0.0f
@@ -590,11 +590,11 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                     
                     vertices.push_back(vertex);
                 }
-                
+
                 submesh.setVertex(vertices);
             }
 
-            // Handle indices
+            // Handle indices - use native index types for memory efficiency
             if (primitive.indices >= 0) {
                 const auto& indexAccessor = model.accessors[primitive.indices];
                 const auto& indexBufferView = model.bufferViews[indexAccessor.bufferView];
@@ -602,28 +602,38 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
                 size_t stride = indexAccessor.ByteStride(indexBufferView);
 
-                indices.reserve(indexAccessor.count);
-                for (size_t i = 0; i < indexAccessor.count; i++) {
-                    uint32_t index = 0;
-                    switch (indexAccessor.componentType) {
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                            index = *((uint8_t*)(dataPtr + stride * i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                            index = *((uint16_t*)(dataPtr + stride * i));
-                            break;
-                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                            index = *((uint32_t*)(dataPtr + stride * i));
-                            break;
-                        default:
-                            throw std::runtime_error("Tiny3D/TinySubmesh[" + std::to_string(meshIndex) + "] Primitive[" + 
-                                                    std::to_string(primitiveIndex) + "] unsupported index component type");
+                switch (indexAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+                        std::vector<uint8_t> indices8;
+                        indices8.reserve(indexAccessor.count);
+                        for (size_t i = 0; i < indexAccessor.count; i++) {
+                            indices8.push_back(*((uint8_t*)(dataPtr + stride * i)));
+                        }
+                        submesh.setIndices(indices8);
+                        break;
                     }
-                    
-                    indices.push_back(index);
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+                        std::vector<uint16_t> indices16;
+                        indices16.reserve(indexAccessor.count);
+                        for (size_t i = 0; i < indexAccessor.count; i++) {
+                            indices16.push_back(*((uint16_t*)(dataPtr + stride * i)));
+                        }
+                        submesh.setIndices(indices16);
+                        break;
+                    }
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: {
+                        std::vector<uint32_t> indices32;
+                        indices32.reserve(indexAccessor.count);
+                        for (size_t i = 0; i < indexAccessor.count; i++) {
+                            indices32.push_back(*((uint32_t*)(dataPtr + stride * i)));
+                        }
+                        submesh.setIndices(indices32);
+                        break;
+                    }
+                    default:
+                        throw std::runtime_error("Tiny3D/TinySubmesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                                std::to_string(primitiveIndex) + "] unsupported index component type");
                 }
-                
-                submesh.setIndices(indices);
             }
 
             // Set material index (-1 if no material assigned or materials not loaded)

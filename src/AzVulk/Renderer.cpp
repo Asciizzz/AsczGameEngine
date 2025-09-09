@@ -174,13 +174,14 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
         VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
         VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
+        VkIndexType indexType = resGroup->getSubmeshIndexType(submeshIndex);
 
         VkBuffer instanceBuffer = instanceGroup->bufferData.get();
 
         VkBuffer buffers[] = { vertexBuffer, instanceBuffer };
         VkDeviceSize offsets[] = { 0, 0 };
         vkCmdBindVertexBuffers(currentCmd, 0, 2, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
 
         // Draw all submesh instances
         vkCmdDrawIndexed(currentCmd, indexCount, instanceCount, 0, 0, 0);
@@ -211,13 +212,14 @@ void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3
         // Push constants: material index (for array indexing in shader)
         pipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex,0,0,0));
 
-        VkBuffer vertexBuffer = resGroup->subMeshVertexBuffers[submeshIndex]->get();
-        VkBuffer indexBuffer = resGroup->subMeshIndexBuffers[submeshIndex]->get();
+        VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
+        VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
+        VkIndexType indexType = resGroup->getSubmeshIndexType(submeshIndex);
 
         VkBuffer buffers[] = { vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
 
         // Draw all submesh instances
         vkCmdDrawIndexed(currentCmd, indexCount, 1, 0, 0, 0);
@@ -251,13 +253,13 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
         // Push constants: material index (for array indexing in shader)
         rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex,0,0,0));
 
-        VkBuffer vertexBuffer = resGroup->subMeshVertexBuffers[submeshIndex]->get();
-        VkBuffer indexBuffer = resGroup->subMeshIndexBuffers[submeshIndex]->get();
+        VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
+        VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
 
         VkBuffer buffers[] = { vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
         // Draw all submesh instances
         vkCmdDrawIndexed(currentCmd, indexCount, 1, 0, 0, 0);

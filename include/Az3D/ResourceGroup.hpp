@@ -19,8 +19,14 @@ struct MaterialVK {
     glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albTexIndex, nrmlTexIndex, unused, unused>
 };
 
+struct SubmeshVK {
+    AzVulk::BufferData vertexBuffer;
+    AzVulk::BufferData indexBuffer;
+    VkIndexType indexType;
+};
+
 // Index pointing to certain Vulkan elements
-struct TinyModelVK {
+struct ModelVK {
     std::vector<size_t> submeshVK_indices;
 
     std::vector<uint32_t> materialVK_indices;
@@ -29,23 +35,6 @@ struct TinyModelVK {
     // Some helpers
     std::vector<uint32_t> submesh_indexCounts; // Cached index counts for each submesh
     size_t submeshCount() const { return submeshVK_indices.size(); }
-};
-
-// Beta, model VK self contains all relavent components
-struct ModelVK {
-    std::vector<AzVulk::BufferData> submeshVertexBuffers;
-    std::vector<AzVulk::BufferData> submeshIndexBuffers;
-
-    AzVulk::BufferData matBuffer;
-    AzVulk::DescSets matDescSet;
-
-    std::vector<TextureVK> textureVKs;
-    AzVulk::DescSets texDescSet;
-
-    std::vector<TinySkeleton> skeletons;
-    std::vector<TinyAnimation> animations;
-
-    ModelVK(const AzVulk::Device* vkDevice, const TinyModel& model);
 };
 
 // All these resource are static and fixed, created upon load
@@ -80,16 +69,15 @@ public:
     AzVulk::Device* vkDevice;
 
     std::vector<TinyModel>            models;
-    std::vector<TinyModelVK>          modelVKs; // Contain indices to vulkan resources
+    std::vector<ModelVK>              modelVKs; // Contain indices to vulkan resources
     std::vector<MaterialVK>           materialVKs; // Very different from TinyMaterial
-    
+    UniquePtrVec<SubmeshVK>           submeshVKs;
     UniquePtrVec<TextureVK>           textureVKs;
 
-    UniquePtrVec<AzVulk::BufferData>  subMeshVertexBuffers;
-    UniquePtrVec<AzVulk::BufferData>  subMeshIndexBuffers;
-    size_t addSubmeshBuffers(const TinySubmesh& submesh);
+    size_t addSubmeshVK(const TinySubmesh& submesh);
     VkBuffer getSubmeshVertexBuffer(size_t submeshVK_index) const;
     VkBuffer getSubmeshIndexBuffer(size_t submeshVK_index) const;
+    VkIndexType getSubmeshIndexType(size_t submeshVK_index) const;
 
     SharedPtrVec<TinySkeleton>        skeletons;
     UniquePtrVec<AzVulk::BufferData>  skeleInvMatBuffers; // Additional buffers in the future
