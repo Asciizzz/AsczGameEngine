@@ -144,7 +144,10 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
     TinyModel grassModel;
 
     // Create mesh
-    TinySubmesh grassSubmesh = TinySubmesh(grassVertices, grassIndices, 0);
+    TinySubmesh grassSubmesh = TinySubmesh()
+        .setVertex(grassVertices)
+        .setIndices(grassIndices)
+        .setMaterial(0);
 
     TinyTexture grassTexture = TinyLoader::loadImage("Assets/Textures/Grass.png");
     grassTexture.addressMode = TinyTexture::AddressMode::ClampToEdge;
@@ -202,7 +205,10 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
     TinyModel grassModel;
 
     // Create mesh
-    TinySubmesh grassSubmesh = TinySubmesh(grassVertices, grassIndices, 0);
+    TinySubmesh grassSubmesh = TinySubmesh()
+        .setVertex(grassVertices)
+        .setIndices(grassIndices)
+        .setMaterial(0);
 
     TinyTexture grassTexture = TinyLoader::loadImage("Assets/Textures/Grass.png");
     grassTexture.addressMode = TinyTexture::AddressMode::ClampToEdge;
@@ -433,7 +439,9 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
     TinyModel terrainModel;
 
     // Create mesh
-    TinySubmesh terrainSubmesh = TinySubmesh(terrainVertices, terrainIndices);
+    TinySubmesh terrainSubmesh = TinySubmesh()
+        .setVertex(terrainVertices)
+        .setIndices(terrainIndices);
     terrainModel.submeshes.push_back(terrainSubmesh);
 
     terrainModelIndex = resGroup.addModel(terrainModel);

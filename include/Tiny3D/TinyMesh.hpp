@@ -37,29 +37,55 @@ struct HitInfo {
 
 // Uniform mesh structure that holds raw data only
 struct TinySubmesh {
+    VertexLayout layout;
+    enum class IndexType {
+        Uint8,
+        Uint16,
+        Uint32
+    } indexType = IndexType::Uint32;
+
+    // Raw byte data
     std::vector<uint8_t> vertexData;
-    std::vector<uint32_t> indices;
+    std::vector<uint8_t> indexData;
     int matIndex = -1;
 
-    VertexLayout layout;
+    // Division is extremely slow, so cache these
+    size_t indexCount = 0; 
+    size_t vertexCount = 0;
 
     TinySubmesh() = default;
 
-    template<typename VertexT>
-    TinySubmesh(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx, int matIdx = -1) {
-        create(verts, idx, matIdx);
+    TinySubmesh& setMaterial(int index) {
+        matIndex = index;
+        return *this;
     }
 
     template<typename VertexT>
-    void create(const std::vector<VertexT>& verts, const std::vector<uint32_t>& idx, int matIdx = -1) {
+    TinySubmesh& setVertex(const std::vector<VertexT>& verts) {
         layout = VertexT::getLayout();
-        indices = idx;
+
         vertexData.resize(verts.size() * sizeof(VertexT));
         std::memcpy(vertexData.data(), verts.data(), vertexData.size());
-        matIndex = matIdx;
+
+        vertexCount = verts.size();
+        return *this;
     }
 
-    size_t vertexCount() const { return vertexData.size() / layout.stride; }
+    template<typename IndexT>
+    TinySubmesh& setIndices(const std::vector<IndexT>& idx) {
+        switch (sizeof(IndexT)) {
+            case sizeof(uint8_t): indexType = IndexType::Uint8; break;
+            case sizeof(uint16_t): indexType = IndexType::Uint16; break;
+            case sizeof(uint32_t): indexType = IndexType::Uint32; break;
+            default: indexType = IndexType::Uint32; break; // Fallback
+        }
+
+        indexData.resize(idx.size() * sizeof(IndexT));
+        std::memcpy(indexData.data(), idx.data(), indexData.size());
+
+        indexCount = idx.size();
+        return *this;
+    }
 };
 
 struct TinyMaterial {

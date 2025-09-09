@@ -132,7 +132,7 @@ void ResourceGroup::createComponentVKsFromModels() {
             size_t submeshVK_index = addSubmeshBuffers(submesh);
             modelVK.submeshVK_indices.push_back(submeshVK_index);
             
-            uint32_t indexCount = submesh.indices.size();
+            uint32_t indexCount = static_cast<uint32_t>(submesh.indexCount);
             modelVK.submesh_indexCounts.push_back(indexCount);
 
             int localMatIndex = model.submeshes[i].matIndex;
@@ -680,7 +680,7 @@ void ResourceGroup::createTextureDescSet() {
 
 size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
     const auto& vertexData = submesh.vertexData;
-    const auto& indices = submesh.indices;
+    const auto& indexData = submesh.indexData;
 
     UniquePtr<BufferData> vBufferData = MakeUnique<BufferData>();
     UniquePtr<BufferData> iBufferData = MakeUnique<BufferData>();
@@ -719,15 +719,15 @@ size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
     BufferData indexStagingBuffer;
     indexStagingBuffer.initVkDevice(vkDevice);
     indexStagingBuffer.setProperties(
-        indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        indexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
     indexStagingBuffer.createBuffer();
-    indexStagingBuffer.mapAndCopy(indices.data());
+    indexStagingBuffer.mapAndCopy(indexData.data());
 
     iBufferData->initVkDevice(vkDevice);
     iBufferData->setProperties(
-        indices.size() * sizeof(uint32_t),
+        indexData.size(),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
@@ -738,7 +738,7 @@ size_t ResourceGroup::addSubmeshBuffers(const TinySubmesh& submesh) {
     VkBufferCopy indexCopyRegion{};
     indexCopyRegion.srcOffset = 0;
     indexCopyRegion.dstOffset = 0;
-    indexCopyRegion.size = indices.size() * sizeof(uint32_t);
+    indexCopyRegion.size = indexData.size();
 
     vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData->buffer, 1, &indexCopyRegion);
     iBufferData->hostVisible = false;

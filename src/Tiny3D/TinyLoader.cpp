@@ -569,7 +569,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                     vertices.push_back(vertex);
                 }
                 
-                submesh.create(vertices, indices);
+                submesh.setVertex(vertices);
             } else {
                 // Build static vertices
                 std::vector<VertexStatic> vertices;
@@ -591,7 +591,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                     vertices.push_back(vertex);
                 }
                 
-                submesh.create(vertices, indices);
+                submesh.setVertex(vertices);
             }
 
             // Handle indices
@@ -623,7 +623,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                     indices.push_back(index);
                 }
                 
-                submesh.indices = indices;
+                submesh.setIndices(indices);
             }
 
             // Set material index (-1 if no material assigned or materials not loaded)
@@ -942,7 +942,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                     }
 
                     TinySubmesh submesh;
-                    submesh.create(vertices, indices);
+                    submesh.setVertex(vertices).setIndices(indices);
                     
                     // Set material index using the proper mapping
                     if (options.loadMaterials && currentMaterialId >= 0) {
@@ -1033,7 +1033,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
             }
 
             TinySubmesh submesh;
-            submesh.create(vertices, indices);
+            submesh.setVertex(vertices).setIndices(indices);
             
             // Set material index using the proper mapping
             if (options.loadMaterials && currentMaterialId >= 0) {
@@ -1110,8 +1110,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
 
         if (!vertices.empty() && !indices.empty()) {
             TinySubmesh submesh;
-            submesh.create(vertices, indices);
-            submesh.matIndex = -1;  // No material
+            submesh.setVertex(vertices).setIndices(indices).setMaterial(-1);  // No material
             result.submeshes.push_back(std::move(submesh));
         }
     }

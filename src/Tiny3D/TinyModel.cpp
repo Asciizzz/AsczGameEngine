@@ -4,7 +4,7 @@
 
 uint32_t TinyModel::getSubmeshIndexCount(size_t index) const {
     if (index >= submeshes.size()) return 0;
-    return static_cast<uint32_t>(submeshes[index].indices.size());
+    return static_cast<uint32_t>(submeshes[index].indexCount);
 }
 
 void TinyModel::printDebug() const {
@@ -17,8 +17,8 @@ void TinyModel::printDebug() const {
     for (size_t i = 0; i < submeshes.size(); ++i) {
         const auto& mesh = submeshes[i];
         std::cout << "  Mesh[" << i << "]: "
-                  << mesh.vertexCount() << " verts, "
-                  << mesh.indices.size() << " idxs, "
+                  << mesh.vertexCount << " verts, "
+                  << mesh.indexCount << " idxs, "
                   << "matIdx: : " << mesh.matIndex << "\n";
     }
 
