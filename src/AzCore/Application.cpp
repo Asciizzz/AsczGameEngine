@@ -83,7 +83,7 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Test/fox.glb");
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Test/Skeleton.glb");
     for (auto& mat : testModel.materials) {
         // mat.shading = false; // No lighting for for highly stylized look
         mat.toonLevel = 4;

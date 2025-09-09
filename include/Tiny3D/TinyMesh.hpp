@@ -36,7 +36,7 @@ struct HitInfo {
 
 // Uniform mesh structure that holds raw data only
 struct TinySubmesh {
-    TinyVertexLayout layout;
+    TinyVertexLayout vertexLayout;
     enum class IndexType {
         Uint8,
         Uint16,
@@ -61,7 +61,7 @@ struct TinySubmesh {
 
     template<typename VertexT>
     TinySubmesh& setVertices(const std::vector<VertexT>& verts) {
-        layout = VertexT::getLayout();
+        vertexLayout = VertexT::getLayout();
 
         vertexData.resize(verts.size() * sizeof(VertexT));
         std::memcpy(vertexData.data(), verts.data(), vertexData.size());

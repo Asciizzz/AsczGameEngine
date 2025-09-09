@@ -321,7 +321,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
         result.textures.reserve(model.textures.size());
         for (const auto& gltfTexture : model.textures) {
             TinyTexture texture;
-            
+
             // Load image data
             if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
                 const auto& image = model.images[gltfTexture.source];
@@ -386,16 +386,16 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
     }
 
     // Build skeleton only if requested
-    std::unordered_map<int, int> nodeIndexToBoneIndex;
+    UnorderedMap<int, int> nodeIndexToBoneIndex;
     
     if (options.loadSkeleton && !model.skins.empty()) {
         const tinygltf::Skin& skin = model.skins[0];
-        
+
         // Create the node-to-bone mapping
         for (size_t i = 0; i < skin.joints.size(); i++) {
             nodeIndexToBoneIndex[skin.joints[i]] = static_cast<int>(i);
         }
-        
+
         // Load inverse bind matrices
         std::vector<glm::mat4> inverseBindMatrices;
         if (skin.inverseBindMatrices >= 0) {
@@ -405,13 +405,13 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
         } else {
             inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f));
         }
-        
+
         // Build skeleton structure
         result.skeleton.names.reserve(skin.joints.size());
         result.skeleton.parentIndices.reserve(skin.joints.size());
         result.skeleton.inverseBindMatrices.reserve(skin.joints.size());
         result.skeleton.localBindTransforms.reserve(skin.joints.size());
-        
+
         // First pass: gather bone data
         for (size_t i = 0; i < skin.joints.size(); i++) {
             int nodeIndex = skin.joints[i];
@@ -458,14 +458,16 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             result.skeleton.parentIndices[i] = parentBoneIndex;
         }
     }
-    
-    // Model are not allowed to mix between rigged and non-rigged
+
+    // [!] Model are not allowed to mix between rigged and non-rigged
     bool hasRigging = options.loadSkeleton && !result.skeleton.names.empty();
 
     for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& mesh = model.meshes[meshIndex];
 
         // Unstack Mesh into separate submeshes (primitives)
+
+        printf("Loading Mesh[%zu] with %zu primitives\n", meshIndex, mesh.primitives.size());
         
         for (size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); primitiveIndex++) {
             const auto& primitive = mesh.primitives[primitiveIndex];
@@ -496,13 +498,16 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 readAccessor(model, model.accessors[primitive.attributes.at("TEXCOORD_0")], uvs);
             }
             
-            // Read skinning data with robust error handling
-            if (hasRigging) {
+            // Only read skin attributes if submesh has rigging
+            bool submeshHasRigging = hasRigging && 
+                                    primitive.attributes.count("JOINTS_0") && 
+                                    primitive.attributes.count("WEIGHTS_0");
+            if (submeshHasRigging) {
                 if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), joints)) {
                     throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                             std::to_string(primitiveIndex) + "] failed to read joint indices");
                 }
-                
+
                 if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), weights)) {
                     throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                             std::to_string(primitiveIndex) + "] failed to read bone weights");
@@ -801,7 +806,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
     }
 
     TinyModel result;
-    std::unordered_map<std::string, int> texturePathToIndex;
+    UnorderedMap<std::string, int> texturePathToIndex;
 
     // Load textures if requested
     // If no materials are loaded, skip texture loading
@@ -845,7 +850,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
     }
 
     // Load materials if requested
-    std::unordered_map<int, int> objMaterialIdToResultIndex;
+    UnorderedMap<int, int> objMaterialIdToResultIndex;
     if (options.loadMaterials) {
         result.materials.reserve(materials.size());
         
@@ -1063,7 +1068,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
     if (result.submeshes.empty() && !shapes.empty()) {
         std::vector<TinyVertexStatic> vertices;
         std::vector<uint32_t> indices;
-        std::unordered_map<size_t, uint32_t> uniqueVertices;
+        UnorderedMap<size_t, uint32_t> uniqueVertices;
 
         for (const auto& shape : shapes) {
             size_t indexOffset = 0;
@@ -1128,7 +1133,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
 
 
 TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& options) {
-    // Determine file extension
     std::string ext;
     size_t dotPos = filePath.find_last_of('.');
     if (dotPos != std::string::npos) {
