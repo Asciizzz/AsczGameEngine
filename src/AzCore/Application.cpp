@@ -1,11 +1,5 @@
 #include "AzCore/Application.hpp"
 
-#include "AzVulk/ComputeTask.hpp"
-#include "AzVulk/Pipeline_manager.hpp"
-
-#include "Tiny3D/TinyLoader.hpp"
-#include "Tiny3D/TinyPlayback.hpp"
-
 #include <iostream>
 #include <random>
 

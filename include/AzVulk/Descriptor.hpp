@@ -6,40 +6,6 @@ namespace AzVulk {
 
 struct BufferData;
 
-// This is not gonna cut it, you gotta have to split them into parts
-
-struct DynamicDescriptor { // OUTDATED!
-    DynamicDescriptor() = default;
-    DynamicDescriptor(VkDevice lDevice) : lDevice(lDevice) {}
-    void init(VkDevice lDevice) { this->lDevice = lDevice; }
-    
-    ~DynamicDescriptor();
-
-    VkDevice lDevice;
-
-    bool uniqueLayout = true;
-    VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
-    void createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
-    void referenceLayout(VkDescriptorSetLayout layout);
-
-    uint32_t maxSets = 0;
-    VkDescriptorPool pool = VK_NULL_HANDLE;
-    std::vector<VkDescriptorPoolSize> poolSizes; // Contain both <Type> and <size>
-    void createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
-
-    std::vector<VkDescriptorSet> sets;
-    VkDescriptorSet getSet(uint32_t index) const { return sets[index]; }
-
-    VkDescriptorSet set = VK_NULL_HANDLE;
-    VkDescriptorSet getSet() const { return set; }
-
-    // Some really helpful functions
-    static VkDescriptorSetLayoutBinding fastBinding(uint32_t binding,
-                                                    VkDescriptorType type,
-                                                    VkShaderStageFlags stageFlags,
-                                                    uint32_t descriptorCount = 1);
-};
-
 struct DescLayout {
     struct BindInfo {
         uint32_t binding;

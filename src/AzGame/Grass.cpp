@@ -39,8 +39,6 @@ bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::Device* vkDevice) 
     terrainInstanceGroup.initVkDevice(vkDevice);
     terrainInstanceGroup.modelIndex = terrainModelIndex;
 
-    setupComputeShaders();
-
     for (const auto& data : grassData3Ds) {
         grassInstanceGroup.addInstance(data);
     }
@@ -497,37 +495,11 @@ std::pair<float, glm::vec3> Grass::getTerrainInfoAt(float worldX, float worldZ) 
     return {height, normal};
 }
 
-
-
-void Grass::setupComputeShaders() {
-    // // Init
-    // fixedMat4Buffer.initVkDevice(vkDevice);
-    // windPropsBuffer.initVkDevice(vkDevice);
-    // grassMat4Buffer.initVkDevice(vkDevice);
-    // grassUniformBuffer.initVkDevice(vkDevice);
-
-    // ComputeTask::uploadDeviceStorageBuffer(fixedMat4Buffer, fixedMat4.data(), sizeof(glm::mat4) * fixedMat4.size());
-    // ComputeTask::uploadDeviceStorageBuffer(windPropsBuffer, windProps.data(), sizeof(glm::vec4) * windProps.size());
-    // ComputeTask::makeStorageBuffer(grassMat4Buffer, grassMat4.data(), sizeof(glm::mat4) * grassMat4.size());
-    // ComputeTask::makeUniformBuffer(grassUniformBuffer, &windTime, sizeof(float));
-
-    // grassComputeTask.init(vkDevice, "Shaders/Compute/grass.comp.spv");
-    // grassComputeTask.addStorageBuffer(fixedMat4Buffer, 0);
-    // grassComputeTask.addStorageBuffer(windPropsBuffer, 1);
-    // grassComputeTask.addStorageBuffer(grassMat4Buffer, 2);
-    // grassComputeTask.addUniformBuffer(grassUniformBuffer, 3);
-    // grassComputeTask.create();
-}
-
-
-
 void Grass::updateWindAnimation(float dTime, bool useGPU) {
     if (!config.enableWind) { return; }
 
     windTime += dTime * 0.5f;
-
-    if (useGPU) updateGrassInstancesGPU();
-    else        updateGrassInstancesCPU();
+    updateGrassInstancesCPU();
 }
 
 void Grass::updateGrassInstancesCPU() {
@@ -606,22 +578,4 @@ void Grass::updateGrassInstancesCPU() {
     });
 
     grassInstanceGroup.datas = grassData3Ds;
-}
-
-void Grass::updateGrassInstancesGPU() {
-    // // Mapped the time
-    // grassUniformBuffer.mapAndCopy(&windTime);
-
-    // grassComputeTask.dispatchAsync(static_cast<uint32_t>(fixedMat4.size()), 128);
-
-    // glm::mat4* resultPtr = static_cast<glm::mat4*>(grassMat4Buffer.mapped);
-
-    // std::vector<size_t> indices(grassMat4.size());
-    // std::iota(indices.begin(), indices.end(), 0);
-
-    // // std::for_each(indices.begin(), indices.end(), [&](size_t i) {
-    // //     grassData3Ds[i].modelMatrix = resultPtr[i];
-    // // });
-
-    // grassInstanceGroup.datas = grassData3Ds;
 }

@@ -8,7 +8,6 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <Az3D/StaticInstance.hpp>
-#include <AzVulk/ComputeTask.hpp>
 
 // Forward declarations
 namespace Az3D {
@@ -109,7 +108,6 @@ public:
     // Wind animation functions (if enabled)
     void updateWindAnimation(float deltaTime, bool useGPU=true);
     void updateGrassInstancesCPU();
-    void updateGrassInstancesGPU();
 
     // Configuration
     GrassConfig config;
@@ -146,9 +144,6 @@ public:
     Az3D::StaticInstanceGroup grassInstanceGroup;
     Az3D::StaticInstanceGroup terrainInstanceGroup;
 
-    // Compute Task
-    AzVulk::ComputeTask grassComputeTask;
-
     // Time tracking for wind animation
     float windTime = 0.0f;
     
@@ -159,8 +154,6 @@ public:
     void generateGrassInstances(std::mt19937& generator);
     void generateTerrainMesh(Az3D::ResourceGroup& resGroup);
     std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
-
-    void setupComputeShaders();
 };
 
 } // namespace AzGame
