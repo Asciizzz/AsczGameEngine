@@ -569,7 +569,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                     vertices.push_back(vertex);
                 }
 
-                submesh.setVertex(vertices);
+                submesh.setVertices(vertices);
             } else {
                 // Build static vertices
                 std::vector<VertexStatic> vertices;
@@ -591,7 +591,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                     vertices.push_back(vertex);
                 }
 
-                submesh.setVertex(vertices);
+                submesh.setVertices(vertices);
             }
 
             // Handle indices - use native index types for memory efficiency
@@ -952,7 +952,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                     }
 
                     TinySubmesh submesh;
-                    submesh.setVertex(vertices).setIndices(indices);
+                    submesh.setVertices(vertices).setIndices(indices);
                     
                     // Set material index using the proper mapping
                     if (options.loadMaterials && currentMaterialId >= 0) {
@@ -1043,7 +1043,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
             }
 
             TinySubmesh submesh;
-            submesh.setVertex(vertices).setIndices(indices);
+            submesh.setVertices(vertices).setIndices(indices);
             
             // Set material index using the proper mapping
             if (options.loadMaterials && currentMaterialId >= 0) {
@@ -1120,7 +1120,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
 
         if (!vertices.empty() && !indices.empty()) {
             TinySubmesh submesh;
-            submesh.setVertex(vertices).setIndices(indices).setMaterial(-1);  // No material
+            submesh.setVertices(vertices).setIndices(indices).setMaterial(-1);  // No material
             result.submeshes.push_back(std::move(submesh));
         }
     }

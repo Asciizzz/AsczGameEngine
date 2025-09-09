@@ -60,7 +60,7 @@ struct TinySubmesh {
     }
 
     template<typename VertexT>
-    TinySubmesh& setVertex(const std::vector<VertexT>& verts) {
+    TinySubmesh& setVertices(const std::vector<VertexT>& verts) {
         layout = VertexT::getLayout();
 
         vertexData.resize(verts.size() * sizeof(VertexT));
@@ -84,6 +84,15 @@ struct TinySubmesh {
 
         indexCount = idx.size();
         return *this;
+    }
+
+    template<typename VertexT, typename IndexT>
+    static TinySubmesh create(const std::vector<VertexT>& verts,
+                            const std::vector<IndexT>& idx,
+                            int matIdx = -1) {
+        TinySubmesh sm;
+        sm.setVertices(verts).setIndices(idx).setMaterial(matIdx);
+        return sm;
     }
 };
 

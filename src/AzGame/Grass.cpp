@@ -145,7 +145,7 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
 
     // Create mesh
     TinySubmesh grassSubmesh = TinySubmesh()
-        .setVertex(grassVertices)
+        .setVertices(grassVertices)
         .setIndices(grassIndices)
         .setMaterial(0);
 
@@ -206,7 +206,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
 
     // Create mesh
     TinySubmesh grassSubmesh = TinySubmesh()
-        .setVertex(grassVertices)
+        .setVertices(grassVertices)
         .setIndices(grassIndices)
         .setMaterial(0);
 
@@ -440,7 +440,7 @@ void Grass::generateTerrainMesh(ResourceGroup& resGroup) {
 
     // Create mesh
     TinySubmesh terrainSubmesh = TinySubmesh()
-        .setVertex(terrainVertices)
+        .setVertices(terrainVertices)
         .setIndices(terrainIndices);
     terrainModel.submeshes.push_back(terrainSubmesh);
 
