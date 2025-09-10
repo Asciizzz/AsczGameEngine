@@ -314,6 +314,20 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_A]) camPos -= camRef.right * p_speed;
         if (k_state[SDL_SCANCODE_D]) camPos += camRef.right * p_speed;
 
+        // Camera roll controls (Q/E keys)
+        float rollSpeed = 45.0f * dTime; // 45 degrees per second
+        if (k_state[SDL_SCANCODE_Q]) camRef.rotateRoll(-rollSpeed);
+        if (k_state[SDL_SCANCODE_E]) camRef.rotateRoll(rollSpeed);
+
+        // Reset roll with R key (with toggle to prevent spam)
+        static bool rPressed = false;
+        if (k_state[SDL_SCANCODE_R] && !rPressed) {
+            camRef.resetRoll();
+            rPressed = true;
+        } else if (!k_state[SDL_SCANCODE_R]) {
+            rPressed = false;
+        }
+
         camRef.pos = camPos;
 
         // Update grass wind animation

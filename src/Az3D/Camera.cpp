@@ -1,7 +1,15 @@
 #include "Az3D/Camera.hpp"
 #include <algorithm>
+#include <cmath>
 
 using namespace Az3D;
+
+// Helper function to normalize angle to [-180, 180] range
+static float normalizeAngle(float angle) {
+    while (angle > 180.0f) angle -= 360.0f;
+    while (angle < -180.0f) angle += 360.0f;
+    return angle;
+}
 
 Camera::Camera() 
     : pos(0.0f, 0.0f, 0.0f)
@@ -49,17 +57,21 @@ void Camera::setPosition(const glm::vec3& newPos) {
 }
 
 void Camera::setRotation(float newPitch, float newYaw, float newRoll) {
+    // Normalize angles to [-180, 180] range
+    float normalizedYaw = normalizeAngle(newYaw);
+    float normalizedRoll = normalizeAngle(newRoll);
+    
     // Constrain pitch to avoid extreme values
     float constrainedPitch = std::clamp(newPitch, -89.0f, 89.0f);
     
     // Create quaternion from Euler angles (pitch, yaw, roll)
-    glm::vec3 eulerRadians(glm::radians(constrainedPitch), glm::radians(newYaw), glm::radians(newRoll));
+    glm::vec3 eulerRadians(glm::radians(constrainedPitch), glm::radians(normalizedYaw), glm::radians(normalizedRoll));
     orientation = glm::quat(eulerRadians);
     
     // Update cached Euler values
     pitch = constrainedPitch;
-    yaw = newYaw;
-    roll = newRoll;
+    yaw = normalizedYaw;
+    roll = normalizedRoll;
 
     updateVectors();
     updateViewMatrix();
@@ -70,9 +82,9 @@ void Camera::setRotation(const glm::quat& quaternion) {
     
     // Update cached Euler values from quaternion
     glm::vec3 eulerAngles = glm::degrees(glm::eulerAngles(orientation));
-    pitch = eulerAngles.x;
-    yaw = eulerAngles.y;
-    roll = eulerAngles.z;
+    pitch = std::clamp(eulerAngles.x, -89.0f, 89.0f);
+    yaw = normalizeAngle(eulerAngles.y);
+    roll = normalizeAngle(eulerAngles.z);
 
     updateVectors();
     updateViewMatrix();
@@ -113,19 +125,42 @@ void Camera::translate(const glm::vec3& offset) {
 }
 
 void Camera::rotate(float pitchDelta, float yawDelta, float rollDelta) {
-    // Update cached Euler angles first (for pitch clamping)
-    pitch += pitchDelta;
-    yaw += yawDelta; 
-    roll += rollDelta;
+    // Handle pitch and yaw in world space (traditional FPS style)
+    if (pitchDelta != 0.0f || yawDelta != 0.0f) {
+        // Update cached Euler angles for pitch/yaw
+        pitch += pitchDelta;
+        yaw += yawDelta;
+        
+        // Normalize yaw to [-180, 180] range
+        yaw = normalizeAngle(yaw);
+        
+        // Clamp pitch to prevent gimbal lock
+        pitch = std::clamp(pitch, -89.0f, 89.0f);
+        
+        // Create base orientation from pitch/yaw only
+        glm::vec3 eulerRadians(glm::radians(pitch), glm::radians(yaw), 0.0f);
+        glm::quat baseOrientation = glm::quat(eulerRadians);
+        
+        // Apply existing roll on top of the base orientation
+        glm::quat rollRotation = glm::angleAxis(glm::radians(roll), glm::vec3(0.0f, 0.0f, -1.0f));
+        orientation = baseOrientation * rollRotation;
+    }
     
-    // Clamp pitch to prevent gimbal lock
-    pitch = std::clamp(pitch, -89.0f, 89.0f);
+    // Handle roll separately if provided
+    if (rollDelta != 0.0f) {
+        roll += rollDelta;
+        
+        // Normalize roll to [-180, 180] range
+        roll = normalizeAngle(roll);
+        
+        // Rebuild orientation with new roll
+        glm::vec3 eulerRadians(glm::radians(pitch), glm::radians(yaw), 0.0f);
+        glm::quat baseOrientation = glm::quat(eulerRadians);
+        glm::quat rollRotation = glm::angleAxis(glm::radians(roll), glm::vec3(0.0f, 0.0f, -1.0f));
+        orientation = baseOrientation * rollRotation;
+    }
     
-    // Create quaternion from the updated Euler angles
-    glm::vec3 eulerRadians(glm::radians(pitch), glm::radians(yaw), glm::radians(roll));
-    orientation = glm::quat(eulerRadians);
     orientation = glm::normalize(orientation);
-
     updateVectors();
     updateViewMatrix();
 }
@@ -177,9 +212,9 @@ void Camera::setOrientation(const glm::quat& quat) {
     
     // Update cached Euler values
     glm::vec3 eulerAngles = glm::degrees(glm::eulerAngles(orientation));
-    pitch = eulerAngles.x;
-    yaw = eulerAngles.y;
-    roll = eulerAngles.z;
+    pitch = std::clamp(eulerAngles.x, -89.0f, 89.0f);
+    yaw = normalizeAngle(eulerAngles.y);
+    roll = normalizeAngle(eulerAngles.z);
     
     updateVectors();
     updateViewMatrix();
@@ -195,18 +230,41 @@ void Camera::rotateYaw(float degrees) {
 }
 
 void Camera::rotateRoll(float degrees) {
+    // Use the main rotate function for consistency
     rotate(0.0f, 0.0f, degrees);
+}
+
+void Camera::resetRoll() {
+    // Reset roll to 0 while keeping pitch and yaw
+    roll = 0.0f;
+    
+    // Rebuild orientation without roll
+    glm::vec3 eulerRadians(glm::radians(pitch), glm::radians(yaw), 0.0f);
+    orientation = glm::quat(eulerRadians);
+    orientation = glm::normalize(orientation);
+
+    updateVectors();
+    updateViewMatrix();
 }
 
 // Euler angle getters (computed from quaternion)
 float Camera::getPitch() const {
-    return glm::degrees(glm::eulerAngles(orientation)).x;
+    float pitchValue = glm::degrees(glm::eulerAngles(orientation)).x;
+    return std::clamp(pitchValue, -89.0f, 89.0f);
 }
 
 float Camera::getYaw() const {
-    return glm::degrees(glm::eulerAngles(orientation)).y;
+    float yawValue = glm::degrees(glm::eulerAngles(orientation)).y;
+    // Normalize angle to [-180, 180] range inline
+    while (yawValue > 180.0f) yawValue -= 360.0f;
+    while (yawValue < -180.0f) yawValue += 360.0f;
+    return yawValue;
 }
 
 float Camera::getRoll() const {
-    return glm::degrees(glm::eulerAngles(orientation)).z;
+    float rollValue = glm::degrees(glm::eulerAngles(orientation)).z;
+    // Normalize angle to [-180, 180] range inline
+    while (rollValue > 180.0f) rollValue -= 360.0f;
+    while (rollValue < -180.0f) rollValue += 360.0f;
+    return rollValue;
 }

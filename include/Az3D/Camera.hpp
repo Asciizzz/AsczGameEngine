@@ -34,6 +34,7 @@ public:
     void rotatePitch(float degrees);
     void rotateYaw(float degrees);
     void rotateRoll(float degrees);
+    void resetRoll();
     
     // Quaternion access
     glm::quat getOrientation() const { return orientation; }
