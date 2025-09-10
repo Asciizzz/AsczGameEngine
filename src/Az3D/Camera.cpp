@@ -6,8 +6,8 @@ using namespace Az3D;
 
 // Helper function to normalize angle to [-180, 180] range
 static float normalizeAngle(float angle) {
-    while (angle > 180.0f) angle -= 360.0f;
-    while (angle < -180.0f) angle += 360.0f;
+    while (angle > 360.0f) angle -= 360.0f;
+    while (angle < 0.0f) angle += 360.0f;
     return angle;
 }
 
