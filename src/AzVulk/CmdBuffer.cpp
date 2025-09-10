@@ -3,11 +3,34 @@
 
 using namespace AzVulk;
 
-CmdBuffer::~CmdBuffer() {
+void CmdBuffer::cleanup() {
     // In the event that pool isn't destroyed first
     if (lDevice != VK_NULL_HANDLE && !cmdBuffers.empty()) {
         vkFreeCommandBuffers(lDevice, cmdPool, static_cast<uint32_t>(cmdBuffers.size()), cmdBuffers.data());
     }
+}
+
+CmdBuffer::CmdBuffer(CmdBuffer&& other) noexcept {
+    lDevice = other.lDevice;
+    cmdPool = other.cmdPool;
+    cmdBuffers = std::move(other.cmdBuffers);
+
+    other.lDevice = VK_NULL_HANDLE;
+    other.cmdPool = VK_NULL_HANDLE;
+}
+
+CmdBuffer& CmdBuffer::operator=(CmdBuffer&& other) noexcept {
+    if (this != &other) {
+        cleanup();
+
+        lDevice = other.lDevice;
+        cmdPool = other.cmdPool;
+        cmdBuffers = std::move(other.cmdBuffers);
+
+        other.lDevice = VK_NULL_HANDLE;
+        other.cmdPool = VK_NULL_HANDLE;
+    }
+    return *this;
 }
 
 void CmdBuffer::create(VkDevice device, VkCommandPool pool, uint32_t count) {

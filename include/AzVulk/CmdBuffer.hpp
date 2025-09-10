@@ -13,7 +13,14 @@ struct CmdBuffer {
     std::vector<VkCommandBuffer> cmdBuffers;
 
     CmdBuffer() = default;
-    ~CmdBuffer();
+    ~CmdBuffer() { cleanup(); } void cleanup();
+
+    // Delete copy constructor and assignment operator
+    CmdBuffer(const CmdBuffer&) = delete;
+    CmdBuffer& operator=(const CmdBuffer&) = delete;
+    // Move constructor and assignment operator
+    CmdBuffer(CmdBuffer&& other) noexcept;
+    CmdBuffer& operator=(CmdBuffer&& other) noexcept;
 
     void create(VkDevice device, VkCommandPool pool, uint32_t count);
 
