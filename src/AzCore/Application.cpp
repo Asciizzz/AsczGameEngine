@@ -319,22 +319,18 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_Q]) camRef.rotateRoll(-rollSpeed);
         if (k_state[SDL_SCANCODE_E]) camRef.rotateRoll(rollSpeed);
 
-        // Reset roll with R key (with toggle to prevent spam)
-        static bool rPressed = false;
-        if (k_state[SDL_SCANCODE_R] && !rPressed) {
-            camRef.resetRoll();
-            rPressed = true;
-        } else if (!k_state[SDL_SCANCODE_R]) {
-            rPressed = false;
+        // Reset roll with R key
+        if (k_state[SDL_SCANCODE_R]) {
+            camRef.rotateRoll(camRef.getRoll() * dTime * 10.0f);
         }
 
         camRef.pos = camPos;
 
         // Update grass wind animation
-        static bool hold_y = false;
+        static bool yPressed = false;
         static bool enable_wind = false;
         static bool use_gpu = true;
-        if (k_state[SDL_SCANCODE_Y] && !hold_y) {
+        if (k_state[SDL_SCANCODE_Y] && !yPressed) {
 
             if (k_state[SDL_SCANCODE_LSHIFT]) {
                 use_gpu = !use_gpu;
@@ -342,9 +338,9 @@ void Application::mainLoop() {
                 enable_wind = !enable_wind;
             }
 
-            hold_y = true;
+            yPressed = true;
         } else if (!k_state[SDL_SCANCODE_Y]) {
-            hold_y = false;
+            yPressed = false;
         }
 
         if (grassSystem && enable_wind) {
@@ -352,9 +348,9 @@ void Application::mainLoop() {
         }
 
         // // Particle physics toggle and teleport
-        // static bool hold_p = false;
+        // static bool pPressed = false;
         // static bool particlePhysicsEnabled = false;
-        // if (k_state[SDL_SCANCODE_P] && !hold_p) {
+        // if (k_state[SDL_SCANCODE_P] && !pPressed) {
         //     // Toggle particle physics
         //     if (!k_state[SDL_SCANCODE_LSHIFT]) { 
         //         particlePhysicsEnabled = !particlePhysicsEnabled;
@@ -375,9 +371,9 @@ void Application::mainLoop() {
         //         });
         //     }
 
-        //     hold_p = true;
+        //     pPressed = true;
         // } else if (!k_state[SDL_SCANCODE_P]) {
-        //     hold_p = false;
+        //     pPressed = false;
         // }
 
         // if (particlePhysicsEnabled) {
