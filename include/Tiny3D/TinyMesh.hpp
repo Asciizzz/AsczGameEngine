@@ -96,6 +96,11 @@ struct TinySubmesh {
     }
 };
 
+struct TinySubmeshLOD { // WIP
+    std::vector<TinySubmesh> levels;
+    std::vector<float> distances;
+};
+
 struct TinyMaterial {
     bool shading = true;
     int toonLevel = 0;

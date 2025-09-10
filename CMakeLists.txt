@@ -55,10 +55,9 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/RenderPass.cpp
     src/AzVulk/MSAAManager.cpp
     src/AzVulk/DepthManager.cpp
-    src/AzVulk/Pipeline_base.cpp
+    src/AzVulk/Pipeline_core.cpp
     src/AzVulk/Pipeline_graphic.cpp
     src/AzVulk/Pipeline_compute.cpp
-    src/AzVulk/Pipeline_assets.cpp
     src/AzVulk/Pipeline_manager.cpp
     src/AzVulk/Renderer.cpp
 

@@ -52,10 +52,10 @@ void PipelineRaster::create() {
         throw std::runtime_error("Pipeline has empty shader paths! Vertex: '" + cfg.vertPath + "', Fragment: '" + cfg.fragPath + "'");
     }
     
-    auto vertCode = readFile(cfg.vertPath);
-    auto fragCode = readFile(cfg.fragPath);
-    VkShaderModule vert = createModule(vertCode);
-    VkShaderModule frag = createModule(fragCode);
+    auto vertCode = PipelineCore::readFile(cfg.vertPath);
+    auto fragCode = PipelineCore::readFile(cfg.fragPath);
+    VkShaderModule vert = core.createModule(vertCode);
+    VkShaderModule frag = core.createModule(fragCode);
 
     VkPipelineShaderStageCreateInfo stages[2]{};
     stages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -203,8 +203,11 @@ void PipelineRaster::create() {
     lci.pSetLayouts    = cfg.setLayouts.data();
     lci.pushConstantRangeCount = static_cast<uint32_t>(cfg.pushConstantRanges.size());
     lci.pPushConstantRanges    = cfg.pushConstantRanges.data();
-    if (vkCreatePipelineLayout(lDevice, &lci, nullptr, &layout) != VK_SUCCESS)
+    
+    VkPipelineLayout layout;
+    if (vkCreatePipelineLayout(core.getDevice(), &lci, nullptr, &layout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout (graphics)");
+    core.setLayout(layout);
 
     // 4. Graphics pipeline
     VkGraphicsPipelineCreateInfo pci{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
@@ -222,9 +225,11 @@ void PipelineRaster::create() {
     pci.renderPass = cfg.renderPass;
     pci.subpass    = 0;
 
-    if (vkCreateGraphicsPipelines(lDevice, VK_NULL_HANDLE, 1, &pci, nullptr, &pipeline) != VK_SUCCESS)
+    VkPipeline pipeline;
+    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pci, nullptr, &pipeline) != VK_SUCCESS)
         throw std::runtime_error("failed to create graphics pipeline");
+    core.setPipeline(pipeline);
 
-    vkDestroyShaderModule(lDevice, frag, nullptr);
-    vkDestroyShaderModule(lDevice, vert, nullptr);
+    vkDestroyShaderModule(core.getDevice(), frag, nullptr);
+    vkDestroyShaderModule(core.getDevice(), vert, nullptr);
 }

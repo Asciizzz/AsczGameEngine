@@ -6,16 +6,14 @@
 
 namespace AzVulk {
 
-class PipelineBase {
+// Core pipeline functionality as a component - replaces PipelineBase
+class PipelineCore {
 public:
-    explicit PipelineBase(VkDevice lDevice) : lDevice(lDevice) {}
-    virtual ~PipelineBase() { cleanup(); }
+    explicit PipelineCore(VkDevice device) : lDevice(device) {}
+    ~PipelineCore() { cleanup(); }
 
-    // Lifecycle
-    virtual void create() = 0;
-    virtual void recreate() = 0;
-
-    virtual void cleanup() {
+    // Lifecycle management
+    void cleanup() {
         if (pipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(lDevice, pipeline, nullptr);
             pipeline = VK_NULL_HANDLE;
@@ -25,16 +23,13 @@ public:
             layout = VK_NULL_HANDLE;
         }
     }
-
-    virtual void bindCmd(VkCommandBuffer cmd) const = 0;
-    virtual void bindSets(VkCommandBuffer cmd, VkDescriptorSet* sets, uint32_t count) const = 0;
     
     // Push constants support
     void pushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues) const {
         vkCmdPushConstants(cmd, layout, stageFlags, offset, size, pValues);
     }
 
-    // Template push constants helper - for type-safe push constants
+    // Template push constants helpers - for type-safe push constants
     template<typename T>
     void pushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, const T* data) const {
         vkCmdPushConstants(cmd, layout, stageFlags, offset, sizeof(T), data);
@@ -45,13 +40,23 @@ public:
         vkCmdPushConstants(cmd, layout, stageFlags, offset, sizeof(T), &data);
     }
 
+    // Getters for composed classes
+    VkDevice getDevice() const { return lDevice; }
+    VkPipeline getPipeline() const { return pipeline; }
+    VkPipelineLayout getLayout() const { return layout; }
+    
+    // Allow composed classes to set pipeline objects
+    void setPipeline(VkPipeline p) { pipeline = p; }
+    void setLayout(VkPipelineLayout l) { layout = l; }
+    
+    // Utility functions - now static or instance methods
+    static std::vector<char> readFile(const std::string& path);
+    VkShaderModule createModule(const std::vector<char>& code) const;
+
+private:
     VkDevice lDevice = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout layout = VK_NULL_HANDLE;
-
-    // helpers
-    static std::vector<char> readFile(const std::string& path);
-    VkShaderModule createModule(const std::vector<char>& code) const;
 };
 
 } // namespace AzVulk

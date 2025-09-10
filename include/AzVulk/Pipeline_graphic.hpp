@@ -1,6 +1,6 @@
 // PipelineRaster.hpp
 #pragma once
-#include "AzVulk/Pipeline_base.hpp"
+#include "AzVulk/Pipeline_core.hpp"
 
 namespace AzVulk {
 
@@ -118,27 +118,47 @@ struct RasterCfg {
     }
 };
 
-class PipelineRaster : public PipelineBase {
+class PipelineRaster {
 public:
     PipelineRaster(VkDevice lDevice, RasterCfg cfg)
-        : PipelineBase(lDevice), cfg(std::move(cfg)) {}
+        : core(lDevice), cfg(std::move(cfg)) {}
 
     void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
     void setMsaa(VkSampleCountFlagBits s) { cfg.msaaSamples = s; }
     void setDescLayouts(const std::vector<VkDescriptorSetLayout>& layouts) { cfg.setLayouts = layouts; }
     void setPushConstantRanges(const std::vector<VkPushConstantRange>& ranges) { cfg.pushConstantRanges = ranges; }
 
-    void create() override;
-    void recreate() override { cleanup(); create(); }
-    void bindCmd(VkCommandBuffer cmd) const override {
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    void create();
+    void recreate() { core.cleanup(); create(); }
+    void cleanup() { core.cleanup(); }
+    
+    void bindCmd(VkCommandBuffer cmd) const {
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, core.getPipeline());
     }
 
-    void bindSets(VkCommandBuffer cmd, VkDescriptorSet* sets, uint32_t count) const override {
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, count, sets, 0, nullptr);
+    void bindSets(VkCommandBuffer cmd, VkDescriptorSet* sets, uint32_t count) const {
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, core.getLayout(), 0, count, sets, 0, nullptr);
+    }
+
+    // Push constants methods
+    void pushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues) const {
+        core.pushConstants(cmd, stageFlags, offset, size, pValues);
+    }
+
+    template<typename T>
+    void pushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, const T* data) const {
+        core.pushConstants(cmd, stageFlags, offset, data);
+    }
+
+    template<typename T>
+    void pushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, const T& data) const {
+        core.pushConstants(cmd, stageFlags, offset, data);
     }
 
     RasterCfg cfg;
+
+private:
+    PipelineCore core;
 };
 
 } // namespace AzVulk
