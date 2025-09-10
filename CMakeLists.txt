@@ -48,7 +48,8 @@ file(GLOB_RECURSE SRC_FILES
 
     src/AzVulk/Device.cpp
     src/AzVulk/Instance.cpp
-    src/AzVulk/Buffer.cpp
+    src/AzVulk/CmdBuffer.cpp
+    src/AzVulk/DataBuffer.cpp
     src/AzVulk/Descriptor.cpp
     src/AzVulk/Swapchain.cpp
     src/AzVulk/RenderPass.cpp

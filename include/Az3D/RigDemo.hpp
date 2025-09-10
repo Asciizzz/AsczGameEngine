@@ -3,7 +3,7 @@
 #include "Tiny3D/TinyModel.hpp"
 #include "Tiny3D/TinyPlayback.hpp"
 
-#include "AzVulk/Buffer.hpp"
+#include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 
 #include <iostream>
@@ -38,7 +38,7 @@ struct RigDemo {
     SharedPtr<TinyModel> model;
     TinyPlayback playback;
 
-    AzVulk::BufferData finalPoseBuffer;
+    AzVulk::DataBuffer finalPoseBuffer;
     AzVulk::DescLayout descLayout;
     AzVulk::DescPool   descPool;
     AzVulk::DescSets   descSet;

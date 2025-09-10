@@ -4,22 +4,22 @@
 
 namespace AzVulk {
 
-    struct BufferData {
-        BufferData() = default;
-        BufferData(const Device* vkDevice) : vkDevice(vkDevice) {}
+    struct DataBuffer {
+        DataBuffer() = default;
+        DataBuffer(const Device* vkDevice) : vkDevice(vkDevice) {}
 
-        ~BufferData() { cleanup(); }
+        ~DataBuffer() { cleanup(); }
         void cleanup();
 
         // Non-copyable
-        BufferData(const BufferData&) = delete;
-        BufferData& operator=(const BufferData&) = delete;
+        DataBuffer(const DataBuffer&) = delete;
+        DataBuffer& operator=(const DataBuffer&) = delete;
 
         // Move constructor
-        BufferData(BufferData&& other) noexcept;
+        DataBuffer(DataBuffer&& other) noexcept;
 
         // Move assignment
-        BufferData& operator=(BufferData&& other) noexcept;
+        DataBuffer& operator=(DataBuffer&& other) noexcept;
 
         const Device* vkDevice;
 

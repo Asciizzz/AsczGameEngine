@@ -4,7 +4,7 @@
 
 namespace AzVulk {
 
-struct BufferData;
+struct DataBuffer;
 
 struct DescLayout {
     struct BindInfo {

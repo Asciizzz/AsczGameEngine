@@ -467,8 +467,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
 
         // Unstack Mesh into separate submeshes (primitives)
 
-        printf("Loading Mesh[%zu] with %zu primitives\n", meshIndex, mesh.primitives.size());
-        
         for (size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); primitiveIndex++) {
             const auto& primitive = mesh.primitives[primitiveIndex];
 

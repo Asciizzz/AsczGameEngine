@@ -1,5 +1,5 @@
 #include "AzVulk/Descriptor.hpp"
-#include "AzVulk/Buffer.hpp"
+#include "AzVulk/DataBuffer.hpp"
 #include "Az3D/Az3D.hpp"
 #include <stdexcept>
 

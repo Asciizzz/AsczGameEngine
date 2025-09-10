@@ -2,7 +2,7 @@
 
 #include "Tiny3D/TinyModel.hpp"
 
-#include "AzVulk/Buffer.hpp"
+#include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 
 namespace Az3D {
@@ -20,8 +20,8 @@ struct MaterialVK {
 };
 
 struct SubmeshVK {
-    AzVulk::BufferData vertexBuffer;
-    AzVulk::BufferData indexBuffer;
+    AzVulk::DataBuffer vertexBuffer;
+    AzVulk::DataBuffer indexBuffer;
     VkIndexType indexType;
 };
 
@@ -80,14 +80,14 @@ public:
     VkIndexType getSubmeshIndexType(size_t submeshVK_index) const;
 
     SharedPtrVec<TinySkeleton>        skeletons;
-    UniquePtrVec<AzVulk::BufferData>  skeleInvMatBuffers; // Additional buffers in the future
+    UniquePtrVec<AzVulk::DataBuffer>  skeleInvMatBuffers; // Additional buffers in the future
     UniquePtr<AzVulk::DescLayout>     skeleDescLayout;
     UniquePtr<AzVulk::DescPool>       skeleDescPool;
     UniquePtrVec<AzVulk::DescSets>    skeleDescSets; // Wrong, but we'll live with it for now
     void createRigSkeleBuffers();
     void createRigSkeleDescSets();
 
-    UniquePtr<AzVulk::BufferData>     matBuffer;
+    UniquePtr<AzVulk::DataBuffer>     matBuffer;
     UniquePtr<AzVulk::DescLayout>     matDescLayout;
     UniquePtr<AzVulk::DescPool>       matDescPool;
     UniquePtr<AzVulk::DescSets>       matDescSet;
@@ -98,7 +98,7 @@ public:
     void createTextureSamplers();
 
     std::vector<uint32_t>             texSamplerIndices; // Per-texture sampler index (maps to samplers array)
-    UniquePtr<AzVulk::BufferData>     textSampIdxBuffer; // Buffer containing sampler indices for each texture
+    UniquePtr<AzVulk::DataBuffer>     textSampIdxBuffer; // Buffer containing sampler indices for each texture
     void createTexSampIdxBuffer(); // Create buffer for texture sampler indices
 
     UniquePtr<AzVulk::DescLayout>     texDescLayout;

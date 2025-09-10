@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "AzVulk/Buffer.hpp"
+#include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 
 namespace Az3D {
@@ -41,7 +41,7 @@ public:
     GlobalUBO ubo;
 
     static const int MAX_FRAMES_IN_FLIGHT = 2; // Must match Renderer
-    std::vector<AzVulk::BufferData> bufferData; // Per-frame buffers
+    std::vector<AzVulk::DataBuffer> bufferData; // Per-frame buffers
     void createBufferData();
 
     AzVulk::DescLayout descLayout;

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <glm/glm.hpp>
 
+#include "AzVulk/CmdBuffer.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_include.hpp"
 
@@ -46,9 +47,8 @@ namespace AzVulk {
         SwapChain* swapChain;
 
         // Command recording
-        VkCommandPool commandPool = VK_NULL_HANDLE;
-        std::vector<VkCommandBuffer> cmdBuffers;
-        
+        CmdBuffer cmdBuffer;
+
         // Synchronization objects
         std::vector<VkSemaphore> imageAvailableSemaphores; // Per MAX_FRAMES_IN_FLIGHT
         std::vector<VkSemaphore> renderFinishedSemaphores; // Per swapchain image

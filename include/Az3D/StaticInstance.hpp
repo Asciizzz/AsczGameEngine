@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "AzVulk/Buffer.hpp"
+#include "AzVulk/DataBuffer.hpp"
 
 namespace Az3D {
 
@@ -37,7 +37,7 @@ struct StaticInstanceGroup {
     std::vector<StaticInstance> datas;
     size_t addInstance(const StaticInstance& data);
 
-    AzVulk::BufferData bufferData;
+    AzVulk::DataBuffer bufferData;
     void initVkDevice(const AzVulk::Device* vkDevice);
     void recreateBufferData();
     void updateBufferData();

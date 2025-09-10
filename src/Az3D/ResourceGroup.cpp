@@ -158,7 +158,7 @@ void ResourceGroup::createMaterialBuffer() {
     VkDeviceSize bufferSize = sizeof(MaterialVK) * materialVKs.size();
 
     // --- staging buffer (CPU visible) ---
-    BufferData stagingBuffer;
+    DataBuffer stagingBuffer;
     stagingBuffer.initVkDevice(vkDevice);
     stagingBuffer.setProperties(
         bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -169,7 +169,7 @@ void ResourceGroup::createMaterialBuffer() {
     stagingBuffer.uploadData(materialVKs.data());
 
     // --- Device-local buffer (GPU only, STORAGE + DST) ---
-    if (!matBuffer) matBuffer = MakeUnique<BufferData>();
+    if (!matBuffer) matBuffer = MakeUnique<DataBuffer>();
     
     matBuffer->initVkDevice(vkDevice);
     matBuffer->setProperties(
@@ -481,7 +481,7 @@ UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture) 
     // Dynamic mipmap levels
     uint32_t mipLevels = static_cast<uint32_t>(floor(log2(std::max(width, height)))) + 1;
 
-    BufferData stagingBuffer;
+    DataBuffer stagingBuffer;
     stagingBuffer.initVkDevice(vkDevice);
     stagingBuffer.setProperties(
         imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -556,7 +556,7 @@ void ResourceGroup::createTexSampIdxBuffer() {
     VkDeviceSize bufferSize = sizeof(uint32_t) * texSamplerIndices.size();
 
     // --- staging buffer (CPU visible) ---
-    BufferData stagingBuffer;
+    DataBuffer stagingBuffer;
     stagingBuffer.initVkDevice(vkDevice);
     stagingBuffer.setProperties(
         bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -566,7 +566,7 @@ void ResourceGroup::createTexSampIdxBuffer() {
     stagingBuffer.uploadData(texSamplerIndices.data());
 
     // --- Device-local buffer (GPU only, STORAGE + DST) ---
-    if (!textSampIdxBuffer) textSampIdxBuffer = MakeUnique<BufferData>();
+    if (!textSampIdxBuffer) textSampIdxBuffer = MakeUnique<DataBuffer>();
     
     textSampIdxBuffer->initVkDevice(vkDevice);
     textSampIdxBuffer->setProperties(
@@ -677,11 +677,11 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     const auto& vertexData = submesh.vertexData;
     const auto& indexData = submesh.indexData;
 
-    BufferData vBufferData;
-    BufferData iBufferData;
+    DataBuffer vBufferData;
+    DataBuffer iBufferData;
 
     // Upload vertex data
-    BufferData vertexStagingBuffer;
+    DataBuffer vertexStagingBuffer;
     vertexStagingBuffer.initVkDevice(vkDevice);
     vertexStagingBuffer.setProperties(
         vertexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -711,7 +711,7 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     vertexCopyCmd.endAndSubmit();
 
     // Upload index data
-    BufferData indexStagingBuffer;
+    DataBuffer indexStagingBuffer;
     indexStagingBuffer.initVkDevice(vkDevice);
     indexStagingBuffer.setProperties(
         indexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -777,10 +777,10 @@ void ResourceGroup::createRigSkeleBuffers() {
 
         const auto& inverseBindMatrices = skeleton->inverseBindMatrices;
 
-        UniquePtr<BufferData> rigInvMatBuffer = MakeUnique<BufferData>();
+        UniquePtr<DataBuffer> rigInvMatBuffer = MakeUnique<DataBuffer>();
 
         // Upload inverse bind matrices
-        BufferData stagingBuffer;
+        DataBuffer stagingBuffer;
         stagingBuffer.initVkDevice(vkDevice);
         stagingBuffer.setProperties(
             inverseBindMatrices.size() * sizeof(glm::mat4), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,

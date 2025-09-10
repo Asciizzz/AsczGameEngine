@@ -8,7 +8,7 @@
 #include "AzVulk/MSAAManager.hpp"
 #include "AzVulk/DepthManager.hpp"
 
-#include "AzVulk/Buffer.hpp"
+#include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 
 #include "AzVulk/Renderer.hpp"

@@ -1,6 +1,4 @@
-#include "AzVulk/Buffer.hpp"
-#include "AzVulk/Device.hpp"
-#include "Az3D/Az3D.hpp"
+#include "AzVulk/DataBuffer.hpp"
 
 #include <stdexcept>
 #include <cstring>
@@ -11,7 +9,7 @@
 using namespace AzVulk;
 
 // Move constructor
-BufferData::BufferData(BufferData&& other) noexcept {
+DataBuffer::DataBuffer(DataBuffer&& other) noexcept {
     vkDevice = other.vkDevice;
 
     buffer = other.buffer;
@@ -30,7 +28,7 @@ BufferData::BufferData(BufferData&& other) noexcept {
 }
 
 // Move assignment
-BufferData& BufferData::operator=(BufferData&& other) noexcept {
+DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
     if (this != &other) {
         cleanup();
         vkDevice = other.vkDevice;
@@ -52,7 +50,7 @@ BufferData& BufferData::operator=(BufferData&& other) noexcept {
     return *this;
 }
 
-void BufferData::cleanup() {
+void DataBuffer::cleanup() {
     if (buffer != VK_NULL_HANDLE) {
         if (mapped) {
             vkUnmapMemory(vkDevice->lDevice, memory);
@@ -70,7 +68,7 @@ void BufferData::cleanup() {
 }
 
 
-void BufferData::setProperties(
+void DataBuffer::setProperties(
     VkDeviceSize dataSize,
     VkBufferUsageFlags usageFlags,
     VkMemoryPropertyFlags memoryFlags
@@ -80,12 +78,12 @@ void BufferData::setProperties(
     this->memoryFlags = memoryFlags;
 }
 
-void BufferData::createBuffer() {
+void DataBuffer::createBuffer() {
     VkDevice lDevice = vkDevice->lDevice;
     VkPhysicalDevice pDevice = vkDevice->pDevice;
 
     if (lDevice == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
-        throw std::runtime_error("BufferData: Vulkan lDevice not initialized");
+        throw std::runtime_error("DataBuffer: Vulkan lDevice not initialized");
     }
 
     cleanup();

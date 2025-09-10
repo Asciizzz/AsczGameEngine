@@ -19,7 +19,7 @@ struct Transform;
 
 namespace AzVulk {
 class Device;
-struct BufferData;
+struct DataBuffer;
 }
 
 namespace AzGame {
@@ -127,10 +127,10 @@ public:
     std::vector<StaticInstance> grassData3Ds;
 
     // Grass buffer
-    AzVulk::BufferData fixedMat4Buffer;
-    AzVulk::BufferData windPropsBuffer;
-    AzVulk::BufferData grassMat4Buffer;
-    AzVulk::BufferData grassUniformBuffer;
+    AzVulk::DataBuffer fixedMat4Buffer;
+    AzVulk::DataBuffer windPropsBuffer;
+    AzVulk::DataBuffer grassMat4Buffer;
+    AzVulk::DataBuffer grassUniformBuffer;
 
     std::vector<StaticInstance> terrainData3Ds;
 
