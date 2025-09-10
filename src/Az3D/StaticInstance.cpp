@@ -31,26 +31,26 @@ size_t StaticInstanceGroup::addInstance(const StaticInstance& data) {
 }
 
 void StaticInstanceGroup::initVkDevice(const AzVulk::Device* vkDevice) {
-    bufferData.initVkDevice(vkDevice);
+    dataBuffer.initVkDevice(vkDevice);
 }
 
-void StaticInstanceGroup::recreateBufferData() {
-    if (!bufferData.vkDevice) return;
+void StaticInstanceGroup::recreateDataBuffer() {
+    if (!dataBuffer.vkDevice) return;
 
-    bufferData.setProperties(
+    dataBuffer.setProperties(
         datas.size() * sizeof(StaticInstance), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
-    bufferData.createBuffer();
-    bufferData.mapAndCopy(datas.data());
+    dataBuffer.createBuffer();
+    dataBuffer.mapAndCopy(datas.data());
 
     prevInstanceCount = datas.size();
 }
 
-void StaticInstanceGroup::updateBufferData() {
-    if (!bufferData.vkDevice) return;
+void StaticInstanceGroup::updateDataBuffer() {
+    if (!dataBuffer.vkDevice) return;
 
-    if (prevInstanceCount != datas.size()) recreateBufferData();
+    if (prevInstanceCount != datas.size()) recreateDataBuffer();
 
-    bufferData.mapAndCopy(datas.data());
+    dataBuffer.mapAndCopy(datas.data());
 }

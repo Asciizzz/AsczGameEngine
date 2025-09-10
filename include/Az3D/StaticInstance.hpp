@@ -37,10 +37,10 @@ struct StaticInstanceGroup {
     std::vector<StaticInstance> datas;
     size_t addInstance(const StaticInstance& data);
 
-    AzVulk::DataBuffer bufferData;
+    AzVulk::DataBuffer dataBuffer;
     void initVkDevice(const AzVulk::Device* vkDevice);
-    void recreateBufferData();
-    void updateBufferData();
+    void recreateDataBuffer();
+    void updateDataBuffer();
 
     uint32_t modelIndex = 0;
 };

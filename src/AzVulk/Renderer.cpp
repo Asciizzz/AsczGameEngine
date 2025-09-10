@@ -166,7 +166,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
         VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
         VkIndexType indexType = resGroup->getSubmeshIndexType(submeshIndex);
 
-        VkBuffer instanceBuffer = instanceGroup->bufferData.get();
+        VkBuffer instanceBuffer = instanceGroup->dataBuffer.get();
 
         VkBuffer buffers[] = { vertexBuffer, instanceBuffer };
         VkDeviceSize offsets[] = { 0, 0 };

@@ -41,8 +41,8 @@ public:
     GlobalUBO ubo;
 
     static const int MAX_FRAMES_IN_FLIGHT = 2; // Must match Renderer
-    std::vector<AzVulk::DataBuffer> bufferData; // Per-frame buffers
-    void createBufferData();
+    std::vector<AzVulk::DataBuffer> dataBuffer; // Per-frame buffers
+    void createDataBuffer();
 
     AzVulk::DescLayout descLayout;
     AzVulk::DescPool descPool;

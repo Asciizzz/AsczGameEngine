@@ -677,8 +677,8 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     const auto& vertexData = submesh.vertexData;
     const auto& indexData = submesh.indexData;
 
-    DataBuffer vBufferData;
-    DataBuffer iBufferData;
+    DataBuffer vDataBuffer;
+    DataBuffer iDataBuffer;
 
     // Upload vertex data
     DataBuffer vertexStagingBuffer;
@@ -690,13 +690,13 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     vertexStagingBuffer.createBuffer();
     vertexStagingBuffer.mapAndCopy(vertexData.data());
 
-    vBufferData.initVkDevice(vkDevice);
-    vBufferData.setProperties(
+    vDataBuffer.initVkDevice(vkDevice);
+    vDataBuffer.setProperties(
         vertexData.size(),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
-    vBufferData.createBuffer();
+    vDataBuffer.createBuffer();
 
     TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -705,8 +705,8 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     vertexCopyRegion.dstOffset = 0;
     vertexCopyRegion.size = vertexData.size();
 
-    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vBufferData.buffer, 1, &vertexCopyRegion);
-    vBufferData.hostVisible = false;
+    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vDataBuffer.buffer, 1, &vertexCopyRegion);
+    vDataBuffer.hostVisible = false;
 
     vertexCopyCmd.endAndSubmit();
 
@@ -720,13 +720,13 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     indexStagingBuffer.createBuffer();
     indexStagingBuffer.mapAndCopy(indexData.data());
 
-    iBufferData.initVkDevice(vkDevice);
-    iBufferData.setProperties(
+    iDataBuffer.initVkDevice(vkDevice);
+    iDataBuffer.setProperties(
         indexData.size(),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
-    iBufferData.createBuffer();
+    iDataBuffer.createBuffer();
 
     TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -735,15 +735,15 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     indexCopyRegion.dstOffset = 0;
     indexCopyRegion.size = indexData.size();
 
-    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iBufferData.buffer, 1, &indexCopyRegion);
-    iBufferData.hostVisible = false;
+    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iDataBuffer.buffer, 1, &indexCopyRegion);
+    iDataBuffer.hostVisible = false;
 
     indexCopyCmd.endAndSubmit();
 
     // Append buffers
     UniquePtr<SubmeshVK> submeshVK = MakeUnique<SubmeshVK>();
-    submeshVK->vertexBuffer = std::move(vBufferData);
-    submeshVK->indexBuffer  = std::move(iBufferData);
+    submeshVK->vertexBuffer = std::move(vDataBuffer);
+    submeshVK->indexBuffer  = std::move(iDataBuffer);
     switch (submesh.indexType) {
         case TinySubmesh::IndexType::Uint8:  submeshVK->indexType = VK_INDEX_TYPE_UINT8;  break;
         case TinySubmesh::IndexType::Uint16: submeshVK->indexType = VK_INDEX_TYPE_UINT16; break;

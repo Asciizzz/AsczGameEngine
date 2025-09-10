@@ -388,7 +388,7 @@ void Application::mainLoop() {
 
 // =================================
 
-        // grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
+        // grassSystem->grassInstanceGroup.updateDataBuffer(); // Per frame update since grass moves
         // Use the new explicit rendering interface
         
         uint32_t imageIndex = rendererRef.beginFrame(mainRenderPass->get(), msaaManager->hasMSAA);
@@ -401,7 +401,7 @@ void Application::mainLoop() {
             rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
             // Draw grass system
-            grassSystem->grassInstanceGroup.updateBufferData(); // Per frame update since grass moves
+            grassSystem->grassInstanceGroup.updateDataBuffer(); // Per frame update since grass moves
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Foliage"), &grassSystem->grassInstanceGroup);
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->terrainInstanceGroup);
 
@@ -411,7 +411,7 @@ void Application::mainLoop() {
             rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Single"), 1);
 
             // Draw the particles
-            // particleManager->instanceGroup.updateBufferData();
+            // particleManager->instanceGroup.updateDataBuffer();
             // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &particleManager->instanceGroup);
 
             rendererRef.endFrame(imageIndex);

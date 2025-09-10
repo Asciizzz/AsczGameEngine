@@ -11,25 +11,25 @@ using namespace Az3D;
 GlbUBOManager::GlbUBOManager(const Device* vkDevice)
 : vkDevice(vkDevice)
 {
-    createBufferData();
+    createDataBuffer();
 
     createDescLayout();
     createDescPool();
     createDescSet();
 }
 
-void GlbUBOManager::createBufferData() {
-    bufferData.resize(MAX_FRAMES_IN_FLIGHT);
+void GlbUBOManager::createDataBuffer() {
+    dataBuffer.resize(MAX_FRAMES_IN_FLIGHT);
     
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        bufferData[i].initVkDevice(vkDevice);
+        dataBuffer[i].initVkDevice(vkDevice);
 
-        bufferData[i].setProperties(
+        dataBuffer[i].setProperties(
             sizeof(GlobalUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
-        bufferData[i].createBuffer();
-        bufferData[i].mapMemory();
+        dataBuffer[i].createBuffer();
+        dataBuffer[i].mapMemory();
     }
 }
 
@@ -57,7 +57,7 @@ void GlbUBOManager::createDescSet() {
         descSets[i].allocate(descPool.pool, descLayout.layout, 1);
 
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = bufferData[i].buffer;
+        bufferInfo.buffer = dataBuffer[i].buffer;
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(GlobalUBO);
 
@@ -91,5 +91,5 @@ void GlbUBOManager::updateUBO(const Camera& camera, uint32_t frameIndex) {
     ubo.cameraRight   = glm::vec4(camera.right, camera.nearPlane);
     ubo.cameraUp      = glm::vec4(camera.up, camera.farPlane);
 
-    memcpy(bufferData[frameIndex].mapped, &ubo, sizeof(ubo));
+    memcpy(dataBuffer[frameIndex].mapped, &ubo, sizeof(ubo));
 }
