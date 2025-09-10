@@ -14,7 +14,7 @@ namespace AzVulk {
         DepthManager(const DepthManager&) = delete;
         DepthManager& operator=(const DepthManager&) = delete;
 
-        void createDepthResources(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
+        void createDepthResources(uint32_t width, uint32_t height);
 
         const Device* vkDevice;
         
@@ -23,8 +23,6 @@ namespace AzVulk {
         VkImageView depthImageView = VK_NULL_HANDLE;
 
         VkFormat depthFormat;
-
-        VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT; // Default to 1x MSAA
         bool depthResolveSupported;
 
         // Helper methods
@@ -34,7 +32,7 @@ namespace AzVulk {
         bool hasStencilComponent(VkFormat format);
         void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
                         VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                        VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT);
+                        VkImage& image, VkDeviceMemory& imageMemory);
         VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     };
 }

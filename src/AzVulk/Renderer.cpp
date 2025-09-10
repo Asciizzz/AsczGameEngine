@@ -63,7 +63,7 @@ void Renderer::createSyncObjects() {
 }
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
-uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
+uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
     // Wait for the current frame's fence
     vkWaitForFences(vkDevice->lDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -100,16 +100,12 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass, bool hasMSAA) {
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = swapChain->extent;
 
-    // No MSAA: depth + color, with MSAA: depth + color + resolve
-    uint32_t clearValueCount = 2 + hasMSAA;
+    // No MSAA: depth + color (fixed count)
+    uint32_t clearValueCount = 2;
 
     std::vector<VkClearValue> clearValues(clearValueCount);
     clearValues[0].depthStencil = {1.0f, 0};
     clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-
-    if (clearValueCount == 3) {
-        clearValues[2].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    }
 
     renderPassInfo.clearValueCount = clearValueCount;
     renderPassInfo.pClearValues = clearValues.data();

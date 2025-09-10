@@ -5,7 +5,6 @@
 
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/RenderPass.hpp"
-#include "AzVulk/MSAAManager.hpp"
 #include "AzVulk/DepthManager.hpp"
 
 #include "AzVulk/DataBuffer.hpp"

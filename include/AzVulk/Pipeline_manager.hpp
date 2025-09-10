@@ -95,9 +95,7 @@ public:
     
     // Initialize all pipelines with common Vulkan objects
     void initializePipelines(
-        VkDevice device,
-        VkRenderPass renderPass,
-        VkSampleCountFlagBits msaa,
+        VkDevice device, VkRenderPass renderPass,
         const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts,
         const std::unordered_map<std::string, VertexInputVK>& namedVertexInputs
     );
@@ -132,7 +130,7 @@ private:
 // Utility macros for easier access - now require a manager instance
 #define PIPELINE_GET(manager, name) (manager)->getPipelineConfig(name)
 #define PIPELINE_INSTANCE(manager, name) (manager)->getPipeline(name)
-#define PIPELINE_INIT(manager, device, renderPass, msaa, namedLayouts, namedVertexInputs) \
-    (manager)->initializePipelines(device, renderPass, msaa, namedLayouts, namedVertexInputs)
+#define PIPELINE_INIT(manager, device, renderPass, namedLayouts, namedVertexInputs) \
+    (manager)->initializePipelines(device, renderPass, namedLayouts, namedVertexInputs)
 
 } // namespace AzVulk

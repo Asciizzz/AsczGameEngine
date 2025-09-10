@@ -318,7 +318,6 @@ std::vector<std::string> PipelineManager::getAllPipelineNames() const {
 void PipelineManager::initializePipelines(
     VkDevice device,
     VkRenderPass renderPass,
-    VkSampleCountFlagBits msaa,
     const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts,
     const std::unordered_map<std::string, VertexInputVK>& namedVertexInputs
 ) {
@@ -328,7 +327,6 @@ void PipelineManager::initializePipelines(
         
         // Set common properties
         pipelineConfig.renderPass = renderPass;
-        pipelineConfig.setMSAA(msaa);
         
         // Build descriptor layouts from the asset configuration
         std::vector<VkDescriptorSetLayout> layouts;

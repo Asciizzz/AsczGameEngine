@@ -53,7 +53,6 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Descriptor.cpp
     src/AzVulk/Swapchain.cpp
     src/AzVulk/RenderPass.cpp
-    src/AzVulk/MSAAManager.cpp
     src/AzVulk/DepthManager.cpp
     src/AzVulk/Pipeline_core.cpp
     src/AzVulk/Pipeline_graphic.cpp

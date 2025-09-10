@@ -21,8 +21,6 @@ enum class BlendMode {
 struct RasterCfg {
     // External dependencies - set by pipeline system
     VkRenderPass renderPass = VK_NULL_HANDLE;
-    VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-    bool hasMSAA = false;
     
     std::vector<VkDescriptorSetLayout> setLayouts;
     std::vector<VkPushConstantRange> pushConstantRanges;
@@ -111,11 +109,7 @@ struct RasterCfg {
         return *this;
     }
 
-    // MSAA support
-    void setMSAA(VkSampleCountFlagBits samples) {
-        msaaSamples = samples;
-        hasMSAA = (samples != VK_SAMPLE_COUNT_1_BIT);
-    }
+
 };
 
 class PipelineRaster {
@@ -124,7 +118,6 @@ public:
         : core(lDevice), cfg(std::move(cfg)) {}
 
     void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
-    void setMsaa(VkSampleCountFlagBits s) { cfg.msaaSamples = s; }
     void setDescLayouts(const std::vector<VkDescriptorSetLayout>& layouts) { cfg.setLayouts = layouts; }
     void setPushConstantRanges(const std::vector<VkPushConstantRange>& ranges) { cfg.pushConstantRanges = ranges; }
 

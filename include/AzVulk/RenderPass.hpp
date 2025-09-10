@@ -23,9 +23,8 @@ namespace AzVulk {
         VkFormat resolveFormat = VK_FORMAT_UNDEFINED;
 
         // Factory methods for common configurations
-        static RenderPassConfig createForwardRenderingConfig(VkFormat swapChainFormat, 
-                                                           VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT);
-        static RenderPassConfig createDeferredGBufferConfig(VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT);
+        static RenderPassConfig createForwardRenderingConfig(VkFormat swapChainFormat);
+        static RenderPassConfig createDeferredGBufferConfig();
         static RenderPassConfig createShadowMapConfig();
     };
 

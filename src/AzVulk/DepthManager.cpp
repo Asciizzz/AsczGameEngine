@@ -14,7 +14,6 @@ DepthManager::DepthManager(const Device* vkDevice)
     , depthImage            (VK_NULL_HANDLE)
     , depthImageMemory      (VK_NULL_HANDLE)
     , depthImageView        (VK_NULL_HANDLE)
-    , msaaSamples           (VK_SAMPLE_COUNT_1_BIT)
     , depthResolveSupported (false)
 {}
 
@@ -51,36 +50,22 @@ static VkResolveModeFlagBits chooseDepthResolveModeForPhysicalDevice(VkPhysicalD
     return VK_RESOLVE_MODE_NONE;
 }
 
-void DepthManager::createDepthResources(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSamplesIn) {
+void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
     // Clean up existing resources first
     cleanup();
 
-    this->msaaSamples = msaaSamplesIn;
-    depthFormat       = findDepthFormat();
+    depthFormat = findDepthFormat();
 
     VkResolveModeFlagBits mode = chooseDepthResolveModeForPhysicalDevice(vkDevice->pDevice);
-    depthResolveSupported  = (mode != VK_RESOLVE_MODE_NONE);
+    depthResolveSupported = (mode != VK_RESOLVE_MODE_NONE);
 
-    // If MSAA disabled (1 sample) create one depth image that is both attachment + sampled
-    if (msaaSamples == VK_SAMPLE_COUNT_1_BIT) {
-        // Create a single image usable as depth attachment and sampled image
-        createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                    depthImage, depthImageMemory, VK_SAMPLE_COUNT_1_BIT);
+    // Create a single image usable as depth attachment and sampled image (no MSAA)
+    createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                depthImage, depthImageMemory);
 
-        depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-    } else {
-        // MSAA > 1: create a multisampled depth attachment image
-        // Note: we intentionally *do not* request SAMPLED_BIT here. If you later want to implement a shader-based manual resolve,
-        // you might need to create the multisampled depth with SAMPLED_BIT so you can sample with sampler2DMS in a shader.
-        createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                    depthImage, depthImageMemory, msaaSamples);
-
-        depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-    }
+    depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
 VkFormat DepthManager::findDepthFormat() {
@@ -113,7 +98,7 @@ bool DepthManager::hasStencilComponent(VkFormat format) {
 
 void DepthManager::createImage( uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
                                 VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                                VkImage& image, VkDeviceMemory& imageMemory, VkSampleCountFlagBits numSamples) {
+                                VkImage& image, VkDeviceMemory& imageMemory) {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType     = VK_IMAGE_TYPE_2D;
@@ -126,7 +111,7 @@ void DepthManager::createImage( uint32_t width, uint32_t height, VkFormat format
     imageInfo.tiling        = tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage         = usage;
-    imageInfo.samples       = numSamples;
+    imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
     if (vkCreateImage(vkDevice->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {

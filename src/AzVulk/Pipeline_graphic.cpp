@@ -166,7 +166,7 @@ void PipelineRaster::create() {
     rs.lineWidth   = 1.0f;
 
     VkPipelineMultisampleStateCreateInfo ms{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-    ms.rasterizationSamples = cfg.msaaSamples;
+    ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT; // No MSAA
     ms.sampleShadingEnable  = cfg.sampleShadingEnable;
     ms.minSampleShading     = cfg.minSampleShading;
 

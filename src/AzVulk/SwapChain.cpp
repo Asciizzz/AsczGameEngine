@@ -91,27 +91,16 @@ void SwapChain::createImageViews() {
     }
 }
 
-void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
+void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView) {
     cleanupFramebuffers();
     framebuffers.resize(imageViews.size());
 
     for (size_t i = 0; i < imageViews.size(); ++i) {
-        std::vector<VkImageView> attachments;
-
-        if (colorImageView != VK_NULL_HANDLE) {
-            // MSAA: colorMSAA, resolve (swapchain), depth
-            attachments = {
-                depthImageView, // depth
-                colorImageView, // color MSAA
-                imageViews[i]   // resolve (swapchain)
-            };
-        } else {
-            // No MSAA: swapchain color, depth
-            attachments = {
-                depthImageView, // depth
-                imageViews[i]   // swapchain color
-            };
-        }
+        // No MSAA: depth, swapchain color (matching RenderPass attachment order)
+        std::vector<VkImageView> attachments = {
+            depthImageView,  // depth
+            imageViews[i]    // swapchain color
+        };
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -128,7 +117,7 @@ void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
     }
 }
 
-void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView, VkImageView colorImageView) {
+void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView) {
     int width = 0, height = 0;
     SDL_GetWindowSize(window, &width, &height);
     while (width == 0 || height == 0) {
@@ -141,7 +130,7 @@ void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass
     cleanup();
     createSwapChain(window);
     createImageViews();
-    createFramebuffers(renderPass, depthImageView, colorImageView);
+    createFramebuffers(renderPass, depthImageView);
 }
 
 void SwapChain::cleanup() {

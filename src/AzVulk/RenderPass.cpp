@@ -5,26 +5,22 @@
 
 using namespace AzVulk;
 
-RenderPassConfig RenderPassConfig::createForwardRenderingConfig(VkFormat swapChainFormat, VkSampleCountFlagBits msaaSamples) {
+RenderPassConfig RenderPassConfig::createForwardRenderingConfig(VkFormat swapChainFormat) {
     RenderPassConfig config;
     config.colorFormat = swapChainFormat;
-    config.colorSamples = msaaSamples;
-    config.depthSamples = msaaSamples;
+    config.colorSamples = VK_SAMPLE_COUNT_1_BIT;
+    config.depthSamples = VK_SAMPLE_COUNT_1_BIT;
     config.hasDepth = true;
-
-    if (msaaSamples != VK_SAMPLE_COUNT_1_BIT) {
-        config.hasResolve = true;
-        config.resolveFormat = swapChainFormat;
-    }
+    config.hasResolve = false;
     return config;
 }
 
-RenderPassConfig RenderPassConfig::createDeferredGBufferConfig(VkSampleCountFlagBits msaaSamples) {
+RenderPassConfig RenderPassConfig::createDeferredGBufferConfig() {
     RenderPassConfig config;
     config.colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
-    config.colorSamples = msaaSamples;
+    config.colorSamples = VK_SAMPLE_COUNT_1_BIT;
     config.hasDepth = true;
-    config.depthSamples = msaaSamples;
+    config.depthSamples = VK_SAMPLE_COUNT_1_BIT;
     config.hasResolve = false;
     return config;
 }

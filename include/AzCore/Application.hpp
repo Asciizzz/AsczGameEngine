@@ -35,7 +35,6 @@ private:
     UniquePtr<AzVulk::PipelineManager> pipelineManager;
 
     UniquePtr<AzVulk::DepthManager> depthManager;
-    UniquePtr<AzVulk::MSAAManager> msaaManager;
     UniquePtr<AzVulk::Renderer> renderer;
 
     UniquePtr<Az3D::Camera> camera;

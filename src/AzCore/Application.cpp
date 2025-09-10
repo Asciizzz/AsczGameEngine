@@ -53,23 +53,20 @@ void Application::initComponents() {
     VkDevice lDevice = vkDevice->lDevice;
     VkPhysicalDevice pDevice = vkDevice->pDevice;
 
-    msaaManager = MakeUnique<MSAAManager>(vkDevice.get());
     swapChain = MakeUnique<SwapChain>(vkDevice.get(), vkInstance->surface, windowManager->window);
-
 
     // Create shared render pass for forward rendering
     auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapChain->imageFormat, msaaManager->msaaSamples
+        swapChain->imageFormat
     );
     mainRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, renderPassConfig);
 
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
     // Initialize render targets and depth testing
-    msaaManager->createColorResources(swapChain->extent.width, swapChain->extent.height, swapChain->imageFormat);
     depthManager = MakeUnique<DepthManager>(vkDevice.get());
-    depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height, msaaManager->msaaSamples);
-    swapChain->createFramebuffers(renderPass, depthManager->depthImageView, msaaManager->colorImageView);
+    depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
+    swapChain->createFramebuffers(renderPass, depthManager->depthImageView);
     renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get());
 
     resGroup = MakeUnique<ResourceGroup>(vkDevice.get());
@@ -189,7 +186,7 @@ void Application::initComponents() {
     .setAttributes({ vstaticAttrs });
     vertexInputVKs["Single"] = vsingleInput;
 
-    PIPELINE_INIT(pipelineManager.get(), lDevice, renderPass, msaaManager->msaaSamples, namedLayouts, vertexInputVKs);
+    PIPELINE_INIT(pipelineManager.get(), lDevice, renderPass, namedLayouts, vertexInputVKs);
 }
 
 void Application::featuresTestingGround() {}
@@ -208,13 +205,11 @@ bool Application::checkWindowResize() {
     // Reset like literally everything
     camera->updateAspectRatio(newWidth, newHeight);
 
-    msaaManager->createColorResources(newWidth, newHeight, swapChain->imageFormat);
-    depthManager->createDepthResources(newWidth, newHeight, msaaManager->msaaSamples);
-
+    depthManager->createDepthResources(newWidth, newHeight);
 
     // Recreate render pass with new settings
     auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapChain->imageFormat, msaaManager->msaaSamples
+        swapChain->imageFormat
     );
     mainRenderPass->recreate(newRenderPassConfig);
 
@@ -222,8 +217,7 @@ bool Application::checkWindowResize() {
 
     swapChain->recreateFramebuffers(
         windowManager->window, renderPass,
-        depthManager->depthImageView,
-        msaaManager->colorImageView
+        depthManager->depthImageView
     );
 
     // Recreate all pipelines with new render pass - using instance
@@ -391,7 +385,7 @@ void Application::mainLoop() {
         // grassSystem->grassInstanceGroup.updateDataBuffer(); // Per frame update since grass moves
         // Use the new explicit rendering interface
         
-        uint32_t imageIndex = rendererRef.beginFrame(mainRenderPass->get(), msaaManager->hasMSAA);
+        uint32_t imageIndex = rendererRef.beginFrame(mainRenderPass->get());
         if (imageIndex != UINT32_MAX) {
             // Update global UBO buffer from frame index
             uint32_t currentFrameIndex = rendererRef.getCurrentFrame();

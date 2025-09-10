@@ -24,7 +24,7 @@ namespace AzVulk {
         Renderer& operator=(const Renderer&) = delete;
 
         // Introduction
-        uint32_t beginFrame(VkRenderPass renderPass, bool hasMSAA);
+        uint32_t beginFrame(VkRenderPass renderPass);
         
         // Frame tracking
         uint32_t getCurrentFrame() const { return currentFrame; }
