@@ -295,7 +295,7 @@ void Application::mainLoop() {
             SDL_GetRelativeMouseState(&mouseX, &mouseY);
 
             float sensitivity = 0.02f;
-            float yawDelta = mouseX * sensitivity;
+            float yawDelta = -mouseX * sensitivity;  // Inverted for correct quaternion rotation
             float pitchDelta = -mouseY * sensitivity;
 
             camRef.rotate(pitchDelta, yawDelta, 0.0f);
@@ -425,7 +425,10 @@ void Application::mainLoop() {
                                                 std::to_string(camRef.pos.z) + " | " +
                                     " | Forward: " + std::to_string(static_cast<int>(camRef.forward.x * 100) / 100.0f) + ", " +
                                                     std::to_string(static_cast<int>(camRef.forward.y * 100) / 100.0f) + ", " +
-                                                    std::to_string(static_cast<int>(camRef.forward.z * 100) / 100.0f);
+                                                    std::to_string(static_cast<int>(camRef.forward.z * 100) / 100.0f) + ", " +
+                                    " | Right: " + std::to_string(static_cast<int>(camRef.right.x * 100) / 100.0f) + ", " +
+                                                    std::to_string(static_cast<int>(camRef.right.y * 100) / 100.0f) + ", " +
+                                                    std::to_string(static_cast<int>(camRef.right.z * 100) / 100.0f);
             SDL_SetWindowTitle(winManager.window, fpsText.c_str());
             lastFpsOutput = now;
         }

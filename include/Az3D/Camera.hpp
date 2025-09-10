@@ -17,6 +17,8 @@ public:
 
     void setPosition(const glm::vec3& position);
     void setRotation(float pitch, float yaw, float roll = 0.0f);
+    void setRotation(const glm::quat& quaternion);
+
     void setFOV(float fov);
     void setNearFar(float nearPlane, float farPlane);
     void setAspectRatio(float aspectRatio);
@@ -26,6 +28,21 @@ public:
 
     void translate(const glm::vec3& offset);
     void rotate(float pitchDelta, float yawDelta, float rollDelta = 0.0f);
+    void rotate(const glm::quat& deltaRotation);
+
+    // Euler angle convenience functions
+    void rotatePitch(float degrees);
+    void rotateYaw(float degrees);
+    void rotateRoll(float degrees);
+    
+    // Quaternion access
+    glm::quat getOrientation() const { return orientation; }
+    void setOrientation(const glm::quat& quat);
+    
+    // Euler angle getters (computed from quaternion)
+    float getPitch() const;
+    float getYaw() const; 
+    float getRoll() const;
 
     void updateVectors();
     void updateViewMatrix();
@@ -33,6 +50,9 @@ public:
 
     // Position and orientation
     glm::vec3 pos;
+    glm::quat orientation;  // Primary orientation storage (quaternion)
+    
+    // Deprecated: Kept for backward compatibility (computed from quaternion)
     float pitch;
     float yaw;
     float roll;

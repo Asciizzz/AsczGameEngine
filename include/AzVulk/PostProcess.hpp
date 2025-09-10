@@ -4,9 +4,10 @@
 
 
 namespace AzVulk {
-    class PostProcess {
-    public:
-    
-        // Leave this empty for now
-    };
+class PostProcess {
+public:
+
+    // Leave this empty for now
+};
+
 }
