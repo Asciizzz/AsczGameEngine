@@ -295,16 +295,16 @@ void PostProcess::createFinalBlit() {
 
 
 void PostProcess::addEffect(const std::string& name, const std::string& computeShaderPath) {
-    auto effect = std::make_unique<PostProcessEffect>();
+    auto effect = MakeUnique<PostProcessEffect>();
     effect->name = name;
     effect->computeShaderPath = computeShaderPath;
-    
+
     // Create compute pipeline using the shared descriptor set layout
     ComputePipelineConfig config{};
     config.setLayouts = {descriptorSets.getLayout()};
     config.compPath = computeShaderPath;
 
-    effect->pipeline = std::make_unique<PipelineCompute>(vkDevice->lDevice, std::move(config));
+    effect->pipeline = MakeUnique<PipelineCompute>(vkDevice->lDevice, std::move(config));
     effect->pipeline->create();
 
     effects.push_back(std::move(effect));

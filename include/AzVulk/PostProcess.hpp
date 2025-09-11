@@ -30,7 +30,7 @@ struct PingPongImages {
 struct PostProcessEffect {
     std::string name;
     std::string computeShaderPath;
-    std::unique_ptr<PipelineCompute> pipeline;
+    UniquePtr<PipelineCompute> pipeline;
 
     void cleanup(VkDevice device);
 };
@@ -82,8 +82,8 @@ private:
     std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
     
     // Post-process effects
-    std::vector<std::unique_ptr<PostProcessEffect>> effects;
-    
+    UniquePtrVec<PostProcessEffect> effects;
+
     // Shared descriptor management for all effects
     DescSets descriptorSets;
     
