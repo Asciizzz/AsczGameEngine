@@ -12,6 +12,7 @@ Renderer::Renderer (Device* vkDevice, SwapChain* swapChain)
 : vkDevice(vkDevice), swapChain(swapChain) {
     createCommandBuffers();
     createSyncObjects();
+    postProcess = std::make_unique<PostProcess>(vkDevice, swapChain);
 }
 
 Renderer::~Renderer() {
@@ -93,10 +94,11 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
+    // Use offscreen render pass instead of swapchain render pass
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = renderPass;
-    renderPassInfo.framebuffer = swapChain->framebuffers[imageIndex];
+    renderPassInfo.renderPass = postProcess->getOffscreenRenderPass();
+    renderPassInfo.framebuffer = postProcess->getOffscreenFramebuffer(currentFrame);
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = swapChain->extent;
 
@@ -277,6 +279,12 @@ void Renderer::endFrame(uint32_t imageIndex) {
 
     vkCmdEndRenderPass(currentCmd);
 
+    // Execute post-processing effects
+    postProcess->executeEffects(currentCmd, currentFrame);
+
+    // Copy final image to swapchain
+    copyFinalImageToSwapchain(currentCmd, imageIndex);
+
     if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
@@ -317,4 +325,23 @@ void Renderer::endFrame(uint32_t imageIndex) {
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void Renderer::initializePostProcessing() {
+    postProcess->initialize();
+}
+
+void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {
+    postProcess->addEffect(name, computeShaderPath);
+}
+
+void Renderer::executePostProcessing(uint32_t imageIndex) {
+    VkCommandBuffer currentCmd = cmdBuffer[currentFrame];
+    postProcess->executeEffects(currentCmd, currentFrame);
+    copyFinalImageToSwapchain(currentCmd, imageIndex);
+}
+
+void Renderer::copyFinalImageToSwapchain(VkCommandBuffer cmd, uint32_t imageIndex) {
+    // Use the PostProcess system's final blit to copy to swapchain
+    postProcess->executeFinalBlit(cmd, currentFrame, imageIndex);
 }

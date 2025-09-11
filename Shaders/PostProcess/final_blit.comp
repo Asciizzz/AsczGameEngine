@@ -1,0 +1,25 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(binding = 0) uniform sampler2D uInput;   // R8G8B8A8_UNORM processed image
+layout(binding = 1, rgba8) uniform writeonly image2D uOutput; // Swapchain image
+
+// Final blit - copy processed image to swapchain with format conversion
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 texSize = vec2(imageSize(uOutput));
+    
+    if (coord.x >= texSize.x || coord.y >= texSize.y) {
+        return;
+    }
+    
+    vec2 texCoord = (vec2(coord) + 0.5) / texSize;
+    vec4 color = texture(uInput, texCoord);
+    
+    // Convert linear RGB to sRGB (simple approximation)
+    color.rgb = pow(color.rgb, vec3(1.0/2.2));
+    
+    // Store to swapchain (format conversion is automatic)
+    imageStore(uOutput, coord, color);
+}

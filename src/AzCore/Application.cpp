@@ -186,7 +186,14 @@ void Application::initComponents() {
     .setAttributes({ vstaticAttrs });
     vertexInputVKs["Single"] = vsingleInput;
 
-    PIPELINE_INIT(pipelineManager.get(), lDevice, renderPass, namedLayouts, vertexInputVKs);
+    // Initialize post-processing system first to get offscreen render pass
+    renderer->initializePostProcessing();
+    
+    // Use offscreen render pass for pipeline creation
+    VkRenderPass offscreenRenderPass = renderer->postProcess->getOffscreenRenderPass();
+    PIPELINE_INIT(pipelineManager.get(), lDevice, offscreenRenderPass, namedLayouts, vertexInputVKs);
+    renderer->addPostProcessEffect("tonemap", "Shaders/PostProcess/tonemap.comp.spv");
+    renderer->addPostProcessEffect("blur", "Shaders/PostProcess/blur.comp.spv");
 }
 
 void Application::featuresTestingGround() {}
@@ -220,8 +227,12 @@ bool Application::checkWindowResize() {
         depthManager->depthImageView
     );
 
-    // Recreate all pipelines with new render pass - using instance
-    pipelineManager->recreateAllPipelines(renderPass);
+    // Recreate all pipelines with offscreen render pass for post-processing
+    VkRenderPass offscreenRenderPass = renderer->postProcess->getOffscreenRenderPass();
+    pipelineManager->recreateAllPipelines(offscreenRenderPass);
+
+    // Recreate post-processing resources for new swapchain size
+    renderer->postProcess->recreate();
 
     return true;
 }
