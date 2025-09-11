@@ -40,7 +40,7 @@ struct ModelVK {
 // All these resource are static and fixed, created upon load
 class ResourceGroup {
 public:
-    ResourceGroup(AzVulk::Device* vkDevice);
+    ResourceGroup(AzVulk::Device* deviceVK);
     ~ResourceGroup() { cleanup(); } void cleanup();
 
     ResourceGroup(const ResourceGroup&) = delete;
@@ -66,7 +66,7 @@ public:
     void createComponentVKsFromModels();
 
 // private:
-    AzVulk::Device* vkDevice;
+    AzVulk::Device* deviceVK;
 
     std::vector<TinyModel>            models;
     std::vector<ModelVK>              modelVKs; // Contain indices to vulkan resources

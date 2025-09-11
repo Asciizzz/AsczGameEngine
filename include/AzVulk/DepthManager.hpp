@@ -8,7 +8,7 @@ namespace AzVulk {
 
     class DepthManager {
     public:
-        DepthManager(const Device* vkDevice);
+        DepthManager(const Device* deviceVK);
         ~DepthManager(); void cleanup();
 
         DepthManager(const DepthManager&) = delete;
@@ -16,7 +16,7 @@ namespace AzVulk {
 
         void createDepthResources(uint32_t width, uint32_t height);
 
-        const Device* vkDevice;
+        const Device* deviceVK;
         
         VkImage depthImage = VK_NULL_HANDLE;
         VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;

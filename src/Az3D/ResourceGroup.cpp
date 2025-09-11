@@ -10,10 +10,10 @@ using namespace Az3D;
 // ======================= General resource group stuff =======================
 // ============================================================================
 
-ResourceGroup::ResourceGroup(Device* vkDevice): vkDevice(vkDevice) {}
+ResourceGroup::ResourceGroup(Device* deviceVK): deviceVK(deviceVK) {}
 
 void ResourceGroup::cleanup() {
-    VkDevice lDevice = vkDevice->lDevice;
+    VkDevice lDevice = deviceVK->lDevice;
 
     // Cleanup texture VK resources first
     for (auto& texVK : textureVKs) {
@@ -31,7 +31,7 @@ void ResourceGroup::cleanup() {
 }
 
 void ResourceGroup::uploadAllToGPU() {
-    VkDevice lDevice = vkDevice->lDevice;
+    VkDevice lDevice = deviceVK->lDevice;
 
     createComponentVKsFromModels();
 
@@ -165,13 +165,13 @@ void ResourceGroup::createMaterialBuffer() {
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         )
         .createDeviceLocalBuffer(
-            vkDevice, materialVKs.data()
+            deviceVK, materialVKs.data()
         );
 }
 
 // Descriptor set creation
 void ResourceGroup::createMaterialDescSet() {
-    VkDevice lDevice = vkDevice->lDevice;
+    VkDevice lDevice = deviceVK->lDevice;
 
     matDescSet = MakeUnique<DescSets>(lDevice);
 
@@ -212,7 +212,7 @@ void ResourceGroup::createMaterialDescSet() {
 // =================== TinyTexture Implementation Utilities ===================
 // ============================================================================
 
-void createImageImpl(AzVulk::Device* vkDevice, uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
+void createImageImpl(AzVulk::Device* deviceVK, uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, 
                                 VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
                                 VkImage& image, VkDeviceMemory& imageMemory) {
     VkImageCreateInfo imageInfo{};
@@ -230,26 +230,26 @@ void createImageImpl(AzVulk::Device* vkDevice, uint32_t width, uint32_t height, 
     imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(vkDevice->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    if (vkCreateImage(deviceVK->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image!");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(vkDevice->lDevice, image, &memRequirements);
+    vkGetImageMemoryRequirements(deviceVK->lDevice, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize  = memRequirements.size;
-    allocInfo.memoryTypeIndex = vkDevice->findMemoryType(memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = deviceVK->findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(vkDevice->lDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(deviceVK->lDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate image memory!");
     }
 
-    vkBindImageMemory(vkDevice->lDevice, image, imageMemory, 0);
+    vkBindImageMemory(deviceVK->lDevice, image, imageMemory, 0);
 }
 
-void createImageViewImpl(AzVulk::Device* vkDevice, VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView) {
+void createImageViewImpl(AzVulk::Device* deviceVK, VkImage image, VkFormat format, uint32_t mipLevels, VkImageView& imageView) {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
@@ -261,14 +261,14 @@ void createImageViewImpl(AzVulk::Device* vkDevice, VkImage image, VkFormat forma
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount     = 1;
 
-    if (vkCreateImageView(vkDevice->lDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    if (vkCreateImageView(deviceVK->lDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture image view!");
     }
 }
 
 
-void transitionImageLayoutImpl(AzVulk::Device* vkDevice, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
-    TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
+void transitionImageLayoutImpl(AzVulk::Device* deviceVK, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
+    TemporaryCommand tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -303,8 +303,8 @@ void transitionImageLayoutImpl(AzVulk::Device* vkDevice, VkImage image, VkFormat
     vkCmdPipelineBarrier(tempCmd.cmdBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void copyBufferToImageImpl(AzVulk::Device* vkDevice, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-    TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
+void copyBufferToImageImpl(AzVulk::Device* deviceVK, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
+    TemporaryCommand tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
 
     VkBufferImageCopy region{};
     region.bufferOffset                    = 0;
@@ -320,15 +320,15 @@ void copyBufferToImageImpl(AzVulk::Device* vkDevice, VkBuffer buffer, VkImage im
     vkCmdCopyBufferToImage(tempCmd.cmdBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void generateMipmapsImpl(AzVulk::Device* vkDevice, VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
+void generateMipmapsImpl(AzVulk::Device* deviceVK, VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(vkDevice->pDevice, imageFormat, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(deviceVK->pDevice, imageFormat, &formatProperties);
 
     if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
-    TemporaryCommand tempCmd(vkDevice, vkDevice->graphicsPoolWrapper);
+    TemporaryCommand tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -461,24 +461,24 @@ UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture) 
             imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         )
-        .createBuffer(vkDevice)
+        .createBuffer(deviceVK)
         .uploadData(vulkanData.data());
 
     // Note: TinyTexture cleanup is handled by caller
 
     // Create texture image with proper format
-    createImageImpl(vkDevice, width, height, mipLevels, textureFormat, VK_IMAGE_TILING_OPTIMAL,
+    createImageImpl(deviceVK, width, height, mipLevels, textureFormat, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureVK.image, textureVK.memory);
 
     // Transfer data and generate mipmaps with proper format
-    transitionImageLayoutImpl(vkDevice, textureVK.image, textureFormat, VK_IMAGE_LAYOUT_UNDEFINED, 
+    transitionImageLayoutImpl(deviceVK, textureVK.image, textureFormat, VK_IMAGE_LAYOUT_UNDEFINED, 
                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-    copyBufferToImageImpl(vkDevice, stagingBuffer.buffer, textureVK.image, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-    generateMipmapsImpl(vkDevice, textureVK.image, textureFormat, width, height, mipLevels);
+    copyBufferToImageImpl(deviceVK, stagingBuffer.buffer, textureVK.image, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    generateMipmapsImpl(deviceVK, textureVK.image, textureFormat, width, height, mipLevels);
 
     // Create image view with proper format
-    createImageViewImpl(vkDevice, textureVK.image, textureFormat, mipLevels, textureVK.view);
+    createImageViewImpl(deviceVK, textureVK.image, textureFormat, mipLevels, textureVK.view);
 
     return MakeUnique<TextureVK>(textureVK);
 }
@@ -486,10 +486,10 @@ UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture) 
 
 // --- Shared Samplers ---
 void ResourceGroup::createTextureSamplers() {
-    VkDevice lDevice = vkDevice->lDevice;
+    VkDevice lDevice = deviceVK->lDevice;
 
     VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(vkDevice->pDevice, &properties);
+    vkGetPhysicalDeviceProperties(deviceVK->pDevice, &properties);
     float maxAnisotropy = fminf(16.0f, properties.limits.maxSamplerAnisotropy);
 
     VkSamplerAddressMode addressModes[] = {
@@ -539,13 +539,13 @@ void ResourceGroup::createTexSampIdxBuffer() {
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         )
         .createDeviceLocalBuffer(
-            vkDevice, texSamplerIndices.data()
+            deviceVK, texSamplerIndices.data()
         );
 
 }
 
 void ResourceGroup::createTextureDescSet() {
-    VkDevice lDevice = vkDevice->lDevice;
+    VkDevice lDevice = deviceVK->lDevice;
     uint32_t textureCount = static_cast<uint32_t>(textureVKs.size());
     uint32_t samplerCount = static_cast<uint32_t>(samplers.size());
 
@@ -637,7 +637,7 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         )
         .createDeviceLocalBuffer(
-            vkDevice, vertexData.data()
+            deviceVK, vertexData.data()
         );
 
     DataBuffer iDataBuffer;
@@ -648,7 +648,7 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         )
         .createDeviceLocalBuffer(
-            vkDevice, indexData.data()
+            deviceVK, indexData.data()
         );
 
     // Append buffers
@@ -697,7 +697,7 @@ void ResourceGroup::createRigSkeleBuffers() {
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             )
             .createDeviceLocalBuffer(
-                vkDevice, inverseBindMatrices.data()
+                deviceVK, inverseBindMatrices.data()
             );
 
         // Append buffer
@@ -706,7 +706,7 @@ void ResourceGroup::createRigSkeleBuffers() {
 }
 
 void ResourceGroup::createRigSkeleDescSets() {
-    VkDevice lDevice = vkDevice->lDevice;
+    VkDevice lDevice = deviceVK->lDevice;
 
     // For the time being only create the descriptor set layout
     skeleDescSets = MakeUnique<DescSets>(lDevice);

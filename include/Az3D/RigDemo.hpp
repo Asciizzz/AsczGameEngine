@@ -44,7 +44,7 @@ struct RigDemo {
     size_t modelIndex = 0;
 
 
-    void init(const AzVulk::Device* vkDevice, const TinyModel& model, size_t modelIndex);
+    void init(const AzVulk::Device* deviceVK, const TinyModel& model, size_t modelIndex);
     void update(float dTime);
     void updateBuffer();
     void updatePlayback(float dTime);

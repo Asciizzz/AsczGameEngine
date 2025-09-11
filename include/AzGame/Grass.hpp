@@ -103,7 +103,7 @@ public:
     Grass& operator=(const Grass&) = delete;
 
     // Initialize the grass system
-    bool initialize(Az3D::ResourceGroup& resGroup, const AzVulk::Device* vkDevice);
+    bool initialize(Az3D::ResourceGroup& resGroup, const AzVulk::Device* deviceVK);
 
     // Wind animation functions (if enabled)
     void updateWindAnimation(float deltaTime, bool useGPU=true);
@@ -138,7 +138,7 @@ public:
     size_t grassModelIndex = 0;
     size_t terrainModelIndex = 0;
 
-    const AzVulk::Device* vkDevice = nullptr;
+    const AzVulk::Device* deviceVK = nullptr;
 
     // Model Group
     Az3D::StaticInstanceGroup grassInstanceGroup;

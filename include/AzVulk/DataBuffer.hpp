@@ -32,7 +32,7 @@ struct DataBuffer {
 
     DataBuffer& setProperties(VkDeviceSize dataSize, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memPropFlags);
 
-    DataBuffer& createBuffer(const Device* vkDevice);
+    DataBuffer& createBuffer(const Device* deviceVK);
     DataBuffer& createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice);
 
     DataBuffer& copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount);
@@ -72,7 +72,7 @@ struct DataBuffer {
 
     template<typename T>
     void createDeviceLocalBuffer(
-        const Device* vkDevice,
+        const Device* deviceVK,
         const T* initialData = nullptr
     ) {
         // --- staging buffer (CPU visible) ---
@@ -82,15 +82,15 @@ struct DataBuffer {
                 dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             )
-            .createBuffer(vkDevice)
+            .createBuffer(deviceVK)
             .uploadData(initialData);
 
         // Update usage flags and create device local buffer
         usageFlags = usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         setProperties(dataSize, usageFlags, memPropFlags);
-        createBuffer(vkDevice);
+        createBuffer(deviceVK);
 
-        TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
+        TemporaryCommand copyCmd(deviceVK, deviceVK->transferPoolWrapper);
 
         VkBufferCopy copyRegion{};
         copyRegion.srcOffset = 0;

@@ -8,17 +8,17 @@ using namespace Az3D;
 using namespace AzVulk;
 
 
-Renderer::Renderer (Device* vkDevice, SwapChain* swapChain, DepthManager* depthManager)
-: vkDevice(vkDevice), swapChain(swapChain) {
+Renderer::Renderer (Device* deviceVK, SwapChain* swapChain, DepthManager* depthManager)
+: deviceVK(deviceVK), swapChain(swapChain) {
     createCommandBuffers();
     createSyncObjects();
 
-    postProcess = MakeUnique<PostProcess>(vkDevice, swapChain, depthManager);
+    postProcess = MakeUnique<PostProcess>(deviceVK, swapChain, depthManager);
     postProcess->initialize();
 }
 
 Renderer::~Renderer() {
-    VkDevice lDevice = vkDevice->lDevice;
+    VkDevice lDevice = deviceVK->lDevice;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         if (inFlightFences[i])           vkDestroyFence(    lDevice, inFlightFences[i],           nullptr);
@@ -30,7 +30,7 @@ Renderer::~Renderer() {
 }
 
 void Renderer::createCommandBuffers() {
-    cmdBuffer.create(vkDevice->lDevice, vkDevice->graphicsPoolWrapper.pool, MAX_FRAMES_IN_FLIGHT);
+    cmdBuffer.create(deviceVK->lDevice, deviceVK->graphicsPoolWrapper.pool, MAX_FRAMES_IN_FLIGHT);
 }
 
 void Renderer::createSyncObjects() {
@@ -51,15 +51,15 @@ void Renderer::createSyncObjects() {
 
     // per-frame acquire + fence
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        if (vkCreateSemaphore(vkDevice->lDevice, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(    vkDevice->lDevice, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
+        if (vkCreateSemaphore(deviceVK->lDevice, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(    deviceVK->lDevice, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-frame sync objects!");
         }
     }
 
     // per-image render-finished
     for (size_t i = 0; i < swapchainImageCount; ++i) {
-        if (vkCreateSemaphore(vkDevice->lDevice, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+        if (vkCreateSemaphore(deviceVK->lDevice, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-image renderFinished semaphore!");
         }
     }
@@ -68,11 +68,11 @@ void Renderer::createSyncObjects() {
 // Begin frame: handle synchronization, image acquisition, and render pass setup
 uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
     // Wait for the current frame's fence
-    vkWaitForFences(vkDevice->lDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(deviceVK->lDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex = UINT32_MAX;
     VkResult acquire = vkAcquireNextImageKHR(
-        vkDevice->lDevice, swapChain->swapChain, UINT64_MAX,
+        deviceVK->lDevice, swapChain->swapChain, UINT64_MAX,
         imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if (acquire == VK_ERROR_OUT_OF_DATE_KHR) { framebufferResized = true; return UINT32_MAX; }
@@ -81,11 +81,11 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
 
     // CRITICAL: If this image is still being used by another frame, wait for that frame's completion
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-        vkWaitForFences(vkDevice->lDevice, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(deviceVK->lDevice, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
     }
     
     // Reset the current frame's fence ONLY after we're sure the image is free
-    vkResetFences(vkDevice->lDevice, 1, &inFlightFences[currentFrame]);
+    vkResetFences(deviceVK->lDevice, 1, &inFlightFences[currentFrame]);
     
     // Now assign this image to the current frame
     imagesInFlight[imageIndex] = inFlightFences[currentFrame];
@@ -303,7 +303,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     submit.signalSemaphoreCount = 1;
     submit.pSignalSemaphores    = signalSemaphores;
 
-    if (vkQueueSubmit(vkDevice->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(deviceVK->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer");
     }
 
@@ -316,7 +316,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     present.pSwapchains        = chains;
     present.pImageIndices      = &imageIndex;
 
-    VkResult res = vkQueuePresentKHR(vkDevice->presentQueue, &present);
+    VkResult res = vkQueuePresentKHR(deviceVK->presentQueue, &present);
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = true;
     } else if (res != VK_SUCCESS) {

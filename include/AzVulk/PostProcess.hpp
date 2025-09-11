@@ -38,7 +38,7 @@ struct PostProcessEffect {
 class PostProcess {
     friend class Renderer;
 public:
-    PostProcess(Device* vkDevice, SwapChain* swapChain, DepthManager* depthManager);
+    PostProcess(Device* deviceVK, SwapChain* swapChain, DepthManager* depthManager);
     ~PostProcess();
 
     PostProcess(const PostProcess&) = delete;
@@ -69,7 +69,7 @@ public:
 private:
     static const int MAX_FRAMES_IN_FLIGHT = 2;
     
-    Device* vkDevice;
+    Device* deviceVK;
     SwapChain* swapChain;
     DepthManager* depthManager; // For offscreen framebuffer only
     VkSampler sampler = VK_NULL_HANDLE;

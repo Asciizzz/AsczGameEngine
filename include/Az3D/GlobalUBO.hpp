@@ -29,14 +29,14 @@ struct GlobalUBO {
 
 class GlbUBOManager {
 public:
-    GlbUBOManager(const AzVulk::Device* vkDevice);
+    GlbUBOManager(const AzVulk::Device* deviceVK);
     ~GlbUBOManager() = default;
 
     // Delete copy constructor and assignment operator
     GlbUBOManager(const GlbUBOManager&) = delete;
     GlbUBOManager& operator=(const GlbUBOManager&) = delete;
 
-    const AzVulk::Device* vkDevice;
+    const AzVulk::Device* deviceVK;
 
     GlobalUBO ubo;
 

@@ -6,8 +6,8 @@
 
 using namespace AzVulk;
 
-SwapChain::SwapChain(const Device* vkDevice, VkSurfaceKHR surface, SDL_Window* window)
-    : vkDevice(vkDevice), surface(surface) {
+SwapChain::SwapChain(const Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window)
+    : deviceVK(deviceVK), surface(surface) {
     createSwapChain(window);
     createImageViews();
 }
@@ -17,7 +17,7 @@ SwapChain::~SwapChain() {
 }
 
 void SwapChain::createSwapChain(SDL_Window* window) {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vkDevice->pDevice);
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(deviceVK->pDevice);
 
     VkSurfaceFormatKHR sc_surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR sc_presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -38,7 +38,7 @@ void SwapChain::createSwapChain(SDL_Window* window) {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-    QueueFamilyIndices indices = vkDevice->queueFamilyIndices;
+    QueueFamilyIndices indices = deviceVK->queueFamilyIndices;
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
     if (indices.graphicsFamily != indices.presentFamily) {
@@ -54,13 +54,13 @@ void SwapChain::createSwapChain(SDL_Window* window) {
     createInfo.presentMode = sc_presentMode;
     createInfo.clipped = VK_TRUE;
 
-    if (vkCreateSwapchainKHR(vkDevice->lDevice, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(deviceVK->lDevice, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    vkGetSwapchainImagesKHR(vkDevice->lDevice, swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(deviceVK->lDevice, swapChain, &imageCount, nullptr);
     images.resize(imageCount);
-    vkGetSwapchainImagesKHR(vkDevice->lDevice, swapChain, &imageCount, images.data());
+    vkGetSwapchainImagesKHR(deviceVK->lDevice, swapChain, &imageCount, images.data());
 
     imageFormat = sc_surfaceFormat.format;
     extent = sc_extent;
@@ -85,7 +85,7 @@ void SwapChain::createImageViews() {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(vkDevice->lDevice, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
+        if (vkCreateImageView(deviceVK->lDevice, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create image views!");
         }
     }
@@ -111,7 +111,7 @@ void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
         framebufferInfo.height = extent.height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(vkDevice->lDevice, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
+        if (vkCreateFramebuffer(deviceVK->lDevice, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create framebuffer!");
         }
     }
@@ -125,7 +125,7 @@ void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass
         SDL_WaitEvent(nullptr);
     }
 
-    vkDeviceWaitIdle(vkDevice->lDevice);
+    vkDeviceWaitIdle(deviceVK->lDevice);
 
     cleanup();
     createSwapChain(window);
@@ -137,19 +137,19 @@ void SwapChain::cleanup() {
     cleanupFramebuffers();
 
     for (auto imageView : imageViews) {
-        vkDestroyImageView(vkDevice->lDevice, imageView, nullptr);
+        vkDestroyImageView(deviceVK->lDevice, imageView, nullptr);
     }
     imageViews.clear();
 
     if (swapChain != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(vkDevice->lDevice, swapChain, nullptr);
+        vkDestroySwapchainKHR(deviceVK->lDevice, swapChain, nullptr);
         swapChain = VK_NULL_HANDLE;
     }
 }
 
 void SwapChain::cleanupFramebuffers() {
     for (auto framebuffer : framebuffers) {
-        vkDestroyFramebuffer(vkDevice->lDevice, framebuffer, nullptr);
+        vkDestroyFramebuffer(deviceVK->lDevice, framebuffer, nullptr);
     }
     framebuffers.clear();
 }

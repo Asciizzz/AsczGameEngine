@@ -21,8 +21,8 @@ Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
 
 Grass::~Grass() {}
 
-bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::Device* vkDevice) {
-    this->vkDevice = vkDevice;
+bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::Device* deviceVK) {
+    this->deviceVK = deviceVK;
 
     createGrassMesh90deg(resGroup);
 
@@ -32,11 +32,11 @@ bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::Device* vkDevice) 
 
     generateGrassInstances(generator);
 
-    // grassInstanceGroup.init("GrassField", vkDevice);
-    grassInstanceGroup.initVkDevice(vkDevice);
+    // grassInstanceGroup.init("GrassField", deviceVK);
+    grassInstanceGroup.initVkDevice(deviceVK);
     grassInstanceGroup.modelIndex = grassModelIndex;
 
-    terrainInstanceGroup.initVkDevice(vkDevice);
+    terrainInstanceGroup.initVkDevice(deviceVK);
     terrainInstanceGroup.modelIndex = terrainModelIndex;
 
     for (const auto& data : grassData3Ds) {

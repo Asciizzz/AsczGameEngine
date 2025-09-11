@@ -41,7 +41,7 @@ struct StaticInstanceGroup {
     VkPhysicalDevice pDevice = VK_NULL_HANDLE;
 
     AzVulk::DataBuffer dataBuffer;
-    void initVkDevice(const AzVulk::Device* vkDevice);
+    void initVkDevice(const AzVulk::Device* deviceVK);
     void initVkDevice(VkDevice lDevice, VkPhysicalDevice pDevice);
 
     void recreateDataBuffer();

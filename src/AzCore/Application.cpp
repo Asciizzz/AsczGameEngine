@@ -47,13 +47,13 @@ void Application::initComponents() {
     vkInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
     vkInstance->createSurface(windowManager->window);
 
-    vkDevice = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
+    deviceVK = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
 
     // So we dont have to write these things over and over again
-    VkDevice lDevice = vkDevice->lDevice;
-    VkPhysicalDevice pDevice = vkDevice->pDevice;
+    VkDevice lDevice = deviceVK->lDevice;
+    VkPhysicalDevice pDevice = deviceVK->pDevice;
 
-    swapChain = MakeUnique<SwapChain>(vkDevice.get(), vkInstance->surface, windowManager->window);
+    swapChain = MakeUnique<SwapChain>(deviceVK.get(), vkInstance->surface, windowManager->window);
 
     // Create shared render pass for forward rendering
     auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
@@ -64,13 +64,13 @@ void Application::initComponents() {
     VkRenderPass renderPass = mainRenderPass->renderPass;
 
     // Initialize render targets and depth testing
-    depthManager = MakeUnique<DepthManager>(vkDevice.get());
+    depthManager = MakeUnique<DepthManager>(deviceVK.get());
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView);
-    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get());
+    renderer = MakeUnique<Renderer>(deviceVK.get(), swapChain.get(), depthManager.get());
 
-    resGroup = MakeUnique<ResourceGroup>(vkDevice.get());
-    glbUBOManager = MakeUnique<GlbUBOManager>(vkDevice.get());
+    resGroup = MakeUnique<ResourceGroup>(deviceVK.get());
+    glbUBOManager = MakeUnique<GlbUBOManager>(deviceVK.get());
 
 // PLAYGROUND FROM HERE
 
@@ -82,7 +82,7 @@ void Application::initComponents() {
 
     testModel.printAnimationList();
 
-    rigDemo.init(vkDevice.get(), testModel, 0);
+    rigDemo.init(deviceVK.get(), testModel, 0);
     rigDemo.playAnimation(3);
 
     resGroup->addModel(testModel);
@@ -104,7 +104,7 @@ void Application::initComponents() {
     grassConfig.influenceFactor = 0.02f;
 
     grassSystem = MakeUnique<Grass>(grassConfig);
-    grassSystem->initialize(*resGroup, vkDevice.get());
+    grassSystem->initialize(*resGroup, deviceVK.get());
 
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
@@ -116,7 +116,7 @@ void Application::initComponents() {
     // boundMax.y += totalHeight * 12.5f;
 
     // particleManager->initialize(
-    //     resGroup.get(), vkDevice.get(),
+    //     resGroup.get(), deviceVK.get(),
     //     5000, // Count
     //     0.5f, // Radius
     //     0.5f, // Display radius
@@ -202,7 +202,7 @@ bool Application::checkWindowResize() {
     windowManager->resizedFlag = false;
     renderer->framebufferResized = false;
 
-    vkDeviceWaitIdle(vkDevice->lDevice);
+    vkDeviceWaitIdle(deviceVK->lDevice);
 
     int newWidth, newHeight;
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
@@ -219,7 +219,6 @@ bool Application::checkWindowResize() {
     mainRenderPass->recreate(newRenderPassConfig);
 
     VkRenderPass renderPass = mainRenderPass->get();
-
     swapChain->recreateFramebuffers(
         windowManager->window, renderPass,
         depthManager->depthImageView
@@ -454,7 +453,7 @@ void Application::mainLoop() {
         }
     }
 
-    vkDeviceWaitIdle(vkDevice->lDevice);
+    vkDeviceWaitIdle(deviceVK->lDevice);
 }
 
 void Application::cleanup() {}

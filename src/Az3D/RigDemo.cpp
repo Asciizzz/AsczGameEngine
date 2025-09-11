@@ -7,7 +7,7 @@
 
 using namespace Az3D;
 
-void RigDemo::init(const AzVulk::Device* vkDevice, const TinyModel& model, size_t modelIndex) {
+void RigDemo::init(const AzVulk::Device* deviceVK, const TinyModel& model, size_t modelIndex) {
     using namespace AzVulk;
 
     this->model = MakeShared<TinyModel>(model);
@@ -24,12 +24,12 @@ void RigDemo::init(const AzVulk::Device* vkDevice, const TinyModel& model, size_
             bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         )
-        .createBuffer(vkDevice)
+        .createBuffer(deviceVK)
         .mapMemory();
 
     updateBuffer();
 
-    descSet.init(vkDevice->lDevice);
+    descSet.init(deviceVK->lDevice);
     descSet.createLayout({
         DescSets::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
     });
@@ -52,7 +52,7 @@ void RigDemo::init(const AzVulk::Device* vkDevice, const TinyModel& model, size_
     write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     write.pBufferInfo = &bufferInfo;
 
-    vkUpdateDescriptorSets(vkDevice->lDevice, 1, &write, 0, nullptr);
+    vkUpdateDescriptorSets(deviceVK->lDevice, 1, &write, 0, nullptr);
 }
 
 void RigDemo::update(float dTime) {

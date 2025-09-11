@@ -74,8 +74,8 @@ DataBuffer& DataBuffer::setProperties(VkDeviceSize dataSize, VkBufferUsageFlags 
     return *this;
 }
 
-DataBuffer& DataBuffer::createBuffer(const Device* vkDevice) {
-    return createBuffer(vkDevice->lDevice, vkDevice->pDevice);
+DataBuffer& DataBuffer::createBuffer(const Device* deviceVK) {
+    return createBuffer(deviceVK->lDevice, deviceVK->pDevice);
 }
 
 DataBuffer& DataBuffer::createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice) {

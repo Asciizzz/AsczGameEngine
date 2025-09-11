@@ -8,9 +8,8 @@ using namespace AzVulk;
 
 using namespace Az3D;
 
-GlbUBOManager::GlbUBOManager(const Device* vkDevice)
-: vkDevice(vkDevice)
-{
+GlbUBOManager::GlbUBOManager(const Device* deviceVK)
+: deviceVK(deviceVK) {
     createDataBuffer();
 
     createDescSets();
@@ -25,13 +24,13 @@ void GlbUBOManager::createDataBuffer() {
                 sizeof(GlobalUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             )
-            .createBuffer(vkDevice)
+            .createBuffer(deviceVK)
             .mapMemory();
     }
 }
 
 void GlbUBOManager::createDescSets() {
-    descSets.init(vkDevice->lDevice);
+    descSets.init(deviceVK->lDevice);
 
     descSets.createLayout({
         DescSets::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
@@ -58,7 +57,7 @@ void GlbUBOManager::createDescSets() {
         write.descriptorCount = 1;
         write.pBufferInfo = &bufferInfo;
 
-        vkUpdateDescriptorSets(vkDevice->lDevice, 1, &write, 0, nullptr);
+        vkUpdateDescriptorSets(deviceVK->lDevice, 1, &write, 0, nullptr);
     }
 }
 

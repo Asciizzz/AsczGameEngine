@@ -154,7 +154,7 @@ public:
         ));
     }
 
-    void initialize(Az3D::ResourceGroup* resGroup, const AzVulk::Device* vkDevice,
+    void initialize(Az3D::ResourceGroup* resGroup, const AzVulk::Device* deviceVK,
                     size_t count, float r = 0.05f, float display_r = 0.05f,
                     const glm::vec3& boundsMin = glm::vec3(-10.0f),
                     const glm::vec3& boundsMax = glm::vec3(10.0f)) {
@@ -171,7 +171,7 @@ public:
         material.toonLevel = 2;
         material.albTexture = 0;
 
-        instanceGroup.initVkDevice(vkDevice);
+        instanceGroup.initVkDevice(deviceVK);
         instanceGroup.modelIndex = resGroup->addModel(particleModel);
 
         particleCount = count;

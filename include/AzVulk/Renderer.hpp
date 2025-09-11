@@ -20,7 +20,7 @@ namespace AzVulk {
 
     class Renderer {
     public:
-        Renderer(Device* vkDevice, SwapChain* swapChain, DepthManager* depthManager);
+        Renderer(Device* deviceVK, SwapChain* swapChain, DepthManager* depthManager);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -46,7 +46,7 @@ namespace AzVulk {
         void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
 
         // Component references
-        Device* vkDevice;
+        Device* deviceVK;
         SwapChain* swapChain;
         UniquePtr<PostProcess> postProcess;
 

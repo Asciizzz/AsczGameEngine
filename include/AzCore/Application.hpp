@@ -27,7 +27,7 @@ private:
     UniquePtr<AzCore::FpsManager> fpsManager;
 
     UniquePtr<AzVulk::Instance> vkInstance;
-    UniquePtr<AzVulk::Device> vkDevice;
+    UniquePtr<AzVulk::Device> deviceVK;
     UniquePtr<AzVulk::SwapChain> swapChain;
 
     UniquePtr<AzVulk::RenderPass> mainRenderPass;

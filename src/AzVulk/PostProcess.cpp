@@ -43,8 +43,8 @@ void PostProcessEffect::cleanup(VkDevice device) {
     }
 }
 
-PostProcess::PostProcess(Device* vkDevice, SwapChain* swapChain, DepthManager* depthManager)
-    : vkDevice(vkDevice), swapChain(swapChain), depthManager(depthManager), descriptorSets(vkDevice->lDevice) {
+PostProcess::PostProcess(Device* deviceVK, SwapChain* swapChain, DepthManager* depthManager)
+    : deviceVK(deviceVK), swapChain(swapChain), depthManager(depthManager), descriptorSets(deviceVK->lDevice) {
 }
 
 PostProcess::~PostProcess() {
@@ -54,8 +54,10 @@ PostProcess::~PostProcess() {
 void PostProcess::initialize() {
     createSampler();
     createPingPongImages();
+
     createOffscreenRenderPass();
     createOffscreenFramebuffers();
+    
     createSharedDescriptors();
     createFinalBlit();
 }
@@ -149,7 +151,7 @@ void PostProcess::createOffscreenRenderPass() {
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(vkDevice->lDevice, &renderPassInfo, nullptr, &offscreenRenderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(deviceVK->lDevice, &renderPassInfo, nullptr, &offscreenRenderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create offscreen render pass!");
     }
 }
@@ -170,7 +172,7 @@ void PostProcess::createOffscreenFramebuffers() {
         framebufferInfo.height = swapChain->extent.height;
         framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(vkDevice->lDevice, &framebufferInfo, nullptr, &offscreenFramebuffers[frame]) != VK_SUCCESS) {
+        if (vkCreateFramebuffer(deviceVK->lDevice, &framebufferInfo, nullptr, &offscreenFramebuffers[frame]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create offscreen framebuffer!");
         }
     }
@@ -195,7 +197,7 @@ void PostProcess::createSampler() {
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    if (vkCreateSampler(vkDevice->lDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
+    if (vkCreateSampler(deviceVK->lDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture sampler!");
     }
 }
@@ -253,7 +255,7 @@ void PostProcess::createSharedDescriptors() {
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfoOutput;
 
-            vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            vkUpdateDescriptorSets(deviceVK->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
         
         // B->A direction (descriptor set index: frame * 2 + 1)
@@ -285,7 +287,7 @@ void PostProcess::createSharedDescriptors() {
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfoOutput;
 
-            vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            vkUpdateDescriptorSets(deviceVK->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
     }
 }
@@ -306,7 +308,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
     config.setLayouts = {descriptorSets.getLayout()};
     config.compPath = computeShaderPath;
 
-    effect->pipeline = MakeUnique<PipelineCompute>(vkDevice->lDevice, std::move(config));
+    effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
     effect->pipeline->create();
 
     effects.push_back(std::move(effect));
@@ -515,7 +517,7 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
 }
 
 void PostProcess::cleanup() {
-    VkDevice device = vkDevice->lDevice;
+    VkDevice device = deviceVK->lDevice;
 
     // Clean up sampler
     if (sampler != VK_NULL_HANDLE) {
