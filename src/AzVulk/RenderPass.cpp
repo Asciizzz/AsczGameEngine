@@ -50,15 +50,6 @@ void RenderPass::recreate(const RenderPassConfig& newConfig) {
     createRenderPass();
 }
 
-
-// ---------- safer chooseDepthResolveMode ----------
-VkResolveModeFlagBits RenderPass::chooseDepthResolveMode(VkPhysicalDevice pDevice) {
-    // This function now returns VK_RESOLVE_MODE_NONE, as depth resolve properties require Vulkan 1.2+ and VkPhysicalDeviceProperties2.
-    // If you want to support depth resolve, you must use VkPhysicalDeviceProperties2 and VkPhysicalDeviceDepthStencilResolveProperties.
-    // For compatibility, we revert to NONE here.
-    return VK_RESOLVE_MODE_NONE;
-}
-
 // ---------- safer createRenderPass ----------
 void RenderPass::createRenderPass() {
     std::vector<VkAttachmentDescription> attachments;
