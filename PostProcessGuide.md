@@ -27,9 +27,9 @@ renderer->addPostProcessEffect("effect_name", "Shaders/PostProcess/effect.comp.s
 ### Effect Order
 Effects are processed in the order they're added:
 ```cpp
-renderer->addPostProcessEffect("fxaa", "Shaders/PostProcess/fxaa.comp.spv");      // First: Anti-aliasing
-renderer->addPostProcessEffect("tonemap", "Shaders/PostProcess/tonemap.comp.spv"); // Second: Tone mapping
-renderer->addPostProcessEffect("blur", "Shaders/PostProcess/blur.comp.spv");       // Third: Blur
+renderer->addPostProcessEffect("effect1", "Shaders/PostProcess/effect1.comp.spv");
+renderer->addPostProcessEffect("effect2", "Shaders/PostProcess/effect2.comp.spv");
+renderer->addPostProcessEffect("effect3", "Shaders/PostProcess/effect3.comp.spv");
 ```
 
 ## Creating Custom Effects
@@ -41,14 +41,9 @@ Create a compute shader in `Shaders/PostProcess/`:
 #version 450
 layout(local_size_x = 16, local_size_y = 16) in;
 
-// Input color texture (previous effect or scene)
 layout(binding = 0) uniform sampler2D inputImage;
-
-// Output image (next effect or final)
 layout(binding = 1, rgba8) uniform image2D outputImage;
-
-// Depth buffer for advanced effects
-layout(binding = 2) uniform sampler2D depthTexture;
+layout(binding = 2) uniform sampler2D depthTexture; // Optional
 
 void main() {
     ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);

@@ -139,7 +139,7 @@ void Application::initComponents() {
     pipelineManager = MakeUnique<PipelineManager>();
     
     // Load pipeline configurations from JSON
-    if (!pipelineManager->loadPipelinesFromJson("Assets/Pipelines/pipelines.json")) {
+    if (!pipelineManager->loadPipelinesFromJson("Shaders/pipelines.json")) {
         std::cout << "Warning: Could not load pipeline JSON, using defaults" << std::endl;
     }
 

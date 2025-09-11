@@ -2,13 +2,8 @@
 
 layout(local_size_x = 16, local_size_y = 16) in;
 
-// Input color texture (ping-pong buffer)
 layout(binding = 0) uniform sampler2D inputImage;
-
-// Output image (storage)
 layout(binding = 1, rgba8) uniform image2D outputImage;
-
-// Depth buffer for edge detection (optional, can improve quality)
 layout(binding = 2) uniform sampler2D depthTexture;
 
 // FXAA quality presets
