@@ -19,13 +19,8 @@ PostEffect::~PostEffect() {
 }
 
 void PostEffect::loadShader() {
-    // Load shader code using existing PipelineCore utility
-    auto code = PipelineCore::readFile(shaderPath);
-    
-    // Create shader module using existing PipelineCore utility
-    PipelineCore core(vkDevice->lDevice);
-    shaderModule = core.createModule(code);
-    
+    shaderModule = PipelineCore::createModuleFromPath(vkDevice->lDevice, shaderPath);
+
     // Set up shader stage info
     shaderStageInfo = {};
     shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -179,7 +174,7 @@ void PostProcessor::createPingPongImages() {
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        allocInfo.memoryTypeIndex = vkDevice->findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (vkAllocateMemory(vkDevice->lDevice, &allocInfo, nullptr, &pingPongImages[i].memory) != VK_SUCCESS) {
             throw std::runtime_error("Failed to allocate ping-pong image memory!");
@@ -333,17 +328,4 @@ void PostProcessor::createPipelineForEffect(size_t effectIndex) {
     if (vkCreateComputePipelines(vkDevice->lDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelines[effectIndex]) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create compute pipeline!");
     }
-}
-
-uint32_t PostProcessor::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(vkDevice->pDevice, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("Failed to find suitable memory type!");
 }

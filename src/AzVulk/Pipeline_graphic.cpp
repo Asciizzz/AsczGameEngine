@@ -9,37 +9,37 @@ using namespace AzVulk;
 RasterCfg& RasterCfg::withBlending(BlendMode mode) {
     switch (mode) {
     case BlendMode::None:
-        blendEnable = VK_FALSE;
+        blendEnable         = VK_FALSE;
         break;
 
     case BlendMode::Alpha:
-        blendEnable = VK_TRUE;
+        blendEnable         = VK_TRUE;
         srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendOp        = VK_BLEND_OP_ADD;
         srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        alphaBlendOp = VK_BLEND_OP_ADD;
+        alphaBlendOp        = VK_BLEND_OP_ADD;
         break;
 
     case BlendMode::Additive:
-        blendEnable = VK_TRUE;
+        blendEnable         = VK_TRUE;
         srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendOp        = VK_BLEND_OP_ADD;
         srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
         dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        alphaBlendOp = VK_BLEND_OP_ADD;
+        alphaBlendOp        = VK_BLEND_OP_ADD;
         break;
 
     case BlendMode::Multiply:
-        blendEnable = VK_TRUE;
+        blendEnable         = VK_TRUE;
         srcColorBlendFactor = VK_BLEND_FACTOR_DST_COLOR;
         dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-        colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendOp        = VK_BLEND_OP_ADD;
         srcAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
         dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        alphaBlendOp = VK_BLEND_OP_ADD;
+        alphaBlendOp        = VK_BLEND_OP_ADD;
         break;
     }
 
@@ -51,11 +51,9 @@ void PipelineRaster::create() {
     if (cfg.vertPath.empty() || cfg.fragPath.empty()) {
         throw std::runtime_error("Pipeline has empty shader paths! Vertex: '" + cfg.vertPath + "', Fragment: '" + cfg.fragPath + "'");
     }
-    
-    auto vertCode = PipelineCore::readFile(cfg.vertPath);
-    auto fragCode = PipelineCore::readFile(cfg.fragPath);
-    VkShaderModule vert = core.createModule(vertCode);
-    VkShaderModule frag = core.createModule(fragCode);
+
+    VkShaderModule vert = PipelineCore::createModuleFromPath(core.getDevice(), cfg.vertPath);
+    VkShaderModule frag = PipelineCore::createModuleFromPath(core.getDevice(), cfg.fragPath);
 
     VkPipelineShaderStageCreateInfo stages[2]{};
     stages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -88,69 +86,6 @@ void PipelineRaster::create() {
         vin.pVertexAttributeDescriptions    = attrs.data();
     }
 
-    /* Deprecated
-    auto vstaticLayout = Az3D::TinyVertexStatic::getLayout();
-    auto vriggedLayout = Az3D::TinyVertexRig::getLayout();
-    auto instanceBind  = Az3D::StaticInstance::getBindingDescription();
-    auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
-
-    switch (cfg.vertexInputType) {
-    case RasterCfg::InputType::None:
-    default:
-        break;
-
-    case RasterCfg::InputType::Static:
-        {
-            auto staticBind = vstaticLayout.getBindingDescription();
-            auto staticAttrs = vstaticLayout.getAttributeDescriptions();
-            
-            bindings = { staticBind, instanceBind };
-            attrs.insert(attrs.end(), staticAttrs.begin(), staticAttrs.end());
-            attrs.insert(attrs.end(), instanceAttrs.begin(), instanceAttrs.end());
-
-            vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
-            vin.pVertexBindingDescriptions      = bindings.data();
-            vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-            vin.pVertexAttributeDescriptions    = attrs.data();
-        }
-        break;
-
-    case RasterCfg::InputType::Rigged:
-        {
-            auto riggedBind = vriggedLayout.getBindingDescription();
-            auto riggedAttrs = vriggedLayout.getAttributeDescriptions();
-            
-            // For the time being, we will work without instancing
-            bindings = { riggedBind };
-            attrs.insert(attrs.end(), riggedAttrs.begin(), riggedAttrs.end());
-
-            vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
-            vin.pVertexBindingDescriptions      = bindings.data();
-            vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-            vin.pVertexAttributeDescriptions    = attrs.data();
-        }
-        break;
-
-    // Debug input types
-
-        case RasterCfg::InputType::Single:
-        {
-            auto singleBind = vstaticLayout.getBindingDescription();
-            auto singleAttrs = vstaticLayout.getAttributeDescriptions();
-
-            // For the time being, we will work without instancing
-            bindings = { singleBind };
-            attrs.insert(attrs.end(), singleAttrs.begin(), singleAttrs.end());
-
-            vin.vertexBindingDescriptionCount   = static_cast<uint32_t>(bindings.size());
-            vin.pVertexBindingDescriptions      = bindings.data();
-            vin.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-            vin.pVertexAttributeDescriptions    = attrs.data();
-        }
-        break;
-    }
-    */
-
     VkPipelineInputAssemblyStateCreateInfo ia{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
@@ -176,8 +111,8 @@ void PipelineRaster::create() {
     ds.depthCompareOp   = cfg.depthCompareOp;
 
     VkPipelineColorBlendAttachmentState cba{};
-    cba.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    cba.colorWriteMask        = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     cba.blendEnable           = cfg.blendEnable;
     cba.srcColorBlendFactor   = cfg.srcColorBlendFactor;
     cba.dstColorBlendFactor   = cfg.dstColorBlendFactor;

@@ -111,7 +111,6 @@ private:
     void createPipelines();
     void createPipelineForEffect(size_t effectIndex);
     void executeEffect(VkCommandBuffer cmdBuffer, size_t effectIndex, VkImageView inputImage, VkImageView outputImage);
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
     void cleanup();
 };
 

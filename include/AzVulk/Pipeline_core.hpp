@@ -48,10 +48,15 @@ public:
     // Allow composed classes to set pipeline objects
     void setPipeline(VkPipeline p) { pipeline = p; }
     void setLayout(VkPipelineLayout l) { layout = l; }
-    
-    // Utility functions - now static or instance methods
+
+    // Utility functions
+    VkShaderModule createModule(const std::vector<char>& code) const {
+        return createModule(lDevice, code);
+    }
+
     static std::vector<char> readFile(const std::string& path);
-    VkShaderModule createModule(const std::vector<char>& code) const;
+    static VkShaderModule createModule(VkDevice lDevice, const std::vector<char>& code);
+    static VkShaderModule createModuleFromPath(VkDevice lDevice, const std::string& path);
 
 private:
     VkDevice lDevice = VK_NULL_HANDLE;
