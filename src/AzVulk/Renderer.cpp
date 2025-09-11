@@ -8,11 +8,11 @@ using namespace Az3D;
 using namespace AzVulk;
 
 
-Renderer::Renderer (Device* vkDevice, SwapChain* swapChain)
+Renderer::Renderer (Device* vkDevice, SwapChain* swapChain, DepthManager* depthManager)
 : vkDevice(vkDevice), swapChain(swapChain) {
     createCommandBuffers();
     createSyncObjects();
-    postProcess = std::make_unique<PostProcess>(vkDevice, swapChain);
+    postProcess = std::make_unique<PostProcess>(vkDevice, swapChain, depthManager);
 }
 
 Renderer::~Renderer() {

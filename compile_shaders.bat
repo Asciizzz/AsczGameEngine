@@ -19,4 +19,8 @@ REM Compute shaders
 glslc Shaders/Compute/test.comp -o Shaders/Compute/test.comp.spv
 glslc Shaders/Compute/grass.comp -o Shaders/Compute/grass.comp.spv
 
+REM Post-process shaders
+glslc Shaders/PostProcess/fxaa.comp -o Shaders/PostProcess/fxaa.comp.spv
+glslc Shaders/PostProcess/tonemap.comp -o Shaders/PostProcess/tonemap.comp.spv
+
 echo Compiling completed!

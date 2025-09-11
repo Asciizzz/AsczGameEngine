@@ -7,6 +7,7 @@
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_include.hpp"
 #include "AzVulk/PostProcess.hpp"
+#include "AzVulk/DepthManager.hpp"
 #include <memory>
 
 #include "Az3D/GlobalUBO.hpp"
@@ -19,7 +20,7 @@ namespace AzVulk {
 
     class Renderer {
     public:
-        Renderer(Device* vkDevice, SwapChain* swapChain);
+        Renderer(Device* vkDevice, SwapChain* swapChain, DepthManager* depthManager);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;

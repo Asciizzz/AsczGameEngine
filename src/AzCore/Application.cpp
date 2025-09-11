@@ -67,7 +67,7 @@ void Application::initComponents() {
     depthManager = MakeUnique<DepthManager>(vkDevice.get());
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
     swapChain->createFramebuffers(renderPass, depthManager->depthImageView);
-    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get());
+    renderer = MakeUnique<Renderer>(vkDevice.get(), swapChain.get(), depthManager.get());
 
     resGroup = MakeUnique<ResourceGroup>(vkDevice.get());
     glbUBOManager = MakeUnique<GlbUBOManager>(vkDevice.get());
@@ -192,8 +192,8 @@ void Application::initComponents() {
     // Use offscreen render pass for pipeline creation
     VkRenderPass offscreenRenderPass = renderer->postProcess->getOffscreenRenderPass();
     PIPELINE_INIT(pipelineManager.get(), lDevice, offscreenRenderPass, namedLayouts, vertexInputVKs);
+    renderer->addPostProcessEffect("fxaa", "Shaders/PostProcess/fxaa.comp.spv");
     renderer->addPostProcessEffect("tonemap", "Shaders/PostProcess/tonemap.comp.spv");
-    renderer->addPostProcessEffect("blur", "Shaders/PostProcess/blur.comp.spv");
 }
 
 void Application::featuresTestingGround() {}

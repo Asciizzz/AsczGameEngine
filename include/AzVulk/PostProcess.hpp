@@ -9,6 +9,7 @@
 #include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_compute.hpp"
+#include "AzVulk/DepthManager.hpp"
 
 namespace AzVulk {
 
@@ -42,7 +43,7 @@ struct PostProcessEffect {
 class PostProcess {
     friend class Renderer;
 public:
-    PostProcess(Device* vkDevice, SwapChain* swapChain);
+    PostProcess(Device* vkDevice, SwapChain* swapChain, DepthManager* depthManager);
     ~PostProcess();
 
     PostProcess(const PostProcess&) = delete;
@@ -78,6 +79,7 @@ private:
     
     Device* vkDevice;
     SwapChain* swapChain;
+    DepthManager* depthManager;
     VkSampler sampler = VK_NULL_HANDLE;
     
     // Per-frame ping-pong images
@@ -87,10 +89,7 @@ private:
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
     std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
     
-    // Depth buffer for offscreen rendering
-    VkImage depthImage = VK_NULL_HANDLE;
-    VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
-    VkImageView depthImageView = VK_NULL_HANDLE;
+    // Note: Depth buffer is managed by DepthManager
     
     // Post-process effects
     std::vector<std::unique_ptr<PostProcessEffect>> effects;

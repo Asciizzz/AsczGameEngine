@@ -27,9 +27,6 @@ Camera::Camera()
 Camera::Camera(const glm::vec3& position, float fov, float nearPlane, float farPlane)
     : pos(position)
     , orientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)) // No rotation
-    , pitch(0.0f)
-    , yaw(-90.0f)  
-    , roll(0.0f)
     , fov(fov)
     , nearPlane(nearPlane)
     , farPlane(farPlane)
@@ -40,6 +37,12 @@ Camera::Camera(const glm::vec3& position, float fov, float nearPlane, float farP
     , viewMatrix(1.0f)
     , projectionMatrix(1.0f)
 {
+    // Convert quaternion to Euler angles at the start to avoid snapping issues
+    glm::vec3 eulerAngles = glm::degrees(glm::eulerAngles(orientation));
+    pitch = std::clamp(eulerAngles.x, -89.0f, 89.0f);
+    yaw = eulerAngles.y;
+    roll = eulerAngles.z;
+
     updateVectors();
     updateMatrices();
 }
