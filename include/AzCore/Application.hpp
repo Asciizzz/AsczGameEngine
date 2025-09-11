@@ -31,11 +31,10 @@ private:
     UniquePtr<AzVulk::SwapChain> swapChain;
 
     UniquePtr<AzVulk::RenderPass> mainRenderPass;
-
-    UniquePtr<AzVulk::PipelineManager> pipelineManager;
-
     UniquePtr<AzVulk::DepthManager> depthManager;
     UniquePtr<AzVulk::Renderer> renderer;
+
+    UniquePtr<AzVulk::PipelineManager> pipelineManager;
 
     UniquePtr<Az3D::Camera> camera;
     UniquePtr<Az3D::GlbUBOManager> glbUBOManager;

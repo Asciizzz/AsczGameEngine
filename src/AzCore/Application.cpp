@@ -87,7 +87,7 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Town.obj");
+    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Tow.obj");
     // testObjModel.printDebug();
     resGroup->addModel(testObjModel);
 
