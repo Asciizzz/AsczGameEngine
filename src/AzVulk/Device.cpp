@@ -182,15 +182,19 @@ void Device::createDefaultCommandPools() {
 }
 
 // ---------------- MEMORY ----------------
-uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice pDevice) {
+uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags memPropFlags, VkPhysicalDevice pDevice) {
     VkPhysicalDeviceMemoryProperties memProps;
     vkGetPhysicalDeviceMemoryProperties(pDevice, &memProps);
 
     for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
-        if ((typeFilter & (1 << i)) && (memProps.memoryTypes[i].propertyFlags & properties) == properties)
+        if ((typeFilter & (1 << i)) && (memProps.memoryTypes[i].propertyFlags & memPropFlags) == memPropFlags)
             return i;
 
     throw std::runtime_error("Failed to find suitable memory type");
+}
+
+uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags memPropFlags) const {
+    return findMemoryType(typeFilter, memPropFlags, pDevice);
 }
 
 // ---------------- QUEUE HELPERS ----------------

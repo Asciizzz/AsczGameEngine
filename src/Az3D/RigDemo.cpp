@@ -16,17 +16,17 @@ void RigDemo::init(const AzVulk::Device* vkDevice, const TinyModel& model, size_
     playback.setSkeleton(this->model->skeleton);  // Use skeleton from the copied model
 
     // Vulkan stuff, very cringe, yet very cool
-
-    finalPoseBuffer.initVkDevice(vkDevice);
-
+    
     VkDeviceSize bufferSize = sizeof(glm::mat4) * model.skeleton.names.size();
 
-    finalPoseBuffer.setProperties(
-        bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    finalPoseBuffer.createBuffer();
-    finalPoseBuffer.mapMemory();
+    finalPoseBuffer
+        .setProperties(
+            bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+        .createBuffer(vkDevice)
+        .mapMemory();
+
     updateBuffer();
 
     descLayout.init(vkDevice->lDevice);

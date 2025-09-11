@@ -37,8 +37,13 @@ struct StaticInstanceGroup {
     std::vector<StaticInstance> datas;
     size_t addInstance(const StaticInstance& data);
 
+    VkDevice lDevice = VK_NULL_HANDLE;
+    VkPhysicalDevice pDevice = VK_NULL_HANDLE;
+
     AzVulk::DataBuffer dataBuffer;
     void initVkDevice(const AzVulk::Device* vkDevice);
+    void initVkDevice(VkDevice lDevice, VkPhysicalDevice pDevice);
+
     void recreateDataBuffer();
     void updateDataBuffer();
 

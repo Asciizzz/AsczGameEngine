@@ -55,6 +55,7 @@ public:
     PoolWrapper createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags = 0);
 
     static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice pDevice);
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
 private:
     void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);

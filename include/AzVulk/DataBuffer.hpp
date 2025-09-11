@@ -6,7 +6,6 @@ namespace AzVulk {
 
     struct DataBuffer {
         DataBuffer() = default;
-        DataBuffer(const Device* vkDevice) : vkDevice(vkDevice) {}
 
         ~DataBuffer() { cleanup(); }
         void cleanup();
@@ -15,13 +14,11 @@ namespace AzVulk {
         DataBuffer(const DataBuffer&) = delete;
         DataBuffer& operator=(const DataBuffer&) = delete;
 
-        // Move constructor
+        // Move constructor and assignment
         DataBuffer(DataBuffer&& other) noexcept;
-
-        // Move assignment
         DataBuffer& operator=(DataBuffer&& other) noexcept;
 
-        const Device* vkDevice;
+        VkDevice lDevice = VK_NULL_HANDLE;
 
         VkBuffer buffer = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
@@ -29,23 +26,20 @@ namespace AzVulk {
 
         VkBuffer get() const { return buffer; }
 
-        bool hostVisible = true;
         VkDeviceSize dataSize = 0;
-
         VkBufferUsageFlags usageFlags = 0;
-        VkMemoryPropertyFlags memoryFlags = 0;
+        VkMemoryPropertyFlags memPropFlags = 0;
 
-        void initVkDevice(const Device* vkDevice) {
-            this->vkDevice = vkDevice;
-        }
-
-        void setProperties(
+        DataBuffer& setProperties(
             VkDeviceSize dataSize,
             VkBufferUsageFlags usageFlags,
-            VkMemoryPropertyFlags memoryFlags
+            VkMemoryPropertyFlags memPropFlags
         );
 
-        void createBuffer();
+        DataBuffer& createBuffer(const Device* vkDevice);
+        DataBuffer& createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice);
+
+        DataBuffer& copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount);
 
         template<typename T>
         void uploadData(const T* data) {
@@ -55,21 +49,22 @@ namespace AzVulk {
         }
 
         void mapMemory() {
-            if (!mapped) vkMapMemory(vkDevice->lDevice, memory, 0, dataSize, 0, &mapped);
+            if (!mapped) vkMapMemory(lDevice, memory, 0, dataSize, 0, &mapped);
         }
         void unmapMemory() {
-            if (mapped) vkUnmapMemory(vkDevice->lDevice, memory);
+            if (mapped) vkUnmapMemory(lDevice, memory);
             mapped = nullptr;
         }
 
         template<typename T>
-        void copyData(const T* data) {
+        DataBuffer& copyData(const T* data) {
             memcpy(mapped, data, dataSize);
+            return *this;
         }
 
         template<typename T>
         void mapAndCopy(const T* data) {
-            if (!mapped) vkMapMemory(vkDevice->lDevice, memory, 0, dataSize, 0, &mapped);
+            if (!mapped) vkMapMemory(lDevice, memory, 0, dataSize, 0, &mapped);
             memcpy(mapped, data, dataSize);
         }
 

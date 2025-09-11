@@ -58,6 +58,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Pipeline_graphic.cpp
     src/AzVulk/Pipeline_compute.cpp
     src/AzVulk/Pipeline_manager.cpp
+    src/AzVulk/PostProcess.cpp
     src/AzVulk/Renderer.cpp
 
     src/AzGame/Grass.cpp

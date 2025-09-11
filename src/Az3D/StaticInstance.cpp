@@ -31,24 +31,29 @@ size_t StaticInstanceGroup::addInstance(const StaticInstance& data) {
 }
 
 void StaticInstanceGroup::initVkDevice(const AzVulk::Device* vkDevice) {
-    dataBuffer.initVkDevice(vkDevice);
+    initVkDevice(vkDevice->lDevice, vkDevice->pDevice);
+}
+void StaticInstanceGroup::initVkDevice(VkDevice lDevice, VkPhysicalDevice pDevice) {
+    this->lDevice = lDevice;
+    this->pDevice = pDevice;
 }
 
 void StaticInstanceGroup::recreateDataBuffer() {
-    if (!dataBuffer.vkDevice) return;
+    if (dataBuffer.lDevice == VK_NULL_HANDLE) return;
 
-    dataBuffer.setProperties(
-        datas.size() * sizeof(StaticInstance), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    dataBuffer.createBuffer();
-    dataBuffer.mapAndCopy(datas.data());
+    dataBuffer
+        .setProperties(
+            datas.size() * sizeof(StaticInstance), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+        .createBuffer(lDevice, pDevice)
+        .mapAndCopy(datas.data());
 
     prevInstanceCount = datas.size();
 }
 
 void StaticInstanceGroup::updateDataBuffer() {
-    if (!dataBuffer.vkDevice) return;
+    if (dataBuffer.lDevice == VK_NULL_HANDLE) return;
 
     if (prevInstanceCount != datas.size()) recreateDataBuffer();
 

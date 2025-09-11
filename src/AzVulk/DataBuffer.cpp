@@ -10,7 +10,7 @@ using namespace AzVulk;
 
 // Move constructor
 DataBuffer::DataBuffer(DataBuffer&& other) noexcept {
-    vkDevice = other.vkDevice;
+    lDevice = other.lDevice;
 
     buffer = other.buffer;
     memory = other.memory;
@@ -19,7 +19,7 @@ DataBuffer::DataBuffer(DataBuffer&& other) noexcept {
     dataSize = other.dataSize;
 
     usageFlags = other.usageFlags;
-    memoryFlags = other.memoryFlags;
+    memPropFlags = other.memPropFlags;
 
     // Invalidate other's handles
     other.buffer = VK_NULL_HANDLE;
@@ -31,7 +31,7 @@ DataBuffer::DataBuffer(DataBuffer&& other) noexcept {
 DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
     if (this != &other) {
         cleanup();
-        vkDevice = other.vkDevice;
+        lDevice = other.lDevice;
 
         buffer = other.buffer;
         memory = other.memory;
@@ -40,7 +40,7 @@ DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
         dataSize = other.dataSize;
 
         usageFlags = other.usageFlags;
-        memoryFlags = other.memoryFlags;
+        memPropFlags = other.memPropFlags;
 
         // Invalidate other's handles
         other.buffer = VK_NULL_HANDLE;
@@ -53,34 +53,38 @@ DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
 void DataBuffer::cleanup() {
     if (buffer != VK_NULL_HANDLE) {
         if (mapped) {
-            vkUnmapMemory(vkDevice->lDevice, memory);
+            vkUnmapMemory(lDevice, memory);
             mapped = nullptr;
         }
 
-        vkDestroyBuffer(vkDevice->lDevice, buffer, nullptr);
+        vkDestroyBuffer(lDevice, buffer, nullptr);
         buffer = VK_NULL_HANDLE;
     }
 
     if (memory != VK_NULL_HANDLE) {
-        vkFreeMemory(vkDevice->lDevice, memory, nullptr);
+        vkFreeMemory(lDevice, memory, nullptr);
         memory = VK_NULL_HANDLE;
     }
 }
 
-
-void DataBuffer::setProperties(
+DataBuffer& DataBuffer::setProperties(
     VkDeviceSize dataSize,
     VkBufferUsageFlags usageFlags,
-    VkMemoryPropertyFlags memoryFlags
+    VkMemoryPropertyFlags memPropFlags
 ) {
     this->dataSize = dataSize;
     this->usageFlags = usageFlags;
-    this->memoryFlags = memoryFlags;
+    this->memPropFlags = memPropFlags;
+    return *this;
 }
 
-void DataBuffer::createBuffer() {
-    VkDevice lDevice = vkDevice->lDevice;
-    VkPhysicalDevice pDevice = vkDevice->pDevice;
+DataBuffer& DataBuffer::createBuffer(const Device* vkDevice) {
+    return createBuffer(vkDevice->lDevice, vkDevice->pDevice);
+}
+
+DataBuffer& DataBuffer::createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice) {
+    this->lDevice = lDevice; // Only need to save lDevice
+    VkPhysicalDevice physDev = pDevice;
 
     if (lDevice == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
         throw std::runtime_error("DataBuffer: Vulkan lDevice not initialized");
@@ -104,11 +108,17 @@ void DataBuffer::createBuffer() {
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memoryFlags, pDevice);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memPropFlags, pDevice);
 
     if (vkAllocateMemory(lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate buffer memory!");
     }
 
     vkBindBufferMemory(lDevice, buffer, memory, 0);
+    return *this;
+}
+
+DataBuffer& DataBuffer::copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount) {
+    vkCmdCopyBuffer(cmdBuffer, srcBuffer, buffer, regionCount, copyRegion);
+    return *this;
 }

@@ -159,26 +159,24 @@ void ResourceGroup::createMaterialBuffer() {
 
     // --- staging buffer (CPU visible) ---
     DataBuffer stagingBuffer;
-    stagingBuffer.initVkDevice(vkDevice);
-    stagingBuffer.setProperties(
-        bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    stagingBuffer.createBuffer();
-
-    stagingBuffer.uploadData(materialVKs.data());
+    stagingBuffer
+        .setProperties(
+            bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+        .createBuffer(vkDevice)
+        .uploadData(materialVKs.data());
 
     // --- Device-local buffer (GPU only, STORAGE + DST) ---
     if (!matBuffer) matBuffer = MakeUnique<DataBuffer>();
-    
-    matBuffer->initVkDevice(vkDevice);
-    matBuffer->setProperties(
-        bufferSize,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-    matBuffer->createBuffer();
+
+    matBuffer
+        ->setProperties(
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
+        .createBuffer(vkDevice);
 
     // --- copy staging -> Device local ---
     TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
@@ -188,7 +186,7 @@ void ResourceGroup::createMaterialBuffer() {
     copyRegion.dstOffset = 0;
     copyRegion.size = bufferSize;
 
-    vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, matBuffer->buffer, 1, &copyRegion);
+    matBuffer->copyFrom(copyCmd.get(), stagingBuffer.get(), &copyRegion, 1);
 
     copyCmd.endAndSubmit();
 }
@@ -266,7 +264,7 @@ void createImageImpl(AzVulk::Device* vkDevice, uint32_t width, uint32_t height, 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize  = memRequirements.size;
-    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, properties, vkDevice->pDevice);
+    allocInfo.memoryTypeIndex = vkDevice->findMemoryType(memRequirements.memoryTypeBits, properties);
 
     if (vkAllocateMemory(vkDevice->lDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate image memory!");
@@ -482,13 +480,13 @@ UniquePtr<TextureVK> ResourceGroup::createTextureVK(const TinyTexture& texture) 
     uint32_t mipLevels = static_cast<uint32_t>(floor(log2(std::max(width, height)))) + 1;
 
     DataBuffer stagingBuffer;
-    stagingBuffer.initVkDevice(vkDevice);
-    stagingBuffer.setProperties(
-        imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    stagingBuffer.createBuffer();
-    stagingBuffer.uploadData(vulkanData.data());
+    stagingBuffer
+        .setProperties(
+            imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+        .createBuffer(vkDevice)
+        .uploadData(vulkanData.data());
 
     // Note: TinyTexture cleanup is handled by caller
 
@@ -557,25 +555,24 @@ void ResourceGroup::createTexSampIdxBuffer() {
 
     // --- staging buffer (CPU visible) ---
     DataBuffer stagingBuffer;
-    stagingBuffer.initVkDevice(vkDevice);
-    stagingBuffer.setProperties(
-        bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    stagingBuffer.createBuffer();
-    stagingBuffer.uploadData(texSamplerIndices.data());
+    stagingBuffer
+        .setProperties(
+            bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+        .createBuffer(vkDevice)
+        .uploadData(texSamplerIndices.data());
 
     // --- Device-local buffer (GPU only, STORAGE + DST) ---
     if (!textSampIdxBuffer) textSampIdxBuffer = MakeUnique<DataBuffer>();
-    
-    textSampIdxBuffer->initVkDevice(vkDevice);
-    textSampIdxBuffer->setProperties(
-        bufferSize,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-    textSampIdxBuffer->createBuffer();
+
+    textSampIdxBuffer
+        ->setProperties(
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
+        .createBuffer(vkDevice);
 
     // --- copy staging -> Device local ---
     TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
@@ -585,7 +582,7 @@ void ResourceGroup::createTexSampIdxBuffer() {
     copyRegion.dstOffset = 0;
     copyRegion.size = bufferSize;
 
-    vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, textSampIdxBuffer->buffer, 1, &copyRegion);
+    textSampIdxBuffer->copyFrom(copyCmd.get(), stagingBuffer.get(), &copyRegion, 1);
 
     copyCmd.endAndSubmit();
 }
@@ -682,21 +679,21 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
 
     // Upload vertex data
     DataBuffer vertexStagingBuffer;
-    vertexStagingBuffer.initVkDevice(vkDevice);
-    vertexStagingBuffer.setProperties(
-        vertexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    vertexStagingBuffer.createBuffer();
-    vertexStagingBuffer.mapAndCopy(vertexData.data());
+    vertexStagingBuffer
+        .setProperties(
+            vertexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+        .createBuffer(vkDevice)
+        .uploadData(vertexData.data());
 
-    vDataBuffer.initVkDevice(vkDevice);
-    vDataBuffer.setProperties(
-        vertexData.size(),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-    vDataBuffer.createBuffer();
+    vDataBuffer
+        .setProperties(
+            vertexData.size(),
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
+        .createBuffer(vkDevice);
 
     TemporaryCommand vertexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -705,28 +702,27 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     vertexCopyRegion.dstOffset = 0;
     vertexCopyRegion.size = vertexData.size();
 
-    vkCmdCopyBuffer(vertexCopyCmd.cmdBuffer, vertexStagingBuffer.buffer, vDataBuffer.buffer, 1, &vertexCopyRegion);
-    vDataBuffer.hostVisible = false;
+    vDataBuffer.copyFrom(vertexCopyCmd.get(), vertexStagingBuffer.get(), &vertexCopyRegion, 1);
 
     vertexCopyCmd.endAndSubmit();
 
     // Upload index data
     DataBuffer indexStagingBuffer;
-    indexStagingBuffer.initVkDevice(vkDevice);
-    indexStagingBuffer.setProperties(
-        indexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    );
-    indexStagingBuffer.createBuffer();
-    indexStagingBuffer.mapAndCopy(indexData.data());
+    indexStagingBuffer
+        .setProperties(
+            indexData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        )
+        .createBuffer(vkDevice)
+        .uploadData(indexData.data());
 
-    iDataBuffer.initVkDevice(vkDevice);
-    iDataBuffer.setProperties(
-        indexData.size(),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-    iDataBuffer.createBuffer();
+    iDataBuffer
+        .setProperties(
+            indexData.size(),
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        )
+        .createBuffer(vkDevice);
 
     TemporaryCommand indexCopyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -735,8 +731,7 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     indexCopyRegion.dstOffset = 0;
     indexCopyRegion.size = indexData.size();
 
-    vkCmdCopyBuffer(indexCopyCmd.cmdBuffer, indexStagingBuffer.buffer, iDataBuffer.buffer, 1, &indexCopyRegion);
-    iDataBuffer.hostVisible = false;
+    iDataBuffer.copyFrom(indexCopyCmd.get(), indexStagingBuffer.get(), &indexCopyRegion, 1);
 
     indexCopyCmd.endAndSubmit();
 
@@ -781,21 +776,21 @@ void ResourceGroup::createRigSkeleBuffers() {
 
         // Upload inverse bind matrices
         DataBuffer stagingBuffer;
-        stagingBuffer.initVkDevice(vkDevice);
-        stagingBuffer.setProperties(
-            inverseBindMatrices.size() * sizeof(glm::mat4), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-        );
-        stagingBuffer.createBuffer();
-        stagingBuffer.mapAndCopy(inverseBindMatrices.data());
+        stagingBuffer
+            .setProperties(
+                inverseBindMatrices.size() * sizeof(glm::mat4), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            )
+            .createBuffer(vkDevice)
+            .mapAndCopy(inverseBindMatrices.data());
 
-        rigInvMatBuffer->initVkDevice(vkDevice);
-        rigInvMatBuffer->setProperties(
-            inverseBindMatrices.size() * sizeof(glm::mat4),
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-        rigInvMatBuffer->createBuffer();
+        rigInvMatBuffer
+            ->setProperties(
+                inverseBindMatrices.size() * sizeof(glm::mat4),
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            )
+            .createBuffer(vkDevice);
 
         TemporaryCommand copyCmd(vkDevice, vkDevice->transferPoolWrapper);
 
@@ -804,8 +799,7 @@ void ResourceGroup::createRigSkeleBuffers() {
         copyRegion.dstOffset = 0;
         copyRegion.size = inverseBindMatrices.size() * sizeof(glm::mat4);
 
-        vkCmdCopyBuffer(copyCmd.cmdBuffer, stagingBuffer.buffer, rigInvMatBuffer->buffer, 1, &copyRegion);
-        rigInvMatBuffer->hostVisible = false;
+        rigInvMatBuffer->copyFrom(copyCmd.get(), stagingBuffer.get(), &copyRegion, 1);
 
         copyCmd.endAndSubmit();
 
