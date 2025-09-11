@@ -44,16 +44,11 @@ public:
     std::vector<AzVulk::DataBuffer> dataBuffer; // Per-frame buffers
     void createDataBuffer();
 
-    AzVulk::DescLayout descLayout;
-    AzVulk::DescPool descPool;
-    std::vector<AzVulk::DescSets> descSets; // Per-frame descriptor sets
+    AzVulk::DescSets descSets; // Per-frame descriptor sets
+    void createDescSets();
 
-    void createDescLayout();
-    void createDescPool();
-    void createDescSet();
-
-    VkDescriptorSet getDescSet(uint32_t frameIndex) const { return descSets[frameIndex].get(); }
-    VkDescriptorSetLayout getDescLayout() const { return descLayout.get(); }
+    VkDescriptorSet getDescSet(uint32_t frameIndex) const { return descSets.get(frameIndex); }
+    VkDescriptorSetLayout getDescLayout() const { return descSets.getLayout(); }
 
 // Functionalities
     void updateUBO(const Camera& camera, uint32_t frameIndex);

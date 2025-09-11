@@ -174,20 +174,18 @@ void ResourceGroup::createMaterialDescSet() {
     VkDevice lDevice = vkDevice->lDevice;
 
     matDescSet = MakeUnique<DescSets>(lDevice);
-    matDescPool = MakeUnique<DescPool>(lDevice);
-    matDescLayout = MakeUnique<DescLayout>(lDevice);
 
     // Create descriptor pool and layout
-    matDescPool->create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-    matDescLayout->create({
-        DescLayout::BindInfo{
+    matDescSet->createPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+    matDescSet->createLayout({
+        DescSets::LayoutBind{
             0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
         }
     });
 
     // Allocate descriptor set
-    matDescSet->allocate(matDescPool->get(), matDescLayout->get(), 1);
+    matDescSet->allocate(1);
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
@@ -552,23 +550,21 @@ void ResourceGroup::createTextureDescSet() {
     uint32_t samplerCount = static_cast<uint32_t>(samplers.size());
 
     texDescSet = MakeUnique<DescSets>(lDevice);
-    texDescPool = MakeUnique<DescPool>(lDevice);
-    texDescLayout = MakeUnique<DescLayout>(lDevice);
 
-    // layout: binding 0 = images, binding 1 = sampler indices buffer, binding 2 = samplers  
-    texDescLayout->create({
+    // layout: binding 0 = images, binding 1 = sampler indices buffer, binding 2 = samplers
+    texDescSet->createLayout({
         {0, textureCount, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT},
         {1, 1,            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT},
         {2, samplerCount, VK_DESCRIPTOR_TYPE_SAMPLER,       VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
     });
 
-    texDescPool->create({
+    texDescSet->createPool({
         {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, textureCount},
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1},
         {VK_DESCRIPTOR_TYPE_SAMPLER,       samplerCount}
     }, 1);
 
-    texDescSet->allocate(texDescPool->get(), texDescLayout->get(), 1);
+    texDescSet->allocate(1);
 
     // Write sampled images
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
@@ -712,41 +708,9 @@ void ResourceGroup::createRigSkeleBuffers() {
 void ResourceGroup::createRigSkeleDescSets() {
     VkDevice lDevice = vkDevice->lDevice;
 
-    skeleDescPool = MakeUnique<DescPool>(lDevice);
-    skeleDescLayout = MakeUnique<DescLayout>(lDevice);
-    skeleDescSets.clear();
-
-    // Create shared descriptor pool and layout
-    skeleDescPool->create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-    skeleDescLayout->create({
-        DescLayout::BindInfo{0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
+    // For the time being only create the descriptor set layout
+    skeleDescSets = MakeUnique<DescSets>(lDevice);
+    skeleDescSets->createLayout({
+        {0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
     });
-
-    if (skeletons.empty()) return;
-
-    uint32_t rigCount = static_cast<uint32_t>(skeletons.size());
-    skeleDescSets.resize(rigCount);
-    for (size_t i = 0; i < rigCount; ++i) {
-        skeleDescSets[i] = MakeUnique<DescSets>(lDevice);
-        skeleDescSets[i]->allocate(skeleDescPool->get(), skeleDescLayout->get(), 1);
-    }
-
-    // Bind each skeleton buffer to its respective descriptor set
-    for (size_t i = 0; i < skeletons.size(); ++i) {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer               = skeleInvMatBuffers[i]->buffer;
-        bufferInfo.offset               = 0;
-        bufferInfo.range                = VK_WHOLE_SIZE;
-
-        VkWriteDescriptorSet descriptorWrite{};
-        descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet          = skeleDescSets[i]->get();  // Get the i-th descriptor set
-        descriptorWrite.dstBinding      = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo     = &bufferInfo;
-
-        vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
-    }
 }

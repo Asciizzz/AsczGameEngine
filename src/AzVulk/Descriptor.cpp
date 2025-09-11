@@ -6,37 +6,75 @@
 using namespace AzVulk;
 
 // Move constructor and assignment operator
-DescLayout::DescLayout(DescLayout&& other) noexcept
-    : lDevice(other.lDevice), layout(other.layout)
-{
+DescSets::DescSets(DescSets&& other) noexcept
+: lDevice(other.lDevice), pool(other.pool), layout(other.layout), sets(std::move(other.sets)) {
     other.lDevice = VK_NULL_HANDLE;
+    other.pool = VK_NULL_HANDLE;
+    other.poolOwned = false;
+
     other.layout = VK_NULL_HANDLE;
+    other.layoutOwned = false;
 }
 
-DescLayout& DescLayout::operator=(DescLayout&& other) noexcept
-{
+DescSets& DescSets::operator=(DescSets&& other) noexcept {
     if (this != &other) {
-        cleanup(); // destroy current layout if valid
+        cleanupLayout();
+        cleanupPool();
+        cleanupSets();
 
         lDevice = other.lDevice;
+
+        pool = other.pool;
+        poolOwned = other.poolOwned;
+
         layout = other.layout;
+        layoutOwned = other.layoutOwned;
+
+        sets = std::move(other.sets);
 
         other.lDevice = VK_NULL_HANDLE;
+        other.pool = VK_NULL_HANDLE;
         other.layout = VK_NULL_HANDLE;
     }
     return *this;
 }
 
 
-void DescLayout::cleanup() {
-    if (layout == VK_NULL_HANDLE) return;
+
+void DescSets::cleanupLayout() {
+    if (layout == VK_NULL_HANDLE || !layoutOwned) return;
 
     vkDestroyDescriptorSetLayout(lDevice, layout, nullptr);
     layout = VK_NULL_HANDLE;
+    layoutOwned = false;
+}
+void DescSets::cleanupPool() {
+    if (pool == VK_NULL_HANDLE || !poolOwned) return;
+
+    vkDestroyDescriptorPool(lDevice, pool, nullptr);
+    pool = VK_NULL_HANDLE;
+    poolOwned = false;
+}
+void DescSets::cleanupSets() {
+    for (auto& set : sets) {
+        if (set != VK_NULL_HANDLE && pool != VK_NULL_HANDLE) {
+            vkFreeDescriptorSets(lDevice, pool, 1, &set);
+            set = VK_NULL_HANDLE;
+        }
+    }
 }
 
-void DescLayout::create(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-    cleanup();
+DescSets::~DescSets() {
+    cleanupSets();
+    cleanupPool();
+    cleanupLayout();
+}
+
+
+
+
+void DescSets::createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+    cleanupLayout();
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -48,8 +86,8 @@ void DescLayout::create(const std::vector<VkDescriptorSetLayoutBinding>& binding
     }
 }
 
-void DescLayout::create(const std::vector<BindInfo>& bindingInfos) {
-    cleanup();
+void DescSets::createLayout(const std::vector<LayoutBind>& bindingInfos) {
+    cleanupLayout();
 
     std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
     for (const auto& bindingInfo : bindingInfos) {
@@ -66,49 +104,27 @@ void DescLayout::create(const std::vector<BindInfo>& bindingInfos) {
     }
 }
 
-VkDescriptorSetLayoutBinding DescLayout::fastBinding(const BindInfo& bindInfo) {
+void DescSets::borrowLayout(VkDescriptorSetLayout newLayout) {
+    cleanupLayout();
+    layout = newLayout;
+    layoutOwned = false;
+}
+
+VkDescriptorSetLayoutBinding DescSets::fastBinding(const LayoutBind& LayoutBind) {
     VkDescriptorSetLayoutBinding bindingInfo{};
-    bindingInfo.binding            = bindInfo.binding;
-    bindingInfo.descriptorCount    = bindInfo.descCount;
-    bindingInfo.descriptorType     = bindInfo.type;
+    bindingInfo.binding            = LayoutBind.binding;
+    bindingInfo.descriptorCount    = LayoutBind.descCount;
+    bindingInfo.descriptorType     = LayoutBind.type;
     bindingInfo.pImmutableSamplers = nullptr;
-    bindingInfo.stageFlags         = bindInfo.stageFlags;
+    bindingInfo.stageFlags         = LayoutBind.stageFlags;
     return bindingInfo;
 }
 
 
 
 
-
-// Move constructor and assignment operator
-DescPool::DescPool(DescPool&& other) noexcept
-    : lDevice(other.lDevice), pool(other.pool) {
-    other.lDevice = VK_NULL_HANDLE;
-    other.pool = VK_NULL_HANDLE;
-}
-
-DescPool& DescPool::operator=(DescPool&& other) noexcept {
-    if (this != &other) {
-        cleanup(); // destroy current pool if valid
-
-        lDevice = other.lDevice;
-        pool = other.pool;
-
-        other.lDevice = VK_NULL_HANDLE;
-        other.pool = VK_NULL_HANDLE;
-    }
-    return *this;
-}
-
-void DescPool::cleanup() {
-    if (pool == VK_NULL_HANDLE) return;
-
-    vkDestroyDescriptorPool(lDevice, pool, nullptr);
-    pool = VK_NULL_HANDLE;
-}
-
-void DescPool::create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
-    cleanup();
+void DescSets::createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
+    cleanupPool();
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -122,56 +138,16 @@ void DescPool::create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32
     }
 }
 
-
-
-void DescSets::weakCleanup() {
-    sets.clear();
-
-    // This is actually insane
-    // but apparently if pool die
-    // sets die with it
-    // Why no one told me this?
-}
-void DescSets::explicitCleanup(VkDescriptorPool pool) {
-    if (pool == VK_NULL_HANDLE) return;
-
-    for (auto& set : sets) {
-        vkFreeDescriptorSets(lDevice, pool, 1, &set);
-    }
-
-    sets.clear();
-}
-
-// Move constructor and assignment operator
-DescSets::DescSets(DescSets&& other) noexcept
-: lDevice(other.lDevice), pool(other.pool), layout(other.layout), sets(std::move(other.sets)) {
-    other.lDevice = VK_NULL_HANDLE;
-    other.pool = VK_NULL_HANDLE;
-    other.layout = VK_NULL_HANDLE;
-}
-
-DescSets& DescSets::operator=(DescSets&& other) noexcept {
-    if (this != &other) {
-        explicitCleanup(pool);
-
-        lDevice = other.lDevice;
-        pool = other.pool;
-        layout = other.layout;
-        sets = std::move(other.sets);
-
-        other.lDevice = VK_NULL_HANDLE;
-        other.pool = VK_NULL_HANDLE;
-        other.layout = VK_NULL_HANDLE;
-    }
-    return *this;
-}
-
-
-void DescSets::allocate(const VkDescriptorPool newPool, const VkDescriptorSetLayout newlayout, uint32_t count) {
-    explicitCleanup(pool);
-
+void DescSets::borrowPool(VkDescriptorPool newPool) {
+    cleanupPool();
     pool = newPool;
-    layout = newlayout;
+    poolOwned = false;
+}
+
+
+
+void DescSets::allocate(uint32_t count) {
+    cleanupSets();
 
     sets.resize(count, VK_NULL_HANDLE);
 

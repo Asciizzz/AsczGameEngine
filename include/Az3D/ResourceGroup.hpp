@@ -47,14 +47,14 @@ public:
     ResourceGroup& operator=(const ResourceGroup&) = delete;
 
     // Descriptor's getters
-    VkDescriptorSetLayout getMatDescLayout() const { return matDescLayout->get(); }
+    VkDescriptorSetLayout getMatDescLayout() const { return matDescSet->getLayout(); }
     VkDescriptorSet getMatDescSet() const { return matDescSet->get(); }
-    
-    VkDescriptorSetLayout getTexDescLayout() const { return texDescLayout->get(); }
+
+    VkDescriptorSetLayout getTexDescLayout() const { return texDescSet->getLayout(); }
     VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
 
-    VkDescriptorSetLayout getRigDescLayout() const { return skeleDescLayout->get(); }
-    VkDescriptorSet getRigSkeleDescSet(size_t index) const { return skeleDescSets[index]->get(); }
+    VkDescriptorSetLayout getRigDescLayout() const { return skeleDescSets->getLayout(); }
+    VkDescriptorSet getRigSkeleDescSet(size_t index) const { return skeleDescSets->get(index); }
 
     size_t addModel(const TinyModel& model) {
         models.push_back(model);
@@ -81,15 +81,11 @@ public:
 
     SharedPtrVec<TinySkeleton>        skeletons;
     UniquePtrVec<AzVulk::DataBuffer>  skeleInvMatBuffers; // Additional buffers in the future
-    UniquePtr<AzVulk::DescLayout>     skeleDescLayout;
-    UniquePtr<AzVulk::DescPool>       skeleDescPool;
-    UniquePtrVec<AzVulk::DescSets>    skeleDescSets; // Wrong, but we'll live with it for now
+    UniquePtr<AzVulk::DescSets>       skeleDescSets; // Wrong, but we'll live with it for now
     void createRigSkeleBuffers();
     void createRigSkeleDescSets();
 
     UniquePtr<AzVulk::DataBuffer>     matBuffer;
-    UniquePtr<AzVulk::DescLayout>     matDescLayout;
-    UniquePtr<AzVulk::DescPool>       matDescPool;
     UniquePtr<AzVulk::DescSets>       matDescSet;
     void createMaterialBuffer(); // One big buffer for all
     void createMaterialDescSet(); // Only need one
@@ -101,8 +97,6 @@ public:
     UniquePtr<AzVulk::DataBuffer>     textSampIdxBuffer; // Buffer containing sampler indices for each texture
     void createTexSampIdxBuffer(); // Create buffer for texture sampler indices
 
-    UniquePtr<AzVulk::DescLayout>     texDescLayout;
-    UniquePtr<AzVulk::DescPool>       texDescPool;
     UniquePtr<AzVulk::DescSets>       texDescSet;
     void createTextureDescSet();
 

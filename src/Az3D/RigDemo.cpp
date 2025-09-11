@@ -29,16 +29,14 @@ void RigDemo::init(const AzVulk::Device* vkDevice, const TinyModel& model, size_
 
     updateBuffer();
 
-    descLayout.init(vkDevice->lDevice);
-    descLayout.create({
-        DescLayout::BindInfo{0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
+    descSet.init(vkDevice->lDevice);
+    descSet.createLayout({
+        DescSets::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
     });
 
-    descPool.init(vkDevice->lDevice);
-    descPool.create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+    descSet.createPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
 
-    descSet.init(vkDevice->lDevice);
-    descSet.allocate(descPool.get(), descLayout.get(), 1);
+    descSet.allocate(1);
 
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = finalPoseBuffer.buffer;

@@ -13,9 +13,7 @@ GlbUBOManager::GlbUBOManager(const Device* vkDevice)
 {
     createDataBuffer();
 
-    createDescLayout();
-    createDescPool();
-    createDescSet();
+    createDescSets();
 }
 
 void GlbUBOManager::createDataBuffer() {
@@ -32,29 +30,20 @@ void GlbUBOManager::createDataBuffer() {
     }
 }
 
-void GlbUBOManager::createDescLayout() {
-    descLayout.init(vkDevice->lDevice);
+void GlbUBOManager::createDescSets() {
+    descSets.init(vkDevice->lDevice);
 
-    descLayout.create({
-        DescLayout::BindInfo{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
+    descSets.createLayout({
+        DescSets::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
     });
-}
 
-void GlbUBOManager::createDescPool() {
-    descPool.init(vkDevice->lDevice);
-
-    descPool.create({
+    descSets.createPool({
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT}
     }, MAX_FRAMES_IN_FLIGHT);
-}
 
-void GlbUBOManager::createDescSet() {
-    descSets.resize(MAX_FRAMES_IN_FLIGHT);
-    
+    descSets.allocate(MAX_FRAMES_IN_FLIGHT);
+
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        descSets[i].init(vkDevice->lDevice);
-        descSets[i].allocate(descPool.pool, descLayout.layout, 1);
-
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = dataBuffer[i].buffer;
         bufferInfo.offset = 0;
@@ -62,14 +51,14 @@ void GlbUBOManager::createDescSet() {
 
         VkWriteDescriptorSet write{};
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet = descSets[i].get();
+        write.dstSet = descSets.get(i);
         write.dstBinding = 0;
         write.dstArrayElement = 0;
         write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         write.descriptorCount = 1;
         write.pBufferInfo = &bufferInfo;
 
-        vkUpdateDescriptorSets(descSets[i].lDevice, 1, &write, 0, nullptr);
+        vkUpdateDescriptorSets(vkDevice->lDevice, 1, &write, 0, nullptr);
     }
 }
 
