@@ -67,11 +67,7 @@ void DataBuffer::cleanup() {
     }
 }
 
-DataBuffer& DataBuffer::setProperties(
-    VkDeviceSize dataSize,
-    VkBufferUsageFlags usageFlags,
-    VkMemoryPropertyFlags memPropFlags
-) {
+DataBuffer& DataBuffer::setProperties(VkDeviceSize dataSize, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memPropFlags) {
     this->dataSize = dataSize;
     this->usageFlags = usageFlags;
     this->memPropFlags = memPropFlags;
@@ -120,5 +116,16 @@ DataBuffer& DataBuffer::createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice)
 
 DataBuffer& DataBuffer::copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount) {
     vkCmdCopyBuffer(cmdBuffer, srcBuffer, buffer, regionCount, copyRegion);
+    return *this;
+}
+
+DataBuffer& DataBuffer::mapMemory() {
+    if (!mapped) vkMapMemory(lDevice, memory, 0, dataSize, 0, &mapped);
+    return *this;
+}
+
+DataBuffer& DataBuffer::unmapMemory() {
+    if (mapped) vkUnmapMemory(lDevice, memory);
+    mapped = nullptr;
     return *this;
 }

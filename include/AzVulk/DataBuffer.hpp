@@ -30,16 +30,15 @@ namespace AzVulk {
         VkBufferUsageFlags usageFlags = 0;
         VkMemoryPropertyFlags memPropFlags = 0;
 
-        DataBuffer& setProperties(
-            VkDeviceSize dataSize,
-            VkBufferUsageFlags usageFlags,
-            VkMemoryPropertyFlags memPropFlags
-        );
+        DataBuffer& setProperties(VkDeviceSize dataSize, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memPropFlags);
 
         DataBuffer& createBuffer(const Device* vkDevice);
         DataBuffer& createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice);
 
         DataBuffer& copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount);
+
+        DataBuffer& mapMemory();
+        DataBuffer& unmapMemory();
 
         template<typename T>
         void uploadData(const T* data) {
@@ -48,18 +47,9 @@ namespace AzVulk {
             unmapMemory();
         }
 
-        void mapMemory() {
-            if (!mapped) vkMapMemory(lDevice, memory, 0, dataSize, 0, &mapped);
-        }
-        void unmapMemory() {
-            if (mapped) vkUnmapMemory(lDevice, memory);
-            mapped = nullptr;
-        }
-
         template<typename T>
-        DataBuffer& copyData(const T* data) {
+        void copyData(const T* data) {
             memcpy(mapped, data, dataSize);
-            return *this;
         }
 
         template<typename T>
