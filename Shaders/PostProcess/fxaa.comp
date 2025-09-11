@@ -4,7 +4,6 @@ layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(binding = 0) uniform sampler2D inputImage;
 layout(binding = 1, rgba8) uniform image2D outputImage;
-layout(binding = 2) uniform sampler2D depthTexture;
 
 // FXAA quality presets
 #define FXAA_QUALITY_PRESET 12
@@ -139,24 +138,6 @@ void main() {
     
     // Apply FXAA
     vec3 color = FxaaPixelShader(uv, inputImage);
-    
-    // Optional: Use depth buffer for enhanced edge detection
-    // This is a simple depth-based edge enhancement
-    float depth = texture(depthTexture, uv).r;
-    vec2 texelSize = 1.0 / vec2(imgSize);
-    float depthN = texture(depthTexture, uv + vec2(0.0, -texelSize.y)).r;
-    float depthS = texture(depthTexture, uv + vec2(0.0, texelSize.y)).r;
-    float depthW = texture(depthTexture, uv + vec2(-texelSize.x, 0.0)).r;
-    float depthE = texture(depthTexture, uv + vec2(texelSize.x, 0.0)).r;
-    
-    float depthEdge = abs(depth - depthN) + abs(depth - depthS) + 
-                     abs(depth - depthW) + abs(depth - depthE);
-    
-    // Enhance FXAA effect on depth edges
-    if (depthEdge > 0.0001) {
-        // Slightly more aggressive anti-aliasing on depth discontinuities
-        color = mix(color, FxaaPixelShader(uv, inputImage), 0.1);
-    }
     
     imageStore(outputImage, texCoord, vec4(color, 1.0));
 }

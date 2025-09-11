@@ -43,14 +43,12 @@ namespace AzVulk {
         void endFrame(uint32_t imageIndex);
 
         // Post-processing methods
-        void initializePostProcessing();
         void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
-        void executePostProcessing(uint32_t imageIndex);
 
         // Component references
         Device* vkDevice;
         SwapChain* swapChain;
-        std::unique_ptr<PostProcess> postProcess;
+        UniquePtr<PostProcess> postProcess;
 
         // Command recording
         CmdBuffer cmdBuffer;

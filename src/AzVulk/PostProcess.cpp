@@ -113,7 +113,7 @@ void PostProcess::createOffscreenRenderPass() {
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    // Depth attachment
+    // Depth attachment - using DepthManager's format
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format = depthManager->depthFormat;
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -233,15 +233,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
     storageLayoutBinding.pImmutableSamplers = nullptr;
     storageLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-    // Add depth buffer binding for FXAA and other depth-dependent effects
-    VkDescriptorSetLayoutBinding depthLayoutBinding{};
-    depthLayoutBinding.binding = 2;
-    depthLayoutBinding.descriptorCount = 1;
-    depthLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    depthLayoutBinding.pImmutableSamplers = nullptr;
-    depthLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    std::array<VkDescriptorSetLayoutBinding, 3> bindings = {samplerLayoutBinding, storageLayoutBinding, depthLayoutBinding};
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {samplerLayoutBinding, storageLayoutBinding};
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -254,7 +246,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
     // Create descriptor pool
     std::array<VkDescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT * 2 * 2; // *2 for color + depth
+    poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT * 2;
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     poolSizes[1].descriptorCount = MAX_FRAMES_IN_FLIGHT * 2;
 
@@ -299,12 +291,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
             imageInfoOutput.imageView = images.viewB;
             imageInfoOutput.sampler = VK_NULL_HANDLE;
 
-            VkDescriptorImageInfo imageInfoDepth{};
-            imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            imageInfoDepth.imageView = depthManager->depthImageView;
-            imageInfoDepth.sampler = sampler;
-
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = effect->descriptorSets[frame][0];
             descriptorWrites[0].dstBinding = 0;
@@ -321,14 +308,6 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfoOutput;
 
-            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].dstSet = effect->descriptorSets[frame][0];
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &imageInfoDepth;
-
             vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
         
@@ -344,12 +323,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
             imageInfoOutput.imageView = images.viewA;
             imageInfoOutput.sampler = VK_NULL_HANDLE;
 
-            VkDescriptorImageInfo imageInfoDepth{};
-            imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            imageInfoDepth.imageView = depthManager->depthImageView;
-            imageInfoDepth.sampler = sampler;
-
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = effect->descriptorSets[frame][1];
             descriptorWrites[0].dstBinding = 0;
@@ -365,14 +339,6 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfoOutput;
-
-            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].dstSet = effect->descriptorSets[frame][1];
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &imageInfoDepth;
 
             vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
@@ -406,18 +372,14 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     transitionImageLayout(cmd, images.imageB, VK_FORMAT_R8G8B8A8_UNORM,
                          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-    // Transition depth buffer for compute shader sampling
-    transitionImageLayout(cmd, depthManager->depthImage, depthManager->depthFormat,
-                         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-
     // Pipeline barrier after layout transitions
     VkMemoryBarrier memBarrier{};
     memBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    memBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    memBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     memBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
     vkCmdPipelineBarrier(cmd,
-                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                         0, 1, &memBarrier, 0, nullptr, 0, nullptr);
 
@@ -452,10 +414,6 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
 
             inputIsA = !inputIsA;  // Swap for next pass
     }
-    
-    // Transition depth buffer back to attachment layout for next frame
-    transitionImageLayout(cmd, depthManager->depthImage, depthManager->depthFormat,
-                         VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uint32_t swapchainImageIndex) {
@@ -577,12 +535,7 @@ void PostProcess::recreate() {
                 imageInfoOutput.imageView = images.viewB;
                 imageInfoOutput.sampler = VK_NULL_HANDLE;
 
-                VkDescriptorImageInfo imageInfoDepth{};
-                imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-                imageInfoDepth.imageView = depthManager->depthImageView;
-                imageInfoDepth.sampler = sampler;
-
-                std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+                std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
                 descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                 descriptorWrites[0].dstSet = effect->descriptorSets[frame][0];
                 descriptorWrites[0].dstBinding = 0;
@@ -599,14 +552,6 @@ void PostProcess::recreate() {
                 descriptorWrites[1].descriptorCount = 1;
                 descriptorWrites[1].pImageInfo = &imageInfoOutput;
 
-                descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[2].dstSet = effect->descriptorSets[frame][0];
-                descriptorWrites[2].dstBinding = 2;
-                descriptorWrites[2].dstArrayElement = 0;
-                descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                descriptorWrites[2].descriptorCount = 1;
-                descriptorWrites[2].pImageInfo = &imageInfoDepth;
-
                 vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
             }
             
@@ -622,12 +567,7 @@ void PostProcess::recreate() {
                 imageInfoOutput.imageView = images.viewA;
                 imageInfoOutput.sampler = VK_NULL_HANDLE;
 
-                VkDescriptorImageInfo imageInfoDepth{};
-                imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-                imageInfoDepth.imageView = depthManager->depthImageView;
-                imageInfoDepth.sampler = sampler;
-
-                std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+                std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
                 descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                 descriptorWrites[0].dstSet = effect->descriptorSets[frame][1];
                 descriptorWrites[0].dstBinding = 0;
@@ -643,14 +583,6 @@ void PostProcess::recreate() {
                 descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                 descriptorWrites[1].descriptorCount = 1;
                 descriptorWrites[1].pImageInfo = &imageInfoOutput;
-
-                descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[2].dstSet = effect->descriptorSets[frame][1];
-                descriptorWrites[2].dstBinding = 2;
-                descriptorWrites[2].dstArrayElement = 0;
-                descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                descriptorWrites[2].descriptorCount = 1;
-                descriptorWrites[2].pImageInfo = &imageInfoDepth;
 
                 vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
             }
@@ -729,9 +661,7 @@ uint32_t PostProcess::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags 
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-VkFormat PostProcess::findDepthFormat() {
-    return VK_FORMAT_D32_SFLOAT; // Simple depth format
-}
+
 
 void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
                                       VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -765,18 +695,7 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
 
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    } else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
-        barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        sourceStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    } else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     } else {
         throw std::invalid_argument("unsupported layout transition!");
     }
@@ -809,8 +728,6 @@ void PostProcess::cleanup() {
         vkDestroyRenderPass(device, offscreenRenderPass, nullptr);
         offscreenRenderPass = VK_NULL_HANDLE;
     }
-    
-    // Note: Depth resources are managed by DepthManager, not cleaned up here
     
     // Clean up ping-pong images
     for (auto& images : pingPongImages) {

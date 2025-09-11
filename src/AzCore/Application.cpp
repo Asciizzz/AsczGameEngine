@@ -185,13 +185,11 @@ void Application::initComponents() {
     .setBindings({ vstaticBind })
     .setAttributes({ vstaticAttrs });
     vertexInputVKs["Single"] = vsingleInput;
-
-    // Initialize post-processing system first to get offscreen render pass
-    renderer->initializePostProcessing();
     
     // Use offscreen render pass for pipeline creation
     VkRenderPass offscreenRenderPass = renderer->postProcess->getOffscreenRenderPass();
     PIPELINE_INIT(pipelineManager.get(), lDevice, offscreenRenderPass, namedLayouts, vertexInputVKs);
+
     renderer->addPostProcessEffect("fxaa", "Shaders/PostProcess/fxaa.comp.spv");
     renderer->addPostProcessEffect("tonemap", "Shaders/PostProcess/tonemap.comp.spv");
 }

@@ -4,7 +4,6 @@ layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(binding = 0) uniform sampler2D inputImage;
 layout(binding = 1, rgba8) uniform image2D outputImage;
-layout(binding = 2) uniform sampler2D depthTexture;
 
 // Simple tone mapping post-process effect
 void main() {

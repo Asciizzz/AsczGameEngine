@@ -79,7 +79,7 @@ private:
     
     Device* vkDevice;
     SwapChain* swapChain;
-    DepthManager* depthManager;
+    DepthManager* depthManager; // For offscreen framebuffer only
     VkSampler sampler = VK_NULL_HANDLE;
     
     // Per-frame ping-pong images
@@ -88,8 +88,6 @@ private:
     // Offscreen render pass and framebuffers for scene rendering
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
     std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
-    
-    // Note: Depth buffer is managed by DepthManager
     
     // Post-process effects
     std::vector<std::unique_ptr<PostProcessEffect>> effects;
@@ -102,7 +100,6 @@ private:
     void createPingPongImages();
     void createOffscreenRenderPass();
     void createOffscreenFramebuffers();
-    void createDepthResources();
     void createSampler();
     void createFinalBlit();
     
@@ -111,7 +108,6 @@ private:
                      VkMemoryPropertyFlags properties, VkImage& image, 
                      VkDeviceMemory& imageMemory);
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    VkFormat findDepthFormat();
     
     void transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
                               VkImageLayout oldLayout, VkImageLayout newLayout);

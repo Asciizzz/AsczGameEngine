@@ -12,7 +12,9 @@ Renderer::Renderer (Device* vkDevice, SwapChain* swapChain, DepthManager* depthM
 : vkDevice(vkDevice), swapChain(swapChain) {
     createCommandBuffers();
     createSyncObjects();
-    postProcess = std::make_unique<PostProcess>(vkDevice, swapChain, depthManager);
+
+    postProcess = MakeUnique<PostProcess>(vkDevice, swapChain, depthManager);
+    postProcess->initialize();
 }
 
 Renderer::~Renderer() {
@@ -278,12 +280,9 @@ void Renderer::endFrame(uint32_t imageIndex) {
     VkCommandBuffer currentCmd = cmdBuffer[currentFrame];
 
     vkCmdEndRenderPass(currentCmd);
-
-    // Execute post-processing effects
+    
     postProcess->executeEffects(currentCmd, currentFrame);
-
-    // Copy final image to swapchain
-    copyFinalImageToSwapchain(currentCmd, imageIndex);
+    postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
 
     if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
@@ -327,21 +326,6 @@ void Renderer::endFrame(uint32_t imageIndex) {
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void Renderer::initializePostProcessing() {
-    postProcess->initialize();
-}
-
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {
     postProcess->addEffect(name, computeShaderPath);
-}
-
-void Renderer::executePostProcessing(uint32_t imageIndex) {
-    VkCommandBuffer currentCmd = cmdBuffer[currentFrame];
-    postProcess->executeEffects(currentCmd, currentFrame);
-    copyFinalImageToSwapchain(currentCmd, imageIndex);
-}
-
-void Renderer::copyFinalImageToSwapchain(VkCommandBuffer cmd, uint32_t imageIndex) {
-    // Use the PostProcess system's final blit to copy to swapchain
-    postProcess->executeFinalBlit(cmd, currentFrame, imageIndex);
 }
