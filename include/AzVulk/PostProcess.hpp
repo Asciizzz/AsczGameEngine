@@ -10,6 +10,7 @@
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_compute.hpp"
 #include "AzVulk/DepthManager.hpp"
+#include "AzVulk/Descriptor.hpp"
 
 namespace AzVulk {
 
@@ -21,7 +22,7 @@ struct PingPongImages {
     VkDeviceMemory memoryB = VK_NULL_HANDLE;
     VkImageView viewA = VK_NULL_HANDLE;
     VkImageView viewB = VK_NULL_HANDLE;
-    
+
     void cleanup(VkDevice device);
 };
 
@@ -30,13 +31,7 @@ struct PostProcessEffect {
     std::string name;
     std::string computeShaderPath;
     std::unique_ptr<PipelineCompute> pipeline;
-    VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-    VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-    
-    // Per-frame descriptor sets: [frame][pingpong_direction]
-    // pingpong_direction: 0 = A->B, 1 = B->A
-    std::vector<std::array<VkDescriptorSet, 2>> descriptorSets;
-    
+
     void cleanup(VkDevice device);
 };
 
@@ -70,9 +65,6 @@ public:
     
     // Recreate resources when swapchain changes
     void recreate();
-    
-    // Helper method for creating image views
-    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
 private:
     static const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -92,22 +84,16 @@ private:
     // Post-process effects
     std::vector<std::unique_ptr<PostProcessEffect>> effects;
     
-
-    
-
+    // Shared descriptor management for all effects
+    DescSets descriptorSets;
     
     // Helper methods
     void createPingPongImages();
     void createOffscreenRenderPass();
     void createOffscreenFramebuffers();
     void createSampler();
+    void createSharedDescriptors();
     void createFinalBlit();
-    
-    void createImage(uint32_t width, uint32_t height, VkFormat format, 
-                     VkImageTiling tiling, VkImageUsageFlags usage, 
-                     VkMemoryPropertyFlags properties, VkImage& image, 
-                     VkDeviceMemory& imageMemory);
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     
     void transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
                               VkImageLayout oldLayout, VkImageLayout newLayout);

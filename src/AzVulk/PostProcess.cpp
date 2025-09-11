@@ -37,14 +37,6 @@ void PingPongImages::cleanup(VkDevice device) {
 }
 
 void PostProcessEffect::cleanup(VkDevice device) {
-    if (descriptorPool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-        descriptorPool = VK_NULL_HANDLE;
-    }
-    if (descriptorSetLayout != VK_NULL_HANDLE) {
-        vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
-        descriptorSetLayout = VK_NULL_HANDLE;
-    }
     if (pipeline) {
         pipeline->cleanup();
         pipeline.reset();
@@ -52,7 +44,7 @@ void PostProcessEffect::cleanup(VkDevice device) {
 }
 
 PostProcess::PostProcess(Device* vkDevice, SwapChain* swapChain, DepthManager* depthManager)
-    : vkDevice(vkDevice), swapChain(swapChain), depthManager(depthManager) {
+    : vkDevice(vkDevice), swapChain(swapChain), depthManager(depthManager), descriptorSets(vkDevice->lDevice) {
 }
 
 PostProcess::~PostProcess() {
@@ -64,6 +56,7 @@ void PostProcess::initialize() {
     createOffscreenRenderPass();
     createOffscreenFramebuffers();
     createSampler();
+    createSharedDescriptors();
     createFinalBlit();
 }
 
@@ -75,27 +68,27 @@ void PostProcess::createPingPongImages() {
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         auto& images = pingPongImages[frame];
         
-        // Create image A
-        createImage(extent.width, extent.height, format,
-                   VK_IMAGE_TILING_OPTIMAL,
-                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-                   VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-                   VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                   images.imageA, images.memoryA);
+        // Create image A using DepthManager's helper
+        depthManager->createImage(extent.width, extent.height, format,
+                                VK_IMAGE_TILING_OPTIMAL,
+                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
+                                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+                                VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                images.imageA, images.memoryA);
         
-        // Create image B  
-        createImage(extent.width, extent.height, format,
-                   VK_IMAGE_TILING_OPTIMAL,
-                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-                   VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-                   VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                   images.imageB, images.memoryB);
+        // Create image B using DepthManager's helper
+        depthManager->createImage(extent.width, extent.height, format,
+                                VK_IMAGE_TILING_OPTIMAL,
+                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
+                                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+                                VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                images.imageB, images.memoryB);
         
-        // Create image views
-        images.viewA = createImageView(images.imageA, format, VK_IMAGE_ASPECT_COLOR_BIT);
-        images.viewB = createImageView(images.imageB, format, VK_IMAGE_ASPECT_COLOR_BIT);
+        // Create image views using DepthManager's helper
+        images.viewA = depthManager->createImageView(images.imageA, format, VK_IMAGE_ASPECT_COLOR_BIT);
+        images.viewB = depthManager->createImageView(images.imageB, format, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
@@ -207,79 +200,29 @@ void PostProcess::createSampler() {
     }
 }
 
-void PostProcess::createFinalBlit() {
-    // Final blit uses vkCmdBlitImage, so no pipeline needed
-}
-
-
-
-void PostProcess::addEffect(const std::string& name, const std::string& computeShaderPath) {
-    auto effect = std::make_unique<PostProcessEffect>();
-    effect->name = name;
-    effect->computeShaderPath = computeShaderPath;
-    
-    // Create descriptor set layout
-    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-    samplerLayoutBinding.binding = 0;
-    samplerLayoutBinding.descriptorCount = 1;
-    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
-    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    VkDescriptorSetLayoutBinding storageLayoutBinding{};
-    storageLayoutBinding.binding = 1;
-    storageLayoutBinding.descriptorCount = 1;
-    storageLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    storageLayoutBinding.pImmutableSamplers = nullptr;
-    storageLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {samplerLayoutBinding, storageLayoutBinding};
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
-
-    if (vkCreateDescriptorSetLayout(vkDevice->lDevice, &layoutInfo, nullptr, &effect->descriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create effect descriptor set layout!");
-    }
+void PostProcess::createSharedDescriptors() {
+    // Create descriptor set layout (shared by all effects)
+    std::vector<DescSets::LayoutBind> bindings = {
+        {0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}, // Input image
+        {1, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT}           // Output image
+    };
+    descriptorSets.createLayout(bindings);
 
     // Create descriptor pool
-    std::array<VkDescriptorPoolSize, 2> poolSizes{};
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT * 2;
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    poolSizes[1].descriptorCount = MAX_FRAMES_IN_FLIGHT * 2;
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 2},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_FRAMES_IN_FLIGHT * 2}
+    };
+    descriptorSets.createPool(poolSizes, MAX_FRAMES_IN_FLIGHT * 2);
 
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = MAX_FRAMES_IN_FLIGHT * 2;
-
-    if (vkCreateDescriptorPool(vkDevice->lDevice, &poolInfo, nullptr, &effect->descriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create effect descriptor pool!");
-    }
-
-    // Allocate descriptor sets
-    effect->descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-    for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        std::vector<VkDescriptorSetLayout> layouts(2, effect->descriptorSetLayout);
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = effect->descriptorPool;
-        allocInfo.descriptorSetCount = 2;
-        allocInfo.pSetLayouts = layouts.data();
-
-        if (vkAllocateDescriptorSets(vkDevice->lDevice, &allocInfo, effect->descriptorSets[frame].data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate effect descriptor sets!");
-        }
-    }
+    // Allocate descriptor sets for all frames and ping-pong directions
+    descriptorSets.allocate(MAX_FRAMES_IN_FLIGHT * 2);
 
     // Update descriptor sets to point to ping-pong images
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         const auto& images = pingPongImages[frame];
         
-        // A->B direction (input=A, output=B)
+        // A->B direction (descriptor set index: frame * 2 + 0)
         {
             VkDescriptorImageInfo imageInfoInput{};
             imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -293,7 +236,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = effect->descriptorSets[frame][0];
+            descriptorWrites[0].dstSet = descriptorSets.get(frame * 2 + 0);
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -301,7 +244,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
             descriptorWrites[0].pImageInfo = &imageInfoInput;
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = effect->descriptorSets[frame][0];
+            descriptorWrites[1].dstSet = descriptorSets.get(frame * 2 + 0);
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -311,7 +254,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
             vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
         
-        // B->A direction (input=B, output=A)
+        // B->A direction (descriptor set index: frame * 2 + 1)
         {
             VkDescriptorImageInfo imageInfoInput{};
             imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -325,7 +268,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = effect->descriptorSets[frame][1];
+            descriptorWrites[0].dstSet = descriptorSets.get(frame * 2 + 1);
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -333,7 +276,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
             descriptorWrites[0].pImageInfo = &imageInfoInput;
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = effect->descriptorSets[frame][1];
+            descriptorWrites[1].dstSet = descriptorSets.get(frame * 2 + 1);
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -343,10 +286,22 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
             vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
     }
+}
 
-    // Create compute pipeline
+void PostProcess::createFinalBlit() {
+    // Final blit uses vkCmdBlitImage, so no pipeline needed
+}
+
+
+
+void PostProcess::addEffect(const std::string& name, const std::string& computeShaderPath) {
+    auto effect = std::make_unique<PostProcessEffect>();
+    effect->name = name;
+    effect->computeShaderPath = computeShaderPath;
+    
+    // Create compute pipeline using the shared descriptor set layout
     ComputePipelineConfig config{};
-    config.setLayouts = {effect->descriptorSetLayout};
+    config.setLayouts = {descriptorSets.getLayout()};
     config.compPath = computeShaderPath;
 
     effect->pipeline = std::make_unique<PipelineCompute>(vkDevice->lDevice, std::move(config));
@@ -391,9 +346,9 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
         
         effect->pipeline->bindCmd(cmd);
         
-        // Bind appropriate descriptor set based on ping-pong direction
+        // Bind appropriate shared descriptor set based on ping-pong direction
         int direction = inputIsA ? 0 : 1;  // 0 = A->B, 1 = B->A
-        VkDescriptorSet descriptorSet = effect->descriptorSets[frameIndex][direction];
+        VkDescriptorSet descriptorSet = descriptorSets.get(frameIndex * 2 + direction);
         effect->pipeline->bindSets(cmd, &descriptorSet, 1);
         
         // Dispatch compute work
@@ -516,152 +471,7 @@ VkImageView PostProcess::getFinalImageView(uint32_t frameIndex) const {
 void PostProcess::recreate() {
     cleanup();
     initialize();
-    
-    // Recreate all effect descriptor sets with new images
-    for (auto& effect : effects) {
-        // Update descriptor sets to point to new ping-pong images
-        for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-            const auto& images = pingPongImages[frame];
-            
-            // A->B direction
-            {
-                VkDescriptorImageInfo imageInfoInput{};
-                imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                imageInfoInput.imageView = images.viewA;
-                imageInfoInput.sampler = sampler;
-
-                VkDescriptorImageInfo imageInfoOutput{};
-                imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                imageInfoOutput.imageView = images.viewB;
-                imageInfoOutput.sampler = VK_NULL_HANDLE;
-
-                std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-                descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[0].dstSet = effect->descriptorSets[frame][0];
-                descriptorWrites[0].dstBinding = 0;
-                descriptorWrites[0].dstArrayElement = 0;
-                descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                descriptorWrites[0].descriptorCount = 1;
-                descriptorWrites[0].pImageInfo = &imageInfoInput;
-
-                descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[1].dstSet = effect->descriptorSets[frame][0];
-                descriptorWrites[1].dstBinding = 1;
-                descriptorWrites[1].dstArrayElement = 0;
-                descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-                descriptorWrites[1].descriptorCount = 1;
-                descriptorWrites[1].pImageInfo = &imageInfoOutput;
-
-                vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-            }
-            
-            // B->A direction
-            {
-                VkDescriptorImageInfo imageInfoInput{};
-                imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                imageInfoInput.imageView = images.viewB;
-                imageInfoInput.sampler = sampler;
-
-                VkDescriptorImageInfo imageInfoOutput{};
-                imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                imageInfoOutput.imageView = images.viewA;
-                imageInfoOutput.sampler = VK_NULL_HANDLE;
-
-                std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-                descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[0].dstSet = effect->descriptorSets[frame][1];
-                descriptorWrites[0].dstBinding = 0;
-                descriptorWrites[0].dstArrayElement = 0;
-                descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                descriptorWrites[0].descriptorCount = 1;
-                descriptorWrites[0].pImageInfo = &imageInfoInput;
-
-                descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[1].dstSet = effect->descriptorSets[frame][1];
-                descriptorWrites[1].dstBinding = 1;
-                descriptorWrites[1].dstArrayElement = 0;
-                descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-                descriptorWrites[1].descriptorCount = 1;
-                descriptorWrites[1].pImageInfo = &imageInfoOutput;
-
-                vkUpdateDescriptorSets(vkDevice->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-            }
-        }
-    }
 }
-
-void PostProcess::createImage(uint32_t width, uint32_t height, VkFormat format,
-                             VkImageTiling tiling, VkImageUsageFlags usage,
-                             VkMemoryPropertyFlags properties, VkImage& image,
-                             VkDeviceMemory& imageMemory) {
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = usage;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateImage(vkDevice->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(vkDevice->lDevice, image, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(vkDevice->lDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate image memory!");
-    }
-
-    vkBindImageMemory(vkDevice->lDevice, image, imageMemory, 0);
-}
-
-VkImageView PostProcess::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    VkImageView imageView;
-    if (vkCreateImageView(vkDevice->lDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture image view!");
-    }
-
-    return imageView;
-}
-
-uint32_t PostProcess::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(vkDevice->pDevice, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("failed to find suitable memory type!");
-}
-
-
 
 void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
                                       VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -712,9 +522,7 @@ void PostProcess::cleanup() {
     }
     effects.clear();
     
-    // Final blit cleanup (nothing to clean up for vkCmdBlitImage approach)
-    
-
+    // Clean up shared descriptors (handled by DescSets destructor automatically)
     
     // Clean up offscreen resources
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {

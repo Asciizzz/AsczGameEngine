@@ -138,6 +138,6 @@ void main() {
     
     // Apply FXAA
     vec3 color = FxaaPixelShader(uv, inputImage);
-    
+
     imageStore(outputImage, texCoord, vec4(color, 1.0));
 }
