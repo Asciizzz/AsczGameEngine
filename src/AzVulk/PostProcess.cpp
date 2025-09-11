@@ -52,10 +52,10 @@ PostProcess::~PostProcess() {
 }
 
 void PostProcess::initialize() {
+    createSampler();
     createPingPongImages();
     createOffscreenRenderPass();
     createOffscreenFramebuffers();
-    createSampler();
     createSharedDescriptors();
     createFinalBlit();
 }
@@ -201,6 +201,8 @@ void PostProcess::createSampler() {
 }
 
 void PostProcess::createSharedDescriptors() {
+    descriptorSets.cleanup();
+
     // Create descriptor set layout (shared by all effects)
     std::vector<DescSets::LayoutBind> bindings = {
         {0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}, // Input image
@@ -367,7 +369,7 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                             0, 1, &computeBarrier, 0, nullptr, 0, nullptr);
 
-            inputIsA = !inputIsA;  // Swap for next pass
+        inputIsA = !inputIsA;  // Swap for next pass
     }
 }
 
@@ -434,8 +436,7 @@ void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uin
     blit.dstSubresource.baseArrayLayer = 0;
     blit.dstSubresource.layerCount = 1;
 
-    vkCmdBlitImage(cmd,
-                  finalImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    vkCmdBlitImage(cmd, finalImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                   swapChain->images[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                   1, &blit, VK_FILTER_LINEAR);
 
@@ -515,15 +516,22 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
 
 void PostProcess::cleanup() {
     VkDevice device = vkDevice->lDevice;
-    
+
+    // Clean up sampler
+    if (sampler != VK_NULL_HANDLE) {
+        vkDestroySampler(device, sampler, nullptr);
+        sampler = VK_NULL_HANDLE;
+    }
+
     // Clean up effects
     for (auto& effect : effects) {
         effect->cleanup(device);
     }
     effects.clear();
-    
-    // Clean up shared descriptors (handled by DescSets destructor automatically)
-    
+
+    // Clean up descriptor sets
+    descriptorSets.cleanup();
+
     // Clean up offscreen resources
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         if (offscreenFramebuffers[frame] != VK_NULL_HANDLE) {
@@ -540,11 +548,5 @@ void PostProcess::cleanup() {
     // Clean up ping-pong images
     for (auto& images : pingPongImages) {
         images.cleanup(device);
-    }
-    
-    // Clean up sampler
-    if (sampler != VK_NULL_HANDLE) {
-        vkDestroySampler(device, sampler, nullptr);
-        sampler = VK_NULL_HANDLE;
     }
 }

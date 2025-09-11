@@ -225,12 +225,13 @@ bool Application::checkWindowResize() {
         depthManager->depthImageView
     );
 
+    // Recreate post-processing resources for new swapchain size
+    renderer->postProcess->recreate();
+
     // Recreate all pipelines with offscreen render pass for post-processing
     VkRenderPass offscreenRenderPass = renderer->postProcess->getOffscreenRenderPass();
     pipelineManager->recreateAllPipelines(offscreenRenderPass);
 
-    // Recreate post-processing resources for new swapchain size
-    renderer->postProcess->recreate();
 
     return true;
 }

@@ -13,7 +13,7 @@ struct DescSets {
     };
 
     DescSets(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
-    ~DescSets();
+    ~DescSets() { cleanup(); } void cleanup();
 
     void cleanupLayout();
     void cleanupPool();

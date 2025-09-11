@@ -9,6 +9,7 @@ using namespace AzVulk;
 DescSets::DescSets(DescSets&& other) noexcept
 : lDevice(other.lDevice), pool(other.pool), layout(other.layout), sets(std::move(other.sets)) {
     other.lDevice = VK_NULL_HANDLE;
+
     other.pool = VK_NULL_HANDLE;
     other.poolOwned = false;
 
@@ -18,9 +19,9 @@ DescSets::DescSets(DescSets&& other) noexcept
 
 DescSets& DescSets::operator=(DescSets&& other) noexcept {
     if (this != &other) {
-        cleanupLayout();
-        cleanupPool();
         cleanupSets();
+        cleanupPool();
+        cleanupLayout();
 
         lDevice = other.lDevice;
 
@@ -46,14 +47,12 @@ void DescSets::cleanupLayout() {
 
     vkDestroyDescriptorSetLayout(lDevice, layout, nullptr);
     layout = VK_NULL_HANDLE;
-    layoutOwned = false;
 }
 void DescSets::cleanupPool() {
     if (pool == VK_NULL_HANDLE || !poolOwned) return;
 
     vkDestroyDescriptorPool(lDevice, pool, nullptr);
     pool = VK_NULL_HANDLE;
-    poolOwned = false;
 }
 void DescSets::cleanupSets() {
     for (auto& set : sets) {
@@ -63,8 +62,7 @@ void DescSets::cleanupSets() {
         }
     }
 }
-
-DescSets::~DescSets() {
+void DescSets::cleanup() {
     cleanupSets();
     cleanupPool();
     cleanupLayout();
@@ -75,6 +73,7 @@ DescSets::~DescSets() {
 
 void DescSets::createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
     cleanupLayout();
+    layoutOwned = true;
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -88,6 +87,7 @@ void DescSets::createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bin
 
 void DescSets::createLayout(const std::vector<LayoutBind>& bindingInfos) {
     cleanupLayout();
+    layoutOwned = true;
 
     std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
     for (const auto& bindingInfo : bindingInfos) {
@@ -125,6 +125,7 @@ VkDescriptorSetLayoutBinding DescSets::fastBinding(const LayoutBind& LayoutBind)
 
 void DescSets::createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
     cleanupPool();
+    poolOwned = true;
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
