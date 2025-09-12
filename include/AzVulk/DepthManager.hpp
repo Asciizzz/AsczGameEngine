@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#include "ImageWrapper.hpp"
 
 namespace AzVulk {
     class Device;
@@ -16,11 +17,16 @@ namespace AzVulk {
 
         void createDepthResources(uint32_t width, uint32_t height);
 
+        // Accessors for depth resources
+        VkImageView getDepthImageView() const { return depthBuffer.getImageView(); }
+        VkImage getDepthImage() const { return depthBuffer.getImage(); }
+        uint32_t getWidth() const { return depthBuffer.getWidth(); }
+        uint32_t getHeight() const { return depthBuffer.getHeight(); }
+
         const Device* deviceVK;
         
-        VkImage depthImage = VK_NULL_HANDLE;
-        VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
-        VkImageView depthImageView = VK_NULL_HANDLE;
+        // Modern ImageWrapper-based depth resource
+        ImageWrapper depthBuffer;
 
         VkFormat depthFormat;
         bool depthResolveSupported;
@@ -30,9 +36,5 @@ namespace AzVulk {
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, 
                                     VkImageTiling tiling, VkFormatFeatureFlags features);
         bool hasStencilComponent(VkFormat format);
-        void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
-                        VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                        VkImage& image, VkDeviceMemory& imageMemory);
-        VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     };
 }

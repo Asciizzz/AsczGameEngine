@@ -1,4 +1,5 @@
 #include "AzVulk/PostProcess.hpp"
+#include "AzVulk/ImageWrapper.hpp"
 #include <stdexcept>
 #include <iostream>
 
@@ -70,27 +71,27 @@ void PostProcess::createPingPongImages() {
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         auto& images = pingPongImages[frame];
         
-        // Create image A using DepthManager's helper
-        depthManager->createImage(extent.width, extent.height, format,
-                                VK_IMAGE_TILING_OPTIMAL,
-                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-                                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-                                VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                images.imageA, images.memoryA);
+        // Create image A using AzVulk helper function
+        AzVulk::createImage(deviceVK, extent.width, extent.height, format,
+                           VK_IMAGE_TILING_OPTIMAL,
+                           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
+                           VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+                           VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                           images.imageA, images.memoryA);
         
-        // Create image B using DepthManager's helper
-        depthManager->createImage(extent.width, extent.height, format,
-                                VK_IMAGE_TILING_OPTIMAL,
-                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-                                VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-                                VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                images.imageB, images.memoryB);
+        // Create image B using AzVulk helper function
+        AzVulk::createImage(deviceVK, extent.width, extent.height, format,
+                           VK_IMAGE_TILING_OPTIMAL,
+                           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
+                           VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+                           VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                           images.imageB, images.memoryB);
         
-        // Create image views using DepthManager's helper
-        images.viewA = depthManager->createImageView(images.imageA, format, VK_IMAGE_ASPECT_COLOR_BIT);
-        images.viewB = depthManager->createImageView(images.imageB, format, VK_IMAGE_ASPECT_COLOR_BIT);
+        // Create image views using AzVulk helper function
+        images.viewA = AzVulk::createImageView(deviceVK, images.imageA, format, VK_IMAGE_ASPECT_COLOR_BIT);
+        images.viewB = AzVulk::createImageView(deviceVK, images.imageB, format, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
@@ -159,7 +160,7 @@ void PostProcess::createOffscreenRenderPass() {
 void PostProcess::createOffscreenFramebuffers() {
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         std::array<VkImageView, 2> attachments = {
-            depthManager->depthImageView,  // Use DepthManager's depth buffer
+            depthManager->getDepthImageView(),  // Use DepthManager's depth buffer
             pingPongImages[frame].viewA  // Use image A as the initial render target
         };
 

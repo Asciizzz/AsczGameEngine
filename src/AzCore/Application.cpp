@@ -66,7 +66,7 @@ void Application::initComponents() {
     // Initialize render targets and depth testing
     depthManager = MakeUnique<DepthManager>(deviceVK.get());
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
-    swapChain->createFramebuffers(renderPass, depthManager->depthImageView);
+    swapChain->createFramebuffers(renderPass, depthManager->getDepthImageView());
     renderer = MakeUnique<Renderer>(deviceVK.get(), swapChain.get(), depthManager.get());
 
     resGroup = MakeUnique<ResourceGroup>(deviceVK.get());
@@ -221,7 +221,7 @@ bool Application::checkWindowResize() {
     VkRenderPass renderPass = mainRenderPass->get();
     swapChain->recreateFramebuffers(
         windowManager->window, renderPass,
-        depthManager->depthImageView
+        depthManager->getDepthImageView()
     );
 
     // Recreate post-processing resources for new swapchain size

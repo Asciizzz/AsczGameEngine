@@ -191,6 +191,12 @@ namespace AzVulk {
         ImageWrapper image;
     };
 
+    // Static utility functions for backward compatibility with manual VkImage management
+    void createImage(const Device* device, uint32_t width, uint32_t height, VkFormat format, 
+                    VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
+                    VkImage& image, VkDeviceMemory& imageMemory);
+    VkImageView createImageView(const Device* device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
     // Factory functions for common use cases
     namespace ImageFactory {
         std::unique_ptr<ImageWrapper> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat);

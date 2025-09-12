@@ -11,9 +11,7 @@ using namespace AzVulk;
 
 DepthManager::DepthManager(const Device* deviceVK)
     : deviceVK              (deviceVK)
-    , depthImage            (VK_NULL_HANDLE)
-    , depthImageMemory      (VK_NULL_HANDLE)
-    , depthImageView        (VK_NULL_HANDLE)
+    , depthBuffer           (deviceVK)
     , depthResolveSupported (false)
 {}
 
@@ -22,11 +20,8 @@ DepthManager::~DepthManager() {
 }
 
 void DepthManager::cleanup() {
-    VkDevice lDevice = deviceVK->lDevice;
-
-    if (depthImageView         != VK_NULL_HANDLE) { vkDestroyImageView (lDevice, depthImageView,         nullptr); depthImageView         = VK_NULL_HANDLE; }
-    if (depthImage             != VK_NULL_HANDLE) { vkDestroyImage     (lDevice, depthImage,             nullptr); depthImage             = VK_NULL_HANDLE; }
-    if (depthImageMemory       != VK_NULL_HANDLE) { vkFreeMemory       (lDevice, depthImageMemory,       nullptr); depthImageMemory       = VK_NULL_HANDLE; }
+    // ImageWrapper handles cleanup automatically
+    depthBuffer.cleanup();
 }
 
 // Helper: query whether the physical lDevice supports any depth-resolve modes
@@ -59,13 +54,10 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
     VkResolveModeFlagBits mode = chooseDepthResolveModeForPhysicalDevice(deviceVK->pDevice);
     depthResolveSupported = (mode != VK_RESOLVE_MODE_NONE);
 
-    // Create a single image usable as depth attachment and sampled image (no MSAA)
-    createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                depthImage, depthImageMemory);
-
-    depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    // Create depth buffer using ImageWrapper convenience method
+    if (!depthBuffer.createDepthBuffer(width, height, depthFormat)) {
+        throw std::runtime_error("Failed to create depth buffer!");
+    }
 }
 
 VkFormat DepthManager::findDepthFormat() {
@@ -94,61 +86,4 @@ VkFormat DepthManager::findSupportedFormat( const std::vector<VkFormat>& candida
 
 bool DepthManager::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
-
-void DepthManager::createImage( uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
-                                VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                                VkImage& image, VkDeviceMemory& imageMemory) {
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType     = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width  = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth  = 1;
-    imageInfo.mipLevels     = 1;
-    imageInfo.arrayLayers   = 1;
-    imageInfo.format        = format;
-    imageInfo.tiling        = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage         = usage;
-    imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateImage(deviceVK->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create depth image!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(deviceVK->lDevice, image, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize  = memRequirements.size;
-    allocInfo.memoryTypeIndex = deviceVK->findMemoryType(memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(deviceVK->lDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate depth image memory!");
-    }
-
-    vkBindImageMemory(deviceVK->lDevice, image, imageMemory, 0);
-}
-
-VkImageView DepthManager::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image                           = image;
-    viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format                          = format;
-    viewInfo.subresourceRange.aspectMask     = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel   = 0;
-    viewInfo.subresourceRange.levelCount     = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount     = 1;
-
-    VkImageView imageView;
-    if (vkCreateImageView(deviceVK->lDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create depth image view!");
-    }
-
-    return imageView;
 }
