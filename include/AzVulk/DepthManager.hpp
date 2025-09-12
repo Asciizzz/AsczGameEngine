@@ -35,6 +35,5 @@ namespace AzVulk {
         VkFormat findDepthFormat();
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, 
                                     VkImageTiling tiling, VkFormatFeatureFlags features);
-        bool hasStencilComponent(VkFormat format);
     };
 }

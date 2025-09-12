@@ -30,7 +30,9 @@ struct DataBuffer {
     VkBufferUsageFlags usageFlags = 0;
     VkMemoryPropertyFlags memPropFlags = 0;
 
-    DataBuffer& setProperties(VkDeviceSize dataSize, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memPropFlags);
+    DataBuffer& setDataSize(VkDeviceSize size);
+    DataBuffer& setUsageFlags(VkBufferUsageFlags flags);
+    DataBuffer& setMemPropFlags(VkMemoryPropertyFlags flags);
 
     DataBuffer& createBuffer(const Device* deviceVK);
     DataBuffer& createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice);
@@ -78,16 +80,15 @@ struct DataBuffer {
         // --- staging buffer (CPU visible) ---
         DataBuffer stagingBuffer;
         stagingBuffer
-            .setProperties(
-                dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            )
+            .setDataSize(dataSize)
+            .setUsageFlags(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+            .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
             .createBuffer(deviceVK)
             .uploadData(initialData);
 
         // Update usage flags and create device local buffer
         usageFlags = usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        setProperties(dataSize, usageFlags, memPropFlags);
+        setUsageFlags(usageFlags);
         createBuffer(deviceVK);
 
         TemporaryCommand copyCmd(deviceVK, deviceVK->transferPoolWrapper);

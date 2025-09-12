@@ -67,11 +67,14 @@ void DataBuffer::cleanup() {
     }
 }
 
-DataBuffer& DataBuffer::setProperties(VkDeviceSize dataSize, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memPropFlags) {
-    this->dataSize = dataSize;
-    this->usageFlags = usageFlags;
-    this->memPropFlags = memPropFlags;
-    return *this;
+DataBuffer& DataBuffer::setDataSize(VkDeviceSize size) {
+    dataSize = size;      return *this;
+}
+DataBuffer& DataBuffer::setUsageFlags(VkBufferUsageFlags flags) {
+    usageFlags = flags;   return *this;
+}
+DataBuffer& DataBuffer::setMemPropFlags(VkMemoryPropertyFlags flags) {
+    memPropFlags = flags; return *this;
 }
 
 DataBuffer& DataBuffer::createBuffer(const Device* deviceVK) {

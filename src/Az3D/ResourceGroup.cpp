@@ -154,14 +154,10 @@ void ResourceGroup::createMaterialBuffer() {
 
     matBuffer = MakeUnique<DataBuffer>();
     matBuffer
-        ->setProperties(
-            bufferSize, 
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        )
-        .createDeviceLocalBuffer(
-            deviceVK, materialVKs.data()
-        );
+        ->setDataSize(bufferSize)
+        .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .createDeviceLocalBuffer(deviceVK, materialVKs.data());
 }
 
 // Descriptor set creation
@@ -224,8 +220,9 @@ ImageWrapper ResourceGroup::createTexture(const TinyTexture& texture) {
     // Create staging buffer for texture data upload
     DataBuffer stagingBuffer;
     stagingBuffer
-        .setProperties( imageSize * sizeof(uint8_t), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .setDataSize(imageSize * sizeof(uint8_t))
+        .setUsageFlags(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+        .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
         .createBuffer(deviceVK)
         .uploadData(vulkanData.data());
 
@@ -295,11 +292,9 @@ void ResourceGroup::createTexSampIdxBuffer() {
     VkDeviceSize bufferSize = sizeof(uint32_t) * texSamplerIndices.size();
 
     textSampIdxBuffer
-        ->setProperties(
-            bufferSize,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        )
+        ->setDataSize(bufferSize)
+        .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
         .createDeviceLocalBuffer(
             deviceVK, texSamplerIndices.data()
         );
@@ -393,25 +388,22 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
 
     DataBuffer vDataBuffer;
     vDataBuffer
-        .setProperties(
-            vertexData.size(), 
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        )
-        .createDeviceLocalBuffer(
-            deviceVK, vertexData.data()
-        );
+        // .setProperties(
+        //     vertexData.size(), 
+        //     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        //     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        // )
+        .setDataSize(vertexData.size())
+        .setUsageFlags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .createDeviceLocalBuffer(deviceVK, vertexData.data());
 
     DataBuffer iDataBuffer;
     iDataBuffer
-        .setProperties(
-            indexData.size(), 
-            VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        )
-        .createDeviceLocalBuffer(
-            deviceVK, indexData.data()
-        );
+        .setDataSize(indexData.size())
+        .setUsageFlags(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .createDeviceLocalBuffer(deviceVK, indexData.data());
 
     // Append buffers
     UniquePtr<SubmeshVK> submeshVK = MakeUnique<SubmeshVK>();
@@ -453,14 +445,10 @@ void ResourceGroup::createRigSkeleBuffers() {
         UniquePtr<DataBuffer> rigInvMatBuffer = MakeUnique<DataBuffer>();
 
         rigInvMatBuffer
-            ->setProperties(
-                inverseBindMatrices.size() * sizeof(glm::mat4),
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-            )
-            .createDeviceLocalBuffer(
-                deviceVK, inverseBindMatrices.data()
-            );
+            ->setDataSize(inverseBindMatrices.size() * sizeof(glm::mat4))
+            .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+            .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+            .createDeviceLocalBuffer(deviceVK, inverseBindMatrices.data());
 
         // Append buffer
         skeleInvMatBuffers.push_back(std::move(rigInvMatBuffer));

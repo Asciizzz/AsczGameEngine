@@ -20,10 +20,9 @@ void GlbUBOManager::createDataBuffer() {
     
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         dataBuffer[i]
-            .setProperties(
-                sizeof(GlobalUBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            )
+            .setDataSize(sizeof(GlobalUBO))
+            .setUsageFlags(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
+            .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
             .createBuffer(deviceVK)
             .mapMemory();
     }
