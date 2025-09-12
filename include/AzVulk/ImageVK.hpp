@@ -88,19 +88,19 @@ namespace AzVulk {
         static ImageViewConfig createCubeMapView();
     };
 
-    // Main ImageWrapper class
-    class ImageWrapper {
+    // Main ImageVK class
+    class ImageVK {
     public:
-        ImageWrapper(const Device* device);
-        ~ImageWrapper();
+        ImageVK(const Device* device);
+        ~ImageVK();
 
         // Delete copy constructor and assignment operator
-        ImageWrapper(const ImageWrapper&) = delete;
-        ImageWrapper& operator=(const ImageWrapper&) = delete;
+        ImageVK(const ImageVK&) = delete;
+        ImageVK& operator=(const ImageVK&) = delete;
 
         // Move constructor and assignment operator
-        ImageWrapper(ImageWrapper&& other) noexcept;
-        ImageWrapper& operator=(ImageWrapper&& other) noexcept;
+        ImageVK(ImageVK&& other) noexcept;
+        ImageVK& operator=(ImageVK&& other) noexcept;
 
         // Creation methods
         bool create(const ImageConfig& config);
@@ -120,16 +120,16 @@ namespace AzVulk {
                             uint32_t baseArrayLayer = 0, uint32_t arrayLayers = VK_REMAINING_ARRAY_LAYERS);
         
         // Immediate layout transition (creates temporary command buffer) - fluent interface
-        ImageWrapper& transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout);
+        ImageVK& transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout);
 
         // Copy operations
         void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer, 
                             uint32_t width, uint32_t height, uint32_t mipLevel = 0);
-        ImageWrapper& copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
+        ImageVK& copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
 
         // Generate mipmaps
         void generateMipmaps(VkCommandBuffer cmd);
-        ImageWrapper& generateMipmapsImmediate();
+        ImageVK& generateMipmapsImmediate();
 
         // Getters
         VkImage getImage() const { return image; }
@@ -183,11 +183,11 @@ namespace AzVulk {
         TemporaryImage(const Device* device, const ImageConfig& config);
         ~TemporaryImage();
 
-        ImageWrapper& get() { return image; }
-        const ImageWrapper& get() const { return image; }
+        ImageVK& get() { return image; }
+        const ImageVK& get() const { return image; }
 
     private:
-        ImageWrapper image;
+        ImageVK image;
     };
 
     // Static utility functions for backward compatibility with manual VkImage management
@@ -198,10 +198,10 @@ namespace AzVulk {
 
     // Factory functions for common use cases
     namespace ImageFactory {
-        UniquePtr<ImageWrapper> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat);
-        UniquePtr<ImageWrapper> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels = 1);
-        UniquePtr<ImageWrapper> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format);
-        UniquePtr<ImageWrapper> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format);
-        UniquePtr<ImageWrapper> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height);
+        UniquePtr<ImageVK> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat);
+        UniquePtr<ImageVK> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels = 1);
+        UniquePtr<ImageVK> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format);
+        UniquePtr<ImageVK> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format);
+        UniquePtr<ImageVK> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height);
     }
 }

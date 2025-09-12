@@ -15,7 +15,7 @@ ResourceGroup::ResourceGroup(Device* deviceVK): deviceVK(deviceVK) {}
 void ResourceGroup::cleanup() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    // ImageWrapper handles its own cleanup automatically
+    // ImageVK handles its own cleanup automatically
     textures.clear();
 
     // Cleanup textures' samplers
@@ -200,10 +200,10 @@ void ResourceGroup::createMaterialDescSet() {
 // ========================= TEXTURES =========================================
 // ============================================================================
 
-ImageWrapper ResourceGroup::createTexture(const TinyTexture& texture) {
+ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
     // Get appropriate Vulkan format and convert data if needed
-    VkFormat textureFormat = ImageWrapper::getVulkanFormatFromChannels(texture.channels);
-    std::vector<uint8_t> vulkanData = ImageWrapper::convertTextureDataForVulkan(
+    VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
+    std::vector<uint8_t> vulkanData = ImageVK::convertTextureDataForVulkan(
         texture.channels, texture.width, texture.height, texture.data.data());
     
     // Calculate image size based on Vulkan format requirements
@@ -215,7 +215,7 @@ ImageWrapper ResourceGroup::createTexture(const TinyTexture& texture) {
     }
 
     // Dynamic mipmap levels
-    uint32_t mipLevels = ImageWrapper::autoMipLevels(texture.width, texture.height);
+    uint32_t mipLevels = ImageVK::autoMipLevels(texture.width, texture.height);
 
     // Create staging buffer for texture data upload
     DataBuffer stagingBuffer;
@@ -226,8 +226,8 @@ ImageWrapper ResourceGroup::createTexture(const TinyTexture& texture) {
         .createBuffer(deviceVK)
         .uploadData(vulkanData.data());
 
-    // Create ImageWrapper with texture configuration
-    ImageWrapper imageWrapper(deviceVK);
+    // Create ImageVK with texture configuration
+    ImageVK imageWrapper(deviceVK);
     if (!imageWrapper.createTexture(texture.width, texture.height, textureFormat, mipLevels)) {
         throw std::runtime_error("Failed to create texture image");
     }

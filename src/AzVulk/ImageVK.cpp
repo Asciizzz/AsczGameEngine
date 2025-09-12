@@ -1,4 +1,4 @@
-#include "AzVulk/ImageWrapper.hpp"
+#include "AzVulk/ImageVK.hpp"
 #include "AzVulk/Device.hpp"
 #include <stdexcept>
 #include <iostream>
@@ -118,15 +118,15 @@ ImageViewConfig ImageViewConfig::createCubeMapView() {
     return config;
 }
 
-// ImageWrapper implementation
-ImageWrapper::ImageWrapper(const Device* device) : device(device) {
+// ImageVK implementation
+ImageVK::ImageVK(const Device* device) : device(device) {
 }
 
-ImageWrapper::~ImageWrapper() {
+ImageVK::~ImageVK() {
     cleanup();
 }
 
-ImageWrapper::ImageWrapper(ImageWrapper&& other) noexcept
+ImageVK::ImageVK(ImageVK&& other) noexcept
     : device(other.device)
     , image(other.image)
     , memory(other.memory)
@@ -154,7 +154,7 @@ ImageWrapper::ImageWrapper(ImageWrapper&& other) noexcept
     other.currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-ImageWrapper& ImageWrapper::operator=(ImageWrapper&& other) noexcept {
+ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
     if (this != &other) {
         cleanup();
         
@@ -187,9 +187,9 @@ ImageWrapper& ImageWrapper::operator=(ImageWrapper&& other) noexcept {
     return *this;
 }
 
-bool ImageWrapper::create(const ImageConfig& config) {
+bool ImageVK::create(const ImageConfig& config) {
     if (!device) {
-        std::cerr << "ImageWrapper: Device is null" << std::endl;
+        std::cerr << "ImageVK: Device is null" << std::endl;
         return false;
     }
 
@@ -221,7 +221,7 @@ bool ImageWrapper::create(const ImageConfig& config) {
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     if (vkCreateImage(device->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        std::cerr << "ImageWrapper: Failed to create image" << std::endl;
+        std::cerr << "ImageVK: Failed to create image" << std::endl;
         return false;
     }
 
@@ -235,14 +235,14 @@ bool ImageWrapper::create(const ImageConfig& config) {
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties);
 
     if (vkAllocateMemory(device->lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
-        std::cerr << "ImageWrapper: Failed to allocate image memory" << std::endl;
+        std::cerr << "ImageVK: Failed to allocate image memory" << std::endl;
         cleanup();
         return false;
     }
 
     // Bind memory
     if (vkBindImageMemory(device->lDevice, image, memory, 0) != VK_SUCCESS) {
-        std::cerr << "ImageWrapper: Failed to bind image memory" << std::endl;
+        std::cerr << "ImageVK: Failed to bind image memory" << std::endl;
         cleanup();
         return false;
     }
@@ -250,9 +250,9 @@ bool ImageWrapper::create(const ImageConfig& config) {
     return true;
 }
 
-bool ImageWrapper::createImageView(const ImageViewConfig& viewConfig) {
+bool ImageVK::createImageView(const ImageViewConfig& viewConfig) {
     if (image == VK_NULL_HANDLE) {
-        std::cerr << "ImageWrapper: Cannot create image view - image not created" << std::endl;
+        std::cerr << "ImageVK: Cannot create image view - image not created" << std::endl;
         return false;
     }
 
@@ -275,14 +275,14 @@ bool ImageWrapper::createImageView(const ImageViewConfig& viewConfig) {
     createInfo.subresourceRange.layerCount = (viewConfig.arrayLayers == VK_REMAINING_ARRAY_LAYERS) ? arrayLayers : viewConfig.arrayLayers;
 
     if (vkCreateImageView(device->lDevice, &createInfo, nullptr, &imageView) != VK_SUCCESS) {
-        std::cerr << "ImageWrapper: Failed to create image view" << std::endl;
+        std::cerr << "ImageVK: Failed to create image view" << std::endl;
         return false;
     }
 
     return true;
 }
 
-bool ImageWrapper::createDepthBuffer(uint32_t width, uint32_t height, VkFormat depthFormat) {
+bool ImageVK::createDepthBuffer(uint32_t width, uint32_t height, VkFormat depthFormat) {
     ImageConfig config = ImageConfig::createDepthBuffer(width, height, depthFormat);
     if (!create(config)) return false;
 
@@ -290,7 +290,7 @@ bool ImageWrapper::createDepthBuffer(uint32_t width, uint32_t height, VkFormat d
     return createImageView(viewConfig);
 }
 
-bool ImageWrapper::createTexture(uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
+bool ImageVK::createTexture(uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
     ImageConfig config = ImageConfig::createTexture(width, height, format, mipLevels);
     if (!create(config)) return false;
 
@@ -298,10 +298,10 @@ bool ImageWrapper::createTexture(uint32_t width, uint32_t height, VkFormat forma
     return createImageView(viewConfig);
 }
 
-bool ImageWrapper::createTexture(uint32_t width, uint32_t height, int channels, const uint8_t* data, VkBuffer stagingBuffer) {
+bool ImageVK::createTexture(uint32_t width, uint32_t height, int channels, const uint8_t* data, VkBuffer stagingBuffer) {
     // Get appropriate Vulkan format and convert data
-    VkFormat textureFormat = ImageWrapper::getVulkanFormatFromChannels(channels);
-    std::vector<uint8_t> vulkanData = ImageWrapper::convertTextureDataForVulkan(channels, width, height, data);
+    VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(channels);
+    std::vector<uint8_t> vulkanData = ImageVK::convertTextureDataForVulkan(channels, width, height, data);
     
     // Dynamic mipmap levels
     uint32_t mipLevels = static_cast<uint32_t>(floor(log2(std::max(width, height)))) + 1;
@@ -319,7 +319,7 @@ bool ImageWrapper::createTexture(uint32_t width, uint32_t height, int channels, 
     return true;
 }
 
-bool ImageWrapper::createRenderTarget(uint32_t width, uint32_t height, VkFormat format) {
+bool ImageVK::createRenderTarget(uint32_t width, uint32_t height, VkFormat format) {
     ImageConfig config = ImageConfig::createRenderTarget(width, height, format);
     if (!create(config)) return false;
 
@@ -327,7 +327,7 @@ bool ImageWrapper::createRenderTarget(uint32_t width, uint32_t height, VkFormat 
     return createImageView(viewConfig);
 }
 
-bool ImageWrapper::createComputeStorage(uint32_t width, uint32_t height, VkFormat format) {
+bool ImageVK::createComputeStorage(uint32_t width, uint32_t height, VkFormat format) {
     ImageConfig config = ImageConfig::createComputeStorage(width, height, format);
     if (!create(config)) return false;
 
@@ -335,7 +335,7 @@ bool ImageWrapper::createComputeStorage(uint32_t width, uint32_t height, VkForma
     return createImageView(viewConfig);
 }
 
-bool ImageWrapper::createPostProcessBuffer(uint32_t width, uint32_t height) {
+bool ImageVK::createPostProcessBuffer(uint32_t width, uint32_t height) {
     ImageConfig config = ImageConfig::createPostProcessBuffer(width, height);
     if (!create(config)) return false;
 
@@ -343,10 +343,10 @@ bool ImageWrapper::createPostProcessBuffer(uint32_t width, uint32_t height) {
     return createImageView(viewConfig);
 }
 
-void ImageWrapper::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
+void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
                                   uint32_t baseMipLevel, uint32_t mipLevels, uint32_t baseArrayLayer, uint32_t arrayLayers) {
     if (image == VK_NULL_HANDLE) {
-        std::cerr << "ImageWrapper: Cannot transition layout - image not created" << std::endl;
+        std::cerr << "ImageVK: Cannot transition layout - image not created" << std::endl;
         return;
     }
 
@@ -384,7 +384,7 @@ void ImageWrapper::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout
     currentLayout = newLayout;
 }
 
-ImageWrapper& ImageWrapper::transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout) {
+ImageVK& ImageVK::transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout) {
     // Create temporary command buffer and execute immediately
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -415,10 +415,10 @@ ImageWrapper& ImageWrapper::transitionLayoutImmediate(VkImageLayout oldLayout, V
     return *this;
 }
 
-void ImageWrapper::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer, 
+void ImageVK::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer, 
                                 uint32_t width, uint32_t height, uint32_t mipLevel) {
     if (image == VK_NULL_HANDLE) {
-        std::cerr << "ImageWrapper: Cannot copy from buffer - image not created" << std::endl;
+        std::cerr << "ImageVK: Cannot copy from buffer - image not created" << std::endl;
         return;
     }
 
@@ -436,7 +436,7 @@ void ImageWrapper::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer,
     vkCmdCopyBufferToImage(cmd, srcBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-ImageWrapper& ImageWrapper::copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
+ImageVK& ImageVK::copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
     // Create temporary command buffer and execute immediately
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -467,9 +467,9 @@ ImageWrapper& ImageWrapper::copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t
     return *this;
 }
 
-void ImageWrapper::generateMipmaps(VkCommandBuffer cmd) {
+void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
     if (image == VK_NULL_HANDLE) {
-        std::cerr << "ImageWrapper: Cannot generate mipmaps - image not created" << std::endl;
+        std::cerr << "ImageVK: Cannot generate mipmaps - image not created" << std::endl;
         return;
     }
 
@@ -478,7 +478,7 @@ void ImageWrapper::generateMipmaps(VkCommandBuffer cmd) {
     vkGetPhysicalDeviceFormatProperties(device->pDevice, format, &formatProperties);
 
     if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-        throw std::runtime_error("ImageWrapper: texture image format does not support linear blitting!");
+        throw std::runtime_error("ImageVK: texture image format does not support linear blitting!");
     }
 
     VkImageMemoryBarrier barrier{};
@@ -541,7 +541,7 @@ void ImageWrapper::generateMipmaps(VkCommandBuffer cmd) {
     currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
-ImageWrapper& ImageWrapper::generateMipmapsImmediate() {
+ImageVK& ImageVK::generateMipmapsImmediate() {
     // Create temporary command buffer and execute immediately
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -572,11 +572,11 @@ ImageWrapper& ImageWrapper::generateMipmapsImmediate() {
     return *this;
 }
 
-bool ImageWrapper::isValid() const {
+bool ImageVK::isValid() const {
     return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE;
 }
 
-void ImageWrapper::cleanup() {
+void ImageVK::cleanup() {
     if (!device) return;
 
     VkDevice lDevice = device->lDevice;
@@ -602,7 +602,7 @@ void ImageWrapper::cleanup() {
     currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-void ImageWrapper::setDebugName(const std::string& name) {
+void ImageVK::setDebugName(const std::string& name) {
     debugName = name;
     
     // Set debug name in Vulkan if debug utils are available
@@ -618,16 +618,16 @@ void ImageWrapper::setDebugName(const std::string& name) {
     }
 }
 
-uint32_t ImageWrapper::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t ImageVK::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     return device->findMemoryType(typeFilter, properties);
 }
 
-bool ImageWrapper::hasStencilComponent(VkFormat format) {
+bool ImageVK::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
 // Static helper functions
-VkFormat ImageWrapper::getVulkanFormatFromChannels(int channels) {
+VkFormat ImageVK::getVulkanFormatFromChannels(int channels) {
     switch (channels) {
         case 1: return VK_FORMAT_R8_UNORM;          // Grayscale
         case 2: return VK_FORMAT_R8G8_UNORM;        // Grayscale + Alpha
@@ -639,7 +639,7 @@ VkFormat ImageWrapper::getVulkanFormatFromChannels(int channels) {
     }
 }
 
-std::vector<uint8_t> ImageWrapper::convertTextureDataForVulkan(int channels, int width, int height, const uint8_t* srcData) {
+std::vector<uint8_t> ImageVK::convertTextureDataForVulkan(int channels, int width, int height, const uint8_t* srcData) {
     if (channels == 3) {
         // Convert RGB to RGBA by adding alpha channel
         size_t pixelCount = width * height;
@@ -660,12 +660,12 @@ std::vector<uint8_t> ImageWrapper::convertTextureDataForVulkan(int channels, int
     }
 }
 
-uint32_t ImageWrapper::autoMipLevels(uint32_t width, uint32_t height) {
+uint32_t ImageVK::autoMipLevels(uint32_t width, uint32_t height) {
     return static_cast<uint32_t>(floor(log2(std::max(width, height)))) + 1;
 }
 
 
-VkPipelineStageFlags ImageWrapper::getStageFlags(VkImageLayout layout) {
+VkPipelineStageFlags ImageVK::getStageFlags(VkImageLayout layout) {
     switch (layout) {
         case VK_IMAGE_LAYOUT_UNDEFINED:
             return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -689,7 +689,7 @@ VkPipelineStageFlags ImageWrapper::getStageFlags(VkImageLayout layout) {
     }
 }
 
-VkAccessFlags ImageWrapper::getAccessFlags(VkImageLayout layout) {
+VkAccessFlags ImageVK::getAccessFlags(VkImageLayout layout) {
     switch (layout) {
         case VK_IMAGE_LAYOUT_UNDEFINED:
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
@@ -721,45 +721,45 @@ TemporaryImage::TemporaryImage(const Device* device, const ImageConfig& config) 
 }
 
 TemporaryImage::~TemporaryImage() {
-    // Automatic cleanup via ImageWrapper destructor
+    // Automatic cleanup via ImageVK destructor
 }
 
 // Factory functions
 namespace AzVulk::ImageFactory {
-    UniquePtr<ImageWrapper> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat) {
-        auto image = MakeUnique<ImageWrapper>(device);
+    UniquePtr<ImageVK> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat) {
+        auto image = MakeUnique<ImageVK>(device);
         if (!image->createDepthBuffer(width, height, depthFormat)) {
             return nullptr;
         }
         return image;
     }
 
-    UniquePtr<ImageWrapper> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
-        auto image = MakeUnique<ImageWrapper>(device);
+    UniquePtr<ImageVK> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
+        auto image = MakeUnique<ImageVK>(device);
         if (!image->createTexture(width, height, format, mipLevels)) {
             return nullptr;
         }
         return image;
     }
 
-    UniquePtr<ImageWrapper> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
-        auto image = MakeUnique<ImageWrapper>(device);
+    UniquePtr<ImageVK> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
+        auto image = MakeUnique<ImageVK>(device);
         if (!image->createRenderTarget(width, height, format)) {
             return nullptr;
         }
         return image;
     }
 
-    UniquePtr<ImageWrapper> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
-        auto image = MakeUnique<ImageWrapper>(device);
+    UniquePtr<ImageVK> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
+        auto image = MakeUnique<ImageVK>(device);
         if (!image->createComputeStorage(width, height, format)) {
             return nullptr;
         }
         return image;
     }
 
-    UniquePtr<ImageWrapper> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height) {
-        auto image = MakeUnique<ImageWrapper>(device);
+    UniquePtr<ImageVK> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height) {
+        auto image = MakeUnique<ImageVK>(device);
         if (!image->createPostProcessBuffer(width, height)) {
             return nullptr;
         }

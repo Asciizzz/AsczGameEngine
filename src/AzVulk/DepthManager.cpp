@@ -20,7 +20,7 @@ DepthManager::~DepthManager() {
 }
 
 void DepthManager::cleanup() {
-    // ImageWrapper handles cleanup automatically
+    // ImageVK handles cleanup automatically
     depthBuffer.cleanup();
 }
 
@@ -30,7 +30,7 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
 
     depthFormat = findDepthFormat();
 
-    // Create depth buffer using ImageWrapper convenience method
+    // Create depth buffer using ImageVK convenience method
     if (!depthBuffer.createDepthBuffer(width, height, depthFormat)) {
         throw std::runtime_error("Failed to create depth buffer!");
     }

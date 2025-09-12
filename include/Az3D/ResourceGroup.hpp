@@ -4,7 +4,7 @@
 
 #include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
-#include "AzVulk/ImageWrapper.hpp"
+#include "AzVulk/ImageVK.hpp"
 
 namespace Az3D {
 
@@ -66,7 +66,7 @@ public:
     std::vector<ModelVK>              modelVKs; // Contain indices to vulkan resources
     std::vector<MaterialVK>           materialVKs; // Very different from TinyMaterial
     UniquePtrVec<SubmeshVK>           submeshVKs;
-    std::vector<AzVulk::ImageWrapper> textures;
+    std::vector<AzVulk::ImageVK> textures;
 
     size_t addSubmeshVK(const TinySubmesh& submesh);
     VkBuffer getSubmeshVertexBuffer(size_t submeshVK_index) const;
@@ -95,7 +95,7 @@ public:
     void createTextureDescSet();
 
     // Useful methods
-    AzVulk::ImageWrapper createTexture(const TinyTexture& texture);
+    AzVulk::ImageVK createTexture(const TinyTexture& texture);
 };
 
 } // namespace Az3D

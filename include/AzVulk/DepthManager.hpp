@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
-#include "ImageWrapper.hpp"
+#include "ImageVK.hpp"
 
 namespace AzVulk {
     class Device;
@@ -25,8 +25,8 @@ namespace AzVulk {
 
         const Device* deviceVK;
         
-        // Modern ImageWrapper-based depth resource
-        ImageWrapper depthBuffer;
+        // Modern ImageVK-based depth resource
+        ImageVK depthBuffer;
 
         VkFormat depthFormat;
         bool depthResolveSupported;
