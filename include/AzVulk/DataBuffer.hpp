@@ -42,23 +42,13 @@ struct DataBuffer {
     DataBuffer& mapMemory();
     DataBuffer& unmapMemory();
 
-    template<typename T>
-    void uploadData(const T* data) {
-        mapMemory();
-        memcpy(mapped, data, dataSize);
-        unmapMemory();
-    }
+    DataBuffer& uploadData(const void* data);
 
-    template<typename T>
-    void copyData(const T* data) {
-        memcpy(mapped, data, dataSize);
-    }
+    DataBuffer& copyData(const void* data);
 
-    template<typename T>
-    void mapAndCopy(const T* data) {
-        if (!mapped) vkMapMemory(lDevice, memory, 0, dataSize, 0, &mapped);
-        memcpy(mapped, data, dataSize);
-    }
+    DataBuffer& mapAndCopy(const void* data);
+
+    DataBuffer& createDeviceLocalBuffer(const Device* deviceVK, const void* initialData);
 
     template<typename T>
     void updateMapped(size_t index, const T& value) {
@@ -70,34 +60,6 @@ struct DataBuffer {
         mapMemory();
         static_cast<T*>(mapped)[index] = value;
         unmapMemory();
-    }
-
-    template<typename T>
-    void createDeviceLocalBuffer(const Device* deviceVK, const T* initialData) {
-        // --- staging buffer (CPU visible) ---
-        DataBuffer stagingBuffer;
-        stagingBuffer
-            .setDataSize(dataSize)
-            .setUsageFlags(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-            .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-            .createBuffer(deviceVK)
-            .uploadData(initialData);
-
-        // Update usage flags and create device local buffer
-        usageFlags = usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        setUsageFlags(usageFlags);
-        createBuffer(deviceVK);
-
-        TemporaryCommand copyCmd(deviceVK, deviceVK->transferPoolWrapper);
-
-        VkBufferCopy copyRegion{};
-        copyRegion.srcOffset = 0;
-        copyRegion.dstOffset = 0;
-        copyRegion.size = dataSize;
-
-        copyFrom(copyCmd.get(), stagingBuffer.get(), &copyRegion, 1);
-
-        copyCmd.endAndSubmit();
     }
 };
 

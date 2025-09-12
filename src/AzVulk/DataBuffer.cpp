@@ -132,3 +132,49 @@ DataBuffer& DataBuffer::unmapMemory() {
     mapped = nullptr;
     return *this;
 }
+
+DataBuffer& DataBuffer::uploadData(const void* data) {
+    mapMemory();
+    memcpy(mapped, data, dataSize);
+    unmapMemory();
+    return *this;
+}
+
+DataBuffer& DataBuffer::copyData(const void* data) {
+    memcpy(mapped, data, dataSize);
+    return *this;
+}
+
+DataBuffer& DataBuffer::mapAndCopy(const void* data) {
+    mapMemory().copyData(data);
+    return *this;
+}
+
+DataBuffer& DataBuffer::createDeviceLocalBuffer(const Device* deviceVK, const void* initialData) {
+    // --- staging buffer (CPU visible) ---
+    DataBuffer stagingBuffer;
+    stagingBuffer
+        .setDataSize(dataSize)
+        .setUsageFlags(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+        .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .createBuffer(deviceVK)
+        .uploadData(initialData);
+
+    // Update usage flags and create device local buffer
+    usageFlags = usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    setUsageFlags(usageFlags);
+    createBuffer(deviceVK);
+
+    TemporaryCommand copyCmd(deviceVK, deviceVK->transferPoolWrapper);
+
+    VkBufferCopy copyRegion{};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = dataSize;
+
+    copyFrom(copyCmd.get(), stagingBuffer.get(), &copyRegion, 1);
+
+    copyCmd.endAndSubmit();
+
+    return *this;
+}
