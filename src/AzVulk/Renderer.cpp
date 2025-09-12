@@ -30,7 +30,7 @@ Renderer::~Renderer() {
 }
 
 void Renderer::createCommandBuffers() {
-    cmdBuffer.create(deviceVK->lDevice, deviceVK->graphicsPoolWrapper.pool, MAX_FRAMES_IN_FLIGHT);
+    cmdBuffers.create(deviceVK->lDevice, deviceVK->graphicsPoolWrapper.pool, MAX_FRAMES_IN_FLIGHT);
 }
 
 void Renderer::createSyncObjects() {
@@ -90,9 +90,11 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
     // Now assign this image to the current frame
     imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
+
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    if (vkBeginCommandBuffer(cmdBuffer[currentFrame], &beginInfo) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(currentCmd, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
@@ -114,7 +116,7 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
     renderPassInfo.clearValueCount = clearValueCount;
     renderPassInfo.pClearValues = clearValues.data();
 
-    vkCmdBeginRenderPass(cmdBuffer[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -123,12 +125,12 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
     viewport.height = static_cast<float>(swapChain->extent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(cmdBuffer[currentFrame], 0, 1, &viewport);
+    vkCmdSetViewport(currentCmd, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = swapChain->extent;
-    vkCmdSetScissor(cmdBuffer[currentFrame], 0, 1, &scissor);
+    vkCmdSetScissor(currentCmd, 0, 1, &scissor);
 
     return imageIndex;
 }
@@ -138,7 +140,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     uint32_t instanceCount = instanceGroup->prevInstanceCount;
     if (instanceCount == 0) return;
 
-    VkCommandBuffer currentCmd = cmdBuffer[currentFrame];
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     rPipeline->bindCmd(currentCmd);
 
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
@@ -180,7 +182,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
 
 void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t modelIndex) const {
-    VkCommandBuffer currentCmd = cmdBuffer[currentFrame];
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     pipeline->bindCmd(currentCmd);
 
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
@@ -219,7 +221,7 @@ void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3
 
 // No instance buffer data yet
 void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const Az3D::RigDemo& demo) const {
-    VkCommandBuffer currentCmd = cmdBuffer[currentFrame];
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     rPipeline->bindCmd(currentCmd);
 
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
@@ -259,7 +261,7 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
 
 // Sky rendering using dedicated sky pipeline
 void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const {
-    VkCommandBuffer currentCmd = cmdBuffer[currentFrame];
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
     // Bind sky pipeline
     skyPipeline->bindCmd(currentCmd);
@@ -277,7 +279,7 @@ void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* 
 void Renderer::endFrame(uint32_t imageIndex) {
     if (imageIndex == UINT32_MAX) return;
 
-    VkCommandBuffer currentCmd = cmdBuffer[currentFrame];
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
     vkCmdEndRenderPass(currentCmd);
     
@@ -312,7 +314,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     present.waitSemaphoreCount = 1;
     present.pWaitSemaphores    = signalSemaphores;
     present.swapchainCount     = 1;
-    VkSwapchainKHR chains[]    = { swapChain->swapChain };
+    VkSwapchainKHR chains[]    = { swapChain->get() };
     present.pSwapchains        = chains;
     present.pImageIndices      = &imageIndex;
 

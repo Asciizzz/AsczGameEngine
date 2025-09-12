@@ -26,12 +26,12 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        // Introduction
         uint32_t beginFrame(VkRenderPass renderPass);
-        
-        // Frame tracking
+        void endFrame(uint32_t imageIndex);
+
         uint32_t getCurrentFrame() const { return currentFrame; }
 
+        // Demo functions
         void drawStaticInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::StaticInstanceGroup* instanceGroup) const;
         
         void drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t modelIndex) const;
@@ -40,7 +40,6 @@ namespace AzVulk {
 
         void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const;
 
-        void endFrame(uint32_t imageIndex);
 
         // Post-processing methods
         void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
@@ -51,7 +50,7 @@ namespace AzVulk {
         UniquePtr<PostProcess> postProcess;
 
         // Command recording
-        CmdBuffer cmdBuffer;
+        CmdBuffer cmdBuffers;
 
         // Synchronization objects
         std::vector<VkSemaphore> imageAvailableSemaphores; // Per MAX_FRAMES_IN_FLIGHT
@@ -67,6 +66,5 @@ namespace AzVulk {
 
         void createCommandBuffers();
         void createSyncObjects();
-        void copyFinalImageToSwapchain(VkCommandBuffer cmd, uint32_t imageIndex);
     };
 }
