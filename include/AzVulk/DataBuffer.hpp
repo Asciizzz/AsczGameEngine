@@ -73,10 +73,7 @@ struct DataBuffer {
     }
 
     template<typename T>
-    void createDeviceLocalBuffer(
-        const Device* deviceVK,
-        const T* initialData = nullptr
-    ) {
+    void createDeviceLocalBuffer(const Device* deviceVK, const T* initialData) {
         // --- staging buffer (CPU visible) ---
         DataBuffer stagingBuffer;
         stagingBuffer
