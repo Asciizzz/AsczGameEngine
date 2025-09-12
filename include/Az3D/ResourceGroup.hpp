@@ -4,15 +4,9 @@
 
 #include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
+#include "AzVulk/ImageWrapper.hpp"
 
 namespace Az3D {
-
-// Vulkan texture resource (image + view + memory only)
-struct TextureVK {
-    VkImage image         = VK_NULL_HANDLE;
-    VkImageView view      = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-};
 
 struct MaterialVK {
     glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
@@ -72,7 +66,7 @@ public:
     std::vector<ModelVK>              modelVKs; // Contain indices to vulkan resources
     std::vector<MaterialVK>           materialVKs; // Very different from TinyMaterial
     UniquePtrVec<SubmeshVK>           submeshVKs;
-    UniquePtrVec<TextureVK>           textureVKs;
+    std::vector<AzVulk::ImageWrapper> textures;
 
     size_t addSubmeshVK(const TinySubmesh& submesh);
     VkBuffer getSubmeshVertexBuffer(size_t submeshVK_index) const;
@@ -101,7 +95,7 @@ public:
     void createTextureDescSet();
 
     // Useful methods
-    UniquePtr<TextureVK> createTextureVK(const TinyTexture& texture);
+    AzVulk::ImageWrapper createTexture(const TinyTexture& texture);
 };
 
 } // namespace Az3D

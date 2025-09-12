@@ -51,6 +51,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/CmdBuffer.cpp
     src/AzVulk/DataBuffer.cpp
     src/AzVulk/Descriptor.cpp
+    src/AzVulk/ImageWrapper.cpp
     src/AzVulk/Swapchain.cpp
     src/AzVulk/RenderPass.cpp
     src/AzVulk/DepthManager.cpp
