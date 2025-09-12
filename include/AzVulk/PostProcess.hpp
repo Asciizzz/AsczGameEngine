@@ -1,12 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include <vector>
 #include <memory>
 #include <string>
 #include <array>
 
-#include "AzVulk/Device.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_compute.hpp"
 #include "AzVulk/DepthManager.hpp"

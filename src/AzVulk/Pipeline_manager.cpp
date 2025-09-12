@@ -1,4 +1,6 @@
 #include "AzVulk/Pipeline_manager.hpp"
+#include "Helpers/Templates.hpp"
+
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -360,7 +362,7 @@ void PipelineManager::initializePipelines(
         pipelineConfig.setLayouts = layouts;
         
         // Create pipeline instance
-        auto pipeline = std::make_unique<PipelineRaster>(device, pipelineConfig);
+        auto pipeline = MakeUnique<PipelineRaster>(device, pipelineConfig);
         pipeline->create();
         
         // Store instance

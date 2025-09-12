@@ -1,9 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include <memory>
+#include <Helpers/Templates.hpp>
 #include <string>
-#include <vector>
 
 namespace AzVulk {
     class Device;
@@ -199,10 +198,10 @@ namespace AzVulk {
 
     // Factory functions for common use cases
     namespace ImageFactory {
-        std::unique_ptr<ImageWrapper> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat);
-        std::unique_ptr<ImageWrapper> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels = 1);
-        std::unique_ptr<ImageWrapper> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format);
-        std::unique_ptr<ImageWrapper> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format);
-        std::unique_ptr<ImageWrapper> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height);
+        UniquePtr<ImageWrapper> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat);
+        UniquePtr<ImageWrapper> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels = 1);
+        UniquePtr<ImageWrapper> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format);
+        UniquePtr<ImageWrapper> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format);
+        UniquePtr<ImageWrapper> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height);
     }
 }

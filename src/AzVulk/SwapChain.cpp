@@ -98,8 +98,8 @@ void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
     for (size_t i = 0; i < imageViews.size(); ++i) {
         // No MSAA: depth, swapchain color (matching RenderPass attachment order)
         std::vector<VkImageView> attachments = {
-            depthImageView,  // depth
-            imageViews[i]    // swapchain color
+            imageViews[i],   // swapchain color
+            depthImageView   // depth
         };
 
         VkFramebufferCreateInfo framebufferInfo{};

@@ -1,10 +1,8 @@
 #pragma once
 
 #include "AzVulk/Pipeline_graphic.hpp"
+#include "Helpers/Templates.hpp"
 #include <string>
-#include <unordered_map>
-#include <memory>
-#include <vector>
 
 namespace AzVulk {
 
@@ -116,7 +114,7 @@ private:
     std::unordered_map<std::string, PipelineAsset> pipelineAssets;  // Store the original asset data
     
     // Storage for actual pipeline instances
-    std::unordered_map<std::string, std::unique_ptr<PipelineRaster>> pipelineInstances;
+    std::unordered_map<std::string, UniquePtr<PipelineRaster>> pipelineInstances;
     
     // JSON parsing helpers
     RasterCfg parseRasterConfig(const PipelineAsset& asset) const;

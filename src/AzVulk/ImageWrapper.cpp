@@ -726,40 +726,40 @@ TemporaryImage::~TemporaryImage() {
 
 // Factory functions
 namespace AzVulk::ImageFactory {
-    std::unique_ptr<ImageWrapper> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat) {
-        auto image = std::make_unique<ImageWrapper>(device);
+    UniquePtr<ImageWrapper> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat) {
+        auto image = MakeUnique<ImageWrapper>(device);
         if (!image->createDepthBuffer(width, height, depthFormat)) {
             return nullptr;
         }
         return image;
     }
 
-    std::unique_ptr<ImageWrapper> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
-        auto image = std::make_unique<ImageWrapper>(device);
+    UniquePtr<ImageWrapper> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
+        auto image = MakeUnique<ImageWrapper>(device);
         if (!image->createTexture(width, height, format, mipLevels)) {
             return nullptr;
         }
         return image;
     }
 
-    std::unique_ptr<ImageWrapper> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
-        auto image = std::make_unique<ImageWrapper>(device);
+    UniquePtr<ImageWrapper> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
+        auto image = MakeUnique<ImageWrapper>(device);
         if (!image->createRenderTarget(width, height, format)) {
             return nullptr;
         }
         return image;
     }
 
-    std::unique_ptr<ImageWrapper> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
-        auto image = std::make_unique<ImageWrapper>(device);
+    UniquePtr<ImageWrapper> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
+        auto image = MakeUnique<ImageWrapper>(device);
         if (!image->createComputeStorage(width, height, format)) {
             return nullptr;
         }
         return image;
     }
 
-    std::unique_ptr<ImageWrapper> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height) {
-        auto image = std::make_unique<ImageWrapper>(device);
+    UniquePtr<ImageWrapper> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height) {
+        auto image = MakeUnique<ImageWrapper>(device);
         if (!image->createPostProcessBuffer(width, height)) {
             return nullptr;
         }

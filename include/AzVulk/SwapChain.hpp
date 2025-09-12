@@ -17,7 +17,6 @@ namespace AzVulk {
         SwapChain(const Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window);
         ~SwapChain();
 
-        
         SwapChain(const SwapChain&) = delete;
         SwapChain& operator=(const SwapChain&) = delete;
 
