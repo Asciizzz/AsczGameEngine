@@ -17,9 +17,7 @@ void main() {
     vec2 texCoord = (vec2(coord) + 0.5) / texSize;
     vec3 color = texture(inputImage, texCoord).rgb;
 
-    // Simple Reinhard tone mapping
-    color = color / (color + vec3(1.0));
+    // Fun shader here
 
-    // Output the tone mapped color
     imageStore(outputImage, coord, vec4(color, 1.0));
 }

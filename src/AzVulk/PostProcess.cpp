@@ -583,10 +583,7 @@ void PostProcess::cleanup() {
         effect->cleanup(device);
     }
     effects.clear();
-    
+
     // Clean up all render resources
     cleanupRenderResources();
-    
-    // Note: effects OrderedMap is cleared above, no separate storedEffects to clear
-    // Note: offscreenRenderPass is now owned by Renderer, not cleaned up here
 }

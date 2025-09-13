@@ -16,7 +16,8 @@ REM Single instance shader
 glslc Shaders/raw/Rasterize/StaticSingle.vert -o Shaders/bin/Rasterize/StaticSingle.vert.spv
 
 REM Post-process shaders
-glslc Shaders/raw/PostProcess/fxaa.comp -o Shaders/bin/PostProcess/fxaa.comp.spv
 glslc Shaders/raw/PostProcess/tonemap.comp -o Shaders/bin/PostProcess/tonemap.comp.spv
+glslc Shaders/raw/PostProcess/fxaa.comp -o Shaders/bin/PostProcess/fxaa.comp.spv
+glslc Shaders/raw/PostProcess/fun.comp -o Shaders/bin/PostProcess/fun.comp.spv
 
 echo Compiling completed!

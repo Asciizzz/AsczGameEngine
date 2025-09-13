@@ -1,6 +1,11 @@
 {
   "effects": [
     {
+      "name": "fun",
+      "shader": "Shaders/bin/PostProcess/fun.comp.spv",
+      "active": true
+    },
+    {
       "name": "fxaa",
       "shader": "Shaders/bin/PostProcess/fxaa.comp.spv",
       "active": true
@@ -9,11 +14,6 @@
       "name": "tonemap",
       "shader": "Shaders/bin/PostProcess/tonemap.comp.spv",
       "active": true
-    },
-    {
-      "name": "ExampleEffect",
-      "shader": "Shaders/bin/PostProcess/example.comp.spv",
-      "active": false
     }
   ]
 }
