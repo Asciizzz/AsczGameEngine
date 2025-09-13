@@ -2,12 +2,15 @@
 
 #include <chrono>
 #include <glm/glm.hpp>
+#include <SDL2/SDL.h>
+#include <vector>
 
 #include "AzVulk/CmdBuffer.hpp"
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_include.hpp"
 #include "AzVulk/PostProcess.hpp"
 #include "AzVulk/DepthManager.hpp"
+#include "AzVulk/RenderPass.hpp"
 #include <memory>
 
 #include "Az3D/GlobalUBO.hpp"
@@ -20,16 +23,36 @@ namespace AzVulk {
 
     class Renderer {
     public:
-        Renderer(Device* deviceVK, SwapChain* swapChain, DepthManager* depthManager);
+        Renderer(Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        uint32_t beginFrame(VkRenderPass renderPass);
+        // Initialize render passes - called after construction
+        void initializeRenderPasses();
+        
+        // Recreate render passes when needed (e.g., window resize)
+        void recreateRenderPasses();
+        
+        // Handle window resize - recreates swap chain and related resources
+        void handleWindowResize(SDL_Window* window);
+
+        uint32_t beginFrame();
         void endFrame(uint32_t imageIndex);
 
         uint32_t getCurrentFrame() const { return currentFrame; }
+
+        // Render pass getters
+        VkRenderPass getMainRenderPass() const;
+        VkRenderPass getOffscreenRenderPass() const;
+        
+        // SwapChain getters for external access
+        SwapChain* getSwapChain() const { return swapChain.get(); }
+        VkExtent2D getSwapChainExtent() const;
+        
+        // DepthManager getter for external access
+        DepthManager* getDepthManager() const { return depthManager.get(); }
 
         // Demo functions
         void drawStaticInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::StaticInstanceGroup* instanceGroup) const;
@@ -46,8 +69,19 @@ namespace AzVulk {
 
         // Component references
         Device* deviceVK;
-        SwapChain* swapChain;
+        
+        // Owned components
+        UniquePtr<SwapChain> swapChain;
+        UniquePtr<DepthManager> depthManager;
+        
+        // Render passes owned by this renderer
+        UniquePtr<RenderPass> mainRenderPass;      // For final presentation
+        UniquePtr<RenderPass> offscreenRenderPass; // For scene rendering
+        
         UniquePtr<PostProcess> postProcess;
+        
+        // Store post-process effects for recreation
+        std::vector<std::pair<std::string, std::string>> postProcessEffects;
 
         // Command recording
         CmdBuffer cmdBuffers;
@@ -66,5 +100,6 @@ namespace AzVulk {
 
         void createCommandBuffers();
         void createSyncObjects();
+        void createRenderPasses();
     };
 }

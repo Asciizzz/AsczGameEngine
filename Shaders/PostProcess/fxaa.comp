@@ -139,5 +139,8 @@ void main() {
     // Apply FXAA
     vec3 color = FxaaPixelShader(uv, inputImage);
 
+    // Debug
+    color = vec3(1.0) - color; // Invert colors for testing
+
     imageStore(outputImage, texCoord, vec4(color, 1.0));
 }

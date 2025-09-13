@@ -65,17 +65,12 @@ SubpassConfig SubpassConfig::createMRTSubpass(const std::vector<uint32_t>& color
 // RenderPassConfig factory methods
 RenderPassConfig RenderPassConfig::createForwardRenderingConfig(VkFormat swapChainFormat) {
     RenderPassConfig config;
-    
-    // Color attachment (swapchain image)
+
     config.attachments.push_back(AttachmentConfig::createColorAttachment(swapChainFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
-    
-    // Depth attachment
     config.attachments.push_back(AttachmentConfig::createDepthAttachment());
     
-    // Single subpass
     config.subpasses.push_back(SubpassConfig::createSimpleSubpass(0, 1));
-    
-    // Default dependency
+
     config.addDefaultDependency();
     
     return config;
@@ -115,11 +110,14 @@ RenderPassConfig RenderPassConfig::createShadowMapConfig() {
 RenderPassConfig RenderPassConfig::createPostProcessConfig(VkFormat colorFormat) {
     RenderPassConfig config;
     
-    // Single color attachment for post-processing
-    config.attachments.push_back(AttachmentConfig::createColorAttachment(colorFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+    // Color attachment for post-processing - use GENERAL layout for compute compatibility
+    config.attachments.push_back(AttachmentConfig::createColorAttachment(colorFormat, VK_IMAGE_LAYOUT_GENERAL));
     
-    // Simple subpass
-    config.subpasses.push_back(SubpassConfig::createSimpleSubpass(0, VK_ATTACHMENT_UNUSED));
+    // Depth attachment (needed to match framebuffer creation)
+    config.attachments.push_back(AttachmentConfig::createDepthAttachment());
+    
+    // Simple subpass with both color and depth
+    config.subpasses.push_back(SubpassConfig::createSimpleSubpass(0, 1));
     
     config.addDefaultDependency();
     

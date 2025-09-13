@@ -2,7 +2,6 @@
 
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
-#include <vector>
 #include "AzVulk/Device.hpp"
 
 namespace AzVulk {

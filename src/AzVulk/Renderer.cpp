@@ -3,18 +3,26 @@
 
 #include <stdexcept>
 #include <cstring>
+#include <SDL.h>
 
 using namespace Az3D;
 using namespace AzVulk;
 
 
-Renderer::Renderer (Device* deviceVK, SwapChain* swapChain, DepthManager* depthManager)
-: deviceVK(deviceVK), swapChain(swapChain) {
+Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window)
+: deviceVK(deviceVK) {
+    // Create depth manager first
+    depthManager = MakeUnique<DepthManager>(deviceVK);
+    
+    // Create swap chain
+    swapChain = MakeUnique<SwapChain>(deviceVK, surface, window);
+    
+    // Initialize depth resources with swap chain dimensions
+    depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
+    
     createCommandBuffers();
     createSyncObjects();
-
-    postProcess = MakeUnique<PostProcess>(deviceVK, swapChain, depthManager);
-    postProcess->initialize();
+    // Note: render passes will be created by initializeRenderPasses() called from Application
 }
 
 Renderer::~Renderer() {
@@ -65,8 +73,96 @@ void Renderer::createSyncObjects() {
     }
 }
 
+void Renderer::initializeRenderPasses() {
+    createRenderPasses();
+    
+    // Create framebuffers for the main render pass
+    VkRenderPass mainRenderPassVK = mainRenderPass->get();
+    swapChain->createFramebuffers(mainRenderPassVK, depthManager->getDepthImageView());
+    
+    // Create post process after render passes are ready
+    postProcess = MakeUnique<PostProcess>(deviceVK, swapChain.get(), depthManager.get());
+    postProcess->initialize(offscreenRenderPass->get());
+}
+
+void Renderer::recreateRenderPasses() {
+    createRenderPasses();
+    
+    // Recreate main render pass framebuffers
+    VkRenderPass mainRenderPassVK = mainRenderPass->get();
+    swapChain->createFramebuffers(mainRenderPassVK, depthManager->getDepthImageView());
+    
+    // Note: PostProcess recreation is handled separately in handleWindowResize
+}
+
+void Renderer::createRenderPasses() {
+    VkDevice lDevice = deviceVK->lDevice;
+    VkPhysicalDevice pDevice = deviceVK->pDevice;
+    
+    // Create main render pass for final presentation to swapchain
+    auto mainRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
+        swapChain->imageFormat
+    );
+    mainRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, mainRenderPassConfig);
+    
+    // Create offscreen render pass for scene rendering (use ping-pong image format)
+    auto offscreenRenderPassConfig = RenderPassConfig::createPostProcessConfig(
+        VK_FORMAT_R8G8B8A8_UNORM  // Match the ping-pong image format
+    );
+    offscreenRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, offscreenRenderPassConfig);
+}
+
+VkRenderPass Renderer::getMainRenderPass() const {
+    return mainRenderPass ? mainRenderPass->get() : VK_NULL_HANDLE;
+}
+
+VkRenderPass Renderer::getOffscreenRenderPass() const {
+    return offscreenRenderPass ? offscreenRenderPass->get() : VK_NULL_HANDLE;
+}
+
+VkExtent2D Renderer::getSwapChainExtent() const {
+    return swapChain ? swapChain->extent : VkExtent2D{0, 0};
+}
+
+void Renderer::handleWindowResize(SDL_Window* window) {
+    // Wait for device to be idle
+    vkDeviceWaitIdle(deviceVK->lDevice);
+    
+    // Clean up PostProcess first (it handles its own framebuffer cleanup)
+    if (postProcess) {
+        postProcess.reset();
+    }
+    
+    // Get new window dimensions for depth resources
+    int newWidth, newHeight;
+    SDL_GetWindowSize(window, &newWidth, &newHeight);
+    
+    // Recreate depth resources before recreating other resources
+    depthManager->createDepthResources(newWidth, newHeight);
+    
+    // Clean up SwapChain framebuffers before image views
+    swapChain->cleanupFramebuffers();
+    
+    // Now safe to cleanup and recreate SwapChain
+    swapChain->cleanup();
+    swapChain->createSwapChain(window);
+    swapChain->createImageViews();
+    
+    // Recreate render passes and framebuffers
+    recreateRenderPasses();
+    
+    // Recreate PostProcess with new render pass and fresh depth resources
+    postProcess = MakeUnique<PostProcess>(deviceVK, swapChain.get(), depthManager.get());
+    postProcess->initialize(offscreenRenderPass->get());
+    
+    // Re-add all stored post-process effects
+    for (const auto& effect : postProcessEffects) {
+        postProcess->addEffect(effect.first, effect.second);
+    }
+}
+
 // Begin frame: handle synchronization, image acquisition, and render pass setup
-uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
+uint32_t Renderer::beginFrame() {
     // Wait for the current frame's fence
     vkWaitForFences(deviceVK->lDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -106,12 +202,12 @@ uint32_t Renderer::beginFrame(VkRenderPass renderPass) {
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = swapChain->extent;
 
-    // No MSAA: depth + color (fixed count)
+    // Clear values to match render pass attachment order: [color, depth]
     uint32_t clearValueCount = 2;
 
     std::vector<VkClearValue> clearValues(clearValueCount);
-    clearValues[0].depthStencil = {1.0f, 0};
-    clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};    // Color attachment (index 0)
+    clearValues[1].depthStencil = {1.0f, 0};               // Depth attachment (index 1)
 
     renderPassInfo.clearValueCount = clearValueCount;
     renderPassInfo.pClearValues = clearValues.data();
@@ -329,5 +425,11 @@ void Renderer::endFrame(uint32_t imageIndex) {
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {
-    postProcess->addEffect(name, computeShaderPath);
+    // Store the effect for recreation during resize
+    postProcessEffects.emplace_back(name, computeShaderPath);
+    
+    // Add to current PostProcess if it exists
+    if (postProcess) {
+        postProcess->addEffect(name, computeShaderPath);
+    }
 }

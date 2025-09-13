@@ -53,21 +53,11 @@ void Application::initComponents() {
     VkDevice lDevice = deviceVK->lDevice;
     VkPhysicalDevice pDevice = deviceVK->pDevice;
 
-    swapChain = MakeUnique<SwapChain>(deviceVK.get(), vkInstance->surface, windowManager->window);
-
-    // Create shared render pass for forward rendering
-    auto renderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapChain->imageFormat
-    );
-    mainRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, renderPassConfig);
-
-    VkRenderPass renderPass = mainRenderPass->renderPass;
-
-    // Initialize render targets and depth testing
-    depthManager = MakeUnique<DepthManager>(deviceVK.get());
-    depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
-    swapChain->createFramebuffers(renderPass, depthManager->getDepthImageView());
-    renderer = MakeUnique<Renderer>(deviceVK.get(), swapChain.get(), depthManager.get());
+    // Create renderer (which now manages depth manager, swap chain and render passes)
+    renderer = MakeUnique<Renderer>(deviceVK.get(), vkInstance->surface, windowManager->window);
+    
+    // Initialize render passes and framebuffers
+    renderer->initializeRenderPasses();
 
     resGroup = MakeUnique<ResourceGroup>(deviceVK.get());
     glbUBOManager = MakeUnique<GlbUBOManager>(deviceVK.get());
@@ -187,7 +177,7 @@ void Application::initComponents() {
     vertexInputVKs["Single"] = vsingleInput;
     
     // Use offscreen render pass for pipeline creation
-    VkRenderPass offscreenRenderPass = renderer->postProcess->getOffscreenRenderPass();
+    VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
     PIPELINE_INIT(pipelineManager.get(), lDevice, offscreenRenderPass, namedLayouts, vertexInputVKs);
 
     renderer->addPostProcessEffect("fxaa", "Shaders/PostProcess/fxaa.comp.spv");
@@ -202,35 +192,18 @@ bool Application::checkWindowResize() {
     windowManager->resizedFlag = false;
     renderer->framebufferResized = false;
 
-    vkDeviceWaitIdle(deviceVK->lDevice);
-
     int newWidth, newHeight;
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
 
     // Reset like literally everything
     camera->updateAspectRatio(newWidth, newHeight);
 
-    depthManager->createDepthResources(newWidth, newHeight);
-
-    // Recreate render pass with new settings
-    auto newRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapChain->imageFormat
-    );
-    mainRenderPass->recreate(newRenderPassConfig);
-
-    VkRenderPass renderPass = mainRenderPass->get();
-    swapChain->recreateFramebuffers(
-        windowManager->window, renderPass,
-        depthManager->getDepthImageView()
-    );
-
-    // Recreate post-processing resources for new swapchain size
-    renderer->postProcess->recreate();
+    // Handle window resize in renderer (now handles depth resources internally)
+    renderer->handleWindowResize(windowManager->window);
 
     // Recreate all pipelines with offscreen render pass for post-processing
-    VkRenderPass offscreenRenderPass = renderer->postProcess->getOffscreenRenderPass();
+    VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
     pipelineManager->recreateAllPipelines(offscreenRenderPass);
-
 
     return true;
 }
@@ -404,7 +377,7 @@ void Application::mainLoop() {
         // grassSystem->grassInstanceGroup.updateDataBuffer(); // Per frame update since grass moves
         // Use the new explicit rendering interface
         
-        uint32_t imageIndex = rendererRef.beginFrame(mainRenderPass->get());
+        uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
             // Update global UBO buffer from frame index
             uint32_t currentFrameIndex = rendererRef.getCurrentFrame();

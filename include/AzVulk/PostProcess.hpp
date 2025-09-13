@@ -41,8 +41,8 @@ public:
     PostProcess(const PostProcess&) = delete;
     PostProcess& operator=(const PostProcess&) = delete;
 
-    // Initialize post-process resources
-    void initialize();
+    // Initialize post-process resources with external render pass
+    void initialize(VkRenderPass offscreenRenderPass);
     
     // Add a post-process effect
     void addEffect(const std::string& name, const std::string& computeShaderPath);
@@ -50,6 +50,9 @@ public:
     // Get offscreen framebuffer for scene rendering
     VkFramebuffer getOffscreenFramebuffer(uint32_t frameIndex) const;
     VkRenderPass getOffscreenRenderPass() const { return offscreenRenderPass; }
+    
+    // Set the offscreen render pass (called by Renderer)
+    void setOffscreenRenderPass(VkRenderPass renderPass) { offscreenRenderPass = renderPass; }
     
     // Execute all post-process effects
     void executeEffects(VkCommandBuffer cmd, uint32_t frameIndex);
@@ -74,7 +77,7 @@ private:
     // Per-frame ping-pong images
     std::array<PingPongImages, MAX_FRAMES_IN_FLIGHT> pingPongImages;
     
-    // Offscreen render pass and framebuffers for scene rendering
+    // Offscreen render pass - now referenced from Renderer, not owned
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
     std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
     
@@ -86,7 +89,6 @@ private:
     
     // Helper methods
     void createPingPongImages();
-    void createOffscreenRenderPass();
     void createOffscreenFramebuffers();
     void createSampler();
     void createSharedDescriptors();

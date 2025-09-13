@@ -28,10 +28,7 @@ private:
 
     UniquePtr<AzVulk::Instance> vkInstance;
     UniquePtr<AzVulk::Device> deviceVK;
-    UniquePtr<AzVulk::SwapChain> swapChain;
 
-    UniquePtr<AzVulk::RenderPass> mainRenderPass;
-    UniquePtr<AzVulk::DepthManager> depthManager;
     UniquePtr<AzVulk::Renderer> renderer;
 
     UniquePtr<AzVulk::PipelineManager> pipelineManager;

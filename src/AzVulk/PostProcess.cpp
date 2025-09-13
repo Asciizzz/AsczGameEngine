@@ -52,11 +52,11 @@ PostProcess::~PostProcess() {
     cleanup();
 }
 
-void PostProcess::initialize() {
+void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
+    this->offscreenRenderPass = offscreenRenderPass;
+    
     createSampler();
     createPingPongImages();
-
-    createOffscreenRenderPass();
     createOffscreenFramebuffers();
     
     createSharedDescriptors();
@@ -95,73 +95,11 @@ void PostProcess::createPingPongImages() {
     }
 }
 
-
-
-void PostProcess::createOffscreenRenderPass() {
-    // Color attachment (ping-pong image A) - use storage-compatible format
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = VK_FORMAT_R8G8B8A8_UNORM;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    // Depth attachment - using DepthManager's format
-    VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = depthManager->depthFormat;
-    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 1; // Color is second attachment (depth first)
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference depthAttachmentRef{};
-    depthAttachmentRef.attachment = 0; // Depth is first attachment 
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-    std::array<VkAttachmentDescription, 2> attachments = {depthAttachment, colorAttachment};
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments = attachments.data();
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
-
-    if (vkCreateRenderPass(deviceVK->lDevice, &renderPassInfo, nullptr, &offscreenRenderPass) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create offscreen render pass!");
-    }
-}
-
 void PostProcess::createOffscreenFramebuffers() {
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         std::array<VkImageView, 2> attachments = {
-            depthManager->getDepthImageView(),  // Use DepthManager's depth buffer
-            pingPongImages[frame].viewA  // Use image A as the initial render target
+            pingPongImages[frame].viewA,        // Color attachment (index 0)
+            depthManager->getDepthImageView()   // Depth attachment (index 1)
         };
 
         VkFramebufferCreateInfo framebufferInfo{};
@@ -324,11 +262,8 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
 
     const auto& images = pingPongImages[frameIndex];
     
-    // Transition ping-pong image A from COLOR_ATTACHMENT_OPTIMAL to GENERAL for compute
-    transitionImageLayout(cmd, images.imageA, VK_FORMAT_R8G8B8A8_UNORM,
-                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
-    
-    // Also transition image B to GENERAL
+    // Images are already in GENERAL layout from the render pass, so no transition needed for image A
+    // Just transition image B from UNDEFINED to GENERAL
     transitionImageLayout(cmd, images.imageB, VK_FORMAT_R8G8B8A8_UNORM,
                          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
@@ -474,7 +409,7 @@ VkImageView PostProcess::getFinalImageView(uint32_t frameIndex) const {
 
 void PostProcess::recreate() {
     cleanup();
-    initialize();
+    initialize(offscreenRenderPass); // Use the stored render pass reference
 }
 
 void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
@@ -520,13 +455,18 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
 void PostProcess::cleanup() {
     VkDevice device = deviceVK->lDevice;
 
-    // Clean up sampler
-    if (sampler != VK_NULL_HANDLE) {
-        vkDestroySampler(device, sampler, nullptr);
-        sampler = VK_NULL_HANDLE;
+    // Wait for device to be idle to ensure no resources are in use
+    vkDeviceWaitIdle(device);
+
+    // Clean up offscreen framebuffers FIRST (before image views)
+    for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
+        if (offscreenFramebuffers[frame] != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(device, offscreenFramebuffers[frame], nullptr);
+            offscreenFramebuffers[frame] = VK_NULL_HANDLE;
+        }
     }
 
-    // Clean up effects
+    // Clean up effects (pipelines)
     for (auto& effect : effects) {
         effect->cleanup(device);
     }
@@ -535,20 +475,15 @@ void PostProcess::cleanup() {
     // Clean up descriptor sets
     descriptorSets.cleanup();
 
-    // Clean up offscreen resources
-    for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        if (offscreenFramebuffers[frame] != VK_NULL_HANDLE) {
-            vkDestroyFramebuffer(device, offscreenFramebuffers[frame], nullptr);
-            offscreenFramebuffers[frame] = VK_NULL_HANDLE;
-        }
+    // Clean up sampler
+    if (sampler != VK_NULL_HANDLE) {
+        vkDestroySampler(device, sampler, nullptr);
+        sampler = VK_NULL_HANDLE;
     }
     
-    if (offscreenRenderPass != VK_NULL_HANDLE) {
-        vkDestroyRenderPass(device, offscreenRenderPass, nullptr);
-        offscreenRenderPass = VK_NULL_HANDLE;
-    }
+    // Note: offscreenRenderPass is now owned by Renderer, not cleaned up here
     
-    // Clean up ping-pong images
+    // Clean up ping-pong images LAST (after framebuffers that use their views)
     for (auto& images : pingPongImages) {
         images.cleanup(device);
     }
