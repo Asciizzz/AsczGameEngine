@@ -79,7 +79,7 @@ void PostProcess::createPingPongImages() {
                            VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                            images.imageA, images.memoryA);
-        
+
         // Create image B using AzVulk helper function
         AzVulk::createImage(deviceVK, extent.width, extent.height, format,
                            VK_IMAGE_TILING_OPTIMAL,
@@ -238,12 +238,9 @@ void PostProcess::createFinalBlit() {
 
 
 void PostProcess::addEffect(const std::string& name, const std::string& computeShaderPath) {
-    // Store the effect configuration for recreation
-    storedEffects.emplace_back(name, computeShaderPath);
-    
     auto effect = MakeUnique<PostProcessEffect>();
-    effect->name = name;
     effect->computeShaderPath = computeShaderPath;
+    effect->active = true;  // Set to active by default
 
     // Create compute pipeline using the shared descriptor set layout
     ComputePipelineConfig config{};
@@ -253,7 +250,8 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
     effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
     effect->pipeline->create();
 
-    effects.push_back(std::move(effect));
+    // Store in OrderedMap with name as key
+    effects[name] = std::move(effect);
 }
 
 VkFramebuffer PostProcess::getOffscreenFramebuffer(uint32_t frameIndex) const {
@@ -283,9 +281,9 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
 
     bool inputIsA = true;  // Start with A as input, B as output
     
-    // Execute each effect
-    for (size_t i = 0; i < effects.size(); ++i) {
-        const auto& effect = effects[i];
+    // Execute each active effect in order
+    for (const auto& [name, effect] : effects) {
+        if (!effect->active) continue;  // Skip inactive effects
         
         effect->pipeline->bindCmd(cmd);
         
@@ -315,9 +313,15 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
 }
 
 void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uint32_t swapchainImageIndex) {
+    // Count active effects to determine final image location
+    size_t activeEffectCount = 0;
+    for (const auto& [name, effect] : effects) {
+        if (effect->active) activeEffectCount++;
+    }
+    
     // Get final processed image
     const auto& images = pingPongImages[frameIndex];
-    bool finalIsA = (effects.size() % 2) == 0;  // Even number of effects means final result is in A
+    bool finalIsA = (activeEffectCount % 2) == 0;  // Even number of effects means final result is in A
     VkImage finalImage = finalIsA ? images.imageA : images.imageB;
 
     // Transition swapchain image to transfer destination
@@ -404,9 +408,15 @@ void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uin
 }
 
 VkImageView PostProcess::getFinalImageView(uint32_t frameIndex) const {
-    // Return the final image based on whether we have even or odd number of effects
+    // Count active effects to determine final image location
+    size_t activeEffectCount = 0;
+    for (const auto& [name, effect] : effects) {
+        if (effect->active) activeEffectCount++;
+    }
+    
+    // Return the final image based on whether we have even or odd number of active effects
     const auto& images = pingPongImages[frameIndex];
-    bool finalIsA = (effects.size() % 2) == 0;  // Even number of effects means final result is in A
+    bool finalIsA = (activeEffectCount % 2) == 0;  // Even number of effects means final result is in A
     return finalIsA ? images.viewA : images.viewB;
 }
 
@@ -494,28 +504,36 @@ void PostProcess::cleanupRenderResources() {
 }
 
 void PostProcess::recreateEffects() {
+    // Store the effect configurations before cleanup
+    OrderedMap<std::string, std::string> storedConfigs;
+    OrderedMap<std::string, bool> storedActiveStates;
+    for (const auto& [name, effect] : effects) {
+        storedConfigs[name] = effect->computeShaderPath;
+        storedActiveStates[name] = effect->active;
+    }
+    
     // Clean up current effects first
     VkDevice device = deviceVK->lDevice;
-    for (auto& effect : effects) {
+    for (auto& [name, effect] : effects) {
         effect->cleanup(device);
     }
     effects.clear();
     
     // Recreate all stored effects
-    for (const auto& storedEffect : storedEffects) {
+    for (const auto& [name, shaderPath] : storedConfigs) {
         auto effect = MakeUnique<PostProcessEffect>();
-        effect->name = storedEffect.first;
-        effect->computeShaderPath = storedEffect.second;
+        effect->computeShaderPath = shaderPath;
+        effect->active = storedActiveStates[name];  // Restore active state
 
         // Create compute pipeline using the shared descriptor set layout
         ComputePipelineConfig config{};
         config.setLayouts = {descriptorSets.getLayout()};
-        config.compPath = storedEffect.second;
+        config.compPath = shaderPath;
 
         effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
         effect->pipeline->create();
 
-        effects.push_back(std::move(effect));
+        effects[name] = std::move(effect);
     }
 }
 
@@ -526,7 +544,7 @@ void PostProcess::cleanup() {
     vkDeviceWaitIdle(device);
 
     // Clean up all effects
-    for (auto& effect : effects) {
+    for (auto& [name, effect] : effects) {
         effect->cleanup(device);
     }
     effects.clear();
@@ -534,8 +552,6 @@ void PostProcess::cleanup() {
     // Clean up all render resources
     cleanupRenderResources();
     
-    // Clear stored effects (full cleanup)
-    storedEffects.clear();
-    
+    // Note: effects OrderedMap is cleared above, no separate storedEffects to clear
     // Note: offscreenRenderPass is now owned by Renderer, not cleaned up here
 }

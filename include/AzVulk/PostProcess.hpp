@@ -8,6 +8,7 @@
 #include "AzVulk/Pipeline_compute.hpp"
 #include "AzVulk/DepthManager.hpp"
 #include "AzVulk/Descriptor.hpp"
+#include "Helpers/Templates.hpp"
 
 namespace AzVulk {
 
@@ -25,8 +26,8 @@ struct PingPongImages {
 
 // Configuration for a post-process effect
 struct PostProcessEffect {
-    std::string name;
     std::string computeShaderPath;
+    bool active = true;  // Whether this effect is active
     UniquePtr<PipelineCompute> pipeline;
 
     void cleanup(VkDevice device);
@@ -81,11 +82,8 @@ private:
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
     std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
     
-    // Post-process effects
-    UniquePtrVec<PostProcessEffect> effects;
-    
-    // Store effect configurations for recreation
-    std::vector<std::pair<std::string, std::string>> storedEffects;
+    // Post-process effects stored in insertion order with active flags
+    OrderedMap<std::string, UniquePtr<PostProcessEffect>> effects;
 
     // Shared descriptor management for all effects
     DescSets descriptorSets;
