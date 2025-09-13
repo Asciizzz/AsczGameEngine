@@ -134,7 +134,7 @@ void Application::initComponents() {
     pipelineManager = MakeUnique<PipelineManager>();
     
     // Load pipeline configurations from JSON
-    if (!pipelineManager->loadPipelinesFromJson("Shaders/pipelines.json")) {
+    if (!pipelineManager->loadPipelinesFromJson("Config/pipelines.json")) {
         std::cout << "Warning: Could not load pipeline JSON, using defaults" << std::endl;
     }
 
@@ -185,8 +185,8 @@ void Application::initComponents() {
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
     PIPELINE_INIT(pipelineManager.get(), lDevice, offscreenRenderPass, namedLayouts, vertexInputVKs);
 
-    renderer->addPostProcessEffect("fxaa", "Shaders/bin/PostProcess/fxaa.comp.spv");
-    renderer->addPostProcessEffect("tonemap", "Shaders/bin/PostProcess/tonemap.comp.spv");
+    // Load post-process effects from JSON configuration
+    renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
 }
 
 void Application::featuresTestingGround() {}

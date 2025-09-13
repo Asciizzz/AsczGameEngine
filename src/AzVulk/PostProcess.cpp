@@ -238,9 +238,13 @@ void PostProcess::createFinalBlit() {
 
 
 void PostProcess::addEffect(const std::string& name, const std::string& computeShaderPath) {
+    addEffect(name, computeShaderPath, true); // Default to active
+}
+
+void PostProcess::addEffect(const std::string& name, const std::string& computeShaderPath, bool active) {
     auto effect = MakeUnique<PostProcessEffect>();
     effect->computeShaderPath = computeShaderPath;
-    effect->active = true;  // Set to active by default
+    effect->active = active;
 
     // Create compute pipeline using the shared descriptor set layout
     ComputePipelineConfig config{};
@@ -252,6 +256,37 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
 
     // Store in OrderedMap with name as key
     effects[name] = std::move(effect);
+}
+
+void PostProcess::loadEffectsFromJson(const std::string& configPath) {
+    try {
+        std::ifstream file(configPath);
+        if (!file.is_open()) {
+            std::cerr << "Warning: Could not open postprocess config file: " << configPath << std::endl;
+            return;
+        }
+
+        nlohmann::json config;
+        file >> config;
+
+        if (config.contains("effects") && config["effects"].is_array()) {
+            for (const auto& effectConfig : config["effects"]) {
+                if (effectConfig.contains("name") && effectConfig.contains("shader")) {
+                    std::string name = effectConfig["name"];
+                    std::string shader = effectConfig["shader"];
+                    bool active = effectConfig.value("active", true); // Default to true if not specified
+
+                    addEffect(name, shader, active);
+                } else {
+                    std::cerr << "Warning: Effect configuration missing 'name' or 'shader' field" << std::endl;
+                }
+            }
+        } else {
+            std::cerr << "Warning: Invalid postprocess config format - missing 'effects' array" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading postprocess config: " << e.what() << std::endl;
+    }
 }
 
 VkFramebuffer PostProcess::getOffscreenFramebuffer(uint32_t frameIndex) const {

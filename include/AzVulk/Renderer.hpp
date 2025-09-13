@@ -61,6 +61,7 @@ namespace AzVulk {
 
         // Post-processing methods
         void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
+        void loadPostProcessEffectsFromJson(const std::string& configPath);
 
         bool isResizeNeeded() const { return framebufferResized; }
         void setResizeHandled() { framebufferResized = false; }

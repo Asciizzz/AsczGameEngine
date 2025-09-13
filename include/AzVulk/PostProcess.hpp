@@ -3,12 +3,14 @@
 #include <memory>
 #include <string>
 #include <array>
+#include <fstream>
 
 #include "AzVulk/SwapChain.hpp"
 #include "AzVulk/Pipeline_compute.hpp"
 #include "AzVulk/DepthManager.hpp"
 #include "AzVulk/Descriptor.hpp"
 #include "Helpers/Templates.hpp"
+#include "Helpers/json.hpp"
 
 namespace AzVulk {
 
@@ -47,6 +49,10 @@ public:
     
     // Add a post-process effect
     void addEffect(const std::string& name, const std::string& computeShaderPath);
+    void addEffect(const std::string& name, const std::string& computeShaderPath, bool active);
+    
+    // Load effects from JSON configuration file
+    void loadEffectsFromJson(const std::string& configPath);
     
     // Get offscreen framebuffer for scene rendering
     VkFramebuffer getOffscreenFramebuffer(uint32_t frameIndex) const;

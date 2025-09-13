@@ -409,3 +409,10 @@ void Renderer::addPostProcessEffect(const std::string& name, const std::string& 
         postProcess->addEffect(name, computeShaderPath);
     }
 }
+
+void Renderer::loadPostProcessEffectsFromJson(const std::string& configPath) {
+    // Delegate to PostProcess to load effects from JSON
+    if (postProcess) {
+        postProcess->loadEffectsFromJson(configPath);
+    }
+}
