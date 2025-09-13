@@ -77,5 +77,6 @@ void GlbUBOManager::updateUBO(const Camera& camera, uint32_t frameIndex) {
     ubo.cameraRight   = glm::vec4(camera.right, camera.nearPlane);
     ubo.cameraUp      = glm::vec4(camera.up, camera.farPlane);
 
-    memcpy(dataBuffer[frameIndex].mapped, &ubo, sizeof(ubo));
+    // memcpy(dataBuffer[frameIndex].mapped, &ubo, sizeof(ubo));
+    dataBuffer[frameIndex].copyData(&ubo);
 }

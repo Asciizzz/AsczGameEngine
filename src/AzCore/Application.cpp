@@ -54,10 +54,18 @@ void Application::initComponents() {
     VkPhysicalDevice pDevice = deviceVK->pDevice;
 
     // Create renderer (which now manages depth manager, swap chain and render passes)
-    renderer = MakeUnique<Renderer>(deviceVK.get(), vkInstance->surface, windowManager->window);
+    renderer = MakeUnique<Renderer>(
+        deviceVK.get(),
+        vkInstance->surface,
+        windowManager->window,
+        Application::MAX_FRAMES_IN_FLIGHT
+    );
 
     resGroup = MakeUnique<ResourceGroup>(deviceVK.get());
-    glbUBOManager = MakeUnique<GlbUBOManager>(deviceVK.get(), Application::MAX_FRAMES_IN_FLIGHT);
+    glbUBOManager = MakeUnique<GlbUBOManager>(
+        deviceVK.get(),
+        Application::MAX_FRAMES_IN_FLIGHT
+    );
 
 // PLAYGROUND FROM HERE
 
