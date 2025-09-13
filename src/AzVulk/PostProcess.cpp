@@ -238,6 +238,9 @@ void PostProcess::createFinalBlit() {
 
 
 void PostProcess::addEffect(const std::string& name, const std::string& computeShaderPath) {
+    // Store the effect configuration for recreation
+    storedEffects.emplace_back(name, computeShaderPath);
+    
     auto effect = MakeUnique<PostProcessEffect>();
     effect->name = name;
     effect->computeShaderPath = computeShaderPath;
@@ -408,8 +411,17 @@ VkImageView PostProcess::getFinalImageView(uint32_t frameIndex) const {
 }
 
 void PostProcess::recreate() {
-    cleanup();
-    initialize(offscreenRenderPass); // Use the stored render pass reference
+    // Clean up render resources but preserve effect configurations
+    cleanupRenderResources();
+    
+    // Recreate render resources
+    createSampler();
+    createPingPongImages();
+    createOffscreenFramebuffers();
+    createSharedDescriptors();
+    
+    // Recreate effects from stored configurations
+    recreateEffects();
 }
 
 void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
@@ -452,26 +464,20 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
     vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void PostProcess::cleanup() {
+void PostProcess::cleanupRenderResources() {
     VkDevice device = deviceVK->lDevice;
-
+    
     // Wait for device to be idle to ensure no resources are in use
     vkDeviceWaitIdle(device);
-
-    // Clean up offscreen framebuffers FIRST (before image views)
+    
+    // Clean up framebuffers first (before image views)
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         if (offscreenFramebuffers[frame] != VK_NULL_HANDLE) {
             vkDestroyFramebuffer(device, offscreenFramebuffers[frame], nullptr);
             offscreenFramebuffers[frame] = VK_NULL_HANDLE;
         }
     }
-
-    // Clean up effects (pipelines)
-    for (auto& effect : effects) {
-        effect->cleanup(device);
-    }
-    effects.clear();
-
+    
     // Clean up descriptor sets
     descriptorSets.cleanup();
 
@@ -481,10 +487,55 @@ void PostProcess::cleanup() {
         sampler = VK_NULL_HANDLE;
     }
     
-    // Note: offscreenRenderPass is now owned by Renderer, not cleaned up here
-    
-    // Clean up ping-pong images LAST (after framebuffers that use their views)
+    // Clean up ping-pong images (after framebuffers that use their views)
     for (auto& images : pingPongImages) {
         images.cleanup(device);
     }
+}
+
+void PostProcess::recreateEffects() {
+    // Clean up current effects first
+    VkDevice device = deviceVK->lDevice;
+    for (auto& effect : effects) {
+        effect->cleanup(device);
+    }
+    effects.clear();
+    
+    // Recreate all stored effects
+    for (const auto& storedEffect : storedEffects) {
+        auto effect = MakeUnique<PostProcessEffect>();
+        effect->name = storedEffect.first;
+        effect->computeShaderPath = storedEffect.second;
+
+        // Create compute pipeline using the shared descriptor set layout
+        ComputePipelineConfig config{};
+        config.setLayouts = {descriptorSets.getLayout()};
+        config.compPath = storedEffect.second;
+
+        effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
+        effect->pipeline->create();
+
+        effects.push_back(std::move(effect));
+    }
+}
+
+void PostProcess::cleanup() {
+    VkDevice device = deviceVK->lDevice;
+
+    // Wait for device to be idle to ensure no resources are in use
+    vkDeviceWaitIdle(device);
+
+    // Clean up all effects
+    for (auto& effect : effects) {
+        effect->cleanup(device);
+    }
+    effects.clear();
+    
+    // Clean up all render resources
+    cleanupRenderResources();
+    
+    // Clear stored effects (full cleanup)
+    storedEffects.clear();
+    
+    // Note: offscreenRenderPass is now owned by Renderer, not cleaned up here
 }

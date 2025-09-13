@@ -29,13 +29,9 @@ namespace AzVulk {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        // Initialize render passes - called after construction
         void initializeRenderPasses();
-        
-        // Recreate render passes when needed (e.g., window resize)
         void recreateRenderPasses();
-        
-        // Handle window resize - recreates swap chain and related resources
+
         void handleWindowResize(SDL_Window* window);
 
         uint32_t beginFrame();
@@ -79,9 +75,6 @@ namespace AzVulk {
         UniquePtr<RenderPass> offscreenRenderPass; // For scene rendering
         
         UniquePtr<PostProcess> postProcess;
-        
-        // Store post-process effects for recreation
-        std::vector<std::pair<std::string, std::string>> postProcessEffects;
 
         // Command recording
         CmdBuffer cmdBuffers;

@@ -128,11 +128,6 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     // Wait for device to be idle
     vkDeviceWaitIdle(deviceVK->lDevice);
     
-    // Clean up PostProcess first (it handles its own framebuffer cleanup)
-    if (postProcess) {
-        postProcess.reset();
-    }
-    
     // Get new window dimensions for depth resources
     int newWidth, newHeight;
     SDL_GetWindowSize(window, &newWidth, &newHeight);
@@ -151,13 +146,10 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     // Recreate render passes and framebuffers
     recreateRenderPasses();
     
-    // Recreate PostProcess with new render pass and fresh depth resources
-    postProcess = MakeUnique<PostProcess>(deviceVK, swapChain.get(), depthManager.get());
-    postProcess->initialize(offscreenRenderPass->get());
-    
-    // Re-add all stored post-process effects
-    for (const auto& effect : postProcessEffects) {
-        postProcess->addEffect(effect.first, effect.second);
+    // Use PostProcess's existing recreate method - it will preserve effects internally
+    if (postProcess) {
+        postProcess->setOffscreenRenderPass(offscreenRenderPass->get());
+        postProcess->recreate();
     }
 }
 
@@ -425,10 +417,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {
-    // Store the effect for recreation during resize
-    postProcessEffects.emplace_back(name, computeShaderPath);
-    
-    // Add to current PostProcess if it exists
+    // Delegate to PostProcess - it now handles its own effect storage
     if (postProcess) {
         postProcess->addEffect(name, computeShaderPath);
     }

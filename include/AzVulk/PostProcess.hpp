@@ -83,6 +83,9 @@ private:
     
     // Post-process effects
     UniquePtrVec<PostProcessEffect> effects;
+    
+    // Store effect configurations for recreation
+    std::vector<std::pair<std::string, std::string>> storedEffects;
 
     // Shared descriptor management for all effects
     DescSets descriptorSets;
@@ -94,9 +97,13 @@ private:
     void createSharedDescriptors();
     void createFinalBlit();
     
+    void cleanupRenderResources(); // Images, sampler, descriptors  
+    void recreateEffects(); // Recreate stored effects
+    
     void transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format,
                               VkImageLayout oldLayout, VkImageLayout newLayout);
     
+    // Full cleanup
     void cleanup();
 };
 
