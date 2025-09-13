@@ -146,14 +146,15 @@ void PostProcess::createSharedDescriptors() {
 
     // Create descriptor set layout (shared by all effects)
     std::vector<DescSets::LayoutBind> bindings = {
-        {0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}, // Input image
-        {1, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT}           // Output image
+        {0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}, // Input color image
+        {1, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT},          // Output color image
+        {2, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}  // Depth image (read-only)
     };
     descriptorSets.createLayout(bindings);
 
     // Create descriptor pool
     std::vector<VkDescriptorPoolSize> poolSizes = {
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 2},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 2 * 2}, // Color input + depth for each direction
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_FRAMES_IN_FLIGHT * 2}
     };
     descriptorSets.createPool(poolSizes, MAX_FRAMES_IN_FLIGHT * 2);
@@ -177,7 +178,12 @@ void PostProcess::createSharedDescriptors() {
             imageInfoOutput.imageView = images.viewB;
             imageInfoOutput.sampler = VK_NULL_HANDLE;
 
-            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+            VkDescriptorImageInfo imageInfoDepth{};
+            imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            imageInfoDepth.imageView = depthManager->getDepthImageView();
+            imageInfoDepth.sampler = sampler;
+
+            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptorSets.get(frame * 2 + 0);
             descriptorWrites[0].dstBinding = 0;
@@ -194,6 +200,14 @@ void PostProcess::createSharedDescriptors() {
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfoOutput;
 
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].dstSet = descriptorSets.get(frame * 2 + 0);
+            descriptorWrites[2].dstBinding = 2;
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pImageInfo = &imageInfoDepth;
+
             vkUpdateDescriptorSets(deviceVK->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
         
@@ -209,7 +223,12 @@ void PostProcess::createSharedDescriptors() {
             imageInfoOutput.imageView = images.viewA;
             imageInfoOutput.sampler = VK_NULL_HANDLE;
 
-            std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+            VkDescriptorImageInfo imageInfoDepth{};
+            imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            imageInfoDepth.imageView = depthManager->getDepthImageView();
+            imageInfoDepth.sampler = sampler;
+
+            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptorSets.get(frame * 2 + 1);
             descriptorWrites[0].dstBinding = 0;
@@ -225,6 +244,14 @@ void PostProcess::createSharedDescriptors() {
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfoOutput;
+
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].dstSet = descriptorSets.get(frame * 2 + 1);
+            descriptorWrites[2].dstBinding = 2;
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pImageInfo = &imageInfoDepth;
 
             vkUpdateDescriptorSets(deviceVK->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
@@ -303,6 +330,27 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     transitionImageLayout(cmd, images.imageB, VK_FORMAT_R8G8B8A8_UNORM,
                          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
+    // Transition depth image to read-only layout for compute shader access
+    VkImageMemoryBarrier depthBarrier{};
+    depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    depthBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    depthBarrier.image = depthManager->getDepthImage();
+    depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    depthBarrier.subresourceRange.baseMipLevel = 0;
+    depthBarrier.subresourceRange.levelCount = 1;
+    depthBarrier.subresourceRange.baseArrayLayer = 0;
+    depthBarrier.subresourceRange.layerCount = 1;
+    depthBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    depthBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(cmd,
+                        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                        0, 0, nullptr, 0, nullptr, 1, &depthBarrier);
+
     // Pipeline barrier after layout transitions
     VkMemoryBarrier memBarrier{};
     memBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
@@ -345,6 +393,27 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
 
         inputIsA = !inputIsA;  // Swap for next pass
     }
+
+    // Transition depth image back to attachment optimal layout
+    VkImageMemoryBarrier depthBackBarrier{};
+    depthBackBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    depthBackBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    depthBackBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthBackBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    depthBackBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    depthBackBarrier.image = depthManager->getDepthImage();
+    depthBackBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    depthBackBarrier.subresourceRange.baseMipLevel = 0;
+    depthBackBarrier.subresourceRange.levelCount = 1;
+    depthBackBarrier.subresourceRange.baseArrayLayer = 0;
+    depthBackBarrier.subresourceRange.layerCount = 1;
+    depthBackBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    depthBackBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    vkCmdPipelineBarrier(cmd,
+                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                        0, 0, nullptr, 0, nullptr, 1, &depthBackBarrier);
 }
 
 void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uint32_t swapchainImageIndex) {
