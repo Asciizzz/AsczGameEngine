@@ -8,17 +8,17 @@ using namespace AzVulk;
 
 using namespace Az3D;
 
-GlbUBOManager::GlbUBOManager(const Device* deviceVK)
-: deviceVK(deviceVK) {
+GlbUBOManager::GlbUBOManager(const Device* deviceVK, uint32_t maxFramesInFlight)
+: deviceVK(deviceVK), maxFramesInFlight(maxFramesInFlight) {
     createDataBuffer();
 
     createDescSets();
 }
 
 void GlbUBOManager::createDataBuffer() {
-    dataBuffer.resize(MAX_FRAMES_IN_FLIGHT);
+    dataBuffer.resize(maxFramesInFlight);
     
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+    for (int i = 0; i < maxFramesInFlight; ++i) {
         dataBuffer[i]
             .setDataSize(sizeof(GlobalUBO))
             .setUsageFlags(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
@@ -36,12 +36,12 @@ void GlbUBOManager::createDescSets() {
     });
 
     descSets.createPool({
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES_IN_FLIGHT}
-    }, MAX_FRAMES_IN_FLIGHT);
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight}
+    }, maxFramesInFlight);
 
-    descSets.allocate(MAX_FRAMES_IN_FLIGHT);
+    descSets.allocate(maxFramesInFlight);
 
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+    for (int i = 0; i < maxFramesInFlight; ++i) {
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = dataBuffer[i].buffer;
         bufferInfo.offset = 0;

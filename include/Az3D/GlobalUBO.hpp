@@ -29,7 +29,7 @@ struct GlobalUBO {
 
 class GlbUBOManager {
 public:
-    GlbUBOManager(const AzVulk::Device* deviceVK);
+    GlbUBOManager(const AzVulk::Device* deviceVK, uint32_t maxFramesInFlight=2);
     ~GlbUBOManager() = default;
 
     // Delete copy constructor and assignment operator
@@ -40,7 +40,7 @@ public:
 
     GlobalUBO ubo;
 
-    static const int MAX_FRAMES_IN_FLIGHT = 2; // Must match Renderer
+    uint32_t maxFramesInFlight = 2; // Must match Renderer
     std::vector<AzVulk::DataBuffer> dataBuffer; // Per-frame buffers
     void createDataBuffer();
 

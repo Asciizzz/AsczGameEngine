@@ -55,12 +55,9 @@ void Application::initComponents() {
 
     // Create renderer (which now manages depth manager, swap chain and render passes)
     renderer = MakeUnique<Renderer>(deviceVK.get(), vkInstance->surface, windowManager->window);
-    
-    // Initialize render passes and framebuffers
-    renderer->initializeRenderPasses();
 
     resGroup = MakeUnique<ResourceGroup>(deviceVK.get());
-    glbUBOManager = MakeUnique<GlbUBOManager>(deviceVK.get());
+    glbUBOManager = MakeUnique<GlbUBOManager>(deviceVK.get(), Application::MAX_FRAMES_IN_FLIGHT);
 
 // PLAYGROUND FROM HERE
 
@@ -187,10 +184,10 @@ void Application::initComponents() {
 void Application::featuresTestingGround() {}
 
 bool Application::checkWindowResize() {
-    if (!windowManager->resizedFlag && !renderer->framebufferResized) return false;
+    if (!windowManager->resizedFlag && !renderer->isResizeNeeded()) return false;
 
     windowManager->resizedFlag = false;
-    renderer->framebufferResized = false;
+    renderer->setResizeHandled();
 
     int newWidth, newHeight;
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);

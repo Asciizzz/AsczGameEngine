@@ -9,26 +9,28 @@ using namespace Az3D;
 using namespace AzVulk;
 
 
-Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window)
-: deviceVK(deviceVK) {
-    // Create depth manager first
-    depthManager = MakeUnique<DepthManager>(deviceVK);
-    
-    // Create swap chain
+Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
+: deviceVK(deviceVK), maxFramesInFlight(maxFramesInFlight) {
+
     swapChain = MakeUnique<SwapChain>(deviceVK, surface, window);
-    
-    // Initialize depth resources with swap chain dimensions
+
+    depthManager = MakeUnique<DepthManager>(deviceVK);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
-    
+
+    createRenderPasses();
+    swapChain->createFramebuffers(mainRenderPass->get(), depthManager->getDepthImageView());
+
+    postProcess = MakeUnique<PostProcess>(deviceVK, swapChain.get(), depthManager.get());
+    postProcess->initialize(offscreenRenderPass->get());
+
     createCommandBuffers();
     createSyncObjects();
-    // Note: render passes will be created by initializeRenderPasses() called from Application
 }
 
 Renderer::~Renderer() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+    for (size_t i = 0; i < maxFramesInFlight; ++i) {
         if (inFlightFences[i])           vkDestroyFence(    lDevice, inFlightFences[i],           nullptr);
         if (imageAvailableSemaphores[i]) vkDestroySemaphore(lDevice, imageAvailableSemaphores[i], nullptr);
     }
@@ -38,14 +40,14 @@ Renderer::~Renderer() {
 }
 
 void Renderer::createCommandBuffers() {
-    cmdBuffers.create(deviceVK->lDevice, deviceVK->graphicsPoolWrapper.pool, MAX_FRAMES_IN_FLIGHT);
+    cmdBuffers.create(deviceVK->lDevice, deviceVK->graphicsPoolWrapper.pool, maxFramesInFlight);
 }
 
 void Renderer::createSyncObjects() {
     swapchainImageCount = swapChain->images.size();
 
-    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    imageAvailableSemaphores.resize(maxFramesInFlight);
+    inFlightFences.resize(maxFramesInFlight);
 
     // IMPORTANT: one render-finished semaphore *per swapchain image*
     renderFinishedSemaphores.resize(swapchainImageCount);
@@ -58,7 +60,7 @@ void Renderer::createSyncObjects() {
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     // per-frame acquire + fence
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+    for (size_t i = 0; i < maxFramesInFlight; ++i) {
         if (vkCreateSemaphore(deviceVK->lDevice, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(    deviceVK->lDevice, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-frame sync objects!");
@@ -73,26 +75,11 @@ void Renderer::createSyncObjects() {
     }
 }
 
-void Renderer::initializeRenderPasses() {
-    createRenderPasses();
-    
-    // Create framebuffers for the main render pass
-    VkRenderPass mainRenderPassVK = mainRenderPass->get();
-    swapChain->createFramebuffers(mainRenderPassVK, depthManager->getDepthImageView());
-    
-    // Create post process after render passes are ready
-    postProcess = MakeUnique<PostProcess>(deviceVK, swapChain.get(), depthManager.get());
-    postProcess->initialize(offscreenRenderPass->get());
-}
-
 void Renderer::recreateRenderPasses() {
     createRenderPasses();
-    
-    // Recreate main render pass framebuffers
+
     VkRenderPass mainRenderPassVK = mainRenderPass->get();
     swapChain->createFramebuffers(mainRenderPassVK, depthManager->getDepthImageView());
-    
-    // Note: PostProcess recreation is handled separately in handleWindowResize
 }
 
 void Renderer::createRenderPasses() {
@@ -413,7 +400,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
         throw std::runtime_error("failed to present");
     }
 
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {

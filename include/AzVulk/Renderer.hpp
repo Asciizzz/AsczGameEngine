@@ -23,13 +23,12 @@ namespace AzVulk {
 
     class Renderer {
     public:
-        Renderer(Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window);
+        Renderer(Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight = 2);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        void initializeRenderPasses();
         void recreateRenderPasses();
 
         void handleWindowResize(SDL_Window* window);
@@ -63,6 +62,10 @@ namespace AzVulk {
         // Post-processing methods
         void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
 
+        bool isResizeNeeded() const { return framebufferResized; }
+        void setResizeHandled() { framebufferResized = false; }
+
+    private:
         // Component references
         Device* deviceVK;
         
@@ -88,7 +91,7 @@ namespace AzVulk {
         uint32_t currentFrame = 0;
         bool framebufferResized = false;
 
-        static const int MAX_FRAMES_IN_FLIGHT = 2; // double buffering
+        uint32_t maxFramesInFlight = 2; // double buffering
         size_t swapchainImageCount = 0;
 
         void createCommandBuffers();
