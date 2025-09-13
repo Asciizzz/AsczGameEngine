@@ -180,8 +180,8 @@ void Application::initComponents() {
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
     PIPELINE_INIT(pipelineManager.get(), lDevice, offscreenRenderPass, namedLayouts, vertexInputVKs);
 
-    renderer->addPostProcessEffect("fxaa", "Shaders/PostProcess/fxaa.comp.spv");
-    renderer->addPostProcessEffect("tonemap", "Shaders/PostProcess/tonemap.comp.spv");
+    renderer->addPostProcessEffect("fxaa", "Shaders/bin/PostProcess/fxaa.comp.spv");
+    renderer->addPostProcessEffect("tonemap", "Shaders/bin/PostProcess/tonemap.comp.spv");
 }
 
 void Application::featuresTestingGround() {}

@@ -19,7 +19,6 @@ void main() {
 
     // Simple Reinhard tone mapping
     color = color / (color + vec3(1.0));
-
     
     // Output the tone mapped color
     imageStore(outputImage, coord, vec4(color, 1.0));
