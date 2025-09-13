@@ -381,7 +381,7 @@ void Application::mainLoop() {
 
         // grassSystem->grassInstanceGroup.updateDataBuffer(); // Per frame update since grass moves
         // Use the new explicit rendering interface
-        
+
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
             // Update global UBO buffer from frame index

@@ -328,7 +328,7 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     // Images are already in GENERAL layout from the render pass, so no transition needed for image A
     // Just transition image B from UNDEFINED to GENERAL
     transitionImageLayout(cmd, images.imageB, VK_FORMAT_R8G8B8A8_UNORM,
-                         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     // Transition depth image to read-only layout for compute shader access
     VkImageMemoryBarrier depthBarrier{};

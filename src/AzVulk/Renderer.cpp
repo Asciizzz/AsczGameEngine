@@ -357,7 +357,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
     vkCmdEndRenderPass(currentCmd);
-    
+
     postProcess->executeEffects(currentCmd, currentFrame);
     postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
 
