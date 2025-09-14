@@ -82,7 +82,7 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    TinyModel testObjModel = TinyLoader::loadModel(".heavy/Town/Town.obj");
+    TinyModel testObjModel = TinyLoader::loadModel("Assets/Maps/Dust2/de_dust2.obj");
     // testObjModel.printDebug();
     resGroup->addModel(testObjModel);
 
@@ -100,6 +100,27 @@ void Application::initComponents() {
 
     grassSystem = MakeUnique<Grass>(grassConfig);
     grassSystem->initialize(*resGroup, deviceVK.get());
+
+    // Initialize dynamic lighting system with example lights
+    Az3D::LightVK sunLight{};
+    sunLight.position = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f); // w=0 for directional light
+    sunLight.color = glm::vec4(1.0f, 0.9f, 0.8f, 1.5f); // Warm white light with intensity 1.5
+    sunLight.direction = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); // Direction vector (no range for directional)
+    resGroup->addLight(sunLight);
+
+    // Az3D::LightVK pointLight{};
+    // pointLight.position = glm::vec4(5.0f, 5.0f, 5.0f, 1.0f); // w=1 for point light
+    // pointLight.color = glm::vec4(0.8f, 0.6f, 1.0f, 2.0f); // Purple light with intensity 2.0
+    // pointLight.direction = glm::vec4(0.0f, 0.0f, 0.0f, 15.0f); // Range of 15 units
+    // pointLight.params = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f); // Attenuation factor 1.0
+    // resGroup->addLight(pointLight);
+
+    // Az3D::LightVK spotLight{};
+    // spotLight.position = glm::vec4(-10.0f, 8.0f, 0.0f, 2.0f); // w=2 for spot light
+    // spotLight.color = glm::vec4(1.0f, 0.5f, 0.2f, 3.0f); // Orange light with intensity 3.0
+    // spotLight.direction = glm::vec4(0.7f, -0.5f, 0.0f, 20.0f); // Direction + range of 20 units
+    // spotLight.params = glm::vec4(glm::cos(glm::radians(15.0f)), glm::cos(glm::radians(25.0f)), 1.2f, 0.0f); // Inner 15°, outer 25°, attenuation 1.2
+    // resGroup->addLight(spotLight);
 
     // Initialize particle system
     particleManager = MakeUnique<AzBeta::ParticleManager>();
@@ -127,6 +148,7 @@ void Application::initComponents() {
     auto matLayout = resGroup->getMatDescLayout();
     auto texLayout = resGroup->getTexDescLayout();
     auto rigLayout = resGroup->getRigDescLayout();
+    auto lightLayout = resGroup->getLightDescLayout();
 
     // Create raster pipeline configurations
 
@@ -143,7 +165,8 @@ void Application::initComponents() {
         {"global", glbLayout},
         {"material", matLayout}, 
         {"texture", texLayout},
-        {"rig", rigLayout}
+        {"rig", rigLayout},
+        {"light", lightLayout}
     };
     
     // Create named vertex inputs
@@ -387,6 +410,9 @@ void Application::mainLoop() {
             // Update global UBO buffer from frame index
             uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
             glbUBOManager->updateUBO(camRef, currentFrameIndex);
+
+            // Update dynamic light buffer if needed
+            resGroup->updateLightBuffer();
 
             // Render sky background with dedicated pipeline
             rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));

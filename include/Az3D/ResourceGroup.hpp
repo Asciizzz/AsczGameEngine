@@ -13,6 +13,13 @@ struct MaterialVK {
     glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albTexIndex, nrmlTexIndex, unused, unused>
 };
 
+struct LightVK {
+    glm::vec4 position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // xyz = position, w = light type (0=directional, 1=point, 2=spot)
+    glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // rgb = color, a = intensity
+    glm::vec4 direction = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f); // xyz = direction (for directional/spot), w = range
+    glm::vec4 params = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f); // x = inner cone angle, y = outer cone angle, z = attenuation, w = unused
+};
+
 struct SubmeshVK {
     AzVulk::DataBuffer vertexBuffer;
     AzVulk::DataBuffer indexBuffer;
@@ -50,10 +57,38 @@ public:
     VkDescriptorSetLayout getRigDescLayout() const { return skeleDescSets->getLayout(); }
     VkDescriptorSet getRigSkeleDescSet(size_t index) const { return skeleDescSets->get(index); }
 
+    VkDescriptorSetLayout getLightDescLayout() const { return lightDescSet->getLayout(); }
+    VkDescriptorSet getLightDescSet() const { return lightDescSet->get(); }
+
     size_t addModel(const TinyModel& model) {
         models.push_back(model);
         return models.size() - 1;
     }
+
+    // Light management
+    size_t addLight(const LightVK& light) {
+        lightVKs.push_back(light);
+        lightsDirty = true;
+        return lightVKs.size() - 1;
+    }
+
+    void updateLight(size_t index, const LightVK& light) {
+        if (index < lightVKs.size()) {
+            lightVKs[index] = light;
+            lightsDirty = true;
+        }
+    }
+
+    void removeLight(size_t index) {
+        if (index < lightVKs.size()) {
+            lightVKs.erase(lightVKs.begin() + index);
+            lightsDirty = true;
+        }
+    }
+
+    uint32_t getLightCount() const { return static_cast<uint32_t>(lightVKs.size()); }
+
+    void updateLightBuffer(); // Update buffer when lights change
 
     void uploadAllToGPU();
 
@@ -93,6 +128,14 @@ public:
 
     UniquePtr<AzVulk::DescSets>       texDescSet;
     void createTextureDescSet();
+
+    // Light system
+    std::vector<LightVK>              lightVKs; // Dynamic light data
+    UniquePtr<AzVulk::DataBuffer>     lightBuffer; // Host-writable buffer for dynamic updates
+    UniquePtr<AzVulk::DescSets>       lightDescSet;
+    bool lightsDirty = false;
+    void createLightBuffer();
+    void createLightDescSet();
 
     // Useful methods
     AzVulk::ImageVK createTexture(const TinyTexture& texture);

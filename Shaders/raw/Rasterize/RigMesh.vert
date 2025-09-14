@@ -18,8 +18,9 @@ layout(location = 3) in uvec4 inBoneID;
 layout(location = 4) in vec4 inWeights;
 
 // No instance data yet, i am scratching my head here
-layout(location = 0) out float debugLight;
-layout(location = 1) out vec2 fragTexUV;
+layout(location = 0) out vec3 fragWorldPos;
+layout(location = 1) out vec3 fragWorldNrml;
+layout(location = 2) out vec2 fragTexUV;
 
 
 void main() {
@@ -50,6 +51,7 @@ void main() {
 
     gl_Position = glb.proj * glb.view * worldPos;
 
-    debugLight = dot(normal, normalize(vec3(1.0, 1.0, 1.0)));
+    fragWorldPos = worldPos.xyz;
+    fragWorldNrml = normalize(skinnedNormal);
     fragTexUV = vec2(inPos_Tu.w, inNrml_Tv.w);
 }

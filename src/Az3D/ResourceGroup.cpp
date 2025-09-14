@@ -39,6 +39,9 @@ void ResourceGroup::uploadAllToGPU() {
 
     createRigSkeleBuffers();
     createRigSkeleDescSets();
+
+    createLightBuffer();
+    createLightDescSet();
 }
 
 // ===========================================================================
@@ -463,4 +466,83 @@ void ResourceGroup::createRigSkeleDescSets() {
     skeleDescSets->createLayout({
         {0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
     });
+}
+
+// ============================================================================
+// ============================= LIGHTING ===================================
+// ============================================================================
+
+void ResourceGroup::createLightBuffer() {
+    // Initialize with at least one default light if none exist
+    if (lightVKs.empty()) {
+        LightVK defaultLight{};
+        defaultLight.position = glm::vec4(0.0f, 10.0f, 0.0f, 1.0f); // Point light at origin
+        defaultLight.color = glm::vec4(1.0f, 1.0f, 1.0f, 2.0f); // White light with intensity 2.0
+        defaultLight.direction = glm::vec4(0.0f, -1.0f, 0.0f, 10.0f); // Range of 10 units
+        lightVKs.push_back(defaultLight);
+    }
+
+    VkDeviceSize bufferSize = sizeof(LightVK) * lightVKs.size();
+
+    lightBuffer = MakeUnique<DataBuffer>();
+    lightBuffer
+        ->setDataSize(bufferSize)
+        .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+        .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .createBuffer(deviceVK)
+        .uploadData(lightVKs.data());
+
+    lightsDirty = false;
+}
+
+void ResourceGroup::createLightDescSet() {
+    VkDevice lDevice = deviceVK->lDevice;
+
+    lightDescSet = MakeUnique<DescSets>(lDevice);
+
+    // Create descriptor pool and layout for lights
+    lightDescSet->createPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+    lightDescSet->createLayout({
+        DescSets::LayoutBind{
+            0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
+        }
+    });
+
+    // Allocate descriptor set
+    lightDescSet->allocate(1);
+
+    // Bind light buffer to descriptor
+    VkDescriptorBufferInfo lightBufferInfo{};
+    lightBufferInfo.buffer = lightBuffer->buffer;
+    lightBufferInfo.offset = 0;
+    lightBufferInfo.range = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = lightDescSet->get();
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = &lightBufferInfo;
+
+    vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
+}
+
+void ResourceGroup::updateLightBuffer() {
+    if (!lightsDirty || !lightBuffer) return;
+
+    // Check if we need to resize the buffer
+    VkDeviceSize requiredSize = sizeof(LightVK) * lightVKs.size();
+    if (requiredSize > lightBuffer->dataSize) {
+        // Need to recreate buffer with larger size
+        createLightBuffer();
+        createLightDescSet();
+    } else {
+        // Just update the existing buffer
+        lightBuffer->uploadData(lightVKs.data());
+    }
+
+    lightsDirty = false;
 }

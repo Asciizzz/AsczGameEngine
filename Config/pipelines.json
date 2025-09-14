@@ -24,7 +24,7 @@
             "vertexShader": "Shaders/bin/Rasterize/StaticMesh.vert.spv",
             "fragmentShader": "Shaders/bin/Rasterize/StaticMesh.frag.spv",
             "vertexInput": "StaticInstanced",
-            "descriptorLayouts": [ "global", "material", "texture" ],
+            "descriptorLayouts": [ "global", "material", "texture", "light" ],
             "pushConstants": [ {
                 "stages": [ "Fragment" ],
                 "offset": 0,
@@ -37,7 +37,7 @@
             "vertexShader": "Shaders/bin/Rasterize/RigMesh.vert.spv",
             "fragmentShader": "Shaders/bin/Rasterize/RigMesh.frag.spv",
             "vertexInput": "Rigged",
-            "descriptorLayouts": [ "global", "material", "texture", "rig" ],
+            "descriptorLayouts": [ "global", "material", "texture", "rig", "light" ],
             "pushConstants": [ {
                 "stages": [ "Fragment" ],
                 "offset": 0,
@@ -62,7 +62,7 @@
             "fragmentShader": "Shaders/bin/Rasterize/StaticMesh.frag.spv",
             "vertexInput": "StaticInstanced",
             "cullMode": "None",
-            "descriptorLayouts": [ "global", "material", "texture" ],
+            "descriptorLayouts": [ "global", "material", "texture", "light" ],
             "pushConstants": [ {
                 "stages": [ "Fragment" ],
                 "offset": 0,
@@ -75,7 +75,7 @@
             "vertexShader": "Shaders/bin/Rasterize/StaticSingle.vert.spv",
             "fragmentShader": "Shaders/bin/Rasterize/StaticMesh.frag.spv",
             "vertexInput": "Single",
-            "descriptorLayouts": [ "global", "material", "texture" ],
+            "descriptorLayouts": [ "global", "material", "texture", "light" ],
             "pushConstants": [ {
                 "stages": [ "Fragment" ],
                 "offset": 0,

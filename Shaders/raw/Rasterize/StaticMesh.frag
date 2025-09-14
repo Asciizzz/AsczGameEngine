@@ -2,6 +2,8 @@
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_samplerless_texture_functions : enable
 
+#include "../Common/lighting.glsl"
+
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
@@ -13,7 +15,7 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 } glb;
 
 layout(push_constant) uniform PushConstant {
-    uvec4 properties;
+    uvec4 properties; // x = material index, y = light count, z = unused, w = unused
 } pushConstant;
 
 struct Material {
@@ -30,6 +32,10 @@ layout(std430, set = 2, binding = 1) readonly buffer SamplerIndexBuffer {
     uint samplerIndices[];
 };
 layout(set = 2, binding = 2) uniform sampler samplers[];
+
+layout(std430, set = 3, binding = 0) readonly buffer LightBuffer {
+    Light lights[];
+};
 
 layout(location = 0) in vec4 fragMultColor;
 layout(location = 1) in vec2 fragTexUV;
@@ -56,6 +62,7 @@ vec4 getTexture(uint texIndex, vec2 uv) {
 
 void main() {
     Material material = materials[pushConstant.properties.x];
+    uint lightCount = pushConstant.properties.y;
 
     // Albedo texture - texIndices.x now contains albedo texture index
     uint albTexIndex = material.texIndices.x;
@@ -76,22 +83,79 @@ void main() {
     bool noTangent = fragTangent.w == 0.0;
     vec3 mappedNormal = noTangent ? fragWorldNrml : normalize(TBN * mapNrml);
 
-    // Simple directional light
-    vec3 sunDir = normalize(vec3(1.0, 1.0, 1.0));
-    int shading = int(material.shadingParams.x);
-    float lightFactor = max(dot(mappedNormal, sunDir), 1 - shading);
+    // Ensure we have a valid normal
+    mappedNormal = length(mappedNormal) > 0.001 ? normalize(mappedNormal) : vec3(0.0, 1.0, 0.0);
 
-    // Ignore if no normal
-    lightFactor = length(mappedNormal) > 0.001 ? lightFactor : 1.0;
+    // Check if shading is disabled
+    bool shadingFlag = material.shadingParams.x > 0.5;
+    
+    vec3 finalColor;
+    if (shadingFlag && lightCount > 0u) {
+        // Use dynamic lighting system
+        vec3 totalLighting = vec3(0.0);
+        
+        // Add ambient lighting
+        totalLighting += texColor.rgb * 0.1;
+        
+        // Calculate contribution from each light
+        for (uint i = 0u; i < lightCount; i++) {
+            Light light = lights[i];
+            uint lightType = uint(light.position.w);
+            vec3 lightColor = light.color.rgb;
+            float intensity = light.color.a;
+            
+            vec3 lightDir;
+            float attenuation = 1.0;
+            
+            if (lightType == LIGHT_TYPE_DIRECTIONAL) {
+                // Directional light
+                lightDir = normalize(-light.direction.xyz);
+            } else if (lightType == LIGHT_TYPE_POINT) {
+                // Point light
+                vec3 lightPos = light.position.xyz;
+                lightDir = normalize(lightPos - fragWorldPos);
+                float range = light.direction.w;
+                float attenuationFactor = light.params.z;
+                attenuation = calculateAttenuation(lightPos, fragWorldPos, range, attenuationFactor);
+            } else if (lightType == LIGHT_TYPE_SPOT) {
+                // Spot light
+                vec3 lightPos = light.position.xyz;
+                vec3 spotDir = normalize(light.direction.xyz);
+                vec3 lightToFrag = fragWorldPos - lightPos;
+                lightDir = normalize(lightPos - fragWorldPos);
+                
+                float range = light.direction.w;
+                float attenuationFactor = light.params.z;
+                float innerCone = light.params.x;
+                float outerCone = light.params.y;
+                
+                attenuation = calculateAttenuation(lightPos, fragWorldPos, range, attenuationFactor);
+                float spotFactor = calculateSpotFactor(spotDir, lightToFrag, innerCone, outerCone);
+                attenuation *= spotFactor;
+            }
+            
+            // Calculate diffuse lighting
+            float NdotL = max(dot(mappedNormal, lightDir), 0.0);
+            
+            // Combine everything
+            vec3 contribution = lightColor * intensity * NdotL * attenuation;
+            totalLighting += contribution * texColor.rgb;
+        }
+        
+        // Apply toon shading to the lighting result
+        uint toonLevel = uint(material.shadingParams.y);
+        float lightIntensity = length(totalLighting) / length(texColor.rgb);
+        lightIntensity = applyToonShading(lightIntensity, toonLevel);
+        
+        finalColor = texColor.rgb * lightIntensity;
+    } else {
+        // No lighting - use full color
+        finalColor = texColor.rgb;
+    }
 
-    uint toonLevel = uint(material.shadingParams.y);
-    lightFactor = applyToonShading(lightFactor, toonLevel);
-    lightFactor = 0.4 + lightFactor * 0.6;
-
-    // Final color
+    // Apply instance color
+    finalColor *= fragMultColor.rgb;
     float finalAlpha = texColor.a * fragMultColor.a;
-    vec3 finalRGB   = texColor.rgb * fragMultColor.rgb * lightFactor;
 
-    // Apply push constant demo color multiplication
-    outColor = vec4(finalRGB, finalAlpha);
+    outColor = vec4(finalColor, finalAlpha);
 }

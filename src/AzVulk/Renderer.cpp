@@ -221,12 +221,14 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
     VkDescriptorSet matSet = resGroup->getMatDescSet();
     VkDescriptorSet texSet = resGroup->getTexDescSet();
-    VkDescriptorSet sets[] = {glbSet, matSet, texSet};
-    rPipeline->bindSets(currentCmd, sets, 3);
+    VkDescriptorSet lightSet = resGroup->getLightDescSet();
+    VkDescriptorSet sets[] = {glbSet, matSet, texSet, lightSet};
+    rPipeline->bindSets(currentCmd, sets, 4);
 
 
     size_t modelIndex = instanceGroup->modelIndex;
     const auto& modelVK = resGroup->modelVKs[modelIndex];
+    uint32_t lightCount = resGroup->getLightCount();
 
     // Draw submeshes
     for (size_t i = 0; i < modelVK.submeshCount(); ++i) {
@@ -236,8 +238,8 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
         size_t submeshIndex = modelVK.submeshVK_indices[i];
         uint32_t matIndex  = modelVK.materialVK_indices[i];
 
-        // Push constants: material index (for array indexing in shader)
-        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex,0,0,0));
+        // Push constants: material index, light count, unused, unused
+        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
         VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
         VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
@@ -263,10 +265,12 @@ void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
     VkDescriptorSet matSet = resGroup->getMatDescSet();
     VkDescriptorSet texSet = resGroup->getTexDescSet();
-    VkDescriptorSet sets[] = {glbSet, matSet, texSet};
-    pipeline->bindSets(currentCmd, sets, 3);
+    VkDescriptorSet lightSet = resGroup->getLightDescSet();
+    VkDescriptorSet sets[] = {glbSet, matSet, texSet, lightSet};
+    pipeline->bindSets(currentCmd, sets, 4);
 
     const auto& modelVK = resGroup->modelVKs[modelIndex];
+    uint32_t lightCount = resGroup->getLightCount();
 
     // Draw submeshes
     for (size_t i = 0; i < modelVK.submeshVK_indices.size(); ++i) {
@@ -276,8 +280,8 @@ void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3
         size_t submeshIndex = modelVK.submeshVK_indices[i];
         uint32_t matIndex  = modelVK.materialVK_indices[i];
 
-        // Push constants: material index (for array indexing in shader)
-        pipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex,0,0,0));
+        // Push constants: material index, light count, unused, unused
+        pipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
         VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
         VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
@@ -303,11 +307,13 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
     VkDescriptorSet matSet = resGroup->getMatDescSet();
     VkDescriptorSet texSet = resGroup->getTexDescSet();
     VkDescriptorSet rigSet = demo.descSet.get();
-    VkDescriptorSet sets[] = {glbSet, matSet, texSet, rigSet};
-    rPipeline->bindSets(currentCmd, sets, 4);
+    VkDescriptorSet lightSet = resGroup->getLightDescSet();
+    VkDescriptorSet sets[] = {glbSet, matSet, texSet, rigSet, lightSet};
+    rPipeline->bindSets(currentCmd, sets, 5);
 
     size_t modelIndex = demo.modelIndex;
     const auto& modelVK = resGroup->modelVKs[modelIndex];
+    uint32_t lightCount = resGroup->getLightCount();
 
     // Draw submeshes
     for (size_t i = 0; i < modelVK.submeshVK_indices.size(); ++i) {
@@ -317,8 +323,8 @@ void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* g
         size_t submeshIndex = modelVK.submeshVK_indices[i];
         uint32_t matIndex  = modelVK.materialVK_indices[i];
 
-        // Push constants: material index (for array indexing in shader)
-        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex,0,0,0));
+        // Push constants: material index, light count, unused, unused
+        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
         VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
         VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
