@@ -388,7 +388,7 @@ void Application::mainLoop() {
             uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
             glbUBOManager->updateUBO(camRef, currentFrameIndex);
 
-            // First: render sky background with dedicated pipeline
+            // Render sky background with dedicated pipeline
             rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
             // Draw grass system

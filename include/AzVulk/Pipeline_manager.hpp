@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AzVulk/Pipeline_graphic.hpp"
+#include "AzVulk/Pipeline_raster.hpp"
 #include "Helpers/Templates.hpp"
 #include <string>
 
