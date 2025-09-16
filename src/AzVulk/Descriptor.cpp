@@ -133,3 +133,20 @@ void DescSet::destroyLayout() {
         layoutOwned = false;
     }
 }
+
+// Standalone descriptor set creation 
+VkDescriptorSet DescSet::create(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSetLayout layout) {
+    VkDescriptorSet set = VK_NULL_HANDLE;
+
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool     = pool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts        = &layout;
+
+    if (vkAllocateDescriptorSets(lDevice, &allocInfo, &set) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor set");
+    }
+
+    return set;
+}
