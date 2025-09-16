@@ -119,12 +119,12 @@ public:
 
     SharedPtrVec<TinySkeleton>        skeletons;
     UniquePtrVec<AzVulk::DataBuffer>  skeleInvMatBuffers; // Additional buffers in the future
-    UniquePtr<AzVulk::DescSets>       skeleDescSets; // Wrong, but we'll live with it for now
+    UniquePtr<AzVulk::DescWrapper>       skeleDescSets; // Wrong, but we'll live with it for now
     void createRigSkeleBuffers();
     void createRigSkeleDescSets();
 
     UniquePtr<AzVulk::DataBuffer>     matBuffer;
-    UniquePtr<AzVulk::DescSets>       matDescSet;
+    UniquePtr<AzVulk::DescWrapper>       matDescSet;
     void createMaterialBuffer(); // One big buffer for all
     void createMaterialDescSet(); // Only need one
 
@@ -135,13 +135,13 @@ public:
     UniquePtr<AzVulk::DataBuffer>     textSampIdxBuffer; // Buffer containing sampler indices for each texture
     void createTexSampIdxBuffer(); // Create buffer for texture sampler indices
 
-    UniquePtr<AzVulk::DescSets>       texDescSet;
+    UniquePtr<AzVulk::DescWrapper>       texDescSet;
     void createTextureDescSet();
 
     // Light system
     std::vector<LightVK>              lightVKs; // Dynamic light data
     UniquePtr<AzVulk::DataBuffer>     lightBuffer; // Host-writable buffer for dynamic updates
-    UniquePtr<AzVulk::DescSets>       lightDescSet;
+    UniquePtr<AzVulk::DescWrapper>       lightDescSet;
     bool lightsDirty = false;
     void createLightBuffer();
     void createLightDescSet();

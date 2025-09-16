@@ -39,7 +39,7 @@ struct RigDemo {
     TinyPlayback playback;
 
     AzVulk::DataBuffer finalPoseBuffer;
-    AzVulk::DescSets   descSet;
+    AzVulk::DescWrapper   descSet;
 
     size_t modelIndex = 0;
 

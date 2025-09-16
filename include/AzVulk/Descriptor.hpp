@@ -4,7 +4,7 @@
 
 namespace AzVulk {
 
-struct DescSets {
+struct DescWrapper {
     struct LayoutBind {
         uint32_t binding;
         uint32_t descCount;
@@ -12,17 +12,17 @@ struct DescSets {
         VkShaderStageFlags stageFlags;
     };
 
-    DescSets(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
-    ~DescSets() { cleanup(); } void cleanup();
+    DescWrapper(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
+    ~DescWrapper() { cleanup(); } void cleanup();
 
     void cleanupLayout();
     void cleanupPool();
     void cleanupSets();
 
-    DescSets(const DescSets&) = delete;
-    DescSets& operator=(const DescSets&) = delete;
-    DescSets(DescSets&& other) noexcept;
-    DescSets& operator=(DescSets&& other) noexcept;
+    DescWrapper(const DescWrapper&) = delete;
+    DescWrapper& operator=(const DescWrapper&) = delete;
+    DescWrapper(DescWrapper&& other) noexcept;
+    DescWrapper& operator=(DescWrapper&& other) noexcept;
 
     void init(const VkDevice lDevice) { this->lDevice = lDevice; }
 

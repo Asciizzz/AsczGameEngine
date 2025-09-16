@@ -145,7 +145,7 @@ void PostProcess::createSharedDescriptors() {
     descriptorSets.cleanup();
 
     // Create descriptor set layout (shared by all effects)
-    std::vector<DescSets::LayoutBind> bindings = {
+    std::vector<DescWrapper::LayoutBind> bindings = {
         {0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}, // Input color image
         {1, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT},          // Output color image
         {2, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}  // Depth image (read-only)

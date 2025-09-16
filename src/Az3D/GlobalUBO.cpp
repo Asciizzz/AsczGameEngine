@@ -32,7 +32,7 @@ void GlbUBOManager::createDescSets() {
     descSets.init(deviceVK->lDevice);
 
     descSets.createLayout({
-        DescSets::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
+        DescWrapper::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
     });
 
     descSets.createPool({

@@ -30,7 +30,7 @@ void RigDemo::init(const AzVulk::Device* deviceVK, const TinyModel& model, size_
 
     descSet.init(deviceVK->lDevice);
     descSet.createLayout({
-        DescSets::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
+        DescWrapper::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
     });
 
     descSet.createPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);

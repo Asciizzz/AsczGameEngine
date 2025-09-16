@@ -167,12 +167,12 @@ void ResourceGroup::createMaterialBuffer() {
 void ResourceGroup::createMaterialDescSet() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    matDescSet = MakeUnique<DescSets>(lDevice);
+    matDescSet = MakeUnique<DescWrapper>(lDevice);
 
     // Create descriptor pool and layout
     matDescSet->createPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
     matDescSet->createLayout({
-        DescSets::LayoutBind{
+        DescWrapper::LayoutBind{
             0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
         }
@@ -306,7 +306,7 @@ void ResourceGroup::createTextureDescSet() {
     uint32_t textureCount = static_cast<uint32_t>(textures.size());
     uint32_t samplerCount = static_cast<uint32_t>(samplers.size());
 
-    texDescSet = MakeUnique<DescSets>(lDevice);
+    texDescSet = MakeUnique<DescWrapper>(lDevice);
 
     // layout: binding 0 = images, binding 1 = sampler indices buffer, binding 2 = samplers
     texDescSet->createLayout({
@@ -452,7 +452,7 @@ void ResourceGroup::createRigSkeleDescSets() {
     VkDevice lDevice = deviceVK->lDevice;
 
     // For the time being only create the descriptor set layout
-    skeleDescSets = MakeUnique<DescSets>(lDevice);
+    skeleDescSets = MakeUnique<DescWrapper>(lDevice);
     skeleDescSets->createLayout({
         {0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
     });
@@ -488,12 +488,12 @@ void ResourceGroup::createLightBuffer() {
 void ResourceGroup::createLightDescSet() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    lightDescSet = MakeUnique<DescSets>(lDevice);
+    lightDescSet = MakeUnique<DescWrapper>(lDevice);
 
     // Create descriptor pool and layout for lights
     lightDescSet->createPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
     lightDescSet->createLayout({
-        DescSets::LayoutBind{
+        DescWrapper::LayoutBind{
             0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
         }
