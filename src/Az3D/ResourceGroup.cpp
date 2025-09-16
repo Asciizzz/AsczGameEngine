@@ -297,10 +297,7 @@ void ResourceGroup::createTexSampIdxBuffer() {
     textSampIdxBuffer
         ->setDataSize(bufferSize)
         .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-        .createDeviceLocalBuffer(
-            deviceVK, texSamplerIndices.data()
-        );
+        .createDeviceLocalBuffer(deviceVK, texSamplerIndices.data());
 
 }
 
