@@ -82,21 +82,17 @@ void DescSet::allocate(VkDescriptorPool pool, VkDescriptorSetLayout layout, uint
 void DescSet::allocate(uint32_t count) {
     free(pool);
 
-    sets.clear();
     sets.resize(count, VK_NULL_HANDLE);
 
+    std::vector<VkDescriptorSetLayout> layouts(count, layout);
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool     = pool;
     allocInfo.descriptorSetCount = count;
-    allocInfo.pSetLayouts        = &layout;
-
-    if (layout == VK_NULL_HANDLE) {
-        printf("DescSet::allocate: DescriptorSetLayout is VK_NULL_HANDLE\n");
-    }
+    allocInfo.pSetLayouts        = layouts.data();
 
     if (vkAllocateDescriptorSets(lDevice, &allocInfo, sets.data()) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor set");
+        throw std::runtime_error("failed to allocate descriptor sets");
     }
 }
 

@@ -175,7 +175,7 @@ void ResourceGroup::createMaterialDescSet() {
 
     matDescSet->createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
 
-    matDescSet->allocate(1);
+    matDescSet->allocate();
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
@@ -317,7 +317,7 @@ void ResourceGroup::createTextureDescSet() {
         {VK_DESCRIPTOR_TYPE_SAMPLER,       samplerCount}
     }, 1);
 
-    texDescSet->allocate(1);
+    texDescSet->allocate();
 
     // Write sampled images
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
@@ -492,7 +492,7 @@ void ResourceGroup::createLightDescSet() {
     
     lightDescSet->createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
 
-    lightDescSet->allocate(1);
+    lightDescSet->allocate();
 
     // Bind light buffer to descriptor
     VkDescriptorBufferInfo lightBufferInfo{};

@@ -50,7 +50,7 @@ struct DescSet {
     DescSet(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
     void init(VkDevice lDevice) { this->lDevice = lDevice; }
 
-    ~DescSet() { free(pool); }
+    ~DescSet() { cleanup(); }
 
     DescSet(const DescSet&) = delete;
     DescSet& operator=(const DescSet&) = delete;
@@ -60,7 +60,7 @@ struct DescSet {
     VkDescriptorPool getPool() const { return pool; }
 
     void allocate(VkDescriptorPool pool, VkDescriptorSetLayout layout, uint32_t count=1); // Borrowed pool and layout version
-    void allocate(uint32_t count); // Owned pool and layout version
+    void allocate(uint32_t count=1); // Owned pool and layout version
 
     // For self contained descriptor sets with owned pool and layout
     void createOwnLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);

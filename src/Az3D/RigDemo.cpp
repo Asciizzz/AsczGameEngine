@@ -35,7 +35,7 @@ void RigDemo::init(const AzVulk::Device* deviceVK, const TinyModel& model, size_
 
     descSet.createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
 
-    descSet.allocate(1);
+    descSet.allocate();
 
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = finalPoseBuffer.buffer;
