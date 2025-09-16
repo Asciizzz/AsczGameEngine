@@ -72,17 +72,17 @@ TinyTexture TinyLoader::loadImage(const std::string& filePath) {
         texture.height = 0;
         texture.channels = 0;
         texture.data.clear();
+        texture.makeHash();
         return texture;
     }
-    
-    // Copy data to our own vector with actual channel count
+
     size_t dataSize = texture.width * texture.height * texture.channels;
     texture.data.resize(dataSize);
     std::memcpy(texture.data.data(), stbiData, dataSize);
-    
     // Free stbi allocated memory
     stbi_image_free(stbiData);
-    
+
+    texture.makeHash();
     return texture;
 }
 
@@ -329,6 +329,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 texture.height = image.height;
                 texture.channels = image.component;
                 texture.data = image.image;
+                texture.makeHash();
             }
             
             // Load sampler settings (address mode)
@@ -339,12 +340,10 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 // Convert GLTF wrap modes to our AddressMode enum
                 // GLTF uses the same values for both wrapS and wrapT, so we'll use wrapS
                 switch (sampler.wrapS) {
-                    case TINYGLTF_TEXTURE_WRAP_REPEAT:
-                        texture.addressMode = TinyTexture::AddressMode::Repeat;
-                        break;
                     case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
                         texture.addressMode = TinyTexture::AddressMode::ClampToEdge;
                         break;
+                    case TINYGLTF_TEXTURE_WRAP_REPEAT:
                     case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
                         // We don't have MirroredRepeat, fallback to Repeat
                         texture.addressMode = TinyTexture::AddressMode::Repeat;

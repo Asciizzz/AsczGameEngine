@@ -178,3 +178,15 @@ DataBuffer& DataBuffer::createDeviceLocalBuffer(const Device* deviceVK, const vo
 
     return *this;
 }
+
+VkBuffer DataBuffer::createDeviceLocalBuffer(const Device* deviceVK, const void* initialData,
+                                            VkDeviceSize size, VkBufferUsageFlags usageFlags) {
+    DataBuffer buffer;
+    buffer
+        .setDataSize(size)
+        .setUsageFlags(usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .createBuffer(deviceVK)
+        .createDeviceLocalBuffer(deviceVK, initialData);
+    return buffer.get();
+}

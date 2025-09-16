@@ -45,7 +45,6 @@ struct DataBuffer {
     DataBuffer& uploadData(const void* data);
 
     DataBuffer& copyData(const void* data);
-
     DataBuffer& mapAndCopy(const void* data);
 
     DataBuffer& createDeviceLocalBuffer(const Device* deviceVK, const void* initialData);
@@ -61,6 +60,10 @@ struct DataBuffer {
         static_cast<T*>(mapped)[index] = value;
         unmapMemory();
     }
+
+    // For situations where we only need the buffer for copying
+    static VkBuffer createDeviceLocalBuffer(const Device* deviceVK, const void* initialData,
+                                            VkDeviceSize size, VkBufferUsageFlags usageFlags); // Only need the VkBuffer
 };
 
 }

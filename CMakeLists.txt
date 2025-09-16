@@ -30,9 +30,10 @@ file(GLOB_RECURSE SRC_FILES
     src/Az3D/GlobalUBO.cpp
     
     src/Tiny3D/TinyVertex.cpp
-    src/Tiny3D/TinyModel.cpp
+    src/Tiny3D/TinyMesh.cpp
     src/Tiny3D/TinySkeleton.cpp
     src/Tiny3D/TinyAnimation.cpp
+    src/Tiny3D/TinyModel.cpp
     src/Tiny3D/TinyPlayback.cpp
     src/Tiny3D/TinyLoader.cpp
     
