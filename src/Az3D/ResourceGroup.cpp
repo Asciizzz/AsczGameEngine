@@ -65,7 +65,7 @@ void ResourceGroup::createComponentVKsFromModels() {
     texSamplerIndices.push_back(0); // Default texture uses Repeat sampler (index 0)
 
     for (auto& model : models) {
-        ModelVK modelVK;
+        ModelPtr modelVK;
 
         std::vector<size_t> tempGlobalTextures; // A temporary list to convert local to global indices
         for (const auto& texture : model.textures) {

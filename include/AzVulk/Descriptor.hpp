@@ -41,6 +41,17 @@ struct DescSets {
         return index < sets.size() ? sets[index] : VK_NULL_HANDLE;
     }
 
+    // Create standalone descriptor objects
+    static VkDescriptorSetLayout createLayout(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+    static VkDescriptorSetLayout createLayout(VkDevice lDevice, const std::vector<LayoutBind>& bindingInfos);
+    static VkDescriptorPool createPool(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
+    static VkDescriptorSet createSet(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSetLayout layout);
+
+    static void destroyLayout(VkDevice lDevice, VkDescriptorSetLayout layout);
+    static void destroyPool(VkDevice lDevice, VkDescriptorPool pool);
+    // If you destroy a pool, all sets allocated from it are also freed
+    static void freeSet(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSet set);
+
 private:
     VkDevice lDevice = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> sets;

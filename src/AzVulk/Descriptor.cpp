@@ -74,34 +74,13 @@ void DescSets::cleanup() {
 void DescSets::createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
     cleanupLayout();
     layoutOwned = true;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-    layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings    = bindings.data();
-
-    if (vkCreateDescriptorSetLayout(lDevice, &layoutInfo, nullptr, &layout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor set layout");
-    }
+    layout = createLayout(lDevice, bindings);
 }
 
 void DescSets::createLayout(const std::vector<LayoutBind>& bindingInfos) {
     cleanupLayout();
     layoutOwned = true;
-
-    std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
-    for (const auto& bindingInfo : bindingInfos) {
-        layoutBindings.push_back(fastBinding(bindingInfo));
-    }
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-    layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-    layoutInfo.pBindings    = layoutBindings.data();
-
-    if (vkCreateDescriptorSetLayout(lDevice, &layoutInfo, nullptr, &layout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor set layout");
-    }
+    layout = createLayout(lDevice, bindingInfos);
 }
 
 void DescSets::borrowLayout(VkDescriptorSetLayout newLayout) {
@@ -126,17 +105,7 @@ VkDescriptorSetLayoutBinding DescSets::fastBinding(const LayoutBind& LayoutBind)
 void DescSets::createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
     cleanupPool();
     poolOwned = true;
-
-    VkDescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    poolInfo.maxSets       = maxSets;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes    = poolSizes.data();
-
-    if (vkCreateDescriptorPool(lDevice, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor pool");
-    }
+    pool = createPool(lDevice, poolSizes, maxSets);
 }
 
 void DescSets::borrowPool(VkDescriptorPool newPool) {
@@ -161,5 +130,92 @@ void DescSets::allocate(uint32_t count) {
 
     if (vkAllocateDescriptorSets(lDevice, &allocInfo, sets.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets");
+    }
+}
+
+// Static methods for standalone layout/pool creation
+
+VkDescriptorSetLayout DescSets::createLayout(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings    = bindings.data();
+
+    if (vkCreateDescriptorSetLayout(lDevice, &layoutInfo, nullptr, &layout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor set layout");
+    }
+
+    return layout;
+}
+
+VkDescriptorSetLayout DescSets::createLayout(VkDevice lDevice, const std::vector<LayoutBind>& bindingInfos) {
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+
+    std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
+    for (const auto& bindingInfo : bindingInfos) {
+        layoutBindings.push_back(fastBinding(bindingInfo));
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
+    layoutInfo.pBindings    = layoutBindings.data();
+
+    if (vkCreateDescriptorSetLayout(lDevice, &layoutInfo, nullptr, &layout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor set layout");
+    }
+
+    return layout;
+}
+
+VkDescriptorPool DescSets::createPool(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+
+    VkDescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    poolInfo.maxSets       = maxSets;
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes    = poolSizes.data();
+
+    if (vkCreateDescriptorPool(lDevice, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor pool");
+    }
+
+    return pool;
+}
+
+VkDescriptorSet DescSets::createSet(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSetLayout layout) {
+    VkDescriptorSet set = VK_NULL_HANDLE;
+
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool     = pool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts        = &layout;
+
+    if (vkAllocateDescriptorSets(lDevice, &allocInfo, &set) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor set");
+    }
+
+    return set;
+}
+
+
+void DescSets::destroyLayout(VkDevice lDevice, VkDescriptorSetLayout layout) {
+    if (layout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(lDevice, layout, nullptr);
+    }
+}
+void DescSets::destroyPool(VkDevice lDevice, VkDescriptorPool pool) {
+    if (pool != VK_NULL_HANDLE) {
+        vkDestroyDescriptorPool(lDevice, pool, nullptr);
+    }
+}
+void DescSets::freeSet(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSet set) {
+    if (set != VK_NULL_HANDLE && pool != VK_NULL_HANDLE) {
+        vkFreeDescriptorSets(lDevice, pool, 1, &set);
     }
 }

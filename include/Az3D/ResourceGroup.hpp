@@ -20,14 +20,8 @@ struct LightVK {
     glm::vec4 params = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f); // x = inner cone angle, y = outer cone angle, z = attenuation, w = unused
 };
 
-struct SubmeshVK {
-    AzVulk::DataBuffer vertexBuffer;
-    AzVulk::DataBuffer indexBuffer;
-    VkIndexType indexType;
-};
-
 // Index pointing to certain Vulkan elements
-struct ModelVK {
+struct ModelPtr {
     std::vector<size_t> submeshVK_indices;
 
     std::vector<uint32_t> materialVK_indices;
@@ -37,6 +31,21 @@ struct ModelVK {
     std::vector<uint32_t> submesh_indexCounts; // Cached index counts for each submesh
     size_t submeshCount() const { return submeshVK_indices.size(); }
 };
+
+struct SubmeshVK {
+    AzVulk::DataBuffer vertexBuffer;
+    AzVulk::DataBuffer indexBuffer;
+    VkIndexType indexType = VK_INDEX_TYPE_UINT32; // Default to uint32
+};
+
+struct ModelVK {
+    std::vector<SubmeshVK> submeshVKs;
+
+    AzVulk::DataBuffer matBuffer; // Big buffer for all materials of THIS model
+    VkDescriptorSet matDescSet; // Descriptor set for the material buffer
+};
+
+
 
 // All these resource are static and fixed, created upon load
 class ResourceGroup {
@@ -98,7 +107,7 @@ public:
     AzVulk::Device* deviceVK;
 
     std::vector<TinyModel>            models;
-    std::vector<ModelVK>              modelVKs; // Contain indices to vulkan resources
+    std::vector<ModelPtr>              modelVKs; // Contain indices to vulkan resources
     std::vector<MaterialVK>           materialVKs; // Very different from TinyMaterial
     UniquePtrVec<SubmeshVK>           submeshVKs;
     std::vector<AzVulk::ImageVK> textures;
