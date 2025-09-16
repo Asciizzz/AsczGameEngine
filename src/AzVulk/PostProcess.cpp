@@ -45,7 +45,7 @@ void PostProcessEffect::cleanup(VkDevice device) {
 }
 
 PostProcess::PostProcess(Device* deviceVK, SwapChain* swapChain, DepthManager* depthManager)
-    : deviceVK(deviceVK), swapChain(swapChain), depthManager(depthManager), descriptorSets(deviceVK->lDevice) {
+    : deviceVK(deviceVK), swapChain(swapChain), depthManager(depthManager) {
 }
 
 PostProcess::~PostProcess() {
@@ -142,25 +142,21 @@ void PostProcess::createSampler() {
 }
 
 void PostProcess::createSharedDescriptors() {
-    descriptorSets.cleanup();
+    descriptorSets = MakeUnique<DescSet>(deviceVK->lDevice);
 
-    // Create descriptor set layout (shared by all effects)
-    std::vector<DescWrapper::LayoutBind> bindings = {
-        {0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}, // Input color image
-        {1, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT},          // Output color image
-        {2, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT}  // Depth image (read-only)
-    };
-    descriptorSets.createLayout(bindings);
+    descriptorSets->createOwnLayout({
+        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
+        {1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
+        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}
+    });
 
-    // Create descriptor pool
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 2 * 2}, // Color input + depth for each direction
+    descriptorSets->createOwnPool({
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 4}, // Color input + depth for each direction
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_FRAMES_IN_FLIGHT * 2}
-    };
-    descriptorSets.createPool(poolSizes, MAX_FRAMES_IN_FLIGHT * 2);
+    }, MAX_FRAMES_IN_FLIGHT * 2);
 
     // Allocate descriptor sets for all frames and ping-pong directions
-    descriptorSets.allocate(MAX_FRAMES_IN_FLIGHT * 2);
+    descriptorSets->allocate(MAX_FRAMES_IN_FLIGHT * 2);
 
     // Update descriptor sets to point to ping-pong images
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
@@ -185,7 +181,7 @@ void PostProcess::createSharedDescriptors() {
 
             std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = descriptorSets.get(frame * 2 + 0);
+            descriptorWrites[0].dstSet = descriptorSets->get(frame * 2 + 0);
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -193,7 +189,7 @@ void PostProcess::createSharedDescriptors() {
             descriptorWrites[0].pImageInfo = &imageInfoInput;
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = descriptorSets.get(frame * 2 + 0);
+            descriptorWrites[1].dstSet = descriptorSets->get(frame * 2 + 0);
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -201,7 +197,7 @@ void PostProcess::createSharedDescriptors() {
             descriptorWrites[1].pImageInfo = &imageInfoOutput;
 
             descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].dstSet = descriptorSets.get(frame * 2 + 0);
+            descriptorWrites[2].dstSet = descriptorSets->get(frame * 2 + 0);
             descriptorWrites[2].dstBinding = 2;
             descriptorWrites[2].dstArrayElement = 0;
             descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -230,7 +226,7 @@ void PostProcess::createSharedDescriptors() {
 
             std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = descriptorSets.get(frame * 2 + 1);
+            descriptorWrites[0].dstSet = descriptorSets->get(frame * 2 + 1);
             descriptorWrites[0].dstBinding = 0;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -238,7 +234,7 @@ void PostProcess::createSharedDescriptors() {
             descriptorWrites[0].pImageInfo = &imageInfoInput;
 
             descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = descriptorSets.get(frame * 2 + 1);
+            descriptorWrites[1].dstSet = descriptorSets->get(frame * 2 + 1);
             descriptorWrites[1].dstBinding = 1;
             descriptorWrites[1].dstArrayElement = 0;
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -246,7 +242,7 @@ void PostProcess::createSharedDescriptors() {
             descriptorWrites[1].pImageInfo = &imageInfoOutput;
 
             descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].dstSet = descriptorSets.get(frame * 2 + 1);
+            descriptorWrites[2].dstSet = descriptorSets->get(frame * 2 + 1);
             descriptorWrites[2].dstBinding = 2;
             descriptorWrites[2].dstArrayElement = 0;
             descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -275,7 +271,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
 
     // Create compute pipeline using the shared descriptor set layout
     ComputePipelineConfig config{};
-    config.setLayouts = {descriptorSets.getLayout()};
+    config.setLayouts = {descriptorSets->getLayout()};
     config.compPath = computeShaderPath;
 
     effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
@@ -372,7 +368,7 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
         
         // Bind appropriate shared descriptor set based on ping-pong direction
         int direction = inputIsA ? 0 : 1;  // 0 = A->B, 1 = B->A
-        VkDescriptorSet descriptorSet = descriptorSets.get(frameIndex * 2 + direction);
+        VkDescriptorSet descriptorSet = descriptorSets->get(frameIndex * 2 + direction);
         effect->pipeline->bindSets(cmd, &descriptorSet, 1);
         
         // Dispatch compute work
@@ -593,7 +589,7 @@ void PostProcess::cleanupRenderResources() {
     }
     
     // Clean up descriptor sets
-    descriptorSets.cleanup();
+    descriptorSets->cleanup();
 
     // Clean up sampler
     if (sampler != VK_NULL_HANDLE) {
@@ -631,7 +627,7 @@ void PostProcess::recreateEffects() {
 
         // Create compute pipeline using the shared descriptor set layout
         ComputePipelineConfig config{};
-        config.setLayouts = {descriptorSets.getLayout()};
+        config.setLayouts = {descriptorSets->getLayout()};
         config.compPath = shaderPath;
 
         effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));

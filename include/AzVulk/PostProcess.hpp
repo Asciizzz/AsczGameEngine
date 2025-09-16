@@ -92,7 +92,7 @@ private:
     OrderedMap<std::string, UniquePtr<PostProcessEffect>> effects;
 
     // Shared descriptor management for all effects
-    DescWrapper descriptorSets;
+    UniquePtr<DescSet> descriptorSets;
     
     // Helper methods
     void createPingPongImages();

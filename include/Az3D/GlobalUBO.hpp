@@ -44,7 +44,7 @@ public:
     std::vector<AzVulk::DataBuffer> dataBuffer; // Per-frame buffers
     void createDataBuffer();
 
-    AzVulk::DescWrapper descSets; // Per-frame descriptor sets
+    AzVulk::DescSet descSets;
     void createDescSets();
 
     VkDescriptorSet getDescSet(uint32_t frameIndex) const { return descSets.get(frameIndex); }

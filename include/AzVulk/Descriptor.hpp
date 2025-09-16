@@ -4,63 +4,84 @@
 
 namespace AzVulk {
 
-struct DescWrapper {
-    struct LayoutBind {
-        uint32_t binding;
-        uint32_t descCount;
-        VkDescriptorType type;
-        VkShaderStageFlags stageFlags;
-    };
+struct DescPool {
+    DescPool(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
+    void init(VkDevice lDevice) { this->lDevice = lDevice; }
 
-    DescWrapper(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
-    ~DescWrapper() { cleanup(); } void cleanup();
+    ~DescPool() { destroy(); }
 
-    void cleanupLayout();
-    void cleanupPool();
-    void cleanupSets();
+    DescPool(const DescPool&) = delete;
+    DescPool& operator=(const DescPool&) = delete;
 
-    DescWrapper(const DescWrapper&) = delete;
-    DescWrapper& operator=(const DescWrapper&) = delete;
-    DescWrapper(DescWrapper&& other) noexcept;
-    DescWrapper& operator=(DescWrapper&& other) noexcept;
+    VkDescriptorPool get() const { return pool; }
 
-    void init(const VkDevice lDevice) { this->lDevice = lDevice; }
+    void create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
+    static VkDescriptorPool create(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
-    void createLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
-    void createLayout(const std::vector<LayoutBind>& bindingInfos); // Version using LayoutBind struct
-    void borrowLayout(VkDescriptorSetLayout layout);
+    void destroy();
 
-    void createPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
-    void borrowPool(VkDescriptorPool pool);
+private:
+    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+};
 
-    void allocate(uint32_t count=1);
+struct DescLayout {
+    DescLayout(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
+    void init(VkDevice lDevice) { this->lDevice = lDevice; }
 
+    ~DescLayout() { destroy(); }
+
+    DescLayout(const DescLayout&) = delete;
+    DescLayout& operator=(const DescLayout&) = delete;
+
+    VkDescriptorSetLayout get() const { return layout; }
+
+    void create(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+    static VkDescriptorSetLayout create(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+
+    void destroy();
+
+private:
+    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+};
+
+struct DescSet {
+    DescSet(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
+    void init(VkDevice lDevice) { this->lDevice = lDevice; }
+
+    ~DescSet() { free(pool); }
+
+    DescSet(const DescSet&) = delete;
+    DescSet& operator=(const DescSet&) = delete;
+
+    VkDescriptorSet get(uint32_t index=0) const { return sets.at(index); }
     VkDescriptorSetLayout getLayout() const { return layout; }
     VkDescriptorPool getPool() const { return pool; }
-    VkDescriptorSet get(uint32_t index=0) const {
-        return index < sets.size() ? sets[index] : VK_NULL_HANDLE;
-    }
 
-    // Create standalone descriptor objects
-    static VkDescriptorSetLayout createLayout(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
-    static VkDescriptorSetLayout createLayout(VkDevice lDevice, const std::vector<LayoutBind>& bindingInfos);
-    static VkDescriptorPool createPool(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
-    static VkDescriptorSet createSet(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSetLayout layout);
+    void allocate(VkDescriptorPool pool, VkDescriptorSetLayout layout, uint32_t count=1); // Borrowed pool and layout version
+    void allocate(uint32_t count); // Owned pool and layout version
 
-    static void destroyLayout(VkDevice lDevice, VkDescriptorSetLayout layout);
-    static void destroyPool(VkDevice lDevice, VkDescriptorPool pool);
-    // If you destroy a pool, all sets allocated from it are also freed
-    static void freeSet(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSet set);
+    // For self contained descriptor sets with owned pool and layout
+    void createOwnLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+    void createOwnPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
+
+    void free(VkDescriptorPool pool);
+    void destroyPool();
+    void destroyLayout();
+
+    // With the assumption that both pool and layout are owned
+    void cleanup() { free(pool); destroyPool(); destroyLayout(); }
 
 private:
     VkDevice lDevice = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> sets;
-    VkDescriptorPool      pool        = VK_NULL_HANDLE;
-    bool                  poolOwned   = true;
-    VkDescriptorSetLayout layout      = VK_NULL_HANDLE;
-    bool                  layoutOwned = true;
 
-    static VkDescriptorSetLayoutBinding fastBinding(const LayoutBind& binder);
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+    bool layoutOwned = false;
+
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+    bool poolOwned = false;
 };
 
 }

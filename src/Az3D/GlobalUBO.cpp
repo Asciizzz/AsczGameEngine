@@ -31,11 +31,11 @@ void GlbUBOManager::createDataBuffer() {
 void GlbUBOManager::createDescSets() {
     descSets.init(deviceVK->lDevice);
 
-    descSets.createLayout({
-        DescWrapper::LayoutBind{0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
+    descSets.createOwnLayout({
+        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
     });
 
-    descSets.createPool({
+    descSets.createOwnPool({
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight}
     }, maxFramesInFlight);
 

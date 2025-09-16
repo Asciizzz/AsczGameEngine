@@ -167,18 +167,14 @@ void ResourceGroup::createMaterialBuffer() {
 void ResourceGroup::createMaterialDescSet() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    matDescSet = MakeUnique<DescWrapper>(lDevice);
+    matDescSet = MakeUnique<DescSet>(lDevice);
 
-    // Create descriptor pool and layout
-    matDescSet->createPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-    matDescSet->createLayout({
-        DescWrapper::LayoutBind{
-            0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
-        }
+    matDescSet->createOwnLayout({
+        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr}
     });
 
-    // Allocate descriptor set
+    matDescSet->createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+
     matDescSet->allocate(1);
 
     // --- bind buffer to descriptor ---
@@ -306,16 +302,16 @@ void ResourceGroup::createTextureDescSet() {
     uint32_t textureCount = static_cast<uint32_t>(textures.size());
     uint32_t samplerCount = static_cast<uint32_t>(samplers.size());
 
-    texDescSet = MakeUnique<DescWrapper>(lDevice);
+    texDescSet = MakeUnique<DescSet>(lDevice);
 
     // layout: binding 0 = images, binding 1 = sampler indices buffer, binding 2 = samplers
-    texDescSet->createLayout({
-        {0, textureCount, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT},
-        {1, 1,            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT},
-        {2, samplerCount, VK_DESCRIPTOR_TYPE_SAMPLER,       VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT}
+    texDescSet->createOwnLayout({
+        {0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,  textureCount, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr},
+        {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr},
+        {2, VK_DESCRIPTOR_TYPE_SAMPLER,        samplerCount, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr}
     });
 
-    texDescSet->createPool({
+    texDescSet->createOwnPool({
         {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, textureCount},
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1},
         {VK_DESCRIPTOR_TYPE_SAMPLER,       samplerCount}
@@ -452,9 +448,9 @@ void ResourceGroup::createRigSkeleDescSets() {
     VkDevice lDevice = deviceVK->lDevice;
 
     // For the time being only create the descriptor set layout
-    skeleDescSets = MakeUnique<DescWrapper>(lDevice);
-    skeleDescSets->createLayout({
-        {0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT}
+    skeleDescSets = MakeUnique<DescSet>(lDevice);
+    skeleDescSets->createOwnLayout({
+        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr}
     });
 }
 
@@ -488,18 +484,14 @@ void ResourceGroup::createLightBuffer() {
 void ResourceGroup::createLightDescSet() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    lightDescSet = MakeUnique<DescWrapper>(lDevice);
+    lightDescSet = MakeUnique<DescSet>(lDevice);
 
-    // Create descriptor pool and layout for lights
-    lightDescSet->createPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-    lightDescSet->createLayout({
-        DescWrapper::LayoutBind{
-            0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
-        }
+    lightDescSet->createOwnLayout({
+        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr}
     });
+    
+    lightDescSet->createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
 
-    // Allocate descriptor set
     lightDescSet->allocate(1);
 
     // Bind light buffer to descriptor
