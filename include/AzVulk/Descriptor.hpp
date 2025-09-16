@@ -72,11 +72,6 @@ struct DescSet {
 
     void cleanup() { free(pool); destroyPool(); destroyLayout(); }
 
-    /* Create standalone descriptor set
-    This is for the most part safe since destroying a pool also frees its sets
-    It is recommended to use the DescPool wrapper for automatic lifetime management */
-    static VkDescriptorSet create(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSetLayout layout);
-
 private:
     VkDevice lDevice = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> sets;
