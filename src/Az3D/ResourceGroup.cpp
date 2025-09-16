@@ -391,21 +391,14 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
 
     DataBuffer vDataBuffer;
     vDataBuffer
-        // .setProperties(
-        //     vertexData.size(), 
-        //     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        // )
         .setDataSize(vertexData.size())
-        .setUsageFlags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .setUsageFlags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
         .createDeviceLocalBuffer(deviceVK, vertexData.data());
 
     DataBuffer iDataBuffer;
     iDataBuffer
         .setDataSize(indexData.size())
-        .setUsageFlags(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .setUsageFlags(VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
         .createDeviceLocalBuffer(deviceVK, indexData.data());
 
     // Append buffers

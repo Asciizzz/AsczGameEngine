@@ -160,9 +160,14 @@ DataBuffer& DataBuffer::createDeviceLocalBuffer(const Device* deviceVK, const vo
         .createBuffer(deviceVK)
         .uploadData(initialData);
 
-    // Update usage flags and create device local buffer
+    // Update usage flags to include transfer dst
     usageFlags = usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     setUsageFlags(usageFlags);
+
+    // Update memory properties to device local
+    memPropFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    setMemPropFlags(memPropFlags);
+
     createBuffer(deviceVK);
 
     TemporaryCommand copyCmd(deviceVK, deviceVK->transferPoolWrapper);
