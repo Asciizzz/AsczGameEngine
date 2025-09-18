@@ -1,6 +1,5 @@
 #include "AzVulk/Descriptor.hpp"
 #include "AzVulk/DataBuffer.hpp"
-#include "Az3D/Az3D.hpp"
 #include <stdexcept>
 
 using namespace AzVulk;

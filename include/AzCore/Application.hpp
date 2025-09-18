@@ -1,10 +1,24 @@
 #pragma once
 
-#include "AzCore/AzCore.hpp"
-#include "AzVulk/AzVulk.hpp"
-#include "Az3D/Az3D.hpp"
+#include "AzCore/FpsManager.hpp"
+#include "AzCore/WindowManager.hpp"
 
-#include "AzBeta/AzBeta.hpp"
+#include "AzVulk/Device.hpp"
+#include "AzVulk/Instance.hpp"
+
+#include "AzVulk/SwapChain.hpp"
+#include "AzVulk/RenderPass.hpp"
+#include "AzVulk/DepthManager.hpp"
+
+#include "AzVulk/DataBuffer.hpp"
+#include "AzVulk/Descriptor.hpp"
+
+#include "AzVulk/Renderer.hpp"
+#include "AzVulk/Pipeline_include.hpp"
+
+#include "Az3D/Camera.hpp"
+
+#include "AzBeta/Particle.hpp"
 
 #include "AzGame/Grass.hpp"
 

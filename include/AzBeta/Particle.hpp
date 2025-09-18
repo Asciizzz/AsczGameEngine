@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Az3D/Az3D.hpp"
+#include "Tiny3D/TinyLoader.hpp"
+
 #include <execution>
 #include <algorithm>
 #include <random>

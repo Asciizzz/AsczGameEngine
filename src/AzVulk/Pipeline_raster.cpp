@@ -1,6 +1,4 @@
-// PipelineRaster.cpp
 #include "AzVulk/Pipeline_raster.hpp"
-#include "Az3D/Az3D.hpp"
 
 #include <stdexcept>
 

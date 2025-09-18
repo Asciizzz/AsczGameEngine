@@ -1,5 +1,4 @@
 #include "AzVulk/Renderer.hpp"
-#include "Az3D/Az3D.hpp"
 
 #include <stdexcept>
 #include <cstring>

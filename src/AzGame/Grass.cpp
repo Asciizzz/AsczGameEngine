@@ -1,7 +1,7 @@
 #include "AzGame/Grass.hpp"
 
-#include "Az3D/Az3D.hpp"
-#include "AzVulk/AzVulk.hpp"
+#include "Az3D/ResourceGroup.hpp"
+#include "AzVulk/DataBuffer.hpp"
 
 #include "Tiny3D/TinyLoader.hpp"
 
