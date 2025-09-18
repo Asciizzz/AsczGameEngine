@@ -60,28 +60,11 @@ void PostProcess::createPingPongImages() {
     VkExtent2D extent = swapChain->extent;
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        auto& images = pingPongImages[frame];
-        
-        // Create image A using AzVulk helper function
-        // AzVulk::createImage(deviceVK, extent.width, extent.height, format,
-        //                    VK_IMAGE_TILING_OPTIMAL,
-        //                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-        //                    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-        //                    VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        //                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        //                    images.imageA, images.memoryA);
+        auto& imageA = pingPongImages[frame].imageA;
+        auto& imageB = pingPongImages[frame].imageB;
 
-        // Create image B using AzVulk helper function
-        // AzVulk::createImage(deviceVK, extent.width, extent.height, format,
-        //                    VK_IMAGE_TILING_OPTIMAL,
-        //                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-        //                    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-        //                    VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        //                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        //                    images.imageB, images.memoryB);
-
-        images.imageA = ImageVK(deviceVK);
-        images.imageB = ImageVK(deviceVK);
+        imageA = ImageVK(deviceVK);
+        imageB = ImageVK(deviceVK);
 
         ImageConfig sharedConfig = ImageConfig()
             .setDimensions(extent.width, extent.height)
@@ -98,16 +81,12 @@ void PostProcess::createPingPongImages() {
             .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT);
 
         bool success = true;
-        success &= images.imageA.createImage(sharedConfig);
-        success &= images.imageA.createImageView(viewConfig);
-        success &= images.imageB.createImage(sharedConfig);
-        success &= images.imageB.createImageView(viewConfig);
+        success &= imageA.createImage(sharedConfig);
+        success &= imageA.createImageView(viewConfig);
+        success &= imageB.createImage(sharedConfig);
+        success &= imageB.createImageView(viewConfig);
 
         if (!success) throw std::runtime_error("Failed to create ping-pong images");
-
-        // // Create image views using AzVulk helper function
-        // images.viewA = AzVulk::createImageView(deviceVK, images.imageA, format, VK_IMAGE_ASPECT_COLOR_BIT);
-        // images.viewB = AzVulk::createImageView(deviceVK, images.imageB, format, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
