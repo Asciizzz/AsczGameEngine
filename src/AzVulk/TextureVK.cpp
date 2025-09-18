@@ -262,7 +262,6 @@ bool ImageVK::createTexture(uint32_t width, uint32_t height, int channels, const
         return false;
     }
     
-    // Upload texture data using fluent interface
     transitionLayoutImmediate(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         .copyFromBufferImmediate(stagingBuffer, width, height)
         .generateMipmapsImmediate();
@@ -469,33 +468,10 @@ void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
 }
 
 ImageVK& ImageVK::generateMipmapsImmediate() {
-    // Create temporary command buffer and execute immediately
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = device->graphicsPoolWrapper.pool;
-    allocInfo.commandBufferCount = 1;
+    TemporaryCommand tempCmd(device, device->graphicsPoolWrapper);
+    generateMipmaps(tempCmd.get());
+    tempCmd.endAndSubmit();
 
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(device->lDevice, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    generateMipmaps(commandBuffer);
-    vkEndCommandBuffer(commandBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(device->graphicsQueue);
-
-    vkFreeCommandBuffers(device->lDevice, device->graphicsPoolWrapper.pool, 1, &commandBuffer);
     return *this;
 }
 
