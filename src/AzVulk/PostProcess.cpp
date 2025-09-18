@@ -1,5 +1,5 @@
 #include "AzVulk/PostProcess.hpp"
-#include "AzVulk/ImageVK.hpp"
+#include "AzVulk/TextureVK.hpp"
 #include <stdexcept>
 #include <iostream>
 

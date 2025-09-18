@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <Helpers/Templates.hpp>
+
+#include <vulkan/vulkan.h>
 #include <string>
 
 namespace AzVulk {

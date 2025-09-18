@@ -2,9 +2,10 @@
 
 #include "Tiny3D/TinyModel.hpp"
 
+#include "AzVulk/Pipeline_manager.hpp"
 #include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
-#include "AzVulk/ImageVK.hpp"
+#include "AzVulk/TextureVK.hpp"
 
 namespace Az3D {
 
@@ -106,8 +107,10 @@ public:
 // private:
     AzVulk::Device* deviceVK;
 
+    AzVulk::PipelineManager pipelines;
+
     std::vector<TinyModel>            models;
-    std::vector<ModelPtr>              modelVKs; // Contain indices to vulkan resources
+    std::vector<ModelPtr>             modelVKs; // Contain indices to vulkan resources
     std::vector<MaterialVK>           materialVKs; // Very different from TinyMaterial
     UniquePtrVec<SubmeshVK>           submeshVKs;
     std::vector<AzVulk::ImageVK> textures;

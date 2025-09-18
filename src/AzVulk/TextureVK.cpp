@@ -1,4 +1,4 @@
-#include "AzVulk/ImageVK.hpp"
+#include "AzVulk/TextureVK.hpp"
 #include "AzVulk/Device.hpp"
 #include <stdexcept>
 #include <iostream>

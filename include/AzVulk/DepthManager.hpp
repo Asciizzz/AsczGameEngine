@@ -1,8 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include <vector>
-#include "ImageVK.hpp"
+#include "AzVulk/TextureVK.hpp"
 
 namespace AzVulk {
     class Device;
