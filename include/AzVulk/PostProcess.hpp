@@ -16,14 +16,17 @@ namespace AzVulk {
 
 // Represents a single ping-pong image pair for one frame
 struct PingPongImages {
-    VkImage imageA = VK_NULL_HANDLE;
-    VkImage imageB = VK_NULL_HANDLE;
-    VkDeviceMemory memoryA = VK_NULL_HANDLE;
-    VkDeviceMemory memoryB = VK_NULL_HANDLE;
-    VkImageView viewA = VK_NULL_HANDLE;
-    VkImageView viewB = VK_NULL_HANDLE;
+    ImageVK imageA;
+    ImageVK imageB;
 
-    void cleanup(VkDevice device);
+    VkImage getImageA() const { return imageA.getImage(); }
+    VkImage getImageB() const { return imageB.getImage(); }
+    VkImageView getViewA() const { return imageA.getView(); }
+    VkImageView getViewB() const { return imageB.getView(); }
+    VkDeviceMemory getMemoryA() const { return imageA.getMemory(); }
+    VkDeviceMemory getMemoryB() const { return imageB.getMemory(); }
+
+    // No need for custom cleanup with ImageVK
 };
 
 // Configuration for a post-process effect

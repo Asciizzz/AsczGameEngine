@@ -28,15 +28,6 @@ void destroyDeviceMemory(VkDevice lDevice, VkDeviceMemory memory) {
     }
 }
 
-void PingPongImages::cleanup(VkDevice device) {
-    destroyImageViews(device, viewA);
-    destroyImageViews(device, viewB);
-    destroyImages(device, imageA);
-    destroyImages(device, imageB);
-    destroyDeviceMemory(device, memoryA);
-    destroyDeviceMemory(device, memoryB);
-}
-
 void PostProcessEffect::cleanup(VkDevice device) {
     if (pipeline) {
         pipeline->cleanup();
@@ -72,33 +63,58 @@ void PostProcess::createPingPongImages() {
         auto& images = pingPongImages[frame];
         
         // Create image A using AzVulk helper function
-        AzVulk::createImage(deviceVK, extent.width, extent.height, format,
-                           VK_IMAGE_TILING_OPTIMAL,
-                           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-                           VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-                           VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                           images.imageA, images.memoryA);
+        // AzVulk::createImage(deviceVK, extent.width, extent.height, format,
+        //                    VK_IMAGE_TILING_OPTIMAL,
+        //                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
+        //                    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+        //                    VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        //                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        //                    images.imageA, images.memoryA);
 
         // Create image B using AzVulk helper function
-        AzVulk::createImage(deviceVK, extent.width, extent.height, format,
-                           VK_IMAGE_TILING_OPTIMAL,
-                           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-                           VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-                           VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                           images.imageB, images.memoryB);
-        
-        // Create image views using AzVulk helper function
-        images.viewA = AzVulk::createImageView(deviceVK, images.imageA, format, VK_IMAGE_ASPECT_COLOR_BIT);
-        images.viewB = AzVulk::createImageView(deviceVK, images.imageB, format, VK_IMAGE_ASPECT_COLOR_BIT);
+        // AzVulk::createImage(deviceVK, extent.width, extent.height, format,
+        //                    VK_IMAGE_TILING_OPTIMAL,
+        //                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
+        //                    VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+        //                    VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        //                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        //                    images.imageB, images.memoryB);
+
+        images.imageA = ImageVK(deviceVK);
+        images.imageB = ImageVK(deviceVK);
+
+        ImageConfig sharedConfig = ImageConfig()
+            .setDimensions(extent.width, extent.height)
+            .setFormat(format)
+            .setTiling(VK_IMAGE_TILING_OPTIMAL)
+            .setUsage(  ImageUsageAlias::ColorAttach |
+                        ImageUsageAlias::Sampled | 
+                        ImageUsageAlias::Storage |
+                        ImageUsageAlias::TransferSrc |
+                        ImageUsageAlias::TransferDst)
+            .setMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        ImageViewConfig viewConfig = ImageViewConfig()
+            .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT);
+
+        bool success = true;
+        success &= images.imageA.createImage(sharedConfig);
+        success &= images.imageA.createImageView(viewConfig);
+        success &= images.imageB.createImage(sharedConfig);
+        success &= images.imageB.createImageView(viewConfig);
+
+        if (!success) throw std::runtime_error("Failed to create ping-pong images");
+
+        // // Create image views using AzVulk helper function
+        // images.viewA = AzVulk::createImageView(deviceVK, images.imageA, format, VK_IMAGE_ASPECT_COLOR_BIT);
+        // images.viewB = AzVulk::createImageView(deviceVK, images.imageB, format, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
 void PostProcess::createOffscreenFramebuffers() {
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         std::array<VkImageView, 2> attachments = {
-            pingPongImages[frame].viewA,        // Color attachment (index 0)
+            pingPongImages[frame].getViewA(),        // Color attachment (index 0)
             depthManager->getDepthImageView()   // Depth attachment (index 1)
         };
 
@@ -166,12 +182,12 @@ void PostProcess::createSharedDescriptors() {
         {
             VkDescriptorImageInfo imageInfoInput{};
             imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoInput.imageView = images.viewA;
+            imageInfoInput.imageView = images.getViewA();
             imageInfoInput.sampler = sampler;
 
             VkDescriptorImageInfo imageInfoOutput{};
             imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoOutput.imageView = images.viewB;
+            imageInfoOutput.imageView = images.getViewB();
             imageInfoOutput.sampler = VK_NULL_HANDLE;
 
             VkDescriptorImageInfo imageInfoDepth{};
@@ -211,12 +227,12 @@ void PostProcess::createSharedDescriptors() {
         {
             VkDescriptorImageInfo imageInfoInput{};
             imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoInput.imageView = images.viewB;
+            imageInfoInput.imageView = images.getViewB();
             imageInfoInput.sampler = sampler;
 
             VkDescriptorImageInfo imageInfoOutput{};
             imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoOutput.imageView = images.viewA;
+            imageInfoOutput.imageView = images.getViewA();
             imageInfoOutput.sampler = VK_NULL_HANDLE;
 
             VkDescriptorImageInfo imageInfoDepth{};
@@ -323,7 +339,7 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     
     // Images are already in GENERAL layout from the render pass, so no transition needed for image A
     // Just transition image B from UNDEFINED to GENERAL
-    transitionImageLayout(cmd, images.imageB, VK_FORMAT_R8G8B8A8_UNORM,
+    transitionImageLayout(cmd, images.getImageB(), VK_FORMAT_R8G8B8A8_UNORM,
                         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     // Transition depth image to read-only layout for compute shader access
@@ -422,7 +438,7 @@ void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uin
     // Get final processed image
     const auto& images = pingPongImages[frameIndex];
     bool finalIsA = (activeEffectCount % 2) == 0;  // Even number of effects means final result is in A
-    VkImage finalImage = finalIsA ? images.imageA : images.imageB;
+    VkImage finalImage = finalIsA ? images.getImageA() : images.getImageB();
 
     // Transition swapchain image to transfer destination
     VkImageMemoryBarrier swapchainBarrier{};
@@ -517,7 +533,7 @@ VkImageView PostProcess::getFinalImageView(uint32_t frameIndex) const {
     // Return the final image based on whether we have even or odd number of active effects
     const auto& images = pingPongImages[frameIndex];
     bool finalIsA = (activeEffectCount % 2) == 0;  // Even number of effects means final result is in A
-    return finalIsA ? images.viewA : images.viewB;
+    return finalIsA ? images.getViewA() : images.getViewB();
 }
 
 void PostProcess::recreate() {
@@ -596,11 +612,8 @@ void PostProcess::cleanupRenderResources() {
         vkDestroySampler(device, sampler, nullptr);
         sampler = VK_NULL_HANDLE;
     }
-    
-    // Clean up ping-pong images (after framebuffers that use their views)
-    for (auto& images : pingPongImages) {
-        images.cleanup(device);
-    }
+
+    // No need for image cleanup
 }
 
 void PostProcess::recreateEffects() {
