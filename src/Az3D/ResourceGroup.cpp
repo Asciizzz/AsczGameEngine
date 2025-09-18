@@ -220,25 +220,40 @@ ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
     DataBuffer stagingBuffer;
     stagingBuffer
         .setDataSize(imageSize * sizeof(uint8_t))
-        .setUsageFlags(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-        .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .setUsageFlags(ImageUsageAlias::TransferSrc)
+        .setMemPropFlags(MemPropAlias::HostVisible | MemPropAlias::HostCoherent)
         .createBuffer(deviceVK)
         .uploadData(vulkanData.data());
 
     // Create ImageVK with texture configuration
-    ImageVK imageWrapper(deviceVK);
-    if (!imageWrapper.createTexture(texture.width, texture.height, textureFormat, mipLevels)) {
-        throw std::runtime_error("Failed to create texture image");
-    }
+    ImageVK textureVK(deviceVK);
+    // if (!textureVK.createTexture(texture.width, texture.height, textureFormat, mipLevels)) {
+    //     throw std::runtime_error("Failed to create texture image");
+    // }
+
+    ImageConfig config = ImageConfig()
+        .setDimensions(texture.width, texture.height)
+        .setFormat(textureFormat)
+        .setUsage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+        .setMipLevels(mipLevels)
+        .setTiling(VK_IMAGE_TILING_OPTIMAL)
+        .setMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    ImageViewConfig viewConfig = ImageViewConfig()
+        .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+        .setMipLevels(mipLevels);
+
+    textureVK.createImage(config);
+    textureVK.createImageView(viewConfig);
 
     // Transition image layout for transfer
-    imageWrapper
+    textureVK
         .transitionLayoutImmediate( VK_IMAGE_LAYOUT_UNDEFINED, 
                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         .copyFromBufferImmediate(stagingBuffer.buffer, texture.width, texture.height)
         .generateMipmapsImmediate();
 
-    return imageWrapper;
+    return textureVK;
 }
 
 
@@ -323,7 +338,7 @@ void ResourceGroup::createTextureDescSet() {
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
     for (uint32_t i = 0; i < textureCount; ++i) {
         imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfos[i].imageView   = textures[i].getImageView();
+        imageInfos[i].imageView   = textures[i].getView();
         imageInfos[i].sampler     = VK_NULL_HANDLE;
     }
 

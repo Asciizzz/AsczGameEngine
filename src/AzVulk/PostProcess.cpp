@@ -14,10 +14,10 @@ void destroyImages(VkDevice lDevice, VkImage image) {
     }
 }
 
-void destroyImageViews(VkDevice lDevice, VkImageView imageView) {
-    if (imageView != VK_NULL_HANDLE) {
-        vkDestroyImageView(lDevice, imageView, nullptr);
-        imageView = VK_NULL_HANDLE;
+void destroyImageViews(VkDevice lDevice, VkImageView view) {
+    if (view != VK_NULL_HANDLE) {
+        vkDestroyImageView(lDevice, view, nullptr);
+        view = VK_NULL_HANDLE;
     }
 }
 

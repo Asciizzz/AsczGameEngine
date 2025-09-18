@@ -136,8 +136,8 @@ void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass
 void SwapChain::cleanup() {
     cleanupFramebuffers();
 
-    for (auto imageView : imageViews) {
-        vkDestroyImageView(deviceVK->lDevice, imageView, nullptr);
+    for (auto view : imageViews) {
+        vkDestroyImageView(deviceVK->lDevice, view, nullptr);
     }
     imageViews.clear();
 

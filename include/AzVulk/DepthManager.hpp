@@ -16,18 +16,17 @@ namespace AzVulk {
         void createDepthResources(uint32_t width, uint32_t height);
 
         // Accessors for depth resources
-        VkImageView getDepthImageView() const { return depthBuffer.getImageView(); }
-        VkImage getDepthImage() const { return depthBuffer.getImage(); }
-        uint32_t getWidth() const { return depthBuffer.getWidth(); }
-        uint32_t getHeight() const { return depthBuffer.getHeight(); }
+        VkImageView getDepthImageView() const { return depthImage.getView(); }
+        VkImage getDepthImage() const { return depthImage.getImage(); }
+        uint32_t getWidth() const { return depthImage.getWidth(); }
+        uint32_t getHeight() const { return depthImage.getHeight(); }
 
         const Device* deviceVK;
         
         // Modern ImageVK-based depth resource
-        ImageVK depthBuffer;
+        ImageVK depthImage;
 
         VkFormat depthFormat;
-        bool depthResolveSupported;
 
         // Helper methods
         VkFormat findDepthFormat();

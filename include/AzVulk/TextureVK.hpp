@@ -8,30 +8,11 @@
 namespace AzVulk {
     class Device;
 
-    // Image usage presets for common scenarios
-    struct ImageUsagePreset {
-        static constexpr VkImageUsageFlags DEPTH_BUFFER = 
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        
-        static constexpr VkImageUsageFlags TEXTURE = 
-            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        
-        static constexpr VkImageUsageFlags RENDER_TARGET = 
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        
-        static constexpr VkImageUsageFlags COMPUTE_STORAGE = 
-            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        
-        static constexpr VkImageUsageFlags POST_PROCESS = 
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | 
-            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    };
-
-    // Memory property presets
-    struct MemoryPreset {
-        static constexpr VkMemoryPropertyFlags DEVICE_LOCAL = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        static constexpr VkMemoryPropertyFlags HOST_VISIBLE = 
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    struct ImageUsageAlias {
+        static constexpr VkImageUsageFlags TransferSrc  = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        static constexpr VkImageUsageFlags TransferDst  = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        static constexpr VkImageUsageFlags Sampled      = VK_IMAGE_USAGE_SAMPLED_BIT;
+        static constexpr VkImageUsageFlags Storage      = VK_IMAGE_USAGE_STORAGE_BIT;
     };
 
     // Image configuration struct for easy setup
@@ -45,7 +26,7 @@ namespace AzVulk {
         VkImageType imageType = VK_IMAGE_TYPE_2D;
         VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
         VkImageUsageFlags usage = 0;
-        VkMemoryPropertyFlags memoryProperties = MemoryPreset::DEVICE_LOCAL;
+        VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
         VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         
@@ -53,22 +34,15 @@ namespace AzVulk {
         ImageConfig& setDimensions(uint32_t w, uint32_t h, uint32_t d = 1);
         ImageConfig& setFormat(VkFormat fmt);
         ImageConfig& setUsage(VkImageUsageFlags usageFlags);
-        ImageConfig& setMemoryProperties(VkMemoryPropertyFlags memProps);
+        ImageConfig& setMemProps(VkMemoryPropertyFlags memProps);
         ImageConfig& setMipLevels(uint32_t levels);
         ImageConfig& setSamples(VkSampleCountFlagBits sampleCount);
         ImageConfig& setTiling(VkImageTiling imageTiling);
-        
-        // Preset configurations
-        static ImageConfig createDepthBuffer(uint32_t width, uint32_t height, VkFormat depthFormat);
-        static ImageConfig createTexture(uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels = 1);
-        static ImageConfig createRenderTarget(uint32_t width, uint32_t height, VkFormat format);
-        static ImageConfig createComputeStorage(uint32_t width, uint32_t height, VkFormat format);
-        static ImageConfig createPostProcessBuffer(uint32_t width, uint32_t height);
     };
 
     // Image view configuration
     struct ImageViewConfig {
-        VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
+        VkImageViewType type = VK_IMAGE_VIEW_TYPE_2D;
         VkFormat format = VK_FORMAT_UNDEFINED;  // If UNDEFINED, uses image format
         VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         uint32_t baseMipLevel = 0;
@@ -76,23 +50,22 @@ namespace AzVulk {
         uint32_t baseArrayLayer = 0;
         uint32_t arrayLayers = VK_REMAINING_ARRAY_LAYERS;
         VkComponentMapping components = {
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY,
-            VK_COMPONENT_SWIZZLE_IDENTITY
+            VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
         };
-        
-        // Preset configurations
-        static ImageViewConfig createDefault(VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
-        static ImageViewConfig createDepthView();
-        static ImageViewConfig createColorView(uint32_t mipLevels = 1);
-        static ImageViewConfig createCubeMapView();
+
+        // You generally only need these setters
+        ImageViewConfig& setType(VkImageViewType viewType);
+        ImageViewConfig& setFormat(VkFormat fmt);
+        ImageViewConfig& setAspectMask(VkImageAspectFlags aspect);
+        ImageViewConfig& setMipLevels(uint32_t levels);
     };
 
     // Main ImageVK class
     class ImageVK {
     public:
-        ImageVK(const Device* device);
+        ImageVK() = default; void init(const Device* device);
+        ImageVK(const Device* device) : device(device) {}
         ~ImageVK();
 
         // Delete copy constructor and assignment operator
@@ -104,16 +77,12 @@ namespace AzVulk {
         ImageVK& operator=(ImageVK&& other) noexcept;
 
         // Creation methods
-        bool create(const ImageConfig& config);
+        bool createImage(const ImageConfig& config);
         bool createImageView(const ImageViewConfig& viewConfig);
         
         // Convenience creation methods
-        bool createDepthBuffer(uint32_t width, uint32_t height, VkFormat depthFormat);
         bool createTexture(uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels = 1);
         bool createTexture(uint32_t width, uint32_t height, int channels, const uint8_t* data, VkBuffer stagingBuffer);
-        bool createRenderTarget(uint32_t width, uint32_t height, VkFormat format);
-        bool createComputeStorage(uint32_t width, uint32_t height, VkFormat format);
-        bool createPostProcessBuffer(uint32_t width, uint32_t height);
 
         // Layout transition
         void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
@@ -134,7 +103,7 @@ namespace AzVulk {
 
         // Getters
         VkImage getImage() const { return image; }
-        VkImageView getImageView() const { return imageView; }
+        VkImageView getView() const { return view; }
         VkDeviceMemory getMemory() const { return memory; }
         VkFormat getFormat() const { return format; }
         uint32_t getWidth() const { return width; }
@@ -159,7 +128,7 @@ namespace AzVulk {
         
         VkImage image = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
-        VkImageView imageView = VK_NULL_HANDLE;
+        VkImageView view = VK_NULL_HANDLE;
         
         VkFormat format = VK_FORMAT_UNDEFINED;
         uint32_t width = 0;
@@ -178,31 +147,9 @@ namespace AzVulk {
         VkAccessFlags getAccessFlags(VkImageLayout layout);
     };
 
-    // RAII helper for temporary image operations
-    class TemporaryImage {
-    public:
-        TemporaryImage(const Device* device, const ImageConfig& config);
-        ~TemporaryImage();
-
-        ImageVK& get() { return image; }
-        const ImageVK& get() const { return image; }
-
-    private:
-        ImageVK image;
-    };
-
     // Static utility functions for backward compatibility with manual VkImage management
     void createImage(const Device* device, uint32_t width, uint32_t height, VkFormat format, 
                     VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
                     VkImage& image, VkDeviceMemory& imageMemory);
     VkImageView createImageView(const Device* device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-
-    // Factory functions for common use cases
-    namespace ImageFactory {
-        UniquePtr<ImageVK> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat);
-        UniquePtr<ImageVK> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels = 1);
-        UniquePtr<ImageVK> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format);
-        UniquePtr<ImageVK> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format);
-        UniquePtr<ImageVK> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height);
-    }
 }

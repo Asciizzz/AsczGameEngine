@@ -10,9 +10,8 @@
 using namespace AzVulk;
 
 DepthManager::DepthManager(const Device* deviceVK)
-    : deviceVK              (deviceVK)
-    , depthBuffer           (deviceVK)
-    , depthResolveSupported (false)
+    : deviceVK   (deviceVK)
+    , depthImage (deviceVK)
 {}
 
 DepthManager::~DepthManager() {
@@ -21,7 +20,7 @@ DepthManager::~DepthManager() {
 
 void DepthManager::cleanup() {
     // ImageVK handles cleanup automatically
-    depthBuffer.cleanup();
+    depthImage.cleanup();
 }
 
 void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
@@ -31,9 +30,20 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
     depthFormat = findDepthFormat();
 
     // Create depth buffer using ImageVK convenience method
-    if (!depthBuffer.createDepthBuffer(width, height, depthFormat)) {
-        throw std::runtime_error("Failed to create depth buffer!");
-    }
+    // if (!depthBuffer.createDepthBuffer(width, height, depthFormat)) {
+    //     throw std::runtime_error("Failed to create depth buffer!");
+    // }
+
+    ImageConfig depthConfig = ImageConfig()
+        .setDimensions(width, height)
+        .setFormat(depthFormat)
+        .setUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    ImageViewConfig depthViewConfig = ImageViewConfig()
+        .setAspectMask(VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    depthImage.createImage(depthConfig);
+    depthImage.createImageView(depthViewConfig);
 }
 
 VkFormat DepthManager::findDepthFormat() {

@@ -24,7 +24,7 @@ ImageConfig& ImageConfig::setUsage(VkImageUsageFlags usageFlags) {
     return *this;
 }
 
-ImageConfig& ImageConfig::setMemoryProperties(VkMemoryPropertyFlags memProps) {
+ImageConfig& ImageConfig::setMemProps(VkMemoryPropertyFlags memProps) {
     memoryProperties = memProps;
     return *this;
 }
@@ -44,93 +44,40 @@ ImageConfig& ImageConfig::setTiling(VkImageTiling imageTiling) {
     return *this;
 }
 
-ImageConfig ImageConfig::createDepthBuffer(uint32_t width, uint32_t height, VkFormat depthFormat) {
-    ImageConfig config;
-    config.setDimensions(width, height)
-          .setFormat(depthFormat)
-          .setUsage(ImageUsagePreset::DEPTH_BUFFER)
-          .setMemoryProperties(MemoryPreset::DEVICE_LOCAL);
-    return config;
-}
-
-ImageConfig ImageConfig::createTexture(uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
-    ImageConfig config;
-    config.setDimensions(width, height)
-          .setFormat(format)
-          .setUsage(ImageUsagePreset::TEXTURE)
-          .setMipLevels(mipLevels)
-          .setMemoryProperties(MemoryPreset::DEVICE_LOCAL);
-    return config;
-}
-
-ImageConfig ImageConfig::createRenderTarget(uint32_t width, uint32_t height, VkFormat format) {
-    ImageConfig config;
-    config.setDimensions(width, height)
-          .setFormat(format)
-          .setUsage(ImageUsagePreset::RENDER_TARGET)
-          .setMemoryProperties(MemoryPreset::DEVICE_LOCAL);
-    return config;
-}
-
-ImageConfig ImageConfig::createComputeStorage(uint32_t width, uint32_t height, VkFormat format) {
-    ImageConfig config;
-    config.setDimensions(width, height)
-          .setFormat(format)
-          .setUsage(ImageUsagePreset::COMPUTE_STORAGE)
-          .setMemoryProperties(MemoryPreset::DEVICE_LOCAL);
-    return config;
-}
-
-ImageConfig ImageConfig::createPostProcessBuffer(uint32_t width, uint32_t height) {
-    ImageConfig config;
-    config.setDimensions(width, height)
-          .setFormat(VK_FORMAT_R8G8B8A8_UNORM)
-          .setUsage(ImageUsagePreset::POST_PROCESS)
-          .setMemoryProperties(MemoryPreset::DEVICE_LOCAL);
-    return config;
-}
-
 // ImageViewConfig implementation
-ImageViewConfig ImageViewConfig::createDefault(VkImageAspectFlags aspect) {
-    ImageViewConfig config;
-    config.aspectMask = aspect;
-    return config;
+ImageViewConfig& ImageViewConfig::setType(VkImageViewType viewType) {
+    type = viewType;
+    return *this;
 }
 
-ImageViewConfig ImageViewConfig::createDepthView() {
-    ImageViewConfig config;
-    config.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    return config;
+ImageViewConfig& ImageViewConfig::setFormat(VkFormat fmt) {
+    format = fmt;
+    return *this;
 }
 
-ImageViewConfig ImageViewConfig::createColorView(uint32_t mipLevels) {
-    ImageViewConfig config;
-    config.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    config.mipLevels = mipLevels;
-    return config;
+ImageViewConfig& ImageViewConfig::setAspectMask(VkImageAspectFlags aspect) {
+    aspectMask = aspect;
+    return *this;
 }
 
-ImageViewConfig ImageViewConfig::createCubeMapView() {
-    ImageViewConfig config;
-    config.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-    config.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    config.arrayLayers = 6;
-    return config;
+ImageViewConfig& ImageViewConfig::setMipLevels(uint32_t levels) {
+    mipLevels = levels;
+    return *this;
 }
+
 
 // ImageVK implementation
-ImageVK::ImageVK(const Device* device) : device(device) {
+void ImageVK::init(const Device* device) {
+    this->device = device;
 }
 
-ImageVK::~ImageVK() {
-    cleanup();
-}
+ImageVK::~ImageVK() { cleanup(); }
 
 ImageVK::ImageVK(ImageVK&& other) noexcept
     : device(other.device)
     , image(other.image)
     , memory(other.memory)
-    , imageView(other.imageView)
+    , view(other.view)
     , format(other.format)
     , width(other.width)
     , height(other.height)
@@ -144,7 +91,7 @@ ImageVK::ImageVK(ImageVK&& other) noexcept
     other.device = nullptr;
     other.image = VK_NULL_HANDLE;
     other.memory = VK_NULL_HANDLE;
-    other.imageView = VK_NULL_HANDLE;
+    other.view = VK_NULL_HANDLE;
     other.format = VK_FORMAT_UNDEFINED;
     other.width = 0;
     other.height = 0;
@@ -161,7 +108,7 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
         device = other.device;
         image = other.image;
         memory = other.memory;
-        imageView = other.imageView;
+        view = other.view;
         format = other.format;
         width = other.width;
         height = other.height;
@@ -175,7 +122,7 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
         other.device = nullptr;
         other.image = VK_NULL_HANDLE;
         other.memory = VK_NULL_HANDLE;
-        other.imageView = VK_NULL_HANDLE;
+        other.view = VK_NULL_HANDLE;
         other.format = VK_FORMAT_UNDEFINED;
         other.width = 0;
         other.height = 0;
@@ -187,7 +134,10 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
     return *this;
 }
 
-bool ImageVK::create(const ImageConfig& config) {
+
+
+
+bool ImageVK::createImage(const ImageConfig& config) {
     if (!device) {
         std::cerr << "ImageVK: Device is null" << std::endl;
         return false;
@@ -257,15 +207,16 @@ bool ImageVK::createImageView(const ImageViewConfig& viewConfig) {
     }
 
     // Clean up existing image view
-    if (imageView != VK_NULL_HANDLE) {
-        vkDestroyImageView(device->lDevice, imageView, nullptr);
-        imageView = VK_NULL_HANDLE;
+    if (view != VK_NULL_HANDLE) {
+        vkDestroyImageView(device->lDevice, view, nullptr);
+        view = VK_NULL_HANDLE;
     }
 
     VkImageViewCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     createInfo.image = image;
-    createInfo.viewType = viewConfig.viewType;
+    createInfo.viewType = viewConfig.type;
+    // Auto-select format if not specified
     createInfo.format = (viewConfig.format != VK_FORMAT_UNDEFINED) ? viewConfig.format : format;
     createInfo.components = viewConfig.components;
     createInfo.subresourceRange.aspectMask = viewConfig.aspectMask;
@@ -274,7 +225,7 @@ bool ImageVK::createImageView(const ImageViewConfig& viewConfig) {
     createInfo.subresourceRange.baseArrayLayer = viewConfig.baseArrayLayer;
     createInfo.subresourceRange.layerCount = (viewConfig.arrayLayers == VK_REMAINING_ARRAY_LAYERS) ? arrayLayers : viewConfig.arrayLayers;
 
-    if (vkCreateImageView(device->lDevice, &createInfo, nullptr, &imageView) != VK_SUCCESS) {
+    if (vkCreateImageView(device->lDevice, &createInfo, nullptr, &view) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to create image view" << std::endl;
         return false;
     }
@@ -282,19 +233,19 @@ bool ImageVK::createImageView(const ImageViewConfig& viewConfig) {
     return true;
 }
 
-bool ImageVK::createDepthBuffer(uint32_t width, uint32_t height, VkFormat depthFormat) {
-    ImageConfig config = ImageConfig::createDepthBuffer(width, height, depthFormat);
-    if (!create(config)) return false;
-
-    ImageViewConfig viewConfig = ImageViewConfig::createDepthView();
-    return createImageView(viewConfig);
-}
-
 bool ImageVK::createTexture(uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
-    ImageConfig config = ImageConfig::createTexture(width, height, format, mipLevels);
-    if (!create(config)) return false;
+    ImageConfig config = ImageConfig()
+        .setDimensions(width, height)
+        .setFormat(format)
+        .setMipLevels(mipLevels)
+        .setMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .setUsage(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 
-    ImageViewConfig viewConfig = ImageViewConfig::createColorView(mipLevels);
+    if (!createImage(config)) return false;
+
+    ImageViewConfig viewConfig = ImageViewConfig()
+        .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+        .setMipLevels(mipLevels);
     return createImageView(viewConfig);
 }
 
@@ -317,30 +268,6 @@ bool ImageVK::createTexture(uint32_t width, uint32_t height, int channels, const
         .generateMipmapsImmediate();
         
     return true;
-}
-
-bool ImageVK::createRenderTarget(uint32_t width, uint32_t height, VkFormat format) {
-    ImageConfig config = ImageConfig::createRenderTarget(width, height, format);
-    if (!create(config)) return false;
-
-    ImageViewConfig viewConfig = ImageViewConfig::createColorView();
-    return createImageView(viewConfig);
-}
-
-bool ImageVK::createComputeStorage(uint32_t width, uint32_t height, VkFormat format) {
-    ImageConfig config = ImageConfig::createComputeStorage(width, height, format);
-    if (!create(config)) return false;
-
-    ImageViewConfig viewConfig = ImageViewConfig::createColorView();
-    return createImageView(viewConfig);
-}
-
-bool ImageVK::createPostProcessBuffer(uint32_t width, uint32_t height) {
-    ImageConfig config = ImageConfig::createPostProcessBuffer(width, height);
-    if (!create(config)) return false;
-
-    ImageViewConfig viewConfig = ImageViewConfig::createColorView();
-    return createImageView(viewConfig);
 }
 
 void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
@@ -581,9 +508,9 @@ void ImageVK::cleanup() {
 
     VkDevice lDevice = device->lDevice;
 
-    if (imageView != VK_NULL_HANDLE) {
-        vkDestroyImageView(lDevice, imageView, nullptr);
-        imageView = VK_NULL_HANDLE;
+    if (view != VK_NULL_HANDLE) {
+        vkDestroyImageView(lDevice, view, nullptr);
+        view = VK_NULL_HANDLE;
     }
 
     if (image != VK_NULL_HANDLE) {
@@ -713,60 +640,6 @@ VkAccessFlags ImageVK::getAccessFlags(VkImageLayout layout) {
     }
 }
 
-// TemporaryImage implementation
-TemporaryImage::TemporaryImage(const Device* device, const ImageConfig& config) : image(device) {
-    if (!image.create(config)) {
-        throw std::runtime_error("Failed to create temporary image");
-    }
-}
-
-TemporaryImage::~TemporaryImage() {
-    // Automatic cleanup via ImageVK destructor
-}
-
-// Factory functions
-namespace AzVulk::ImageFactory {
-    UniquePtr<ImageVK> createDepthBuffer(const Device* device, uint32_t width, uint32_t height, VkFormat depthFormat) {
-        auto image = MakeUnique<ImageVK>(device);
-        if (!image->createDepthBuffer(width, height, depthFormat)) {
-            return nullptr;
-        }
-        return image;
-    }
-
-    UniquePtr<ImageVK> createTexture(const Device* device, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
-        auto image = MakeUnique<ImageVK>(device);
-        if (!image->createTexture(width, height, format, mipLevels)) {
-            return nullptr;
-        }
-        return image;
-    }
-
-    UniquePtr<ImageVK> createRenderTarget(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
-        auto image = MakeUnique<ImageVK>(device);
-        if (!image->createRenderTarget(width, height, format)) {
-            return nullptr;
-        }
-        return image;
-    }
-
-    UniquePtr<ImageVK> createComputeStorage(const Device* device, uint32_t width, uint32_t height, VkFormat format) {
-        auto image = MakeUnique<ImageVK>(device);
-        if (!image->createComputeStorage(width, height, format)) {
-            return nullptr;
-        }
-        return image;
-    }
-
-    UniquePtr<ImageVK> createPostProcessBuffer(const Device* device, uint32_t width, uint32_t height) {
-        auto image = MakeUnique<ImageVK>(device);
-        if (!image->createPostProcessBuffer(width, height)) {
-            return nullptr;
-        }
-        return image;
-    }
-}
-
 namespace AzVulk {
 
 // Static utility functions for backward compatibility
@@ -819,12 +692,12 @@ VkImageView createImageView(const Device* device, VkImage image, VkFormat format
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount     = 1;
 
-    VkImageView imageView;
-    if (vkCreateImageView(device->lDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    VkImageView view;
+    if (vkCreateImageView(device->lDevice, &viewInfo, nullptr, &view) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image view!");
     }
 
-    return imageView;
+    return view;
 }
 
 }
