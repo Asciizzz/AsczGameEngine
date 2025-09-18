@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Helpers/Templates.hpp"
-
-#include <vulkan/vulkan.h>
+#include "AzVulk/Device.hpp"
 
 namespace AzVulk {
 
@@ -27,6 +25,22 @@ struct CmdBuffer {
     // Operator [] for easy access
     template<typename T>
     const VkCommandBuffer& operator[](T index) const { return cmdBuffers[index]; }
+};
+
+
+// RAII temporary command buffer wrapper
+class TempCmd {
+public:
+    TempCmd(const Device* deviceVK, const Device::PoolWrapper& poolWrapper);
+    ~TempCmd();
+    void endAndSubmit(VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+    VkCommandBuffer get() const { return cmdBuffer; }
+
+    const Device* deviceVK = nullptr;
+    Device::PoolWrapper poolWrapper{};
+    VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
+    bool submitted = false;
 };
 
 };

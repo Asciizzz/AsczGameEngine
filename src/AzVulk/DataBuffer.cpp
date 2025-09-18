@@ -1,4 +1,5 @@
 #include "AzVulk/DataBuffer.hpp"
+#include "AzVulk/CmdBuffer.hpp"
 
 #include <stdexcept>
 #include <cstring>
@@ -170,7 +171,7 @@ DataBuffer& DataBuffer::createDeviceLocalBuffer(const Device* deviceVK, const vo
 
     createBuffer(deviceVK);
 
-    TemporaryCommand copyCmd(deviceVK, deviceVK->transferPoolWrapper);
+    TempCmd copyCmd(deviceVK, deviceVK->transferPoolWrapper);
 
     VkBufferCopy copyRegion{};
     copyRegion.srcOffset = 0;

@@ -202,7 +202,7 @@ void ResourceGroup::createMaterialDescSet() {
 ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
-    std::vector<uint8_t> vulkanData = ImageVK::convertTextureDataForVulkan(
+    std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
         texture.channels, texture.width, texture.height, texture.data.data());
     
     // Calculate image size based on Vulkan format requirements
@@ -212,9 +212,6 @@ ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
     if (texture.data.empty()) {
         throw std::runtime_error("Failed to load texture from TinyTexture");
     }
-
-    // Dynamic mipmap levels
-    uint32_t mipLevels = ImageVK::autoMipLevels(texture.width, texture.height);
 
     // Create staging buffer for texture data upload
     DataBuffer stagingBuffer;
@@ -227,26 +224,24 @@ ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
 
     // Create ImageVK with texture configuration
     ImageVK textureVK(deviceVK);
-    // if (!textureVK.createTexture(texture.width, texture.height, textureFormat, mipLevels)) {
-    //     throw std::runtime_error("Failed to create texture image");
-    // }
 
     ImageConfig config = ImageConfig()
         .setDimensions(texture.width, texture.height)
         .setFormat(textureFormat)
-        .setUsage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-        .setMipLevels(mipLevels)
+        .setUsage(ImageUsageAlias::Sampled | ImageUsageAlias::TransferDst | ImageUsageAlias::TransferSrc)
+        .setAutoMipLevels(texture.width, texture.height)
         .setTiling(VK_IMAGE_TILING_OPTIMAL)
-        .setMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        .setMemProps(MemPropAlias::DeviceLocal);
 
     ImageViewConfig viewConfig = ImageViewConfig()
         .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-        .setMipLevels(mipLevels);
+        .setAutoMipLevels(texture.width, texture.height);
 
-    textureVK.createImage(config);
-    textureVK.createImageView(viewConfig);
+    bool success = textureVK.createImage(config);
+    success &= textureVK.createImageView(viewConfig);
 
-    // Transition image layout for transfer
+    if (!success) throw std::runtime_error("Failed to create ImageVK for texture");
+
     textureVK
         .transitionLayoutImmediate( VK_IMAGE_LAYOUT_UNDEFINED, 
                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)

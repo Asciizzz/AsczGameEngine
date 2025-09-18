@@ -73,19 +73,4 @@ private:
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice lDevice, VkSurfaceKHR surface);
 };
 
-// RAII temporary command buffer wrapper
-class TemporaryCommand {
-public:
-    TemporaryCommand(const Device* deviceVK, const Device::PoolWrapper& poolWrapper);
-    ~TemporaryCommand();
-    void endAndSubmit(VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-
-    VkCommandBuffer get() const { return cmdBuffer; }
-
-    const Device* deviceVK = nullptr;
-    Device::PoolWrapper poolWrapper{};
-    VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
-    bool submitted = false;
-};
-
 } // namespace AzVulk

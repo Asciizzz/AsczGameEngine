@@ -48,3 +48,46 @@ void CmdBuffer::create(VkDevice device, VkCommandPool pool, uint32_t count) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
+
+
+// ---------------- TEMPORARY COMMAND BUFFER ----------------
+TempCmd::TempCmd(const Device* dev, const Device::PoolWrapper& pool) 
+    : deviceVK(dev), poolWrapper(pool) {
+    VkCommandBufferAllocateInfo alloc{};
+    alloc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc.commandPool = poolWrapper.pool;
+    alloc.commandBufferCount = 1;
+
+    if (vkAllocateCommandBuffers(deviceVK->lDevice, &alloc, &cmdBuffer) != VK_SUCCESS)
+        throw std::runtime_error("Failed to allocate command buffer");
+
+    VkCommandBufferBeginInfo begin{};
+    begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmdBuffer, &begin);
+}
+
+TempCmd::~TempCmd() {
+    if (cmdBuffer != VK_NULL_HANDLE) {
+        if (!submitted) endAndSubmit();
+        vkFreeCommandBuffers(deviceVK->lDevice, poolWrapper.pool, 1, &cmdBuffer);
+    }
+}
+
+void TempCmd::endAndSubmit(VkPipelineStageFlags waitStage) {
+    if (submitted) return;
+    submitted = true;
+
+    vkEndCommandBuffer(cmdBuffer);
+
+    VkSubmitInfo submit{};
+    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit.commandBufferCount = 1;
+    submit.pCommandBuffers = &cmdBuffer;
+
+    vkQueueSubmit(deviceVK->getQueue(poolWrapper.type), 1, &submit, VK_NULL_HANDLE);
+    vkQueueWaitIdle(deviceVK->getQueue(poolWrapper.type));
+
+    cmdBuffer = VK_NULL_HANDLE;
+}

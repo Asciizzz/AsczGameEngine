@@ -36,6 +36,7 @@ namespace AzVulk {
         ImageConfig& setUsage(VkImageUsageFlags usageFlags);
         ImageConfig& setMemProps(VkMemoryPropertyFlags memProps);
         ImageConfig& setMipLevels(uint32_t levels);
+        ImageConfig& setAutoMipLevels(uint32_t width, uint32_t height);
         ImageConfig& setSamples(VkSampleCountFlagBits sampleCount);
         ImageConfig& setTiling(VkImageTiling imageTiling);
     };
@@ -59,6 +60,7 @@ namespace AzVulk {
         ImageViewConfig& setFormat(VkFormat fmt);
         ImageViewConfig& setAspectMask(VkImageAspectFlags aspect);
         ImageViewConfig& setMipLevels(uint32_t levels);
+        ImageViewConfig& setAutoMipLevels(uint32_t width, uint32_t height);
     };
 
     // Main ImageVK class
@@ -79,26 +81,18 @@ namespace AzVulk {
         // Creation methods
         bool createImage(const ImageConfig& config);
         bool createImageView(const ImageViewConfig& viewConfig);
-        
-        // Convenience creation methods
-        bool createTexture(uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels = 1);
-        bool createTexture(uint32_t width, uint32_t height, int channels, const uint8_t* data, VkBuffer stagingBuffer);
 
-        // Layout transition
+        // For static texture
         void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
                             uint32_t baseMipLevel = 0, uint32_t mipLevels = VK_REMAINING_MIP_LEVELS,
                             uint32_t baseArrayLayer = 0, uint32_t arrayLayers = VK_REMAINING_ARRAY_LAYERS);
-        
-        // Immediate layout transition (creates temporary command buffer) - fluent interface
-        ImageVK& transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout);
-
-        // Copy operations
         void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer, 
                             uint32_t width, uint32_t height, uint32_t mipLevel = 0);
-        ImageVK& copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
-
-        // Generate mipmaps
         void generateMipmaps(VkCommandBuffer cmd);
+
+        // Immediate operations using temporary command buffers
+        ImageVK& transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout);
+        ImageVK& copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
         ImageVK& generateMipmapsImmediate();
 
         // Getters
@@ -111,16 +105,12 @@ namespace AzVulk {
         uint32_t getMipLevels() const { return mipLevels; }
         VkImageLayout getCurrentLayout() const { return currentLayout; }
 
-        // Utility methods
         bool isValid() const;
         void cleanup();
-        
-        // Debug information
-        void setDebugName(const std::string& name);
 
         // Static helper functions
         static VkFormat getVulkanFormatFromChannels(int channels);
-        static std::vector<uint8_t> convertTextureDataForVulkan(int channels, int width, int height, const uint8_t* srcData);
+        static std::vector<uint8_t> convertToValidData(int channels, int width, int height, const uint8_t* srcData);
         static uint32_t autoMipLevels(uint32_t width, uint32_t height);
 
     private:
@@ -141,13 +131,12 @@ namespace AzVulk {
         std::string debugName;
 
         // Helper methods
-        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-        bool hasStencilComponent(VkFormat format);
         VkPipelineStageFlags getStageFlags(VkImageLayout layout);
         VkAccessFlags getAccessFlags(VkImageLayout layout);
     };
 
-    // Static utility functions for backward compatibility with manual VkImage management
+    // Legacy-style static utility functions for backward compatibility
+
     void createImage(const Device* device, uint32_t width, uint32_t height, VkFormat format, 
                     VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
                     VkImage& image, VkDeviceMemory& imageMemory);

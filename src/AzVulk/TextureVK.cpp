@@ -1,5 +1,6 @@
 #include "AzVulk/TextureVK.hpp"
-#include "AzVulk/Device.hpp"
+#include "AzVulk/CmdBuffer.hpp"
+
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
@@ -34,6 +35,11 @@ ImageConfig& ImageConfig::setMipLevels(uint32_t levels) {
     return *this;
 }
 
+ImageConfig& ImageConfig::setAutoMipLevels(uint32_t width, uint32_t height) {
+    mipLevels = ImageVK::autoMipLevels(width, height);
+    return *this;
+}
+
 ImageConfig& ImageConfig::setSamples(VkSampleCountFlagBits sampleCount) {
     samples = sampleCount;
     return *this;
@@ -62,6 +68,11 @@ ImageViewConfig& ImageViewConfig::setAspectMask(VkImageAspectFlags aspect) {
 
 ImageViewConfig& ImageViewConfig::setMipLevels(uint32_t levels) {
     mipLevels = levels;
+    return *this;
+}
+
+ImageViewConfig& ImageViewConfig::setAutoMipLevels(uint32_t width, uint32_t height) {
+    mipLevels = ImageVK::autoMipLevels(width, height);
     return *this;
 }
 
@@ -182,7 +193,7 @@ bool ImageVK::createImage(const ImageConfig& config) {
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties);
+    allocInfo.memoryTypeIndex = device->findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties);
 
     if (vkAllocateMemory(device->lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to allocate image memory" << std::endl;
@@ -233,41 +244,9 @@ bool ImageVK::createImageView(const ImageViewConfig& viewConfig) {
     return true;
 }
 
-bool ImageVK::createTexture(uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels) {
-    ImageConfig config = ImageConfig()
-        .setDimensions(width, height)
-        .setFormat(format)
-        .setMipLevels(mipLevels)
-        .setMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-        .setUsage(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 
-    if (!createImage(config)) return false;
 
-    ImageViewConfig viewConfig = ImageViewConfig()
-        .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-        .setMipLevels(mipLevels);
-    return createImageView(viewConfig);
-}
 
-bool ImageVK::createTexture(uint32_t width, uint32_t height, int channels, const uint8_t* data, VkBuffer stagingBuffer) {
-    // Get appropriate Vulkan format and convert data
-    VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(channels);
-    std::vector<uint8_t> vulkanData = ImageVK::convertTextureDataForVulkan(channels, width, height, data);
-    
-    // Dynamic mipmap levels
-    uint32_t mipLevels = static_cast<uint32_t>(floor(log2(std::max(width, height)))) + 1;
-    
-    // Create the texture
-    if (!createTexture(width, height, textureFormat, mipLevels)) {
-        return false;
-    }
-    
-    transitionLayoutImmediate(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        .copyFromBufferImmediate(stagingBuffer, width, height)
-        .generateMipmapsImmediate();
-        
-    return true;
-}
 
 void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
                                   uint32_t baseMipLevel, uint32_t mipLevels, uint32_t baseArrayLayer, uint32_t arrayLayers) {
@@ -287,9 +266,10 @@ void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkI
     // Determine aspect mask based on format
     if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (hasStencilComponent(format)) {
-            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
+
+        bool hasStencil = format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+        barrier.subresourceRange.aspectMask |= hasStencil ? VK_IMAGE_ASPECT_STENCIL_BIT : 0;
+
     } else {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
@@ -308,37 +288,6 @@ void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkI
     vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
     currentLayout = newLayout;
-}
-
-ImageVK& ImageVK::transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout) {
-    // Create temporary command buffer and execute immediately
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = device->graphicsPoolWrapper.pool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(device->lDevice, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    transitionLayout(commandBuffer, oldLayout, newLayout);
-    vkEndCommandBuffer(commandBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(device->graphicsQueue);
-
-    vkFreeCommandBuffers(device->lDevice, device->graphicsPoolWrapper.pool, 1, &commandBuffer);
-    return *this;
 }
 
 void ImageVK::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer, 
@@ -360,37 +309,6 @@ void ImageVK::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer,
     region.imageExtent = {width, height, 1};
 
     vkCmdCopyBufferToImage(cmd, srcBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-}
-
-ImageVK& ImageVK::copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
-    // Create temporary command buffer and execute immediately
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = device->graphicsPoolWrapper.pool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(device->lDevice, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    copyFromBuffer(commandBuffer, srcBuffer, width, height, mipLevel);
-    vkEndCommandBuffer(commandBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(device->graphicsQueue);
-
-    vkFreeCommandBuffers(device->lDevice, device->graphicsPoolWrapper.pool, 1, &commandBuffer);
-    return *this;
 }
 
 void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
@@ -467,13 +385,34 @@ void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
     currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
+
+
+ImageVK& ImageVK::transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout) {
+    TempCmd tempCmd(device, device->graphicsPoolWrapper);
+    transitionLayout(tempCmd.get(), oldLayout, newLayout);
+    tempCmd.endAndSubmit();
+
+    return *this;
+}
+
+ImageVK& ImageVK::copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
+    TempCmd tempCmd(device, device->graphicsPoolWrapper);
+    copyFromBuffer(tempCmd.get(), srcBuffer, width, height, mipLevel);
+    tempCmd.endAndSubmit();
+
+    return *this;
+}
+
 ImageVK& ImageVK::generateMipmapsImmediate() {
-    TemporaryCommand tempCmd(device, device->graphicsPoolWrapper);
+    TempCmd tempCmd(device, device->graphicsPoolWrapper);
     generateMipmaps(tempCmd.get());
     tempCmd.endAndSubmit();
 
     return *this;
 }
+
+
+
 
 bool ImageVK::isValid() const {
     return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE;
@@ -484,20 +423,9 @@ void ImageVK::cleanup() {
 
     VkDevice lDevice = device->lDevice;
 
-    if (view != VK_NULL_HANDLE) {
-        vkDestroyImageView(lDevice, view, nullptr);
-        view = VK_NULL_HANDLE;
-    }
-
-    if (image != VK_NULL_HANDLE) {
-        vkDestroyImage(lDevice, image, nullptr);
-        image = VK_NULL_HANDLE;
-    }
-
-    if (memory != VK_NULL_HANDLE) {
-        vkFreeMemory(lDevice, memory, nullptr);
-        memory = VK_NULL_HANDLE;
-    }
+    if (view != VK_NULL_HANDLE) { vkDestroyImageView(lDevice, view, nullptr); view = VK_NULL_HANDLE; }
+    if (image != VK_NULL_HANDLE) { vkDestroyImage(lDevice, image, nullptr); image = VK_NULL_HANDLE; }
+    if (memory != VK_NULL_HANDLE) { vkFreeMemory(lDevice, memory, nullptr); memory = VK_NULL_HANDLE; }
 
     format = VK_FORMAT_UNDEFINED;
     width = height = depth = 0;
@@ -505,29 +433,8 @@ void ImageVK::cleanup() {
     currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-void ImageVK::setDebugName(const std::string& name) {
-    debugName = name;
-    
-    // Set debug name in Vulkan if debug utils are available
-    if (device && image != VK_NULL_HANDLE) {
-        VkDebugUtilsObjectNameInfoEXT nameInfo{};
-        nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-        nameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
-        nameInfo.objectHandle = reinterpret_cast<uint64_t>(image);
-        nameInfo.pObjectName = debugName.c_str();
-        
-        // Note: This requires the debug utils extension to be enabled
-        // You might want to add a check for this extension
-    }
-}
 
-uint32_t ImageVK::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-    return device->findMemoryType(typeFilter, properties);
-}
 
-bool ImageVK::hasStencilComponent(VkFormat format) {
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
 
 // Static helper functions
 VkFormat ImageVK::getVulkanFormatFromChannels(int channels) {
@@ -542,7 +449,7 @@ VkFormat ImageVK::getVulkanFormatFromChannels(int channels) {
     }
 }
 
-std::vector<uint8_t> ImageVK::convertTextureDataForVulkan(int channels, int width, int height, const uint8_t* srcData) {
+std::vector<uint8_t> ImageVK::convertToValidData(int channels, int width, int height, const uint8_t* srcData) {
     if (channels == 3) {
         // Convert RGB to RGBA by adding alpha channel
         size_t pixelCount = width * height;
@@ -618,7 +525,6 @@ VkAccessFlags ImageVK::getAccessFlags(VkImageLayout layout) {
 
 namespace AzVulk {
 
-// Static utility functions for backward compatibility
 void createImage(const Device* device, uint32_t width, uint32_t height, VkFormat format, 
                 VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
                 VkImage& image, VkDeviceMemory& imageMemory) {
