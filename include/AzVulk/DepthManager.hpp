@@ -8,7 +8,7 @@ namespace AzVulk {
     class DepthManager {
     public:
         DepthManager(const Device* deviceVK);
-        ~DepthManager(); void cleanup();
+        ~DepthManager() = default;
 
         DepthManager(const DepthManager&) = delete;
         DepthManager& operator=(const DepthManager&) = delete;

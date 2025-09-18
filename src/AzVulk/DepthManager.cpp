@@ -14,30 +14,13 @@ DepthManager::DepthManager(const Device* deviceVK)
     , depthImage (deviceVK)
 {}
 
-DepthManager::~DepthManager() {
-    cleanup();
-}
-
-void DepthManager::cleanup() {
-    // ImageVK handles cleanup automatically
-    depthImage.cleanup();
-}
-
 void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
-    // Clean up existing resources first
-    cleanup();
-
-    depthFormat = findDepthFormat();
-
-    // Create depth buffer using ImageVK convenience method
-    // if (!depthBuffer.createDepthBuffer(width, height, depthFormat)) {
-    //     throw std::runtime_error("Failed to create depth buffer!");
-    // }
+    depthImage.cleanup(); // In case of re-creation
 
     ImageConfig depthConfig = ImageConfig()
         .setDimensions(width, height)
-        .setFormat(depthFormat)
-        .setUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        .setFormat(findDepthFormat())
+        .setUsage(ImageUsageAlias::DepthStencil | ImageUsageAlias::Sampled);
 
     ImageViewConfig depthViewConfig = ImageViewConfig()
         .setAspectMask(VK_IMAGE_ASPECT_DEPTH_BIT);

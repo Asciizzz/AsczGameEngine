@@ -92,7 +92,7 @@ void PostProcess::createPingPongImages() {
                         ImageUsageAlias::Storage |
                         ImageUsageAlias::TransferSrc |
                         ImageUsageAlias::TransferDst)
-            .setMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            .setMemProps(MemPropAlias::DeviceLocal);
 
         ImageViewConfig viewConfig = ImageViewConfig()
             .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT);

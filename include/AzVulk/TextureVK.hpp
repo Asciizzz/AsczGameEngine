@@ -14,6 +14,7 @@ namespace AzVulk {
         static constexpr VkImageUsageFlags Sampled      = VK_IMAGE_USAGE_SAMPLED_BIT;
         static constexpr VkImageUsageFlags Storage      = VK_IMAGE_USAGE_STORAGE_BIT;
         static constexpr VkImageUsageFlags ColorAttach  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        static constexpr VkImageUsageFlags DepthStencil = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     };
 
     // Image configuration struct for easy setup
@@ -135,11 +136,4 @@ namespace AzVulk {
         VkPipelineStageFlags getStageFlags(VkImageLayout layout);
         VkAccessFlags getAccessFlags(VkImageLayout layout);
     };
-
-    // Legacy-style static utility functions for backward compatibility
-
-    void createImage(const Device* device, uint32_t width, uint32_t height, VkFormat format, 
-                    VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                    VkImage& image, VkDeviceMemory& imageMemory);
-    VkImageView createImageView(const Device* device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 }
