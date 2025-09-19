@@ -492,10 +492,10 @@ void ResourceGroup::createLightDescSet() {
     lightDescSet = MakeUnique<DescSet>(lDevice);
 
     lightDescSet->createOwnLayout({
-        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr}
+        {0, DescType::StorageBuffer, 1, ShaderStage::VertexAndFragment, nullptr}
     });
     
-    lightDescSet->createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+    lightDescSet->createOwnPool({ {DescType::StorageBuffer, 1} }, 1);
 
     lightDescSet->allocate();
 
