@@ -19,3 +19,14 @@ uint32_t TinyTexture::makeHash() {
     hash = hashValue;
     return hash;
 }
+
+
+TinyTexture TinyTexture::createDefaultTexture() {
+    TinyTexture texture;
+    texture.width = 1;
+    texture.height = 1;
+    texture.channels = 4;
+    texture.data = { 255, 255, 255, 255 }; // White pixel
+    texture.makeHash();
+    return texture;
+}

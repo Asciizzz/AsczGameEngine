@@ -20,4 +20,7 @@ struct TinyTexture {
         ClampToEdge   = 1,
         ClampToBorder = 2
     } addressMode = AddressMode::Repeat;
+
+
+    static TinyTexture createDefaultTexture();
 };

@@ -54,15 +54,10 @@ void ResourceGroup::createComponentVKsFromModels() {
     MaterialVK defaultMat{};
     materialVKs.push_back(defaultMat);
 
-    TinyTexture defaultTex;
-    defaultTex.width = 1;
-    defaultTex.height = 1;
-    defaultTex.channels = 4;
-    defaultTex.data = { 255, 255, 255, 255 }; // White pixel
-    defaultTex.addressMode = TinyTexture::AddressMode::Repeat; // Default address mode
-    auto defaultTexture = createTexture(defaultTex);
+    TinyTexture defaultTex = TinyTexture::createDefaultTexture();
+    auto defaultTexture = createTexture(std::move(defaultTex));
     textures.push_back(std::move(defaultTexture));
-    texSamplerIndices.push_back(0); // Default texture uses Repeat sampler (index 0)
+    texSamplerIndices.push_back(0);
 
     for (auto& model : models) {
         ModelPtr modelVK;

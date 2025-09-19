@@ -368,7 +368,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             if (options.loadTextures && gltfMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0) {
                 int texIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
                 if (texIndex >= 0 && texIndex < static_cast<int>(result.textures.size())) {
-                    material.albTexture = texIndex;
+                    material.setAlbedoTexture(texIndex);
                 }
             }
             
@@ -376,7 +376,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             if (options.loadTextures && gltfMaterial.normalTexture.index >= 0) {
                 int texIndex = gltfMaterial.normalTexture.index;
                 if (texIndex >= 0 && texIndex < static_cast<int>(result.textures.size())) {
-                    material.nrmlTexture = texIndex;
+                    material.setNormalTexture(texIndex);
                 }
             }
             

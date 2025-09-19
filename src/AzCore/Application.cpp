@@ -71,7 +71,7 @@ void Application::initComponents() {
 
     TinyModel testModel = TinyLoader::loadModel("Assets/Untitled.glb");
     for (auto& mat : testModel.materials) {
-        mat.toonLevel = 4;
+        // mat.toonLevel = 4;
     }
 
     testModel.printAnimationList();
@@ -81,13 +81,13 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    TinyLoader::LoadOptions loadOpts;
-    loadOpts.forceStatic = true; // No need for terrain
-    TinyModel testModel2 = TinyLoader::loadModel(".heavy/de_mirage/de_mirage.gltf", loadOpts);
-    for (auto& mat : testModel2.materials) {
-        mat.shading = false; // No lighting for for highly stylized look
-    }
-    resGroup->addModel(testModel2);
+    // TinyLoader::LoadOptions loadOpts;
+    // loadOpts.forceStatic = true; // No need for terrain
+    // TinyModel testModel2 = TinyLoader::loadModel(".heavy/de_mirage/de_mirage.gltf", loadOpts);
+    // for (auto& mat : testModel2.materials) {
+    //     mat.shading = false; // No lighting for for highly stylized look
+    // }
+    // resGroup->addModel(testModel2);
 
     // Set up advanced grass system with terrain generation
     GrassConfig grassConfig;
