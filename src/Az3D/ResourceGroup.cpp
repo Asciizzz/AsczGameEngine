@@ -390,13 +390,13 @@ size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
     DataBuffer vDataBuffer;
     vDataBuffer
         .setDataSize(vertexData.size())
-        .setUsageFlags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
+        .setUsageFlags(BufferUsage::Vertex)
         .createDeviceLocalBuffer(deviceVK, vertexData.data());
 
     DataBuffer iDataBuffer;
     iDataBuffer
         .setDataSize(indexData.size())
-        .setUsageFlags(VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
+        .setUsageFlags(BufferUsage::Index)
         .createDeviceLocalBuffer(deviceVK, indexData.data());
 
     // Append buffers
@@ -455,7 +455,7 @@ void ResourceGroup::createRigSkeleDescSets() {
     // For the time being only create the descriptor set layout
     skeleDescSets = MakeUnique<DescSet>(lDevice);
     skeleDescSets->createOwnLayout({
-        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr}
+        {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr}
     });
 }
 
@@ -510,7 +510,7 @@ void ResourceGroup::createLightDescSet() {
     descriptorWrite.dstSet = lightDescSet->get();
     descriptorWrite.dstBinding = 0;
     descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorWrite.descriptorType = DescType::StorageBuffer;
     descriptorWrite.descriptorCount = 1;
     descriptorWrite.pBufferInfo = &lightBufferInfo;
 
