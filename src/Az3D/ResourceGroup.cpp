@@ -441,7 +441,7 @@ void ResourceGroup::createRigSkeleBuffers() {
         rigInvMatBuffer
             ->setDataSize(inverseBindMatrices.size() * sizeof(glm::mat4))
             .setUsageFlags(BufferUsage::Storage)
-            .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+            .setMemPropFlags(MemProp::DeviceLocal)
             .createDeviceLocalBuffer(deviceVK, inverseBindMatrices.data());
 
         // Append buffer
@@ -479,7 +479,7 @@ void ResourceGroup::createLightBuffer() {
     lightBuffer
         ->setDataSize(bufferSize)
         .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK)
         .uploadData(lightVKs.data());
 

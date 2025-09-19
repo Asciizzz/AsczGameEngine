@@ -4,18 +4,18 @@
 
 namespace AzVulk {
 
-enum class DescType {
-    Sampler              = VK_DESCRIPTOR_TYPE_SAMPLER,
-    CombinedImageSampler = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-    SampledImage         = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-    StorageImage         = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-    UniformTexelBuffer   = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
-    StorageTexelBuffer   = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
-    UniformBuffer        = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    StorageBuffer        = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-    UniformBufferDynamic = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-    StorageBufferDynamic = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
-    InputAttachment      = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT
+struct DescType {
+    static constexpr VkDescriptorType Sampler              = VK_DESCRIPTOR_TYPE_SAMPLER;
+    static constexpr VkDescriptorType CombinedImageSampler = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    static constexpr VkDescriptorType SampledImage         = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    static constexpr VkDescriptorType StorageImage         = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    static constexpr VkDescriptorType UniformTexelBuffer   = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+    static constexpr VkDescriptorType StorageTexelBuffer   = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+    static constexpr VkDescriptorType UniformBuffer        = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    static constexpr VkDescriptorType StorageBuffer        = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    static constexpr VkDescriptorType UniformBufferDynamic = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    static constexpr VkDescriptorType StorageBufferDynamic = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    static constexpr VkDescriptorType InputAttachment      = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 };
 
 struct DescPool {

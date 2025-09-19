@@ -17,6 +17,15 @@ struct MemProp {
     static constexpr VkMemoryPropertyFlags HostVisibleAndCoherent = HostVisible | HostCoherent;
 };
 
+struct ShaderStage {
+    static constexpr VkShaderStageFlags Vertex   = VK_SHADER_STAGE_VERTEX_BIT;
+    static constexpr VkShaderStageFlags Fragment = VK_SHADER_STAGE_FRAGMENT_BIT;
+    static constexpr VkShaderStageFlags Compute  = VK_SHADER_STAGE_COMPUTE_BIT;
+    static constexpr VkShaderStageFlags All      = VK_SHADER_STAGE_ALL;
+
+    static constexpr VkShaderStageFlags VertexAndFragment = Vertex | Fragment;
+};
+
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;

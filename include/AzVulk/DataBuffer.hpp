@@ -12,6 +12,8 @@ struct BufferUsage {
     static constexpr VkBufferUsageFlags TransferSrc = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     static constexpr VkBufferUsageFlags TransferDst = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     static constexpr VkBufferUsageFlags Indirect    = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+
+    static constexpr VkBufferUsageFlags TransferSrcAndDst = TransferSrc | TransferDst;
 };
 
 struct DataBuffer {
