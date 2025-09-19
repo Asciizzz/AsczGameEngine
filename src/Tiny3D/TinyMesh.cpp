@@ -1,20 +1,15 @@
 #include "Tiny3D/TinyMesh.hpp"
-#include <windows.h>
-#include <wincrypt.h>
-#include <sstream>
-#include <iomanip>
 
-uint32_t TinyTexture::makeHash() {
-    // FNV-1a 32-bit hash
-    const uint32_t fnv_prime = 0x01000193;
-    const uint32_t fnv_offset_basis = 0x811C9DC5;
+TinySubmesh& TinySubmesh::setMaterial(int index) {
+    matIndex = index;
+    return *this;
+}
 
-    uint32_t hashValue = fnv_offset_basis;
-    for (const auto& byte : data) {
-        hashValue ^= byte;
-        hashValue *= fnv_prime;
+TinySubmesh::IndexType TinySubmesh::sizeToIndexType(size_t size) {
+    switch (size) {
+        case sizeof(uint8_t):  return IndexType::Uint8;
+        case sizeof(uint16_t): return IndexType::Uint16;
+        case sizeof(uint32_t): return IndexType::Uint32;
+        default: return IndexType::Uint32; // Default to uint32
     }
-
-    hash = hashValue;
-    return hash;
 }

@@ -40,7 +40,7 @@ void Application::initComponents() {
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     // 10km view distance for those distant horizons
-    camera = MakeUnique<Camera>(glm::vec3(0.0f), 45.0f, 0.1f, 2000.0f);
+    camera = MakeUnique<Camera>(glm::vec3(0.0f), 45.0f, 0.1f, 1000.0f);
     camera->setAspectRatio(aspectRatio);
 
     auto extensions = windowManager->getRequiredVulkanExtensions();
@@ -71,7 +71,6 @@ void Application::initComponents() {
 
     TinyModel testModel = TinyLoader::loadModel("Assets/Untitled.glb");
     for (auto& mat : testModel.materials) {
-        // mat.shading = false; // No lighting for for highly stylized look
         mat.toonLevel = 4;
     }
 
@@ -82,9 +81,13 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    TinyModel testObjModel = TinyLoader::loadModel("Assets/Maps/Dust2/de_dust2.obj");
-    // testObjModel.printDebug();
-    resGroup->addModel(testObjModel);
+    TinyLoader::LoadOptions loadOpts;
+    loadOpts.forceStatic = true; // No need for terrain
+    TinyModel testModel2 = TinyLoader::loadModel(".heavy/de_mirage/de_mirage.gltf", loadOpts);
+    for (auto& mat : testModel2.materials) {
+        mat.shading = false; // No lighting for for highly stylized look
+    }
+    resGroup->addModel(testModel2);
 
     // Set up advanced grass system with terrain generation
     GrassConfig grassConfig;
@@ -173,8 +176,7 @@ void Application::initComponents() {
     UnorderedMap<std::string, VertexInputVK> vertexInputVKs;
     
     // None - no vertex input (for fullscreen quads, etc.)
-    VertexInputVK noneInput;
-    vertexInputVKs["None"] = noneInput;
+    vertexInputVKs["None"] = VertexInputVK();
     
     // Static - single static mesh
     auto vstaticLayout = TinyVertexStatic::getLayout();
@@ -184,25 +186,23 @@ void Application::initComponents() {
     // StaticInstanced - static mesh with instancing
     auto instanceBind = Az3D::StaticInstance::getBindingDescription();
     auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
-    VertexInputVK vstaticInstancedInput = VertexInputVK()
-    .setBindings({vstaticBind, instanceBind})
-    .setAttributes({vstaticAttrs, instanceAttrs});
-    vertexInputVKs["StaticInstanced"] = vstaticInstancedInput;
+
+    vertexInputVKs["StaticInstanced"] = VertexInputVK()
+        .setBindings({vstaticBind, instanceBind})
+        .setAttributes({vstaticAttrs, instanceAttrs});
     
     // Rigged - rigged mesh for skeletal animation
     auto vriggedLayout = TinyVertexRig::getLayout();
     auto vriggedBind = vriggedLayout.getBindingDescription();
     auto vriggedAttrs = vriggedLayout.getAttributeDescriptions();
-    VertexInputVK vriggedInput = VertexInputVK()
-    .setBindings({ vriggedBind })
-    .setAttributes({ vriggedAttrs });
-    vertexInputVKs["Rigged"] = vriggedInput;
 
-    // Single - single static mesh (alias for Static)
-    VertexInputVK vsingleInput = VertexInputVK()
-    .setBindings({ vstaticBind })
-    .setAttributes({ vstaticAttrs });
-    vertexInputVKs["Single"] = vsingleInput;
+    vertexInputVKs["Rigged"] = VertexInputVK()
+        .setBindings({ vriggedBind })
+        .setAttributes({ vriggedAttrs });
+
+    vertexInputVKs["Single"] = VertexInputVK()
+        .setBindings({ vstaticBind })
+        .setAttributes({ vstaticAttrs });
     
     // Use offscreen render pass for pipeline creation
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();

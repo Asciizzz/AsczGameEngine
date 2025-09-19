@@ -31,6 +31,8 @@ file(GLOB_RECURSE SRC_FILES
     
     src/Tiny3D/TinyVertex.cpp
     src/Tiny3D/TinyMesh.cpp
+    src/Tiny3D/TinyMaterial.cpp
+    src/Tiny3D/TinyTexture.cpp
     src/Tiny3D/TinySkeleton.cpp
     src/Tiny3D/TinyAnimation.cpp
     src/Tiny3D/TinyModel.cpp

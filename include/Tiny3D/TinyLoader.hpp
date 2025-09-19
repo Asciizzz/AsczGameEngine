@@ -7,7 +7,7 @@ public:
     struct LoadOptions {
         bool loadMaterials = true;
         bool loadTextures = true;
-        bool loadSkeleton = true;
+        bool forceStatic = false; // Ignore skinning data even if present
     };
 
     static TinyTexture loadImage(const std::string& filePath);

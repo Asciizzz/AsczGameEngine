@@ -103,8 +103,8 @@ struct TinyVertexRig {
     TinyVertexRig& setNormal(const glm::vec3& normal);
     TinyVertexRig& setTextureUV(const glm::vec2& uv);
     TinyVertexRig& setTangent(const glm::vec4& tangent);
-    TinyVertexRig& setBoneIDs(const glm::uvec4& ids);
-    TinyVertexRig& setWeights(const glm::vec4& weights);
+    TinyVertexRig& setBoneIDs(const glm::uvec4& ids=glm::uvec4(0));
+    TinyVertexRig& setWeights(const glm::vec4& weights=glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
 
     glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }

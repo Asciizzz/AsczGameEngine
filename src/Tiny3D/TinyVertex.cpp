@@ -133,6 +133,14 @@ TinyVertexRig& TinyVertexRig::setTangent(const glm::vec4& tang) {
     tangent = tang;
     return *this;
 }
+TinyVertexRig& TinyVertexRig::setBoneIDs(const glm::uvec4& ids) {
+    boneIDs = ids;
+    return *this;
+}
+TinyVertexRig& TinyVertexRig::setWeights(const glm::vec4& weights) {
+    this->weights = weights;
+    return *this;
+}
 
 TinyVertexLayout TinyVertexRig::getLayout() {
     TinyVertexLayout layout;

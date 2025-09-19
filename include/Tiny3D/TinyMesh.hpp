@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Tiny3D/TinyVertex.hpp"
-#include <string>
 
 // Uniform mesh structure that holds raw data only
 struct TinySubmesh {
@@ -23,11 +22,6 @@ struct TinySubmesh {
 
     TinySubmesh() = default;
 
-    TinySubmesh& setMaterial(int index) {
-        matIndex = index;
-        return *this;
-    }
-
     template<typename VertexT>
     TinySubmesh& setVertices(const std::vector<VertexT>& verts) {
         vertexLayout = VertexT::getLayout();
@@ -41,12 +35,7 @@ struct TinySubmesh {
 
     template<typename IndexT>
     TinySubmesh& setIndices(const std::vector<IndexT>& idx) {
-        switch (sizeof(IndexT)) {
-            case sizeof(uint8_t): indexType = IndexType::Uint8; break;
-            case sizeof(uint16_t): indexType = IndexType::Uint16; break;
-            case sizeof(uint32_t): indexType = IndexType::Uint32; break;
-            default: indexType = IndexType::Uint32; break; // Fallback
-        }
+        indexType = sizeToIndexType(sizeof(IndexT));
 
         indexData.resize(idx.size() * sizeof(IndexT));
         std::memcpy(indexData.data(), idx.data(), indexData.size());
@@ -63,39 +52,7 @@ struct TinySubmesh {
         sm.setVertices(verts).setIndices(idx).setMaterial(matIdx);
         return sm;
     }
-};
 
-struct TinySubmeshLOD { // WIP
-    std::vector<TinySubmesh> levels;
-    std::vector<float> distances;
-};
-
-struct TinyMaterial {
-    bool shading = true;
-    int toonLevel = 0;
-
-    // Some debug values
-    float normalBlend = 0.0f;
-    float discardThreshold = 0.01f;
-
-    int albTexture = -1;
-    int nrmlTexture = -1;
-};
-
-
-// Raw texture data (no Vulkan handles)
-struct TinyTexture {
-    int width = 0;
-    int height = 0;
-    int channels = 0;
-    std::vector<uint8_t> data;
-
-    uint32_t hash = 0; // fnv1a hash of raw data
-    uint32_t makeHash();
-
-    enum class AddressMode {
-        Repeat        = 0,
-        ClampToEdge   = 1,
-        ClampToBorder = 2
-    } addressMode = AddressMode::Repeat;
+    TinySubmesh& setMaterial(int index);
+    static IndexType sizeToIndexType(size_t size);
 };

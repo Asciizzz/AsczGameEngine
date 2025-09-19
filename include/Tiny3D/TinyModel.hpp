@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Tiny3D/TinyMesh.hpp"
+#include "Tiny3D/TinyMaterial.hpp"
+#include "Tiny3D/TinyTexture.hpp"
 #include "Tiny3D/TinySkeleton.hpp"
 #include "Tiny3D/TinyAnimation.hpp"
 

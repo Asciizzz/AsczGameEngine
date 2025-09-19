@@ -386,8 +386,9 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
 
     // Build skeleton only if requested
     UnorderedMap<int, int> nodeIndexToBoneIndex;
-    
-    if (options.loadSkeleton && !model.skins.empty()) {
+
+    bool hasRigging = !options.forceStatic && !model.skins.empty();
+    if (hasRigging) {
         const tinygltf::Skin& skin = model.skins[0];
 
         // Create the node-to-bone mapping
@@ -458,8 +459,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
         }
     }
 
-    // [!] Model are not allowed to mix between rigged and non-rigged
-    bool hasRigging = options.loadSkeleton && !result.skeleton.names.empty();
+    hasRigging &= !result.skeleton.names.empty();
 
     for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& mesh = model.meshes[meshIndex];
@@ -518,7 +518,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 // Build rigged vertices
                 std::vector<TinyVertexRig> vertices;
                 vertices.reserve(vertexCount);
-                
+
                 for (size_t i = 0; i < vertexCount; i++) {
                     TinyVertexRig vertex{};
 
@@ -542,28 +542,15 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                             }
                         }
 
-                        if (hasInvalidJoint) {
-                            // Set to rest pose (root bone only)
-                            vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
-                            vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-                        } else {
-                            // Normalize weights to ensure they sum to 1.0
-                            float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
-                            if (weightSum > 0.0f) {
-                                boneWeights /= weightSum;
-                            } else {
-                                boneWeights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-                                jointIds = glm::uvec4(0, 0, 0, 0);
-                            }
+                        float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
 
-                            vertex.boneIDs = glm::ivec4(jointIds);
-                            vertex.weights = boneWeights;
+                        if (!hasInvalidJoint && weightSum > 0.0f) {
+                            // Normalize weights
+                            boneWeights /= weightSum;
+
+                            vertex.setBoneIDs(jointIds).setWeights(boneWeights);
                         }
-                    } else {
-                        // No rigging - bind to root
-                        vertex.boneIDs = glm::ivec4(0, 0, 0, 0);
-                        vertex.weights = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-                    }
+                    };
 
                     vertices.push_back(vertex);
                 }
@@ -577,16 +564,12 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 for (size_t i = 0; i < vertexCount; i++) {
                     TinyVertexStatic vertex{};
 
-                    vertex.pos_tu = glm::vec4(
-                        positions.size() > i ? positions[i] : glm::vec3(0.0f),
-                        uvs.size() > i ? uvs[i].x : 0.0f
-                    );
-                    vertex.nrml_tv = glm::vec4(
-                        normals.size() > i ? normals[i] : glm::vec3(0.0f),
-                        uvs.size() > i ? uvs[i].y : 0.0f
-                    );
-                    vertex.tangent = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
-                    
+                    glm::vec3 pos = positions.size() > i ? positions[i] : glm::vec3(0.0f);
+                    glm::vec3 nrml = normals.size() > i ? normals[i] : glm::vec3(0.0f);
+                    glm::vec2 texUV = uvs.size() > i ? uvs[i] : glm::vec2(0.0f);
+                    glm::vec4 tang = tangents.size() > i ? tangents[i] : glm::vec4(1,0,0,1);
+
+                    vertex.setPosition(pos).setNormal(nrml).setTextureUV(texUV).setTangent(tang);
                     vertices.push_back(vertex);
                 }
 
@@ -646,9 +629,11 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
     }
 
     // Load animations only if skeleton is loaded and animations exist
-    if (options.loadSkeleton && !result.skeleton.names.empty() && !model.animations.empty()) {
+    hasRigging &= !model.animations.empty();
+
+    if (hasRigging) {
         result.animations.reserve(model.animations.size());
-        
+
         for (size_t animIndex = 0; animIndex < model.animations.size(); animIndex++) {
             const tinygltf::Animation& gltfAnim = model.animations[animIndex];
             TinyAnimation tinyAnim;
