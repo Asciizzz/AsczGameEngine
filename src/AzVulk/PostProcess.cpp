@@ -70,12 +70,12 @@ void PostProcess::createPingPongImages() {
             .setDimensions(extent.width, extent.height)
             .setFormat(format)
             .setTiling(VK_IMAGE_TILING_OPTIMAL)
-            .setUsage(  ImageUsageAlias::ColorAttach |
-                        ImageUsageAlias::Sampled | 
-                        ImageUsageAlias::Storage |
-                        ImageUsageAlias::TransferSrc |
-                        ImageUsageAlias::TransferDst)
-            .setMemProps(MemPropAlias::DeviceLocal);
+            .setUsage(  ImageUsage::ColorAttach |
+                        ImageUsage::Sampled | 
+                        ImageUsage::Storage |
+                        ImageUsage::TransferSrc |
+                        ImageUsage::TransferDst)
+            .setMemProps(MemProp::DeviceLocal);
 
         ImageViewConfig viewConfig = ImageViewConfig()
             .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT);

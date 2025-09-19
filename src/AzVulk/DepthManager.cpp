@@ -20,7 +20,7 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
     ImageConfig depthConfig = ImageConfig()
         .setDimensions(width, height)
         .setFormat(findDepthFormat())
-        .setUsage(ImageUsageAlias::DepthStencil | ImageUsageAlias::Sampled);
+        .setUsage(ImageUsage::DepthStencil | ImageUsage::Sampled);
 
     ImageViewConfig depthViewConfig = ImageViewConfig()
         .setAspectMask(VK_IMAGE_ASPECT_DEPTH_BIT);

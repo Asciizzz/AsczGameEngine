@@ -4,6 +4,16 @@
 
 namespace AzVulk {
 
+struct BufferUsage {
+    static constexpr VkBufferUsageFlags Vertex      = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    static constexpr VkBufferUsageFlags Index       = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    static constexpr VkBufferUsageFlags Uniform     = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    static constexpr VkBufferUsageFlags Storage     = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    static constexpr VkBufferUsageFlags TransferSrc = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    static constexpr VkBufferUsageFlags TransferDst = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    static constexpr VkBufferUsageFlags Indirect    = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+};
+
 struct DataBuffer {
     DataBuffer() = default;
 

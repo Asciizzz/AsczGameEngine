@@ -56,3 +56,13 @@ struct TinySubmesh {
     TinySubmesh& setMaterial(int index);
     static IndexType sizeToIndexType(size_t size);
 };
+
+struct TinyMeshLOD {
+    std::vector<TinySubmesh> submeshes;
+};
+
+struct TinyMesh {
+    std::vector<TinyMeshLOD> lods;
+
+    TinyMesh() = default;
+};

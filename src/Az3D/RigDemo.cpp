@@ -21,8 +21,8 @@ void RigDemo::init(const AzVulk::Device* deviceVK, const TinyModel& model, size_
 
     finalPoseBuffer
         .setDataSize(bufferSize)
-        .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-        .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK)
         .mapMemory();
 

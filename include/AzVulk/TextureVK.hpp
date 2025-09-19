@@ -8,7 +8,7 @@
 namespace AzVulk {
     class Device;
 
-    struct ImageUsageAlias {
+    struct ImageUsage {
         static constexpr VkImageUsageFlags TransferSrc  = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         static constexpr VkImageUsageFlags TransferDst  = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         static constexpr VkImageUsageFlags Sampled      = VK_IMAGE_USAGE_SAMPLED_BIT;

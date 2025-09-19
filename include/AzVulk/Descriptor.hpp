@@ -4,6 +4,20 @@
 
 namespace AzVulk {
 
+enum class DescType {
+    Sampler              = VK_DESCRIPTOR_TYPE_SAMPLER,
+    CombinedImageSampler = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+    SampledImage         = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+    StorageImage         = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    UniformTexelBuffer   = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+    StorageTexelBuffer   = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+    UniformBuffer        = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    StorageBuffer        = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    UniformBufferDynamic = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+    StorageBufferDynamic = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+    InputAttachment      = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT
+};
+
 struct DescPool {
     DescPool(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
     void init(VkDevice lDevice) { this->lDevice = lDevice; }

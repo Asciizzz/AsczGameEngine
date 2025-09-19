@@ -8,11 +8,13 @@
 
 namespace AzVulk {
 
-struct MemPropAlias {
+struct MemProp {
     static constexpr VkMemoryPropertyFlags DeviceLocal  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     static constexpr VkMemoryPropertyFlags HostVisible  = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     static constexpr VkMemoryPropertyFlags HostCoherent = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     static constexpr VkMemoryPropertyFlags HostCached   = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+
+    static constexpr VkMemoryPropertyFlags HostVisibleAndCoherent = HostVisible | HostCoherent;
 };
 
 

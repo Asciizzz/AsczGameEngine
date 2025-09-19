@@ -153,8 +153,8 @@ void ResourceGroup::createMaterialBuffer() {
     matBuffer = MakeUnique<DataBuffer>();
     matBuffer
         ->setDataSize(bufferSize)
-        .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-        .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::DeviceLocal)
         .createDeviceLocalBuffer(deviceVK, materialVKs.data());
 }
 
@@ -212,8 +212,8 @@ ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
     DataBuffer stagingBuffer;
     stagingBuffer
         .setDataSize(imageSize * sizeof(uint8_t))
-        .setUsageFlags(ImageUsageAlias::TransferSrc)
-        .setMemPropFlags(MemPropAlias::HostVisible | MemPropAlias::HostCoherent)
+        .setUsageFlags(ImageUsage::TransferSrc)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK)
         .uploadData(vulkanData.data());
 
@@ -223,10 +223,10 @@ ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
     ImageConfig config = ImageConfig()
         .setDimensions(texture.width, texture.height)
         .setFormat(textureFormat)
-        .setUsage(ImageUsageAlias::Sampled | ImageUsageAlias::TransferDst | ImageUsageAlias::TransferSrc)
+        .setUsage(ImageUsage::Sampled | ImageUsage::TransferDst | ImageUsage::TransferSrc)
         .setAutoMipLevels(texture.width, texture.height)
         .setTiling(VK_IMAGE_TILING_OPTIMAL)
-        .setMemProps(MemPropAlias::DeviceLocal);
+        .setMemProps(MemProp::DeviceLocal);
 
     ImageViewConfig viewConfig = ImageViewConfig()
         .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
@@ -297,7 +297,7 @@ void ResourceGroup::createTexSampIdxBuffer() {
 
     textSampIdxBuffer
         ->setDataSize(bufferSize)
-        .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+        .setUsageFlags(BufferUsage::Storage)
         .createDeviceLocalBuffer(deviceVK, texSamplerIndices.data());
 
 }
@@ -440,7 +440,7 @@ void ResourceGroup::createRigSkeleBuffers() {
 
         rigInvMatBuffer
             ->setDataSize(inverseBindMatrices.size() * sizeof(glm::mat4))
-            .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+            .setUsageFlags(BufferUsage::Storage)
             .setMemPropFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
             .createDeviceLocalBuffer(deviceVK, inverseBindMatrices.data());
 
@@ -478,7 +478,7 @@ void ResourceGroup::createLightBuffer() {
     lightBuffer = MakeUnique<DataBuffer>();
     lightBuffer
         ->setDataSize(bufferSize)
-        .setUsageFlags(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+        .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
         .createBuffer(deviceVK)
         .uploadData(lightVKs.data());
