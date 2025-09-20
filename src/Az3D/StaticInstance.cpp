@@ -1,8 +1,7 @@
 #include "Az3D/StaticInstance.hpp"
-#include <vulkan/vulkan.h>
-#include <algorithm>
 
 using namespace Az3D;
+using namespace AzVulk;
 
 // Vulkan-specific methods for Model
 VkVertexInputBindingDescription StaticInstance::getBindingDescription() {
@@ -43,8 +42,8 @@ void StaticInstanceGroup::recreateDataBuffer() {
 
     dataBuffer
         .setDataSize(datas.size() * sizeof(StaticInstance))
-        .setUsageFlags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
-        .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .setUsageFlags(BufferUsage::Vertex)
         .createBuffer(lDevice, pDevice)
         .mapAndCopy(datas.data());
 

@@ -61,10 +61,13 @@ void Application::initComponents() {
         Application::MAX_FRAMES_IN_FLIGHT
     );
 
+    
+    // Red text
+    printf("\033[1;31m Checkpoint \033[0m\n");
+
     resGroup = MakeUnique<ResourceGroup>(deviceVK.get());
     glbUBOManager = MakeUnique<GlbUBOManager>(
-        deviceVK.get(),
-        Application::MAX_FRAMES_IN_FLIGHT
+        deviceVK.get(), Application::MAX_FRAMES_IN_FLIGHT
     );
 
 // PLAYGROUND FROM HERE
