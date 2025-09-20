@@ -51,7 +51,7 @@ DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
     return *this;
 }
 
-void DataBuffer::cleanup() {
+DataBuffer& DataBuffer::cleanup() {
     if (buffer != VK_NULL_HANDLE) {
         if (mapped) {
             vkUnmapMemory(lDevice, memory);
@@ -66,6 +66,12 @@ void DataBuffer::cleanup() {
         vkFreeMemory(lDevice, memory, nullptr);
         memory = VK_NULL_HANDLE;
     }
+
+    lDevice = VK_NULL_HANDLE;
+    dataSize = 0;
+    usageFlags = 0;
+    memPropFlags = 0;
+    return *this;
 }
 
 DataBuffer& DataBuffer::setDataSize(VkDeviceSize size) {

@@ -108,7 +108,7 @@ void Application::initComponents() {
     Az3D::LightVK sunLight{};
     sunLight.position = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f); // w=0 for directional light
     sunLight.color = glm::vec4(1.0f, 0.9f, 0.8f, 1.5f); // Warm white light with intensity 1.5
-    sunLight.direction = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f); // Direction vector (no range for directional)
+    sunLight.direction = glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f); // Direction vector (no range for directional)
     resGroup->addLight(sunLight);
 
     // Az3D::LightVK pointLight{};

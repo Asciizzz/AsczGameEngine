@@ -20,7 +20,7 @@ struct DataBuffer {
     DataBuffer() = default;
 
     ~DataBuffer() { cleanup(); }
-    void cleanup();
+    DataBuffer& cleanup();
 
     // Non-copyable
     DataBuffer(const DataBuffer&) = delete;

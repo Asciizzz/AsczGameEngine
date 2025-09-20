@@ -57,12 +57,15 @@ struct TinySubmesh {
     static IndexType sizeToIndexType(size_t size);
 };
 
-struct TinyMeshLOD {
+struct TinyMesh {
     std::vector<TinySubmesh> submeshes;
 };
 
-struct TinyMesh {
-    std::vector<TinyMeshLOD> lods;
+struct TinyMeshLOD {
+    std::vector<TinyMesh> lods;
 
-    TinyMesh() = default;
+    TinyMesh& getLevel(size_t level) {
+        if (level >= lods.size()) return lods.back();
+        else                      return lods[level];
+    }
 };
