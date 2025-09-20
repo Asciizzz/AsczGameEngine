@@ -46,12 +46,36 @@ PostProcess::~PostProcess() {
 void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
     this->offscreenRenderPass = offscreenRenderPass;
     
+    // CRITICAL: Ensure device is idle before creating resources
+    vkDeviceWaitIdle(deviceVK->lDevice);
+    
+    // Validate dependencies before proceeding
+    if (!swapChain || !depthManager || !deviceVK) {
+        throw std::runtime_error("PostProcess: Invalid dependencies during initialization");
+    }
+    
+    // Validate swapchain extent is valid
+    if (swapChain->extent.width == 0 || swapChain->extent.height == 0) {
+        throw std::runtime_error("PostProcess: Invalid swapchain dimensions");
+    }
+    
+    printf("        \033[1;35m Initializing PostProcess with swapchain extent: %ux%u \033[0m\n", 
+            swapChain->extent.width, swapChain->extent.height);
+
     createSampler();
+    printf("        \033[1;35m Sampler created. \033[0m\n");
+
     createPingPongImages();
+    printf("        \033[1;35m Ping-pong images created. \033[0m\n");
+
     createOffscreenFramebuffers();
+    printf("        \033[1;35m Offscreen framebuffers created. \033[0m\n");
     
     createSharedDescriptors();
+    printf("        \033[1;35m Shared descriptors created. \033[0m\n");
+
     createFinalBlit();
+    printf("        \033[1;35m Final blit pipeline created. \033[0m\n");
 }
 
 void PostProcess::createPingPongImages() {
@@ -60,11 +84,19 @@ void PostProcess::createPingPongImages() {
     VkExtent2D extent = swapChain->extent;
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        auto& imageA = pingPongImages[frame].imageA;
-        auto& imageB = pingPongImages[frame].imageB;
+        // auto& imageA = pingPongImages[frame].imageA;
+        // auto& imageB = pingPongImages[frame].imageB;
+        pingPongImages.push_back(MakeUnique<PingPongImages>());
+        auto& imageA = pingPongImages[frame]->imageA;
+        auto& imageB = pingPongImages[frame]->imageB;
+
+        printf("            \033[1;36m Creating ping-pong images for frame %d with extent %ux%u \033[0m\n", 
+                frame, extent.width, extent.height);
 
         imageA = ImageVK(deviceVK);
         imageB = ImageVK(deviceVK);
+        printf("            \033[1;36m Initialized ImageVK instances for ping-pong images. \033[0m\n");
+
 
         ImageConfig sharedConfig = ImageConfig()
             .setDimensions(extent.width, extent.height)
@@ -82,9 +114,16 @@ void PostProcess::createPingPongImages() {
 
         bool success = true;
         success &= imageA.createImage(sharedConfig);
+        printf("            \033[1;36m Created ping-pong image A. \033[0m\n");
+
         success &= imageA.createImageView(viewConfig);
+        printf("            \033[1;36m Created ping-pong image A view. \033[0m\n");
+
         success &= imageB.createImage(sharedConfig);
+        printf("            \033[1;36m Created ping-pong image B. \033[0m\n");
+
         success &= imageB.createImageView(viewConfig);
+        printf("            \033[1;36m Created ping-pong image B view. \033[0m\n");
 
         if (!success) throw std::runtime_error("Failed to create ping-pong images");
     }
@@ -93,7 +132,7 @@ void PostProcess::createPingPongImages() {
 void PostProcess::createOffscreenFramebuffers() {
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         std::array<VkImageView, 2> attachments = {
-            pingPongImages[frame].getViewA(),        // Color attachment (index 0)
+            pingPongImages[frame]->getViewA(),        // Color attachment (index 0)
             depthManager->getDepthImageView()   // Depth attachment (index 1)
         };
 
@@ -139,18 +178,20 @@ void PostProcess::createSampler() {
 void PostProcess::createSharedDescriptors() {
     descriptorSets = MakeUnique<DescSet>(deviceVK->lDevice);
 
+    // Create descriptor set layout with validation
     descriptorSets->createOwnLayout({
         {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
         {1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
         {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}
     });
 
+    // Create descriptor pool with validation
     descriptorSets->createOwnPool({
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 4}, // Color input + depth for each direction
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_FRAMES_IN_FLIGHT * 2}
     }, MAX_FRAMES_IN_FLIGHT * 2);
 
-    // Allocate descriptor sets for all frames and ping-pong directions
+    // Allocate descriptor sets with validation
     descriptorSets->allocate(MAX_FRAMES_IN_FLIGHT * 2);
 
     // Update descriptor sets to point to ping-pong images
@@ -161,12 +202,12 @@ void PostProcess::createSharedDescriptors() {
         {
             VkDescriptorImageInfo imageInfoInput{};
             imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoInput.imageView = images.getViewA();
+            imageInfoInput.imageView = images->getViewA();
             imageInfoInput.sampler = sampler;
 
             VkDescriptorImageInfo imageInfoOutput{};
             imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoOutput.imageView = images.getViewB();
+            imageInfoOutput.imageView = images->getViewB();
             imageInfoOutput.sampler = VK_NULL_HANDLE;
 
             VkDescriptorImageInfo imageInfoDepth{};
@@ -206,12 +247,12 @@ void PostProcess::createSharedDescriptors() {
         {
             VkDescriptorImageInfo imageInfoInput{};
             imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoInput.imageView = images.getViewB();
+            imageInfoInput.imageView = images->getViewB();
             imageInfoInput.sampler = sampler;
 
             VkDescriptorImageInfo imageInfoOutput{};
             imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoOutput.imageView = images.getViewA();
+            imageInfoOutput.imageView = images->getViewA();
             imageInfoOutput.sampler = VK_NULL_HANDLE;
 
             VkDescriptorImageInfo imageInfoDepth{};
@@ -260,20 +301,31 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
 }
 
 void PostProcess::addEffect(const std::string& name, const std::string& computeShaderPath, bool active) {
+    // Validate shader file exists before attempting to create pipeline
+    std::ifstream testFile(computeShaderPath, std::ios::binary);
+    if (!testFile.is_open()) {
+        throw std::runtime_error("PostProcess: Cannot open shader file: " + computeShaderPath);
+    }
+    testFile.close();
+    
     auto effect = MakeUnique<PostProcessEffect>();
     effect->computeShaderPath = computeShaderPath;
     effect->active = active;
 
-    // Create compute pipeline using the shared descriptor set layout
-    ComputePipelineConfig config{};
-    config.setLayouts = {descriptorSets->getLayout()};
-    config.compPath = computeShaderPath;
+    try {
+        // Create compute pipeline using the shared descriptor set layout
+        ComputePipelineConfig config{};
+        config.setLayouts = {descriptorSets->getLayout()};
+        config.compPath = computeShaderPath;
 
-    effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
-    effect->pipeline->create();
+        effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
+        effect->pipeline->create();
 
-    // Store in OrderedMap with name as key
-    effects[name] = std::move(effect);
+        // Store in OrderedMap with name as key
+        effects[name] = std::move(effect);
+    } catch (const std::exception& e) {
+        throw std::runtime_error("PostProcess: Failed to create effect '" + name + "': " + e.what());
+    }
 }
 
 void PostProcess::loadEffectsFromJson(const std::string& configPath) {
@@ -294,7 +346,13 @@ void PostProcess::loadEffectsFromJson(const std::string& configPath) {
                     std::string shader = effectConfig["shader"];
                     bool active = effectConfig.value("active", true); // Default to true if not specified
 
-                    addEffect(name, shader, active);
+                    try {
+                        addEffect(name, shader, active);
+                    } catch (const std::exception& e) {
+                        std::cerr << "Error loading effect '" << name << "': " << e.what() << std::endl;
+                        // Continue loading other effects instead of crashing
+                        continue;
+                    }
                 } else {
                     std::cerr << "Warning: Effect configuration missing 'name' or 'shader' field" << std::endl;
                 }
@@ -304,6 +362,7 @@ void PostProcess::loadEffectsFromJson(const std::string& configPath) {
         }
     } catch (const std::exception& e) {
         std::cerr << "Error loading postprocess config: " << e.what() << std::endl;
+        // Don't rethrow - allow application to continue with no effects
     }
 }
 
@@ -318,7 +377,7 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     
     // Images are already in GENERAL layout from the render pass, so no transition needed for image A
     // Just transition image B from UNDEFINED to GENERAL
-    transitionImageLayout(cmd, images.getImageB(), VK_FORMAT_R8G8B8A8_UNORM,
+    transitionImageLayout(cmd, images->getImageB(), VK_FORMAT_R8G8B8A8_UNORM,
                         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     // Transition depth image to read-only layout for compute shader access
@@ -417,7 +476,7 @@ void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uin
     // Get final processed image
     const auto& images = pingPongImages[frameIndex];
     bool finalIsA = (activeEffectCount % 2) == 0;  // Even number of effects means final result is in A
-    VkImage finalImage = finalIsA ? images.getImageA() : images.getImageB();
+    VkImage finalImage = finalIsA ? images->getImageA() : images->getImageB();
 
     // Transition swapchain image to transfer destination
     VkImageMemoryBarrier swapchainBarrier{};
@@ -512,7 +571,7 @@ VkImageView PostProcess::getFinalImageView(uint32_t frameIndex) const {
     // Return the final image based on whether we have even or odd number of active effects
     const auto& images = pingPongImages[frameIndex];
     bool finalIsA = (activeEffectCount % 2) == 0;  // Even number of effects means final result is in A
-    return finalIsA ? images.getViewA() : images.getViewB();
+    return finalIsA ? images->getViewA() : images->getViewB();
 }
 
 void PostProcess::recreate() {

@@ -85,8 +85,8 @@ private:
     VkSampler sampler = VK_NULL_HANDLE;
     
     // Per-frame ping-pong images
-    std::array<PingPongImages, MAX_FRAMES_IN_FLIGHT> pingPongImages;
-    
+    UniquePtrVec<PingPongImages> pingPongImages;
+
     // Offscreen render pass - now referenced from Renderer, not owned
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
     std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
