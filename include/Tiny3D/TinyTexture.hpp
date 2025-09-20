@@ -16,11 +16,10 @@ struct TinyTexture {
 
     // Sampler
     enum class AddressMode {
-        Repeat        = 0,
-        ClampToEdge   = 1,
-        ClampToBorder = 2
+        Repeat,
+        ClampToEdge,
+        ClampToBorder
     } addressMode = AddressMode::Repeat;
-
 
     static TinyTexture createDefaultTexture();
 };

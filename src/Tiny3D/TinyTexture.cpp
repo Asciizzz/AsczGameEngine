@@ -1,5 +1,7 @@
 #include "Tiny3D/TinyTexture.hpp"
 
+#include <vulkan/vulkan.h>
+
 #include <windows.h>
 #include <wincrypt.h>
 #include <sstream>
@@ -19,7 +21,6 @@ uint32_t TinyTexture::makeHash() {
     hash = hashValue;
     return hash;
 }
-
 
 TinyTexture TinyTexture::createDefaultTexture() {
     TinyTexture texture;

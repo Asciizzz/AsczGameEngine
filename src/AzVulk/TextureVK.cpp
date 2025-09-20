@@ -441,13 +441,11 @@ void ImageVK::cleanup() {
 // Static helper functions
 VkFormat ImageVK::getVulkanFormatFromChannels(int channels) {
     switch (channels) {
-        case 1: return VK_FORMAT_R8_UNORM;          // Grayscale
-        case 2: return VK_FORMAT_R8G8_UNORM;        // Grayscale + Alpha
-        case 3: return VK_FORMAT_R8G8B8A8_SRGB;     // Convert RGB to RGBA
-        case 4: return VK_FORMAT_R8G8B8A8_SRGB;     // RGBA
-        default: 
-            std::cerr << "Warning: Unsupported channel count " << channels << ", defaulting to RGBA" << std::endl;
-            return VK_FORMAT_R8G8B8A8_SRGB;
+        case 1:  return VK_FORMAT_R8_UNORM;          // Grayscale
+        case 2:  return VK_FORMAT_R8G8_UNORM;        // Grayscale + Alpha
+        case 3:  return VK_FORMAT_R8G8B8A8_SRGB;     // Convert RGB to RGBA
+        case 4:  return VK_FORMAT_R8G8B8A8_SRGB;     // RGBA
+        default: return VK_FORMAT_R8G8B8A8_SRGB;
     }
 }
 
