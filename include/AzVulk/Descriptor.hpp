@@ -72,7 +72,7 @@ struct DescSet {
     DescSet& operator=(const DescSet&) = delete;
 
     VkDescriptorSet get(uint32_t index=0) const { return sets.at(index); }
-    // Implicit conversion (only works on single descriptor set)
+    // Implicit conversion only works on single descriptor set
     operator VkDescriptorSet() const { return get(); }
 
     VkDescriptorSetLayout getLayout() const { return layout; }

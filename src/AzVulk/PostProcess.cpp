@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <iostream>
 
+#include "Helpers/json.hpp"
+
 using namespace AzVulk;
 
 // Destroy helper
@@ -107,25 +109,28 @@ void PostProcess::createPingPongImages() {
 }
 
 void PostProcess::createOffscreenFramebuffers() {
+    offscreenFramebuffers.clear();
+    
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        std::array<VkImageView, 2> attachments = {
+        std::vector<VkImageView> attachments = {
             pingPongImages[frame]->getViewA(),        // Color attachment (index 0)
             depthManager->getDepthImageView()   // Depth attachment (index 1)
         };
 
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = offscreenRenderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = swapChain->extent.width;
-        framebufferInfo.height = swapChain->extent.height;
-        framebufferInfo.layers = 1;
+        UniquePtr<FrameBuffer> framebuffer = MakeUnique<FrameBuffer>();
 
-        if (vkCreateFramebuffer(deviceVK->lDevice, &framebufferInfo, nullptr, &offscreenFramebuffers[frame]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create offscreen framebuffer!");
-        }
+        FrameBufferConfig fbConfig;
+        fbConfig
+            .withRenderPass(offscreenRenderPass)
+            .withAttachments(attachments)
+            .withExtent(swapChain->extent);
+        
+        bool success = framebuffer->create(deviceVK->lDevice, fbConfig);
+        if (!success) throw std::runtime_error("Failed to create offscreen framebuffer");
+
+        offscreenFramebuffers.push_back(std::move(framebuffer));
     }
+
 }
 
 void PostProcess::createSampler() {
@@ -352,7 +357,7 @@ void PostProcess::loadEffectsFromJson(const std::string& configPath) {
 }
 
 VkFramebuffer PostProcess::getOffscreenFramebuffer(uint32_t frameIndex) const {
-    return offscreenFramebuffers[frameIndex];
+    return *offscreenFramebuffers[frameIndex];
 }
 
 void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
@@ -620,13 +625,8 @@ void PostProcess::cleanupRenderResources() {
     vkDeviceWaitIdle(device);
     
     // Clean up framebuffers first (before image views)
-    for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        if (offscreenFramebuffers[frame] != VK_NULL_HANDLE) {
-            vkDestroyFramebuffer(device, offscreenFramebuffers[frame], nullptr);
-            offscreenFramebuffers[frame] = VK_NULL_HANDLE;
-        }
-    }
-    
+    offscreenFramebuffers.clear();
+
     // Clean up descriptor sets
     descriptorSets->cleanup();
 

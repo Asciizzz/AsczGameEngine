@@ -53,6 +53,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/Instance.cpp
     src/AzVulk/CmdBuffer.cpp
     src/AzVulk/DataBuffer.cpp
+    src/AzVulk/FrameBuffer.cpp
     src/AzVulk/Descriptor.cpp
     src/AzVulk/TextureVK.cpp
     src/AzVulk/Swapchain.cpp

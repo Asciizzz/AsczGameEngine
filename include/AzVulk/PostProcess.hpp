@@ -9,8 +9,8 @@
 #include "AzVulk/Pipeline_compute.hpp"
 #include "AzVulk/DepthManager.hpp"
 #include "AzVulk/Descriptor.hpp"
-#include "Helpers/Templates.hpp"
-#include "Helpers/json.hpp"
+
+#include "AzVulk/FrameBuffer.hpp"
 
 namespace AzVulk {
 
@@ -89,11 +89,10 @@ private:
     // Sampler
     UniquePtr<SamplerVK> sampler;
 
-    // Offscreen render pass - now referenced from Renderer, not owned
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
-    std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
-    
-    // Post-process effects stored in insertion order with active flags
+    // std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
+    UniquePtrVec<FrameBuffer> offscreenFramebuffers;
+
     OrderedMap<std::string, UniquePtr<PostProcessEffect>> effects;
 
     // Shared descriptor management for all effects
