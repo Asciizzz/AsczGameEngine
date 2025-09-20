@@ -395,26 +395,20 @@ void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
 
 
 
-ImageVK& ImageVK::transitionLayoutImmediate(const Device* device, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    TempCmd tempCmd(device, device->graphicsPoolWrapper);
-    transitionLayout(tempCmd.get(), oldLayout, newLayout);
-    tempCmd.endAndSubmit();
+ImageVK& ImageVK::transitionLayoutImmediate(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
+    transitionLayout(cmd, oldLayout, newLayout);
 
     return *this;
 }
 
-ImageVK& ImageVK::copyFromBufferImmediate(const Device* device, VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
-    TempCmd tempCmd(device, device->graphicsPoolWrapper);
-    copyFromBuffer(tempCmd.get(), srcBuffer, width, height, mipLevel);
-    tempCmd.endAndSubmit();
+ImageVK& ImageVK::copyFromBufferImmediate(VkCommandBuffer cmd, VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
+    copyFromBuffer(cmd, srcBuffer, width, height, mipLevel);
 
     return *this;
 }
 
-ImageVK& ImageVK::generateMipmapsImmediate(const Device* device) {
-    TempCmd tempCmd(device, device->graphicsPoolWrapper);
-    generateMipmaps(tempCmd.get());
-    tempCmd.endAndSubmit();
+ImageVK& ImageVK::generateMipmapsImmediate(VkCommandBuffer cmd) {
+    generateMipmaps(cmd);
 
     return *this;
 }

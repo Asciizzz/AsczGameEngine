@@ -97,9 +97,9 @@ public:
     void generateMipmaps(VkCommandBuffer cmd);
 
     // Immediate operations using temporary command buffers
-    ImageVK& transitionLayoutImmediate(const Device* deviceVK, VkImageLayout oldLayout, VkImageLayout newLayout);
-    ImageVK& copyFromBufferImmediate(const Device* deviceVK, VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
-    ImageVK& generateMipmapsImmediate(const Device* deviceVK);
+    ImageVK& transitionLayoutImmediate(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    ImageVK& copyFromBufferImmediate(VkCommandBuffer cmd, VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
+    ImageVK& generateMipmapsImmediate(VkCommandBuffer cmd);
 
     // Getters
     VkImage getImage() const { return image; }

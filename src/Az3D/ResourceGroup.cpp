@@ -242,13 +242,15 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
 
     if (!success) throw std::runtime_error("Failed to create ImageVK for texture");
 
-    // TempCmd tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
+    TempCmd tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
 
     textureVK
-        .transitionLayoutImmediate(deviceVK, VK_IMAGE_LAYOUT_UNDEFINED, 
+        .transitionLayoutImmediate(tempCmd.get(), VK_IMAGE_LAYOUT_UNDEFINED, 
                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        .copyFromBufferImmediate(deviceVK, stagingBuffer.get(), texture.width, texture.height)
-        .generateMipmapsImmediate(deviceVK);
+        .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get(), texture.width, texture.height)
+        .generateMipmapsImmediate(tempCmd.get());
+
+    tempCmd.endAndSubmit(); // Kinda redundant but whatever
 
     return MakeUnique<ImageVK>(std::move(textureVK));
 }
