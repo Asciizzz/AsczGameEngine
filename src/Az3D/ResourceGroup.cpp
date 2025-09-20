@@ -176,13 +176,13 @@ void ResourceGroup::createMaterialDescSet() {
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
-    materialBufferInfo.buffer = matBuffer->get();
+    materialBufferInfo.buffer = *matBuffer;
     materialBufferInfo.offset = 0;
     materialBufferInfo.range = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = matDescSet->get();
+    descriptorWrite.dstSet = *matDescSet;
     descriptorWrite.dstBinding = 0;
     descriptorWrite.dstArrayElement = 0;
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -343,7 +343,7 @@ void ResourceGroup::createTextureDescSet() {
 
     VkWriteDescriptorSet imageWrite{};
     imageWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    imageWrite.dstSet          = texDescSet->get();
+    imageWrite.dstSet          = *texDescSet;
     imageWrite.dstBinding      = 0;
     imageWrite.dstArrayElement = 0;
     imageWrite.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -353,13 +353,13 @@ void ResourceGroup::createTextureDescSet() {
     
     // Write sampler indices buffer
     VkDescriptorBufferInfo texSampIdxBufferInfo{};
-    texSampIdxBufferInfo.buffer = textSampIdxBuffer->get();
+    texSampIdxBufferInfo.buffer = *textSampIdxBuffer;
     texSampIdxBufferInfo.offset = 0;
     texSampIdxBufferInfo.range = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet texSampIdxBufferWrite{};
     texSampIdxBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    texSampIdxBufferWrite.dstSet = texDescSet->get();
+    texSampIdxBufferWrite.dstSet = *texDescSet;
     texSampIdxBufferWrite.dstBinding = 1;
     texSampIdxBufferWrite.dstArrayElement = 0;
     texSampIdxBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -376,7 +376,7 @@ void ResourceGroup::createTextureDescSet() {
 
     VkWriteDescriptorSet samplerWrite{};
     samplerWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    samplerWrite.dstSet          = texDescSet->get();
+    samplerWrite.dstSet          = *texDescSet;
     samplerWrite.dstBinding      = 2;
     samplerWrite.dstArrayElement = 0;
     samplerWrite.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -510,13 +510,13 @@ void ResourceGroup::createLightDescSet() {
 
     // Bind light buffer to descriptor
     VkDescriptorBufferInfo lightBufferInfo{};
-    lightBufferInfo.buffer = lightBuffer->get();
+    lightBufferInfo.buffer = *lightBuffer;
     lightBufferInfo.offset = 0;
     lightBufferInfo.range = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = lightDescSet->get();
+    descriptorWrite.dstSet = *lightDescSet;
     descriptorWrite.dstBinding = 0;
     descriptorWrite.dstArrayElement = 0;
     descriptorWrite.descriptorType = DescType::StorageBuffer;

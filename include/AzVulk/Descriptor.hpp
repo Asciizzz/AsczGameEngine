@@ -28,6 +28,7 @@ struct DescPool {
     DescPool& operator=(const DescPool&) = delete;
 
     VkDescriptorPool get() const { return pool; }
+    operator VkDescriptorPool() const { return pool; }
 
     void create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
     static VkDescriptorPool create(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
@@ -49,6 +50,7 @@ struct DescLayout {
     DescLayout& operator=(const DescLayout&) = delete;
 
     VkDescriptorSetLayout get() const { return layout; }
+    operator VkDescriptorSetLayout() const { return layout; }
 
     void create(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
     static VkDescriptorSetLayout create(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
@@ -70,6 +72,9 @@ struct DescSet {
     DescSet& operator=(const DescSet&) = delete;
 
     VkDescriptorSet get(uint32_t index=0) const { return sets.at(index); }
+    // Implicit conversion (only works on single descriptor set)
+    operator VkDescriptorSet() const { return get(); }
+
     VkDescriptorSetLayout getLayout() const { return layout; }
     VkDescriptorPool getPool() const { return pool; }
 

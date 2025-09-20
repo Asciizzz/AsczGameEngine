@@ -141,9 +141,70 @@ private:
 };
 
 
+// Sampler configuration struct for easy setup
+struct SamplerConfig {
+    VkFilter magFilter = VK_FILTER_LINEAR;
+    VkFilter minFilter = VK_FILTER_LINEAR;
+    VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    VkSamplerAddressMode addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    VkSamplerAddressMode addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    VkSamplerAddressMode addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    VkBool32 anisotropyEnable = VK_TRUE;
+    float maxAnisotropy = 16.0f; // Will be clamped to device limit
+    float mipLodBias = 0.0f;
+    float minLod = 0.0f;
+    float maxLod = VK_LOD_CLAMP_NONE;
+    VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    VkBool32 unnormalizedCoordinates = VK_FALSE;
+    VkBool32 compareEnable = VK_FALSE;
+    VkCompareOp compareOp = VK_COMPARE_OP_ALWAYS;
+
+    // Builder pattern methods for easy configuration
+    SamplerConfig& setFilters(VkFilter magFilter, VkFilter minFilter);
+    SamplerConfig& setMipmapMode(VkSamplerMipmapMode mode);
+    SamplerConfig& setAddressModes(VkSamplerAddressMode mode);
+    SamplerConfig& setAddressModes(VkSamplerAddressMode u, VkSamplerAddressMode v, VkSamplerAddressMode w);
+    SamplerConfig& setAnisotropy(VkBool32 enable, float maxAniso = 16.0f);
+    SamplerConfig& setLodRange(float minLod, float maxLod, float bias = 0.0f);
+    SamplerConfig& setBorderColor(VkBorderColor color);
+    SamplerConfig& setCompare(VkBool32 enable, VkCompareOp op = VK_COMPARE_OP_LESS);
+};
+
 class SamplerVK {
 public:
+    SamplerVK() = default;
+    SamplerVK(const Device* device);
+    SamplerVK(VkDevice lDevice, VkPhysicalDevice pDevice);
+
+    ~SamplerVK();
+
+    // Delete copy constructor and assignment operator
+    SamplerVK(const SamplerVK&) = delete;
+    SamplerVK& operator=(const SamplerVK&) = delete;
+
+    // Move constructor and assignment operator
+    SamplerVK(SamplerVK&& other) noexcept;
+    SamplerVK& operator=(SamplerVK&& other) noexcept;
+
+    // Create and initialize
+    SamplerVK& init(const Device* device);
+    SamplerVK& init(VkDevice lDevice, VkPhysicalDevice pDevice);
+    SamplerVK& create(const SamplerConfig& config);
+
+    // Getters
+    VkSampler get() const { return sampler; }
+    operator VkSampler() const { return sampler; } // Implicit conversion
+
+    bool isValid() const { return sampler != VK_NULL_HANDLE; }
+    void cleanup();
+
+private:
+    VkDevice lDevice = VK_NULL_HANDLE;
+    VkPhysicalDevice pDevice = VK_NULL_HANDLE;
     VkSampler sampler = VK_NULL_HANDLE;
+
+    // Helper to clamp anisotropy to device limits
+    float getMaxAnisotropy(float requested) const;
 };
 
 }

@@ -520,3 +520,151 @@ VkAccessFlags ImageVK::getAccessFlags(VkImageLayout layout) {
             return VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
     }
 }
+
+
+
+
+
+SamplerConfig& SamplerConfig::setFilters(VkFilter magFilter, VkFilter minFilter) {
+    this->magFilter = magFilter;
+    this->minFilter = minFilter;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::setMipmapMode(VkSamplerMipmapMode mode) {
+    this->mipmapMode = mode;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::setAddressModes(VkSamplerAddressMode mode) {
+    setAddressModes(mode, mode, mode);
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::setAddressModes(VkSamplerAddressMode u, VkSamplerAddressMode v, VkSamplerAddressMode w) {
+    this->addressModeU = u;
+    this->addressModeV = v;
+    this->addressModeW = w;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::setAnisotropy(VkBool32 enable, float maxAniso) {
+    this->anisotropyEnable = enable;
+    this->maxAnisotropy = maxAniso;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::setLodRange(float minLod, float maxLod, float bias) {
+    this->minLod = minLod;
+    this->maxLod = maxLod;
+    this->mipLodBias = bias;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::setBorderColor(VkBorderColor color) {
+    this->borderColor = color;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::setCompare(VkBool32 enable, VkCompareOp op) {
+    this->compareEnable = enable;
+    this->compareOp = op;
+    return *this;
+}
+
+
+SamplerVK::SamplerVK(const Device* device) {
+    init(device);
+}
+
+SamplerVK::SamplerVK(VkDevice lDevice, VkPhysicalDevice pDevice) {
+    init(lDevice, pDevice);
+}
+
+SamplerVK::~SamplerVK() {
+    cleanup();
+}
+
+SamplerVK::SamplerVK(SamplerVK&& other) noexcept {
+    *this = std::move(other);
+}
+
+SamplerVK& SamplerVK::operator=(SamplerVK&& other) noexcept {
+    if (this != &other) {
+        cleanup();
+        
+        lDevice = other.lDevice;
+        pDevice = other.pDevice;
+        sampler = other.sampler;
+        
+        other.lDevice = VK_NULL_HANDLE;
+        other.pDevice = VK_NULL_HANDLE;
+        other.sampler = VK_NULL_HANDLE;
+    }
+    return *this;
+}
+
+SamplerVK& SamplerVK::init(const Device* device) {
+    if (device) {
+        lDevice = device->lDevice;
+        pDevice = device->pDevice;
+    }
+    return *this;
+}
+
+SamplerVK& SamplerVK::init(VkDevice lDevice, VkPhysicalDevice pDevice) {
+    this->lDevice = lDevice;
+    this->pDevice = pDevice;
+    return *this;
+}
+
+SamplerVK& SamplerVK::create(const SamplerConfig& config) {
+    if (lDevice == VK_NULL_HANDLE) {
+        throw std::runtime_error("SamplerVK: Device not initialized");
+    }
+
+    cleanup(); // Clean up existing sampler if any
+
+    VkSamplerCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    createInfo.magFilter = config.magFilter;
+    createInfo.minFilter = config.minFilter;
+    createInfo.mipmapMode = config.mipmapMode;
+    createInfo.addressModeU = config.addressModeU;
+    createInfo.addressModeV = config.addressModeV;
+    createInfo.addressModeW = config.addressModeW;
+    createInfo.anisotropyEnable = config.anisotropyEnable;
+    createInfo.maxAnisotropy = getMaxAnisotropy(config.maxAnisotropy);
+    createInfo.mipLodBias = config.mipLodBias;
+    createInfo.minLod = config.minLod;
+    createInfo.maxLod = config.maxLod;
+    createInfo.borderColor = config.borderColor;
+    createInfo.unnormalizedCoordinates = config.unnormalizedCoordinates;
+    createInfo.compareEnable = config.compareEnable;
+    createInfo.compareOp = config.compareOp;
+
+    VkResult result = vkCreateSampler(lDevice, &createInfo, nullptr, &sampler);
+    if (result != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create VkSampler");
+    }
+
+    return *this;
+}
+
+void SamplerVK::cleanup() {
+    if (sampler != VK_NULL_HANDLE && lDevice != VK_NULL_HANDLE) {
+        vkDestroySampler(lDevice, sampler, nullptr);
+        sampler = VK_NULL_HANDLE;
+    }
+}
+
+float SamplerVK::getMaxAnisotropy(float requested) const {
+    if (pDevice == VK_NULL_HANDLE) {
+        return 1.0f; // Safe fallback
+    }
+
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(pDevice, &properties);
+    
+    return std::min(requested, properties.limits.maxSamplerAnisotropy);
+}

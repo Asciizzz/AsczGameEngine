@@ -32,8 +32,10 @@ public:
     DataBuffer& operator=(DataBuffer&& other) noexcept;
 
     VkBuffer get() const { return buffer; }
-    VkDeviceMemory getMemory() const { return memory; }
+    operator VkBuffer() const { return buffer; }
 
+
+    VkDeviceMemory getMemory() const { return memory; }
     VkDeviceSize getDataSize() const { return dataSize; }
     VkBufferUsageFlags getUsageFlags() const { return usageFlags; }
     VkMemoryPropertyFlags getMemPropFlags() const { return memPropFlags; }

@@ -129,27 +129,35 @@ void PostProcess::createOffscreenFramebuffers() {
 }
 
 void PostProcess::createSampler() {
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.anisotropyEnable = VK_FALSE;
-    samplerInfo.maxAnisotropy = 1.0f;
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 0.0f;
+    // VkSamplerCreateInfo samplerInfo{};
+    // samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    // samplerInfo.magFilter = VK_FILTER_LINEAR;
+    // samplerInfo.minFilter = VK_FILTER_LINEAR;
+    // samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    // samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    // samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    // samplerInfo.anisotropyEnable = VK_FALSE;
+    // samplerInfo.maxAnisotropy = 1.0f;
+    // samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    // samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    // samplerInfo.compareEnable = VK_FALSE;
+    // samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    // samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    // samplerInfo.mipLodBias = 0.0f;
+    // samplerInfo.minLod = 0.0f;
+    // samplerInfo.maxLod = 0.0f;
 
-    if (vkCreateSampler(deviceVK->lDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture sampler!");
-    }
+    SamplerConfig config = SamplerConfig()
+        .setFilters(VK_FILTER_LINEAR, VK_FILTER_LINEAR)
+        .setAddressModes(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+        .setAnisotropy(VK_FALSE)
+        .setBorderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK)
+        .setCompare(VK_FALSE)
+        .setMipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
+        .setLodRange(0.0f, 0.0f);
+
+    sampler = MakeUnique<SamplerVK>();
+    sampler->init(deviceVK).create(config);
 }
 
 void PostProcess::createSharedDescriptors() {
@@ -180,7 +188,7 @@ void PostProcess::createSharedDescriptors() {
             VkDescriptorImageInfo imageInfoInput{};
             imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
             imageInfoInput.imageView = images->getViewA();
-            imageInfoInput.sampler = sampler;
+            imageInfoInput.sampler = *sampler;
 
             VkDescriptorImageInfo imageInfoOutput{};
             imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -190,7 +198,7 @@ void PostProcess::createSharedDescriptors() {
             VkDescriptorImageInfo imageInfoDepth{};
             imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
             imageInfoDepth.imageView = depthManager->getDepthImageView();
-            imageInfoDepth.sampler = sampler;
+            imageInfoDepth.sampler = *sampler;
 
             std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -225,7 +233,7 @@ void PostProcess::createSharedDescriptors() {
             VkDescriptorImageInfo imageInfoInput{};
             imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
             imageInfoInput.imageView = images->getViewB();
-            imageInfoInput.sampler = sampler;
+            imageInfoInput.sampler = *sampler;
 
             VkDescriptorImageInfo imageInfoOutput{};
             imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -235,7 +243,7 @@ void PostProcess::createSharedDescriptors() {
             VkDescriptorImageInfo imageInfoDepth{};
             imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
             imageInfoDepth.imageView = depthManager->getDepthImageView();
-            imageInfoDepth.sampler = sampler;
+            imageInfoDepth.sampler = *sampler;
 
             std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -623,10 +631,7 @@ void PostProcess::cleanupRenderResources() {
     descriptorSets->cleanup();
 
     // Clean up sampler
-    if (sampler != VK_NULL_HANDLE) {
-        vkDestroySampler(device, sampler, nullptr);
-        sampler = VK_NULL_HANDLE;
-    }
+    sampler->cleanup();
 
     // Destroy ping-pong images
     pingPongImages.clear();

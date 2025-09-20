@@ -82,10 +82,12 @@ private:
     Device* deviceVK;
     SwapChain* swapChain;
     DepthManager* depthManager; // For offscreen framebuffer only
-    VkSampler sampler = VK_NULL_HANDLE;
     
     // Per-frame ping-pong images
     UniquePtrVec<PingPongImages> pingPongImages;
+
+    // Sampler
+    UniquePtr<SamplerVK> sampler;
 
     // Offscreen render pass - now referenced from Renderer, not owned
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
