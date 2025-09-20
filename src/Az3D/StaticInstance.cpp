@@ -17,7 +17,6 @@ std::vector<VkVertexInputAttributeDescription> StaticInstance::getAttributeDescr
 
     attribs[0] = {3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, trformT_S)};
     attribs[1] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, trformR)};
-
     attribs[2] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(StaticInstance, multColor)};
 
     return attribs;
