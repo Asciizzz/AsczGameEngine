@@ -12,15 +12,19 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
 : deviceVK(deviceVK), maxFramesInFlight(maxFramesInFlight) {
 
     swapChain = MakeUnique<SwapChain>(deviceVK, surface, window);
+    printf("    \033[1;33m SwapChain created with %zu images. \033[0m\n", swapChain->images.size());
 
     depthManager = MakeUnique<DepthManager>(deviceVK);
     depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
+    printf("    \033[1;33m Depth resources created with dimensions: %ux%u. \033[0m\n", depthManager->getWidth(), depthManager->getHeight());
 
     createRenderPasses();
     swapChain->createFramebuffers(mainRenderPass->get(), depthManager->getDepthImageView());
+    printf("    \033[1;33m Render passes and framebuffers created. \033[0m\n");
 
     postProcess = MakeUnique<PostProcess>(deviceVK, swapChain.get(), depthManager.get());
     postProcess->initialize(offscreenRenderPass->get());
+    printf("    \033[1;33m Post-process initialized. \033[0m\n");
 
     createCommandBuffers();
     createSyncObjects();
