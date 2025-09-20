@@ -94,12 +94,12 @@ void PostProcess::createPingPongImages() {
             imageA
                 .init(deviceVK)
                 .createImage(sharedImageConfig)
-                .createImageView(sharedViewConfig)
+                .createView(sharedViewConfig)
                 .isValid() &&
             imageB
                 .init(deviceVK)
                 .createImage(sharedImageConfig)
-                .createImageView(sharedViewConfig)
+                .createView(sharedViewConfig)
                 .isValid();
 
         if (!success) throw std::runtime_error("Failed to create ping-pong images");

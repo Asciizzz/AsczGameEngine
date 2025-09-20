@@ -220,7 +220,7 @@ ImageVK& ImageVK::createImage(const ImageConfig& config) {
     return *this;
 }
 
-ImageVK& ImageVK::createImageView(const ImageViewConfig& viewConfig) {
+ImageVK& ImageVK::createView(const ImageViewConfig& viewConfig) {
     if (image == VK_NULL_HANDLE) {
         std::cerr << "ImageVK: Cannot create image view - image not created" << std::endl;
         return *this;

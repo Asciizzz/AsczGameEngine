@@ -26,7 +26,7 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
         .setAspectMask(VK_IMAGE_ASPECT_DEPTH_BIT);
 
     depthImage.createImage(depthConfig);
-    depthImage.createImageView(depthViewConfig);
+    depthImage.createView(depthViewConfig);
 }
 
 VkFormat DepthManager::findDepthFormat() {

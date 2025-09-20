@@ -86,7 +86,7 @@ public:
     ImageVK& init(const Device* device);
     ImageVK& init(VkDevice lDevice, VkPhysicalDevice pDevice);
     ImageVK& createImage(const ImageConfig& config);
-    ImageVK& createImageView(const ImageViewConfig& viewConfig);
+    ImageVK& createView(const ImageViewConfig& viewConfig);
 
     // For static texture
     void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
@@ -143,11 +143,7 @@ private:
 
 class SamplerVK {
 public:
-};
-
-class TextureVK {
-public:
-
+    VkSampler sampler = VK_NULL_HANDLE;
 };
 
 }

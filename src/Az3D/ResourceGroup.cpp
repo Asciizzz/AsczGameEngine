@@ -237,7 +237,7 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
     bool success = textureVK
         .init(deviceVK)
         .createImage(config)
-        .createImageView(viewConfig)
+        .createView(viewConfig)
         .isValid();
 
     if (!success) throw std::runtime_error("Failed to create ImageVK for texture");
