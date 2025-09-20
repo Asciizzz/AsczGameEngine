@@ -43,7 +43,7 @@ void GlbUBOManager::createDescSets() {
 
     for (int i = 0; i < maxFramesInFlight; ++i) {
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = dataBuffer[i].buffer;
+        bufferInfo.buffer = dataBuffer[i].get();
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(GlobalUBO);
 

@@ -4,12 +4,8 @@
 
 namespace AzVulk {
 
-struct CmdBuffer {
-    VkDevice lDevice = VK_NULL_HANDLE;
-    VkCommandPool cmdPool = VK_NULL_HANDLE;
-
-    std::vector<VkCommandBuffer> cmdBuffers;
-
+class CmdBuffer {
+public:
     CmdBuffer() = default;
     ~CmdBuffer() { cleanup(); } void cleanup();
 
@@ -25,6 +21,12 @@ struct CmdBuffer {
     // Operator [] for easy access
     template<typename T>
     const VkCommandBuffer& operator[](T index) const { return cmdBuffers[index]; }
+
+private:
+    VkDevice lDevice = VK_NULL_HANDLE;
+    VkCommandPool cmdPool = VK_NULL_HANDLE;
+
+    std::vector<VkCommandBuffer> cmdBuffers;
 };
 
 

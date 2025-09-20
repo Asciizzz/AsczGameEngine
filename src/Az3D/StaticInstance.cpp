@@ -37,7 +37,7 @@ void StaticInstanceGroup::initVkDevice(VkDevice lDevice, VkPhysicalDevice pDevic
 }
 
 void StaticInstanceGroup::recreateDataBuffer() {
-    if (dataBuffer.lDevice == VK_NULL_HANDLE) return;
+    if (lDevice == VK_NULL_HANDLE) return;
 
     dataBuffer
         .setDataSize(datas.size() * sizeof(StaticInstance))
@@ -50,7 +50,7 @@ void StaticInstanceGroup::recreateDataBuffer() {
 }
 
 void StaticInstanceGroup::updateDataBuffer() {
-    if (dataBuffer.lDevice == VK_NULL_HANDLE) return;
+    if (lDevice == VK_NULL_HANDLE) return;
 
     if (prevInstanceCount != datas.size()) recreateDataBuffer();
 

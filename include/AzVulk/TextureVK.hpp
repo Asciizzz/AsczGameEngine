@@ -140,6 +140,10 @@ private:
 
 class SamplerVK {
 public:
+};
+
+class TextureVK {
+public:
 
 };
 

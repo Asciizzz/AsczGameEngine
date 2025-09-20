@@ -16,7 +16,8 @@ struct BufferUsage {
     static constexpr VkBufferUsageFlags TransferSrcAndDst = TransferSrc | TransferDst;
 };
 
-struct DataBuffer {
+class DataBuffer {
+public:
     DataBuffer() = default;
 
     ~DataBuffer() { cleanup(); }
@@ -29,12 +30,6 @@ struct DataBuffer {
     // Move constructor and assignment
     DataBuffer(DataBuffer&& other) noexcept;
     DataBuffer& operator=(DataBuffer&& other) noexcept;
-
-    VkDevice lDevice = VK_NULL_HANDLE;
-
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    void* mapped = nullptr;
 
     VkBuffer get() const { return buffer; }
 
@@ -72,6 +67,12 @@ struct DataBuffer {
         static_cast<T*>(mapped)[index] = value;
         unmapMemory();
     }
+
+private:
+    VkDevice lDevice = VK_NULL_HANDLE;
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    void* mapped = nullptr;
 };
 
 }

@@ -174,7 +174,7 @@ void ResourceGroup::createMaterialDescSet() {
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
-    materialBufferInfo.buffer = matBuffer->buffer;
+    materialBufferInfo.buffer = matBuffer->get();
     materialBufferInfo.offset = 0;
     materialBufferInfo.range = VK_WHOLE_SIZE;
 
@@ -240,7 +240,7 @@ ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
     textureVK
         .transitionLayoutImmediate( VK_IMAGE_LAYOUT_UNDEFINED, 
                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        .copyFromBufferImmediate(stagingBuffer.buffer, texture.width, texture.height)
+        .copyFromBufferImmediate(stagingBuffer.get(), texture.width, texture.height)
         .generateMipmapsImmediate();
 
     return textureVK;
@@ -344,7 +344,7 @@ void ResourceGroup::createTextureDescSet() {
     
     // Write sampler indices buffer
     VkDescriptorBufferInfo texSampIdxBufferInfo{};
-    texSampIdxBufferInfo.buffer = textSampIdxBuffer->buffer;
+    texSampIdxBufferInfo.buffer = textSampIdxBuffer->get();
     texSampIdxBufferInfo.offset = 0;
     texSampIdxBufferInfo.range = VK_WHOLE_SIZE;
 
@@ -501,7 +501,7 @@ void ResourceGroup::createLightDescSet() {
 
     // Bind light buffer to descriptor
     VkDescriptorBufferInfo lightBufferInfo{};
-    lightBufferInfo.buffer = lightBuffer->buffer;
+    lightBufferInfo.buffer = lightBuffer->get();
     lightBufferInfo.offset = 0;
     lightBufferInfo.range = VK_WHOLE_SIZE;
 

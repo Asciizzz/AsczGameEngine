@@ -38,7 +38,7 @@ void RigDemo::init(const AzVulk::Device* deviceVK, const TinyModel& model, size_
     descSet.allocate();
 
     VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = finalPoseBuffer.buffer;
+    bufferInfo.buffer = finalPoseBuffer.get();
     bufferInfo.offset = 0;
     bufferInfo.range = bufferSize;
 
