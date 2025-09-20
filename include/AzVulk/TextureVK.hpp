@@ -63,6 +63,8 @@ struct ImageViewConfig {
     ImageViewConfig& withFormat(VkFormat fmt);
     ImageViewConfig& withAspectMask(VkImageAspectFlags aspect);
     ImageViewConfig& withMipLevels(uint32_t levels);
+    ImageViewConfig& withComponents(VkComponentMapping comp);
+
     ImageViewConfig& withAutoMipLevels(uint32_t width, uint32_t height);
 };
 

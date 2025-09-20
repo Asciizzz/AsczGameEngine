@@ -92,28 +92,37 @@ void SwapChain::createImageViews() {
 }
 
 void SwapChain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView) {
-    cleanupFramebuffers();
-    framebuffers.resize(imageViews.size());
+    framebuffers.clear();
 
     for (size_t i = 0; i < imageViews.size(); ++i) {
-        // No MSAA: depth, swapchain color (matching RenderPass attachment order)
         std::vector<VkImageView> attachments = {
             imageViews[i],   // swapchain color
             depthImageView   // depth
         };
 
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = renderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = extent.width;
-        framebufferInfo.height = extent.height;
-        framebufferInfo.layers = 1;
+        // VkFramebufferCreateInfo framebufferInfo{};
+        // framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        // framebufferInfo.renderPass = renderPass;
+        // framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        // framebufferInfo.pAttachments = attachments.data();
+        // framebufferInfo.width = extent.width;
+        // framebufferInfo.height = extent.height;
+        // framebufferInfo.layers = 1;
 
-        if (vkCreateFramebuffer(deviceVK->lDevice, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create framebuffer!");
-        }
+        // if (vkCreateFramebuffer(deviceVK->lDevice, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
+        //     throw std::runtime_error("failed to create framebuffer!");
+        // }
+
+        FrameBufferConfig fbConfig = FrameBufferConfig()
+            .withRenderPass(renderPass)
+            .withAttachments(attachments)
+            .withExtent(extent);
+
+        UniquePtr<FrameBuffer> framebuffer = std::make_unique<FrameBuffer>();
+        bool success = framebuffer->create(deviceVK->lDevice, fbConfig);
+        if (!success) throw std::runtime_error("Failed to create framebuffer");
+
+        framebuffers.push_back(std::move(framebuffer));
     }
 }
 
@@ -128,13 +137,14 @@ void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass
     vkDeviceWaitIdle(deviceVK->lDevice);
 
     cleanup();
+
     createSwapChain(window);
     createImageViews();
     createFramebuffers(renderPass, depthImageView);
 }
 
 void SwapChain::cleanup() {
-    cleanupFramebuffers();
+    framebuffers.clear();
 
     for (auto view : imageViews) {
         vkDestroyImageView(deviceVK->lDevice, view, nullptr);
@@ -145,13 +155,6 @@ void SwapChain::cleanup() {
         vkDestroySwapchainKHR(deviceVK->lDevice, swapChain, nullptr);
         swapChain = VK_NULL_HANDLE;
     }
-}
-
-void SwapChain::cleanupFramebuffers() {
-    for (auto framebuffer : framebuffers) {
-        vkDestroyFramebuffer(deviceVK->lDevice, framebuffer, nullptr);
-    }
-    framebuffers.clear();
 }
 
 SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice lDevice) {

@@ -71,10 +71,19 @@ ImageViewConfig& ImageViewConfig::withMipLevels(uint32_t levels) {
     return *this;
 }
 
+ImageViewConfig& ImageViewConfig::withComponents(VkComponentMapping comp) {
+    components = comp;
+    return *this;
+}
+
 ImageViewConfig& ImageViewConfig::withAutoMipLevels(uint32_t width, uint32_t height) {
     mipLevels = ImageVK::autoMipLevels(width, height);
     return *this;
 }
+
+
+
+
 
 ImageVK::ImageVK(const Device* device) {
     init(device);

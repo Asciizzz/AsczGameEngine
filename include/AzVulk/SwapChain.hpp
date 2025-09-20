@@ -1,8 +1,7 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
-#include "AzVulk/Device.hpp"
+#include "AzVulk/FrameBuffer.hpp"
 
 namespace AzVulk {
 struct SwapChainSupportDetails {
@@ -15,6 +14,7 @@ class SwapChain {
 public:
     SwapChain(const Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window);
     ~SwapChain();
+    void cleanup();
 
     SwapChain(const SwapChain&) = delete;
     SwapChain& operator=(const SwapChain&) = delete;
@@ -32,13 +32,12 @@ public:
     VkFormat imageFormat;
     VkExtent2D extent;
     std::vector<VkImageView> imageViews;
-    std::vector<VkFramebuffer> framebuffers;
+
+    UniquePtrVec<FrameBuffer> framebuffers;
 
     // Helper methods 
     void createSwapChain(SDL_Window* window);
     void createImageViews();
-    void cleanup();
-    void cleanupFramebuffers();
 
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice lDevice);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);

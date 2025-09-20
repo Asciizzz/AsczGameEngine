@@ -121,9 +121,6 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     // Recreate depth resources before recreating other resources
     depthManager->createDepthResources(newWidth, newHeight);
     
-    // Clean up SwapChain framebuffers before image views
-    swapChain->cleanupFramebuffers();
-    
     // Now safe to cleanup and recreate SwapChain
     swapChain->cleanup();
     swapChain->createSwapChain(window);
