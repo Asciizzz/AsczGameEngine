@@ -42,15 +42,12 @@ void Application::initComponents() {
     // 10km view distance for those distant horizons
     camera = MakeUnique<Camera>(glm::vec3(0.0f), 45.0f, 0.1f, 1000.0f);
     camera->setAspectRatio(aspectRatio);
-    printf("\033[1;34m Camera initialized with aspect ratio: %.2f \033[0m\n", aspectRatio);
 
     auto extensions = windowManager->getRequiredVulkanExtensions();
     vkInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
     vkInstance->createSurface(windowManager->window);
-    printf("\033[1;34m Vulkan instance and surface created. \033[0m\n");
 
     deviceVK = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
-    printf("\033[1;34m Vulkan device created. \033[0m\n");
 
     // So we dont have to write these things over and over again
     VkDevice lDevice = deviceVK->lDevice;
@@ -63,15 +60,12 @@ void Application::initComponents() {
         windowManager->window,
         Application::MAX_FRAMES_IN_FLIGHT
     );
-    printf("\033[1;34m Renderer initialized. \033[0m\n");
 
     resGroup = MakeUnique<ResourceGroup>(deviceVK.get());
-    printf("\033[1;34m Resource group created. \033[0m\n");
 
     glbUBOManager = MakeUnique<GlbUBOManager>(
         deviceVK.get(), Application::MAX_FRAMES_IN_FLIGHT
     );
-    printf("\033[1;34m Global UBO manager created. \033[0m\n");
 
 // PLAYGROUND FROM HERE
 

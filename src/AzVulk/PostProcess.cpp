@@ -58,24 +58,12 @@ void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
     if (swapChain->extent.width == 0 || swapChain->extent.height == 0) {
         throw std::runtime_error("PostProcess: Invalid swapchain dimensions");
     }
-    
-    printf("        \033[1;35m Initializing PostProcess with swapchain extent: %ux%u \033[0m\n", 
-            swapChain->extent.width, swapChain->extent.height);
 
     createSampler();
-    printf("        \033[1;35m Sampler created. \033[0m\n");
-
     createPingPongImages();
-    printf("        \033[1;35m Ping-pong images created. \033[0m\n");
-
     createOffscreenFramebuffers();
-    printf("        \033[1;35m Offscreen framebuffers created. \033[0m\n");
-    
     createSharedDescriptors();
-    printf("        \033[1;35m Shared descriptors created. \033[0m\n");
-
     createFinalBlit();
-    printf("        \033[1;35m Final blit pipeline created. \033[0m\n");
 }
 
 void PostProcess::createPingPongImages() {
@@ -84,19 +72,12 @@ void PostProcess::createPingPongImages() {
     VkExtent2D extent = swapChain->extent;
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        // auto& imageA = pingPongImages[frame].imageA;
-        // auto& imageB = pingPongImages[frame].imageB;
         pingPongImages.push_back(MakeUnique<PingPongImages>());
         auto& imageA = pingPongImages[frame]->imageA;
         auto& imageB = pingPongImages[frame]->imageB;
 
-        printf("            \033[1;36m Creating ping-pong images for frame %d with extent %ux%u \033[0m\n", 
-                frame, extent.width, extent.height);
-
         imageA = ImageVK(deviceVK);
         imageB = ImageVK(deviceVK);
-        printf("            \033[1;36m Initialized ImageVK instances for ping-pong images. \033[0m\n");
-
 
         ImageConfig sharedConfig = ImageConfig()
             .setDimensions(extent.width, extent.height)
@@ -114,16 +95,9 @@ void PostProcess::createPingPongImages() {
 
         bool success = true;
         success &= imageA.createImage(sharedConfig);
-        printf("            \033[1;36m Created ping-pong image A. \033[0m\n");
-
         success &= imageA.createImageView(viewConfig);
-        printf("            \033[1;36m Created ping-pong image A view. \033[0m\n");
-
         success &= imageB.createImage(sharedConfig);
-        printf("            \033[1;36m Created ping-pong image B. \033[0m\n");
-
         success &= imageB.createImageView(viewConfig);
-        printf("            \033[1;36m Created ping-pong image B view. \033[0m\n");
 
         if (!success) throw std::runtime_error("Failed to create ping-pong images");
     }
@@ -651,7 +625,8 @@ void PostProcess::cleanupRenderResources() {
         sampler = VK_NULL_HANDLE;
     }
 
-    // No need for image cleanup
+    // Destroy ping-pong images
+    pingPongImages.clear();
 }
 
 void PostProcess::recreateEffects() {
