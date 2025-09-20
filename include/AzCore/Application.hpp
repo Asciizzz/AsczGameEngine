@@ -18,11 +18,6 @@
 
 #include "Az3D/Camera.hpp"
 
-#include "AzBeta/Particle.hpp"
-
-#include "AzGame/Grass.hpp"
-
-
 class Application {
 public:
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
@@ -51,11 +46,6 @@ private:
     UniquePtr<Az3D::GlbUBOManager> glbUBOManager;
 
     UniquePtr<Az3D::ResourceGroup> resGroup;
-
-    // Some cool game element demos
-    UniquePtr<AzGame::Grass> grassSystem;
-    UniquePtr<AzBeta::ParticleManager> particleManager;
-    Az3D::RigDemo rigDemo;
 
     // Window metadata
     const char* appTitle;

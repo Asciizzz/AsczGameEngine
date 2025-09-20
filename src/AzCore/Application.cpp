@@ -1,5 +1,7 @@
 #include "AzCore/Application.hpp"
 
+#include "Tiny3D/TinyLoader.hpp"
+
 #include <iostream>
 #include <random>
 
@@ -9,10 +11,7 @@ const bool enableValidationLayers = true;
 const bool enableValidationLayers = true;
 #endif
 
-// You're welcome
-using namespace AzGame;
 using namespace AzVulk;
-using namespace AzBeta;
 using namespace AzCore;
 using namespace Az3D;
 
@@ -69,15 +68,14 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel testModel = TinyLoader::loadModel("Assets/Untitled.glb");
+    TinyLoader::LoadOptions loadOpts;
+    loadOpts.forceStatic = true;
+    TinyModel testModel = TinyLoader::loadModel("Assets/Untitled.glb", loadOpts);
     for (auto& mat : testModel.materials) {
         // mat.toonLevel = 4;
     }
 
     testModel.printAnimationList();
-
-    rigDemo.init(deviceVK.get(), testModel, 0);
-    rigDemo.playAnimation(3);
 
     resGroup->addModel(testModel);
 
@@ -88,21 +86,6 @@ void Application::initComponents() {
     //     mat.shading = false; // No lighting for for highly stylized look
     // }
     // resGroup->addModel(testModel2);
-
-    // Set up advanced grass system with terrain generation
-    GrassConfig grassConfig;
-    grassConfig.worldSizeX = 120;
-    grassConfig.worldSizeZ = 120;
-    grassConfig.baseDensity = 3;
-    grassConfig.heightVariance = 26.9f;
-    grassConfig.lowVariance = 0.1f;
-    grassConfig.numHeightNodes = 750;
-    grassConfig.enableWind = true;
-    grassConfig.falloffRadius = 25.0f;
-    grassConfig.influenceFactor = 0.02f;
-
-    grassSystem = MakeUnique<Grass>(grassConfig);
-    grassSystem->initialize(*resGroup, deviceVK.get());
 
     // Initialize dynamic lighting system with example lights
     Az3D::LightVK sunLight{};
@@ -125,27 +108,9 @@ void Application::initComponents() {
     // spotLight.params = glm::vec4(glm::cos(glm::radians(15.0f)), glm::cos(glm::radians(25.0f)), 1.2f, 0.0f); // Inner 15°, outer 25°, attenuation 1.2
     // resGroup->addLight(spotLight);
 
-    // Initialize particle system
-    particleManager = MakeUnique<AzBeta::ParticleManager>();
-
-    // glm::vec3 boundMin = resGroup->getStaticMesh("TerrainMesh")->nodes[0].min;
-    // glm::vec3 boundMax = resGroup->getStaticMesh("TerrainMesh")->nodes[0].max;
-    // float totalHeight = abs(boundMax.y - boundMin.y);
-    // boundMin.y -= totalHeight * 2.5f;
-    // boundMax.y += totalHeight * 12.5f;
-
-    // particleManager->initialize(
-    //     resGroup.get(), deviceVK.get(),
-    //     5000, // Count
-    //     0.5f, // Radius
-    //     0.5f, // Display radius
-    //     boundMin, boundMax
-    // );
-
 // PLAYGROUND END HERE 
 
     resGroup->uploadAllToGPU();
-
 
     auto glbLayout = glbUBOManager->getDescLayout();
     auto matLayout = resGroup->getMatDescLayout();
@@ -335,74 +300,7 @@ void Application::mainLoop() {
 
         camRef.pos = camPos;
 
-        // Update grass wind animation
-        static bool yPressed = false;
-        static bool enable_wind = false;
-        static bool use_gpu = true;
-        if (k_state[SDL_SCANCODE_Y] && !yPressed) {
-
-            if (k_state[SDL_SCANCODE_LSHIFT]) {
-                use_gpu = !use_gpu;
-            } else {
-                enable_wind = !enable_wind;
-            }
-
-            yPressed = true;
-        } else if (!k_state[SDL_SCANCODE_Y]) {
-            yPressed = false;
-        }
-
-        if (grassSystem && enable_wind) {
-            grassSystem->updateWindAnimation(dTime, use_gpu);
-        }
-
-        // // Particle physics toggle and teleport
-        // static bool pPressed = false;
-        // static bool particlePhysicsEnabled = false;
-        // if (k_state[SDL_SCANCODE_P] && !pPressed) {
-        //     // Toggle particle physics
-        //     if (!k_state[SDL_SCANCODE_LSHIFT]) { 
-        //         particlePhysicsEnabled = !particlePhysicsEnabled;
-        //     } else {
-        //         particlePhysicsEnabled = false;
-
-        //         // Teleport every particle to the current location
-        //         std::vector<Transform>& particles = particleManager->particles;
-        //         std::vector<StaticInstance>& particlesData = particleManager->particles_data;
-
-        //         std::vector<size_t> indices(particles.size());
-        //         std::iota(indices.begin(), indices.end(), 0);
-
-        //         std::for_each(indices.begin(), indices.end(), [&](size_t i) {
-        //             particles[i].pos = camRef.pos;
-
-        //             particlesData[i].setTransform(particles[i].pos, particles[i].rot);
-        //         });
-        //     }
-
-        //     pPressed = true;
-        // } else if (!k_state[SDL_SCANCODE_P]) {
-        //     pPressed = false;
-        // }
-
-        // if (particlePhysicsEnabled) {
-        //     // particleManager->updatePhysic(dTime, resGroup->getStaticMesh("TerrainMesh"), glm::mat4(1.0f));
-        // };
-        // particleManager->updateRender();
-
-        // Crouch walking
-        if (k_state[SDL_SCANCODE_1]) rigDemo.playAnimation(0);
-        if (k_state[SDL_SCANCODE_2]) rigDemo.playAnimation(1);
-        if (k_state[SDL_SCANCODE_3]) rigDemo.playAnimation(2);
-        if (k_state[SDL_SCANCODE_4]) rigDemo.playAnimation(3);
-        if (k_state[SDL_SCANCODE_5]) rigDemo.playAnimation(4);
-        if (k_state[SDL_SCANCODE_6]) rigDemo.playAnimation(5);
-
-
 // =================================
-
-        // grassSystem->grassInstanceGroup.updateDataBuffer(); // Per frame update since grass moves
-        // Use the new explicit rendering interface
 
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
@@ -413,22 +311,9 @@ void Application::mainLoop() {
             // Update dynamic light buffer if needed
             resGroup->updateLightBuffer();
 
-            // Render sky background with dedicated pipeline
             rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
-            // Draw grass system
-            grassSystem->grassInstanceGroup.updateDataBuffer(); // Per frame update since grass moves
-            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->grassInstanceGroup);
-            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->terrainInstanceGroup);
-
-            rigDemo.update(dTime);
-            rendererRef.drawDemoRig(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "RiggedMesh"), rigDemo);
-
-            rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Single"), 1);
-
-            // Draw the particles
-            // particleManager->instanceGroup.updateDataBuffer();
-            // rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &particleManager->instanceGroup);
+            rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Single"), 0);
 
             rendererRef.endFrame(imageIndex);
         };

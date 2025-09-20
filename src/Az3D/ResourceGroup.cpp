@@ -194,7 +194,7 @@ void ResourceGroup::createMaterialDescSet() {
 // ========================= TEXTURES =========================================
 // ============================================================================
 
-ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
+UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& texture) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
@@ -243,7 +243,7 @@ ImageVK ResourceGroup::createTexture(const TinyTexture& texture) {
         .copyFromBufferImmediate(stagingBuffer.get(), texture.width, texture.height)
         .generateMipmapsImmediate();
 
-    return textureVK;
+    return MakeUnique<ImageVK>(std::move(textureVK));
 }
 
 
@@ -328,7 +328,7 @@ void ResourceGroup::createTextureDescSet() {
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
     for (uint32_t i = 0; i < textureCount; ++i) {
         imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfos[i].imageView   = textures[i].getView();
+        imageInfos[i].imageView   = textures[i]->getView();
         imageInfos[i].sampler     = VK_NULL_HANDLE;
     }
 

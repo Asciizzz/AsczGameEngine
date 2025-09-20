@@ -113,7 +113,7 @@ public:
     std::vector<ModelPtr>             modelVKs; // Contain indices to vulkan resources
     std::vector<MaterialVK>           materialVKs; // Very different from TinyMaterial
     UniquePtrVec<SubmeshVK>           submeshVKs;
-    std::vector<AzVulk::ImageVK> textures;
+    UniquePtrVec<AzVulk::ImageVK>     textures;
 
     size_t addSubmeshVK(const TinySubmesh& submesh);
     VkBuffer getSubmeshVertexBuffer(size_t submeshVK_index) const;
@@ -151,7 +151,7 @@ public:
     void createLightDescSet();
 
     // Useful methods
-    AzVulk::ImageVK createTexture(const TinyTexture& texture);
+    UniquePtr<AzVulk::ImageVK> createTexture(const TinyTexture& texture);
 };
 
 } // namespace Az3D

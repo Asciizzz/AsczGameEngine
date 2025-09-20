@@ -296,49 +296,6 @@ void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3
     }
 }
 
-
-// No instance buffer data yet
-void Renderer::drawDemoRig(const ResourceGroup* resGroup, const GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const Az3D::RigDemo& demo) const {
-    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
-    rPipeline->bindCmd(currentCmd);
-
-    VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
-    VkDescriptorSet matSet = resGroup->getMatDescSet();
-    VkDescriptorSet texSet = resGroup->getTexDescSet();
-    VkDescriptorSet rigSet = demo.descSet.get();
-    VkDescriptorSet lightSet = resGroup->getLightDescSet();
-    VkDescriptorSet sets[] = {glbSet, matSet, texSet, rigSet, lightSet};
-    rPipeline->bindSets(currentCmd, sets, 5);
-
-    size_t modelIndex = demo.modelIndex;
-    const auto& modelVK = resGroup->modelVKs[modelIndex];
-    uint32_t lightCount = resGroup->getLightCount();
-
-    // Draw submeshes
-    for (size_t i = 0; i < modelVK.submeshVK_indices.size(); ++i) {
-        uint32_t indexCount = modelVK.submesh_indexCounts[i];
-        if (indexCount == 0) continue;
-
-        size_t submeshIndex = modelVK.submeshVK_indices[i];
-        uint32_t matIndex  = modelVK.materialVK_indices[i];
-
-        // Push constants: material index, light count, unused, unused
-        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
-
-        VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
-        VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
-
-        VkBuffer buffers[] = { vertexBuffer };
-        VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-        // Draw all submesh instances
-        vkCmdDrawIndexed(currentCmd, indexCount, 1, 0, 0, 0);
-    }
-}
-
-
 // Sky rendering using dedicated sky pipeline
 void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];

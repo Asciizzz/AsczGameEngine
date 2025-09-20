@@ -11,13 +11,10 @@
 #include "AzVulk/PostProcess.hpp"
 #include "AzVulk/DepthManager.hpp"
 #include "AzVulk/RenderPass.hpp"
-#include <memory>
 
 #include "Az3D/GlobalUBO.hpp"
 #include "Az3D/ResourceGroup.hpp"
 #include "Az3D/StaticInstance.hpp"
-
-#include "Az3D/RigDemo.hpp"
 
 namespace AzVulk {
 
@@ -53,8 +50,6 @@ public:
     void drawStaticInstanceGroup(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::StaticInstanceGroup* instanceGroup) const;
     
     void drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t modelIndex) const;
-
-    void drawDemoRig(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const Az3D::RigDemo& demo) const;
 
     void drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const;
 
