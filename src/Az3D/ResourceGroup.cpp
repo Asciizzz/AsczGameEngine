@@ -1,6 +1,8 @@
 #include "Az3D/ResourceGroup.hpp"
 #include "Tiny3D/TinyLoader.hpp"
-#include "AzVulk/Device.hpp"
+
+#include "AzVulk/CmdBuffer.hpp"
+
 #include <iostream>
 
 using namespace AzVulk;
@@ -218,7 +220,7 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
         .uploadData(vulkanData.data());
 
     // Create ImageVK with texture configuration
-    ImageVK textureVK(deviceVK);
+    ImageVK textureVK;
 
     ImageConfig config = ImageConfig()
         .setDimensions(texture.width, texture.height)
@@ -232,16 +234,21 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
         .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
         .setAutoMipLevels(texture.width, texture.height);
 
-    bool success = textureVK.createImage(config);
-    success &= textureVK.createImageView(viewConfig);
+    bool success = textureVK
+        .init(deviceVK)
+        .createImage(config)
+        .createImageView(viewConfig)
+        .isValid();
 
     if (!success) throw std::runtime_error("Failed to create ImageVK for texture");
 
+    // TempCmd tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
+
     textureVK
-        .transitionLayoutImmediate( VK_IMAGE_LAYOUT_UNDEFINED, 
+        .transitionLayoutImmediate(deviceVK, VK_IMAGE_LAYOUT_UNDEFINED, 
                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        .copyFromBufferImmediate(stagingBuffer.get(), texture.width, texture.height)
-        .generateMipmapsImmediate();
+        .copyFromBufferImmediate(deviceVK, stagingBuffer.get(), texture.width, texture.height)
+        .generateMipmapsImmediate(deviceVK);
 
     return MakeUnique<ImageVK>(std::move(textureVK));
 }

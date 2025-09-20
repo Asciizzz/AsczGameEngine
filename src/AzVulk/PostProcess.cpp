@@ -76,10 +76,7 @@ void PostProcess::createPingPongImages() {
         auto& imageA = pingPongImages[frame]->imageA;
         auto& imageB = pingPongImages[frame]->imageB;
 
-        imageA = ImageVK(deviceVK);
-        imageB = ImageVK(deviceVK);
-
-        ImageConfig sharedConfig = ImageConfig()
+        ImageConfig sharedImageConfig = ImageConfig()
             .setDimensions(extent.width, extent.height)
             .setFormat(format)
             .setTiling(VK_IMAGE_TILING_OPTIMAL)
@@ -90,14 +87,20 @@ void PostProcess::createPingPongImages() {
                         ImageUsage::TransferDst)
             .setMemProps(MemProp::DeviceLocal);
 
-        ImageViewConfig viewConfig = ImageViewConfig()
+        ImageViewConfig sharedViewConfig = ImageViewConfig()
             .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT);
 
-        bool success = true;
-        success &= imageA.createImage(sharedConfig);
-        success &= imageA.createImageView(viewConfig);
-        success &= imageB.createImage(sharedConfig);
-        success &= imageB.createImageView(viewConfig);
+        bool success = 
+            imageA
+                .init(deviceVK)
+                .createImage(sharedImageConfig)
+                .createImageView(sharedViewConfig)
+                .isValid() &&
+            imageB
+                .init(deviceVK)
+                .createImage(sharedImageConfig)
+                .createImageView(sharedViewConfig)
+                .isValid();
 
         if (!success) throw std::runtime_error("Failed to create ping-pong images");
     }

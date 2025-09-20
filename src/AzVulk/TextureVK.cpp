@@ -76,16 +76,17 @@ ImageViewConfig& ImageViewConfig::setAutoMipLevels(uint32_t width, uint32_t heig
     return *this;
 }
 
-
-// ImageVK implementation
-void ImageVK::init(const Device* device) {
-    this->device = device;
+ImageVK::ImageVK(const Device* device) {
+    init(device);
+}
+ImageVK::ImageVK(VkDevice lDevice, VkPhysicalDevice pDevice) {
+    init(lDevice, pDevice);
 }
 
 ImageVK::~ImageVK() { cleanup(); }
 
 ImageVK::ImageVK(ImageVK&& other) noexcept
-    : device(other.device)
+    : lDevice(other.lDevice)
     , image(other.image)
     , memory(other.memory)
     , view(other.view)
@@ -95,11 +96,10 @@ ImageVK::ImageVK(ImageVK&& other) noexcept
     , depth(other.depth)
     , mipLevels(other.mipLevels)
     , arrayLayers(other.arrayLayers)
-    , currentLayout(other.currentLayout)
-    , debugName(std::move(other.debugName)) {
+    , currentLayout(other.currentLayout) {
     
     // Reset other object
-    other.device = nullptr;
+    other.lDevice = VK_NULL_HANDLE;
     other.image = VK_NULL_HANDLE;
     other.memory = VK_NULL_HANDLE;
     other.view = VK_NULL_HANDLE;
@@ -115,8 +115,8 @@ ImageVK::ImageVK(ImageVK&& other) noexcept
 ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
     if (this != &other) {
         cleanup();
-        
-        device = other.device;
+
+        lDevice = other.lDevice;
         image = other.image;
         memory = other.memory;
         view = other.view;
@@ -127,10 +127,9 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
         mipLevels = other.mipLevels;
         arrayLayers = other.arrayLayers;
         currentLayout = other.currentLayout;
-        debugName = std::move(other.debugName);
         
         // Reset other object
-        other.device = nullptr;
+        other.lDevice = VK_NULL_HANDLE;
         other.image = VK_NULL_HANDLE;
         other.memory = VK_NULL_HANDLE;
         other.view = VK_NULL_HANDLE;
@@ -146,15 +145,26 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
 }
 
 
+ImageVK& ImageVK::init(const Device* device) {
+    return init(device->lDevice, device->pDevice);
+}
+ImageVK& ImageVK::init(VkDevice lDevice, VkPhysicalDevice pDevice) {
+    if (lDevice == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
+        std::cerr << "ImageVK: Cannot initialize - invalid device handles" << std::endl;
+        return *this;
+    }
+    this->lDevice = lDevice;
+    this->pDevice = pDevice;
+    return *this;
+}
 
-
-bool ImageVK::createImage(const ImageConfig& config) {
-    if (!device) {
-        std::cerr << "ImageVK: Device is null" << std::endl;
-        return false;
+ImageVK& ImageVK::createImage(const ImageConfig& config) {
+    if (lDevice == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
+        std::cerr << "ImageVK: Cannot create image - device not set" << std::endl;
+        return *this;
     }
 
-    cleanup(); // Clean up any existing resources
+    cleanup();
 
     // Store configuration
     width = config.width;
@@ -181,45 +191,44 @@ bool ImageVK::createImage(const ImageConfig& config) {
     imageInfo.samples = config.samples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(device->lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    if (vkCreateImage(lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to create image" << std::endl;
-        return false;
+        return *this;
     }
 
     // Allocate memory
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device->lDevice, image, &memRequirements);
+    vkGetImageMemoryRequirements(lDevice, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device->findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties, pDevice);
 
-    if (vkAllocateMemory(device->lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+    if (vkAllocateMemory(lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to allocate image memory" << std::endl;
         cleanup();
-        return false;
+        return *this;
     }
 
     // Bind memory
-    if (vkBindImageMemory(device->lDevice, image, memory, 0) != VK_SUCCESS) {
+    if (vkBindImageMemory(lDevice, image, memory, 0) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to bind image memory" << std::endl;
         cleanup();
-        return false;
     }
 
-    return true;
+    return *this;
 }
 
-bool ImageVK::createImageView(const ImageViewConfig& viewConfig) {
+ImageVK& ImageVK::createImageView(const ImageViewConfig& viewConfig) {
     if (image == VK_NULL_HANDLE) {
         std::cerr << "ImageVK: Cannot create image view - image not created" << std::endl;
-        return false;
+        return *this;
     }
 
     // Clean up existing image view
     if (view != VK_NULL_HANDLE) {
-        vkDestroyImageView(device->lDevice, view, nullptr);
+        vkDestroyImageView(lDevice, view, nullptr);
         view = VK_NULL_HANDLE;
     }
 
@@ -236,12 +245,11 @@ bool ImageVK::createImageView(const ImageViewConfig& viewConfig) {
     createInfo.subresourceRange.baseArrayLayer = viewConfig.baseArrayLayer;
     createInfo.subresourceRange.layerCount = (viewConfig.arrayLayers == VK_REMAINING_ARRAY_LAYERS) ? arrayLayers : viewConfig.arrayLayers;
 
-    if (vkCreateImageView(device->lDevice, &createInfo, nullptr, &view) != VK_SUCCESS) {
+    if (vkCreateImageView(lDevice, &createInfo, nullptr, &view) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to create image view" << std::endl;
-        return false;
     }
 
-    return true;
+    return *this;
 }
 
 
@@ -319,7 +327,7 @@ void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
 
     // Check if image format supports linear blitting
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(device->pDevice, format, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(pDevice, format, &formatProperties);
 
     if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
         throw std::runtime_error("ImageVK: texture image format does not support linear blitting!");
@@ -387,7 +395,7 @@ void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
 
 
 
-ImageVK& ImageVK::transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout) {
+ImageVK& ImageVK::transitionLayoutImmediate(const Device* device, VkImageLayout oldLayout, VkImageLayout newLayout) {
     TempCmd tempCmd(device, device->graphicsPoolWrapper);
     transitionLayout(tempCmd.get(), oldLayout, newLayout);
     tempCmd.endAndSubmit();
@@ -395,7 +403,7 @@ ImageVK& ImageVK::transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayo
     return *this;
 }
 
-ImageVK& ImageVK::copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
+ImageVK& ImageVK::copyFromBufferImmediate(const Device* device, VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
     TempCmd tempCmd(device, device->graphicsPoolWrapper);
     copyFromBuffer(tempCmd.get(), srcBuffer, width, height, mipLevel);
     tempCmd.endAndSubmit();
@@ -403,7 +411,7 @@ ImageVK& ImageVK::copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, ui
     return *this;
 }
 
-ImageVK& ImageVK::generateMipmapsImmediate() {
+ImageVK& ImageVK::generateMipmapsImmediate(const Device* device) {
     TempCmd tempCmd(device, device->graphicsPoolWrapper);
     generateMipmaps(tempCmd.get());
     tempCmd.endAndSubmit();
@@ -419,10 +427,6 @@ bool ImageVK::isValid() const {
 }
 
 void ImageVK::cleanup() {
-    if (!device) return;
-
-    VkDevice lDevice = device->lDevice;
-
     if (view != VK_NULL_HANDLE) { vkDestroyImageView(lDevice, view, nullptr); view = VK_NULL_HANDLE; }
     if (image != VK_NULL_HANDLE) { vkDestroyImage(lDevice, image, nullptr); image = VK_NULL_HANDLE; }
     if (memory != VK_NULL_HANDLE) { vkFreeMemory(lDevice, memory, nullptr); memory = VK_NULL_HANDLE; }

@@ -68,8 +68,10 @@ struct ImageViewConfig {
 // Main ImageVK class
 class ImageVK {
 public:
-    ImageVK() = default; void init(const Device* device);
-    ImageVK(const Device* device) : device(device) {}
+    ImageVK() = default;
+    ImageVK(const Device* device);
+    ImageVK(VkDevice lDevice, VkPhysicalDevice pDevice);
+
     ~ImageVK();
 
     // Delete copy constructor and assignment operator
@@ -80,9 +82,11 @@ public:
     ImageVK(ImageVK&& other) noexcept;
     ImageVK& operator=(ImageVK&& other) noexcept;
 
-    // Creation methods
-    bool createImage(const ImageConfig& config);
-    bool createImageView(const ImageViewConfig& viewConfig);
+    // Create and initialize
+    ImageVK& init(const Device* device);
+    ImageVK& init(VkDevice lDevice, VkPhysicalDevice pDevice);
+    ImageVK& createImage(const ImageConfig& config);
+    ImageVK& createImageView(const ImageViewConfig& viewConfig);
 
     // For static texture
     void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
@@ -93,9 +97,9 @@ public:
     void generateMipmaps(VkCommandBuffer cmd);
 
     // Immediate operations using temporary command buffers
-    ImageVK& transitionLayoutImmediate(VkImageLayout oldLayout, VkImageLayout newLayout);
-    ImageVK& copyFromBufferImmediate(VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
-    ImageVK& generateMipmapsImmediate();
+    ImageVK& transitionLayoutImmediate(const Device* deviceVK, VkImageLayout oldLayout, VkImageLayout newLayout);
+    ImageVK& copyFromBufferImmediate(const Device* deviceVK, VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
+    ImageVK& generateMipmapsImmediate(const Device* deviceVK);
 
     // Getters
     VkImage getImage() const { return image; }
@@ -116,8 +120,9 @@ public:
     static uint32_t autoMipLevels(uint32_t width, uint32_t height);
 
 private:
-    const Device* device;
-    
+    VkDevice lDevice = VK_NULL_HANDLE;
+    VkPhysicalDevice pDevice = VK_NULL_HANDLE;
+
     VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
@@ -129,8 +134,6 @@ private:
     uint32_t mipLevels = 1;
     uint32_t arrayLayers = 1;
     VkImageLayout currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    
-    std::string debugName;
 
     // Helper methods
     VkPipelineStageFlags getStageFlags(VkImageLayout layout);
