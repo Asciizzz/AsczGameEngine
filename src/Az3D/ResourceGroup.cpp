@@ -247,7 +247,7 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
     textureVK
         .transitionLayoutImmediate(tempCmd.get(), VK_IMAGE_LAYOUT_UNDEFINED, 
                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-        .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get(), texture.width, texture.height)
+        .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get())
         .generateMipmapsImmediate(tempCmd.get());
 
     tempCmd.endAndSubmit(); // Kinda redundant but whatever

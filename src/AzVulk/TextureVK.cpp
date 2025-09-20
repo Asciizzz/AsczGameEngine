@@ -265,8 +265,7 @@ ImageVK& ImageVK::createView(const ImageViewConfig& viewConfig) {
 
 
 
-void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
-                                  uint32_t baseMipLevel, uint32_t mipLevels, uint32_t baseArrayLayer, uint32_t arrayLayers) {
+void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
     if (image == VK_NULL_HANDLE) {
         std::cerr << "ImageVK: Cannot transition layout - image not created" << std::endl;
         return;
@@ -290,11 +289,11 @@ void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkI
     } else {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
-    
-    barrier.subresourceRange.baseMipLevel = baseMipLevel;
-    barrier.subresourceRange.levelCount = (mipLevels == VK_REMAINING_MIP_LEVELS) ? this->mipLevels - baseMipLevel : mipLevels;
-    barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
-    barrier.subresourceRange.layerCount = (arrayLayers == VK_REMAINING_ARRAY_LAYERS) ? this->arrayLayers - baseArrayLayer : arrayLayers;
+
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = mipLevels;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = arrayLayers;
 
     barrier.srcAccessMask = getAccessFlags(oldLayout);
     barrier.dstAccessMask = getAccessFlags(newLayout);
@@ -307,8 +306,7 @@ void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkI
     currentLayout = newLayout;
 }
 
-void ImageVK::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer, 
-                                uint32_t width, uint32_t height, uint32_t mipLevel) {
+void ImageVK::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer) {
     if (image == VK_NULL_HANDLE) {
         std::cerr << "ImageVK: Cannot copy from buffer - image not created" << std::endl;
         return;
@@ -319,7 +317,7 @@ void ImageVK::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer,
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = mipLevel;
+    region.imageSubresource.mipLevel = 0;
     region.imageSubresource.baseArrayLayer = 0;
     region.imageSubresource.layerCount = 1;
     region.imageOffset = {0, 0, 0};
@@ -404,21 +402,18 @@ void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
 
 
 
-ImageVK& ImageVK::transitionLayoutImmediate(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    transitionLayout(cmd, oldLayout, newLayout);
-
+ImageVK& ImageVK::transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
+    transitionLayout(tempCmd, oldLayout, newLayout);
     return *this;
 }
 
-ImageVK& ImageVK::copyFromBufferImmediate(VkCommandBuffer cmd, VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel) {
-    copyFromBuffer(cmd, srcBuffer, width, height, mipLevel);
-
+ImageVK& ImageVK::copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer) {
+    copyFromBuffer(tempCmd, srcBuffer);
     return *this;
 }
 
-ImageVK& ImageVK::generateMipmapsImmediate(VkCommandBuffer cmd) {
-    generateMipmaps(cmd);
-
+ImageVK& ImageVK::generateMipmapsImmediate(VkCommandBuffer tempCmd) {
+    generateMipmaps(tempCmd);
     return *this;
 }
 

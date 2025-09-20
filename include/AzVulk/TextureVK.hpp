@@ -92,17 +92,14 @@ public:
     ImageVK& createView(const ImageViewConfig& viewConfig);
 
     // For static texture
-    void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout,
-                        uint32_t baseMipLevel = 0, uint32_t mipLevels = VK_REMAINING_MIP_LEVELS,
-                        uint32_t baseArrayLayer = 0, uint32_t arrayLayers = VK_REMAINING_ARRAY_LAYERS);
-    void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer, 
-                        uint32_t width, uint32_t height, uint32_t mipLevel = 0);
+    void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer);
     void generateMipmaps(VkCommandBuffer cmd);
 
     // Immediate operations using temporary command buffers
-    ImageVK& transitionLayoutImmediate(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
-    ImageVK& copyFromBufferImmediate(VkCommandBuffer cmd, VkBuffer srcBuffer, uint32_t width, uint32_t height, uint32_t mipLevel = 0);
-    ImageVK& generateMipmapsImmediate(VkCommandBuffer cmd);
+    ImageVK& transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    ImageVK& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
+    ImageVK& generateMipmapsImmediate(VkCommandBuffer tempCmd);
 
     // Getters
     VkImage getImage() const { return image; }
