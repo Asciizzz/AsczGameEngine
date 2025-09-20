@@ -177,8 +177,7 @@ void Application::initComponents() {
     
     // None - no vertex input (for fullscreen quads, etc.)
     vertexInputVKs["None"] = VertexInputVK();
-    
-    // Static - single static mesh
+
     auto vstaticLayout = TinyVertexStatic::getLayout();
     auto vstaticBind = vstaticLayout.getBindingDescription();
     auto vstaticAttrs = vstaticLayout.getAttributeDescriptions();
@@ -419,7 +418,7 @@ void Application::mainLoop() {
 
             // Draw grass system
             grassSystem->grassInstanceGroup.updateDataBuffer(); // Per frame update since grass moves
-            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Foliage"), &grassSystem->grassInstanceGroup);
+            rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->grassInstanceGroup);
             rendererRef.drawStaticInstanceGroup(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "StaticMesh"), &grassSystem->terrainInstanceGroup);
 
             rigDemo.update(dTime);

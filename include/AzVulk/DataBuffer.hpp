@@ -32,10 +32,12 @@ public:
     DataBuffer& operator=(DataBuffer&& other) noexcept;
 
     VkBuffer get() const { return buffer; }
+    VkDeviceMemory getMemory() const { return memory; }
 
-    VkDeviceSize dataSize = 0;
-    VkBufferUsageFlags usageFlags = 0;
-    VkMemoryPropertyFlags memPropFlags = 0;
+    VkDeviceSize getDataSize() const { return dataSize; }
+    VkBufferUsageFlags getUsageFlags() const { return usageFlags; }
+    VkMemoryPropertyFlags getMemPropFlags() const { return memPropFlags; }
+
 
     DataBuffer& setDataSize(VkDeviceSize size);
     DataBuffer& setUsageFlags(VkBufferUsageFlags flags);
@@ -73,6 +75,10 @@ private:
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     void* mapped = nullptr;
+
+    VkDeviceSize dataSize = 0;
+    VkBufferUsageFlags usageFlags = 0;
+    VkMemoryPropertyFlags memPropFlags = 0;
 };
 
 }

@@ -522,7 +522,7 @@ void ResourceGroup::updateLightBuffer() {
 
     // Check if we need to resize the buffer
     VkDeviceSize requiredSize = sizeof(LightVK) * lightVKs.size();
-    if (requiredSize > lightBuffer->dataSize) {
+    if (requiredSize > lightBuffer->getDataSize()) {
         // Need to recreate buffer with larger size
         createLightBuffer();
         createLightDescSet();
