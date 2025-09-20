@@ -79,18 +79,18 @@ void PostProcess::createPingPongImages() {
         auto& imageB = pingPongImages[frame]->imageB;
 
         ImageConfig sharedImageConfig = ImageConfig()
-            .setDimensions(extent.width, extent.height)
-            .setFormat(format)
-            .setTiling(VK_IMAGE_TILING_OPTIMAL)
-            .setUsage(  ImageUsage::ColorAttach |
+            .withDimensions(extent.width, extent.height)
+            .withFormat(format)
+            .withTiling(VK_IMAGE_TILING_OPTIMAL)
+            .withUsage(  ImageUsage::ColorAttach |
                         ImageUsage::Sampled | 
                         ImageUsage::Storage |
                         ImageUsage::TransferSrc |
                         ImageUsage::TransferDst)
-            .setMemProps(MemProp::DeviceLocal);
+            .withMemProps(MemProp::DeviceLocal);
 
         ImageViewConfig sharedViewConfig = ImageViewConfig()
-            .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT);
+            .withAspectMask(VK_IMAGE_ASPECT_COLOR_BIT);
 
         bool success = 
             imageA

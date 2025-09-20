@@ -8,70 +8,70 @@
 using namespace AzVulk;
 
 // ImageConfig implementation
-ImageConfig& ImageConfig::setDimensions(uint32_t w, uint32_t h, uint32_t d) {
+ImageConfig& ImageConfig::withDimensions(uint32_t w, uint32_t h, uint32_t d) {
     width = w;
     height = h;
     depth = d;
     return *this;
 }
 
-ImageConfig& ImageConfig::setFormat(VkFormat fmt) {
-    format = fmt;
-    return *this;
-}
-
-ImageConfig& ImageConfig::setUsage(VkImageUsageFlags usageFlags) {
-    usage = usageFlags;
-    return *this;
-}
-
-ImageConfig& ImageConfig::setMemProps(VkMemoryPropertyFlags memProps) {
-    memoryProperties = memProps;
-    return *this;
-}
-
-ImageConfig& ImageConfig::setMipLevels(uint32_t levels) {
-    mipLevels = levels;
-    return *this;
-}
-
-ImageConfig& ImageConfig::setAutoMipLevels(uint32_t width, uint32_t height) {
+ImageConfig& ImageConfig::withAutoMipLevels() {
     mipLevels = ImageVK::autoMipLevels(width, height);
     return *this;
 }
 
-ImageConfig& ImageConfig::setSamples(VkSampleCountFlagBits sampleCount) {
+ImageConfig& ImageConfig::withFormat(VkFormat fmt) {
+    format = fmt;
+    return *this;
+}
+
+ImageConfig& ImageConfig::withUsage(VkImageUsageFlags usageFlags) {
+    usage = usageFlags;
+    return *this;
+}
+
+ImageConfig& ImageConfig::withMemProps(VkMemoryPropertyFlags memProps) {
+    memoryProperties = memProps;
+    return *this;
+}
+
+ImageConfig& ImageConfig::withMipLevels(uint32_t levels) {
+    mipLevels = levels;
+    return *this;
+}
+
+ImageConfig& ImageConfig::withSamples(VkSampleCountFlagBits sampleCount) {
     samples = sampleCount;
     return *this;
 }
 
-ImageConfig& ImageConfig::setTiling(VkImageTiling imageTiling) {
+ImageConfig& ImageConfig::withTiling(VkImageTiling imageTiling) {
     tiling = imageTiling;
     return *this;
 }
 
 // ImageViewConfig implementation
-ImageViewConfig& ImageViewConfig::setType(VkImageViewType viewType) {
+ImageViewConfig& ImageViewConfig::withType(VkImageViewType viewType) {
     type = viewType;
     return *this;
 }
 
-ImageViewConfig& ImageViewConfig::setFormat(VkFormat fmt) {
+ImageViewConfig& ImageViewConfig::withFormat(VkFormat fmt) {
     format = fmt;
     return *this;
 }
 
-ImageViewConfig& ImageViewConfig::setAspectMask(VkImageAspectFlags aspect) {
+ImageViewConfig& ImageViewConfig::withAspectMask(VkImageAspectFlags aspect) {
     aspectMask = aspect;
     return *this;
 }
 
-ImageViewConfig& ImageViewConfig::setMipLevels(uint32_t levels) {
+ImageViewConfig& ImageViewConfig::withMipLevels(uint32_t levels) {
     mipLevels = levels;
     return *this;
 }
 
-ImageViewConfig& ImageViewConfig::setAutoMipLevels(uint32_t width, uint32_t height) {
+ImageViewConfig& ImageViewConfig::withAutoMipLevels(uint32_t width, uint32_t height) {
     mipLevels = ImageVK::autoMipLevels(width, height);
     return *this;
 }

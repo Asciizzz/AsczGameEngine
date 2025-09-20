@@ -223,16 +223,16 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
     ImageVK textureVK;
 
     ImageConfig config = ImageConfig()
-        .setDimensions(texture.width, texture.height)
-        .setFormat(textureFormat)
-        .setUsage(ImageUsage::Sampled | ImageUsage::TransferDst | ImageUsage::TransferSrc)
-        .setAutoMipLevels(texture.width, texture.height)
-        .setTiling(VK_IMAGE_TILING_OPTIMAL)
-        .setMemProps(MemProp::DeviceLocal);
+        .withDimensions(texture.width, texture.height)
+        .withAutoMipLevels()
+        .withFormat(textureFormat)
+        .withUsage(ImageUsage::Sampled | ImageUsage::TransferDst | ImageUsage::TransferSrc)
+        .withTiling(VK_IMAGE_TILING_OPTIMAL)
+        .withMemProps(MemProp::DeviceLocal);
 
     ImageViewConfig viewConfig = ImageViewConfig()
-        .setAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-        .setAutoMipLevels(texture.width, texture.height);
+        .withAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+        .withAutoMipLevels(texture.width, texture.height);
 
     bool success = textureVK
         .init(deviceVK)

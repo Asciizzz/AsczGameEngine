@@ -18,12 +18,12 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
     depthImage.cleanup(); // In case of re-creation
 
     ImageConfig depthConfig = ImageConfig()
-        .setDimensions(width, height)
-        .setFormat(findDepthFormat())
-        .setUsage(ImageUsage::DepthStencil | ImageUsage::Sampled);
+        .withDimensions(width, height)
+        .withFormat(findDepthFormat())
+        .withUsage(ImageUsage::DepthStencil | ImageUsage::Sampled);
 
     ImageViewConfig depthViewConfig = ImageViewConfig()
-        .setAspectMask(VK_IMAGE_ASPECT_DEPTH_BIT);
+        .withAspectMask(VK_IMAGE_ASPECT_DEPTH_BIT);
 
     depthImage.createImage(depthConfig);
     depthImage.createView(depthViewConfig);

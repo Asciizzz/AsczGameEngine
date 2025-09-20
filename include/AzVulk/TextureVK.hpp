@@ -33,14 +33,15 @@ struct ImageConfig {
     VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     
     // Builder pattern methods for easy configuration
-    ImageConfig& setDimensions(uint32_t w, uint32_t h, uint32_t d = 1);
-    ImageConfig& setFormat(VkFormat fmt);
-    ImageConfig& setUsage(VkImageUsageFlags usageFlags);
-    ImageConfig& setMemProps(VkMemoryPropertyFlags memProps);
-    ImageConfig& setMipLevels(uint32_t levels);
-    ImageConfig& setAutoMipLevels(uint32_t width, uint32_t height);
-    ImageConfig& setSamples(VkSampleCountFlagBits sampleCount);
-    ImageConfig& setTiling(VkImageTiling imageTiling);
+    ImageConfig& withDimensions(uint32_t w, uint32_t h, uint32_t d = 1);
+    ImageConfig& withFormat(VkFormat fmt);
+    ImageConfig& withUsage(VkImageUsageFlags usageFlags);
+    ImageConfig& withMemProps(VkMemoryPropertyFlags memProps);
+    ImageConfig& withMipLevels(uint32_t levels);
+    ImageConfig& withSamples(VkSampleCountFlagBits sampleCount);
+    ImageConfig& withTiling(VkImageTiling imageTiling);
+    
+    ImageConfig& withAutoMipLevels();
 };
 
 // Image view configuration
@@ -58,11 +59,11 @@ struct ImageViewConfig {
     };
 
     // You generally only need these setters
-    ImageViewConfig& setType(VkImageViewType viewType);
-    ImageViewConfig& setFormat(VkFormat fmt);
-    ImageViewConfig& setAspectMask(VkImageAspectFlags aspect);
-    ImageViewConfig& setMipLevels(uint32_t levels);
-    ImageViewConfig& setAutoMipLevels(uint32_t width, uint32_t height);
+    ImageViewConfig& withType(VkImageViewType viewType);
+    ImageViewConfig& withFormat(VkFormat fmt);
+    ImageViewConfig& withAspectMask(VkImageAspectFlags aspect);
+    ImageViewConfig& withMipLevels(uint32_t levels);
+    ImageViewConfig& withAutoMipLevels(uint32_t width, uint32_t height);
 };
 
 // Main ImageVK class
