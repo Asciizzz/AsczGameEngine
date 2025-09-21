@@ -10,35 +10,6 @@
 struct VkVertexInputBindingDescription;
 struct VkVertexInputAttributeDescription;
 
-// Transform structure
-
-namespace Az3D {
-
-struct Transform {
-    glm::vec3 pos{0.0f};
-    glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
-    float scl = 1.0f;
-
-    void translate(const glm::vec3& translation);
-    void rotate(const glm::quat& rotation);
-    void rotateX(float radians);
-    void rotateY(float radians);
-    void rotateZ(float radians);
-    void scale(float scale);
-
-    glm::mat4 getMat4() const;
-    void reset();
-
-    // Useful static methods
-
-    static glm::vec3 rotate(const glm::vec3& point, const glm::vec3& axis, float angle) {
-        glm::quat rotation = glm::angleAxis(angle, axis);
-        return rotation * point;
-    }
-};
-
-} // Namespace Az3D
-
 struct TinyVertexLayout {
     uint32_t stride;
     struct Attribute {
