@@ -1,5 +1,7 @@
 # AsczGame Engine - (*Subject to change for the worse*)
 
+Oh crap I forgot this ReadMe ever existed.
+
 A Vulkan-based engine that started as “how tf do I draw a triangle” and somehow evolved into something *functional*. Performance-focused and kinda proud of it, actually.
 
 Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3060" here.

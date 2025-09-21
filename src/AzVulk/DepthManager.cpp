@@ -18,6 +18,7 @@ void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
     depthImage.cleanup(); // In case of re-creation
 
     ImageConfig depthConfig = ImageConfig()
+        .withPhysicalDevice(deviceVK->pDevice)
         .withDimensions(width, height)
         .withFormat(findDepthFormat())
         .withUsage(ImageUsage::DepthStencil | ImageUsage::Sampled);

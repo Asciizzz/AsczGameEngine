@@ -50,6 +50,11 @@ ImageConfig& ImageConfig::withTiling(VkImageTiling imageTiling) {
     return *this;
 }
 
+ImageConfig& ImageConfig::withPhysicalDevice(VkPhysicalDevice pDevice) {
+    this->pDevice = pDevice;
+    return *this;
+}
+
 // ImageViewConfig implementation
 ImageViewConfig& ImageViewConfig::withType(VkImageViewType viewType) {
     type = viewType;
@@ -85,11 +90,20 @@ ImageViewConfig& ImageViewConfig::withAutoMipLevels(uint32_t width, uint32_t hei
 
 
 
+ImageVK::ImageVK(VkDevice lDevice) {
+    init(lDevice);
+}
+ImageVK& ImageVK::init(VkDevice lDevice) {
+    this->lDevice = lDevice;
+    return *this;
+}
+
 ImageVK::ImageVK(const Device* device) {
     init(device);
 }
-ImageVK::ImageVK(VkDevice lDevice, VkPhysicalDevice pDevice) {
-    init(lDevice, pDevice);
+ImageVK& ImageVK::init(const Device* device) {
+    if (device) this->lDevice = device->lDevice;
+    return *this;
 }
 
 ImageVK::~ImageVK() { cleanup(); }
@@ -105,7 +119,7 @@ ImageVK::ImageVK(ImageVK&& other) noexcept
     , depth(other.depth)
     , mipLevels(other.mipLevels)
     , arrayLayers(other.arrayLayers)
-    , currentLayout(other.currentLayout) {
+    , layout(other.layout) {
     
     // Reset other object
     other.lDevice = VK_NULL_HANDLE;
@@ -118,7 +132,7 @@ ImageVK::ImageVK(ImageVK&& other) noexcept
     other.depth = 1;
     other.mipLevels = 1;
     other.arrayLayers = 1;
-    other.currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
@@ -135,7 +149,7 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
         depth = other.depth;
         mipLevels = other.mipLevels;
         arrayLayers = other.arrayLayers;
-        currentLayout = other.currentLayout;
+        layout = other.layout;
         
         // Reset other object
         other.lDevice = VK_NULL_HANDLE;
@@ -148,27 +162,14 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
         other.depth = 1;
         other.mipLevels = 1;
         other.arrayLayers = 1;
-        other.currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
     }
     return *this;
 }
 
-
-ImageVK& ImageVK::init(const Device* device) {
-    return init(device->lDevice, device->pDevice);
-}
-ImageVK& ImageVK::init(VkDevice lDevice, VkPhysicalDevice pDevice) {
-    if (lDevice == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
-        std::cerr << "ImageVK: Cannot initialize - invalid device handles" << std::endl;
-        return *this;
-    }
-    this->lDevice = lDevice;
-    this->pDevice = pDevice;
-    return *this;
-}
 
 ImageVK& ImageVK::createImage(const ImageConfig& config) {
-    if (lDevice == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
+    if (lDevice == VK_NULL_HANDLE || config.pDevice == VK_NULL_HANDLE) {
         std::cerr << "ImageVK: Cannot create image - device not set" << std::endl;
         return *this;
     }
@@ -182,7 +183,7 @@ ImageVK& ImageVK::createImage(const ImageConfig& config) {
     mipLevels = config.mipLevels;
     arrayLayers = config.arrayLayers;
     format = config.format;
-    currentLayout = config.initialLayout;
+    layout = config.initialLayout;
 
     // Create image
     VkImageCreateInfo imageInfo{};
@@ -212,7 +213,7 @@ ImageVK& ImageVK::createImage(const ImageConfig& config) {
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties, pDevice);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties, config.pDevice);
 
     if (vkAllocateMemory(lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to allocate image memory" << std::endl;
@@ -261,169 +262,6 @@ ImageVK& ImageVK::createView(const ImageViewConfig& viewConfig) {
     return *this;
 }
 
-
-
-
-
-void ImageVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    if (image == VK_NULL_HANDLE) {
-        std::cerr << "ImageVK: Cannot transition layout - image not created" << std::endl;
-        return;
-    }
-
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    
-    // Determine aspect mask based on format
-    if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-        bool hasStencil = format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-        barrier.subresourceRange.aspectMask |= hasStencil ? VK_IMAGE_ASPECT_STENCIL_BIT : 0;
-
-    } else {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = mipLevels;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = arrayLayers;
-
-    barrier.srcAccessMask = getAccessFlags(oldLayout);
-    barrier.dstAccessMask = getAccessFlags(newLayout);
-
-    VkPipelineStageFlags sourceStage = getStageFlags(oldLayout);
-    VkPipelineStageFlags destinationStage = getStageFlags(newLayout);
-
-    vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-    currentLayout = newLayout;
-}
-
-void ImageVK::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer) {
-    if (image == VK_NULL_HANDLE) {
-        std::cerr << "ImageVK: Cannot copy from buffer - image not created" << std::endl;
-        return;
-    }
-
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {width, height, 1};
-
-    vkCmdCopyBufferToImage(cmd, srcBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-}
-
-void ImageVK::generateMipmaps(VkCommandBuffer cmd) {
-    if (image == VK_NULL_HANDLE) {
-        std::cerr << "ImageVK: Cannot generate mipmaps - image not created" << std::endl;
-        return;
-    }
-
-    // Check if image format supports linear blitting
-    VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(pDevice, format, &formatProperties);
-
-    if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-        throw std::runtime_error("ImageVK: texture image format does not support linear blitting!");
-    }
-
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.image = image;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.subresourceRange.levelCount = 1;
-
-    int32_t mipWidth = static_cast<int32_t>(width);
-    int32_t mipHeight = static_cast<int32_t>(height);
-
-    for (uint32_t i = 1; i < mipLevels; ++i) {
-        barrier.subresourceRange.baseMipLevel = i - 1;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-        VkImageBlit blit{};
-        blit.srcOffsets[0] = { 0, 0, 0 };
-        blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
-        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        blit.srcSubresource.mipLevel = i - 1;
-        blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = 1;
-        blit.dstOffsets[0] = { 0, 0, 0 };
-        blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
-        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        blit.dstSubresource.mipLevel = i;
-        blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = 1;
-
-        vkCmdBlitImage(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
-
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-        if (mipWidth > 1) mipWidth /= 2;
-        if (mipHeight > 1) mipHeight /= 2;
-    }
-
-    barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    
-    currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-}
-
-
-
-ImageVK& ImageVK::transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    transitionLayout(tempCmd, oldLayout, newLayout);
-    return *this;
-}
-
-ImageVK& ImageVK::copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer) {
-    copyFromBuffer(tempCmd, srcBuffer);
-    return *this;
-}
-
-ImageVK& ImageVK::generateMipmapsImmediate(VkCommandBuffer tempCmd) {
-    generateMipmaps(tempCmd);
-    return *this;
-}
-
-
-
-
-bool ImageVK::isValid() const {
-    return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE;
-}
-
 void ImageVK::cleanup() {
     if (view != VK_NULL_HANDLE) { vkDestroyImageView(lDevice, view, nullptr); view = VK_NULL_HANDLE; }
     if (image != VK_NULL_HANDLE) { vkDestroyImage(lDevice, image, nullptr); image = VK_NULL_HANDLE; }
@@ -432,11 +270,8 @@ void ImageVK::cleanup() {
     format = VK_FORMAT_UNDEFINED;
     width = height = depth = 0;
     mipLevels = arrayLayers = 1;
-    currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
-
-
-
 
 // Static helper functions
 VkFormat ImageVK::getVulkanFormatFromChannels(int channels) {
@@ -475,7 +310,350 @@ uint32_t ImageVK::autoMipLevels(uint32_t width, uint32_t height) {
 }
 
 
-VkPipelineStageFlags ImageVK::getStageFlags(VkImageLayout layout) {
+
+SamplerConfig& SamplerConfig::withFilters(VkFilter magFilter, VkFilter minFilter) {
+    this->magFilter = magFilter;
+    this->minFilter = minFilter;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::withMipmapMode(VkSamplerMipmapMode mode) {
+    this->mipmapMode = mode;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::withAddressModes(VkSamplerAddressMode mode) {
+    withAddressModes(mode, mode, mode);
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::withAddressModes(VkSamplerAddressMode u, VkSamplerAddressMode v, VkSamplerAddressMode w) {
+    this->addressModeU = u;
+    this->addressModeV = v;
+    this->addressModeW = w;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::withAnisotropy(VkBool32 enable, float maxAniso) {
+    this->anisotropyEnable = enable;
+    this->maxAnisotropy = maxAniso;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::withLodRange(float minLod, float maxLod, float bias) {
+    this->minLod = minLod;
+    this->maxLod = maxLod;
+    this->mipLodBias = bias;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::withBorderColor(VkBorderColor color) {
+    this->borderColor = color;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::withCompare(VkBool32 enable, VkCompareOp op) {
+    this->compareEnable = enable;
+    this->compareOp = op;
+    return *this;
+}
+
+SamplerConfig& SamplerConfig::withPhysicalDevice(VkPhysicalDevice pDevice) {
+    this->pDevice = pDevice;
+    return *this;
+}
+
+
+
+SamplerVK::SamplerVK(VkDevice lDevice) {
+    init(lDevice);
+}
+SamplerVK& SamplerVK::init(VkDevice lDevice) {
+    this->lDevice = lDevice;
+    return *this;
+}
+SamplerVK& SamplerVK::init(const Device* device) {
+    lDevice = device ? device->lDevice : VK_NULL_HANDLE;
+    return *this;
+}
+
+SamplerVK::SamplerVK(SamplerVK&& other) noexcept {
+    lDevice = other.lDevice;
+    sampler = other.sampler;
+
+    other.lDevice = VK_NULL_HANDLE;
+    other.sampler = VK_NULL_HANDLE;
+}
+
+SamplerVK& SamplerVK::operator=(SamplerVK&& other) noexcept {
+    if (this != &other) {
+        cleanup();
+
+        lDevice = other.lDevice;
+        sampler = other.sampler;
+        
+        other.lDevice = VK_NULL_HANDLE;
+        other.sampler = VK_NULL_HANDLE;
+    }
+    return *this;
+}
+
+SamplerVK& SamplerVK::create(const SamplerConfig& config) {
+    if (lDevice == VK_NULL_HANDLE) {
+        throw std::runtime_error("SamplerVK: Device not initialized");
+    }
+
+    cleanup(); // Clean up existing sampler if any
+
+    VkSamplerCreateInfo createInfo{};
+    createInfo.sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    createInfo.magFilter        = config.magFilter;
+    createInfo.minFilter        = config.minFilter;
+    createInfo.mipmapMode       = config.mipmapMode;
+    createInfo.addressModeU     = config.addressModeU;
+    createInfo.addressModeV     = config.addressModeV;
+    createInfo.addressModeW     = config.addressModeW;
+    createInfo.anisotropyEnable = config.anisotropyEnable;
+    createInfo.mipLodBias       = config.mipLodBias;
+    createInfo.minLod           = config.minLod;
+    createInfo.maxLod           = config.maxLod;
+    createInfo.borderColor      = config.borderColor;
+    createInfo.compareEnable    = config.compareEnable;
+    createInfo.compareOp        = config.compareOp;
+    createInfo.maxAnisotropy    = getMaxAnisotropy(config.pDevice, config.maxAnisotropy);
+    createInfo.unnormalizedCoordinates = config.unnormalizedCoordinates;
+
+    VkResult result = vkCreateSampler(lDevice, &createInfo, nullptr, &sampler);
+    if (result != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create VkSampler");
+    }
+
+    return *this;
+}
+
+void SamplerVK::cleanup() {
+    if (sampler != VK_NULL_HANDLE && lDevice != VK_NULL_HANDLE) {
+        vkDestroySampler(lDevice, sampler, nullptr);
+        sampler = VK_NULL_HANDLE;
+    }
+}
+
+float SamplerVK::getMaxAnisotropy(VkPhysicalDevice pDevice, float requested) {
+    if (pDevice == VK_NULL_HANDLE) {
+        return 1.0f; // Safe fallback
+    }
+
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(pDevice, &properties);
+
+    return std::min(requested, properties.limits.maxSamplerAnisotropy);
+}
+
+
+
+
+TextureVK::TextureVK(VkDevice lDevice) {
+    init(lDevice);
+}
+TextureVK& TextureVK::init(VkDevice lDevice) {
+    image.init(lDevice);
+    sampler.init(lDevice);
+    return *this;
+}
+TextureVK& TextureVK::init(const Device* device) {
+    if (device) {
+        image.init(device);
+        sampler.init(device);
+    }
+    return *this;
+}
+
+
+TextureVK::TextureVK(TextureVK&& other) noexcept
+    : image(std::move(other.image))
+    , sampler(std::move(other.sampler)) {}
+
+TextureVK& TextureVK::operator=(TextureVK&& other) noexcept {
+    if (this != &other) {
+        image = std::move(other.image);
+        sampler = std::move(other.sampler);
+    }
+    return *this;
+}
+
+
+TextureVK& TextureVK::createImage(const ImageConfig& config) {
+    image.createImage(config);
+    return *this;
+}
+
+TextureVK& TextureVK::createView(const ImageViewConfig& viewConfig) {
+    image.createView(viewConfig);
+    return *this;
+}
+
+TextureVK& TextureVK::createSampler(const SamplerConfig& config) {
+    sampler.create(config);
+    return *this;
+}
+
+
+void TextureVK::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
+    if (image.getImage() == VK_NULL_HANDLE) {
+        std::cerr << "TextureVK: Cannot transition layout - image not created" << std::endl;
+        return;
+    }
+
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = oldLayout;
+    barrier.newLayout = newLayout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image.getImage();
+    
+    // Determine aspect mask based on format
+    if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        bool hasStencil =   image.getFormat() == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+                            image.getFormat() == VK_FORMAT_D24_UNORM_S8_UINT;
+        barrier.subresourceRange.aspectMask |= hasStencil ? VK_IMAGE_ASPECT_STENCIL_BIT : 0;
+
+    } else {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = image.getMipLevels();
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = image.getArrayLayers();
+
+    barrier.srcAccessMask = getAccessFlags(oldLayout);
+    barrier.dstAccessMask = getAccessFlags(newLayout);
+
+    VkPipelineStageFlags sourceStage = getStageFlags(oldLayout);
+    VkPipelineStageFlags destinationStage = getStageFlags(newLayout);
+
+    vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    image.setLayout(newLayout);
+}
+
+void TextureVK::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer) {
+    if (image.getImage() == VK_NULL_HANDLE) {
+        std::cerr << "TextureVK: Cannot copy from buffer - image not created" << std::endl;
+        return;
+    }
+
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = image.getExtent3D();
+
+    vkCmdCopyBufferToImage(cmd, srcBuffer, image.getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+}
+
+void TextureVK::generateMipmaps(VkCommandBuffer cmd, VkPhysicalDevice pDevice) {
+    if (image.getImage() == VK_NULL_HANDLE) {
+        std::cerr << "TextureVK: Cannot generate mipmaps - image not created" << std::endl;
+        return;
+    }
+
+    // Check if image format supports linear blitting
+    VkFormatProperties formatProperties;
+    vkGetPhysicalDeviceFormatProperties(pDevice, image.getFormat(), &formatProperties);
+
+    if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+        throw std::runtime_error("TextureVK: texture image format does not support linear blitting!");
+    }
+
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.image = image.getImage();
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.levelCount = 1;
+
+    int32_t mipWidth = static_cast<int32_t>(image.getWidth());
+    int32_t mipHeight = static_cast<int32_t>(image.getHeight());
+
+    for (uint32_t i = 1; i < image.getMipLevels(); ++i) {
+        barrier.subresourceRange.baseMipLevel = i - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+        VkImageBlit blit{};
+        blit.srcOffsets[0] = { 0, 0, 0 };
+        blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.mipLevel = i - 1;
+        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.layerCount = 1;
+        blit.dstOffsets[0] = { 0, 0, 0 };
+        blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.mipLevel = i;
+        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.layerCount = 1;
+
+        vkCmdBlitImage(cmd, image.getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                            image.getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+        if (mipWidth > 1) mipWidth /= 2;
+        if (mipHeight > 1) mipHeight /= 2;
+    }
+
+    barrier.subresourceRange.baseMipLevel = image.getMipLevels() - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    
+    image.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+
+
+
+TextureVK& TextureVK::transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
+    transitionLayout(tempCmd, oldLayout, newLayout);
+    return *this;
+}
+
+TextureVK& TextureVK::copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer) {
+    copyFromBuffer(tempCmd, srcBuffer);
+    return *this;
+}
+
+TextureVK& TextureVK::generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice) {
+    generateMipmaps(tempCmd, pDevice);
+    return *this;
+}
+
+
+VkPipelineStageFlags TextureVK::getStageFlags(VkImageLayout layout) {
     switch (layout) {
         case VK_IMAGE_LAYOUT_UNDEFINED:
             return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -499,7 +677,7 @@ VkPipelineStageFlags ImageVK::getStageFlags(VkImageLayout layout) {
     }
 }
 
-VkAccessFlags ImageVK::getAccessFlags(VkImageLayout layout) {
+VkAccessFlags TextureVK::getAccessFlags(VkImageLayout layout) {
     switch (layout) {
         case VK_IMAGE_LAYOUT_UNDEFINED:
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
@@ -523,150 +701,3 @@ VkAccessFlags ImageVK::getAccessFlags(VkImageLayout layout) {
     }
 }
 
-
-
-
-
-SamplerConfig& SamplerConfig::setFilters(VkFilter magFilter, VkFilter minFilter) {
-    this->magFilter = magFilter;
-    this->minFilter = minFilter;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::setMipmapMode(VkSamplerMipmapMode mode) {
-    this->mipmapMode = mode;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::setAddressModes(VkSamplerAddressMode mode) {
-    setAddressModes(mode, mode, mode);
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::setAddressModes(VkSamplerAddressMode u, VkSamplerAddressMode v, VkSamplerAddressMode w) {
-    this->addressModeU = u;
-    this->addressModeV = v;
-    this->addressModeW = w;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::setAnisotropy(VkBool32 enable, float maxAniso) {
-    this->anisotropyEnable = enable;
-    this->maxAnisotropy = maxAniso;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::setLodRange(float minLod, float maxLod, float bias) {
-    this->minLod = minLod;
-    this->maxLod = maxLod;
-    this->mipLodBias = bias;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::setBorderColor(VkBorderColor color) {
-    this->borderColor = color;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::setCompare(VkBool32 enable, VkCompareOp op) {
-    this->compareEnable = enable;
-    this->compareOp = op;
-    return *this;
-}
-
-
-SamplerVK::SamplerVK(const Device* device) {
-    init(device);
-}
-
-SamplerVK::SamplerVK(VkDevice lDevice, VkPhysicalDevice pDevice) {
-    init(lDevice, pDevice);
-}
-
-SamplerVK::~SamplerVK() {
-    cleanup();
-}
-
-SamplerVK::SamplerVK(SamplerVK&& other) noexcept {
-    *this = std::move(other);
-}
-
-SamplerVK& SamplerVK::operator=(SamplerVK&& other) noexcept {
-    if (this != &other) {
-        cleanup();
-        
-        lDevice = other.lDevice;
-        pDevice = other.pDevice;
-        sampler = other.sampler;
-        
-        other.lDevice = VK_NULL_HANDLE;
-        other.pDevice = VK_NULL_HANDLE;
-        other.sampler = VK_NULL_HANDLE;
-    }
-    return *this;
-}
-
-SamplerVK& SamplerVK::init(const Device* device) {
-    if (device) {
-        lDevice = device->lDevice;
-        pDevice = device->pDevice;
-    }
-    return *this;
-}
-
-SamplerVK& SamplerVK::init(VkDevice lDevice, VkPhysicalDevice pDevice) {
-    this->lDevice = lDevice;
-    this->pDevice = pDevice;
-    return *this;
-}
-
-SamplerVK& SamplerVK::create(const SamplerConfig& config) {
-    if (lDevice == VK_NULL_HANDLE) {
-        throw std::runtime_error("SamplerVK: Device not initialized");
-    }
-
-    cleanup(); // Clean up existing sampler if any
-
-    VkSamplerCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    createInfo.magFilter = config.magFilter;
-    createInfo.minFilter = config.minFilter;
-    createInfo.mipmapMode = config.mipmapMode;
-    createInfo.addressModeU = config.addressModeU;
-    createInfo.addressModeV = config.addressModeV;
-    createInfo.addressModeW = config.addressModeW;
-    createInfo.anisotropyEnable = config.anisotropyEnable;
-    createInfo.maxAnisotropy = getMaxAnisotropy(config.maxAnisotropy);
-    createInfo.mipLodBias = config.mipLodBias;
-    createInfo.minLod = config.minLod;
-    createInfo.maxLod = config.maxLod;
-    createInfo.borderColor = config.borderColor;
-    createInfo.unnormalizedCoordinates = config.unnormalizedCoordinates;
-    createInfo.compareEnable = config.compareEnable;
-    createInfo.compareOp = config.compareOp;
-
-    VkResult result = vkCreateSampler(lDevice, &createInfo, nullptr, &sampler);
-    if (result != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create VkSampler");
-    }
-
-    return *this;
-}
-
-void SamplerVK::cleanup() {
-    if (sampler != VK_NULL_HANDLE && lDevice != VK_NULL_HANDLE) {
-        vkDestroySampler(lDevice, sampler, nullptr);
-        sampler = VK_NULL_HANDLE;
-    }
-}
-
-float SamplerVK::getMaxAnisotropy(float requested) const {
-    if (pDevice == VK_NULL_HANDLE) {
-        return 1.0f; // Safe fallback
-    }
-
-    VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(pDevice, &properties);
-    
-    return std::min(requested, properties.limits.maxSamplerAnisotropy);
-}

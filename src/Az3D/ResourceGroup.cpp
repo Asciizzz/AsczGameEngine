@@ -196,7 +196,7 @@ void ResourceGroup::createMaterialDescSet() {
 // ========================= TEXTURES =========================================
 // ============================================================================
 
-UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& texture) {
+UniquePtr<AzVulk::TextureVK> ResourceGroup::createTexture(const TinyTexture& texture) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
@@ -219,10 +219,11 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
         .createBuffer(deviceVK)
         .uploadData(vulkanData.data());
 
-    // Create ImageVK with texture configuration
-    ImageVK textureVK;
+    // Create texture with texture configuration
+    TextureVK textureVK;
 
-    ImageConfig config = ImageConfig()
+    ImageConfig imageConfig = ImageConfig()
+        .withPhysicalDevice(deviceVK->pDevice)
         .withDimensions(texture.width, texture.height)
         .withAutoMipLevels()
         .withFormat(textureFormat)
@@ -234,13 +235,28 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
         .withAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
         .withAutoMipLevels(texture.width, texture.height);
 
+    // A quick function to convert TinyTexture::AddressMode to VkSamplerAddressMode
+    auto convertAddressMode = [](TinyTexture::AddressMode mode) {
+        switch (mode) {
+            case TinyTexture::AddressMode::Repeat:        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            case TinyTexture::AddressMode::ClampToEdge:   return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case TinyTexture::AddressMode::ClampToBorder: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            default:                                      return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        }
+    };
+
+    SamplerConfig sampConfig = SamplerConfig()
+    // The only thing we care about right now is address mode
+        .withAddressModes(convertAddressMode(texture.addressMode));
+
     bool success = textureVK
         .init(deviceVK)
-        .createImage(config)
+        .createImage(imageConfig)
         .createView(viewConfig)
+        .createSampler(sampConfig)
         .isValid();
 
-    if (!success) throw std::runtime_error("Failed to create ImageVK for texture");
+    if (!success) throw std::runtime_error("Failed to create TextureVK from TinyTexture");
 
     TempCmd tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
 
@@ -248,11 +264,11 @@ UniquePtr<AzVulk::ImageVK> ResourceGroup::createTexture(const TinyTexture& textu
         .transitionLayoutImmediate(tempCmd.get(), VK_IMAGE_LAYOUT_UNDEFINED, 
                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get())
-        .generateMipmapsImmediate(tempCmd.get());
+        .generateMipmapsImmediate(tempCmd.get(), deviceVK->pDevice);
 
     tempCmd.endAndSubmit(); // Kinda redundant but whatever
 
-    return MakeUnique<ImageVK>(std::move(textureVK));
+    return MakeUnique<TextureVK>(std::move(textureVK));
 }
 
 

@@ -79,6 +79,7 @@ void PostProcess::createPingPongImages() {
         auto& imageB = pingPongImages[frame]->imageB;
 
         ImageConfig sharedImageConfig = ImageConfig()
+            .withPhysicalDevice(deviceVK->pDevice)
             .withDimensions(extent.width, extent.height)
             .withFormat(format)
             .withTiling(VK_IMAGE_TILING_OPTIMAL)
@@ -134,32 +135,13 @@ void PostProcess::createOffscreenFramebuffers() {
 }
 
 void PostProcess::createSampler() {
-    // VkSamplerCreateInfo samplerInfo{};
-    // samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    // samplerInfo.magFilter = VK_FILTER_LINEAR;
-    // samplerInfo.minFilter = VK_FILTER_LINEAR;
-    // samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    // samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    // samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    // samplerInfo.anisotropyEnable = VK_FALSE;
-    // samplerInfo.maxAnisotropy = 1.0f;
-    // samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    // samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    // samplerInfo.compareEnable = VK_FALSE;
-    // samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    // samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    // samplerInfo.mipLodBias = 0.0f;
-    // samplerInfo.minLod = 0.0f;
-    // samplerInfo.maxLod = 0.0f;
-
     SamplerConfig config = SamplerConfig()
-        .setFilters(VK_FILTER_LINEAR, VK_FILTER_LINEAR)
-        .setAddressModes(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
-        .setAnisotropy(VK_FALSE)
-        .setBorderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK)
-        .setCompare(VK_FALSE)
-        .setMipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
-        .setLodRange(0.0f, 0.0f);
+        .withFilters(VK_FILTER_LINEAR, VK_FILTER_LINEAR)
+        .withAddressModes(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+        .withAnisotropy(VK_FALSE) // No anisotropy for post-process
+        .withCompare(VK_FALSE) // No compare operation
+        .withBorderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK)
+        .withLodRange(0.0f, 0.0f);
 
     sampler = MakeUnique<SamplerVK>();
     sampler->init(deviceVK).create(config);

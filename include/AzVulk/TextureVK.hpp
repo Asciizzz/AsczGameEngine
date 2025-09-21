@@ -31,6 +31,8 @@ struct ImageConfig {
     VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
     VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkPhysicalDevice pDevice = VK_NULL_HANDLE; // Optional, for memory type finding
     
     // Builder pattern methods for easy configuration
     ImageConfig& withDimensions(uint32_t w, uint32_t h, uint32_t d = 1);
@@ -40,6 +42,7 @@ struct ImageConfig {
     ImageConfig& withMipLevels(uint32_t levels);
     ImageConfig& withSamples(VkSampleCountFlagBits sampleCount);
     ImageConfig& withTiling(VkImageTiling imageTiling);
+    ImageConfig& withPhysicalDevice(VkPhysicalDevice pDevice);
     
     ImageConfig& withAutoMipLevels();
 };
@@ -69,49 +72,44 @@ struct ImageViewConfig {
 };
 
 // Main ImageVK class
+
+class TextureVK;
 class ImageVK {
 public:
     ImageVK() = default;
+    ImageVK(VkDevice lDevice);
     ImageVK(const Device* device);
-    ImageVK(VkDevice lDevice, VkPhysicalDevice pDevice);
+    ImageVK& init(VkDevice lDevice);
+    ImageVK& init(const Device* device);
 
     ~ImageVK();
 
-    // Delete copy constructor and assignment operator
     ImageVK(const ImageVK&) = delete;
     ImageVK& operator=(const ImageVK&) = delete;
 
-    // Move constructor and assignment operator
     ImageVK(ImageVK&& other) noexcept;
     ImageVK& operator=(ImageVK&& other) noexcept;
 
-    // Create and initialize
-    ImageVK& init(const Device* device);
-    ImageVK& init(VkDevice lDevice, VkPhysicalDevice pDevice);
+    // =====================
+
     ImageVK& createImage(const ImageConfig& config);
     ImageVK& createView(const ImageViewConfig& viewConfig);
 
-    // For static texture
-    void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
-    void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer);
-    void generateMipmaps(VkCommandBuffer cmd);
-
-    // Immediate operations using temporary command buffers
-    ImageVK& transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout);
-    ImageVK& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
-    ImageVK& generateMipmapsImmediate(VkCommandBuffer tempCmd);
-
-    // Getters
     VkImage getImage() const { return image; }
     VkImageView getView() const { return view; }
     VkDeviceMemory getMemory() const { return memory; }
     VkFormat getFormat() const { return format; }
     uint32_t getWidth() const { return width; }
     uint32_t getHeight() const { return height; }
+    VkExtent2D getExtent2D() const { return { width, height }; }
+    VkExtent3D getExtent3D() const { return { width, height, depth }; }
     uint32_t getMipLevels() const { return mipLevels; }
-    VkImageLayout getCurrentLayout() const { return currentLayout; }
+    uint32_t getArrayLayers() const { return arrayLayers; }
+    VkImageLayout getCurrentLayout() const { return layout; }
 
-    bool isValid() const;
+    bool isValid() const { return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE; }
+    bool hasImage() const { return image != VK_NULL_HANDLE; }
+    bool hasView() const { return view != VK_NULL_HANDLE; }
     void cleanup();
 
     // Static helper functions
@@ -120,24 +118,23 @@ public:
     static uint32_t autoMipLevels(uint32_t width, uint32_t height);
 
 private:
+    friend class TextureVK;
+
     VkDevice lDevice = VK_NULL_HANDLE;
-    VkPhysicalDevice pDevice = VK_NULL_HANDLE;
 
     VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
-    
+
     VkFormat format = VK_FORMAT_UNDEFINED;
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t depth = 1;
     uint32_t mipLevels = 1;
     uint32_t arrayLayers = 1;
-    VkImageLayout currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    // Helper methods
-    VkPipelineStageFlags getStageFlags(VkImageLayout layout);
-    VkAccessFlags getAccessFlags(VkImageLayout layout);
+    void setLayout(VkImageLayout newLayout) { layout = newLayout; } // For TextureVK
 };
 
 
@@ -159,39 +156,39 @@ struct SamplerConfig {
     VkBool32 compareEnable = VK_FALSE;
     VkCompareOp compareOp = VK_COMPARE_OP_ALWAYS;
 
+    VkPhysicalDevice pDevice = VK_NULL_HANDLE; // Optional, for anisotropy limits
+
     // Builder pattern methods for easy configuration
-    SamplerConfig& setFilters(VkFilter magFilter, VkFilter minFilter);
-    SamplerConfig& setMipmapMode(VkSamplerMipmapMode mode);
-    SamplerConfig& setAddressModes(VkSamplerAddressMode mode);
-    SamplerConfig& setAddressModes(VkSamplerAddressMode u, VkSamplerAddressMode v, VkSamplerAddressMode w);
-    SamplerConfig& setAnisotropy(VkBool32 enable, float maxAniso = 16.0f);
-    SamplerConfig& setLodRange(float minLod, float maxLod, float bias = 0.0f);
-    SamplerConfig& setBorderColor(VkBorderColor color);
-    SamplerConfig& setCompare(VkBool32 enable, VkCompareOp op = VK_COMPARE_OP_LESS);
+    SamplerConfig& withFilters(VkFilter magFilter, VkFilter minFilter);
+    SamplerConfig& withMipmapMode(VkSamplerMipmapMode mode);
+    SamplerConfig& withAddressModes(VkSamplerAddressMode mode);
+    SamplerConfig& withAddressModes(VkSamplerAddressMode u, VkSamplerAddressMode v, VkSamplerAddressMode w);
+    SamplerConfig& withAnisotropy(VkBool32 enable, float maxAniso = 16.0f);
+    SamplerConfig& withLodRange(float minLod, float maxLod, float bias = 0.0f);
+    SamplerConfig& withBorderColor(VkBorderColor color);
+    SamplerConfig& withCompare(VkBool32 enable, VkCompareOp op = VK_COMPARE_OP_LESS);
+    SamplerConfig& withPhysicalDevice(VkPhysicalDevice pDevice);
 };
 
 class SamplerVK {
 public:
     SamplerVK() = default;
-    SamplerVK(const Device* device);
-    SamplerVK(VkDevice lDevice, VkPhysicalDevice pDevice);
+    SamplerVK(VkDevice lDevice);
+    SamplerVK& init(VkDevice lDevice);
+    SamplerVK& init(const Device* device);
 
-    ~SamplerVK();
+    ~SamplerVK() { cleanup(); }
 
-    // Delete copy constructor and assignment operator
     SamplerVK(const SamplerVK&) = delete;
     SamplerVK& operator=(const SamplerVK&) = delete;
 
-    // Move constructor and assignment operator
     SamplerVK(SamplerVK&& other) noexcept;
     SamplerVK& operator=(SamplerVK&& other) noexcept;
 
-    // Create and initialize
-    SamplerVK& init(const Device* device);
-    SamplerVK& init(VkDevice lDevice, VkPhysicalDevice pDevice);
+    // =====================
+
     SamplerVK& create(const SamplerConfig& config);
 
-    // Getters
     VkSampler get() const { return sampler; }
     operator VkSampler() const { return sampler; } // Implicit conversion
 
@@ -200,11 +197,55 @@ public:
 
 private:
     VkDevice lDevice = VK_NULL_HANDLE;
-    VkPhysicalDevice pDevice = VK_NULL_HANDLE;
     VkSampler sampler = VK_NULL_HANDLE;
 
     // Helper to clamp anisotropy to device limits
-    float getMaxAnisotropy(float requested) const;
+    static float getMaxAnisotropy(VkPhysicalDevice pDevice, float requested);
+};
+
+
+class TextureVK {
+public:
+    TextureVK() = default;
+    TextureVK(VkDevice lDevice);
+    TextureVK& init(VkDevice lDevice);
+    TextureVK& init(const Device* device);
+
+    TextureVK(const TextureVK&) = delete;
+    TextureVK& operator=(const TextureVK&) = delete;
+
+    TextureVK(TextureVK&& other) noexcept;
+    TextureVK& operator=(TextureVK&& other) noexcept;
+
+    // =====================
+
+    TextureVK& createImage(const ImageConfig& config);
+    TextureVK& createView(const ImageViewConfig& viewConfig);
+    TextureVK& createSampler(const SamplerConfig& config);
+
+    VkImage getImage() const { return image.getImage(); }
+    VkImageView getView() const { return image.getView(); }
+    VkSampler getSampler() const { return sampler.get(); }
+
+
+    void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer);
+    void generateMipmaps(VkCommandBuffer cmd, VkPhysicalDevice pDevice);
+
+    // Immediate operations using temporary command buffers
+    TextureVK& transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    TextureVK& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
+    TextureVK& generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice);
+
+    bool isValid() const { return image.isValid() && sampler.isValid(); }
+
+private:
+    ImageVK image;
+    SamplerVK sampler;
+    
+    // Helper methods
+    VkPipelineStageFlags getStageFlags(VkImageLayout layout);
+    VkAccessFlags getAccessFlags(VkImageLayout layout);
 };
 
 }
