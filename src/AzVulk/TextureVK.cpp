@@ -106,7 +106,16 @@ ImageVK& ImageVK::init(const Device* device) {
     return *this;
 }
 
-ImageVK::~ImageVK() { cleanup(); }
+void ImageVK::cleanup() {
+    if (view != VK_NULL_HANDLE) { vkDestroyImageView(lDevice, view, nullptr); view = VK_NULL_HANDLE; }
+    if (image != VK_NULL_HANDLE) { vkDestroyImage(lDevice, image, nullptr); image = VK_NULL_HANDLE; }
+    if (memory != VK_NULL_HANDLE) { vkFreeMemory(lDevice, memory, nullptr); memory = VK_NULL_HANDLE; }
+
+    format = VK_FORMAT_UNDEFINED;
+    width = height = depth = 0;
+    mipLevels = arrayLayers = 1;
+    layout = VK_IMAGE_LAYOUT_UNDEFINED;
+}
 
 ImageVK::ImageVK(ImageVK&& other) noexcept
     : lDevice(other.lDevice)
@@ -262,17 +271,6 @@ ImageVK& ImageVK::createView(const ImageViewConfig& viewConfig) {
     return *this;
 }
 
-void ImageVK::cleanup() {
-    if (view != VK_NULL_HANDLE) { vkDestroyImageView(lDevice, view, nullptr); view = VK_NULL_HANDLE; }
-    if (image != VK_NULL_HANDLE) { vkDestroyImage(lDevice, image, nullptr); image = VK_NULL_HANDLE; }
-    if (memory != VK_NULL_HANDLE) { vkFreeMemory(lDevice, memory, nullptr); memory = VK_NULL_HANDLE; }
-
-    format = VK_FORMAT_UNDEFINED;
-    width = height = depth = 0;
-    mipLevels = arrayLayers = 1;
-    layout = VK_IMAGE_LAYOUT_UNDEFINED;
-}
-
 // Static helper functions
 VkFormat ImageVK::getVulkanFormatFromChannels(int channels) {
     switch (channels) {
@@ -363,8 +361,6 @@ SamplerConfig& SamplerConfig::withPhysicalDevice(VkPhysicalDevice pDevice) {
     return *this;
 }
 
-
-
 SamplerVK::SamplerVK(VkDevice lDevice) {
     init(lDevice);
 }
@@ -398,6 +394,14 @@ SamplerVK& SamplerVK::operator=(SamplerVK&& other) noexcept {
     return *this;
 }
 
+void SamplerVK::cleanup() {
+    if (sampler != VK_NULL_HANDLE && lDevice != VK_NULL_HANDLE) {
+        vkDestroySampler(lDevice, sampler, nullptr);
+        sampler = VK_NULL_HANDLE;
+    }
+}
+
+
 SamplerVK& SamplerVK::create(const SamplerConfig& config) {
     if (lDevice == VK_NULL_HANDLE) {
         throw std::runtime_error("SamplerVK: Device not initialized");
@@ -429,13 +433,6 @@ SamplerVK& SamplerVK::create(const SamplerConfig& config) {
     }
 
     return *this;
-}
-
-void SamplerVK::cleanup() {
-    if (sampler != VK_NULL_HANDLE && lDevice != VK_NULL_HANDLE) {
-        vkDestroySampler(lDevice, sampler, nullptr);
-        sampler = VK_NULL_HANDLE;
-    }
 }
 
 float SamplerVK::getMaxAnisotropy(VkPhysicalDevice pDevice, float requested) {

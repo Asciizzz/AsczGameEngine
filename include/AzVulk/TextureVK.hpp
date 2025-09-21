@@ -82,7 +82,8 @@ public:
     ImageVK& init(VkDevice lDevice);
     ImageVK& init(const Device* device);
 
-    ~ImageVK();
+    ~ImageVK() { cleanup(); }
+    void cleanup();
 
     ImageVK(const ImageVK&) = delete;
     ImageVK& operator=(const ImageVK&) = delete;
@@ -110,7 +111,6 @@ public:
     bool isValid() const { return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE; }
     bool hasImage() const { return image != VK_NULL_HANDLE; }
     bool hasView() const { return view != VK_NULL_HANDLE; }
-    void cleanup();
 
     // Static helper functions
     static VkFormat getVulkanFormatFromChannels(int channels);
@@ -178,6 +178,7 @@ public:
     SamplerVK& init(const Device* device);
 
     ~SamplerVK() { cleanup(); }
+    void cleanup();
 
     SamplerVK(const SamplerVK&) = delete;
     SamplerVK& operator=(const SamplerVK&) = delete;
@@ -193,7 +194,6 @@ public:
     operator VkSampler() const { return sampler; } // Implicit conversion
 
     bool isValid() const { return sampler != VK_NULL_HANDLE; }
-    void cleanup();
 
 private:
     VkDevice lDevice = VK_NULL_HANDLE;

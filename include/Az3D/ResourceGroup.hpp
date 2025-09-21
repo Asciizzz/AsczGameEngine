@@ -132,13 +132,6 @@ public:
     void createMaterialBuffer(); // One big buffer for all
     void createMaterialDescSet();
 
-    std::vector<VkSampler>            samplers;
-    void createTextureSamplers();
-
-    std::vector<uint32_t>             texSamplerIndices; // Per-texture sampler index (maps to samplers array)
-    UniquePtr<AzVulk::DataBuffer>     textSampIdxBuffer; // Buffer containing sampler indices for each texture
-    void createTexSampIdxBuffer(); // Create buffer for texture sampler indices
-
     UniquePtr<AzVulk::DescSet>        texDescSet;
     void createTextureDescSet();
 

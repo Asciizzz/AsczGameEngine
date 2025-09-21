@@ -17,11 +17,7 @@ layout(std430, set = 1, binding = 0) readonly buffer MaterialBuffer {
     Material materials[];
 };
 
-layout(set = 2, binding = 0) uniform texture2D textures[];
-layout(std430, set = 2, binding = 1) readonly buffer SamplerIndexBuffer {
-    uint samplerIndices[];
-};
-layout(set = 2, binding = 2) uniform sampler samplers[];
+layout(set = 2, binding = 0) uniform sampler2D textures[];
 
 layout(std430, set = 4, binding = 0) readonly buffer LightBuffer {
     Light lights[];
@@ -44,8 +40,7 @@ float applyToonShading(float value, uint toonLevel) {
 }
 
 vec4 getTexture(uint texIndex, vec2 uv) {
-    uint samplerIndex = samplerIndices[texIndex];
-    return texture(sampler2D(textures[nonuniformEXT(texIndex)], samplers[samplerIndex]), uv);
+    return texture(textures[nonuniformEXT(texIndex)], uv);
 }
 
 void main() {
