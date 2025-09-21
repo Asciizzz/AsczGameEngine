@@ -66,8 +66,6 @@ file(GLOB_RECURSE SRC_FILES
     src/AzVulk/PostProcess.cpp
     src/AzVulk/Renderer.cpp
 
-    src/AzGame/Grass.cpp
-
     main.cpp
 )
 
@@ -91,9 +89,6 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/AzVulk
     ${CMAKE_SOURCE_DIR}/include/Tiny3D
     ${CMAKE_SOURCE_DIR}/include/Az3D
-
-    ${CMAKE_SOURCE_DIR}/include/AzBeta
-    ${CMAKE_SOURCE_DIR}/include/AzGame
 )
 
 
