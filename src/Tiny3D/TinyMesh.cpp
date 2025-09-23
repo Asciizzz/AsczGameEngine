@@ -1,11 +1,11 @@
 #include "Tiny3D/TinyMesh.hpp"
 
-TinySubmesh& TinySubmesh::setMaterial(int index) {
-    matIndex = index;
+TinyMesh& TinyMesh::setSubmeshes(const std::vector<TinySubmesh>& subs) {
+    submeshes = subs;
     return *this;
 }
 
-TinySubmesh::IndexType TinySubmesh::sizeToIndexType(size_t size) {
+TinyMesh::IndexType TinyMesh::sizeToIndexType(size_t size) {
     switch (size) {
         case sizeof(uint8_t):  return IndexType::Uint8;
         case sizeof(uint16_t): return IndexType::Uint16;

@@ -14,38 +14,42 @@ struct MaterialVK {
     glm::uvec4 texIndices = glm::uvec4(0, 0, 0, 0); // <albTexIndex, nrmlTexIndex, unused, unused>
 };
 
+struct MeshVK {
+    MeshVK() = default;
+    MeshVK(const MeshVK&) = delete;
+    MeshVK& operator=(const MeshVK&) = delete;
+
+    AzVulk::DataBuffer vertexBuffer;
+    AzVulk::DataBuffer indexBuffer;
+    VkIndexType indexType = VK_INDEX_TYPE_UINT32; // Default to uint32
+
+    std::vector<TinySubmesh> submeshes;
+
+    void fromMesh(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh);
+    static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
+};
+
+struct ModelVK {
+    // Deleted copy constructor and assignment
+    ModelVK() = default;
+    ModelVK(const ModelVK&) = delete;
+    ModelVK& operator=(const ModelVK&) = delete;
+    
+    MeshVK mesh;
+
+    // All material of this mesh
+    AzVulk::DataBuffer matBuffer;
+    AzVulk::DescSet matDescSet;
+
+    // No skeleton data yet since we are doing CPU skinning for now
+};
+
 struct LightVK {
     glm::vec4 position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // xyz = position, w = light type (0=directional, 1=point, 2=spot)
     glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // rgb = color, a = intensity
     glm::vec4 direction = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f); // xyz = direction (for directional/spot), w = range
     glm::vec4 params = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f); // x = inner cone angle, y = outer cone angle, z = attenuation, w = unused
 };
-
-// Index pointing to certain Vulkan elements
-struct ModelPtr {
-    std::vector<size_t> submeshVK_indices;
-
-    std::vector<uint32_t> materialVK_indices;
-    size_t skeletonIndex = -1;
-
-    // Some helpers
-    std::vector<uint32_t> submesh_indexCounts; // Cached index counts for each submesh
-    size_t submeshCount() const { return submeshVK_indices.size(); }
-};
-
-struct SubmeshVK {
-    AzVulk::DataBuffer vertexBuffer;
-    AzVulk::DataBuffer indexBuffer;
-    VkIndexType indexType = VK_INDEX_TYPE_UINT32; // Default to uint32
-};
-
-struct ModelVK {
-    std::vector<SubmeshVK> submeshVKs;
-
-    AzVulk::DataBuffer matBuffer; // Big buffer for all materials of THIS model
-    VkDescriptorSet matDescSet; // Descriptor set for the material buffer
-};
-
 
 
 // All these resource are static and fixed, created upon load
@@ -58,8 +62,7 @@ public:
     ResourceGroup& operator=(const ResourceGroup&) = delete;
 
     // Descriptor's getters
-    VkDescriptorSetLayout getMatDescLayout() const { return matDescSet->getLayout(); }
-    VkDescriptorSet getMatDescSet() const { return matDescSet->get(); }
+    VkDescriptorSetLayout getMatDescLayout() const { return *matDescLayout; }
 
     VkDescriptorSetLayout getTexDescLayout() const { return texDescSet->getLayout(); }
     VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
@@ -109,16 +112,10 @@ public:
 
     AzVulk::PipelineManager pipelines;
 
-    std::vector<TinyModel>            models;
-    std::vector<ModelPtr>             modelVKs; // Contain indices to vulkan resources
-    std::vector<MaterialVK>           materialVKs; // Very different from TinyMaterial
-    UniquePtrVec<SubmeshVK>           submeshVKs;
-    UniquePtrVec<AzVulk::TextureVK>   textures;
 
-    size_t addSubmeshVK(const TinySubmesh& submesh);
-    VkBuffer getSubmeshVertexBuffer(size_t submeshVK_index) const;
-    VkBuffer getSubmeshIndexBuffer(size_t submeshVK_index) const;
-    VkIndexType getSubmeshIndexType(size_t submeshVK_index) const;
+    std::vector<TinyModel>            models;
+    UniquePtrVec<ModelVK>             modelVKs;
+    UniquePtrVec<AzVulk::TextureVK>   textures;
 
     SharedPtrVec<TinySkeleton>        skeletons;
     UniquePtrVec<AzVulk::DataBuffer>  skeleInvMatBuffers; // Additional buffers in the future
@@ -126,12 +123,18 @@ public:
     void createRigSkeleBuffers();
     void createRigSkeleDescSets();
 
-    UniquePtr<AzVulk::DataBuffer>     matBuffer;
-    UniquePtr<AzVulk::DescSet>        matDescSet;
+    // Shared pool and layout for all models
 
-    void createMaterialBuffer(); // One big buffer for all
-    void createMaterialDescSet();
+    UniquePtr<AzVulk::DescPool>       skeleDescPool;
+    UniquePtr<AzVulk::DescLayout>     skeleDescLayout;
 
+    UniquePtr<AzVulk::DescPool>       matDescPool;
+    UniquePtr<AzVulk::DescLayout>     matDescLayout;
+    void createMaterialDescPoolAndLayout();
+
+    void createMaterialDescSet(const std::vector<MaterialVK>& materials, ModelVK& modelVK);
+
+    // Global list of all textures
     UniquePtr<AzVulk::DescSet>        texDescSet;
     void createTextureDescSet();
 

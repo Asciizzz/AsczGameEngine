@@ -85,11 +85,13 @@ struct DescSet {
     void createOwnLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
     void createOwnPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
+    // Explicit free of descriptor sets
     void free(VkDescriptorPool pool);
+
     void destroyPool();
     void destroyLayout();
 
-    void cleanup() { free(pool); destroyPool(); destroyLayout(); }
+    void cleanup() { destroyPool(); destroyLayout(); }
 
 private:
     VkDevice lDevice = VK_NULL_HANDLE;

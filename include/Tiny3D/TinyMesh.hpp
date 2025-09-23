@@ -2,8 +2,14 @@
 
 #include "Tiny3D/TinyVertex.hpp"
 
-// Uniform mesh structure that holds raw data only
 struct TinySubmesh {
+    uint32_t indexOffset = 0;
+    uint32_t indexCount = 0;
+    int matIndex = -1;
+};
+
+// Uniform mesh structure that holds raw data only
+struct TinyMesh {
     TinyVertexLayout vertexLayout;
     enum class IndexType {
         Uint8,
@@ -11,61 +17,44 @@ struct TinySubmesh {
         Uint32
     } indexType = IndexType::Uint32;
 
+    TinyMesh() = default;
+
     // Raw byte data
     std::vector<uint8_t> vertexData;
     std::vector<uint8_t> indexData;
-    int matIndex = -1;
 
-    // Division is extremely slow, so cache these
-    size_t indexCount = 0; 
     size_t vertexCount = 0;
+    size_t indexCount = 0; 
 
-    TinySubmesh() = default;
+    // Useful for reconstructing data (rarely needed)
+    size_t indexStride = 0;
+
+    std::vector<TinySubmesh> submeshes;
+
+    TinyMesh& setSubmeshes(const std::vector<TinySubmesh>& subs);
 
     template<typename VertexT>
-    TinySubmesh& setVertices(const std::vector<VertexT>& verts) {
+    TinyMesh& setVertices(const std::vector<VertexT>& verts) {
+        vertexCount = verts.size();
         vertexLayout = VertexT::getLayout();
 
-        vertexData.resize(verts.size() * sizeof(VertexT));
+        vertexData.resize(vertexCount * sizeof(VertexT));
         std::memcpy(vertexData.data(), verts.data(), vertexData.size());
 
-        vertexCount = verts.size();
         return *this;
     }
 
     template<typename IndexT>
-    TinySubmesh& setIndices(const std::vector<IndexT>& idx) {
-        indexType = sizeToIndexType(sizeof(IndexT));
+    TinyMesh& setIndices(const std::vector<IndexT>& idx) {
+        indexCount = idx.size();
+        indexStride = sizeof(IndexT);
+        indexType = sizeToIndexType(indexStride);
 
-        indexData.resize(idx.size() * sizeof(IndexT));
+        indexData.resize(indexCount * indexStride);
         std::memcpy(indexData.data(), idx.data(), indexData.size());
 
-        indexCount = idx.size();
         return *this;
     }
 
-    template<typename VertexT, typename IndexT>
-    static TinySubmesh create(const std::vector<VertexT>& verts,
-                            const std::vector<IndexT>& idx,
-                            int matIdx = -1) {
-        TinySubmesh sm;
-        sm.setVertices(verts).setIndices(idx).setMaterial(matIdx);
-        return sm;
-    }
-
-    TinySubmesh& setMaterial(int index);
     static IndexType sizeToIndexType(size_t size);
-};
-
-struct TinyMesh {
-    std::vector<TinySubmesh> submeshes;
-};
-
-struct TinyMeshLOD {
-    std::vector<TinyMesh> lods;
-
-    TinyMesh& getLevel(size_t level) {
-        if (level >= lods.size()) return lods.back();
-        else                      return lods[level];
-    }
 };

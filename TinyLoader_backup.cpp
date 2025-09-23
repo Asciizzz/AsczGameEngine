@@ -296,6 +296,7 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
         return glm::mat4(M);
     }
 }
+
 TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadOptions& options) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
@@ -907,12 +908,547 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
     return result;
 }
 
-// OBJ loader implementation using tiny_obj_loader
-TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOptions& options) {
 
-    return TinyModel(); // OBJ loading not implemented yet
+// Helper function to create a default 1x1 white texture
+TinyTexture createDefaultTexture() {
+    TinyTexture defaultTexture;
+    defaultTexture.width = 1;
+    defaultTexture.height = 1;
+    defaultTexture.channels = 3;
+    defaultTexture.data = { 255, 255, 255 }; // White pixel
+    return defaultTexture;
 }
 
+// OBJ loader implementation using tiny_obj_loader
+TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOptions& options) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    // Extract directory path for relative texture paths
+    std::string basePath = filePath.substr(0, filePath.find_last_of("/\\") + 1);
+
+    // Load the OBJ file
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str(), basePath.c_str())) {
+        return TinyModel(); // Return empty model on failure
+    }
+
+    if (!warn.empty()) {
+        printf("OBJ loader warning: %s\n", warn.c_str());
+    }
+
+    TinyModel result;
+    UnorderedMap<std::string, int> texturePathToIndex;
+
+    // Load textures if requested
+    if (options.loadTextures && options.loadMaterials) {
+        for (const auto& material : materials) {
+            if (!material.diffuse_texname.empty()) {
+                std::string texturePath = basePath + material.diffuse_texname;
+                if (texturePathToIndex.find(texturePath) == texturePathToIndex.end()) {
+                    texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                    result.textures.push_back(loadImage(texturePath));
+                }
+            }
+        }
+    }
+
+    // Load materials if requested
+    UnorderedMap<int, int> objMaterialIdToResultIndex;
+    if (options.loadMaterials) {
+        for (size_t i = 0; i < materials.size(); ++i) {
+            const auto& material = materials[i];
+            
+            TinyMaterial tinyMat{};
+            // Note: TinyMaterial has different fields than standard material
+            // Just set texture if available
+            if (options.loadTextures && !material.diffuse_texname.empty()) {
+                std::string texturePath = basePath + material.diffuse_texname;
+                auto texIt = texturePathToIndex.find(texturePath);
+                if (texIt != texturePathToIndex.end()) {
+                    tinyMat.albTexture = texIt->second;
+                }
+            }
+            
+            objMaterialIdToResultIndex[static_cast<int>(i)] = static_cast<int>(result.materials.size());
+            result.materials.push_back(tinyMat);
+        }
+    }
+
+    // Process mesh - simple approach: combine all vertices/indices, create submeshes by material ranges
+    if (shapes.empty()) {
+        return result;
+    }
+
+    // Combine all vertices and indices from all shapes
+    std::vector<TinyVertexStatic> combinedVertices;
+    std::vector<uint32_t> combinedIndices;
+    std::vector<TinySubmesh> submeshes;
+    
+    bool hasNormals = !attrib.normals.empty();
+
+    // Process each shape
+    for (const auto& shape : shapes) {
+        if (shape.mesh.indices.empty()) continue;
+
+        // Track submesh ranges by material
+        int currentMaterialId = -1;
+        uint32_t submeshStartIndex = static_cast<uint32_t>(combinedIndices.size());
+        uint32_t submeshIndexCount = 0;
+
+        size_t indexOffset = 0;
+        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+            size_t fv = shape.mesh.num_face_vertices[f];
+            int faceMaterialId = shape.mesh.material_ids.empty() ? -1 : shape.mesh.material_ids[f];
+            
+            // Check if material changed (usemtl in OBJ)
+            if (currentMaterialId != faceMaterialId) {
+                // Finish previous submesh if it has indices
+                if (submeshIndexCount > 0) {
+                    TinySubmesh submesh;
+                    submesh.indexOffset = submeshStartIndex;
+                    submesh.indexCount = submeshIndexCount;
+                    
+                    // Set material index
+                    if (options.loadMaterials && currentMaterialId >= 0) {
+                        auto it = objMaterialIdToResultIndex.find(currentMaterialId);
+                        submesh.matIndex = (it != objMaterialIdToResultIndex.end()) ? it->second : -1;
+                    } else {
+                        submesh.matIndex = -1;
+                    }
+                    
+                    submeshes.push_back(submesh);
+                }
+                
+                // Start new submesh
+                currentMaterialId = faceMaterialId;
+                submeshStartIndex = static_cast<uint32_t>(combinedIndices.size());
+                submeshIndexCount = 0;
+            }
+            
+            // Add vertices for this face
+            for (size_t v = 0; v < fv; v++) {
+                const auto& index = shape.mesh.indices[indexOffset + v];
+                TinyVertexStatic vertex{};
+
+                // Position
+                if (index.vertex_index >= 0) {
+                    vertex.pos_tu = glm::vec4(
+                        attrib.vertices[3 * index.vertex_index + 0],
+                        attrib.vertices[3 * index.vertex_index + 1],
+                        attrib.vertices[3 * index.vertex_index + 2],
+                        0.0f
+                    );
+                }
+
+                // Texture coordinates
+                if (index.texcoord_index >= 0) {
+                    vertex.pos_tu.w = attrib.texcoords[2 * index.texcoord_index + 0];
+                    vertex.nrml_tv.w = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];
+                }
+
+                // Normals
+                if (hasNormals && index.normal_index >= 0) {
+                    vertex.nrml_tv = glm::vec4(
+                        attrib.normals[3 * index.normal_index + 0],
+                        attrib.normals[3 * index.normal_index + 1],
+                        attrib.normals[3 * index.normal_index + 2],
+                        vertex.nrml_tv.w
+                    );
+                }
+
+                combinedVertices.push_back(vertex);
+                combinedIndices.push_back(static_cast<uint32_t>(combinedVertices.size() - 1));
+                submeshIndexCount++;
+            }
+            
+            indexOffset += fv;
+        }
+        
+        // Handle the last submesh for this shape
+        if (submeshIndexCount > 0) {
+            TinySubmesh submesh;
+            submesh.indexOffset = submeshStartIndex;
+            submesh.indexCount = submeshIndexCount;
+            
+            // Set material index
+            if (options.loadMaterials && currentMaterialId >= 0) {
+                auto it = objMaterialIdToResultIndex.find(currentMaterialId);
+                submesh.matIndex = (it != objMaterialIdToResultIndex.end()) ? it->second : -1;
+            } else {
+                submesh.matIndex = -1;
+            }
+            
+            submeshes.push_back(submesh);
+        }
+    }
+
+    // Generate normals if not provided
+    if (!hasNormals && combinedIndices.size() >= 3) {
+        for (size_t i = 0; i < combinedIndices.size(); i += 3) {
+            if (i + 2 < combinedIndices.size()) {
+                glm::vec3 v0 = glm::vec3(combinedVertices[combinedIndices[i]].pos_tu);
+                glm::vec3 v1 = glm::vec3(combinedVertices[combinedIndices[i + 1]].pos_tu);
+                glm::vec3 v2 = glm::vec3(combinedVertices[combinedIndices[i + 2]].pos_tu);
+                
+                glm::vec3 edge1 = v1 - v0;
+                glm::vec3 edge2 = v2 - v0;
+                glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+                for (int j = 0; j < 3; j++) {
+                    combinedVertices[combinedIndices[i + j]].nrml_tv.x = normal.x;
+                    combinedVertices[combinedIndices[i + j]].nrml_tv.y = normal.y;
+                    combinedVertices[combinedIndices[i + j]].nrml_tv.z = normal.z;
+                }
+            }
+        }
+    }
+
+    // Set up the single mesh with all data
+    if (!combinedVertices.empty() && !combinedIndices.empty()) {
+        // Determine index type
+        TinyMesh::IndexType indexType = (combinedVertices.size() > UINT16_MAX) ? 
+            TinyMesh::IndexType::Uint32 : TinyMesh::IndexType::Uint16;
+        
+        result.mesh.setVertices(combinedVertices);
+        result.mesh.setIndices(combinedIndices);
+        result.mesh.submeshes = std::move(submeshes);
+    }
+
+    return result;
+
+    // Load the OBJ file
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filePath.c_str(), basePath.c_str())) {
+        return TinyModel(); // Return empty model on failure
+    }
+
+    if (!warn.empty()) {
+        printf("OBJ loader warning: %s\n", warn.c_str());
+    }
+
+    TinyModel result;
+    UnorderedMap<std::string, int> texturePathToIndex;
+
+    // Load textures if requested
+    // If no materials are loaded, skip texture loading
+    if (options.loadTextures && options.loadMaterials) {
+        
+        for (const auto& material : materials) {
+            // Check diffuse texture
+            if (!material.diffuse_texname.empty()) {
+                std::string texturePath = basePath + material.diffuse_texname;
+                if (texturePathToIndex.find(texturePath) == texturePathToIndex.end()) {
+                    try {
+                        TinyTexture texture = loadImage(texturePath);
+                        if (!texture.data.empty()) {
+                            texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                            result.textures.push_back(std::move(texture));
+                        }
+                    } catch (const std::exception& e) {
+                        texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                        result.textures.push_back(createDefaultTexture());
+                    }
+                }
+            }
+            
+            // Check normal map texture
+            if (!material.normal_texname.empty()) {
+                std::string texturePath = basePath + material.normal_texname;
+                if (texturePathToIndex.find(texturePath) == texturePathToIndex.end()) {
+                    try {
+                        TinyTexture texture = loadImage(texturePath);
+                        if (!texture.data.empty()) {
+                            texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                            result.textures.push_back(std::move(texture));
+                        }
+                    } catch (const std::exception& e) {
+                        texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
+                        result.textures.push_back(createDefaultTexture());
+                    }
+                }
+            }
+        }
+    }
+
+    // Load materials if requested
+    UnorderedMap<int, int> objMaterialIdToResultIndex;
+    if (options.loadMaterials) {
+        result.materials.reserve(materials.size());
+        
+        for (size_t i = 0; i < materials.size(); i++) {
+            const auto& objMaterial = materials[i];
+            TinyMaterial material;
+            
+            // Map OBJ material index to result material index
+            objMaterialIdToResultIndex[static_cast<int>(i)] = static_cast<int>(result.materials.size());
+
+            // TinyMaterial doesn't store names, so we'll just use indices for material tracking
+            if (options.loadTextures) {
+                // Handle diffuse texture
+                if (!objMaterial.diffuse_texname.empty()) {
+                    std::string texturePath = basePath + objMaterial.diffuse_texname;
+                    auto it = texturePathToIndex.find(texturePath);
+                    if (it != texturePathToIndex.end()) {
+                        material.albTexture = it->second;
+                    }
+                }
+                
+                // Handle normal texture
+                if (!objMaterial.normal_texname.empty()) {
+                    std::string texturePath = basePath + objMaterial.normal_texname;
+                    auto it = texturePathToIndex.find(texturePath);
+                    if (it != texturePathToIndex.end()) {
+                        material.nrmlTexture = it->second;
+                    }
+                }
+            }
+            
+            result.materials.push_back(material);
+        }
+    }
+
+    // Hash combine utility
+    auto hash_combine = [](std::size_t& seed, std::size_t hash) {
+        seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    };
+
+    // Full-attribute hash (position + normal + texcoord)
+    auto hashVertex = [&](const TinyVertexStatic& v) -> size_t {
+        size_t seed = 0;
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.x));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.y));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.z));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.x));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.y));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.z));
+        hash_combine(seed, std::hash<float>{}(v.pos_tu.w));
+        hash_combine(seed, std::hash<float>{}(v.nrml_tv.w));
+        return seed;
+    };
+
+    bool hasNormals = !attrib.normals.empty();
+
+    // Process each shape as a separate submesh - create single combined mesh
+    TinyMesh combinedMesh;
+    std::vector<TinySubmesh> submeshRanges;
+    std::vector<TinyVertexStatic> allVertices;
+    std::vector<uint32_t> allIndices;
+    uint32_t currentIndexOffset = 0;
+    
+    for (size_t shapeIndex = 0; shapeIndex < shapes.size(); shapeIndex++) {
+        const auto& shape = shapes[shapeIndex];
+
+        // Process faces sequentially, creating new submesh when material changes
+        std::vector<TinyVertexStatic> vertices;
+        std::vector<uint32_t> indices;
+        int currentMaterialId = -2; // Start with invalid material to force first submesh creation
+        
+        size_t indexOffset = 0;
+        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+            size_t fv = shape.mesh.num_face_vertices[f];
+            int faceMaterialId = shape.mesh.material_ids.size() > f ? shape.mesh.material_ids[f] : -1;
+            
+            // Check if material changed - create new submesh if so
+            if (faceMaterialId != currentMaterialId) {
+                // Finish current submesh if it has data
+                if (!vertices.empty() && !indices.empty()) {
+                    // Generate face normals if no normals provided
+                    if (!hasNormals && indices.size() >= 3) {
+                        for (size_t i = 0; i < indices.size(); i += 3) {
+                            if (i + 2 < indices.size()) {
+                                glm::vec3 v0 = glm::vec3(vertices[indices[i]].pos_tu);
+                                glm::vec3 v1 = glm::vec3(vertices[indices[i + 1]].pos_tu);
+                                glm::vec3 v2 = glm::vec3(vertices[indices[i + 2]].pos_tu);
+                                
+                                glm::vec3 edge1 = v1 - v0;
+                                glm::vec3 edge2 = v2 - v0;
+                                glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
+                                vertices[indices[i]].nrml_tv.x = faceNormal.x;
+                                vertices[indices[i]].nrml_tv.y = faceNormal.y;
+                                vertices[indices[i]].nrml_tv.z = faceNormal.z;
+                                
+                                vertices[indices[i + 1]].nrml_tv.x = faceNormal.x;
+                                vertices[indices[i + 1]].nrml_tv.y = faceNormal.y;
+                                vertices[indices[i + 1]].nrml_tv.z = faceNormal.z;
+                                
+                                vertices[indices[i + 2]].nrml_tv.x = faceNormal.x;
+                                vertices[indices[i + 2]].nrml_tv.y = faceNormal.y;
+                                vertices[indices[i + 2]].nrml_tv.z = faceNormal.z;
+                            }
+                        }
+                    }
+
+                    // Add vertices to the combined mesh
+                    uint32_t vertexOffset = static_cast<uint32_t>(allVertices.size());
+                    allVertices.insert(allVertices.end(), vertices.begin(), vertices.end());
+                    
+                    // Add indices with vertex offset
+                    for (uint32_t index : indices) {
+                        allIndices.push_back(index + vertexOffset);
+                    }
+                    
+                    // Create submesh range
+                    TinySubmesh submesh;
+                    submesh.indexOffset = currentIndexOffset;
+                    submesh.indexCount = static_cast<uint32_t>(indices.size());
+                    
+                    // Set material index
+                    if (options.loadMaterials && currentMaterialId >= 0 && currentMaterialId < static_cast<int>(result.materials.size())) {
+                        submesh.matIndex = currentMaterialId;
+                    } else {
+                        submesh.matIndex = -1;  // No material
+                    }
+                    
+                    submeshRanges.push_back(submesh);
+                    currentIndexOffset += static_cast<uint32_t>(indices.size());
+                }
+                
+                // Start new submesh
+                vertices.clear();
+                indices.clear();
+                currentMaterialId = faceMaterialId;
+            }
+                // Save previous submesh if it has geometry
+                if (!vertices.empty() && !indices.empty()) {
+                    // Generate face normals if no normals provided
+                    if (!hasNormals && indices.size() >= 3) {
+                        for (size_t i = 0; i < indices.size(); i += 3) {
+                            if (i + 2 < indices.size()) {
+                                glm::vec3 v0 = glm::vec3(vertices[indices[i]].pos_tu);
+                                glm::vec3 v1 = glm::vec3(vertices[indices[i + 1]].pos_tu);
+                                glm::vec3 v2 = glm::vec3(vertices[indices[i + 2]].pos_tu);
+                                
+                                glm::vec3 edge1 = v1 - v0;
+                                glm::vec3 edge2 = v2 - v0;
+                                glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
+                                vertices[indices[i]].nrml_tv.x = faceNormal.x;
+                                vertices[indices[i]].nrml_tv.y = faceNormal.y;
+                                vertices[indices[i]].nrml_tv.z = faceNormal.z;
+                                
+                                vertices[indices[i + 1]].nrml_tv.x = faceNormal.x;
+                                vertices[indices[i + 1]].nrml_tv.y = faceNormal.y;
+                                vertices[indices[i + 1]].nrml_tv.z = faceNormal.z;
+                                
+                                vertices[indices[i + 2]].nrml_tv.x = faceNormal.x;
+                                vertices[indices[i + 2]].nrml_tv.y = faceNormal.y;
+                                vertices[indices[i + 2]].nrml_tv.z = faceNormal.z;
+                            }
+                        }
+                    }
+
+                    /*
+                    TinySubmesh submesh;
+                    submesh.setVertices(vertices).setIndices(indices);
+                    
+                    // Set material index using the proper mapping
+                    if (options.loadMaterials && currentMaterialId >= 0) {
+                        auto it = objMaterialIdToResultIndex.find(currentMaterialId);
+                        if (it != objMaterialIdToResultIndex.end()) {
+                            submesh.matIndex = it->second;
+                        }
+                    }
+
+                    result.submeshes.push_back(std::move(submesh));
+                    */
+                }
+                
+                // Start new submesh
+                vertices.clear();
+                indices.clear();
+                currentMaterialId = faceMaterialId;
+            }
+            
+            // Process face vertices - allow repetition for legacy OBJ compatibility
+            for (size_t v = 0; v < fv; v++) {
+                const auto& index = shape.mesh.indices[indexOffset + v];
+                TinyVertexStatic vertex{};
+
+                // Position
+                if (index.vertex_index >= 0) {
+                    vertex.pos_tu = glm::vec4(
+                        attrib.vertices[3 * index.vertex_index + 0],
+                        attrib.vertices[3 * index.vertex_index + 1],
+                        attrib.vertices[3 * index.vertex_index + 2],
+                        0.0f  // UV.x will be set below
+                    );
+                }
+
+                // Texture coordinates
+                if (index.texcoord_index >= 0) {
+                    vertex.pos_tu.w = attrib.texcoords[2 * index.texcoord_index + 0];  // U
+                    vertex.nrml_tv.w = 1.0f - attrib.texcoords[2 * index.texcoord_index + 1];  // V (flipped)
+                } else {
+                    vertex.pos_tu.w = 0.0f;  // U
+                    vertex.nrml_tv.w = 0.0f;  // V
+                }
+
+                // Normals
+                if (hasNormals && index.normal_index >= 0) {
+                    vertex.nrml_tv = glm::vec4(
+                        attrib.normals[3 * index.normal_index + 0],
+                        attrib.normals[3 * index.normal_index + 1],
+                        attrib.normals[3 * index.normal_index + 2],
+                        vertex.nrml_tv.w  // Preserve V coordinate
+                    );
+                }
+
+                // Add vertex directly (allow repetition for OBJ legacy compatibility)
+                vertices.push_back(vertex);
+                indices.push_back(static_cast<uint32_t>(vertices.size() - 1));
+            }
+            
+            indexOffset += fv;
+        }
+        
+        // Handle the last submesh
+        if (!vertices.empty() && !indices.empty()) {
+            // Generate face normals if no normals provided
+            if (!hasNormals && indices.size() >= 3) {
+                for (size_t i = 0; i < indices.size(); i += 3) {
+                    if (i + 2 < indices.size()) {
+                        glm::vec3 v0 = glm::vec3(vertices[indices[i]].pos_tu);
+                        glm::vec3 v1 = glm::vec3(vertices[indices[i + 1]].pos_tu);
+                        glm::vec3 v2 = glm::vec3(vertices[indices[i + 2]].pos_tu);
+                        
+                        glm::vec3 edge1 = v1 - v0;
+                        glm::vec3 edge2 = v2 - v0;
+                        glm::vec3 faceNormal = glm::normalize(glm::cross(edge1, edge2));
+
+                        vertices[indices[i]].nrml_tv.x = faceNormal.x;
+                        vertices[indices[i]].nrml_tv.y = faceNormal.y;
+                        vertices[indices[i]].nrml_tv.z = faceNormal.z;
+                        
+                        vertices[indices[i + 1]].nrml_tv.x = faceNormal.x;
+                        vertices[indices[i + 1]].nrml_tv.y = faceNormal.y;
+                        vertices[indices[i + 1]].nrml_tv.z = faceNormal.z;
+                        
+                        vertices[indices[i + 2]].nrml_tv.x = faceNormal.x;
+                        vertices[indices[i + 2]].nrml_tv.y = faceNormal.y;
+                        vertices[indices[i + 2]].nrml_tv.z = faceNormal.z;
+                    }
+                }
+            }
+
+            TinySubmesh submesh;
+            submesh.setVertices(vertices).setIndices(indices);
+            
+            // Set material index using the proper mapping
+            if (options.loadMaterials && currentMaterialId >= 0) {
+                auto it = objMaterialIdToResultIndex.find(currentMaterialId);
+                if (it != objMaterialIdToResultIndex.end()) {
+                    submesh.matIndex = it->second;
+                } else {
+                    submesh.matIndex = -1;  // Material not found
+                }
+            } else {
+                submesh.matIndex = -1;  // No material
+            }
+            
+    return result;
+}
 
 
 TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& options) {
@@ -931,5 +1467,3 @@ TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& 
         return TinyModel(); // Unsupported format
     }
 }
-
-

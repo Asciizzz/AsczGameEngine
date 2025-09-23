@@ -69,8 +69,8 @@ void Application::initComponents() {
 // PLAYGROUND FROM HERE
 
     TinyLoader::LoadOptions loadOpts;
-    loadOpts.forceStatic = true;
-    TinyModel testModel = TinyLoader::loadModel("Assets/Untitled.glb", loadOpts);
+    // loadOpts.forceStatic = true;
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf", loadOpts);
     for (auto& mat : testModel.materials) {
         // mat.toonLevel = 4;
     }
@@ -313,7 +313,7 @@ void Application::mainLoop() {
 
             rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
-            rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Single"), 0);
+            rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "RiggedMesh"), 0);
 
             rendererRef.endFrame(imageIndex);
         };

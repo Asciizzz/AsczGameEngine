@@ -19,21 +19,23 @@ void ResourceGroup::cleanup() {
 
     // TextureVK handles its own cleanup automatically
     textures.clear();
+
+    // Ensure correct cleanup order for material
+    modelVKs.clear();
 }
 
 void ResourceGroup::uploadAllToGPU() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    createComponentVKsFromModels();
+    createMaterialDescPoolAndLayout();
 
-    createMaterialBuffer();
-    createMaterialDescSet();
+    createComponentVKsFromModels();
 
     createTextureDescSet();
 
     createRigSkeleBuffers();
     createRigSkeleDescSets();
-
+    
     createLightBuffer();
     createLightDescSet();
 }
@@ -44,16 +46,13 @@ void ResourceGroup::uploadAllToGPU() {
 
 
 void ResourceGroup::createComponentVKsFromModels() {
-    // Create default texture and material
-    MaterialVK defaultMat{};
-    materialVKs.push_back(defaultMat);
-
+    // Create default texture first
     TinyTexture defaultTex = TinyTexture::createDefaultTexture();
     auto defaultTexture = createTexture(std::move(defaultTex));
     textures.push_back(std::move(defaultTexture));
 
     for (auto& model : models) {
-        ModelPtr modelVK;
+        UniquePtr<ModelVK> modelVK = MakeUnique<ModelVK>();
 
         std::vector<size_t> tempGlobalTextures; // A temporary list to convert local to global indices
         for (const auto& texture : model.textures) {
@@ -63,7 +62,8 @@ void ResourceGroup::createComponentVKsFromModels() {
             textures.push_back(std::move(tex));
         }
 
-        std::vector<size_t> tempGlobalMaterials; // A temporary list to convert local to global indices
+        std::vector<MaterialVK> modelMaterialVKs;
+
         for (const auto& material : model.materials) {
             MaterialVK matVK{};
 
@@ -84,36 +84,31 @@ void ResourceGroup::createComponentVKsFromModels() {
             matVK.texIndices.z = 0;
             matVK.texIndices.w = 0;
 
-            tempGlobalMaterials.push_back(materialVKs.size());
-            materialVKs.push_back(matVK);
+            modelMaterialVKs.push_back(matVK);
         }
 
+        createMaterialDescSet(modelMaterialVKs, *modelVK);
 
-        for (size_t i = 0; i < model.submeshes.size(); ++i) {
-            const auto& submesh = model.submeshes[i];
+        const TinyMesh& mesh = model.mesh;
+        modelVK->mesh.fromMesh(deviceVK, mesh);
 
-            size_t submeshVK_index = addSubmeshVK(submesh);
-            modelVK.submeshVK_indices.push_back(submeshVK_index);
+        // for (size_t i = 0; i < mesh.submeshes.size(); ++i) {
+        //     const auto& submesh = mesh.submeshes[i];
+
+        //     size_t submeshVK_index = addSubmeshVK(submesh);
+        //     modelVK.submeshVK_indices.push_back(submeshVK_index);
             
-            uint32_t indexCount = static_cast<uint32_t>(submesh.indexCount);
-            modelVK.submesh_indexCounts.push_back(indexCount);
+        //     uint32_t indexCount = static_cast<uint32_t>(submesh.indexCount);
+        //     modelVK.submesh_indexCounts.push_back(indexCount);
 
-            int localMatIndex = model.submeshes[i].matIndex;
+        //     int localMatIndex = model.submeshes[i].matIndex;
 
-            bool validMat = localMatIndex >= 0 && localMatIndex < static_cast<int>(model.materials.size());
-            size_t globalMatIndex = validMat ? tempGlobalMaterials[localMatIndex] : 0;
-            modelVK.materialVK_indices.push_back(globalMatIndex);
-        }
+        //     bool validMat = localMatIndex >= 0 && localMatIndex < static_cast<int>(model.materials.size());
+        //     size_t globalMatIndex = validMat ? tempGlobalMaterials[localMatIndex] : 0;
+        //     modelVK.materialVK_indices.push_back(globalMatIndex);
+        // }
 
-        modelVK.skeletonIndex = -1;
-        if (model.skeleton.names.size() > 0) {
-            // Create skeleton
-            SharedPtr<TinySkeleton> skeleton = std::make_shared<TinySkeleton>(model.skeleton);
-            modelVK.skeletonIndex = skeletons.size();
-            skeletons.push_back(skeleton);
-        }
-
-        modelVKs.push_back(modelVK);
+        modelVKs.push_back(std::move(modelVK));
     }
 }
 
@@ -122,40 +117,42 @@ void ResourceGroup::createComponentVKsFromModels() {
 // ========================= MATERIAL =========================================
 // ============================================================================
 
-void ResourceGroup::createMaterialBuffer() {
-    VkDeviceSize bufferSize = sizeof(MaterialVK) * materialVKs.size();
-
-    matBuffer = MakeUnique<DataBuffer>();
-    matBuffer
-        ->setDataSize(bufferSize)
-        .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(MemProp::DeviceLocal)
-        .createDeviceLocalBuffer(deviceVK, materialVKs.data());
-}
-
-// Descriptor set creation
-void ResourceGroup::createMaterialDescSet() {
+void ResourceGroup::createMaterialDescPoolAndLayout() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    matDescSet = MakeUnique<DescSet>(lDevice);
+    matDescPool = MakeUnique<DescPool>(lDevice);
+    matDescPool->create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 } }, 1024);
 
-    matDescSet->createOwnLayout({
-        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr}
-    });
+    matDescLayout = MakeUnique<DescLayout>(lDevice);
+    matDescLayout->create({ {0, DescType::StorageBuffer, 1, ShaderStage::VertexAndFragment, nullptr} } );
+}
 
-    matDescSet->createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+void ResourceGroup::createMaterialDescSet(const std::vector<MaterialVK>& materials, ModelVK& modelVK) {
+    VkDevice lDevice = deviceVK->lDevice;
 
-    matDescSet->allocate();
+    // Create material buffer
+    VkDeviceSize bufferSize = sizeof(MaterialVK) * materials.size();
+
+    // Modifiable buffer
+    modelVK.matBuffer
+        .setDataSize(bufferSize)
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(deviceVK)
+        .mapAndCopy(materials.data());
+
+    modelVK.matDescSet.init(lDevice);
+    modelVK.matDescSet.allocate(*matDescPool, *matDescLayout, 1);
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
-    materialBufferInfo.buffer = *matBuffer;
+    materialBufferInfo.buffer = modelVK.matBuffer;
     materialBufferInfo.offset = 0;
     materialBufferInfo.range = VK_WHOLE_SIZE;
 
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = *matDescSet;
+    descriptorWrite.dstSet = modelVK.matDescSet;
     descriptorWrite.dstBinding = 0;
     descriptorWrite.dstArrayElement = 0;
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -164,6 +161,50 @@ void ResourceGroup::createMaterialDescSet() {
 
     vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
 }
+
+
+// void ResourceGroup::createMaterialBuffer() {
+//     VkDeviceSize bufferSize = sizeof(MaterialVK) * materialVKs.size();
+
+//     matBuffer = MakeUnique<DataBuffer>();
+//     matBuffer
+//         ->setDataSize(bufferSize)
+//         .setUsageFlags(BufferUsage::Storage)
+//         .setMemPropFlags(MemProp::DeviceLocal)
+//         .createDeviceLocalBuffer(deviceVK, materialVKs.data());
+// }
+
+// // Descriptor set creation
+// void ResourceGroup::createMaterialDescSet() {
+//     VkDevice lDevice = deviceVK->lDevice;
+
+//     matDescSet = MakeUnique<DescSet>(lDevice);
+
+//     matDescSet->createOwnLayout({
+//         {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr}
+//     });
+
+//     matDescSet->createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
+
+//     matDescSet->allocate();
+
+//     // --- bind buffer to descriptor ---
+//     VkDescriptorBufferInfo materialBufferInfo{};
+//     materialBufferInfo.buffer = *matBuffer;
+//     materialBufferInfo.offset = 0;
+//     materialBufferInfo.range = VK_WHOLE_SIZE;
+
+//     VkWriteDescriptorSet descriptorWrite{};
+//     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//     descriptorWrite.dstSet = *matDescSet;
+//     descriptorWrite.dstBinding = 0;
+//     descriptorWrite.dstArrayElement = 0;
+//     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+//     descriptorWrite.descriptorCount = 1;
+//     descriptorWrite.pBufferInfo = &materialBufferInfo;
+
+//     vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
+// }
 
 // ============================================================================
 // ========================= TEXTURES =========================================
@@ -286,45 +327,32 @@ void ResourceGroup::createTextureDescSet() {
 // =========================== MESH STATIC ====================================
 // ============================================================================
 
-size_t ResourceGroup::addSubmeshVK(const TinySubmesh& submesh) {
-    const auto& vertexData = submesh.vertexData;
-    const auto& indexData = submesh.indexData;
+void MeshVK::fromMesh(const DeviceVK* deviceVK, const TinyMesh& mesh) {
+    const auto& vertexData = mesh.vertexData;
+    const auto& indexData = mesh.indexData;
 
-    DataBuffer vDataBuffer;
-    vDataBuffer
+    vertexBuffer
         .setDataSize(vertexData.size())
         .setUsageFlags(BufferUsage::Vertex)
         .createDeviceLocalBuffer(deviceVK, vertexData.data());
 
-    DataBuffer iDataBuffer;
-    iDataBuffer
+    indexBuffer
         .setDataSize(indexData.size())
         .setUsageFlags(BufferUsage::Index)
         .createDeviceLocalBuffer(deviceVK, indexData.data());
 
-    // Append buffers
-    UniquePtr<SubmeshVK> submeshVK = MakeUnique<SubmeshVK>();
-    submeshVK->vertexBuffer = std::move(vDataBuffer);
-    submeshVK->indexBuffer  = std::move(iDataBuffer);
-    switch (submesh.indexType) {
-        case TinySubmesh::IndexType::Uint8:  submeshVK->indexType = VK_INDEX_TYPE_UINT8;  break;
-        case TinySubmesh::IndexType::Uint16: submeshVK->indexType = VK_INDEX_TYPE_UINT16; break;
-        case TinySubmesh::IndexType::Uint32: submeshVK->indexType = VK_INDEX_TYPE_UINT32; break;
-        default: throw std::runtime_error("Unsupported index type in submesh");
+    indexType = tinyToVkIndexType(mesh.indexType);
+
+    submeshes = mesh.submeshes; // Direct copy
+}
+
+VkIndexType MeshVK::tinyToVkIndexType(TinyMesh::IndexType type) {
+    switch (type) {
+        case TinyMesh::IndexType::Uint8:  return VK_INDEX_TYPE_UINT8;
+        case TinyMesh::IndexType::Uint16: return VK_INDEX_TYPE_UINT16;
+        case TinyMesh::IndexType::Uint32: return VK_INDEX_TYPE_UINT32;
+        default: throw std::runtime_error("Unsupported index type in TinyMesh");
     }
-
-    submeshVKs.push_back(std::move(submeshVK));
-    return submeshVKs.size() - 1; // Return index of newly added buffers
-}
-
-VkBuffer ResourceGroup::getSubmeshVertexBuffer(size_t submeshVK_index) const {
-    return submeshVKs[submeshVK_index]->vertexBuffer.get();
-}
-VkBuffer ResourceGroup::getSubmeshIndexBuffer(size_t submeshVK_index) const {
-    return submeshVKs[submeshVK_index]->indexBuffer.get();
-}
-VkIndexType ResourceGroup::getSubmeshIndexType(size_t submeshVK_index) const {
-    return submeshVKs[submeshVK_index]->indexType;
 }
 
 // ============================================================================

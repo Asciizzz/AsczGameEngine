@@ -214,82 +214,85 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     rPipeline->bindCmd(currentCmd);
 
+    size_t modelIndex = instanceGroup->modelIndex;
+    const auto& modelVK = resGroup->modelVKs[modelIndex];
+    const auto& meshVK = modelVK->mesh;
+
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
-    VkDescriptorSet matSet = resGroup->getMatDescSet();
+    VkDescriptorSet matSet = modelVK->matDescSet;
     VkDescriptorSet texSet = resGroup->getTexDescSet();
     VkDescriptorSet lightSet = resGroup->getLightDescSet();
     VkDescriptorSet sets[] = {glbSet, matSet, texSet, lightSet};
     rPipeline->bindSets(currentCmd, sets, 4);
 
-
-    size_t modelIndex = instanceGroup->modelIndex;
-    const auto& modelVK = resGroup->modelVKs[modelIndex];
     uint32_t lightCount = resGroup->getLightCount();
 
+    // Bind vertex and index buffers once then draw indexed
+    VkBuffer vertexBuffer = meshVK.vertexBuffer;
+    VkBuffer indexBuffer = meshVK.indexBuffer;
+    VkBuffer instanceBuffer = instanceGroup->dataBuffer;
+    VkIndexType indexType = meshVK.indexType;
+
+    VkBuffer buffers[] = { vertexBuffer, instanceBuffer };
+    VkDeviceSize offsets[] = { 0, 0 };
+    vkCmdBindVertexBuffers(currentCmd, 0, 2, buffers, offsets);
+    vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
+
+
     // Draw submeshes
-    for (size_t i = 0; i < modelVK.submeshCount(); ++i) {
-        uint32_t indexCount = modelVK.submesh_indexCounts[i];
+    for (size_t i = 0; i < meshVK.submeshes.size(); ++i) {
+        uint32_t indexCount = meshVK.submeshes[i].indexCount;
         if (indexCount == 0) continue;
 
-        size_t submeshIndex = modelVK.submeshVK_indices[i];
-        uint32_t matIndex  = modelVK.materialVK_indices[i];
+        uint32_t indexOffset = meshVK.submeshes[i].indexOffset;
 
         // Push constants: material index, light count, unused, unused
+        uint32_t matIndex  = meshVK.submeshes[i].matIndex;
         rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
-        VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
-        VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
-        VkIndexType indexType = resGroup->getSubmeshIndexType(submeshIndex);
-
-        VkBuffer instanceBuffer = instanceGroup->dataBuffer.get();
-
-        VkBuffer buffers[] = { vertexBuffer, instanceBuffer };
-        VkDeviceSize offsets[] = { 0, 0 };
-        vkCmdBindVertexBuffers(currentCmd, 0, 2, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
-
-        // Draw all submesh instances
-        vkCmdDrawIndexed(currentCmd, indexCount, instanceCount, 0, 0, 0);
+        vkCmdDrawIndexed(currentCmd, indexCount, instanceCount, indexOffset, 0, 0);
     }
 }
 
 
-void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t modelIndex) const {
+void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, size_t modelIndex) const {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
-    pipeline->bindCmd(currentCmd);
+    rPipeline->bindCmd(currentCmd);
+
+    const auto& modelVK = resGroup->modelVKs[modelIndex];
+    const auto& meshVK = modelVK->mesh;
 
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
-    VkDescriptorSet matSet = resGroup->getMatDescSet();
+    VkDescriptorSet matSet = modelVK->matDescSet;
     VkDescriptorSet texSet = resGroup->getTexDescSet();
     VkDescriptorSet lightSet = resGroup->getLightDescSet();
     VkDescriptorSet sets[] = {glbSet, matSet, texSet, lightSet};
-    pipeline->bindSets(currentCmd, sets, 4);
+    rPipeline->bindSets(currentCmd, sets, 4);
 
-    const auto& modelVK = resGroup->modelVKs[modelIndex];
     uint32_t lightCount = resGroup->getLightCount();
 
+    // Bind vertex and index buffers once then draw indexed
+    VkBuffer vertexBuffer = meshVK.vertexBuffer;
+    VkBuffer indexBuffer = meshVK.indexBuffer;
+    VkIndexType indexType = meshVK.indexType;
+
+    VkBuffer buffers[] = { vertexBuffer };
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
+    vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
+
     // Draw submeshes
-    for (size_t i = 0; i < modelVK.submeshVK_indices.size(); ++i) {
-        uint32_t indexCount = modelVK.submesh_indexCounts[i];
+    for (size_t i = 0; i < meshVK.submeshes.size(); ++i) {
+        uint32_t indexCount = meshVK.submeshes[i].indexCount;
         if (indexCount == 0) continue;
 
-        size_t submeshIndex = modelVK.submeshVK_indices[i];
-        uint32_t matIndex  = modelVK.materialVK_indices[i];
+        uint32_t indexOffset = meshVK.submeshes[i].indexOffset;
 
         // Push constants: material index, light count, unused, unused
-        pipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
+        uint32_t matIndex  = meshVK.submeshes[i].matIndex;
+        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
-        VkBuffer vertexBuffer = resGroup->getSubmeshVertexBuffer(submeshIndex);
-        VkBuffer indexBuffer = resGroup->getSubmeshIndexBuffer(submeshIndex);
-        VkIndexType indexType = resGroup->getSubmeshIndexType(submeshIndex);
-
-        VkBuffer buffers[] = { vertexBuffer };
-        VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
-
-        // Draw all submesh instances
-        vkCmdDrawIndexed(currentCmd, indexCount, 1, 0, 0, 0);
+        vkCmdDrawIndexed(currentCmd, indexCount, 1, indexOffset, 0, 0);
     }
 }
 
