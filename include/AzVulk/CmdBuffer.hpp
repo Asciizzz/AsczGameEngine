@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AzVulk/Device.hpp"
+#include "AzVulk/DeviceVK.hpp"
 
 namespace AzVulk {
 
@@ -33,14 +33,14 @@ private:
 // RAII temporary command buffer wrapper
 class TempCmd {
 public:
-    TempCmd(const Device* deviceVK, const Device::PoolWrapper& poolWrapper);
+    TempCmd(const DeviceVK* deviceVK, const DeviceVK::PoolWrapper& poolWrapper);
     ~TempCmd();
     void endAndSubmit(VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
     VkCommandBuffer get() const { return cmdBuffer; }
 
-    const Device* deviceVK = nullptr;
-    Device::PoolWrapper poolWrapper{};
+    const DeviceVK* deviceVK = nullptr;
+    DeviceVK::PoolWrapper poolWrapper{};
     VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
     bool submitted = false;
 };

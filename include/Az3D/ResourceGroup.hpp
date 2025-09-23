@@ -51,7 +51,7 @@ struct ModelVK {
 // All these resource are static and fixed, created upon load
 class ResourceGroup {
 public:
-    ResourceGroup(AzVulk::Device* deviceVK);
+    ResourceGroup(AzVulk::DeviceVK* deviceVK);
     ~ResourceGroup() { cleanup(); } void cleanup();
 
     ResourceGroup(const ResourceGroup&) = delete;
@@ -105,7 +105,7 @@ public:
     void createComponentVKsFromModels();
 
 // private:
-    AzVulk::Device* deviceVK;
+    AzVulk::DeviceVK* deviceVK;
 
     AzVulk::PipelineManager pipelines;
 

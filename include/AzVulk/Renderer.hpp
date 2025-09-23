@@ -20,7 +20,7 @@ namespace AzVulk {
 
 class Renderer {
 public:
-    Renderer(Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight = 2);
+    Renderer(DeviceVK* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight = 2);
     ~Renderer();
 
     Renderer(const Renderer&) = delete;
@@ -63,7 +63,7 @@ public:
 
 private:
     // Component references
-    Device* deviceVK;
+    DeviceVK* deviceVK;
     
     // Owned components
     UniquePtr<SwapChain> swapChain;

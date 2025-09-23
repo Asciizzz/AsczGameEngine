@@ -7,7 +7,7 @@
 
 using namespace Az3D;
 
-void RigDemo::init(const AzVulk::Device* deviceVK, const TinyModel& model, size_t modelIndex) {
+void RigDemo::init(const AzVulk::DeviceVK* deviceVK, const TinyModel& model, size_t modelIndex) {
     using namespace AzVulk;
 
     this->model = MakeShared<TinyModel>(model);

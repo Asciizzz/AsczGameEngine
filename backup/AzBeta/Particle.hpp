@@ -155,7 +155,7 @@ public:
         ));
     }
 
-    void initialize(Az3D::ResourceGroup* resGroup, const AzVulk::Device* deviceVK,
+    void initialize(Az3D::ResourceGroup* resGroup, const AzVulk::DeviceVK* deviceVK,
                     size_t count, float r = 0.05f, float display_r = 0.05f,
                     const glm::vec3& boundsMin = glm::vec3(-10.0f),
                     const glm::vec3& boundsMax = glm::vec3(10.0f)) {

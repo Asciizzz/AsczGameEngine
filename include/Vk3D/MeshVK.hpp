@@ -11,7 +11,7 @@ struct SubmeshVK {
     SubmeshVK(const SubmeshVK&) = delete;
     SubmeshVK& operator=(const SubmeshVK&) = delete;
 
-    void create(const AzVulk::Device* deviceVK, const TinySubmesh& submesh);
+    void create(const AzVulk::DeviceVK* deviceVK, const TinySubmesh& submesh);
 
     static VkIndexType tinyToVkIndexType(TinySubmesh::IndexType type);
 };

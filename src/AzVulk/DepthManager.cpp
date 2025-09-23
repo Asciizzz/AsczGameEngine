@@ -1,6 +1,6 @@
 // DepthManager.cpp
 #include "AzVulk/DepthManager.hpp"
-#include "AzVulk/Device.hpp"
+#include "AzVulk/DeviceVK.hpp"
 
 #include <stdexcept>
 #include <algorithm>
@@ -9,7 +9,7 @@
 
 using namespace AzVulk;
 
-DepthManager::DepthManager(const Device* deviceVK)
+DepthManager::DepthManager(const DeviceVK* deviceVK)
     : deviceVK   (deviceVK)
     , depthImage (deviceVK)
 {}

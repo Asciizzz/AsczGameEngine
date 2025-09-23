@@ -18,8 +18,8 @@ struct Transform;
 }
 
 namespace AzVulk {
-class Device;
-struct DataBuffer;
+    class DeviceVK;
+    class DataBuffer;
 }
 
 namespace AzGame {
@@ -103,7 +103,7 @@ public:
     Grass& operator=(const Grass&) = delete;
 
     // Initialize the grass system
-    bool initialize(Az3D::ResourceGroup& resGroup, const AzVulk::Device* deviceVK);
+    bool initialize(Az3D::ResourceGroup& resGroup, const AzVulk::DeviceVK* deviceVK);
 
     // Wind animation functions (if enabled)
     void updateWindAnimation(float deltaTime, bool useGPU=true);
@@ -138,7 +138,7 @@ public:
     size_t grassModelIndex = 0;
     size_t terrainModelIndex = 0;
 
-    const AzVulk::Device* deviceVK = nullptr;
+    const AzVulk::DeviceVK* deviceVK = nullptr;
 
     // Model Group
     Az3D::StaticInstanceGroup grassInstanceGroup;

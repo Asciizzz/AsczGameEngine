@@ -51,7 +51,7 @@ void CmdBuffer::create(VkDevice device, VkCommandPool pool, uint32_t count) {
 
 
 // ---------------- TEMPORARY COMMAND BUFFER ----------------
-TempCmd::TempCmd(const Device* dev, const Device::PoolWrapper& pool) 
+TempCmd::TempCmd(const DeviceVK* dev, const DeviceVK::PoolWrapper& pool) 
     : deviceVK(dev), poolWrapper(pool) {
     VkCommandBufferAllocateInfo alloc{};
     alloc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

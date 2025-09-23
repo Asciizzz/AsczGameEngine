@@ -3,7 +3,7 @@
 
 using namespace AzVulk;
 
-void SubmeshVK::create(const AzVulk::Device* deviceVK, const TinySubmesh& submesh) {
+void SubmeshVK::create(const AzVulk::DeviceVK* deviceVK, const TinySubmesh& submesh) {
     const auto& vertexData = submesh.vertexData;
     const auto& indexData = submesh.indexData;
 

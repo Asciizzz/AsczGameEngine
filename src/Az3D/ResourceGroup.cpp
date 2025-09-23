@@ -12,7 +12,7 @@ using namespace Az3D;
 // ======================= General resource group stuff =======================
 // ============================================================================
 
-ResourceGroup::ResourceGroup(Device* deviceVK): deviceVK(deviceVK) {}
+ResourceGroup::ResourceGroup(DeviceVK* deviceVK): deviceVK(deviceVK) {}
 
 void ResourceGroup::cleanup() {
     VkDevice lDevice = deviceVK->lDevice;

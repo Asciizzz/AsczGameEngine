@@ -12,7 +12,7 @@ struct SwapChainSupportDetails {
 
 class SwapChain {
 public:
-    SwapChain(const Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window);
+    SwapChain(const DeviceVK* deviceVK, VkSurfaceKHR surface, SDL_Window* window);
     ~SwapChain();
     void cleanup();
 
@@ -22,7 +22,7 @@ public:
     void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
     void recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView);
 
-    const Device* deviceVK;
+    const DeviceVK* deviceVK;
     VkSurfaceKHR surface;
 
     VkSwapchainKHR swapChain = VK_NULL_HANDLE;

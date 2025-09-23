@@ -37,7 +37,7 @@ void PostProcessEffect::cleanup(VkDevice device) {
     }
 }
 
-PostProcess::PostProcess(Device* deviceVK, SwapChain* swapChain, DepthManager* depthManager)
+PostProcess::PostProcess(DeviceVK* deviceVK, SwapChain* swapChain, DepthManager* depthManager)
     : deviceVK(deviceVK), swapChain(swapChain), depthManager(depthManager) {
 }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AzVulk/Device.hpp"
+#include "AzVulk/DeviceVK.hpp"
 
 namespace AzVulk {
 

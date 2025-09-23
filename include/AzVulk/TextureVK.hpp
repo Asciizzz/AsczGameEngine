@@ -6,7 +6,7 @@
 #include <string>
 
 namespace AzVulk {
-class Device;
+class DeviceVK;
 
 struct ImageUsage {
     static constexpr VkImageUsageFlags TransferSrc  = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -78,9 +78,9 @@ class ImageVK {
 public:
     ImageVK() = default;
     ImageVK(VkDevice lDevice);
-    ImageVK(const Device* device);
+    ImageVK(const DeviceVK* device);
     ImageVK& init(VkDevice lDevice);
-    ImageVK& init(const Device* device);
+    ImageVK& init(const DeviceVK* device);
 
     ~ImageVK() { cleanup(); }
     void cleanup();
@@ -175,7 +175,7 @@ public:
     SamplerVK() = default;
     SamplerVK(VkDevice lDevice);
     SamplerVK& init(VkDevice lDevice);
-    SamplerVK& init(const Device* device);
+    SamplerVK& init(const DeviceVK* device);
 
     ~SamplerVK() { cleanup(); }
     void cleanup();
@@ -209,7 +209,7 @@ public:
     TextureVK() = default;
     TextureVK(VkDevice lDevice);
     TextureVK& init(VkDevice lDevice);
-    TextureVK& init(const Device* device);
+    TextureVK& init(const DeviceVK* device);
 
     TextureVK(const TextureVK&) = delete;
     TextureVK& operator=(const TextureVK&) = delete;

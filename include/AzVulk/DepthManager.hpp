@@ -3,11 +3,11 @@
 #include "AzVulk/TextureVK.hpp"
 
 namespace AzVulk {
-class Device;
+class DeviceVK;
 
 class DepthManager {
 public:
-    DepthManager(const Device* deviceVK);
+    DepthManager(const DeviceVK* deviceVK);
     ~DepthManager() = default;
 
     DepthManager(const DepthManager&) = delete;
@@ -21,7 +21,7 @@ public:
     uint32_t getWidth() const { return depthImage.getWidth(); }
     uint32_t getHeight() const { return depthImage.getHeight(); }
 
-    const Device* deviceVK;
+    const DeviceVK* deviceVK;
 
     ImageVK depthImage;
 

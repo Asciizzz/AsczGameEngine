@@ -8,7 +8,7 @@ using namespace Az3D;
 using namespace AzVulk;
 
 
-Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
+Renderer::Renderer (DeviceVK* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
 : deviceVK(deviceVK), maxFramesInFlight(maxFramesInFlight) {
 
     swapChain = MakeUnique<SwapChain>(deviceVK, surface, window);

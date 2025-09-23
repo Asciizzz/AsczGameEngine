@@ -3,7 +3,7 @@
 #include "AzCore/FpsManager.hpp"
 #include "AzCore/WindowManager.hpp"
 
-#include "AzVulk/Device.hpp"
+#include "AzVulk/DeviceVK.hpp"
 #include "AzVulk/Instance.hpp"
 
 #include "AzVulk/SwapChain.hpp"
@@ -36,7 +36,7 @@ private:
     UniquePtr<AzCore::FpsManager> fpsManager;
 
     UniquePtr<AzVulk::Instance> vkInstance;
-    UniquePtr<AzVulk::Device> deviceVK;
+    UniquePtr<AzVulk::DeviceVK> deviceVK;
 
     UniquePtr<AzVulk::Renderer> renderer;
 

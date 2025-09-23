@@ -61,15 +61,15 @@ struct QueueFamilyIndices {
     bool isComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
 };
 
-class Device {
+class DeviceVK {
 public:
     static const std::vector<const char*> deviceExtensions;
 
-    Device(VkInstance instance, VkSurfaceKHR surface);
-    ~Device();
+    DeviceVK(VkInstance instance, VkSurfaceKHR surface);
+    ~DeviceVK();
 
-    Device(const Device&) = delete;
-    Device& operator=(const Device&) = delete;
+    DeviceVK(const DeviceVK&) = delete;
+    DeviceVK& operator=(const DeviceVK&) = delete;
 
     // Vulkan objects
     VkPhysicalDevice pDevice = VK_NULL_HANDLE;

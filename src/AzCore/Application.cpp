@@ -46,7 +46,7 @@ void Application::initComponents() {
     vkInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
     vkInstance->createSurface(windowManager->window);
 
-    deviceVK = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
+    deviceVK = MakeUnique<DeviceVK>(vkInstance->instance, vkInstance->surface);
 
     // So we dont have to write these things over and over again
     VkDevice lDevice = deviceVK->lDevice;

@@ -49,7 +49,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzCore/WindowManager.cpp
     src/AzCore/Application.cpp
 
-    src/AzVulk/Device.cpp
+    src/AzVulk/DeviceVK.cpp
     src/AzVulk/Instance.cpp
     src/AzVulk/CmdBuffer.cpp
     src/AzVulk/DataBuffer.cpp

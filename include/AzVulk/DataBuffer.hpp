@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AzVulk/Device.hpp"
+#include "AzVulk/DeviceVK.hpp"
 
 namespace AzVulk {
 
@@ -45,7 +45,7 @@ public:
     DataBuffer& setUsageFlags(VkBufferUsageFlags flags);
     DataBuffer& setMemPropFlags(VkMemoryPropertyFlags flags);
 
-    DataBuffer& createBuffer(const Device* deviceVK);
+    DataBuffer& createBuffer(const DeviceVK* deviceVK);
     DataBuffer& createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice);
 
     DataBuffer& copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount);
@@ -58,7 +58,7 @@ public:
     DataBuffer& copyData(const void* data);
     DataBuffer& mapAndCopy(const void* data);
 
-    DataBuffer& createDeviceLocalBuffer(const Device* deviceVK, const void* initialData);
+    DataBuffer& createDeviceLocalBuffer(const DeviceVK* deviceVK, const void* initialData);
 
     template<typename T>
     void updateMapped(size_t index, const T& value) {

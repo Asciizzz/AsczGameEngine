@@ -21,7 +21,7 @@ Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
 
 Grass::~Grass() {}
 
-bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::Device* deviceVK) {
+bool Grass::initialize(ResourceGroup& resGroup, const AzVulk::DeviceVK* deviceVK) {
     this->deviceVK = deviceVK;
 
     createGrassMesh90deg(resGroup);
