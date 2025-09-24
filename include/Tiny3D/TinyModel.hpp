@@ -8,6 +8,8 @@
 
 struct TinyModel {
     TinyMesh mesh;
+    std::vector<int> submeshMaterials; // Material index per submesh
+    
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
 

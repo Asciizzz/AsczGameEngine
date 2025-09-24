@@ -5,7 +5,6 @@
 struct TinySubmesh {
     uint32_t indexOffset = 0;
     uint32_t indexCount = 0;
-    int matIndex = -1;
 };
 
 // Uniform mesh structure that holds raw data only

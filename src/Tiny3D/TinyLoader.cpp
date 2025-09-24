@@ -463,6 +463,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
     // Create a single TinyMesh to hold all combined mesh data
     TinyMesh combinedMesh;
     std::vector<TinySubmesh> submeshRanges;
+    std::vector<int> submeshMaterials;
     
     // Temporary storage for collecting all primitives data
     struct PrimitiveData {
@@ -659,8 +660,8 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 TinySubmesh submesh;
                 submesh.indexOffset = currentIndexOffset;
                 submesh.indexCount = static_cast<uint32_t>(primData.indices.size());
-                submesh.matIndex = primData.materialIndex;
                 submeshRanges.push_back(submesh);
+                submeshMaterials.push_back(primData.materialIndex);
                 
                 currentVertexOffset += static_cast<uint32_t>(primData.vertexCount);
                 currentIndexOffset += static_cast<uint32_t>(primData.indices.size());
@@ -736,8 +737,8 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 TinySubmesh submesh;
                 submesh.indexOffset = currentIndexOffset;
                 submesh.indexCount = static_cast<uint32_t>(primData.indices.size());
-                submesh.matIndex = primData.materialIndex;
                 submeshRanges.push_back(submesh);
+                submeshMaterials.push_back(primData.materialIndex);
                 
                 currentVertexOffset += static_cast<uint32_t>(primData.vertexCount);
                 currentIndexOffset += static_cast<uint32_t>(primData.indices.size());
@@ -777,6 +778,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
         
         // Add the combined mesh to the result
         result.mesh = std::move(combinedMesh);
+        result.submeshMaterials = std::move(submeshMaterials);
     }
 
     // Load animations only if skeleton is loaded and animations exist
