@@ -1,12 +1,5 @@
 #include "TinyData/TinyTexture.hpp"
 
-#include <vulkan/vulkan.h>
-
-#include <windows.h>
-#include <wincrypt.h>
-#include <sstream>
-#include <iomanip>
-
 uint64_t TinyTexture::makeHash() {
     const uint64_t FNV_offset = 1469598103934665603ULL;
     const uint64_t FNV_prime  = 1099511628211ULL;

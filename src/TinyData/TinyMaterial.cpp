@@ -1,4 +1,4 @@
-#include "TinyMaterial.hpp"
+#include "TinyData/TinyMaterial.hpp"
 
 TinyMaterial& TinyMaterial::setShading(bool enable) {
     shading = enable;
@@ -22,6 +22,7 @@ TinyMaterial& TinyMaterial::setDiscardThreshold(float threshold) {
 
 TinyMaterial& TinyMaterial::setAlbedoTexture(int texIndex, uint32_t texHash) {
     localAlbTexture = texIndex;
+    albTexHash = texHash;
     return *this;
 }
 
