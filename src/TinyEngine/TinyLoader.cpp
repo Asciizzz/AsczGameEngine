@@ -426,31 +426,28 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
         size_t stride = indexAccessor.ByteStride(indexBufferView);
 
+        auto appendIndices = [&](auto dummyType) {
+            using T = decltype(dummyType);
+            for (size_t i = 0; i < indexAccessor.count; i++) {
+                T index;
+                std::memcpy(&index, dataPtr + stride * i, sizeof(T));
+                pData.indices.push_back(static_cast<uint64_t>(index));
+            }
+        };
+
         // Do 2 things: find the current index type, and append indices to pd.indices
         TinyMesh::IndexType currentType;
         switch (indexAccessor.componentType) {
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: 
-                for (size_t i = 0; i < indexAccessor.count; i++) {
-                    uint8_t index = *((uint8_t*)(dataPtr + stride * i));
-                    pData.indices.push_back(static_cast<uint64_t>(index));
-                }
-
+                appendIndices(uint8_t{});
                 currentType = TinyMesh::IndexType::Uint8;
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                for (size_t i = 0; i < indexAccessor.count; i++) {
-                    uint16_t index = *((uint16_t*)(dataPtr + stride * i));
-                    pData.indices.push_back(static_cast<uint64_t>(index));
-                }
-
+                appendIndices(uint16_t{});
                 currentType = TinyMesh::IndexType::Uint16;
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                for (size_t i = 0; i < indexAccessor.count; i++) {
-                    uint32_t index = *((uint32_t*)(dataPtr + stride * i));
-                    pData.indices.push_back(static_cast<uint64_t>(index));
-                }
-
+                appendIndices(uint32_t{});
                 currentType = TinyMesh::IndexType::Uint32;
                 break;
             default:
