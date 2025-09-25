@@ -67,10 +67,7 @@ void Application::initComponents() {
     );
 
 // PLAYGROUND FROM HERE
-
-    TinyLoader::LoadOptions loadOpts;
-    loadOpts.forceStatic = true;
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf", loadOpts);
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf", true);
     for (auto& mat : testModel.materials) {
         // mat.toonLevel = 4;
     }

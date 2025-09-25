@@ -4,20 +4,14 @@
 
 class TinyLoader {
 public:
-    struct LoadOptions {
-        bool loadMaterials = true;
-        bool loadTextures = true;
-        bool forceStatic = false; // Ignore skinning data even if present
-    };
-
     static TinyTexture loadTexture(const std::string& filePath);
 
     // True implementation that we will use in the future
-    static TinyModel loadModel(const std::string& filePath, const LoadOptions& options = LoadOptions());
+    static TinyModel loadModel(const std::string& filePath, bool forceStatic = false);
 
 private:
-    static TinyModel loadModelFromGLTF(const std::string& filePath, const LoadOptions& options);
-    static TinyModel loadModelFromOBJ(const std::string& filePath, const LoadOptions& options);
+    static TinyModel loadModelFromGLTF(const std::string& filePath, bool forceStatic);
+    static TinyModel loadModelFromOBJ(const std::string& filePath, bool forceStatic);
 
     static std::string sanitizeAsciiz(const std::string& originalName, const std::string& key, size_t fallbackIndex = 0);
 };

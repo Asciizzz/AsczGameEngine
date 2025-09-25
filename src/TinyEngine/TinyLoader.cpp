@@ -296,7 +296,7 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
         return glm::mat4(M);
     }
 }
-TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadOptions& options) {
+TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err, warn;
@@ -316,81 +316,71 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
     if (!ok || model.meshes.empty()) return TinyModel();
 
     // Load textures only if requested
-    if (options.loadTextures && options.loadMaterials) {
-        result.textures.reserve(model.textures.size());
-        for (const auto& gltfTexture : model.textures) {
-            TinyTexture texture;
+    result.textures.reserve(model.textures.size());
+    for (const auto& gltfTexture : model.textures) {
+        TinyTexture texture;
 
-            // Load image data
-            if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
-                const auto& image = model.images[gltfTexture.source];
-                texture.width = image.width;
-                texture.height = image.height;
-                texture.channels = image.component;
-                texture.data = image.image;
-                texture.makeHash();
-            }
-            
-            // Load sampler settings (address mode)
-            texture.addressMode = TinyTexture::AddressMode::Repeat; // Default
-            if (gltfTexture.sampler >= 0 && gltfTexture.sampler < static_cast<int>(model.samplers.size())) {
-                const auto& sampler = model.samplers[gltfTexture.sampler];
-                
-                // Convert GLTF wrap modes to our AddressMode enum
-                // GLTF uses the same values for both wrapS and wrapT, so we'll use wrapS
-                switch (sampler.wrapS) {
-                    case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-                        texture.addressMode = TinyTexture::AddressMode::ClampToEdge;
-                        break;
-                    case TINYGLTF_TEXTURE_WRAP_REPEAT:
-                    case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-                        // We don't have MirroredRepeat, fallback to Repeat
-                        texture.addressMode = TinyTexture::AddressMode::Repeat;
-                        break;
-                    default:
-                        texture.addressMode = TinyTexture::AddressMode::Repeat;
-                        break;
-                }
-            }
-            
-            result.textures.push_back(std::move(texture));
+        // Load image data
+        if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
+            const auto& image = model.images[gltfTexture.source];
+            texture.width = image.width;
+            texture.height = image.height;
+            texture.channels = image.component;
+            texture.data = image.image;
+            texture.makeHash();
         }
+        
+        // Load sampler settings (address mode)
+        texture.addressMode = TinyTexture::AddressMode::Repeat; // Default
+        if (gltfTexture.sampler >= 0 && gltfTexture.sampler < static_cast<int>(model.samplers.size())) {
+            const auto& sampler = model.samplers[gltfTexture.sampler];
+            
+            // Convert GLTF wrap modes to our AddressMode enum
+            // GLTF uses the same values for both wrapS and wrapT, so we'll use wrapS
+            switch (sampler.wrapS) {
+                case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+                    texture.addressMode = TinyTexture::AddressMode::ClampToEdge;
+                    break;
+                case TINYGLTF_TEXTURE_WRAP_REPEAT:
+                case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+                    // We don't have MirroredRepeat, fallback to Repeat
+                    texture.addressMode = TinyTexture::AddressMode::Repeat;
+                    break;
+                default:
+                    texture.addressMode = TinyTexture::AddressMode::Repeat;
+                    break;
+            }
+        }
+        
+        result.textures.push_back(std::move(texture));
     }
 
-    // Load materials only if requested
-    if (options.loadMaterials) {
-        result.materials.reserve(model.materials.size());
-        for (const auto& gltfMaterial : model.materials) {
-            TinyMaterial material;
-            
-            // Handle albedo texture (only if textures are also being loaded)
-            if (options.loadTextures && gltfMaterial.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-                int texIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-                uint32_t texHash = result.textures[texIndex].hash;
+    result.materials.reserve(model.materials.size());
+    for (const auto& gltfMaterial : model.materials) {
+        TinyMaterial material;
 
-                if (texIndex >= 0 && texIndex < static_cast<int>(result.textures.size())) {
-                    material.setAlbedoTexture(texIndex, texHash);
-                }
-            }
-            
-            // Handle normal texture (only if textures are also being loaded)
-            if (options.loadTextures && gltfMaterial.normalTexture.index >= 0) {
-                int texIndex = gltfMaterial.normalTexture.index;
-                uint32_t texHash = result.textures[texIndex].hash;
+        int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+        uint32_t albedoTexHash = result.textures[albedoTexIndex].hash;
 
-                if (texIndex >= 0 && texIndex < static_cast<int>(result.textures.size())) {
-                    material.setNormalTexture(texIndex, texHash);
-                }
-            }
-            
-            result.materials.push_back(material);
+        if (albedoTexIndex >= 0 && albedoTexIndex < static_cast<int>(result.textures.size())) {
+            material.setAlbedoTexture(albedoTexIndex, albedoTexHash);
         }
+    
+    // Handle normal texture (only if textures are also being loaded)
+        int normalTexIndex = gltfMaterial.normalTexture.index;
+        uint32_t normalTexHash = result.textures[normalTexIndex].hash;
+
+        if (normalTexIndex >= 0 && normalTexIndex < static_cast<int>(result.textures.size())) {
+            material.setNormalTexture(normalTexIndex, normalTexHash);
+        }
+
+        result.materials.push_back(material);
     }
 
     // Build skeleton only if requested
     UnorderedMap<int, int> nodeIndexToBoneIndex;
 
-    bool hasRigging = !options.forceStatic && !model.skins.empty();
+    bool hasRigging = !forceStatic && !model.skins.empty();
     if (hasRigging) {
         const tinygltf::Skin& skin = model.skins[0];
 
@@ -586,7 +576,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             }
 
             // Set material index
-            if (options.loadMaterials && primitive.material >= 0 && primitive.material < static_cast<int>(result.materials.size())) {
+            if (primitive.material >= 0 && primitive.material < static_cast<int>(result.materials.size())) {
                 primData.materialIndex = primitive.material;
             }
 
@@ -914,14 +904,14 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
 }
 
 // OBJ loader implementation using tiny_obj_loader
-TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOptions& options) {
+TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, bool forceStatic) {
 
     return TinyModel(); // OBJ loading not implemented yet
 }
 
 
 
-TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& options) {
+TinyModel TinyLoader::loadModel(const std::string& filePath, bool forceStatic) {
     std::string ext;
     size_t dotPos = filePath.find_last_of('.');
     if (dotPos != std::string::npos) {
@@ -930,9 +920,9 @@ TinyModel TinyLoader::loadModel(const std::string& filePath, const LoadOptions& 
     }
 
     if (ext == ".gltf" || ext == ".glb") {
-        return loadModelFromGLTF(filePath, options);
+        return loadModelFromGLTF(filePath, forceStatic);
     } else if (ext == ".obj") {
-        return loadModelFromOBJ(filePath, options);
+        return loadModelFromOBJ(filePath, forceStatic);
     } else {
         return TinyModel(); // Unsupported format
     }
