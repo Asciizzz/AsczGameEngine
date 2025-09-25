@@ -3,7 +3,7 @@
 #include "TinyEngine/ResourceGroup.hpp"
 #include "AzVulk/DataBuffer.hpp"
 
-#include "TinyData/TinyLoader.hpp"
+#include "TinyEngine/TinyLoader.hpp"
 
 #include <iostream>
 #include <fstream>

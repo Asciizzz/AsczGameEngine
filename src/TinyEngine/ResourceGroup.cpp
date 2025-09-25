@@ -1,5 +1,5 @@
 #include "TinyEngine/ResourceGroup.hpp"
-#include "TinyData/TinyLoader.hpp"
+#include "TinyEngine/TinyLoader.hpp"
 
 #include "AzVulk/CmdBuffer.hpp"
 

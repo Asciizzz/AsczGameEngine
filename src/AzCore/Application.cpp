@@ -1,6 +1,6 @@
 #include "AzCore/Application.hpp"
 
-#include "TinyData/TinyLoader.hpp"
+#include "TinyEngine/TinyLoader.hpp"
 
 #include <iostream>
 #include <random>

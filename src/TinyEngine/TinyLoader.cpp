@@ -1,4 +1,4 @@
-#include "TinyData/TinyLoader.hpp"
+#include "TinyEngine/TinyLoader.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Helpers/stb_image.h"
