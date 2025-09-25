@@ -1,10 +1,8 @@
-#include "Az3D/Camera.hpp"
+#include "Tiny3D/TinyCamera.hpp"
 #include <algorithm>
 #include <cmath>
 
-using namespace Az3D;
-
-Camera::Camera() 
+TinyCamera::TinyCamera() 
     : pos(0.0f, 0.0f, 0.0f)
     , orientation(glm::quat(glm::vec3(0.0f, glm::radians(-90.0f), 0.0f))) // Start looking down negative Z axis
     , pitch(0.0f)
@@ -24,7 +22,7 @@ Camera::Camera()
     updateMatrices();
 }
 
-Camera::Camera(const glm::vec3& position, float fov, float nearPlane, float farPlane)
+TinyCamera::TinyCamera(const glm::vec3& position, float fov, float nearPlane, float farPlane)
     : pos(position)
     , orientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)) // No rotation
     , fov(fov)
@@ -47,12 +45,12 @@ Camera::Camera(const glm::vec3& position, float fov, float nearPlane, float farP
     updateMatrices();
 }
 
-void Camera::setPosition(const glm::vec3& newPos) {
+void TinyCamera::setPosition(const glm::vec3& newPos) {
     pos = newPos;
     updateViewMatrix();
 }
 
-void Camera::setRotation(float newPitch, float newYaw, float newRoll) {
+void TinyCamera::setRotation(float newPitch, float newYaw, float newRoll) {
     // Constrain pitch to avoid extreme values
     float constrainedPitch = std::clamp(newPitch, -89.0f, 89.0f);
     
@@ -69,7 +67,7 @@ void Camera::setRotation(float newPitch, float newYaw, float newRoll) {
     updateViewMatrix();
 }
 
-void Camera::setRotation(const glm::quat& quaternion) {
+void TinyCamera::setRotation(const glm::quat& quaternion) {
     orientation = glm::normalize(quaternion);
     
     // Update cached Euler values from quaternion
@@ -82,41 +80,41 @@ void Camera::setRotation(const glm::quat& quaternion) {
     updateViewMatrix();
 }
 
-void Camera::setFOV(float newFov) {
+void TinyCamera::setFOV(float newFov) {
     fov = std::clamp(newFov, 1.0f, 120.0f);
     updateProjectionMatrix();
 }
 
-void Camera::setNearFar(float newNearPlane, float newFarPlane) {
+void TinyCamera::setNearFar(float newNearPlane, float newFarPlane) {
     nearPlane = newNearPlane;
     farPlane = newFarPlane;
     updateProjectionMatrix();
 }
 
-void Camera::setAspectRatio(float newAspectRatio) {
+void TinyCamera::setAspectRatio(float newAspectRatio) {
     aspectRatio = newAspectRatio;
     updateProjectionMatrix();
 }
 
-void Camera::updateAspectRatio(uint32_t width, uint32_t height) {
+void TinyCamera::updateAspectRatio(uint32_t width, uint32_t height) {
     if (height > 0) {
         aspectRatio = static_cast<float>(width) / static_cast<float>(height);
         updateProjectionMatrix();
     }
 }
 
-void Camera::updateMatrices() {
+void TinyCamera::updateMatrices() {
     updateVectors();
     updateViewMatrix();
     updateProjectionMatrix();
 }
 
-void Camera::translate(const glm::vec3& offset) {
+void TinyCamera::translate(const glm::vec3& offset) {
     pos += offset;
     updateViewMatrix();
 }
 
-void Camera::rotate(float pitchDelta, float yawDelta, float rollDelta) {
+void TinyCamera::rotate(float pitchDelta, float yawDelta, float rollDelta) {
     // Handle pitch and yaw in world space (traditional FPS style)
     if (pitchDelta != 0.0f || yawDelta != 0.0f) {
         // Update cached Euler angles for pitch/yaw
@@ -151,7 +149,7 @@ void Camera::rotate(float pitchDelta, float yawDelta, float rollDelta) {
     updateViewMatrix();
 }
 
-void Camera::rotate(const glm::quat& deltaRotation) {
+void TinyCamera::rotate(const glm::quat& deltaRotation) {
     orientation = orientation * deltaRotation;
     orientation = glm::normalize(orientation);
     
@@ -165,9 +163,9 @@ void Camera::rotate(const glm::quat& deltaRotation) {
     updateViewMatrix();
 }
 
-void Camera::updateVectors() {
+void TinyCamera::updateVectors() {
     // Use quaternion to rotate the standard basis vectors
-    // Standard camera basis: forward = -Z, right = +X, up = +Y
+    // Standard TinyCamera basis: forward = -Z, right = +X, up = +Y
     glm::vec3 baseForward = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 baseRight = glm::vec3(1.0f, 0.0f, 0.0f);
     glm::vec3 baseUp = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -178,12 +176,12 @@ void Camera::updateVectors() {
     up = glm::normalize(orientation * baseUp);
 }
 
-void Camera::updateViewMatrix() {
+void TinyCamera::updateViewMatrix() {
     // Create view matrix using position and direction vectors
     viewMatrix = glm::lookAt(pos, pos + forward, up);
 }
 
-void Camera::updateProjectionMatrix() {
+void TinyCamera::updateProjectionMatrix() {
     // Create perspective projection matrix
     // Note: GLM's perspective function expects FOV in radians
     projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
@@ -193,7 +191,7 @@ void Camera::updateProjectionMatrix() {
 }
 
 // Quaternion-specific methods
-void Camera::setOrientation(const glm::quat& quat) {
+void TinyCamera::setOrientation(const glm::quat& quat) {
     orientation = glm::normalize(quat);
     
     // Update cached Euler values
@@ -207,19 +205,19 @@ void Camera::setOrientation(const glm::quat& quat) {
 }
 
 // Euler angle convenience functions
-void Camera::rotatePitch(float degrees) {
+void TinyCamera::rotatePitch(float degrees) {
     rotate(degrees, 0.0f, 0.0f);
 }
 
-void Camera::rotateYaw(float degrees) {
+void TinyCamera::rotateYaw(float degrees) {
     rotate(0.0f, degrees, 0.0f);
 }
 
-void Camera::rotateRoll(float degrees) {
+void TinyCamera::rotateRoll(float degrees) {
     rotate(0.0f, 0.0f, degrees);
 }
 
-void Camera::resetRoll() {
+void TinyCamera::resetRoll() {
     // Reset roll to 0 while keeping pitch and yaw
     roll = 0.0f;
     
@@ -233,12 +231,12 @@ void Camera::resetRoll() {
 }
 
 // Euler angle getters (computed from quaternion)
-float Camera::getPitch() const {
+float TinyCamera::getPitch() const {
     float pitchValue = glm::degrees(glm::eulerAngles(orientation)).x;
     return std::clamp(pitchValue, -89.0f, 89.0f);
 }
 
-float Camera::getYaw() const {
+float TinyCamera::getYaw() const {
     float yawValue = glm::degrees(glm::eulerAngles(orientation)).y;
     // Normalize angle to [-180, 180] range inline
     while (yawValue > 180.0f) yawValue -= 360.0f;
@@ -246,7 +244,7 @@ float Camera::getYaw() const {
     return yawValue;
 }
 
-float Camera::getRoll() const {
+float TinyCamera::getRoll() const {
     float rollValue = glm::degrees(glm::eulerAngles(orientation)).z;
     // Normalize angle to [-180, 180] range inline
     while (rollValue > 180.0f) rollValue -= 360.0f;

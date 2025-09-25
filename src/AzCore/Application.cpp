@@ -39,7 +39,7 @@ void Application::initComponents() {
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     // 10km view distance for those distant horizons
-    camera = MakeUnique<Camera>(glm::vec3(0.0f), 45.0f, 0.1f, 1000.0f);
+    camera = MakeUnique<TinyCamera>(glm::vec3(0.0f), 45.0f, 0.1f, 1000.0f);
     camera->setAspectRatio(aspectRatio);
 
     auto extensions = windowManager->getRequiredVulkanExtensions();

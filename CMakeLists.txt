@@ -26,7 +26,6 @@ else()
 endif()
 
 file(GLOB_RECURSE SRC_FILES
-    src/Az3D/Camera.cpp
     src/Az3D/GlobalUBO.cpp
     
     src/Tiny3D/TinyVertex.cpp
@@ -38,6 +37,7 @@ file(GLOB_RECURSE SRC_FILES
     src/Tiny3D/TinyModel.cpp
     src/Tiny3D/TinyPlayback.cpp
     src/Tiny3D/TinyLoader.cpp
+    src/Tiny3D/TinyCamera.cpp
     
     # src/Az3D/StaticMesh_BVH.cpp
     src/Az3D/RigDemo.cpp

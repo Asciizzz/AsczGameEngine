@@ -1,5 +1,6 @@
 #include "Az3D/GlobalUBO.hpp"
-#include "Az3D/Camera.hpp"
+
+#include "Tiny3D/TinyCamera.hpp"
 
 #include <stdexcept>
 #include <chrono>
@@ -62,7 +63,7 @@ void GlbUBOManager::createDescSets() {
 
 float deltaDay = 1.0f / 86400.0f;
 
-void GlbUBOManager::updateUBO(const Camera& camera, uint32_t frameIndex) {
+void GlbUBOManager::updateUBO(const TinyCamera& camera, uint32_t frameIndex) {
     ubo.proj = camera.projectionMatrix;
     ubo.view = camera.viewMatrix;
 

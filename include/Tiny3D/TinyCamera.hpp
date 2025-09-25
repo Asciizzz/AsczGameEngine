@@ -7,13 +7,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-namespace Az3D {
-
-class Camera {
+class TinyCamera {
 public:
-    Camera();
-    Camera(const glm::vec3& position, float fov = 45.0f, float nearPlane = 0.1f, float farPlane = 100.0f);
-    ~Camera() = default;
+    TinyCamera();
+    TinyCamera(const glm::vec3& position, float fov = 45.0f, float nearPlane = 0.1f, float farPlane = 100.0f);
+    ~TinyCamera() = default;
 
     void setPosition(const glm::vec3& position);
     void setRotation(float pitch, float yaw, float roll = 0.0f);
@@ -75,5 +73,3 @@ public:
 
     glm::mat4 getMVP() const { return projectionMatrix * viewMatrix; }
 };
-
-}

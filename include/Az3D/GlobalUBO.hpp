@@ -8,9 +8,9 @@
 #include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 
-namespace Az3D {
+class TinyCamera;
 
-class Camera;
+namespace Az3D {
 
 struct GlobalUBO {
     // Camera matrices
@@ -51,7 +51,7 @@ public:
     VkDescriptorSetLayout getDescLayout() const { return descSets.getLayout(); }
 
 // Functionalities
-    void updateUBO(const Camera& camera, uint32_t frameIndex);
+    void updateUBO(const TinyCamera& camera, uint32_t frameIndex);
 };
 
 }
