@@ -166,7 +166,7 @@ public:
 
         TinySubmesh submesh = TinyLoader::loadModel("Assets/Shapes/Icosphere.obj").submeshes[0];
 
-        TinyTexture texture = TinyLoader::loadImage("Assets/Textures/Selen.png");
+        TinyTexture texture = TinyLoader::loadTexture("Assets/Textures/Selen.png");
 
         TinyMaterial material;
         material.toonLevel = 2;

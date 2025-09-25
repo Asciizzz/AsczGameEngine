@@ -147,7 +147,7 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
         .setIndices(grassIndices)
         .setMaterial(0);
 
-    TinyTexture grassTexture = TinyLoader::loadImage("Assets/Textures/Grass.png");
+    TinyTexture grassTexture = TinyLoader::loadTexture("Assets/Textures/Grass.png");
     grassTexture.addressMode = TinyTexture::AddressMode::ClampToEdge;
 
     TinyMaterial grassMaterial;
@@ -208,7 +208,7 @@ void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
         .setIndices(grassIndices)
         .setMaterial(0);
 
-    TinyTexture grassTexture = TinyLoader::loadImage("Assets/Textures/Grass.png");
+    TinyTexture grassTexture = TinyLoader::loadTexture("Assets/Textures/Grass.png");
     grassTexture.addressMode = TinyTexture::AddressMode::ClampToEdge;
     
     TinyMaterial grassMaterial;

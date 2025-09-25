@@ -10,7 +10,7 @@ public:
         bool forceStatic = false; // Ignore skinning data even if present
     };
 
-    static TinyTexture loadImage(const std::string& filePath);
+    static TinyTexture loadTexture(const std::string& filePath);
 
     // True implementation that we will use in the future
     static TinyModel loadModel(const std::string& filePath, const LoadOptions& options = LoadOptions());

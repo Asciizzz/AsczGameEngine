@@ -7,19 +7,35 @@
 #include <sstream>
 #include <iomanip>
 
-uint32_t TinyTexture::makeHash() {
-    // FNV-1a 32-bit hash
-    const uint32_t fnv_prime = 0x01000193;
-    const uint32_t fnv_offset_basis = 0x811C9DC5;
+uint64_t TinyTexture::makeHash() {
+    const uint64_t FNV_offset = 1469598103934665603ULL;
+    const uint64_t FNV_prime  = 1099511628211ULL;
+    uint64_t h = FNV_offset;
 
-    uint32_t hashValue = fnv_offset_basis;
-    for (const auto& byte : data) {
-        hashValue ^= byte;
-        hashValue *= fnv_prime;
+    auto fnv1a = [&](auto value) {
+        const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&value);
+        for (size_t i = 0; i < sizeof(value); i++) {
+            h ^= bytes[i];
+            h *= FNV_prime;
+        }
+    };
+
+    // Dimensions & channels
+    fnv1a(width);
+    fnv1a(height);
+    fnv1a(channels);
+
+    // Sampler state
+    auto addr = static_cast<uint32_t>(addressMode);
+    fnv1a(addr);
+
+    // Image data
+    for (auto b : data) {
+        h ^= b;
+        h *= FNV_prime;
     }
 
-    hash = hashValue;
-    return hash;
+    return h;
 }
 
 TinyTexture TinyTexture::createDefaultTexture() {

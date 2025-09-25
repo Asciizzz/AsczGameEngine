@@ -53,7 +53,7 @@ bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err
     return true;
 }
 
-TinyTexture TinyLoader::loadImage(const std::string& filePath) {
+TinyTexture TinyLoader::loadTexture(const std::string& filePath) {
     TinyTexture texture = {};
 
     // Load image using stbi with original channel count

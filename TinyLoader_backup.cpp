@@ -53,7 +53,7 @@ bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err
     return true;
 }
 
-TinyTexture TinyLoader::loadImage(const std::string& filePath) {
+TinyTexture TinyLoader::loadTexture(const std::string& filePath) {
     TinyTexture texture = {};
 
     // Load image using stbi with original channel count
@@ -948,7 +948,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                 std::string texturePath = basePath + material.diffuse_texname;
                 if (texturePathToIndex.find(texturePath) == texturePathToIndex.end()) {
                     texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
-                    result.textures.push_back(loadImage(texturePath));
+                    result.textures.push_back(loadTexture(texturePath));
                 }
             }
         }
@@ -1140,7 +1140,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                 std::string texturePath = basePath + material.diffuse_texname;
                 if (texturePathToIndex.find(texturePath) == texturePathToIndex.end()) {
                     try {
-                        TinyTexture texture = loadImage(texturePath);
+                        TinyTexture texture = loadTexture(texturePath);
                         if (!texture.data.empty()) {
                             texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
                             result.textures.push_back(std::move(texture));
@@ -1157,7 +1157,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, const LoadOp
                 std::string texturePath = basePath + material.normal_texname;
                 if (texturePathToIndex.find(texturePath) == texturePathToIndex.end()) {
                     try {
-                        TinyTexture texture = loadImage(texturePath);
+                        TinyTexture texture = loadTexture(texturePath);
                         if (!texture.data.empty()) {
                             texturePathToIndex[texturePath] = static_cast<int>(result.textures.size());
                             result.textures.push_back(std::move(texture));

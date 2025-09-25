@@ -11,8 +11,8 @@ struct TinyTexture {
     int channels = 0;
     std::vector<uint8_t> data;
 
-    uint32_t hash = 0; // fnv1a hash of raw data
-    uint32_t makeHash();
+    uint64_t hash = 0; // fnv1a hash of raw data
+    uint64_t makeHash();
 
     // Sampler
     enum class AddressMode {
