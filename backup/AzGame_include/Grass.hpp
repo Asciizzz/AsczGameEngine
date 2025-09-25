@@ -7,10 +7,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include <Az3D/StaticInstance.hpp>
+#include <TinyEngine/StaticInstance.hpp>
 
 // Forward declarations
-namespace Az3D {
+namespace TinyEngine {
 struct ResourceGroup;
 struct StaticMeshGroup;
 
@@ -93,7 +93,7 @@ struct WindUBO {
 
 class Grass {
 public:
-    using StaticInstance = Az3D::StaticInstance;
+    using StaticInstance = TinyEngine::StaticInstance;
 
     explicit Grass(const GrassConfig& config);
     ~Grass();
@@ -103,7 +103,7 @@ public:
     Grass& operator=(const Grass&) = delete;
 
     // Initialize the grass system
-    bool initialize(Az3D::ResourceGroup& resGroup, const AzVulk::DeviceVK* deviceVK);
+    bool initialize(TinyEngine::ResourceGroup& resGroup, const AzVulk::DeviceVK* deviceVK);
 
     // Wind animation functions (if enabled)
     void updateWindAnimation(float deltaTime, bool useGPU=true);
@@ -123,7 +123,7 @@ public:
     // std::vector<glm::mat4> grassMat4;
 
     std::vector<glm::vec4> fixedColor;
-    std::vector<Az3D::Transform> baseTransform;
+    std::vector<TinyEngine::Transform> baseTransform;
     std::vector<StaticInstance> grassData3Ds;
 
     // Grass buffer
@@ -141,18 +141,18 @@ public:
     const AzVulk::DeviceVK* deviceVK = nullptr;
 
     // Model Group
-    Az3D::StaticInstanceGroup grassInstanceGroup;
-    Az3D::StaticInstanceGroup terrainInstanceGroup;
+    TinyEngine::StaticInstanceGroup grassInstanceGroup;
+    TinyEngine::StaticInstanceGroup terrainInstanceGroup;
 
     // Time tracking for wind animation
     float windTime = 0.0f;
     
     // Helper functions
     void generateHeightMap(std::mt19937& generator);
-    void createGrassMesh(Az3D::ResourceGroup& resGroup);
-    void createGrassMesh90deg(Az3D::ResourceGroup& resGroup);
+    void createGrassMesh(TinyEngine::ResourceGroup& resGroup);
+    void createGrassMesh90deg(TinyEngine::ResourceGroup& resGroup);
     void generateGrassInstances(std::mt19937& generator);
-    void generateTerrainMesh(Az3D::ResourceGroup& resGroup);
+    void generateTerrainMesh(TinyEngine::ResourceGroup& resGroup);
     std::pair<float, glm::vec3> getTerrainInfoAt(float worldX, float worldZ) const;
 };
 

@@ -1,4 +1,4 @@
-#include "Tiny3D/TinyVertex.hpp"
+#include "TinyData/TinyVertex.hpp"
 
 #include <vulkan/vulkan.h>
 

@@ -1,9 +1,9 @@
 #include "AzGame/Grass.hpp"
 
-#include "Az3D/ResourceGroup.hpp"
+#include "TinyEngine/ResourceGroup.hpp"
 #include "AzVulk/DataBuffer.hpp"
 
-#include "Tiny3D/TinyLoader.hpp"
+#include "TinyData/TinyLoader.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -12,7 +12,7 @@
 #include <execution>
 
 using namespace AzGame;
-using namespace Az3D;
+using namespace TinyEngine;
 using namespace AzVulk;
 
 Grass::Grass(const GrassConfig& grassConfig) : config(grassConfig) {
@@ -90,7 +90,7 @@ void Grass::generateHeightMap(std::mt19937& generator) {
 
 // Note: use pipeline that has no backface culling
 
-void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
+void Grass::createGrassMesh(TinyEngine::ResourceGroup& resGroup) {
     // Create grass geometry - 3 intersecting quads for volume
     glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
 
@@ -162,7 +162,7 @@ void Grass::createGrassMesh(Az3D::ResourceGroup& resGroup) {
 }
 
 
-void Grass::createGrassMesh90deg(Az3D::ResourceGroup& resGroup) {
+void Grass::createGrassMesh90deg(TinyEngine::ResourceGroup& resGroup) {
     // Create grass geometry - 3 intersecting quads for volume
     glm::vec3 g_normal(0.0f, 1.0f, 0.0f);
 

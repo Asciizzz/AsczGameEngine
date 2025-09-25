@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Tiny3D/TinyModel.hpp"
+#include "TinyData/TinyModel.hpp"
 
 class TinyLoader {
 public:

@@ -10,7 +10,7 @@
 
 class TinyCamera;
 
-namespace Az3D {
+namespace TinyEngine {
 
 struct GlobalUBO {
     // Camera matrices

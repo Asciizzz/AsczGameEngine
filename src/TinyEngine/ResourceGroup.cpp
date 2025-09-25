@@ -1,12 +1,12 @@
-#include "Az3D/ResourceGroup.hpp"
-#include "Tiny3D/TinyLoader.hpp"
+#include "TinyEngine/ResourceGroup.hpp"
+#include "TinyData/TinyLoader.hpp"
 
 #include "AzVulk/CmdBuffer.hpp"
 
 #include <iostream>
 
 using namespace AzVulk;
-using namespace Az3D;
+using namespace TinyEngine;
 
 // ============================================================================
 // ======================= General resource group stuff =======================

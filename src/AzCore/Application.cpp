@@ -1,6 +1,6 @@
 #include "AzCore/Application.hpp"
 
-#include "Tiny3D/TinyLoader.hpp"
+#include "TinyData/TinyLoader.hpp"
 
 #include <iostream>
 #include <random>
@@ -13,7 +13,7 @@ const bool enableValidationLayers = true;
 
 using namespace AzVulk;
 using namespace AzCore;
-using namespace Az3D;
+using namespace TinyEngine;
 
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
@@ -88,20 +88,20 @@ void Application::initComponents() {
     // resGroup->addModel(testModel2);
 
     // Initialize dynamic lighting system with example lights
-    Az3D::LightVK sunLight{};
+    TinyEngine::LightVK sunLight{};
     sunLight.position = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f); // w=0 for directional light
     sunLight.color = glm::vec4(1.0f, 0.9f, 0.8f, 1.5f); // Warm white light with intensity 1.5
     sunLight.direction = glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f); // Direction vector (no range for directional)
     resGroup->addLight(sunLight);
 
-    // Az3D::LightVK pointLight{};
+    // TinyEngine::LightVK pointLight{};
     // pointLight.position = glm::vec4(5.0f, 5.0f, 5.0f, 1.0f); // w=1 for point light
     // pointLight.color = glm::vec4(0.8f, 0.6f, 1.0f, 2.0f); // Purple light with intensity 2.0
     // pointLight.direction = glm::vec4(0.0f, 0.0f, 0.0f, 15.0f); // Range of 15 units
     // pointLight.params = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f); // Attenuation factor 1.0
     // resGroup->addLight(pointLight);
 
-    // Az3D::LightVK spotLight{};
+    // TinyEngine::LightVK spotLight{};
     // spotLight.position = glm::vec4(-10.0f, 8.0f, 0.0f, 2.0f); // w=2 for spot light
     // spotLight.color = glm::vec4(1.0f, 0.5f, 0.2f, 3.0f); // Orange light with intensity 3.0
     // spotLight.direction = glm::vec4(0.7f, -0.5f, 0.0f, 20.0f); // Direction + range of 20 units
@@ -148,8 +148,8 @@ void Application::initComponents() {
     auto vstaticAttrs = vstaticLayout.getAttributeDescriptions();
 
     // StaticInstanced - static mesh with instancing
-    auto instanceBind = Az3D::StaticInstance::getBindingDescription();
-    auto instanceAttrs = Az3D::StaticInstance::getAttributeDescriptions();
+    auto instanceBind = TinyEngine::StaticInstance::getBindingDescription();
+    auto instanceAttrs = TinyEngine::StaticInstance::getAttributeDescriptions();
 
     vertexInputVKs["StaticInstanced"] = VertexInputVK()
         .setBindings({vstaticBind, instanceBind})

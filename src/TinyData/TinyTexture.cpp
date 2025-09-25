@@ -1,4 +1,4 @@
-#include "Tiny3D/TinyTexture.hpp"
+#include "TinyData/TinyTexture.hpp"
 
 #include <vulkan/vulkan.h>
 

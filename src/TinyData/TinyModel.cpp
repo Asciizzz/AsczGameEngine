@@ -1,4 +1,4 @@
-#include "Tiny3D/TinyModel.hpp"
+#include "TinyData/TinyModel.hpp"
 #include <iostream>
 #include <iomanip>
 

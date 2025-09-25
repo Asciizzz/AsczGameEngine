@@ -1,13 +1,13 @@
-#include "Az3D/GlobalUBO.hpp"
+#include "TinyEngine/GlobalUBO.hpp"
 
-#include "Tiny3D/TinyCamera.hpp"
+#include "TinyData/TinyCamera.hpp"
 
 #include <stdexcept>
 #include <chrono>
 
 using namespace AzVulk;
 
-using namespace Az3D;
+using namespace TinyEngine;
 
 GlbUBOManager::GlbUBOManager(const DeviceVK* deviceVK, uint32_t maxFramesInFlight)
 : deviceVK(deviceVK), maxFramesInFlight(maxFramesInFlight) {

@@ -4,7 +4,7 @@
 #include <cstring>
 #include <SDL.h>
 
-using namespace Az3D;
+using namespace TinyEngine;
 using namespace AzVulk;
 
 
@@ -255,7 +255,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 }
 
 
-void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, size_t modelIndex) const {
+void Renderer::drawSingleInstance(const TinyEngine::ResourceGroup* resGroup, const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, size_t modelIndex) const {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     rPipeline->bindCmd(currentCmd);
 
@@ -297,7 +297,7 @@ void Renderer::drawSingleInstance(const Az3D::ResourceGroup* resGroup, const Az3
 }
 
 // Sky rendering using dedicated sky pipeline
-void Renderer::drawSky(const Az3D::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const {
+void Renderer::drawSky(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
     // Bind sky pipeline

@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Tiny3D/TinyModel.hpp"
-#include "Tiny3D/TinyPlayback.hpp"
+#include "TinyData/TinyModel.hpp"
+#include "TinyData/TinyPlayback.hpp"
 
 #include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 
 #include <iostream>
 
-namespace Az3D {
+namespace TinyEngine {
 
 struct FunTransform {
     glm::vec3 translation{0.0f};
@@ -52,4 +52,4 @@ struct RigDemo {
     void playAnimation(size_t animIndex=0, bool loop=true, float speed=1.0f, float transitionTime=0.3f);
 };
 
-} // namespace Az3D
+} // namespace TinyEngine

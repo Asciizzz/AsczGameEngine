@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Az3D/TinyResource.hpp"
+#include "TinyEngine/TinyResource.hpp"
 
 class TinyProject {
 public:

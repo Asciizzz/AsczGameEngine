@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Tiny3D/TinyVertex.hpp"
+#include "TinyData/TinyVertex.hpp"
 
 struct TinySubmesh {
     uint32_t indexOffset = 0;

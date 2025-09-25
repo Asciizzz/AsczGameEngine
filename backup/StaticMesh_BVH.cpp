@@ -1,9 +1,9 @@
-#include "Tiny3D/TinyModel.hpp"
+#include "TinyData/TinyModel.hpp"
 #include <algorithm>
 #include <cfloat>
 #include <queue>
 
-using namespace Az3D;
+using namespace TinyEngine;
 
 // BVH Construction
 

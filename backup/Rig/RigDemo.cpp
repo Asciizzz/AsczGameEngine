@@ -1,11 +1,11 @@
-#include "Az3D/RigDemo.hpp"
+#include "TinyEngine/RigDemo.hpp"
 #include <iostream>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-using namespace Az3D;
+using namespace TinyEngine;
 
 void RigDemo::init(const AzVulk::DeviceVK* deviceVK, const TinyModel& model, size_t modelIndex) {
     using namespace AzVulk;

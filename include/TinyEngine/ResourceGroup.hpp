@@ -1,17 +1,17 @@
 #pragma once
 
-#include "Tiny3D/TinyModel.hpp"
+#include "TinyData/TinyModel.hpp"
 
 #include "AzVulk/Pipeline_manager.hpp"
 #include "AzVulk/DataBuffer.hpp"
 #include "AzVulk/Descriptor.hpp"
 #include "AzVulk/TextureVK.hpp"
 
-#include "Az3D/TinyProject.hpp"
+#include "TinyEngine/TinyProject.hpp"
 
 // ResourceGroup soon to be deperecated
 
-namespace Az3D {
+namespace TinyEngine {
 
 struct MaterialVK {
     glm::vec4 shadingParams = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f); // <bool shading>, <int toonLevel>, <float normalBlend>, <float discardThreshold>
@@ -155,4 +155,4 @@ public:
     UniquePtr<AzVulk::TextureVK> createTexture(const TinyTexture& texture);
 };
 
-} // namespace Az3D
+} // namespace TinyEngine

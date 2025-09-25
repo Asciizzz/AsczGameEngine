@@ -16,7 +16,7 @@
 #include "AzVulk/Renderer.hpp"
 #include "AzVulk/Pipeline_include.hpp"
 
-#include "Tiny3D/TinyCamera.hpp"
+#include "TinyData/TinyCamera.hpp"
 
 class Application {
 public:
@@ -44,8 +44,8 @@ private:
 
     UniquePtr<TinyCamera> camera;
 
-    UniquePtr<Az3D::GlbUBOManager> glbUBOManager;
-    UniquePtr<Az3D::ResourceGroup> resGroup;
+    UniquePtr<TinyEngine::GlbUBOManager> glbUBOManager;
+    UniquePtr<TinyEngine::ResourceGroup> resGroup;
 
     // Window metadata
     const char* appTitle;

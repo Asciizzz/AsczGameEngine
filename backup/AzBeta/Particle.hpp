@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Tiny3D/TinyLoader.hpp"
+#include "TinyData/TinyLoader.hpp"
 
 #include <execution>
 #include <algorithm>
@@ -10,7 +10,7 @@ namespace AzBeta {
 
 class ParticleManager {
 public:
-    using StaticInstance = Az3D::StaticInstance;
+    using StaticInstance = TinyEngine::StaticInstance;
 
     ParticleManager() = default;
     ~ParticleManager() = default;
@@ -18,14 +18,14 @@ public:
     size_t modelIndex = 0;
 
     size_t particleCount = 0;
-    std::vector<Az3D::Transform> particles; // Only store transforms, not full models
+    std::vector<TinyEngine::Transform> particles; // Only store transforms, not full models
     std::vector<StaticInstance> particles_data;
     std::vector<glm::vec3> particles_velocity;
     std::vector<glm::vec3> particles_angular_velocity; // For rotation
     std::vector<short> particles_special; // Cool rare 1% drop particles
     std::vector<float> particles_rainbow; // Special scalar value for all special particles (not just rainbow)
 
-    Az3D::StaticInstanceGroup instanceGroup;
+    TinyEngine::StaticInstanceGroup instanceGroup;
 
     std::vector<glm::vec3> rainbow_colors = {
         glm::vec3(1.0f, 0.2f, 0.2f), // Red
@@ -155,7 +155,7 @@ public:
         ));
     }
 
-    void initialize(Az3D::ResourceGroup* resGroup, const AzVulk::DeviceVK* deviceVK,
+    void initialize(TinyEngine::ResourceGroup* resGroup, const AzVulk::DeviceVK* deviceVK,
                     size_t count, float r = 0.05f, float display_r = 0.05f,
                     const glm::vec3& boundsMin = glm::vec3(-10.0f),
                     const glm::vec3& boundsMax = glm::vec3(10.0f)) {
@@ -385,12 +385,12 @@ public:
 
             glm::vec3 predictedPos = pos + direction * step;
 
-            Az3D::HitInfo map_collision = mesh->closestHit(
+            TinyEngine::HitInfo map_collision = mesh->closestHit(
                 predictedPos, radius, meshModelMat4
             );
 
             // Additional ray cast in case of an overstep
-            Az3D::HitInfo ray_collision = mesh->closestHit(
+            TinyEngine::HitInfo ray_collision = mesh->closestHit(
                 pos, direction, step, meshModelMat4
             );
 

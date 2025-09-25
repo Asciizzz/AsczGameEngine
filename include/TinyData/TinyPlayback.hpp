@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Tiny3D/TinySkeleton.hpp"
-#include "Tiny3D/TinyAnimation.hpp"
+#include "TinyData/TinySkeleton.hpp"
+#include "TinyData/TinyAnimation.hpp"
 
 // Represents the current pose of a single bone
 struct BonePose {

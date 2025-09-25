@@ -1,6 +1,6 @@
-#include "Az3D/StaticInstance.hpp"
+#include "TinyEngine/StaticInstance.hpp"
 
-using namespace Az3D;
+using namespace TinyEngine;
 using namespace AzVulk;
 
 // Vulkan-specific methods for Model

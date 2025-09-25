@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Tiny3D/TinyMesh.hpp"
-#include "Tiny3D/TinyMaterial.hpp"
-#include "Tiny3D/TinyTexture.hpp"
-#include "Tiny3D/TinySkeleton.hpp"
-#include "Tiny3D/TinyAnimation.hpp"
+#include "TinyData/TinyMesh.hpp"
+#include "TinyData/TinyMaterial.hpp"
+#include "TinyData/TinyTexture.hpp"
+#include "TinyData/TinySkeleton.hpp"
+#include "TinyData/TinyAnimation.hpp"
 
 struct TinyModel {
     TinyMesh mesh;

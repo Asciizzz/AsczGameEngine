@@ -1,4 +1,4 @@
-#include "Az3D/TinyResource.hpp"
+#include "TinyEngine/TinyResource.hpp"
 
 void TinyResource::setMaxTextureCount(uint32_t count) {
     maxTextureCount = count;

@@ -1,4 +1,4 @@
-#include "Tiny3D/TinyMesh.hpp"
+#include "TinyData/TinyMesh.hpp"
 
 TinyMesh& TinyMesh::setSubmeshes(const std::vector<TinySubmesh>& subs) {
     submeshes = subs;

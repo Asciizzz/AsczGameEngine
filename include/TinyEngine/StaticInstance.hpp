@@ -6,7 +6,7 @@
 
 #include "AzVulk/DataBuffer.hpp"
 
-namespace Az3D {
+namespace TinyEngine {
 
 // Dynamic, per-frame object data
 struct StaticInstance {
@@ -50,4 +50,4 @@ struct StaticInstanceGroup {
     uint32_t modelIndex = 0;
 };
 
-} // namespace Az3D
+} // namespace TinyEngine

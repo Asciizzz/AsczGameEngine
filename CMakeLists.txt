@@ -26,27 +26,27 @@ else()
 endif()
 
 file(GLOB_RECURSE SRC_FILES
-    src/Az3D/GlobalUBO.cpp
+    src/TinyEngine/GlobalUBO.cpp
     
-    src/Tiny3D/TinyVertex.cpp
-    src/Tiny3D/TinyMesh.cpp
-    src/Tiny3D/TinyMaterial.cpp
-    src/Tiny3D/TinyTexture.cpp
-    src/Tiny3D/TinySkeleton.cpp
-    src/Tiny3D/TinyAnimation.cpp
-    src/Tiny3D/TinyModel.cpp
-    src/Tiny3D/TinyPlayback.cpp
-    src/Tiny3D/TinyLoader.cpp
-    src/Tiny3D/TinyCamera.cpp
+    src/TinyData/TinyVertex.cpp
+    src/TinyData/TinyMesh.cpp
+    src/TinyData/TinyMaterial.cpp
+    src/TinyData/TinyTexture.cpp
+    src/TinyData/TinySkeleton.cpp
+    src/TinyData/TinyAnimation.cpp
+    src/TinyData/TinyModel.cpp
+    src/TinyData/TinyPlayback.cpp
+    src/TinyData/TinyLoader.cpp
+    src/TinyData/TinyCamera.cpp
     
-    src/Az3D/TinyResource.cpp
-    src/Az3D/TinyProject.cpp
+    src/TinyEngine/TinyResource.cpp
+    src/TinyEngine/TinyProject.cpp
 
-    # src/Az3D/StaticMesh_BVH.cpp
-    src/Az3D/RigDemo.cpp
-    src/Az3D/StaticInstance.cpp
+    # src/TinyEngine/StaticMesh_BVH.cpp
+    src/TinyEngine/RigDemo.cpp
+    src/TinyEngine/StaticInstance.cpp
 
-    src/Az3D/ResourceGroup.cpp
+    src/TinyEngine/ResourceGroup.cpp
 
     src/AzCore/FpsManager.cpp
     src/AzCore/WindowManager.cpp
@@ -90,8 +90,8 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/AzCore
     ${CMAKE_SOURCE_DIR}/include/AzVulk
-    ${CMAKE_SOURCE_DIR}/include/Tiny3D
-    ${CMAKE_SOURCE_DIR}/include/Az3D
+    ${CMAKE_SOURCE_DIR}/include/TinyData
+    ${CMAKE_SOURCE_DIR}/include/TinyEngine
 )
 
 
