@@ -39,6 +39,9 @@ file(GLOB_RECURSE SRC_FILES
     src/Tiny3D/TinyLoader.cpp
     src/Tiny3D/TinyCamera.cpp
     
+    src/Az3D/TinyResource.cpp
+    src/Az3D/TinyProject.cpp
+
     # src/Az3D/StaticMesh_BVH.cpp
     src/Az3D/RigDemo.cpp
     src/Az3D/StaticInstance.cpp

@@ -7,6 +7,8 @@
 #include "AzVulk/Descriptor.hpp"
 #include "AzVulk/TextureVK.hpp"
 
+#include "Az3D/TinyProject.hpp"
+
 // ResourceGroup soon to be deperecated
 
 namespace Az3D {
