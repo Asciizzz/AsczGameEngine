@@ -12,10 +12,10 @@ struct TinySubmesh {
 struct TinyMesh {
     TinyVertexLayout vertexLayout;
     enum class IndexType {
-        Uint8,
-        Uint16,
-        Uint32
-    } indexType = IndexType::Uint32;
+        Uint8  = 0,
+        Uint16 = 1,
+        Uint32 = 2
+    } indexType = IndexType::Uint32; // You can use the value for comparison
 
     TinyMesh() = default;
 
@@ -32,6 +32,9 @@ struct TinyMesh {
     std::vector<TinySubmesh> submeshes;
 
     TinyMesh& setSubmeshes(const std::vector<TinySubmesh>& subs);
+
+    TinyMesh& addSubmesh(const TinySubmesh& sub);
+    TinyMesh& writeSubmesh(const TinySubmesh& sub, uint32_t index);
 
     template<typename VertexT>
     TinyMesh& setVertices(const std::vector<VertexT>& verts) {

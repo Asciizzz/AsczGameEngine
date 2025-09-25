@@ -91,7 +91,7 @@ TinyTexture TinyLoader::loadTexture(const std::string& filePath) {
 
 // Utility: read GLTF accessor as typed array with proper error checking
 template<typename T>
-bool readAccessorSafe(const tinygltf::Model& model, int accessorIndex, std::vector<T>& out) {
+bool readAccessor(const tinygltf::Model& model, int accessorIndex, std::vector<T>& out) {
     if (accessorIndex < 0 || accessorIndex >= static_cast<int>(model.accessors.size())) {
         return false;
     }
@@ -125,6 +125,13 @@ bool readAccessorSafe(const tinygltf::Model& model, int accessorIndex, std::vect
     }
     
     return true;
+}
+
+template<typename T>
+bool readAccessorFromMap(const tinygltf::Model& model, const std::map<std::string, int>& attributes, const std::string& key, std::vector<T>& out) {
+    if (attributes.count(key) == 0) return false;
+
+    return readAccessor(model, attributes.at(key), out);
 }
 
 // Utility: read joint indices with proper component type handling
@@ -189,25 +196,6 @@ bool readJointIndices(const tinygltf::Model& model, int accessorIndex, std::vect
     return true;
 }
 
-// Basic readAccessor for backward compatibility
-template<typename T>
-void readAccessor(const tinygltf::Model& model, const tinygltf::Accessor& accessor, std::vector<T>& out) {
-    const auto& bufferView = model.bufferViews[accessor.bufferView];
-    const auto& buffer = model.buffers[bufferView.buffer];
-    
-    const unsigned char* dataPtr = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
-    size_t stride = accessor.ByteStride(bufferView);
-    
-    if (stride == 0) {
-        stride = sizeof(T);
-    }
-    
-    out.resize(accessor.count);
-    
-    for (size_t i = 0; i < accessor.count; i++) {
-        std::memcpy(&out[i], dataPtr + stride * i, sizeof(T));
-    }
-}
 
 // ============================================================================
 // ===================== TinyLoader Implementation ===========================
@@ -358,17 +346,15 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
         TinyMaterial material;
 
         int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-        uint32_t albedoTexHash = result.textures[albedoTexIndex].hash;
-
         if (albedoTexIndex >= 0 && albedoTexIndex < static_cast<int>(result.textures.size())) {
+            uint32_t albedoTexHash = result.textures[albedoTexIndex].hash;
             material.setAlbedoTexture(albedoTexIndex, albedoTexHash);
         }
     
-    // Handle normal texture (only if textures are also being loaded)
+        // Handle normal texture (only if textures are also being loaded)
         int normalTexIndex = gltfMaterial.normalTexture.index;
-        uint32_t normalTexHash = result.textures[normalTexIndex].hash;
-
         if (normalTexIndex >= 0 && normalTexIndex < static_cast<int>(result.textures.size())) {
+            uint32_t normalTexHash = result.textures[normalTexIndex].hash;
             material.setNormalTexture(normalTexIndex, normalTexHash);
         }
 
@@ -390,7 +376,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
         // Load inverse bind matrices
         std::vector<glm::mat4> inverseBindMatrices;
         if (skin.inverseBindMatrices >= 0) {
-            if (!readAccessorSafe(model, skin.inverseBindMatrices, inverseBindMatrices)) {
+            if (!readAccessor(model, skin.inverseBindMatrices, inverseBindMatrices)) {
                 throw std::runtime_error("Failed to read inverse bind matrices");
             }
         } else {
@@ -475,39 +461,33 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
         for (size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); primitiveIndex++) {
             const auto& primitive = mesh.primitives[primitiveIndex];
 
-            // Validate required attributes
-            if (!primitive.attributes.count("POSITION")) {
-                throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
-                                        std::to_string(primitiveIndex) + "] missing POSITION attribute");
-            }
-            
             PrimitiveData primData;
-            primData.vertexCount = model.accessors[primitive.attributes.at("POSITION")].count;
 
-            // Read standard attributes with validation
-            readAccessor(model, model.accessors[primitive.attributes.at("POSITION")], primData.positions);
-            
-            if (primitive.attributes.count("NORMAL")) {
-                readAccessor(model, model.accessors[primitive.attributes.at("NORMAL")], primData.normals);
+            bool hasPosition = readAccessorFromMap(model, primitive.attributes, "POSITION", primData.positions);
+            if (!hasPosition) {
+                throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                        std::to_string(primitiveIndex) + "] failed to read POSITION attribute");
             }
-            if (primitive.attributes.count("TANGENT")) {
-                readAccessor(model, model.accessors[primitive.attributes.at("TANGENT")], primData.tangents);
-            }
-            if (primitive.attributes.count("TEXCOORD_0")) {
-                readAccessor(model, model.accessors[primitive.attributes.at("TEXCOORD_0")], primData.uvs);
-            }
+
+            readAccessorFromMap(model, primitive.attributes, "NORMAL", primData.normals);
+            readAccessorFromMap(model, primitive.attributes, "TANGENT", primData.tangents);
+            readAccessorFromMap(model, primitive.attributes, "TEXCOORD_0", primData.uvs);
+            primData.vertexCount = primData.positions.size();
             
             // Only read skin attributes if submesh has rigging
             bool submeshHasRigging = hasRigging && 
                                     primitive.attributes.count("JOINTS_0") && 
                                     primitive.attributes.count("WEIGHTS_0");
+
+            printf("Has rigging: %d\n", submeshHasRigging);
+
             if (submeshHasRigging) {
                 if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), primData.joints)) {
                     throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                             std::to_string(primitiveIndex) + "] failed to read joint indices");
                 }
 
-                if (!readAccessorSafe(model, primitive.attributes.at("WEIGHTS_0"), primData.weights)) {
+                if (!readAccessor(model, primitive.attributes.at("WEIGHTS_0"), primData.weights)) {
                     throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
                                             std::to_string(primitiveIndex) + "] failed to read bone weights");
                 }
@@ -790,7 +770,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 
                 // Read time values (input)
                 if (gltfSampler.input >= 0) {
-                    if (!readAccessorSafe(model, gltfSampler.input, sampler.inputTimes)) {
+                    if (!readAccessor(model, gltfSampler.input, sampler.inputTimes)) {
                         std::cerr << "Warning: Failed to read animation sampler input times for animation: " 
                                   << tinyAnim.name << std::endl;
                         continue;
@@ -845,7 +825,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 if (gltfChannel.target_path == "translation") {
                     channel.targetPath = TinyAnimationChannel::TargetPath::Translation;
                     if (gltfSampler.output >= 0) {
-                        if (!readAccessorSafe(model, gltfSampler.output, sampler.translations)) {
+                        if (!readAccessor(model, gltfSampler.output, sampler.translations)) {
                             std::cerr << "Warning: Failed to read translation data for animation: " 
                                       << tinyAnim.name << std::endl;
                             continue;
@@ -854,7 +834,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 } else if (gltfChannel.target_path == "rotation") {
                     channel.targetPath = TinyAnimationChannel::TargetPath::Rotation;
                     if (gltfSampler.output >= 0) {
-                        if (!readAccessorSafe(model, gltfSampler.output, sampler.rotations)) {
+                        if (!readAccessor(model, gltfSampler.output, sampler.rotations)) {
                             std::cerr << "Warning: Failed to read rotation data for animation: " 
                                       << tinyAnim.name << std::endl;
                             continue;
@@ -863,7 +843,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 } else if (gltfChannel.target_path == "scale") {
                     channel.targetPath = TinyAnimationChannel::TargetPath::Scale;
                     if (gltfSampler.output >= 0) {
-                        if (!readAccessorSafe(model, gltfSampler.output, sampler.scales)) {
+                        if (!readAccessor(model, gltfSampler.output, sampler.scales)) {
                             std::cerr << "Warning: Failed to read scale data for animation: " 
                                       << tinyAnim.name << std::endl;
                             continue;
@@ -872,7 +852,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 } else if (gltfChannel.target_path == "weights") {
                     channel.targetPath = TinyAnimationChannel::TargetPath::Weights;
                     if (gltfSampler.output >= 0) {
-                        if (!readAccessorSafe(model, gltfSampler.output, sampler.weights)) {
+                        if (!readAccessor(model, gltfSampler.output, sampler.weights)) {
                             std::cerr << "Warning: Failed to read weights data for animation: " 
                                       << tinyAnim.name << std::endl;
                             continue;
@@ -978,13 +958,111 @@ void loadTextures(std::vector<TinyTexture>& textures, tinygltf::Model& model) {
     }
 }
 
-void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& model, bool forceStatic) {
+struct PrimitiveData {
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> uvs;
+    std::vector<glm::vec4> tangents;
+    std::vector<glm::uvec4> joints;
+    std::vector<glm::vec4> weights;
+    std::vector<uint64_t> indices; // Initial conversion
+    int materialIndex = -1;
+    size_t vertexCount = 0;
+};
+
+void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
+    std::vector<PrimitiveData> allPrimitiveDatas;
+
+    // Shared data
+    TinyMesh::IndexType largestIndexType = TinyMesh::IndexType::Uint8;
+
+    // First pass: gather all primitive data and determine largest index type
+    for (const auto& primitive : primitives) {
+        PrimitiveData pd;
+
+        if (!primitive.attributes.count("POSITION")) {
+            throw std::runtime_error("Primitive missing POSITION attribute");
+        }
+
+        readAccessor(gltfModel, primitive.attributes.at("POSITION"), pd.positions);
+
+        if (primitive.attributes.count("NORMAL")) {
+            readAccessor(gltfModel, primitive.attributes.at("NORMAL"), pd.normals);
+        }   
+        if (primitive.attributes.count("TANGENT")) {
+            readAccessor(gltfModel, primitive.attributes.at("TANGENT"), pd.tangents);
+        }
+        if (primitive.attributes.count("TEXCOORD_0")) {
+            readAccessor(gltfModel, primitive.attributes.at("TEXCOORD_0"), pd.uvs);
+        }
+
+        if (hasRigging && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0")){
+            readJointIndices(gltfModel, primitive.attributes.at("JOINTS_0"), pd.joints);
+            readAccessor(gltfModel, primitive.attributes.at("WEIGHTS_0"), pd.weights);
+        }
+
+        pd.vertexCount = pd.positions.size();
+
+        if (primitive.indices <= 0) continue;
+
+        const auto& indexAccessor = gltfModel.accessors[primitive.indices];
+        const auto& indexBufferView = gltfModel.bufferViews[indexAccessor.bufferView];
+        const auto& indexBuffer = gltfModel.buffers[indexBufferView.buffer];
+        const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+        size_t stride = indexAccessor.ByteStride(indexBufferView);
+
+        // Do 2 things: find the current index type, and append indices to pd.indices
+        TinyMesh::IndexType currentType;
+        switch (indexAccessor.componentType) {
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: 
+                for (size_t i = 0; i < indexAccessor.count; i++) {
+                    uint8_t index = *((uint8_t*)(dataPtr + stride * i));
+                    pd.indices.push_back(static_cast<uint64_t>(index));
+                }
+
+                currentType = TinyMesh::IndexType::Uint8;
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                for (size_t i = 0; i < indexAccessor.count; i++) {
+                    uint16_t index = *((uint16_t*)(dataPtr + stride * i));
+                    pd.indices.push_back(static_cast<uint64_t>(index));
+                }
+
+                currentType = TinyMesh::IndexType::Uint16;
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                for (size_t i = 0; i < indexAccessor.count; i++) {
+                    uint32_t index = *((uint32_t*)(dataPtr + stride * i));
+                    pd.indices.push_back(static_cast<uint64_t>(index));
+                }
+
+                currentType = TinyMesh::IndexType::Uint32;
+                break;
+            default:
+                throw std::runtime_error("Unsupported index component type");
+        }
+
+        // Update largest index type
+        if (currentType > largestIndexType) largestIndexType = currentType;
+
+        pd.materialIndex = primitive.material;
+    }
+
+    // Second pass: construct the TinyMesh
+    if (allPrimitiveDatas.empty()) throw std::runtime_error("What kind of shitty mesh did you give me?");
+
+    mesh.indexType = largestIndexType;
+}
+
+void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
     meshes.clear();
 
-    for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
-        const tinygltf::Mesh& mesh = model.meshes[meshIndex];
+    for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
+        const tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
+        TinyMesh tinyMesh;
 
-        TinyMesh combinedMesh;
+        loadMesh(tinyMesh, gltfModel, gltfMesh.primitives, !forceStatic);
+        meshes.push_back(std::move(tinyMesh));
     }
 }
 
@@ -1010,4 +1088,6 @@ TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool 
 
     loadTextures(result.textures, model);
     loadMeshes(result.meshes, model, forceStatic);
+
+    return result;
 }
