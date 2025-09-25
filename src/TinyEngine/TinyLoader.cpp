@@ -567,7 +567,7 @@ void loadMeshCombined(TinyMesh& mesh, tinygltf::Model& gltfModel, bool forceStat
 
 // Animation target bones, leading to a complex reference layer
 
-void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<size_t, int>>& nodeToSkeletonAndJointIndex, size_t skeletonIndex, const tinygltf::Model& model, const tinygltf::Skin& skin) {
+void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndJointIndex, int skeletonIndex, const tinygltf::Model& model, const tinygltf::Skin& skin) {
     if (skin.joints.empty()) return;
 
     skeleton.clear();
@@ -626,7 +626,7 @@ void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<size_t, in
     }
 }
 
-void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::pair<size_t, int>>& nodeToSkeletonAndJointIndex, tinygltf::Model& model) {
+void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndJointIndex, tinygltf::Model& model) {
     skeletons.clear();
     nodeToSkeletonAndJointIndex.clear();
 
@@ -668,7 +668,7 @@ TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool 
     std::vector<TinyMesh> meshes;
     loadMeshes(meshes, model, forceStatic);
 
-    UnorderedMap<int, std::pair<size_t, int>> nodeToSkeletonAndJointIndex;
+    UnorderedMap<int, std::pair<int, int>> nodeToSkeletonAndJointIndex;
     std::vector<TinySkeleton> skeletons;
     loadSkeletons(skeletons, nodeToSkeletonAndJointIndex, model);
 
@@ -702,6 +702,8 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     }
 
     if (!ok || model.meshes.empty()) return TinyModel();
+    
+    bool hasRigging = !forceStatic && !model.skins.empty();
 
     std::vector<TinyTexture> textures;
     loadTextures(textures, model);
@@ -709,92 +711,19 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     std::vector<TinyMaterial> materials;
     loadMaterials(materials, model, textures);
 
-    // Build skeleton only if requested
-    UnorderedMap<int, int> nodeIndexToBoneIndex;
+    UnorderedMap<int, std::pair<int, int>> nodeToSkeletonAndJointIndex; // Left: node index, Right: pair<skeleton index, joint index>
+    std::vector<TinySkeleton> skeletons;
+    loadSkeletons(skeletons, nodeToSkeletonAndJointIndex, model);
 
-    bool hasRigging = !forceStatic && !model.skins.empty();
-    if (hasRigging) {
-        const tinygltf::Skin& skin = model.skins[0];
+    hasRigging &= !skeletons.empty();
 
-        // Create the node-to-bone mapping
-        for (size_t i = 0; i < skin.joints.size(); i++) {
-            nodeIndexToBoneIndex[skin.joints[i]] = static_cast<int>(i);
-        }
-
-        // Load inverse bind matrices
-        std::vector<glm::mat4> inverseBindMatrices;
-        if (skin.inverseBindMatrices >= 0) {
-            if (!readAccessor(model, skin.inverseBindMatrices, inverseBindMatrices)) {
-                throw std::runtime_error("Failed to read inverse bind matrices");
-            }
-        } else {
-            inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f));
-        }
-
-        // First pass: gather bone data
-        for (size_t i = 0; i < skin.joints.size(); i++) {
-            int nodeIndex = skin.joints[i];
-
-            if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size())) {
-                throw std::runtime_error("Invalid joint node index: " + std::to_string(nodeIndex));
-            }
-            
-            const auto& node = model.nodes[nodeIndex];
-
-            TinyJoint joint;
-            joint.inverseBindMatrix = inverseBindMatrices[i];
-            joint.localBindTransform = makeLocalFromNode(node);
-
-            std::string originalName = node.name.empty() ? "" : node.name;
-            joint.name = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
-
-            result.skeleton.insert(joint);
-        }
-        
-        // Second pass: fix parent relationships (optimized)
-        // Build a node-to-parent lookup table once - O(m*c) where m=nodes, c=avg children
-        UnorderedMap<int, int> nodeToParent;
-        for (size_t nodeIdx = 0; nodeIdx < model.nodes.size(); nodeIdx++) {
-            const auto& node = model.nodes[nodeIdx];
-            for (int childIdx : node.children) {
-                nodeToParent[childIdx] = static_cast<int>(nodeIdx);
-            }
-        }
-        
-        // Now lookup parents in O(1) per joint - O(n) total where n=joints
-        for (size_t i = 0; i < skin.joints.size(); i++) {
-            int nodeIndex = skin.joints[i];
-            int parentBoneIndex = -1;
-            
-            // Find parent node in O(1)
-            auto parentIt = nodeToParent.find(nodeIndex);
-            if (parentIt != nodeToParent.end()) {
-                int parentNodeIndex = parentIt->second;
-                
-                // Check if parent is also in the skeleton
-                auto boneIt = nodeIndexToBoneIndex.find(parentNodeIndex);
-                if (boneIt != nodeIndexToBoneIndex.end()) {
-                    parentBoneIndex = boneIt->second;
-                }
-            }
-            
-            result.skeleton.parents[i] = parentBoneIndex;
-        }
-    }
-
-    hasRigging &= !result.skeleton.names.empty();
-
-    // std::vector<TinyMesh> meshes;
-    // loadMeshes(meshes, model, hasRigging);
-
-    // Legacy
     TinyMesh combinedMesh;
     loadMeshCombined(combinedMesh, model, !hasRigging);
 
-    // Load animations only if skeleton is loaded and animations exist
-    hasRigging &= !model.animations.empty();
+    // For the time being we will only be using the first skeleton
+    if (hasRigging) result.skeleton = skeletons[0];
 
-    if (hasRigging) {
+    if (!model.animations.empty()) {
         for (size_t animIndex = 0; animIndex < model.animations.size(); animIndex++) {
             const tinygltf::Animation& gltfAnim = model.animations[animIndex];
             TinyAnimation tinyAnim;
@@ -838,9 +767,10 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 
                 // Find target bone index
                 if (gltfChannel.target_node >= 0) {
-                    auto it = nodeIndexToBoneIndex.find(gltfChannel.target_node);
-                    if (it != nodeIndexToBoneIndex.end()) {
-                        channel.targetJointIndex = it->second;
+                    auto it = nodeToSkeletonAndJointIndex.find(gltfChannel.target_node);
+                    if (it != nodeToSkeletonAndJointIndex.end()) {
+                        channel.targetSkeletonIndex = it->second.first;
+                        channel.targetJointIndex = it->second.second;
                     } else {
                         // Node is not part of the skeleton - skip this channel
                         std::cerr << "Warning: Animation channel targets node not in skeleton: " 
