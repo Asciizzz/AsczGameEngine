@@ -92,7 +92,14 @@ TinyVertexRig& TinyVertexRig::setBoneIDs(const glm::uvec4& ids) {
     boneIDs = ids;
     return *this;
 }
-TinyVertexRig& TinyVertexRig::setWeights(const glm::vec4& weights) {
+TinyVertexRig& TinyVertexRig::setWeights(const glm::vec4& weights, bool normalize) {
+    if (normalize) {
+        float total = weights.x + weights.y + weights.z + weights.w;
+        if (total > 0.0f) {
+            this->weights = weights / total;
+            return *this;
+        }
+    }
     this->weights = weights;
     return *this;
 }
@@ -115,4 +122,21 @@ VkVertexInputBindingDescription TinyVertexRig::getBindingDescription() {
 }
 std::vector<VkVertexInputAttributeDescription> TinyVertexRig::getAttributeDescriptions() {
     return getLayout().getAttributeDescriptions();
+}
+
+
+TinyVertexStatic TinyVertexRig::makeStaticVertex(const TinyVertexRig& rigVertex) {
+    TinyVertexStatic staticVertex;
+    staticVertex.pos_tu = rigVertex.pos_tu;
+    staticVertex.nrml_tv = rigVertex.nrml_tv;
+    staticVertex.tangent = rigVertex.tangent;
+    return staticVertex;
+}
+
+std::vector<TinyVertexStatic> TinyVertexRig::makeStaticVertices(const std::vector<TinyVertexRig>& rigVertices) {
+    std::vector<TinyVertexStatic> staticVertices;
+    for (const auto& rigV : rigVertices) {
+        staticVertices.push_back(makeStaticVertex(rigV));
+    }
+    return staticVertices;
 }

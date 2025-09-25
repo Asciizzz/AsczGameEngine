@@ -286,26 +286,42 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
     }
 }
 
-TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
-    tinygltf::Model model;
-    tinygltf::TinyGLTF loader;
-    std::string err, warn;
+// OBJ loader implementation using tiny_obj_loader
+TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, bool forceStatic) {
 
-    loader.SetImageLoader(LoadImageData, nullptr);
-    loader.SetPreserveImageChannels(true);  // Preserve original channel count
+    return TinyModel(); // OBJ loading not implemented yet
+}
 
-    TinyModel result;
 
-    bool ok;
-    if (filePath.find(".glb") != std::string::npos) {
-        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);  // GLB
-    } else {
-        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
+TinyModel TinyLoader::loadModel(const std::string& filePath, bool forceStatic) {
+    std::string ext;
+    size_t dotPos = filePath.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        ext = filePath.substr(dotPos);
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return std::tolower(c); });
     }
 
-    if (!ok || model.meshes.empty()) return TinyModel();
+    if (ext == ".gltf" || ext == ".glb") {
+        return loadModelFromGLTF(filePath, forceStatic);
+    } else if (ext == ".obj") {
+        return loadModelFromOBJ(filePath, forceStatic);
+    } else {
+        return TinyModel(); // Unsupported format
+    }
+}
 
-    result.textures.reserve(model.textures.size());
+
+
+
+
+
+
+// New implemetation
+
+void loadTextures(std::vector<TinyTexture>& textures, tinygltf::Model& model) {
+    textures.clear();
+    textures.reserve(model.textures.size());
+
     for (const auto& gltfTexture : model.textures) {
         TinyTexture texture;
 
@@ -339,28 +355,257 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
             }
         }
         
-        result.textures.push_back(std::move(texture));
+        textures.push_back(std::move(texture));
     }
+}
 
-    result.materials.reserve(model.materials.size());
+void loadMaterials(std::vector<TinyMaterial>& materials, tinygltf::Model& model, const std::vector<TinyTexture>& textures) {
+    materials.clear();
+    materials.reserve(model.materials.size());
     for (const auto& gltfMaterial : model.materials) {
         TinyMaterial material;
 
         int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-        if (albedoTexIndex >= 0 && albedoTexIndex < static_cast<int>(result.textures.size())) {
-            uint32_t albedoTexHash = result.textures[albedoTexIndex].hash;
+        if (albedoTexIndex >= 0 && albedoTexIndex < static_cast<int>(textures.size())) {
+            uint32_t albedoTexHash = textures[albedoTexIndex].hash;
             material.setAlbedoTexture(albedoTexIndex, albedoTexHash);
         }
     
         // Handle normal texture (only if textures are also being loaded)
         int normalTexIndex = gltfMaterial.normalTexture.index;
-        if (normalTexIndex >= 0 && normalTexIndex < static_cast<int>(result.textures.size())) {
-            uint32_t normalTexHash = result.textures[normalTexIndex].hash;
+        if (normalTexIndex >= 0 && normalTexIndex < static_cast<int>(textures.size())) {
+            uint32_t normalTexHash = textures[normalTexIndex].hash;
             material.setNormalTexture(normalTexIndex, normalTexHash);
         }
 
-        result.materials.push_back(material);
+        materials.push_back(material);
     }
+}
+
+struct PrimitiveData {
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> uvs;
+    std::vector<glm::vec4> tangents;
+    std::vector<glm::uvec4> joints;
+    std::vector<glm::vec4> weights;
+    std::vector<uint64_t> indices; // Initial conversion
+    int materialIndex = -1;
+    size_t vertexCount = 0;
+};
+
+void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
+    std::vector<PrimitiveData> allPrimitiveDatas;
+
+    // Shared data
+    TinyMesh::IndexType largestIndexType = TinyMesh::IndexType::Uint8;
+
+    // First pass: gather all primitive data and determine largest index type
+    for (const auto& primitive : primitives) {
+        PrimitiveData pData;
+
+        bool hasPosition = readAccessorFromMap(gltfModel, primitive.attributes, "POSITION", pData.positions);
+        if (!hasPosition) throw std::runtime_error("Primitive failed to read POSITION attribute");
+
+        readAccessorFromMap(gltfModel, primitive.attributes, "NORMAL", pData.normals);
+        readAccessorFromMap(gltfModel, primitive.attributes, "TANGENT", pData.tangents);
+        readAccessorFromMap(gltfModel, primitive.attributes, "TEXCOORD_0", pData.uvs);
+
+        if (hasRigging) {
+            readAccessorFromMap(gltfModel, primitive.attributes, "JOINTS_0", pData.joints);
+            readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", pData.weights);
+        }
+
+        pData.vertexCount = pData.positions.size();
+
+        if (primitive.indices <= 0) continue;
+
+        const auto& indexAccessor = gltfModel.accessors[primitive.indices];
+        const auto& indexBufferView = gltfModel.bufferViews[indexAccessor.bufferView];
+        const auto& indexBuffer = gltfModel.buffers[indexBufferView.buffer];
+        const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+        size_t stride = indexAccessor.ByteStride(indexBufferView);
+
+        // Do 2 things: find the current index type, and append indices to pd.indices
+        TinyMesh::IndexType currentType;
+        switch (indexAccessor.componentType) {
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: 
+                for (size_t i = 0; i < indexAccessor.count; i++) {
+                    uint8_t index = *((uint8_t*)(dataPtr + stride * i));
+                    pData.indices.push_back(static_cast<uint64_t>(index));
+                }
+
+                currentType = TinyMesh::IndexType::Uint8;
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                for (size_t i = 0; i < indexAccessor.count; i++) {
+                    uint16_t index = *((uint16_t*)(dataPtr + stride * i));
+                    pData.indices.push_back(static_cast<uint64_t>(index));
+                }
+
+                currentType = TinyMesh::IndexType::Uint16;
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                for (size_t i = 0; i < indexAccessor.count; i++) {
+                    uint32_t index = *((uint32_t*)(dataPtr + stride * i));
+                    pData.indices.push_back(static_cast<uint64_t>(index));
+                }
+
+                currentType = TinyMesh::IndexType::Uint32;
+                break;
+            default:
+                throw std::runtime_error("Unsupported index component type");
+        }
+
+        // Update largest index type
+        if (currentType > largestIndexType) largestIndexType = currentType;
+
+        pData.materialIndex = primitive.material;
+    }
+
+    // Second pass: construct the TinyMesh
+    if (allPrimitiveDatas.empty())
+        throw std::runtime_error("What kind of shitty mesh did you give me?");
+
+    mesh.indexType = largestIndexType;
+
+    std::vector<uint32_t> allIndices;
+    std::vector<TinyVertexRig> allVertices;
+        // Use the shared version
+        // If the model happen to be static, create a new vector for TinyVertexStatic
+
+    uint32_t currentVertexOffset = 0;
+    uint32_t currentIndexOffset = 0;
+
+    for (const auto& pData : allPrimitiveDatas) {
+        for (uint32_t i = 0 ; i < pData.vertexCount; ++i) {
+            TinyVertexRig vertex{};
+
+            glm::vec3 pos = pData.positions.size() > i ? pData.positions[i] : glm::vec3(0.0f);
+            glm::vec3 nrml = pData.normals.size() > i ? pData.normals[i] : glm::vec3(0.0f);
+            glm::vec2 texUV = pData.uvs.size() > i ? pData.uvs[i] : glm::vec2(0.0f);
+            glm::vec4 tang = pData.tangents.size() > i ? pData.tangents[i] : glm::vec4(1,0,0,1);
+
+            vertex.setPosition(pos).setNormal(nrml).setTextureUV(texUV).setTangent(tang);
+
+            if (pData.joints.size() > i && pData.weights.size() > i) {
+                glm::uvec4 jointIds = pData.joints[i];
+                glm::vec4 boneWeights = pData.weights[i];
+
+                vertex.setBoneIDs(jointIds).setWeights(boneWeights, true);
+            }
+
+            allVertices.push_back(vertex);
+        }
+
+        // Add indices with vertex offset
+        for (uint64_t index : pData.indices) {
+            allIndices.push_back(static_cast<uint32_t>(index + currentVertexOffset));
+        }
+
+        // Create submesh range
+        TinySubmesh submesh;
+        submesh.indexOffset = currentIndexOffset;
+        submesh.indexCount = static_cast<uint32_t>(pData.indices.size());
+        submesh.materialIndex = pData.materialIndex;
+        mesh.addSubmesh(submesh);
+
+        currentVertexOffset += static_cast<uint32_t>(pData.vertexCount);
+        currentIndexOffset += static_cast<uint32_t>(pData.indices.size());
+    }
+
+    switch (largestIndexType) {
+        case TinyMesh::IndexType::Uint8: {
+            std::vector<uint8_t> indices8;
+            indices8.reserve(allIndices.size());
+            for (uint32_t idx : allIndices) {
+                indices8.push_back(static_cast<uint8_t>(idx));
+            }
+            mesh.setIndices(indices8);
+            break;
+        }
+        case TinyMesh::IndexType::Uint16: {
+            std::vector<uint16_t> indices16;
+            indices16.reserve(allIndices.size());
+            for (uint32_t idx : allIndices) {
+                indices16.push_back(static_cast<uint16_t>(idx));
+            }
+            mesh.setIndices(indices16);
+            break;
+        }
+        case TinyMesh::IndexType::Uint32: {
+            mesh.setIndices(allIndices);
+            break;
+        }
+    }
+
+    if (hasRigging) mesh.setVertices(allVertices);
+    else mesh.setVertices(TinyVertexRig::makeStaticVertices(allVertices));
+}
+
+void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
+    meshes.clear();
+
+    for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
+        const tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
+        TinyMesh tinyMesh;
+
+        loadMesh(tinyMesh, gltfModel, gltfMesh.primitives, !forceStatic);
+        meshes.push_back(std::move(tinyMesh));
+    }
+}
+
+
+TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool forceStatic) {
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err, warn;
+
+    loader.SetImageLoader(LoadImageData, nullptr);
+    loader.SetPreserveImageChannels(true);  // Preserve original channel count
+
+    bool ok;
+    if (filePath.find(".glb") != std::string::npos) {
+        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);  // GLB
+    } else {
+        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
+    }
+
+    TinyModelNew result;
+    if (!ok || model.meshes.empty()) return result;
+
+    loadTextures(result.textures, model);
+    loadMaterials(result.materials, model, result.textures);
+    loadMeshes(result.meshes, model, forceStatic);
+
+    return result;
+}
+
+
+
+
+
+TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err, warn;
+
+    loader.SetImageLoader(LoadImageData, nullptr);
+    loader.SetPreserveImageChannels(true);  // Preserve original channel count
+
+    TinyModel result;
+
+    bool ok;
+    if (filePath.find(".glb") != std::string::npos) {
+        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);  // GLB
+    } else {
+        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
+    }
+
+    if (!ok || model.meshes.empty()) return TinyModel();
+
+    loadTextures(result.textures, model);
+    loadMaterials(result.materials, model, result.textures);
 
     // Build skeleton only if requested
     UnorderedMap<int, int> nodeIndexToBoneIndex;
@@ -440,17 +685,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     // Create a single TinyMesh to hold all combined mesh data
     TinyMesh combinedMesh;
     std::vector<TinySubmesh> submeshRanges;
-
-    // Temporary storage for collecting all primitives data
-    struct PrimitiveData {
-        std::vector<glm::vec3> positions, normals;
-        std::vector<glm::vec4> tangents, weights;
-        std::vector<glm::vec2> uvs;
-        std::vector<glm::uvec4> joints;
-        std::vector<uint32_t> indices; // Always convert to uint32_t
-        int materialIndex = -1;
-        size_t vertexCount = 0;
-    };
     
     std::vector<PrimitiveData> allPrimitives;
     TinyMesh::IndexType largestIndexType = TinyMesh::IndexType::Uint8;
@@ -553,19 +787,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
         // Combine all vertices into continuous buffer
         if (hasRigging) {
             std::vector<TinyVertexRig> allVertices;
-            size_t totalVertices = 0;
-            for (const auto& primData : allPrimitives) {
-                totalVertices += primData.vertexCount;
-            }
-            allVertices.reserve(totalVertices);
-            
-            // Combine all indices and create submesh ranges
             std::vector<uint32_t> allIndices;
-            size_t totalIndices = 0;
-            for (const auto& primData : allPrimitives) {
-                totalIndices += primData.indices.size();
-            }
-            allIndices.reserve(totalIndices);
             
             uint32_t currentVertexOffset = 0;
             uint32_t currentIndexOffset = 0;
@@ -860,213 +1082,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
             result.animations.push_back(std::move(tinyAnim));
         }
     }
-
-    return result;
-}
-
-// OBJ loader implementation using tiny_obj_loader
-TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, bool forceStatic) {
-
-    return TinyModel(); // OBJ loading not implemented yet
-}
-
-
-TinyModel TinyLoader::loadModel(const std::string& filePath, bool forceStatic) {
-    std::string ext;
-    size_t dotPos = filePath.find_last_of('.');
-    if (dotPos != std::string::npos) {
-        ext = filePath.substr(dotPos);
-        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return std::tolower(c); });
-    }
-
-    if (ext == ".gltf" || ext == ".glb") {
-        return loadModelFromGLTF(filePath, forceStatic);
-    } else if (ext == ".obj") {
-        return loadModelFromOBJ(filePath, forceStatic);
-    } else {
-        return TinyModel(); // Unsupported format
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// New implemetation
-
-void loadTextures(std::vector<TinyTexture>& textures, tinygltf::Model& model) {
-    textures.clear();
-    textures.reserve(model.textures.size());
-
-    for (const auto& gltfTexture : model.textures) {
-        TinyTexture texture;
-
-        // Load image data
-        if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
-            const auto& image = model.images[gltfTexture.source];
-            texture.
-                setDimensions(image.width, image.height).
-                setChannels(image.component).
-                setData(image.image).
-                makeHash();
-        }
-        
-        // Load sampler settings (address mode)
-        texture.addressMode = TinyTexture::AddressMode::Repeat; // Default
-        if (gltfTexture.sampler >= 0 && gltfTexture.sampler < static_cast<int>(model.samplers.size())) {
-            const auto& sampler = model.samplers[gltfTexture.sampler];
-            
-            // Convert GLTF wrap modes to our AddressMode enum
-            // GLTF uses the same values for both wrapS and wrapT, so we'll use wrapS
-            switch (sampler.wrapS) {
-                case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-                    texture.setAddressMode(TinyTexture::AddressMode::ClampToEdge);
-                    break;
-
-                case TINYGLTF_TEXTURE_WRAP_REPEAT:
-                case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT: // Fall back
-                default:
-                    texture.setAddressMode(TinyTexture::AddressMode::Repeat);
-                    break;
-            }
-        }
-        
-        textures.push_back(std::move(texture));
-    }
-}
-
-struct PrimitiveData {
-    std::vector<glm::vec3> positions;
-    std::vector<glm::vec3> normals;
-    std::vector<glm::vec2> uvs;
-    std::vector<glm::vec4> tangents;
-    std::vector<glm::uvec4> joints;
-    std::vector<glm::vec4> weights;
-    std::vector<uint64_t> indices; // Initial conversion
-    int materialIndex = -1;
-    size_t vertexCount = 0;
-};
-
-void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
-    std::vector<PrimitiveData> allPrimitiveDatas;
-
-    // Shared data
-    TinyMesh::IndexType largestIndexType = TinyMesh::IndexType::Uint8;
-
-    // First pass: gather all primitive data and determine largest index type
-    for (const auto& primitive : primitives) {
-        PrimitiveData pd;
-
-        bool hasPosition = readAccessorFromMap(gltfModel, primitive.attributes, "POSITION", pd.positions);
-        if (!hasPosition) throw std::runtime_error("Primitive failed to read POSITION attribute");
-
-        readAccessorFromMap(gltfModel, primitive.attributes, "NORMAL", pd.normals);
-        readAccessorFromMap(gltfModel, primitive.attributes, "TANGENT", pd.tangents);
-        readAccessorFromMap(gltfModel, primitive.attributes, "TEXCOORD_0", pd.uvs);
-        
-
-        if (hasRigging) {
-            readAccessorFromMap(gltfModel, primitive.attributes, "JOINTS_0", pd.joints);
-            readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", pd.weights);
-        }
-
-        pd.vertexCount = pd.positions.size();
-
-        if (primitive.indices <= 0) continue;
-
-        const auto& indexAccessor = gltfModel.accessors[primitive.indices];
-        const auto& indexBufferView = gltfModel.bufferViews[indexAccessor.bufferView];
-        const auto& indexBuffer = gltfModel.buffers[indexBufferView.buffer];
-        const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
-        size_t stride = indexAccessor.ByteStride(indexBufferView);
-
-        // Do 2 things: find the current index type, and append indices to pd.indices
-        TinyMesh::IndexType currentType;
-        switch (indexAccessor.componentType) {
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: 
-                for (size_t i = 0; i < indexAccessor.count; i++) {
-                    uint8_t index = *((uint8_t*)(dataPtr + stride * i));
-                    pd.indices.push_back(static_cast<uint64_t>(index));
-                }
-
-                currentType = TinyMesh::IndexType::Uint8;
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                for (size_t i = 0; i < indexAccessor.count; i++) {
-                    uint16_t index = *((uint16_t*)(dataPtr + stride * i));
-                    pd.indices.push_back(static_cast<uint64_t>(index));
-                }
-
-                currentType = TinyMesh::IndexType::Uint16;
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                for (size_t i = 0; i < indexAccessor.count; i++) {
-                    uint32_t index = *((uint32_t*)(dataPtr + stride * i));
-                    pd.indices.push_back(static_cast<uint64_t>(index));
-                }
-
-                currentType = TinyMesh::IndexType::Uint32;
-                break;
-            default:
-                throw std::runtime_error("Unsupported index component type");
-        }
-
-        // Update largest index type
-        if (currentType > largestIndexType) largestIndexType = currentType;
-
-        pd.materialIndex = primitive.material;
-    }
-
-    // Second pass: construct the TinyMesh
-    if (allPrimitiveDatas.empty()) throw std::runtime_error("What kind of shitty mesh did you give me?");
-
-    mesh.indexType = largestIndexType;
-}
-
-void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
-    meshes.clear();
-
-    for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
-        const tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
-        TinyMesh tinyMesh;
-
-        loadMesh(tinyMesh, gltfModel, gltfMesh.primitives, !forceStatic);
-        meshes.push_back(std::move(tinyMesh));
-    }
-}
-
-
-TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool forceStatic) {
-    tinygltf::Model model;
-    tinygltf::TinyGLTF loader;
-    std::string err, warn;
-
-    loader.SetImageLoader(LoadImageData, nullptr);
-    loader.SetPreserveImageChannels(true);  // Preserve original channel count
-
-    TinyModelNew result;
-
-    bool ok;
-    if (filePath.find(".glb") != std::string::npos) {
-        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);  // GLB
-    } else {
-        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
-    }
-
-    if (!ok || model.meshes.empty()) return result;
-
-    loadTextures(result.textures, model);
-    loadMeshes(result.meshes, model, forceStatic);
 
     return result;
 }

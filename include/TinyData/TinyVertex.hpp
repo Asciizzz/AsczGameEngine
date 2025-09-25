@@ -75,7 +75,7 @@ struct TinyVertexRig {
     TinyVertexRig& setTextureUV(const glm::vec2& uv);
     TinyVertexRig& setTangent(const glm::vec4& tangent);
     TinyVertexRig& setBoneIDs(const glm::uvec4& ids=glm::uvec4(0));
-    TinyVertexRig& setWeights(const glm::vec4& weights=glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
+    TinyVertexRig& setWeights(const glm::vec4& weights=glm::vec4(1.0f, 0.0f, 0.0f, 0.0f), bool normalize=true);
 
     glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
@@ -85,4 +85,7 @@ struct TinyVertexRig {
     static TinyVertexLayout getLayout();
     static VkVertexInputBindingDescription getBindingDescription();
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+
+    static TinyVertexStatic makeStaticVertex(const TinyVertexRig& rigVertex);
+    static std::vector<TinyVertexStatic> makeStaticVertices(const std::vector<TinyVertexRig>& rigVertices);
 };
