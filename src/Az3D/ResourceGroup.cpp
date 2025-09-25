@@ -74,11 +74,11 @@ void ResourceGroup::createComponentVKsFromModels() {
             matVK.shadingParams.w = material.discardThreshold;
 
             // Texture indices - x for albedo, y for normal map
-            bool validAlbTex = material.albTexture >= 0 && material.albTexture < static_cast<int>(model.textures.size());
-            matVK.texIndices.x = validAlbTex ? static_cast<uint32_t>(tempGlobalTextures[material.albTexture]) : 0;
+            bool validAlbTex = material.localAlbTexture >= 0 && material.localAlbTexture < static_cast<int>(model.textures.size());
+            matVK.texIndices.x = validAlbTex ? static_cast<uint32_t>(tempGlobalTextures[material.localAlbTexture]) : 0;
 
-            bool validNrmlTex = material.nrmlTexture >= 0 && material.nrmlTexture < static_cast<int>(model.textures.size());
-            matVK.texIndices.y = validNrmlTex ? static_cast<uint32_t>(tempGlobalTextures[material.nrmlTexture]) : 0;
+            bool validNrmlTex = material.localNrmlTexture >= 0 && material.localNrmlTexture < static_cast<int>(model.textures.size());
+            matVK.texIndices.y = validNrmlTex ? static_cast<uint32_t>(tempGlobalTextures[material.localNrmlTexture]) : 0;
 
             // z and w components unused for now
             matVK.texIndices.z = 0;

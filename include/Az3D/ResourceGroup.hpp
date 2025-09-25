@@ -7,6 +7,8 @@
 #include "AzVulk/Descriptor.hpp"
 #include "AzVulk/TextureVK.hpp"
 
+// ResourceGroup soon to be deperecated
+
 namespace Az3D {
 
 struct MaterialVK {

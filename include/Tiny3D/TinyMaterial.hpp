@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 struct TinyMaterial {
     bool shading = true;
     int toonLevel = 0;
@@ -8,8 +10,11 @@ struct TinyMaterial {
     float normalBlend = 0.0f;
     float discardThreshold = 0.01f;
 
-    int albTexture = -1;
-    int nrmlTexture = -1;
+    int localAlbTexture = -1;
+    int localNrmlTexture = -1;
+
+    uint32_t albTexHash = 0;
+    uint32_t nrmlTexHash = 0;
 
     TinyMaterial& setShading(bool enable);
     TinyMaterial& setToonLevel(int level);
@@ -17,6 +22,7 @@ struct TinyMaterial {
     TinyMaterial& setNormalBlend(float blend);
     TinyMaterial& setDiscardThreshold(float threshold);
 
-    TinyMaterial& setAlbedoTexture(int texIndex);
-    TinyMaterial& setNormalTexture(int texIndex);
+    // Hash data is required to match textures later
+    TinyMaterial& setAlbedoTexture(int texIndex, uint32_t texHash);
+    TinyMaterial& setNormalTexture(int texIndex, uint32_t texHash);
 };

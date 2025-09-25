@@ -20,12 +20,13 @@ TinyMaterial& TinyMaterial::setDiscardThreshold(float threshold) {
     return *this;
 }
 
-TinyMaterial& TinyMaterial::setAlbedoTexture(int texIndex) {
-    albTexture = texIndex;
+TinyMaterial& TinyMaterial::setAlbedoTexture(int texIndex, uint32_t texHash) {
+    localAlbTexture = texIndex;
     return *this;
 }
 
-TinyMaterial& TinyMaterial::setNormalTexture(int texIndex) {
-    nrmlTexture = texIndex;
+TinyMaterial& TinyMaterial::setNormalTexture(int texIndex, uint32_t texHash) {
+    localNrmlTexture = texIndex;
+    nrmlTexHash = texHash;
     return *this;
 }
