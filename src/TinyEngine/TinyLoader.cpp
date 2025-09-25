@@ -125,44 +125,40 @@ bool readAccessor(const tinygltf::Model& model, int accessorIndex, std::vector<T
     return true;
 }
 
-template<typename T>
-bool readAccessorFromMap(const tinygltf::Model& model, const std::map<std::string, int>& attributes, const std::string& key, std::vector<T>& out) {
-    if (attributes.count(key) == 0) return false;
-
-    return readAccessor(model, attributes.at(key), out);
-}
-
-// Utility: read joint indices with proper component type handling
-bool readJointIndices(const tinygltf::Model& model, int accessorIndex, std::vector<glm::uvec4>& joints) {
+// Template specialization for joint indices - handles component type conversion
+template<>
+bool readAccessor<glm::uvec4>(const tinygltf::Model& model, int accessorIndex, std::vector<glm::uvec4>& out) {
     if (accessorIndex < 0 || accessorIndex >= static_cast<int>(model.accessors.size())) {
         return false;
     }
     
     const tinygltf::Accessor& accessor = model.accessors[accessorIndex];
-    const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
-    const tinygltf::Buffer& buf = model.buffers[view.buffer];
     
+    if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) {
+        return false;
+    }
+    
+    const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
+    
+    if (view.buffer < 0 || view.buffer >= static_cast<int>(model.buffers.size())) {
+        return false;
+    }
+    
+    const tinygltf::Buffer& buf = model.buffers[view.buffer];
     const unsigned char* dataPtr = buf.data.data() + view.byteOffset + accessor.byteOffset;
     size_t stride = accessor.ByteStride(view);
     
     // Calculate stride based on component type if not specified
     if (stride == 0) {
         switch (accessor.componentType) {
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                stride = 4; // VEC4 of bytes
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                stride = 8; // VEC4 of shorts
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                stride = 16; // VEC4 of ints
-                break;
-            default:
-                return false;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:  stride = 4; break;  // VEC4 of bytes
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: stride = 8; break;  // VEC4 of shorts
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:   stride = 16; break; // VEC4 of ints
+            default: return false;
         }
     }
     
-    joints.resize(accessor.count);
+    out.resize(accessor.count);
     
     for (size_t i = 0; i < accessor.count; i++) {
         const unsigned char* vertexDataPtr = dataPtr + stride * i;
@@ -188,10 +184,17 @@ bool readJointIndices(const tinygltf::Model& model, int accessorIndex, std::vect
                 return false;
         }
         
-        joints[i] = jointIndices;
+        out[i] = jointIndices;
     }
     
     return true;
+}
+
+template<typename T>
+bool readAccessorFromMap(const tinygltf::Model& model, const std::map<std::string, int>& attributes, const std::string& key, std::vector<T>& out) {
+    if (attributes.count(key) == 0) return false;
+
+    return readAccessor(model, attributes.at(key), out);
 }
 
 
@@ -471,22 +474,10 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
             readAccessorFromMap(model, primitive.attributes, "TANGENT", primData.tangents);
             readAccessorFromMap(model, primitive.attributes, "TEXCOORD_0", primData.uvs);
             primData.vertexCount = primData.positions.size();
-            
-            // Only read skin attributes if submesh has rigging
-            bool submeshHasRigging = hasRigging && 
-                                    primitive.attributes.count("JOINTS_0") && 
-                                    primitive.attributes.count("WEIGHTS_0");
 
-            if (submeshHasRigging) {
-                if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), primData.joints)) {
-                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
-                                            std::to_string(primitiveIndex) + "] failed to read joint indices");
-                }
-
-                if (!readAccessor(model, primitive.attributes.at("WEIGHTS_0"), primData.weights)) {
-                    throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
-                                            std::to_string(primitiveIndex) + "] failed to read bone weights");
-                }
+            if (hasRigging) {
+                readAccessorFromMap(model, primitive.attributes, "JOINTS_0", primData.joints);
+                readAccessorFromMap(model, primitive.attributes, "WEIGHTS_0", primData.weights);
             }
 
             // Handle indices and determine largest type
@@ -985,7 +976,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         
 
         if (hasRigging) {
-            readJointIndices(gltfModel, primitive.attributes.at("JOINTS_0"), pd.joints);
+            readAccessorFromMap(gltfModel, primitive.attributes, "JOINTS_0", pd.joints);
             readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", pd.weights);
         }
 

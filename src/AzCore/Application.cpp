@@ -67,7 +67,7 @@ void Application::initComponents() {
     );
 
 // PLAYGROUND FROM HERE
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf", true);
+    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf", false);
     for (auto& mat : testModel.materials) {
         // mat.toonLevel = 4;
     }
@@ -160,8 +160,10 @@ void Application::initComponents() {
         .setAttributes({ vriggedAttrs });
 
     vertexInputVKs["Single"] = VertexInputVK()
-        .setBindings({ vstaticBind })
-        .setAttributes({ vstaticAttrs });
+        // .setBindings({ vstaticBind })
+        // .setAttributes({ vstaticAttrs });
+        .setBindings({ vriggedBind })
+        .setAttributes({ vriggedAttrs });
     
     // Use offscreen render pass for pipeline creation
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
