@@ -90,7 +90,7 @@ void ResourceGroup::createComponentVKsFromModels() {
         createMaterialDescSet(modelMaterialVKs, *modelVK);
 
         const TinyMesh& mesh = model.mesh;
-        modelVK->mesh.fromMesh(deviceVK, mesh, model.submeshMaterials);
+        modelVK->mesh.fromMesh(deviceVK, mesh);
 
         modelVKs.push_back(std::move(modelVK));
     }
@@ -311,7 +311,7 @@ void ResourceGroup::createTextureDescSet() {
 // =========================== MESH STATIC ====================================
 // ============================================================================
 
-void MeshVK::fromMesh(const DeviceVK* deviceVK, const TinyMesh& mesh, const std::vector<int>& submeshMats) {
+void MeshVK::fromMesh(const DeviceVK* deviceVK, const TinyMesh& mesh) {
     const auto& vertexData = mesh.vertexData;
     const auto& indexData = mesh.indexData;
 
@@ -328,7 +328,6 @@ void MeshVK::fromMesh(const DeviceVK* deviceVK, const TinyMesh& mesh, const std:
     indexType = tinyToVkIndexType(mesh.indexType);
 
     submeshes = mesh.submeshes; // Direct copy
-    submeshMaterials = submeshMats;
 }
 
 VkIndexType MeshVK::tinyToVkIndexType(TinyMesh::IndexType type) {

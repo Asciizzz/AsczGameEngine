@@ -11,6 +11,10 @@ struct TinyTexture {
     int channels = 0;
     std::vector<uint8_t> data;
 
+    TinyTexture& setDimensions(int w, int h);
+    TinyTexture& setChannels(int c);
+    TinyTexture& setData(const std::vector<uint8_t>& d);
+
     uint64_t hash = 0; // fnv1a hash of raw data
     uint64_t makeHash();
 
@@ -20,6 +24,10 @@ struct TinyTexture {
         ClampToEdge,
         ClampToBorder
     } addressMode = AddressMode::Repeat;
+    TinyTexture& setAddressMode(AddressMode mode) {
+        addressMode = mode;
+        return *this;
+    }
 
     static TinyTexture createDefaultTexture();
 };

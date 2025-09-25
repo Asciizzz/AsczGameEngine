@@ -247,7 +247,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
         uint32_t indexOffset = meshVK.submeshes[i].indexOffset;
 
         // Push constants: material index, light count, unused, unused
-        uint32_t matIndex  = meshVK.submeshMaterials[i];
+        uint32_t matIndex  = meshVK.submeshes[i].materialIndex;
         rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
         vkCmdDrawIndexed(currentCmd, indexCount, instanceCount, indexOffset, 0, 0);
@@ -289,7 +289,7 @@ void Renderer::drawSingleInstance(const TinyEngine::ResourceGroup* resGroup, con
         uint32_t indexOffset = meshVK.submeshes[i].indexOffset;
 
         // Push constants: material index, light count, unused, unused
-        uint32_t matIndex  = meshVK.submeshMaterials[i];
+        uint32_t matIndex  = meshVK.submeshes[i].materialIndex;
         rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
         vkCmdDrawIndexed(currentCmd, indexCount, 1, indexOffset, 0, 0);

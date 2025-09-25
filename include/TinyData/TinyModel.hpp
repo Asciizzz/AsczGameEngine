@@ -9,8 +9,7 @@
 
 struct TinyModel {
     TinyMesh mesh;
-    std::vector<int> submeshMaterials; // Material index per submesh
-    
+
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
 
@@ -19,14 +18,9 @@ struct TinyModel {
     UnorderedMap<std::string, int> nameToAnimationIndex;
 };
 
-struct TinyMeshMaterial {
-    std::vector<int> index;
-};
-
 struct TinyModelNew {
     // Raw data
     std::vector<TinyMesh> meshes;
-    std::vector<TinyMeshMaterial> submeshMaterials; // Material index per submesh per mesh
 
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;

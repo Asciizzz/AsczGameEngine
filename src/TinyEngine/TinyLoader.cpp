@@ -316,7 +316,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
     if (!ok || model.meshes.empty()) return TinyModel();
 
-    // Load textures only if requested
     result.textures.reserve(model.textures.size());
     for (const auto& gltfTexture : model.textures) {
         TinyTexture texture;
@@ -324,11 +323,11 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
         // Load image data
         if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
             const auto& image = model.images[gltfTexture.source];
-            texture.width = image.width;
-            texture.height = image.height;
-            texture.channels = image.component;
-            texture.data = image.image;
-            texture.makeHash();
+            texture.
+                setDimensions(image.width, image.height).
+                setChannels(image.component).
+                setData(image.image).
+                makeHash();
         }
         
         // Load sampler settings (address mode)
@@ -340,15 +339,13 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
             // GLTF uses the same values for both wrapS and wrapT, so we'll use wrapS
             switch (sampler.wrapS) {
                 case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-                    texture.addressMode = TinyTexture::AddressMode::ClampToEdge;
+                    texture.setAddressMode(TinyTexture::AddressMode::ClampToEdge);
                     break;
+
                 case TINYGLTF_TEXTURE_WRAP_REPEAT:
-                case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-                    // We don't have MirroredRepeat, fallback to Repeat
-                    texture.addressMode = TinyTexture::AddressMode::Repeat;
-                    break;
+                case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT: // Fall back
                 default:
-                    texture.addressMode = TinyTexture::AddressMode::Repeat;
+                    texture.setAddressMode(TinyTexture::AddressMode::Repeat);
                     break;
             }
         }
@@ -456,8 +453,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     // Create a single TinyMesh to hold all combined mesh data
     TinyMesh combinedMesh;
     std::vector<TinySubmesh> submeshRanges;
-    std::vector<int> submeshMaterials;
-    
+
     // Temporary storage for collecting all primitives data
     struct PrimitiveData {
         std::vector<glm::vec3> positions, normals;
@@ -653,8 +649,8 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 TinySubmesh submesh;
                 submesh.indexOffset = currentIndexOffset;
                 submesh.indexCount = static_cast<uint32_t>(primData.indices.size());
+                submesh.materialIndex = primData.materialIndex;
                 submeshRanges.push_back(submesh);
-                submeshMaterials.push_back(primData.materialIndex);
                 
                 currentVertexOffset += static_cast<uint32_t>(primData.vertexCount);
                 currentIndexOffset += static_cast<uint32_t>(primData.indices.size());
@@ -730,9 +726,9 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 TinySubmesh submesh;
                 submesh.indexOffset = currentIndexOffset;
                 submesh.indexCount = static_cast<uint32_t>(primData.indices.size());
+                submesh.materialIndex = primData.materialIndex;
                 submeshRanges.push_back(submesh);
-                submeshMaterials.push_back(primData.materialIndex);
-                
+ 
                 currentVertexOffset += static_cast<uint32_t>(primData.vertexCount);
                 currentIndexOffset += static_cast<uint32_t>(primData.indices.size());
             }
@@ -771,7 +767,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
         
         // Add the combined mesh to the result
         result.mesh = std::move(combinedMesh);
-        result.submeshMaterials = std::move(submeshMaterials);
     }
 
     // Load animations only if skeleton is loaded and animations exist
@@ -909,7 +904,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, bool forceSt
 }
 
 
-
 TinyModel TinyLoader::loadModel(const std::string& filePath, bool forceStatic) {
     std::string ext;
     size_t dotPos = filePath.find_last_of('.');
@@ -928,3 +922,92 @@ TinyModel TinyLoader::loadModel(const std::string& filePath, bool forceStatic) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+// New implemetation
+
+void loadTextures(std::vector<TinyTexture>& textures, tinygltf::Model& model) {
+    textures.clear();
+    textures.reserve(model.textures.size());
+
+    for (const auto& gltfTexture : model.textures) {
+        TinyTexture texture;
+
+        // Load image data
+        if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
+            const auto& image = model.images[gltfTexture.source];
+            texture.
+                setDimensions(image.width, image.height).
+                setChannels(image.component).
+                setData(image.image).
+                makeHash();
+        }
+        
+        // Load sampler settings (address mode)
+        texture.addressMode = TinyTexture::AddressMode::Repeat; // Default
+        if (gltfTexture.sampler >= 0 && gltfTexture.sampler < static_cast<int>(model.samplers.size())) {
+            const auto& sampler = model.samplers[gltfTexture.sampler];
+            
+            // Convert GLTF wrap modes to our AddressMode enum
+            // GLTF uses the same values for both wrapS and wrapT, so we'll use wrapS
+            switch (sampler.wrapS) {
+                case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+                    texture.setAddressMode(TinyTexture::AddressMode::ClampToEdge);
+                    break;
+
+                case TINYGLTF_TEXTURE_WRAP_REPEAT:
+                case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT: // Fall back
+                default:
+                    texture.setAddressMode(TinyTexture::AddressMode::Repeat);
+                    break;
+            }
+        }
+        
+        textures.push_back(std::move(texture));
+    }
+}
+
+void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& model, bool forceStatic) {
+    meshes.clear();
+
+    for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
+        const tinygltf::Mesh& mesh = model.meshes[meshIndex];
+
+        TinyMesh combinedMesh;
+    }
+}
+
+
+TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool forceStatic) {
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err, warn;
+
+    loader.SetImageLoader(LoadImageData, nullptr);
+    loader.SetPreserveImageChannels(true);  // Preserve original channel count
+
+    TinyModelNew result;
+
+    bool ok;
+    if (filePath.find(".glb") != std::string::npos) {
+        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);  // GLB
+    } else {
+        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
+    }
+
+    if (!ok || model.meshes.empty()) return result;
+
+    loadTextures(result.textures, model);
+    loadMeshes(result.meshes, model, forceStatic);
+}

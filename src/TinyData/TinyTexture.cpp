@@ -1,5 +1,19 @@
 #include "TinyData/TinyTexture.hpp"
 
+TinyTexture& TinyTexture::setDimensions(int w, int h) {
+    width = w;
+    height = h;
+    return *this;
+}
+TinyTexture& TinyTexture::setChannels(int c) {
+    channels = c;
+    return *this;
+}
+TinyTexture& TinyTexture::setData(const std::vector<uint8_t>& d) {
+    data = d;
+    return *this;
+}
+
 uint64_t TinyTexture::makeHash() {
     const uint64_t FNV_offset = 1469598103934665603ULL;
     const uint64_t FNV_prime  = 1099511628211ULL;
