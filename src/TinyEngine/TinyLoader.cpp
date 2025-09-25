@@ -568,6 +568,74 @@ void loadMeshCombined(TinyMesh& mesh, tinygltf::Model& gltfModel, bool forceStat
     loadMesh(mesh, gltfModel, combinedPrimitives, !forceStatic);
 }
 
+struct SkeletonBuild {
+    TinySkeleton skeleton;
+    UnorderedMap<int, int> nodeIndexToBoneIndex;
+};
+
+void loadSkeleton(SkeletonBuild& build, const tinygltf::Model& model, const tinygltf::Skin& skin) {
+    if (skin.joints.empty()) return;
+
+    TinySkeleton& skeleton = build.skeleton;
+    skeleton.clear();
+    
+    UnorderedMap<int, int>& nodeIndexToBoneIndex = build.nodeIndexToBoneIndex;
+    nodeIndexToBoneIndex.clear();
+
+    // Create the node-to-bone mapping
+    for (int i = 0; i < skin.joints.size(); ++i) {
+        int jointIndex = skin.joints[i];
+        nodeIndexToBoneIndex[jointIndex] = i;
+    }
+
+    bool hasInvBindMat4 = readAccessor(model, skin.inverseBindMatrices, skeleton.inverseBindMatrices);
+    if (!hasInvBindMat4) skeleton.inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f)); // Compromise with identity
+
+    for (int i = 0; i < skin.joints.size(); ++i) {
+        int nodeIndex = skin.joints[i];
+        if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size())) {
+            throw std::runtime_error("Invalid joint node index: " + std::to_string(nodeIndex));
+        }
+
+        const auto& node = model.nodes[nodeIndex];
+
+        TinyJoint joint;
+        joint.inverseBindMatrix = skeleton.inverseBindMatrices[i];
+        joint.localBindTransform = makeLocalFromNode(node);
+
+        std::string originalName = node.name.empty() ? "" : node.name;
+        joint.name = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
+
+        skeleton.insert(joint);
+    }
+
+    // Fix parent relationships
+    UnorderedMap<int, int> nodeToParent; // Left: child node index, Right: parent node index
+    for (int nodeIdx = 0; nodeIdx < model.nodes.size(); ++nodeIdx) {
+        const auto& node = model.nodes[nodeIdx];
+
+        for (int childIdx : node.children) nodeToParent[childIdx] = nodeIdx;
+    }
+
+    for (int i = 0; i < skin.joints.size(); ++i) {
+        int nodeIndex = skin.joints[i];
+        int parentBoneIndex = -1;
+
+        auto parentIt = nodeToParent.find(nodeIndex);
+        if (parentIt != nodeToParent.end()) {
+            int parentNodeIndex = parentIt->second;
+
+            auto boneIt = nodeIndexToBoneIndex.find(parentNodeIndex);
+            if (boneIt != nodeIndexToBoneIndex.end()) {
+                parentBoneIndex = boneIt->second;
+            }
+        }
+
+        skeleton.parents[i] = parentBoneIndex;
+    }
+}
+
+
 
 TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool forceStatic) {
     tinygltf::Model model;

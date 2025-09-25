@@ -8,6 +8,8 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 layout(location = 0) in vec4 inPos_Tu;   // .xyz = pos, .w = u (if you use packed UVs)
 layout(location = 1) in vec4 inNrml_Tv;  // .xyz = normal, .w = v (if packed)
 layout(location = 2) in vec4 inTangent;  // .xyz = tangent, .w = handedness
+layout(location = 3) in uvec4 inJoints; // .xyzw = joint indices (if skinned)
+layout(location = 4) in vec4 inWeights;  // .xyzw = joint
 
 layout(location = 0) out vec4 fragMultColor;
 layout(location = 1) out vec2 fragTexUV;
@@ -40,11 +42,9 @@ mat4 rotateXMat(float deg) {
 
 void main() {
     // construct model matrix properly instead of mutating a single mat
-    mat4 R = rotateXMat(-90.0);
+    mat4 R = rotateXMat(0.0);
     mat4 S = scaleMat(0.05);
 
-    // If you intended: rotate then scale -> model = S * R
-    // If you intended: scale then rotate -> model = R * S
     mat4 model = S * R;
 
     // world-space position
