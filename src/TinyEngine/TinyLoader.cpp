@@ -770,8 +770,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     hasRigging &= !model.animations.empty();
 
     if (hasRigging) {
-        result.animations.reserve(model.animations.size());
-
         for (size_t animIndex = 0; animIndex < model.animations.size(); animIndex++) {
             const tinygltf::Animation& gltfAnim = model.animations[animIndex];
             TinyAnimation tinyAnim;
@@ -795,17 +793,8 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 }
                 
                 // Set interpolation type
-                if (gltfSampler.interpolation == "STEP") {
-                    sampler.interpolation = TinyAnimationSampler::InterpolationType::Step;
-                } else if (gltfSampler.interpolation == "CUBICSPLINE") {
-                    sampler.interpolation = TinyAnimationSampler::InterpolationType::CubicSpline;
-                } else {
-                    sampler.interpolation = TinyAnimationSampler::InterpolationType::Linear;
-                }
-                
-                // Note: We don't read output values here since we don't know the target path yet
-                // The output will be read when processing channels
-                
+                sampler.setInterpolation(gltfSampler.interpolation);
+
                 tinyAnim.samplers.push_back(std::move(sampler));
             }
             

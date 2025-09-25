@@ -19,9 +19,10 @@ struct TinyAnimationSampler {
         Linear,
         Step,
         CubicSpline
-    };
-    
-    InterpolationType interpolation = InterpolationType::Linear;
+    } interpolation = InterpolationType::Linear;
+
+    TinyAnimationSampler& setInterpolation(const std::string& interpStr);
+    TinyAnimationSampler& setInterpolation(const InterpolationType interpType);
     
     // Helper methods to determine what type of data this sampler contains
     bool hasTranslations() const { return !translations.empty(); }

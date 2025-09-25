@@ -4,6 +4,22 @@
 #include <iomanip>
 #include <algorithm>
 
+TinyAnimationSampler& TinyAnimationSampler::setInterpolation(const std::string& interpStr) {
+    setInterpolation(InterpolationType::Linear);
+
+    if (interpStr == "STEP") setInterpolation(InterpolationType::Step); else
+    if (interpStr == "CUBICSPLINE") setInterpolation(InterpolationType::CubicSpline);
+
+    return *this;
+}
+
+TinyAnimationSampler& TinyAnimationSampler::setInterpolation(const InterpolationType interpType) {
+    interpolation = interpType;
+    return *this;
+}
+
+
+
 void TinyAnimation::computeDuration() {
     duration = 0.0f;
     
