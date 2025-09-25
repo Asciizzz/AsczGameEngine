@@ -54,5 +54,5 @@ void StaticInstanceGroup::updateDataBuffer() {
 
     if (prevInstanceCount != datas.size()) recreateDataBuffer();
 
-    dataBuffer.mapAndCopy(datas.data());
+    dataBuffer.copyData(datas.data());
 }

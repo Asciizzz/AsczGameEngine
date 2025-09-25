@@ -35,12 +35,12 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyData/TinySkeleton.cpp
     src/TinyData/TinyAnimation.cpp
     src/TinyData/TinyModel.cpp
-    src/TinyData/TinyPlayback.cpp
     src/TinyData/TinyLoader.cpp
     src/TinyData/TinyCamera.cpp
     
     src/TinyEngine/TinyResource.cpp
     src/TinyEngine/TinyProject.cpp
+    src/TinyEngine/TinyPlayback.cpp
 
     # src/TinyEngine/StaticMesh_BVH.cpp
     src/TinyEngine/RigDemo.cpp
