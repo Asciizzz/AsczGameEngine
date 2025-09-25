@@ -1,7 +1,7 @@
 #pragma once
 
 #include "TinyData/TinyLoader.hpp"
-#include "TinyData/TinyPool.hpp"
+#include "TinyEngine/TinyPool.hpp"
 
 #include "AzVulk/TextureVK.hpp"
 #include "AzVulk/Descriptor.hpp"
