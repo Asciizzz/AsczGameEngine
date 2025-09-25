@@ -296,6 +296,7 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
         return glm::mat4(M);
     }
 }
+
 TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;

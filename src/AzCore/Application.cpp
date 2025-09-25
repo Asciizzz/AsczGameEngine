@@ -72,8 +72,6 @@ void Application::initComponents() {
         // mat.toonLevel = 4;
     }
 
-    testModel.printAnimationList();
-
     resGroup->addModel(testModel);
 
     // TinyLoader::LoadOptions loadOpts;

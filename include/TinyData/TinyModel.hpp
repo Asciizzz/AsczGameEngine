@@ -16,6 +16,4 @@ struct TinyModel {
     TinySkeleton skeleton;
     std::vector<TinyAnimation> animations;
     UnorderedMap<std::string, int> nameToAnimationIndex;
-
-    void printAnimationList() const;
 };
