@@ -461,7 +461,6 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         if (currentType > largestIndexType) largestIndexType = currentType;
 
         pData.materialIndex = primitive.material;
-        allPrimitiveDatas.push_back(std::move(pData));
     }
 
     // Second pass: construct the TinyMesh
@@ -558,14 +557,14 @@ void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool 
 
 
 // For legacy support - combines all meshes into one
-void loadMeshCombined(TinyMesh& mesh, tinygltf::Model& gltfModel, bool forceStatic) {
+void loadMeshCombined(TinyMesh& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
     // Combined primitives
     std::vector<tinygltf::Primitive> combinedPrimitives;
     for (const auto& gltfMesh : gltfModel.meshes) {
         combinedPrimitives.insert(combinedPrimitives.end(), gltfMesh.primitives.begin(), gltfMesh.primitives.end());
     }
 
-    loadMesh(mesh, gltfModel, combinedPrimitives, !forceStatic);
+    loadMesh(meshes, gltfModel, combinedPrimitives, !forceStatic);
 }
 
 
@@ -695,8 +694,281 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
     hasRigging &= !result.skeleton.names.empty();
 
-    // Load mesh
-    loadMeshCombined(result.mesh, model, forceStatic || !hasRigging);
+    // Create a single TinyMesh to hold all combined mesh data
+    TinyMesh combinedMesh;
+    std::vector<TinySubmesh> submeshRanges;
+    
+    std::vector<PrimitiveData> allPrimitives;
+    TinyMesh::IndexType largestIndexType = TinyMesh::IndexType::Uint8;
+    
+    // First pass: Determine the largest index type and collect primitive data
+    for (size_t meshIndex = 0; meshIndex < model.meshes.size(); meshIndex++) {
+        const tinygltf::Mesh& mesh = model.meshes[meshIndex];
+
+        for (size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); primitiveIndex++) {
+            const auto& primitive = mesh.primitives[primitiveIndex];
+
+            PrimitiveData primData;
+
+            bool hasPosition = readAccessorFromMap(model, primitive.attributes, "POSITION", primData.positions);
+            if (!hasPosition) {
+                throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                        std::to_string(primitiveIndex) + "] failed to read POSITION attribute");
+            }
+
+            readAccessorFromMap(model, primitive.attributes, "NORMAL", primData.normals);
+            readAccessorFromMap(model, primitive.attributes, "TANGENT", primData.tangents);
+            readAccessorFromMap(model, primitive.attributes, "TEXCOORD_0", primData.uvs);
+            primData.vertexCount = primData.positions.size();
+
+            if (hasRigging) {
+                readAccessorFromMap(model, primitive.attributes, "JOINTS_0", primData.joints);
+                readAccessorFromMap(model, primitive.attributes, "WEIGHTS_0", primData.weights);
+            }
+
+            // Handle indices and determine largest type
+            if (primitive.indices >= 0) {
+                const auto& indexAccessor = model.accessors[primitive.indices];
+                const auto& indexBufferView = model.bufferViews[indexAccessor.bufferView];
+                const auto& indexBuffer = model.buffers[indexBufferView.buffer];
+                const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+                size_t stride = indexAccessor.ByteStride(indexBufferView);
+
+                // Determine index type and update largest
+                TinyMesh::IndexType currentType;
+                switch (indexAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                        currentType = TinyMesh::IndexType::Uint8;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                        currentType = TinyMesh::IndexType::Uint16;
+                        break;
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                        currentType = TinyMesh::IndexType::Uint32;
+                        break;
+                    default:
+                        throw std::runtime_error("Mesh[" + std::to_string(meshIndex) + "] Primitive[" + 
+                                                std::to_string(primitiveIndex) + "] unsupported index component type");
+                }
+                
+                // Update largest index type (Uint32 > Uint16 > Uint8)
+                if (currentType > largestIndexType) {
+                    largestIndexType = currentType;
+                }
+
+                // Read indices and convert to uint32_t for consistency
+                primData.indices.reserve(indexAccessor.count);
+                switch (indexAccessor.componentType) {
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+                        for (size_t i = 0; i < indexAccessor.count; i++) {
+                            uint8_t index = *((uint8_t*)(dataPtr + stride * i));
+                            primData.indices.push_back(static_cast<uint32_t>(index));
+                        }
+                        break;
+                    }
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+                        for (size_t i = 0; i < indexAccessor.count; i++) {
+                            uint16_t index = *((uint16_t*)(dataPtr + stride * i));
+                            primData.indices.push_back(static_cast<uint32_t>(index));
+                        }
+                        break;
+                    }
+                    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: {
+                        for (size_t i = 0; i < indexAccessor.count; i++) {
+                            uint32_t index = *((uint32_t*)(dataPtr + stride * i));
+                            primData.indices.push_back(index);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Set material index
+            if (primitive.material >= 0 && primitive.material < static_cast<int>(result.materials.size())) {
+                primData.materialIndex = primitive.material;
+            }
+
+            allPrimitives.push_back(std::move(primData));
+        }
+    }
+
+    // Second pass: Combine all vertices and indices into a single TinyMesh
+    if (!allPrimitives.empty()) {
+        combinedMesh.indexType = largestIndexType;
+        
+        // Combine all vertices into continuous buffer
+        if (hasRigging) {
+            std::vector<TinyVertexRig> allVertices;
+            std::vector<uint32_t> allIndices;
+            
+            uint32_t currentVertexOffset = 0;
+            uint32_t currentIndexOffset = 0;
+            
+            for (const auto& primData : allPrimitives) {
+                // Create vertices for this primitive
+                for (size_t i = 0; i < primData.vertexCount; i++) {
+                    TinyVertexRig vertex{};
+
+                    glm::vec3 pos = primData.positions.size() > i ? primData.positions[i] : glm::vec3(0.0f);
+                    glm::vec3 nrml = primData.normals.size() > i ? primData.normals[i] : glm::vec3(0.0f);
+                    glm::vec2 texUV = primData.uvs.size() > i ? primData.uvs[i] : glm::vec2(0.0f);
+                    glm::vec4 tang = primData.tangents.size() > i ? primData.tangents[i] : glm::vec4(1,0,0,1);
+
+                    vertex.setPosition(pos).setNormal(nrml).setTextureUV(texUV).setTangent(tang);
+
+                    if (primData.joints.size() > i && primData.weights.size() > i) {
+                        glm::uvec4 jointIds = primData.joints[i];
+                        glm::vec4 boneWeights = primData.weights[i];
+
+                        // Validate joint indices are within skeleton range
+                        bool hasInvalidJoint = false;
+                        for (int j = 0; j < 4; j++) {
+                            if (boneWeights[j] > 0.0f && jointIds[j] >= result.skeleton.names.size()) {
+                                hasInvalidJoint = true;
+                                break;
+                            }
+                        }
+
+                        float weightSum = boneWeights.x + boneWeights.y + boneWeights.z + boneWeights.w;
+
+                        if (!hasInvalidJoint && weightSum > 0.0f) {
+                            // Normalize weights
+                            boneWeights /= weightSum;
+                            vertex.setBoneIDs(jointIds).setWeights(boneWeights);
+                        }
+                    }
+
+                    allVertices.push_back(vertex);
+                }
+                
+                // Add indices with vertex offset
+                for (uint32_t index : primData.indices) {
+                    allIndices.push_back(index + currentVertexOffset);
+                }
+                
+                // Create submesh range
+                TinySubmesh submesh;
+                submesh.indexOffset = currentIndexOffset;
+                submesh.indexCount = static_cast<uint32_t>(primData.indices.size());
+                submesh.materialIndex = primData.materialIndex;
+                submeshRanges.push_back(submesh);
+                
+                currentVertexOffset += static_cast<uint32_t>(primData.vertexCount);
+                currentIndexOffset += static_cast<uint32_t>(primData.indices.size());
+            }
+            
+            combinedMesh.setVertices(allVertices);
+            
+            // Convert indices to the determined largest type
+            switch (largestIndexType) {
+                case TinyMesh::IndexType::Uint8: {
+                    std::vector<uint8_t> indices8;
+                    indices8.reserve(allIndices.size());
+                    for (uint32_t idx : allIndices) {
+                        indices8.push_back(static_cast<uint8_t>(idx));
+                    }
+                    combinedMesh.setIndices(indices8);
+                    break;
+                }
+                case TinyMesh::IndexType::Uint16: {
+                    std::vector<uint16_t> indices16;
+                    indices16.reserve(allIndices.size());
+                    for (uint32_t idx : allIndices) {
+                        indices16.push_back(static_cast<uint16_t>(idx));
+                    }
+                    combinedMesh.setIndices(indices16);
+                    break;
+                }
+                case TinyMesh::IndexType::Uint32: {
+                    combinedMesh.setIndices(allIndices);
+                    break;
+                }
+            }
+        } else {
+            // Static vertices (no rigging)
+            std::vector<TinyVertexStatic> allVertices;
+            size_t totalVertices = 0;
+            for (const auto& primData : allPrimitives) {
+                totalVertices += primData.vertexCount;
+            }
+            allVertices.reserve(totalVertices);
+            
+            // Combine all indices and create submesh ranges
+            std::vector<uint32_t> allIndices;
+            size_t totalIndices = 0;
+            for (const auto& primData : allPrimitives) {
+                totalIndices += primData.indices.size();
+            }
+            allIndices.reserve(totalIndices);
+            
+            uint32_t currentVertexOffset = 0;
+            uint32_t currentIndexOffset = 0;
+            
+            for (const auto& primData : allPrimitives) {
+                // Create vertices for this primitive
+                for (size_t i = 0; i < primData.vertexCount; i++) {
+                    TinyVertexStatic vertex{};
+
+                    glm::vec3 pos = primData.positions.size() > i ? primData.positions[i] : glm::vec3(0.0f);
+                    glm::vec3 nrml = primData.normals.size() > i ? primData.normals[i] : glm::vec3(0.0f);
+                    glm::vec2 texUV = primData.uvs.size() > i ? primData.uvs[i] : glm::vec2(0.0f);
+                    glm::vec4 tang = primData.tangents.size() > i ? primData.tangents[i] : glm::vec4(1,0,0,1);
+
+                    vertex.setPosition(pos).setNormal(nrml).setTextureUV(texUV).setTangent(tang);
+                    allVertices.push_back(vertex);
+                }
+                
+                // Add indices with vertex offset
+                for (uint32_t index : primData.indices) {
+                    allIndices.push_back(index + currentVertexOffset);
+                }
+                
+                // Create submesh range
+                TinySubmesh submesh;
+                submesh.indexOffset = currentIndexOffset;
+                submesh.indexCount = static_cast<uint32_t>(primData.indices.size());
+                submesh.materialIndex = primData.materialIndex;
+                submeshRanges.push_back(submesh);
+ 
+                currentVertexOffset += static_cast<uint32_t>(primData.vertexCount);
+                currentIndexOffset += static_cast<uint32_t>(primData.indices.size());
+            }
+            
+            combinedMesh.setVertices(allVertices);
+            
+            // Convert indices to the determined largest type
+            switch (largestIndexType) {
+                case TinyMesh::IndexType::Uint8: {
+                    std::vector<uint8_t> indices8;
+                    indices8.reserve(allIndices.size());
+                    for (uint32_t idx : allIndices) {
+                        indices8.push_back(static_cast<uint8_t>(idx));
+                    }
+                    combinedMesh.setIndices(indices8);
+                    break;
+                }
+                case TinyMesh::IndexType::Uint16: {
+                    std::vector<uint16_t> indices16;
+                    indices16.reserve(allIndices.size());
+                    for (uint32_t idx : allIndices) {
+                        indices16.push_back(static_cast<uint16_t>(idx));
+                    }
+                    combinedMesh.setIndices(indices16);
+                    break;
+                }
+                case TinyMesh::IndexType::Uint32: {
+                    combinedMesh.setIndices(allIndices);
+                    break;
+                }
+            }
+        }
+        
+        // Set submesh ranges in the combined mesh
+        combinedMesh.setSubmeshes(submeshRanges);
+        
+        // Add the combined mesh to the result
+        result.mesh = std::move(combinedMesh);
+    }
 
     // Load animations only if skeleton is loaded and animations exist
     hasRigging &= !model.animations.empty();
