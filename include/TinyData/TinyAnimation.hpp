@@ -33,8 +33,9 @@ struct TinyAnimationSampler {
 
 struct TinyAnimationChannel {
     int samplerIndex = -1;        // Index into TinyAnimation::samplers
-    int targetBoneIndex = -1;     // Index into TinySkeleton bone arrays (-1 if targets the whole model)
-    
+    int targetSkeletonIndex = -1; // Index into TinyModel::skeletons
+    int targetJointIndex = -1;     // Index into TinySkeleton bone arrays
+
     enum class TargetPath {
         Translation,
         Rotation, 

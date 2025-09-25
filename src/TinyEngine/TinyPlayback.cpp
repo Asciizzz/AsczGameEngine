@@ -193,7 +193,7 @@ void TinyPlayback::sampleAnimation(const TinyAnimation& anim, float time, std::v
     
     // Apply each channel
     for (const auto& channel : anim.channels) {
-        if (channel.targetBoneIndex < 0 || channel.targetBoneIndex >= static_cast<int>(outPose.size())) {
+        if (channel.targetJointIndex < 0 || channel.targetJointIndex >= static_cast<int>(outPose.size())) {
             continue; // Skip invalid bone indices
         }
         
@@ -202,7 +202,7 @@ void TinyPlayback::sampleAnimation(const TinyAnimation& anim, float time, std::v
         }
         
         const auto& sampler = anim.samplers[channel.samplerIndex];
-        BonePose& bonePose = outPose[channel.targetBoneIndex];
+        BonePose& bonePose = outPose[channel.targetJointIndex];
         
         // Sample the appropriate property
         switch (channel.targetPath) {

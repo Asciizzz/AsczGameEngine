@@ -840,7 +840,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 if (gltfChannel.target_node >= 0) {
                     auto it = nodeIndexToBoneIndex.find(gltfChannel.target_node);
                     if (it != nodeIndexToBoneIndex.end()) {
-                        channel.targetBoneIndex = it->second;
+                        channel.targetJointIndex = it->second;
                     } else {
                         // Node is not part of the skeleton - skip this channel
                         std::cerr << "Warning: Animation channel targets node not in skeleton: " 

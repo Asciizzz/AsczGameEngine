@@ -33,7 +33,7 @@ void TinyAnimation::computeDuration() {
 
 int TinyAnimation::findChannelForBone(int boneIndex, TinyAnimationChannel::TargetPath path) const {
     for (int i = 0; i < static_cast<int>(channels.size()); ++i) {
-        if (channels[i].targetBoneIndex == boneIndex && channels[i].targetPath == path) {
+        if (channels[i].targetJointIndex == boneIndex && channels[i].targetPath == path) {
             return i;
         }
     }
@@ -145,11 +145,11 @@ void TinyAnimation::printDebug(const std::vector<std::string>& boneNames) const 
         
         // Target node/bone
         std::cout << childPrefix << "+-- Target Bone: ";
-        if (channel.targetBoneIndex >= 0) {
-            if (!boneNames.empty() && channel.targetBoneIndex < static_cast<int>(boneNames.size())) {
-                std::cout << "\"" << boneNames[channel.targetBoneIndex] << "\" [" << channel.targetBoneIndex << "]";
+        if (channel.targetJointIndex >= 0) {
+            if (!boneNames.empty() && channel.targetJointIndex < static_cast<int>(boneNames.size())) {
+                std::cout << "\"" << boneNames[channel.targetJointIndex] << "\" [" << channel.targetJointIndex << "]";
             } else {
-                std::cout << "[" << channel.targetBoneIndex << "]";
+                std::cout << "[" << channel.targetJointIndex << "]";
             }
         } else {
             std::cout << "[Root/Model]";

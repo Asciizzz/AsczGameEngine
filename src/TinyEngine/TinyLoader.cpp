@@ -565,24 +565,18 @@ void loadMeshCombined(TinyMesh& mesh, tinygltf::Model& gltfModel, bool forceStat
     loadMesh(mesh, gltfModel, combinedPrimitives, !forceStatic);
 }
 
-struct SkeletonBuild {
-    TinySkeleton skeleton;
-    UnorderedMap<int, int> nodeIndexToBoneIndex;
-};
+// Animation target bones, leading to a complex reference layer
 
-void loadSkeleton(SkeletonBuild& build, const tinygltf::Model& model, const tinygltf::Skin& skin) {
+void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<size_t, int>>& nodeToSkeletonAndJointIndex, size_t skeletonIndex, const tinygltf::Model& model, const tinygltf::Skin& skin) {
     if (skin.joints.empty()) return;
 
-    TinySkeleton& skeleton = build.skeleton;
     skeleton.clear();
-    
-    UnorderedMap<int, int>& nodeIndexToBoneIndex = build.nodeIndexToBoneIndex;
-    nodeIndexToBoneIndex.clear();
 
     // Create the node-to-bone mapping
     for (int i = 0; i < skin.joints.size(); ++i) {
-        int jointIndex = skin.joints[i];
-        nodeIndexToBoneIndex[jointIndex] = i;
+        int nodeIndex = skin.joints[i];
+
+        nodeToSkeletonAndJointIndex[nodeIndex] = {skeletonIndex, i};
     }
 
     bool hasInvBindMat4 = readAccessor(model, skin.inverseBindMatrices, skeleton.inverseBindMatrices);
@@ -616,19 +610,33 @@ void loadSkeleton(SkeletonBuild& build, const tinygltf::Model& model, const tiny
 
     for (int i = 0; i < skin.joints.size(); ++i) {
         int nodeIndex = skin.joints[i];
-        int parentBoneIndex = -1;
+        int parentJointIndex = -1;
 
         auto parentIt = nodeToParent.find(nodeIndex);
         if (parentIt != nodeToParent.end()) {
             int parentNodeIndex = parentIt->second;
 
-            auto boneIt = nodeIndexToBoneIndex.find(parentNodeIndex);
-            if (boneIt != nodeIndexToBoneIndex.end()) {
-                parentBoneIndex = boneIt->second;
+            auto jointIt = nodeToSkeletonAndJointIndex.find(parentNodeIndex);
+            if (jointIt != nodeToSkeletonAndJointIndex.end()) {
+                parentJointIndex = jointIt->second.second;
             }
         }
 
-        skeleton.parents[i] = parentBoneIndex;
+        skeleton.parents[i] = parentJointIndex;
+    }
+}
+
+void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::pair<size_t, int>>& nodeToSkeletonAndJointIndex, tinygltf::Model& model) {
+    skeletons.clear();
+    nodeToSkeletonAndJointIndex.clear();
+
+    for (size_t skinIndex = 0; skinIndex < model.skins.size(); ++skinIndex) {
+        const tinygltf::Skin& skin = model.skins[skinIndex];
+
+        TinySkeleton skeleton;
+        loadSkeleton(skeleton, nodeToSkeletonAndJointIndex, skinIndex, model, skin);
+
+        skeletons.push_back(std::move(skeleton));
     }
 }
 
@@ -649,13 +657,26 @@ TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool 
         ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
     }
 
+    if (!ok || model.meshes.empty()) return TinyModelNew();
+
+    std::vector<TinyTexture> textures;
+    loadTextures(textures, model);
+
+    std::vector<TinyMaterial> materials;
+    loadMaterials(materials, model, textures);
+
+    std::vector<TinyMesh> meshes;
+    loadMeshes(meshes, model, forceStatic);
+
+    UnorderedMap<int, std::pair<size_t, int>> nodeToSkeletonAndJointIndex;
+    std::vector<TinySkeleton> skeletons;
+    loadSkeletons(skeletons, nodeToSkeletonAndJointIndex, model);
+
     TinyModelNew result;
-    if (!ok || model.meshes.empty()) return result;
-
-    loadTextures(result.textures, model);
-    loadMaterials(result.materials, model, result.textures);
-    loadMeshes(result.meshes, model, forceStatic);
-
+    result.meshes = std::move(meshes);
+    result.materials = std::move(materials);
+    result.textures = std::move(textures);
+    result.skeletons = std::move(skeletons);
     return result;
 }
 
@@ -682,8 +703,11 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
     if (!ok || model.meshes.empty()) return TinyModel();
 
-    loadTextures(result.textures, model);
-    loadMaterials(result.materials, model, result.textures);
+    std::vector<TinyTexture> textures;
+    loadTextures(textures, model);
+
+    std::vector<TinyMaterial> materials;
+    loadMaterials(materials, model, textures);
 
     // Build skeleton only if requested
     UnorderedMap<int, int> nodeIndexToBoneIndex;
@@ -760,8 +784,12 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
     hasRigging &= !result.skeleton.names.empty();
 
-    // Load mesh
-    loadMeshCombined(result.mesh, model, forceStatic || !hasRigging);
+    // std::vector<TinyMesh> meshes;
+    // loadMeshes(meshes, model, hasRigging);
+
+    // Legacy
+    TinyMesh combinedMesh;
+    loadMeshCombined(combinedMesh, model, !hasRigging);
 
     // Load animations only if skeleton is loaded and animations exist
     hasRigging &= !model.animations.empty();
@@ -812,7 +840,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
                 if (gltfChannel.target_node >= 0) {
                     auto it = nodeIndexToBoneIndex.find(gltfChannel.target_node);
                     if (it != nodeIndexToBoneIndex.end()) {
-                        channel.targetBoneIndex = it->second;
+                        channel.targetJointIndex = it->second;
                     } else {
                         // Node is not part of the skeleton - skip this channel
                         std::cerr << "Warning: Animation channel targets node not in skeleton: " 
@@ -877,5 +905,8 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
         }
     }
 
+    result.mesh = std::move(combinedMesh);
+    result.materials = std::move(materials);
+    result.textures = std::move(textures);
     return result;
 }
