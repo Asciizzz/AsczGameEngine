@@ -408,7 +408,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
 
         // Build skeleton structure
         result.skeleton.names.reserve(skin.joints.size());
-        result.skeleton.parentIndices.reserve(skin.joints.size());
+        result.skeleton.parents.reserve(skin.joints.size());
         result.skeleton.inverseBindMatrices.reserve(skin.joints.size());
         result.skeleton.localBindTransforms.reserve(skin.joints.size());
 
@@ -425,7 +425,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
             std::string boneName = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
             
             result.skeleton.names.push_back(boneName);
-            result.skeleton.parentIndices.push_back(-1); // Will be fixed in second pass
+            result.skeleton.parents.push_back(-1); // Will be fixed in second pass
             result.skeleton.inverseBindMatrices.push_back(inverseBindMatrices.size() > i ? inverseBindMatrices[i] : glm::mat4(1.0f));
             result.skeleton.localBindTransforms.push_back(makeLocalFromNode(node));
             result.skeleton.nameToIndex[boneName] = static_cast<int>(i);
@@ -455,7 +455,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                 if (parentBoneIndex != -1) break;
             }
             
-            result.skeleton.parentIndices[i] = parentBoneIndex;
+            result.skeleton.parents[i] = parentBoneIndex;
         }
     }
 

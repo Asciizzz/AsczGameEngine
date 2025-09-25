@@ -400,56 +400,54 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
             inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f));
         }
 
-        // Build skeleton structure
-        result.skeleton.names.reserve(skin.joints.size());
-        result.skeleton.parentIndices.reserve(skin.joints.size());
-        result.skeleton.inverseBindMatrices.reserve(skin.joints.size());
-        result.skeleton.localBindTransforms.reserve(skin.joints.size());
-
         // First pass: gather bone data
         for (size_t i = 0; i < skin.joints.size(); i++) {
             int nodeIndex = skin.joints[i];
-            
+
             if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size())) {
                 throw std::runtime_error("Invalid joint node index: " + std::to_string(nodeIndex));
             }
             
             const auto& node = model.nodes[nodeIndex];
+
+            TinyJoint joint;
+            joint.inverseBindMatrix = inverseBindMatrices[i];
+            joint.localBindTransform = makeLocalFromNode(node);
+
             std::string originalName = node.name.empty() ? "" : node.name;
-            std::string boneName = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
-            
-            result.skeleton.names.push_back(boneName);
-            result.skeleton.parentIndices.push_back(-1); // Will be fixed in second pass
-            result.skeleton.inverseBindMatrices.push_back(inverseBindMatrices.size() > i ? inverseBindMatrices[i] : glm::mat4(1.0f));
-            result.skeleton.localBindTransforms.push_back(makeLocalFromNode(node));
-            result.skeleton.nameToIndex[boneName] = static_cast<int>(i);
+            joint.name = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
+
+            result.skeleton.insert(joint);
         }
         
-        // Second pass: fix parent relationships
+        // Second pass: fix parent relationships (optimized)
+        // Build a node-to-parent lookup table once - O(m*c) where m=nodes, c=avg children
+        UnorderedMap<int, int> nodeToParent;
+        for (size_t nodeIdx = 0; nodeIdx < model.nodes.size(); nodeIdx++) {
+            const auto& node = model.nodes[nodeIdx];
+            for (int childIdx : node.children) {
+                nodeToParent[childIdx] = static_cast<int>(nodeIdx);
+            }
+        }
+        
+        // Now lookup parents in O(1) per joint - O(n) total where n=joints
         for (size_t i = 0; i < skin.joints.size(); i++) {
             int nodeIndex = skin.joints[i];
             int parentBoneIndex = -1;
             
-            // Find which node is the parent of this node
-            for (size_t nodeIdx = 0; nodeIdx < model.nodes.size(); nodeIdx++) {
-                const auto& candidateParent = model.nodes[nodeIdx];
+            // Find parent node in O(1)
+            auto parentIt = nodeToParent.find(nodeIndex);
+            if (parentIt != nodeToParent.end()) {
+                int parentNodeIndex = parentIt->second;
                 
-                // Check if this node is a child of candidateParent
-                for (int childIdx : candidateParent.children) {
-                    if (childIdx == nodeIndex) {
-                        // Found parent, check if it's also in the skeleton
-                        auto it = nodeIndexToBoneIndex.find(static_cast<int>(nodeIdx));
-                        if (it != nodeIndexToBoneIndex.end()) {
-                            parentBoneIndex = it->second;
-                        }
-                        break;
-                    }
+                // Check if parent is also in the skeleton
+                auto boneIt = nodeIndexToBoneIndex.find(parentNodeIndex);
+                if (boneIt != nodeIndexToBoneIndex.end()) {
+                    parentBoneIndex = boneIt->second;
                 }
-                
-                if (parentBoneIndex != -1) break;
             }
             
-            result.skeleton.parentIndices[i] = parentBoneIndex;
+            result.skeleton.parents[i] = parentBoneIndex;
         }
     }
 

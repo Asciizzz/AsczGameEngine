@@ -231,10 +231,10 @@ void TinyPlayback::computeBoneMatrices() {
     for (size_t i = 0; i < skeleton->names.size(); ++i) {
         glm::mat4 localTransform = currentPose[i].toMatrix();
 
-        int parentIndex = skeleton->parentIndices[i];
-        if (parentIndex >= 0) {
+        int parent = skeleton->parents[i];
+        if (parent >= 0) {
             // Multiply by parent's world transform
-            worldTransforms[i] = worldTransforms[parentIndex] * localTransform;
+            worldTransforms[i] = worldTransforms[parent] * localTransform;
         } else {
             // Root bone
             worldTransforms[i] = localTransform;
