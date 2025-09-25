@@ -6,18 +6,18 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-struct TinyNode {
-    enum class Scope {
-        Local,      // Local to model
-        Global      // Global scene node
-    } scope = Scope::Local;
+#include "TinyData/TinyEnum.hpp"
 
-    int parent = -1;                 // parent index, -1 if root
-    std::vector<uint32_t> children;  // children indices
+struct TinyNode {
+    TinyScope scope = TinyScope::Local;
+
+    int parent = -1; // -1 if root
+    std::vector<uint32_t> children;
 
     glm::mat4 transform = glm::mat4(1.0f);
 
-    uint32_t meshId = UINT32_MAX; // index into local mesh
-    std::vector<uint32_t> matIds; // submesh material indices
-    uint32_t skeleId = UINT32_MAX; // index into local skeleton
+    uint32_t meshId = UINT32_MAX;
+    std::vector<uint32_t> matIds;
+    uint32_t skeleId = UINT32_MAX;
+    uint32_t animId = UINT32_MAX;
 };
