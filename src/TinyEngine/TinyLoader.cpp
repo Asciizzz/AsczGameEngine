@@ -112,11 +112,9 @@ bool readAccessor(const tinygltf::Model& model, int accessorIndex, std::vector<T
 
     const unsigned char* dataPtr = buf.data.data() + view.byteOffset + accessor.byteOffset;
     size_t stride = accessor.ByteStride(view);
-    
-    if (stride == 0) {
-        stride = sizeof(T);
-    }
-    
+
+    if (stride == 0) stride = sizeof(T);
+
     out.resize(accessor.count);
 
     for (size_t i = 0; i < accessor.count; i++) {
@@ -478,8 +476,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
             bool submeshHasRigging = hasRigging && 
                                     primitive.attributes.count("JOINTS_0") && 
                                     primitive.attributes.count("WEIGHTS_0");
-
-            printf("Has rigging: %d\n", submeshHasRigging);
 
             if (submeshHasRigging) {
                 if (!readJointIndices(model, primitive.attributes.at("JOINTS_0"), primData.joints)) {
@@ -980,25 +976,17 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
     for (const auto& primitive : primitives) {
         PrimitiveData pd;
 
-        if (!primitive.attributes.count("POSITION")) {
-            throw std::runtime_error("Primitive missing POSITION attribute");
-        }
+        bool hasPosition = readAccessorFromMap(gltfModel, primitive.attributes, "POSITION", pd.positions);
+        if (!hasPosition) throw std::runtime_error("Primitive failed to read POSITION attribute");
 
-        readAccessor(gltfModel, primitive.attributes.at("POSITION"), pd.positions);
+        readAccessorFromMap(gltfModel, primitive.attributes, "NORMAL", pd.normals);
+        readAccessorFromMap(gltfModel, primitive.attributes, "TANGENT", pd.tangents);
+        readAccessorFromMap(gltfModel, primitive.attributes, "TEXCOORD_0", pd.uvs);
+        
 
-        if (primitive.attributes.count("NORMAL")) {
-            readAccessor(gltfModel, primitive.attributes.at("NORMAL"), pd.normals);
-        }   
-        if (primitive.attributes.count("TANGENT")) {
-            readAccessor(gltfModel, primitive.attributes.at("TANGENT"), pd.tangents);
-        }
-        if (primitive.attributes.count("TEXCOORD_0")) {
-            readAccessor(gltfModel, primitive.attributes.at("TEXCOORD_0"), pd.uvs);
-        }
-
-        if (hasRigging && primitive.attributes.count("JOINTS_0") && primitive.attributes.count("WEIGHTS_0")){
+        if (hasRigging) {
             readJointIndices(gltfModel, primitive.attributes.at("JOINTS_0"), pd.joints);
-            readAccessor(gltfModel, primitive.attributes.at("WEIGHTS_0"), pd.weights);
+            readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", pd.weights);
         }
 
         pd.vertexCount = pd.positions.size();
