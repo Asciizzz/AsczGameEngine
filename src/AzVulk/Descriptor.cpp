@@ -145,8 +145,7 @@ DescWrite& DescWrite::addWrite() {
 
     writes.push_back(newWrite);
     writeCount = static_cast<uint32_t>(writes.size());
-    currentIndex = writeCount - 1;
-
+    
     // Add storage slots for this write
     imageInfoStorage.emplace_back();
     bufferInfoStorage.emplace_back();
@@ -154,16 +153,7 @@ DescWrite& DescWrite::addWrite() {
     return *this;
 }
 
-DescWrite& DescWrite::rewrite(uint32_t index) {
-    if (index >= writes.size()) {
-        throw std::out_of_range("DescWrite::rewrite - index out of range");
-    }
-
-    currentIndex = index;
-    return *this;
-}
-
-VkWriteDescriptorSet& DescWrite::current() {
+VkWriteDescriptorSet& DescWrite::lastWrite() {
     if (writes.empty()) addWrite();
     return writes.back();
 }
@@ -174,11 +164,11 @@ DescWrite& DescWrite::setBufferInfo(std::vector<VkDescriptorBufferInfo> bufferIn
         size_t writeIndex = writes.size() - 1;
         if (writeIndex < bufferInfoStorage.size()) {
             bufferInfoStorage[writeIndex] = std::move(bufferInfo);
-            current().pBufferInfo = bufferInfoStorage[writeIndex].data();
+            lastWrite().pBufferInfo = bufferInfoStorage[writeIndex].data();
         }
     }
-    current().pImageInfo = nullptr;
-    current().pTexelBufferView = nullptr;
+    lastWrite().pImageInfo = nullptr;
+    lastWrite().pTexelBufferView = nullptr;
     return *this;
 }
 
@@ -188,37 +178,37 @@ DescWrite& DescWrite::setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos
         size_t writeIndex = writes.size() - 1;
         if (writeIndex < imageInfoStorage.size()) {
             imageInfoStorage[writeIndex] = std::move(imageInfos);
-            current().pImageInfo = imageInfoStorage[writeIndex].data();
+            lastWrite().pImageInfo = imageInfoStorage[writeIndex].data();
         }
     }
-    current().pBufferInfo = nullptr;
-    current().pTexelBufferView = nullptr;
+    lastWrite().pBufferInfo = nullptr;
+    lastWrite().pTexelBufferView = nullptr;
     return *this;
 }
 
 DescWrite& DescWrite::setDstSet(VkDescriptorSet dstSet) {
-    current().dstSet = dstSet;
+    lastWrite().dstSet = dstSet;
     return *this;
 }
 DescWrite& DescWrite::setDstBinding(uint32_t dstBinding) {
-    current().dstBinding = dstBinding;
+    lastWrite().dstBinding = dstBinding;
     return *this;
 }
 DescWrite& DescWrite::setDstArrayElement(uint32_t dstArrayElement) {
-    current().dstArrayElement = dstArrayElement;
+    lastWrite().dstArrayElement = dstArrayElement;
     return *this;
 }
 DescWrite& DescWrite::setDescCount(uint32_t count) {
-    current().descriptorCount = count;
+    lastWrite().descriptorCount = count;
     return *this;
 }
 DescWrite& DescWrite::setDescType(VkDescriptorType type) {
-    current().descriptorType = type;
+    lastWrite().descriptorType = type;
     return *this;
 }
 
 DescWrite& DescWrite::updateDescSet(VkDevice lDevice) {
-    vkUpdateDescriptorSets(lDevice, 1, &current(), 0, nullptr);
+    vkUpdateDescriptorSets(lDevice, 1, &lastWrite(), 0, nullptr);
     return *this;
 }
 DescWrite& DescWrite::updateDescSets(VkDevice lDevice) {

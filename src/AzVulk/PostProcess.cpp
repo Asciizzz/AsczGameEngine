@@ -148,7 +148,9 @@ void PostProcess::createSampler() {
 }
 
 void PostProcess::createSharedDescriptors() {
-    descriptorSets = MakeUnique<DescSet>(deviceVK->lDevice);
+    VkDevice lDevice = deviceVK->lDevice;
+
+    descriptorSets = MakeUnique<DescSet>(lDevice);
 
     // Create descriptor set layout with validation
     descriptorSets->createOwnLayout({
@@ -196,6 +198,7 @@ void PostProcess::createSharedDescriptors() {
         imageInfoDepth.sampler = *sampler;
 
         DescWrite()
+            // A -> B
             .addWrite()
                 .setDstSet(descriptorSets->get(frame * 2 + 0))
                 .setDstBinding(0)
@@ -214,9 +217,7 @@ void PostProcess::createSharedDescriptors() {
                 .setDescType(DescType::CombinedImageSampler)
                 .setDescCount(1)
                 .setImageInfo({imageInfoDepth})
-            .updateDescSets(deviceVK->lDevice);
-
-        DescWrite()
+            // B -> A
             .addWrite()
                 .setDstSet(descriptorSets->get(frame * 2 + 1))
                 .setDstBinding(0)
