@@ -88,8 +88,8 @@ TinyVertexRig& TinyVertexRig::setTangent(const glm::vec4& tang) {
     tangent = tang;
     return *this;
 }
-TinyVertexRig& TinyVertexRig::setJointIDs(const glm::uvec4& ids) {
-    jointIDs = ids;
+TinyVertexRig& TinyVertexRig::setBoneIDs(const glm::uvec4& ids) {
+    boneIDs = ids;
     return *this;
 }
 TinyVertexRig& TinyVertexRig::setWeights(const glm::vec4& weights, bool normalize) {
@@ -111,7 +111,7 @@ TinyVertexLayout TinyVertexRig::getLayout() {
         {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, pos_tu)},
         {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, nrml_tv)},
         {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, tangent)},
-        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(TinyVertexRig, jointIDs)},
+        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(TinyVertexRig, boneIDs)},
         {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, weights)}
     };
     return layout;

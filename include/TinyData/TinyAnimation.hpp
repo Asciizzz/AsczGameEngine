@@ -32,12 +32,12 @@ struct TinyAnimationChannel {
     TinyAnimationChannel& setTargetPath(const std::string& pathStr);
 
     enum class TargetType {
-        Joint,
+        Bone,
         Node,
         Morph
-    } targetType = TargetType::Joint;
+    } targetType = TargetType::Bone;
 
-    int targetIndex = -1;   // Node/joint/morph index in the node/resource system
+    int targetIndex = -1;   // Node/bone/morph index in the node/resource system
     int samplerIndex = -1;  // Reference into TinyAnimation.samplers
 };
 

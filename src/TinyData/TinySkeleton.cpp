@@ -10,14 +10,14 @@ void TinySkeleton::clear() {
     nameToIndex.clear();
 }
 
-void TinySkeleton::insert(const TinyJoint& joint) {
+void TinySkeleton::insert(const TinyBone& bone) {
     int index = static_cast<int>(names.size());
-    nameToIndex[joint.name] = index;
+    nameToIndex[bone.name] = index;
 
-    names.push_back(joint.name);
-    parents.push_back(joint.parent);
-    inverseBindMatrices.push_back(joint.inverseBindMatrix);
-    localBindTransforms.push_back(joint.localBindTransform);
+    names.push_back(bone.name);
+    parents.push_back(bone.parent);
+    inverseBindMatrices.push_back(bone.inverseBindMatrix);
+    localBindTransforms.push_back(bone.localBindTransform);
 }
 
 void TinySkeleton::debugPrintHierarchy() const {

@@ -7,7 +7,7 @@
 
 #include "Helpers/Templates.hpp"
 
-struct TinyJoint {
+struct TinyBone {
     int parent = -1; // -1 if root
     std::string name;
 
@@ -25,7 +25,7 @@ struct TinySkeleton {
     std::unordered_map<std::string, int> nameToIndex;
 
     void clear();
-    void insert(const TinyJoint& joint);
+    void insert(const TinyBone& bone);
 
     void debugPrintHierarchy() const;
 private:
