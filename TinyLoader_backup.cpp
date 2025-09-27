@@ -644,7 +644,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, const LoadO
                         if (!hasInvalidJoint && weightSum > 0.0f) {
                             // Normalize weights
                             boneWeights /= weightSum;
-                            vertex.setBoneIDs(jointIds).setWeights(boneWeights);
+                            vertex.setJointIDs(jointIds).setWeights(boneWeights);
                         }
                     }
 

@@ -67,20 +67,13 @@ void Application::initComponents() {
     );
 
 // PLAYGROUND FROM HERE
-    TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf", false);
+    // TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf", false);
+    TinyModel testModel = TinyLoader::loadModel("Assets/Untitled.glb", false);
     for (auto& mat : testModel.materials) {
         // mat.toonLevel = 4;
     }
 
     resGroup->addModel(testModel);
-
-    // TinyLoader::LoadOptions loadOpts;
-    // loadOpts.forceStatic = true; // No need for terrain
-    // TinyModel testModel2 = TinyLoader::loadModel(".heavy/de_mirage/de_mirage.gltf", loadOpts);
-    // for (auto& mat : testModel2.materials) {
-    //     mat.shading = false; // No lighting for for highly stylized look
-    // }
-    // resGroup->addModel(testModel2);
 
     // Initialize dynamic lighting system with example lights
     TinyEngine::LightVK sunLight{};

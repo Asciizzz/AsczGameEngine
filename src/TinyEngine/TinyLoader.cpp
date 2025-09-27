@@ -388,10 +388,77 @@ struct PrimitiveData {
     std::vector<glm::vec4> tangents;
     std::vector<glm::uvec4> joints;
     std::vector<glm::vec4> weights;
-    std::vector<uint64_t> indices; // Initial conversion
+    std::vector<uint32_t> indices; // Initial conversion
     int materialIndex = -1;
     size_t vertexCount = 0;
 };
+
+// Animation target bones, leading to a complex reference layer
+
+void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndJointIndex, int skeletonIndex, const tinygltf::Model& model, const tinygltf::Skin& skin) {
+    if (skin.joints.empty()) return;
+
+    skeleton.clear();
+
+    // Create the node-to-bone mapping
+    for (int i = 0; i < skin.joints.size(); ++i) {
+        int nodeIndex = skin.joints[i];
+
+        nodeToSkeletonAndJointIndex[nodeIndex] = {skeletonIndex, i};
+    }
+
+    // Parent mapping
+    UnorderedMap<int, int> nodeToParent; // Left: child node index, Right: parent node index
+    for (int nodeIdx = 0; nodeIdx < model.nodes.size(); ++nodeIdx) {
+        const auto& node = model.nodes[nodeIdx];
+
+        for (int childIdx : node.children) nodeToParent[childIdx] = nodeIdx;
+    }
+
+    bool hasInvBindMat4 = readAccessor(model, skin.inverseBindMatrices, skeleton.inverseBindMatrices);
+    if (!hasInvBindMat4) skeleton.inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f)); // Compromise with identity
+
+    for (int i = 0; i < skin.joints.size(); ++i) {
+        int nodeIndex = skin.joints[i];
+        if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size())) {
+            throw std::runtime_error("Invalid joint node index: " + std::to_string(nodeIndex));
+        }
+
+        const auto& node = model.nodes[nodeIndex];
+
+        TinyJoint joint;
+        std::string originalName = node.name.empty() ? "" : node.name;
+        joint.name = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
+        joint.inverseBindMatrix = skeleton.inverseBindMatrices[i];
+        joint.localBindTransform = makeLocalFromNode(node);
+
+        auto parentIt = nodeToParent.find(nodeIndex);
+        if (parentIt != nodeToParent.end()) {
+            int parentNodeIndex = parentIt->second;
+
+            auto jointIt = nodeToSkeletonAndJointIndex.find(parentNodeIndex);
+            if (jointIt != nodeToSkeletonAndJointIndex.end()) {
+                joint.parent = jointIt->second.second;
+            }
+        }
+
+        skeleton.insert(joint);
+    }
+}
+
+void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndJointIndex, tinygltf::Model& model) {
+    skeletons.clear();
+    nodeToSkeletonAndJointIndex.clear();
+
+    for (size_t skinIndex = 0; skinIndex < model.skins.size(); ++skinIndex) {
+        const tinygltf::Skin& skin = model.skins[skinIndex];
+
+        TinySkeleton skeleton;
+        loadSkeleton(skeleton, nodeToSkeletonAndJointIndex, skinIndex, model, skin);
+
+        skeletons.push_back(std::move(skeleton));
+    }
+}
 
 void loadMesh(TinyMesh& mesh, std::vector<int>& meshMaterials, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
     std::vector<PrimitiveData> allPrimitiveDatas;
@@ -411,7 +478,9 @@ void loadMesh(TinyMesh& mesh, std::vector<int>& meshMaterials, const tinygltf::M
         readAccessorFromMap(gltfModel, primitive.attributes, "TEXCOORD_0", pData.uvs);
 
         if (hasRigging) {
+            // JOINTS_0 IS WRONG, REQUIRE REMAPPING OF SKINS
             readAccessorFromMap(gltfModel, primitive.attributes, "JOINTS_0", pData.joints);
+
             readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", pData.weights);
         }
 
@@ -430,7 +499,7 @@ void loadMesh(TinyMesh& mesh, std::vector<int>& meshMaterials, const tinygltf::M
             for (size_t i = 0; i < indexAccessor.count; i++) {
                 T index;
                 std::memcpy(&index, dataPtr + stride * i, sizeof(T));
-                pData.indices.push_back(static_cast<uint64_t>(index));
+                pData.indices.push_back(static_cast<uint32_t>(index));
             }
         };
 
@@ -483,15 +552,15 @@ void loadMesh(TinyMesh& mesh, std::vector<int>& meshMaterials, const tinygltf::M
                 .setTangent(  pData.tangents.size()  > i ? pData.tangents[i]  : glm::vec4(1,0,0,1));
 
             if (pData.joints.size() > i && pData.weights.size() > i) vertex
-                .setBoneIDs(pData.joints[i])
+                .setJointIDs(pData.joints[i])
                 .setWeights(pData.weights[i], true);
 
             allVertices.push_back(vertex);
         }
 
         // Add indices with vertex offset
-        for (uint64_t index : pData.indices) {
-            allIndices.push_back(static_cast<uint32_t>(index + currentVertexOffset));
+        for (uint32_t index : pData.indices) {
+            allIndices.push_back(index + currentVertexOffset);
         }
 
         // Create submesh range
@@ -560,73 +629,6 @@ void loadMeshCombined(TinyMesh& mesh, std::vector<int>& meshMaterials, tinygltf:
     }
 
     loadMesh(mesh, meshMaterials, gltfModel, combinedPrimitives, !forceStatic);
-}
-
-// Animation target bones, leading to a complex reference layer
-
-void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndJointIndex, int skeletonIndex, const tinygltf::Model& model, const tinygltf::Skin& skin) {
-    if (skin.joints.empty()) return;
-
-    skeleton.clear();
-
-    // Create the node-to-bone mapping
-    for (int i = 0; i < skin.joints.size(); ++i) {
-        int nodeIndex = skin.joints[i];
-
-        nodeToSkeletonAndJointIndex[nodeIndex] = {skeletonIndex, i};
-    }
-
-    // Parent mapping
-    UnorderedMap<int, int> nodeToParent; // Left: child node index, Right: parent node index
-    for (int nodeIdx = 0; nodeIdx < model.nodes.size(); ++nodeIdx) {
-        const auto& node = model.nodes[nodeIdx];
-
-        for (int childIdx : node.children) nodeToParent[childIdx] = nodeIdx;
-    }
-
-    bool hasInvBindMat4 = readAccessor(model, skin.inverseBindMatrices, skeleton.inverseBindMatrices);
-    if (!hasInvBindMat4) skeleton.inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f)); // Compromise with identity
-
-    for (int i = 0; i < skin.joints.size(); ++i) {
-        int nodeIndex = skin.joints[i];
-        if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size())) {
-            throw std::runtime_error("Invalid joint node index: " + std::to_string(nodeIndex));
-        }
-
-        const auto& node = model.nodes[nodeIndex];
-
-        TinyJoint joint;
-        std::string originalName = node.name.empty() ? "" : node.name;
-        joint.name = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
-        joint.inverseBindMatrix = skeleton.inverseBindMatrices[i];
-        joint.localBindTransform = makeLocalFromNode(node);
-
-        auto parentIt = nodeToParent.find(nodeIndex);
-        if (parentIt != nodeToParent.end()) {
-            int parentNodeIndex = parentIt->second;
-
-            auto jointIt = nodeToSkeletonAndJointIndex.find(parentNodeIndex);
-            if (jointIt != nodeToSkeletonAndJointIndex.end()) {
-                joint.parent = jointIt->second.second;
-            }
-        }
-
-        skeleton.insert(joint);
-    }
-}
-
-void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndJointIndex, tinygltf::Model& model) {
-    skeletons.clear();
-    nodeToSkeletonAndJointIndex.clear();
-
-    for (size_t skinIndex = 0; skinIndex < model.skins.size(); ++skinIndex) {
-        const tinygltf::Skin& skin = model.skins[skinIndex];
-
-        TinySkeleton skeleton;
-        loadSkeleton(skeleton, nodeToSkeletonAndJointIndex, skinIndex, model, skin);
-
-        skeletons.push_back(std::move(skeleton));
-    }
 }
 
 
@@ -757,6 +759,8 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
     hasRigging &= !skeletons.empty();
     loadMeshCombined(result.mesh, result.meshMaterials, model, !hasRigging);
+    // Print mesh count
+    printf("Loaded %zu meshes from GLTF\n", model.meshes.size());
 
     // For the time being we will only be using the first skeleton
     if (hasRigging) result.skeleton = skeletons[0];

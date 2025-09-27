@@ -8,7 +8,7 @@ Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3
 
 ---
 
-## Recent Progress
+## Progress
 
 ### Rendering
 
@@ -54,6 +54,76 @@ Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3
 * `build_portable.bat`, it does what it says.
 * `compile_shader.bat` for shader compilation, convenient.
 * `compile_shader.sh` for Linux/Mac (not yet implemented, sorry).
+
+---
+
+## Engine Architecture
+
+* Buckle up, this is going to be a wild ride.
+* The engine is designed around **three layers** of asset handling:
+
+### 1. Raw Import (TinyModel)
+
+* First stage when importing (e.g. from glTF).
+* Contains:
+
+  * **Raw components**: meshes, materials, textures, skeletons, animations, etc.
+  * **Scene nodes (local)**: hierarchy of objects pointing to those components.
+* Think of this as a **staging area** - raw, unlinked data before the engine makes sense of it.
+
+### 2. Global Resource Registry
+
+* Converts a `TinyModel` into engine-managed resources:
+  * Pushes meshes, materials, textures, etc. into **global registries**.
+  * Each resource that uses other resources gets a **handle** (an ID) that:
+    * Keeps track of type (mesh/material/etc.).
+    * Prevents invalid references.
+    * Allows safe sharing across multiple prefabs.
+  * Ensures **deduplication** - one material can be reused across many prefabs.
+
+### 3. Construct Layer (Scene Composition)
+
+* The scene graph from the `TinyModel` is rebuilt into a construct.
+  * They store **references (handles)** to global resource registries.
+  * They define **structure** (hierarchy, transforms, which resources are linked).
+  * **Ownership matters**:
+    * If they own the resources, they can modify them directly.
+    * If they reference other constructs' resources, they can't modify them, simple as that.
+  * Overrides (variants with modifications) are **not implemented yet**, but the handle system allows for it later, hopefully.
+
+* Note: Constructs are basically just reusable nodes
+---
+
+### Conceptual Structure
+
+```
+Import Stage
+└── TinyModel
+    ├── Meshes
+    ├── Materials
+    ├── Textures
+    ├── Skeletons
+    └── SceneNodes (local hierarchy)
+
+Resource Stage
+├── Global Registries
+│   ├── Mesh Pool
+│   ├── Material Pool
+│   ├── Texture Pool
+│   ├── Skeleton Pool
+│   └── Animation Pool
+└── Constructs (reusable nodes)
+    └── Scene Graph (nodes)
+        └── References to Global Resources (handles)
+```
+
+---
+
+### Data Flow
+
+```plaintext
+[Import File] → TinyModel → TinyResource → Global Registries → Prefab (Scene Graph) → Runtime
+```
 
 ---
 

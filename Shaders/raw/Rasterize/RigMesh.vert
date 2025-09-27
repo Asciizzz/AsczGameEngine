@@ -14,7 +14,7 @@ layout(std430, set = 3, binding = 0) readonly buffer RigBuffer {
 layout(location = 0) in vec4 inPos_Tu;
 layout(location = 1) in vec4 inNrml_Tv;
 layout(location = 2) in vec4 inTangent;
-layout(location = 3) in uvec4 inBoneID;
+layout(location = 3) in uvec4 inJointID;
 layout(location = 4) in vec4 inWeights;
 
 // No instance data yet, i am scratching my head here
@@ -38,7 +38,7 @@ void main() {
     vec3 skinnedNormal = vec3(0.0);
 
     for (uint i = 0; i < 4; ++i) {
-        uint id = inBoneID[i];
+        uint id = inJointID[i];
         float w = inWeights[i];
         mat4 boneMat = finalPose[id];
 
