@@ -152,15 +152,15 @@ void PostProcess::createSharedDescriptors() {
 
     // Create descriptor set layout with validation
     descriptorSets->createOwnLayout({
-        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}
+        {0, DescType::CombinedImageSampler, 1, ShaderStage::Compute, nullptr},
+        {1, DescType::StorageImage,         1, ShaderStage::Compute, nullptr},
+        {2, DescType::CombinedImageSampler, 1, ShaderStage::Compute, nullptr}
     });
 
     // Create descriptor pool with validation
     descriptorSets->createOwnPool({
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 4}, // Color input + depth for each direction
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, MAX_FRAMES_IN_FLIGHT * 2}
+        {DescType::CombinedImageSampler, MAX_FRAMES_IN_FLIGHT * 4}, // Color input + depth for each direction
+        {DescType::StorageImage, MAX_FRAMES_IN_FLIGHT * 2}
     }, MAX_FRAMES_IN_FLIGHT * 2);
 
     // Allocate descriptor sets with validation
@@ -169,110 +169,73 @@ void PostProcess::createSharedDescriptors() {
     // Update descriptor sets to point to ping-pong images
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         const auto& images = pingPongImages[frame];
-        
-        // A->B direction (descriptor set index: frame * 2 + 0)
-        {
-            VkDescriptorImageInfo imageInfoInput{};
-            imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoInput.imageView = images->getViewA();
-            imageInfoInput.sampler = *sampler;
 
-            VkDescriptorImageInfo imageInfoOutput{};
-            imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoOutput.imageView = images->getViewB();
-            imageInfoOutput.sampler = VK_NULL_HANDLE;
+        VkDescriptorImageInfo imageInfoInputA{};
+        imageInfoInputA.imageLayout = ImageLayout::General;
+        imageInfoInputA.imageView = images->getViewA();
+        imageInfoInputA.sampler = *sampler;
 
-            VkDescriptorImageInfo imageInfoDepth{};
-            imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            imageInfoDepth.imageView = depthManager->getDepthImageView();
-            imageInfoDepth.sampler = *sampler;
+        VkDescriptorImageInfo imageInfoOutputB{};
+        imageInfoOutputB.imageLayout = ImageLayout::General;
+        imageInfoOutputB.imageView = images->getViewB();
+        imageInfoOutputB.sampler = VK_NULL_HANDLE;
 
-            // std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
-            // descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            // descriptorWrites[0].dstSet = descriptorSets->get(frame * 2 + 0);
-            // descriptorWrites[0].dstBinding = 0;
-            // descriptorWrites[0].dstArrayElement = 0;
-            // descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // descriptorWrites[0].descriptorCount = 1;
-            // descriptorWrites[0].pImageInfo = &imageInfoInput;
+        VkDescriptorImageInfo imageInfoInputB{};
+        imageInfoInputB.imageLayout = ImageLayout::General;
+        imageInfoInputB.imageView = images->getViewB();
+        imageInfoInputB.sampler = *sampler;
 
-            // descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            // descriptorWrites[1].dstSet = descriptorSets->get(frame * 2 + 0);
-            // descriptorWrites[1].dstBinding = 1;
-            // descriptorWrites[1].dstArrayElement = 0;
-            // descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            // descriptorWrites[1].descriptorCount = 1;
-            // descriptorWrites[1].pImageInfo = &imageInfoOutput;
+        VkDescriptorImageInfo imageInfoOutputA{};
+        imageInfoOutputA.imageLayout = ImageLayout::General;
+        imageInfoOutputA.imageView = images->getViewA();
+        imageInfoOutputA.sampler = VK_NULL_HANDLE;
 
-            // descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            // descriptorWrites[2].dstSet = descriptorSets->get(frame * 2 + 0);
-            // descriptorWrites[2].dstBinding = 2;
-            // descriptorWrites[2].dstArrayElement = 0;
-            // descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // descriptorWrites[2].descriptorCount = 1;
-            // descriptorWrites[2].pImageInfo = &imageInfoDepth;
+        VkDescriptorImageInfo imageInfoDepth{};
+        imageInfoDepth.imageLayout = ImageLayout::DepthStencilReadOnlyOptimal;
+        imageInfoDepth.imageView = depthManager->getDepthImageView();
+        imageInfoDepth.sampler = *sampler;
 
-            // vkUpdateDescriptorSets(deviceVK->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-            DescWrite()
-                .addWrite()
-                    .setDstSet(descriptorSets->get(frame * 2 + 0))
-                    .setDstBinding(0)
-                    .setDescType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-                    .setDescCount(1)
-                    .setImageInfo({imageInfoInput})
-                .addWrite()
-                    .setDstSet(descriptorSets->get(frame * 2 + 0))
-                    .setDstBinding(1)
-                    .setDescType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-                    .setDescCount(1)
-                    .setImageInfo({imageInfoOutput})
-                .addWrite()
-                    .setDstSet(descriptorSets->get(frame * 2 + 0))
-                    .setDstBinding(2)
-                    .setDescType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-                    .setDescCount(1)
-                    .setImageInfo({imageInfoDepth})
-                .updateDescSets(deviceVK->lDevice);
-        }
-        
-        // B->A direction (descriptor set index: frame * 2 + 1)
-        {
-            VkDescriptorImageInfo imageInfoInput{};
-            imageInfoInput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoInput.imageView = images->getViewB();
-            imageInfoInput.sampler = *sampler;
+        DescWrite()
+            .addWrite()
+                .setDstSet(descriptorSets->get(frame * 2 + 0))
+                .setDstBinding(0)
+                .setDescType(DescType::CombinedImageSampler)
+                .setDescCount(1)
+                .setImageInfo({imageInfoInputA})
+            .addWrite()
+                .setDstSet(descriptorSets->get(frame * 2 + 0))
+                .setDstBinding(1)
+                .setDescType(DescType::StorageImage)
+                .setDescCount(1)
+                .setImageInfo({imageInfoOutputB})
+            .addWrite()
+                .setDstSet(descriptorSets->get(frame * 2 + 0))
+                .setDstBinding(2)
+                .setDescType(DescType::CombinedImageSampler)
+                .setDescCount(1)
+                .setImageInfo({imageInfoDepth})
+            .updateDescSets(deviceVK->lDevice);
 
-            VkDescriptorImageInfo imageInfoOutput{};
-            imageInfoOutput.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageInfoOutput.imageView = images->getViewA();
-            imageInfoOutput.sampler = VK_NULL_HANDLE;
-
-            VkDescriptorImageInfo imageInfoDepth{};
-            imageInfoDepth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            imageInfoDepth.imageView = depthManager->getDepthImageView();
-            imageInfoDepth.sampler = *sampler;
-
-            DescWrite()
-                .addWrite()
-                    .setDstSet(descriptorSets->get(frame * 2 + 1))
-                    .setDstBinding(0)
-                    .setDescType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-                    .setDescCount(1)
-                    .setImageInfo({imageInfoInput})
-                .addWrite()
-                    .setDstSet(descriptorSets->get(frame * 2 + 1))
-                    .setDstBinding(1)
-                    .setDescType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-                    .setDescCount(1)
-                    .setImageInfo({imageInfoOutput})
-                .addWrite()
-                    .setDstSet(descriptorSets->get(frame * 2 + 1))
-                    .setDstBinding(2)
-                    .setDescType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-                    .setDescCount(1)
-                    .setImageInfo({imageInfoDepth})
-                .updateDescSets(deviceVK->lDevice);
-        }
+        DescWrite()
+            .addWrite()
+                .setDstSet(descriptorSets->get(frame * 2 + 1))
+                .setDstBinding(0)
+                .setDescType(DescType::CombinedImageSampler)
+                .setDescCount(1)
+                .setImageInfo({imageInfoInputB})
+            .addWrite()
+                .setDstSet(descriptorSets->get(frame * 2 + 1))
+                .setDstBinding(1)
+                .setDescType(DescType::StorageImage)
+                .setDescCount(1)
+                .setImageInfo({imageInfoOutputA})
+            .addWrite()
+                .setDstSet(descriptorSets->get(frame * 2 + 1))
+                .setDstBinding(2)
+                .setDescType(DescType::CombinedImageSampler)
+                .setDescCount(1)
+                .setImageInfo({imageInfoDepth})
+            .updateDescSets(deviceVK->lDevice);
     }
 }
 
@@ -364,13 +327,13 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     // Images are already in GENERAL layout from the render pass, so no transition needed for image A
     // Just transition image B from UNDEFINED to GENERAL
     transitionImageLayout(cmd, images->getImageB(), VK_FORMAT_R8G8B8A8_UNORM,
-                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+                        ImageLayout::Undefined, ImageLayout::General);
 
     // Transition depth image to read-only layout for compute shader access
     VkImageMemoryBarrier depthBarrier{};
     depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    depthBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    depthBarrier.oldLayout = ImageLayout::DepthStencilAttachmentOptimal;
+    depthBarrier.newLayout = ImageLayout::DepthStencilReadOnlyOptimal;
     depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     depthBarrier.image = depthManager->getDepthImage();
@@ -433,8 +396,8 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     // Transition depth image back to attachment optimal layout
     VkImageMemoryBarrier depthBackBarrier{};
     depthBackBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    depthBackBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    depthBackBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthBackBarrier.oldLayout = ImageLayout::DepthStencilReadOnlyOptimal;
+    depthBackBarrier.newLayout = ImageLayout::DepthStencilAttachmentOptimal;
     depthBackBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     depthBackBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     depthBackBarrier.image = depthManager->getDepthImage();
@@ -488,8 +451,8 @@ void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uin
     // Transition final image to transfer source
     VkImageMemoryBarrier finalImageBarrier{};
     finalImageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    finalImageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-    finalImageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    finalImageBarrier.oldLayout = ImageLayout::General;
+    finalImageBarrier.newLayout = ImageLayout::TransferSrcOptimal;
     finalImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     finalImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     finalImageBarrier.image = finalImage;
@@ -594,13 +557,13 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
 
-    if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+    if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == ImageLayout::General) {
         barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
         sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+    } else if (oldLayout == ImageLayout::Undefined && newLayout == ImageLayout::General) {
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
