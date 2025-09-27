@@ -193,7 +193,7 @@ void TinyPlayback::sampleAnimation(const TinyAnimation& anim, float time, std::v
     
     // Apply each channel
     for (const auto& channel : anim.channels) {
-        if (channel.targetJointIndex < 0 || channel.targetJointIndex >= static_cast<int>(outPose.size())) {
+        if (channel.targetIndex < 0 || channel.targetIndex >= static_cast<int>(outPose.size())) {
             continue; // Skip invalid bone indices
         }
         
@@ -202,7 +202,7 @@ void TinyPlayback::sampleAnimation(const TinyAnimation& anim, float time, std::v
         }
         
         const auto& sampler = anim.samplers[channel.samplerIndex];
-        BonePose& bonePose = outPose[channel.targetJointIndex];
+        BonePose& bonePose = outPose[channel.targetIndex];
         
         // Sample the appropriate property
         switch (channel.targetPath) {
@@ -250,16 +250,23 @@ void TinyPlayback::resetToBindPose() {
     computeBoneMatrices();
 }
 
+// Use these before we impleement proper fix to the animation
 glm::vec3 TinyPlayback::interpolateTranslation(const TinyAnimationSampler& sampler, float time) {
-    return interpolateValues(sampler.translations, sampler.inputTimes, time, sampler.interpolation);
+    // return interpolateValues(sampler.translations, sampler.inputTimes, time, sampler.interpolation);
+
+    return glm::vec3(0.0f);
 }
 
 glm::quat TinyPlayback::interpolateRotation(const TinyAnimationSampler& sampler, float time) {
-    return interpolateValues(sampler.rotations, sampler.inputTimes, time, sampler.interpolation);
+    // return interpolateValues(sampler.rotations, sampler.inputTimes, time, sampler.interpolation);
+
+    return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 }
 
 glm::vec3 TinyPlayback::interpolateScale(const TinyAnimationSampler& sampler, float time) {
-    return interpolateValues(sampler.scales, sampler.inputTimes, time, sampler.interpolation);
+    // return interpolateValues(sampler.scales, sampler.inputTimes, time, sampler.interpolation);
+
+    return glm::vec3(1.0f);
 }
 
 template<typename T>

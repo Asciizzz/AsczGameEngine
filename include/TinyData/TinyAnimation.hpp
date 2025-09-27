@@ -9,12 +9,9 @@
 #include "Helpers/Templates.hpp"
 
 struct TinyAnimationSampler {
-    std::vector<float> inputTimes;        // Time values (in seconds)
-    std::vector<glm::vec3> translations;  // Translation values (if target_path is "translation")
-    std::vector<glm::quat> rotations;     // Rotation values (if target_path is "rotation") 
-    std::vector<glm::vec3> scales;        // Scale values (if target_path is "scale")
-    std::vector<float> weights;           // Morph target weights (if target_path is "weights")
-    
+    std::vector<float> inputTimes;        // keyframe times
+    std::vector<glm::vec4> outputValues;  // generic container
+                                          // vec3 for translation/scale, vec4 for rotation, vecN for weights
     enum class InterpolationType {
         Linear,
         Step,
@@ -23,27 +20,25 @@ struct TinyAnimationSampler {
 
     TinyAnimationSampler& setInterpolation(const std::string& interpStr);
     TinyAnimationSampler& setInterpolation(const InterpolationType interpType);
-    
-    // Helper methods to determine what type of data this sampler contains
-    bool hasTranslations() const { return !translations.empty(); }
-    bool hasRotations() const { return !rotations.empty(); }
-    bool hasScales() const { return !scales.empty(); }
-    bool hasWeights() const { return !weights.empty(); }
 };
 
 struct TinyAnimationChannel {
-    int samplerIndex = -1;        // Index into TinyAnimation::samplers
-    int targetSkeletonIndex = -1; // Index into TinyModel::skeletons
-    int targetJointIndex = -1;     // Index into TinySkeleton bone arrays
-
     enum class TargetPath {
         Translation,
-        Rotation, 
+        Rotation,
         Scale,
-        Weights  // For morph targets
-    };
-    
-    TargetPath targetPath = TargetPath::Translation;
+        Weights  // Morph targets
+    } targetPath = TargetPath::Translation;
+    TinyAnimationChannel& setTargetPath(const std::string& pathStr);
+
+    enum class TargetType {
+        Joint,
+        Node,
+        Morph
+    } targetType = TargetType::Joint;
+
+    int targetIndex = -1;   // Node/joint/morph index in the node/resource system
+    int samplerIndex = -1;  // Reference into TinyAnimation.samplers
 };
 
 struct TinyAnimation {
@@ -51,11 +46,11 @@ struct TinyAnimation {
     
     std::vector<TinyAnimationSampler> samplers;
     std::vector<TinyAnimationChannel> channels;
-    
     float duration = 0.0f;  // Computed from all samplers
-    
+
+    void clear();
+
     // Helper methods
     void computeDuration();
     int findChannelForBone(int boneIndex, TinyAnimationChannel::TargetPath path) const;
-    void printDebug(const std::vector<std::string>& boneNames = {}) const;
 };

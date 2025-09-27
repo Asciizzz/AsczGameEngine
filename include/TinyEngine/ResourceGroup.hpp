@@ -28,8 +28,9 @@ struct MeshVK {
     VkIndexType indexType = VK_INDEX_TYPE_UINT32; // Default to uint32
 
     std::vector<TinySubmesh> submeshes;
+    std::vector<int> meshMaterials; // Point to global material index
 
-    void fromMesh(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh);
+    void fromMesh(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh, const std::vector<int>& meshMats);
     static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };
 

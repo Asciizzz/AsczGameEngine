@@ -10,14 +10,13 @@
 
 struct TinyNode {
     TinyScope scope = TinyScope::Local;
+    std::string name = "Node";
 
-    int parent = -1; // -1 if root
-    std::vector<uint32_t> children;
+    int parent = -1;
+    std::vector<int> children; // Indices into global node list
 
     glm::mat4 transform = glm::mat4(1.0f);
 
-    uint32_t meshId = UINT32_MAX;
-    std::vector<uint32_t> matIds;
-    uint32_t skeleId = UINT32_MAX;
-    uint32_t animId = UINT32_MAX;
+    int meshIndex = -1;     // Index into global mesh list
+    int skinIndex = -1;     // Index into global skin/skeleton list
 };

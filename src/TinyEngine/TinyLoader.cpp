@@ -394,7 +394,7 @@ struct PrimitiveData {
     size_t vertexCount = 0;
 };
 
-void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
+void loadMesh(TinyMesh& mesh, std::vector<int>& meshMaterials, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
     std::vector<PrimitiveData> allPrimitiveDatas;
 
     // Shared data
@@ -505,8 +505,8 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         TinySubmesh submesh;
         submesh.indexOffset = currentIndexOffset;
         submesh.indexCount = static_cast<uint32_t>(pData.indices.size());
-        submesh.materialIndex = pData.materialIndex;
         mesh.addSubmesh(submesh);
+        meshMaterials.push_back(pData.materialIndex);
 
         currentVertexOffset += static_cast<uint32_t>(pData.vertexCount);
         currentIndexOffset += static_cast<uint32_t>(pData.indices.size());
@@ -541,28 +541,32 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
     else mesh.setVertices(TinyVertexRig::makeStaticVertices(allVertices));
 }
 
-void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
+void loadMeshes(std::vector<TinyMesh>& meshes, std::vector<std::vector<int>>& meshesMaterials, tinygltf::Model& gltfModel, bool forceStatic) {
     meshes.clear();
+    meshesMaterials.clear();
 
     for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
         TinyMesh tinyMesh;
+        std::vector<int> meshMaterials;
 
-        loadMesh(tinyMesh, gltfModel, gltfMesh.primitives, !forceStatic);
+        loadMesh(tinyMesh, meshMaterials, gltfModel, gltfMesh.primitives, !forceStatic);
+
         meshes.push_back(std::move(tinyMesh));
+        meshesMaterials.push_back(std::move(meshMaterials));
     }
 }
 
 
 // For legacy support - combines all meshes into one
-void loadMeshCombined(TinyMesh& mesh, tinygltf::Model& gltfModel, bool forceStatic) {
+void loadMeshCombined(TinyMesh& mesh, std::vector<int>& meshMaterials, tinygltf::Model& gltfModel, bool forceStatic) {
     // Combined primitives
     std::vector<tinygltf::Primitive> combinedPrimitives;
     for (const auto& gltfMesh : gltfModel.meshes) {
         combinedPrimitives.insert(combinedPrimitives.end(), gltfMesh.primitives.begin(), gltfMesh.primitives.end());
     }
 
-    loadMesh(mesh, gltfModel, combinedPrimitives, !forceStatic);
+    loadMesh(mesh, meshMaterials, gltfModel, combinedPrimitives, !forceStatic);
 }
 
 // Animation target bones, leading to a complex reference layer
@@ -633,6 +637,70 @@ void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::
 }
 
 
+struct ChannelToSkeletonMap {
+    UnorderedMap<int, int> channelToSkeletonIndex;
+
+    void set(int channelIndex, int skeletonIndex) {
+        channelToSkeletonIndex[channelIndex] = skeletonIndex;
+    }
+};
+
+void loadAnimation(TinyAnimation& animation, ChannelToSkeletonMap& channelToSkeletonMap, const tinygltf::Model& model, const tinygltf::Animation& gltfAnim, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndJointIndex) {
+    animation.clear();
+    animation.name = gltfAnim.name;
+
+    for (const auto& gltfSampler : gltfAnim.samplers) {
+
+        TinyAnimationSampler sampler;
+
+        // Read time values
+        if (gltfSampler.input >= 0) {
+            readAccessor(model, gltfSampler.input, sampler.inputTimes);
+        }
+
+        // Read output generically
+        if (gltfSampler.output >= 0) {
+            readAccessor(model, gltfSampler.output, sampler.outputValues);
+        }
+
+        sampler.setInterpolation(gltfSampler.interpolation);
+        animation.samplers.push_back(std::move(sampler));
+    }
+
+    for (const auto& gltfChannel : gltfAnim.channels) {
+        TinyAnimationChannel channel;
+        channel.samplerIndex = gltfChannel.sampler;
+
+        // Resolve node/joint/morph index
+        auto it = nodeToSkeletonAndJointIndex.find(gltfChannel.target_node);
+        if (it != nodeToSkeletonAndJointIndex.end()) {
+            int channelIndex = animation.channels.size();
+
+            channelToSkeletonMap.set(channelIndex, it->second.first);
+            channel.targetIndex = it->second.second;
+        }
+
+        channel.setTargetPath(gltfChannel.target_path);
+
+        animation.channels.push_back(std::move(channel));
+    }
+}
+
+void loadAnimations(std::vector<TinyAnimation>& animations, std::vector<ChannelToSkeletonMap>& ChannelToSkeletonMaps, tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndJointIndex) {
+    animations.clear();
+    ChannelToSkeletonMaps.clear();
+
+    for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
+        const tinygltf::Animation& gltfAnim = model.animations[animIndex];
+
+        TinyAnimation animation;
+        ChannelToSkeletonMap channelToSkeletonMap;
+        loadAnimation(animation, channelToSkeletonMap, model, gltfAnim, nodeToSkeletonAndJointIndex);
+
+        animations.push_back(std::move(animation));
+        ChannelToSkeletonMaps.push_back(std::move(channelToSkeletonMap));
+    }
+}
 
 TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool forceStatic) {
     tinygltf::Model model;
@@ -660,12 +728,10 @@ TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool 
     if (!forceStatic) loadSkeletons(result.skeletons, nodeToSkeletonAndJointIndex, model);
 
     bool hasRigging = !forceStatic && !result.skeletons.empty();
-    loadMeshes(result.meshes, model, !hasRigging);
+    loadMeshes(result.meshes, result.meshesMaterials, model, !hasRigging);
 
     return result;
 }
-
-
 
 
 TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
@@ -697,122 +763,13 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     if (hasRigging) loadSkeletons(skeletons, nodeToSkeletonAndJointIndex, model);
 
     hasRigging &= !skeletons.empty();
-    loadMeshCombined(result.mesh, model, !hasRigging);
+    loadMeshCombined(result.mesh, result.meshMaterials, model, !hasRigging);
 
     // For the time being we will only be using the first skeleton
     if (hasRigging) result.skeleton = skeletons[0];
 
-    if (hasRigging && !model.animations.empty()) {
-        for (size_t animIndex = 0; animIndex < model.animations.size(); animIndex++) {
-            const tinygltf::Animation& gltfAnim = model.animations[animIndex];
-            TinyAnimation tinyAnim;
-            
-            // Set animation name (use index as fallback)
-            tinyAnim.name = gltfAnim.name.empty() ? 
-                ("Animation_" + std::to_string(animIndex)) : gltfAnim.name;
-            
-            // Load samplers first
-            tinyAnim.samplers.reserve(gltfAnim.samplers.size());
-            for (const auto& gltfSampler : gltfAnim.samplers) {
-                TinyAnimationSampler sampler;
-                
-                // Read time values (input)
-                if (gltfSampler.input >= 0) {
-                    if (!readAccessor(model, gltfSampler.input, sampler.inputTimes)) {
-                        std::cerr << "Warning: Failed to read animation sampler input times for animation: " 
-                                  << tinyAnim.name << std::endl;
-                        continue;
-                    }
-                }
-                
-                // Set interpolation type
-                sampler.setInterpolation(gltfSampler.interpolation);
-
-                tinyAnim.samplers.push_back(std::move(sampler));
-            }
-            
-            // Load channels and read appropriate output data
-            tinyAnim.channels.reserve(gltfAnim.channels.size());
-            for (const auto& gltfChannel : gltfAnim.channels) {
-                TinyAnimationChannel channel;
-                
-                // Set sampler index
-                channel.samplerIndex = gltfChannel.sampler;
-                if (channel.samplerIndex < 0 || channel.samplerIndex >= static_cast<int>(tinyAnim.samplers.size())) {
-                    std::cerr << "Warning: Invalid sampler index in animation channel: " 
-                              << tinyAnim.name << std::endl;
-                    continue;
-                }
-                
-                // Find target bone index
-                if (gltfChannel.target_node >= 0) {
-                    auto it = nodeToSkeletonAndJointIndex.find(gltfChannel.target_node);
-                    if (it != nodeToSkeletonAndJointIndex.end()) {
-                        channel.targetSkeletonIndex = it->second.first;
-                        channel.targetJointIndex = it->second.second;
-                    } else {
-                        // Node is not part of the skeleton - skip this channel
-                        std::cerr << "Warning: Animation channel targets node not in skeleton: " 
-                                  << gltfChannel.target_node << " in animation: " << tinyAnim.name << std::endl;
-                        continue;
-                    }
-                }
-                
-                // Set target path and read corresponding output data
-                TinyAnimationSampler& sampler = tinyAnim.samplers[channel.samplerIndex];
-                const tinygltf::AnimationSampler& gltfSampler = gltfAnim.samplers[channel.samplerIndex];
-                
-                if (gltfChannel.target_path == "translation") {
-                    channel.targetPath = TinyAnimationChannel::TargetPath::Translation;
-                    if (gltfSampler.output >= 0) {
-                        if (!readAccessor(model, gltfSampler.output, sampler.translations)) {
-                            std::cerr << "Warning: Failed to read translation data for animation: " 
-                                      << tinyAnim.name << std::endl;
-                            continue;
-                        }
-                    }
-                } else if (gltfChannel.target_path == "rotation") {
-                    channel.targetPath = TinyAnimationChannel::TargetPath::Rotation;
-                    if (gltfSampler.output >= 0) {
-                        if (!readAccessor(model, gltfSampler.output, sampler.rotations)) {
-                            std::cerr << "Warning: Failed to read rotation data for animation: " 
-                                      << tinyAnim.name << std::endl;
-                            continue;
-                        }
-                    }
-                } else if (gltfChannel.target_path == "scale") {
-                    channel.targetPath = TinyAnimationChannel::TargetPath::Scale;
-                    if (gltfSampler.output >= 0) {
-                        if (!readAccessor(model, gltfSampler.output, sampler.scales)) {
-                            std::cerr << "Warning: Failed to read scale data for animation: " 
-                                      << tinyAnim.name << std::endl;
-                            continue;
-                        }
-                    }
-                } else if (gltfChannel.target_path == "weights") {
-                    channel.targetPath = TinyAnimationChannel::TargetPath::Weights;
-                    if (gltfSampler.output >= 0) {
-                        if (!readAccessor(model, gltfSampler.output, sampler.weights)) {
-                            std::cerr << "Warning: Failed to read weights data for animation: " 
-                                      << tinyAnim.name << std::endl;
-                            continue;
-                        }
-                    }
-                } else {
-                    std::cerr << "Warning: Unsupported animation target path: " 
-                              << gltfChannel.target_path << " in animation: " << tinyAnim.name << std::endl;
-                    continue;
-                }
-                
-                tinyAnim.channels.push_back(std::move(channel));
-            }
-            
-            // Compute animation duration and add to name mapping
-            tinyAnim.computeDuration();
-            result.nameToAnimationIndex[tinyAnim.name] = static_cast<int>(result.animations.size());
-            result.animations.push_back(std::move(tinyAnim));
-        }
-    }
+    std::vector<ChannelToSkeletonMap> channelToSkeletonMaps; // Left: channel index, Right: skeleton index
+    if (hasRigging) loadAnimations(result.animations, channelToSkeletonMaps, model, nodeToSkeletonAndJointIndex);
 
     return result;
 }

@@ -238,16 +238,18 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     vkCmdBindVertexBuffers(currentCmd, 0, 2, buffers, offsets);
     vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
 
+    const auto& submeshes = meshVK.submeshes;
+    const auto& meshMaterials = meshVK.meshMaterials;
 
     // Draw submeshes
-    for (size_t i = 0; i < meshVK.submeshes.size(); ++i) {
-        uint32_t indexCount = meshVK.submeshes[i].indexCount;
+    for (size_t i = 0; i < submeshes.size(); ++i) {
+        uint32_t indexCount = submeshes[i].indexCount;
         if (indexCount == 0) continue;
 
-        uint32_t indexOffset = meshVK.submeshes[i].indexOffset;
+        uint32_t indexOffset = submeshes[i].indexOffset;
 
         // Push constants: material index, light count, unused, unused
-        uint32_t matIndex  = meshVK.submeshes[i].materialIndex;
+        uint32_t matIndex  = meshMaterials[i];
         rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
         vkCmdDrawIndexed(currentCmd, indexCount, instanceCount, indexOffset, 0, 0);
@@ -282,14 +284,17 @@ void Renderer::drawSingleInstance(const TinyEngine::ResourceGroup* resGroup, con
     vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
 
     // Draw submeshes
-    for (size_t i = 0; i < meshVK.submeshes.size(); ++i) {
-        uint32_t indexCount = meshVK.submeshes[i].indexCount;
+    const auto& submeshes = meshVK.submeshes;
+    const auto& meshMaterials = meshVK.meshMaterials;
+
+    for (size_t i = 0; i < submeshes.size(); ++i) {
+        uint32_t indexCount = submeshes[i].indexCount;
         if (indexCount == 0) continue;
 
-        uint32_t indexOffset = meshVK.submeshes[i].indexOffset;
+        uint32_t indexOffset = submeshes[i].indexOffset;
 
         // Push constants: material index, light count, unused, unused
-        uint32_t matIndex  = meshVK.submeshes[i].materialIndex;
+        uint32_t matIndex  = meshMaterials[i];
         rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
 
         vkCmdDrawIndexed(currentCmd, indexCount, 1, indexOffset, 0, 0);
