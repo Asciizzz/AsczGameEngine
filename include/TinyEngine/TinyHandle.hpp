@@ -10,6 +10,7 @@ union TinyHandle {
         Texture,
         Skeleton,
         Animation,
+        Node,
         Unknown = 255
     };
     

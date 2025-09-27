@@ -104,4 +104,31 @@ private:
     bool poolOwned = false;
 };
 
+
+struct DescWrite {
+    enum class Type {
+        Buffer,
+        Image
+    } type = Type::Buffer;
+
+    VkDescriptorBufferInfo bufferInfo = {};
+    VkDescriptorImageInfo  imageInfo  = {};
+
+    VkWriteDescriptorSet writeSet = {};
+
+    DescWrite();
+
+    operator VkWriteDescriptorSet() const { return writeSet; }
+    VkWriteDescriptorSet* operator&() { return &writeSet; }
+
+    DescWrite& setBufferInfo(VkDescriptorBufferInfo bufferInfo);
+    DescWrite& setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos);
+
+    DescWrite& setDstSet(VkDescriptorSet dstSet);
+    DescWrite& setDstBinding(uint32_t dstBinding);
+    DescWrite& setDstArrayElement(uint32_t dstArrayElement);
+    DescWrite& setDescCount(uint32_t count);
+    DescWrite& setDescType(VkDescriptorType type);
+};
+
 }

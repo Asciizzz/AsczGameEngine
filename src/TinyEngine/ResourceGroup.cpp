@@ -135,61 +135,14 @@ void ResourceGroup::createMaterialDescSet(const std::vector<MaterialVK>& materia
     materialBufferInfo.offset = 0;
     materialBufferInfo.range = VK_WHOLE_SIZE;
 
-    VkWriteDescriptorSet descriptorWrite{};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = modelVK.matDescSet;
-    descriptorWrite.dstBinding = 0;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrite.descriptorCount = 1;
-    descriptorWrite.pBufferInfo = &materialBufferInfo;
+    DescWrite descriptorWrite = DescWrite()
+        .setDstSet(modelVK.matDescSet)
+        .setDescType(DescType::StorageBuffer)
+        .setDescCount(1)
+        .setBufferInfo(materialBufferInfo);
 
     vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
 }
-
-
-// void ResourceGroup::createMaterialBuffer() {
-//     VkDeviceSize bufferSize = sizeof(MaterialVK) * materialVKs.size();
-
-//     matBuffer = MakeUnique<DataBuffer>();
-//     matBuffer
-//         ->setDataSize(bufferSize)
-//         .setUsageFlags(BufferUsage::Storage)
-//         .setMemPropFlags(MemProp::DeviceLocal)
-//         .createDeviceLocalBuffer(deviceVK, materialVKs.data());
-// }
-
-// // Descriptor set creation
-// void ResourceGroup::createMaterialDescSet() {
-//     VkDevice lDevice = deviceVK->lDevice;
-
-//     matDescSet = MakeUnique<DescSet>(lDevice);
-
-//     matDescSet->createOwnLayout({
-//         {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr}
-//     });
-
-//     matDescSet->createOwnPool({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1} }, 1);
-
-//     matDescSet->allocate();
-
-//     // --- bind buffer to descriptor ---
-//     VkDescriptorBufferInfo materialBufferInfo{};
-//     materialBufferInfo.buffer = *matBuffer;
-//     materialBufferInfo.offset = 0;
-//     materialBufferInfo.range = VK_WHOLE_SIZE;
-
-//     VkWriteDescriptorSet descriptorWrite{};
-//     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-//     descriptorWrite.dstSet = *matDescSet;
-//     descriptorWrite.dstBinding = 0;
-//     descriptorWrite.dstArrayElement = 0;
-//     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-//     descriptorWrite.descriptorCount = 1;
-//     descriptorWrite.pBufferInfo = &materialBufferInfo;
-
-//     vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
-// }
 
 // ============================================================================
 // ========================= TEXTURES =========================================
@@ -278,11 +231,11 @@ void ResourceGroup::createTextureDescSet() {
 
     // Combined image sampler descriptor for each texture
     texDescSet->createOwnLayout({
-        {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, textureCount, ShaderStage::Fragment, nullptr}
+        {0, DescType::CombinedImageSampler, textureCount, ShaderStage::Fragment, nullptr}
     });
 
     texDescSet->createOwnPool({
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, textureCount}
+        {DescType::CombinedImageSampler, textureCount}
     }, 1);
 
     texDescSet->allocate();
@@ -295,14 +248,11 @@ void ResourceGroup::createTextureDescSet() {
         imageInfos[i].sampler     = textures[i]->getSampler(); // Now using the texture's own sampler
     }
 
-    VkWriteDescriptorSet imageWrite{};
-    imageWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    imageWrite.dstSet          = *texDescSet;
-    imageWrite.dstBinding      = 0;
-    imageWrite.dstArrayElement = 0;
-    imageWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    imageWrite.descriptorCount = textureCount;
-    imageWrite.pImageInfo      = imageInfos.data();
+    DescWrite imageWrite = DescWrite()
+        .setDstSet(*texDescSet)
+        .setDescType(DescType::CombinedImageSampler)
+        .setDescCount(textureCount)
+        .setImageInfo(imageInfos);
 
     vkUpdateDescriptorSets(lDevice, 1, &imageWrite, 0, nullptr);
 }

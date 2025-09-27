@@ -132,3 +132,55 @@ void DescSet::destroyLayout() {
         layoutOwned = false;
     }
 }
+
+
+DescWrite::DescWrite() {
+    // Common defaults
+    writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeSet.dstBinding = 0;
+    writeSet.dstArrayElement = 0;
+    writeSet.descriptorCount = 1;
+}
+
+DescWrite& DescWrite::setBufferInfo(VkDescriptorBufferInfo bufferInfo) {
+    type = Type::Buffer;
+    this->bufferInfo = bufferInfo;
+    writeSet.pBufferInfo = &this->bufferInfo;
+    writeSet.pImageInfo = nullptr;
+    writeSet.pTexelBufferView = nullptr;
+    return *this;
+}
+
+DescWrite& DescWrite::setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos) {
+    type = Type::Image;
+    if (imageInfos.empty()) {
+        throw std::runtime_error("imageInfos cannot be empty");
+    }
+    this->imageInfo = imageInfos[0]; // Store the first one for single descriptor
+    writeSet.pImageInfo = imageInfos.data();
+    writeSet.descriptorCount = static_cast<uint32_t>(imageInfos.size());
+    writeSet.pBufferInfo = nullptr;
+    writeSet.pTexelBufferView = nullptr;
+    return *this;
+}
+
+DescWrite& DescWrite::setDstSet(VkDescriptorSet dstSet) {
+    writeSet.dstSet = dstSet;
+    return *this;
+}
+DescWrite& DescWrite::setDstBinding(uint32_t dstBinding) {
+    writeSet.dstBinding = dstBinding;
+    return *this;
+}
+DescWrite& DescWrite::setDstArrayElement(uint32_t dstArrayElement) {
+    writeSet.dstArrayElement = dstArrayElement;
+    return *this;
+}
+DescWrite& DescWrite::setDescCount(uint32_t count) {
+    writeSet.descriptorCount = count;
+    return *this;
+}
+DescWrite& DescWrite::setDescType(VkDescriptorType type) {
+    writeSet.descriptorType = type;
+    return *this;
+}

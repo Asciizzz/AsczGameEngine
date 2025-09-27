@@ -7,6 +7,17 @@
 #include "AzVulk/Descriptor.hpp"
 #include "AzVulk/DataBuffer.hpp"
 
+struct TinyMeshVK {
+    AzVulk::DataBuffer vertexBuffer;
+    AzVulk::DataBuffer indexBuffer;
+    VkIndexType indexType = VK_INDEX_TYPE_UINT32;
+
+    std::vector<TinySubmesh> submeshes;
+    void import(const TinyMesh& mesh, const AzVulk::DeviceVK* deviceVK);
+
+    static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
+};
+
 struct TinyMaterialVK {
 
     // Modifiable
@@ -17,8 +28,8 @@ struct TinyMaterialVK {
     AzVulk::DataBuffer matBuffer; // Mapable
     AzVulk::DescSet matDescSet;
 
-    void fromTinyMaterial(const TinyMaterial& mat);
-    void toGPU(const AzVulk::DeviceVK* deviceVK, VkDescriptorSetLayout layout, VkDescriptorPool pool);
+    void import(const TinyMaterialVK::Data& matData, const AzVulk::DeviceVK* deviceVK,
+                VkDescriptorSetLayout layout, VkDescriptorPool pool);
 
     void setAlbedoTextureIndex(uint32_t index) {
         data.texIndices.x = index;
@@ -31,20 +42,12 @@ struct TinyMaterialVK {
     }
 };
 
-struct TinyMeshVK {
-    AzVulk::DataBuffer vertexBuffer;
-    AzVulk::DataBuffer indexBuffer;
-
-    std::vector<TinySubmesh> submeshes;
-    std::vector<int> submeshMaterials; // Point to global registry
-};
-
 struct TinyTextureVK {
     AzVulk::TextureVK texture;
     AzVulk::DescSet descSet;
 
-    void fromTinyTexture(const TinyTexture& tex);
-    void toGPU(const AzVulk::DeviceVK* deviceVK, VkDescriptorSetLayout layout, VkDescriptorPool pool);
+    void import(const TinyTexture& tex, const AzVulk::DeviceVK* deviceVK,
+                VkDescriptorSetLayout layout, VkDescriptorPool pool);
 };
 
 struct TinySkeletonVK {
@@ -85,4 +88,6 @@ private:
     TinyPoolPtr<TinyMeshVK>     meshes;
     TinyPoolPtr<TinyMaterialVK> materials;
     TinyPoolPtr<TinyTextureVK>  textures;
+    TinyPoolPtr<TinySkeletonVK> skeletons;
+    
 };
