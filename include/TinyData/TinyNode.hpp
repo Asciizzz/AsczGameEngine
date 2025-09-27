@@ -6,10 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "TinyData/TinyHelp.hpp"
-
 struct TinyNode {
-    TinyScope scope = TinyScope::Local;
     std::string name = "Node";
 
     int parent = -1;

@@ -288,7 +288,6 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
 
 // OBJ loader implementation using tiny_obj_loader
 TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, bool forceStatic) {
-
     return TinyModel(); // OBJ loading not implemented yet
 }
 

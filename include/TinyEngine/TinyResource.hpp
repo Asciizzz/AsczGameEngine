@@ -36,7 +36,7 @@ struct TinyMeshVK {
     AzVulk::DataBuffer indexBuffer;
 
     std::vector<TinySubmesh> submeshes;
-    std::vector<int> submeshMaterials; // Point to global material index
+    std::vector<int> submeshMaterials; // Point to global registry
 };
 
 struct TinyTextureVK {
@@ -72,10 +72,7 @@ private:
     uint32_t maxTextureCount = 4096;
     uint32_t maxMaterialCount = 4096;
 
-    TinyPoolPtr<TinyMeshVK>     meshes;
-    TinyPoolPtr<TinyMaterialVK> materials;
-    TinyPoolPtr<TinyTextureVK>  textures;
-
+    // Shared descriptor resources
     UniquePtr<AzVulk::DescLayout> matDescLayout;
     UniquePtr<AzVulk::DescPool>   matDescPool;
     void createMaterialDescResources(uint32_t count = 1);
@@ -83,4 +80,9 @@ private:
     UniquePtr<AzVulk::DescLayout> texDescLayout;
     UniquePtr<AzVulk::DescPool>   texDescPool;
     void createTextureDescResources(uint32_t count = 1);
+
+    // Resource pools registry
+    TinyPoolPtr<TinyMeshVK>     meshes;
+    TinyPoolPtr<TinyMaterialVK> materials;
+    TinyPoolPtr<TinyTextureVK>  textures;
 };

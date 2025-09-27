@@ -3,11 +3,6 @@
 #include <cstdint>
 #include <functional>
 
-enum class TinyScope {
-    Local,
-    Global
-};
-
 union TinyHandle {
     enum class Type : uint8_t {
         Mesh,
