@@ -107,13 +107,20 @@ private:
 
 struct DescWrite {
     uint32_t writeCount = 0;
+    uint32_t currentIndex = UINT32_MAX;
+    
     std::vector<VkWriteDescriptorSet> writes;
+
+    // Storage for image and buffer info to ensure lifetime - one per write
+    std::vector<std::vector<VkDescriptorImageInfo>> imageInfoStorage;
+    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfoStorage;
 
     DescWrite() = default;
     VkWriteDescriptorSet* operator&() { return writes.data(); }
 
     DescWrite& addWrite();
-    VkWriteDescriptorSet& lastWrite();
+    DescWrite& rewrite(uint32_t index);
+    VkWriteDescriptorSet& current();
 
     DescWrite& setBufferInfo(std::vector<VkDescriptorBufferInfo> bufferInfo);
     DescWrite& setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos);

@@ -252,32 +252,26 @@ void PostProcess::createSharedDescriptors() {
             imageInfoDepth.imageView = depthManager->getDepthImageView();
             imageInfoDepth.sampler = *sampler;
 
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
-            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = descriptorSets->get(frame * 2 + 1);
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pImageInfo = &imageInfoInput;
-
-            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = descriptorSets->get(frame * 2 + 1);
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &imageInfoOutput;
-
-            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].dstSet = descriptorSets->get(frame * 2 + 1);
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &imageInfoDepth;
-
-            vkUpdateDescriptorSets(deviceVK->lDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            DescWrite()
+                .addWrite()
+                    .setDstSet(descriptorSets->get(frame * 2 + 1))
+                    .setDstBinding(0)
+                    .setDescType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                    .setDescCount(1)
+                    .setImageInfo({imageInfoInput})
+                .addWrite()
+                    .setDstSet(descriptorSets->get(frame * 2 + 1))
+                    .setDstBinding(1)
+                    .setDescType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+                    .setDescCount(1)
+                    .setImageInfo({imageInfoOutput})
+                .addWrite()
+                    .setDstSet(descriptorSets->get(frame * 2 + 1))
+                    .setDstBinding(2)
+                    .setDescType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                    .setDescCount(1)
+                    .setImageInfo({imageInfoDepth})
+                .updateDescSets(deviceVK->lDevice);
         }
     }
 }
