@@ -756,8 +756,6 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
     hasRigging &= !skeletons.empty();
     loadMeshCombined(result.mesh, result.meshMaterials, model, !hasRigging);
-    // Print mesh count
-    printf("Loaded %zu meshes from GLTF\n", model.meshes.size());
 
     // For the time being we will only be using the first skeleton
     if (hasRigging) result.skeleton = skeletons[0];

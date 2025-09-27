@@ -21,7 +21,7 @@ struct TinyModel {
 };
 
 struct TinyModelNew {
-    // Raw unlinked data
+    // Raw unlinked registries
     std::vector<TinyMesh> meshes;
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;

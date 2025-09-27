@@ -23,22 +23,24 @@ struct TinyAnimationSampler {
 };
 
 struct TinyAnimationChannel {
+    uint32_t nodeIndex = 0;
+    uint32_t samplerIndex = 0;    // link to sampler
+
     enum class TargetPath {
         Translation,
         Rotation,
         Scale,
-        Weights  // Morph targets
-    } targetPath = TargetPath::Translation;
+        Weights
+    } targetPath;
     TinyAnimationChannel& setTargetPath(const std::string& pathStr);
+    TinyAnimationChannel& setTargetPath(const TargetPath path);
 
     enum class TargetType {
-        Bone,
         Node,
+        Bone, 
         Morph
-    } targetType = TargetType::Bone;
-
-    int targetIndex = -1;   // Node/bone/morph index in the node/resource system
-    int samplerIndex = -1;  // Reference into TinyAnimation.samplers
+    } targetType = TargetType::Node;
+    uint32_t targetIndex = 0;
 };
 
 struct TinyAnimation {

@@ -40,7 +40,7 @@ file(GLOB_RECURSE SRC_FILES
     
     src/TinyEngine/TinyResource.cpp
     src/TinyEngine/TinyProject.cpp
-    src/TinyEngine/TinyPlayback.cpp
+    # src/TinyEngine/TinyPlayback.cpp deprecated
 
     # src/TinyEngine/StaticMesh_BVH.cpp
     src/TinyEngine/RigDemo.cpp

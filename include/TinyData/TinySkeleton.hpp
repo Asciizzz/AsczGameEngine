@@ -8,8 +8,10 @@
 #include "Helpers/Templates.hpp"
 
 struct TinyBone {
-    int parent = -1; // -1 if root
     std::string name;
+
+    int parent = -1; // -1 if root
+    std::vector<int> children;
 
     glm::mat4 inverseBindMatrix = glm::mat4(1.0f); // From mesh space to bone local space
     glm::mat4 localBindTransform = glm::mat4(1.0f); // Local transform in bind pose
