@@ -197,46 +197,42 @@ void PostProcess::createSharedDescriptors() {
         imageInfoDepth.imageView = depthManager->getDepthImageView();
         imageInfoDepth.sampler = *sampler;
 
+        uint32_t frame_x2 = frame * 2; // 2 for 2 directions (not to be confused with the famous band One Direction)
+
         DescWrite()
             // A -> B
             .addWrite()
-                .setDstSet(descriptorSets->get(frame * 2 + 0))
                 .setDstBinding(0)
+                .setDstSet(descriptorSets->get(frame_x2 + 0))
                 .setDescType(DescType::CombinedImageSampler)
-                .setDescCount(1)
                 .setImageInfo({imageInfoInputA})
             .addWrite()
-                .setDstSet(descriptorSets->get(frame * 2 + 0))
                 .setDstBinding(1)
+                .setDstSet(descriptorSets->get(frame_x2 + 0))
                 .setDescType(DescType::StorageImage)
-                .setDescCount(1)
                 .setImageInfo({imageInfoOutputB})
             .addWrite()
-                .setDstSet(descriptorSets->get(frame * 2 + 0))
                 .setDstBinding(2)
+                .setDstSet(descriptorSets->get(frame_x2 + 0))
                 .setDescType(DescType::CombinedImageSampler)
-                .setDescCount(1)
                 .setImageInfo({imageInfoDepth})
             // B -> A
             .addWrite()
-                .setDstSet(descriptorSets->get(frame * 2 + 1))
                 .setDstBinding(0)
+                .setDstSet(descriptorSets->get(frame_x2 + 1))
                 .setDescType(DescType::CombinedImageSampler)
-                .setDescCount(1)
                 .setImageInfo({imageInfoInputB})
             .addWrite()
-                .setDstSet(descriptorSets->get(frame * 2 + 1))
                 .setDstBinding(1)
+                .setDstSet(descriptorSets->get(frame_x2 + 1))
                 .setDescType(DescType::StorageImage)
-                .setDescCount(1)
                 .setImageInfo({imageInfoOutputA})
             .addWrite()
-                .setDstSet(descriptorSets->get(frame * 2 + 1))
                 .setDstBinding(2)
+                .setDstSet(descriptorSets->get(frame_x2 + 1))
                 .setDescType(DescType::CombinedImageSampler)
-                .setDescCount(1)
                 .setImageInfo({imageInfoDepth})
-            .updateDescSets(deviceVK->lDevice);
+            .updateDescSets(lDevice);
     }
 }
 
