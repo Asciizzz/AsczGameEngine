@@ -476,21 +476,15 @@ void loadMesh(TinyMesh& mesh, std::vector<int>& meshMaterials, const tinygltf::M
 
     for (const auto& pData : allPrimitiveDatas) {
         for (uint32_t i = 0 ; i < pData.vertexCount; ++i) {
-            TinyVertexRig vertex{};
+            TinyVertexRig vertex = TinyVertexRig()
+                .setPosition( pData.positions.size() > i ? pData.positions[i] : glm::vec3(0.0f))
+                .setNormal(   pData.normals.size()   > i ? pData.normals[i]   : glm::vec3(0.0f))
+                .setTextureUV(pData.uvs.size()       > i ? pData.uvs[i]       : glm::vec2(0.0f))
+                .setTangent(  pData.tangents.size()  > i ? pData.tangents[i]  : glm::vec4(1,0,0,1));
 
-            glm::vec3 pos = pData.positions.size() > i ? pData.positions[i] : glm::vec3(0.0f);
-            glm::vec3 nrml = pData.normals.size() > i ? pData.normals[i] : glm::vec3(0.0f);
-            glm::vec2 texUV = pData.uvs.size() > i ? pData.uvs[i] : glm::vec2(0.0f);
-            glm::vec4 tang = pData.tangents.size() > i ? pData.tangents[i] : glm::vec4(1,0,0,1);
-
-            vertex.setPosition(pos).setNormal(nrml).setTextureUV(texUV).setTangent(tang);
-
-            if (pData.joints.size() > i && pData.weights.size() > i) {
-                glm::uvec4 jointIds = pData.joints[i];
-                glm::vec4 boneWeights = pData.weights[i];
-
-                vertex.setBoneIDs(jointIds).setWeights(boneWeights, true);
-            }
+            if (pData.joints.size() > i && pData.weights.size() > i) vertex
+                .setBoneIDs(pData.joints[i])
+                .setWeights(pData.weights[i], true);
 
             allVertices.push_back(vertex);
         }
