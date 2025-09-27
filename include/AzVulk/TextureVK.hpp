@@ -25,7 +25,9 @@ struct ImageLayout {
     static constexpr VkImageLayout TransferSrcOptimal         = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     static constexpr VkImageLayout TransferDstOptimal         = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     static constexpr VkImageLayout ShaderReadOnlyOptimal      = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    static constexpr VkImageLayout DepthReadOnlyOptimal       = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
     static constexpr VkImageLayout ColorAttachmentOptimal     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    static constexpr VkImageLayout DepthStencilReadOnlyOptimal = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     static constexpr VkImageLayout DepthStencilAttachmentOptimal = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 };
 

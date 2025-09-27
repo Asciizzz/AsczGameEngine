@@ -30,7 +30,9 @@ void GlbUBOManager::createDataBuffer() {
 }
 
 void GlbUBOManager::createDescSets() {
-    descSets.init(deviceVK->lDevice);
+    VkDevice lDevice = deviceVK->lDevice;
+
+    descSets.init(lDevice);
 
     descSets.createOwnLayout({
         {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
@@ -48,16 +50,23 @@ void GlbUBOManager::createDescSets() {
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(GlobalUBO);
 
-        VkWriteDescriptorSet write{};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet = descSets.get(i);
-        write.dstBinding = 0;
-        write.dstArrayElement = 0;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        write.descriptorCount = 1;
-        write.pBufferInfo = &bufferInfo;
+        // VkWriteDescriptorSet write{};
+        // write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        // write.dstSet = descSets.get(i);
+        // write.dstBinding = 0;
+        // write.dstArrayElement = 0;
+        // write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        // write.descriptorCount = 1;
+        // write.pBufferInfo = &bufferInfo;
 
-        vkUpdateDescriptorSets(deviceVK->lDevice, 1, &write, 0, nullptr);
+        // vkUpdateDescriptorSets(deviceVK->lDevice, 1, &write, 0, nullptr);
+
+        DescWrite()
+            .setDstSet(descSets.get(i))
+            .setDescType(DescType::UniformBuffer)
+            .setDescCount(1)
+            .setBufferInfo({bufferInfo})
+            .updateDescSet(lDevice);
     }
 }
 

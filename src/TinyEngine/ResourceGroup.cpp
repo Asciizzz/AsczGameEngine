@@ -135,13 +135,12 @@ void ResourceGroup::createMaterialDescSet(const std::vector<MaterialVK>& materia
     materialBufferInfo.offset = 0;
     materialBufferInfo.range = VK_WHOLE_SIZE;
 
-    DescWrite descriptorWrite = DescWrite()
+    DescWrite()
         .setDstSet(modelVK.matDescSet)
         .setDescType(DescType::StorageBuffer)
         .setDescCount(1)
-        .setBufferInfo({materialBufferInfo});
-
-    vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
+        .setBufferInfo({materialBufferInfo})
+        .updateDescSet(lDevice);
 }
 
 // ============================================================================
@@ -218,7 +217,7 @@ UniquePtr<AzVulk::TextureVK> ResourceGroup::createTexture(const TinyTexture& tex
         .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get())
         .generateMipmapsImmediate(tempCmd.get(), deviceVK->pDevice);
 
-    tempCmd.endAndSubmit(); // Kinda redundant but whatever
+    tempCmd.endAndSubmit(); // Kinda redundant with RAII but whatever
 
     return MakeUnique<TextureVK>(std::move(textureVK));
 }
@@ -248,13 +247,12 @@ void ResourceGroup::createTextureDescSet() {
         imageInfos[i].sampler     = textures[i]->getSampler(); // Now using the texture's own sampler
     }
 
-    DescWrite imageWrite = DescWrite()
+    DescWrite()
         .setDstSet(*texDescSet)
         .setDescType(DescType::CombinedImageSampler)
         .setDescCount(textureCount)
-        .setImageInfo(imageInfos);
-
-    vkUpdateDescriptorSets(lDevice, 1, &imageWrite, 0, nullptr);
+        .setImageInfo(imageInfos)
+        .updateDescSet(lDevice);
 }
 
 
@@ -372,16 +370,12 @@ void ResourceGroup::createLightDescSet() {
     lightBufferInfo.offset = 0;
     lightBufferInfo.range = VK_WHOLE_SIZE;
 
-    VkWriteDescriptorSet descriptorWrite{};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = *lightDescSet;
-    descriptorWrite.dstBinding = 0;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = DescType::StorageBuffer;
-    descriptorWrite.descriptorCount = 1;
-    descriptorWrite.pBufferInfo = &lightBufferInfo;
-
-    vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
+    DescWrite()
+        .setDstSet(*lightDescSet)
+        .setDescType(DescType::StorageBuffer)
+        .setDescCount(1)
+        .setBufferInfo({lightBufferInfo})
+        .updateDescSet(lDevice);
 }
 
 void ResourceGroup::updateLightBuffer() {

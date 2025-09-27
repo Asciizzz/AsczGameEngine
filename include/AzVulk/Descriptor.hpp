@@ -106,17 +106,14 @@ private:
 
 
 struct DescWrite {
-    enum class Type {
-        Buffer,
-        Image
-    } type = Type::Buffer;
+    uint32_t writeCount = 0;
+    std::vector<VkWriteDescriptorSet> writes;
 
-    VkWriteDescriptorSet writeSet = {};
+    DescWrite() = default;
+    VkWriteDescriptorSet* operator&() { return writes.data(); }
 
-    DescWrite();
-
-    operator VkWriteDescriptorSet() const { return writeSet; }
-    VkWriteDescriptorSet* operator&() { return &writeSet; }
+    DescWrite& addWrite();
+    VkWriteDescriptorSet& lastWrite();
 
     DescWrite& setBufferInfo(std::vector<VkDescriptorBufferInfo> bufferInfo);
     DescWrite& setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos);
@@ -126,6 +123,9 @@ struct DescWrite {
     DescWrite& setDstArrayElement(uint32_t dstArrayElement);
     DescWrite& setDescCount(uint32_t count);
     DescWrite& setDescType(VkDescriptorType type);
+
+    DescWrite& updateDescSet(VkDevice lDevice);
+    DescWrite& updateDescSets(VkDevice lDevice);
 };
 
 }

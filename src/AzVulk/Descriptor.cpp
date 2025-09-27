@@ -134,47 +134,65 @@ void DescSet::destroyLayout() {
 }
 
 
-DescWrite::DescWrite() {
-    // Common defaults
-    writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeSet.dstBinding = 0;
-    writeSet.dstArrayElement = 0;
-    writeSet.descriptorCount = 1;
+DescWrite& DescWrite::addWrite() {
+    // Setting some default values
+    VkWriteDescriptorSet newWrite{};
+    newWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    newWrite.pNext = nullptr;
+    newWrite.dstBinding = 0;
+    newWrite.dstArrayElement = 0;
+    newWrite.descriptorCount = 1;
+
+    writes.push_back(newWrite);
+    writeCount = static_cast<uint32_t>(writes.size());
+    return *this;
+}
+
+VkWriteDescriptorSet& DescWrite::lastWrite() {
+    if (writes.empty()) addWrite();
+    return writes.back();
 }
 
 DescWrite& DescWrite::setBufferInfo(std::vector<VkDescriptorBufferInfo> bufferInfo) {
-    type = Type::Buffer;
-    writeSet.pBufferInfo = bufferInfo.data();
-    writeSet.pImageInfo = nullptr;
-    writeSet.pTexelBufferView = nullptr;
+    lastWrite().pBufferInfo = bufferInfo.data();
+    lastWrite().pImageInfo = nullptr;
+    lastWrite().pTexelBufferView = nullptr;
     return *this;
 }
 
 DescWrite& DescWrite::setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos) {
-    type = Type::Image;
-    writeSet.pImageInfo = imageInfos.data();
-    writeSet.pBufferInfo = nullptr;
-    writeSet.pTexelBufferView = nullptr;
+    lastWrite().pImageInfo = imageInfos.data();
+    lastWrite().pBufferInfo = nullptr;
+    lastWrite().pTexelBufferView = nullptr;
     return *this;
 }
 
 DescWrite& DescWrite::setDstSet(VkDescriptorSet dstSet) {
-    writeSet.dstSet = dstSet;
+    lastWrite().dstSet = dstSet;
     return *this;
 }
 DescWrite& DescWrite::setDstBinding(uint32_t dstBinding) {
-    writeSet.dstBinding = dstBinding;
+    lastWrite().dstBinding = dstBinding;
     return *this;
 }
 DescWrite& DescWrite::setDstArrayElement(uint32_t dstArrayElement) {
-    writeSet.dstArrayElement = dstArrayElement;
+    lastWrite().dstArrayElement = dstArrayElement;
     return *this;
 }
 DescWrite& DescWrite::setDescCount(uint32_t count) {
-    writeSet.descriptorCount = count;
+    lastWrite().descriptorCount = count;
     return *this;
 }
 DescWrite& DescWrite::setDescType(VkDescriptorType type) {
-    writeSet.descriptorType = type;
+    lastWrite().descriptorType = type;
+    return *this;
+}
+
+DescWrite& DescWrite::updateDescSet(VkDevice lDevice) {
+    vkUpdateDescriptorSets(lDevice, 1, &lastWrite(), 0, nullptr);
+    return *this;
+}
+DescWrite& DescWrite::updateDescSets(VkDevice lDevice) {
+    vkUpdateDescriptorSets(lDevice, writeCount, writes.data(), 0, nullptr);
     return *this;
 }
