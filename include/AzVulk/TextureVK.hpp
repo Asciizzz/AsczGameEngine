@@ -17,6 +17,18 @@ struct ImageUsage {
     static constexpr VkImageUsageFlags DepthStencil = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 };
 
+struct ImageLayout {
+    static constexpr VkImageLayout Undefined                  = VK_IMAGE_LAYOUT_UNDEFINED;
+    static constexpr VkImageLayout General                    = VK_IMAGE_LAYOUT_GENERAL;
+    static constexpr VkImageLayout Preinitialized             = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    static constexpr VkImageLayout PresentSrcKHR              = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    static constexpr VkImageLayout TransferSrcOptimal         = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    static constexpr VkImageLayout TransferDstOptimal         = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    static constexpr VkImageLayout ShaderReadOnlyOptimal      = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    static constexpr VkImageLayout ColorAttachmentOptimal     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    static constexpr VkImageLayout DepthStencilAttachmentOptimal = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+};
+
 // Image configuration struct for easy setup
 struct ImageConfig {
     uint32_t width = 0;

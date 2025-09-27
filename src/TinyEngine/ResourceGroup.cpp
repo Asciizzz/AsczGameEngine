@@ -139,7 +139,7 @@ void ResourceGroup::createMaterialDescSet(const std::vector<MaterialVK>& materia
         .setDstSet(modelVK.matDescSet)
         .setDescType(DescType::StorageBuffer)
         .setDescCount(1)
-        .setBufferInfo(materialBufferInfo);
+        .setBufferInfo({materialBufferInfo});
 
     vkUpdateDescriptorSets(lDevice, 1, &descriptorWrite, 0, nullptr);
 }
@@ -243,7 +243,7 @@ void ResourceGroup::createTextureDescSet() {
     // Write combined image samplers - each texture now includes its own sampler
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
     for (uint32_t i = 0; i < textureCount; ++i) {
-        imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfos[i].imageLayout = ImageLayout::ShaderReadOnlyOptimal;
         imageInfos[i].imageView   = textures[i]->getView();
         imageInfos[i].sampler     = textures[i]->getSampler(); // Now using the texture's own sampler
     }

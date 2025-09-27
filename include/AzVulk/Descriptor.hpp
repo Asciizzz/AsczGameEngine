@@ -111,9 +111,6 @@ struct DescWrite {
         Image
     } type = Type::Buffer;
 
-    VkDescriptorBufferInfo bufferInfo = {};
-    VkDescriptorImageInfo  imageInfo  = {};
-
     VkWriteDescriptorSet writeSet = {};
 
     DescWrite();
@@ -121,7 +118,7 @@ struct DescWrite {
     operator VkWriteDescriptorSet() const { return writeSet; }
     VkWriteDescriptorSet* operator&() { return &writeSet; }
 
-    DescWrite& setBufferInfo(VkDescriptorBufferInfo bufferInfo);
+    DescWrite& setBufferInfo(std::vector<VkDescriptorBufferInfo> bufferInfo);
     DescWrite& setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos);
 
     DescWrite& setDstSet(VkDescriptorSet dstSet);

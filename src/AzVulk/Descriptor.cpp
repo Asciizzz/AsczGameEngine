@@ -142,10 +142,9 @@ DescWrite::DescWrite() {
     writeSet.descriptorCount = 1;
 }
 
-DescWrite& DescWrite::setBufferInfo(VkDescriptorBufferInfo bufferInfo) {
+DescWrite& DescWrite::setBufferInfo(std::vector<VkDescriptorBufferInfo> bufferInfo) {
     type = Type::Buffer;
-    this->bufferInfo = bufferInfo;
-    writeSet.pBufferInfo = &this->bufferInfo;
+    writeSet.pBufferInfo = bufferInfo.data();
     writeSet.pImageInfo = nullptr;
     writeSet.pTexelBufferView = nullptr;
     return *this;
@@ -153,12 +152,7 @@ DescWrite& DescWrite::setBufferInfo(VkDescriptorBufferInfo bufferInfo) {
 
 DescWrite& DescWrite::setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos) {
     type = Type::Image;
-    if (imageInfos.empty()) {
-        throw std::runtime_error("imageInfos cannot be empty");
-    }
-    this->imageInfo = imageInfos[0]; // Store the first one for single descriptor
     writeSet.pImageInfo = imageInfos.data();
-    writeSet.descriptorCount = static_cast<uint32_t>(imageInfos.size());
     writeSet.pBufferInfo = nullptr;
     writeSet.pTexelBufferView = nullptr;
     return *this;
