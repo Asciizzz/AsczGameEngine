@@ -194,9 +194,13 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
         bool registryExists = registryToRuntimeNodeMap.count(parentRegHandle);
         bool noParent = parentRegHandle == TinyHandle::invalid();
+        bool hasParent = !noParent && registryExists;
 
-        TinyHandle parentRuntimeHandle = registryToRuntimeNodeMap.count(parentRegHandle) ?
+        TinyHandle parentRuntimeHandle = hasParent ?
             registryToRuntimeNodeMap[parentRegHandle] : TinyHandle(0, HType::Node, false); // Default to root if not found
+
+        // If no parent, add child to root
+        runtimeNodes[0]->children.push_back(runtimeNodeHandle);
 
         for (const TinyHandle& childRegHandle : regNode->children) {
             if (registryToRuntimeNodeMap.count(childRegHandle)) {
