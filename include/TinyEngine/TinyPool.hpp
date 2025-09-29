@@ -143,7 +143,6 @@ public:
         if (newCapacity <= capacity) return; // no shrinking allowed
 
         items.resize(newCapacity);
-        occupied.resize(newCapacity, false);
 
         // Add new slots to free list
         for (uint32_t i = newCapacity; i-- > capacity;) {

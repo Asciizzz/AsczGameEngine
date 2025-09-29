@@ -89,6 +89,7 @@
         "shared_mutex": "cpp",
         "valarray": "cpp",
         "*.rh": "cpp",
-        "cfloat": "cpp"
+        "cfloat": "cpp",
+        "variant": "cpp"
     }
 }

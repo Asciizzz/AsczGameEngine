@@ -120,7 +120,6 @@ void ResourceGroup::createMaterialDescSet(const std::vector<MaterialVK>& materia
         .createBuffer(deviceVK)
         .mapAndCopy(materials.data());
 
-    printf("Created material buffer of size %llu bytes for %zu materials\n", bufferSize, materials.size());
     modelVK.matDescSet.allocate(lDevice, *matDescPool, *matDescLayout);
 
     // --- bind buffer to descriptor ---

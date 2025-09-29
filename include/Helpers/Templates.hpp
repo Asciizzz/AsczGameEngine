@@ -3,8 +3,6 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <map>
-#include <unordered_map>
 
 template<typename T> using UniquePtr = std::unique_ptr<T>;
 template<typename T> using UniquePtrVec = std::vector<UniquePtr<T>>;
@@ -20,5 +18,12 @@ SharedPtr<T> MakeShared(Args&&... args) {
     return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
+#include <map>
+#include <unordered_map>
 template<typename K, typename V> using OrderedMap = std::map<K, V>;
 template<typename K, typename V> using UnorderedMap = std::unordered_map<K, V>;
+
+
+#include <variant>
+template<typename... Ts>
+using MonoVariant = std::variant<std::monostate, Ts...>;

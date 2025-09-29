@@ -1,7 +1,9 @@
 #pragma once
 
-#include "TinyEngine/TinyLoader.hpp"
 #include "TinyEngine/TinyPool.hpp"
+#include "TinyEngine/TinyHandle.hpp"
+
+#include "TinyData/TinyModel.hpp"
 
 #include "AzVulk/TextureVK.hpp"
 #include "AzVulk/Descriptor.hpp"
@@ -15,58 +17,57 @@ public:
         std::vector<TinySubmesh> submeshes;
         VkIndexType indexType = VK_INDEX_TYPE_UINT32;
 
-        void import(const TinyMesh& mesh, const AzVulk::DeviceVK* deviceVK);
+        bool import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh);
 
         static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
     };
 
     struct MaterialData {
         glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
+
+        void setAlbTexIndex(uint32_t index) { texIndices.x = index; }
+        void setNrmlTexIndex(uint32_t index) { texIndices.y = index; }
     };
 
     struct TextureData {
-        AzVulk::TextureVK texture;
-        void import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture);
+        AzVulk::TextureVK textureVK;
+        bool import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture);
     };
 
+    TinyRegistry(const AzVulk::DeviceVK* deviceVK);
 
-
-    TinyRegistry(const AzVulk::DeviceVK* deviceVK): deviceVK(deviceVK) {
-        setMaxTextureCount(maxTextureCount);
-        setMaxMaterialCount(maxMaterialCount);
-    }
-
-    // Require rework of descriptor sets and bindings
-    void setMaxTextureCount(uint32_t count);
-    void setMaxMaterialCount(uint32_t count);
+    TinyRegistry(const TinyRegistry&) = delete;
+    TinyRegistry& operator=(const TinyRegistry&) = delete;
 
     uint32_t getMaxTextureCount() const { return maxTextureCount; }
     uint32_t getMaxMaterialCount() const { return maxMaterialCount; }
+    uint32_t getMaxMeshCount() const { return maxMeshCount; }
+    uint32_t getMaxSkeletonCount() const { return maxSkeletonCount; }
+    uint32_t getMaxNodeCount() const { return maxNodeCount; }
 
-    uint32_t addMesh(const TinyMesh& mesh) {
-        UniquePtr<MeshData> meshData = MakeUnique<MeshData>();
-        meshData->import(mesh, deviceVK);
+    TinyHandle addMesh(const TinyMesh& mesh);
+    TinyHandle addTexture(const TinyTexture& texture);
+    TinyHandle addMaterial(const MaterialData& matData);
+    TinyHandle addSkeleton(const TinySkeleton& skeleton);
+    TinyHandle addNode(const TinyNode& node);
 
-        return meshDatas.insert(std::move(meshData));
-    }
-
-    uint32_t addTexture(const TinyTexture& texture) {
-        UniquePtr<TextureData> textureData = MakeUnique<TextureData>();
-        textureData->import(deviceVK, texture);
-
-        return textureDatas.insert(std::move(textureData));
-    }
-
-    // Usually you need to know the texture beforehand to remap the material texture indices
-    uint32_t addMaterial(const MaterialData& matData) {
-        return materialDatas.insert(matData);
-    }
+    // Access to resources - allow modification
+    MeshData*     getMeshData(const TinyHandle& handle);
+    MaterialData* getMaterialData(const TinyHandle& handle);
+    TextureData*  getTextureData(const TinyHandle& handle);
+    TinySkeleton* getSkeletonData(const TinyHandle& handle);
+    TinyNode*     getNodeData(const TinyHandle& handle);
 
 private:
     const AzVulk::DeviceVK* deviceVK;
 
+    uint32_t maxMeshCount = 1024;
     uint32_t maxTextureCount = 1024;
     uint32_t maxMaterialCount = 1024;
+    uint32_t maxSkeletonCount = 256;
+    uint32_t maxNodeCount = 2048;
+
+    void initVkResources();
 
     // Shared descriptor resources
 
@@ -87,4 +88,6 @@ private:
     TinyPoolPtr<MeshData>     meshDatas;
     TinyPoolRaw<MaterialData> materialDatas;
     TinyPoolPtr<TextureData>  textureDatas;
+    TinyPoolRaw<TinySkeleton> skeletonDatas;
+    TinyPoolRaw<TinyNode>     nodeDatas;
 };

@@ -18,6 +18,8 @@
 
 #include "TinyData/TinyCamera.hpp"
 
+#include "TinyEngine/TinyProject.hpp"
+
 class Application {
 public:
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
@@ -44,8 +46,9 @@ private:
 
     UniquePtr<TinyCamera> camera;
 
-    UniquePtr<TinyEngine::GlbUBOManager> glbUBOManager;
-    UniquePtr<TinyEngine::ResourceGroup> resGroup;
+    UniquePtr<TinyEngine::GlbUBOManager> glbUBOManager; // Soon to be moved to project
+    UniquePtr<TinyEngine::ResourceGroup> resGroup; // Soon to be deprecated
+    UniquePtr<TinyProject> project; // New gigachad system
 
     // Window metadata
     const char* appTitle;

@@ -75,7 +75,10 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
+    project = MakeUnique<TinyProject>(deviceVK.get());
+
+    TinyModelNew newModel = TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
+    project->addTemplateFromModel(newModel);
 
 // PLAYGROUND END HERE 
 

@@ -38,7 +38,7 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyEngine/TinyLoader.cpp
     src/TinyData/TinyCamera.cpp
     
-    src/TinyEngine/TinyResource.cpp
+    src/TinyEngine/TinyRegistry.cpp
     src/TinyEngine/TinyProject.cpp
     # src/TinyEngine/TinyPlayback.cpp deprecated
 

@@ -1,21 +1,32 @@
 #include "TinyEngine/TinyRegistry.hpp"
 
+#include "AzVulk/CmdBuffer.hpp"
+
 #include <stdexcept>
 
 using namespace AzVulk;
 
-void TinyRegistry::setMaxMaterialCount(uint32_t count) {
-    maxMaterialCount = count;
-    createMaterialVkResources();
+bool TinyRegistry::MeshData::import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh) {
+    const auto& vertexData = mesh.vertexData;
+    const auto& indexData = mesh.indexData;
+
+    if (vertexData.empty() || indexData.empty()) return false;
+
+    vertexBuffer
+        .setDataSize(vertexData.size())
+        .setUsageFlags(BufferUsage::Vertex)
+        .createDeviceLocalBuffer(deviceVK, vertexData.data());
+
+    indexBuffer
+        .setDataSize(indexData.size())
+        .setUsageFlags(BufferUsage::Index)
+        .createDeviceLocalBuffer(deviceVK, indexData.data());
+
+    submeshes = mesh.submeshes;
+    indexType = tinyToVkIndexType(mesh.indexType);
+
+    return true;
 }
-
-void TinyRegistry::setMaxTextureCount(uint32_t count) {
-    maxTextureCount = count;
-    createTextureVkResources();
-}
-
-
-
 
 VkIndexType TinyRegistry::MeshData::tinyToVkIndexType(TinyMesh::IndexType type) {
     switch (type) {
@@ -26,8 +37,171 @@ VkIndexType TinyRegistry::MeshData::tinyToVkIndexType(TinyMesh::IndexType type) 
     }
 }
 
+bool TinyRegistry::TextureData::import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture) {
+    // Get appropriate Vulkan format and convert data if needed
+    VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
+    std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
+        texture.channels, texture.width, texture.height, texture.data.data());
+
+    // Calculate image size based on Vulkan format requirements
+    int vulkanChannels = (texture.channels == 3) ? 4 : texture.channels; // RGB becomes RGBA
+    VkDeviceSize imageSize = texture.width * texture.height * vulkanChannels;
+
+    if (texture.data.empty()) return false;
+
+    // Create staging buffer for texture data upload
+    DataBuffer stagingBuffer;
+    stagingBuffer
+        .setDataSize(imageSize * sizeof(uint8_t))
+        .setUsageFlags(ImageUsage::TransferSrc)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(deviceVK)
+        .uploadData(vulkanData.data());
+
+    ImageConfig imageConfig = ImageConfig()
+        .withPhysicalDevice(deviceVK->pDevice)
+        .withDimensions(texture.width, texture.height)
+        .withAutoMipLevels()
+        .withFormat(textureFormat)
+        .withUsage(ImageUsage::Sampled | ImageUsage::TransferDst | ImageUsage::TransferSrc)
+        .withTiling(ImageTiling::Optimal)
+        .withMemProps(MemProp::DeviceLocal);
+
+    ImageViewConfig viewConfig = ImageViewConfig()
+        .withAspectMask(ImageAspect::Color)
+        .withAutoMipLevels(texture.width, texture.height);
+
+    // A quick function to convert TinyTexture::AddressMode to VkSamplerAddressMode
+    auto convertAddressMode = [](TinyTexture::AddressMode mode) {
+        switch (mode) {
+            case TinyTexture::AddressMode::Repeat:        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            case TinyTexture::AddressMode::ClampToEdge:   return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case TinyTexture::AddressMode::ClampToBorder: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            default:                                      return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        }
+    };
+
+    SamplerConfig sampConfig = SamplerConfig()
+    // The only thing we care about right now is address mode
+        .withAddressModes(convertAddressMode(texture.addressMode));
+
+    textureVK = TextureVK(); // Reset texture
+    bool success = textureVK
+        .init(deviceVK)
+        .createImage(imageConfig)
+        .createView(viewConfig)
+        .createSampler(sampConfig)
+        .isValid();
+
+    if (!success) return false;
+
+    TempCmd tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
+
+    textureVK
+        .transitionLayoutImmediate(tempCmd.get(), ImageLayout::Undefined, ImageLayout::TransferDstOptimal)
+        .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get())
+        .generateMipmapsImmediate(tempCmd.get(), deviceVK->pDevice);
+
+    tempCmd.endAndSubmit(); // Kinda redundant with RAII but whatever
+
+    return true;
+}
+
+
+
+
+
+
+// Registry
+
+
+TinyRegistry::TinyRegistry(const AzVulk::DeviceVK* deviceVK)
+: deviceVK(deviceVK) {
+    // Resize
+    materialDatas.resize(maxMaterialCount);
+    textureDatas.resize(maxTextureCount);
+    meshDatas.resize(maxMeshCount);
+    skeletonDatas.resize(maxSkeletonCount);
+    nodeDatas.resize(maxNodeCount);
+
+    printf("TinyRegistry initialized with capacities - Textures: %u, Materials: %u, Meshes: %u, Skeletons: %u, Nodes: %u\n",
+        maxTextureCount, maxMaterialCount, maxMeshCount, maxSkeletonCount, maxNodeCount);
+
+    initVkResources();
+}
+
+
+TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
+    UniquePtr<MeshData> meshData = MakeUnique<MeshData>();
+    meshData->import(deviceVK, mesh);
+
+    uint32_t index = meshDatas.insert(std::move(meshData));
+    return TinyHandle::make(index, 0, TinyHandle::Type::Mesh, true);
+}
+
+TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
+    UniquePtr<TextureData> textureData = MakeUnique<TextureData>();
+    textureData->import(deviceVK, texture);
+
+    // Further descriptor logic in the future
+
+    uint32_t index = textureDatas.insert(std::move(textureData));
+    return TinyHandle::make(index, 0, TinyHandle::Type::Texture, true);
+}
+
+// Usually you need to know the texture beforehand to remap the material texture indices
+TinyHandle TinyRegistry::addMaterial(const MaterialData& matData) {
+    uint32_t index = materialDatas.insert(matData);
+
+    // Update the GPU buffer immediately
+    matBuffer->mapAndCopy(materialDatas.data());
+
+    return TinyHandle::make(index, 0, TinyHandle::Type::Material, true);
+}
+
+TinyHandle TinyRegistry::addSkeleton(const TinySkeleton& skeleton) {
+    uint32_t index = skeletonDatas.insert(skeleton);
+    return TinyHandle::make(index, 0, TinyHandle::Type::Skeleton, true);
+}
+
+TinyHandle TinyRegistry::addNode(const TinyNode& node) {
+    uint32_t index = nodeDatas.insert(node);
+    return TinyHandle::make(index, 0, TinyHandle::Type::Node, true);
+}
+
+// Access to resources - allow modification
+
+TinyRegistry::MeshData* TinyRegistry::getMeshData(const TinyHandle& handle) {
+    if (handle.getType() != TinyHandle::Type::Mesh) return nullptr;
+    return meshDatas.getPtr(handle.getIndex());
+}
+
+TinyRegistry::MaterialData* TinyRegistry::getMaterialData(const TinyHandle& handle) {
+    if (handle.getType() != TinyHandle::Type::Material) return nullptr;
+    return &materialDatas.get(handle.getIndex());
+}
+
+TinyRegistry::TextureData* TinyRegistry::getTextureData(const TinyHandle& handle) {
+    if (handle.getType() != TinyHandle::Type::Texture) return nullptr;
+    return textureDatas.getPtr(handle.getIndex());
+}
+
+TinySkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
+    if (handle.getType() != TinyHandle::Type::Skeleton) return nullptr;
+    return &skeletonDatas.get(handle.getIndex());
+}
+
+TinyNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
+    if (handle.getType() != TinyHandle::Type::Node) return nullptr;
+    return &nodeDatas.get(handle.getIndex());
+}
 
 // Vulkan resources creation
+
+void TinyRegistry::initVkResources() {
+    createMaterialVkResources();
+    createTextureVkResources();
+}
 
 void TinyRegistry::createMaterialVkResources() {
     if (maxMaterialCount == 0) throw std::runtime_error("TinyRegistry: maxMaterialCount cannot be zero");
@@ -43,9 +217,6 @@ void TinyRegistry::createMaterialVkResources() {
     matDescPool->create(deviceVK->lDevice, {
         {DescType::StorageBuffer, maxMaterialCount}
     }, 1);
-
-    // Resize
-    materialDatas.resize(maxMaterialCount);
 
     // Create material buffer
     matBuffer = MakeUnique<DataBuffer>();
@@ -88,9 +259,6 @@ void TinyRegistry::createTextureVkResources() {
     texDescPool->create(deviceVK->lDevice, {
         {DescType::CombinedImageSampler, maxTextureCount}
     }, 1);
-
-    // Resize
-    textureDatas.resize(maxTextureCount);
 
     // Allocate descriptor set
     texDescSet = MakeUnique<DescSet>();
