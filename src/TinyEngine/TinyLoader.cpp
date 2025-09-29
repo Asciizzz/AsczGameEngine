@@ -694,6 +694,79 @@ void loadAnimations(std::vector<TinyAnimation>& animations, std::vector<ChannelT
     }
 }
 
+void loadNodes(std::vector<TinyNode>& nodes,
+               const tinygltf::Model& model,
+               const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex)
+{
+    nodes.clear();
+
+    for (size_t i = 0; i < model.nodes.size(); ++i) {
+        const tinygltf::Node& gltfNode = model.nodes[i];
+
+        // Skip nodes that are pure joints (they already exist in skeletons)
+        if (nodeToSkeletonAndBoneIndex.find((int)i) != nodeToSkeletonAndBoneIndex.end()) {
+            continue;
+        }
+
+        TinyNode node;
+        node.name = gltfNode.name.empty() ? "Node" : gltfNode.name;
+
+        // Mesh assignment
+        node.meshIndex = (gltfNode.mesh >= 0) ? gltfNode.mesh : -1;
+
+        // Skeleton link (remap glTF skin → our skeleton index)
+        node.skeletonIndex = (gltfNode.skin >= 0) ? gltfNode.skin : -1;
+
+        // Transform
+        glm::mat4 matrix(1.0f);
+        if (!gltfNode.matrix.empty()) {
+            matrix = glm::make_mat4(gltfNode.matrix.data());
+        } else {
+            glm::vec3 translation(0.0f);
+            glm::quat rotation(1.0f, 0.0f, 0.0f, 0.0f);
+            glm::vec3 scale(1.0f);
+
+            if (!gltfNode.translation.empty()) {
+                translation = glm::make_vec3(gltfNode.translation.data());
+            }
+            if (!gltfNode.rotation.empty()) {
+                rotation = glm::quat(
+                    gltfNode.rotation[3],
+                    gltfNode.rotation[0],
+                    gltfNode.rotation[1],
+                    gltfNode.rotation[2]
+                );
+            }
+            if (!gltfNode.scale.empty()) {
+                scale = glm::make_vec3(gltfNode.scale.data());
+            }
+
+            matrix = glm::translate(glm::mat4(1.0f), translation) *
+                     glm::mat4_cast(rotation) *
+                     glm::scale(glm::mat4(1.0f), scale);
+        }
+        node.transform = matrix;
+
+        // Children: keep only children that are *not* pure joints
+        for (int childIdx : gltfNode.children) {
+            if (nodeToSkeletonAndBoneIndex.find(childIdx) == nodeToSkeletonAndBoneIndex.end()) {
+                node.children.push_back(childIdx);
+            }
+        }
+
+        nodes.push_back(std::move(node));
+    }
+
+    // Assign parents (only among kept nodes)
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        for (int childIdx : nodes[i].children) {
+            if (childIdx >= 0 && childIdx < (int)nodes.size()) {
+                nodes[childIdx].parent = static_cast<int>(i);
+            }
+        }
+    }
+}
+
 TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool forceStatic) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
@@ -721,6 +794,14 @@ TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool 
 
     bool hasRigging = !forceStatic && !result.skeletons.empty();
     loadMeshes(result.meshes, result.meshesMaterials, model, !hasRigging);
+    
+    printf("Loaded %zu meshes\n", result.meshes.size());
+
+    loadNodes(result.nodes, model, nodeToSkeletonAndBoneIndex);
+
+    for (uint32_t i = 0; i < result.nodes.size(); ++i) {
+        result.nodes[i].printDebug(i);
+    }
 
     return result;
 }

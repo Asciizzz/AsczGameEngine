@@ -6,53 +6,18 @@ using namespace AzVulk;
 
 void TinyRegistry::setMaxMaterialCount(uint32_t count) {
     maxMaterialCount = count;
-    createMaterialDescResources(count);
+    createMaterialVkResources();
 }
 
 void TinyRegistry::setMaxTextureCount(uint32_t count) {
     maxTextureCount = count;
-    createTextureDescResources(count);
+    createTextureVkResources();
 }
 
 
-// void TinyRegistry::createMaterialDescResources(uint32_t count) {
-//     if (count == 0) return;
-
-//     matDescPool = MakeUnique<DescPool>(deviceVK->lDevice);
-//     matDescPool->create({ { DescType::StorageBuffer, 1 } }, count);
-
-//     matDescLayout = MakeUnique<DescLayout>(deviceVK->lDevice);
-//     matDescLayout->create({ {0, DescType::StorageBuffer, 1, ShaderStage::VertexAndFragment, nullptr} } );
-// }
-
-// void TinyRegistry::createTextureDescResources(uint32_t count) {
-//     if (count == 0) return;
-
-//     texDescPool = MakeUnique<DescPool>(deviceVK->lDevice);
-//     texDescPool->create({ { DescType::CombinedImageSampler, 1 } }, count);
-
-//     texDescLayout = MakeUnique<DescLayout>(deviceVK->lDevice);
-//     texDescLayout->create({ {0, DescType::CombinedImageSampler, 1, ShaderStage::Fragment, nullptr} } );
-// }
 
 
-void TinyMeshVK::import(const TinyMesh& mesh, const AzVulk::DeviceVK* deviceVK) {
-    vertexBuffer
-        .setDataSize(mesh.vertexData.size())
-        .setUsageFlags(BufferUsage::Vertex)
-        .createDeviceLocalBuffer(deviceVK, mesh.vertexData.data());
-
-    indexBuffer
-        .setDataSize(mesh.indexData.size())
-        .setUsageFlags(BufferUsage::Index)
-        .createDeviceLocalBuffer(deviceVK, mesh.indexData.data());
-
-    indexType = tinyToVkIndexType(mesh.indexType);
-
-    submeshes = mesh.submeshes;
-}
-
-VkIndexType TinyMeshVK::tinyToVkIndexType(TinyMesh::IndexType type) {
+VkIndexType TinyRegistry::MeshData::tinyToVkIndexType(TinyMesh::IndexType type) {
     switch (type) {
         case TinyMesh::IndexType::Uint8:  return VK_INDEX_TYPE_UINT8;
         case TinyMesh::IndexType::Uint16: return VK_INDEX_TYPE_UINT16;
@@ -62,6 +27,74 @@ VkIndexType TinyMeshVK::tinyToVkIndexType(TinyMesh::IndexType type) {
 }
 
 
-void TinyMaterialVK::import(const TinyMaterialVK::Data& matData, const AzVulk::DeviceVK* deviceVK,
-                        VkDescriptorSetLayout layout, VkDescriptorPool pool) {
+// Vulkan resources creation
+
+void TinyRegistry::createMaterialVkResources() {
+    if (maxMaterialCount == 0) throw std::runtime_error("TinyRegistry: maxMaterialCount cannot be zero");
+
+    // Create descriptor layout for materials
+    matDescLayout = MakeUnique<DescLayout>();
+    matDescLayout->create(deviceVK->lDevice, {
+        {0, DescType::StorageBuffer, maxMaterialCount, ShaderStage::Fragment, nullptr}
+    });
+
+    // Create descriptor pool
+    matDescPool = MakeUnique<DescPool>();
+    matDescPool->create(deviceVK->lDevice, {
+        {DescType::StorageBuffer, maxMaterialCount}
+    }, 1);
+
+    // Resize
+    materialDatas.resize(maxMaterialCount);
+
+    // Create material buffer
+    matBuffer = MakeUnique<DataBuffer>();
+    matBuffer->setDataSize(sizeof(MaterialData) * maxMaterialCount)
+             .setUsageFlags(BufferUsage::Storage | BufferUsage::TransferDst)
+             .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+             .createBuffer(deviceVK)
+             .mapAndCopy(materialDatas.data());
+
+    // Allocate descriptor set
+    matDescSet = MakeUnique<DescSet>();
+    matDescSet->allocate(deviceVK->lDevice, *matDescPool, *matDescLayout);
+
+    // Write storage buffer info
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = *matBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range  = VK_WHOLE_SIZE;
+
+    DescWrite()
+        .setDstSet(*matDescSet)
+        .setDstBinding(0)
+        .setDescType(DescType::StorageBuffer)
+        .setDescCount(1)
+        .setBufferInfo({ bufferInfo })
+        .updateDescSet(deviceVK->lDevice);
+}
+
+void TinyRegistry::createTextureVkResources() {
+    if (maxTextureCount == 0) throw std::runtime_error("TinyRegistry: maxTextureCount cannot be zero");
+
+    // Create descriptor layout for textures
+    texDescLayout = MakeUnique<DescLayout>();
+    texDescLayout->create(deviceVK->lDevice, {
+        {0, DescType::CombinedImageSampler, maxTextureCount, ShaderStage::Fragment, nullptr}
+    });
+
+    // Create descriptor pool
+    texDescPool = MakeUnique<DescPool>();
+    texDescPool->create(deviceVK->lDevice, {
+        {DescType::CombinedImageSampler, maxTextureCount}
+    }, 1);
+
+    // Resize
+    textureDatas.resize(maxTextureCount);
+
+    // Allocate descriptor set
+    texDescSet = MakeUnique<DescSet>();
+    texDescSet->allocate(deviceVK->lDevice, *texDescPool, *texDescLayout);
+
+    // Note: Actual image infos will be written when textures are added to the registry
 }

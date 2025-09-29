@@ -56,6 +56,8 @@ struct TinyPoolRaw {
         capacity = newCapacity;
     }
 
+    void* data() { return items.data(); }
+
     template<typename U>
     uint32_t insert(U&& item) {
         checkSpace();

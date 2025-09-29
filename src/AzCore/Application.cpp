@@ -75,19 +75,7 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    // TinyEngine::LightVK pointLight{};
-    // pointLight.position = glm::vec4(5.0f, 5.0f, 5.0f, 1.0f); // w=1 for point light
-    // pointLight.color = glm::vec4(0.8f, 0.6f, 1.0f, 2.0f); // Purple light with intensity 2.0
-    // pointLight.direction = glm::vec4(0.0f, 0.0f, 0.0f, 15.0f); // Range of 15 units
-    // pointLight.params = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f); // Attenuation factor 1.0
-    // resGroup->addLight(pointLight);
-
-    // TinyEngine::LightVK spotLight{};
-    // spotLight.position = glm::vec4(-10.0f, 8.0f, 0.0f, 2.0f); // w=2 for spot light
-    // spotLight.color = glm::vec4(1.0f, 0.5f, 0.2f, 3.0f); // Orange light with intensity 3.0
-    // spotLight.direction = glm::vec4(0.7f, -0.5f, 0.0f, 20.0f); // Direction + range of 20 units
-    // spotLight.params = glm::vec4(glm::cos(glm::radians(15.0f)), glm::cos(glm::radians(25.0f)), 1.2f, 0.0f); // Inner 15°, outer 25°, attenuation 1.2
-    // resGroup->addLight(spotLight);
+    TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
 
 // PLAYGROUND END HERE 
 
