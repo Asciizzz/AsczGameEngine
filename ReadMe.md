@@ -81,49 +81,51 @@ Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3
     * Allows safe sharing across multiple prefabs.
   * Ensures **deduplication** - one material can be reused across many prefabs.
 
-### 3. Construct Layer (Scene Composition)
+### 3. Template Layer (Scene Composition)
 
-* The scene graph from the `TinyModel` is rebuilt into a construct.
+* The scene graph from the `TinyModel` is rebuilt into a template.
   * They store **references (handles)** to global resource registries.
   * They define **structure** (hierarchy, transforms, which resources are linked).
   * **Ownership matters**:
     * If they own the resources, they can modify them directly.
-    * If they reference other constructs' resources, they can't modify them, simple as that.
+    * If they reference other templates' resources, they can't modify them, simple as that.
   * Overrides (variants with modifications) are **not implemented yet**, but the handle system allows for it later, hopefully.
 
-* Note: Constructs are basically just reusable nodes
----
-
-### Conceptual Structure
-
-```
-Import Stage
-└── TinyModel
-    ├── Meshes
-    ├── Materials
-    ├── Textures
-    ├── Skeletons
-    └── SceneNodes (local hierarchy)
-
-Resource Stage
-├── Global Registries
-│   ├── Mesh Pool
-│   ├── Material Pool
-│   ├── Texture Pool
-│   ├── Skeleton Pool
-│   └── Animation Pool
-└── Constructs (reusable nodes)
-    └── Scene Graph (nodes)
-        └── References to Global Resources (handles)
-```
+* Note: Templates are basically just reusable node
 
 ---
 
-### Data Flow
+### Work flow:
 
-```plaintext
-[Import File] → TinyModel → TinyResource → Global Registries → Prefab (Scene Graph) → Runtime
+* Import gltf models, convert into TinyModel: Raw data components and Scene construct (nodes). Raw data do not have any sort of link or relation with each other, nodes will construct the scene and makes the necessary link
+
+* For example: Importing a Human.gltf with 6 meshes (6 materials and 1 textures) for 6 body parts, all share the same skin/skeleton
+
+##### Register data:
+
 ```
+Meshes    [0, 1, 2, 3, 4, 5] - for 6 body parts
+Textures  [0] - image + sampler
+Materials [0, 1, 2, 3, 4, 5] - all uses Textures[0]
+Skeleton  [0] - contains a bunch of bones
+```
+
+##### Scene hierarchy
+
+```
+Reg.Nodes{}:
+
+[0]Root <Node3D>
+[1]  Armature<Skeleton3D> -> Reg.Skeleton[0]
+[2]    BodyPart0<Mesh3D> -> Reg.Meshes[0] - Reg.Nodes[1] - Reg.Materials[0]
+[3]    BodyPart1<Mesh3D> -> Reg.Meshes[1] - Reg.Nodes[1] - Reg.Materials[1]
+[4]    BodyPart2<Mesh3D> -> Reg.Meshes[2] - Reg.Nodes[1] - Reg.Materials[2]
+[5]    BodyPart3<Mesh3D> -> Reg.Meshes[3] - Reg.Nodes[1] - Reg.Materials[3]
+[6]    BodyPart4<Mesh3D> -> Reg.Meshes[4] - Reg.Nodes[1] - Reg.Materials[4]
+[7]    BodyPart5<Mesh3D> -> Reg.Meshes[5] - Reg.Nodes[1] - Reg.Materials[5]
+```
+
+Note: In `BodyParts<Mesh3D>`, mesh reference the Node containing the skeleton, NOT the Skeleton itself
 
 ---
 

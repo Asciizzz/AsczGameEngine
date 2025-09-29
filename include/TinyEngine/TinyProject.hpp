@@ -20,6 +20,7 @@ public:
     TinyProject& operator=(const TinyProject&) = delete;
     // No move semantics, where tf would you even want to move it to?
 
+    // Return the template index, which in turn contains handles to the registry
     uint32_t addTemplateFromModel(const TinyModelNew& model); // Returns template index + remapping a bunch of shit (very complex) (cops called)
 
 private:
@@ -27,7 +28,8 @@ private:
 
     UniquePtr<TinyRegistry> registry;
 
-    std::vector<TinyHandle> templates; // Point to registry
+    std::vector<TinyHandle> templates; // Point to registry (can be virtually anything)
 
-    std::vector<TinyNodeRuntime> nodes; // Construct from registry[templates.type][template.index]
+    // A basic scene
+    std::vector<TinyNodeRuntime> runtimeNodes; // Construct from registry[templates.type][template.index]
 };
