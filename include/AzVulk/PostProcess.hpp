@@ -96,8 +96,10 @@ private:
     OrderedMap<std::string, UniquePtr<PostProcessEffect>> effects;
 
     // Shared descriptor management for all effects
-    UniquePtr<DescSet> descriptorSets;
-    
+    UniquePtr<DescLayout> descLayout;
+    UniquePtr<DescPool> descPool;
+    UniquePtrVec<DescSet> descSets;
+
     // Helper methods
     void createPingPongImages();
     void createOffscreenFramebuffers();

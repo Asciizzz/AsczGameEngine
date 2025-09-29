@@ -1,11 +1,11 @@
 #pragma once
 
-#include "TinyEngine/TinyResource.hpp"
+#include "TinyEngine/TinyRegistry.hpp"
 
 class TinyProject {
 public:
 
 
 private:
-    UniquePtr<TinyResource> resource;
+    UniquePtr<TinyRegistry> resource;
 };

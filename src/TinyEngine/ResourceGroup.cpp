@@ -32,12 +32,6 @@ void ResourceGroup::uploadAllToGPU() {
     createComponentVKsFromModels();
 
     createTextureDescSet();
-
-    createRigSkeleBuffers();
-    createRigSkeleDescSets();
-    
-    createLightBuffer();
-    createLightDescSet();
 }
 
 // ===========================================================================
@@ -105,11 +99,11 @@ void ResourceGroup::createComponentVKsFromModels() {
 void ResourceGroup::createMaterialDescPoolAndLayout() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    matDescPool = MakeUnique<DescPool>(lDevice);
-    matDescPool->create({ {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 } }, 1024);
+    matDescPool = MakeUnique<DescPool>();
+    matDescPool->create(lDevice, { {DescType::StorageBuffer, 1 } }, 1024);
 
-    matDescLayout = MakeUnique<DescLayout>(lDevice);
-    matDescLayout->create({ {0, DescType::StorageBuffer, 1, ShaderStage::VertexAndFragment, nullptr} } );
+    matDescLayout = MakeUnique<DescLayout>();
+    matDescLayout->create(lDevice, { {0, DescType::StorageBuffer, 1, ShaderStage::VertexAndFragment, nullptr} } );
 }
 
 void ResourceGroup::createMaterialDescSet(const std::vector<MaterialVK>& materials, ModelVK& modelVK) {
@@ -126,8 +120,8 @@ void ResourceGroup::createMaterialDescSet(const std::vector<MaterialVK>& materia
         .createBuffer(deviceVK)
         .mapAndCopy(materials.data());
 
-    modelVK.matDescSet.init(lDevice);
-    modelVK.matDescSet.allocate(*matDescPool, *matDescLayout, 1);
+    printf("Created material buffer of size %llu bytes for %zu materials\n", bufferSize, materials.size());
+    modelVK.matDescSet.allocate(lDevice, *matDescPool, *matDescLayout);
 
     // --- bind buffer to descriptor ---
     VkDescriptorBufferInfo materialBufferInfo{};
@@ -179,11 +173,11 @@ UniquePtr<AzVulk::TextureVK> ResourceGroup::createTexture(const TinyTexture& tex
         .withAutoMipLevels()
         .withFormat(textureFormat)
         .withUsage(ImageUsage::Sampled | ImageUsage::TransferDst | ImageUsage::TransferSrc)
-        .withTiling(VK_IMAGE_TILING_OPTIMAL)
+        .withTiling(ImageTiling::Optimal)
         .withMemProps(MemProp::DeviceLocal);
 
     ImageViewConfig viewConfig = ImageViewConfig()
-        .withAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+        .withAspectMask(ImageAspect::Color)
         .withAutoMipLevels(texture.width, texture.height);
 
     // A quick function to convert TinyTexture::AddressMode to VkSamplerAddressMode
@@ -212,8 +206,7 @@ UniquePtr<AzVulk::TextureVK> ResourceGroup::createTexture(const TinyTexture& tex
     TempCmd tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
 
     textureVK
-        .transitionLayoutImmediate(tempCmd.get(), VK_IMAGE_LAYOUT_UNDEFINED, 
-                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        .transitionLayoutImmediate(tempCmd.get(), ImageLayout::Undefined, ImageLayout::TransferDstOptimal)
         .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get())
         .generateMipmapsImmediate(tempCmd.get(), deviceVK->pDevice);
 
@@ -226,18 +219,19 @@ void ResourceGroup::createTextureDescSet() {
     VkDevice lDevice = deviceVK->lDevice;
     uint32_t textureCount = static_cast<uint32_t>(textures.size());
 
-    texDescSet = MakeUnique<DescSet>(lDevice);
-
     // Combined image sampler descriptor for each texture
-    texDescSet->createOwnLayout({
+    texDescLayout = MakeUnique<DescLayout>();
+    texDescLayout->create(lDevice, {
         {0, DescType::CombinedImageSampler, textureCount, ShaderStage::Fragment, nullptr}
     });
 
-    texDescSet->createOwnPool({
+    texDescPool = MakeUnique<DescPool>();
+    texDescPool->create(lDevice, {
         {DescType::CombinedImageSampler, textureCount}
     }, 1);
 
-    texDescSet->allocate();
+    texDescSet = MakeUnique<DescSet>();
+    texDescSet->allocate(lDevice, *texDescPool, *texDescLayout);
 
     // Write combined image samplers - each texture now includes its own sampler
     std::vector<VkDescriptorImageInfo> imageInfos(textureCount);
@@ -287,110 +281,4 @@ VkIndexType MeshVK::tinyToVkIndexType(TinyMesh::IndexType type) {
         case TinyMesh::IndexType::Uint32: return VK_INDEX_TYPE_UINT32;
         default: throw std::runtime_error("Unsupported index type in TinyMesh");
     }
-}
-
-// ============================================================================
-// ========================== SKELETON DATA ==================================
-// ============================================================================
-
-void ResourceGroup::createRigSkeleBuffers() {
-    skeleInvMatBuffers.clear();
-
-    for (size_t i = 0; i < skeletons.size(); ++i) {
-        const auto* skeleton = skeletons[i].get();
-
-        const auto& inverseBindMatrices = skeleton->inverseBindMatrices;
-
-        UniquePtr<DataBuffer> rigInvMatBuffer = MakeUnique<DataBuffer>();
-
-        rigInvMatBuffer
-            ->setDataSize(inverseBindMatrices.size() * sizeof(glm::mat4))
-            .setUsageFlags(BufferUsage::Storage)
-            .setMemPropFlags(MemProp::DeviceLocal)
-            .createDeviceLocalBuffer(deviceVK, inverseBindMatrices.data());
-
-        // Append buffer
-        skeleInvMatBuffers.push_back(std::move(rigInvMatBuffer));
-    }
-}
-
-void ResourceGroup::createRigSkeleDescSets() {
-    VkDevice lDevice = deviceVK->lDevice;
-
-    // For the time being only create the descriptor set layout
-    skeleDescSets = MakeUnique<DescSet>(lDevice);
-    skeleDescSets->createOwnLayout({
-        {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr}
-    });
-}
-
-// ============================================================================
-// ============================= LIGHTING ===================================
-// ============================================================================
-
-void ResourceGroup::createLightBuffer() {
-    // Initialize with at least one default light if none exist
-    if (lightVKs.empty()) {
-        LightVK defaultLight{};
-        defaultLight.position = glm::vec4(0.0f, 10.0f, 0.0f, 1.0f); // Point light at origin
-        defaultLight.color = glm::vec4(1.0f, 1.0f, 1.0f, 2.0f); // White light with intensity 2.0
-        defaultLight.direction = glm::vec4(0.0f, -1.0f, 0.0f, 10.0f); // Range of 10 units
-        lightVKs.push_back(defaultLight);
-    }
-
-    VkDeviceSize bufferSize = sizeof(LightVK) * lightVKs.size();
-
-    lightBuffer = MakeUnique<DataBuffer>();
-    lightBuffer
-        ->setDataSize(bufferSize)
-        .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVK)
-        .uploadData(lightVKs.data());
-
-    lightsDirty = false;
-}
-
-void ResourceGroup::createLightDescSet() {
-    VkDevice lDevice = deviceVK->lDevice;
-
-    lightDescSet = MakeUnique<DescSet>(lDevice);
-
-    lightDescSet->createOwnLayout({
-        {0, DescType::StorageBuffer, 1, ShaderStage::VertexAndFragment, nullptr}
-    });
-    
-    lightDescSet->createOwnPool({ {DescType::StorageBuffer, 1} }, 1);
-
-    lightDescSet->allocate();
-
-    // Bind light buffer to descriptor
-    VkDescriptorBufferInfo lightBufferInfo{};
-    lightBufferInfo.buffer = *lightBuffer;
-    lightBufferInfo.offset = 0;
-    lightBufferInfo.range = VK_WHOLE_SIZE;
-
-    DescWrite()
-        .setDstSet(*lightDescSet)
-        .setDescType(DescType::StorageBuffer)
-        .setDescCount(1)
-        .setBufferInfo({lightBufferInfo})
-        .updateDescSet(lDevice);
-}
-
-void ResourceGroup::updateLightBuffer() {
-    if (!lightsDirty || !lightBuffer) return;
-
-    // Check if we need to resize the buffer
-    VkDeviceSize requiredSize = sizeof(LightVK) * lightVKs.size();
-    if (requiredSize > lightBuffer->getDataSize()) {
-        // Need to recreate buffer with larger size
-        createLightBuffer();
-        createLightDescSet();
-    } else {
-        // Just update the existing buffer
-        lightBuffer->uploadData(lightVKs.data());
-    }
-
-    lightsDirty = false;
 }

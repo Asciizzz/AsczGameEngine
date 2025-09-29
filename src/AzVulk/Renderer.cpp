@@ -221,11 +221,8 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
     VkDescriptorSet matSet = modelVK->matDescSet;
     VkDescriptorSet texSet = resGroup->getTexDescSet();
-    VkDescriptorSet lightSet = resGroup->getLightDescSet();
-    VkDescriptorSet sets[] = {glbSet, matSet, texSet, lightSet};
-    rPipeline->bindSets(currentCmd, sets, 4);
-
-    uint32_t lightCount = resGroup->getLightCount();
+    VkDescriptorSet sets[] = {glbSet, matSet, texSet};
+    rPipeline->bindSets(currentCmd, sets, 3);
 
     // Bind vertex and index buffers once then draw indexed
     VkBuffer vertexBuffer = meshVK.vertexBuffer;
@@ -250,7 +247,7 @@ void Renderer::drawStaticInstanceGroup(const ResourceGroup* resGroup, const GlbU
 
         // Push constants: material index, light count, unused, unused
         uint32_t matIndex  = meshMaterials[i];
-        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
+        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, 0, 0, 0));
 
         vkCmdDrawIndexed(currentCmd, indexCount, instanceCount, indexOffset, 0, 0);
     }
@@ -267,11 +264,8 @@ void Renderer::drawSingleInstance(const TinyEngine::ResourceGroup* resGroup, con
     VkDescriptorSet glbSet = glbUBO->getDescSet(currentFrame);
     VkDescriptorSet matSet = modelVK->matDescSet;
     VkDescriptorSet texSet = resGroup->getTexDescSet();
-    VkDescriptorSet lightSet = resGroup->getLightDescSet();
-    VkDescriptorSet sets[] = {glbSet, matSet, texSet, lightSet};
-    rPipeline->bindSets(currentCmd, sets, 4);
-
-    uint32_t lightCount = resGroup->getLightCount();
+    VkDescriptorSet sets[] = {glbSet, matSet, texSet};
+    rPipeline->bindSets(currentCmd, sets, 3);
 
     // Bind vertex and index buffers once then draw indexed
     VkBuffer vertexBuffer = meshVK.vertexBuffer;
@@ -295,7 +289,7 @@ void Renderer::drawSingleInstance(const TinyEngine::ResourceGroup* resGroup, con
 
         // Push constants: material index, light count, unused, unused
         uint32_t matIndex  = meshMaterials[i];
-        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, lightCount, 0, 0));
+        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::uvec4(matIndex, 0, 0, 0));
 
         vkCmdDrawIndexed(currentCmd, indexCount, 1, indexOffset, 0, 0);
     }

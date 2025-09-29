@@ -4,13 +4,27 @@
 
 using namespace AzVulk;
 
-void DescLayout::create(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-    destroy();
-    layout = create(lDevice, bindings);
+DescLayout::DescLayout(DescLayout&& other) noexcept {
+    lDevice = other.lDevice;
+    layout = other.layout;
+
+    other.lDevice = VK_NULL_HANDLE;
+    other.layout = VK_NULL_HANDLE;
+}
+DescLayout& DescLayout::operator=(DescLayout&& other) noexcept {
+    if (this != &other) {
+        lDevice = other.lDevice;
+        layout = other.layout;
+
+        other.lDevice = VK_NULL_HANDLE;
+        other.layout = VK_NULL_HANDLE;
+    }
+    return *this;
 }
 
-VkDescriptorSetLayout DescLayout::create(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+void DescLayout::create(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+    this->lDevice = lDevice;
+    destroy();
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -20,8 +34,6 @@ VkDescriptorSetLayout DescLayout::create(VkDevice lDevice, const std::vector<VkD
     if (vkCreateDescriptorSetLayout(lDevice, &layoutInfo, nullptr, &layout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout");
     }
-
-    return layout;
 }
 
 void DescLayout::destroy() {
@@ -34,14 +46,27 @@ void DescLayout::destroy() {
 
 
 
+DescPool::DescPool(DescPool&& other) noexcept {
+    lDevice = other.lDevice;
+    pool = other.pool;
 
-void DescPool::create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
-    destroy();
-    pool = create(lDevice, poolSizes, maxSets);
+    other.lDevice = VK_NULL_HANDLE;
+    other.pool = VK_NULL_HANDLE;
+}
+DescPool& DescPool::operator=(DescPool&& other) noexcept {
+    if (this != &other) {
+        lDevice = other.lDevice;
+        pool = other.pool;
+
+        other.lDevice = VK_NULL_HANDLE;
+        other.pool = VK_NULL_HANDLE;
+    }
+    return *this;
 }
 
-VkDescriptorPool DescPool::create(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
-    VkDescriptorPool pool = VK_NULL_HANDLE;
+void DescPool::create(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
+    this->lDevice = lDevice;
+    destroy();
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -53,8 +78,6 @@ VkDescriptorPool DescPool::create(VkDevice lDevice, const std::vector<VkDescript
     if (vkCreateDescriptorPool(lDevice, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool");
     }
-
-    return pool;
 }
 
 void DescPool::destroy() {
@@ -65,74 +88,59 @@ void DescPool::destroy() {
 }
 
 
+DescSet::DescSet(DescSet&& other) noexcept {
+    lDevice = other.lDevice;
+    set = other.set;
+    layout = other.layout;
+    pool = other.pool;
 
-void DescSet::allocate(VkDescriptorPool pool, VkDescriptorSetLayout layout, uint32_t count) {
-    cleanup();
+    other.lDevice = VK_NULL_HANDLE;
+    other.set = VK_NULL_HANDLE;
+    other.layout = VK_NULL_HANDLE;
+    other.pool = VK_NULL_HANDLE;
+}
+DescSet& DescSet::operator=(DescSet&& other) noexcept {
+    if (this != &other) {
+        lDevice = other.lDevice;
+        set = other.set;
+        layout = other.layout;
+        pool = other.pool;
 
-    layoutOwned = false;
-    poolOwned = false;
-
-    this->layout = layout;
-    this->pool = pool;
-
-    allocate(count);
+        other.lDevice = VK_NULL_HANDLE;
+        other.set = VK_NULL_HANDLE;
+        other.layout = VK_NULL_HANDLE;
+        other.pool = VK_NULL_HANDLE;
+    }
+    return *this;
 }
 
-void DescSet::allocate(uint32_t count) {
-    free(pool);
+void DescSet::allocate(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSetLayout layout) {
+    this->pool = pool;
+    this->layout = layout;
+    this->lDevice = lDevice;
 
-    sets.resize(count, VK_NULL_HANDLE);
-
-    std::vector<VkDescriptorSetLayout> layouts(count, layout);
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool     = pool;
-    allocInfo.descriptorSetCount = count;
-    allocInfo.pSetLayouts        = layouts.data();
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts        = &layout;
+    allocInfo.pNext = nullptr;
 
-    if (vkAllocateDescriptorSets(lDevice, &allocInfo, sets.data()) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(lDevice, &allocInfo, &set) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets");
     }
-}
-
-void DescSet::createOwnLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-    destroyLayout();
-    layout = DescLayout::create(lDevice, bindings);
-    layoutOwned = true;
-}
-
-void DescSet::createOwnPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
-    destroyPool();
-    pool = DescPool::create(lDevice, poolSizes, maxSets);
-    poolOwned = true;
 }
 
 void DescSet::free(VkDescriptorPool pool) {
     if (pool == VK_NULL_HANDLE) return;
 
-    for (auto& set : sets) if (set != VK_NULL_HANDLE) {
+    if (set != VK_NULL_HANDLE) {
         vkFreeDescriptorSets(lDevice, pool, 1, &set);
+        set = VK_NULL_HANDLE;
     }
 
-    sets.clear();
+    set = VK_NULL_HANDLE;
 }
-
-void DescSet::destroyPool() {
-    if (poolOwned && pool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(lDevice, pool, nullptr);
-        pool = VK_NULL_HANDLE;
-        poolOwned = false;
-    }
-}
-
-void DescSet::destroyLayout() {
-    if (layoutOwned && layout != VK_NULL_HANDLE) {
-        vkDestroyDescriptorSetLayout(lDevice, layout, nullptr);
-        layout = VK_NULL_HANDLE;
-        layoutOwned = false;
-    }
-}
-
 
 DescWrite& DescWrite::addWrite() {
     // Setting some default values

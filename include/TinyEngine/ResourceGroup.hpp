@@ -72,41 +72,10 @@ public:
     VkDescriptorSetLayout getTexDescLayout() const { return texDescSet->getLayout(); }
     VkDescriptorSet getTexDescSet() const { return texDescSet->get(); }
 
-    VkDescriptorSetLayout getRigDescLayout() const { return skeleDescSets->getLayout(); }
-    VkDescriptorSet getRigSkeleDescSet(size_t index) const { return skeleDescSets->get(index); }
-
-    VkDescriptorSetLayout getLightDescLayout() const { return lightDescSet->getLayout(); }
-    VkDescriptorSet getLightDescSet() const { return lightDescSet->get(); }
-
     size_t addModel(const TinyModel& model) {
         models.push_back(model);
         return models.size() - 1;
     }
-
-    // Light management
-    size_t addLight(const LightVK& light) {
-        lightVKs.push_back(light);
-        lightsDirty = true;
-        return lightVKs.size() - 1;
-    }
-
-    void updateLight(size_t index, const LightVK& light) {
-        if (index < lightVKs.size()) {
-            lightVKs[index] = light;
-            lightsDirty = true;
-        }
-    }
-
-    void removeLight(size_t index) {
-        if (index < lightVKs.size()) {
-            lightVKs.erase(lightVKs.begin() + index);
-            lightsDirty = true;
-        }
-    }
-
-    uint32_t getLightCount() const { return static_cast<uint32_t>(lightVKs.size()); }
-
-    void updateLightBuffer(); // Update buffer when lights change
 
     void uploadAllToGPU();
 
@@ -122,14 +91,7 @@ public:
     UniquePtrVec<ModelVK>             modelVKs;
     UniquePtrVec<AzVulk::TextureVK>   textures;
 
-    SharedPtrVec<TinySkeleton>        skeletons;
-    UniquePtrVec<AzVulk::DataBuffer>  skeleInvMatBuffers; // Additional buffers in the future
-    UniquePtr<AzVulk::DescSet>        skeleDescSets; // Wrong, but we'll live with it for now
-    void createRigSkeleBuffers();
-    void createRigSkeleDescSets();
-
     // Shared pool and layout for all models
-
     UniquePtr<AzVulk::DescPool>       skeleDescPool;
     UniquePtr<AzVulk::DescLayout>     skeleDescLayout;
 
@@ -140,16 +102,10 @@ public:
     void createMaterialDescSet(const std::vector<MaterialVK>& materials, ModelVK& modelVK);
 
     // Global list of all textures
+    UniquePtr<AzVulk::DescPool>       texDescPool;
+    UniquePtr<AzVulk::DescLayout>     texDescLayout;
     UniquePtr<AzVulk::DescSet>        texDescSet;
     void createTextureDescSet();
-
-    // Light system
-    std::vector<LightVK>              lightVKs; // Dynamic light data
-    UniquePtr<AzVulk::DataBuffer>     lightBuffer; // Host-writable buffer for dynamic updates
-    UniquePtr<AzVulk::DescSet>        lightDescSet;
-    bool lightsDirty = false;
-    void createLightBuffer();
-    void createLightDescSet();
 
     // Useful methods
     UniquePtr<AzVulk::TextureVK> createTexture(const TinyTexture& texture);

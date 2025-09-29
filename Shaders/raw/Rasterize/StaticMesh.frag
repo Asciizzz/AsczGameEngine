@@ -15,7 +15,7 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 } glb;
 
 layout(push_constant) uniform PushConstant {
-    uvec4 properties; // x = material index, y = light count, z = unused, w = unused
+    uvec4 properties; // x = material index, y = unused, z = unused, w = unused
 } pushConstant;
 
 struct Material {
@@ -57,7 +57,6 @@ vec4 getTexture(uint texIndex, vec2 uv) {
 
 void main() {
     Material material = materials[pushConstant.properties.x];
-    uint lightCount = pushConstant.properties.y;
 
     // Albedo texture - texIndices.x now contains albedo texture index
     uint albTexIndex = material.texIndices.x;
@@ -84,69 +83,7 @@ void main() {
     // Check if shading is disabled
     bool shadingFlag = material.shadingParams.x > 0.5;
     
-    vec3 finalColor;
-    if (shadingFlag && lightCount > 0u) {
-        // Use dynamic lighting system
-        vec3 totalLighting = vec3(0.0);
-        
-        // Add ambient lighting
-        totalLighting += texColor.rgb * 0.1;
-        
-        // Calculate contribution from each light
-        for (uint i = 0u; i < lightCount; i++) {
-            Light light = lights[i];
-            uint lightType = uint(light.position.w);
-            vec3 lightColor = light.color.rgb;
-            float intensity = light.color.a;
-            
-            vec3 lightDir;
-            float attenuation = 1.0;
-            
-            if (lightType == LIGHT_TYPE_DIRECTIONAL) {
-                // Directional light
-                lightDir = normalize(-light.direction.xyz);
-            } else if (lightType == LIGHT_TYPE_POINT) {
-                // Point light
-                vec3 lightPos = light.position.xyz;
-                lightDir = normalize(lightPos - fragWorldPos);
-                float range = light.direction.w;
-                float attenuationFactor = light.params.z;
-                attenuation = calculateAttenuation(lightPos, fragWorldPos, range, attenuationFactor);
-            } else if (lightType == LIGHT_TYPE_SPOT) {
-                // Spot light
-                vec3 lightPos = light.position.xyz;
-                vec3 spotDir = normalize(light.direction.xyz);
-                vec3 lightToFrag = fragWorldPos - lightPos;
-                lightDir = normalize(lightPos - fragWorldPos);
-                
-                float range = light.direction.w;
-                float attenuationFactor = light.params.z;
-                float innerCone = light.params.x;
-                float outerCone = light.params.y;
-                
-                attenuation = calculateAttenuation(lightPos, fragWorldPos, range, attenuationFactor);
-                float spotFactor = calculateSpotFactor(spotDir, lightToFrag, innerCone, outerCone);
-                attenuation *= spotFactor;
-            }
-            
-            // Calculate diffuse lighting
-            float NdotL = max(dot(mappedNormal, lightDir), 0.0);
-            
-            // Combine everything
-            vec3 contribution = lightColor * intensity * NdotL * attenuation;
-            totalLighting += contribution * texColor.rgb;
-        }
-        
-        // Apply toon shading to the lighting result
-        uint toonLevel = uint(material.shadingParams.y);
-        float lightIntensity = length(totalLighting) / length(texColor.rgb);
-        lightIntensity = applyToonShading(lightIntensity, toonLevel);
-        
-        finalColor = texColor.rgb * lightIntensity;
-    } else {
-        // No lighting - use full color
-        finalColor = texColor.rgb;
-    }
+    vec3 finalColor = texColor.rgb;
 
     // Apply instance color
     finalColor *= fragMultColor.rgb;

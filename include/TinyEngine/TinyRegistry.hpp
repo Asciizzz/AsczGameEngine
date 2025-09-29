@@ -55,9 +55,9 @@ struct TinySkeletonVK {
     AzVulk::DescSet skeleDescSet;
 };
 
-class TinyResource {
+class TinyRegistry {
 public:
-    TinyResource(const AzVulk::DeviceVK* deviceVK): deviceVK(deviceVK) {
+    TinyRegistry(const AzVulk::DeviceVK* deviceVK): deviceVK(deviceVK) {
         setMaxTextureCount(4096);
         setMaxMaterialCount(4096);
     }

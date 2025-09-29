@@ -31,6 +31,18 @@ struct ImageLayout {
     static constexpr VkImageLayout DepthStencilAttachmentOptimal = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 };
 
+struct ImageTiling {
+    static constexpr VkImageTiling Optimal = VK_IMAGE_TILING_OPTIMAL;
+    static constexpr VkImageTiling Linear  = VK_IMAGE_TILING_LINEAR;
+};
+
+struct ImageAspect {
+    static constexpr VkImageAspectFlags Color   = VK_IMAGE_ASPECT_COLOR_BIT;
+    static constexpr VkImageAspectFlags Depth   = VK_IMAGE_ASPECT_DEPTH_BIT;
+    static constexpr VkImageAspectFlags Stencil = VK_IMAGE_ASPECT_STENCIL_BIT;
+    static constexpr VkImageAspectFlags Metadata= VK_IMAGE_ASPECT_METADATA_BIT;
+};
+
 // Image configuration struct for easy setup
 struct ImageConfig {
     uint32_t width = 0;

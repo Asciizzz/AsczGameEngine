@@ -19,19 +19,19 @@ struct DescType {
 };
 
 struct DescPool {
-    DescPool(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
-    void init(VkDevice lDevice) { this->lDevice = lDevice; }
-
+    DescPool() = default;
     ~DescPool() { destroy(); }
 
     DescPool(const DescPool&) = delete;
     DescPool& operator=(const DescPool&) = delete;
+    // Move semantics
+    DescPool(DescPool&& other) noexcept;
+    DescPool& operator=(DescPool&& other) noexcept;
 
     VkDescriptorPool get() const { return pool; }
     operator VkDescriptorPool() const { return pool; }
 
-    void create(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
-    static VkDescriptorPool create(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
+    void create(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
     void destroy();
 
@@ -41,19 +41,20 @@ private:
 };
 
 struct DescLayout {
-    DescLayout(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
-    void init(VkDevice lDevice) { this->lDevice = lDevice; }
-
+    DescLayout() = default;
     ~DescLayout() { destroy(); }
 
     DescLayout(const DescLayout&) = delete;
     DescLayout& operator=(const DescLayout&) = delete;
+    // Move semantics
+    DescLayout(DescLayout&& other) noexcept;
+    DescLayout& operator=(DescLayout&& other) noexcept;
 
     VkDescriptorSetLayout get() const { return layout; }
     operator VkDescriptorSetLayout() const { return layout; }
+    operator VkDescriptorSetLayout&() { return layout; }
 
-    void create(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
-    static VkDescriptorSetLayout create(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+    void create(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 
     void destroy();
 
@@ -63,45 +64,32 @@ private:
 };
 
 struct DescSet {
-    DescSet(VkDevice lDevice = VK_NULL_HANDLE) : lDevice(lDevice) {}
-    void init(VkDevice lDevice) { this->lDevice = lDevice; }
-
-    ~DescSet() { cleanup(); }
+    DescSet() = default;
+    ~DescSet() = default;
 
     DescSet(const DescSet&) = delete;
     DescSet& operator=(const DescSet&) = delete;
+    // Move semantics
+    DescSet(DescSet&& other) noexcept;
+    DescSet& operator=(DescSet&& other) noexcept;
 
-    VkDescriptorSet get(uint32_t index=0) const { return sets.at(index); }
-    // Implicit conversion only works on single descriptor set
+    VkDescriptorSet get() const { return set; }
     operator VkDescriptorSet() const { return get(); }
 
     VkDescriptorSetLayout getLayout() const { return layout; }
     VkDescriptorPool getPool() const { return pool; }
 
-    void allocate(VkDescriptorPool pool, VkDescriptorSetLayout layout, uint32_t count=1); // Borrowed pool and layout version
-    void allocate(uint32_t count=1); // Owned pool and layout version
-
-    // For self contained descriptor sets with owned pool and layout
-    void createOwnLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
-    void createOwnPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
+    void allocate(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSetLayout layout);
 
     // Explicit free of descriptor sets
     void free(VkDescriptorPool pool);
 
-    void destroyPool();
-    void destroyLayout();
-
-    void cleanup() { destroyPool(); destroyLayout(); }
-
 private:
     VkDevice lDevice = VK_NULL_HANDLE;
-    std::vector<VkDescriptorSet> sets;
+    VkDescriptorSet set = VK_NULL_HANDLE;
 
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-    bool layoutOwned = false;
-
     VkDescriptorPool pool = VK_NULL_HANDLE;
-    bool poolOwned = false;
 };
 
 

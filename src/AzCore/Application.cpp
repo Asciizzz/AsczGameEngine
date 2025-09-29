@@ -75,13 +75,6 @@ void Application::initComponents() {
 
     resGroup->addModel(testModel);
 
-    // Initialize dynamic lighting system with example lights
-    TinyEngine::LightVK sunLight{};
-    sunLight.position = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f); // w=0 for directional light
-    sunLight.color = glm::vec4(1.0f, 0.9f, 0.8f, 1.5f); // Warm white light with intensity 1.5
-    sunLight.direction = glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f); // Direction vector (no range for directional)
-    resGroup->addLight(sunLight);
-
     // TinyEngine::LightVK pointLight{};
     // pointLight.position = glm::vec4(5.0f, 5.0f, 5.0f, 1.0f); // w=1 for point light
     // pointLight.color = glm::vec4(0.8f, 0.6f, 1.0f, 2.0f); // Purple light with intensity 2.0
@@ -103,8 +96,6 @@ void Application::initComponents() {
     auto glbLayout = glbUBOManager->getDescLayout();
     auto matLayout = resGroup->getMatDescLayout();
     auto texLayout = resGroup->getTexDescLayout();
-    auto rigLayout = resGroup->getRigDescLayout();
-    auto lightLayout = resGroup->getLightDescLayout();
 
     // Create raster pipeline configurations
 
@@ -119,10 +110,8 @@ void Application::initComponents() {
     // Initialize all pipelines with the manager using named layouts
     UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
         {"global", glbLayout},
-        {"material", matLayout}, 
-        {"texture", texLayout},
-        {"rig", rigLayout},
-        {"light", lightLayout}
+        {"material", matLayout},
+        {"texture", texLayout}
     };
     
     // Create named vertex inputs
@@ -297,9 +286,6 @@ void Application::mainLoop() {
             // Update global UBO buffer from frame index
             uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
             glbUBOManager->updateUBO(camRef, currentFrameIndex);
-
-            // Update dynamic light buffer if needed
-            resGroup->updateLightBuffer();
 
             rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
