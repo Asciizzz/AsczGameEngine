@@ -77,8 +77,10 @@ void Application::initComponents() {
 
     project = MakeUnique<TinyProject>(deviceVK.get());
 
-    TinyModelNew newModel = TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
-    project->addTemplateFromModel(newModel);
+    TinyModelNew newModel0 = TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
+    TinyModelNew newModel1 = TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
+    project->addTemplateFromModel(newModel0);
+    project->addTemplateFromModel(newModel1);
 
 // PLAYGROUND END HERE 
 
