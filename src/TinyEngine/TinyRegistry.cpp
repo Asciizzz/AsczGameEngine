@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 using namespace AzVulk;
+using HType = TinyHandle::Type;
 
 bool TinyRegistry::MeshData::import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh) {
     const auto& vertexData = mesh.vertexData;
@@ -136,7 +137,7 @@ TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
     meshData->import(deviceVK, mesh);
 
     uint32_t index = meshDatas.insert(std::move(meshData));
-    return TinyHandle::make(index, TinyHandle::Type::Mesh);
+    return TinyHandle(index, HType::Mesh);
 }
 
 TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
@@ -146,7 +147,7 @@ TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
     // Further descriptor logic in the future
 
     uint32_t index = textureDatas.insert(std::move(textureData));
-    return TinyHandle::make(index, TinyHandle::Type::Texture);
+    return TinyHandle(index, HType::Texture);
 }
 
 // Usually you need to know the texture beforehand to remap the material texture indices
@@ -156,43 +157,43 @@ TinyHandle TinyRegistry::addMaterial(const MaterialData& matData) {
     // Update the GPU buffer immediately
     matBuffer->mapAndCopy(materialDatas.data());
 
-    return TinyHandle::make(index, TinyHandle::Type::Material);
+    return TinyHandle(index, HType::Material);
 }
 
 TinyHandle TinyRegistry::addSkeleton(const TinySkeleton& skeleton) {
     uint32_t index = skeletonDatas.insert(skeleton);
-    return TinyHandle::make(index, TinyHandle::Type::Skeleton);
+    return TinyHandle(index, HType::Skeleton);
 }
 
 TinyHandle TinyRegistry::addNode(const TinyNode& node) {
     uint32_t index = nodeDatas.insert(node);
-    return TinyHandle::make(index, TinyHandle::Type::Node);
+    return TinyHandle(index, HType::Node);
 }
 
 // Access to resources - allow modification
 
 TinyRegistry::MeshData* TinyRegistry::getMeshData(const TinyHandle& handle) {
-    if (!handle.isType(TinyHandle::Type::Mesh)) return nullptr;
+    if (!handle.isType(HType::Mesh)) return nullptr;
     return meshDatas.getPtr(handle.index);
 }
 
 TinyRegistry::MaterialData* TinyRegistry::getMaterialData(const TinyHandle& handle) {
-    if (!handle.isType(TinyHandle::Type::Material)) return nullptr;
+    if (!handle.isType(HType::Material)) return nullptr;
     return &materialDatas.get(handle.index);
 }
 
 TinyRegistry::TextureData* TinyRegistry::getTextureData(const TinyHandle& handle) {
-    if (!handle.isType(TinyHandle::Type::Texture)) return nullptr;
+    if (!handle.isType(HType::Texture)) return nullptr;
     return textureDatas.getPtr(handle.index);
 }
 
 TinySkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
-    if (!handle.isType(TinyHandle::Type::Skeleton)) return nullptr;
+    if (!handle.isType(HType::Skeleton)) return nullptr;
     return &skeletonDatas.get(handle.index);
 }
 
 TinyNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
-    if (!handle.isType(TinyHandle::Type::Node)) return nullptr;
+    if (!handle.isType(HType::Node)) return nullptr;
     return &nodeDatas.get(handle.index);
 }
 

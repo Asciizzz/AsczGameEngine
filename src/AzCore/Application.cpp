@@ -78,9 +78,14 @@ void Application::initComponents() {
     project = MakeUnique<TinyProject>(deviceVK.get());
 
     TinyModelNew newModel0 = TinyLoader::loadModelFromGLTFNew("Assets/Characters/Test/Niji.glb", false);
-    // TinyModelNew newModel1 = TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
+    TinyModelNew newModel1 = TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
     project->addTemplateFromModel(newModel0);
-    // project->addTemplateFromModel(newModel1);
+    project->addTemplateFromModel(newModel1);
+
+    project->addNodeInstance(0); // Add Niji
+    project->addNodeInstance(0); // Add Niji again
+
+    project->printRuntimeNodeTree();
 
 // PLAYGROUND END HERE 
 

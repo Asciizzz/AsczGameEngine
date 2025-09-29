@@ -25,16 +25,14 @@ union TinyHandle {
     uint64_t value;
 
     TinyHandle() : value(UINT64_MAX) {}
+    TinyHandle(uint64_t v) : value(v) {}
 
     // Value operators
     bool operator==(const TinyHandle& other) const { return value == other.value; }
     bool operator!=(const TinyHandle& other) const { return value != other.value; }
 
-    // Fast index setter
-    TinyHandle& operator=(uint32_t newIndex) { index = newIndex; return *this; }
-
     static TinyHandle invalid() { return TinyHandle(); }
-    bool isValid() const { return value != UINT64_MAX; }
+    bool isValid() const { return value != UINT64_MAX && index != UINT32_MAX; }
     void invalidate() { value = UINT64_MAX; }
 
     bool isType(Type t) const { return static_cast<Type>(type) == t; }
@@ -46,18 +44,33 @@ union TinyHandle {
     @param type The type of the handle
     @param owned Whether the handle is owned or not
     */
-    static TinyHandle make(uint32_t index, uint16_t generation, Type type, bool owned) {
+    template<typename IndexType>
+    static TinyHandle make(IndexType index, uint16_t generation, Type type, bool owned) {
         TinyHandle handle;
-        handle.index = index;
+        handle.index = static_cast<uint32_t>(index);
         handle.generation = generation;
         handle.type = static_cast<uint8_t>(type);
         handle.owned = owned ? 1 : 0;
         return handle;
     }
 
-    // First generation, owned by default
-    static TinyHandle make(uint32_t index, Type type=Type::Unknown, bool owned=true) {
+    
+    template<typename IndexType>
+    static TinyHandle make(IndexType index, Type type=Type::Unknown, bool owned=true) {
+        // First generation, owned by default
         return make(index, 0, type, owned);
+    }
+
+    // Nice fast constructors
+
+    template<typename IndexType>
+    TinyHandle(IndexType index, Type type=Type::Unknown, bool owned=true) {
+        *this = make(index, 0, type, owned);
+    }
+
+    template<typename IndexType>
+    TinyHandle(IndexType index, uint16_t generation, Type type, bool owned) {
+        *this = make(index, generation, type, owned);
     }
 };
 

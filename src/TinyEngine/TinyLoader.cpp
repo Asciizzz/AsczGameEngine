@@ -504,7 +504,7 @@ void loadMesh(TinyMesh& mesh, std::vector<TinyHandle>& submeshMats, const tinygl
 
         TinyHandle matHandle; // Invalid by default
         if (pData.materialIndex >= 0) {
-            matHandle = TinyHandle::make(pData.materialIndex, TinyHandle::Type::Material);
+            matHandle = TinyHandle(pData.materialIndex, TinyHandle::Type::Material);
         }
 
         submeshMats.push_back(matHandle);
@@ -725,8 +725,8 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
     // A function to automatically assign parent-child relationships
     auto parentAndChild = [&](TinyNode& parent, int parentIndex,
                                 TinyNode& child, int childIndex) {
-        parent.children.push_back(TinyHandle::make(childIndex, Type::Node));
-        child.parent = TinyHandle::make(parentIndex, Type::Node);
+        parent.children.push_back(TinyHandle(childIndex, Type::Node));
+        child.parent = TinyHandle(parentIndex, Type::Node);
     };
 
     // Create root node
@@ -736,7 +736,6 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
 
     pushNode(std::move(rootNode)); // Root node at index 0
 
-    
     const std::vector<std::vector<TinyHandle>>& submeshesMats = tinyModel.submeshesMats;
 
     // For each individual skeleton, create a parent node
@@ -751,7 +750,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
         skeleNode.name = "Skeleton_" + std::to_string(skelIdx);
 
         TinyNode::Skeleton3D skel3D;
-        skel3D.skeleRegistry.make(skelIdx, Type::Skeleton);
+        skel3D.skeleRegistry = TinyHandle(skelIdx, Type::Skeleton);
 
         skeleNode.make(std::move(skel3D));
 
@@ -825,13 +824,6 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
         if (skeletonNodeIndex >= 0) nodeMesh3D.skeleNode = skeletonNodeIndex;
 
         node.make(std::move(nodeMesh3D));
-
-        // Children: keep only children that are *not* pure joints
-        for (int childIdx : gltfNode.children) {
-            if (nodeToSkeletonAndBoneIndex.find(childIdx) == nodeToSkeletonAndBoneIndex.end()) {
-                node.children.push_back(TinyHandle::make(childIdx, Type::Node));
-            }
-        }
 
         nodes.push_back(std::move(node));
     }
@@ -928,8 +920,6 @@ TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool 
 
     bool hasRigging = !forceStatic && !result.skeletons.empty();
     loadMeshes(result.meshes, result.submeshesMats, model, !hasRigging);
-    
-    printf("Loaded %zu skeleton(s), %zu mesh(es)\n", result.skeletons.size(), result.meshes.size());
 
     loadNodes(result, model, nodeToSkeletonAndBoneIndex);
 
