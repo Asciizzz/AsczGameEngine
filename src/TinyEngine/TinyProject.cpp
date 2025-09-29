@@ -1,34 +1,42 @@
 #include "TinyEngine/TinyProject.hpp"
 
+
+// A quick function for range validation
+template<typename T>
+bool isValidIndex(int index, const std::vector<T>& vec) {
+    return index >= 0 && index < static_cast<int>(vec.size());
+}
+
+
 uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
-    std::vector<uint32_t> glbMeshRegIndex; // Ensure correct mapping
+    std::vector<TinyHandle> glbMeshRegHandle; // Ensure correct mapping
     for (const auto& mesh : model.meshes) {
         TinyHandle handle = registry->addMesh(mesh);
-        glbMeshRegIndex.push_back(handle.index);
+        glbMeshRegHandle.push_back(handle);
     }
 
-    std::vector<uint32_t> glbTexRegIndex;
+    std::vector<TinyHandle> glbTexRegHandle;
     for (const auto& texture : model.textures) {
         TinyHandle handle = registry->addTexture(texture);
-        glbTexRegIndex.push_back(handle.index);
+        glbTexRegHandle.push_back(handle);
     }
 
-    std::vector<uint32_t> glbMatRegIndex;
+    std::vector<TinyHandle> glbMatRegHandle;
     for (const auto& material : model.materials) {
         TinyRegistry::MaterialData correctMat;
 
         // Remap the material's texture indices
         
         uint32_t localAlbIndex = material.localAlbTexture;
-        bool localAlbValid = localAlbIndex >= 0 && localAlbIndex < static_cast<int>(glbTexRegIndex.size());
-        correctMat.setAlbTexIndex(localAlbValid ? glbTexRegIndex[localAlbIndex] : 0);
+        bool localAlbValid = localAlbIndex >= 0 && localAlbIndex < static_cast<int>(glbTexRegHandle.size());
+        correctMat.setAlbTexIndex(localAlbValid ? glbTexRegHandle[localAlbIndex].index : 0);
 
         uint32_t localNrmlIndex = material.localNrmlTexture;
-        bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexRegIndex.size());
-        correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRegIndex[localNrmlIndex] : 0);
+        bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexRegHandle.size());
+        correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRegHandle[localNrmlIndex].index : 0);
 
         TinyHandle handle = registry->addMaterial(correctMat);
-        glbMatRegIndex.push_back(handle.index);
+        glbMatRegHandle.push_back(handle);
     }
 
     std::vector<uint32_t> glbSkeletonRegIndex;
@@ -39,12 +47,12 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     std::vector<TinyHandle> glbNodeRegHandle;
 
-    UnorderedMap<int, int> localToGlobalNodeIndex; // Left: local index, Right: global index
+    UnorderedMap<int, TinyHandle> localNodeIndexToGlobalNodeHandle; // Left: local index, Right: global index
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
         // Just occupy the index
         TinyHandle handle = registry->addNode(TinyNode());
-        localToGlobalNodeIndex[i] = handle.index;
+        localNodeIndexToGlobalNodeHandle[i] = handle;
 
         glbNodeRegHandle.push_back(handle);
     }
@@ -55,18 +63,19 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
     }
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
-
         const TinyNode& localNode = model.nodes[i];
         TinyNode& regNode = *registry->getNodeData(glbNodeRegHandle[i]);
         regNode.scope = localNode.scope;
         regNode.name = localNode.name;
 
         // Remapping children and parent
-        regNode.parent = localToGlobalNodeIndex[localNode.parent];
+        regNode.parent = localNodeIndexToGlobalNodeHandle[localNode.parent.index];
         regNode.children.clear();
-        for (int localChild : localNode.children) {
-            regNode.children.push_back(localToGlobalNodeIndex[localChild]);
+        for (const TinyHandle& localChild : localNode.children) {
+            regNode.children.push_back(localNodeIndexToGlobalNodeHandle[localChild.index]);
         }
+
+        printf("Mapping local node %d to global node %d\n", i, glbNodeRegHandle[i].index);
 
         // Remapping node data
         switch(localNode.type) {
@@ -82,16 +91,16 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
                 TinyNode::Mesh3D trueMesh3D;
                 trueMesh3D.transform = mesh3D.transform;
 
-                trueMesh3D.meshIndex = glbMeshRegIndex[mesh3D.meshIndex];
+                trueMesh3D.mesh = glbMeshRegHandle[mesh3D.mesh.index];
 
-                for (int localMatIndex : mesh3D.submeshMats) {
-                    bool valid = localMatIndex >= 0 && localMatIndex < static_cast<int>(glbMatRegIndex.size());
-                    trueMesh3D.submeshMats.push_back(valid ? glbMatRegIndex[localMatIndex] : 0);
+                for (TinyHandle localMat : mesh3D.submeshMats) {
+                    bool valid = isValidIndex(localMat.index, glbMatRegHandle);
+                    trueMesh3D.submeshMats.push_back(valid ? glbMatRegHandle[localMat.index] : TinyHandle::invalid());
                 }
 
-                bool hasValidSkeleton = mesh3D.skeletonNodeIndex >= 0 && mesh3D.skeletonNodeIndex < static_cast<int>(model.nodes.size());
-                trueMesh3D.skeletonNodeIndex = hasValidSkeleton ? localToGlobalNodeIndex[mesh3D.skeletonNodeIndex] : -1; // Point to node
-                
+                bool hasValidSkeleton = isValidIndex(mesh3D.skeleNode.index, glbNodeRegHandle);
+                trueMesh3D.skeleNode = hasValidSkeleton ? localNodeIndexToGlobalNodeHandle[mesh3D.skeleNode.index] : TinyHandle::invalid();
+
                 regNode.make(std::move(trueMesh3D));
                 break;
             }
@@ -99,8 +108,8 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
             case TinyNode::Type::Skeleton3D: {
                 const TinyNode::Skeleton3D& skel3D = localNode.asSkeleton3D();
                 TinyNode::Skeleton3D trueSkel3D;
-                bool hasValidSkeleton = skel3D.skeletonRegIndex >= 0 && skel3D.skeletonRegIndex < static_cast<int>(glbSkeletonRegIndex.size());
-                trueSkel3D.skeletonRegIndex = hasValidSkeleton ? glbSkeletonRegIndex[skel3D.skeletonRegIndex] : -1; // Point to skeleton registry
+                bool hasValidSkeleton = isValidIndex(skel3D.skeleRegistry.index, glbSkeletonRegIndex);
+                trueSkel3D.skeleRegistry.index = hasValidSkeleton ? glbSkeletonRegIndex[skel3D.skeleRegistry.index] : -1; // Point to skeleton registry
 
                 regNode.make(std::move(trueSkel3D));
                 break;
@@ -116,10 +125,10 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
         printf("\033[32mNode %d: Name='%s', Parent=%d, Children=[ ",
             glbNodeRegHandle[i].index,
             regNode->name.c_str(),
-            regNode->parent
+            regNode->parent.index
         );
         for (size_t c = 0; c < regNode->children.size(); ++c) {
-            printf("%d ", regNode->children[c]);
+            printf("%d ", regNode->children[c].index);
         }
         printf("]");
         // Reset color
@@ -127,15 +136,15 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
         // Print additional info
         if (regNode->isMesh3D()) {
-            const auto& mesh = regNode->asMesh3D();
-            printf(" -> MeshID=%d, MaterialIDs=[ ", mesh.meshIndex);
-            for (size_t m = 0; m < mesh.submeshMats.size(); ++m) {
-                printf("%d ", mesh.submeshMats[m]);
+            const auto& meshNode = regNode->asMesh3D();
+            printf(" -> MeshID=%d, MaterialIDs=[ ", meshNode.mesh.index);
+            for (size_t m = 0; m < meshNode.submeshMats.size(); ++m) {
+                printf("%d ", meshNode.submeshMats[m].index);
             }
-            printf("], SkeNodeID=%d\n", mesh.skeletonNodeIndex);
+            printf("], SkeNodeID=%d\n", meshNode.skeleNode.index);
         } else if (regNode->isSkeleton3D()) {
-            const auto& skel = regNode->asSkeleton3D();
-            printf(" -> SkeRegID=%d\n", skel.skeletonRegIndex);
+            const auto& skeleNode = regNode->asSkeleton3D();
+            printf(" -> SkeRegID=%d\n", skeleNode.skeleRegistry.index);
         }
     }
 

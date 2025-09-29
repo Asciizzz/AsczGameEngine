@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Helpers/Templates.hpp>
-#include <cstdint>
+#include "TinyEngine/TinyHandle.hpp"
+#include "Helpers/Templates.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -21,8 +21,8 @@ struct TinyNode {
         Skeleton3D
     } type = Type::Node3D;
 
-    int parent = -1;
-    std::vector<int> children;
+    TinyHandle parent;
+    std::vector<TinyHandle> children;
 
     struct Node3D {
         static constexpr Type kType = Type::Node3D;
@@ -33,21 +33,21 @@ struct TinyNode {
     struct Mesh3D : Node3D {
         static constexpr Type kType = Type::Mesh3D;
 
-        int meshIndex = -1;
-        std::vector<int> submeshMats;
-        int skeletonNodeIndex = -1;
+        TinyHandle mesh;
+        std::vector<TinyHandle> submeshMats;
+        TinyHandle skeleNode;
     };
 
     struct Skeleton3D : Node3D {
         static constexpr Type kType = Type::Skeleton3D;
 
-        int skeletonRegIndex = -1;
+        TinyHandle skeleRegistry;
     };
 
     /* Keep in mind very clear distinction between:
-        * skeletonNodeIndex: local index to the model's node array that contains the skeleton
+        * skeleNode: local index to the model's node array that contains the skeleton
             -> reference a node
-        * skeletonRegIndex: global index to the registry's skeleton array
+        * skeleRegistry: global index to the registry's skeleton array
             -> reference a skeleton
     */
 
@@ -68,13 +68,6 @@ struct TinyNode {
         TinyNode node;
         node.type = T::kType;
         node.data = data;
-        return node;
-    }
-
-    static TinyNode make(glm::mat4 transform = glm::mat4(1.0f)) {
-        TinyNode node;
-        node.type = Type::Node3D;
-        node.data = Node3D{ transform };
         return node;
     }
 

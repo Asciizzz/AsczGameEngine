@@ -136,7 +136,7 @@ TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
     meshData->import(deviceVK, mesh);
 
     uint32_t index = meshDatas.insert(std::move(meshData));
-    return TinyHandle::make(index, 0, TinyHandle::Type::Mesh, true);
+    return TinyHandle::make(index, TinyHandle::Type::Mesh);
 }
 
 TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
@@ -146,7 +146,7 @@ TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
     // Further descriptor logic in the future
 
     uint32_t index = textureDatas.insert(std::move(textureData));
-    return TinyHandle::make(index, 0, TinyHandle::Type::Texture, true);
+    return TinyHandle::make(index, TinyHandle::Type::Texture);
 }
 
 // Usually you need to know the texture beforehand to remap the material texture indices
@@ -156,44 +156,44 @@ TinyHandle TinyRegistry::addMaterial(const MaterialData& matData) {
     // Update the GPU buffer immediately
     matBuffer->mapAndCopy(materialDatas.data());
 
-    return TinyHandle::make(index, 0, TinyHandle::Type::Material, true);
+    return TinyHandle::make(index, TinyHandle::Type::Material);
 }
 
 TinyHandle TinyRegistry::addSkeleton(const TinySkeleton& skeleton) {
     uint32_t index = skeletonDatas.insert(skeleton);
-    return TinyHandle::make(index, 0, TinyHandle::Type::Skeleton, true);
+    return TinyHandle::make(index, TinyHandle::Type::Skeleton);
 }
 
 TinyHandle TinyRegistry::addNode(const TinyNode& node) {
     uint32_t index = nodeDatas.insert(node);
-    return TinyHandle::make(index, 0, TinyHandle::Type::Node, true);
+    return TinyHandle::make(index, TinyHandle::Type::Node);
 }
 
 // Access to resources - allow modification
 
 TinyRegistry::MeshData* TinyRegistry::getMeshData(const TinyHandle& handle) {
-    if (handle.getType() != TinyHandle::Type::Mesh) return nullptr;
-    return meshDatas.getPtr(handle.getIndex());
+    if (!handle.isType(TinyHandle::Type::Mesh)) return nullptr;
+    return meshDatas.getPtr(handle.index);
 }
 
 TinyRegistry::MaterialData* TinyRegistry::getMaterialData(const TinyHandle& handle) {
-    if (handle.getType() != TinyHandle::Type::Material) return nullptr;
-    return &materialDatas.get(handle.getIndex());
+    if (!handle.isType(TinyHandle::Type::Material)) return nullptr;
+    return &materialDatas.get(handle.index);
 }
 
 TinyRegistry::TextureData* TinyRegistry::getTextureData(const TinyHandle& handle) {
-    if (handle.getType() != TinyHandle::Type::Texture) return nullptr;
-    return textureDatas.getPtr(handle.getIndex());
+    if (!handle.isType(TinyHandle::Type::Texture)) return nullptr;
+    return textureDatas.getPtr(handle.index);
 }
 
 TinySkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
-    if (handle.getType() != TinyHandle::Type::Skeleton) return nullptr;
-    return &skeletonDatas.get(handle.getIndex());
+    if (!handle.isType(TinyHandle::Type::Skeleton)) return nullptr;
+    return &skeletonDatas.get(handle.index);
 }
 
 TinyNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
-    if (handle.getType() != TinyHandle::Type::Node) return nullptr;
-    return &nodeDatas.get(handle.getIndex());
+    if (!handle.isType(TinyHandle::Type::Node)) return nullptr;
+    return &nodeDatas.get(handle.index);
 }
 
 // Vulkan resources creation

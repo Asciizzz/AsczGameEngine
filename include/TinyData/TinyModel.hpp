@@ -23,15 +23,12 @@ struct TinyModel {
 struct TinyModelNew {
     // Raw unlinked registries
     std::vector<TinyMesh> meshes;
+    std::vector<std::vector<TinyHandle>> submeshesMats; // Per-mesh material indices
+
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
     std::vector<TinySkeleton> skeletons;
     std::vector<TinyAnimation> animations;
 
-    std::vector<std::vector<int>> meshesMaterials; // Per-mesh material indices
-    std::vector<int> skeletonForMesh;
-    std::vector<int> animationForSkeleton;
-
-    // Template/Prefab like structure
-    std::vector<TinyNode> nodes; // Local scope
+    std::vector<TinyNode> nodes;
 };

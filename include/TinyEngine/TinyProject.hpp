@@ -3,10 +3,37 @@
 #include "TinyEngine/TinyRegistry.hpp"
 
 struct TinyNodeRuntime {
-    TinyHandle regHandle;     // Points to registry node
-    TinyHandle runtimeHandle; // Points to another runtime node
+    TinyHandle regHandle;     // Points to registry node (data for reference)
 
-    // Override data (not yet implemented)
+    int parent = -1;           // Runtime parent index
+    std::vector<int> children; // Runtime children indices
+
+    // Info override
+    struct Node3D_runtime {
+        static constexpr TinyNode::Type kType = TinyNode::Type::Node3D;
+
+        glm::mat4 transform = glm::mat4(1.0f);
+    };
+
+    struct Mesh3D_runtime : Node3D_runtime {
+        static constexpr TinyNode::Type kType = TinyNode::Type::Mesh3D;
+
+        // Overrideable handles
+        std::vector<TinyHandle> submeshMatOverride;
+        TinyHandle skeletonNodeOverride;
+    };
+
+    struct Skeleton3D_runtime : Node3D_runtime {
+        static constexpr TinyNode::Type kType = TinyNode::Type::Skeleton3D;
+
+        TinyHandle skeletonHandle; // Points to registry skeleton
+    };
+
+    MonoVariant<
+        Node3D_runtime,
+        Mesh3D_runtime,
+        Skeleton3D_runtime
+    > data = Node3D_runtime();
 };
 
 class TinyProject {
