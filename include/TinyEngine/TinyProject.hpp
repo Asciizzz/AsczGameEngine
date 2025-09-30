@@ -125,7 +125,7 @@ public:
      * @param templateIndex point to the template to use.
      * @param rootIndex point to the runtime node to inherit from (optional).
      */
-    void addNodeInstance(uint32_t templateIndex, uint32_t rootIndex = 0);
+    void addNodeInstance(uint32_t templateIndex, uint32_t rootIndex = 0, glm::mat4 at = glm::mat4(1.0f));
 
     void printRuntimeNodeRecursive(
         const UniquePtrVec<TinyNodeRT3D>& rtNodes,

@@ -162,7 +162,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
 // Recursive function to construct runtime node tree
 
-void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex) {
+void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, glm::mat4 at) {
     if (!isValidIndex(templateIndex, templates)) {
         printf("Error: Invalid template index %d\n", templateIndex);
         return;
@@ -174,7 +174,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex) {
 
     // First pass: create and append - each template instance gets its own runtime nodes
     for (const TinyHandle& regHandle : temp.registryNodes) {
-        TinyNode* regNode = registry->getNodeData(regHandle);
+        const TinyNode* regNode = registry->getNodeData(regHandle);
         if (!regNode) {
             printf("Warning: Registry node handle %llu is invalid, skipping.\n", regHandle.value);
             continue;
@@ -193,10 +193,9 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex) {
 
     for (uint32_t i = 0; i < static_cast<uint32_t>(temp.registryNodes.size()); ++i) {
         const TinyHandle& regHandle = temp.registryNodes[i];
-        TinyNode* regNode = registry->getNodeData(regHandle);
+        const TinyNode* regNode = registry->getNodeData(regHandle);
 
         uint32_t rtNodeIndex = regHandleToRtNodeIndex[regHandle];
-
         auto& rtNode = rtNodes[rtNodeIndex];
 
         // Remap children and parent (do not affect the children OR the parent, only apply to this current node)
@@ -222,7 +221,10 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex) {
         // Construct components based on registry node data
 
         if (regNode->hasType(NTypes::Node)) {
-            rtNode->transformOverride = glm::mat4(1.0f); // Default override
+            // Check if this node parent is the root node
+            bool isRootChild = rtNode->parentIdx == rtRootIndex;
+
+            rtNode->transformOverride = isRootChild ? at : glm::mat4(1.0f);
             rtNode->globalTransform = glm::mat4(1.0f);
         }
 
@@ -247,8 +249,6 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex) {
 
             rtNode->add(data);
         }
-
-        // Transforms will be updated every frame in runPlayground(), no need to update here
     }
 
     // Mark the root node as dirty since it's receiving new children
@@ -334,26 +334,25 @@ void TinyProject::updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4
     }
 
     UniquePtr<TinyNodeRT3D>& runtimeNode = rtNodes[rootNodeIndex];
-    if (!runtimeNode) {
-        return;
-    }
+    if (!runtimeNode) return;
 
-    // Always update - no dirty flag checking
-    
     // Get the registry node to access the base transform
-    TinyNode* regNode = registry->getNodeData(runtimeNode->regHandle);
-    if (!regNode) {
-        return;
-    }
+    const TinyNode* regNode = registry->getNodeData(runtimeNode->regHandle);
+    if (!regNode) { return; }
 
     // Calculate the local transform: registry transform * user override
     glm::mat4 localTransform = regNode->transform * runtimeNode->transformOverride;
 
+    // If node has override, print the word has override
+    if (runtimeNode->transformOverride != glm::mat4(1.0f)) {
+        printf("Node %s has transform override.\n", regNode->name.c_str());
+    }
+
     // Calculate global transform: parent global * local transform
     runtimeNode->globalTransform = parentGlobalTransform * localTransform;
 
-    // Mark this node as clean (optional since we're not checking dirty flags anymore)
-    runtimeNode->isDirty = false;
+    // // Mark this node as clean (optional since we're not checking dirty flags anymore)
+    // runtimeNode->isDirty = false;
 
     // Recursively update all children
     for (uint32_t childIdx : runtimeNode->childrenIdxs) {

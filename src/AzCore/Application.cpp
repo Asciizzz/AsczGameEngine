@@ -279,7 +279,19 @@ void Application::mainLoop() {
 
 // =================================
 
-        project->runPlayground(dTime);
+        // Press p to place
+        static bool pPressed = false;
+        if (k_state[SDL_SCANCODE_P] && !pPressed) {
+            project->addNodeInstance(1, 0, glm::translate(glm::mat4(1.0f), camRef.pos));
+            project->updateGlobalTransforms(0);
+            
+            project->printRuntimeNodeHierarchy();
+            pPressed = true;
+        } else if (!k_state[SDL_SCANCODE_P]) {
+            pPressed = false;
+        }
+
+        // project->runPlayground(dTime);
 
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
