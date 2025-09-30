@@ -131,7 +131,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
     const TinyTemplate& temp = templates[templateIndex];
 
-    // First pass: create, append, and update the global transform of all runtime nodes
+    // First pass: create and append
     for (const TinyHandle& regHandle : temp.registryNodes) {
         TinyNode* regNode = registry->getNodeData(regHandle);
         if (!regNode) {
@@ -201,9 +201,9 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
                 TinyNodeRuntime::Mesh3D_runtime mesh3DRuntime;
                 mesh3DRuntime.transformOverride = mesh3D.transform;
 
-                mesh3DRuntime.submeshTransformsOverride.resize(mesh3D.submeshMats.size(), glm::mat4(1.0f));
-                mesh3DRuntime.submeshMatsOverride = mesh3D.submeshMats;
-                mesh3DRuntime.skeletonNodeOverride = mesh3D.skeleNode;
+                // Get the true skeleton node in the runtime
+                bool hasValidSkeleNode = mesh3D.skeleNode.isValid() && registryToRuntimeNodeMap.count(mesh3D.skeleNode);
+                mesh3DRuntime.skeleNodeOverride = hasValidSkeleNode ? registryToRuntimeNodeMap[mesh3D.skeleNode] : TinyHandle::invalid();
 
                 runtimeNode->make(mesh3DRuntime);
                 break;

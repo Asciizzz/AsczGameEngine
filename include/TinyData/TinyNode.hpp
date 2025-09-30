@@ -42,8 +42,8 @@ struct TinyNode {
     struct BoneAttach3D : Node3D {
         static constexpr Type kType = Type::BoneAttach3D;
 
-        TinyHandle skeleNode; // Point to a Akeleton3D node
-        TinyHandle boneIndex = -1; // Index in skeleton
+        TinyHandle skeleNode; // Point to a Skeleton3D node
+        TinyHandle bone; // Index in skeleton
     };
 
     struct Skeleton3D : Node3D {

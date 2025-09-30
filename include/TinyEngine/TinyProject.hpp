@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TinyEngine/TinyRegistry.hpp"
+#include "TinyEngine/TinyInstance.hpp"
 
 struct TinyNodeRuntime {
     TinyHandle regHandle;     // Points to registry node (data for reference)
@@ -22,10 +23,15 @@ struct TinyNodeRuntime {
     struct Mesh3D_runtime : Node3D_runtime {
         static constexpr TinyNode::Type kType = TinyNode::Type::MeshRender3D;
 
-        // Overrideable handles (initialized with registry data)
-        std::vector<glm::mat4> submeshTransformsOverride; // Per-submesh transform overrides
-        std::vector<TinyHandle> submeshMatsOverride;
-        TinyHandle skeletonNodeOverride;
+        // Overrideable handles
+        TinyHandle skeleNodeOverride; // Point to a runtime Skeleton3D node
+    };
+
+    struct Bone3D_runtime : Node3D_runtime {
+        static constexpr TinyNode::Type kType = TinyNode::Type::BoneAttach3D;
+
+        TinyHandle skeleNodeOverride; // Point to a runtime Skeleton3D node
+        TinyHandle boneOverride;
     };
 
     struct Skeleton3D_runtime : Node3D_runtime {
