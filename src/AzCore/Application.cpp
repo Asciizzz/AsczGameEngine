@@ -141,9 +141,7 @@ void Application::initComponents() {
         .setBindings({ vriggedBind })
         .setAttributes({ vriggedAttrs });
 
-    vertexInputVKs["Single"] = VertexInputVK()
-        // .setBindings({ vstaticBind })
-        // .setAttributes({ vstaticAttrs });
+    vertexInputVKs["Test"] = VertexInputVK()
         .setBindings({ vriggedBind })
         .setAttributes({ vriggedAttrs });
     
@@ -289,7 +287,7 @@ void Application::mainLoop() {
 
             rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
-            rendererRef.drawSingleInstance(resGroup.get(), glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Single"), 0);
+            rendererRef.drawScene(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Test"), project.get());
 
             rendererRef.endFrame(imageIndex);
         };

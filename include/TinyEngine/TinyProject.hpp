@@ -137,6 +137,12 @@ public:
         registry->printDataCounts();
     }
 
+
+    // These are not official public methods, only for testing purposes
+    const UniquePtrVec<TinyNodeRT>& getRuntimeNodes() const { return runtimeNodes; }
+
+    const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
+
 private:
     const AzVulk::DeviceVK* device;
 
@@ -145,5 +151,5 @@ private:
     std::vector<TinyTemplate> templates;
 
     // A basic scene (best if we use smart pointers)
-    UniquePtrVec<TinyNodeRT> runtimeNodes; // Construct from registry[templates.type][template.index]
+    UniquePtrVec<TinyNodeRT> runtimeNodes;
 };

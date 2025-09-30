@@ -311,6 +311,58 @@ void Renderer::drawSky(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRa
 }
 
 
+void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const TinyProject* project) const {
+    const auto& rtNodes = project->getRuntimeNodes();
+
+    const auto& registry = project->getRegistry();
+
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
+    rPipeline->bindCmd(currentCmd);
+
+    // Bind only the global descriptor set (set 0) for test pipeline
+    VkDescriptorSet globalSet = glbUBO->getDescSet(currentFrame);
+    rPipeline->bindSets(currentCmd, &globalSet, 1);
+
+    for (const auto& rtNode : rtNodes) {
+        // Only draw mesh nodes
+        if (rtNode->type != TinyNode3D::Type::MeshRender) continue;
+
+        const auto& transform = rtNode->globalTransform;
+        // Global transform as push constant (set 0, binding 0)
+        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), transform);
+
+        const auto& regNode = registry->getNodeData(rtNode->regHandle);
+        const auto& regMeshData = regNode->as<TinyNode3D::MeshRender>();
+
+        const auto& regMesh = registry->getMeshData(regMeshData.mesh);
+        const auto& submeshes = regMesh->submeshes;
+
+        const auto& submeshMats = regMeshData.submeshMats;
+
+        // Normally you'd bind the material based on the mesh node, but because we haven't setup the bind descriptor, ignore it
+
+        // Draw each individual submeshes
+        VkBuffer vertexBuffer = regMesh->vertexBuffer;
+        VkBuffer indexBuffer = regMesh->indexBuffer;
+        VkIndexType indexType = regMesh->indexType;
+
+        VkBuffer buffers[] = { vertexBuffer };
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
+        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
+
+        for (size_t i = 0; i < submeshes.size(); ++i) {
+            uint32_t indexCount = submeshes[i].indexCount;
+            if (indexCount == 0) continue;
+
+            uint32_t indexOffset = submeshes[i].indexOffset;
+
+            vkCmdDrawIndexed(currentCmd, indexCount, 1, indexOffset, 0, 0);
+        }
+    }
+}
+
+
 // End frame: finalize command buffer, submit, and present
 void Renderer::endFrame(uint32_t imageIndex) {
     if (imageIndex == UINT32_MAX) return;

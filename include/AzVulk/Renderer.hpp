@@ -16,6 +16,8 @@
 #include "TinyEngine/ResourceGroup.hpp"
 #include "TinyEngine/StaticInstance.hpp"
 
+#include "TinyEngine/TinyProject.hpp"
+
 namespace AzVulk {
 
 class Renderer {
@@ -52,6 +54,8 @@ public:
     void drawSingleInstance(const TinyEngine::ResourceGroup* resGroup, const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t modelIndex) const;
 
     void drawSky(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const;
+
+    void drawScene(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const TinyProject* project) const;
 
 
     // Post-processing methods

@@ -13,7 +13,8 @@ glslc Shaders/raw/Sky/sky.vert -o Shaders/bin/Sky/sky.vert.spv
 glslc Shaders/raw/Sky/sky.frag -o Shaders/bin/Sky/sky.frag.spv
 
 REM Single instance shader
-glslc Shaders/raw/Rasterize/StaticSingle.vert -o Shaders/bin/Rasterize/StaticSingle.vert.spv
+glslc Shaders/raw/Rasterize/TestSingle.vert -o Shaders/bin/Rasterize/TestSingle.vert.spv
+glslc Shaders/raw/Rasterize/TestSingle.frag -o Shaders/bin/Rasterize/TestSingle.frag.spv
 
 REM Post-process shaders
 glslc Shaders/raw/PostProcess/tonemap.comp -o Shaders/bin/PostProcess/tonemap.comp.spv
