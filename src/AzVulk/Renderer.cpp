@@ -325,17 +325,17 @@ void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const Pipeline
 
     for (const auto& rtNode : rtNodes) {
         // Only draw mesh nodes
-        if (rtNode->type != TinyNode3D::Type::MeshRender) continue;
+        if (!rtNode->hasType(TinyNode::Types::MeshRender)) continue;
 
         const auto& transform = rtNode->globalTransform;
 
         const auto& regNode = registry->getNodeData(rtNode->regHandle);
-        const auto& regMeshData = regNode->as<TinyNode3D::MeshRender>();
+        const auto& regMeshData = regNode->get<TinyNode::MeshRender>();
 
-        const auto& regMesh = registry->getMeshData(regMeshData.mesh);
+        const auto& regMesh = registry->getMeshData(regMeshData->mesh);
         const auto& submeshes = regMesh->submeshes;
 
-        const auto& submeshMats = regMeshData.submeshMats;
+        const auto& submeshMats = regMeshData->submeshMats;
 
         // Normally you'd bind the material based on the mesh node, but because we haven't setup the bind descriptor, ignore it
 

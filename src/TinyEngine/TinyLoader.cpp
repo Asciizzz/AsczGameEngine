@@ -713,9 +713,9 @@ void loadAnimations(std::vector<TinyAnimation>& animations, std::vector<ChannelT
 void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
                const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex)
 {
-    std::vector<TinyNode3D> nodes;
+    std::vector<TinyNode> nodes;
 
-    auto pushNode = [&](TinyNode3D&& node) -> int {
+    auto pushNode = [&](TinyNode&& node) -> int {
         int index = static_cast<int>(nodes.size());
         nodes.push_back(std::move(node));
         return index;
@@ -727,9 +727,8 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
     };
 
     // Root node (index 0)
-    TinyNode3D rootNode;
+    TinyNode rootNode;
     rootNode.name = "FunnyRoot";
-    rootNode.make(TinyNode3D::Node());
     pushNode(std::move(rootNode));
 
     const auto& submeshesMats = tinyModel.submeshesMats;
@@ -737,13 +736,13 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
     // Skeleton parent nodes
     UnorderedMap<int, int> skeletonToModelNodeIndex;
     for (size_t skelIdx = 0; skelIdx < tinyModel.skeletons.size(); ++skelIdx) {
-        TinyNode3D skeleNode;
+        TinyNode skeleNode;
         skeleNode.name = "Skeleton_" + std::to_string(skelIdx);
 
-        TinyNode3D::Skeleton skel3D;
+        TinyNode::Skeleton skel3D;
         skel3D.skeleRegistry = TinyHandle((uint32_t)skelIdx, TinyHandle::Type::Skeleton);
 
-        skeleNode.make(std::move(skel3D));
+        skeleNode.add<TinyNode::Skeleton>(std::move(skel3D));
 
         int modelNodeIndex = pushNode(std::move(skeleNode));
         skeletonToModelNodeIndex[(int)skelIdx] = modelNodeIndex;
@@ -762,9 +761,8 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
             continue;
         }
 
-        TinyNode3D placeholder;
+        TinyNode placeholder;
         placeholder.name = model.nodes[i].name.empty() ? "Node" : model.nodes[i].name;
-        placeholder.make(TinyNode3D::Node());
 
         int globalIdx = pushNode(std::move(placeholder));
         localToGlobal[i] = globalIdx;
@@ -776,7 +774,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
         if (globalIdx < 0) continue; // skip joints
 
         const tinygltf::Node& gltfNode = model.nodes[i];
-        TinyNode3D& target = nodes[globalIdx];
+        TinyNode& target = nodes[globalIdx];
 
         // Transform
         glm::mat4 matrix(1.0f);
@@ -807,11 +805,11 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
         target.transform = matrix;
 
         if (gltfNode.mesh >= 0) {
-            TinyNode3D::MeshRender meshData;
+            TinyNode::MeshRender meshData;
             meshData.mesh = TinyHandle((uint32_t)gltfNode.mesh, TinyHandle::Type::Mesh);
 
-            bool hasValidMaterials = (gltfNode.mesh >= 0 &&
-                                     gltfNode.mesh < (int)submeshesMats.size());
+            bool hasValidMaterials=(gltfNode.mesh >= 0 &&
+                                    gltfNode.mesh < (int)submeshesMats.size());
             meshData.submeshMats = hasValidMaterials ? submeshesMats[gltfNode.mesh] : std::vector<TinyHandle>();
 
             int skeletonIndex = gltfNode.skin;
@@ -820,9 +818,9 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
                 meshData.skeleNode = TinyHandle(it->second, TinyHandle::Type::Node);
             }
 
-            target.make(std::move(meshData));
+            target.add<TinyNode::MeshRender>(std::move(meshData));
         } else {
-            target.make(TinyNode3D::Node{});
+            // Future logic here
         }
     }
 
@@ -871,36 +869,31 @@ constexpr const char* RED   = "\033[31m";
 constexpr const char* WHITE = "\033[0m";
 
 // Recursive hierarchy printer
-void printNodeHierarchy(const std::vector<TinyNode3D>& nodes, int nodeIndex, int depth = 0) {
-    using NType = TinyNode3D::Type;
-    
+void printNodeHierarchy(const std::vector<TinyNode>& nodes, int nodeIndex, int depth = 0) {
+    using NType = TinyNode::Types;
+
     if (nodeIndex < 0 || nodeIndex >= static_cast<int>(nodes.size())) return;
 
-    const TinyNode3D& node = nodes[nodeIndex];
+    const TinyNode& node = nodes[nodeIndex];
     std::string indent(depth * 2, ' ');
 
-    std::string typeStr;
-    switch (node.type) {
-        case NType::Node:        typeStr = "Node"; break;
-        case NType::MeshRender:  typeStr = "MeshRender"; break;
-        case NType::Skeleton:    typeStr = "Skeleton"; break;
-        case NType::BoneAttach:  typeStr = "BoneAttach"; break;
-        default:                 typeStr = "Unknown"; break;
-    }
-
     // Print node name in RED
-    std::cout << indent << RED << node.name << WHITE << " [" << typeStr << "]";
+    std::cout << indent << RED << node.name << WHITE;
+
+    // Print the translation part of the transform
+    glm::vec3 translation = glm::vec3(node.transform[3]);
+    std::cout << " (Pos: " << translation.x << ", " << translation.y << ", " << translation.z << ")";
 
     // Append extra info
-    if (node.isType(NType::MeshRender)) {
-        const auto& mesh = std::get<TinyNode3D::MeshRender>(node.data);
-        std::cout << " -> MeshID=" << mesh.mesh.index
-                  << ", MaterialIDs=" << formatVector(mesh.submeshMats)
-                  << ", SkeNodeID=" << mesh.skeleNode.index;
-    } else if (node.isType(NType::Skeleton)) {
-        const auto& skel = std::get<TinyNode3D::Skeleton>(node.data);
-        std::cout << " -> SkeRegID=" << skel.skeleRegistry.index;
-    }
+    // if (node.isType(NType::MeshRender)) {
+    //     const auto& mesh = std::get<TinyNode3D::MeshRender>(node.data);
+    //     std::cout << " -> MeshID=" << mesh.mesh.index
+    //               << ", MaterialIDs=" << formatVector(mesh.submeshMats)
+    //               << ", SkeNodeID=" << mesh.skeleNode.index;
+    // if (node.isType(NType::Skeleton)) {
+    //     const auto& skel = std::get<TinyNode3D::Skeleton>(node.data);
+    //     std::cout << " -> SkeRegID=" << skel.skeleRegistry.index;
+    // }
 
     std::cout << "\n";
 
@@ -911,7 +904,7 @@ void printNodeHierarchy(const std::vector<TinyNode3D>& nodes, int nodeIndex, int
 }
 
 // Wrapper
-void printHierarchy(const std::vector<TinyNode3D>& nodes) {
+void printHierarchy(const std::vector<TinyNode>& nodes) {
     if (nodes.empty()) {
         std::cout << "[Empty node list]\n";
         return;

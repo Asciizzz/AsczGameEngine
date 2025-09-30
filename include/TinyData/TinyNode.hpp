@@ -5,9 +5,14 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <stdexcept>
+#include <cstdint>
+#include <optional>
+#include <tuple>
+#include <vector>
+#include <string>
 
-struct TinyNode3D {
-    // Default node data
+struct TinyNode {
     std::string name = "Node";
 
     enum class Scope {
@@ -15,76 +20,98 @@ struct TinyNode3D {
         Global // Global registry
     } scope = Scope::Local;
 
-    enum class Type {
-        Node,
-        MeshRender,
-        Skeleton,
-        BoneAttach
-    } type = Type::Node;
+    enum class Types : uint8_t {
+        Node          = 0,
+        MeshRender    = 1 << 0,
+        Skeleton      = 1 << 1,
+        BoneAttach    = 1 << 2
+    };
+    uint8_t types = toMask(Types::Node);
 
     TinyHandle parent;
     std::vector<TinyHandle> children;
 
-    // Transform data is now part of the base TinyNode3D
     glm::mat4 transform = glm::mat4(1.0f);
 
-    struct Node {
-        static constexpr Type kType = Type::Node;
-    };
-
+    // Component definitions
     struct MeshRender {
-        static constexpr Type kType = Type::MeshRender;
-
+        static constexpr Types kType = Types::MeshRender;
         TinyHandle mesh;
         std::vector<TinyHandle> submeshMats;
         TinyHandle skeleNode;
     };
 
     struct BoneAttach {
-        static constexpr Type kType = Type::BoneAttach;
-
+        static constexpr Types kType = Types::BoneAttach;
         TinyHandle skeleNode; // Point to a Skeleton node
         TinyHandle bone; // Index in skeleton
     };
 
-    struct Skeleton {
-        static constexpr Type kType = Type::Skeleton;
-
-        TinyHandle skeleRegistry;
-    };  
-
-    /* Keep in mind very clear distinction between:
-        * skeleNode: local index to the model's node array that contains the skeleton
-            -> reference a node
-        * skeleRegistry: global index to the registry's skeleton array
-            -> reference a skeleton
+    /** Keep in mind very clear distinction between:
+    ** @param skeleNode: local index to the model's node array that contains the skeleton
+        -> reference a node
+    ** @param skeleRegistry: global index to the registry's skeleton array
+        -> reference a skeleton
     */
+    struct Skeleton {
+        static constexpr Types kType = Types::Skeleton;
+        TinyHandle skeleRegistry;
+    };
 
-    MonoVariant<
-        Node,
-        MeshRender,
-        Skeleton,
-        BoneAttach
-    > data = Node();
+private:
+    // Store all components in a tuple - completely generic!
+    std::tuple<MeshRender, BoneAttach, Skeleton> components;
 
+    // Template magic to get component by type from tuple
     template<typename T>
-    void make(T&& newData) {
-        type = T::kType;
-        data = std::forward<T>(newData);
+    T& getComponent() {
+        return std::get<T>(components);
     }
 
     template<typename T>
-    static TinyNode3D make(const T& data) {
-        TinyNode3D node;
-        node.type = T::kType;
-        node.data = data;
-        return node;
+    const T& getComponent() const {
+        return std::get<T>(components);
+    }
+
+public:
+    static constexpr uint8_t toMask(Types t) {
+        return static_cast<uint8_t>(t);
+    }
+
+    // Component management functions
+    bool hasType(Types componentType) const {
+        return (types & toMask(componentType)) != 0;
+    }
+
+    void setType(Types componentType, bool state) {
+        if (state) types |= toMask(componentType);
+        else       types &= ~toMask(componentType);
+    }
+
+    // Completely generic template functions - no knowledge of specific components!
+    template<typename T>
+    bool hasComponent() const {
+        return hasType(T::kType);
     }
 
     template<typename T>
-    T& as() { return std::get<T>(data); }
-    template<typename T>
-    const T& as() const { return std::get<T>(data); }
+    void add(const T& componentData) {
+        setType(T::kType, true);
+        getComponent<T>() = componentData;
+    }
 
-    bool isType(Type t) const { return type == t; }
+    template<typename T>
+    void remove() {
+        setType(T::kType, false);
+    }
+
+    template<typename T>
+    T* get() {
+        return hasComponent<T>() ? &getComponent<T>() : nullptr;
+    }
+
+    template<typename T>
+    const T* get() const {
+        return hasComponent<T>() ? &getComponent<T>() : nullptr;
+    }
 };

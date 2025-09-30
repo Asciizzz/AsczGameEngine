@@ -5,7 +5,7 @@
 
 struct TinyNodeRT3D {
     TinyHandle regHandle;     // Points to registry node (data for reference)
-    TinyNode3D::Type type = TinyNode3D::Type::Node; // Direct copy of registry type
+    uint8_t types = TinyNode::toMask(TinyNode::Types::Node);
 
     uint32_t parentIdx = UINT32_MAX;    // Runtime parent index (UINT32_MAX = no parent)
     std::vector<uint32_t> childrenIdxs;   // Runtime children indices
@@ -15,55 +15,77 @@ struct TinyNodeRT3D {
     glm::mat4 transformOverride = glm::mat4(1.0f);
     glm::mat4 globalTransform = glm::mat4(1.0f);
 
-    // Runtime data structures
-    struct Node {
-        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Node;
-    };
-
-    struct Mesh {
-        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::MeshRender;
+    struct MeshRender {
+        static constexpr TinyNode::Types kType = TinyNode::Types::MeshRender;
 
         uint32_t skeleNodeRT = UINT32_MAX;
     };
 
-    struct Bone {
-        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::BoneAttach;
+    struct BoneAttach {
+        static constexpr TinyNode::Types kType = TinyNode::Types::BoneAttach;
 
         uint32_t skeleNodeRT = UINT32_MAX;
     };
 
     struct Skeleton {
-        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Skeleton;
+        static constexpr TinyNode::Types kType = TinyNode::Types::Skeleton;
 
         std::vector<glm::mat4> boneTransformsFinal;
     };
 
-    MonoVariant<
-        Node,
-        Mesh,
-        Skeleton
-    > data = Node();
+private:
+    std::tuple<MeshRender, BoneAttach, Skeleton> components;
 
+    // Template magic to get component by type from tuple
     template<typename T>
-    void make(T&& newData) {
-        using CleanT = std::decay_t<T>;   // remove refs/const
-        type = CleanT::kType;
-        data = std::forward<T>(newData);
+    T& getComponent() {
+        return std::get<T>(components);
     }
 
     template<typename T>
-    static TinyNodeRT3D make(const T& data) {
-        TinyNodeRT3D node;
-        using CleanT = std::decay_t<T>;   // remove refs/const
-        node.type = CleanT::kType;
-        node.data = data;
-        return node;
+    const T& getComponent() const {
+        return std::get<T>(components);
     }
 
-    /**
-     * Manages parent-child relationships with automatic dirty flagging.
-     * Adds child to this node and marks both nodes as dirty for transform updates.
-     */
+public:
+    // Component management functions
+    bool hasType(TinyNode::Types componentType) const {
+        return (types & TinyNode::toMask(componentType)) != 0;
+    }
+
+    void setType(TinyNode::Types componentType, bool state) {
+        if (state) types |= TinyNode::toMask(componentType);
+        else       types &= ~TinyNode::toMask(componentType);
+    }
+
+    // Completely generic template functions - no knowledge of specific components!
+    template<typename T>
+    bool hasComponent() const {
+        return hasType(T::kType);
+    }
+
+    template<typename T>
+    void add(const T& componentData) {
+        setType(T::kType, true);
+        getComponent<T>() = componentData;
+    }
+
+    template<typename T>
+    void remove() {
+        setType(T::kType, false);
+    }
+
+    template<typename T>
+    T* get() {
+        return hasComponent<T>() ? &getComponent<T>() : nullptr;
+    }
+
+    template<typename T>
+    const T* get() const {
+        return hasComponent<T>() ? &getComponent<T>() : nullptr;
+    }
+
+
     void addChild(uint32_t childIndex, std::vector<std::unique_ptr<TinyNodeRT3D>>& allrtNodes);
 };
 
@@ -80,7 +102,7 @@ public:
         registry = MakeUnique<TinyRegistry>(deviceVK);
 
         // Create root node
-        TinyHandle rootHandle = registry->addNode(TinyNode3D());
+        TinyHandle rootHandle = registry->addNode(TinyNode());
 
         auto rootNode = MakeUnique<TinyNodeRT3D>();
         rootNode->regHandle = rootHandle;
