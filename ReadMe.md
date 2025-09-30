@@ -116,16 +116,16 @@ Skeleton  [0] - contains a bunch of bones
 Reg.Nodes{}:
 
 [0]Root <Node3D>
-[1]  Armature<Skeleton3D> -> Reg.Skeleton[0]
-[2]    BodyPart0<Mesh3D> -> Reg.Meshes[0] - Reg.Nodes[1] - Reg.Materials[0]
-[3]    BodyPart1<Mesh3D> -> Reg.Meshes[1] - Reg.Nodes[1] - Reg.Materials[1]
-[4]    BodyPart2<Mesh3D> -> Reg.Meshes[2] - Reg.Nodes[1] - Reg.Materials[2]
-[5]    BodyPart3<Mesh3D> -> Reg.Meshes[3] - Reg.Nodes[1] - Reg.Materials[3]
-[6]    BodyPart4<Mesh3D> -> Reg.Meshes[4] - Reg.Nodes[1] - Reg.Materials[4]
-[7]    BodyPart5<Mesh3D> -> Reg.Meshes[5] - Reg.Nodes[1] - Reg.Materials[5]
+[1]  Armature<Skeleton3D> ==Reg=> Skeleton[0]
+[2]    BodyPart0<MeshRender3D> ==Reg=> Meshes[0] - Nodes[1] - Materials[0]
+[3]    BodyPart1<MeshRender3D> ==Reg=> Meshes[1] - Nodes[1] - Materials[1]
+[4]    BodyPart2<MeshRender3D> ==Reg=> Meshes[2] - Nodes[1] - Materials[2]
+[5]    BodyPart3<MeshRender3D> ==Reg=> Meshes[3] - Nodes[1] - Materials[3]
+[6]    BodyPart4<MeshRender3D> ==Reg=> Meshes[4] - Nodes[1] - Materials[4]
+[7]    BodyPart5<MeshRender3D> ==Reg=> Meshes[5] - Nodes[1] - Materials[5]
 ```
 
-Note: In `BodyParts<Mesh3D>`, mesh reference the Node containing the skeleton, NOT the Skeleton itself
+Note: In `BodyParts<MeshRender3D>`, mesh reference the Node containing the skeleton, NOT the Skeleton itself
 
 ---
 

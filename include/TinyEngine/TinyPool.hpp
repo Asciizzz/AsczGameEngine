@@ -11,6 +11,8 @@ A fixed-capacity free-list pool for managing resources by stable indices.
     to reference resources by index (e.g., for scenes or GPU descriptor indexing).
 */
 
+#define TINYPOOL_CAPACITY_STEP 128
+
 template<typename Type>
 struct TinyPoolRaw {
     TinyPoolRaw() = default;
@@ -20,12 +22,14 @@ struct TinyPoolRaw {
     std::vector<uint32_t> freeList;
     std::vector<bool> occupied; // For arbitrary types
     uint32_t capacity = 0;
+    uint32_t count = 0;
 
     void clear() {
         items.clear();
         freeList.clear();
         occupied.clear();
         capacity = 0;
+        count = 0;
     }
 
     void allocate(uint32_t capacity) {
@@ -60,7 +64,10 @@ struct TinyPoolRaw {
 
     template<typename U>
     uint32_t insert(U&& item) {
-        checkSpace();
+        // Resize until there's space
+        while (!hasSpace()) resize(capacity + TINYPOOL_CAPACITY_STEP);
+
+        count++;
 
         uint32_t index = freeList.back();
         freeList.pop_back();
@@ -71,6 +78,7 @@ struct TinyPoolRaw {
 
     void remove(uint32_t index) {
         if (!isValid(index)) return;
+        count--;
 
         items[index] = {};
         occupied[index] = false;
@@ -83,12 +91,6 @@ struct TinyPoolRaw {
 
     bool isValid(uint32_t index) const {
         return index < items.size() && occupied[index];
-    }
-
-    void checkSpace() const {
-        if (!hasSpace()) {
-            throw std::runtime_error("TinyPoolRaw: No space available for new items");
-        }
     }
 
     void checkValid(uint32_t index) const {
@@ -120,11 +122,13 @@ public:
     UniquePtrVec<Type> items;
     std::vector<uint32_t> freeList;
     uint32_t capacity = 0;
+    uint32_t count = 0;
 
     void clear() {
         items.clear();
         freeList.clear();
         capacity = 0;
+        count = 0;
     }
 
     void allocate(uint32_t capacity) {
@@ -153,7 +157,8 @@ public:
     }
 
     uint32_t insert(UniquePtr<Type> item) {
-        checkSpace();
+        while (!hasSpace()) resize(capacity + TINYPOOL_CAPACITY_STEP);
+        count++;
 
         uint32_t index = freeList.back();
         freeList.pop_back();
@@ -168,6 +173,7 @@ public:
 
     void remove(uint32_t index) {
         if (!isValid(index)) return;
+        count--;
 
         items[index].reset();
         freeList.push_back(index);
@@ -179,12 +185,6 @@ public:
 
     bool isValid(uint32_t index) const {
         return index < items.size() && static_cast<bool>(items[index]);
-    }
-
-    void checkSpace() const {
-        if (!hasSpace()) {
-            throw std::runtime_error("TinyPoolPtr: No space available for new items");
-        }
     }
 
     void checkValid(uint32_t index) const {

@@ -5,12 +5,16 @@
 
 union TinyHandle {
     enum class Type : uint8_t {
+        // Registry types
+        Node,
         Mesh,
         Material,
         Texture,
         Skeleton,
         Animation,
-        Node,
+        
+        // Special types
+        Bone,
         Unknown = 255
     };
     

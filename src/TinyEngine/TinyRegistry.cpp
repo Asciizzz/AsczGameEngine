@@ -118,15 +118,12 @@ bool TinyRegistry::TextureData::import(const AzVulk::DeviceVK* deviceVK, const T
 
 TinyRegistry::TinyRegistry(const AzVulk::DeviceVK* deviceVK)
 : deviceVK(deviceVK) {
-    // Resize
-    materialDatas.resize(maxMaterialCount);
-    textureDatas.resize(maxTextureCount);
-    meshDatas.resize(maxMeshCount);
-    skeletonDatas.resize(maxSkeletonCount);
-    nodeDatas.resize(maxNodeCount);
-
-    printf("TinyRegistry initialized with capacities - Textures: %u, Materials: %u, Meshes: %u, Skeletons: %u, Nodes: %u\n",
-        maxTextureCount, maxMaterialCount, maxMeshCount, maxSkeletonCount, maxNodeCount);
+    // Start humble
+    materialDatas.resize(prevMaterialCapacity);
+    textureDatas.resize(prevTextureCapacity);
+    meshDatas.resize(prevMeshCapacity);
+    skeletonDatas.resize(prevSkeletonCapacity);
+    nodeDatas.resize(prevNodeCapacity);
 
     initVkResources();
 }
@@ -137,6 +134,8 @@ TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
     meshData->import(deviceVK, mesh);
 
     uint32_t index = meshDatas.insert(std::move(meshData));
+    resizeCheck();
+
     return TinyHandle(index, HType::Mesh);
 }
 
@@ -144,15 +143,18 @@ TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
     UniquePtr<TextureData> textureData = MakeUnique<TextureData>();
     textureData->import(deviceVK, texture);
 
+    uint32_t index = textureDatas.insert(std::move(textureData));
+    resizeCheck();
+
     // Further descriptor logic in the future
 
-    uint32_t index = textureDatas.insert(std::move(textureData));
     return TinyHandle(index, HType::Texture);
 }
 
 // Usually you need to know the texture beforehand to remap the material texture indices
 TinyHandle TinyRegistry::addMaterial(const MaterialData& matData) {
     uint32_t index = materialDatas.insert(matData);
+    resizeCheck();
 
     // Update the GPU buffer immediately
     matBuffer->mapAndCopy(materialDatas.data());
@@ -162,11 +164,15 @@ TinyHandle TinyRegistry::addMaterial(const MaterialData& matData) {
 
 TinyHandle TinyRegistry::addSkeleton(const TinySkeleton& skeleton) {
     uint32_t index = skeletonDatas.insert(skeleton);
+    resizeCheck();
+
     return TinyHandle(index, HType::Skeleton);
 }
 
 TinyHandle TinyRegistry::addNode(const TinyNode& node) {
     uint32_t index = nodeDatas.insert(node);
+    resizeCheck();
+
     return TinyHandle(index, HType::Node);
 }
 
@@ -198,6 +204,33 @@ TinyNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
 }
 
 // Vulkan resources creation
+void TinyRegistry::resizeCheck() {
+    // TinyPool has auto-resize upon insertion
+    // so we just need to check if we need to recreate any Vulkan resources
+
+    if (materialDatas.capacity >= prevMaterialCapacity) {
+        prevMaterialCapacity = materialDatas.capacity;
+        createMaterialVkResources();
+    }
+
+    if (textureDatas.capacity >= prevTextureCapacity) {
+        prevTextureCapacity = textureDatas.capacity;
+        createTextureVkResources();
+    }
+
+    if (meshDatas.capacity >= prevMeshCapacity) {
+        prevMeshCapacity = meshDatas.capacity;
+    }
+
+    if (skeletonDatas.capacity >= prevSkeletonCapacity) {
+        prevSkeletonCapacity = skeletonDatas.capacity;
+    }
+
+    if (nodeDatas.capacity >= prevNodeCapacity) {
+        prevNodeCapacity = nodeDatas.capacity;
+    }
+}
+
 
 void TinyRegistry::initVkResources() {
     createMaterialVkResources();
@@ -205,23 +238,21 @@ void TinyRegistry::initVkResources() {
 }
 
 void TinyRegistry::createMaterialVkResources() {
-    if (maxMaterialCount == 0) throw std::runtime_error("TinyRegistry: maxMaterialCount cannot be zero");
-
     // Create descriptor layout for materials
     matDescLayout = MakeUnique<DescLayout>();
     matDescLayout->create(deviceVK->lDevice, {
-        {0, DescType::StorageBuffer, maxMaterialCount, ShaderStage::Fragment, nullptr}
+        {0, DescType::StorageBuffer, materialDatas.capacity, ShaderStage::Fragment, nullptr}
     });
 
     // Create descriptor pool
     matDescPool = MakeUnique<DescPool>();
     matDescPool->create(deviceVK->lDevice, {
-        {DescType::StorageBuffer, maxMaterialCount}
+        {DescType::StorageBuffer, materialDatas.capacity}
     }, 1);
 
     // Create material buffer
     matBuffer = MakeUnique<DataBuffer>();
-    matBuffer->setDataSize(sizeof(MaterialData) * maxMaterialCount)
+    matBuffer->setDataSize(sizeof(MaterialData) * materialDatas.capacity)
              .setUsageFlags(BufferUsage::Storage | BufferUsage::TransferDst)
              .setMemPropFlags(MemProp::HostVisibleAndCoherent)
              .createBuffer(deviceVK)
@@ -247,18 +278,16 @@ void TinyRegistry::createMaterialVkResources() {
 }
 
 void TinyRegistry::createTextureVkResources() {
-    if (maxTextureCount == 0) throw std::runtime_error("TinyRegistry: maxTextureCount cannot be zero");
-
     // Create descriptor layout for textures
     texDescLayout = MakeUnique<DescLayout>();
     texDescLayout->create(deviceVK->lDevice, {
-        {0, DescType::CombinedImageSampler, maxTextureCount, ShaderStage::Fragment, nullptr}
+        {0, DescType::CombinedImageSampler, textureDatas.capacity, ShaderStage::Fragment, nullptr}
     });
 
     // Create descriptor pool
     texDescPool = MakeUnique<DescPool>();
     texDescPool->create(deviceVK->lDevice, {
-        {DescType::CombinedImageSampler, maxTextureCount}
+        {DescType::CombinedImageSampler, textureDatas.capacity}
     }, 1);
 
     // Allocate descriptor set

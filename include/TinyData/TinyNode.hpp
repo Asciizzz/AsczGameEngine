@@ -17,8 +17,9 @@ struct TinyNode {
 
     enum class Type {
         Node3D,
-        Mesh3D,
-        Skeleton3D
+        MeshRender3D,
+        Skeleton3D,
+        BoneAttach3D
     } type = Type::Node3D;
 
     TinyHandle parent;
@@ -30,19 +31,26 @@ struct TinyNode {
         glm::mat4 transform = glm::mat4(1.0f);
     };
 
-    struct Mesh3D : Node3D {
-        static constexpr Type kType = Type::Mesh3D;
+    struct MeshRender3D : Node3D {
+        static constexpr Type kType = Type::MeshRender3D;
 
         TinyHandle mesh;
         std::vector<TinyHandle> submeshMats;
         TinyHandle skeleNode;
     };
 
+    struct BoneAttach3D : Node3D {
+        static constexpr Type kType = Type::BoneAttach3D;
+
+        TinyHandle skeleNode; // Point to a Akeleton3D node
+        TinyHandle boneIndex = -1; // Index in skeleton
+    };
+
     struct Skeleton3D : Node3D {
         static constexpr Type kType = Type::Skeleton3D;
 
         TinyHandle skeleRegistry;
-    };
+    };  
 
     /* Keep in mind very clear distinction between:
         * skeleNode: local index to the model's node array that contains the skeleton
@@ -53,8 +61,9 @@ struct TinyNode {
 
     MonoVariant<
         Node3D,
-        Mesh3D,
-        Skeleton3D
+        MeshRender3D,
+        Skeleton3D,
+        BoneAttach3D
     > data = Node3D();
 
     template<typename T>
@@ -71,12 +80,10 @@ struct TinyNode {
         return node;
     }
 
-    // Convenience helpers
-    bool isNode3D() const { return type == Type::Node3D; }
-    bool isMesh3D() const { return type == Type::Mesh3D; }
-    bool isSkeleton3D() const { return type == Type::Skeleton3D; }
+    template<typename T>
+    T& as() { return std::get<T>(data); }
+    template<typename T>
+    const T& as() const { return std::get<T>(data); }
 
-    const Node3D& asNode3D() const { return std::get<Node3D>(data); }
-    const Mesh3D& asMesh3D() const { return std::get<Mesh3D>(data); }
-    const Skeleton3D& asSkeleton3D() const { return std::get<Skeleton3D>(data); }
+    bool isType(Type t) const { return type == t; }
 };

@@ -715,76 +715,68 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
 {
     std::vector<TinyNode> nodes;
 
-    // A function to push node as well as returning its index
     auto pushNode = [&](TinyNode&& node) -> int {
         int index = static_cast<int>(nodes.size());
         nodes.push_back(std::move(node));
         return index;
     };
 
-    // A function to automatically assign parent-child relationships
-    auto parentAndChild = [&](TinyNode& parent, int parentIndex,
-                                TinyNode& child, int childIndex) {
-        parent.children.push_back(TinyHandle(childIndex, Type::Node));
-        child.parent = TinyHandle(parentIndex, Type::Node);
+    auto parentAndChild = [&](int parentIndex, int childIndex) {
+        nodes[parentIndex].children.push_back(TinyHandle::make(childIndex, TinyHandle::Type::Node));
+        nodes[childIndex].parent = TinyHandle::make(parentIndex, TinyHandle::Type::Node);
     };
 
-    // Create root node
+    // Root node (index 0)
     TinyNode rootNode;
     rootNode.name = "FunnyRoot";
-    rootNode.make(TinyNode::Node3D()); // Empty Node3D
+    rootNode.make(TinyNode::Node3D());
+    pushNode(std::move(rootNode));
 
-    pushNode(std::move(rootNode)); // Root node at index 0
+    const auto& submeshesMats = tinyModel.submeshesMats;
 
-    const std::vector<std::vector<TinyHandle>>& submeshesMats = tinyModel.submeshesMats;
-
-    // For each individual skeleton, create a parent node
-    // Any Mesh3D that uses a skeleton will be a child of that skeleton
+    // Skeleton parent nodes
     UnorderedMap<int, int> skeletonToModelNodeIndex;
-    auto hasInSkeletonMap = [&](int skeletonIndex) -> bool {
-        return nodeToSkeletonAndBoneIndex.find(skeletonIndex) != nodeToSkeletonAndBoneIndex.end();
-    };
-    
     for (size_t skelIdx = 0; skelIdx < tinyModel.skeletons.size(); ++skelIdx) {
         TinyNode skeleNode;
         skeleNode.name = "Skeleton_" + std::to_string(skelIdx);
 
         TinyNode::Skeleton3D skel3D;
-        skel3D.skeleRegistry = TinyHandle(skelIdx, Type::Skeleton);
+        skel3D.skeleRegistry = TinyHandle::make((uint32_t)skelIdx, TinyHandle::Type::Skeleton);
 
         skeleNode.make(std::move(skel3D));
 
         int modelNodeIndex = pushNode(std::move(skeleNode));
-        skeletonToModelNodeIndex[skelIdx] = modelNodeIndex;
+        skeletonToModelNodeIndex[(int)skelIdx] = modelNodeIndex;
 
-        // Oops, forgot that we already moved skeleNode
-        parentAndChild(nodes[0], 0, nodes[modelNodeIndex], modelNodeIndex); // Child of root
+        parentAndChild(0, modelNodeIndex); // Child of root
     }
 
+    // Mapping: glTF node index -> TinyNode index (or -1 if it's a joint)
+    std::vector<int> localToGlobal(model.nodes.size(), -1);
+
+    // First pass: reserve only for non-joints
     for (size_t i = 0; i < model.nodes.size(); ++i) {
-        const tinygltf::Node& gltfNode = model.nodes[i];
-
-        // Skip non-mesh nodes
-        if (gltfNode.mesh < 0) continue;
-
-        TinyNode node;
-        node.name = gltfNode.name.empty() ? "Node" : gltfNode.name;
-
-        // Mesh assignment (should by logic mirror the tinyModel.meshes)
-        int meshIndex = gltfNode.mesh;
-
-        // Skeleton link (remap glTF skin → our skeleton index)
-        int skeletonIndex = gltfNode.skin;
-
-        int skeletonNodeIndex = -1; // True value
-
-        // Turn into child of skeleton node if applicable
-        if (hasInSkeletonMap(skeletonIndex)) {
-            skeletonNodeIndex = skeletonToModelNodeIndex[skeletonIndex];
-            parentAndChild(nodes[skeletonNodeIndex], skeletonNodeIndex, node, static_cast<int>(nodes.size()));
-        } else {
-            node.parent = 0; // Child of root since no skeleton available
+        if (nodeToSkeletonAndBoneIndex.find((int)i) != nodeToSkeletonAndBoneIndex.end()) {
+            // It's a joint node -> skip
+            localToGlobal[i] = -1;
+            continue;
         }
+
+        TinyNode placeholder;
+        placeholder.name = model.nodes[i].name.empty() ? "Node" : model.nodes[i].name;
+        placeholder.make(TinyNode::Node3D());
+
+        int globalIdx = pushNode(std::move(placeholder));
+        localToGlobal[i] = globalIdx;
+    }
+
+    // Second pass: fill in non-joint nodes
+    for (size_t i = 0; i < model.nodes.size(); ++i) {
+        int globalIdx = localToGlobal[i];
+        if (globalIdx < 0) continue; // skip joints
+
+        const tinygltf::Node& gltfNode = model.nodes[i];
+        TinyNode& target = nodes[globalIdx];
 
         // Transform
         glm::mat4 matrix(1.0f);
@@ -795,37 +787,66 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
             glm::quat rotation(1.0f, 0.0f, 0.0f, 0.0f);
             glm::vec3 scale(1.0f);
 
-            if (!gltfNode.translation.empty()) {
+            if (!gltfNode.translation.empty())
                 translation = glm::make_vec3(gltfNode.translation.data());
-            }
-            if (!gltfNode.rotation.empty()) {
+            if (!gltfNode.rotation.empty())
                 rotation = glm::quat(
                     gltfNode.rotation[3],
                     gltfNode.rotation[0],
                     gltfNode.rotation[1],
-                    gltfNode.rotation[2]
-                );
-            }
-            if (!gltfNode.scale.empty()) {
+                    gltfNode.rotation[2]);
+            if (!gltfNode.scale.empty())
                 scale = glm::make_vec3(gltfNode.scale.data());
-            }
 
             matrix = glm::translate(glm::mat4(1.0f), translation) *
                      glm::mat4_cast(rotation) *
                      glm::scale(glm::mat4(1.0f), scale);
         }
 
-        TinyNode::Mesh3D nodeMesh3D;
-        nodeMesh3D.transform = matrix;
-        nodeMesh3D.mesh.index = meshIndex;
-        bool hasValidMaterials = (meshIndex >= 0 && meshIndex < static_cast<int>(submeshesMats.size()));
-        nodeMesh3D.submeshMats = hasValidMaterials ? submeshesMats[meshIndex] : std::vector<TinyHandle>();
+        if (gltfNode.mesh >= 0) {
+            TinyNode::MeshRender3D meshData;
+            meshData.transform = matrix;
+            meshData.mesh = TinyHandle::make((uint32_t)gltfNode.mesh, TinyHandle::Type::Mesh);
 
-        if (skeletonNodeIndex >= 0) nodeMesh3D.skeleNode = skeletonNodeIndex;
+            bool hasValidMaterials = (gltfNode.mesh >= 0 &&
+                                     gltfNode.mesh < (int)submeshesMats.size());
+            meshData.submeshMats = hasValidMaterials ? submeshesMats[gltfNode.mesh] : std::vector<TinyHandle>();
 
-        node.make(std::move(nodeMesh3D));
+            int skeletonIndex = gltfNode.skin;
+            auto it = skeletonToModelNodeIndex.find(skeletonIndex);
+            if (it != skeletonToModelNodeIndex.end())
+                meshData.skeleNode = it->second;
 
-        nodes.push_back(std::move(node));
+            target.make(std::move(meshData));
+        } else {
+            TinyNode::Node3D node3D;
+            node3D.transform = matrix;
+            target.make(std::move(node3D));
+        }
+    }
+
+    // Third pass: parent-child wiring (skip joints)
+    for (size_t i = 0; i < model.nodes.size(); ++i) {
+        int parentGlobal = localToGlobal[i];
+        if (parentGlobal < 0) continue; // skip joint as parent
+
+        const tinygltf::Node& gltfNode = model.nodes[i];
+        for (int childLocal : gltfNode.children) {
+            int childGlobal = localToGlobal[childLocal];
+            if (childGlobal < 0) continue; // skip joint as child
+            parentAndChild(parentGlobal, childGlobal);
+        }
+    }
+
+    // Attach scene roots to FunnyRoot
+    if (!model.scenes.empty()) {
+        const tinygltf::Scene& scene = model.scenes[model.defaultScene >= 0 ? model.defaultScene : 0];
+        for (int rootLocal : scene.nodes) {
+            int rootGlobal = localToGlobal[rootLocal];
+            if (rootGlobal >= 0 && !nodes[rootGlobal].parent.isValid()) {
+                parentAndChild(0, rootGlobal);
+            }
+        }
     }
 
     tinyModel.nodes = std::move(nodes);
@@ -850,26 +871,31 @@ constexpr const char* WHITE = "\033[0m";
 
 // Recursive hierarchy printer
 void printNodeHierarchy(const std::vector<TinyNode>& nodes, int nodeIndex, int depth = 0) {
+    using NType = TinyNode::Type;
+    
     if (nodeIndex < 0 || nodeIndex >= static_cast<int>(nodes.size())) return;
 
     const TinyNode& node = nodes[nodeIndex];
     std::string indent(depth * 2, ' ');
 
     std::string typeStr;
-    if (node.isNode3D()) typeStr = "Node3D";
-    else if (node.isMesh3D()) typeStr = "Mesh3D";
-    else if (node.isSkeleton3D()) typeStr = "Skeleton3D";
+    switch (node.type) {
+        case NType::Node3D:      typeStr = "Node3D"; break;
+        case NType::MeshRender3D:      typeStr = "MeshRender3D"; break;
+        case NType::Skeleton3D:  typeStr = "Skeleton3D"; break;
+        default:                 typeStr = "Unknown"; break;
+    }
 
     // Print node name in RED
     std::cout << indent << RED << node.name << WHITE << " [" << typeStr << "]";
 
     // Append extra info
-    if (node.isMesh3D()) {
-        const auto& mesh = std::get<TinyNode::Mesh3D>(node.data);
+    if (node.isType(NType::MeshRender3D)) {
+        const auto& mesh = std::get<TinyNode::MeshRender3D>(node.data);
         std::cout << " -> MeshID=" << mesh.mesh.index
                   << ", MaterialIDs=" << formatVector(mesh.submeshMats)
                   << ", SkeNodeID=" << mesh.skeleNode.index;
-    } else if (node.isSkeleton3D()) {
+    } else if (node.isType(NType::Skeleton3D)) {
         const auto& skel = std::get<TinyNode::Skeleton3D>(node.data);
         std::cout << " -> SkeRegID=" << skel.skeleRegistry.index;
     }

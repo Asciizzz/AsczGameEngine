@@ -39,11 +39,11 @@ public:
     TinyRegistry(const TinyRegistry&) = delete;
     TinyRegistry& operator=(const TinyRegistry&) = delete;
 
-    uint32_t getMaxTextureCount() const { return maxTextureCount; }
-    uint32_t getMaxMaterialCount() const { return maxMaterialCount; }
-    uint32_t getMaxMeshCount() const { return maxMeshCount; }
-    uint32_t getMaxSkeletonCount() const { return maxSkeletonCount; }
-    uint32_t getMaxNodeCount() const { return maxNodeCount; }
+    uint32_t getMaxTextureCount() const { return textureDatas.capacity; }
+    uint32_t getMaxMaterialCount() const { return materialDatas.capacity; }
+    uint32_t getMaxMeshCount() const { return meshDatas.capacity; }
+    uint32_t getMaxSkeletonCount() const { return skeletonDatas.capacity; }
+    uint32_t getMaxNodeCount() const { return nodeDatas.capacity; }
 
     TinyHandle addMesh(const TinyMesh& mesh);
     TinyHandle addTexture(const TinyTexture& texture);
@@ -58,14 +58,25 @@ public:
     TinySkeleton* getSkeletonData(const TinyHandle& handle);
     TinyNode*     getNodeData(const TinyHandle& handle);
 
+
+    void printDataCounts() const {
+        printf("TinyRegistry Data Counts:\n");
+        printf("  Meshes:    %u / %u\n", meshDatas.count, meshDatas.capacity);
+        printf("  Textures:  %u / %u\n", textureDatas.count, textureDatas.capacity);
+        printf("  Materials: %u / %u\n", materialDatas.count, materialDatas.capacity);
+        printf("  Skeletons: %u / %u\n", skeletonDatas.count, skeletonDatas.capacity);
+        printf("  Nodes:     %u / %u\n", nodeDatas.count, nodeDatas.capacity);
+    }
+
 private:
     const AzVulk::DeviceVK* deviceVK;
 
-    uint32_t maxMeshCount = 1024;
-    uint32_t maxTextureCount = 1024;
-    uint32_t maxMaterialCount = 1024;
-    uint32_t maxSkeletonCount = 256;
-    uint32_t maxNodeCount = 2048;
+    size_t prevMaterialCapacity = 128;
+    size_t prevTextureCapacity  = 128;
+    size_t prevMeshCapacity     = 128;
+    size_t prevSkeletonCapacity = 128;
+    size_t prevNodeCapacity     = 128;
+    void resizeCheck();
 
     void initVkResources();
 

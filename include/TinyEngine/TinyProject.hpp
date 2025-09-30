@@ -9,15 +9,18 @@ struct TinyNodeRuntime {
     TinyHandle parent;           // Runtime parent index
     std::vector<TinyHandle> children; // Runtime children indices
 
+    bool isDirty = true;
+
     // Info override
     struct Node3D_runtime {
         static constexpr TinyNode::Type kType = TinyNode::Type::Node3D;
 
         glm::mat4 transformOverride = glm::mat4(1.0f);
+        glm::mat4 globalTransform = glm::mat4(1.0f);
     };
 
     struct Mesh3D_runtime : Node3D_runtime {
-        static constexpr TinyNode::Type kType = TinyNode::Type::Mesh3D;
+        static constexpr TinyNode::Type kType = TinyNode::Type::MeshRender3D;
 
         // Overrideable handles (initialized with registry data)
         std::vector<glm::mat4> submeshTransformsOverride; // Per-submesh transform overrides
@@ -29,7 +32,7 @@ struct TinyNodeRuntime {
         static constexpr TinyNode::Type kType = TinyNode::Type::Skeleton3D;
 
         TinyHandle skeletonHandle; // Points to registry skeleton
-        std::vector<glm::mat4> boneTransformsOverride; // Final bone transforms for skinning
+        std::vector<glm::mat4> boneTransformsFinal; // Final bone transforms for skinning
     };
 
     MonoVariant<
@@ -95,16 +98,21 @@ public:
     void addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex = 0);
 
     void printRuntimeNodeRecursive(
-        const std::vector<UniquePtr<TinyNodeRuntime>>& runtimeNodes,
+        const UniquePtrVec<TinyNodeRuntime>& runtimeNodes,
         TinyRegistry* registry,
         const TinyHandle& runtimeHandle,
         int depth = 0
     );
 
-    void printRuntimeNodeTree() {
+    void printRuntimeNodeHierarchy() {
         printRuntimeNodeRecursive(runtimeNodes, registry.get(), TinyHandle::make(0, TinyHandle::Type::Node, false));
-    }
+    };
 
+    void printRuntimeNodeOrdered();
+
+    void printDataCounts() const {
+        registry->printDataCounts();
+    }
 
 private:
     const AzVulk::DeviceVK* device;
