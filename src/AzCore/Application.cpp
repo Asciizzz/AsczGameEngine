@@ -84,7 +84,7 @@ void Application::initComponents() {
     project->addTemplateFromModel(newModel1);
 
     project->addNodeInstance(0);
-    project->addNodeInstance(1);
+    project->addNodeInstance(1, 9);
 
     project->printRuntimeNodeHierarchy();
     project->printDataCounts();

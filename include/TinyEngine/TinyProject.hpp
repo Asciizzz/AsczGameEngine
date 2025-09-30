@@ -3,7 +3,7 @@
 #include "TinyEngine/TinyRegistry.hpp"
 #include "TinyEngine/TinyInstance.hpp"
 
-struct TinyNodeRuntime {
+struct TinyNodeRT {
     TinyHandle regHandle;     // Points to registry node (data for reference)
     TinyNode3D::Type type = TinyNode3D::Type::Node; // Direct copy of registry type
 
@@ -12,29 +12,31 @@ struct TinyNodeRuntime {
 
     bool isDirty = true;
 
-    // Info override
-    struct Node_runtime {
-        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Node;
+    // Transform data is now at the base level, like TinyNode3D
+    glm::mat4 transformOverride = glm::mat4(1.0f);
+    glm::mat4 globalTransform = glm::mat4(1.0f);
 
-        glm::mat4 transformOverride = glm::mat4(1.0f);
-        glm::mat4 globalTransform = glm::mat4(1.0f);
+    // Runtime data structures
+    struct Node {
+        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Node;
+        // No additional data needed for base node
     };
 
-    struct Mesh_runtime : Node_runtime {
+    struct Mesh {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::MeshRender;
 
         // Overrideable handles
         TinyHandle skeleNodeOverride; // Point to a runtime Skeleton node
     };
 
-    struct Bone_runtime : Node_runtime {
+    struct Bone {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::BoneAttach;
 
         TinyHandle skeleNodeOverride; // Point to a runtime Skeleton node
         TinyHandle boneOverride;
     };
 
-    struct Skeleton_runtime : Node_runtime {
+    struct Skeleton {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Skeleton;
 
         TinyHandle skeletonHandle; // Points to registry skeleton
@@ -42,10 +44,10 @@ struct TinyNodeRuntime {
     };
 
     MonoVariant<
-        Node_runtime,
-        Mesh_runtime,
-        Skeleton_runtime
-    > data = Node_runtime();
+        Node,
+        Mesh,
+        Skeleton
+    > data = Node();
 
     template<typename T>
     void make(T&& newData) {
@@ -55,13 +57,19 @@ struct TinyNodeRuntime {
     }
 
     template<typename T>
-    static TinyNodeRuntime make(const T& data) {
-        TinyNodeRuntime node;
+    static TinyNodeRT make(const T& data) {
+        TinyNodeRT node;
         using CleanT = std::decay_t<T>;   // remove refs/const
         node.type = CleanT::kType;
         node.data = data;
         return node;
     }
+
+    /**
+     * Manages parent-child relationships with automatic dirty flagging.
+     * Adds child to this node and marks both nodes as dirty for transform updates.
+     */
+    void addChild(const TinyHandle& childHandle, std::vector<std::unique_ptr<TinyNodeRT>>& allRuntimeNodes);
 };
 
 struct TinyTemplate {
@@ -79,7 +87,7 @@ public:
         // Create root node
         TinyHandle rootHandle = registry->addNode(TinyNode3D());
 
-        auto rootNode = MakeUnique<TinyNodeRuntime>();
+        auto rootNode = MakeUnique<TinyNodeRT>();
         rootNode->regHandle = rootHandle;
         rootNode->parent = TinyHandle::invalid(); // No parent
         // Children will be added upon scene population
@@ -99,12 +107,12 @@ public:
      * Adds a node instance to the scene.
      *
      * @param templateIndex point to the template to use.
-     * @param inheritIndex point to the runtime node to inherit from (optional).
+     * @param parentIndex point to the runtime node to inherit from (optional).
      */
-    void addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex = 0);
+    void addNodeInstance(uint32_t templateIndex, uint32_t parentIndex = 0);
 
     void printRuntimeNodeRecursive(
-        const UniquePtrVec<TinyNodeRuntime>& runtimeNodes,
+        const UniquePtrVec<TinyNodeRT>& runtimeNodes,
         TinyRegistry* registry,
         const TinyHandle& runtimeHandle,
         int depth = 0
@@ -115,6 +123,15 @@ public:
     };
 
     void printRuntimeNodeOrdered();
+
+    /**
+     * Recursively updates global transforms for dirty nodes starting from the specified root.
+     * Only processes nodes marked as isDirty = true, and sets isDirty = false after processing.
+     * 
+     * @param rootNodeHandle Handle to the root node to start the recursive update from
+     * @param parentGlobalTransform Global transform of the parent (identity for root nodes)
+     */
+    void updateGlobalTransforms(const TinyHandle& rootNodeHandle, const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
     void printDataCounts() const {
         registry->printDataCounts();
@@ -128,5 +145,5 @@ private:
     std::vector<TinyTemplate> templates;
 
     // A basic scene (best if we use smart pointers)
-    UniquePtrVec<TinyNodeRuntime> runtimeNodes; // Construct from registry[templates.type][template.index]
+    UniquePtrVec<TinyNodeRT> runtimeNodes; // Construct from registry[templates.type][template.index]
 };

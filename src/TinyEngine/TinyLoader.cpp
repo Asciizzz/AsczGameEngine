@@ -722,8 +722,8 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
     };
 
     auto parentAndChild = [&](int parentIndex, int childIndex) {
-        nodes[parentIndex].children.push_back(TinyHandle::make(childIndex, TinyHandle::Type::Node));
-        nodes[childIndex].parent = TinyHandle::make(parentIndex, TinyHandle::Type::Node);
+        nodes[parentIndex].children.push_back(TinyHandle(childIndex, TinyHandle::Type::Node));
+        nodes[childIndex].parent = TinyHandle(parentIndex, TinyHandle::Type::Node);
     };
 
     // Root node (index 0)
@@ -741,7 +741,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
         skeleNode.name = "Skeleton_" + std::to_string(skelIdx);
 
         TinyNode3D::Skeleton skel3D;
-        skel3D.skeleRegistry = TinyHandle::make((uint32_t)skelIdx, TinyHandle::Type::Skeleton);
+        skel3D.skeleRegistry = TinyHandle((uint32_t)skelIdx, TinyHandle::Type::Skeleton);
 
         skeleNode.make(std::move(skel3D));
 
@@ -808,7 +808,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
 
         if (gltfNode.mesh >= 0) {
             TinyNode3D::MeshRender meshData;
-            meshData.mesh = TinyHandle::make((uint32_t)gltfNode.mesh, TinyHandle::Type::Mesh);
+            meshData.mesh = TinyHandle((uint32_t)gltfNode.mesh, TinyHandle::Type::Mesh);
 
             bool hasValidMaterials = (gltfNode.mesh >= 0 &&
                                      gltfNode.mesh < (int)submeshesMats.size());
@@ -816,8 +816,9 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
 
             int skeletonIndex = gltfNode.skin;
             auto it = skeletonToModelNodeIndex.find(skeletonIndex);
-            if (it != skeletonToModelNodeIndex.end())
-                meshData.skeleNode = it->second;
+            if (it != skeletonToModelNodeIndex.end()) {
+                meshData.skeleNode = TinyHandle(it->second, TinyHandle::Type::Node);
+            }
 
             target.make(std::move(meshData));
         } else {

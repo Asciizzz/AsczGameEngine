@@ -125,7 +125,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
 // Recursive function to construct runtime node tree
 
-void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex) {
+void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t parentIndex) {
     if (!isValidIndex(templateIndex, templates)) {
         printf("Error: Invalid template index %d\n", templateIndex);
         return;
@@ -143,7 +143,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
             continue;
         }
 
-        auto runtimeNode = MakeUnique<TinyNodeRuntime>();
+        auto runtimeNode = MakeUnique<TinyNodeRT>();
         runtimeNode->regHandle = regHandle; // reference to the registry node
 
         // Runtime node cannot own the registry node
@@ -153,8 +153,8 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
     // Second pass: set up the node (parent - child relationships, data, overrides)
 
-    TinyHandle rootRuntimeHandle = inheritIndex < runtimeNodes.size() ?
-        TinyHandle(inheritIndex, HType::Node, false) :
+    TinyHandle rootRuntimeHandle = parentIndex < runtimeNodes.size() ?
+        TinyHandle(parentIndex, HType::Node, false) :
         TinyHandle(0, HType::Node, false); // Default to root if invalid
 
     for (uint32_t i = 0; i < static_cast<uint32_t>(temp.registryNodes.size()); ++i) {
@@ -163,7 +163,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
         TinyHandle runtimeNodeHandle = registryToRuntimeNodeMap[regHandle];
 
-        UniquePtr<TinyNodeRuntime>& runtimeNode = runtimeNodes[runtimeNodeHandle.index];
+        UniquePtr<TinyNodeRT>& runtimeNode = runtimeNodes[runtimeNodeHandle.index];
 
         // Remap children and parent (do not affect the children OR the parent, only apply to this current node)
         TinyHandle parentRegHandle = regNode->parent;
@@ -175,7 +175,9 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
         // If no parent, add child to root
         if (!hasParent) {
-            runtimeNodes[inheritIndex]->children.push_back(runtimeNodeHandle);
+            runtimeNodes[parentIndex]->children.push_back(runtimeNodeHandle);
+            // Mark the parent as dirty since it now has new children
+            runtimeNodes[parentIndex]->isDirty = true;
         }
 
         runtimeNode->parent = parentRuntimeHandle;
@@ -184,25 +186,26 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
             if (registryToRuntimeNodeMap.count(childRegHandle)) {
                 TinyHandle childRuntimeHandle = registryToRuntimeNodeMap[childRegHandle];
                 runtimeNode->children.push_back(childRuntimeHandle);
+                // Mark this node as dirty since it now has new children
+                runtimeNode->isDirty = true;
             }
         }
+
+        // Keep transformOverride as identity (user override), we'll calculate globalTransform later
+        // The registry transform will be used as the base local transform for global calculations
 
         // Construct the runtime node with override datas
         switch (regNode->type) {
             case NType::Node: {
-                // Transform is now directly in the base class
-                TinyNodeRuntime::Node_runtime nodeRuntime;
-                nodeRuntime.transformOverride = regNode->transform;
-
-                runtimeNode->make(nodeRuntime); // Automatic resolve, don't worry
+                TinyNodeRT::Node nodeRuntime;
+                runtimeNode->make(nodeRuntime);
                 break;
             }
 
             case NType::MeshRender: {
                 const auto& mesh3D = regNode->as<TinyNode3D::MeshRender>();
 
-                TinyNodeRuntime::Mesh_runtime meshRuntime;
-                meshRuntime.transformOverride = regNode->transform;
+                TinyNodeRT::Mesh meshRuntime;
 
                 // Get the true skeleton node in the runtime
                 bool hasValidSkeleNode = mesh3D.skeleNode.isValid() && registryToRuntimeNodeMap.count(mesh3D.skeleNode);
@@ -217,8 +220,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
                 const auto* skeleData = registry->getSkeletonData(skel3D.skeleRegistry);
 
-                TinyNodeRuntime::Skeleton_runtime skelRuntime;
-                skelRuntime.transformOverride = regNode->transform;
+                TinyNodeRT::Skeleton skelRuntime;
                 skelRuntime.skeletonHandle = skel3D.skeleRegistry;
                 skelRuntime.boneTransformsFinal.resize(
                     skeleData->names.size(), glm::mat4(1.0f)
@@ -228,16 +230,33 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
                 break;
             }
         }
+
+        // Update transforms immediately after each node is created
+        if (runtimeNode->isDirty) {
+            // Find this node's parent global transform
+            glm::mat4 parentGlobalTransform = glm::mat4(1.0f);
+            if (runtimeNode->parent.isValid() && runtimeNode->parent.index < runtimeNodes.size()) {
+                parentGlobalTransform = runtimeNodes[runtimeNode->parent.index]->globalTransform;
+            }
+            
+            TinyHandle nodeHandle = TinyHandle(runtimeNodeHandle.index, HType::Node, false);
+            updateGlobalTransforms(nodeHandle, parentGlobalTransform);
+        }
+    }
+
+    // Mark the target parent node as dirty since it's receiving new children
+    if (parentIndex < runtimeNodes.size() && runtimeNodes[parentIndex]) {
+        runtimeNodes[parentIndex]->isDirty = true;
     }
 }
 
 void TinyProject::printRuntimeNodeRecursive(
-    const UniquePtrVec<TinyNodeRuntime>& runtimeNodes,
+    const UniquePtrVec<TinyNodeRT>& runtimeNodes,
     TinyRegistry* registry,
     const TinyHandle& runtimeHandle,
     int depth
 ) {
-    const TinyNodeRuntime* rtNode = runtimeNodes[runtimeHandle.index].get();
+    const TinyNodeRT* rtNode = runtimeNodes[runtimeHandle.index].get();
     const TinyNode3D* regNode = registry->getNodeData(rtNode->regHandle);
 
     // Format runtime index padded to 3 chars
@@ -247,13 +266,27 @@ void TinyProject::printRuntimeNodeRecursive(
     // Indentation
     std::string indent(depth * 2, ' ');
 
-    // Print: [idx] indent Name (Reg: regIndex, Parent: parentIndex)
-    printf("[%s] %s%s (Reg: %u, Parent: %u)\n",
+    // Extract local and global positions
+    glm::vec3 localPos(0.0f);
+    glm::vec3 globalPos(0.0f);
+    
+    if (regNode) {
+        // Calculate local transform: registry transform * user override
+        glm::mat4 localTransform = regNode->transform * rtNode->transformOverride;
+        localPos = glm::vec3(localTransform[3]); // Extract translation component
+    }
+    
+    globalPos = glm::vec3(rtNode->globalTransform[3]); // Extract global translation
+
+    // Print: [idx] indent Name (Reg: regIndex, Parent: parentIndex) -> Local (x, y, z) - Glb (x, y, z)
+    printf("[%s] %s%s (Reg: %u, Parent: %u) -> Local (%.2f, %.2f, %.2f) - Glb (%.2f, %.2f, %.2f)\n",
         idxBuf,
         indent.c_str(),
         regNode ? regNode->name.c_str() : "<invalid>",
         rtNode->regHandle.index,
-        rtNode->parent.index);   // <-- Added here
+        rtNode->parent.index,
+        localPos.x, localPos.y, localPos.z,
+        globalPos.x, globalPos.y, globalPos.z);
 
     // Recurse for children
     for (const TinyHandle& child : rtNode->children) {
@@ -263,7 +296,7 @@ void TinyProject::printRuntimeNodeRecursive(
 
 void TinyProject::printRuntimeNodeOrdered() {
     for (size_t i = 0; i < runtimeNodes.size(); ++i) {
-        const UniquePtr<TinyNodeRuntime>& runtimeNode = runtimeNodes[i];
+        const UniquePtr<TinyNodeRT>& runtimeNode = runtimeNodes[i];
         if (!runtimeNode) continue;
 
         // Lookup registry node name
@@ -283,6 +316,58 @@ void TinyProject::printRuntimeNodeOrdered() {
             regName.c_str(),
             runtimeNode->regHandle.index,
             parentIndex);
+    }
+}
+
+void TinyProject::updateGlobalTransforms(const TinyHandle& rootNodeHandle, const glm::mat4& parentGlobalTransform) {
+    // Validate the node handle
+    if (!rootNodeHandle.isValid() || rootNodeHandle.index >= runtimeNodes.size()) {
+        return;
+    }
+
+    UniquePtr<TinyNodeRT>& runtimeNode = runtimeNodes[rootNodeHandle.index];
+    if (!runtimeNode) {
+        return;
+    }
+
+    // Only process dirty nodes
+    if (!runtimeNode->isDirty) {
+        return;
+    }
+
+    // Get the registry node to access the base transform
+    TinyNode3D* regNode = registry->getNodeData(runtimeNode->regHandle);
+    if (!regNode) {
+        return;
+    }
+
+    // Calculate the local transform: registry transform * user override
+    glm::mat4 localTransform = regNode->transform * runtimeNode->transformOverride;
+
+    // Calculate global transform: parent global * local transform
+    runtimeNode->globalTransform = parentGlobalTransform * localTransform;
+
+    // Mark this node as clean
+    runtimeNode->isDirty = false;
+
+    // Recursively update all children
+    for (const TinyHandle& childHandle : runtimeNode->children) {
+        updateGlobalTransforms(childHandle, runtimeNode->globalTransform);
+    }
+}
+
+// TinyNodeRT method implementation
+void TinyNodeRT::addChild(const TinyHandle& childHandle, std::vector<std::unique_ptr<TinyNodeRT>>& allRuntimeNodes) {
+    // Add child to this node's children list
+    children.push_back(childHandle);
+    
+    // Mark this node (parent) as dirty
+    isDirty = true;
+    
+    // Mark the child node as dirty and set its parent
+    if (childHandle.isValid() && childHandle.index < allRuntimeNodes.size() && allRuntimeNodes[childHandle.index]) {
+        allRuntimeNodes[childHandle.index]->parent = TinyHandle(0, TinyHandle::Type::Node, false); // This will be set properly by caller
+        allRuntimeNodes[childHandle.index]->isDirty = true;
     }
 }
 
