@@ -7,8 +7,8 @@ struct TinyNodeRT {
     TinyHandle regHandle;     // Points to registry node (data for reference)
     TinyNode3D::Type type = TinyNode3D::Type::Node; // Direct copy of registry type
 
-    TinyHandle parent;           // Runtime parent index
-    std::vector<TinyHandle> children; // Runtime children indices
+    uint32_t parentIdx = UINT32_MAX;    // Runtime parent index (UINT32_MAX = no parent)
+    std::vector<uint32_t> childrenIdxs;   // Runtime children indices
 
     bool isDirty = true;
 
@@ -25,21 +25,19 @@ struct TinyNodeRT {
     struct Mesh {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::MeshRender;
 
-        // Overrideable handles
-        TinyHandle skeleNodeOverride; // Point to a runtime Skeleton node
+        // Overrideable indices
+        uint32_t skeleNodeOverride = UINT32_MAX; // Point to a runtime Skeleton node (UINT32_MAX = no override)
     };
 
     struct Bone {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::BoneAttach;
 
-        TinyHandle skeleNodeOverride; // Point to a runtime Skeleton node
-        TinyHandle boneOverride;
+        uint32_t skeleNodeOverride = UINT32_MAX; // Point to a runtime Skeleton node (UINT32_MAX = no override)
     };
 
     struct Skeleton {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Skeleton;
 
-        TinyHandle skeletonHandle; // Points to registry skeleton
         std::vector<glm::mat4> boneTransformsFinal; // Final bone transforms for skinning
     };
 
@@ -69,7 +67,7 @@ struct TinyNodeRT {
      * Manages parent-child relationships with automatic dirty flagging.
      * Adds child to this node and marks both nodes as dirty for transform updates.
      */
-    void addChild(const TinyHandle& childHandle, std::vector<std::unique_ptr<TinyNodeRT>>& allRuntimeNodes);
+    void addChild(uint32_t childIndex, std::vector<std::unique_ptr<TinyNodeRT>>& allRuntimeNodes);
 };
 
 struct TinyTemplate {
@@ -89,7 +87,6 @@ public:
 
         auto rootNode = MakeUnique<TinyNodeRT>();
         rootNode->regHandle = rootHandle;
-        rootNode->parent = TinyHandle::invalid(); // No parent
         // Children will be added upon scene population
 
         runtimeNodes.push_back(std::move(rootNode));
@@ -128,15 +125,20 @@ public:
      * Recursively updates global transforms for dirty nodes starting from the specified root.
      * Only processes nodes marked as isDirty = true, and sets isDirty = false after processing.
      * 
-     * @param rootNodeHandle Handle to the root node to start the recursive update from
+     * @param rootNodeIndex Index to the root node to start the recursive update from
      * @param parentGlobalTransform Global transform of the parent (identity for root nodes)
      */
-    void updateGlobalTransforms(const TinyHandle& rootNodeHandle, const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
+    void updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
     void printDataCounts() const {
         registry->printDataCounts();
     }
 
+    /**
+     * Playground function for testing - rotates root node by 90 degrees per second
+     * @param dTime Delta time in seconds
+     */
+    void runPlayground(float dTime);
 
     // These are not official public methods, only for testing purposes
     const UniquePtrVec<TinyNodeRT>& getRuntimeNodes() const { return runtimeNodes; }
