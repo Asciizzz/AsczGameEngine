@@ -175,9 +175,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t parentIndex) 
 
         // If no parent, add child to root
         if (!hasParent) {
-            runtimeNodes[parentIndex]->children.push_back(runtimeNodeHandle);
-            // Mark the parent as dirty since it now has new children
-            runtimeNodes[parentIndex]->isDirty = true;
+            runtimeNodes[parentIndex]->addChild(runtimeNodeHandle, runtimeNodes);
         }
 
         runtimeNode->parent = parentRuntimeHandle;
@@ -185,9 +183,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t parentIndex) 
         for (const TinyHandle& childRegHandle : regNode->children) {
             if (registryToRuntimeNodeMap.count(childRegHandle)) {
                 TinyHandle childRuntimeHandle = registryToRuntimeNodeMap[childRegHandle];
-                runtimeNode->children.push_back(childRuntimeHandle);
-                // Mark this node as dirty since it now has new children
-                runtimeNode->isDirty = true;
+                runtimeNode->addChild(childRuntimeHandle, runtimeNodes);
             }
         }
 
@@ -364,9 +360,8 @@ void TinyNodeRT::addChild(const TinyHandle& childHandle, std::vector<std::unique
     // Mark this node (parent) as dirty
     isDirty = true;
     
-    // Mark the child node as dirty and set its parent
+    // Mark the child node as dirty (parent will be set separately by the caller)
     if (childHandle.isValid() && childHandle.index < allRuntimeNodes.size() && allRuntimeNodes[childHandle.index]) {
-        allRuntimeNodes[childHandle.index]->parent = TinyHandle(0, TinyHandle::Type::Node, false); // This will be set properly by caller
         allRuntimeNodes[childHandle.index]->isDirty = true;
     }
 }
