@@ -5,7 +5,7 @@
 
 struct TinyNodeRT3D {
     TinyHandle regHandle;     // Points to registry node (data for reference)
-    uint8_t types = TinyNode::toMask(TinyNode::Types::Node);
+    uint32_t types = TinyNode::toMask(TinyNode::Types::Node);
 
     uint32_t parentIdx = UINT32_MAX;    // Runtime parent index (UINT32_MAX = no parent)
     std::vector<uint32_t> childrenIdxs;   // Runtime children indices

@@ -20,13 +20,13 @@ struct TinyNode {
         Global // Global registry
     } scope = Scope::Local;
 
-    enum class Types : uint8_t {
-        Node          = 0,
-        MeshRender    = 1 << 0,
-        Skeleton      = 1 << 1,
-        BoneAttach    = 1 << 2
+    enum class Types : uint32_t {
+        Node          = 1 << 0,
+        MeshRender    = 1 << 1,
+        Skeleton      = 1 << 2,
+        BoneAttach    = 1 << 3
     };
-    uint8_t types = toMask(Types::Node);
+    uint32_t types = toMask(Types::Node);
 
     TinyHandle parent;
     std::vector<TinyHandle> children;
@@ -74,8 +74,8 @@ private:
     }
 
 public:
-    static constexpr uint8_t toMask(Types t) {
-        return static_cast<uint8_t>(t);
+    static constexpr uint32_t toMask(Types t) {
+        return static_cast<uint32_t>(t);
     }
 
     // Component management functions
