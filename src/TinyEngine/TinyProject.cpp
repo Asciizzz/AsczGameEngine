@@ -1,7 +1,7 @@
 #include "TinyEngine/TinyProject.hpp"
 
 using HType = TinyHandle::Type;
-using NType = TinyNode::Type;
+using NType = TinyNode3D::Type;
 
 // A quick function for range validation
 template<typename T>
@@ -53,15 +53,15 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
         // Just occupy the index
-        TinyHandle handle = registry->addNode(TinyNode());
+        TinyHandle handle = registry->addNode(TinyNode3D());
         localNodeIndexToGlobalNodeHandle[i] = handle;
 
         glbNodeRegHandle.push_back(handle);
     }
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
-        const TinyNode& localNode = model.nodes[i];
-        TinyNode& regNode = *registry->getNodeData(glbNodeRegHandle[i]);
+        const TinyNode3D& localNode = model.nodes[i];
+        TinyNode3D& regNode = *registry->getNodeData(glbNodeRegHandle[i]);
         regNode.scope = localNode.scope;
         regNode.name = localNode.name;
 
@@ -74,17 +74,18 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
         // Remapping node data
         switch(localNode.type) {
-            case NType::Node3D: {
-                const TinyNode::Node3D& node3D = localNode.as<TinyNode::Node3D>();
-
-                regNode.make(node3D);
+            case NType::Node: {
+                // Since transform is now in base class, we can just copy it directly
+                regNode.transform = localNode.transform;
+                regNode.make(TinyNode3D::Node{});
                 break;
             }
 
-            case NType::MeshRender3D: {
-                const TinyNode::MeshRender3D& mesh3D = localNode.as<TinyNode::MeshRender3D>();
-                TinyNode::MeshRender3D trueMesh3D;
-                trueMesh3D.transform = mesh3D.transform;
+            case NType::MeshRender: {
+                const TinyNode3D::MeshRender& mesh3D = localNode.as<TinyNode3D::MeshRender>();
+                TinyNode3D::MeshRender trueMesh3D;
+                // Transform is now in base class
+                regNode.transform = localNode.transform;
 
                 trueMesh3D.mesh = glbMeshRegHandle[mesh3D.mesh.index];
 
@@ -100,9 +101,12 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
                 break;
             }
 
-            case TinyNode::Type::Skeleton3D: {
-                const TinyNode::Skeleton3D& skel3D = localNode.as<TinyNode::Skeleton3D>();
-                TinyNode::Skeleton3D trueSkel3D;
+            case NType::Skeleton: {
+                const TinyNode3D::Skeleton& skel3D = localNode.as<TinyNode3D::Skeleton>();
+                TinyNode3D::Skeleton trueSkel3D;
+                // Transform is now in base class
+                regNode.transform = localNode.transform;
+                
                 bool hasValidSkeleton = isValidIndex(skel3D.skeleRegistry.index, glbSkeleRegHandle);
                 // trueSkel3D.skeleRegistry = hasValidSkeleton ? glbSkeleRegHandle[skel3D.skeleRegistry.index] : TinyHandle::invalid();
                 trueSkel3D.skeleRegistry = glbSkeleRegHandle[skel3D.skeleRegistry.index];
@@ -133,7 +137,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
     // First pass: create and append
     for (const TinyHandle& regHandle : temp.registryNodes) {
-        TinyNode* regNode = registry->getNodeData(regHandle);
+        TinyNode3D* regNode = registry->getNodeData(regHandle);
         if (!regNode) {
             printf("Warning: Registry node handle %llu is invalid, skipping.\n", regHandle.value);
             continue;
@@ -155,7 +159,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
     for (uint32_t i = 0; i < static_cast<uint32_t>(temp.registryNodes.size()); ++i) {
         const TinyHandle& regHandle = temp.registryNodes[i];
-        TinyNode* regNode = registry->getNodeData(regHandle);
+        TinyNode3D* regNode = registry->getNodeData(regHandle);
 
         TinyHandle runtimeNodeHandle = registryToRuntimeNodeMap[regHandle];
 
@@ -185,42 +189,42 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t inheritIndex)
 
         // Construct the runtime node with override datas
         switch (regNode->type) {
-            case NType::Node3D: {
-                const auto& node3D = regNode->as<TinyNode::Node3D>();
+            case NType::Node: {
+                // Transform is now directly in the base class
+                TinyNodeRuntime::Node_runtime nodeRuntime;
+                nodeRuntime.transformOverride = regNode->transform;
 
-                TinyNodeRuntime::Node3D_runtime node3DRuntime;
-                node3DRuntime.transformOverride = node3D.transform;
-
-                runtimeNode->make(node3DRuntime); // Automatic resolve, don't worry
+                runtimeNode->make(nodeRuntime); // Automatic resolve, don't worry
                 break;
             }
 
-            case NType::MeshRender3D: {
-                const auto& mesh3D = regNode->as<TinyNode::MeshRender3D>();
+            case NType::MeshRender: {
+                const auto& mesh3D = regNode->as<TinyNode3D::MeshRender>();
 
-                TinyNodeRuntime::Mesh3D_runtime mesh3DRuntime;
-                mesh3DRuntime.transformOverride = mesh3D.transform;
+                TinyNodeRuntime::Mesh_runtime meshRuntime;
+                meshRuntime.transformOverride = regNode->transform;
 
                 // Get the true skeleton node in the runtime
                 bool hasValidSkeleNode = mesh3D.skeleNode.isValid() && registryToRuntimeNodeMap.count(mesh3D.skeleNode);
-                mesh3DRuntime.skeleNodeOverride = hasValidSkeleNode ? registryToRuntimeNodeMap[mesh3D.skeleNode] : TinyHandle::invalid();
+                meshRuntime.skeleNodeOverride = hasValidSkeleNode ? registryToRuntimeNodeMap[mesh3D.skeleNode] : TinyHandle::invalid();
 
-                runtimeNode->make(mesh3DRuntime);
+                runtimeNode->make(meshRuntime);
                 break;
             }
 
-            case NType::Skeleton3D: {
-                const auto& skel3D = regNode->as<TinyNode::Skeleton3D>();
+            case NType::Skeleton: {
+                const auto& skel3D = regNode->as<TinyNode3D::Skeleton>();
 
                 const auto* skeleData = registry->getSkeletonData(skel3D.skeleRegistry);
 
-                TinyNodeRuntime::Skeleton3D_runtime skel3DRuntime;
-                skel3DRuntime.skeletonHandle = skel3D.skeleRegistry;
-                skel3DRuntime.boneTransformsFinal.resize(
+                TinyNodeRuntime::Skeleton_runtime skelRuntime;
+                skelRuntime.transformOverride = regNode->transform;
+                skelRuntime.skeletonHandle = skel3D.skeleRegistry;
+                skelRuntime.boneTransformsFinal.resize(
                     skeleData->names.size(), glm::mat4(1.0f)
                 );
 
-                runtimeNode->make(skel3DRuntime);
+                runtimeNode->make(skelRuntime);
                 break;
             }
         }
@@ -234,7 +238,7 @@ void TinyProject::printRuntimeNodeRecursive(
     int depth
 ) {
     const TinyNodeRuntime* rtNode = runtimeNodes[runtimeHandle.index].get();
-    const TinyNode* regNode = registry->getNodeData(rtNode->regHandle);
+    const TinyNode3D* regNode = registry->getNodeData(rtNode->regHandle);
 
     // Format runtime index padded to 3 chars
     char idxBuf[8];
@@ -264,7 +268,7 @@ void TinyProject::printRuntimeNodeOrdered() {
 
         // Lookup registry node name
         std::string regName = "???";
-        if (TinyNode* regNode = registry->getNodeData(runtimeNode->regHandle)) {
+        if (TinyNode3D* regNode = registry->getNodeData(runtimeNode->regHandle)) {
             regName = regNode->name;
         }
 

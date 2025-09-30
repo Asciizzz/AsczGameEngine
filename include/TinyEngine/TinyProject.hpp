@@ -5,7 +5,7 @@
 
 struct TinyNodeRuntime {
     TinyHandle regHandle;     // Points to registry node (data for reference)
-    TinyNode::Type type = TinyNode::Type::Node3D; // Direct copy of registry type
+    TinyNode3D::Type type = TinyNode3D::Type::Node; // Direct copy of registry type
 
     TinyHandle parent;           // Runtime parent index
     std::vector<TinyHandle> children; // Runtime children indices
@@ -13,39 +13,39 @@ struct TinyNodeRuntime {
     bool isDirty = true;
 
     // Info override
-    struct Node3D_runtime {
-        static constexpr TinyNode::Type kType = TinyNode::Type::Node3D;
+    struct Node_runtime {
+        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Node;
 
         glm::mat4 transformOverride = glm::mat4(1.0f);
         glm::mat4 globalTransform = glm::mat4(1.0f);
     };
 
-    struct Mesh3D_runtime : Node3D_runtime {
-        static constexpr TinyNode::Type kType = TinyNode::Type::MeshRender3D;
+    struct Mesh_runtime : Node_runtime {
+        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::MeshRender;
 
         // Overrideable handles
-        TinyHandle skeleNodeOverride; // Point to a runtime Skeleton3D node
+        TinyHandle skeleNodeOverride; // Point to a runtime Skeleton node
     };
 
-    struct Bone3D_runtime : Node3D_runtime {
-        static constexpr TinyNode::Type kType = TinyNode::Type::BoneAttach3D;
+    struct Bone_runtime : Node_runtime {
+        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::BoneAttach;
 
-        TinyHandle skeleNodeOverride; // Point to a runtime Skeleton3D node
+        TinyHandle skeleNodeOverride; // Point to a runtime Skeleton node
         TinyHandle boneOverride;
     };
 
-    struct Skeleton3D_runtime : Node3D_runtime {
-        static constexpr TinyNode::Type kType = TinyNode::Type::Skeleton3D;
+    struct Skeleton_runtime : Node_runtime {
+        static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Skeleton;
 
         TinyHandle skeletonHandle; // Points to registry skeleton
         std::vector<glm::mat4> boneTransformsFinal; // Final bone transforms for skinning
     };
 
     MonoVariant<
-        Node3D_runtime,
-        Mesh3D_runtime,
-        Skeleton3D_runtime
-    > data = Node3D_runtime();
+        Node_runtime,
+        Mesh_runtime,
+        Skeleton_runtime
+    > data = Node_runtime();
 
     template<typename T>
     void make(T&& newData) {
@@ -77,7 +77,7 @@ public:
         registry = MakeUnique<TinyRegistry>(deviceVK);
 
         // Create root node
-        TinyHandle rootHandle = registry->addNode(TinyNode());
+        TinyHandle rootHandle = registry->addNode(TinyNode3D());
 
         auto rootNode = MakeUnique<TinyNodeRuntime>();
         rootNode->regHandle = rootHandle;

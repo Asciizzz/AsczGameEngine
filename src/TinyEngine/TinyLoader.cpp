@@ -713,9 +713,9 @@ void loadAnimations(std::vector<TinyAnimation>& animations, std::vector<ChannelT
 void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
                const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex)
 {
-    std::vector<TinyNode> nodes;
+    std::vector<TinyNode3D> nodes;
 
-    auto pushNode = [&](TinyNode&& node) -> int {
+    auto pushNode = [&](TinyNode3D&& node) -> int {
         int index = static_cast<int>(nodes.size());
         nodes.push_back(std::move(node));
         return index;
@@ -727,9 +727,9 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
     };
 
     // Root node (index 0)
-    TinyNode rootNode;
+    TinyNode3D rootNode;
     rootNode.name = "FunnyRoot";
-    rootNode.make(TinyNode::Node3D());
+    rootNode.make(TinyNode3D::Node());
     pushNode(std::move(rootNode));
 
     const auto& submeshesMats = tinyModel.submeshesMats;
@@ -737,10 +737,10 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
     // Skeleton parent nodes
     UnorderedMap<int, int> skeletonToModelNodeIndex;
     for (size_t skelIdx = 0; skelIdx < tinyModel.skeletons.size(); ++skelIdx) {
-        TinyNode skeleNode;
+        TinyNode3D skeleNode;
         skeleNode.name = "Skeleton_" + std::to_string(skelIdx);
 
-        TinyNode::Skeleton3D skel3D;
+        TinyNode3D::Skeleton skel3D;
         skel3D.skeleRegistry = TinyHandle::make((uint32_t)skelIdx, TinyHandle::Type::Skeleton);
 
         skeleNode.make(std::move(skel3D));
@@ -751,7 +751,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
         parentAndChild(0, modelNodeIndex); // Child of root
     }
 
-    // Mapping: glTF node index -> TinyNode index (or -1 if it's a joint)
+    // Mapping: glTF node index -> TinyNode3D index (or -1 if it's a joint)
     std::vector<int> localToGlobal(model.nodes.size(), -1);
 
     // First pass: reserve only for non-joints
@@ -762,9 +762,9 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
             continue;
         }
 
-        TinyNode placeholder;
+        TinyNode3D placeholder;
         placeholder.name = model.nodes[i].name.empty() ? "Node" : model.nodes[i].name;
-        placeholder.make(TinyNode::Node3D());
+        placeholder.make(TinyNode3D::Node());
 
         int globalIdx = pushNode(std::move(placeholder));
         localToGlobal[i] = globalIdx;
@@ -776,7 +776,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
         if (globalIdx < 0) continue; // skip joints
 
         const tinygltf::Node& gltfNode = model.nodes[i];
-        TinyNode& target = nodes[globalIdx];
+        TinyNode3D& target = nodes[globalIdx];
 
         // Transform
         glm::mat4 matrix(1.0f);
@@ -803,9 +803,11 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
                      glm::scale(glm::mat4(1.0f), scale);
         }
 
+        // Set transform in base class
+        target.transform = matrix;
+
         if (gltfNode.mesh >= 0) {
-            TinyNode::MeshRender3D meshData;
-            meshData.transform = matrix;
+            TinyNode3D::MeshRender meshData;
             meshData.mesh = TinyHandle::make((uint32_t)gltfNode.mesh, TinyHandle::Type::Mesh);
 
             bool hasValidMaterials = (gltfNode.mesh >= 0 &&
@@ -819,9 +821,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
 
             target.make(std::move(meshData));
         } else {
-            TinyNode::Node3D node3D;
-            node3D.transform = matrix;
-            target.make(std::move(node3D));
+            target.make(TinyNode3D::Node{});
         }
     }
 
@@ -870,19 +870,20 @@ constexpr const char* RED   = "\033[31m";
 constexpr const char* WHITE = "\033[0m";
 
 // Recursive hierarchy printer
-void printNodeHierarchy(const std::vector<TinyNode>& nodes, int nodeIndex, int depth = 0) {
-    using NType = TinyNode::Type;
+void printNodeHierarchy(const std::vector<TinyNode3D>& nodes, int nodeIndex, int depth = 0) {
+    using NType = TinyNode3D::Type;
     
     if (nodeIndex < 0 || nodeIndex >= static_cast<int>(nodes.size())) return;
 
-    const TinyNode& node = nodes[nodeIndex];
+    const TinyNode3D& node = nodes[nodeIndex];
     std::string indent(depth * 2, ' ');
 
     std::string typeStr;
     switch (node.type) {
-        case NType::Node3D:      typeStr = "Node3D"; break;
-        case NType::MeshRender3D:      typeStr = "MeshRender3D"; break;
-        case NType::Skeleton3D:  typeStr = "Skeleton3D"; break;
+        case NType::Node:        typeStr = "Node"; break;
+        case NType::MeshRender:  typeStr = "MeshRender"; break;
+        case NType::Skeleton:    typeStr = "Skeleton"; break;
+        case NType::BoneAttach:  typeStr = "BoneAttach"; break;
         default:                 typeStr = "Unknown"; break;
     }
 
@@ -890,13 +891,13 @@ void printNodeHierarchy(const std::vector<TinyNode>& nodes, int nodeIndex, int d
     std::cout << indent << RED << node.name << WHITE << " [" << typeStr << "]";
 
     // Append extra info
-    if (node.isType(NType::MeshRender3D)) {
-        const auto& mesh = std::get<TinyNode::MeshRender3D>(node.data);
+    if (node.isType(NType::MeshRender)) {
+        const auto& mesh = std::get<TinyNode3D::MeshRender>(node.data);
         std::cout << " -> MeshID=" << mesh.mesh.index
                   << ", MaterialIDs=" << formatVector(mesh.submeshMats)
                   << ", SkeNodeID=" << mesh.skeleNode.index;
-    } else if (node.isType(NType::Skeleton3D)) {
-        const auto& skel = std::get<TinyNode::Skeleton3D>(node.data);
+    } else if (node.isType(NType::Skeleton)) {
+        const auto& skel = std::get<TinyNode3D::Skeleton>(node.data);
         std::cout << " -> SkeRegID=" << skel.skeleRegistry.index;
     }
 
@@ -909,7 +910,7 @@ void printNodeHierarchy(const std::vector<TinyNode>& nodes, int nodeIndex, int d
 }
 
 // Wrapper
-void printHierarchy(const std::vector<TinyNode>& nodes) {
+void printHierarchy(const std::vector<TinyNode3D>& nodes) {
     if (nodes.empty()) {
         std::cout << "[Empty node list]\n";
         return;

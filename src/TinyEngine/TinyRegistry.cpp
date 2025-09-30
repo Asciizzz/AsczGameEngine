@@ -169,7 +169,7 @@ TinyHandle TinyRegistry::addSkeleton(const TinySkeleton& skeleton) {
     return TinyHandle(index, HType::Skeleton);
 }
 
-TinyHandle TinyRegistry::addNode(const TinyNode& node) {
+TinyHandle TinyRegistry::addNode(const TinyNode3D& node) {
     uint32_t index = nodeDatas.insert(node);
     resizeCheck();
 
@@ -198,7 +198,7 @@ TinySkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
     return &skeletonDatas.get(handle.index);
 }
 
-TinyNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
+TinyNode3D* TinyRegistry::getNodeData(const TinyHandle& handle) {
     if (!handle.isType(HType::Node)) return nullptr;
     return &nodeDatas.get(handle.index);
 }

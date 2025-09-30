@@ -30,5 +30,5 @@ struct TinyModelNew {
     std::vector<TinySkeleton> skeletons;
     std::vector<TinyAnimation> animations;
 
-    std::vector<TinyNode> nodes;
+    std::vector<TinyNode3D> nodes;
 };

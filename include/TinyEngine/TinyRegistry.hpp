@@ -49,14 +49,14 @@ public:
     TinyHandle addTexture(const TinyTexture& texture);
     TinyHandle addMaterial(const MaterialData& matData);
     TinyHandle addSkeleton(const TinySkeleton& skeleton);
-    TinyHandle addNode(const TinyNode& node);
+    TinyHandle addNode(const TinyNode3D& node);
 
     // Access to resources - allow modification
     MeshData*     getMeshData(const TinyHandle& handle);
     MaterialData* getMaterialData(const TinyHandle& handle);
     TextureData*  getTextureData(const TinyHandle& handle);
     TinySkeleton* getSkeletonData(const TinyHandle& handle);
-    TinyNode*     getNodeData(const TinyHandle& handle);
+    TinyNode3D*     getNodeData(const TinyHandle& handle);
 
 
     void printDataCounts() const {
@@ -100,5 +100,5 @@ private:
     TinyPoolRaw<MaterialData> materialDatas;
     TinyPoolPtr<TextureData>  textureDatas;
     TinyPoolRaw<TinySkeleton> skeletonDatas;
-    TinyPoolRaw<TinyNode>     nodeDatas;
+    TinyPoolRaw<TinyNode3D>     nodeDatas;
 };

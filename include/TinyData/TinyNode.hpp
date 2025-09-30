@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-struct TinyNode {
+struct TinyNode3D {
     // Default node data
     std::string name = "Node";
 
@@ -16,38 +16,39 @@ struct TinyNode {
     } scope = Scope::Local;
 
     enum class Type {
-        Node3D,
-        MeshRender3D,
-        Skeleton3D,
-        BoneAttach3D
-    } type = Type::Node3D;
+        Node,
+        MeshRender,
+        Skeleton,
+        BoneAttach
+    } type = Type::Node;
 
     TinyHandle parent;
     std::vector<TinyHandle> children;
 
-    struct Node3D {
-        static constexpr Type kType = Type::Node3D;
+    // Transform data is now part of the base TinyNode3D
+    glm::mat4 transform = glm::mat4(1.0f);
 
-        glm::mat4 transform = glm::mat4(1.0f);
+    struct Node {
+        static constexpr Type kType = Type::Node;
     };
 
-    struct MeshRender3D : Node3D {
-        static constexpr Type kType = Type::MeshRender3D;
+    struct MeshRender {
+        static constexpr Type kType = Type::MeshRender;
 
         TinyHandle mesh;
         std::vector<TinyHandle> submeshMats;
         TinyHandle skeleNode;
     };
 
-    struct BoneAttach3D : Node3D {
-        static constexpr Type kType = Type::BoneAttach3D;
+    struct BoneAttach {
+        static constexpr Type kType = Type::BoneAttach;
 
-        TinyHandle skeleNode; // Point to a Skeleton3D node
+        TinyHandle skeleNode; // Point to a Skeleton node
         TinyHandle bone; // Index in skeleton
     };
 
-    struct Skeleton3D : Node3D {
-        static constexpr Type kType = Type::Skeleton3D;
+    struct Skeleton {
+        static constexpr Type kType = Type::Skeleton;
 
         TinyHandle skeleRegistry;
     };  
@@ -60,11 +61,11 @@ struct TinyNode {
     */
 
     MonoVariant<
-        Node3D,
-        MeshRender3D,
-        Skeleton3D,
-        BoneAttach3D
-    > data = Node3D();
+        Node,
+        MeshRender,
+        Skeleton,
+        BoneAttach
+    > data = Node();
 
     template<typename T>
     void make(T&& newData) {
@@ -73,8 +74,8 @@ struct TinyNode {
     }
 
     template<typename T>
-    static TinyNode make(const T& data) {
-        TinyNode node;
+    static TinyNode3D make(const T& data) {
+        TinyNode3D node;
         node.type = T::kType;
         node.data = data;
         return node;
