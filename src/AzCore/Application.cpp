@@ -279,6 +279,8 @@ void Application::mainLoop() {
 
 // =================================
 
+        project->runPlayground(dTime);
+
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
             // Update global UBO buffer from frame index

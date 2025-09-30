@@ -3,7 +3,7 @@
 #include "TinyEngine/TinyRegistry.hpp"
 #include "TinyEngine/TinyInstance.hpp"
 
-struct TinyNodeRT {
+struct TinyNodeRT3D {
     TinyHandle regHandle;     // Points to registry node (data for reference)
     TinyNode3D::Type type = TinyNode3D::Type::Node; // Direct copy of registry type
 
@@ -55,8 +55,8 @@ struct TinyNodeRT {
     }
 
     template<typename T>
-    static TinyNodeRT make(const T& data) {
-        TinyNodeRT node;
+    static TinyNodeRT3D make(const T& data) {
+        TinyNodeRT3D node;
         using CleanT = std::decay_t<T>;   // remove refs/const
         node.type = CleanT::kType;
         node.data = data;
@@ -67,7 +67,7 @@ struct TinyNodeRT {
      * Manages parent-child relationships with automatic dirty flagging.
      * Adds child to this node and marks both nodes as dirty for transform updates.
      */
-    void addChild(uint32_t childIndex, std::vector<std::unique_ptr<TinyNodeRT>>& allRuntimeNodes);
+    void addChild(uint32_t childIndex, std::vector<std::unique_ptr<TinyNodeRT3D>>& allrtNodes);
 };
 
 struct TinyTemplate {
@@ -85,11 +85,11 @@ public:
         // Create root node
         TinyHandle rootHandle = registry->addNode(TinyNode3D());
 
-        auto rootNode = MakeUnique<TinyNodeRT>();
+        auto rootNode = MakeUnique<TinyNodeRT3D>();
         rootNode->regHandle = rootHandle;
         // Children will be added upon scene population
 
-        runtimeNodes.push_back(std::move(rootNode));
+        rtNodes.push_back(std::move(rootNode));
     }
 
     // Delete copy
@@ -104,19 +104,19 @@ public:
      * Adds a node instance to the scene.
      *
      * @param templateIndex point to the template to use.
-     * @param parentIndex point to the runtime node to inherit from (optional).
+     * @param rootIndex point to the runtime node to inherit from (optional).
      */
-    void addNodeInstance(uint32_t templateIndex, uint32_t parentIndex = 0);
+    void addNodeInstance(uint32_t templateIndex, uint32_t rootIndex = 0);
 
     void printRuntimeNodeRecursive(
-        const UniquePtrVec<TinyNodeRT>& runtimeNodes,
+        const UniquePtrVec<TinyNodeRT3D>& rtNodes,
         TinyRegistry* registry,
         const TinyHandle& runtimeHandle,
         int depth = 0
     );
 
     void printRuntimeNodeHierarchy() {
-        printRuntimeNodeRecursive(runtimeNodes, registry.get(), TinyHandle::make(0, TinyHandle::Type::Node, false));
+        printRuntimeNodeRecursive(rtNodes, registry.get(), TinyHandle::make(0, TinyHandle::Type::Node, false));
     };
 
     void printRuntimeNodeOrdered();
@@ -141,7 +141,7 @@ public:
     void runPlayground(float dTime);
 
     // These are not official public methods, only for testing purposes
-    const UniquePtrVec<TinyNodeRT>& getRuntimeNodes() const { return runtimeNodes; }
+    const UniquePtrVec<TinyNodeRT3D>& getRuntimeNodes() const { return rtNodes; }
 
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
 
@@ -153,5 +153,5 @@ private:
     std::vector<TinyTemplate> templates;
 
     // A basic scene (best if we use smart pointers)
-    UniquePtrVec<TinyNodeRT> runtimeNodes;
+    UniquePtrVec<TinyNodeRT3D> rtNodes;
 };
