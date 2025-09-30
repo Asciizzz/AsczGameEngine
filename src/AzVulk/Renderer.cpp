@@ -328,8 +328,6 @@ void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const Pipeline
         if (rtNode->type != TinyNode3D::Type::MeshRender) continue;
 
         const auto& transform = rtNode->globalTransform;
-        // Global transform as push constant (offset 0) - include both vertex and fragment stages
-        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, transform);
 
         const auto& regNode = registry->getNodeData(rtNode->regHandle);
         const auto& regMeshData = regNode->as<TinyNode3D::MeshRender>();
@@ -355,8 +353,18 @@ void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const Pipeline
             uint32_t indexCount = submeshes[i].indexCount;
             if (indexCount == 0) continue;
 
-            uint32_t indexOffset = submeshes[i].indexOffset;
+            uint32_t matIndex  = submeshMats[i].index;
+            glm::uvec4 props1 = glm::uvec4(matIndex, 0, 0, 0);
 
+            // // Print submesh mats index
+            // printf("Submesh %zu uses material index %u\n", i, submeshMats[i].index);
+
+            // Offset 0: global transform
+            // Offset 64: other properties (1)
+            rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transform);
+            rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
+
+            uint32_t indexOffset = submeshes[i].indexOffset;
             vkCmdDrawIndexed(currentCmd, indexCount, 1, indexOffset, 0, 0);
         }
     }

@@ -39,7 +39,7 @@
             "pushConstants": [ {
                 "stages": [ "Vertex", "Fragment" ],
                 "offset": 0,
-                "size": 64
+                "size": 80
             } ]
         }
     ]
