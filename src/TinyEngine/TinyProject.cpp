@@ -197,7 +197,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex) {
 
                 // Get the true skeleton node in the runtime
                 bool hasValidSkeleNode = mesh3D.skeleNode.isValid() && regHandleToRtNodeIndex.count(mesh3D.skeleNode);
-                data.skeleNodeOverride = hasValidSkeleNode ? regHandleToRtNodeIndex[mesh3D.skeleNode] : UINT32_MAX;
+                data.skeleNodeRT = hasValidSkeleNode ? regHandleToRtNodeIndex[mesh3D.skeleNode] : UINT32_MAX;
 
                 rtNode->make(data);
                 break;
@@ -218,16 +218,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex) {
             }
         }
 
-        // Update transforms immediately after each node is created
-        if (rtNode->isDirty) {
-            // Find this node's parent global transform
-            glm::mat4 parentGlobalTransform = glm::mat4(1.0f);
-            if (rtNode->parentIdx < rtNodes.size()) {
-                parentGlobalTransform = rtNodes[rtNode->parentIdx]->globalTransform;
-            }
-            
-            updateGlobalTransforms(rtNodeIndex, parentGlobalTransform);
-        }
+        // Transforms will be updated every frame in runPlayground(), no need to update here
     }
 
     // Mark the root node as dirty since it's receiving new children
@@ -315,11 +306,8 @@ void TinyProject::updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4
         return;
     }
 
-    // Only process dirty nodes
-    if (!runtimeNode->isDirty) {
-        return;
-    }
-
+    // Always update - no dirty flag checking
+    
     // Get the registry node to access the base transform
     TinyNode3D* regNode = registry->getNodeData(runtimeNode->regHandle);
     if (!regNode) {
@@ -332,7 +320,7 @@ void TinyProject::updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4
     // Calculate global transform: parent global * local transform
     runtimeNode->globalTransform = parentGlobalTransform * localTransform;
 
-    // Mark this node as clean
+    // Mark this node as clean (optional since we're not checking dirty flags anymore)
     runtimeNode->isDirty = false;
 
     // Recursively update all children
@@ -356,28 +344,23 @@ void TinyNodeRT3D::addChild(uint32_t childIndex, std::vector<std::unique_ptr<Tin
 }
 
 void TinyProject::runPlayground(float dTime) {
-    // Make sure we have a root node
-    if (rtNodes.empty() || !rtNodes[0]) {
-        return;
-    }
-
     // Get the root node (index 0)
-    TinyNodeRT3D* rootNode = rtNodes[0].get();
-    
+    TinyNodeRT3D* node0 = rtNodes[0].get();
+    TinyNodeRT3D* node1 = rtNodes[10].get();
+
     // Calculate rotation: 90 degrees per second = π/2 radians per second
     float rotationSpeed = glm::radians(90.0f); // 90 degrees per second in radians
     float rotationThisFrame = rotationSpeed * dTime;
     
     // Create rotation matrix around Y axis
-    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), rotationThisFrame, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 rotMat0 = glm::rotate(glm::mat4(1.0f), rotationThisFrame, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 rotMat1 = glm::rotate(glm::mat4(1.0f), -rotationThisFrame, glm::vec3(0.0f, 1.0f, 0.0f));
     
     // Apply rotation to the transform override
-    rootNode->transformOverride = rotationMatrix * rootNode->transformOverride;
-    
-    // Mark root node as dirty so transforms get updated
-    rootNode->isDirty = true;
-    
-    // Update global transforms starting from root
+    node0->transformOverride = rotMat0 * node0->transformOverride;
+    node1->transformOverride = rotMat1 * node1->transformOverride;
+
+    // Update the entire transform hierarchy every frame (no dirty flag checking)
     updateGlobalTransforms(0);
 }
 

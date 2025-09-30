@@ -12,33 +12,30 @@ struct TinyNodeRT3D {
 
     bool isDirty = true;
 
-    // Transform data is now at the base level, like TinyNode3D
     glm::mat4 transformOverride = glm::mat4(1.0f);
     glm::mat4 globalTransform = glm::mat4(1.0f);
 
     // Runtime data structures
     struct Node {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Node;
-        // No additional data needed for base node
     };
 
     struct Mesh {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::MeshRender;
 
-        // Overrideable indices
-        uint32_t skeleNodeOverride = UINT32_MAX; // Point to a runtime Skeleton node (UINT32_MAX = no override)
+        uint32_t skeleNodeRT = UINT32_MAX;
     };
 
     struct Bone {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::BoneAttach;
 
-        uint32_t skeleNodeOverride = UINT32_MAX; // Point to a runtime Skeleton node (UINT32_MAX = no override)
+        uint32_t skeleNodeRT = UINT32_MAX;
     };
 
     struct Skeleton {
         static constexpr TinyNode3D::Type kType = TinyNode3D::Type::Skeleton;
 
-        std::vector<glm::mat4> boneTransformsFinal; // Final bone transforms for skinning
+        std::vector<glm::mat4> boneTransformsFinal;
     };
 
     MonoVariant<
@@ -122,8 +119,8 @@ public:
     void printRuntimeNodeOrdered();
 
     /**
-     * Recursively updates global transforms for dirty nodes starting from the specified root.
-     * Only processes nodes marked as isDirty = true, and sets isDirty = false after processing.
+     * Recursively updates global transforms for all nodes starting from the specified root.
+     * Always processes all nodes regardless of dirty state for guaranteed correctness.
      * 
      * @param rootNodeIndex Index to the root node to start the recursive update from
      * @param parentGlobalTransform Global transform of the parent (identity for root nodes)
