@@ -22,7 +22,7 @@ layout(location = 3) out vec4 fragTangent;
 
 void main() {
     // world-space position
-    vec4 worldPos4 = vec4(inPos_Tu.xyz, 1.0);
+    vec4 worldPos4 = transform.model * vec4(inPos_Tu.xyz, 1.0);
     fragWorldPos = worldPos4.xyz;
 
     mat3 normalMat = transpose(inverse(mat3(transform.model)));

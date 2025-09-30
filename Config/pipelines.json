@@ -37,7 +37,7 @@
             "vertexInput": "Test",
             "descriptorLayouts": [ "global" ],
             "pushConstants": [ {
-                "stages": [ "Vertex" ],
+                "stages": [ "Vertex", "Fragment" ],
                 "offset": 0,
                 "size": 64
             } ]

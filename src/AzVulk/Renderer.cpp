@@ -328,8 +328,8 @@ void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const Pipeline
         if (rtNode->type != TinyNode3D::Type::MeshRender) continue;
 
         const auto& transform = rtNode->globalTransform;
-        // Global transform as push constant (set 0, binding 0)
-        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), transform);
+        // Global transform as push constant (offset 0) - include both vertex and fragment stages
+        rPipeline->pushConstants(currentCmd, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, transform);
 
         const auto& regNode = registry->getNodeData(rtNode->regHandle);
         const auto& regMeshData = regNode->as<TinyNode3D::MeshRender>();
