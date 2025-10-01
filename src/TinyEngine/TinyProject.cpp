@@ -81,10 +81,6 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
         if (localNode.hasType(NTypes::Node)) {
             regNode.transform = localNode.transform;
-
-            // Print the translation component for verification
-            glm::vec3 translation = glm::vec3(regNode.transform[3]);
-            printf("Node %s translation: (%.2f, %.2f, %.2f)\n", regNode.name.c_str(), translation.x, translation.y, translation.z);
         }
 
         if (localNode.hasType(NTypes::MeshRender)) {
