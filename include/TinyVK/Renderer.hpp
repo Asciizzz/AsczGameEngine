@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <functional>
 #include <glm/glm.hpp>
 #include <SDL2/SDL.h>
 #include <vector>
@@ -30,6 +31,7 @@ public:
 
     uint32_t beginFrame();
     void endFrame(uint32_t imageIndex);
+    void endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer, VkRenderPass, VkFramebuffer)> imguiRenderFunc);
 
     uint32_t getCurrentFrame() const { return currentFrame; }
     VkCommandBuffer getCurrentCommandBuffer() const;
@@ -37,10 +39,12 @@ public:
     // Render pass getters
     VkRenderPass getMainRenderPass() const;
     VkRenderPass getOffscreenRenderPass() const;
+    VkRenderPass getImGuiRenderPass() const;
     
     // SwapChain getters for external access
     SwapChain* getSwapChain() const { return swapChain.get(); }
     VkExtent2D getSwapChainExtent() const;
+    uint32_t getSwapChainImageCount() const { return static_cast<uint32_t>(swapchainImageCount); }
     
     // DepthManager getter for external access
     DepthManager* getDepthManager() const { return depthManager.get(); }
@@ -49,6 +53,8 @@ public:
 
     void drawScene(const TinyProject* project, const PipelineRaster* rPipeline) const;
 
+    // Get swapchain framebuffer for external ImGui rendering
+    VkFramebuffer getSwapChainFramebuffer(uint32_t imageIndex) const;
 
     // Post-processing methods
     void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
@@ -68,6 +74,7 @@ private:
     // Render passes owned by this renderer
     UniquePtr<RenderPass> mainRenderPass;      // For final presentation
     UniquePtr<RenderPass> offscreenRenderPass; // For scene rendering
+    UniquePtr<RenderPass> imguiRenderPass;     // For ImGui overlay rendering (preserves content)
     
     UniquePtr<PostProcess> postProcess;
 

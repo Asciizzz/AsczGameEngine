@@ -4,7 +4,7 @@
 #include <iostream>
 
 bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
-                       const TinyVK::RenderPass* renderPass, uint32_t imageCount) {
+                       VkRenderPass renderPass, uint32_t imageCount) {
     if (m_initialized) {
         std::cerr << "ImGuiWrapper: Already initialized!" << std::endl;
         return false;
@@ -44,7 +44,7 @@ bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::D
     init_info.CheckVkResultFn = nullptr;
     
     // Set up the pipeline info for the main viewport
-    init_info.PipelineInfoMain.RenderPass = renderPass->renderPass;
+    init_info.PipelineInfoMain.RenderPass = renderPass;
     init_info.PipelineInfoMain.Subpass = 0;
     init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -127,4 +127,40 @@ void ImGuiWrapper::destroyDescriptorPool() {
         vkDestroyDescriptorPool(m_deviceVK->lDevice, m_descriptorPool, nullptr);
         m_descriptorPool = VK_NULL_HANDLE;
     }
+}
+
+void ImGuiWrapper::updateRenderPass(VkRenderPass newRenderPass, uint32_t imageCount) {
+    if (!m_initialized) return;
+
+    // Wait for device to be idle
+    vkDeviceWaitIdle(m_deviceVK->lDevice);
+
+    // Shutdown current Vulkan backend (but keep SDL2 backend)
+    ImGui_ImplVulkan_Shutdown();
+
+    // Recreate descriptor pool (old one may be invalid)
+    destroyDescriptorPool();
+    createDescriptorPool();
+
+    // Reinitialize Vulkan backend with new render pass
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.ApiVersion = VK_API_VERSION_1_0;
+    init_info.Instance = VK_NULL_HANDLE; // Not needed for reinit
+    init_info.PhysicalDevice = m_deviceVK->pDevice;
+    init_info.Device = m_deviceVK->lDevice;
+    init_info.QueueFamily = m_deviceVK->queueFamilyIndices.graphicsFamily.value();
+    init_info.Queue = m_deviceVK->graphicsQueue;
+    init_info.PipelineCache = VK_NULL_HANDLE;
+    init_info.DescriptorPool = m_descriptorPool;
+    init_info.MinImageCount = imageCount;
+    init_info.ImageCount = imageCount;
+    init_info.Allocator = nullptr;
+    init_info.CheckVkResultFn = nullptr;
+    
+    // Set up the pipeline info with the new render pass
+    init_info.PipelineInfoMain.RenderPass = newRenderPass;
+    init_info.PipelineInfoMain.Subpass = 0;
+    init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+    ImGui_ImplVulkan_Init(&init_info);
 }

@@ -20,7 +20,7 @@ public:
 
     // Initialize ImGui with SDL2 and Vulkan backends
     bool init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
-              const TinyVK::RenderPass* renderPass, uint32_t imageCount);
+              VkRenderPass renderPass, uint32_t imageCount);
 
     // Cleanup ImGui
     void cleanup();
@@ -33,6 +33,9 @@ public:
 
     // Handle SDL events
     void processEvent(const SDL_Event* event);
+
+    // Update render pass after window resize
+    void updateRenderPass(VkRenderPass newRenderPass, uint32_t imageCount);
 
     // Demo window for testing
     void showDemoWindow(bool* p_open = nullptr);

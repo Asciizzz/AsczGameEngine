@@ -115,17 +115,12 @@ void Application::initComponents() {
     // Initialize ImGui - do this after renderer is fully set up
     imguiWrapper = MakeUnique<ImGuiWrapper>();
     
-    // Create a temporary RenderPass for ImGui initialization using the correct swapchain format
-    TinyVK::RenderPassConfig imguiRenderPassConfig = TinyVK::RenderPassConfig::createForwardRenderingConfig(
-        renderer->getSwapChain()->imageFormat
-    );
-    auto imguiRenderPass = MakeUnique<TinyVK::RenderPass>(lDevice, pDevice, imguiRenderPassConfig);
-    
+    // Use the ImGui render pass from the Renderer (designed to preserve existing content)
     bool imguiInitSuccess = imguiWrapper->init(
         windowManager->window,
         vkInstance->instance,
         deviceVK.get(),
-        imguiRenderPass.get(),
+        renderer->getImGuiRenderPass(),
         static_cast<uint32_t>(renderer->getSwapChain()->images.size())
     );
     
@@ -152,10 +147,20 @@ bool Application::checkWindowResize() {
 
     // Handle window resize in renderer (now handles depth resources internally)
     renderer->handleWindowResize(windowManager->window);
+    printf("\033[0;32m[Info]\033[0m Window resized to %dx%d and renderer updated.\n", newWidth, newHeight);
+
+    // Update ImGui render pass after renderer recreates render passes
+    if (imguiWrapper) {
+        VkRenderPass imguiRenderPass = renderer->getImGuiRenderPass();
+        uint32_t imageCount = renderer->getSwapChainImageCount();
+        imguiWrapper->updateRenderPass(imguiRenderPass, imageCount);
+    }
+    printf("\033[0;32m[Info]\033[0m ImGui render pass updated after resize.\n");
 
     // Recreate all pipelines with offscreen render pass for post-processing
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
     pipelineManager->recreateAllPipelines(offscreenRenderPass);
+    printf("\033[0;32m[Info]\033[0m All pipelines recreated with new offscreen render pass.\n");
 
     return true;
 }
@@ -326,10 +331,10 @@ void Application::mainLoop() {
 
             rendererRef.drawScene(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Test"));
 
-            // Render ImGui
-            imguiWrapper->render(rendererRef.getCurrentCommandBuffer());
-
-            rendererRef.endFrame(imageIndex);
+            // End frame with ImGui rendering callback
+            rendererRef.endFrame(imageIndex, [this](VkCommandBuffer cmd, VkRenderPass renderPass, VkFramebuffer framebuffer) {
+                imguiWrapper->render(cmd);
+            });
         };
 
         // Clean window title - FPS info now in ImGui

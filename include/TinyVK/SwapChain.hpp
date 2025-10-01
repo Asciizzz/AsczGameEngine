@@ -21,6 +21,8 @@ public:
 
     void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
     void recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView);
+    
+    VkFramebuffer getFramebuffer(uint32_t index) const;
 
     const Device* deviceVK;
     VkSurfaceKHR surface;

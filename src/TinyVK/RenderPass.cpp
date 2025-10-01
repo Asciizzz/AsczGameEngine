@@ -150,6 +150,41 @@ RenderPassConfig RenderPassConfig::createMSAAConfig(VkFormat colorFormat, VkForm
     return config;
 }
 
+RenderPassConfig RenderPassConfig::createImGuiConfig(VkFormat swapChainFormat) {
+    RenderPassConfig config;
+
+    // Color attachment that preserves existing content (doesn't clear)
+    AttachmentConfig colorAttachment;
+    colorAttachment.format = swapChainFormat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;  // Preserve existing content
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    config.attachments.push_back(colorAttachment);
+    
+    // Depth attachment (required to match framebuffer but not used by ImGui)
+    AttachmentConfig depthAttachment;
+    depthAttachment.format = VK_FORMAT_D32_SFLOAT;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;  // Don't care about depth for ImGui
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    config.attachments.push_back(depthAttachment);
+    
+    // Subpass with color attachment and depth attachment (to match framebuffer)
+    config.subpasses.push_back(SubpassConfig::createSimpleSubpass(0, 1));  // Color=0, depth=1
+
+    config.addDefaultDependency();
+    
+    return config;
+}
+
 // RenderPassConfig helper methods
 void RenderPassConfig::addDefaultDependency() {
     VkSubpassDependency dep{};

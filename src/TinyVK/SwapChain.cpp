@@ -143,6 +143,13 @@ void SwapChain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass
     createFramebuffers(renderPass, depthImageView);
 }
 
+VkFramebuffer SwapChain::getFramebuffer(uint32_t index) const {
+    if (index >= framebuffers.size()) {
+        return VK_NULL_HANDLE;
+    }
+    return framebuffers[index]->get();
+}
+
 void SwapChain::cleanup() {
     framebuffers.clear();
 

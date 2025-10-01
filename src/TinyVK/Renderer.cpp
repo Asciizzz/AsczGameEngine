@@ -95,6 +95,12 @@ void Renderer::createRenderPasses() {
         VK_FORMAT_R8G8B8A8_UNORM  // Match the ping-pong image format
     );
     offscreenRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, offscreenRenderPassConfig);
+
+    // Create ImGui render pass that preserves existing framebuffer content
+    auto imguiRenderPassConfig = RenderPassConfig::createImGuiConfig(
+        swapChain->imageFormat
+    );
+    imguiRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, imguiRenderPassConfig);
 }
 
 VkRenderPass Renderer::getMainRenderPass() const {
@@ -103,6 +109,14 @@ VkRenderPass Renderer::getMainRenderPass() const {
 
 VkRenderPass Renderer::getOffscreenRenderPass() const {
     return offscreenRenderPass ? offscreenRenderPass->get() : VK_NULL_HANDLE;
+}
+
+VkRenderPass Renderer::getImGuiRenderPass() const {
+    return imguiRenderPass ? imguiRenderPass->get() : VK_NULL_HANDLE;
+}
+
+VkFramebuffer Renderer::getSwapChainFramebuffer(uint32_t imageIndex) const {
+    return swapChain ? swapChain->getFramebuffer(imageIndex) : VK_NULL_HANDLE;
 }
 
 VkExtent2D Renderer::getSwapChainExtent() const {
@@ -295,6 +309,105 @@ void Renderer::endFrame(uint32_t imageIndex) {
 
     postProcess->executeEffects(currentCmd, currentFrame);
     postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
+
+    if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
+
+    VkSemaphore waitSemaphores[]   = { imageAvailableSemaphores[currentFrame] };
+    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    // SIGNAL the per-IMAGE semaphore:
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[imageIndex] };
+
+    VkSubmitInfo submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submit.waitSemaphoreCount   = 1;
+    submit.pWaitSemaphores      = waitSemaphores;
+    submit.pWaitDstStageMask    = &waitStage;
+    submit.commandBufferCount   = 1;
+    submit.pCommandBuffers      = &currentCmd;
+    submit.signalSemaphoreCount = 1;
+    submit.pSignalSemaphores    = signalSemaphores;
+
+    if (vkQueueSubmit(deviceVK->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit draw command buffer");
+    }
+
+    // PRESENT waits on the same per-IMAGE semaphore:
+    VkPresentInfoKHR present{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+    present.waitSemaphoreCount = 1;
+    present.pWaitSemaphores    = signalSemaphores;
+    present.swapchainCount     = 1;
+    VkSwapchainKHR chains[]    = { swapChain->get() };
+    present.pSwapchains        = chains;
+    present.pImageIndices      = &imageIndex;
+
+    VkResult res = vkQueuePresentKHR(deviceVK->presentQueue, &present);
+    if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || framebufferResized) {
+        framebufferResized = true;
+    } else if (res != VK_SUCCESS) {
+        throw std::runtime_error("failed to present");
+    }
+
+    currentFrame = (currentFrame + 1) % maxFramesInFlight;
+}
+
+void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer, VkRenderPass, VkFramebuffer)> imguiRenderFunc) {
+    if (imageIndex == UINT32_MAX) return;
+
+    VkCommandBuffer currentCmd = getCurrentCommandBuffer();
+
+    // End the offscreen render pass first before post-processing
+    vkCmdEndRenderPass(currentCmd);
+
+    postProcess->executeEffects(currentCmd, currentFrame);
+    postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
+
+    // Render ImGui if a render function is provided
+    if (imguiRenderFunc) {
+        // Transition swapchain image from present to color attachment
+        VkImageMemoryBarrier toColorAttachment{};
+        toColorAttachment.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        toColorAttachment.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        toColorAttachment.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        toColorAttachment.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        toColorAttachment.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        toColorAttachment.image = swapChain->images[imageIndex];
+        toColorAttachment.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        toColorAttachment.subresourceRange.baseMipLevel = 0;
+        toColorAttachment.subresourceRange.levelCount = 1;
+        toColorAttachment.subresourceRange.baseArrayLayer = 0;
+        toColorAttachment.subresourceRange.layerCount = 1;
+        toColorAttachment.srcAccessMask = 0;  // Already transitioned by blit in previous stage
+        toColorAttachment.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        vkCmdPipelineBarrier(currentCmd,
+                            VK_PIPELINE_STAGE_TRANSFER_BIT,  // Wait for the blit operation to complete
+                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                            0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
+
+        // Begin render pass for ImGui
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = imguiRenderPass->get();
+        renderPassInfo.framebuffer = swapChain->getFramebuffer(imageIndex);
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = swapChain->extent;
+
+        // No clear - we want to preserve the blitted image
+        renderPassInfo.clearValueCount = 0;
+        renderPassInfo.pClearValues = nullptr;
+
+        vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        // Call the ImGui render function
+        imguiRenderFunc(currentCmd, imguiRenderPass->get(), swapChain->getFramebuffer(imageIndex));
+
+        vkCmdEndRenderPass(currentCmd);
+
+        // Note: The render pass automatically transitions the image back to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+        // as specified in its finalLayout, so no manual transition is needed
+    }
 
     if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");

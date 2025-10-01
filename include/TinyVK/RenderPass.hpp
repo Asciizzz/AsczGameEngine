@@ -46,6 +46,7 @@ struct RenderPassConfig {
     static RenderPassConfig createShadowMapConfig();
     static RenderPassConfig createPostProcessConfig(VkFormat colorFormat);
     static RenderPassConfig createMSAAConfig(VkFormat colorFormat, VkFormat resolveFormat, VkSampleCountFlagBits samples);
+    static RenderPassConfig createImGuiConfig(VkFormat swapChainFormat);
     
     // Helper methods
     void addDefaultDependency();
