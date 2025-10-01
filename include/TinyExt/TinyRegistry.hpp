@@ -5,16 +5,16 @@
 
 #include <typeindex>
 
-struct IPool {
-    virtual ~IPool() = default;
-};
-
-template<typename T>
-struct PoolWrapper : public IPool {
-    TinyPool<T> pool;
-};
-
 class TinyRegistry { // For raw resource data
+    struct IPool {
+        virtual ~IPool() = default;
+    };
+
+    template<typename T>
+    struct PoolWrapper : public IPool {
+        TinyPool<T> pool;
+    };
+
     UnorderedMap<std::type_index, UniquePtr<IPool>> pools;
 
     template<typename T>
@@ -66,8 +66,14 @@ public:
     }
 
     template<typename T>
+    const T* get(const TinyHandle& handle) const {
+        auto* wrapper = getWrapper<T>(); // check validity
+        return wrapper ? wrapper->pool.get(handle.index) : nullptr;
+    }
+
+    template<typename T>
     uint32_t poolCapacity() const {
-        auto* wrapper = wrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>(); // check validity
         return wrapper ? wrapper->pool.capacity : 0;
     }
 };

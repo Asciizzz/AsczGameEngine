@@ -1,8 +1,5 @@
 #pragma once
 
-#include "TinyExt/TinyPool.hpp"
-#include "TinyExt/TinyHandle.hpp"
-
 #include "TinyData/TinyModel.hpp"
 
 #include "TinyVK/TextureVK.hpp"

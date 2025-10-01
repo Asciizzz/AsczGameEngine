@@ -15,14 +15,6 @@ union TinyHandle {
     TinyHandle() : value(UINT64_MAX) {}
     TinyHandle(uint64_t v) : value(v) {}
 
-    // Value operators
-    bool operator==(const TinyHandle& other) const { return value == other.value; }
-    bool operator!=(const TinyHandle& other) const { return value != other.value; }
-
-    static TinyHandle invalid() { return TinyHandle(); }
-    bool isValid() const { return value != UINT64_MAX && index != UINT32_MAX; }
-    void invalidate() { value = UINT64_MAX; }
-
     /**
     * Create a handle
     @param index The index in the respective pool/array
@@ -36,12 +28,18 @@ union TinyHandle {
         return handle;
     }
 
-    // Nice fast constructors
-
     template<typename IndexType, typename VersionType>
     TinyHandle(IndexType index, VersionType version = 0) {
         *this = make(index, version);
     }
+
+    // Value operators
+    bool operator==(const TinyHandle& other) const { return value == other.value; }
+    bool operator!=(const TinyHandle& other) const { return value != other.value; }
+
+    static TinyHandle invalid() { return TinyHandle(); }
+    bool isValid() const { return value != UINT64_MAX && index != UINT32_MAX; }
+    void invalidate() { value = UINT64_MAX; }
 };
 
 namespace std {
