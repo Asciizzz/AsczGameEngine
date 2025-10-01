@@ -313,6 +313,7 @@ void Renderer::drawSky(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRa
 
 void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const TinyProject* project) const {
     const auto& rtNodes = project->getRuntimeNodes();
+    const auto& rtMeshRenderIdxs = project->getRuntimeMeshRenderIndices();
 
     const auto& registry = project->getRegistry();
 
@@ -323,16 +324,15 @@ void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const Pipeline
     VkDescriptorSet globalSet = glbUBO->getDescSet(currentFrame);
     rPipeline->bindSets(currentCmd, &globalSet, 1);
 
-    for (const auto& rtNode : rtNodes) {
-        // Only draw mesh nodes
-        if (!rtNode->hasType(TinyNode::Types::MeshRender)) continue;
+    for (uint32_t meshIdx : rtMeshRenderIdxs) {
+        const auto& rtNode = rtNodes[meshIdx];
 
         const auto& transform = rtNode->globalTransform;
 
-        const auto& regNode = registry->getNodeData(rtNode->regHandle);
+        const auto& regNode = registry->get<TinyRNode>(rtNode->regHandle);
         const auto& regMeshData = regNode->get<TinyNode::MeshRender>();
 
-        const auto& regMesh = registry->getMeshData(regMeshData->mesh);
+        const auto& regMesh = registry->get<TinyRMesh>(regMeshData->mesh);
         const auto& submeshes = regMesh->submeshes;
 
         const auto& submeshMats = regMeshData->submeshMats;

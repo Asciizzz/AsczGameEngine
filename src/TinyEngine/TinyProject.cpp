@@ -132,8 +132,8 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
     const TinyTemplate& temp = templates[templateIndex];
 
     // First pass: create and append - each template instance gets its own runtime nodes
-    for (const TinyHandle& regHandle : temp.registryNodes) {
-        const TinyNode* regNode = registry->getNodeData(regHandle);
+    for (const TinyHandle& regHandle : temp.rData) {
+        const TinyNode* regNode = registry->get<TinyRNode>(regHandle);
         if (!regNode) {
             printf("Warning: Registry node handle %llu is invalid, skipping.\n", regHandle.value);
             continue;
@@ -151,9 +151,9 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
 
     uint32_t rtRootIndex = rootIndex < rtNodes.size() ? rootIndex : 0;
 
-    for (uint32_t i = 0; i < static_cast<uint32_t>(temp.registryNodes.size()); ++i) {
-        const TinyHandle& regHandle = temp.registryNodes[i];
-        const TinyNode* regNode = registry->getNodeData(regHandle);
+    for (uint32_t i = 0; i < static_cast<uint32_t>(temp.rData.size()); ++i) {
+        const TinyHandle& regHandle = temp.rData[i];
+        const TinyNode* regNode = registry->get<TinyRNode>(regHandle);
 
         uint32_t rtNodeIndex = regHandleToRtNodeIndex[regHandle];
         auto& rtNode = rtNodes[rtNodeIndex];
@@ -197,12 +197,15 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
             data.skeleNodeRT = hasValidSkeleNode ? regHandleToRtNodeIndex[regMesh->skeleNode] : UINT32_MAX;
 
             rtNode->add(data);
+
+            // Append to the mesh render index list for easy access later
+            rtMeshRenderIdxs.push_back(rtNodeIndex);
         }
 
         if (regNode->hasType(NTypes::Skeleton)) {
             const auto& regSkeleton = regNode->get<TinyNode::Skeleton>();
 
-            const auto* skeleData = registry->getSkeletonData(regSkeleton->skeleRegistry);
+            const auto* skeleData = registry->get<TinyRSkeleton>(regSkeleton->skeleRegistry);
 
             TinyNodeRT3D::Skeleton data;
             data.boneTransformsFinal.resize( skeleData->bones.size(), glm::mat4(1.0f) );
@@ -226,7 +229,7 @@ void TinyProject::printRuntimeNodeRecursive(
     int depth
 ) {
     const TinyNodeRT3D* rtNode = rtNodes[runtimeHandle.index].get();
-    const TinyNode* regNode = registry->getNodeData(rtNode->regHandle);
+    const TinyNode* regNode = registry->get<TinyRNode>(rtNode->regHandle);
 
     // Format runtime index padded to 3 chars
     char idxBuf[8];
@@ -271,7 +274,7 @@ void TinyProject::printRuntimeNodeOrdered() {
 
         // Lookup registry node name
         std::string regName = "???";
-        if (TinyNode* regNode = registry->getNodeData(runtimeNode->regHandle)) {
+        if (TinyNode* regNode = registry->get<TinyRNode>(runtimeNode->regHandle)) {
             regName = regNode->name;
         }
 
@@ -297,7 +300,7 @@ void TinyProject::updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4
     if (!runtimeNode) return;
 
     // Get the registry node to access the base transform
-    const TinyNode* regNode = registry->getNodeData(runtimeNode->regHandle);
+    const TinyNode* regNode = registry->get<TinyRNode>(runtimeNode->regHandle);
     if (!regNode) { return; }
 
     // Calculate the local transform: registry transform * user override
@@ -330,6 +333,8 @@ void TinyNodeRT3D::addChild(uint32_t childIndex, std::vector<std::unique_ptr<Tin
 }
 
 void TinyProject::runPlayground(float dTime) {
+    return;
+
     // Get the root node (index 0)
     TinyNodeRT3D* node0 = rtNodes[1].get();
     TinyNodeRT3D* node1 = rtNodes[10].get();

@@ -1,28 +1,63 @@
-#pragma once
-
 #include "Helpers/Templates.hpp"
 
-/* TinyPool:
-A fixed-capacity free-list pool for managing resources by stable indices.
-  - Preallocates a contiguous vector of unique_ptr<T>, avoiding reallocation.
-  - Insert reuses freed slots (O(1)), ensuring indices remain stable.
-  - Remove frees the object and recycles the slot into the free list.
-  - Prevents memory fragmentation and shifting of resources, making it safe
-    to reference resources by index (e.g., for scenes or GPU descriptor indexing).
-*/
+#include <type_traits>
+#include <stdexcept>
+#include <cstdint>
+#include <utility>
 
-#define TINYPOOL_CAPACITY_STEP 128
+#define TINYPOOL_CAPACITY_STEP 16
 
+enum class TinyPoolType {
+    Raw,  // Direct storage
+    UPtr, // Unique pointer storage
+};
+
+// Helper traits for pointer types
+template<typename T>
+struct TinyPoolTraits {
+    static constexpr TinyPoolType poolType = TinyPoolType::Raw;
+    static constexpr bool is_pointer = std::is_pointer_v<T>;
+    static constexpr bool is_unique_ptr = false;
+    static constexpr bool is_shared_ptr = false;
+};
+
+template<typename T>
+struct TinyPoolTraits<std::unique_ptr<T>> {
+    static constexpr TinyPoolType poolType = TinyPoolType::UPtr;
+    static constexpr bool is_pointer = false;
+    static constexpr bool is_unique_ptr = true;
+    static constexpr bool is_shared_ptr = false;
+    using element_type = T;
+};
+
+template<typename T>
+struct TinyPoolTraits<std::shared_ptr<T>> {
+    static constexpr TinyPoolType poolType = TinyPoolType::UPtr; // Treat same as unique_ptr for now
+    static constexpr bool is_pointer = false;
+    static constexpr bool is_unique_ptr = false;
+    static constexpr bool is_shared_ptr = true;
+    using element_type = T;
+};
+
+// TinyPoolRaw with type-aware methods
 template<typename Type>
-struct TinyPoolRaw {
-    TinyPoolRaw() = default;
-    TinyPoolRaw(uint32_t initialCapacity) { allocate(initialCapacity); }
+struct TinyPool {
+    TinyPool() = default;
+    TinyPool(uint32_t initialCapacity) { allocate(initialCapacity); }
+
+    // Delete copy semantics
+    TinyPool(const TinyPool&) = delete;
+    TinyPool& operator=(const TinyPool&) = delete;
+
+    TinyPoolType poolType = TinyPoolTraits<Type>::poolType;
 
     std::vector<Type> items;
     std::vector<uint32_t> freeList;
-    std::vector<bool> occupied; // For arbitrary types
+    std::vector<bool> occupied;
     uint32_t capacity = 0;
     uint32_t count = 0;
+
+    bool resizeFlag = false; // Helpful toggleable flag for register resize logics
 
     void clear() {
         items.clear();
@@ -34,12 +69,9 @@ struct TinyPoolRaw {
 
     void allocate(uint32_t capacity) {
         clear();
-
         this->capacity = capacity;
-
         items.resize(capacity);
         occupied.resize(capacity, false);
-
         freeList.reserve(capacity);
         for (uint32_t i = 0; i < capacity; ++i) {
             freeList.push_back(capacity - 1 - i);
@@ -47,47 +79,21 @@ struct TinyPoolRaw {
     }
 
     void resize(uint32_t newCapacity) {
-        if (newCapacity <= capacity) return; // no shrinking allowed
+        if (newCapacity <= capacity) return;
 
         items.resize(newCapacity);
         occupied.resize(newCapacity, false);
-
-        // Add new slots to free list
         for (uint32_t i = newCapacity; i-- > capacity;) {
             freeList.push_back(i);
         }
-
         capacity = newCapacity;
+        resizeFlag = true;
     }
 
-    void* data() { return items.data(); }
+    bool hasResized() const { return resizeFlag; }
+    void resetResizeFlag() { resizeFlag = false; }
 
-    template<typename U>
-    uint32_t insert(U&& item) {
-        // Resize until there's space
-        while (!hasSpace()) resize(capacity + TINYPOOL_CAPACITY_STEP);
-
-        count++;
-
-        uint32_t index = freeList.back();
-        freeList.pop_back();
-        items[index] = std::forward<U>(item); // move or copy
-        occupied[index] = true;
-        return index;
-    }
-
-    void remove(uint32_t index) {
-        if (!isValid(index)) return;
-        count--;
-
-        items[index] = {};
-        occupied[index] = false;
-        freeList.push_back(index);
-    }
-
-    bool hasSpace() const {
-        return !freeList.empty();
-    }
+    bool hasSpace() const { return !freeList.empty(); }
 
     bool isValid(uint32_t index) const {
         return index < items.size() && occupied[index];
@@ -95,158 +101,97 @@ struct TinyPoolRaw {
 
     void checkValid(uint32_t index) const {
         if (!isValid(index)) {
-            throw std::runtime_error("TinyPoolRaw: Invalid index access");
+            throw std::runtime_error("TinyPool: Invalid index access");
         }
     }
 
-    Type& get(uint32_t index) {
-        checkValid(index);
-        return items[index];
-    }
-
-    const Type& get(uint32_t index) const {
-        checkValid(index);
-        return items[index];
-    }
-
-    Type* getPtr(uint32_t index) {
-        checkValid(index);
-        return &items[index];
-    }
-
-    const Type* getPtr(uint32_t index) const {
-        checkValid(index);
-        return &items[index];
-    }
-
-    Type& operator[](uint32_t index) { return get(index); }
-    const Type& operator[](uint32_t index) const { return get(index); }
-};
-
-template<typename Type>
-class TinyPoolPtr {
-public:
-    TinyPoolPtr() = default;
-    TinyPoolPtr(uint32_t initialCapacity) { allocate(initialCapacity); }
-
-    UniquePtrVec<Type> items;
-    std::vector<uint32_t> freeList;
-    uint32_t capacity = 0;
-    uint32_t count = 0;
-
-    void clear() {
-        items.clear();
-        freeList.clear();
-        capacity = 0;
-        count = 0;
-    }
-
-    void allocate(uint32_t capacity) {
-        clear();
-        this->capacity = capacity;
-
-        items.resize(capacity);
-
-        freeList.reserve(capacity);
-        for (uint32_t i = 0; i < capacity; ++i) {
-            freeList.push_back(capacity - 1 - i);
-        }
-    }
-
-    void resize(uint32_t newCapacity) {
-        if (newCapacity <= capacity) return; // no shrinking allowed
-
-        items.resize(newCapacity);
-
-        // Add new slots to free list
-        for (uint32_t i = newCapacity; i-- > capacity;) {
-            freeList.push_back(i);
-        }
-
-        capacity = newCapacity;
-    }
-
-    uint32_t insert(UniquePtr<Type> item) {
+    // ---- Type-aware insert ----
+    template<typename U>
+    uint32_t insert(U&& item) {
         while (!hasSpace()) resize(capacity + TINYPOOL_CAPACITY_STEP);
         count++;
 
         uint32_t index = freeList.back();
         freeList.pop_back();
-        items[index] = std::move(item);
+
+        if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
+            if constexpr (std::is_same_v<std::decay_t<U>, Type>) {
+                // If U is already a unique_ptr of the correct type, just move it
+                items[index] = std::forward<U>(item);
+            } else {
+                // If U is the raw type, wrap it in a unique_ptr and move the data
+                static_assert(std::is_move_constructible_v<std::decay_t<U>>, 
+                    "Type must be move constructible to insert into unique_ptr pool");
+
+                items[index] = std::make_unique<typename TinyPoolTraits<Type>::element_type>(std::move(item));
+            }
+        } else {
+            items[index] = std::forward<U>(item);
+        }
+
+        occupied[index] = true;
         return index;
     }
 
-    template<typename... Args>
-    uint32_t emplace(Args&&... args) {
-        return insert(MakeUnique<Type>(std::forward<Args>(args)...));
-    }
-
+    // ---- Remove ----
     void remove(uint32_t index) {
         if (!isValid(index)) return;
         count--;
 
-        items[index].reset();
+        if constexpr (TinyPoolTraits<Type>::is_unique_ptr || TinyPoolTraits<Type>::is_shared_ptr) {
+            items[index].reset();
+        } else {
+            items[index] = {};
+        }
+
+        occupied[index] = false;
         freeList.push_back(index);
     }
 
-    bool hasSpace() const {
-        return !freeList.empty();
-    }
+    // ---- Get item data ----
 
-    bool isValid(uint32_t index) const {
-        return index < items.size() && static_cast<bool>(items[index]);
-    }
-
-    void checkValid(uint32_t index) const {
-        if (!isValid(index)) {
-            throw std::runtime_error("TinyPoolPtr: Invalid index access");
+    auto data() {
+        if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
+            return items.data()->get();
+        } else {
+            return items.data();
         }
     }
 
-    Type& get(uint32_t index) {
+    // ---- Type-aware getters ----
+    auto get(uint32_t index) {
         checkValid(index);
-        return *items[index];
+        if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
+            return items[index].get();
+        } else {
+            return &items[index];
+        }
     }
 
-    const Type& get(uint32_t index) const {
+    auto get(uint32_t index) const {
         checkValid(index);
-        return *items[index];
+        if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
+            return items[index].get();
+        } else {
+            return &items[index];
+        }
     }
 
-    Type* getPtr(uint32_t index) {
+    Type& operator[](uint32_t index) {
         checkValid(index);
-        return items[index].get();
+        return items[index];
     }
 
-    const Type* getPtr(uint32_t index) const {
+    const Type& operator[](uint32_t index) const {
         checkValid(index);
-        return items[index].get();
+        return items[index];
     }
-
-
-    Type& operator[](uint32_t index) { return get(index); }
-    const Type& operator[](uint32_t index) const { return get(index); }
 };
 
-
-// -----------------------------
-// PoolTraits
-// -----------------------------
-
-template<typename Pool>
-struct PoolTrait;
+// Some class name helpers
 
 template<typename T>
-struct PoolTrait<TinyPoolRaw<T>> {
-    using ValueType = T;
-    static T& get(TinyPoolRaw<T>& pool, uint32_t index) { return pool.get(index); }
-    static const T& get(const TinyPoolRaw<T>& pool, uint32_t index) { return pool.get(index); }
-};
+using TinyPoolRaw = TinyPool<T>;
 
 template<typename T>
-struct PoolTrait<TinyPoolPtr<T>> {
-    using ValueType = T;
-    static T& get(TinyPoolPtr<T>& pool, uint32_t index) { return pool.get(index); }
-    static const T& get(const TinyPoolPtr<T>& pool, uint32_t index) { return pool.get(index); }
-    static T* getPtr(TinyPoolPtr<T>& pool, uint32_t index) { return pool.getPtr(index); }
-};
+using TinyPoolPtr = TinyPool<UniquePtr<T>>;

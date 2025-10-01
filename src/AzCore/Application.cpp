@@ -68,14 +68,14 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModelNew newModel0 = TinyLoader::loadModelFromGLTFNew("Assets/Characters/Test/Niji.glb", false);
-    // TinyModelNew newModel0 = TinyLoader::loadModelFromGLTFNew(".heavy/de_mirage/de_mirage.gltf", false);
-    TinyModelNew newModel1 = TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
+    // TinyModelNew newModel0 = TinyLoader::loadModelFromGLTFNew("Assets/Characters/Test/Niji.glb", false);
+    TinyModelNew newModel0 = TinyLoader::loadModelFromGLTFNew(".heavy/de_mirage/de_mirage.gltf", false);
+    // TinyModelNew newModel1 = TinyLoader::loadModelFromGLTFNew("Assets/Untitled.glb", false);
     project->addTemplateFromModel(newModel0);
-    project->addTemplateFromModel(newModel1);
+    // project->addTemplateFromModel(newModel1);
 
     project->addNodeInstance(0);
-    project->addNodeInstance(1, 9);
+    // project->addNodeInstance(1, 9);
 
     project->printRuntimeNodeHierarchy();
     project->printDataCounts();

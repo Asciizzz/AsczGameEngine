@@ -11,7 +11,6 @@
 
 struct TinyRMesh {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Mesh;
-    using pType = TinyPoolPtr<TinyRMesh>;
 
     AzVulk::DataBuffer vertexBuffer;
     AzVulk::DataBuffer indexBuffer;
@@ -25,7 +24,6 @@ struct TinyRMesh {
 
 struct TinyRMaterial {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Material;
-    using pType = TinyPoolRaw<TinyRMaterial>;
 
     glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
 
@@ -35,7 +33,6 @@ struct TinyRMaterial {
 
 struct TinyRTexture {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Texture;
-    using pType = TinyPoolPtr<TinyRTexture>;
 
     AzVulk::TextureVK textureVK;
     bool import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture);
@@ -43,14 +40,12 @@ struct TinyRTexture {
 
 struct TinyRSkeleton {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Skeleton;
-    using pType = TinyPoolRaw<TinyRSkeleton>;
 
     std::vector<TinyBone> bones;
 };
 
 struct TinyRNode : public TinyNode {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Node;
-    using pType = TinyPoolRaw<TinyRNode>;
 };
 
 
@@ -61,24 +56,13 @@ public:
     TinyRegistry(const TinyRegistry&) = delete;
     TinyRegistry& operator=(const TinyRegistry&) = delete;
 
-    uint32_t getMaxTextureCount() const { return textureDatas.capacity; }
-    uint32_t getMaxMaterialCount() const { return materialDatas.capacity; }
-    uint32_t getMaxMeshCount() const { return meshDatas.capacity; }
-    uint32_t getMaxSkeletonCount() const { return skeletonDatas.capacity; }
-    uint32_t getMaxNodeCount() const { return nodeDatas.capacity; }
+    uint32_t getPoolCapacity(TinyHandle::Type type) const;
 
     TinyHandle addMesh(const TinyMesh& mesh);
     TinyHandle addTexture(const TinyTexture& texture);
     TinyHandle addMaterial(const TinyRMaterial& matData);
     TinyHandle addSkeleton(const TinyRSkeleton& skeleton);
     TinyHandle addNode(const TinyRNode& node);
-
-    // Access to resources - allow modification
-    TinyRMesh*     getMeshData(const TinyHandle& handle);
-    TinyRMaterial* getMaterialData(const TinyHandle& handle);
-    TinyRTexture*  getTextureData(const TinyHandle& handle);
-    TinyRSkeleton* getSkeletonData(const TinyHandle& handle);
-    TinyRNode*     getNodeData(const TinyHandle& handle);
 
     template<typename T>
     T* get(const TinyHandle& handle) {
@@ -87,15 +71,15 @@ public:
 
         // Only allow correct type
         if constexpr (std::is_same_v<T, TinyRMesh>)
-            return meshDatas.getPtr(handle.index);
+            return meshDatas.get(handle.index);
         else if constexpr (std::is_same_v<T, TinyRMaterial>)
-            return materialDatas.getPtr(handle.index);
+            return materialDatas.get(handle.index);
         else if constexpr (std::is_same_v<T, TinyRTexture>)
-            return textureDatas.getPtr(handle.index);
+            return textureDatas.get(handle.index);
         else if constexpr (std::is_same_v<T, TinyRSkeleton>)
-            return skeletonDatas.getPtr(handle.index);
+            return skeletonDatas.get(handle.index);
         else if constexpr (std::is_same_v<T, TinyRNode>)
-            return nodeDatas.getPtr(handle.index);
+            return nodeDatas.get(handle.index);
         else
             static_assert(sizeof(T) == 0, "Unsupported type for get<T>");
     }
@@ -113,11 +97,6 @@ public:
 private:
     const AzVulk::DeviceVK* deviceVK;
 
-    size_t prevMaterialCapacity = 128;
-    size_t prevTextureCapacity  = 128;
-    size_t prevMeshCapacity     = 128;
-    size_t prevSkeletonCapacity = 128;
-    size_t prevNodeCapacity     = 128;
     void resizeCheck();
 
     void initVkResources();

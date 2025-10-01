@@ -90,10 +90,10 @@ public:
 };
 
 struct TinyTemplate {
-    std::vector<TinyHandle> registryNodes;
+    std::vector<TinyHandle> rData; // Could be virtually anything - nodes, meshes, materials, textures, skeletons, animations...
 
     TinyTemplate() = default;
-    TinyTemplate(const std::vector<TinyHandle>& nodes) : registryNodes(nodes) {}
+    TinyTemplate(const std::vector<TinyHandle>& rData) : rData(rData) {}
 };
 
 class TinyProject {
@@ -164,6 +164,7 @@ public:
 
     // These are not official public methods, only for testing purposes
     const UniquePtrVec<TinyNodeRT3D>& getRuntimeNodes() const { return rtNodes; }
+    const std::vector<uint32_t>& getRuntimeMeshRenderIndices() const { return rtMeshRenderIdxs; }
 
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
 
@@ -173,5 +174,7 @@ private:
     UniquePtr<TinyRegistry> registry;
 
     std::vector<TinyTemplate> templates;
+
     UniquePtrVec<TinyNodeRT3D> rtNodes;
+    std::vector<uint32_t> rtMeshRenderIdxs; // Points to rtNodes with MeshRender component
 };

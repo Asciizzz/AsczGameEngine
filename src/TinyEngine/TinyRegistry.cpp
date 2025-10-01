@@ -119,15 +119,26 @@ bool TinyRTexture::import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& t
 TinyRegistry::TinyRegistry(const AzVulk::DeviceVK* deviceVK)
 : deviceVK(deviceVK) {
     // Start humble
-    materialDatas.resize(prevMaterialCapacity);
-    textureDatas.resize(prevTextureCapacity);
-    meshDatas.resize(prevMeshCapacity);
-    skeletonDatas.resize(prevSkeletonCapacity);
-    nodeDatas.resize(prevNodeCapacity);
+    materialDatas.resize(128);
+    textureDatas.resize(128);
+    meshDatas.resize(128);
+    skeletonDatas.resize(128);
+    nodeDatas.resize(128);
 
     initVkResources();
 }
 
+
+uint32_t TinyRegistry::getPoolCapacity(TinyHandle::Type type) const {
+    switch (type) {
+        case TinyHandle::Type::Mesh:     return meshDatas.capacity;
+        case TinyHandle::Type::Material: return materialDatas.capacity;
+        case TinyHandle::Type::Texture:  return textureDatas.capacity;
+        case TinyHandle::Type::Skeleton: return skeletonDatas.capacity;
+        case TinyHandle::Type::Node:     return nodeDatas.capacity;
+        default:                         return 0;
+    }
+}
 
 TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
     UniquePtr<TinyRMesh> meshData = MakeUnique<TinyRMesh>();
@@ -176,58 +187,32 @@ TinyHandle TinyRegistry::addNode(const TinyRNode& node) {
     return TinyHandle(index, HType::Node);
 }
 
-// Access to resources - allow modification
-
-TinyRMesh* TinyRegistry::getMeshData(const TinyHandle& handle) {
-    if (!handle.isType(HType::Mesh)) return nullptr;
-    return meshDatas.getPtr(handle.index);
-}
-
-TinyRMaterial* TinyRegistry::getMaterialData(const TinyHandle& handle) {
-    if (!handle.isType(HType::Material)) return nullptr;
-    return &materialDatas.get(handle.index);
-}
-
-TinyRTexture* TinyRegistry::getTextureData(const TinyHandle& handle) {
-    if (!handle.isType(HType::Texture)) return nullptr;
-    return textureDatas.getPtr(handle.index);
-}
-
-TinyRSkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
-    if (!handle.isType(HType::Skeleton)) return nullptr;
-    return &skeletonDatas.get(handle.index);
-}
-
-TinyRNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
-    if (!handle.isType(HType::Node)) return nullptr;
-    return &nodeDatas.get(handle.index);
-}
-
 // Vulkan resources creation
 void TinyRegistry::resizeCheck() {
-    // TinyPool has auto-resize upon insertion
-    // so we just need to check if we need to recreate any Vulkan resources
 
-    if (materialDatas.capacity >= prevMaterialCapacity) {
-        prevMaterialCapacity = materialDatas.capacity;
-        createMaterialVkResources();
-    }
-
-    if (textureDatas.capacity >= prevTextureCapacity) {
-        prevTextureCapacity = textureDatas.capacity;
+    if (textureDatas.hasResized()) {
+        textureDatas.resetResizeFlag();
         createTextureVkResources();
     }
 
-    if (meshDatas.capacity >= prevMeshCapacity) {
-        prevMeshCapacity = meshDatas.capacity;
+    if (materialDatas.hasResized()) {
+        materialDatas.resetResizeFlag();
+        createMaterialVkResources();
     }
 
-    if (skeletonDatas.capacity >= prevSkeletonCapacity) {
-        prevSkeletonCapacity = skeletonDatas.capacity;
+    if (meshDatas.hasResized()) {
+        meshDatas.resetResizeFlag();
+        // No further logic
     }
 
-    if (nodeDatas.capacity >= prevNodeCapacity) {
-        prevNodeCapacity = nodeDatas.capacity;
+    if (skeletonDatas.hasResized()) {
+        skeletonDatas.resetResizeFlag();
+        // No further logic
+    }
+
+    if (nodeDatas.hasResized()) {
+        nodeDatas.resetResizeFlag();
+        // No further logic
     }
 }
 
