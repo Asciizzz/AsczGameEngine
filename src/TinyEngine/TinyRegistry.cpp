@@ -198,7 +198,7 @@ TinyRegistry::RSkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle)
     return &skeletonDatas.get(handle.index);
 }
 
-TinyNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
+TinyRegistry::RNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
     if (!handle.isType(HType::Node)) return nullptr;
     return &nodeDatas.get(handle.index);
 }

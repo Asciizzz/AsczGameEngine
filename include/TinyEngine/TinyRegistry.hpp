@@ -72,7 +72,7 @@ public:
     RMaterial* getMaterialData(const TinyHandle& handle);
     RTexture*  getTextureData(const TinyHandle& handle);
     RSkeleton* getSkeletonData(const TinyHandle& handle);
-    TinyNode*  getNodeData(const TinyHandle& handle);
+    RNode*     getNodeData(const TinyHandle& handle);
 
 
     void printDataCounts() const {
