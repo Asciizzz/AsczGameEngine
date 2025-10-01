@@ -26,8 +26,6 @@ else()
 endif()
 
 file(GLOB_RECURSE SRC_FILES
-    src/TinyEngine/GlobalUBO.cpp
-    
     src/TinyData/TinyVertex.cpp
     src/TinyData/TinyMesh.cpp
     src/TinyData/TinyMaterial.cpp
