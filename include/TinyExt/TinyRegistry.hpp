@@ -3,8 +3,6 @@
 #include "TinyExt/TinyPool.hpp"
 #include "TinyExt/TinyHandle.hpp"
 
-#include "TinyEngine/TinyRData.hpp"
-
 #include <typeindex>
 
 struct IPool {

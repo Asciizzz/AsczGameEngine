@@ -4,6 +4,8 @@
 
 #include "TinyEngine/TinyInstance.hpp"
 
+#include "TinyEngine/TinyRData.hpp"
+
 struct TinyNodeRT3D {
     TinyHandle rHandle; // Points to registry node (data for reference)
     uint32_t types = TinyNode::toMask(TinyNode::Types::Node);
