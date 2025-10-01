@@ -109,6 +109,16 @@ struct TinyPoolRaw {
         return items[index];
     }
 
+    Type* getPtr(uint32_t index) {
+        checkValid(index);
+        return &items[index];
+    }
+
+    const Type* getPtr(uint32_t index) const {
+        checkValid(index);
+        return &items[index];
+    }
+
     Type& operator[](uint32_t index) { return get(index); }
     const Type& operator[](uint32_t index) const { return get(index); }
 };

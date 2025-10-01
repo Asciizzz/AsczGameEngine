@@ -84,29 +84,18 @@ public:
     T* get(const TinyHandle& handle) {
         // Clean the type
         if (!handle.isType(T::kType)) return nullptr;
-        
-        auto getPtrFromPool = [&](auto& pool) -> T* {
-            using PoolType = std::decay_t<decltype(pool)>;
-            if constexpr (std::is_same_v<PoolType, TinyPoolPtr<T>>) {
-                return pool.getPtr(handle.index); // already a pointer
-            } else if constexpr (std::is_same_v<PoolType, TinyPoolRaw<T>>) {
-                return &pool.get(handle.index);   // wrap reference as pointer
-            } else {
-                static_assert(sizeof(PoolType) == 0, "Unsupported pool type");
-            }
-        };
 
         // Only allow correct type
         if constexpr (std::is_same_v<T, TinyRMesh>)
-            return getPtrFromPool(meshDatas);
+            return meshDatas.getPtr(handle.index);
         else if constexpr (std::is_same_v<T, TinyRMaterial>)
-            return getPtrFromPool(materialDatas);
+            return materialDatas.getPtr(handle.index);
         else if constexpr (std::is_same_v<T, TinyRTexture>)
-            return getPtrFromPool(textureDatas);
+            return textureDatas.getPtr(handle.index);
         else if constexpr (std::is_same_v<T, TinyRSkeleton>)
-            return getPtrFromPool(skeletonDatas);
+            return skeletonDatas.getPtr(handle.index);
         else if constexpr (std::is_same_v<T, TinyRNode>)
-            return getPtrFromPool(nodeDatas);
+            return nodeDatas.getPtr(handle.index);
         else
             static_assert(sizeof(T) == 0, "Unsupported type for get<T>");
     }
