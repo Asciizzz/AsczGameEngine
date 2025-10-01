@@ -67,8 +67,8 @@ struct TinyPool {
     uint32_t capacity = 0;
     uint32_t count = 0;
 
-    uint32_t capacityStep = 16; // Default expansion step
-    void setCapacityStep(uint32_t step) { capacityStep = step; }
+    uint32_t autoExpandStep = 16; // Default expansion step
+    void setAutoExpandStep(uint32_t step) { autoExpandStep = step; }
 
     bool resizeFlag = false; // Helpful toggleable flag for register resize logics
     bool hasResized() const { return resizeFlag; }
@@ -126,7 +126,7 @@ struct TinyPool {
     // ---- Type-aware insert ----
     template<typename U>
     uint32_t insert(U&& item) {
-        while (!hasSpace()) resize(capacity + capacityStep);
+        while (!hasSpace()) resize(capacity + autoExpandStep);
         count++;
 
         uint32_t index = freeList.back();
