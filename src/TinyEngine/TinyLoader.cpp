@@ -23,8 +23,6 @@
 
 #include <iostream>
 
-using Type = TinyHandle::Type;
-
 // Custom image loading callback for tinygltf since we disabled STB_IMAGE
 bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err,
                    std::string* warn, int req_width, int req_height,
@@ -505,7 +503,7 @@ void loadMesh(TinyMesh& mesh, std::vector<TinyHandle>& submeshMats, const tinygl
 
         TinyHandle matHandle; // Invalid by default
         if (pData.materialIndex >= 0) {
-            matHandle = TinyHandle(pData.materialIndex, TinyHandle::Type::Material);
+            matHandle = TinyHandle(pData.materialIndex);
         }
 
         submeshMats.push_back(matHandle);
@@ -723,8 +721,8 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
     };
 
     auto parentAndChild = [&](int parentIndex, int childIndex) {
-        nodes[parentIndex].children.push_back(TinyHandle(childIndex, TinyHandle::Type::Node));
-        nodes[childIndex].parent = TinyHandle(parentIndex, TinyHandle::Type::Node);
+        nodes[parentIndex].children.push_back(TinyHandle(childIndex));
+        nodes[childIndex].parent = TinyHandle(parentIndex);
     };
 
     // Root node (index 0)
@@ -741,7 +739,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
         skeleNode.name = "Skeleton_" + std::to_string(skelIdx);
 
         TinyNode::Skeleton skel3D;
-        skel3D.skeleRegistry = TinyHandle((uint32_t)skelIdx, TinyHandle::Type::Skeleton);
+        skel3D.skeleRegistry = TinyHandle(skelIdx);
 
         skeleNode.add<TinyNode::Skeleton>(std::move(skel3D));
 
@@ -807,7 +805,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
 
         if (gltfNode.mesh >= 0) {
             TinyNode::MeshRender meshData;
-            meshData.mesh = TinyHandle((uint32_t)gltfNode.mesh, TinyHandle::Type::Mesh);
+            meshData.mesh = TinyHandle(gltfNode.mesh);
 
             bool hasValidMaterials=(gltfNode.mesh >= 0 &&
                                     gltfNode.mesh < (int)submeshesMats.size());
@@ -816,7 +814,7 @@ void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
             int skeletonIndex = gltfNode.skin;
             auto it = skeletonToModelNodeIndex.find(skeletonIndex);
             if (it != skeletonToModelNodeIndex.end()) {
-                meshData.skeleNode = TinyHandle(it->second, TinyHandle::Type::Node);
+                meshData.skeleNode = TinyHandle(it->second);
             }
 
             target.add<TinyNode::MeshRender>(std::move(meshData));

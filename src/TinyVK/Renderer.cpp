@@ -240,7 +240,7 @@ void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const Pipeline
 
         const auto& transform = rtNode->globalTransform;
 
-        const auto& regNode = registry->get<TinyRNode>(rtNode->regHandle);
+        const auto& regNode = registry->get<TinyRNode>(rtNode->rHandle);
         const auto& regMeshData = regNode->get<TinyNode::MeshRender>();
 
         const auto& regMesh = registry->get<TinyRMesh>(regMeshData->mesh);

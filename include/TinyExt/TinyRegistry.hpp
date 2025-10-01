@@ -43,7 +43,7 @@ public:
     TinyHandle add(T& data) {
         uint32_t index = pool<T>().insert(std::move(data));
 
-        return TinyHandle(index, T::kType);
+        return TinyHandle(index);
     }
 
     template<typename T>

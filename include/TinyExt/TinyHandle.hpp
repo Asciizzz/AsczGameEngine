@@ -4,25 +4,9 @@
 #include <functional>
 
 union TinyHandle {
-    enum class Type : uint8_t {
-        // Registry types
-        Node,
-        Mesh,
-        Material,
-        Texture,
-        Skeleton,
-        Animation,
-        
-        // Special types
-        Bone,
-        Unknown = 255
-    };
-    
     struct {
         uint32_t index;
-        uint16_t version;
-        uint8_t type;
-        uint8_t owned;
+        uint32_t version;
     };
 
     // Full pack representation
@@ -39,42 +23,24 @@ union TinyHandle {
     bool isValid() const { return value != UINT64_MAX && index != UINT32_MAX; }
     void invalidate() { value = UINT64_MAX; }
 
-    bool isType(Type t) const { return static_cast<Type>(type) == t; }
-
     /**
     * Create a handle
     @param index The index in the respective pool/array
     @param version The version for safety checks (default 0)
-    @param type The type of the handle
-    @param owned Whether the handle is owned or not
     */
-    template<typename IndexType>
-    static TinyHandle make(IndexType index, uint16_t version, Type type, bool owned) {
+    template<typename IndexType, typename VersionType>
+    static TinyHandle make(IndexType index, VersionType version) {
         TinyHandle handle;
         handle.index = static_cast<uint32_t>(index);
-        handle.version = version;
-        handle.type = static_cast<uint8_t>(type);
-        handle.owned = owned ? 1 : 0;
+        handle.version = static_cast<uint32_t>(version);
         return handle;
-    }
-
-    
-    template<typename IndexType>
-    static TinyHandle make(IndexType index, Type type=Type::Unknown, bool owned=true) {
-        // First version, owned by default
-        return make(index, 0, type, owned);
     }
 
     // Nice fast constructors
 
-    template<typename IndexType>
-    TinyHandle(IndexType index, Type type=Type::Unknown, bool owned=true) {
-        *this = make(index, 0, type, owned);
-    }
-
-    template<typename IndexType>
-    TinyHandle(IndexType index, uint16_t version, Type type, bool owned) {
-        *this = make(index, version, type, owned);
+    template<typename IndexType, typename VersionType>
+    TinyHandle(IndexType index, VersionType version = 0) {
+        *this = make(index, version);
     }
 };
 

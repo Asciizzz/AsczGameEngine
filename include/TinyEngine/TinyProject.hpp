@@ -5,7 +5,7 @@
 #include "TinyEngine/TinyInstance.hpp"
 
 struct TinyNodeRT3D {
-    TinyHandle regHandle;     // Points to registry node (data for reference)
+    TinyHandle rHandle; // Points to registry node (data for reference)
     uint32_t types = TinyNode::toMask(TinyNode::Types::Node);
 
     uint32_t parentIdx = UINT32_MAX;    // Runtime parent index (UINT32_MAX = no parent)
@@ -106,7 +106,7 @@ public:
         TinyHandle rootHandle = registry->add(TinyRNode());
 
         auto rootNode = MakeUnique<TinyNodeRT3D>();
-        rootNode->regHandle = rootHandle;
+        rootNode->rHandle = rootHandle;
         // Children will be added upon scene population
 
         rtNodes.push_back(std::move(rootNode));
@@ -137,7 +137,7 @@ public:
     );
 
     void printRuntimeNodeHierarchy() {
-        printRuntimeNodeRecursive(rtNodes, registry.get(), TinyHandle::make(0, TinyHandle::Type::Node, false));
+        printRuntimeNodeRecursive(rtNodes, registry.get(), TinyHandle(0));
     };
 
     void printRuntimeNodeOrdered();

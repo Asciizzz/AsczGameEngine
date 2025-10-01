@@ -10,8 +10,6 @@
 #include "TinyVK/DataBuffer.hpp"
 
 struct TinyRMesh {
-    constexpr static TinyHandle::Type kType = TinyHandle::Type::Mesh;
-
     TinyVK::DataBuffer vertexBuffer;
     TinyVK::DataBuffer indexBuffer;
     std::vector<TinySubmesh> submeshes;
@@ -23,8 +21,6 @@ struct TinyRMesh {
 };
 
 struct TinyRMaterial {
-    constexpr static TinyHandle::Type kType = TinyHandle::Type::Material;
-
     glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
 
     void setAlbTexIndex(uint32_t index) { texIndices.x = index; }
@@ -32,18 +28,12 @@ struct TinyRMaterial {
 };
 
 struct TinyRTexture {
-    constexpr static TinyHandle::Type kType = TinyHandle::Type::Texture;
-
     TinyVK::TextureVK textureVK;
     bool import(const TinyVK::Device* deviceVK, const TinyTexture& texture);
 };
 
 struct TinyRSkeleton {
-    constexpr static TinyHandle::Type kType = TinyHandle::Type::Skeleton;
-
     std::vector<TinyBone> bones;
 };
 
-struct TinyRNode : public TinyNode {
-    constexpr static TinyHandle::Type kType = TinyHandle::Type::Node;
-};
+struct TinyRNode : public TinyNode {}; // Naming scheme for consistency

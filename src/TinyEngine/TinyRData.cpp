@@ -5,7 +5,6 @@
 #include <stdexcept>
 
 using namespace TinyVK;
-using HType = TinyHandle::Type;
 
 bool TinyRMesh::import(const TinyVK::Device* deviceVK, const TinyMesh& mesh) {
     const auto& vertexData = mesh.vertexData;

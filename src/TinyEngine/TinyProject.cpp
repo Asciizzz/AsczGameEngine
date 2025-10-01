@@ -1,6 +1,5 @@
 #include "TinyEngine/TinyProject.hpp"
 
-using HType = TinyHandle::Type;
 using NTypes = TinyNode::Types;
 
 // A quick function for range validation
@@ -13,52 +12,52 @@ using RNode = TinyRNode;
 
 
 uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
-    std::vector<TinyHandle> glbMeshRegHandle; // Ensure correct mapping
+    std::vector<TinyHandle> glbMeshrHandle; // Ensure correct mapping
     for (const auto& mesh : model.meshes) {
         TinyRMesh meshData;
         meshData.import(deviceVK, mesh);
 
         TinyHandle handle = registry->add(meshData);
-        glbMeshRegHandle.push_back(handle);
+        glbMeshrHandle.push_back(handle);
     }
 
-    std::vector<TinyHandle> glbTexRegHandle;
+    std::vector<TinyHandle> glbTexrHandle;
     for (const auto& texture : model.textures) {
         TinyRTexture textureData;
         textureData.import(deviceVK, texture);
 
         TinyHandle handle = registry->add(textureData);
-        glbTexRegHandle.push_back(handle);
+        glbTexrHandle.push_back(handle);
     }
 
-    std::vector<TinyHandle> glbMatRegHandle;
+    std::vector<TinyHandle> glbMatrHandle;
     for (const auto& material : model.materials) {
         TinyRMaterial correctMat;
 
         // Remap the material's texture indices
         
         uint32_t localAlbIndex = material.localAlbTexture;
-        bool localAlbValid = localAlbIndex >= 0 && localAlbIndex < static_cast<int>(glbTexRegHandle.size());
-        correctMat.setAlbTexIndex(localAlbValid ? glbTexRegHandle[localAlbIndex].index : 0);
+        bool localAlbValid = localAlbIndex >= 0 && localAlbIndex < static_cast<int>(glbTexrHandle.size());
+        correctMat.setAlbTexIndex(localAlbValid ? glbTexrHandle[localAlbIndex].index : 0);
 
         uint32_t localNrmlIndex = material.localNrmlTexture;
-        bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexRegHandle.size());
-        correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRegHandle[localNrmlIndex].index : 0);
+        bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexrHandle.size());
+        correctMat.setNrmlTexIndex(localNrmlValid ? glbTexrHandle[localNrmlIndex].index : 0);
 
         TinyHandle handle = registry->add(correctMat);
-        glbMatRegHandle.push_back(handle);
+        glbMatrHandle.push_back(handle);
     }
 
-    std::vector<TinyHandle> glbSkeleRegHandle;
+    std::vector<TinyHandle> glbSkelerHandle;
     for (const auto& skeleton : model.skeletons) {
         TinyRSkeleton rSkeleton;
         rSkeleton.bones = skeleton.construct();
 
         TinyHandle handle = registry->add(rSkeleton);
-        glbSkeleRegHandle.push_back(handle);
+        glbSkelerHandle.push_back(handle);
     }
 
-    std::vector<TinyHandle> glbNodeRegHandle;
+    std::vector<TinyHandle> glbNoderHandle;
 
     UnorderedMap<int, TinyHandle> localNodeIndexToGlobalNodeHandle; // Left: local index, Right: global index
 
@@ -67,12 +66,12 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
         TinyHandle handle = registry->add(RNode());
         localNodeIndexToGlobalNodeHandle[i] = handle;
 
-        glbNodeRegHandle.push_back(handle);
+        glbNoderHandle.push_back(handle);
     }
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
         const TinyNode& localNode = model.nodes[i];
-        TinyNode& regNode = *registry->get<TinyRNode>(glbNodeRegHandle[i]);
+        TinyNode& regNode = *registry->get<TinyRNode>(glbNoderHandle[i]);
         regNode.scope = localNode.scope;
         regNode.name = localNode.name;
 
@@ -93,13 +92,13 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
             const auto& mesh3D = localNode.get<TinyNode::MeshRender>();
             TinyNode::MeshRender trueMesh3D;
 
-            trueMesh3D.mesh = glbMeshRegHandle[mesh3D->mesh.index];
+            trueMesh3D.mesh = glbMeshrHandle[mesh3D->mesh.index];
             for (TinyHandle localMat : mesh3D->submeshMats) {
-                bool valid = isValidIndex(localMat.index, glbMatRegHandle);
-                trueMesh3D.submeshMats.push_back(valid ? glbMatRegHandle[localMat.index] : TinyHandle::invalid());
+                bool valid = isValidIndex(localMat.index, glbMatrHandle);
+                trueMesh3D.submeshMats.push_back(valid ? glbMatrHandle[localMat.index] : TinyHandle::invalid());
             }
 
-            bool hasValidSkeleton = isValidIndex(mesh3D->skeleNode.index, glbNodeRegHandle);
+            bool hasValidSkeleton = isValidIndex(mesh3D->skeleNode.index, glbNoderHandle);
             bool isInNodeMap = localNodeIndexToGlobalNodeHandle.count(mesh3D->skeleNode.index) > 0;
             trueMesh3D.skeleNode = (hasValidSkeleton && isInNodeMap)
                 ? localNodeIndexToGlobalNodeHandle[mesh3D->skeleNode.index]
@@ -112,14 +111,14 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
             const auto& skele3D = localNode.get<TinyNode::Skeleton>();
             TinyNode::Skeleton trueSkel3D;
 
-            bool hasValidSkeleton = isValidIndex(skele3D->skeleRegistry.index, glbSkeleRegHandle);
-            trueSkel3D.skeleRegistry = glbSkeleRegHandle[skele3D->skeleRegistry.index];
+            bool hasValidSkeleton = isValidIndex(skele3D->skeleRegistry.index, glbSkelerHandle);
+            trueSkel3D.skeleRegistry = glbSkelerHandle[skele3D->skeleRegistry.index];
 
             regNode.add(trueSkel3D);
         }
     }
 
-    templates.push_back(TinyTemplate(glbNodeRegHandle));
+    templates.push_back(TinyTemplate(glbNoderHandle));
     return static_cast<uint32_t>(templates.size() - 1);
 }
 
@@ -133,23 +132,22 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
         return;
     }
 
-    UnorderedMap<TinyHandle, uint32_t> regHandleToRtNodeIndex;
+    UnorderedMap<TinyHandle, uint32_t> rHandleToRtNodeIndex;
 
     const TinyTemplate& temp = templates[templateIndex];
 
     // First pass: create and append - each template instance gets its own runtime nodes
-    for (const TinyHandle& regHandle : temp.rData) {
-        const TinyNode* regNode = registry->get<TinyRNode>(regHandle);
-        if (!regNode) {
-            printf("Warning: Registry node handle %llu is invalid, skipping.\n", regHandle.value);
+    for (const TinyHandle& rHandle : temp.rData) {
+        const TinyNode* rNode = registry->get<TinyRNode>(rHandle);
+        if (!rNode) {
+            printf("Warning: Registry node handle %llu is invalid, skipping.\n", rHandle.value);
             continue;
         }
 
         auto rtNode = MakeUnique<TinyNodeRT3D>();
-        rtNode->regHandle = regHandle;
-        rtNode->regHandle.owned = false; // Runtime node owned nothing
+        rtNode->rHandle = rHandle;
 
-        regHandleToRtNodeIndex[regHandle] = rtNodes.size();
+        rHandleToRtNodeIndex[rHandle] = rtNodes.size();
         rtNodes.push_back(std::move(rtNode));
     }
 
@@ -158,18 +156,18 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
     uint32_t rtRootIndex = rootIndex < rtNodes.size() ? rootIndex : 0;
 
     for (uint32_t i = 0; i < static_cast<uint32_t>(temp.rData.size()); ++i) {
-        const TinyHandle& regHandle = temp.rData[i];
-        const TinyNode* regNode = registry->get<TinyRNode>(regHandle);
+        const TinyHandle& rHandle = temp.rData[i];
+        const TinyNode* regNode = registry->get<TinyRNode>(rHandle);
 
-        uint32_t rtNodeIndex = regHandleToRtNodeIndex[regHandle];
+        uint32_t rtNodeIndex = rHandleToRtNodeIndex[rHandle];
         auto& rtNode = rtNodes[rtNodeIndex];
 
         // Remap children and parent (do not affect the children OR the parent, only apply to this current node)
         TinyHandle regParentHandle = regNode->parent;
 
         // Default to root if no parent found
-        bool hasParent = regParentHandle.isValid() && regHandleToRtNodeIndex.count(regParentHandle);
-        uint32_t rtParentIndex = hasParent ? regHandleToRtNodeIndex[regParentHandle] : rtRootIndex;
+        bool hasParent = regParentHandle.isValid() && rHandleToRtNodeIndex.count(regParentHandle);
+        uint32_t rtParentIndex = hasParent ? rHandleToRtNodeIndex[regParentHandle] : rtRootIndex;
 
         // If no parent, add child to root
         if (!hasParent) {
@@ -178,8 +176,8 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
         rtNode->parentIdx = rtParentIndex;
 
         for (const TinyHandle& regChildHandle : regNode->children) {
-            if (regHandleToRtNodeIndex.count(regChildHandle)) {
-                uint32_t rtChildIndex = regHandleToRtNodeIndex[regChildHandle];
+            if (rHandleToRtNodeIndex.count(regChildHandle)) {
+                uint32_t rtChildIndex = rHandleToRtNodeIndex[regChildHandle];
                 rtNode->addChild(rtChildIndex, rtNodes);
             }
         }
@@ -199,8 +197,8 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
             TinyNodeRT3D::MeshRender data;
 
             // Get the true skeleton node in the runtime
-            bool hasValidSkeleNode = regMesh->skeleNode.isValid() && regHandleToRtNodeIndex.count(regMesh->skeleNode);
-            data.skeleNodeRT = hasValidSkeleNode ? regHandleToRtNodeIndex[regMesh->skeleNode] : UINT32_MAX;
+            bool hasValidSkeleNode = regMesh->skeleNode.isValid() && rHandleToRtNodeIndex.count(regMesh->skeleNode);
+            data.skeleNodeRT = hasValidSkeleNode ? rHandleToRtNodeIndex[regMesh->skeleNode] : UINT32_MAX;
 
             rtNode->add(data);
 
@@ -235,7 +233,7 @@ void TinyProject::printRuntimeNodeRecursive(
     int depth
 ) {
     const TinyNodeRT3D* rtNode = rtNodes[runtimeHandle.index].get();
-    const TinyNode* regNode = registry->get<TinyRNode>(rtNode->regHandle);
+    const TinyNode* regNode = registry->get<TinyRNode>(rtNode->rHandle);
 
     // Format runtime index padded to 3 chars
     char idxBuf[8];
@@ -261,14 +259,14 @@ void TinyProject::printRuntimeNodeRecursive(
         idxBuf,
         indent.c_str(),
         regNode ? regNode->name.c_str() : "<invalid>",
-        rtNode->regHandle.index,
+        rtNode->rHandle.index,
         rtNode->parentIdx,
         localPos.x, localPos.y, localPos.z,
         globalPos.x, globalPos.y, globalPos.z);
 
     // Recurse for children
     for (uint32_t childIdx : rtNode->childrenIdxs) {
-        TinyHandle childHandle = TinyHandle(childIdx, TinyHandle::Type::Node, false);
+        TinyHandle childHandle = TinyHandle(childIdx);
         printRuntimeNodeRecursive(rtNodes, registry, childHandle, depth + 1);
     }
 }
@@ -280,7 +278,7 @@ void TinyProject::printRuntimeNodeOrdered() {
 
         // Lookup registry node name
         std::string regName = "???";
-        if (TinyNode* regNode = registry->get<TinyRNode>(runtimeNode->regHandle)) {
+        if (TinyNode* regNode = registry->get<TinyRNode>(runtimeNode->rHandle)) {
             regName = regNode->name;
         }
 
@@ -291,7 +289,7 @@ void TinyProject::printRuntimeNodeOrdered() {
         printf("[%3zu] %s (Reg: %u, Parent: %u)\n",
             i,
             regName.c_str(),
-            runtimeNode->regHandle.index,
+            runtimeNode->rHandle.index,
             parentIndex);
     }
 }
@@ -306,7 +304,7 @@ void TinyProject::updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4
     if (!runtimeNode) return;
 
     // Get the registry node to access the base transform
-    const TinyNode* regNode = registry->get<TinyRNode>(runtimeNode->regHandle);
+    const TinyNode* regNode = registry->get<TinyRNode>(runtimeNode->rHandle);
     if (!regNode) { return; }
 
     // Calculate the local transform: registry transform * user override
