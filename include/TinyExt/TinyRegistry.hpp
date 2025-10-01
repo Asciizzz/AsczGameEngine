@@ -72,6 +72,26 @@ public:
     }
 
     template<typename T>
+    TinyPool<T>& view() {
+        return ensurePool<T>().pool;
+    }
+
+    template<typename T>
+    const TinyPool<T>& view() const {
+        const auto* wrapper = getWrapper<T>();
+
+        // Cannot retrieve non-existing pool in const context
+        if (!wrapper) {
+            static TinyPool<T> empty; // or throw/assert
+            return empty;
+        }
+
+        return wrapper->pool;
+    }
+
+
+
+    template<typename T>
     uint32_t capacity() const {
         auto* wrapper = getWrapper<T>(); // check validity
         return wrapper ? wrapper->pool.capacity : 0;
@@ -83,5 +103,3 @@ public:
         return wrapper ? wrapper->pool.count : 0;
     }
 };
-
-

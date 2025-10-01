@@ -162,6 +162,9 @@ public:
     void runPlayground(float dTime);
 
     // These are not official public methods, only for testing purposes
+
+    void deleteRNode(uint32_t index);
+
     const UniquePtrVec<TinyNodeRT3D>& getRuntimeNodes() const { return rtNodes; }
     const std::vector<uint32_t>& getRuntimeMeshRenderIndices() const { return rtMeshRenderIdxs; }
 

@@ -359,3 +359,25 @@ void TinyProject::runPlayground(float dTime) {
     updateGlobalTransforms(0);
 }
 
+
+void deleteRNodeRecursive(TinyPool<TinyRNode>& rNodePool, uint32_t index) {
+    TinyRNode* node = rNodePool.get(index);
+    if (!node) return;
+
+    // Recurse for children
+    for (const TinyHandle& childHandle : node->children) {
+        if (childHandle.isValid()) {
+            deleteRNodeRecursive(rNodePool, childHandle.index);
+        }
+    }
+
+    rNodePool.remove(index); // Delete last (to avoid invalid access)
+}
+
+void TinyProject::deleteRNode(uint32_t index) {
+    auto& rNodePool = registry->view<TinyRNode>();
+
+    if (!rNodePool.isOccupied(index)) return;
+
+    deleteRNodeRecursive(rNodePool, index);
+}

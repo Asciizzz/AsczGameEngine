@@ -114,9 +114,12 @@ struct TinyPool {
     bool hasSpace() const { return !freeList.empty(); }
 
     bool isValid(TinyHandle handle) const {
-        return  handle.index < items.size() &&   // Valid size
-                states[handle.index].occupied && // Occupied
-                states[handle.index].version == handle.version; // Same version
+        return  isOccupied(handle.index) &&
+                states[handle.index].version == handle.version;
+    }
+
+    bool isOccupied(uint32_t index) const {
+        return index < items.size() && states[index].occupied;
     }
 
     // ---- Type-aware insert ----
@@ -161,21 +164,15 @@ struct TinyPool {
         }
 
         states[index].occupied = false;
+        states[index].version++;
+
         freeList.push_back(index);
     }
 
-    // ---- Get item data ----
+    Type* data() { return items.data(); }
+    const Type* data() const { return items.data(); }
 
-    auto data() {
-        if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
-            return items.data()->get();
-        } else {
-            return items.data();
-        }
-    }
-
-    // ---- Type-aware getters ----
-    auto get(const TinyHandle& handle) {
+    Type* get(const TinyHandle& handle) {
         bool valid = isValid(handle);
 
         if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
@@ -185,13 +182,11 @@ struct TinyPool {
         }
     }
 
-    auto get(const TinyHandle& handle) const {
-        bool valid = isValid(handle);
-
-        if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
-            return valid ? items[handle.index].get() : nullptr;
-        } else {
-            return valid ? &items[handle.index] : nullptr;
-        }
+    const Type* get(const TinyHandle& handle) const {
+        return const_cast<TinyPool<Type>*>(this)->get(handle);
     }
+
+    // Reference is better since this is never null
+    std::vector<Type>& view() { return &items; }
+    const std::vector<Type>& view() const { return &items; }
 };
