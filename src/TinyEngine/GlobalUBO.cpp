@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <chrono>
 
-using namespace AzVulk;
+using namespace TinyVK;
 
 using namespace TinyEngine;
 

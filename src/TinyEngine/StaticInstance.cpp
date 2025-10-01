@@ -1,7 +1,7 @@
 #include "TinyEngine/StaticInstance.hpp"
 
 using namespace TinyEngine;
-using namespace AzVulk;
+using namespace TinyVK;
 
 // Vulkan-specific methods for Model
 VkVertexInputBindingDescription StaticInstance::getBindingDescription() {
@@ -28,7 +28,7 @@ size_t StaticInstanceGroup::addInstance(const StaticInstance& data) {
     return datas.size() - 1;
 }
 
-void StaticInstanceGroup::initVkDevice(const AzVulk::DeviceVK* deviceVK) {
+void StaticInstanceGroup::initVkDevice(const TinyVK::DeviceVK* deviceVK) {
     initVkDevice(deviceVK->lDevice, deviceVK->pDevice);
 }
 void StaticInstanceGroup::initVkDevice(VkDevice lDevice, VkPhysicalDevice pDevice) {

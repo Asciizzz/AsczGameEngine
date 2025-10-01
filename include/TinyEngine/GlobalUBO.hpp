@@ -5,8 +5,8 @@
 
 #include <glm/glm.hpp>
 
-#include "AzVulk/DataBuffer.hpp"
-#include "AzVulk/Descriptor.hpp"
+#include "TinyVK/DataBuffer.hpp"
+#include "TinyVK/Descriptor.hpp"
 
 class TinyCamera;
 
@@ -29,24 +29,24 @@ struct GlobalUBO {
 
 class GlbUBOManager {
 public:
-    GlbUBOManager(const AzVulk::DeviceVK* deviceVK, uint32_t maxFramesInFlight=2);
+    GlbUBOManager(const TinyVK::DeviceVK* deviceVK, uint32_t maxFramesInFlight=2);
     ~GlbUBOManager() = default;
 
     // Delete copy constructor and assignment operator
     GlbUBOManager(const GlbUBOManager&) = delete;
     GlbUBOManager& operator=(const GlbUBOManager&) = delete;
 
-    const AzVulk::DeviceVK* deviceVK;
+    const TinyVK::DeviceVK* deviceVK;
 
     GlobalUBO ubo;
 
     uint32_t maxFramesInFlight = 2; // Must match Renderer
-    std::vector<AzVulk::DataBuffer> dataBuffer; // Per-frame buffers
+    std::vector<TinyVK::DataBuffer> dataBuffer; // Per-frame buffers
     void createDataBuffer();
 
-    UniquePtr<AzVulk::DescLayout> descLayout;
-    UniquePtr<AzVulk::DescPool> descPool;
-    UniquePtrVec<AzVulk::DescSet> descSets;
+    UniquePtr<TinyVK::DescLayout> descLayout;
+    UniquePtr<TinyVK::DescPool> descPool;
+    UniquePtrVec<TinyVK::DescSet> descSets;
     void createDescSets();
 
     VkDescriptorSet getDescSet(uint32_t frameIndex) const { return *descSets[frameIndex]; }

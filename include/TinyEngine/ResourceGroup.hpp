@@ -2,10 +2,10 @@
 
 #include "TinyData/TinyModel.hpp"
 
-#include "AzVulk/Pipeline_manager.hpp"
-#include "AzVulk/DataBuffer.hpp"
-#include "AzVulk/Descriptor.hpp"
-#include "AzVulk/TextureVK.hpp"
+#include "TinyVK/Pipeline_manager.hpp"
+#include "TinyVK/DataBuffer.hpp"
+#include "TinyVK/Descriptor.hpp"
+#include "TinyVK/TextureVK.hpp"
 
 #include "TinyEngine/TinyProject.hpp"
 
@@ -23,14 +23,14 @@ struct MeshVK {
     MeshVK(const MeshVK&) = delete;
     MeshVK& operator=(const MeshVK&) = delete;
 
-    AzVulk::DataBuffer vertexBuffer;
-    AzVulk::DataBuffer indexBuffer;
+    TinyVK::DataBuffer vertexBuffer;
+    TinyVK::DataBuffer indexBuffer;
     VkIndexType indexType = VK_INDEX_TYPE_UINT32; // Default to uint32
 
     std::vector<TinySubmesh> submeshes;
     std::vector<int> meshMaterials; // Point to global material index
 
-    void fromMesh(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh, const std::vector<int>& meshMats);
+    void fromMesh(const TinyVK::DeviceVK* deviceVK, const TinyMesh& mesh, const std::vector<int>& meshMats);
     static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };
 
@@ -43,8 +43,8 @@ struct ModelVK {
     MeshVK mesh;
 
     // All material of this mesh
-    AzVulk::DataBuffer matBuffer;
-    AzVulk::DescSet matDescSet;
+    TinyVK::DataBuffer matBuffer;
+    TinyVK::DescSet matDescSet;
 
     // No skeleton data yet since we are doing CPU skinning for now
 };
@@ -60,7 +60,7 @@ struct LightVK {
 // All these resource are static and fixed, created upon load
 class ResourceGroup {
 public:
-    ResourceGroup(AzVulk::DeviceVK* deviceVK);
+    ResourceGroup(TinyVK::DeviceVK* deviceVK);
     ~ResourceGroup() { cleanup(); } void cleanup();
 
     ResourceGroup(const ResourceGroup&) = delete;
@@ -82,33 +82,33 @@ public:
     void createComponentVKsFromModels();
 
 // private:
-    AzVulk::DeviceVK* deviceVK;
+    TinyVK::DeviceVK* deviceVK;
 
-    AzVulk::PipelineManager pipelines;
+    TinyVK::PipelineManager pipelines;
 
 
     std::vector<TinyModel>            models;
     UniquePtrVec<ModelVK>             modelVKs;
-    UniquePtrVec<AzVulk::TextureVK>   textures;
+    UniquePtrVec<TinyVK::TextureVK>   textures;
 
     // Shared pool and layout for all models
-    UniquePtr<AzVulk::DescPool>       skeleDescPool;
-    UniquePtr<AzVulk::DescLayout>     skeleDescLayout;
+    UniquePtr<TinyVK::DescPool>       skeleDescPool;
+    UniquePtr<TinyVK::DescLayout>     skeleDescLayout;
 
-    UniquePtr<AzVulk::DescPool>       matDescPool;
-    UniquePtr<AzVulk::DescLayout>     matDescLayout;
+    UniquePtr<TinyVK::DescPool>       matDescPool;
+    UniquePtr<TinyVK::DescLayout>     matDescLayout;
     void createMaterialDescPoolAndLayout();
 
     void createMaterialDescSet(const std::vector<MaterialVK>& materials, ModelVK& modelVK);
 
     // Global list of all textures
-    UniquePtr<AzVulk::DescPool>       texDescPool;
-    UniquePtr<AzVulk::DescLayout>     texDescLayout;
-    UniquePtr<AzVulk::DescSet>        texDescSet;
+    UniquePtr<TinyVK::DescPool>       texDescPool;
+    UniquePtr<TinyVK::DescLayout>     texDescLayout;
+    UniquePtr<TinyVK::DescSet>        texDescSet;
     void createTextureDescSet();
 
     // Useful methods
-    UniquePtr<AzVulk::TextureVK> createTexture(const TinyTexture& texture);
+    UniquePtr<TinyVK::TextureVK> createTexture(const TinyTexture& texture);
 };
 
 } // namespace TinyEngine

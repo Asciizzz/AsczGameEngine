@@ -53,22 +53,22 @@ file(GLOB_RECURSE SRC_FILES
     src/AzCore/WindowManager.cpp
     src/AzCore/Application.cpp
 
-    src/AzVulk/DeviceVK.cpp
-    src/AzVulk/Instance.cpp
-    src/AzVulk/CmdBuffer.cpp
-    src/AzVulk/DataBuffer.cpp
-    src/AzVulk/FrameBuffer.cpp
-    src/AzVulk/Descriptor.cpp
-    src/AzVulk/TextureVK.cpp
-    src/AzVulk/Swapchain.cpp
-    src/AzVulk/RenderPass.cpp
-    src/AzVulk/DepthManager.cpp
-    src/AzVulk/Pipeline_core.cpp
-    src/AzVulk/Pipeline_raster.cpp
-    src/AzVulk/Pipeline_compute.cpp
-    src/AzVulk/Pipeline_manager.cpp
-    src/AzVulk/PostProcess.cpp
-    src/AzVulk/Renderer.cpp
+    src/TinyVK/DeviceVK.cpp
+    src/TinyVK/Instance.cpp
+    src/TinyVK/CmdBuffer.cpp
+    src/TinyVK/DataBuffer.cpp
+    src/TinyVK/FrameBuffer.cpp
+    src/TinyVK/Descriptor.cpp
+    src/TinyVK/TextureVK.cpp
+    src/TinyVK/Swapchain.cpp
+    src/TinyVK/RenderPass.cpp
+    src/TinyVK/DepthManager.cpp
+    src/TinyVK/Pipeline_core.cpp
+    src/TinyVK/Pipeline_raster.cpp
+    src/TinyVK/Pipeline_compute.cpp
+    src/TinyVK/Pipeline_manager.cpp
+    src/TinyVK/PostProcess.cpp
+    src/TinyVK/Renderer.cpp
 
     main.cpp
 )
@@ -93,7 +93,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/.ext/Helpers
 
     ${CMAKE_SOURCE_DIR}/include/AzCore
-    ${CMAKE_SOURCE_DIR}/include/AzVulk
+    ${CMAKE_SOURCE_DIR}/include/TinyVK
     ${CMAKE_SOURCE_DIR}/include/TinyData
     ${CMAKE_SOURCE_DIR}/include/TinyEngine
 )

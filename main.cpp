@@ -6,7 +6,7 @@
 int main() {
     try {
         // Peak 2009 window engineering
-        Application app("AzVulk Engine", 1600, 900);
+        Application app("TinyVK Engine", 1600, 900);
         app.run();
     } catch (const std::exception& e) {
         // Plot twist: things broke

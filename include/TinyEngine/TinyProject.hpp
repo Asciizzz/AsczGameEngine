@@ -98,7 +98,7 @@ struct TinyTemplate {
 
 class TinyProject {
 public:
-    TinyProject(const AzVulk::DeviceVK* deviceVK) : device(deviceVK) {
+    TinyProject(const TinyVK::DeviceVK* deviceVK) : device(deviceVK) {
         registry = MakeUnique<TinyRegistry>(deviceVK);
 
         // Create root node
@@ -169,7 +169,7 @@ public:
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
 
 private:
-    const AzVulk::DeviceVK* device;
+    const TinyVK::DeviceVK* device;
 
     UniquePtr<TinyRegistry> registry;
 

@@ -3,18 +3,18 @@
 #include "AzCore/FpsManager.hpp"
 #include "AzCore/WindowManager.hpp"
 
-#include "AzVulk/DeviceVK.hpp"
-#include "AzVulk/Instance.hpp"
+#include "TinyVK/DeviceVK.hpp"
+#include "TinyVK/Instance.hpp"
 
-#include "AzVulk/SwapChain.hpp"
-#include "AzVulk/RenderPass.hpp"
-#include "AzVulk/DepthManager.hpp"
+#include "TinyVK/SwapChain.hpp"
+#include "TinyVK/RenderPass.hpp"
+#include "TinyVK/DepthManager.hpp"
 
-#include "AzVulk/DataBuffer.hpp"
-#include "AzVulk/Descriptor.hpp"
+#include "TinyVK/DataBuffer.hpp"
+#include "TinyVK/Descriptor.hpp"
 
-#include "AzVulk/Renderer.hpp"
-#include "AzVulk/Pipeline_include.hpp"
+#include "TinyVK/Renderer.hpp"
+#include "TinyVK/Pipeline_include.hpp"
 
 #include "TinyData/TinyCamera.hpp"
 
@@ -37,12 +37,12 @@ private:
     UniquePtr<WindowManager> windowManager;
     UniquePtr<FpsManager> fpsManager;
 
-    UniquePtr<AzVulk::Instance> vkInstance;
-    UniquePtr<AzVulk::DeviceVK> deviceVK;
+    UniquePtr<TinyVK::Instance> vkInstance;
+    UniquePtr<TinyVK::DeviceVK> deviceVK;
 
-    UniquePtr<AzVulk::Renderer> renderer;
+    UniquePtr<TinyVK::Renderer> renderer;
 
-    UniquePtr<AzVulk::PipelineManager> pipelineManager;
+    UniquePtr<TinyVK::PipelineManager> pipelineManager;
 
     UniquePtr<TinyCamera> camera;
 

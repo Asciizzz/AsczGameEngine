@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "AzVulk/DataBuffer.hpp"
+#include "TinyVK/DataBuffer.hpp"
 
 namespace TinyEngine {
 
@@ -40,8 +40,8 @@ struct StaticInstanceGroup {
     VkDevice lDevice = VK_NULL_HANDLE;
     VkPhysicalDevice pDevice = VK_NULL_HANDLE;
 
-    AzVulk::DataBuffer dataBuffer;
-    void initVkDevice(const AzVulk::DeviceVK* deviceVK);
+    TinyVK::DataBuffer dataBuffer;
+    void initVkDevice(const TinyVK::DeviceVK* deviceVK);
     void initVkDevice(VkDevice lDevice, VkPhysicalDevice pDevice);
 
     void recreateDataBuffer();

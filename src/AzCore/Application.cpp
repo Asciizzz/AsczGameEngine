@@ -11,7 +11,7 @@ const bool enableValidationLayers = true;
 const bool enableValidationLayers = true;
 #endif
 
-using namespace AzVulk;
+using namespace TinyVK;
 using namespace TinyEngine;
 
 Application::Application(const char* title, uint32_t width, uint32_t height)

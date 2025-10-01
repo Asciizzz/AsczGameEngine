@@ -5,19 +5,19 @@
 
 #include "TinyData/TinyModel.hpp"
 
-#include "AzVulk/TextureVK.hpp"
-#include "AzVulk/Descriptor.hpp"
-#include "AzVulk/DataBuffer.hpp"
+#include "TinyVK/TextureVK.hpp"
+#include "TinyVK/Descriptor.hpp"
+#include "TinyVK/DataBuffer.hpp"
 
 struct TinyRMesh {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Mesh;
 
-    AzVulk::DataBuffer vertexBuffer;
-    AzVulk::DataBuffer indexBuffer;
+    TinyVK::DataBuffer vertexBuffer;
+    TinyVK::DataBuffer indexBuffer;
     std::vector<TinySubmesh> submeshes;
     VkIndexType indexType = VK_INDEX_TYPE_UINT32;
 
-    bool import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh);
+    bool import(const TinyVK::DeviceVK* deviceVK, const TinyMesh& mesh);
 
     static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };
@@ -34,8 +34,8 @@ struct TinyRMaterial {
 struct TinyRTexture {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Texture;
 
-    AzVulk::TextureVK textureVK;
-    bool import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture);
+    TinyVK::TextureVK textureVK;
+    bool import(const TinyVK::DeviceVK* deviceVK, const TinyTexture& texture);
 };
 
 struct TinyRSkeleton {
@@ -51,7 +51,7 @@ struct TinyRNode : public TinyNode {
 
 class TinyRegistry { // For raw resource data
 public:
-    TinyRegistry(const AzVulk::DeviceVK* deviceVK);
+    TinyRegistry(const TinyVK::DeviceVK* deviceVK);
 
     TinyRegistry(const TinyRegistry&) = delete;
     TinyRegistry& operator=(const TinyRegistry&) = delete;
@@ -95,7 +95,7 @@ public:
     }
 
 private:
-    const AzVulk::DeviceVK* deviceVK;
+    const TinyVK::DeviceVK* deviceVK;
 
     void resizeCheck();
 
@@ -104,16 +104,16 @@ private:
     // Shared descriptor resources
 
     // All materials in a buffer
-    UniquePtr<AzVulk::DescLayout> matDescLayout;
-    UniquePtr<AzVulk::DescPool>   matDescPool;
-    UniquePtr<AzVulk::DataBuffer> matBuffer;
-    UniquePtr<AzVulk::DescSet>    matDescSet;
+    UniquePtr<TinyVK::DescLayout> matDescLayout;
+    UniquePtr<TinyVK::DescPool>   matDescPool;
+    UniquePtr<TinyVK::DataBuffer> matBuffer;
+    UniquePtr<TinyVK::DescSet>    matDescSet;
     void createMaterialVkResources();
 
     // All textures
-    UniquePtr<AzVulk::DescLayout> texDescLayout;
-    UniquePtr<AzVulk::DescPool>   texDescPool;
-    UniquePtr<AzVulk::DescSet>    texDescSet;
+    UniquePtr<TinyVK::DescLayout> texDescLayout;
+    UniquePtr<TinyVK::DescPool>   texDescPool;
+    UniquePtr<TinyVK::DescSet>    texDescSet;
     void createTextureVkResources();
 
     // Resource pools registry

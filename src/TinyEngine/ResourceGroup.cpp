@@ -1,11 +1,11 @@
 #include "TinyEngine/ResourceGroup.hpp"
 #include "TinyEngine/TinyLoader.hpp"
 
-#include "AzVulk/CmdBuffer.hpp"
+#include "TinyVK/CmdBuffer.hpp"
 
 #include <iostream>
 
-using namespace AzVulk;
+using namespace TinyVK;
 using namespace TinyEngine;
 
 // ============================================================================
@@ -140,7 +140,7 @@ void ResourceGroup::createMaterialDescSet(const std::vector<MaterialVK>& materia
 // ========================= TEXTURES =========================================
 // ============================================================================
 
-UniquePtr<AzVulk::TextureVK> ResourceGroup::createTexture(const TinyTexture& texture) {
+UniquePtr<TinyVK::TextureVK> ResourceGroup::createTexture(const TinyTexture& texture) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(

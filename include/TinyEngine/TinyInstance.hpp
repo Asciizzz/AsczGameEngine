@@ -3,7 +3,7 @@
 #include "TinyData/TinyNode.hpp"
 #include "TinyData/TinyMesh.hpp"
 
-#include "AzVulk/DataBuffer.hpp"
+#include "TinyVK/DataBuffer.hpp"
 
 class TinyInstance {
 public:
@@ -14,6 +14,6 @@ public:
         static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
     };
 
-    AzVulk::DataBuffer buffer;
-    void initBuffer(const AzVulk::DeviceVK* deviceVK, size_t instanceCount);
+    TinyVK::DataBuffer buffer;
+    void initBuffer(const TinyVK::DeviceVK* deviceVK, size_t instanceCount);
 };
