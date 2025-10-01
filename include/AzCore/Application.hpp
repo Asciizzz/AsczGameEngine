@@ -47,7 +47,6 @@ private:
     UniquePtr<TinyCamera> camera;
 
     UniquePtr<TinyEngine::GlbUBOManager> glbUBOManager; // Soon to be moved to project
-    UniquePtr<TinyEngine::ResourceGroup> resGroup; // Soon to be deprecated
     UniquePtr<TinyProject> project; // New gigachad system
 
     // Window metadata

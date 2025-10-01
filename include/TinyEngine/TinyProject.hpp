@@ -127,6 +127,7 @@ public:
      */
     void addNodeInstance(uint32_t templateIndex, uint32_t rootIndex = 0, glm::mat4 at = glm::mat4(1.0f));
 
+
     void printRuntimeNodeRecursive(
         const UniquePtrVec<TinyNodeRT3D>& rtNodes,
         TinyRegistry* registry,
@@ -153,6 +154,8 @@ public:
         registry->printDataCounts();
     }
 
+// All these belows are only for testing purposes
+
     /**
      * Playground function for testing - rotates root node by 90 degrees per second
      * @param dTime Delta time in seconds
@@ -170,7 +173,5 @@ private:
     UniquePtr<TinyRegistry> registry;
 
     std::vector<TinyTemplate> templates;
-
-    // A basic scene (best if we use smart pointers)
     UniquePtrVec<TinyNodeRT3D> rtNodes;
 };

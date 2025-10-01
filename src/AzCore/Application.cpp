@@ -60,22 +60,13 @@ void Application::initComponents() {
         Application::MAX_FRAMES_IN_FLIGHT
     );
 
-    resGroup = MakeUnique<ResourceGroup>(deviceVK.get());
-
     glbUBOManager = MakeUnique<GlbUBOManager>(
         deviceVK.get(), Application::MAX_FRAMES_IN_FLIGHT
     );
 
-// PLAYGROUND FROM HERE
-    // TinyModel testModel = TinyLoader::loadModel("Assets/Characters/Spy/Spy.gltf", false);
-    TinyModel testModel = TinyLoader::loadModel("Assets/Untitled.glb", false);
-    for (auto& mat : testModel.materials) {
-        // mat.toonLevel = 4;
-    }
-
-    resGroup->addModel(testModel);
-
     project = MakeUnique<TinyProject>(deviceVK.get());
+
+// PLAYGROUND FROM HERE
 
     TinyModelNew newModel0 = TinyLoader::loadModelFromGLTFNew("Assets/Characters/Test/Niji.glb", false);
     // TinyModelNew newModel0 = TinyLoader::loadModelFromGLTFNew(".heavy/de_mirage/de_mirage.gltf", false);
@@ -91,27 +82,16 @@ void Application::initComponents() {
 
 // PLAYGROUND END HERE 
 
-    resGroup->uploadAllToGPU();
-
     auto glbLayout = glbUBOManager->getDescLayout();
-    auto matLayout = resGroup->getMatDescLayout();
-    auto texLayout = resGroup->getTexDescLayout();
+    auto matLayout = VK_NULL_HANDLE; // Placeholder until we have a material UBO
+    auto texLayout = VK_NULL_HANDLE; // Placeholder until we have a texture UBO
 
-    // Create raster pipeline configurations
-
-    // Create pipeline manager
     pipelineManager = MakeUnique<PipelineManager>();
-    
-    // Load pipeline configurations from JSON
-    if (!pipelineManager->loadPipelinesFromJson("Config/pipelines.json")) {
-        std::cout << "Warning: Could not load pipeline JSON, using defaults" << std::endl;
-    }
+    pipelineManager->loadPipelinesFromJson("Config/pipelines.json");
 
     // Initialize all pipelines with the manager using named layouts
     UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
-        {"global", glbLayout},
-        {"material", matLayout},
-        {"texture", texLayout}
+        {"global", glbLayout}
     };
     
     // Create named vertex inputs

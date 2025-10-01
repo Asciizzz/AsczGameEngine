@@ -182,6 +182,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
 
         auto rtNode = MakeUnique<TinyNodeRT3D>();
         rtNode->regHandle = regHandle;
+        rtNode->regHandle.owned = false; // Runtime node owned nothing
 
         regHandleToRtNodeIndex[regHandle] = rtNodes.size();
         rtNodes.push_back(std::move(rtNode));
