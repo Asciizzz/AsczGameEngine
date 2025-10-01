@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 #include <cstring>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 using namespace TinyVK;
 
@@ -107,6 +107,10 @@ VkRenderPass Renderer::getOffscreenRenderPass() const {
 
 VkExtent2D Renderer::getSwapChainExtent() const {
     return swapChain ? swapChain->extent : VkExtent2D{0, 0};
+}
+
+VkCommandBuffer Renderer::getCurrentCommandBuffer() const {
+    return cmdBuffers[currentFrame];
 }
 
 void Renderer::handleWindowResize(SDL_Window* window) {

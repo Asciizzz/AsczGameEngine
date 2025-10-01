@@ -21,6 +21,9 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
 }
 
 Application::~Application() {
+    if (imguiWrapper) {
+        imguiWrapper->cleanup();
+    }
     cleanup();
 }
 
@@ -108,6 +111,29 @@ void Application::initComponents() {
 
     // Load post-process effects from JSON configuration
     renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
+
+    // Initialize ImGui - do this after renderer is fully set up
+    imguiWrapper = MakeUnique<ImGuiWrapper>();
+    
+    // Create a temporary RenderPass for ImGui initialization using the correct swapchain format
+    TinyVK::RenderPassConfig imguiRenderPassConfig = TinyVK::RenderPassConfig::createForwardRenderingConfig(
+        renderer->getSwapChain()->imageFormat
+    );
+    auto imguiRenderPass = MakeUnique<TinyVK::RenderPass>(lDevice, pDevice, imguiRenderPassConfig);
+    
+    bool imguiInitSuccess = imguiWrapper->init(
+        windowManager->window,
+        vkInstance->instance,
+        deviceVK.get(),
+        imguiRenderPass.get(),
+        static_cast<uint32_t>(renderer->getSwapChain()->images.size())
+    );
+    
+    if (imguiInitSuccess) {
+        std::cout << "ImGui initialized successfully with format: " << renderer->getSwapChain()->imageFormat << std::endl;
+    } else {
+        std::cerr << "Failed to initialize ImGui!" << std::endl;
+    }
 }
 
 void Application::featuresTestingGround() {}
@@ -149,7 +175,29 @@ void Application::mainLoop() {
     while (!winManager.shouldCloseFlag) {
         // Update FPS manager for timing
         fpsRef.update();
-        winManager.pollEvents();
+        
+        // Handle SDL events for both window manager and ImGui
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            // Let ImGui process the event first
+            imguiWrapper->processEvent(&event);
+            
+            // Then handle our own events
+            switch (event.type) {
+                case SDL_QUIT:
+                    winManager.shouldCloseFlag = true;
+                    break;
+                case SDL_WINDOWEVENT:
+                    if (SDL_GetWindowFromID(event.window.windowID) == winManager.window) {
+                        if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                            winManager.resizedFlag = true;
+                        } else if (event.window.event == SDL_WINDOWEVENT_CLOSE) {
+                            winManager.shouldCloseFlag = true;
+                        }
+                    }
+                    break;
+            }
+        }
 
         float dTime = fpsRef.deltaTime;
 
@@ -260,6 +308,12 @@ void Application::mainLoop() {
 
         project->runPlayground(dTime);
 
+        // Start ImGui frame
+        imguiWrapper->newFrame();
+        
+        // Create ImGui UI
+        createImGuiUI(fpsRef, camRef, mouseLocked, dTime);
+
         project->getGlobal()->update(camRef, rendererRef.getCurrentFrame());
 
         uint32_t imageIndex = rendererRef.beginFrame();
@@ -272,33 +326,74 @@ void Application::mainLoop() {
 
             rendererRef.drawScene(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Test"));
 
+            // Render ImGui
+            imguiWrapper->render(rendererRef.getCurrentCommandBuffer());
+
             rendererRef.endFrame(imageIndex);
         };
 
-        // On-screen FPS display (toggleable with F2) - using window title for now
-        static auto lastFpsOutput = std::chrono::steady_clock::now();
-        auto now = std::chrono::steady_clock::now();
-
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFpsOutput).count() >= 500) {
-            // Update FPS text every 500ms for smooth display
-            std::string fpsText = "AsczGame | FPS: " + std::to_string(static_cast<int>(fpsRef.currentFPS)) +
-                                    " | Avg: " + std::to_string(static_cast<int>(fpsRef.getAverageFPS())) +
-                                    " | " + std::to_string(static_cast<int>(fpsRef.frameTimeMs * 10) / 10.0f) + "ms" +
-                                    " | Pos: "+ std::to_string(camRef.pos.x) + ", " +
-                                                std::to_string(camRef.pos.y) + ", " +
-                                                std::to_string(camRef.pos.z) + " | " +
-                                    " | Forward: " + std::to_string(static_cast<int>(camRef.forward.x * 100) / 100.0f) + ", " +
-                                                    std::to_string(static_cast<int>(camRef.forward.y * 100) / 100.0f) + ", " +
-                                                    std::to_string(static_cast<int>(camRef.forward.z * 100) / 100.0f) + ", " +
-                                    " | Right: " + std::to_string(static_cast<int>(camRef.right.x * 100) / 100.0f) + ", " +
-                                                    std::to_string(static_cast<int>(camRef.right.y * 100) / 100.0f) + ", " +
-                                                    std::to_string(static_cast<int>(camRef.right.z * 100) / 100.0f);
-            SDL_SetWindowTitle(winManager.window, fpsText.c_str());
-            lastFpsOutput = now;
+        // Clean window title - FPS info now in ImGui
+        static bool titleSet = false;
+        if (!titleSet) {
+            SDL_SetWindowTitle(winManager.window, appTitle);
+            titleSet = true;
         }
     }
 
     vkDeviceWaitIdle(deviceVK->lDevice);
+}
+
+void Application::createImGuiUI(const FpsManager& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime) {
+    // Main debug window
+    if (showDebugWindow) {
+        ImGui::Begin("Debug Panel", &showDebugWindow);
+        
+        // FPS and Performance
+        ImGui::Text("Performance");
+        ImGui::Separator();
+        ImGui::Text("FPS: %.1f (%.2f ms)", fpsManager.currentFPS, fpsManager.frameTimeMs);
+        ImGui::Text("Avg FPS: %.1f", fpsManager.getAverageFPS());
+        ImGui::Text("Delta Time: %.4f s", deltaTime);
+        
+        ImGui::Spacing();
+        
+        // Camera Information
+        ImGui::Text("Camera");
+        ImGui::Separator();
+        ImGui::Text("Position: (%.2f, %.2f, %.2f)", camera.pos.x, camera.pos.y, camera.pos.z);
+        ImGui::Text("Forward: (%.2f, %.2f, %.2f)", camera.forward.x, camera.forward.y, camera.forward.z);
+        ImGui::Text("Right: (%.2f, %.2f, %.2f)", camera.right.x, camera.right.y, camera.right.z);
+        ImGui::Text("Up: (%.2f, %.2f, %.2f)", camera.up.x, camera.up.y, camera.up.z);
+        ImGui::Text("Yaw: %.2f° | Pitch: %.2f° | Roll: %.2f°", 
+                   camera.getYaw(true) * 57.2958f, // Convert radians to degrees
+                   camera.getPitch(true) * 57.2958f,
+                   camera.getRoll() * 57.2958f);
+        
+        ImGui::Spacing();
+        
+        // Input Status
+        ImGui::Text("Input");
+        ImGui::Separator();
+        ImGui::Text("Mouse Locked: %s", mouseLocked ? "Yes" : "No");
+        ImGui::Text("Press F1 to toggle mouse lock");
+        ImGui::Text("Press F11 for fullscreen");
+        ImGui::Text("Press P to place object");
+        ImGui::Text("WASD: Move | QE: Roll | R: Reset Roll");
+        
+        ImGui::Spacing();
+        
+        // Window controls
+        ImGui::Text("Windows");
+        ImGui::Separator();
+        ImGui::Checkbox("Show Demo Window", &showDemoWindow);
+        
+        ImGui::End();
+    }
+    
+    // Demo window
+    if (showDemoWindow) {
+        imguiWrapper->showDemoWindow(&showDemoWindow);
+    }
 }
 
 void Application::cleanup() {}

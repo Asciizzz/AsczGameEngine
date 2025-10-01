@@ -19,6 +19,7 @@
 #include "TinyData/TinyCamera.hpp"
 
 #include "TinyEngine/TinyProject.hpp"
+#include "AzCore/ImGuiWrapper.hpp"
 
 class Application {
 public:
@@ -45,6 +46,11 @@ private:
     UniquePtr<TinyVK::PipelineManager> pipelineManager;
 
     UniquePtr<TinyProject> project; // New gigachad system
+    UniquePtr<ImGuiWrapper> imguiWrapper; // ImGui integration
+
+    // ImGui UI state
+    bool showDebugWindow = true;
+    bool showDemoWindow = false;
 
     // Window metadata
     const char* appTitle;
@@ -56,6 +62,7 @@ private:
     void initComponents();
     void mainLoop();
     void cleanup();
+    void createImGuiUI(const FpsManager& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
 
     bool checkWindowResize();
 };

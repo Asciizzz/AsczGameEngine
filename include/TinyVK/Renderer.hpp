@@ -32,6 +32,7 @@ public:
     void endFrame(uint32_t imageIndex);
 
     uint32_t getCurrentFrame() const { return currentFrame; }
+    VkCommandBuffer getCurrentCommandBuffer() const;
 
     // Render pass getters
     VkRenderPass getMainRenderPass() const;

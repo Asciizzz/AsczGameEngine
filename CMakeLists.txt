@@ -42,9 +42,19 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyEngine/TinyLoader.cpp
     # src/TinyEngine/TinyPlayback.cpp deprecated
 
+    # ImGui source files
+    include/.ext/imgui/imgui.cpp
+    include/.ext/imgui/imgui_demo.cpp
+    include/.ext/imgui/imgui_draw.cpp
+    include/.ext/imgui/imgui_tables.cpp
+    include/.ext/imgui/imgui_widgets.cpp
+    include/.ext/imgui/backends/imgui_impl_sdl2.cpp
+    include/.ext/imgui/backends/imgui_impl_vulkan.cpp
+
     src/AzCore/FpsManager.cpp
     src/AzCore/WindowManager.cpp
     src/AzCore/Application.cpp
+    src/AzCore/ImGuiWrapper.cpp
 
     src/TinyVK/Device.cpp
     src/TinyVK/Instance.cpp
@@ -84,6 +94,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/.ext/json
     ${CMAKE_SOURCE_DIR}/include/.ext/tiny3d
     ${CMAKE_SOURCE_DIR}/include/.ext/Helpers
+    ${CMAKE_SOURCE_DIR}/include/.ext/imgui
 
     ${CMAKE_SOURCE_DIR}/include/AzCore
     ${CMAKE_SOURCE_DIR}/include/TinyVK
