@@ -51,7 +51,7 @@ struct TinyRNode : public TinyNode {
 
 class TinyRegistry { // For raw resource data
 public:
-    TinyRegistry(const TinyVK::Device* deviceVK);
+    TinyRegistry() = default;
 
     TinyRegistry(const TinyRegistry&) = delete;
     TinyRegistry& operator=(const TinyRegistry&) = delete;
@@ -60,7 +60,6 @@ public:
     TinyHandle add(T& data) {
         uint32_t index = pool<T>().insert(std::move(data));
 
-        resizeCheck();
         return TinyHandle(index, T::kType);
     }
 
@@ -77,25 +76,7 @@ public:
         return pool<T>().capacity;
     }
 
-
-    void printDataCounts() const {
-        printf("TinyRegistry Data Counts:\n");
-        printf("  Meshes:    %u / %u\n", pool<TinyRMesh>().count, pool<TinyRMesh>().capacity);
-        printf("  Textures:  %u / %u\n", pool<TinyRTexture>().count, pool<TinyRTexture>().capacity);
-        printf("  Materials: %u / %u\n", pool<TinyRMaterial>().count, pool<TinyRMaterial>().capacity);
-        printf("  Skeletons: %u / %u\n", pool<TinyRSkeleton>().count, pool<TinyRSkeleton>().capacity);
-        printf("  Nodes:     %u / %u\n", pool<TinyRNode>().count, pool<TinyRNode>().capacity);
-    }
-
-    VkDescriptorSetLayout getMaterialDescSetLayout() const { return *matDescLayout; }
-    VkDescriptorSet getMaterialDescSet() const { return *matDescSet; }
-
-    VkDescriptorSetLayout getTextureDescSetLayout() const { return *texDescLayout; }
-    VkDescriptorSet getTextureDescSet() const { return *texDescSet; }
-
 private:
-    const TinyVK::Device* deviceVK;
-
     std::tuple<
         TinyPool<TinyRMesh>,
         TinyPool<TinyRMaterial>,
@@ -113,22 +94,5 @@ private:
     const TinyPool<T>& pool() const {
         return std::get<TinyPool<T>>(pools);
     }
-
-    void resizeCheck();
-
-    // Shared descriptor resources
-
-    // All materials in a buffer
-    UniquePtr<TinyVK::DescLayout> matDescLayout;
-    UniquePtr<TinyVK::DescPool>   matDescPool;
-    UniquePtr<TinyVK::DataBuffer> matBuffer;
-    UniquePtr<TinyVK::DescSet>    matDescSet;
-    void createMaterialVkResources();
-
-    // All textures
-    UniquePtr<TinyVK::DescLayout> texDescLayout;
-    UniquePtr<TinyVK::DescPool>   texDescPool;
-    UniquePtr<TinyVK::DescSet>    texDescSet;
-    void createTextureVkResources();
 };
 

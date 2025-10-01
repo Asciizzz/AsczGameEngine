@@ -76,7 +76,6 @@ void Application::initComponents() {
     project->addNodeInstance(0);
 
     project->printRuntimeNodeHierarchy();
-    project->printDataCounts();
 
 // PLAYGROUND END HERE 
 

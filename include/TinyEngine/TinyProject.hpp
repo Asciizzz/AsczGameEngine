@@ -99,7 +99,7 @@ struct TinyTemplate {
 class TinyProject {
 public:
     TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
-        registry = MakeUnique<TinyRegistry>(deviceVK);
+        registry = MakeUnique<TinyRegistry>();
 
         // Create root node
         TinyHandle rootHandle = registry->add(TinyRNode());
@@ -150,10 +150,6 @@ public:
      */
     void updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
-    void printDataCounts() const {
-        registry->printDataCounts();
-    }
-
 // All these belows are only for testing purposes
 
     /**
@@ -167,19 +163,6 @@ public:
     const std::vector<uint32_t>& getRuntimeMeshRenderIndices() const { return rtMeshRenderIdxs; }
 
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
-
-    const VkDescriptorSetLayout getMaterialDescSetLayout() const {
-        return registry->getMaterialDescSetLayout();
-    }
-    const VkDescriptorSet getMaterialDescSet() const {
-        return registry->getMaterialDescSet();
-    }
-    const VkDescriptorSetLayout getTextureDescSetLayout() const {
-        return registry->getTextureDescSetLayout();
-    }
-    const VkDescriptorSet getTextureDescSet() const {
-        return registry->getTextureDescSet();
-    }
 
 private:
     const TinyVK::Device* deviceVK;

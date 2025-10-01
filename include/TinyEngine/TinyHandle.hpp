@@ -20,7 +20,7 @@ union TinyHandle {
     
     struct {
         uint32_t index;
-        uint16_t generation;
+        uint16_t version;
         uint8_t type;
         uint8_t owned;
     };
@@ -44,15 +44,15 @@ union TinyHandle {
     /**
     * Create a handle
     @param index The index in the respective pool/array
-    @param generation The generation for safety checks (default 0)
+    @param version The version for safety checks (default 0)
     @param type The type of the handle
     @param owned Whether the handle is owned or not
     */
     template<typename IndexType>
-    static TinyHandle make(IndexType index, uint16_t generation, Type type, bool owned) {
+    static TinyHandle make(IndexType index, uint16_t version, Type type, bool owned) {
         TinyHandle handle;
         handle.index = static_cast<uint32_t>(index);
-        handle.generation = generation;
+        handle.version = version;
         handle.type = static_cast<uint8_t>(type);
         handle.owned = owned ? 1 : 0;
         return handle;
@@ -61,7 +61,7 @@ union TinyHandle {
     
     template<typename IndexType>
     static TinyHandle make(IndexType index, Type type=Type::Unknown, bool owned=true) {
-        // First generation, owned by default
+        // First version, owned by default
         return make(index, 0, type, owned);
     }
 
@@ -73,8 +73,8 @@ union TinyHandle {
     }
 
     template<typename IndexType>
-    TinyHandle(IndexType index, uint16_t generation, Type type, bool owned) {
-        *this = make(index, generation, type, owned);
+    TinyHandle(IndexType index, uint16_t version, Type type, bool owned) {
+        *this = make(index, version, type, owned);
     }
 };
 
