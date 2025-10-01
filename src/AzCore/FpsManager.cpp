@@ -2,8 +2,6 @@
 #include <algorithm>
 #include <thread>
 
-namespace AzCore {
-
 FpsManager::FpsManager() 
     : lastFrameTime(Clock::now()), startTime(Clock::now()),
         currentFPS(0.0f), frameTimeMs(0.0f), deltaTime(0.0f),
@@ -95,6 +93,4 @@ void FpsManager::limitFrameRate() {
     if (currentTime < targetTimePoint) {
         std::this_thread::sleep_until(targetTimePoint);
     }
-}
-
 }

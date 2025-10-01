@@ -2,8 +2,6 @@
 #include <iostream>
 #include <stdexcept>
 
-namespace AzCore {
-
 WindowManager::WindowManager(const char* title, uint32_t width, uint32_t height)
     : window(nullptr), shouldCloseFlag(false), resizedFlag(false), 
         windowWidth(width), windowHeight(height) {
@@ -75,6 +73,4 @@ void WindowManager::getFramebufferSize(int& width, int& height) const {
 
 void WindowManager::waitEvents() const {
     SDL_WaitEvent(nullptr);
-}
-
 }

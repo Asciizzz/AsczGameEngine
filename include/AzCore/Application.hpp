@@ -34,8 +34,8 @@ public:
     void run();
 
 private:
-    UniquePtr<AzCore::WindowManager> windowManager;
-    UniquePtr<AzCore::FpsManager> fpsManager;
+    UniquePtr<WindowManager> windowManager;
+    UniquePtr<FpsManager> fpsManager;
 
     UniquePtr<AzVulk::Instance> vkInstance;
     UniquePtr<AzVulk::DeviceVK> deviceVK;

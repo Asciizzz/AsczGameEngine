@@ -3,8 +3,6 @@
 #include <chrono>
 #include <deque>
 
-namespace AzCore {
-
 class FpsManager {
 public:
     FpsManager();
@@ -47,5 +45,3 @@ public:
     void updateFrameTimeHistory(float frameTime);
     void limitFrameRate();
 };
-
-}

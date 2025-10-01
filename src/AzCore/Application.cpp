@@ -12,7 +12,6 @@ const bool enableValidationLayers = true;
 #endif
 
 using namespace AzVulk;
-using namespace AzCore;
 using namespace TinyEngine;
 
 Application::Application(const char* title, uint32_t width, uint32_t height)
@@ -34,8 +33,8 @@ void Application::run() {
 
 void Application::initComponents() {
 
-    windowManager = MakeUnique<AzCore::WindowManager>(appTitle, appWidth, appHeight);
-    fpsManager = MakeUnique<AzCore::FpsManager>();
+    windowManager = MakeUnique<WindowManager>(appTitle, appWidth, appHeight);
+    fpsManager = MakeUnique<FpsManager>();
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     // 10km view distance for those distant horizons
