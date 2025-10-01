@@ -118,130 +118,68 @@ bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& tex
 
 TinyRegistry::TinyRegistry(const TinyVK::Device* deviceVK)
 : deviceVK(deviceVK) {
-    // Start humble
-    materialDatas.resize(128);
-    textureDatas.resize(128);
-    meshDatas.resize(128);
-    skeletonDatas.resize(128);
-    nodeDatas.resize(128);
+    pool<TinyRMesh>().resize(64).setCapacityStep(64);
+    pool<TinyRMaterial>().resize(64).setCapacityStep(16);
+    pool<TinyRTexture>().resize(64).setCapacityStep(16);
+    pool<TinyRSkeleton>().resize(16).setCapacityStep(8);
+    pool<TinyRNode>().resize(128).setCapacityStep(32);
 
-    initVkResources();
+    createMaterialVkResources();
+    createTextureVkResources();
 }
 
-
-uint32_t TinyRegistry::getPoolCapacity(TinyHandle::Type type) const {
-    switch (type) {
-        case TinyHandle::Type::Mesh:     return meshDatas.capacity;
-        case TinyHandle::Type::Material: return materialDatas.capacity;
-        case TinyHandle::Type::Texture:  return textureDatas.capacity;
-        case TinyHandle::Type::Skeleton: return skeletonDatas.capacity;
-        case TinyHandle::Type::Node:     return nodeDatas.capacity;
-        default:                         return 0;
-    }
-}
-
-TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
-    UniquePtr<TinyRMesh> meshData = MakeUnique<TinyRMesh>();
-    meshData->import(deviceVK, mesh);
-
-    uint32_t index = meshDatas.insert(std::move(meshData));
-    resizeCheck();
-
-    return TinyHandle(index, HType::Mesh);
-}
-
-TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
-    UniquePtr<TinyRTexture> textureData = MakeUnique<TinyRTexture>();
-    textureData->import(deviceVK, texture);
-
-    uint32_t index = textureDatas.insert(std::move(textureData));
-    resizeCheck();
-
-    // Further descriptor logic in the future
-
-    return TinyHandle(index, HType::Texture);
-}
-
-// Usually you need to know the texture beforehand to remap the material texture indices
-TinyHandle TinyRegistry::addMaterial(const TinyRMaterial& matData) {
-    uint32_t index = materialDatas.insert(matData);
-    resizeCheck();
-
-    // Update the GPU buffer immediately
-    matBuffer->mapAndCopy(materialDatas.data());
-
-    return TinyHandle(index, HType::Material);
-}
-
-TinyHandle TinyRegistry::addSkeleton(const TinyRSkeleton& skeleton) {
-    uint32_t index = skeletonDatas.insert(skeleton);
-    resizeCheck();
-
-    return TinyHandle(index, HType::Skeleton);
-}
-
-TinyHandle TinyRegistry::addNode(const TinyRNode& node) {
-    uint32_t index = nodeDatas.insert(node);
-    resizeCheck();
-
-    return TinyHandle(index, HType::Node);
-}
 
 // Vulkan resources creation
+
 void TinyRegistry::resizeCheck() {
 
-    if (textureDatas.hasResized()) {
-        textureDatas.resetResizeFlag();
+    if (pool<TinyRTexture>().hasResized()) {
+        pool<TinyRTexture>().resetResizeFlag();
         createTextureVkResources();
     }
 
-    if (materialDatas.hasResized()) {
-        materialDatas.resetResizeFlag();
+    if (pool<TinyRMaterial>().hasResized()) {
+        pool<TinyRMaterial>().resetResizeFlag();
         createMaterialVkResources();
     }
 
-    if (meshDatas.hasResized()) {
-        meshDatas.resetResizeFlag();
+    if (pool<TinyRMesh>().hasResized()) {
+        pool<TinyRMesh>().resetResizeFlag();
         // No further logic
     }
 
-    if (skeletonDatas.hasResized()) {
-        skeletonDatas.resetResizeFlag();
+    if (pool<TinyRSkeleton>().hasResized()) {
+        pool<TinyRSkeleton>().resetResizeFlag();
         // No further logic
     }
 
-    if (nodeDatas.hasResized()) {
-        nodeDatas.resetResizeFlag();
+    if (pool<TinyRNode>().hasResized()) {
+        pool<TinyRNode>().resetResizeFlag();
         // No further logic
     }
-}
-
-
-void TinyRegistry::initVkResources() {
-    createMaterialVkResources();
-    createTextureVkResources();
 }
 
 void TinyRegistry::createMaterialVkResources() {
     // Create descriptor layout for materials
     matDescLayout = MakeUnique<DescLayout>();
     matDescLayout->create(deviceVK->lDevice, {
-        {0, DescType::StorageBuffer, materialDatas.capacity, ShaderStage::Fragment, nullptr}
+        {0, DescType::StorageBuffer, 1, ShaderStage::Fragment, nullptr}
     });
 
     // Create descriptor pool
     matDescPool = MakeUnique<DescPool>();
     matDescPool->create(deviceVK->lDevice, {
-        {DescType::StorageBuffer, materialDatas.capacity}
+        {DescType::StorageBuffer, 1}
     }, 1);
 
     // Create material buffer
     matBuffer = MakeUnique<DataBuffer>();
-    matBuffer->setDataSize(sizeof(TinyRMaterial) * materialDatas.capacity)
-             .setUsageFlags(BufferUsage::Storage | BufferUsage::TransferDst)
-             .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-             .createBuffer(deviceVK)
-             .mapAndCopy(materialDatas.data());
+    matBuffer
+        ->setDataSize(sizeof(TinyRMaterial) * pool<TinyRMaterial>().capacity)
+        .setUsageFlags(BufferUsage::Storage | BufferUsage::TransferDst)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(deviceVK)
+        .mapAndCopy(pool<TinyRMaterial>().data());
 
     // Allocate descriptor set
     matDescSet = MakeUnique<DescSet>();
@@ -259,20 +197,20 @@ void TinyRegistry::createMaterialVkResources() {
         .setDescType(DescType::StorageBuffer)
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
-        .updateDescSet(deviceVK->lDevice);
+        .updateDescSets(deviceVK->lDevice);
 }
 
 void TinyRegistry::createTextureVkResources() {
     // Create descriptor layout for textures
     texDescLayout = MakeUnique<DescLayout>();
     texDescLayout->create(deviceVK->lDevice, {
-        {0, DescType::CombinedImageSampler, textureDatas.capacity, ShaderStage::Fragment, nullptr}
+        {0, DescType::CombinedImageSampler, pool<TinyRTexture>().capacity, ShaderStage::Fragment, nullptr}
     });
 
     // Create descriptor pool
     texDescPool = MakeUnique<DescPool>();
     texDescPool->create(deviceVK->lDevice, {
-        {DescType::CombinedImageSampler, textureDatas.capacity}
+        {DescType::CombinedImageSampler, pool<TinyRTexture>().capacity}
     }, 1);
 
     // Allocate descriptor set

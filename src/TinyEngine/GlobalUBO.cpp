@@ -56,7 +56,7 @@ void GlbUBOManager::createDescSets() {
             .setDescType(DescType::UniformBuffer)
             .setDescCount(1)
             .setBufferInfo({bufferInfo})
-            .updateDescSet(lDevice);
+            .updateDescSets(lDevice);
 
         descSets.push_back(std::move(descSet));
     }

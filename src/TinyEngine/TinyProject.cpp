@@ -15,13 +15,19 @@ using RNode = TinyRNode;
 uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
     std::vector<TinyHandle> glbMeshRegHandle; // Ensure correct mapping
     for (const auto& mesh : model.meshes) {
-        TinyHandle handle = registry->addMesh(mesh);
+        TinyRMesh meshData;
+        meshData.import(deviceVK, mesh);
+
+        TinyHandle handle = registry->add(meshData);
         glbMeshRegHandle.push_back(handle);
     }
 
     std::vector<TinyHandle> glbTexRegHandle;
     for (const auto& texture : model.textures) {
-        TinyHandle handle = registry->addTexture(texture);
+        TinyRTexture textureData;
+        textureData.import(deviceVK, texture);
+
+        TinyHandle handle = registry->add(textureData);
         glbTexRegHandle.push_back(handle);
     }
 
@@ -39,7 +45,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
         bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexRegHandle.size());
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRegHandle[localNrmlIndex].index : 0);
 
-        TinyHandle handle = registry->addMaterial(correctMat);
+        TinyHandle handle = registry->add(correctMat);
         glbMatRegHandle.push_back(handle);
     }
 
@@ -48,7 +54,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
         TinyRSkeleton rSkeleton;
         rSkeleton.bones = skeleton.construct();
 
-        TinyHandle handle = registry->addSkeleton(rSkeleton);
+        TinyHandle handle = registry->add(rSkeleton);
         glbSkeleRegHandle.push_back(handle);
     }
 
@@ -58,7 +64,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
         // Just occupy the index
-        TinyHandle handle = registry->addNode(RNode());
+        TinyHandle handle = registry->add(RNode());
         localNodeIndexToGlobalNodeHandle[i] = handle;
 
         glbNodeRegHandle.push_back(handle);

@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <utility>
 
-#define TINYPOOL_CAPACITY_STEP 16
-
 enum class TinyPoolType {
     Raw,  // Direct storage
     UPtr, // Unique pointer storage
@@ -43,7 +41,10 @@ struct TinyPoolTraits<std::shared_ptr<T>> {
 template<typename Type>
 struct TinyPool {
     TinyPool() = default;
-    TinyPool(uint32_t initialCapacity) { allocate(initialCapacity); }
+    TinyPool(uint32_t initialCapacity, uint32_t capacityStep = 16)
+    : expandStep(capacityStep) {
+        allocate(initialCapacity);
+    }
 
     // Delete copy semantics
     TinyPool(const TinyPool&) = delete;
@@ -57,7 +58,12 @@ struct TinyPool {
     uint32_t capacity = 0;
     uint32_t count = 0;
 
+    uint32_t capacityStep = 16; // Default expansion step
+    void setCapacityStep(uint32_t step) { capacityStep = step; }
+
     bool resizeFlag = false; // Helpful toggleable flag for register resize logics
+    bool hasResized() const { return resizeFlag; }
+    void resetResizeFlag() { resizeFlag = false; }
 
     void clear() {
         items.clear();
@@ -67,7 +73,7 @@ struct TinyPool {
         count = 0;
     }
 
-    void allocate(uint32_t capacity) {
+    TinyPool& allocate(uint32_t capacity) {
         clear();
         this->capacity = capacity;
         items.resize(capacity);
@@ -76,10 +82,11 @@ struct TinyPool {
         for (uint32_t i = 0; i < capacity; ++i) {
             freeList.push_back(capacity - 1 - i);
         }
+        return *this;
     }
 
-    void resize(uint32_t newCapacity) {
-        if (newCapacity <= capacity) return;
+    TinyPool& resize(uint32_t newCapacity) {
+        if (newCapacity <= capacity) return *this;
 
         items.resize(newCapacity);
         occupied.resize(newCapacity, false);
@@ -88,10 +95,8 @@ struct TinyPool {
         }
         capacity = newCapacity;
         resizeFlag = true;
+        return *this;
     }
-
-    bool hasResized() const { return resizeFlag; }
-    void resetResizeFlag() { resizeFlag = false; }
 
     bool hasSpace() const { return !freeList.empty(); }
 
@@ -108,7 +113,7 @@ struct TinyPool {
     // ---- Type-aware insert ----
     template<typename U>
     uint32_t insert(U&& item) {
-        while (!hasSpace()) resize(capacity + TINYPOOL_CAPACITY_STEP);
+        while (!hasSpace()) resize(capacity + capacityStep);
         count++;
 
         uint32_t index = freeList.back();

@@ -56,50 +56,65 @@ public:
     TinyRegistry(const TinyRegistry&) = delete;
     TinyRegistry& operator=(const TinyRegistry&) = delete;
 
-    uint32_t getPoolCapacity(TinyHandle::Type type) const;
+    template<typename T>
+    TinyHandle add(T& data) {
+        uint32_t index = pool<T>().insert(std::move(data));
 
-    TinyHandle addMesh(const TinyMesh& mesh);
-    TinyHandle addTexture(const TinyTexture& texture);
-    TinyHandle addMaterial(const TinyRMaterial& matData);
-    TinyHandle addSkeleton(const TinyRSkeleton& skeleton);
-    TinyHandle addNode(const TinyRNode& node);
+        resizeCheck();
+        return TinyHandle(index, T::kType);
+    }
 
     template<typename T>
     T* get(const TinyHandle& handle) {
         // Clean the type
         if (!handle.isType(T::kType)) return nullptr;
 
-        // Only allow correct type
-        if constexpr (std::is_same_v<T, TinyRMesh>)
-            return meshDatas.get(handle.index);
-        else if constexpr (std::is_same_v<T, TinyRMaterial>)
-            return materialDatas.get(handle.index);
-        else if constexpr (std::is_same_v<T, TinyRTexture>)
-            return textureDatas.get(handle.index);
-        else if constexpr (std::is_same_v<T, TinyRSkeleton>)
-            return skeletonDatas.get(handle.index);
-        else if constexpr (std::is_same_v<T, TinyRNode>)
-            return nodeDatas.get(handle.index);
-        else
-            static_assert(sizeof(T) == 0, "Unsupported type for get<T>");
+        return pool<T>().get(handle.index);
+    }
+
+    template<typename T>
+    uint32_t poolCapacity() const {
+        return pool<T>().capacity;
     }
 
 
     void printDataCounts() const {
         printf("TinyRegistry Data Counts:\n");
-        printf("  Meshes:    %u / %u\n", meshDatas.count, meshDatas.capacity);
-        printf("  Textures:  %u / %u\n", textureDatas.count, textureDatas.capacity);
-        printf("  Materials: %u / %u\n", materialDatas.count, materialDatas.capacity);
-        printf("  Skeletons: %u / %u\n", skeletonDatas.count, skeletonDatas.capacity);
-        printf("  Nodes:     %u / %u\n", nodeDatas.count, nodeDatas.capacity);
+        printf("  Meshes:    %u / %u\n", pool<TinyRMesh>().count, pool<TinyRMesh>().capacity);
+        printf("  Textures:  %u / %u\n", pool<TinyRTexture>().count, pool<TinyRTexture>().capacity);
+        printf("  Materials: %u / %u\n", pool<TinyRMaterial>().count, pool<TinyRMaterial>().capacity);
+        printf("  Skeletons: %u / %u\n", pool<TinyRSkeleton>().count, pool<TinyRSkeleton>().capacity);
+        printf("  Nodes:     %u / %u\n", pool<TinyRNode>().count, pool<TinyRNode>().capacity);
     }
+
+    VkDescriptorSetLayout getMaterialDescSetLayout() const { return *matDescLayout; }
+    VkDescriptorSet getMaterialDescSet() const { return *matDescSet; }
+
+    VkDescriptorSetLayout getTextureDescSetLayout() const { return *texDescLayout; }
+    VkDescriptorSet getTextureDescSet() const { return *texDescSet; }
 
 private:
     const TinyVK::Device* deviceVK;
 
-    void resizeCheck();
+    std::tuple<
+        TinyPool<TinyRMesh>,
+        TinyPool<TinyRMaterial>,
+        TinyPool<TinyRTexture>,
+        TinyPool<TinyRSkeleton>,
+        TinyPool<TinyRNode>
+    > pools;
 
-    void initVkResources();
+    template<typename T>
+    TinyPool<T>& pool() {
+        return std::get<TinyPool<T>>(pools);
+    }
+
+    template<typename T>
+    const TinyPool<T>& pool() const {
+        return std::get<TinyPool<T>>(pools);
+    }
+
+    void resizeCheck();
 
     // Shared descriptor resources
 
@@ -115,12 +130,5 @@ private:
     UniquePtr<TinyVK::DescPool>   texDescPool;
     UniquePtr<TinyVK::DescSet>    texDescSet;
     void createTextureVkResources();
-
-    // Resource pools registry
-    TinyPoolPtr<TinyRMesh>     meshDatas;
-    TinyPoolRaw<TinyRMaterial> materialDatas;
-    TinyPoolPtr<TinyRTexture>  textureDatas;
-    TinyPoolRaw<TinyRSkeleton> skeletonDatas;
-    TinyPoolRaw<TinyRNode>     nodeDatas;
 };
 

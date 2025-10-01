@@ -215,10 +215,6 @@ DescWrite& DescWrite::setDescType(VkDescriptorType type) {
     return *this;
 }
 
-DescWrite& DescWrite::updateDescSet(VkDevice lDevice) {
-    vkUpdateDescriptorSets(lDevice, 1, &lastWrite(), 0, nullptr);
-    return *this;
-}
 DescWrite& DescWrite::updateDescSets(VkDevice lDevice) {
     vkUpdateDescriptorSets(lDevice, writeCount, writes.data(), 0, nullptr);
     return *this;

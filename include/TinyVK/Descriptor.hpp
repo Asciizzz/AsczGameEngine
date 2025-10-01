@@ -116,7 +116,6 @@ struct DescWrite {
     DescWrite& setDescCount(uint32_t count);
     DescWrite& setDescType(VkDescriptorType type);
 
-    DescWrite& updateDescSet(VkDevice lDevice);
     DescWrite& updateDescSets(VkDevice lDevice);
 };
 

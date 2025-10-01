@@ -98,11 +98,11 @@ struct TinyTemplate {
 
 class TinyProject {
 public:
-    TinyProject(const TinyVK::Device* deviceVK) : device(deviceVK) {
+    TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
         registry = MakeUnique<TinyRegistry>(deviceVK);
 
         // Create root node
-        TinyHandle rootHandle = registry->addNode(TinyRNode());
+        TinyHandle rootHandle = registry->add(TinyRNode());
 
         auto rootNode = MakeUnique<TinyNodeRT3D>();
         rootNode->regHandle = rootHandle;
@@ -168,8 +168,21 @@ public:
 
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
 
+    const VkDescriptorSetLayout getMaterialDescSetLayout() const {
+        return registry->getMaterialDescSetLayout();
+    }
+    const VkDescriptorSet getMaterialDescSet() const {
+        return registry->getMaterialDescSet();
+    }
+    const VkDescriptorSetLayout getTextureDescSetLayout() const {
+        return registry->getTextureDescSetLayout();
+    }
+    const VkDescriptorSet getTextureDescSet() const {
+        return registry->getTextureDescSet();
+    }
+
 private:
-    const TinyVK::Device* device;
+    const TinyVK::Device* deviceVK;
 
     UniquePtr<TinyRegistry> registry;
 
