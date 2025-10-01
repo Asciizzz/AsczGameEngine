@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TinyEngine/TinyHandle.hpp"
+#include "TinyExt/TinyHandle.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

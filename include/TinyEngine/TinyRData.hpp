@@ -1,7 +1,7 @@
 #pragma once
 
-#include "TinyEngine/TinyPool.hpp"
-#include "TinyEngine/TinyHandle.hpp"
+#include "TinyExt/TinyPool.hpp"
+#include "TinyExt/TinyHandle.hpp"
 
 #include "TinyData/TinyModel.hpp"
 
@@ -47,52 +47,3 @@ struct TinyRSkeleton {
 struct TinyRNode : public TinyNode {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Node;
 };
-
-
-class TinyRegistry { // For raw resource data
-public:
-    TinyRegistry() = default;
-
-    TinyRegistry(const TinyRegistry&) = delete;
-    TinyRegistry& operator=(const TinyRegistry&) = delete;
-
-    template<typename T>
-    TinyHandle add(T& data) {
-        uint32_t index = pool<T>().insert(std::move(data));
-
-        return TinyHandle(index, T::kType);
-    }
-
-    template<typename T>
-    T* get(const TinyHandle& handle) {
-        // Clean the type
-        if (!handle.isType(T::kType)) return nullptr;
-
-        return pool<T>().get(handle.index);
-    }
-
-    template<typename T>
-    uint32_t poolCapacity() const {
-        return pool<T>().capacity;
-    }
-
-private:
-    std::tuple<
-        TinyPool<TinyRMesh>,
-        TinyPool<TinyRMaterial>,
-        TinyPool<TinyRTexture>,
-        TinyPool<TinyRSkeleton>,
-        TinyPool<TinyRNode>
-    > pools;
-
-    template<typename T>
-    TinyPool<T>& pool() {
-        return std::get<TinyPool<T>>(pools);
-    }
-
-    template<typename T>
-    const TinyPool<T>& pool() const {
-        return std::get<TinyPool<T>>(pools);
-    }
-};
-

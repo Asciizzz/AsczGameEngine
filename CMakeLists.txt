@@ -39,7 +39,7 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyEngine/TinyLoader.cpp
     src/TinyData/TinyCamera.cpp
     
-    src/TinyEngine/TinyRegistry.cpp
+    src/TinyEngine/TinyRData.cpp
     src/TinyEngine/TinyProject.cpp
     # src/TinyEngine/TinyPlayback.cpp deprecated
 
@@ -93,6 +93,7 @@ target_include_directories(AsczGame PRIVATE
 
     ${CMAKE_SOURCE_DIR}/include/AzCore
     ${CMAKE_SOURCE_DIR}/include/TinyVK
+    ${CMAKE_SOURCE_DIR}/include/TinyExt
     ${CMAKE_SOURCE_DIR}/include/TinyData
     ${CMAKE_SOURCE_DIR}/include/TinyEngine
 )

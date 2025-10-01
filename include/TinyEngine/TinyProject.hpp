@@ -1,6 +1,7 @@
 #pragma once
 
-#include "TinyEngine/TinyRegistry.hpp"
+#include "TinyExt/TinyRegistry.hpp"
+
 #include "TinyEngine/TinyInstance.hpp"
 
 struct TinyNodeRT3D {

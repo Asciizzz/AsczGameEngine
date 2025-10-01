@@ -1,3 +1,5 @@
+#pragma once
+
 #include ".ext/Templates.hpp"
 
 #include <type_traits>
