@@ -44,13 +44,13 @@ public:
     std::vector<TinyVK::DataBuffer> dataBuffer; // Per-frame buffers
     void createDataBuffer();
 
-    UniquePtr<TinyVK::DescLayout> descLayout;
-    UniquePtr<TinyVK::DescPool> descPool;
-    UniquePtrVec<TinyVK::DescSet> descSets;
+    TinyVK::DescLayout descLayout;
+    TinyVK::DescPool descPool;
+    std::vector<TinyVK::DescSet> descSets;
     void createDescSets();
 
-    VkDescriptorSet getDescSet(uint32_t frameIndex) const { return *descSets[frameIndex]; }
-    VkDescriptorSetLayout getDescLayout() const { return *descLayout; }
+    VkDescriptorSet getDescSet(uint32_t frameIndex) const { return descSets[frameIndex]; }
+    VkDescriptorSetLayout getDescLayout() const { return descLayout; }
 
 // Functionalities
     void updateUBO(const TinyCamera& camera, uint32_t frameIndex);

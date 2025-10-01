@@ -32,19 +32,17 @@ void GlbUBOManager::createDataBuffer() {
 void GlbUBOManager::createDescSets() {
     VkDevice lDevice = deviceVK->lDevice;
 
-    descLayout = MakeUnique<DescLayout>();
-    descLayout->create(lDevice,
+    descLayout.create(lDevice,
         {{0, DescType::UniformBuffer, 1, ShaderStage::VertexAndFragment, nullptr}
     });
 
-    descPool = MakeUnique<DescPool>();
-    descPool->create(lDevice, {
+    descPool.create(lDevice, {
         {DescType::UniformBuffer, maxFramesInFlight}
     }, maxFramesInFlight);
 
     for (int i = 0; i < maxFramesInFlight; ++i) {
-        UniquePtr<DescSet> descSet = MakeUnique<DescSet>();
-        descSet->allocate(lDevice, *descPool, *descLayout);
+        DescSet descSet;
+        descSet.allocate(lDevice, descPool, descLayout);
 
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = dataBuffer[i].get();
@@ -52,7 +50,7 @@ void GlbUBOManager::createDescSets() {
         bufferInfo.range = sizeof(GlobalUBO);
 
         DescWrite()
-            .setDstSet(*descSet)
+            .setDstSet(descSet)
             .setDescType(DescType::UniformBuffer)
             .setDescCount(1)
             .setBufferInfo({bufferInfo})
