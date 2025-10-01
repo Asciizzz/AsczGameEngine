@@ -13,9 +13,6 @@
 #include "TinyVK/RenderPass.hpp"
 
 #include "TinyEngine/GlobalUBO.hpp"
-#include "TinyEngine/ResourceGroup.hpp"
-#include "TinyEngine/StaticInstance.hpp"
-
 #include "TinyEngine/TinyProject.hpp"
 
 namespace TinyVK {
@@ -47,11 +44,6 @@ public:
     
     // DepthManager getter for external access
     DepthManager* getDepthManager() const { return depthManager.get(); }
-
-    // Demo functions
-    void drawStaticInstanceGroup(const TinyEngine::ResourceGroup* resGroup, const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, const TinyEngine::StaticInstanceGroup* instanceGroup) const;
-    
-    void drawSingleInstance(const TinyEngine::ResourceGroup* resGroup, const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* pipeline, size_t modelIndex) const;
 
     void drawSky(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const;
 

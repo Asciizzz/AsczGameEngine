@@ -47,7 +47,6 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyEngine/RigDemo.cpp
     src/TinyEngine/StaticInstance.cpp
 
-    src/TinyEngine/ResourceGroup.cpp
 
     src/AzCore/FpsManager.cpp
     src/AzCore/WindowManager.cpp
