@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-#include "Helpers/Templates.hpp"
+#include ".ext/Templates.hpp"
 
 struct TinyAnimationSampler {
     std::vector<float> inputTimes;        // keyframe times

@@ -98,7 +98,7 @@ struct TinyTemplate {
 
 class TinyProject {
 public:
-    TinyProject(const TinyVK::DeviceVK* deviceVK) : device(deviceVK) {
+    TinyProject(const TinyVK::Device* deviceVK) : device(deviceVK) {
         registry = MakeUnique<TinyRegistry>(deviceVK);
 
         // Create root node
@@ -169,7 +169,7 @@ public:
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
 
 private:
-    const TinyVK::DeviceVK* device;
+    const TinyVK::Device* device;
 
     UniquePtr<TinyRegistry> registry;
 

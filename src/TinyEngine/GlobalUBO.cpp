@@ -9,7 +9,7 @@ using namespace TinyVK;
 
 using namespace TinyEngine;
 
-GlbUBOManager::GlbUBOManager(const DeviceVK* deviceVK, uint32_t maxFramesInFlight)
+GlbUBOManager::GlbUBOManager(const Device* deviceVK, uint32_t maxFramesInFlight)
 : deviceVK(deviceVK), maxFramesInFlight(maxFramesInFlight) {
     createDataBuffer();
 

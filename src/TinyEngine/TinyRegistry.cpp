@@ -7,7 +7,7 @@
 using namespace TinyVK;
 using HType = TinyHandle::Type;
 
-bool TinyRMesh::import(const TinyVK::DeviceVK* deviceVK, const TinyMesh& mesh) {
+bool TinyRMesh::import(const TinyVK::Device* deviceVK, const TinyMesh& mesh) {
     const auto& vertexData = mesh.vertexData;
     const auto& indexData = mesh.indexData;
 
@@ -38,7 +38,7 @@ VkIndexType TinyRMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
     }
 }
 
-bool TinyRTexture::import(const TinyVK::DeviceVK* deviceVK, const TinyTexture& texture) {
+bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& texture) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
@@ -116,7 +116,7 @@ bool TinyRTexture::import(const TinyVK::DeviceVK* deviceVK, const TinyTexture& t
 // Registry
 
 
-TinyRegistry::TinyRegistry(const TinyVK::DeviceVK* deviceVK)
+TinyRegistry::TinyRegistry(const TinyVK::Device* deviceVK)
 : deviceVK(deviceVK) {
     // Start humble
     materialDatas.resize(128);

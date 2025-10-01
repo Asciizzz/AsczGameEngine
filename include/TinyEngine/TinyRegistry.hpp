@@ -17,7 +17,7 @@ struct TinyRMesh {
     std::vector<TinySubmesh> submeshes;
     VkIndexType indexType = VK_INDEX_TYPE_UINT32;
 
-    bool import(const TinyVK::DeviceVK* deviceVK, const TinyMesh& mesh);
+    bool import(const TinyVK::Device* deviceVK, const TinyMesh& mesh);
 
     static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };
@@ -35,7 +35,7 @@ struct TinyRTexture {
     constexpr static TinyHandle::Type kType = TinyHandle::Type::Texture;
 
     TinyVK::TextureVK textureVK;
-    bool import(const TinyVK::DeviceVK* deviceVK, const TinyTexture& texture);
+    bool import(const TinyVK::Device* deviceVK, const TinyTexture& texture);
 };
 
 struct TinyRSkeleton {
@@ -51,7 +51,7 @@ struct TinyRNode : public TinyNode {
 
 class TinyRegistry { // For raw resource data
 public:
-    TinyRegistry(const TinyVK::DeviceVK* deviceVK);
+    TinyRegistry(const TinyVK::Device* deviceVK);
 
     TinyRegistry(const TinyRegistry&) = delete;
     TinyRegistry& operator=(const TinyRegistry&) = delete;
@@ -95,7 +95,7 @@ public:
     }
 
 private:
-    const TinyVK::DeviceVK* deviceVK;
+    const TinyVK::Device* deviceVK;
 
     void resizeCheck();
 

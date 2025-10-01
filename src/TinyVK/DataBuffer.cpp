@@ -82,7 +82,7 @@ DataBuffer& DataBuffer::setMemPropFlags(VkMemoryPropertyFlags flags) {
     memPropFlags = flags; return *this;
 }
 
-DataBuffer& DataBuffer::createBuffer(const DeviceVK* deviceVK) {
+DataBuffer& DataBuffer::createBuffer(const Device* deviceVK) {
     return createBuffer(deviceVK->lDevice, deviceVK->pDevice);
 }
 
@@ -112,7 +112,7 @@ DataBuffer& DataBuffer::createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice)
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = DeviceVK::findMemoryType(memRequirements.memoryTypeBits, memPropFlags, pDevice);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memPropFlags, pDevice);
 
     if (vkAllocateMemory(lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate buffer memory!");
@@ -155,7 +155,7 @@ DataBuffer& DataBuffer::mapAndCopy(const void* data) {
     return *this;
 }
 
-DataBuffer& DataBuffer::createDeviceLocalBuffer(const DeviceVK* deviceVK, const void* initialData) {
+DataBuffer& DataBuffer::createDeviceLocalBuffer(const Device* deviceVK, const void* initialData) {
     // --- staging buffer (CPU visible) ---
     DataBuffer stagingBuffer;
     stagingBuffer

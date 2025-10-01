@@ -22,7 +22,7 @@ namespace TinyVK {
 
 class Renderer {
 public:
-    Renderer(DeviceVK* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight = 2);
+    Renderer(Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight = 2);
     ~Renderer();
 
     Renderer(const Renderer&) = delete;
@@ -67,7 +67,7 @@ public:
 
 private:
     // Component references
-    DeviceVK* deviceVK;
+    Device* deviceVK;
     
     // Owned components
     UniquePtr<SwapChain> swapChain;

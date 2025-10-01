@@ -1,6 +1,6 @@
 // DepthManager.cpp
 #include "TinyVK/DepthManager.hpp"
-#include "TinyVK/DeviceVK.hpp"
+#include "TinyVK/Device.hpp"
 
 #include <stdexcept>
 #include <algorithm>
@@ -9,7 +9,7 @@
 
 using namespace TinyVK;
 
-DepthManager::DepthManager(const DeviceVK* deviceVK)
+DepthManager::DepthManager(const Device* deviceVK)
     : deviceVK   (deviceVK)
     , depthImage (deviceVK)
 {}

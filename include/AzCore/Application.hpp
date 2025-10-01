@@ -3,7 +3,7 @@
 #include "AzCore/FpsManager.hpp"
 #include "AzCore/WindowManager.hpp"
 
-#include "TinyVK/DeviceVK.hpp"
+#include "TinyVK/Device.hpp"
 #include "TinyVK/Instance.hpp"
 
 #include "TinyVK/SwapChain.hpp"
@@ -38,7 +38,7 @@ private:
     UniquePtr<FpsManager> fpsManager;
 
     UniquePtr<TinyVK::Instance> vkInstance;
-    UniquePtr<TinyVK::DeviceVK> deviceVK;
+    UniquePtr<TinyVK::Device> deviceVK;
 
     UniquePtr<TinyVK::Renderer> renderer;
 

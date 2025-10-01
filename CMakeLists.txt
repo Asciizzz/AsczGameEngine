@@ -53,7 +53,7 @@ file(GLOB_RECURSE SRC_FILES
     src/AzCore/WindowManager.cpp
     src/AzCore/Application.cpp
 
-    src/TinyVK/DeviceVK.cpp
+    src/TinyVK/Device.cpp
     src/TinyVK/Instance.cpp
     src/TinyVK/CmdBuffer.cpp
     src/TinyVK/DataBuffer.cpp

@@ -98,10 +98,10 @@ ImageVK& ImageVK::init(VkDevice lDevice) {
     return *this;
 }
 
-ImageVK::ImageVK(const DeviceVK* device) {
+ImageVK::ImageVK(const Device* device) {
     init(device);
 }
-ImageVK& ImageVK::init(const DeviceVK* device) {
+ImageVK& ImageVK::init(const Device* device) {
     if (device) this->lDevice = device->lDevice;
     return *this;
 }
@@ -222,7 +222,7 @@ ImageVK& ImageVK::createImage(const ImageConfig& config) {
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = DeviceVK::findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties, config.pDevice);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties, config.pDevice);
 
     if (vkAllocateMemory(lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to allocate image memory" << std::endl;
@@ -368,7 +368,7 @@ SamplerVK& SamplerVK::init(VkDevice lDevice) {
     this->lDevice = lDevice;
     return *this;
 }
-SamplerVK& SamplerVK::init(const DeviceVK* device) {
+SamplerVK& SamplerVK::init(const Device* device) {
     lDevice = device ? device->lDevice : VK_NULL_HANDLE;
     return *this;
 }
@@ -457,7 +457,7 @@ TextureVK& TextureVK::init(VkDevice lDevice) {
     sampler.init(lDevice);
     return *this;
 }
-TextureVK& TextureVK::init(const DeviceVK* device) {
+TextureVK& TextureVK::init(const Device* device) {
     if (device) {
         image.init(device);
         sampler.init(device);

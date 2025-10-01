@@ -1,4 +1,4 @@
-#include "TinyVK/DeviceVK.hpp"
+#include "TinyVK/Device.hpp"
 #include <stdexcept>
 #include <set>
 #include <vector>
@@ -6,19 +6,19 @@
 using namespace TinyVK;
 
 // ---------------- EXTENSIONS ----------------
-const std::vector<const char*> DeviceVK::deviceExtensions = {
+const std::vector<const char*> Device::deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
 };
 
 // ---------------- CONSTRUCTOR / DESTRUCTOR ----------------
-DeviceVK::DeviceVK(VkInstance instance, VkSurfaceKHR surface) {
+Device::Device(VkInstance instance, VkSurfaceKHR surface) {
     pickPhysicalDevice(instance, surface);
     createLogicalDevice();
     createDefaultCommandPools();
 }
 
-DeviceVK::~DeviceVK() {
+Device::~Device() {
     if (lDevice != VK_NULL_HANDLE) {
         vkDestroyCommandPool(lDevice, graphicsPoolWrapper.pool, nullptr);
         vkDestroyCommandPool(lDevice, presentPoolWrapper.pool, nullptr);
@@ -29,7 +29,7 @@ DeviceVK::~DeviceVK() {
 }
 
 // ---------------- PHYSICAL DEVICE ----------------
-void DeviceVK::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
+void Device::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
     uint32_t count = 0;
     vkEnumeratePhysicalDevices(instance, &count, nullptr);
     if (count == 0) throw std::runtime_error("No Vulkan devices found.");
@@ -49,7 +49,7 @@ void DeviceVK::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
 }
 
 // ---------------- LOGICAL DEVICE ----------------
-void DeviceVK::createLogicalDevice() {
+void Device::createLogicalDevice() {
     std::set<uint32_t> uniqueFamilies = {
         queueFamilyIndices.graphicsFamily.value(),
         queueFamilyIndices.presentFamily.value(),
@@ -103,7 +103,7 @@ void DeviceVK::createLogicalDevice() {
 }
 
 // ---------------- QUEUE FAMILY ----------------
-QueueFamilyIndices DeviceVK::findQueueFamilies(VkPhysicalDevice lDevice, VkSurfaceKHR surface) {
+QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice lDevice, VkSurfaceKHR surface) {
     QueueFamilyIndices indices;
 
     uint32_t count = 0;
@@ -136,7 +136,7 @@ QueueFamilyIndices DeviceVK::findQueueFamilies(VkPhysicalDevice lDevice, VkSurfa
     return indices;
 }
 
-bool DeviceVK::isDeviceSuitable(VkPhysicalDevice lDevice, VkSurfaceKHR surface) {
+bool Device::isDeviceSuitable(VkPhysicalDevice lDevice, VkSurfaceKHR surface) {
     QueueFamilyIndices indices = findQueueFamilies(lDevice, surface);
     bool extensionsOk = checkDeviceExtensionSupport(lDevice);
 
@@ -149,7 +149,7 @@ bool DeviceVK::isDeviceSuitable(VkPhysicalDevice lDevice, VkSurfaceKHR surface) 
     return indices.isComplete() && extensionsOk && fmtCount > 0 && presentCount > 0;
 }
 
-bool DeviceVK::checkDeviceExtensionSupport(VkPhysicalDevice lDevice) {
+bool Device::checkDeviceExtensionSupport(VkPhysicalDevice lDevice) {
     uint32_t extCount = 0;
     vkEnumerateDeviceExtensionProperties(lDevice, nullptr, &extCount, nullptr);
     std::vector<VkExtensionProperties> available(extCount);
@@ -161,7 +161,7 @@ bool DeviceVK::checkDeviceExtensionSupport(VkPhysicalDevice lDevice) {
 }
 
 // ---------------- COMMAND POOLS ----------------
-DeviceVK::PoolWrapper DeviceVK::createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags) {
+Device::PoolWrapper Device::createCommandPool(QueueFamilyType type, VkCommandPoolCreateFlags flags) {
     VkCommandPoolCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     ci.queueFamilyIndex = getQueueFamilyIndex(type);
@@ -174,7 +174,7 @@ DeviceVK::PoolWrapper DeviceVK::createCommandPool(QueueFamilyType type, VkComman
     return { pool, type };
 }
 
-void DeviceVK::createDefaultCommandPools() {
+void Device::createDefaultCommandPools() {
     graphicsPoolWrapper = createCommandPool(GraphicsType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     presentPoolWrapper  = createCommandPool(PresentType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     computePoolWrapper  = createCommandPool(ComputeType, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
@@ -182,7 +182,7 @@ void DeviceVK::createDefaultCommandPools() {
 }
 
 // ---------------- MEMORY ----------------
-uint32_t DeviceVK::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags memPropFlags, VkPhysicalDevice pDevice) {
+uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags memPropFlags, VkPhysicalDevice pDevice) {
     VkPhysicalDeviceMemoryProperties memProps;
     vkGetPhysicalDeviceMemoryProperties(pDevice, &memProps);
 
@@ -193,12 +193,12 @@ uint32_t DeviceVK::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags mem
     throw std::runtime_error("Failed to find suitable memory type");
 }
 
-uint32_t DeviceVK::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags memPropFlags) const {
+uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags memPropFlags) const {
     return findMemoryType(typeFilter, memPropFlags, pDevice);
 }
 
 // ---------------- QUEUE HELPERS ----------------
-uint32_t DeviceVK::getQueueFamilyIndex(QueueFamilyType type) const {
+uint32_t Device::getQueueFamilyIndex(QueueFamilyType type) const {
     switch(type) {
         case GraphicsType: return queueFamilyIndices.graphicsFamily.value();
         case PresentType:  return queueFamilyIndices.presentFamily.value();
@@ -208,7 +208,7 @@ uint32_t DeviceVK::getQueueFamilyIndex(QueueFamilyType type) const {
     return queueFamilyIndices.graphicsFamily.value();
 }
 
-VkQueue DeviceVK::getQueue(QueueFamilyType type) const {
+VkQueue Device::getQueue(QueueFamilyType type) const {
     switch(type) {
         case GraphicsType: return graphicsQueue;
         case PresentType:  return presentQueue;

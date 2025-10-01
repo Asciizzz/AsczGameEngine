@@ -5,7 +5,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <cstdint>
 
-#include "Helpers/Templates.hpp"
+#include ".ext/Templates.hpp"
 
 struct VkVertexInputBindingDescription;
 struct VkVertexInputAttributeDescription;

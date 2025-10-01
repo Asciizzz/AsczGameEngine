@@ -1,12 +1,12 @@
 #pragma once
 
-#include <Helpers/Templates.hpp>
+#include <.ext/Templates.hpp>
 
 #include <vulkan/vulkan.h>
 #include <string>
 
 namespace TinyVK {
-class DeviceVK;
+class Device;
 
 struct ImageUsage {
     static constexpr VkImageUsageFlags TransferSrc  = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -104,9 +104,9 @@ class ImageVK {
 public:
     ImageVK() = default;
     ImageVK(VkDevice lDevice);
-    ImageVK(const DeviceVK* device);
+    ImageVK(const Device* device);
     ImageVK& init(VkDevice lDevice);
-    ImageVK& init(const DeviceVK* device);
+    ImageVK& init(const Device* device);
 
     ~ImageVK() { cleanup(); }
     void cleanup();
@@ -201,7 +201,7 @@ public:
     SamplerVK() = default;
     SamplerVK(VkDevice lDevice);
     SamplerVK& init(VkDevice lDevice);
-    SamplerVK& init(const DeviceVK* device);
+    SamplerVK& init(const Device* device);
 
     ~SamplerVK() { cleanup(); }
     void cleanup();
@@ -235,7 +235,7 @@ public:
     TextureVK() = default;
     TextureVK(VkDevice lDevice);
     TextureVK& init(VkDevice lDevice);
-    TextureVK& init(const DeviceVK* device);
+    TextureVK& init(const Device* device);
 
     TextureVK(const TextureVK&) = delete;
     TextureVK& operator=(const TextureVK&) = delete;

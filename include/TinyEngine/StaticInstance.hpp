@@ -41,7 +41,7 @@ struct StaticInstanceGroup {
     VkPhysicalDevice pDevice = VK_NULL_HANDLE;
 
     TinyVK::DataBuffer dataBuffer;
-    void initVkDevice(const TinyVK::DeviceVK* deviceVK);
+    void initVkDevice(const TinyVK::Device* deviceVK);
     void initVkDevice(VkDevice lDevice, VkPhysicalDevice pDevice);
 
     void recreateDataBuffer();

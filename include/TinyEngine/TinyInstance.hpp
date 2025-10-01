@@ -15,5 +15,5 @@ public:
     };
 
     TinyVK::DataBuffer buffer;
-    void initBuffer(const TinyVK::DeviceVK* deviceVK, size_t instanceCount);
+    void initBuffer(const TinyVK::Device* deviceVK, size_t instanceCount);
 };

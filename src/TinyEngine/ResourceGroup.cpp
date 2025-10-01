@@ -12,7 +12,7 @@ using namespace TinyEngine;
 // ======================= General resource group stuff =======================
 // ============================================================================
 
-ResourceGroup::ResourceGroup(DeviceVK* deviceVK): deviceVK(deviceVK) {}
+ResourceGroup::ResourceGroup(Device* deviceVK): deviceVK(deviceVK) {}
 
 void ResourceGroup::cleanup() {
     VkDevice lDevice = deviceVK->lDevice;
@@ -253,7 +253,7 @@ void ResourceGroup::createTextureDescSet() {
 // =========================== MESH STATIC ====================================
 // ============================================================================
 
-void MeshVK::fromMesh(const DeviceVK* deviceVK, const TinyMesh& mesh, const std::vector<int>& meshMats) {
+void MeshVK::fromMesh(const Device* deviceVK, const TinyMesh& mesh, const std::vector<int>& meshMats) {
     const auto& vertexData = mesh.vertexData;
     const auto& indexData = mesh.indexData;
 

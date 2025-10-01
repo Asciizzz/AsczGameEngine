@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Helpers/Templates.hpp"
+#include ".ext/Templates.hpp"
 
 #include <vulkan/vulkan.h>
 #include <optional>
@@ -61,15 +61,15 @@ struct QueueFamilyIndices {
     bool isComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
 };
 
-class DeviceVK {
+class Device {
 public:
     static const std::vector<const char*> deviceExtensions;
 
-    DeviceVK(VkInstance instance, VkSurfaceKHR surface);
-    ~DeviceVK();
+    Device(VkInstance instance, VkSurfaceKHR surface);
+    ~Device();
 
-    DeviceVK(const DeviceVK&) = delete;
-    DeviceVK& operator=(const DeviceVK&) = delete;
+    Device(const Device&) = delete;
+    Device& operator=(const Device&) = delete;
 
     // Vulkan objects
     VkPhysicalDevice pDevice = VK_NULL_HANDLE;

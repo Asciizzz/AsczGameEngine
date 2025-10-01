@@ -28,7 +28,7 @@ size_t StaticInstanceGroup::addInstance(const StaticInstance& data) {
     return datas.size() - 1;
 }
 
-void StaticInstanceGroup::initVkDevice(const TinyVK::DeviceVK* deviceVK) {
+void StaticInstanceGroup::initVkDevice(const TinyVK::Device* deviceVK) {
     initVkDevice(deviceVK->lDevice, deviceVK->pDevice);
 }
 void StaticInstanceGroup::initVkDevice(VkDevice lDevice, VkPhysicalDevice pDevice) {

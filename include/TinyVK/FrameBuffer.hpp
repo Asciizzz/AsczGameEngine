@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TinyVK/DeviceVK.hpp"
+#include "TinyVK/Device.hpp"
 
 namespace TinyVK {
 

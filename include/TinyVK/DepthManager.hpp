@@ -3,11 +3,11 @@
 #include "TinyVK/TextureVK.hpp"
 
 namespace TinyVK {
-class DeviceVK;
+class Device;
 
 class DepthManager {
 public:
-    DepthManager(const DeviceVK* deviceVK);
+    DepthManager(const Device* deviceVK);
     ~DepthManager() = default;
 
     DepthManager(const DepthManager&) = delete;
@@ -21,7 +21,7 @@ public:
     uint32_t getWidth() const { return depthImage.getWidth(); }
     uint32_t getHeight() const { return depthImage.getHeight(); }
 
-    const DeviceVK* deviceVK;
+    const Device* deviceVK;
 
     ImageVK depthImage;
 

@@ -30,7 +30,7 @@ struct MeshVK {
     std::vector<TinySubmesh> submeshes;
     std::vector<int> meshMaterials; // Point to global material index
 
-    void fromMesh(const TinyVK::DeviceVK* deviceVK, const TinyMesh& mesh, const std::vector<int>& meshMats);
+    void fromMesh(const TinyVK::Device* deviceVK, const TinyMesh& mesh, const std::vector<int>& meshMats);
     static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };
 
@@ -60,7 +60,7 @@ struct LightVK {
 // All these resource are static and fixed, created upon load
 class ResourceGroup {
 public:
-    ResourceGroup(TinyVK::DeviceVK* deviceVK);
+    ResourceGroup(TinyVK::Device* deviceVK);
     ~ResourceGroup() { cleanup(); } void cleanup();
 
     ResourceGroup(const ResourceGroup&) = delete;
@@ -82,7 +82,7 @@ public:
     void createComponentVKsFromModels();
 
 // private:
-    TinyVK::DeviceVK* deviceVK;
+    TinyVK::Device* deviceVK;
 
     TinyVK::PipelineManager pipelines;
 
