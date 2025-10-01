@@ -20,6 +20,32 @@ void TinySkeleton::insert(const TinyBone& bone) {
     localBindTransforms.push_back(bone.localBindTransform);
 }
 
+std::vector<TinyBone> TinySkeleton::construct() const {
+    std::vector<TinyBone> bones;
+    bones.reserve(names.size());
+
+    for (int i = 0; i < static_cast<int>(names.size()); ++i) {
+        TinyBone bone;
+        bone.name = names[i];
+        bone.parent = parents[i];
+        bone.inverseBindMatrix = inverseBindMatrices[i];
+        bone.localBindTransform = localBindTransforms[i];
+        bones.push_back(std::move(bone));
+    }
+
+    // Build children lists
+    for (int i = 0; i < static_cast<int>(bones.size()); ++i) {
+        int parentIndex = bones[i].parent;
+        if (parentIndex >= 0 && parentIndex < static_cast<int>(bones.size())) {
+            bones[parentIndex].children.push_back(i);
+        }
+    }
+
+    return bones;
+}
+
+
+
 void TinySkeleton::debugPrintHierarchy() const {
     std::cout << "Skeleton Hierarchy (" << names.size() << " bones):\n";
     std::cout << std::string(50, '=') << "\n";

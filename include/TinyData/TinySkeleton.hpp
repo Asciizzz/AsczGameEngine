@@ -26,6 +26,8 @@ struct TinySkeleton {
 
     std::unordered_map<std::string, int> nameToIndex;
 
+    std::vector<TinyBone> construct() const;
+
     void clear();
     void insert(const TinyBone& bone);
 

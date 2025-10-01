@@ -7,7 +7,7 @@
 using namespace AzVulk;
 using HType = TinyHandle::Type;
 
-bool TinyRegistry::MeshData::import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh) {
+bool TinyRegistry::RMesh::import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh) {
     const auto& vertexData = mesh.vertexData;
     const auto& indexData = mesh.indexData;
 
@@ -29,7 +29,7 @@ bool TinyRegistry::MeshData::import(const AzVulk::DeviceVK* deviceVK, const Tiny
     return true;
 }
 
-VkIndexType TinyRegistry::MeshData::tinyToVkIndexType(TinyMesh::IndexType type) {
+VkIndexType TinyRegistry::RMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
     switch (type) {
         case TinyMesh::IndexType::Uint8:  return VK_INDEX_TYPE_UINT8;
         case TinyMesh::IndexType::Uint16: return VK_INDEX_TYPE_UINT16;
@@ -38,7 +38,7 @@ VkIndexType TinyRegistry::MeshData::tinyToVkIndexType(TinyMesh::IndexType type) 
     }
 }
 
-bool TinyRegistry::TextureData::import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture) {
+bool TinyRegistry::RTexture::import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
@@ -130,7 +130,7 @@ TinyRegistry::TinyRegistry(const AzVulk::DeviceVK* deviceVK)
 
 
 TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
-    UniquePtr<MeshData> meshData = MakeUnique<MeshData>();
+    UniquePtr<RMesh> meshData = MakeUnique<RMesh>();
     meshData->import(deviceVK, mesh);
 
     uint32_t index = meshDatas.insert(std::move(meshData));
@@ -140,7 +140,7 @@ TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
 }
 
 TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
-    UniquePtr<TextureData> textureData = MakeUnique<TextureData>();
+    UniquePtr<RTexture> textureData = MakeUnique<RTexture>();
     textureData->import(deviceVK, texture);
 
     uint32_t index = textureDatas.insert(std::move(textureData));
@@ -152,7 +152,7 @@ TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
 }
 
 // Usually you need to know the texture beforehand to remap the material texture indices
-TinyHandle TinyRegistry::addMaterial(const MaterialData& matData) {
+TinyHandle TinyRegistry::addMaterial(const RMaterial& matData) {
     uint32_t index = materialDatas.insert(matData);
     resizeCheck();
 
@@ -162,7 +162,7 @@ TinyHandle TinyRegistry::addMaterial(const MaterialData& matData) {
     return TinyHandle(index, HType::Material);
 }
 
-TinyHandle TinyRegistry::addSkeleton(const TinySkeleton& skeleton) {
+TinyHandle TinyRegistry::addSkeleton(const RSkeleton& skeleton) {
     uint32_t index = skeletonDatas.insert(skeleton);
     resizeCheck();
 
@@ -178,22 +178,22 @@ TinyHandle TinyRegistry::addNode(const TinyNode& node) {
 
 // Access to resources - allow modification
 
-TinyRegistry::MeshData* TinyRegistry::getMeshData(const TinyHandle& handle) {
+TinyRegistry::RMesh* TinyRegistry::getMeshData(const TinyHandle& handle) {
     if (!handle.isType(HType::Mesh)) return nullptr;
     return meshDatas.getPtr(handle.index);
 }
 
-TinyRegistry::MaterialData* TinyRegistry::getMaterialData(const TinyHandle& handle) {
+TinyRegistry::RMaterial* TinyRegistry::getMaterialData(const TinyHandle& handle) {
     if (!handle.isType(HType::Material)) return nullptr;
     return &materialDatas.get(handle.index);
 }
 
-TinyRegistry::TextureData* TinyRegistry::getTextureData(const TinyHandle& handle) {
+TinyRegistry::RTexture* TinyRegistry::getTextureData(const TinyHandle& handle) {
     if (!handle.isType(HType::Texture)) return nullptr;
     return textureDatas.getPtr(handle.index);
 }
 
-TinySkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
+TinyRegistry::RSkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
     if (!handle.isType(HType::Skeleton)) return nullptr;
     return &skeletonDatas.get(handle.index);
 }
@@ -252,7 +252,7 @@ void TinyRegistry::createMaterialVkResources() {
 
     // Create material buffer
     matBuffer = MakeUnique<DataBuffer>();
-    matBuffer->setDataSize(sizeof(MaterialData) * materialDatas.capacity)
+    matBuffer->setDataSize(sizeof(RMaterial) * materialDatas.capacity)
              .setUsageFlags(BufferUsage::Storage | BufferUsage::TransferDst)
              .setMemPropFlags(MemProp::HostVisibleAndCoherent)
              .createBuffer(deviceVK)

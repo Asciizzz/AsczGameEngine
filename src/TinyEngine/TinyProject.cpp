@@ -25,7 +25,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     std::vector<TinyHandle> glbMatRegHandle;
     for (const auto& material : model.materials) {
-        TinyRegistry::MaterialData correctMat;
+        TinyRegistry::RMaterial correctMat;
 
         // Remap the material's texture indices
         
@@ -43,7 +43,10 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     std::vector<TinyHandle> glbSkeleRegHandle;
     for (const auto& skeleton : model.skeletons) {
-        TinyHandle handle = registry->addSkeleton(skeleton);
+        TinyRegistry::RSkeleton rSkeleton;
+        rSkeleton.bones = skeleton.construct();
+
+        TinyHandle handle = registry->addSkeleton(rSkeleton);
         glbSkeleRegHandle.push_back(handle);
     }
 
@@ -72,49 +75,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
             regNode.children.push_back(localNodeIndexToGlobalNodeHandle[localChild.index]);
         }
 
-        // Remapping node data
-        // switch(localNode.type) {
-        //     case NType::Node: {
-        //         // Since transform is now in base class, we can just copy it directly
-        //         regNode.transform = localNode.transform;
-        //         regNode.make(TinyNode3D::Node{});
-        //         break;
-        //     }
-
-        //     case NType::MeshRender: {
-        //         const TinyNode3D::MeshRender& mesh3D = localNode.as<TinyNode3D::MeshRender>();
-        //         TinyNode3D::MeshRender trueMesh3D;
-        //         // Transform is now in base class
-        //         regNode.transform = localNode.transform;
-
-        //         trueMesh3D.mesh = glbMeshRegHandle[mesh3D.mesh.index];
-
-        //         for (TinyHandle localMat : mesh3D.submeshMats) {
-        //             bool valid = isValidIndex(localMat.index, glbMatRegHandle);
-        //             trueMesh3D.submeshMats.push_back(valid ? glbMatRegHandle[localMat.index] : TinyHandle::invalid());
-        //         }
-
-        //         bool hasValidSkeleton = isValidIndex(mesh3D.skeleNode.index, glbNodeRegHandle);
-        //         trueMesh3D.skeleNode = hasValidSkeleton ? localNodeIndexToGlobalNodeHandle[mesh3D.skeleNode.index] : TinyHandle::invalid();
-
-        //         regNode.make(std::move(trueMesh3D));
-        //         break;
-        //     }
-
-        //     case NType::Skeleton: {
-        //         const TinyNode3D::Skeleton& skel3D = localNode.as<TinyNode3D::Skeleton>();
-        //         TinyNode3D::Skeleton trueSkel3D;
-        //         // Transform is now in base class
-        //         regNode.transform = localNode.transform;
-                
-        //         bool hasValidSkeleton = isValidIndex(skel3D.skeleRegistry.index, glbSkeleRegHandle);
-        //         // trueSkel3D.skeleRegistry = hasValidSkeleton ? glbSkeleRegHandle[skel3D.skeleRegistry.index] : TinyHandle::invalid();
-        //         trueSkel3D.skeleRegistry = glbSkeleRegHandle[skel3D.skeleRegistry.index];
-
-        //         regNode.make(std::move(trueSkel3D));
-        //         break;
-        //     }
-        // }
+    // Add components
 
         if (localNode.hasType(NTypes::Node)) {
             regNode.transform = localNode.transform;
@@ -246,7 +207,7 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
             const auto* skeleData = registry->getSkeletonData(regSkeleton->skeleRegistry);
 
             TinyNodeRT3D::Skeleton data;
-            data.boneTransformsFinal.resize( skeleData->names.size(), glm::mat4(1.0f) );
+            data.boneTransformsFinal.resize( skeleData->bones.size(), glm::mat4(1.0f) );
 
             rtNode->add(data);
         }

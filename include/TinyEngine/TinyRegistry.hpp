@@ -11,7 +11,7 @@
 
 class TinyRegistry { // For raw resource data
 public:
-    struct MeshData {
+    struct RMesh {
         AzVulk::DataBuffer vertexBuffer;
         AzVulk::DataBuffer indexBuffer;
         std::vector<TinySubmesh> submeshes;
@@ -22,16 +22,20 @@ public:
         static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
     };
 
-    struct MaterialData {
+    struct RMaterial {
         glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
 
         void setAlbTexIndex(uint32_t index) { texIndices.x = index; }
         void setNrmlTexIndex(uint32_t index) { texIndices.y = index; }
     };
 
-    struct TextureData {
+    struct RTexture {
         AzVulk::TextureVK textureVK;
         bool import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture);
+    };
+
+    struct RSkeleton {
+        std::vector<TinyBone> bones;
     };
 
     TinyRegistry(const AzVulk::DeviceVK* deviceVK);
@@ -47,16 +51,16 @@ public:
 
     TinyHandle addMesh(const TinyMesh& mesh);
     TinyHandle addTexture(const TinyTexture& texture);
-    TinyHandle addMaterial(const MaterialData& matData);
-    TinyHandle addSkeleton(const TinySkeleton& skeleton);
+    TinyHandle addMaterial(const RMaterial& matData);
+    TinyHandle addSkeleton(const RSkeleton& skeleton);
     TinyHandle addNode(const TinyNode& node);
 
     // Access to resources - allow modification
-    MeshData*     getMeshData(const TinyHandle& handle);
-    MaterialData* getMaterialData(const TinyHandle& handle);
-    TextureData*  getTextureData(const TinyHandle& handle);
-    TinySkeleton* getSkeletonData(const TinyHandle& handle);
-    TinyNode*     getNodeData(const TinyHandle& handle);
+    RMesh*     getMeshData(const TinyHandle& handle);
+    RMaterial* getMaterialData(const TinyHandle& handle);
+    RTexture*  getTextureData(const TinyHandle& handle);
+    RSkeleton* getSkeletonData(const TinyHandle& handle);
+    TinyNode*  getNodeData(const TinyHandle& handle);
 
 
     void printDataCounts() const {
@@ -96,9 +100,9 @@ private:
     void createTextureVkResources();
 
     // Resource pools registry
-    TinyPoolPtr<MeshData>     meshDatas;
-    TinyPoolRaw<MaterialData> materialDatas;
-    TinyPoolPtr<TextureData>  textureDatas;
-    TinyPoolRaw<TinySkeleton> skeletonDatas;
-    TinyPoolRaw<TinyNode>     nodeDatas;
+    TinyPoolPtr<RMesh>     meshDatas;
+    TinyPoolRaw<RMaterial> materialDatas;
+    TinyPoolPtr<RTexture>  textureDatas;
+    TinyPoolRaw<RSkeleton> skeletonDatas;
+    TinyPoolRaw<TinyNode>  nodeDatas;
 };
