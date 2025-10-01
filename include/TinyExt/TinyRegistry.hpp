@@ -5,6 +5,8 @@
 
 #include "TinyEngine/TinyRData.hpp"
 
+#include <typeindex>
+
 struct IPool {
     virtual ~IPool() = default;
 };
@@ -15,22 +17,34 @@ struct PoolWrapper : public IPool {
 };
 
 class TinyRegistry { // For raw resource data
-    std::tuple<
-        TinyPool<TinyRMesh>,
-        TinyPool<TinyRMaterial>,
-        TinyPool<TinyRTexture>,
-        TinyPool<TinyRSkeleton>,
-        TinyPool<TinyRNode>
-    > pools;
+    UnorderedMap<std::type_index, UniquePtr<IPool>> pools;
 
     template<typename T>
-    TinyPool<T>& pool() {
-        return std::get<TinyPool<T>>(pools);
+    PoolWrapper<T>* getWrapper() {
+        auto it = pools.find(std::type_index(typeid(T)));
+        if (it == pools.end()) return nullptr;
+        return static_cast<PoolWrapper<T>*>(it->second.get());
     }
 
     template<typename T>
-    const TinyPool<T>& pool() const {
-        return std::get<TinyPool<T>>(pools);
+    const PoolWrapper<T>* getWrapper() const {
+        auto it = pools.find(std::type_index(typeid(T)));
+        if (it == pools.end()) return nullptr;
+        return static_cast<const PoolWrapper<T>*>(it->second.get());
+    }
+
+    // Ensure pool exists for type T
+    template<typename T>
+    PoolWrapper<T>& ensurePool() {
+        auto idx = std::type_index(typeid(T));
+        auto it = pools.find(idx);
+        if (it == pools.end()) {
+            auto wrapper = std::make_unique<PoolWrapper<T>>();
+            auto* ptr = wrapper.get();
+            pools[idx] = std::move(wrapper);
+            return *ptr;
+        }
+        return *static_cast<PoolWrapper<T>*>(pools[idx].get());
     }
 
 public:
@@ -41,19 +55,22 @@ public:
 
     template<typename T>
     TinyHandle add(T& data) {
-        uint32_t index = pool<T>().insert(std::move(data));
+        auto& pool = ensurePool<T>().pool;
+        uint32_t index = pool.insert(std::move(data));
 
-        return TinyHandle(index);
+        return TinyHandle(index); // Will add version in the future
     }
 
     template<typename T>
     T* get(const TinyHandle& handle) {
-        return pool<T>().get(handle.index);
+        auto* wrapper = getWrapper<T>(); // check validity
+        return wrapper ? wrapper->pool.get(handle.index) : nullptr;
     }
 
     template<typename T>
     uint32_t poolCapacity() const {
-        return pool<T>().capacity;
+        auto* wrapper = wrapper<T>(); // check validity
+        return wrapper ? wrapper->pool.capacity : 0;
     }
 };
 
