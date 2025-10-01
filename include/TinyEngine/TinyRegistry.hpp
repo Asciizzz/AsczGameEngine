@@ -12,6 +12,8 @@
 class TinyRegistry { // For raw resource data
 public:
     struct RMesh {
+        constexpr static TinyHandle::Type kType = TinyHandle::Type::Mesh;
+
         AzVulk::DataBuffer vertexBuffer;
         AzVulk::DataBuffer indexBuffer;
         std::vector<TinySubmesh> submeshes;
@@ -23,6 +25,8 @@ public:
     };
 
     struct RMaterial {
+        constexpr static TinyHandle::Type kType = TinyHandle::Type::Material;
+
         glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
 
         void setAlbTexIndex(uint32_t index) { texIndices.x = index; }
@@ -30,12 +34,20 @@ public:
     };
 
     struct RTexture {
+        constexpr static TinyHandle::Type kType = TinyHandle::Type::Texture;
+
         AzVulk::TextureVK textureVK;
         bool import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture);
     };
 
     struct RSkeleton {
+        constexpr static TinyHandle::Type kType = TinyHandle::Type::Skeleton;
+
         std::vector<TinyBone> bones;
+    };
+
+    struct RNode : public TinyNode {
+        constexpr static TinyHandle::Type kType = TinyHandle::Type::Node;
     };
 
     TinyRegistry(const AzVulk::DeviceVK* deviceVK);
@@ -53,7 +65,7 @@ public:
     TinyHandle addTexture(const TinyTexture& texture);
     TinyHandle addMaterial(const RMaterial& matData);
     TinyHandle addSkeleton(const RSkeleton& skeleton);
-    TinyHandle addNode(const TinyNode& node);
+    TinyHandle addNode(const RNode& node);
 
     // Access to resources - allow modification
     RMesh*     getMeshData(const TinyHandle& handle);
@@ -104,5 +116,5 @@ private:
     TinyPoolRaw<RMaterial> materialDatas;
     TinyPoolPtr<RTexture>  textureDatas;
     TinyPoolRaw<RSkeleton> skeletonDatas;
-    TinyPoolRaw<TinyNode>  nodeDatas;
+    TinyPoolRaw<RNode>     nodeDatas;
 };

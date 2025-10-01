@@ -1,16 +1,12 @@
 #pragma once
 
 #include "TinyEngine/TinyHandle.hpp"
-#include "Helpers/Templates.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <stdexcept>
 #include <cstdint>
-#include <optional>
 #include <tuple>
-#include <vector>
-#include <string>
 
 struct TinyNode {
     std::string name = "Node";
@@ -58,7 +54,8 @@ struct TinyNode {
         TinyHandle skeleRegistry;
     };
 
-private:
+protected: // RNode inherits from this
+
     // Store all components in a tuple - completely generic!
     std::tuple<MeshRender, BoneAttach, Skeleton> components;
 

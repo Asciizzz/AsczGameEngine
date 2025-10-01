@@ -9,6 +9,8 @@ bool isValidIndex(int index, const std::vector<T>& vec) {
     return index >= 0 && index < static_cast<int>(vec.size());
 }
 
+using RNode = TinyRegistry::RNode;
+
 
 uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
     std::vector<TinyHandle> glbMeshRegHandle; // Ensure correct mapping
@@ -56,7 +58,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
         // Just occupy the index
-        TinyHandle handle = registry->addNode(TinyNode());
+        TinyHandle handle = registry->addNode(RNode());
         localNodeIndexToGlobalNodeHandle[i] = handle;
 
         glbNodeRegHandle.push_back(handle);

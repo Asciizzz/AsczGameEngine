@@ -169,7 +169,7 @@ TinyHandle TinyRegistry::addSkeleton(const RSkeleton& skeleton) {
     return TinyHandle(index, HType::Skeleton);
 }
 
-TinyHandle TinyRegistry::addNode(const TinyNode& node) {
+TinyHandle TinyRegistry::addNode(const RNode& node) {
     uint32_t index = nodeDatas.insert(node);
     resizeCheck();
 
