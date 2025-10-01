@@ -8,8 +8,24 @@ bool isValidIndex(int index, const std::vector<T>& vec) {
     return index >= 0 && index < static_cast<int>(vec.size());
 }
 
-using RNode = TinyRNode;
 
+TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
+    registry = MakeUnique<TinyRegistry>();
+
+    // Create root node
+    TinyHandle rootHandle = registry->add(TinyRNode());
+
+    auto rootNode = MakeUnique<TinyNodeRT3D>();
+    rootNode->rHandle = rootHandle;
+    // Children will be added upon scene population
+
+    rtNodes.push_back(std::move(rootNode));
+
+    // Create camera and global UBO manager
+    tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 100.0f);
+    tinyGlobal = MakeUnique<TinyGlobal>(2);
+    tinyGlobal->createVkResources(deviceVK);
+}
 
 uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
     std::vector<TinyHandle> glbMeshrHandle; // Ensure correct mapping
@@ -63,7 +79,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
         // Just occupy the index
-        TinyHandle handle = registry->add(RNode());
+        TinyHandle handle = registry->add(TinyRNode());
         localNodeIndexToGlobalNodeHandle[i] = handle;
 
         glbNoderHandle.push_back(handle);

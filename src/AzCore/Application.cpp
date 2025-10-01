@@ -12,7 +12,6 @@ const bool enableValidationLayers = true;
 #endif
 
 using namespace TinyVK;
-using namespace TinyEngine;
 
 Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
@@ -36,11 +35,6 @@ void Application::initComponents() {
     windowManager = MakeUnique<WindowManager>(appTitle, appWidth, appHeight);
     fpsManager = MakeUnique<FpsManager>();
 
-    float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
-    // 10km view distance for those distant horizons
-    camera = MakeUnique<TinyCamera>(glm::vec3(0.0f), 45.0f, 0.1f, 1000.0f);
-    camera->setAspectRatio(aspectRatio);
-
     auto extensions = windowManager->getRequiredVulkanExtensions();
     vkInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
     vkInstance->createSurface(windowManager->window);
@@ -59,11 +53,10 @@ void Application::initComponents() {
         Application::MAX_FRAMES_IN_FLIGHT
     );
 
-    glbUBOManager = MakeUnique<GlbUBOManager>(
-        deviceVK.get(), Application::MAX_FRAMES_IN_FLIGHT
-    );
-
     project = MakeUnique<TinyProject>(deviceVK.get());
+
+    float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
+    project->getCamera()->setAspectRatio(aspectRatio);
 
 // PLAYGROUND FROM HERE
 
@@ -79,7 +72,7 @@ void Application::initComponents() {
 
 // PLAYGROUND END HERE 
 
-    auto glbLayout = glbUBOManager->getDescLayout();
+    auto glbLayout = project->getGlbDescSetLayout();
     auto matLayout = VK_NULL_HANDLE; // Placeholder until we have a material UBO
     auto texLayout = VK_NULL_HANDLE; // Placeholder until we have a texture UBO
 
@@ -129,7 +122,7 @@ bool Application::checkWindowResize() {
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
 
     // Reset like literally everything
-    camera->updateAspectRatio(newWidth, newHeight);
+    project->getCamera()->updateAspectRatio(newWidth, newHeight);
 
     // Handle window resize in renderer (now handles depth resources internally)
     renderer->handleWindowResize(windowManager->window);
@@ -149,7 +142,7 @@ void Application::mainLoop() {
     auto& winManager = *windowManager;
     auto& fpsRef = *fpsManager;
 
-    auto& camRef = *camera;
+    auto& camRef = *project->getCamera();
 
     auto& rendererRef = *renderer;
 
@@ -267,15 +260,17 @@ void Application::mainLoop() {
 
         project->runPlayground(dTime);
 
+        project->getGlobal()->update(camRef, rendererRef.getCurrentFrame());
+
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
             // Update global UBO buffer from frame index
             uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
-            glbUBOManager->updateUBO(camRef, currentFrameIndex);
+            // glbUBOManager->updateUBO(camRef, currentFrameIndex);
 
-            rendererRef.drawSky(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
+            rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
-            rendererRef.drawScene(glbUBOManager.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Test"), project.get());
+            rendererRef.drawScene(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Test"));
 
             rendererRef.endFrame(imageIndex);
         };

@@ -12,7 +12,6 @@
 #include "TinyVK/DepthManager.hpp"
 #include "TinyVK/RenderPass.hpp"
 
-#include "TinyEngine/GlobalUBO.hpp"
 #include "TinyEngine/TinyProject.hpp"
 
 namespace TinyVK {
@@ -45,9 +44,9 @@ public:
     // DepthManager getter for external access
     DepthManager* getDepthManager() const { return depthManager.get(); }
 
-    void drawSky(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const;
+    void drawSky(const TinyProject* project, const PipelineRaster* skyPipeline) const;
 
-    void drawScene(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const TinyProject* project) const;
+    void drawScene(const TinyProject* project, const PipelineRaster* rPipeline) const;
 
 
     // Post-processing methods

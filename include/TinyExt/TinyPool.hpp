@@ -169,9 +169,6 @@ struct TinyPool {
         freeList.push_back(index);
     }
 
-    Type* data() { return items.data(); }
-    const Type* data() const { return items.data(); }
-
     Type* get(const TinyHandle& handle) {
         bool valid = isValid(handle);
 
@@ -189,4 +186,7 @@ struct TinyPool {
     // Reference is better since this is never null
     std::vector<Type>& view() { return &items; }
     const std::vector<Type>& view() const { return &items; }
+
+    Type* data() { return items.data(); }
+    const Type* data() const { return items.data(); }
 };

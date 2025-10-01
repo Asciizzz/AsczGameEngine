@@ -44,9 +44,6 @@ private:
 
     UniquePtr<TinyVK::PipelineManager> pipelineManager;
 
-    UniquePtr<TinyCamera> camera;
-
-    UniquePtr<TinyEngine::GlbUBOManager> glbUBOManager; // Soon to be moved to project
     UniquePtr<TinyProject> project; // New gigachad system
 
     // Window metadata

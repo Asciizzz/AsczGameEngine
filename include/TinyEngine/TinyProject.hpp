@@ -6,6 +6,9 @@
 
 #include "TinyEngine/TinyRData.hpp"
 
+#include "TinyData/TinyCamera.hpp"
+#include "TinyEngine/TinyGlobal.hpp"
+
 struct TinyNodeRT3D {
     TinyHandle rHandle; // Points to registry node (data for reference)
     uint32_t types = TinyNode::toMask(TinyNode::Types::Node);
@@ -101,18 +104,7 @@ struct TinyTemplate {
 
 class TinyProject {
 public:
-    TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
-        registry = MakeUnique<TinyRegistry>();
-
-        // Create root node
-        TinyHandle rootHandle = registry->add(TinyRNode());
-
-        auto rootNode = MakeUnique<TinyNodeRT3D>();
-        rootNode->rHandle = rootHandle;
-        // Children will be added upon scene population
-
-        rtNodes.push_back(std::move(rootNode));
-    }
+    TinyProject(const TinyVK::Device* deviceVK);
 
     // Delete copy
     TinyProject(const TinyProject&) = delete;
@@ -122,6 +114,12 @@ public:
     // Return the template index, which in turn contains handles to the registry
     uint32_t addTemplateFromModel(const TinyModelNew& model); // Returns template index + remapping a bunch of shit (very complex) (cops called)
 
+    TinyCamera* getCamera() const { return tinyCamera.get(); }
+    TinyGlobal* getGlobal() const { return tinyGlobal.get(); }
+    VkDescriptorSetLayout getGlbDescSetLayout() const { return tinyGlobal->getDescLayout(); }
+    VkDescriptorSet getGlbDescSet(uint32_t idx) const { return tinyGlobal->getDescSet(idx); }
+
+// All these belows are only for testing purposes
     /**
      * Adds a node instance to the scene.
      *
@@ -153,7 +151,6 @@ public:
      */
     void updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
-// All these belows are only for testing purposes
 
     /**
      * Playground function for testing - rotates root node by 90 degrees per second
@@ -172,6 +169,9 @@ public:
 
 private:
     const TinyVK::Device* deviceVK;
+
+    UniquePtr<TinyGlobal> tinyGlobal;
+    UniquePtr<TinyCamera> tinyCamera;
 
     UniquePtr<TinyRegistry> registry;
 

@@ -36,17 +36,13 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyData/TinyAnimation.cpp
     src/TinyData/TinyNode.cpp
     src/TinyData/TinyModel.cpp
-    src/TinyEngine/TinyLoader.cpp
     src/TinyData/TinyCamera.cpp
     
     src/TinyEngine/TinyRData.cpp
+    src/TinyEngine/TinyGlobal.cpp
     src/TinyEngine/TinyProject.cpp
+    src/TinyEngine/TinyLoader.cpp
     # src/TinyEngine/TinyPlayback.cpp deprecated
-
-    # src/TinyEngine/StaticMesh_BVH.cpp
-    src/TinyEngine/RigDemo.cpp
-    src/TinyEngine/StaticInstance.cpp
-
 
     src/AzCore/FpsManager.cpp
     src/AzCore/WindowManager.cpp

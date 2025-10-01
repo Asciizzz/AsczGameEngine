@@ -4,7 +4,6 @@
 #include <cstring>
 #include <SDL.h>
 
-using namespace TinyEngine;
 using namespace TinyVK;
 
 
@@ -207,22 +206,22 @@ uint32_t Renderer::beginFrame() {
 }
 
 // Sky rendering using dedicated sky pipeline
-void Renderer::drawSky(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* skyPipeline) const {
+void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipeline) const {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
     // Bind sky pipeline
     skyPipeline->bindCmd(currentCmd);
 
     // Bind only the global descriptor set (set 0) for sky
-    VkDescriptorSet globalSet = glbUBO->getDescSet(currentFrame);
-    skyPipeline->bindSets(currentCmd, &globalSet, 1);
+    VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
+    skyPipeline->bindSets(currentCmd, &glbSet, 1);
 
     // Draw fullscreen triangle (3 vertices, no input)
     vkCmdDraw(currentCmd, 3, 1, 0, 0);
 }
 
 
-void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const PipelineRaster* rPipeline, const TinyProject* project) const {
+void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipeline) const {
     const auto& rtNodes = project->getRuntimeNodes();
     const auto& rtMeshRenderIdxs = project->getRuntimeMeshRenderIndices();
 
@@ -232,8 +231,8 @@ void Renderer::drawScene(const TinyEngine::GlbUBOManager* glbUBO, const Pipeline
     rPipeline->bindCmd(currentCmd);
 
     // Bind only the global descriptor set (set 0) for test pipeline
-    VkDescriptorSet globalSet = glbUBO->getDescSet(currentFrame);
-    rPipeline->bindSets(currentCmd, &globalSet, 1);
+    VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
+    rPipeline->bindSets(currentCmd, &glbSet, 1);
 
     for (uint32_t meshIdx : rtMeshRenderIdxs) {
         const auto& rtNode = rtNodes[meshIdx];
