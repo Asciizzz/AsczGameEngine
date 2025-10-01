@@ -85,10 +85,13 @@ set_target_properties(AsczGame PROPERTIES
 
 target_include_directories(AsczGame PRIVATE
     ${SDL2_INCLUDE_DIR}
-    ${CMAKE_SOURCE_DIR}/include/glm
-    ${CMAKE_SOURCE_DIR}/include/Helpers
-
     ${CMAKE_SOURCE_DIR}/include
+
+    ${CMAKE_SOURCE_DIR}/include/.ext/glm
+    ${CMAKE_SOURCE_DIR}/include/.ext/json
+    ${CMAKE_SOURCE_DIR}/include/.ext/tiny3d
+    ${CMAKE_SOURCE_DIR}/include/.ext/Helpers
+
     ${CMAKE_SOURCE_DIR}/include/AzCore
     ${CMAKE_SOURCE_DIR}/include/AzVulk
     ${CMAKE_SOURCE_DIR}/include/TinyData
