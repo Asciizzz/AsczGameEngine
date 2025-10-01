@@ -224,8 +224,9 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
             // Check if this node parent is the root node
             bool isRootChild = rtNode->parentIdx == rtRootIndex;
 
-            rtNode->transformOverride = isRootChild ? at : glm::mat4(1.0f);
-            rtNode->globalTransform = glm::mat4(1.0f);
+            // Counter the root node transform
+            glm::mat4 invRootTransform = glm::inverse(rtNodes[rtRootIndex]->globalTransform);
+            rtNode->transformOverride = isRootChild ? at * invRootTransform : glm::mat4(1.0f);
         }
 
         if (regNode->hasType(NTypes::MeshRender)) {
