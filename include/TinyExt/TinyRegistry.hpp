@@ -54,27 +54,33 @@ public:
     template<typename T>
     TinyHandle add(T& data) {
         auto& pool = ensurePool<T>().pool;
-        uint32_t index = pool.insert(std::move(data));
+        TinyHandle handle = pool.insert(std::move(data));
 
-        return TinyHandle(index); // Will add version in the future
+        return handle;
     }
 
     template<typename T>
     T* get(const TinyHandle& handle) {
         auto* wrapper = getWrapper<T>(); // check validity
-        return wrapper ? wrapper->pool.get(handle.index) : nullptr;
+        return wrapper ? wrapper->pool.get(handle) : nullptr;
     }
 
     template<typename T>
     const T* get(const TinyHandle& handle) const {
         auto* wrapper = getWrapper<T>(); // check validity
-        return wrapper ? wrapper->pool.get(handle.index) : nullptr;
+        return wrapper ? wrapper->pool.get(handle) : nullptr;
     }
 
     template<typename T>
-    uint32_t poolCapacity() const {
+    uint32_t capacity() const {
         auto* wrapper = getWrapper<T>(); // check validity
         return wrapper ? wrapper->pool.capacity : 0;
+    }
+
+    template<typename T>
+    uint32_t count() const {
+        auto* wrapper = getWrapper<T>(); // check validity
+        return wrapper ? wrapper->pool.count : 0;
     }
 };
 

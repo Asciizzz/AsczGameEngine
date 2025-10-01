@@ -113,19 +113,15 @@ struct TinyPool {
 
     bool hasSpace() const { return !freeList.empty(); }
 
-    bool isValid(uint32_t index) const {
-        return index < items.size() && states[index].occupied;
-    }
-
-    void checkValid(uint32_t index) const {
-        if (!isValid(index)) {
-            throw std::runtime_error("TinyPool: Invalid index access");
-        }
+    bool isValid(TinyHandle handle) const {
+        return  handle.index < items.size() &&   // Valid size
+                states[handle.index].occupied && // Occupied
+                states[handle.index].version == handle.version; // Same version
     }
 
     // ---- Type-aware insert ----
     template<typename U>
-    uint32_t insert(U&& item) {
+    TinyHandle insert(U&& item) {
         while (!hasSpace()) resize(capacity + autoExpandStep);
         count++;
 
@@ -149,7 +145,8 @@ struct TinyPool {
 
         states[index].occupied = true;
         states[index].version++;
-        return index;
+
+        return TinyHandle(index, states[index].version);
     }
 
     // ---- Remove ----
@@ -178,21 +175,23 @@ struct TinyPool {
     }
 
     // ---- Type-aware getters ----
-    auto get(uint32_t index) {
-        checkValid(index);
+    auto get(const TinyHandle& handle) {
+        bool valid = isValid(handle);
+
         if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
-            return items[index].get();
+            return valid ? items[handle.index].get() : nullptr;
         } else {
-            return &items[index];
+            return valid ? &items[handle.index] : nullptr;
         }
     }
 
-    auto get(uint32_t index) const {
-        checkValid(index);
+    auto get(const TinyHandle& handle) const {
+        bool valid = isValid(handle);
+
         if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
-            return items[index].get();
+            return valid ? items[handle.index].get() : nullptr;
         } else {
-            return &items[index];
+            return valid ? &items[handle.index] : nullptr;
         }
     }
 };
