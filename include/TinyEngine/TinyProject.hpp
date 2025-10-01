@@ -102,7 +102,7 @@ public:
         registry = MakeUnique<TinyRegistry>(deviceVK);
 
         // Create root node
-        TinyHandle rootHandle = registry->addNode(TinyRegistry::RNode());
+        TinyHandle rootHandle = registry->addNode(TinyRNode());
 
         auto rootNode = MakeUnique<TinyNodeRT3D>();
         rootNode->regHandle = rootHandle;

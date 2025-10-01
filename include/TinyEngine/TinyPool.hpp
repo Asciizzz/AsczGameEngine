@@ -217,3 +217,26 @@ public:
     Type& operator[](uint32_t index) { return get(index); }
     const Type& operator[](uint32_t index) const { return get(index); }
 };
+
+
+// -----------------------------
+// PoolTraits
+// -----------------------------
+
+template<typename Pool>
+struct PoolTrait;
+
+template<typename T>
+struct PoolTrait<TinyPoolRaw<T>> {
+    using ValueType = T;
+    static T& get(TinyPoolRaw<T>& pool, uint32_t index) { return pool.get(index); }
+    static const T& get(const TinyPoolRaw<T>& pool, uint32_t index) { return pool.get(index); }
+};
+
+template<typename T>
+struct PoolTrait<TinyPoolPtr<T>> {
+    using ValueType = T;
+    static T& get(TinyPoolPtr<T>& pool, uint32_t index) { return pool.get(index); }
+    static const T& get(const TinyPoolPtr<T>& pool, uint32_t index) { return pool.get(index); }
+    static T* getPtr(TinyPoolPtr<T>& pool, uint32_t index) { return pool.getPtr(index); }
+};

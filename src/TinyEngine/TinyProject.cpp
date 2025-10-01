@@ -9,7 +9,7 @@ bool isValidIndex(int index, const std::vector<T>& vec) {
     return index >= 0 && index < static_cast<int>(vec.size());
 }
 
-using RNode = TinyRegistry::RNode;
+using RNode = TinyRNode;
 
 
 uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
@@ -27,7 +27,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     std::vector<TinyHandle> glbMatRegHandle;
     for (const auto& material : model.materials) {
-        TinyRegistry::RMaterial correctMat;
+        TinyRMaterial correctMat;
 
         // Remap the material's texture indices
         
@@ -45,7 +45,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     std::vector<TinyHandle> glbSkeleRegHandle;
     for (const auto& skeleton : model.skeletons) {
-        TinyRegistry::RSkeleton rSkeleton;
+        TinyRSkeleton rSkeleton;
         rSkeleton.bones = skeleton.construct();
 
         TinyHandle handle = registry->addSkeleton(rSkeleton);
@@ -66,7 +66,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
         const TinyNode& localNode = model.nodes[i];
-        TinyNode& regNode = *registry->get<TinyRegistry::RNode>(glbNodeRegHandle[i]);
+        TinyNode& regNode = *registry->get<TinyRNode>(glbNodeRegHandle[i]);
         regNode.scope = localNode.scope;
         regNode.name = localNode.name;
 

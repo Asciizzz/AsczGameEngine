@@ -7,7 +7,7 @@
 using namespace AzVulk;
 using HType = TinyHandle::Type;
 
-bool TinyRegistry::RMesh::import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh) {
+bool TinyRMesh::import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh) {
     const auto& vertexData = mesh.vertexData;
     const auto& indexData = mesh.indexData;
 
@@ -29,7 +29,7 @@ bool TinyRegistry::RMesh::import(const AzVulk::DeviceVK* deviceVK, const TinyMes
     return true;
 }
 
-VkIndexType TinyRegistry::RMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
+VkIndexType TinyRMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
     switch (type) {
         case TinyMesh::IndexType::Uint8:  return VK_INDEX_TYPE_UINT8;
         case TinyMesh::IndexType::Uint16: return VK_INDEX_TYPE_UINT16;
@@ -38,7 +38,7 @@ VkIndexType TinyRegistry::RMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
     }
 }
 
-bool TinyRegistry::RTexture::import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture) {
+bool TinyRTexture::import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
@@ -130,7 +130,7 @@ TinyRegistry::TinyRegistry(const AzVulk::DeviceVK* deviceVK)
 
 
 TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
-    UniquePtr<RMesh> meshData = MakeUnique<RMesh>();
+    UniquePtr<TinyRMesh> meshData = MakeUnique<TinyRMesh>();
     meshData->import(deviceVK, mesh);
 
     uint32_t index = meshDatas.insert(std::move(meshData));
@@ -140,7 +140,7 @@ TinyHandle TinyRegistry::addMesh(const TinyMesh& mesh) {
 }
 
 TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
-    UniquePtr<RTexture> textureData = MakeUnique<RTexture>();
+    UniquePtr<TinyRTexture> textureData = MakeUnique<TinyRTexture>();
     textureData->import(deviceVK, texture);
 
     uint32_t index = textureDatas.insert(std::move(textureData));
@@ -152,7 +152,7 @@ TinyHandle TinyRegistry::addTexture(const TinyTexture& texture) {
 }
 
 // Usually you need to know the texture beforehand to remap the material texture indices
-TinyHandle TinyRegistry::addMaterial(const RMaterial& matData) {
+TinyHandle TinyRegistry::addMaterial(const TinyRMaterial& matData) {
     uint32_t index = materialDatas.insert(matData);
     resizeCheck();
 
@@ -162,14 +162,14 @@ TinyHandle TinyRegistry::addMaterial(const RMaterial& matData) {
     return TinyHandle(index, HType::Material);
 }
 
-TinyHandle TinyRegistry::addSkeleton(const RSkeleton& skeleton) {
+TinyHandle TinyRegistry::addSkeleton(const TinyRSkeleton& skeleton) {
     uint32_t index = skeletonDatas.insert(skeleton);
     resizeCheck();
 
     return TinyHandle(index, HType::Skeleton);
 }
 
-TinyHandle TinyRegistry::addNode(const RNode& node) {
+TinyHandle TinyRegistry::addNode(const TinyRNode& node) {
     uint32_t index = nodeDatas.insert(node);
     resizeCheck();
 
@@ -178,27 +178,27 @@ TinyHandle TinyRegistry::addNode(const RNode& node) {
 
 // Access to resources - allow modification
 
-TinyRegistry::RMesh* TinyRegistry::getMeshData(const TinyHandle& handle) {
+TinyRMesh* TinyRegistry::getMeshData(const TinyHandle& handle) {
     if (!handle.isType(HType::Mesh)) return nullptr;
     return meshDatas.getPtr(handle.index);
 }
 
-TinyRegistry::RMaterial* TinyRegistry::getMaterialData(const TinyHandle& handle) {
+TinyRMaterial* TinyRegistry::getMaterialData(const TinyHandle& handle) {
     if (!handle.isType(HType::Material)) return nullptr;
     return &materialDatas.get(handle.index);
 }
 
-TinyRegistry::RTexture* TinyRegistry::getTextureData(const TinyHandle& handle) {
+TinyRTexture* TinyRegistry::getTextureData(const TinyHandle& handle) {
     if (!handle.isType(HType::Texture)) return nullptr;
     return textureDatas.getPtr(handle.index);
 }
 
-TinyRegistry::RSkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
+TinyRSkeleton* TinyRegistry::getSkeletonData(const TinyHandle& handle) {
     if (!handle.isType(HType::Skeleton)) return nullptr;
     return &skeletonDatas.get(handle.index);
 }
 
-TinyRegistry::RNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
+TinyRNode* TinyRegistry::getNodeData(const TinyHandle& handle) {
     if (!handle.isType(HType::Node)) return nullptr;
     return &nodeDatas.get(handle.index);
 }
@@ -252,7 +252,7 @@ void TinyRegistry::createMaterialVkResources() {
 
     // Create material buffer
     matBuffer = MakeUnique<DataBuffer>();
-    matBuffer->setDataSize(sizeof(RMaterial) * materialDatas.capacity)
+    matBuffer->setDataSize(sizeof(TinyRMaterial) * materialDatas.capacity)
              .setUsageFlags(BufferUsage::Storage | BufferUsage::TransferDst)
              .setMemPropFlags(MemProp::HostVisibleAndCoherent)
              .createBuffer(deviceVK)

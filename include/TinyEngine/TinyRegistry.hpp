@@ -9,48 +9,53 @@
 #include "AzVulk/Descriptor.hpp"
 #include "AzVulk/DataBuffer.hpp"
 
+struct TinyRMesh {
+    constexpr static TinyHandle::Type kType = TinyHandle::Type::Mesh;
+    using pType = TinyPoolPtr<TinyRMesh>;
+
+    AzVulk::DataBuffer vertexBuffer;
+    AzVulk::DataBuffer indexBuffer;
+    std::vector<TinySubmesh> submeshes;
+    VkIndexType indexType = VK_INDEX_TYPE_UINT32;
+
+    bool import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh);
+
+    static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
+};
+
+struct TinyRMaterial {
+    constexpr static TinyHandle::Type kType = TinyHandle::Type::Material;
+    using pType = TinyPoolRaw<TinyRMaterial>;
+
+    glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
+
+    void setAlbTexIndex(uint32_t index) { texIndices.x = index; }
+    void setNrmlTexIndex(uint32_t index) { texIndices.y = index; }
+};
+
+struct TinyRTexture {
+    constexpr static TinyHandle::Type kType = TinyHandle::Type::Texture;
+    using pType = TinyPoolPtr<TinyRTexture>;
+
+    AzVulk::TextureVK textureVK;
+    bool import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture);
+};
+
+struct TinyRSkeleton {
+    constexpr static TinyHandle::Type kType = TinyHandle::Type::Skeleton;
+    using pType = TinyPoolRaw<TinyRSkeleton>;
+
+    std::vector<TinyBone> bones;
+};
+
+struct TinyRNode : public TinyNode {
+    constexpr static TinyHandle::Type kType = TinyHandle::Type::Node;
+    using pType = TinyPoolRaw<TinyRNode>;
+};
+
 
 class TinyRegistry { // For raw resource data
 public:
-    struct RMesh {
-        constexpr static TinyHandle::Type kType = TinyHandle::Type::Mesh;
-
-        AzVulk::DataBuffer vertexBuffer;
-        AzVulk::DataBuffer indexBuffer;
-        std::vector<TinySubmesh> submeshes;
-        VkIndexType indexType = VK_INDEX_TYPE_UINT32;
-
-        bool import(const AzVulk::DeviceVK* deviceVK, const TinyMesh& mesh);
-
-        static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
-    };
-
-    struct RMaterial {
-        constexpr static TinyHandle::Type kType = TinyHandle::Type::Material;
-
-        glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
-
-        void setAlbTexIndex(uint32_t index) { texIndices.x = index; }
-        void setNrmlTexIndex(uint32_t index) { texIndices.y = index; }
-    };
-
-    struct RTexture {
-        constexpr static TinyHandle::Type kType = TinyHandle::Type::Texture;
-
-        AzVulk::TextureVK textureVK;
-        bool import(const AzVulk::DeviceVK* deviceVK, const TinyTexture& texture);
-    };
-
-    struct RSkeleton {
-        constexpr static TinyHandle::Type kType = TinyHandle::Type::Skeleton;
-
-        std::vector<TinyBone> bones;
-    };
-
-    struct RNode : public TinyNode {
-        constexpr static TinyHandle::Type kType = TinyHandle::Type::Node;
-    };
-
     TinyRegistry(const AzVulk::DeviceVK* deviceVK);
 
     TinyRegistry(const TinyRegistry&) = delete;
@@ -64,34 +69,44 @@ public:
 
     TinyHandle addMesh(const TinyMesh& mesh);
     TinyHandle addTexture(const TinyTexture& texture);
-    TinyHandle addMaterial(const RMaterial& matData);
-    TinyHandle addSkeleton(const RSkeleton& skeleton);
-    TinyHandle addNode(const RNode& node);
+    TinyHandle addMaterial(const TinyRMaterial& matData);
+    TinyHandle addSkeleton(const TinyRSkeleton& skeleton);
+    TinyHandle addNode(const TinyRNode& node);
 
     // Access to resources - allow modification
-    RMesh*     getMeshData(const TinyHandle& handle);
-    RMaterial* getMaterialData(const TinyHandle& handle);
-    RTexture*  getTextureData(const TinyHandle& handle);
-    RSkeleton* getSkeletonData(const TinyHandle& handle);
-    RNode*     getNodeData(const TinyHandle& handle);
+    TinyRMesh*     getMeshData(const TinyHandle& handle);
+    TinyRMaterial* getMaterialData(const TinyHandle& handle);
+    TinyRTexture*  getTextureData(const TinyHandle& handle);
+    TinyRSkeleton* getSkeletonData(const TinyHandle& handle);
+    TinyRNode*     getNodeData(const TinyHandle& handle);
 
     template<typename T>
     T* get(const TinyHandle& handle) {
         // Clean the type
         if (!handle.isType(T::kType)) return nullptr;
         
+        auto getPtrFromPool = [&](auto& pool) -> T* {
+            using PoolType = std::decay_t<decltype(pool)>;
+            if constexpr (std::is_same_v<PoolType, TinyPoolPtr<T>>) {
+                return pool.getPtr(handle.index); // already a pointer
+            } else if constexpr (std::is_same_v<PoolType, TinyPoolRaw<T>>) {
+                return &pool.get(handle.index);   // wrap reference as pointer
+            } else {
+                static_assert(sizeof(PoolType) == 0, "Unsupported pool type");
+            }
+        };
 
         // Only allow correct type
-        if constexpr (std::is_same_v<T, TinyRegistry::RMesh>)
-            return meshDatas.getPtr(handle.index);
-        else if constexpr (std::is_same_v<T, TinyRegistry::RMaterial>)
-            return &materialDatas.get(handle.index);
-        else if constexpr (std::is_same_v<T, TinyRegistry::RTexture>)
-            return textureDatas.getPtr(handle.index);
-        else if constexpr (std::is_same_v<T, TinyRegistry::RSkeleton>)
-            return &skeletonDatas.get(handle.index);
-        else if constexpr (std::is_same_v<T, TinyRegistry::RNode>)
-            return &nodeDatas.get(handle.index);
+        if constexpr (std::is_same_v<T, TinyRMesh>)
+            return getPtrFromPool(meshDatas);
+        else if constexpr (std::is_same_v<T, TinyRMaterial>)
+            return getPtrFromPool(materialDatas);
+        else if constexpr (std::is_same_v<T, TinyRTexture>)
+            return getPtrFromPool(textureDatas);
+        else if constexpr (std::is_same_v<T, TinyRSkeleton>)
+            return getPtrFromPool(skeletonDatas);
+        else if constexpr (std::is_same_v<T, TinyRNode>)
+            return getPtrFromPool(nodeDatas);
         else
             static_assert(sizeof(T) == 0, "Unsupported type for get<T>");
     }
@@ -134,9 +149,10 @@ private:
     void createTextureVkResources();
 
     // Resource pools registry
-    TinyPoolPtr<RMesh>     meshDatas;
-    TinyPoolRaw<RMaterial> materialDatas;
-    TinyPoolPtr<RTexture>  textureDatas;
-    TinyPoolRaw<RSkeleton> skeletonDatas;
-    TinyPoolRaw<RNode>     nodeDatas;
+    TinyPoolPtr<TinyRMesh>     meshDatas;
+    TinyPoolRaw<TinyRMaterial> materialDatas;
+    TinyPoolPtr<TinyRTexture>  textureDatas;
+    TinyPoolRaw<TinyRSkeleton> skeletonDatas;
+    TinyPoolRaw<TinyRNode>     nodeDatas;
 };
+
