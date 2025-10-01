@@ -224,7 +224,6 @@ void TinyProject::addNodeInstance(uint32_t templateIndex, uint32_t rootIndex, gl
             // Check if this node parent is the root node
             bool isRootChild = rtNode->parentIdx == rtRootIndex;
 
-            // Counter the root node transform
             glm::mat4 invRootTransform = glm::inverse(rtNodes[rtRootIndex]->globalTransform);
             rtNode->transformOverride = isRootChild ? at * invRootTransform : glm::mat4(1.0f);
         }
@@ -344,16 +343,11 @@ void TinyProject::updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4
     // Calculate the local transform: registry transform * user override
     glm::mat4 localTransform = regNode->transform * runtimeNode->transformOverride;
 
-    // If node has override, print the word has override
-    if (runtimeNode->transformOverride != glm::mat4(1.0f)) {
-        printf("Node %s has transform override.\n", regNode->name.c_str());
-    }
-
     // Calculate global transform: parent global * local transform
     runtimeNode->globalTransform = parentGlobalTransform * localTransform;
 
-    // // Mark this node as clean (optional since we're not checking dirty flags anymore)
-    // runtimeNode->isDirty = false;
+    // Mark this node as clean (optional since we're not checking dirty flags anymore)
+    runtimeNode->isDirty = false;
 
     // Recursively update all children
     for (uint32_t childIdx : runtimeNode->childrenIdxs) {
@@ -377,7 +371,7 @@ void TinyNodeRT3D::addChild(uint32_t childIndex, std::vector<std::unique_ptr<Tin
 
 void TinyProject::runPlayground(float dTime) {
     // Get the root node (index 0)
-    TinyNodeRT3D* node0 = rtNodes[0].get();
+    TinyNodeRT3D* node0 = rtNodes[1].get();
     TinyNodeRT3D* node1 = rtNodes[10].get();
 
     // Calculate rotation: 90 degrees per second = π/2 radians per second

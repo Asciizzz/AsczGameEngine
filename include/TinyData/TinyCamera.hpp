@@ -39,9 +39,9 @@ public:
     void setOrientation(const glm::quat& quat);
     
     // Euler angle getters (computed from quaternion)
-    float getPitch() const;
-    float getYaw() const; 
-    float getRoll() const;
+    float getPitch(bool radians = false) const;
+    float getYaw(bool radians = false) const; 
+    float getRoll(bool radians = false) const;
 
     void updateVectors();
     void updateViewMatrix();

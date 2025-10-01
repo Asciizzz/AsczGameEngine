@@ -282,7 +282,17 @@ void Application::mainLoop() {
         // Press p to place
         static bool pPressed = false;
         if (k_state[SDL_SCANCODE_P] && !pPressed) {
-            project->addNodeInstance(1, 0, glm::translate(glm::mat4(1.0f), camRef.pos));
+            // Place it at the camera position
+            // Rotated in the camera yaw direction
+
+            glm::mat4 rot = glm::mat4(1.0f);
+            rot = glm::rotate(rot, camRef.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
+
+            glm::mat4 trans = glm::translate(glm::mat4(1.0f), camRef.pos + camRef.forward * 2.0f);
+
+            glm::mat4 model = trans * rot;
+
+            project->addNodeInstance(1, 0, model);
             project->updateGlobalTransforms(0);
             
             project->printRuntimeNodeHierarchy();
@@ -291,7 +301,7 @@ void Application::mainLoop() {
             pPressed = false;
         }
 
-        // project->runPlayground(dTime);
+        project->runPlayground(dTime);
 
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {

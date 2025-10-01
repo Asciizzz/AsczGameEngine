@@ -231,23 +231,26 @@ void TinyCamera::resetRoll() {
 }
 
 // Euler angle getters (computed from quaternion)
-float TinyCamera::getPitch() const {
+float TinyCamera::getPitch(bool radians) const {
     float pitchValue = glm::degrees(glm::eulerAngles(orientation)).x;
-    return std::clamp(pitchValue, -89.0f, 89.0f);
+    pitchValue = std::clamp(pitchValue, -89.0f, 89.0f);
+
+    return radians ? glm::radians(pitchValue) : pitchValue;
 }
 
-float TinyCamera::getYaw() const {
+float TinyCamera::getYaw(bool radians) const {
     float yawValue = glm::degrees(glm::eulerAngles(orientation)).y;
     // Normalize angle to [-180, 180] range inline
     while (yawValue > 180.0f) yawValue -= 360.0f;
     while (yawValue < -180.0f) yawValue += 360.0f;
-    return yawValue;
+    return radians ? glm::radians(yawValue) : yawValue;
 }
 
-float TinyCamera::getRoll() const {
+float TinyCamera::getRoll(bool radians) const {
     float rollValue = glm::degrees(glm::eulerAngles(orientation)).z;
     // Normalize angle to [-180, 180] range inline
     while (rollValue > 180.0f) rollValue -= 360.0f;
     while (rollValue < -180.0f) rollValue += 360.0f;
-    return rollValue;
+
+    return radians ? glm::radians(rollValue) : rollValue;
 }
