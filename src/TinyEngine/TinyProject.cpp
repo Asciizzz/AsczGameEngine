@@ -66,7 +66,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
 
     for (int i = 0; i < static_cast<int>(model.nodes.size()); ++i) {
         const TinyNode& localNode = model.nodes[i];
-        TinyNode& regNode = *registry->getNodeData(glbNodeRegHandle[i]);
+        TinyNode& regNode = *registry->get<TinyRegistry::RNode>(glbNodeRegHandle[i]);
         regNode.scope = localNode.scope;
         regNode.name = localNode.name;
 

@@ -9,6 +9,7 @@
 #include "AzVulk/Descriptor.hpp"
 #include "AzVulk/DataBuffer.hpp"
 
+
 class TinyRegistry { // For raw resource data
 public:
     struct RMesh {
@@ -73,6 +74,27 @@ public:
     RTexture*  getTextureData(const TinyHandle& handle);
     RSkeleton* getSkeletonData(const TinyHandle& handle);
     RNode*     getNodeData(const TinyHandle& handle);
+
+    template<typename T>
+    T* get(const TinyHandle& handle) {
+        // Clean the type
+        if (!handle.isType(T::kType)) return nullptr;
+        
+
+        // Only allow correct type
+        if constexpr (std::is_same_v<T, TinyRegistry::RMesh>)
+            return meshDatas.getPtr(handle.index);
+        else if constexpr (std::is_same_v<T, TinyRegistry::RMaterial>)
+            return &materialDatas.get(handle.index);
+        else if constexpr (std::is_same_v<T, TinyRegistry::RTexture>)
+            return textureDatas.getPtr(handle.index);
+        else if constexpr (std::is_same_v<T, TinyRegistry::RSkeleton>)
+            return &skeletonDatas.get(handle.index);
+        else if constexpr (std::is_same_v<T, TinyRegistry::RNode>)
+            return &nodeDatas.get(handle.index);
+        else
+            static_assert(sizeof(T) == 0, "Unsupported type for get<T>");
+    }
 
 
     void printDataCounts() const {
