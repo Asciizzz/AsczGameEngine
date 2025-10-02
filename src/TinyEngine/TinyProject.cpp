@@ -67,7 +67,7 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
     std::vector<TinyHandle> glbSkelerHandle;
     for (const auto& skeleton : model.skeletons) {
         TinyRSkeleton rSkeleton;
-        rSkeleton.bones = skeleton.construct();
+        rSkeleton.bones = skeleton.bones; // Direct copy is fine
 
         TinyHandle handle = registry->add(rSkeleton);
         glbSkelerHandle.push_back(handle);

@@ -18,18 +18,10 @@ struct TinyBone {
 };
 
 struct TinySkeleton {
-    // Joint SoA
-    std::vector<std::string> names;
-    std::vector<int> parents;
-    std::vector<glm::mat4> inverseBindMatrices;
-    std::vector<glm::mat4> localBindTransforms;
+    std::vector<TinyBone> bones;
 
-    std::unordered_map<std::string, int> nameToIndex;
-
-    std::vector<TinyBone> construct() const;
-
-    void clear();
-    void insert(const TinyBone& bone);
+    void clear() { bones.clear(); }
+    uint32_t insert(const TinyBone& bone);
 
     void debugPrintHierarchy() const;
 private:

@@ -599,8 +599,9 @@ void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
         for (int childIdx : node.children) nodeToParent[childIdx] = nodeIdx;
     }
 
-    bool hasInvBindMat4 = readAccessor(model, skin.inverseBindMatrices, skeleton.inverseBindMatrices);
-    if (!hasInvBindMat4) skeleton.inverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f)); // Compromise with identity
+    std::vector<glm::mat4> skeletonInverseBindMatrices;
+    bool hasInvBindMat4 = readAccessor(model, skin.inverseBindMatrices, skeletonInverseBindMatrices);
+    if (!hasInvBindMat4) skeletonInverseBindMatrices.resize(skin.joints.size(), glm::mat4(1.0f)); // Compromise with identity
 
     for (int i = 0; i < skin.joints.size(); ++i) {
         int nodeIndex = skin.joints[i];
@@ -613,7 +614,7 @@ void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
         TinyBone bone;
         std::string originalName = node.name.empty() ? "" : node.name;
         bone.name = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
-        bone.inverseBindMatrix = skeleton.inverseBindMatrices[i];
+        bone.inverseBindMatrix = skeletonInverseBindMatrices[i];
         bone.localBindTransform = makeLocalFromNode(node);
 
         auto parentIt = nodeToParent.find(nodeIndex);
@@ -627,6 +628,14 @@ void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
         }
 
         skeleton.insert(bone);
+    }
+
+    // Bind children
+    for (int i = 0; i < skeleton.bones.size(); ++i) {
+        int parentIndex = skeleton.bones[i].parent;
+        if (parentIndex >= 0 && parentIndex < skeleton.bones.size()) {
+            skeleton.bones[parentIndex].children.push_back(i);
+        }
     }
 }
 

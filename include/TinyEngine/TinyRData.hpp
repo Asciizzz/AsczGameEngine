@@ -29,8 +29,6 @@ struct TinyRTexture {
     bool import(const TinyVK::Device* deviceVK, const TinyTexture& texture);
 };
 
-struct TinyRSkeleton {
-    std::vector<TinyBone> bones;
-};
+struct TinyRSkeleton : public TinySkeleton {};
 
 struct TinyRNode : public TinyNode {}; // Naming scheme for consistency
