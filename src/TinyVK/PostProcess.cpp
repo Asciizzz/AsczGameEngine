@@ -9,27 +9,6 @@ using namespace TinyVK;
 
 // Destroy helper
 
-void destroyImages(VkDevice lDevice, VkImage image) {
-    if (image != VK_NULL_HANDLE) {
-        vkDestroyImage(lDevice, image, nullptr);
-        image = VK_NULL_HANDLE;
-    }
-}
-
-void destroyImageViews(VkDevice lDevice, VkImageView view) {
-    if (view != VK_NULL_HANDLE) {
-        vkDestroyImageView(lDevice, view, nullptr);
-        view = VK_NULL_HANDLE;
-    }
-}
-
-void destroyDeviceMemory(VkDevice lDevice, VkDeviceMemory memory) {
-    if (memory != VK_NULL_HANDLE) {
-        vkFreeMemory(lDevice, memory, nullptr);
-        memory = VK_NULL_HANDLE;
-    }
-}
-
 void PostProcessEffect::cleanup(VkDevice device) {
     if (pipeline) {
         pipeline->cleanup();
@@ -57,7 +36,7 @@ void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
     }
     
     // Validate swapchain extent is valid
-    if (swapChain->extent.width == 0 || swapChain->extent.height == 0) {
+    if (swapChain->compareExtent({0, 0})) {
         throw std::runtime_error("PostProcess: Invalid swapchain dimensions");
     }
 
@@ -71,7 +50,7 @@ void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
 void PostProcess::createPingPongImages() {
     // Use R8G8B8A8_UNORM format which supports storage images
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-    VkExtent2D extent = swapChain->extent;
+    VkExtent2D extent = swapChain->getExtent();
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         pingPongImages.push_back(MakeUnique<PingPongImages>());
@@ -124,7 +103,7 @@ void PostProcess::createOffscreenFramebuffers() {
         fbConfig
             .withRenderPass(offscreenRenderPass)
             .withAttachments(attachments)
-            .withExtent(swapChain->extent);
+            .withExtent(swapChain->getExtent());
         
         bool success = framebuffer->create(deviceVK->lDevice, fbConfig);
         if (!success) throw std::runtime_error("Failed to create offscreen framebuffer");
@@ -380,8 +359,8 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
         effect->pipeline->bindSets(cmd, &descriptorSet, 1);
         
         // Dispatch compute work
-        uint32_t groupCountX = (swapChain->extent.width + 15) / 16;
-        uint32_t groupCountY = (swapChain->extent.height + 15) / 16;
+        uint32_t groupCountX = (swapChain->getWidth() + 15) / 16;
+        uint32_t groupCountY = (swapChain->getHeight() + 15) / 16;
         vkCmdDispatch(cmd, groupCountX, groupCountY, 1);
 
         // Memory barrier between compute passes
@@ -439,7 +418,7 @@ void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uin
     swapchainBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     swapchainBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     swapchainBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    swapchainBarrier.image = swapChain->images[swapchainImageIndex];
+    swapchainBarrier.image = swapChain->getImage(swapchainImageIndex);
     swapchainBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     swapchainBarrier.subresourceRange.baseMipLevel = 0;
     swapchainBarrier.subresourceRange.levelCount = 1;
@@ -477,20 +456,20 @@ void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uin
     // Blit final image to swapchain
     VkImageBlit blit{};
     blit.srcOffsets[0] = {0, 0, 0};
-    blit.srcOffsets[1] = {static_cast<int32_t>(swapChain->extent.width), static_cast<int32_t>(swapChain->extent.height), 1};
+    blit.srcOffsets[1] = {static_cast<int32_t>(swapChain->getWidth()), static_cast<int32_t>(swapChain->getHeight()), 1};
     blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blit.srcSubresource.mipLevel = 0;
     blit.srcSubresource.baseArrayLayer = 0;
     blit.srcSubresource.layerCount = 1;
     blit.dstOffsets[0] = {0, 0, 0};
-    blit.dstOffsets[1] = {static_cast<int32_t>(swapChain->extent.width), static_cast<int32_t>(swapChain->extent.height), 1};
+    blit.dstOffsets[1] = {static_cast<int32_t>(swapChain->getWidth()), static_cast<int32_t>(swapChain->getHeight()), 1};
     blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blit.dstSubresource.mipLevel = 0;
     blit.dstSubresource.baseArrayLayer = 0;
     blit.dstSubresource.layerCount = 1;
 
     vkCmdBlitImage(cmd, finalImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                  swapChain->images[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                  swapChain->getImage(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                   1, &blit, VK_FILTER_LINEAR);
 
     // Transition swapchain image to present
@@ -500,7 +479,7 @@ void PostProcess::executeFinalBlit(VkCommandBuffer cmd, uint32_t frameIndex, uin
     presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    presentBarrier.image = swapChain->images[swapchainImageIndex];
+    presentBarrier.image = swapChain->getImage(swapchainImageIndex);
     presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     presentBarrier.subresourceRange.baseMipLevel = 0;
     presentBarrier.subresourceRange.levelCount = 1;

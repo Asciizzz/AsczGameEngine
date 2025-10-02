@@ -91,7 +91,10 @@ struct ImageViewConfig {
     ImageViewConfig& withType(VkImageViewType viewType);
     ImageViewConfig& withFormat(VkFormat fmt);
     ImageViewConfig& withAspectMask(VkImageAspectFlags aspect);
+    ImageViewConfig& withBaseMipLevel(uint32_t baseLevel);
     ImageViewConfig& withMipLevels(uint32_t levels);
+    ImageViewConfig& withBaseArrayLayer(uint32_t baseLayer);
+    ImageViewConfig& withArrayLayers(uint32_t layers);
     ImageViewConfig& withComponents(VkComponentMapping comp);
 
     ImageViewConfig& withAutoMipLevels(uint32_t width, uint32_t height);
@@ -102,6 +105,11 @@ struct ImageViewConfig {
 class TextureVK;
 class ImageVK {
 public:
+    enum class Ownership {
+        Owned,
+        External
+    };
+
     ImageVK() = default;
     ImageVK(VkDevice lDevice);
     ImageVK(const Device* device);
@@ -121,6 +129,8 @@ public:
 
     ImageVK& createImage(const ImageConfig& config);
     ImageVK& createView(const ImageViewConfig& viewConfig);
+
+    ImageVK& setSwapchainImage(VkImage swapchainImage, VkFormat fmt, VkExtent2D extent);
 
     VkImage getImage() const { return image; }
     VkImageView getView() const { return view; }
@@ -151,6 +161,7 @@ private:
     VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
+    Ownership ownership = Ownership::Owned;
 
     VkFormat format = VK_FORMAT_UNDEFINED;
     uint32_t width = 0;

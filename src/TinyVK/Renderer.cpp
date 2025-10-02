@@ -13,7 +13,7 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
     swapChain = MakeUnique<SwapChain>(deviceVK, surface, window);
 
     depthManager = MakeUnique<DepthManager>(deviceVK);
-    depthManager->createDepthResources(swapChain->extent.width, swapChain->extent.height);
+    depthManager->createDepthResources(swapChain->getExtent());
 
     createRenderPasses();
     swapChain->createFramebuffers(mainRenderPass->get(), depthManager->getDepthImageView());
@@ -86,7 +86,7 @@ void Renderer::createRenderPasses() {
     
     // Create main render pass for final presentation to swapchain
     auto mainRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapChain->imageFormat
+        swapChain->getImageFormat()
     );
     mainRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, mainRenderPassConfig);
     
@@ -98,7 +98,7 @@ void Renderer::createRenderPasses() {
 
     // Create ImGui render pass that preserves existing framebuffer content
     auto imguiRenderPassConfig = RenderPassConfig::createImGuiConfig(
-        swapChain->imageFormat
+        swapChain->getImageFormat()
     );
     imguiRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, imguiRenderPassConfig);
 }
@@ -120,7 +120,7 @@ VkFramebuffer Renderer::getSwapChainFramebuffer(uint32_t imageIndex) const {
 }
 
 VkExtent2D Renderer::getSwapChainExtent() const {
-    return swapChain ? swapChain->extent : VkExtent2D{0, 0};
+    return swapChain ? swapChain->getExtent() : VkExtent2D{0, 0};
 }
 
 VkCommandBuffer Renderer::getCurrentCommandBuffer() const {
@@ -192,7 +192,7 @@ uint32_t Renderer::beginFrame() {
     renderPassInfo.renderPass = postProcess->getOffscreenRenderPass();
     renderPassInfo.framebuffer = postProcess->getOffscreenFramebuffer(currentFrame);
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapChain->extent;
+    renderPassInfo.renderArea.extent = swapChain->getExtent();
 
     // Clear values to match render pass attachment order: [color, depth]
     uint32_t clearValueCount = 2;
@@ -209,15 +209,15 @@ uint32_t Renderer::beginFrame() {
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(swapChain->extent.width);
-    viewport.height = static_cast<float>(swapChain->extent.height);
+    viewport.width = static_cast<float>(swapChain->getWidth());
+    viewport.height = static_cast<float>(swapChain->getHeight());
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(currentCmd, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = swapChain->extent;
+    scissor.extent = swapChain->getExtent();
     vkCmdSetScissor(currentCmd, 0, 1, &scissor);
 
     return imageIndex;
@@ -372,7 +372,7 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         toColorAttachment.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         toColorAttachment.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         toColorAttachment.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        toColorAttachment.image = swapChain->images[imageIndex];
+        toColorAttachment.image = swapChain->getImage(imageIndex);
         toColorAttachment.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         toColorAttachment.subresourceRange.baseMipLevel = 0;
         toColorAttachment.subresourceRange.levelCount = 1;
@@ -392,7 +392,7 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         renderPassInfo.renderPass = imguiRenderPass->get();
         renderPassInfo.framebuffer = swapChain->getFramebuffer(imageIndex);
         renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = swapChain->extent;
+        renderPassInfo.renderArea.extent = swapChain->getExtent();
 
         // No clear - we want to preserve the blitted image
         renderPassInfo.clearValueCount = 0;

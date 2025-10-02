@@ -1,7 +1,10 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+
 #include "TinyVK/FrameBuffer.hpp"
+
+#include "TinyVK/TextureVK.hpp"
 
 namespace TinyVK {
 struct SwapChainSupportDetails {
@@ -30,10 +33,29 @@ public:
     VkSwapchainKHR swapChain = VK_NULL_HANDLE;
     VkSwapchainKHR get() const { return swapChain; }
 
-    std::vector<VkImage> images;
-    VkFormat imageFormat;
-    VkExtent2D extent;
-    std::vector<VkImageView> imageViews;
+    // std::vector<VkImage> images;
+    // VkFormat imageFormat;
+    // VkExtent2D extent;
+    // std::vector<VkImageView> imageViews;
+
+    std::vector<ImageVK> images;
+
+    VkImageView getImageView(uint32_t index) const {
+        return (index < images.size()) ? images[index].getView() : VK_NULL_HANDLE;
+    }
+    VkImage getImage(uint32_t index) const {
+        return (index < images.size()) ? images[index].getImage() : VK_NULL_HANDLE;
+    }
+
+    VkFormat getImageFormat() const { return images.empty() ? VK_FORMAT_UNDEFINED : images[0].getFormat(); }
+    VkExtent2D getExtent() const { return images.empty() ? VkExtent2D{0, 0} : images[0].getExtent2D(); }
+    uint32_t getWidth() const { return getExtent().width; }
+    uint32_t getHeight() const { return getExtent().height; }
+    uint32_t getImageCount() const { return static_cast<uint32_t>(images.size()); }
+
+    bool compareExtent(const VkExtent2D& otherExtent) const {
+        return otherExtent.width == getWidth() && otherExtent.height == getHeight();
+    }
 
     UniquePtrVec<FrameBuffer> framebuffers;
 

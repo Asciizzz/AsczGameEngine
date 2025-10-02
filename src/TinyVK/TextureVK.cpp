@@ -71,8 +71,23 @@ ImageViewConfig& ImageViewConfig::withAspectMask(VkImageAspectFlags aspect) {
     return *this;
 }
 
+ImageViewConfig& ImageViewConfig::withBaseMipLevel(uint32_t baseLevel) {
+    baseMipLevel = baseLevel;
+    return *this;
+}
+
 ImageViewConfig& ImageViewConfig::withMipLevels(uint32_t levels) {
     mipLevels = levels;
+    return *this;
+}
+
+ImageViewConfig& ImageViewConfig::withBaseArrayLayer(uint32_t baseLayer) {
+    baseArrayLayer = baseLayer;
+    return *this;
+}
+
+ImageViewConfig& ImageViewConfig::withArrayLayers(uint32_t layers) {
+    arrayLayers = layers;
     return *this;
 }
 
@@ -107,14 +122,22 @@ ImageVK& ImageVK::init(const Device* device) {
 }
 
 void ImageVK::cleanup() {
-    if (view != VK_NULL_HANDLE) { vkDestroyImageView(lDevice, view, nullptr); view = VK_NULL_HANDLE; }
-    if (image != VK_NULL_HANDLE) { vkDestroyImage(lDevice, image, nullptr); image = VK_NULL_HANDLE; }
-    if (memory != VK_NULL_HANDLE) { vkFreeMemory(lDevice, memory, nullptr); memory = VK_NULL_HANDLE; }
+    if (view != VK_NULL_HANDLE) vkDestroyImageView(lDevice, view, nullptr);
+
+    if (ownership == Ownership::Owned) {
+        if (image != VK_NULL_HANDLE)  vkDestroyImage(lDevice, image, nullptr);
+        if (memory != VK_NULL_HANDLE) vkFreeMemory(lDevice, memory, nullptr);
+    }
+
+    view = VK_NULL_HANDLE;
+    image = VK_NULL_HANDLE;
+    memory = VK_NULL_HANDLE;
 
     format = VK_FORMAT_UNDEFINED;
     width = height = depth = 0;
     mipLevels = arrayLayers = 1;
-    layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    layout = ImageLayout::Undefined;
+    ownership = Ownership::Owned;
 }
 
 ImageVK::ImageVK(ImageVK&& other) noexcept
@@ -128,7 +151,8 @@ ImageVK::ImageVK(ImageVK&& other) noexcept
     , depth(other.depth)
     , mipLevels(other.mipLevels)
     , arrayLayers(other.arrayLayers)
-    , layout(other.layout) {
+    , layout(other.layout)
+    , ownership(other.ownership) {
     
     // Reset other object
     other.lDevice = VK_NULL_HANDLE;
@@ -142,6 +166,7 @@ ImageVK::ImageVK(ImageVK&& other) noexcept
     other.mipLevels = 1;
     other.arrayLayers = 1;
     other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    other.ownership = Ownership::Owned;
 }
 
 ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
@@ -159,6 +184,7 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
         mipLevels = other.mipLevels;
         arrayLayers = other.arrayLayers;
         layout = other.layout;
+        ownership = other.ownership;
         
         // Reset other object
         other.lDevice = VK_NULL_HANDLE;
@@ -172,6 +198,7 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
         other.mipLevels = 1;
         other.arrayLayers = 1;
         other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+        other.ownership = Ownership::Owned;
     }
     return *this;
 }
@@ -267,6 +294,22 @@ ImageVK& ImageVK::createView(const ImageViewConfig& viewConfig) {
     if (vkCreateImageView(lDevice, &createInfo, nullptr, &view) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to create image view" << std::endl;
     }
+
+    return *this;
+}
+
+ImageVK& ImageVK::setSwapchainImage(VkImage swapchainImage, VkFormat fmt, VkExtent2D extent) {
+    cleanup();
+
+    image = swapchainImage;
+    format = fmt;
+    width = extent.width;
+    height = extent.height;
+    depth = 1;
+    mipLevels = 1;
+    arrayLayers = 1;
+    layout = ImageLayout::PresentSrcKHR;
+    ownership = Ownership::External;
 
     return *this;
 }

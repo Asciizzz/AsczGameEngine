@@ -125,7 +125,7 @@ void Application::initComponents() {
     );
     
     if (imguiInitSuccess) {
-        std::cout << "ImGui initialized successfully with format: " << renderer->getSwapChain()->imageFormat << std::endl;
+        std::cout << "ImGui initialized successfully with format: " << renderer->getSwapChain()->getImageFormat() << std::endl;
     } else {
         std::cerr << "Failed to initialize ImGui!" << std::endl;
     }

@@ -13,6 +13,9 @@ public:
     DepthManager(const DepthManager&) = delete;
     DepthManager& operator=(const DepthManager&) = delete;
 
+    void createDepthResources(VkExtent2D extent) {
+        createDepthResources(extent.width, extent.height);
+    }
     void createDepthResources(uint32_t width, uint32_t height);
 
     // Accessors for depth resources
