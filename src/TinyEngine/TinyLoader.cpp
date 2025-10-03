@@ -537,10 +537,10 @@ void loadMesh(TinyMesh& mesh, std::vector<TinyHandle>& submeshMats, const tinygl
         }
     }
 
-    // mesh.setVertices(allVertices);
+    mesh.setVertices(allVertices);
 
-    if (hasRigging) mesh.setVertices(allVertices);
-    else mesh.setVertices(TinyVertexRig::makeStaticVertices(allVertices));
+    // if (hasRigging) mesh.setVertices(allVertices);
+    // else mesh.setVertices(TinyVertexRig::makeStaticVertices(allVertices));
 }
 
 void loadMeshes(std::vector<TinyMesh>& meshes, std::vector<std::vector<TinyHandle>>& meshesMaterials, tinygltf::Model& gltfModel, bool forceStatic) {

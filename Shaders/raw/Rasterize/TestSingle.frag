@@ -24,7 +24,7 @@ void main() {
     intensity = 0.5 + intensity * 0.5;
 
     // For the time being, set the color based on the material index % 7
-    outColor = rainbowColors[fragMaterialIndex % 7] * intensity;
+    // outColor = rainbowColors[fragMaterialIndex % 7] * intensity;
 
-    // outColor = vec4(vec3(intensity), 1.0);
+    outColor = vec4(vec3(intensity), 1.0);
 }

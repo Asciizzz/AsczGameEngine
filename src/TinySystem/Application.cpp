@@ -63,8 +63,7 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel newModel0 = TinyLoader::loadModel("Assets/Characters/Test/Niji.glb", false);
-    // TinyModel newModel0 = TinyLoader::loadModel(".heavy/de_mirage/de_mirage.gltf", false);
+    TinyModel newModel0 = TinyLoader::loadModel("Assets/Maps/gm_construct/untitled.gltf", false);
     TinyModel newModel1 = TinyLoader::loadModel("Assets/Characters/Furina.glb", false);
     project->addTemplateFromModel(newModel0);
     project->addTemplateFromModel(newModel1);
