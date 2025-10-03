@@ -12,8 +12,8 @@ struct ComputePipelineConfig {
 
 class PipelineCompute {
 public:
-    PipelineCompute(VkDevice lDevice, ComputePipelineConfig cfg)
-        : core(lDevice), cfg(std::move(cfg)) {}
+    PipelineCompute(VkDevice device, ComputePipelineConfig cfg)
+        : core(device), cfg(std::move(cfg)) {}
 
     void create();
     void recreate() { core.cleanup(); create(); }

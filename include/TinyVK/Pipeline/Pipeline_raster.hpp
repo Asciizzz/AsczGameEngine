@@ -114,8 +114,8 @@ struct RasterCfg {
 
 class PipelineRaster {
 public:
-    PipelineRaster(VkDevice lDevice, RasterCfg cfg)
-        : core(lDevice), cfg(std::move(cfg)) {}
+    PipelineRaster(VkDevice device, RasterCfg cfg)
+        : core(device), cfg(std::move(cfg)) {}
 
     void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
     void setDescLayouts(const std::vector<VkDescriptorSetLayout>& layouts) { cfg.setLayouts = layouts; }

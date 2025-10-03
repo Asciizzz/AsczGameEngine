@@ -9,17 +9,17 @@ namespace TinyVK {
 // Core pipeline functionality as a component - replaces PipelineBase
 class PipelineCore {
 public:
-    explicit PipelineCore(VkDevice device) : lDevice(device) {}
+    explicit PipelineCore(VkDevice device) : device(device) {}
     ~PipelineCore() { cleanup(); }
 
     // Lifecycle management
     void cleanup() {
         if (pipeline != VK_NULL_HANDLE) {
-            vkDestroyPipeline(lDevice, pipeline, nullptr);
+            vkDestroyPipeline(device, pipeline, nullptr);
             pipeline = VK_NULL_HANDLE;
         }
         if (layout != VK_NULL_HANDLE) {
-            vkDestroyPipelineLayout(lDevice, layout, nullptr);
+            vkDestroyPipelineLayout(device, layout, nullptr);
             layout = VK_NULL_HANDLE;
         }
     }
@@ -41,7 +41,7 @@ public:
     }
 
     // Getters for composed classes
-    VkDevice getDevice() const { return lDevice; }
+    VkDevice getDevice() const { return device; }
     VkPipeline getPipeline() const { return pipeline; }
     VkPipelineLayout getLayout() const { return layout; }
     
@@ -51,15 +51,15 @@ public:
 
     // Utility functions
     VkShaderModule createModule(const std::vector<char>& code) const {
-        return createModule(lDevice, code);
+        return createModule(device, code);
     }
 
     static std::vector<char> readFile(const std::string& path);
-    static VkShaderModule createModule(VkDevice lDevice, const std::vector<char>& code);
-    static VkShaderModule createModuleFromPath(VkDevice lDevice, const std::string& path);
+    static VkShaderModule createModule(VkDevice device, const std::vector<char>& code);
+    static VkShaderModule createModuleFromPath(VkDevice device, const std::string& path);
 
 private:
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout layout = VK_NULL_HANDLE;
 };

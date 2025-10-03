@@ -5,17 +5,17 @@ using namespace TinyVK;
 
 void CmdBuffer::cleanup() {
     // In the event that pool isn't destroyed first
-    if (lDevice != VK_NULL_HANDLE && !cmdBuffers.empty()) {
-        vkFreeCommandBuffers(lDevice, cmdPool, static_cast<uint32_t>(cmdBuffers.size()), cmdBuffers.data());
+    if (device != VK_NULL_HANDLE && !cmdBuffers.empty()) {
+        vkFreeCommandBuffers(device, cmdPool, static_cast<uint32_t>(cmdBuffers.size()), cmdBuffers.data());
     }
 }
 
 CmdBuffer::CmdBuffer(CmdBuffer&& other) noexcept {
-    lDevice = other.lDevice;
+    device = other.device;
     cmdPool = other.cmdPool;
     cmdBuffers = std::move(other.cmdBuffers);
 
-    other.lDevice = VK_NULL_HANDLE;
+    other.device = VK_NULL_HANDLE;
     other.cmdPool = VK_NULL_HANDLE;
 }
 
@@ -23,18 +23,18 @@ CmdBuffer& CmdBuffer::operator=(CmdBuffer&& other) noexcept {
     if (this != &other) {
         cleanup();
 
-        lDevice = other.lDevice;
+        device = other.device;
         cmdPool = other.cmdPool;
         cmdBuffers = std::move(other.cmdBuffers);
 
-        other.lDevice = VK_NULL_HANDLE;
+        other.device = VK_NULL_HANDLE;
         other.cmdPool = VK_NULL_HANDLE;
     }
     return *this;
 }
 
 void CmdBuffer::create(VkDevice device, VkCommandPool pool, uint32_t count) {
-    lDevice = device;
+    device = device;
     cmdPool = pool;
     cmdBuffers.resize(count);
 
@@ -44,7 +44,7 @@ void CmdBuffer::create(VkDevice device, VkCommandPool pool, uint32_t count) {
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = (uint32_t) cmdBuffers.size();
 
-    if (vkAllocateCommandBuffers(lDevice, &allocInfo, cmdBuffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device, &allocInfo, cmdBuffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
@@ -59,7 +59,7 @@ TempCmd::TempCmd(const Device* dev, const Device::PoolWrapper& pool)
     alloc.commandPool = poolWrapper.pool;
     alloc.commandBufferCount = 1;
 
-    if (vkAllocateCommandBuffers(deviceVK->lDevice, &alloc, &cmdBuffer) != VK_SUCCESS)
+    if (vkAllocateCommandBuffers(deviceVK->device, &alloc, &cmdBuffer) != VK_SUCCESS)
         throw std::runtime_error("Failed to allocate command buffer");
 
     VkCommandBufferBeginInfo begin{};
@@ -71,7 +71,7 @@ TempCmd::TempCmd(const Device* dev, const Device::PoolWrapper& pool)
 TempCmd::~TempCmd() {
     if (cmdBuffer != VK_NULL_HANDLE) {
         if (!submitted) endAndSubmit();
-        vkFreeCommandBuffers(deviceVK->lDevice, poolWrapper.pool, 1, &cmdBuffer);
+        vkFreeCommandBuffers(deviceVK->device, poolWrapper.pool, 1, &cmdBuffer);
     }
 }
 

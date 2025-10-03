@@ -28,7 +28,7 @@ void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
     this->offscreenRenderPass = offscreenRenderPass;
     
     // CRITICAL: Ensure device is idle before creating resources
-    vkDeviceWaitIdle(deviceVK->lDevice);
+    vkDeviceWaitIdle(deviceVK->device);
     
     // Validate dependencies before proceeding
     if (!swapchain || !depthManager || !deviceVK) {
@@ -105,7 +105,7 @@ void PostProcess::createOffscreenFrameBuffers() {
             .withAttachments(attachments)
             .withExtent(swapchain->getExtent());
         
-        bool success = framebuffer->create(deviceVK->lDevice, fbConfig);
+        bool success = framebuffer->create(deviceVK->device, fbConfig);
         if (!success) throw std::runtime_error("Failed to create offscreen framebuffer");
 
         offscreenFrameBuffers.push_back(std::move(framebuffer));
@@ -127,11 +127,11 @@ void PostProcess::createSampler() {
 }
 
 void PostProcess::createSharedDescriptors() {
-    VkDevice lDevice = deviceVK->lDevice;
+    VkDevice device = deviceVK->device;
 
     // Create descriptor set layout with validation
     descLayout = MakeUnique<DescLayout>();
-    descLayout->create(lDevice, {
+    descLayout->create(device, {
         {0, DescType::CombinedImageSampler, 1, ShaderStage::Compute, nullptr},
         {1, DescType::StorageImage,         1, ShaderStage::Compute, nullptr},
         {2, DescType::CombinedImageSampler, 1, ShaderStage::Compute, nullptr}
@@ -139,7 +139,7 @@ void PostProcess::createSharedDescriptors() {
 
     // Create descriptor pool with validation
     descPool = MakeUnique<DescPool>();
-    descPool->create(lDevice, {
+    descPool->create(device, {
         {DescType::CombinedImageSampler, MAX_FRAMES_IN_FLIGHT * 4}, // Color input + depth for each direction
         {DescType::StorageImage, MAX_FRAMES_IN_FLIGHT * 2}
     }, MAX_FRAMES_IN_FLIGHT * 2);
@@ -149,10 +149,10 @@ void PostProcess::createSharedDescriptors() {
     // Update descriptor sets to point to ping-pong images
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         UniquePtr<DescSet> descSet0 = MakeUnique<DescSet>();
-        descSet0->allocate(lDevice, *descPool, *descLayout);
+        descSet0->allocate(device, *descPool, *descLayout);
 
         UniquePtr<DescSet> descSet1 = MakeUnique<DescSet>();
-        descSet1->allocate(lDevice, *descPool, *descLayout);
+        descSet1->allocate(device, *descPool, *descLayout);
 
         const auto& images = pingPongImages[frame];
 
@@ -216,7 +216,7 @@ void PostProcess::createSharedDescriptors() {
                 .setDstSet(*descSet1)
                 .setDescType(DescType::CombinedImageSampler)
                 .setImageInfo({imageInfoDepth})
-            .updateDescSets(lDevice);
+            .updateDescSets(device);
 
         descSets.push_back(std::move(descSet0));
         descSets.push_back(std::move(descSet1));
@@ -251,7 +251,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
         config.setLayouts = {*descLayout};
         config.compPath = computeShaderPath;
 
-        effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
+        effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->device, std::move(config));
         effect->pipeline->create();
 
         // Store in OrderedMap with name as key
@@ -562,7 +562,7 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
 }
 
 void PostProcess::cleanupRenderResources() {
-    VkDevice device = deviceVK->lDevice;
+    VkDevice device = deviceVK->device;
     
     // Wait for device to be idle to ensure no resources are in use
     vkDeviceWaitIdle(device);
@@ -592,7 +592,7 @@ void PostProcess::recreateEffects() {
     }
     
     // Clean up current effects first
-    VkDevice device = deviceVK->lDevice;
+    VkDevice device = deviceVK->device;
     for (auto& [name, effect] : effects) {
         effect->cleanup(device);
     }
@@ -609,7 +609,7 @@ void PostProcess::recreateEffects() {
         config.setLayouts = {*descLayout};
         config.compPath = shaderPath;
 
-        effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->lDevice, std::move(config));
+        effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->device, std::move(config));
         effect->pipeline->create();
 
         effects[name] = std::move(effect);
@@ -617,7 +617,7 @@ void PostProcess::recreateEffects() {
 }
 
 void PostProcess::cleanup() {
-    VkDevice device = deviceVK->lDevice;
+    VkDevice device = deviceVK->device;
 
     // Wait for device to be idle to ensure no resources are in use
     vkDeviceWaitIdle(device);

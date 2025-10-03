@@ -105,28 +105,28 @@ ImageViewConfig& ImageViewConfig::withAutoMipLevels(uint32_t width, uint32_t hei
 
 
 
-ImageVK::ImageVK(VkDevice lDevice) {
-    init(lDevice);
+ImageVK::ImageVK(VkDevice device) {
+    init(device);
 }
-ImageVK& ImageVK::init(VkDevice lDevice) {
-    this->lDevice = lDevice;
+ImageVK& ImageVK::init(VkDevice device) {
+    this->device = device;
     return *this;
 }
 
-ImageVK::ImageVK(const Device* device) {
-    init(device);
+ImageVK::ImageVK(const Device* deviceVK) {
+    init(deviceVK);
 }
-ImageVK& ImageVK::init(const Device* device) {
-    if (device) this->lDevice = device->lDevice;
+ImageVK& ImageVK::init(const Device* deviceVK) {
+    device = deviceVK ? deviceVK->device : VK_NULL_HANDLE;
     return *this;
 }
 
 void ImageVK::cleanup() {
-    if (view != VK_NULL_HANDLE) vkDestroyImageView(lDevice, view, nullptr);
+    if (view != VK_NULL_HANDLE) vkDestroyImageView(device, view, nullptr);
 
     if (ownership == Ownership::Owned) {
-        if (image != VK_NULL_HANDLE)  vkDestroyImage(lDevice, image, nullptr);
-        if (memory != VK_NULL_HANDLE) vkFreeMemory(lDevice, memory, nullptr);
+        if (image != VK_NULL_HANDLE)  vkDestroyImage(device, image, nullptr);
+        if (memory != VK_NULL_HANDLE) vkFreeMemory(device, memory, nullptr);
     }
 
     view = VK_NULL_HANDLE;
@@ -141,7 +141,7 @@ void ImageVK::cleanup() {
 }
 
 ImageVK::ImageVK(ImageVK&& other) noexcept
-    : lDevice(other.lDevice)
+    : device(other.device)
     , image(other.image)
     , memory(other.memory)
     , view(other.view)
@@ -155,7 +155,7 @@ ImageVK::ImageVK(ImageVK&& other) noexcept
     , ownership(other.ownership) {
     
     // Reset other object
-    other.lDevice = VK_NULL_HANDLE;
+    other.device = VK_NULL_HANDLE;
     other.image = VK_NULL_HANDLE;
     other.memory = VK_NULL_HANDLE;
     other.view = VK_NULL_HANDLE;
@@ -173,7 +173,7 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
     if (this != &other) {
         cleanup();
 
-        lDevice = other.lDevice;
+        device = other.device;
         image = other.image;
         memory = other.memory;
         view = other.view;
@@ -187,7 +187,7 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
         ownership = other.ownership;
         
         // Reset other object
-        other.lDevice = VK_NULL_HANDLE;
+        other.device = VK_NULL_HANDLE;
         other.image = VK_NULL_HANDLE;
         other.memory = VK_NULL_HANDLE;
         other.view = VK_NULL_HANDLE;
@@ -205,7 +205,7 @@ ImageVK& ImageVK::operator=(ImageVK&& other) noexcept {
 
 
 ImageVK& ImageVK::createImage(const ImageConfig& config) {
-    if (lDevice == VK_NULL_HANDLE || config.pDevice == VK_NULL_HANDLE) {
+    if (device == VK_NULL_HANDLE || config.pDevice == VK_NULL_HANDLE) {
         std::cerr << "ImageVK: Cannot create image - device not set" << std::endl;
         return *this;
     }
@@ -237,28 +237,28 @@ ImageVK& ImageVK::createImage(const ImageConfig& config) {
     imageInfo.samples = config.samples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(lDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to create image" << std::endl;
         return *this;
     }
 
     // Allocate memory
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(lDevice, image, &memRequirements);
+    vkGetImageMemoryRequirements(device, image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties, config.pDevice);
 
-    if (vkAllocateMemory(lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to allocate image memory" << std::endl;
         cleanup();
         return *this;
     }
 
     // Bind memory
-    if (vkBindImageMemory(lDevice, image, memory, 0) != VK_SUCCESS) {
+    if (vkBindImageMemory(device, image, memory, 0) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to bind image memory" << std::endl;
         cleanup();
     }
@@ -274,7 +274,7 @@ ImageVK& ImageVK::createView(const ImageViewConfig& viewConfig) {
 
     // Clean up existing image view
     if (view != VK_NULL_HANDLE) {
-        vkDestroyImageView(lDevice, view, nullptr);
+        vkDestroyImageView(device, view, nullptr);
         view = VK_NULL_HANDLE;
     }
 
@@ -291,7 +291,7 @@ ImageVK& ImageVK::createView(const ImageViewConfig& viewConfig) {
     createInfo.subresourceRange.baseArrayLayer = viewConfig.baseArrayLayer;
     createInfo.subresourceRange.layerCount = (viewConfig.arrayLayers == VK_REMAINING_ARRAY_LAYERS) ? arrayLayers : viewConfig.arrayLayers;
 
-    if (vkCreateImageView(lDevice, &createInfo, nullptr, &view) != VK_SUCCESS) {
+    if (vkCreateImageView(device, &createInfo, nullptr, &view) != VK_SUCCESS) {
         std::cerr << "ImageVK: Failed to create image view" << std::endl;
     }
 
@@ -404,23 +404,27 @@ SamplerConfig& SamplerConfig::withPhysicalDevice(VkPhysicalDevice pDevice) {
     return *this;
 }
 
-SamplerVK::SamplerVK(VkDevice lDevice) {
-    init(lDevice);
+SamplerVK::SamplerVK(VkDevice device) {
+    init(device);
 }
-SamplerVK& SamplerVK::init(VkDevice lDevice) {
-    this->lDevice = lDevice;
+SamplerVK& SamplerVK::init(VkDevice device) {
+    this->device = device;
     return *this;
 }
-SamplerVK& SamplerVK::init(const Device* device) {
-    lDevice = device ? device->lDevice : VK_NULL_HANDLE;
+
+SamplerVK::SamplerVK(const Device* deviceVK) {
+    init(deviceVK);
+}
+SamplerVK& SamplerVK::init(const Device* deviceVK) {
+    device = deviceVK ? deviceVK->device : VK_NULL_HANDLE;
     return *this;
 }
 
 SamplerVK::SamplerVK(SamplerVK&& other) noexcept {
-    lDevice = other.lDevice;
+    device = other.device;
     sampler = other.sampler;
 
-    other.lDevice = VK_NULL_HANDLE;
+    other.device = VK_NULL_HANDLE;
     other.sampler = VK_NULL_HANDLE;
 }
 
@@ -428,25 +432,25 @@ SamplerVK& SamplerVK::operator=(SamplerVK&& other) noexcept {
     if (this != &other) {
         cleanup();
 
-        lDevice = other.lDevice;
+        device = other.device;
         sampler = other.sampler;
         
-        other.lDevice = VK_NULL_HANDLE;
+        other.device = VK_NULL_HANDLE;
         other.sampler = VK_NULL_HANDLE;
     }
     return *this;
 }
 
 void SamplerVK::cleanup() {
-    if (sampler != VK_NULL_HANDLE && lDevice != VK_NULL_HANDLE) {
-        vkDestroySampler(lDevice, sampler, nullptr);
+    if (sampler != VK_NULL_HANDLE && device != VK_NULL_HANDLE) {
+        vkDestroySampler(device, sampler, nullptr);
         sampler = VK_NULL_HANDLE;
     }
 }
 
 
 SamplerVK& SamplerVK::create(const SamplerConfig& config) {
-    if (lDevice == VK_NULL_HANDLE) {
+    if (device == VK_NULL_HANDLE) {
         throw std::runtime_error("SamplerVK: Device not initialized");
     }
 
@@ -470,7 +474,7 @@ SamplerVK& SamplerVK::create(const SamplerConfig& config) {
     createInfo.maxAnisotropy    = getMaxAnisotropy(config.pDevice, config.maxAnisotropy);
     createInfo.unnormalizedCoordinates = config.unnormalizedCoordinates;
 
-    VkResult result = vkCreateSampler(lDevice, &createInfo, nullptr, &sampler);
+    VkResult result = vkCreateSampler(device, &createInfo, nullptr, &sampler);
     if (result != VK_SUCCESS) {
         throw std::runtime_error("Failed to create VkSampler");
     }
@@ -492,18 +496,18 @@ float SamplerVK::getMaxAnisotropy(VkPhysicalDevice pDevice, float requested) {
 
 
 
-TextureVK::TextureVK(VkDevice lDevice) {
-    init(lDevice);
+TextureVK::TextureVK(VkDevice device) {
+    init(device);
 }
-TextureVK& TextureVK::init(VkDevice lDevice) {
-    image.init(lDevice);
-    sampler.init(lDevice);
+TextureVK& TextureVK::init(VkDevice device) {
+    image.init(device);
+    sampler.init(device);
     return *this;
 }
-TextureVK& TextureVK::init(const Device* device) {
-    if (device) {
-        image.init(device);
-        sampler.init(device);
+TextureVK& TextureVK::init(const Device* deviceVK) {
+    if (deviceVK) {
+        image.init(deviceVK);
+        sampler.init(deviceVK);
     }
     return *this;
 }

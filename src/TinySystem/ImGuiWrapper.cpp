@@ -33,7 +33,7 @@ bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::D
     init_info.ApiVersion = VK_API_VERSION_1_0;
     init_info.Instance = instance;
     init_info.PhysicalDevice = deviceVK->pDevice;
-    init_info.Device = deviceVK->lDevice;
+    init_info.Device = deviceVK->device;
     init_info.QueueFamily = deviceVK->queueFamilyIndices.graphicsFamily.value();
     init_info.Queue = deviceVK->graphicsQueue;
     init_info.PipelineCache = VK_NULL_HANDLE;
@@ -117,14 +117,14 @@ void ImGuiWrapper::createDescriptorPool() {
     pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
     pool_info.pPoolSizes = pool_sizes;
 
-    if (vkCreateDescriptorPool(m_deviceVK->lDevice, &pool_info, nullptr, &m_descriptorPool) != VK_SUCCESS) {
+    if (vkCreateDescriptorPool(m_deviceVK->device, &pool_info, nullptr, &m_descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create ImGui descriptor pool!");
     }
 }
 
 void ImGuiWrapper::destroyDescriptorPool() {
     if (m_descriptorPool != VK_NULL_HANDLE && m_deviceVK != nullptr) {
-        vkDestroyDescriptorPool(m_deviceVK->lDevice, m_descriptorPool, nullptr);
+        vkDestroyDescriptorPool(m_deviceVK->device, m_descriptorPool, nullptr);
         m_descriptorPool = VK_NULL_HANDLE;
     }
 }
@@ -133,7 +133,7 @@ void ImGuiWrapper::updateRenderPass(VkRenderPass newRenderPass, uint32_t imageCo
     if (!m_initialized) return;
 
     // Wait for device to be idle
-    vkDeviceWaitIdle(m_deviceVK->lDevice);
+    vkDeviceWaitIdle(m_deviceVK->device);
 
     // Shutdown current Vulkan backend (but keep SDL2 backend)
     ImGui_ImplVulkan_Shutdown();
@@ -147,7 +147,7 @@ void ImGuiWrapper::updateRenderPass(VkRenderPass newRenderPass, uint32_t imageCo
     init_info.ApiVersion = VK_API_VERSION_1_0;
     init_info.Instance = VK_NULL_HANDLE; // Not needed for reinit
     init_info.PhysicalDevice = m_deviceVK->pDevice;
-    init_info.Device = m_deviceVK->lDevice;
+    init_info.Device = m_deviceVK->device;
     init_info.QueueFamily = m_deviceVK->queueFamilyIndices.graphicsFamily.value();
     init_info.Queue = m_deviceVK->graphicsQueue;
     init_info.PipelineCache = VK_NULL_HANDLE;

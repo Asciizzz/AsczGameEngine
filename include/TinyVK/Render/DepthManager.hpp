@@ -21,6 +21,7 @@ public:
     // Accessors for depth resources
     VkImageView getDepthImageView() const { return depthImage.getView(); }
     VkImage getDepthImage() const { return depthImage.getImage(); }
+    VkFormat getDepthFormat() const { return depthImage.getFormat(); }
     uint32_t getWidth() const { return depthImage.getWidth(); }
     uint32_t getHeight() const { return depthImage.getHeight(); }
 

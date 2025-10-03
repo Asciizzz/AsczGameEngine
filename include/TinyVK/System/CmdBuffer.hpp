@@ -23,7 +23,7 @@ public:
     const VkCommandBuffer& operator[](T index) const { return cmdBuffers[index]; }
 
 private:
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     VkCommandPool cmdPool = VK_NULL_HANDLE;
 
     std::vector<VkCommandBuffer> cmdBuffers;

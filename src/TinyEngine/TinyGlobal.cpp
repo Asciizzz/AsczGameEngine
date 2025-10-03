@@ -21,19 +21,19 @@ void TinyGlobal::createDataBuffer(const TinyVK::Device* deviceVK) {
 }
 
 void TinyGlobal::createDescResources(const TinyVK::Device* deviceVK) {
-    VkDevice lDevice = deviceVK->lDevice;
+    VkDevice device = deviceVK->device;
 
-    descLayout.create(lDevice,
+    descLayout.create(device,
         {{0, DescType::UniformBuffer, 1, ShaderStage::VertexAndFragment, nullptr}
     });
 
-    descPool.create(lDevice, {
+    descPool.create(device, {
         {DescType::UniformBuffer, maxFramesInFlight}
     }, maxFramesInFlight);
 
     for (int i = 0; i < maxFramesInFlight; ++i) {
         DescSet descSet;
-        descSet.allocate(lDevice, descPool, descLayout);
+        descSet.allocate(device, descPool, descLayout);
 
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = dataBuffer[i].get();
@@ -45,7 +45,7 @@ void TinyGlobal::createDescResources(const TinyVK::Device* deviceVK) {
             .setDescType(DescType::UniformBuffer)
             .setDescCount(1)
             .setBufferInfo({bufferInfo})
-            .updateDescSets(lDevice);
+            .updateDescSets(device);
 
         descSets.push_back(std::move(descSet));
     }

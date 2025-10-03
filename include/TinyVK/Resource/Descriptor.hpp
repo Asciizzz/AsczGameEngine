@@ -31,12 +31,12 @@ struct DescPool {
     VkDescriptorPool get() const { return pool; }
     operator VkDescriptorPool() const { return pool; }
 
-    void create(VkDevice lDevice, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
+    void create(VkDevice device, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
     void destroy();
 
 private:
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     VkDescriptorPool pool = VK_NULL_HANDLE;
 };
 
@@ -54,12 +54,12 @@ struct DescLayout {
     operator VkDescriptorSetLayout() const { return layout; }
     operator VkDescriptorSetLayout&() { return layout; }
 
-    void create(VkDevice lDevice, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+    void create(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings);
 
     void destroy();
 
 private:
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 };
 
@@ -79,13 +79,13 @@ struct DescSet {
     VkDescriptorSetLayout getLayout() const { return layout; }
     VkDescriptorPool getPool() const { return pool; }
 
-    void allocate(VkDevice lDevice, VkDescriptorPool pool, VkDescriptorSetLayout layout);
+    void allocate(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout);
 
     // Explicit free of descriptor sets
     void free(VkDescriptorPool pool);
 
 private:
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     VkDescriptorSet set = VK_NULL_HANDLE;
 
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
@@ -116,7 +116,7 @@ struct DescWrite {
     DescWrite& setDescCount(uint32_t count);
     DescWrite& setDescType(VkDescriptorType type);
 
-    DescWrite& updateDescSets(VkDevice lDevice);
+    DescWrite& updateDescSets(VkDevice device);
 };
 
 }

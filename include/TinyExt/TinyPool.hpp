@@ -98,10 +98,9 @@ struct TinyPool {
     }
 
     TinyPool& resize(uint32_t newCapacity) {
-        if (newCapacity <= capacity) return *this;
-
         items.resize(newCapacity);
         states.resize(newCapacity);
+        freeList.reserve(newCapacity);
 
         for (uint32_t i = newCapacity; i-- > capacity;) {
             freeList.push_back(i);

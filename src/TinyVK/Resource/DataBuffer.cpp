@@ -11,7 +11,7 @@ using namespace TinyVK;
 
 // Move constructor
 DataBuffer::DataBuffer(DataBuffer&& other) noexcept {
-    lDevice = other.lDevice;
+    device = other.device;
 
     buffer = other.buffer;
     memory = other.memory;
@@ -32,7 +32,7 @@ DataBuffer::DataBuffer(DataBuffer&& other) noexcept {
 DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
     if (this != &other) {
         cleanup();
-        lDevice = other.lDevice;
+        device = other.device;
 
         buffer = other.buffer;
         memory = other.memory;
@@ -52,20 +52,20 @@ DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
 }
 
 DataBuffer& DataBuffer::cleanup() {
-    if (lDevice == VK_NULL_HANDLE) return *this;
+    if (device == VK_NULL_HANDLE) return *this;
 
     if (buffer != VK_NULL_HANDLE) {
         if (mapped) {
-            vkUnmapMemory(lDevice, memory);
+            vkUnmapMemory(device, memory);
             mapped = nullptr;
         }
 
-        vkDestroyBuffer(lDevice, buffer, nullptr);
+        vkDestroyBuffer(device, buffer, nullptr);
         buffer = VK_NULL_HANDLE;
     }
 
     if (memory != VK_NULL_HANDLE) {
-        vkFreeMemory(lDevice, memory, nullptr);
+        vkFreeMemory(device, memory, nullptr);
         memory = VK_NULL_HANDLE;
     }
 
@@ -83,15 +83,15 @@ DataBuffer& DataBuffer::setMemPropFlags(VkMemoryPropertyFlags flags) {
 }
 
 DataBuffer& DataBuffer::createBuffer(const Device* deviceVK) {
-    return createBuffer(deviceVK->lDevice, deviceVK->pDevice);
+    return createBuffer(deviceVK->device, deviceVK->pDevice);
 }
 
-DataBuffer& DataBuffer::createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice) {
-    this->lDevice = lDevice; // Only need to save lDevice
+DataBuffer& DataBuffer::createBuffer(VkDevice device, VkPhysicalDevice pDevice) {
+    this->device = device; // Only need to save device
     VkPhysicalDevice physDev = pDevice;
 
-    if (lDevice == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
-        throw std::runtime_error("DataBuffer: Vulkan lDevice not initialized");
+    if (device == VK_NULL_HANDLE || pDevice == VK_NULL_HANDLE) {
+        throw std::runtime_error("DataBuffer: Vulkan device not initialized");
     }
 
     cleanup();
@@ -102,23 +102,23 @@ DataBuffer& DataBuffer::createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice)
     bufferInfo.usage = usageFlags;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(lDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+    if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create buffer!");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(lDevice, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, memPropFlags, pDevice);
 
-    if (vkAllocateMemory(lDevice, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate buffer memory!");
     }
 
-    vkBindBufferMemory(lDevice, buffer, memory, 0);
+    vkBindBufferMemory(device, buffer, memory, 0);
     return *this;
 }
 
@@ -128,12 +128,12 @@ DataBuffer& DataBuffer::copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, 
 }
 
 DataBuffer& DataBuffer::mapMemory() {
-    if (!mapped) vkMapMemory(lDevice, memory, 0, dataSize, 0, &mapped);
+    if (!mapped) vkMapMemory(device, memory, 0, dataSize, 0, &mapped);
     return *this;
 }
 
 DataBuffer& DataBuffer::unmapMemory() {
-    if (mapped) vkUnmapMemory(lDevice, memory);
+    if (mapped) vkUnmapMemory(device, memory);
     mapped = nullptr;
     return *this;
 }

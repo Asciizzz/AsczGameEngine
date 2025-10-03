@@ -45,7 +45,7 @@ void Application::initComponents() {
     deviceVK = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
 
     // So we dont have to write these things over and over again
-    VkDevice lDevice = deviceVK->lDevice;
+    VkDevice device = deviceVK->device;
     VkPhysicalDevice pDevice = deviceVK->pDevice;
 
     // Create renderer (which now manages depth manager, swap chain and render passes)
@@ -63,7 +63,7 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel newModel0 = TinyLoader::loadModel("Assets/Maps/gm_construct/untitled.gltf", false);
+    TinyModel newModel0 = TinyLoader::loadModel("Assets/Characters/Furina.glb", false);
     TinyModel newModel1 = TinyLoader::loadModel("Assets/Characters/Furina.glb", false);
     project->addTemplateFromModel(newModel0);
     project->addTemplateFromModel(newModel1);
@@ -106,7 +106,7 @@ void Application::initComponents() {
     
     // Use offscreen render pass for pipeline creation
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
-    PIPELINE_INIT(pipelineManager.get(), lDevice, offscreenRenderPass, namedLayouts, vertexInputVKs);
+    PIPELINE_INIT(pipelineManager.get(), device, offscreenRenderPass, namedLayouts, vertexInputVKs);
 
     // Load post-process effects from JSON configuration
     renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
@@ -344,7 +344,7 @@ void Application::mainLoop() {
         }
     }
 
-    vkDeviceWaitIdle(deviceVK->lDevice);
+    vkDeviceWaitIdle(deviceVK->device);
 }
 
 void Application::createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime) {

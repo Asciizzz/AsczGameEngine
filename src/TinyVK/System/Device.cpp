@@ -14,17 +14,17 @@ const std::vector<const char*> Device::deviceExtensions = {
 // ---------------- CONSTRUCTOR / DESTRUCTOR ----------------
 Device::Device(VkInstance instance, VkSurfaceKHR surface) {
     pickPhysicalDevice(instance, surface);
-    createLogicalDevice();
+    createLogicadevice();
     createDefaultCommandPools();
 }
 
 Device::~Device() {
-    if (lDevice != VK_NULL_HANDLE) {
-        vkDestroyCommandPool(lDevice, graphicsPoolWrapper.pool, nullptr);
-        vkDestroyCommandPool(lDevice, presentPoolWrapper.pool, nullptr);
-        vkDestroyCommandPool(lDevice, computePoolWrapper.pool, nullptr);
-        vkDestroyCommandPool(lDevice, transferPoolWrapper.pool, nullptr);
-        vkDestroyDevice(lDevice, nullptr);
+    if (device != VK_NULL_HANDLE) {
+        vkDestroyCommandPool(device, graphicsPoolWrapper.pool, nullptr);
+        vkDestroyCommandPool(device, presentPoolWrapper.pool, nullptr);
+        vkDestroyCommandPool(device, computePoolWrapper.pool, nullptr);
+        vkDestroyCommandPool(device, transferPoolWrapper.pool, nullptr);
+        vkDestroyDevice(device, nullptr);
     }
 }
 
@@ -49,7 +49,7 @@ void Device::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
 }
 
 // ---------------- LOGICAL DEVICE ----------------
-void Device::createLogicalDevice() {
+void Device::createLogicadevice() {
     std::set<uint32_t> uniqueFamilies = {
         queueFamilyIndices.graphicsFamily.value(),
         queueFamilyIndices.presentFamily.value(),
@@ -92,31 +92,31 @@ void Device::createLogicalDevice() {
     ci.ppEnabledExtensionNames = deviceExtensions.data();
     ci.pNext = &vk12Features;
 
-    if (vkCreateDevice(pDevice, &ci, nullptr, &lDevice) != VK_SUCCESS)
-        throw std::runtime_error("Failed to create logical lDevice");
+    if (vkCreateDevice(pDevice, &ci, nullptr, &device) != VK_SUCCESS)
+        throw std::runtime_error("Failed to create logical device");
 
     // Queues
-    vkGetDeviceQueue(lDevice, queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
-    vkGetDeviceQueue(lDevice, queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
-    vkGetDeviceQueue(lDevice, queueFamilyIndices.transferFamily.value_or(queueFamilyIndices.graphicsFamily.value()), 0, &transferQueue);
-    vkGetDeviceQueue(lDevice, queueFamilyIndices.computeFamily.value_or(queueFamilyIndices.graphicsFamily.value()), 0, &computeQueue);
+    vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily.value(), 0, &graphicsQueue);
+    vkGetDeviceQueue(device, queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
+    vkGetDeviceQueue(device, queueFamilyIndices.transferFamily.value_or(queueFamilyIndices.graphicsFamily.value()), 0, &transferQueue);
+    vkGetDeviceQueue(device, queueFamilyIndices.computeFamily.value_or(queueFamilyIndices.graphicsFamily.value()), 0, &computeQueue);
 }
 
 // ---------------- QUEUE FAMILY ----------------
-QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice lDevice, VkSurfaceKHR surface) {
+QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
     QueueFamilyIndices indices;
 
     uint32_t count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(lDevice, &count, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, nullptr);
     std::vector<VkQueueFamilyProperties> families(count);
-    vkGetPhysicalDeviceQueueFamilyProperties(lDevice, &count, families.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, families.data());
 
     int i = 0;
     for (auto& f : families) {
         if (f.queueFlags & VK_QUEUE_GRAPHICS_BIT) indices.graphicsFamily = i;
 
         VkBool32 present = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(lDevice, i, surface, &present);
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &present);
         if (present) indices.presentFamily = i;
 
         if ((f.queueFlags & VK_QUEUE_COMPUTE_BIT) && !(f.queueFlags & VK_QUEUE_GRAPHICS_BIT))
@@ -136,24 +136,24 @@ QueueFamilyIndices Device::findQueueFamilies(VkPhysicalDevice lDevice, VkSurface
     return indices;
 }
 
-bool Device::isDeviceSuitable(VkPhysicalDevice lDevice, VkSurfaceKHR surface) {
-    QueueFamilyIndices indices = findQueueFamilies(lDevice, surface);
-    bool extensionsOk = checkDeviceExtensionSupport(lDevice);
+bool Device::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+    QueueFamilyIndices indices = findQueueFamilies(device, surface);
+    bool extensionsOk = checkDeviceExtensionSupport(device);
 
     uint32_t fmtCount = 0, presentCount = 0;
     if (extensionsOk) {
-        vkGetPhysicalDeviceSurfaceFormatsKHR(lDevice, surface, &fmtCount, nullptr);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(lDevice, surface, &presentCount, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &fmtCount, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentCount, nullptr);
     }
 
     return indices.isComplete() && extensionsOk && fmtCount > 0 && presentCount > 0;
 }
 
-bool Device::checkDeviceExtensionSupport(VkPhysicalDevice lDevice) {
+bool Device::checkDeviceExtensionSupport(VkPhysicalDevice device) {
     uint32_t extCount = 0;
-    vkEnumerateDeviceExtensionProperties(lDevice, nullptr, &extCount, nullptr);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extCount, nullptr);
     std::vector<VkExtensionProperties> available(extCount);
-    vkEnumerateDeviceExtensionProperties(lDevice, nullptr, &extCount, available.data());
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extCount, available.data());
 
     std::set<std::string> required(deviceExtensions.begin(), deviceExtensions.end());
     for (auto& ext : available) required.erase(ext.extensionName);
@@ -168,7 +168,7 @@ Device::PoolWrapper Device::createCommandPool(QueueFamilyType type, VkCommandPoo
     ci.flags = flags;
 
     VkCommandPool pool;
-    if (vkCreateCommandPool(lDevice, &ci, nullptr, &pool) != VK_SUCCESS)
+    if (vkCreateCommandPool(device, &ci, nullptr, &pool) != VK_SUCCESS)
         throw std::runtime_error("Failed to create command pool");
 
     return { pool, type };

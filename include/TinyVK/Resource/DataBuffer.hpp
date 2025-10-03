@@ -46,7 +46,7 @@ public:
     DataBuffer& setMemPropFlags(VkMemoryPropertyFlags flags);
 
     DataBuffer& createBuffer(const Device* deviceVK);
-    DataBuffer& createBuffer(VkDevice lDevice, VkPhysicalDevice pDevice);
+    DataBuffer& createBuffer(VkDevice device, VkPhysicalDevice pDevice);
 
     DataBuffer& copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount);
 
@@ -73,7 +73,7 @@ public:
     }
 
 private:
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     void* mapped = nullptr;

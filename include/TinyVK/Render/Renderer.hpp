@@ -75,7 +75,7 @@ private:
     UniquePtr<RenderPass> mainRenderPass;      // For final presentation
     UniquePtr<RenderPass> offscreenRenderPass; // For scene rendering
     UniquePtr<RenderPass> imguiRenderPass;     // For ImGui overlay rendering (preserves content)
-    
+
     UniquePtr<PostProcess> postProcess;
 
     UniquePtrVec<FrameBuffer> framebuffers;

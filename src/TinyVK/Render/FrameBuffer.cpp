@@ -34,39 +34,39 @@ FrameBuffer::~FrameBuffer() {
     cleanup();
 }
 void FrameBuffer::cleanup() {
-    if (lDevice != VK_NULL_HANDLE && framebuffer != VK_NULL_HANDLE) {
-        vkDestroyFramebuffer(lDevice, framebuffer, nullptr);
+    if (device != VK_NULL_HANDLE && framebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(device, framebuffer, nullptr);
         framebuffer = VK_NULL_HANDLE;
     }
 }
 
 FrameBuffer::FrameBuffer(FrameBuffer&& other) noexcept
-    : lDevice(other.lDevice)
+    : device(other.device)
     , framebuffer(other.framebuffer) {
     
     // Reset other object
-    other.lDevice = VK_NULL_HANDLE;
+    other.device = VK_NULL_HANDLE;
     other.framebuffer = VK_NULL_HANDLE;
 }
 FrameBuffer& FrameBuffer::operator=(FrameBuffer&& other) noexcept {
     if (this != &other) {
         cleanup();
 
-        lDevice = other.lDevice;
+        device = other.device;
         framebuffer = other.framebuffer;
 
         // Reset other object
-        other.lDevice = VK_NULL_HANDLE;
+        other.device = VK_NULL_HANDLE;
         other.framebuffer = VK_NULL_HANDLE;
     }
     return *this;
 }
 
 
-bool FrameBuffer::create(VkDevice lDevice, const FrameBufferConfig& config) {
+bool FrameBuffer::create(VkDevice device, const FrameBufferConfig& config) {
     cleanup();
 
-    this->lDevice = lDevice;
+    this->device = device;
 
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -77,7 +77,7 @@ bool FrameBuffer::create(VkDevice lDevice, const FrameBufferConfig& config) {
     framebufferInfo.height = config.extent.height;
     framebufferInfo.layers = config.layers;
 
-    if (vkCreateFramebuffer(lDevice, &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) {
+    if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to create framebuffer!");
 
         framebuffer = VK_NULL_HANDLE;

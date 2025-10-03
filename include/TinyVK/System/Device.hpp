@@ -72,8 +72,8 @@ public:
     Device& operator=(const Device&) = delete;
 
     // Vulkan objects
+    VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice pDevice = VK_NULL_HANDLE;
-    VkDevice lDevice = VK_NULL_HANDLE;
 
     // Queues
     VkQueue graphicsQueue = VK_NULL_HANDLE;
@@ -103,10 +103,10 @@ public:
 
 private:
     void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
-    void createLogicalDevice();
-    bool isDeviceSuitable(VkPhysicalDevice lDevice, VkSurfaceKHR surface);
-    bool checkDeviceExtensionSupport(VkPhysicalDevice lDevice);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice lDevice, VkSurfaceKHR surface);
+    void createLogicadevice();
+    bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 };
 
 } // namespace TinyVK

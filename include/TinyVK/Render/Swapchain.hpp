@@ -51,7 +51,7 @@ public:
     void createSwapChain(SDL_Window* window);
     void createImageViews();
 
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice lDevice);
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, SDL_Window* window);

@@ -34,10 +34,10 @@ public:
 
     bool isValid() const { return framebuffer != VK_NULL_HANDLE; }
 
-    bool create(VkDevice lDevice, const FrameBufferConfig& config);
+    bool create(VkDevice device, const FrameBufferConfig& config);
 
 private:
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
 };
 

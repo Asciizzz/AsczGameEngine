@@ -15,17 +15,17 @@ std::vector<char> PipelineCore::readFile(const std::string& path) {
     return buf;
 }
 
-VkShaderModule PipelineCore::createModule(VkDevice lDevice, const std::vector<char>& code) {
+VkShaderModule PipelineCore::createModule(VkDevice device, const std::vector<char>& code) {
     VkShaderModuleCreateInfo ci{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
     ci.codeSize = code.size();
     ci.pCode = reinterpret_cast<const uint32_t*>(code.data());
     VkShaderModule m{};
-    if (vkCreateShaderModule(lDevice, &ci, nullptr, &m) != VK_SUCCESS)
+    if (vkCreateShaderModule(device, &ci, nullptr, &m) != VK_SUCCESS)
         throw std::runtime_error("failed to create shader module");
     return m;
 }
 
-VkShaderModule PipelineCore::createModuleFromPath(VkDevice lDevice, const std::string& path) {
+VkShaderModule PipelineCore::createModuleFromPath(VkDevice device, const std::string& path) {
     auto code = readFile(path);
-    return createModule(lDevice, code);
+    return createModule(device, code);
 }

@@ -35,7 +35,7 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
             .withExtent(swapchain->getExtent());
 
         UniquePtr<FrameBuffer> framebuffer = std::make_unique<FrameBuffer>();
-        bool success = framebuffer->create(deviceVK->lDevice, fbConfig);
+        bool success = framebuffer->create(deviceVK->device, fbConfig);
         if (!success) throw std::runtime_error("Failed to create framebuffer");
 
         framebuffers.push_back(std::move(framebuffer));
@@ -46,19 +46,19 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
 }
 
 Renderer::~Renderer() {
-    VkDevice lDevice = deviceVK->lDevice;
+    VkDevice device = deviceVK->device;
 
     for (size_t i = 0; i < maxFramesInFlight; ++i) {
-        if (inFlightFences[i])           vkDestroyFence(    lDevice, inFlightFences[i],           nullptr);
-        if (imageAvailableSemaphores[i]) vkDestroySemaphore(lDevice, imageAvailableSemaphores[i], nullptr);
+        if (inFlightFences[i])           vkDestroyFence(    device, inFlightFences[i],           nullptr);
+        if (imageAvailableSemaphores[i]) vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
     }
     for (size_t i = 0; i < renderFinishedSemaphores.size(); ++i) {
-        if (renderFinishedSemaphores[i]) vkDestroySemaphore(lDevice, renderFinishedSemaphores[i], nullptr);
+        if (renderFinishedSemaphores[i]) vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
     }
 }
 
 void Renderer::createCommandBuffers() {
-    cmdBuffers.create(deviceVK->lDevice, deviceVK->graphicsPoolWrapper.pool, maxFramesInFlight);
+    cmdBuffers.create(deviceVK->device, deviceVK->graphicsPoolWrapper.pool, maxFramesInFlight);
 }
 
 void Renderer::createSyncObjects() {
@@ -79,15 +79,15 @@ void Renderer::createSyncObjects() {
 
     // per-frame acquire + fence
     for (size_t i = 0; i < maxFramesInFlight; ++i) {
-        if (vkCreateSemaphore(deviceVK->lDevice, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(    deviceVK->lDevice, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
+        if (vkCreateSemaphore(deviceVK->device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(    deviceVK->device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-frame sync objects!");
         }
     }
 
     // per-image render-finished
     for (size_t i = 0; i < swapchainImageCount; ++i) {
-        if (vkCreateSemaphore(deviceVK->lDevice, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+        if (vkCreateSemaphore(deviceVK->device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-image renderFinished semaphore!");
         }
     }
@@ -98,26 +98,31 @@ void Renderer::recreateRenderPasses() {
 }
 
 void Renderer::createRenderPasses() {
-    VkDevice lDevice = deviceVK->lDevice;
-    VkPhysicalDevice pDevice = deviceVK->pDevice;
+    VkDevice device = deviceVK->device;
     
     // Create main render pass for final presentation to swapchain
-    auto mainRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapchain->getImageFormat()
+    auto mainRenderPassConfig = RenderPassConfig::forwardRendering(
+        swapchain->getImageFormat(), 
+        depthManager->getDepthFormat()
     );
-    mainRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, mainRenderPassConfig);
-    
+
+    mainRenderPass = MakeUnique<RenderPass>(device, mainRenderPassConfig);
+
     // Create offscreen render pass for scene rendering (use ping-pong image format)
-    auto offscreenRenderPassConfig = RenderPassConfig::createPostProcessConfig(
-        VK_FORMAT_R8G8B8A8_UNORM  // Match the ping-pong image format
+    auto offscreenRenderPassConfig = RenderPassConfig::offscreenRendering(
+        VK_FORMAT_R8G8B8A8_UNORM,  // Match ping-pong image format
+        depthManager->getDepthFormat()
     );
-    offscreenRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, offscreenRenderPassConfig);
+
+    offscreenRenderPass = MakeUnique<RenderPass>(device, offscreenRenderPassConfig);
 
     // Create ImGui render pass that preserves existing framebuffer content
-    auto imguiRenderPassConfig = RenderPassConfig::createImGuiConfig(
-        swapchain->getImageFormat()
+    auto imguiRenderPassConfig = RenderPassConfig::imguiOverlay(
+        swapchain->getImageFormat(),
+        depthManager->getDepthFormat()
     );
-    imguiRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, imguiRenderPassConfig);
+
+    imguiRenderPass = MakeUnique<RenderPass>(device, imguiRenderPassConfig);
 }
 
 VkRenderPass Renderer::getMainRenderPass() const {
@@ -146,7 +151,7 @@ VkCommandBuffer Renderer::getCurrentCommandBuffer() const {
 
 void Renderer::handleWindowResize(SDL_Window* window) {
     // Wait for device to be idle
-    vkDeviceWaitIdle(deviceVK->lDevice);
+    vkDeviceWaitIdle(deviceVK->device);
     
     // Get new window dimensions for depth resources
     int newWidth, newHeight;
@@ -173,11 +178,11 @@ void Renderer::handleWindowResize(SDL_Window* window) {
 // Begin frame: handle synchronization, image acquisition, and render pass setup
 uint32_t Renderer::beginFrame() {
     // Wait for the current frame's fence
-    vkWaitForFences(deviceVK->lDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(deviceVK->device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex = UINT32_MAX;
     VkResult acquire = vkAcquireNextImageKHR(
-        deviceVK->lDevice, swapchain->swapchain, UINT64_MAX,
+        deviceVK->device, swapchain->swapchain, UINT64_MAX,
         imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if (acquire == VK_ERROR_OUT_OF_DATE_KHR) { framebufferResized = true; return UINT32_MAX; }
@@ -186,11 +191,11 @@ uint32_t Renderer::beginFrame() {
 
     // CRITICAL: If this image is still being used by another frame, wait for that frame's completion
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-        vkWaitForFences(deviceVK->lDevice, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(deviceVK->device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
     }
     
     // Reset the current frame's fence ONLY after we're sure the image is free
-    vkResetFences(deviceVK->lDevice, 1, &inFlightFences[currentFrame]);
+    vkResetFences(deviceVK->device, 1, &inFlightFences[currentFrame]);
     
     // Now assign this image to the current frame
     imagesInFlight[imageIndex] = inFlightFences[currentFrame];

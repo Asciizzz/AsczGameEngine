@@ -69,7 +69,7 @@ struct ImageConfig {
     ImageConfig& withSamples(VkSampleCountFlagBits sampleCount);
     ImageConfig& withTiling(VkImageTiling imageTiling);
     ImageConfig& withPhysicalDevice(VkPhysicalDevice pDevice);
-    
+
     ImageConfig& withAutoMipLevels();
 };
 
@@ -111,10 +111,10 @@ public:
     };
 
     ImageVK() = default;
-    ImageVK(VkDevice lDevice);
-    ImageVK(const Device* device);
-    ImageVK& init(VkDevice lDevice);
-    ImageVK& init(const Device* device);
+    ImageVK(VkDevice device);
+    ImageVK(const Device* deviceVK);
+    ImageVK& init(VkDevice device);
+    ImageVK& init(const Device* deviceVK);
 
     ~ImageVK() { cleanup(); }
     void cleanup();
@@ -156,7 +156,7 @@ public:
 private:
     friend class TextureVK;
 
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
 
     VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
@@ -210,9 +210,10 @@ struct SamplerConfig {
 class SamplerVK {
 public:
     SamplerVK() = default;
-    SamplerVK(VkDevice lDevice);
-    SamplerVK& init(VkDevice lDevice);
-    SamplerVK& init(const Device* device);
+    SamplerVK(VkDevice device);
+    SamplerVK(const Device* deviceVK);
+    SamplerVK& init(VkDevice device);
+    SamplerVK& init(const Device* deviceVK);
 
     ~SamplerVK() { cleanup(); }
     void cleanup();
@@ -233,7 +234,7 @@ public:
     bool isValid() const { return sampler != VK_NULL_HANDLE; }
 
 private:
-    VkDevice lDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
     VkSampler sampler = VK_NULL_HANDLE;
 
     // Helper to clamp anisotropy to device limits
@@ -244,9 +245,10 @@ private:
 class TextureVK {
 public:
     TextureVK() = default;
-    TextureVK(VkDevice lDevice);
-    TextureVK& init(VkDevice lDevice);
-    TextureVK& init(const Device* device);
+    TextureVK(VkDevice device);
+    TextureVK(const Device* deviceVK);
+    TextureVK& init(VkDevice device);
+    TextureVK& init(const Device* deviceVK);
 
     TextureVK(const TextureVK&) = delete;
     TextureVK& operator=(const TextureVK&) = delete;
