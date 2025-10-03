@@ -386,7 +386,7 @@ bool PipelineManager::hasPipelineInstance(const std::string& name) const {
 
 void PipelineManager::recreateAllPipelines(VkRenderPass newRenderPass) {
     for (auto& [name, pipeline] : pipelineInstances) {
-        pipeline->setRenderPass(newRenderPass);
+        pipeline->withRenderPass(newRenderPass);
         pipeline->recreate();
     }
 }

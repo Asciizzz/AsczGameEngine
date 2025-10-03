@@ -8,6 +8,30 @@
 
 namespace TinyVK {
 
+// Forward declarations
+class ImageVK;
+
+/**
+ * @brief Represents a single render attachment with Vulkan resources and clear value
+ */
+struct RenderAttachment {
+    VkImage image = VK_NULL_HANDLE;
+    VkImageView view = VK_NULL_HANDLE;
+    VkClearValue clearValue{};
+    
+    // Constructors - moved to implementation for forward declaration support
+    RenderAttachment();
+    RenderAttachment(VkImage img, VkImageView v);
+    RenderAttachment(VkImage img, VkImageView v, VkClearValue clear);
+    RenderAttachment(const ImageVK& imageVK, VkClearValue clear = {});
+    
+    // Copy and move operations
+    RenderAttachment(const RenderAttachment&) = default;
+    RenderAttachment& operator=(const RenderAttachment&) = default;
+    RenderAttachment(RenderAttachment&&) = default;
+    RenderAttachment& operator=(RenderAttachment&&) = default;
+};
+
 /**
  * @brief Lightweight wrapper that references existing Vulkan resources for rendering
  * 
@@ -25,29 +49,11 @@ namespace TinyVK {
  */
 class RenderTarget {
 public:
-    struct Attachment {
-        VkImage image = VK_NULL_HANDLE;
-        VkImageView view = VK_NULL_HANDLE;
-        VkClearValue clearValue{};
-        
-        Attachment() = default;
-        Attachment(VkImage img, VkImageView v) : image(img), view(v) {}
-        Attachment(VkImage img, VkImageView v, VkClearValue clear) 
-            : image(img), view(v), clearValue(clear) {}
-    };
-
-    // Constructors - all non-owning, just storing references
-    RenderTarget() = default;
-    
-    // Simple constructor with attachments
-    RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent)
-        : renderPass(renderPass), framebuffer(framebuffer), extent(extent) {}
-    
-    // Full constructor with attachment tracking
+    // Constructors - moved to implementation for forward declaration support
+    RenderTarget();
+    RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent);
     RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent,
-                std::vector<Attachment> attachments)
-        : renderPass(renderPass), framebuffer(framebuffer), extent(extent), 
-          attachments(std::move(attachments)) {}
+                std::vector<RenderAttachment> attachments);
 
     // Default destructor - we don't own anything
     ~RenderTarget() = default;
@@ -59,11 +65,11 @@ public:
     RenderTarget& operator=(RenderTarget&&) = default;
 
     // Setup/modification
-    void setRenderPass(VkRenderPass rp) { renderPass = rp; }
-    void setFramebuffer(VkFramebuffer fb) { framebuffer = fb; }
-    void setExtent(VkExtent2D ext) { extent = ext; }
+    void withRenderPass(VkRenderPass rp) { renderPass = rp; }
+    void withFrameBuffer(VkFramebuffer fb) { framebuffer = fb; }
+    void withExtent(VkExtent2D ext) { extent = ext; }
     
-    void addAttachment(const Attachment& attachment) { attachments.push_back(attachment); }
+    void addAttachment(const RenderAttachment& attachment) { attachments.push_back(attachment); }
     void addAttachment(VkImage image, VkImageView view, VkClearValue clearValue = {}) {
         attachments.emplace_back(image, view, clearValue);
     }
@@ -86,8 +92,8 @@ public:
     
     // Attachment access
     size_t getAttachmentCount() const { return attachments.size(); }
-    const Attachment& getAttachment(size_t index) const { return attachments[index]; }
-    const std::vector<Attachment>& getAttachments() const { return attachments; }
+    const RenderAttachment& getAttachment(size_t index) const { return attachments[index]; }
+    const std::vector<RenderAttachment>& getAttachments() const { return attachments; }
     
     // Convenience accessors (assumes standard layout: color attachments first, then depth)
     VkImage getColorImage(size_t index = 0) const { 
@@ -116,7 +122,7 @@ private:
     VkExtent2D extent{};
     
     // Dynamic attachments
-    std::vector<Attachment> attachments;
+    std::vector<RenderAttachment> attachments;
 };
 
 /**

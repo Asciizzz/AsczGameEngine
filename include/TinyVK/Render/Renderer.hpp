@@ -43,7 +43,7 @@ public:
     
     // Legacy render pass getters (for backward compatibility)
     VkRenderPass getMainRenderPass() const;
-    VkRenderPass getOffscreenRenderPass() const;
+    VkRenderPass getOffscreenRenderPass() const;  // Delegates to PostProcess
     VkRenderPass getImGuiRenderPass() const;
     
     // Swapchain getters for external access
@@ -53,6 +53,9 @@ public:
     
     // DepthManager getter for external access
     DepthManager* getDepthManager() const { return depthManager.get(); }
+    
+    // PostProcess getter for external access
+    PostProcess* getPostProcess() const { return postProcess.get(); }
 
     void drawSky(const TinyProject* project, const PipelineRaster* skyPipeline) const;
 
@@ -82,7 +85,6 @@ private:
 
     // Properly owned resources for render targets
     UniquePtr<RenderPass> mainRenderPass;
-    UniquePtr<RenderPass> offscreenRenderPass; 
     UniquePtr<RenderPass> imguiRenderPass;
     UniquePtrVec<FrameBuffer> framebuffers;
 

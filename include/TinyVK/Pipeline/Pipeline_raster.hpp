@@ -117,7 +117,7 @@ public:
     PipelineRaster(VkDevice device, RasterCfg cfg)
         : core(device), cfg(std::move(cfg)) {}
 
-    void setRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
+    void withRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
     void setDescLayouts(const std::vector<VkDescriptorSetLayout>& layouts) { cfg.setLayouts = layouts; }
     void setPushConstantRanges(const std::vector<VkPushConstantRange>& ranges) { cfg.pushConstantRanges = ranges; }
 

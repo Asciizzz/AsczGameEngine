@@ -58,7 +58,7 @@ struct RenderPassConfig {
     std::vector<VkSubpassDependency> dependencies;
 
     // Fluent builder interface
-    RenderPassConfig& withAttachment(const AttachmentConfig& attachment);
+    RenderPassConfig& addAttachment(const AttachmentConfig& attachment);
     RenderPassConfig& withSubpass(const SubpassConfig& subpass);
     RenderPassConfig& withDependency(const VkSubpassDependency& dependency);
     RenderPassConfig& withStandardDependency();

@@ -12,8 +12,8 @@ struct FrameBufferConfig {
     uint32_t layers = 1;
 
     FrameBufferConfig& withRenderPass(VkRenderPass rp);
-    FrameBufferConfig& withAttachment(VkImageView att);
-    FrameBufferConfig& withAttachments(const std::vector<VkImageView>& atts);
+    FrameBufferConfig& addAttachment(VkImageView att);
+    FrameBufferConfig& addAttachments(const std::vector<VkImageView>& atts);
     FrameBufferConfig& withExtent(VkExtent2D ext);
     FrameBufferConfig& withExtent(uint32_t width, uint32_t height);
     FrameBufferConfig& withLayers(uint32_t layers);

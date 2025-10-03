@@ -15,15 +15,10 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
     depthManager = MakeUnique<DepthManager>(deviceVK);
     depthManager->createDepthResources(swapchain->getExtent());
 
-    createRenderTargets();
-
     postProcess = MakeUnique<PostProcess>(deviceVK, swapchain.get(), depthManager.get());
-    auto* offscreenTarget = renderTargets.getTarget("offscreen");
-    if (offscreenTarget) {
-        postProcess->initialize(offscreenTarget->getRenderPass());
-    } else {
-        throw std::runtime_error("Failed to create offscreen render target");
-    }
+    postProcess->initialize();  // PostProcess now manages its own render pass
+
+    createRenderTargets();
 
     createCommandBuffers();
     createSyncObjects();
@@ -99,21 +94,11 @@ void Renderer::createRenderTargets() {
     );
     mainRenderPass = MakeUnique<RenderPass>(device, mainRenderPassConfig);
 
-    auto offscreenRenderPassConfig = RenderPassConfig::offscreenRendering(
-        VK_FORMAT_R8G8B8A8_UNORM,
-        depthManager->getDepthFormat()
-    );
-    offscreenRenderPass = MakeUnique<RenderPass>(device, offscreenRenderPassConfig);
-
     auto imguiRenderPassConfig = RenderPassConfig::imguiOverlay(
         swapchain->getImageFormat(),
         depthManager->getDepthFormat()
     );
     imguiRenderPass = MakeUnique<RenderPass>(device, imguiRenderPassConfig);
-    
-    // Create offscreen render target (PostProcess will manage its framebuffer)
-    RenderTarget offscreenTarget(offscreenRenderPass->get(), VK_NULL_HANDLE, extent);
-    renderTargets.addTarget("offscreen", offscreenTarget);
     
     // Create swapchain framebuffers and render targets
     framebuffers.reserve(swapchain->getImageCount());
@@ -121,8 +106,8 @@ void Renderer::createRenderTargets() {
         // Create framebuffer for this swapchain image
         FrameBufferConfig fbConfig = FrameBufferConfig()
             .withRenderPass(mainRenderPass->get())
-            .withAttachment(swapchain->getImageView(i))
-            .withAttachment(depthManager->getDepthImageView())
+            .addAttachment(swapchain->getImageView(i))
+            .addAttachment(depthManager->getDepthImageView())
             .withExtent(extent);
 
         auto framebuffer = MakeUnique<FrameBuffer>(device);
@@ -164,7 +149,7 @@ VkRenderPass Renderer::getMainRenderPass() const {
 }
 
 VkRenderPass Renderer::getOffscreenRenderPass() const {
-    return offscreenRenderPass ? offscreenRenderPass->get() : VK_NULL_HANDLE;
+    return postProcess ? postProcess->getOffscreenRenderPass() : VK_NULL_HANDLE;
 }
 
 VkRenderPass Renderer::getImGuiRenderPass() const {
@@ -205,10 +190,6 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     
     // Use PostProcess's existing recreate method - it will preserve effects internally
     if (postProcess) {
-        auto* offscreenTarget = renderTargets.getTarget("offscreen");
-        if (offscreenTarget) {
-            postProcess->setOffscreenRenderPass(offscreenTarget->getRenderPass());
-        }
         postProcess->recreate();
     }
 }
@@ -246,34 +227,14 @@ uint32_t Renderer::beginFrame() {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    // Start rendering to offscreen target
-    currentRenderTarget = renderTargets.getTarget("offscreen");
+    // Start rendering to PostProcess's offscreen target
+    currentRenderTarget = postProcess->getOffscreenRenderTarget(currentFrame);
     if (!currentRenderTarget) {
-        throw std::runtime_error("Offscreen render target not found!");
+        throw std::runtime_error("PostProcess offscreen render target not found!");
     }
-    
-    // For now, we still need to use PostProcess framebuffer since offscreen target isn't fully set up
-    // TODO: Fix this when we properly integrate PostProcess with RenderTarget
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = postProcess->getOffscreenRenderPass();
-    renderPassInfo.framebuffer = postProcess->getOffscreenFrameBuffer(currentFrame);
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapchain->getExtent();
 
-    // Clear values to match render pass attachment order: [color, depth]
-    uint32_t clearValueCount = 2;
-
-    std::vector<VkClearValue> clearValues(clearValueCount);
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};    // Color attachment (index 0)
-    clearValues[1].depthStencil = {1.0f, 0};               // Depth attachment (index 1)
-
-    renderPassInfo.clearValueCount = clearValueCount;
-    renderPassInfo.pClearValues = clearValues.data();
-
-    vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    // Use render target for viewport/scissor setup
+    // Begin render pass using RenderTarget wrapper
+    currentRenderTarget->beginRenderPass(currentCmd);
     currentRenderTarget->setViewportAndScissor(currentCmd);
 
     return imageIndex;
@@ -420,7 +381,12 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
     VkCommandBuffer currentCmd = getCurrentCommandBuffer();
 
     // End the offscreen render pass first before post-processing
-    vkCmdEndRenderPass(currentCmd);
+    if (currentRenderTarget) {
+        currentRenderTarget->endRenderPass(currentCmd);
+        currentRenderTarget = nullptr;
+    } else {
+        vkCmdEndRenderPass(currentCmd);
+    }
 
     postProcess->executeEffects(currentCmd, currentFrame);
     postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);

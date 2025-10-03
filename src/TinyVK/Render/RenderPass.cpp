@@ -193,7 +193,7 @@ SubpassConfig SubpassConfig::multipleRenderTargets(const std::vector<uint32_t>& 
 }
 
 // RenderPassConfig fluent interface implementations
-RenderPassConfig& RenderPassConfig::withAttachment(const AttachmentConfig& attachment) {
+RenderPassConfig& RenderPassConfig::addAttachment(const AttachmentConfig& attachment) {
     attachments.push_back(attachment);
     return *this;
 }
@@ -234,24 +234,24 @@ RenderPassConfig& RenderPassConfig::withImGuiDependency() {
 
 RenderPassConfig RenderPassConfig::forwardRendering(VkFormat colorFormat, VkFormat depthFormat) {
     return RenderPassConfig()
-        .withAttachment(AttachmentConfig().withFormat(colorFormat).asPresent())
-        .withAttachment(AttachmentConfig().withFormat(depthFormat).asDepthAttachment())
+        .addAttachment(AttachmentConfig().withFormat(colorFormat).asPresent())
+        .addAttachment(AttachmentConfig().withFormat(depthFormat).asDepthAttachment())
         .withSubpass(SubpassConfig::simple(0, 1))
         .withStandardDependency();
 }
 
 RenderPassConfig RenderPassConfig::offscreenRendering(VkFormat colorFormat, VkFormat depthFormat) {
     return RenderPassConfig()
-        .withAttachment(AttachmentConfig().withFormat(colorFormat).asGeneral())
-        .withAttachment(AttachmentConfig().withFormat(depthFormat).asDepthAttachment())
+        .addAttachment(AttachmentConfig().withFormat(colorFormat).asGeneral())
+        .addAttachment(AttachmentConfig().withFormat(depthFormat).asDepthAttachment())
         .withSubpass(SubpassConfig::simple(0, 1))
         .withStandardDependency();
 }
 
 RenderPassConfig RenderPassConfig::imguiOverlay(VkFormat colorFormat, VkFormat depthFormat) {
     return RenderPassConfig()
-        .withAttachment(AttachmentConfig().withFormat(colorFormat).preserveContent().asPresent())
-        .withAttachment(AttachmentConfig().withFormat(depthFormat).dontCare().asDepthAttachment())
+        .addAttachment(AttachmentConfig().withFormat(colorFormat).preserveContent().asPresent())
+        .addAttachment(AttachmentConfig().withFormat(depthFormat).dontCare().asDepthAttachment())
         .withSubpass(SubpassConfig::simple(0, 1))
         .withStandardDependency();
 }

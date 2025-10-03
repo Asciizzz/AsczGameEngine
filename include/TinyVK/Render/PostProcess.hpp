@@ -11,6 +11,8 @@
 #include "TinyVK/Resource/Descriptor.hpp"
 
 #include "TinyVK/Render/FrameBuffer.hpp"
+#include "TinyVK/Render/RenderTarget.hpp"
+#include "TinyVK/Render/RenderPass.hpp"
 
 namespace TinyVK {
 
@@ -47,8 +49,8 @@ public:
     PostProcess(const PostProcess&) = delete;
     PostProcess& operator=(const PostProcess&) = delete;
 
-    // Initialize post-process resources with external render pass
-    void initialize(VkRenderPass offscreenRenderPass);
+    // Initialize post-process resources (creates own render pass)
+    void initialize();
     
     // Add a post-process effect
     void addEffect(const std::string& name, const std::string& computeShaderPath);
@@ -57,12 +59,12 @@ public:
     // Load effects from JSON configuration file
     void loadEffectsFromJson(const std::string& configPath);
     
-    // Get offscreen framebuffer for scene rendering
-    VkFramebuffer getOffscreenFrameBuffer(uint32_t frameIndex) const;
-    VkRenderPass getOffscreenRenderPass() const { return offscreenRenderPass; }
+    // Get offscreen render target for scene rendering
+    RenderTarget* getOffscreenRenderTarget(uint32_t frameIndex);
+    VkRenderPass getOffscreenRenderPass() const { return offscreenRenderPass ? offscreenRenderPass->get() : VK_NULL_HANDLE; }
     
-    // Set the offscreen render pass (called by Renderer)
-    void setOffscreenRenderPass(VkRenderPass renderPass) { offscreenRenderPass = renderPass; }
+    // Legacy compatibility - get framebuffer directly
+    VkFramebuffer getOffscreenFrameBuffer(uint32_t frameIndex) const;
     
     // Execute all post-process effects
     void executeEffects(VkCommandBuffer cmd, uint32_t frameIndex);
@@ -89,8 +91,12 @@ private:
     // Sampler
     UniquePtr<SamplerVK> sampler;
 
-    VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
+    // Owned offscreen render pass
+    UniquePtr<RenderPass> offscreenRenderPass;
     UniquePtrVec<FrameBuffer> offscreenFrameBuffers;
+    
+    // RenderTarget management
+    std::vector<RenderTarget> offscreenRenderTargets;
 
     OrderedMap<std::string, UniquePtr<PostProcessEffect>> effects;
 
@@ -100,8 +106,10 @@ private:
     UniquePtrVec<DescSet> descSets;
 
     // Helper methods
+    void createOffscreenRenderPass();
     void createPingPongImages();
     void createOffscreenFrameBuffers();
+    void createOffscreenRenderTargets();
     void createSampler();
     void createSharedDescriptors();
     void createFinalBlit();

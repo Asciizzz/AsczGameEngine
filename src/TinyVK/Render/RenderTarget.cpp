@@ -1,6 +1,30 @@
 #include "TinyVK/Render/RenderTarget.hpp"
+#include "TinyVK/Resource/TextureVK.hpp"
 
 using namespace TinyVK;
+
+// RenderAttachment constructors
+RenderAttachment::RenderAttachment() = default;
+
+RenderAttachment::RenderAttachment(VkImage img, VkImageView v) 
+    : image(img), view(v) {}
+
+RenderAttachment::RenderAttachment(VkImage img, VkImageView v, VkClearValue clear) 
+    : image(img), view(v), clearValue(clear) {}
+
+RenderAttachment::RenderAttachment(const ImageVK& imageVK, VkClearValue clear) 
+    : image(imageVK.getImage()), view(imageVK.getView()), clearValue(clear) {}
+
+// RenderTarget constructors
+RenderTarget::RenderTarget() = default;
+
+RenderTarget::RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent)
+    : renderPass(renderPass), framebuffer(framebuffer), extent(extent) {}
+
+RenderTarget::RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent,
+                          std::vector<RenderAttachment> attachments)
+    : renderPass(renderPass), framebuffer(framebuffer), extent(extent), 
+      attachments(std::move(attachments)) {}
 
 void RenderTarget::beginRenderPass(VkCommandBuffer cmd, VkSubpassContents contents) const {
     if (!isValid()) return;

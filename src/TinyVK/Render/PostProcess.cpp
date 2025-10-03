@@ -24,9 +24,7 @@ PostProcess::~PostProcess() {
     cleanup();
 }
 
-void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
-    this->offscreenRenderPass = offscreenRenderPass;
-    
+void PostProcess::initialize() {
     // CRITICAL: Ensure device is idle before creating resources
     vkDeviceWaitIdle(deviceVK->device);
     
@@ -40,11 +38,23 @@ void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
         throw std::runtime_error("PostProcess: Invalid swapchain dimensions");
     }
 
+    createOffscreenRenderPass();
     createSampler();
     createPingPongImages();
     createOffscreenFrameBuffers();
+    createOffscreenRenderTargets();
     createSharedDescriptors();
     createFinalBlit();
+}
+
+void PostProcess::createOffscreenRenderPass() {
+    // Create offscreen render pass for scene rendering to ping-pong images
+    VkFormat colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    VkFormat depthFormat = depthManager->getDepthFormat();
+    
+    RenderPassConfig config = RenderPassConfig::offscreenRendering(colorFormat, depthFormat);
+    
+    offscreenRenderPass = MakeUnique<RenderPass>(deviceVK->device, config);
 }
 
 void PostProcess::createPingPongImages() {
@@ -95,9 +105,9 @@ void PostProcess::createOffscreenFrameBuffers() {
         UniquePtr<FrameBuffer> framebuffer = MakeUnique<FrameBuffer>(deviceVK->device);
 
         FrameBufferConfig fbConfig = FrameBufferConfig()
-            .withRenderPass(offscreenRenderPass)
-            .withAttachment(pingPongImages[frame]->getViewA())  // Color attachment (index 0)
-            .withAttachment(depthManager->getDepthImageView())  // Depth attachment (index 1)
+            .withRenderPass(offscreenRenderPass->get())
+            .addAttachment(pingPongImages[frame]->getViewA())  // Color attachment (index 0)
+            .addAttachment(depthManager->getDepthImageView())  // Depth attachment (index 1)
             .withExtent(swapchain->getExtent());
 
         bool success = framebuffer->create(fbConfig);
@@ -105,7 +115,30 @@ void PostProcess::createOffscreenFrameBuffers() {
 
         offscreenFrameBuffers.push_back(std::move(framebuffer));
     }
+}
 
+void PostProcess::createOffscreenRenderTargets() {
+    offscreenRenderTargets.clear();
+    offscreenRenderTargets.reserve(MAX_FRAMES_IN_FLIGHT);
+    
+    for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
+        const auto& images = pingPongImages[frame];
+        
+        // Create render target with attachments
+        RenderTarget renderTarget(*offscreenRenderPass, *offscreenFrameBuffers[frame], swapchain->getExtent());
+
+        // Add color attachment (ping-pong image A)
+        VkClearValue colorClear{};
+        colorClear.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        renderTarget.addAttachment(images->getImageA(), images->getViewA(), colorClear);
+        
+        // Add depth attachment
+        VkClearValue depthClear{};
+        depthClear.depthStencil = {1.0f, 0};
+        renderTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView(), depthClear);
+        
+        offscreenRenderTargets.push_back(std::move(renderTarget));
+    }
 }
 
 void PostProcess::createSampler() {
@@ -292,6 +325,11 @@ void PostProcess::loadEffectsFromJson(const std::string& configPath) {
         std::cerr << "Error loading postprocess config: " << e.what() << std::endl;
         // Don't rethrow - allow application to continue with no effects
     }
+}
+
+RenderTarget* PostProcess::getOffscreenRenderTarget(uint32_t frameIndex) {
+    if (frameIndex >= offscreenRenderTargets.size()) return nullptr;
+    return &offscreenRenderTargets[frameIndex];
 }
 
 VkFramebuffer PostProcess::getOffscreenFrameBuffer(uint32_t frameIndex) const {
@@ -507,9 +545,11 @@ void PostProcess::recreate() {
     cleanupRenderResources();
     
     // Recreate render resources
+    createOffscreenRenderPass();
     createSampler();
     createPingPongImages();
     createOffscreenFrameBuffers();
+    createOffscreenRenderTargets();
     createSharedDescriptors();
     
     // Recreate effects from stored configurations
@@ -562,6 +602,9 @@ void PostProcess::cleanupRenderResources() {
     // Wait for device to be idle to ensure no resources are in use
     vkDeviceWaitIdle(device);
     
+    // Clear render targets first (non-owning, just clears the vector)
+    offscreenRenderTargets.clear();
+    
     // Clean up framebuffers first (before image views)
     offscreenFrameBuffers.clear();
 
@@ -575,6 +618,9 @@ void PostProcess::cleanupRenderResources() {
 
     // Destroy ping-pong images
     pingPongImages.clear();
+    
+    // Clean up owned render pass (destructor handles cleanup automatically)
+    offscreenRenderPass.reset();
 }
 
 void PostProcess::recreateEffects() {
