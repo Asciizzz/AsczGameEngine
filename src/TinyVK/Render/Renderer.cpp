@@ -10,16 +10,36 @@ using namespace TinyVK;
 Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
 : deviceVK(deviceVK), maxFramesInFlight(maxFramesInFlight) {
 
-    swapChain = MakeUnique<Swapchain>(deviceVK, surface, window);
+    swapchain = MakeUnique<Swapchain>(deviceVK, surface, window);
 
     depthManager = MakeUnique<DepthManager>(deviceVK);
-    depthManager->createDepthResources(swapChain->getExtent());
+    depthManager->createDepthResources(swapchain->getExtent());
 
     createRenderPasses();
-    swapChain->createFrameBuffers(mainRenderPass->get(), depthManager->getDepthImageView());
 
-    postProcess = MakeUnique<PostProcess>(deviceVK, swapChain.get(), depthManager.get());
+    postProcess = MakeUnique<PostProcess>(deviceVK, swapchain.get(), depthManager.get());
     postProcess->initialize(offscreenRenderPass->get());
+
+    framebuffers.clear();
+    framebuffers.reserve(swapchain->getImageCount());
+
+    for (size_t i = 0; i < swapchain->getImageCount(); ++i) {
+        std::vector<VkImageView> attachments = {
+            swapchain->getImageView(i),   // swapchain color
+            depthManager->getDepthImageView()         // depth
+        };
+
+        FrameBufferConfig fbConfig = FrameBufferConfig()
+            .withRenderPass(*mainRenderPass)
+            .withAttachments(attachments)
+            .withExtent(swapchain->getExtent());
+
+        UniquePtr<FrameBuffer> framebuffer = std::make_unique<FrameBuffer>();
+        bool success = framebuffer->create(deviceVK->lDevice, fbConfig);
+        if (!success) throw std::runtime_error("Failed to create framebuffer");
+
+        framebuffers.push_back(std::move(framebuffer));
+    }
 
     createCommandBuffers();
     createSyncObjects();
@@ -42,7 +62,7 @@ void Renderer::createCommandBuffers() {
 }
 
 void Renderer::createSyncObjects() {
-    swapchainImageCount = swapChain->images.size();
+    swapchainImageCount = swapchain->images.size();
 
     imageAvailableSemaphores.resize(maxFramesInFlight);
     inFlightFences.resize(maxFramesInFlight);
@@ -75,9 +95,6 @@ void Renderer::createSyncObjects() {
 
 void Renderer::recreateRenderPasses() {
     createRenderPasses();
-
-    VkRenderPass mainRenderPassVK = mainRenderPass->get();
-    swapChain->createFrameBuffers(mainRenderPassVK, depthManager->getDepthImageView());
 }
 
 void Renderer::createRenderPasses() {
@@ -86,7 +103,7 @@ void Renderer::createRenderPasses() {
     
     // Create main render pass for final presentation to swapchain
     auto mainRenderPassConfig = RenderPassConfig::createForwardRenderingConfig(
-        swapChain->getImageFormat()
+        swapchain->getImageFormat()
     );
     mainRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, mainRenderPassConfig);
     
@@ -98,7 +115,7 @@ void Renderer::createRenderPasses() {
 
     // Create ImGui render pass that preserves existing framebuffer content
     auto imguiRenderPassConfig = RenderPassConfig::createImGuiConfig(
-        swapChain->getImageFormat()
+        swapchain->getImageFormat()
     );
     imguiRenderPass = MakeUnique<RenderPass>(lDevice, pDevice, imguiRenderPassConfig);
 }
@@ -115,12 +132,12 @@ VkRenderPass Renderer::getImGuiRenderPass() const {
     return imguiRenderPass ? imguiRenderPass->get() : VK_NULL_HANDLE;
 }
 
-VkFramebuffer Renderer::getSwapChainFrameBuffer(uint32_t imageIndex) const {
-    return swapChain ? swapChain->getFrameBuffer(imageIndex) : VK_NULL_HANDLE;
+VkFramebuffer Renderer::getFrameBuffer(uint32_t imageIndex) const {
+    return framebuffers[imageIndex] ? framebuffers[imageIndex]->get() : VK_NULL_HANDLE;
 }
 
 VkExtent2D Renderer::getSwapChainExtent() const {
-    return swapChain ? swapChain->getExtent() : VkExtent2D{0, 0};
+    return swapchain ? swapchain->getExtent() : VkExtent2D{0, 0};
 }
 
 VkCommandBuffer Renderer::getCurrentCommandBuffer() const {
@@ -139,9 +156,9 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     depthManager->createDepthResources(newWidth, newHeight);
     
     // Now safe to cleanup and recreate Swapchain
-    swapChain->cleanup();
-    swapChain->createSwapChain(window);
-    swapChain->createImageViews();
+    swapchain->cleanup();
+    swapchain->createSwapChain(window);
+    swapchain->createImageViews();
     
     // Recreate render passes and framebuffers
     recreateRenderPasses();
@@ -160,7 +177,7 @@ uint32_t Renderer::beginFrame() {
 
     uint32_t imageIndex = UINT32_MAX;
     VkResult acquire = vkAcquireNextImageKHR(
-        deviceVK->lDevice, swapChain->swapChain, UINT64_MAX,
+        deviceVK->lDevice, swapchain->swapchain, UINT64_MAX,
         imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if (acquire == VK_ERROR_OUT_OF_DATE_KHR) { framebufferResized = true; return UINT32_MAX; }
@@ -192,7 +209,7 @@ uint32_t Renderer::beginFrame() {
     renderPassInfo.renderPass = postProcess->getOffscreenRenderPass();
     renderPassInfo.framebuffer = postProcess->getOffscreenFrameBuffer(currentFrame);
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapChain->getExtent();
+    renderPassInfo.renderArea.extent = swapchain->getExtent();
 
     // Clear values to match render pass attachment order: [color, depth]
     uint32_t clearValueCount = 2;
@@ -209,15 +226,15 @@ uint32_t Renderer::beginFrame() {
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(swapChain->getWidth());
-    viewport.height = static_cast<float>(swapChain->getHeight());
+    viewport.width = static_cast<float>(swapchain->getWidth());
+    viewport.height = static_cast<float>(swapchain->getHeight());
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(currentCmd, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = swapChain->getExtent();
+    scissor.extent = swapchain->getExtent();
     vkCmdSetScissor(currentCmd, 0, 1, &scissor);
 
     return imageIndex;
@@ -338,7 +355,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     present.waitSemaphoreCount = 1;
     present.pWaitSemaphores    = signalSemaphores;
     present.swapchainCount     = 1;
-    VkSwapchainKHR chains[]    = { swapChain->get() };
+    VkSwapchainKHR chains[]    = { swapchain->get() };
     present.pSwapchains        = chains;
     present.pImageIndices      = &imageIndex;
 
@@ -372,7 +389,7 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         toColorAttachment.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         toColorAttachment.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         toColorAttachment.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        toColorAttachment.image = swapChain->getImage(imageIndex);
+        toColorAttachment.image = swapchain->getImage(imageIndex);
         toColorAttachment.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         toColorAttachment.subresourceRange.baseMipLevel = 0;
         toColorAttachment.subresourceRange.levelCount = 1;
@@ -390,9 +407,9 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = imguiRenderPass->get();
-        renderPassInfo.framebuffer = swapChain->getFrameBuffer(imageIndex);
+        renderPassInfo.framebuffer = *framebuffers[imageIndex];
         renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = swapChain->getExtent();
+        renderPassInfo.renderArea.extent = swapchain->getExtent();
 
         // No clear - we want to preserve the blitted image
         renderPassInfo.clearValueCount = 0;
@@ -401,7 +418,7 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         // Call the ImGui render function
-        imguiRenderFunc(currentCmd, imguiRenderPass->get(), swapChain->getFrameBuffer(imageIndex));
+        imguiRenderFunc(currentCmd, imguiRenderPass->get(), *framebuffers[imageIndex]);
 
         vkCmdEndRenderPass(currentCmd);
 
@@ -437,7 +454,7 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
     present.waitSemaphoreCount = 1;
     present.pWaitSemaphores    = signalSemaphores;
     present.swapchainCount     = 1;
-    VkSwapchainKHR chains[]    = { swapChain->get() };
+    VkSwapchainKHR chains[]    = { swapchain->get() };
     present.pSwapchains        = chains;
     present.pImageIndices      = &imageIndex;
 

@@ -22,21 +22,11 @@ public:
     Swapchain(const Swapchain&) = delete;
     Swapchain& operator=(const Swapchain&) = delete;
 
-    void createFrameBuffers(VkRenderPass renderPass, VkImageView depthImageView);
-    void recreateFrameBuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView);
-    
-    VkFramebuffer getFrameBuffer(uint32_t index) const;
-
     const Device* deviceVK;
     VkSurfaceKHR surface;
 
-    VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-    VkSwapchainKHR get() const { return swapChain; }
-
-    // std::vector<VkImage> images;
-    // VkFormat imageFormat;
-    // VkExtent2D extent;
-    // std::vector<VkImageView> imageViews;
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    VkSwapchainKHR get() const { return swapchain; }
 
     std::vector<ImageVK> images;
 
@@ -56,8 +46,6 @@ public:
     bool compareExtent(const VkExtent2D& otherExtent) const {
         return otherExtent.width == getWidth() && otherExtent.height == getHeight();
     }
-
-    UniquePtrVec<FrameBuffer> framebuffers;
 
     // Helper methods 
     void createSwapChain(SDL_Window* window);

@@ -1,3 +1,12 @@
 #pragma once
 
-#include "TinyEngine/TinyProject.hpp"
+class TinyRenderer {
+public:
+    TinyRenderer() = default;
+    ~TinyRenderer() = default;
+
+    // Delete copy semantics
+    TinyRenderer(const TinyRenderer&) = delete;
+    TinyRenderer& operator=(const TinyRenderer&) = delete;
+
+};

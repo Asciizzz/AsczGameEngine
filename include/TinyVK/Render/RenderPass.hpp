@@ -41,12 +41,12 @@ struct RenderPassConfig {
     std::vector<VkSubpassDependency> dependencies;
     
     // Factory methods for common configurations
-    static RenderPassConfig createForwardRenderingConfig(VkFormat swapChainFormat);
+    static RenderPassConfig createForwardRenderingConfig(VkFormat swapchainFormat);
     static RenderPassConfig createDeferredGBufferConfig();
     static RenderPassConfig createShadowMapConfig();
     static RenderPassConfig createPostProcessConfig(VkFormat colorFormat);
     static RenderPassConfig createMSAAConfig(VkFormat colorFormat, VkFormat resolveFormat, VkSampleCountFlagBits samples);
-    static RenderPassConfig createImGuiConfig(VkFormat swapChainFormat);
+    static RenderPassConfig createImGuiConfig(VkFormat swapchainFormat);
     
     // Helper methods
     void addDefaultDependency();
@@ -71,6 +71,7 @@ public:
     RenderPassConfig config;
 
     VkRenderPass get() const { return renderPass; }
+    operator VkRenderPass() const { return renderPass; }
     
     // Getters for attachment info
     uint32_t getAttachmentCount() const { return static_cast<uint32_t>(config.attachments.size()); }

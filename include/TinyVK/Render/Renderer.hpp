@@ -42,7 +42,7 @@ public:
     VkRenderPass getImGuiRenderPass() const;
     
     // Swapchain getters for external access
-    Swapchain* getSwapChain() const { return swapChain.get(); }
+    Swapchain* getSwapChain() const { return swapchain.get(); }
     VkExtent2D getSwapChainExtent() const;
     uint32_t getSwapChainImageCount() const { return static_cast<uint32_t>(swapchainImageCount); }
     
@@ -54,7 +54,7 @@ public:
     void drawScene(const TinyProject* project, const PipelineRaster* rPipeline) const;
 
     // Get swapchain framebuffer for external ImGui rendering
-    VkFramebuffer getSwapChainFrameBuffer(uint32_t imageIndex) const;
+    VkFramebuffer getFrameBuffer(uint32_t imageIndex) const;
 
     // Post-processing methods
     void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
@@ -68,15 +68,17 @@ private:
     Device* deviceVK;
     
     // Owned components
-    UniquePtr<Swapchain> swapChain;
+    UniquePtr<Swapchain> swapchain;
     UniquePtr<DepthManager> depthManager;
-    
+
     // Render passes owned by this renderer
     UniquePtr<RenderPass> mainRenderPass;      // For final presentation
     UniquePtr<RenderPass> offscreenRenderPass; // For scene rendering
     UniquePtr<RenderPass> imguiRenderPass;     // For ImGui overlay rendering (preserves content)
     
     UniquePtr<PostProcess> postProcess;
+
+    UniquePtrVec<FrameBuffer> framebuffers;
 
     // Command recording
     CmdBuffer cmdBuffers;

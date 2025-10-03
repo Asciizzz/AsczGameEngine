@@ -63,10 +63,10 @@ SubpassConfig SubpassConfig::createMRTSubpass(const std::vector<uint32_t>& color
 }
 
 // RenderPassConfig factory methods
-RenderPassConfig RenderPassConfig::createForwardRenderingConfig(VkFormat swapChainFormat) {
+RenderPassConfig RenderPassConfig::createForwardRenderingConfig(VkFormat swapchainFormat) {
     RenderPassConfig config;
 
-    config.attachments.push_back(AttachmentConfig::createColorAttachment(swapChainFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
+    config.attachments.push_back(AttachmentConfig::createColorAttachment(swapchainFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
     config.attachments.push_back(AttachmentConfig::createDepthAttachment());
     
     config.subpasses.push_back(SubpassConfig::createSimpleSubpass(0, 1));
@@ -150,12 +150,12 @@ RenderPassConfig RenderPassConfig::createMSAAConfig(VkFormat colorFormat, VkForm
     return config;
 }
 
-RenderPassConfig RenderPassConfig::createImGuiConfig(VkFormat swapChainFormat) {
+RenderPassConfig RenderPassConfig::createImGuiConfig(VkFormat swapchainFormat) {
     RenderPassConfig config;
 
     // Color attachment that preserves existing content (doesn't clear)
     AttachmentConfig colorAttachment;
-    colorAttachment.format = swapChainFormat;
+    colorAttachment.format = swapchainFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;  // Preserve existing content
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;

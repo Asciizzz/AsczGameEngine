@@ -41,7 +41,7 @@ struct PostProcessEffect {
 class PostProcess {
     friend class Renderer;
 public:
-    PostProcess(Device* deviceVK, Swapchain* swapChain, DepthManager* depthManager);
+    PostProcess(Device* deviceVK, Swapchain* swapchain, DepthManager* depthManager);
     ~PostProcess();
 
     PostProcess(const PostProcess&) = delete;
@@ -80,7 +80,7 @@ private:
     static const int MAX_FRAMES_IN_FLIGHT = 2;
     
     Device* deviceVK;
-    Swapchain* swapChain;
+    Swapchain* swapchain;
     DepthManager* depthManager; // For offscreen framebuffer only
     
     // Per-frame ping-pong images

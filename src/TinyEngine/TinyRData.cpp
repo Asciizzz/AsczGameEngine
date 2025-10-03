@@ -23,6 +23,8 @@ bool TinyRMesh::import(const TinyVK::Device* deviceVK, const TinyMesh& mesh) {
         .createDeviceLocalBuffer(deviceVK, indexData.data());
 
     submeshes = mesh.submeshes;
+
+    vertexLayout = mesh.vertexLayout;
     indexType = tinyToVkIndexType(mesh.indexType);
 
     return true;

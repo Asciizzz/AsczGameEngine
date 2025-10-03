@@ -10,6 +10,7 @@ struct TinyRMesh {
     TinyVK::DataBuffer vertexBuffer;
     TinyVK::DataBuffer indexBuffer;
     std::vector<TinySubmesh> submeshes;
+    TinyVertexLayout vertexLayout;
     VkIndexType indexType = VK_INDEX_TYPE_UINT32;
 
     bool import(const TinyVK::Device* deviceVK, const TinyMesh& mesh);
