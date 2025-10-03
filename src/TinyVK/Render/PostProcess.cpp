@@ -92,17 +92,12 @@ void PostProcess::createOffscreenFrameBuffers() {
     offscreenFrameBuffers.clear();
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        std::vector<VkImageView> attachments = {
-            pingPongImages[frame]->getViewA(),        // Color attachment (index 0)
-            depthManager->getDepthImageView()   // Depth attachment (index 1)
-        };
-
         UniquePtr<FrameBuffer> framebuffer = MakeUnique<FrameBuffer>();
 
-        FrameBufferConfig fbConfig;
-        fbConfig
+        FrameBufferConfig fbConfig = FrameBufferConfig()
             .withRenderPass(offscreenRenderPass)
-            .withAttachments(attachments)
+            .withAttachment(pingPongImages[frame]->getViewA())  // Color attachment (index 0)
+            .withAttachment(depthManager->getDepthImageView())  // Depth attachment (index 1)
             .withExtent(swapchain->getExtent());
         
         bool success = framebuffer->create(deviceVK->device, fbConfig);

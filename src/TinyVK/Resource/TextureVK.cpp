@@ -298,10 +298,10 @@ ImageVK& ImageVK::createView(const ImageViewConfig& viewConfig) {
     return *this;
 }
 
-ImageVK& ImageVK::setSwapchainImage(VkImage swapchainImage, VkFormat fmt, VkExtent2D extent) {
+ImageVK& ImageVK::wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D extent) {
     cleanup();
 
-    image = swapchainImage;
+    image = extImage;
     format = fmt;
     width = extent.width;
     height = extent.height;

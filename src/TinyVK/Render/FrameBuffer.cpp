@@ -8,8 +8,13 @@ FrameBufferConfig& FrameBufferConfig::withRenderPass(VkRenderPass rp) {
     return *this;
 }
 
+FrameBufferConfig& FrameBufferConfig::withAttachment(VkImageView att) {
+    attachments.push_back(att);
+    return *this;
+}
+
 FrameBufferConfig& FrameBufferConfig::withAttachments(const std::vector<VkImageView>& atts) {
-    attachments = atts;
+    for (auto att : atts) withAttachment(att);
     return *this;
 }
 

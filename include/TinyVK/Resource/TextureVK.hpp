@@ -130,7 +130,7 @@ public:
     ImageVK& createImage(const ImageConfig& config);
     ImageVK& createView(const ImageViewConfig& viewConfig);
 
-    ImageVK& setSwapchainImage(VkImage swapchainImage, VkFormat fmt, VkExtent2D extent);
+    ImageVK& wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D extent);
 
     VkImage getImage() const { return image; }
     VkImageView getView() const { return view; }
@@ -159,8 +159,8 @@ private:
     VkDevice device = VK_NULL_HANDLE;
 
     VkImage image = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
     Ownership ownership = Ownership::Owned;
 
     VkFormat format = VK_FORMAT_UNDEFINED;

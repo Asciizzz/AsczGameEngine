@@ -67,7 +67,7 @@ void Swapchain::createSwapChain(SDL_Window* window) {
     for (const auto& image : rawImages) {
         // images.emplace_back(deviceVK->device);
         ImageVK img = ImageVK(deviceVK->device);
-        img.setSwapchainImage(image, sc_surfaceFormat.format, sc_extent);
+        img.wrapExternalImage(image, sc_surfaceFormat.format, sc_extent);
 
         images.push_back(std::move(img));
     }
