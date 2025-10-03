@@ -117,19 +117,6 @@ void Swapchain::createFrameBuffers(VkRenderPass renderPass, VkImageView depthIma
             depthImageView         // depth
         };
 
-        // VkFramebufferCreateInfo framebufferInfo{};
-        // framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        // framebufferInfo.renderPass = renderPass;
-        // framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        // framebufferInfo.pAttachments = attachments.data();
-        // framebufferInfo.width = extent.width;
-        // framebufferInfo.height = extent.height;
-        // framebufferInfo.layers = 1;
-
-        // if (vkCreateFrameBuffer(deviceVK->lDevice, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
-        //     throw std::runtime_error("failed to create framebuffer!");
-        // }
-
         FrameBufferConfig fbConfig = FrameBufferConfig()
             .withRenderPass(renderPass)
             .withAttachments(attachments)
