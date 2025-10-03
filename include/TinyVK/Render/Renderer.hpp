@@ -54,7 +54,7 @@ public:
     void drawScene(const TinyProject* project, const PipelineRaster* rPipeline) const;
 
     // Get swapchain framebuffer for external ImGui rendering
-    VkFramebuffer getSwapChainFramebuffer(uint32_t imageIndex) const;
+    VkFramebuffer getSwapChainFrameBuffer(uint32_t imageIndex) const;
 
     // Post-processing methods
     void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);

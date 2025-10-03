@@ -17,7 +17,7 @@ public:
 
     void pollEvents();
     std::vector<const char*> getRequiredVulkanExtensions() const;
-    void getFramebufferSize(int& width, int& height) const;
+    void getFrameBufferSize(int& width, int& height) const;
     void waitEvents() const;
     
     SDL_Window* window;

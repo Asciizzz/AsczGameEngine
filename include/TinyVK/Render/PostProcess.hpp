@@ -58,7 +58,7 @@ public:
     void loadEffectsFromJson(const std::string& configPath);
     
     // Get offscreen framebuffer for scene rendering
-    VkFramebuffer getOffscreenFramebuffer(uint32_t frameIndex) const;
+    VkFramebuffer getOffscreenFrameBuffer(uint32_t frameIndex) const;
     VkRenderPass getOffscreenRenderPass() const { return offscreenRenderPass; }
     
     // Set the offscreen render pass (called by Renderer)
@@ -90,8 +90,8 @@ private:
     UniquePtr<SamplerVK> sampler;
 
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
-    // std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFramebuffers{};
-    UniquePtrVec<FrameBuffer> offscreenFramebuffers;
+    // std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFrameBuffers{};
+    UniquePtrVec<FrameBuffer> offscreenFrameBuffers;
 
     OrderedMap<std::string, UniquePtr<PostProcessEffect>> effects;
 
@@ -102,7 +102,7 @@ private:
 
     // Helper methods
     void createPingPongImages();
-    void createOffscreenFramebuffers();
+    void createOffscreenFrameBuffers();
     void createSampler();
     void createSharedDescriptors();
     void createFinalBlit();

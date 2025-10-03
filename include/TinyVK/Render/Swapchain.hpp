@@ -22,10 +22,10 @@ public:
     Swapchain(const Swapchain&) = delete;
     Swapchain& operator=(const Swapchain&) = delete;
 
-    void createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView);
-    void recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView);
+    void createFrameBuffers(VkRenderPass renderPass, VkImageView depthImageView);
+    void recreateFrameBuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView);
     
-    VkFramebuffer getFramebuffer(uint32_t index) const;
+    VkFramebuffer getFrameBuffer(uint32_t index) const;
 
     const Device* deviceVK;
     VkSurfaceKHR surface;

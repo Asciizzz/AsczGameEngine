@@ -108,7 +108,7 @@ void Swapchain::createImageViews() {
     }
 }
 
-void Swapchain::createFramebuffers(VkRenderPass renderPass, VkImageView depthImageView) {
+void Swapchain::createFrameBuffers(VkRenderPass renderPass, VkImageView depthImageView) {
     framebuffers.clear();
 
     for (size_t i = 0; i < images.size(); ++i) {
@@ -126,7 +126,7 @@ void Swapchain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
         // framebufferInfo.height = extent.height;
         // framebufferInfo.layers = 1;
 
-        // if (vkCreateFramebuffer(deviceVK->lDevice, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
+        // if (vkCreateFrameBuffer(deviceVK->lDevice, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
         //     throw std::runtime_error("failed to create framebuffer!");
         // }
 
@@ -143,7 +143,7 @@ void Swapchain::createFramebuffers(VkRenderPass renderPass, VkImageView depthIma
     }
 }
 
-void Swapchain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView) {
+void Swapchain::recreateFrameBuffers(SDL_Window* window, VkRenderPass renderPass, VkImageView depthImageView) {
     int width = 0, height = 0;
     SDL_GetWindowSize(window, &width, &height);
     while (width == 0 || height == 0) {
@@ -157,10 +157,10 @@ void Swapchain::recreateFramebuffers(SDL_Window* window, VkRenderPass renderPass
 
     createSwapChain(window);
     createImageViews();
-    createFramebuffers(renderPass, depthImageView);
+    createFrameBuffers(renderPass, depthImageView);
 }
 
-VkFramebuffer Swapchain::getFramebuffer(uint32_t index) const {
+VkFramebuffer Swapchain::getFrameBuffer(uint32_t index) const {
     if (index >= framebuffers.size()) {
         return VK_NULL_HANDLE;
     }

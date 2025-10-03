@@ -42,7 +42,7 @@ void PostProcess::initialize(VkRenderPass offscreenRenderPass) {
 
     createSampler();
     createPingPongImages();
-    createOffscreenFramebuffers();
+    createOffscreenFrameBuffers();
     createSharedDescriptors();
     createFinalBlit();
 }
@@ -88,8 +88,8 @@ void PostProcess::createPingPongImages() {
     }
 }
 
-void PostProcess::createOffscreenFramebuffers() {
-    offscreenFramebuffers.clear();
+void PostProcess::createOffscreenFrameBuffers() {
+    offscreenFrameBuffers.clear();
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         std::vector<VkImageView> attachments = {
@@ -108,7 +108,7 @@ void PostProcess::createOffscreenFramebuffers() {
         bool success = framebuffer->create(deviceVK->lDevice, fbConfig);
         if (!success) throw std::runtime_error("Failed to create offscreen framebuffer");
 
-        offscreenFramebuffers.push_back(std::move(framebuffer));
+        offscreenFrameBuffers.push_back(std::move(framebuffer));
     }
 
 }
@@ -299,8 +299,8 @@ void PostProcess::loadEffectsFromJson(const std::string& configPath) {
     }
 }
 
-VkFramebuffer PostProcess::getOffscreenFramebuffer(uint32_t frameIndex) const {
-    return *offscreenFramebuffers[frameIndex];
+VkFramebuffer PostProcess::getOffscreenFrameBuffer(uint32_t frameIndex) const {
+    return *offscreenFrameBuffers[frameIndex];
 }
 
 void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
@@ -514,7 +514,7 @@ void PostProcess::recreate() {
     // Recreate render resources
     createSampler();
     createPingPongImages();
-    createOffscreenFramebuffers();
+    createOffscreenFrameBuffers();
     createSharedDescriptors();
     
     // Recreate effects from stored configurations
@@ -568,7 +568,7 @@ void PostProcess::cleanupRenderResources() {
     vkDeviceWaitIdle(device);
     
     // Clean up framebuffers first (before image views)
-    offscreenFramebuffers.clear();
+    offscreenFrameBuffers.clear();
 
     // Clean up descriptor sets
     for (auto& descSet : descSets) {

@@ -16,7 +16,7 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
     depthManager->createDepthResources(swapChain->getExtent());
 
     createRenderPasses();
-    swapChain->createFramebuffers(mainRenderPass->get(), depthManager->getDepthImageView());
+    swapChain->createFrameBuffers(mainRenderPass->get(), depthManager->getDepthImageView());
 
     postProcess = MakeUnique<PostProcess>(deviceVK, swapChain.get(), depthManager.get());
     postProcess->initialize(offscreenRenderPass->get());
@@ -77,7 +77,7 @@ void Renderer::recreateRenderPasses() {
     createRenderPasses();
 
     VkRenderPass mainRenderPassVK = mainRenderPass->get();
-    swapChain->createFramebuffers(mainRenderPassVK, depthManager->getDepthImageView());
+    swapChain->createFrameBuffers(mainRenderPassVK, depthManager->getDepthImageView());
 }
 
 void Renderer::createRenderPasses() {
@@ -115,8 +115,8 @@ VkRenderPass Renderer::getImGuiRenderPass() const {
     return imguiRenderPass ? imguiRenderPass->get() : VK_NULL_HANDLE;
 }
 
-VkFramebuffer Renderer::getSwapChainFramebuffer(uint32_t imageIndex) const {
-    return swapChain ? swapChain->getFramebuffer(imageIndex) : VK_NULL_HANDLE;
+VkFramebuffer Renderer::getSwapChainFrameBuffer(uint32_t imageIndex) const {
+    return swapChain ? swapChain->getFrameBuffer(imageIndex) : VK_NULL_HANDLE;
 }
 
 VkExtent2D Renderer::getSwapChainExtent() const {
@@ -190,7 +190,7 @@ uint32_t Renderer::beginFrame() {
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = postProcess->getOffscreenRenderPass();
-    renderPassInfo.framebuffer = postProcess->getOffscreenFramebuffer(currentFrame);
+    renderPassInfo.framebuffer = postProcess->getOffscreenFrameBuffer(currentFrame);
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = swapChain->getExtent();
 
@@ -390,7 +390,7 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = imguiRenderPass->get();
-        renderPassInfo.framebuffer = swapChain->getFramebuffer(imageIndex);
+        renderPassInfo.framebuffer = swapChain->getFrameBuffer(imageIndex);
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapChain->getExtent();
 
@@ -401,7 +401,7 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         // Call the ImGui render function
-        imguiRenderFunc(currentCmd, imguiRenderPass->get(), swapChain->getFramebuffer(imageIndex));
+        imguiRenderFunc(currentCmd, imguiRenderPass->get(), swapChain->getFrameBuffer(imageIndex));
 
         vkCmdEndRenderPass(currentCmd);
 

@@ -67,7 +67,7 @@ std::vector<const char*> TinyWindow::getRequiredVulkanExtensions() const {
     return extensions;
 }
 
-void TinyWindow::getFramebufferSize(int& width, int& height) const {
+void TinyWindow::getFrameBufferSize(int& width, int& height) const {
     SDL_Vulkan_GetDrawableSize(window, &width, &height);
 }
 
