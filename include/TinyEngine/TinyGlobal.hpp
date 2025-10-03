@@ -5,8 +5,8 @@
 
 #include <glm/glm.hpp>
 
-#include "TinyVK/DataBuffer.hpp"
-#include "TinyVK/Descriptor.hpp"
+#include "TinyVK/Resource/DataBuffer.hpp"
+#include "TinyVK/Resource/Descriptor.hpp"
 
 
 class TinyCamera;

@@ -4,8 +4,8 @@
 #include "backends/imgui_impl_sdl2.h"
 #include "backends/imgui_impl_vulkan.h"
 
-#include "TinyVK/Device.hpp"
-#include "TinyVK/RenderPass.hpp"
+#include "TinyVK/System/Device.hpp"
+#include "TinyVK/Render/RenderPass.hpp"
 
 #include <SDL2/SDL.h>
 

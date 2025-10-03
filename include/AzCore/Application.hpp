@@ -3,18 +3,18 @@
 #include "AzCore/TinyChrono.hpp"
 #include "AzCore/TinyWindow.hpp"
 
-#include "TinyVK/Device.hpp"
-#include "TinyVK/Instance.hpp"
+#include "TinyVK/System/Device.hpp"
+#include "TinyVK/System/Instance.hpp"
 
-#include "TinyVK/SwapChain.hpp"
-#include "TinyVK/RenderPass.hpp"
-#include "TinyVK/DepthManager.hpp"
+#include "TinyVK/Render/Swapchain.hpp"
+#include "TinyVK/Render/RenderPass.hpp"
+#include "TinyVK/Render/DepthManager.hpp"
 
-#include "TinyVK/DataBuffer.hpp"
-#include "TinyVK/Descriptor.hpp"
+#include "TinyVK/Resource/DataBuffer.hpp"
+#include "TinyVK/Resource/Descriptor.hpp"
 
-#include "TinyVK/Renderer.hpp"
-#include "TinyVK/Pipeline_include.hpp"
+#include "TinyVK/Render/Renderer.hpp"
+#include "TinyVK/Pipeline/Pipeline_include.hpp"
 
 #include "TinyData/TinyCamera.hpp"
 

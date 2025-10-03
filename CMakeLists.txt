@@ -55,22 +55,25 @@ file(GLOB_RECURSE SRC_FILES
     src/AzCore/Application.cpp
     src/AzCore/ImGuiWrapper.cpp
 
-    src/TinyVK/Device.cpp
-    src/TinyVK/Instance.cpp
-    src/TinyVK/CmdBuffer.cpp
-    src/TinyVK/DataBuffer.cpp
-    src/TinyVK/FrameBuffer.cpp
-    src/TinyVK/Descriptor.cpp
-    src/TinyVK/TextureVK.cpp
-    src/TinyVK/Swapchain.cpp
-    src/TinyVK/RenderPass.cpp
-    src/TinyVK/DepthManager.cpp
-    src/TinyVK/Pipeline_core.cpp
-    src/TinyVK/Pipeline_raster.cpp
-    src/TinyVK/Pipeline_compute.cpp
-    src/TinyVK/Pipeline_manager.cpp
-    src/TinyVK/PostProcess.cpp
-    src/TinyVK/Renderer.cpp
+    src/TinyVK/System/Device.cpp
+    src/TinyVK/System/Instance.cpp
+    src/TinyVK/System/CmdBuffer.cpp
+
+    src/TinyVK/Resource/DataBuffer.cpp
+    src/TinyVK/Resource/Descriptor.cpp
+    src/TinyVK/Resource/TextureVK.cpp
+
+    src/TinyVK/Pipeline/Pipeline_core.cpp
+    src/TinyVK/Pipeline/Pipeline_raster.cpp
+    src/TinyVK/Pipeline/Pipeline_compute.cpp
+    src/TinyVK/Pipeline/Pipeline_manager.cpp
+
+    src/TinyVK/Render/FrameBuffer.cpp
+    src/TinyVK/Render/DepthManager.cpp
+    src/TinyVK/Render/Swapchain.cpp
+    src/TinyVK/Render/RenderPass.cpp
+    src/TinyVK/Render/PostProcess.cpp
+    src/TinyVK/Render/Renderer.cpp
 
     main.cpp
 )

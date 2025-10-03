@@ -1,6 +1,6 @@
 #include "TinyEngine/TinyRData.hpp"
 
-#include "TinyVK/CmdBuffer.hpp"
+#include "TinyVK/System/CmdBuffer.hpp"
 
 #include <stdexcept>
 

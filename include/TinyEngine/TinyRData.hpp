@@ -2,9 +2,9 @@
 
 #include "TinyData/TinyModel.hpp"
 
-#include "TinyVK/TextureVK.hpp"
-#include "TinyVK/Descriptor.hpp"
-#include "TinyVK/DataBuffer.hpp"
+#include "TinyVK/Resource/TextureVK.hpp"
+#include "TinyVK/Resource/Descriptor.hpp"
+#include "TinyVK/Resource/DataBuffer.hpp"
 
 struct TinyRMesh {
     TinyVK::DataBuffer vertexBuffer;

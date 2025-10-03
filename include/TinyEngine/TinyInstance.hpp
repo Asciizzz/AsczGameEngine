@@ -3,7 +3,7 @@
 #include "TinyData/TinyNode.hpp"
 #include "TinyData/TinyMesh.hpp"
 
-#include "TinyVK/DataBuffer.hpp"
+#include "TinyVK/Resource/DataBuffer.hpp"
 
 class TinyInstance {
 public:
