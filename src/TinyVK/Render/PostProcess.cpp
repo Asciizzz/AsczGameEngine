@@ -173,6 +173,7 @@ void PostProcess::createSharedDescriptors() {
     }, MAX_FRAMES_IN_FLIGHT * 2);
 
     // Allocate descriptor sets with validation
+    descSets.clear();  // Clear old invalid handles
 
     // Update descriptor sets to point to ping-pong images
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
@@ -209,41 +210,15 @@ void PostProcess::createSharedDescriptors() {
         imageInfoDepth.imageView = depthManager->getDepthImageView();
         imageInfoDepth.sampler = *sampler;
 
-        uint32_t frame_x2 = frame * 2; // 2 for 2 directions (not to be confused with the famous band One Direction)
-
         DescWrite()
             // A -> B
-            .addWrite()
-                .setDstBinding(0)
-                .setDstSet(*descSet0)
-                .setDescType(DescType::CombinedImageSampler)
-                .setImageInfo({imageInfoInputA})
-            .addWrite()
-                .setDstBinding(1)
-                .setDstSet(*descSet0)
-                .setDescType(DescType::StorageImage)
-                .setImageInfo({imageInfoOutputB})
-            .addWrite()
-                .setDstBinding(2)
-                .setDstSet(*descSet0)
-                .setDescType(DescType::CombinedImageSampler)
-                .setImageInfo({imageInfoDepth})
+            .addWrite().setDstBinding(0).setDstSet(*descSet0).setDescType(DescType::CombinedImageSampler).setImageInfo({imageInfoInputA})
+            .addWrite().setDstBinding(1).setDstSet(*descSet0).setDescType(DescType::StorageImage).setImageInfo({imageInfoOutputB})
+            .addWrite().setDstBinding(2).setDstSet(*descSet0).setDescType(DescType::CombinedImageSampler).setImageInfo({imageInfoDepth})
             // B -> A
-            .addWrite()
-                .setDstBinding(0)
-                .setDstSet(*descSet1)
-                .setDescType(DescType::CombinedImageSampler)
-                .setImageInfo({imageInfoInputB})
-            .addWrite()
-                .setDstBinding(1)
-                .setDstSet(*descSet1)
-                .setDescType(DescType::StorageImage)
-                .setImageInfo({imageInfoOutputA})
-            .addWrite()
-                .setDstBinding(2)
-                .setDstSet(*descSet1)
-                .setDescType(DescType::CombinedImageSampler)
-                .setImageInfo({imageInfoDepth})
+            .addWrite().setDstBinding(0).setDstSet(*descSet1).setDescType(DescType::CombinedImageSampler).setImageInfo({imageInfoInputB})
+            .addWrite().setDstBinding(1).setDstSet(*descSet1).setDescType(DescType::StorageImage).setImageInfo({imageInfoOutputA})
+            .addWrite().setDstBinding(2).setDstSet(*descSet1).setDescType(DescType::CombinedImageSampler).setImageInfo({imageInfoDepth})
             .updateDescSets(device);
 
         descSets.push_back(std::move(descSet0));
