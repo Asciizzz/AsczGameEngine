@@ -27,7 +27,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyGlobal->createVkResources(deviceVK);
 }
 
-uint32_t TinyProject::addTemplateFromModel(const TinyModelNew& model) {
+uint32_t TinyProject::addTemplateFromModel(const TinyModel& model) {
     std::vector<TinyHandle> glbMeshrHandle; // Ensure correct mapping
     for (const auto& mesh : model.meshes) {
         TinyRMesh meshData;

@@ -537,6 +537,8 @@ void loadMesh(TinyMesh& mesh, std::vector<TinyHandle>& submeshMats, const tinygl
         }
     }
 
+    // mesh.setVertices(allVertices);
+
     if (hasRigging) mesh.setVertices(allVertices);
     else mesh.setVertices(TinyVertexRig::makeStaticVertices(allVertices));
 }
@@ -718,7 +720,7 @@ void loadAnimations(std::vector<TinyAnimation>& animations, std::vector<ChannelT
     }
 }
 
-void loadNodes(TinyModelNew& tinyModel, const tinygltf::Model& model,
+void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
                const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex)
 {
     std::vector<TinyNode> nodes;
@@ -921,8 +923,7 @@ void printHierarchy(const std::vector<TinyNode>& nodes) {
 }
 
 
-
-TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool forceStatic) {
+TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err, warn;
@@ -938,7 +939,7 @@ TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool 
     }
 
 
-    TinyModelNew result;
+    TinyModel result;
     if (!ok || model.meshes.empty()) return result;
 
     loadTextures(result.textures, model);
@@ -953,47 +954,6 @@ TinyModelNew TinyLoader::loadModelFromGLTFNew(const std::string& filePath, bool 
     loadNodes(result, model, nodeToSkeletonAndBoneIndex);
 
     printHierarchy(result.nodes);
-
-    return result;
-}
-
-
-TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
-    tinygltf::Model model;
-    tinygltf::TinyGLTF loader;
-    std::string err, warn;
-
-    loader.SetImageLoader(LoadImageData, nullptr);
-    loader.SetPreserveImageChannels(true);  // Preserve original channel count
-
-    TinyModel result;
-
-    bool ok;
-    if (filePath.find(".glb") != std::string::npos) {
-        ok = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);  // GLB
-    } else {
-        ok = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);  // GLTF
-    }
-
-    if (!ok || model.meshes.empty()) return TinyModel();
-
-    loadTextures(result.textures, model);
-    loadMaterials(result.materials, model, result.textures);
-
-    UnorderedMap<int, std::pair<int, int>> nodeToSkeletonAndBoneIndex; // Node index -> {skeleton index, it's bone index}
-    std::vector<TinySkeleton> skeletons;
-
-    bool hasRigging = !forceStatic && !model.skins.empty();
-    if (hasRigging) loadSkeletons(skeletons, nodeToSkeletonAndBoneIndex, model);
-
-    hasRigging &= !skeletons.empty();
-    loadMeshCombined(result.mesh, result.meshMaterials, model, !hasRigging);
-
-    // For the time being we will only be using the first skeleton
-    if (hasRigging) result.skeleton = skeletons[0];
-
-    std::vector<ChannelToSkeletonMap> channelToSkeletonMaps; // Left: channel index, Right: skeleton index
-    if (hasRigging) loadAnimations(result.animations, channelToSkeletonMaps, model, nodeToSkeletonAndBoneIndex);
 
     return result;
 }

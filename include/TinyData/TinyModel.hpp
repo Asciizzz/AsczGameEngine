@@ -8,19 +8,6 @@
 #include "TinyData/TinyNode.hpp"
 
 struct TinyModel {
-    // Raw unlinked data
-    TinyMesh mesh;
-    std::vector<TinyMaterial> materials;
-    std::vector<TinyTexture> textures;
-    TinySkeleton skeleton;
-    std::vector<TinyAnimation> animations;
-
-    // The links
-    std::vector<int> meshMaterials; // Only 1 mesh
-    UnorderedMap<std::string, int> nameToAnimationIndex;
-};
-
-struct TinyModelNew {
     // Raw unlinked registries
     std::vector<TinyMesh> meshes;
     std::vector<std::vector<TinyHandle>> submeshesMats; // Per-mesh material indices

@@ -66,6 +66,7 @@ struct TinyPool {
 
     uint32_t capacity = 0;
     uint32_t count = 0;
+    uint32_t spaceLeft() const { return capacity - count; }
 
     uint32_t autoExpandStep = 16; // Default expansion step
     void setAutoExpandStep(uint32_t step) { autoExpandStep = step; }

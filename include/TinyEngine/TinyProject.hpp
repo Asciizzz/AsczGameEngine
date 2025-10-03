@@ -112,7 +112,7 @@ public:
     // No move semantics, where tf would you even want to move it to?
 
     // Return the template index, which in turn contains handles to the registry
-    uint32_t addTemplateFromModel(const TinyModelNew& model); // Returns template index + remapping a bunch of shit (very complex) (cops called)
+    uint32_t addTemplateFromModel(const TinyModel& model); // Returns template index + remapping a bunch of shit (very complex) (cops called)
 
     TinyCamera* getCamera() const { return tinyCamera.get(); }
     TinyGlobal* getGlobal() const { return tinyGlobal.get(); }
