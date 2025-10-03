@@ -194,12 +194,14 @@ void Renderer::handleWindowResize(SDL_Window* window) {
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
 uint32_t Renderer::beginFrame() {
+    VkDevice device = deviceVK->device;
+
     // Wait for the current frame's fence
-    vkWaitForFences(deviceVK->device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex = UINT32_MAX;
     VkResult acquire = vkAcquireNextImageKHR(
-        deviceVK->device, swapchain->swapchain, UINT64_MAX,
+        device, *swapchain, UINT64_MAX,
         imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if (acquire == VK_ERROR_OUT_OF_DATE_KHR) { framebufferResized = true; return UINT32_MAX; }
@@ -235,7 +237,7 @@ uint32_t Renderer::beginFrame() {
     currentRenderTarget->beginRenderPass(currentCmd);
     currentRenderTarget->setViewportAndScissor(currentCmd);
 
-    return imageIndex;
+    return imageIndex;  
 }
 
 // Sky rendering using dedicated sky pipeline

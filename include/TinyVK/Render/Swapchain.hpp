@@ -23,11 +23,8 @@ public:
     Swapchain(const Swapchain&) = delete;
     Swapchain& operator=(const Swapchain&) = delete;
 
-    const Device* deviceVK;
-    VkSurfaceKHR surface;
-
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     VkSwapchainKHR get() const { return swapchain; }
+    operator VkSwapchainKHR() const { return swapchain; }
 
     std::vector<ImageVK> images;
 
@@ -51,6 +48,12 @@ public:
     // Helper methods 
     void createSwapChain(SDL_Window* window);
     void createImageViews();
+
+private:
+    const Device* deviceVK;
+    VkSurfaceKHR surface;
+
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice pDevice);
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
