@@ -73,6 +73,15 @@ bool FrameBuffer::create(VkDevice device, const FrameBufferConfig& config) {
 
     this->device = device;
 
+    framebuffer = createFrameBuffer(device, config);
+
+    return true;
+}
+
+
+VkFramebuffer FrameBuffer::createFrameBuffer(VkDevice device, const FrameBufferConfig& config) {
+    VkFramebuffer framebuffer = VK_NULL_HANDLE;
+
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass = config.renderPass;
@@ -84,10 +93,8 @@ bool FrameBuffer::create(VkDevice device, const FrameBufferConfig& config) {
 
     if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to create framebuffer!");
-
-        framebuffer = VK_NULL_HANDLE;
-        return false;
+        return VK_NULL_HANDLE;
     }
 
-    return true;
+    return framebuffer;
 }
