@@ -1,14 +1,14 @@
-#include "AzCore/FpsManager.hpp"
+#include "AzCore/TinyChrono.hpp"
 #include <algorithm>
 #include <thread>
 
-FpsManager::FpsManager() 
+TinyChrono::TinyChrono() 
     : lastFrameTime(Clock::now()), startTime(Clock::now()),
         currentFPS(0.0f), frameTimeMs(0.0f), deltaTime(0.0f),
         targetFPS(0.0f), vsyncEnabled(false) {
 }
 
-void FpsManager::update() {
+void TinyChrono::update() {
     auto currentTime = Clock::now();
     
     // Calculate delta time in seconds
@@ -34,7 +34,7 @@ void FpsManager::update() {
     lastFrameTime = currentTime;
 }
 
-float FpsManager::getAverageFPS() const {
+float TinyChrono::getAverageFPS() const {
     if (frameTimeHistory.empty()) {
         return 0.0f;
     }
@@ -48,21 +48,21 @@ float FpsManager::getAverageFPS() const {
     return averageFrameTime > 0.0f ? 1000.0f / averageFrameTime : 0.0f;
 }
 
-float FpsManager::getMinFrameTime() const {
+float TinyChrono::getMinFrameTime() const {
     if (frameTimeHistory.empty()) {
         return 0.0f;
     }
     return *std::min_element(frameTimeHistory.begin(), frameTimeHistory.end());
 }
 
-float FpsManager::getMaxFrameTime() const {
+float TinyChrono::getMaxFrameTime() const {
     if (frameTimeHistory.empty()) {
         return 0.0f;
     }
     return *std::max_element(frameTimeHistory.begin(), frameTimeHistory.end());
 }
 
-void FpsManager::reset() {
+void TinyChrono::reset() {
     lastFrameTime = Clock::now();
     startTime = Clock::now();
     currentFPS = 0.0f;
@@ -71,7 +71,7 @@ void FpsManager::reset() {
     frameTimeHistory.clear();
 }
 
-void FpsManager::updateFrameTimeHistory(float frameTime) {
+void TinyChrono::updateFrameTimeHistory(float frameTime) {
     frameTimeHistory.push_back(frameTime);
     
     // Keep only the last SAMPLE_COUNT frames
@@ -80,7 +80,7 @@ void FpsManager::updateFrameTimeHistory(float frameTime) {
     }
 }
 
-void FpsManager::limitFrameRate() {
+void TinyChrono::limitFrameRate() {
     if (targetFPS <= 0.0f) {
         return;
     }

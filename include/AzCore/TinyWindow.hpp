@@ -5,13 +5,15 @@
 #include <vector>
 #include <cstdint>
 
-class WindowManager {
+class TinyWindow {
 public:
-    WindowManager(const char* title, uint32_t width, uint32_t height);
-    ~WindowManager();
+    TinyWindow(const char* title, uint32_t width, uint32_t height);
+    ~TinyWindow();
 
-    WindowManager(const WindowManager&) = delete;
-    WindowManager& operator=(const WindowManager&) = delete;
+    TinyWindow(const TinyWindow&) = delete;
+    TinyWindow& operator=(const TinyWindow&) = delete;
+
+    operator SDL_Window*() const { return window; }
 
     void pollEvents();
     std::vector<const char*> getRequiredVulkanExtensions() const;

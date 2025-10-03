@@ -35,8 +35,8 @@ void Application::run() {
 
 void Application::initComponents() {
 
-    windowManager = MakeUnique<WindowManager>(appTitle, appWidth, appHeight);
-    fpsManager = MakeUnique<FpsManager>();
+    windowManager = MakeUnique<TinyWindow>(appTitle, appWidth, appHeight);
+    fpsManager = MakeUnique<TinyChrono>();
 
     auto extensions = windowManager->getRequiredVulkanExtensions();
     vkInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
@@ -348,7 +348,7 @@ void Application::mainLoop() {
     vkDeviceWaitIdle(deviceVK->lDevice);
 }
 
-void Application::createImGuiUI(const FpsManager& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime) {
+void Application::createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime) {
     // Main debug window
     if (showDebugWindow) {
         ImGui::Begin("Debug Panel", &showDebugWindow);

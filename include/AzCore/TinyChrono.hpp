@@ -3,9 +3,9 @@
 #include <chrono>
 #include <deque>
 
-class FpsManager {
+class TinyChrono {
 public:
-    FpsManager();
+    TinyChrono();
 
     // Call this once per frame
     void update();

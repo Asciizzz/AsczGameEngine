@@ -50,8 +50,8 @@ file(GLOB_RECURSE SRC_FILES
     include/.ext/imgui/backends/imgui_impl_sdl2.cpp
     include/.ext/imgui/backends/imgui_impl_vulkan.cpp
 
-    src/AzCore/FpsManager.cpp
-    src/AzCore/WindowManager.cpp
+    src/AzCore/TinyChrono.cpp
+    src/AzCore/TinyWindow.cpp
     src/AzCore/Application.cpp
     src/AzCore/ImGuiWrapper.cpp
 

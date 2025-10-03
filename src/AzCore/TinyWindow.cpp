@@ -1,8 +1,8 @@
-#include "AzCore/WindowManager.hpp"
+#include "AzCore/TinyWindow.hpp"
 #include <iostream>
 #include <stdexcept>
 
-WindowManager::WindowManager(const char* title, uint32_t width, uint32_t height)
+TinyWindow::TinyWindow(const char* title, uint32_t width, uint32_t height)
     : window(nullptr), shouldCloseFlag(false), resizedFlag(false), 
         windowWidth(width), windowHeight(height) {
     
@@ -25,14 +25,14 @@ WindowManager::WindowManager(const char* title, uint32_t width, uint32_t height)
     }
 }
 
-WindowManager::~WindowManager() {
+TinyWindow::~TinyWindow() {
     if (window) {
         SDL_DestroyWindow(window);
     }
     SDL_Quit();
 }
 
-void WindowManager::pollEvents() {
+void TinyWindow::pollEvents() {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
@@ -53,7 +53,7 @@ void WindowManager::pollEvents() {
     }
 }
 
-std::vector<const char*> WindowManager::getRequiredVulkanExtensions() const {
+std::vector<const char*> TinyWindow::getRequiredVulkanExtensions() const {
     unsigned int sdlExtensionCount = 0;
     if (!SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, nullptr)) {
         throw std::runtime_error("Failed to get Vulkan extension count from SDL.");
@@ -67,10 +67,10 @@ std::vector<const char*> WindowManager::getRequiredVulkanExtensions() const {
     return extensions;
 }
 
-void WindowManager::getFramebufferSize(int& width, int& height) const {
+void TinyWindow::getFramebufferSize(int& width, int& height) const {
     SDL_Vulkan_GetDrawableSize(window, &width, &height);
 }
 
-void WindowManager::waitEvents() const {
+void TinyWindow::waitEvents() const {
     SDL_WaitEvent(nullptr);
 }

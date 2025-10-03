@@ -1,7 +1,7 @@
 #pragma once
 
-#include "AzCore/FpsManager.hpp"
-#include "AzCore/WindowManager.hpp"
+#include "AzCore/TinyChrono.hpp"
+#include "AzCore/TinyWindow.hpp"
 
 #include "TinyVK/Device.hpp"
 #include "TinyVK/Instance.hpp"
@@ -35,8 +35,8 @@ public:
     void run();
 
 private:
-    UniquePtr<WindowManager> windowManager;
-    UniquePtr<FpsManager> fpsManager;
+    UniquePtr<TinyWindow> windowManager;
+    UniquePtr<TinyChrono> fpsManager;
 
     UniquePtr<TinyVK::Instance> vkInstance;
     UniquePtr<TinyVK::Device> deviceVK;
@@ -62,7 +62,7 @@ private:
     void initComponents();
     void mainLoop();
     void cleanup();
-    void createImGuiUI(const FpsManager& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
+    void createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
 
     bool checkWindowResize();
 };
