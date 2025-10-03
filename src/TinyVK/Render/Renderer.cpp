@@ -189,9 +189,7 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     recreateRenderPasses();  // This calls createRenderTargets() now
     
     // Use PostProcess's existing recreate method - it will preserve effects internally
-    if (postProcess) {
-        postProcess->recreate();
-    }
+    postProcess->recreate();
 }
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup

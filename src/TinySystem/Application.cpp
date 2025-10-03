@@ -141,12 +141,10 @@ bool Application::checkWindowResize() {
     int newWidth, newHeight;
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
 
-    // Reset like literally everything
     project->getCamera()->updateAspectRatio(newWidth, newHeight);
 
     // Handle window resize in renderer (now handles depth resources internally)
     renderer->handleWindowResize(windowManager->window);
-    printf("\033[0;32m[Info]\033[0m Window resized to %dx%d and renderer updated.\n", newWidth, newHeight);
 
     // Update ImGui render pass after renderer recreates render passes
     if (imguiWrapper) {
@@ -154,12 +152,10 @@ bool Application::checkWindowResize() {
         uint32_t imageCount = renderer->getSwapChainImageCount();
         imguiWrapper->updateRenderPass(imguiRenderPass, imageCount);
     }
-    printf("\033[0;32m[Info]\033[0m ImGui render pass updated after resize.\n");
 
     // Recreate all pipelines with offscreen render pass for post-processing
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
     pipelineManager->recreateAllPipelines(offscreenRenderPass);
-    printf("\033[0;32m[Info]\033[0m All pipelines recreated with new offscreen render pass.\n");
 
     return true;
 }

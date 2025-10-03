@@ -598,28 +598,19 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
 
 void PostProcess::cleanupRenderResources() {
     VkDevice device = deviceVK->device;
-    
-    // Wait for device to be idle to ensure no resources are in use
+
     vkDeviceWaitIdle(device);
-    
-    // Clear render targets first (non-owning, just clears the vector)
+
     offscreenRenderTargets.clear();
     
-    // Clean up framebuffers first (before image views)
     offscreenFrameBuffers.clear();
 
-    // Clean up descriptor sets
-    for (auto& descSet : descSets) {
-        descSet->free(*descPool);
-    }
+    descSets.clear();
 
-    // Clean up sampler
     sampler->cleanup();
 
-    // Destroy ping-pong images
     pingPongImages.clear();
-    
-    // Clean up owned render pass (destructor handles cleanup automatically)
+
     offscreenRenderPass.reset();
 }
 
