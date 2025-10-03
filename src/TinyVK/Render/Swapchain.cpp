@@ -1,4 +1,5 @@
 #include "TinyVK/Render/Swapchain.hpp"
+#include "TinyVK/System/Device.hpp"  // Need full Device definition
 
 #include <SDL2/SDL_vulkan.h>
 #include <stdexcept>

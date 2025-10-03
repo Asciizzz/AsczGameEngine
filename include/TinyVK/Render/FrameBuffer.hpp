@@ -1,6 +1,7 @@
 #pragma once
 
-#include "TinyVK/System/Device.hpp"
+#include <vulkan/vulkan.h>
+#include <vector>
 
 namespace TinyVK {
 

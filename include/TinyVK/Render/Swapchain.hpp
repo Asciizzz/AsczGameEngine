@@ -2,11 +2,11 @@
 
 #include <SDL2/SDL.h>
 
-#include "TinyVK/Render/FrameBuffer.hpp"
-
 #include "TinyVK/Resource/TextureVK.hpp"
 
 namespace TinyVK {
+
+class Device; // Forward declaration
 
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;

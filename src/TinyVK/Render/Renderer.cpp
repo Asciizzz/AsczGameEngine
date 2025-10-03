@@ -15,30 +15,14 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
     depthManager = MakeUnique<DepthManager>(deviceVK);
     depthManager->createDepthResources(swapchain->getExtent());
 
-    createRenderPasses();
+    createRenderTargets();
 
     postProcess = MakeUnique<PostProcess>(deviceVK, swapchain.get(), depthManager.get());
-    postProcess->initialize(offscreenRenderPass->get());
-
-    framebuffers.clear();
-    framebuffers.reserve(swapchain->getImageCount());
-
-    for (size_t i = 0; i < swapchain->getImageCount(); ++i) {
-        std::vector<VkImageView> attachments = {
-            swapchain->getImageView(i),   // swapchain color
-            depthManager->getDepthImageView()         // depth
-        };
-
-        FrameBufferConfig fbConfig = FrameBufferConfig()
-            .withRenderPass(*mainRenderPass)
-            .withAttachments(attachments)
-            .withExtent(swapchain->getExtent());
-
-        UniquePtr<FrameBuffer> framebuffer = MakeUnique<FrameBuffer>(deviceVK->device);
-        bool success = framebuffer->create(fbConfig);
-        if (!success) throw std::runtime_error("Failed to create framebuffer");
-
-        framebuffers.push_back(std::move(framebuffer));
+    auto* offscreenTarget = renderTargets.getTarget("offscreen");
+    if (offscreenTarget) {
+        postProcess->initialize(offscreenTarget->getRenderPass());
+    } else {
+        throw std::runtime_error("Failed to create offscreen render target");
     }
 
     createCommandBuffers();
@@ -55,6 +39,9 @@ Renderer::~Renderer() {
     for (size_t i = 0; i < renderFinishedSemaphores.size(); ++i) {
         if (renderFinishedSemaphores[i]) vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
     }
+    
+    // RenderTargets are automatically cleaned up (non-owning)
+    renderTargets.clear();
 }
 
 void Renderer::createCommandBuffers() {
@@ -94,35 +81,82 @@ void Renderer::createSyncObjects() {
 }
 
 void Renderer::recreateRenderPasses() {
-    createRenderPasses();
+    createRenderTargets();
 }
 
-void Renderer::createRenderPasses() {
+void Renderer::createRenderTargets() {
     VkDevice device = deviceVK->device;
+    VkExtent2D extent = swapchain->getExtent();
     
-    // Create main render pass for final presentation to swapchain
+    // Clear existing targets and resources
+    renderTargets.clear();
+    framebuffers.clear();
+    
+    // Create render passes with proper ownership
     auto mainRenderPassConfig = RenderPassConfig::forwardRendering(
         swapchain->getImageFormat(), 
         depthManager->getDepthFormat()
     );
-
     mainRenderPass = MakeUnique<RenderPass>(device, mainRenderPassConfig);
 
-    // Create offscreen render pass for scene rendering (use ping-pong image format)
     auto offscreenRenderPassConfig = RenderPassConfig::offscreenRendering(
-        VK_FORMAT_R8G8B8A8_UNORM,  // Match ping-pong image format
+        VK_FORMAT_R8G8B8A8_UNORM,
         depthManager->getDepthFormat()
     );
-
     offscreenRenderPass = MakeUnique<RenderPass>(device, offscreenRenderPassConfig);
 
-    // Create ImGui render pass that preserves existing framebuffer content
     auto imguiRenderPassConfig = RenderPassConfig::imguiOverlay(
         swapchain->getImageFormat(),
         depthManager->getDepthFormat()
     );
-
     imguiRenderPass = MakeUnique<RenderPass>(device, imguiRenderPassConfig);
+    
+    // Create offscreen render target (PostProcess will manage its framebuffer)
+    RenderTarget offscreenTarget(offscreenRenderPass->get(), VK_NULL_HANDLE, extent);
+    renderTargets.addTarget("offscreen", offscreenTarget);
+    
+    // Create swapchain framebuffers and render targets
+    framebuffers.reserve(swapchain->getImageCount());
+    for (uint32_t i = 0; i < swapchain->getImageCount(); ++i) {
+        // Create framebuffer for this swapchain image
+        FrameBufferConfig fbConfig = FrameBufferConfig()
+            .withRenderPass(mainRenderPass->get())
+            .withAttachment(swapchain->getImageView(i))
+            .withAttachment(depthManager->getDepthImageView())
+            .withExtent(extent);
+
+        auto framebuffer = MakeUnique<FrameBuffer>(device);
+        bool success = framebuffer->create(fbConfig);
+        if (!success) throw std::runtime_error("Failed to create swapchain framebuffer");
+
+        // Create render target
+        RenderTarget swapchainTarget(mainRenderPass->get(), framebuffer->get(), extent);
+        
+        // Add color attachment info
+        VkClearValue colorClear;
+        colorClear.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        VkClearValue depthClear;
+        depthClear.depthStencil = {1.0f, 0};
+        
+        swapchainTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i), colorClear);
+        swapchainTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView(), depthClear);
+        
+        renderTargets.addTarget("swapchain_" + std::to_string(i), swapchainTarget);
+        
+        // Store framebuffer with proper ownership
+        framebuffers.push_back(std::move(framebuffer));
+    }
+    
+    // Create ImGui render targets (reuse swapchain framebuffers)
+    for (uint32_t i = 0; i < swapchain->getImageCount(); ++i) {
+        auto* swapchainTarget = renderTargets.getTarget("swapchain_" + std::to_string(i));
+        if (swapchainTarget) {
+            RenderTarget imguiTarget(imguiRenderPass->get(), swapchainTarget->getFramebuffer(), extent);
+            imguiTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i));
+            imguiTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView());
+            renderTargets.addTarget("imgui_" + std::to_string(i), imguiTarget);
+        }
+    }
 }
 
 VkRenderPass Renderer::getMainRenderPass() const {
@@ -138,7 +172,8 @@ VkRenderPass Renderer::getImGuiRenderPass() const {
 }
 
 VkFramebuffer Renderer::getFrameBuffer(uint32_t imageIndex) const {
-    return framebuffers[imageIndex] ? framebuffers[imageIndex]->get() : VK_NULL_HANDLE;
+    return (imageIndex < framebuffers.size() && framebuffers[imageIndex]) ? 
+           framebuffers[imageIndex]->get() : VK_NULL_HANDLE;
 }
 
 VkExtent2D Renderer::getSwapChainExtent() const {
@@ -165,12 +200,15 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     swapchain->createSwapChain(window);
     swapchain->createImageViews();
     
-    // Recreate render passes and framebuffers
-    recreateRenderPasses();
+    // Recreate render targets
+    recreateRenderPasses();  // This calls createRenderTargets() now
     
     // Use PostProcess's existing recreate method - it will preserve effects internally
     if (postProcess) {
-        postProcess->setOffscreenRenderPass(offscreenRenderPass->get());
+        auto* offscreenTarget = renderTargets.getTarget("offscreen");
+        if (offscreenTarget) {
+            postProcess->setOffscreenRenderPass(offscreenTarget->getRenderPass());
+        }
         postProcess->recreate();
     }
 }
@@ -208,7 +246,14 @@ uint32_t Renderer::beginFrame() {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    // Use offscreen render pass instead of swapchain render pass
+    // Start rendering to offscreen target
+    currentRenderTarget = renderTargets.getTarget("offscreen");
+    if (!currentRenderTarget) {
+        throw std::runtime_error("Offscreen render target not found!");
+    }
+    
+    // For now, we still need to use PostProcess framebuffer since offscreen target isn't fully set up
+    // TODO: Fix this when we properly integrate PostProcess with RenderTarget
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = postProcess->getOffscreenRenderPass();
@@ -228,19 +273,8 @@ uint32_t Renderer::beginFrame() {
 
     vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(swapchain->getWidth());
-    viewport.height = static_cast<float>(swapchain->getHeight());
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(currentCmd, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = swapchain->getExtent();
-    vkCmdSetScissor(currentCmd, 0, 1, &scissor);
+    // Use render target for viewport/scissor setup
+    currentRenderTarget->setViewportAndScissor(currentCmd);
 
     return imageIndex;
 }
@@ -327,7 +361,13 @@ void Renderer::endFrame(uint32_t imageIndex) {
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
-    vkCmdEndRenderPass(currentCmd);
+    // End current render pass
+    if (currentRenderTarget) {
+        currentRenderTarget->endRenderPass(currentCmd);
+        currentRenderTarget = nullptr;
+    } else {
+        vkCmdEndRenderPass(currentCmd);
+    }
 
     postProcess->executeEffects(currentCmd, currentFrame);
     postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
@@ -408,24 +448,27 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                             0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
 
-        // Begin render pass for ImGui
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = imguiRenderPass->get();
-        renderPassInfo.framebuffer = *framebuffers[imageIndex];
-        renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = swapchain->getExtent();
+        // Use ImGui render target
+        auto* imguiTarget = renderTargets.getTarget("imgui_" + std::to_string(imageIndex));
+        if (imguiTarget) {
+            imguiTarget->render(currentCmd, [&](VkCommandBuffer cmd, VkRenderPass rp, VkFramebuffer fb) {
+                imguiRenderFunc(cmd, rp, fb);
+            });
+        } else {
+            // Fallback to old method
+            VkRenderPassBeginInfo renderPassInfo{};
+            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.renderPass = getImGuiRenderPass();
+            renderPassInfo.framebuffer = getFrameBuffer(imageIndex);
+            renderPassInfo.renderArea.offset = {0, 0};
+            renderPassInfo.renderArea.extent = swapchain->getExtent();
+            renderPassInfo.clearValueCount = 0;
+            renderPassInfo.pClearValues = nullptr;
 
-        // No clear - we want to preserve the blitted image
-        renderPassInfo.clearValueCount = 0;
-        renderPassInfo.pClearValues = nullptr;
-
-        vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        // Call the ImGui render function
-        imguiRenderFunc(currentCmd, imguiRenderPass->get(), *framebuffers[imageIndex]);
-
-        vkCmdEndRenderPass(currentCmd);
+            vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            imguiRenderFunc(currentCmd, getImGuiRenderPass(), getFrameBuffer(imageIndex));
+            vkCmdEndRenderPass(currentCmd);
+        }
 
         // Note: The render pass automatically transitions the image back to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
         // as specified in its finalLayout, so no manual transition is needed

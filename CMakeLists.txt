@@ -72,6 +72,7 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyVK/Render/DepthManager.cpp
     src/TinyVK/Render/Swapchain.cpp
     src/TinyVK/Render/RenderPass.cpp
+    src/TinyVK/Render/RenderTarget.cpp
     src/TinyVK/Render/PostProcess.cpp
     src/TinyVK/Render/Renderer.cpp
 

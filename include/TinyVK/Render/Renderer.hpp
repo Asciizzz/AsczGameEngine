@@ -12,6 +12,7 @@
 #include "TinyVK/Render/PostProcess.hpp"
 #include "TinyVK/Render/DepthManager.hpp"
 #include "TinyVK/Render/RenderPass.hpp"
+#include "TinyVK/Render/RenderTarget.hpp"
 
 #include "TinyEngine/TinyProject.hpp"
 
@@ -36,7 +37,11 @@ public:
     uint32_t getCurrentFrame() const { return currentFrame; }
     VkCommandBuffer getCurrentCommandBuffer() const;
 
-    // Render pass getters
+    // Render target access
+    RenderTarget* getRenderTarget(const std::string& name) { return renderTargets.getTarget(name); }
+    RenderTarget* getCurrentRenderTarget() const { return currentRenderTarget; }
+    
+    // Legacy render pass getters (for backward compatibility)
     VkRenderPass getMainRenderPass() const;
     VkRenderPass getOffscreenRenderPass() const;
     VkRenderPass getImGuiRenderPass() const;
@@ -71,14 +76,17 @@ private:
     UniquePtr<Swapchain> swapchain;
     UniquePtr<DepthManager> depthManager;
 
-    // Render passes owned by this renderer
-    UniquePtr<RenderPass> mainRenderPass;      // For final presentation
-    UniquePtr<RenderPass> offscreenRenderPass; // For scene rendering
-    UniquePtr<RenderPass> imguiRenderPass;     // For ImGui overlay rendering (preserves content)
+    // Render target management
+    RenderTargetManager renderTargets;
+    RenderTarget* currentRenderTarget = nullptr;
+
+    // Properly owned resources for render targets
+    UniquePtr<RenderPass> mainRenderPass;
+    UniquePtr<RenderPass> offscreenRenderPass; 
+    UniquePtr<RenderPass> imguiRenderPass;
+    UniquePtrVec<FrameBuffer> framebuffers;
 
     UniquePtr<PostProcess> postProcess;
-
-    UniquePtrVec<FrameBuffer> framebuffers;
 
     // Command recording
     CmdBuffer cmdBuffers;
@@ -97,7 +105,7 @@ private:
 
     void createCommandBuffers();
     void createSyncObjects();
-    void createRenderPasses();
+    void createRenderTargets();
 };
 
 }
