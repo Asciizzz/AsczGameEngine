@@ -90,7 +90,6 @@ private:
     UniquePtr<SamplerVK> sampler;
 
     VkRenderPass offscreenRenderPass = VK_NULL_HANDLE;
-    // std::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> offscreenFrameBuffers{};
     UniquePtrVec<FrameBuffer> offscreenFrameBuffers;
 
     OrderedMap<std::string, UniquePtr<PostProcessEffect>> effects;
