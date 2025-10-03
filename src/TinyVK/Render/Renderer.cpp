@@ -34,8 +34,8 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
             .withAttachments(attachments)
             .withExtent(swapchain->getExtent());
 
-        UniquePtr<FrameBuffer> framebuffer = std::make_unique<FrameBuffer>();
-        bool success = framebuffer->create(deviceVK->device, fbConfig);
+        UniquePtr<FrameBuffer> framebuffer = MakeUnique<FrameBuffer>(deviceVK->device);
+        bool success = framebuffer->create(fbConfig);
         if (!success) throw std::runtime_error("Failed to create framebuffer");
 
         framebuffers.push_back(std::move(framebuffer));

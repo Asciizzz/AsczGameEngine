@@ -20,7 +20,6 @@ struct FrameBufferConfig {
 
 class FrameBuffer {
 public:
-    FrameBuffer() = default;
     FrameBuffer(VkDevice device) : device(device) {}
     ~FrameBuffer();
     void cleanup();
@@ -36,8 +35,8 @@ public:
 
     bool isValid() const { return framebuffer != VK_NULL_HANDLE; }
 
-    bool create(VkDevice device, const FrameBufferConfig& config);
-    static VkFramebuffer createFrameBuffer(VkDevice device, const FrameBufferConfig& config);
+    bool create(const FrameBufferConfig& config);
+    static VkFramebuffer create(VkDevice device, const FrameBufferConfig& config);
 
 private:
     VkDevice device = VK_NULL_HANDLE;

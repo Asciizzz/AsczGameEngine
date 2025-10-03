@@ -68,18 +68,18 @@ FrameBuffer& FrameBuffer::operator=(FrameBuffer&& other) noexcept {
 }
 
 
-bool FrameBuffer::create(VkDevice device, const FrameBufferConfig& config) {
+bool FrameBuffer::create(const FrameBufferConfig& config) {
     cleanup();
 
     this->device = device;
 
-    framebuffer = createFrameBuffer(device, config);
+    framebuffer = create(device, config);
 
     return true;
 }
 
 
-VkFramebuffer FrameBuffer::createFrameBuffer(VkDevice device, const FrameBufferConfig& config) {
+VkFramebuffer FrameBuffer::create(VkDevice device, const FrameBufferConfig& config) {
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
 
     VkFramebufferCreateInfo framebufferInfo{};
