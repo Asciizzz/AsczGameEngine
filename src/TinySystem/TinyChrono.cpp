@@ -1,4 +1,4 @@
-#include "AzCore/TinyChrono.hpp"
+#include "TinySystem/TinyChrono.hpp"
 #include <algorithm>
 #include <thread>
 

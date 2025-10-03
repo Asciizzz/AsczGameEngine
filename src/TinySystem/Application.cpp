@@ -1,4 +1,4 @@
-#include "AzCore/Application.hpp"
+#include "TinySystem/Application.hpp"
 
 #include "TinyEngine/TinyLoader.hpp"
 

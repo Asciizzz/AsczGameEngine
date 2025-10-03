@@ -1,4 +1,4 @@
-#include "AzCore/TinyWindow.hpp"
+#include "TinySystem/TinyWindow.hpp"
 #include <iostream>
 #include <stdexcept>
 

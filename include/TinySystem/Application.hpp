@@ -1,7 +1,8 @@
 #pragma once
 
-#include "AzCore/TinyChrono.hpp"
-#include "AzCore/TinyWindow.hpp"
+#include "TinySystem/TinyChrono.hpp"
+#include "TinySystem/TinyWindow.hpp"
+#include "TinySystem/ImGuiWrapper.hpp"
 
 #include "TinyVK/System/Device.hpp"
 #include "TinyVK/System/Instance.hpp"
@@ -19,7 +20,6 @@
 #include "TinyData/TinyCamera.hpp"
 
 #include "TinyEngine/TinyProject.hpp"
-#include "AzCore/ImGuiWrapper.hpp"
 
 class Application {
 public:

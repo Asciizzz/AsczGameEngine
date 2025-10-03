@@ -50,10 +50,10 @@ file(GLOB_RECURSE SRC_FILES
     include/.ext/imgui/backends/imgui_impl_sdl2.cpp
     include/.ext/imgui/backends/imgui_impl_vulkan.cpp
 
-    src/AzCore/TinyChrono.cpp
-    src/AzCore/TinyWindow.cpp
-    src/AzCore/Application.cpp
-    src/AzCore/ImGuiWrapper.cpp
+    src/TinySystem/TinyChrono.cpp
+    src/TinySystem/TinyWindow.cpp
+    src/TinySystem/Application.cpp
+    src/TinySystem/ImGuiWrapper.cpp
 
     src/TinyVK/System/Device.cpp
     src/TinyVK/System/Instance.cpp
@@ -98,7 +98,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/.ext/Helpers
     ${CMAKE_SOURCE_DIR}/include/.ext/imgui
 
-    ${CMAKE_SOURCE_DIR}/include/AzCore
+    ${CMAKE_SOURCE_DIR}/include/TinySystem
     ${CMAKE_SOURCE_DIR}/include/TinyVK
     ${CMAKE_SOURCE_DIR}/include/TinyExt
     ${CMAKE_SOURCE_DIR}/include/TinyData

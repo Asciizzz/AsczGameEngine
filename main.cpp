@@ -1,5 +1,5 @@
 #define SDL_MAIN_HANDLED
-#include "AzCore/Application.hpp"
+#include "TinySystem/Application.hpp"
 #include <iostream>
 #include <stdexcept>
 
