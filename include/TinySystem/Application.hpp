@@ -17,8 +17,6 @@
 #include "TinyVK/Render/Renderer.hpp"
 #include "TinyVK/Pipeline/Pipeline_include.hpp"
 
-#include "TinyData/TinyCamera.hpp"
-
 #include "TinyEngine/TinyProject.hpp"
 
 class Application {

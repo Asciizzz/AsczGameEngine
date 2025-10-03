@@ -2,8 +2,6 @@
 
 #include "TinyExt/TinyRegistry.hpp"
 
-#include "TinyEngine/TinyInstance.hpp"
-
 #include "TinyEngine/TinyRData.hpp"
 
 #include "TinyData/TinyCamera.hpp"
