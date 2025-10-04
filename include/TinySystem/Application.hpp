@@ -62,7 +62,7 @@ private:
     void initComponents();
     void mainLoop();
     void cleanup();
-    void createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
+
     void setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
 
     bool checkWindowResize();

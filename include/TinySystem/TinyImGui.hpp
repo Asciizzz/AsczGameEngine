@@ -73,14 +73,6 @@ public:
 
     // Demo window for testing
     void showDemoWindow(bool* p_open = nullptr);
-    
-    // Font management
-    bool loadCustomFont(const char* fontPath, float fontSize, const char* fontName = nullptr);
-    void setFont(ImFont* font);
-    ImFont* getFont(const char* fontName);
-    void setGlobalFont(ImFont* font);
-    void resetToDefaultFont();
-    const std::vector<std::pair<std::string, ImFont*>>& getLoadedFonts() const { return m_loadedFonts; }
 
 private:
     bool m_initialized = false;
