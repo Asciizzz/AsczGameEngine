@@ -2,9 +2,6 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
-#include <functional>
-#include <string>
-#include <unordered_map>
 
 namespace TinyVK {
 
@@ -49,14 +46,11 @@ struct RenderAttachment {
  */
 class RenderTarget {
 public:
-    // Constructors - moved to implementation for forward declaration support
-    RenderTarget();
-    RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent);
-    RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent,
-                std::vector<RenderAttachment> attachments);
-
-    // Default destructor - we don't own anything
+    RenderTarget() = default;
     ~RenderTarget() = default;
+
+    RenderTarget(VkRenderPass rp, VkFramebuffer fb, VkExtent2D ext) 
+        : renderPass(rp), framebuffer(fb), extent(ext) {}
 
     // Copyable and movable since we're just storing handles
     RenderTarget(const RenderTarget&) = default;
@@ -65,16 +59,13 @@ public:
     RenderTarget& operator=(RenderTarget&&) = default;
 
     // Setup/modification
-    void withRenderPass(VkRenderPass rp) { renderPass = rp; }
-    void withFrameBuffer(VkFramebuffer fb) { framebuffer = fb; }
-    void withExtent(VkExtent2D ext) { extent = ext; }
-    
-    void addAttachment(const RenderAttachment& attachment) { attachments.push_back(attachment); }
-    void addAttachment(VkImage image, VkImageView view, VkClearValue clearValue = {}) {
-        attachments.emplace_back(image, view, clearValue);
-    }
-    
-    void clearAttachments() { attachments.clear(); }
+    RenderTarget& withRenderPass(VkRenderPass rp);
+    RenderTarget& withFrameBuffer(VkFramebuffer fb);
+    RenderTarget& withExtent(VkExtent2D ext);
+
+    RenderTarget& addAttachment(const RenderAttachment& attachment);
+    RenderTarget& addAttachment(VkImage image, VkImageView view, VkClearValue clearValue = {});
+    RenderTarget& clearAttachments();
 
     // Core rendering interface
     void beginRenderPass(VkCommandBuffer cmd, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE) const;
@@ -94,33 +85,17 @@ public:
     size_t getAttachmentCount() const { return attachments.size(); }
     const RenderAttachment& getAttachment(size_t index) const { return attachments[index]; }
     const std::vector<RenderAttachment>& getAttachments() const { return attachments; }
-    
-    // Convenience accessors (assumes standard layout: color attachments first, then depth)
-    VkImage getColorImage(size_t index = 0) const { 
-        return (index < attachments.size()) ? attachments[index].image : VK_NULL_HANDLE; 
-    }
-    VkImageView getColorImageView(size_t index = 0) const { 
-        return (index < attachments.size()) ? attachments[index].view : VK_NULL_HANDLE; 
-    }
-    
+
     // State queries
     bool isValid() const { return renderPass != VK_NULL_HANDLE && framebuffer != VK_NULL_HANDLE; }
     bool hasAttachments() const { return !attachments.empty(); }
-
-    // Utility: Execute a render function with automatic begin/end
-    template<typename RenderFunc>
-    void render(VkCommandBuffer cmd, RenderFunc&& renderFunc) const {
-        beginRenderPass(cmd);
-        renderFunc(cmd, getRenderPass(), getFramebuffer());
-        endRenderPass(cmd);
-    }
 
 private:
     // Core Vulkan resources (non-owning references)
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
     VkExtent2D extent{};
-    
+
     // Dynamic attachments
     std::vector<RenderAttachment> attachments;
 };

@@ -110,8 +110,11 @@ void Renderer::createRenderTargets() {
         if (!success) throw std::runtime_error("Failed to create swapchain framebuffer");
 
         // Create render target
-        RenderTarget swapchainTarget(mainRenderPass->get(), framebuffer->get(), extent);
-        
+        RenderTarget swapchainTarget = RenderTarget()
+            .withRenderPass(*mainRenderPass)
+            .withFrameBuffer(framebuffer->get())
+            .withExtent(extent);
+
         // Add color attachment info
         VkClearValue colorClear;
         colorClear.color = {{0.0f, 0.0f, 0.0f, 1.0f}};

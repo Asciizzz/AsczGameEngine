@@ -185,9 +185,10 @@ void ImGuiWrapper::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFr
     if (imageIndex < m_renderTargets.size()) {
         // Update render target with the correct framebuffer
         m_renderTargets[imageIndex].withFrameBuffer(framebuffer);
-        m_renderTargets[imageIndex].render(cmd, [&](VkCommandBuffer cmdBuffer, VkRenderPass rp, VkFramebuffer fb) {
-            render(cmdBuffer);
-        });
+
+        m_renderTargets[imageIndex].beginRenderPass(cmd);
+        render(cmd);
+        m_renderTargets[imageIndex].endRenderPass(cmd);
     }
 }
 

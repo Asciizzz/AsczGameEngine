@@ -15,16 +15,34 @@ RenderAttachment::RenderAttachment(VkImage img, VkImageView v, VkClearValue clea
 RenderAttachment::RenderAttachment(const ImageVK& imageVK, VkClearValue clear) 
     : image(imageVK.getImage()), view(imageVK.getView()), clearValue(clear) {}
 
-// RenderTarget constructors
-RenderTarget::RenderTarget() = default;
 
-RenderTarget::RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent)
-    : renderPass(renderPass), framebuffer(framebuffer), extent(extent) {}
+RenderTarget& RenderTarget::withRenderPass(VkRenderPass rp) {
+    renderPass = rp; 
+    return *this; 
+}
+RenderTarget& RenderTarget::withFrameBuffer(VkFramebuffer fb) {
+    framebuffer = fb; 
+    return *this; 
+}
+RenderTarget& RenderTarget::withExtent(VkExtent2D ext) {
+    extent = ext; 
+    return *this; 
+}
 
-RenderTarget::RenderTarget(VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent,
-                          std::vector<RenderAttachment> attachments)
-    : renderPass(renderPass), framebuffer(framebuffer), extent(extent), 
-      attachments(std::move(attachments)) {}
+
+RenderTarget& RenderTarget::addAttachment(const RenderAttachment& attachment) {
+    attachments.push_back(attachment);
+    return *this;
+}
+RenderTarget& RenderTarget::addAttachment(VkImage image, VkImageView view, VkClearValue clearValue) {
+    attachments.emplace_back(image, view, clearValue);
+    return *this;
+}
+RenderTarget& RenderTarget::clearAttachments() {
+    attachments.clear();
+    return *this;
+}
+
 
 void RenderTarget::beginRenderPass(VkCommandBuffer cmd, VkSubpassContents contents) const {
     if (!isValid()) return;
