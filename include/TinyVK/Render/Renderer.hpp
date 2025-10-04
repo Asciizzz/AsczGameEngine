@@ -39,8 +39,10 @@ public:
     uint32_t getCurrentFrame() const { return currentFrame; }
     VkCommandBuffer getCurrentCommandBuffer() const;
 
-    // Render target access
-    RenderTarget* getRenderTarget(const std::string& name) { return renderTargets.getTarget(name); }
+    // Direct render target access
+    RenderTarget* getSwapchainRenderTarget(uint32_t index) { 
+        return (index < swapchainRenderTargets.size()) ? &swapchainRenderTargets[index] : nullptr; 
+    }
     RenderTarget* getCurrentRenderTarget() const { return currentRenderTarget; }
     
     // Legacy render pass getters (for backward compatibility)
@@ -64,6 +66,9 @@ public:
 
     // Get swapchain framebuffer for external ImGui rendering
     VkFramebuffer getFrameBuffer(uint32_t imageIndex) const;
+    
+    // Set up ImGui render targets after framebuffers are created
+    void setupImGuiRenderTargets(ImGuiWrapper* imguiWrapper);
 
     // Post-processing methods
     void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
@@ -80,8 +85,8 @@ private:
     UniquePtr<Swapchain> swapchain;
     UniquePtr<DepthManager> depthManager;
 
-    // Render target management
-    RenderTargetManager renderTargets;
+    // Direct render target ownership (no manager needed)
+    std::vector<RenderTarget> swapchainRenderTargets;
     RenderTarget* currentRenderTarget = nullptr;
 
     // Properly owned resources for render targets
@@ -109,9 +114,7 @@ private:
     void createSyncObjects();
     void createRenderTargets();
 
-public:
-    // ImGui integration
-    void createImGuiRenderTargets(ImGuiWrapper* imguiWrapper);
+
 
 private:
 };

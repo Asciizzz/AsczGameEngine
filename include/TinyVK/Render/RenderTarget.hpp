@@ -125,59 +125,6 @@ private:
     std::vector<RenderAttachment> attachments;
 };
 
-/**
- * @brief Simple manager for multiple render targets with name-based access
- */
-class RenderTargetManager {
-public:
-    RenderTargetManager() = default;
-    ~RenderTargetManager() = default;
 
-    // Add named render targets
-    void addTarget(const std::string& name, const RenderTarget& target) {
-        targets[name] = target;
-    }
-    
-    void addTarget(const std::string& name, VkRenderPass renderPass, VkFramebuffer framebuffer, VkExtent2D extent) {
-        targets[name] = RenderTarget(renderPass, framebuffer, extent);
-    }
-    
-    // Access targets
-    RenderTarget* getTarget(const std::string& name) {
-        auto it = targets.find(name);
-        return (it != targets.end()) ? &it->second : nullptr;
-    }
-    
-    const RenderTarget* getTarget(const std::string& name) const {
-        auto it = targets.find(name);
-        return (it != targets.end()) ? &it->second : nullptr;
-    }
-    
-    RenderTarget* getCurrentTarget() { return currentTarget; }
-    
-    // Switch active target
-    void setActiveTarget(const std::string& name) {
-        currentTarget = getTarget(name);
-    }
-    void setActiveTarget(RenderTarget* target) { currentTarget = target; }
-    
-    // Convenience rendering with automatic target management
-    template<typename RenderFunc>
-    void renderTo(const std::string& targetName, VkCommandBuffer cmd, RenderFunc&& renderFunc) {
-        auto* target = getTarget(targetName);
-        if (target && target->isValid()) {
-            target->render(cmd, std::forward<RenderFunc>(renderFunc));
-        }
-    }
-
-    // Management
-    void removeTarget(const std::string& name) { targets.erase(name); }
-    void clear() { targets.clear(); currentTarget = nullptr; }
-    bool hasTarget(const std::string& name) const { return targets.find(name) != targets.end(); }
-
-private:
-    std::unordered_map<std::string, RenderTarget> targets;
-    RenderTarget* currentTarget = nullptr;
-};
 
 } // namespace TinyVK

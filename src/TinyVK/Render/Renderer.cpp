@@ -37,7 +37,7 @@ Renderer::~Renderer() {
     }
     
     // RenderTargets are automatically cleaned up (non-owning)
-    renderTargets.clear();
+    swapchainRenderTargets.clear();
 }
 
 void Renderer::createCommandBuffers() {
@@ -85,7 +85,7 @@ void Renderer::createRenderTargets() {
     VkExtent2D extent = swapchain->getExtent();
     
     // Clear existing targets and resources
-    renderTargets.clear();
+    swapchainRenderTargets.clear();
     framebuffers.clear();
     
     // Create render passes with proper ownership
@@ -121,35 +121,26 @@ void Renderer::createRenderTargets() {
         swapchainTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i), colorClear);
         swapchainTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView(), depthClear);
         
-        renderTargets.addTarget("swapchain_" + std::to_string(i), swapchainTarget);
+        swapchainRenderTargets.push_back(swapchainTarget);
         
         // Store framebuffer with proper ownership
         framebuffers.push_back(std::move(framebuffer));
     }
 }
 
-void Renderer::createImGuiRenderTargets(ImGuiWrapper* imguiWrapper) {
+void Renderer::setupImGuiRenderTargets(ImGuiWrapper* imguiWrapper) {
     if (!imguiWrapper) return;
     
-    VkExtent2D extent = swapchain->getExtent();
-    
-    // Create ImGui render targets using ImGui's own render pass
-    for (uint32_t i = 0; i < swapchain->getImageCount(); ++i) {
-        RenderTarget imguiTarget(imguiWrapper->getRenderPass(), getFrameBuffer(i), extent);
-        
-        // Add swapchain image attachment (no clear needed for overlay)
-        VkClearValue colorClear{};
-        colorClear.color = {{0.0f, 0.0f, 0.0f, 0.0f}}; // Transparent
-        imguiTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i), colorClear);
-        
-        // Add depth attachment 
-        VkClearValue depthClear{};
-        depthClear.depthStencil = {1.0f, 0};
-        imguiTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView(), depthClear);
-        
-        renderTargets.addTarget("imgui_" + std::to_string(i), imguiTarget);
+    // Convert framebuffers to vector of VkFramebuffer handles
+    std::vector<VkFramebuffer> framebufferHandles;
+    for (const auto& fb : framebuffers) {
+        framebufferHandles.push_back(fb->get());
     }
+    
+    imguiWrapper->updateRenderTargets(swapchain.get(), depthManager.get(), framebufferHandles);
 }
+
+
 
 VkRenderPass Renderer::getMainRenderPass() const {
     return mainRenderPass ? mainRenderPass->get() : VK_NULL_HANDLE;
@@ -361,13 +352,9 @@ void Renderer::endFrame(uint32_t imageIndex, ImGuiWrapper* imguiWrapper) {
                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                             0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
 
-        // Use ImGui render target
-        auto* imguiTarget = renderTargets.getTarget("imgui_" + std::to_string(imageIndex));
-        if (imguiTarget) {
-            imguiTarget->render(currentCmd, [&](VkCommandBuffer cmd, VkRenderPass rp, VkFramebuffer fb) {
-                imguiWrapper->render(cmd);
-            });
-        }
+        // Use ImGuiWrapper's own render target
+        VkFramebuffer framebuffer = getFrameBuffer(imageIndex);
+        imguiWrapper->renderToTarget(imageIndex, currentCmd, framebuffer);
     }
 
     if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {

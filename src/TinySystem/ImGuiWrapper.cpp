@@ -12,8 +12,9 @@ bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::D
 
     this->deviceVK = deviceVK;
     
-    // Create our own render pass for ImGui overlay
+    // Create our own render pass for ImGui overlay  
     createRenderPass(swapchain, depthManager);
+    // Note: render targets will be created later when we have access to framebuffers
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -141,8 +142,9 @@ void ImGuiWrapper::updateRenderPass(const TinyVK::Swapchain* swapchain, const Ti
     // Shutdown current Vulkan backend (but keep SDL2 backend)
     ImGui_ImplVulkan_Shutdown();
 
-    // Recreate our render pass with new swapchain format
+    // Recreate our render pass with new swapchain format  
     createRenderPass(swapchain, depthManager);
+    // Note: render targets will be recreated later when we have access to framebuffers
 
     // Recreate descriptor pool (old one may be invalid)
     destroyDescriptorPool();
@@ -175,10 +177,53 @@ VkRenderPass ImGuiWrapper::getRenderPass() const {
     return m_renderPass ? m_renderPass->get() : VK_NULL_HANDLE;
 }
 
+TinyVK::RenderTarget* ImGuiWrapper::getRenderTarget(uint32_t imageIndex) {
+    return (imageIndex < m_renderTargets.size()) ? &m_renderTargets[imageIndex] : nullptr;
+}
+
+void ImGuiWrapper::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFramebuffer framebuffer) {
+    if (imageIndex < m_renderTargets.size()) {
+        // Update render target with the correct framebuffer
+        m_renderTargets[imageIndex].withFrameBuffer(framebuffer);
+        m_renderTargets[imageIndex].render(cmd, [&](VkCommandBuffer cmdBuffer, VkRenderPass rp, VkFramebuffer fb) {
+            render(cmdBuffer);
+        });
+    }
+}
+
 void ImGuiWrapper::createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager) {
     auto renderPassConfig = TinyVK::RenderPassConfig::imguiOverlay(
         swapchain->getImageFormat(),
         depthManager->getDepthFormat()
     );
     m_renderPass = MakeUnique<TinyVK::RenderPass>(deviceVK->device, renderPassConfig);
+}
+
+void ImGuiWrapper::updateRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers) {
+    if (!m_renderPass) return;
+    
+    m_renderTargets.clear();
+    VkExtent2D extent = swapchain->getExtent();
+    
+    // Create ImGui render targets for each swapchain image
+    for (uint32_t i = 0; i < swapchain->getImageCount(); ++i) {
+        VkFramebuffer framebuffer = (i < framebuffers.size()) ? framebuffers[i] : VK_NULL_HANDLE;
+        TinyVK::RenderTarget imguiTarget(m_renderPass->get(), framebuffer, extent);
+        
+        // Add swapchain image attachment (no clear needed for overlay)
+        VkClearValue colorClear{};
+        colorClear.color = {{0.0f, 0.0f, 0.0f, 0.0f}}; // Transparent
+        imguiTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i), colorClear);
+        
+        // Add depth attachment 
+        VkClearValue depthClear{};
+        depthClear.depthStencil = {1.0f, 0};
+        imguiTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView(), depthClear);
+        
+        m_renderTargets.push_back(imguiTarget);
+    }
+}
+
+void ImGuiWrapper::createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers) {
+    updateRenderTargets(swapchain, depthManager, framebuffers);
 }

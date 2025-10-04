@@ -6,6 +6,7 @@
 
 #include "TinyVK/System/Device.hpp"
 #include "TinyVK/Render/RenderPass.hpp"
+#include "TinyVK/Render/RenderTarget.hpp"
 #include "TinyVK/Render/Swapchain.hpp"
 #include "TinyVK/Render/DepthManager.hpp"
 
@@ -36,11 +37,20 @@ public:
     // Handle SDL events
     void processEvent(const SDL_Event* event);
 
-    // Update render pass after window resize (recreates internal render pass)
+    // Update render pass after window resize (recreates internal render pass and render targets)
     void updateRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager);
     
     // Get the ImGui render pass for external use
     VkRenderPass getRenderPass() const;
+    
+    // Get render target for specific swapchain image
+    TinyVK::RenderTarget* getRenderTarget(uint32_t imageIndex);
+    
+    // Render to specific swapchain image (requires framebuffers from Renderer)
+    void renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFramebuffer framebuffer);
+    
+    // Update render targets with framebuffers (called by Renderer after it creates framebuffers)
+    void updateRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers);
 
     // Demo window for testing
     void showDemoWindow(bool* p_open = nullptr);
@@ -52,10 +62,12 @@ private:
     const TinyVK::Device* deviceVK = nullptr;
     VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
     
-    // Owned render pass for ImGui overlay
+    // Owned render pass and render targets for ImGui overlay
     UniquePtr<TinyVK::RenderPass> m_renderPass;
+    std::vector<TinyVK::RenderTarget> m_renderTargets;
     
     void createDescriptorPool();
     void destroyDescriptorPool();
     void createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager);
+    void createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers);
 };

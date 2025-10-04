@@ -126,8 +126,8 @@ void Application::initComponents() {
     if (imguiInitSuccess) {
         std::cout << "ImGui initialized successfully with format: " << renderer->getSwapChain()->getImageFormat() << std::endl;
         
-        // Create ImGui render targets now that ImGui owns its render pass
-        renderer->createImGuiRenderTargets(imguiWrapper.get());
+        // Set up ImGui render targets with Renderer's framebuffers
+        renderer->setupImGuiRenderTargets(imguiWrapper.get());
     } else {
         std::cerr << "Failed to initialize ImGui!" << std::endl;
     }
@@ -149,11 +149,11 @@ bool Application::checkWindowResize() {
     // Handle window resize in renderer (now handles depth resources internally)
     renderer->handleWindowResize(windowManager->window);
 
-    // Update ImGui render pass after renderer recreates render passes
+    // Update ImGui render pass after renderer recreates render passes  
     if (imguiWrapper) {
         imguiWrapper->updateRenderPass(renderer->getSwapChain(), renderer->getDepthManager());
-        // Recreate ImGui render targets with the updated render pass
-        renderer->createImGuiRenderTargets(imguiWrapper.get());
+        // Set up ImGui render targets with updated framebuffers
+        renderer->setupImGuiRenderTargets(imguiWrapper.get());
     }
 
     // Recreate all pipelines with offscreen render pass for post-processing
