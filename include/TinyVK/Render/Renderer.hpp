@@ -17,7 +17,7 @@
 #include "TinyEngine/TinyProject.hpp"
 
 // Forward declarations
-class ImGuiWrapper;
+class TinyImGui;
 
 namespace TinyVK {
 
@@ -34,7 +34,7 @@ public:
     void handleWindowResize(SDL_Window* window);
 
     uint32_t beginFrame();
-    void endFrame(uint32_t imageIndex, ImGuiWrapper* imguiWrapper = nullptr);
+    void endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper = nullptr);
 
     uint32_t getCurrentFrame() const { return currentFrame; }
     VkCommandBuffer getCurrentCommandBuffer() const;
@@ -68,7 +68,7 @@ public:
     VkFramebuffer getFrameBuffer(uint32_t imageIndex) const;
     
     // Set up ImGui render targets after framebuffers are created
-    void setupImGuiRenderTargets(ImGuiWrapper* imguiWrapper);
+    void setupImGuiRenderTargets(TinyImGui* imguiWrapper);
 
     // Post-processing methods
     void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);

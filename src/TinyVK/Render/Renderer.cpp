@@ -1,5 +1,5 @@
 #include "TinyVK/Render/Renderer.hpp"
-#include "TinySystem/ImGuiWrapper.hpp"
+#include "TinySystem/TinyImGui.hpp"
 
 #include <stdexcept>
 #include <cstring>
@@ -131,7 +131,7 @@ void Renderer::createRenderTargets() {
     }
 }
 
-void Renderer::setupImGuiRenderTargets(ImGuiWrapper* imguiWrapper) {
+void Renderer::setupImGuiRenderTargets(TinyImGui* imguiWrapper) {
     if (!imguiWrapper) return;
     
     // Convert framebuffers to vector of VkFramebuffer handles
@@ -316,7 +316,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
 
 
 // End frame: finalize command buffer, submit, and present
-void Renderer::endFrame(uint32_t imageIndex, ImGuiWrapper* imguiWrapper) {
+void Renderer::endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper) {
     if (imageIndex == UINT32_MAX) return;
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
@@ -355,7 +355,7 @@ void Renderer::endFrame(uint32_t imageIndex, ImGuiWrapper* imguiWrapper) {
                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                             0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
 
-        // Use ImGuiWrapper's own render target
+        // Use TinyImGui's own render target
         VkFramebuffer framebuffer = getFrameBuffer(imageIndex);
         imguiWrapper->renderToTarget(imageIndex, currentCmd, framebuffer);
     }

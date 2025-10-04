@@ -4,22 +4,32 @@
 #include "backends/imgui_impl_sdl2.h"
 #include "backends/imgui_impl_vulkan.h"
 
-#include "TinyVK/System/Device.hpp"
 #include "TinyVK/Render/RenderPass.hpp"
 #include "TinyVK/Render/RenderTarget.hpp"
 #include "TinyVK/Render/Swapchain.hpp"
 #include "TinyVK/Render/DepthManager.hpp"
+#include "TinyVK/Resource/Descriptor.hpp"
 
 #include <SDL2/SDL.h>
+#include <functional>
 
-class ImGuiWrapper {
+class TinyImGui {
 public:
-    ImGuiWrapper() = default;
-    ~ImGuiWrapper() = default;
+    struct Window {
+        std::string name;
+        std::function<void()> draw;
+        bool* p_open = nullptr; // Optional pointer to control window open/close state
+        
+        Window(const std::string& windowName, std::function<void()> drawFunc, bool* openPtr = nullptr)
+            : name(windowName), draw(drawFunc), p_open(openPtr) {}
+    };
+
+    TinyImGui() = default;
+    ~TinyImGui() = default;
 
     // Delete copy semantics
-    ImGuiWrapper(const ImGuiWrapper&) = delete;
-    ImGuiWrapper& operator=(const ImGuiWrapper&) = delete;
+    TinyImGui(const TinyImGui&) = delete;
+    TinyImGui& operator=(const TinyImGui&) = delete;
 
     // Initialize ImGui with SDL2 and Vulkan backends (now creates its own render pass)
     bool init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
@@ -31,7 +41,16 @@ public:
     // Start a new ImGui frame
     void newFrame();
 
-    // Render ImGui draw data to command buffer
+    // Add a window to the UI system
+    void addWindow(const std::string& name, std::function<void()> draw, bool* p_open = nullptr);
+    
+    // Remove a window by name
+    void removeWindow(const std::string& name);
+    
+    // Clear all windows
+    void clearWindows();
+
+    // Render all windows and ImGui draw data to command buffer
     void render(VkCommandBuffer commandBuffer);
 
     // Handle SDL events
@@ -65,11 +84,11 @@ public:
 
 private:
     bool m_initialized = false;
-    
+
     // Vulkan context
     const TinyVK::Device* deviceVK = nullptr;
-    VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
-    
+    TinyVK::DescPool descPool;
+
     // Owned render pass and render targets for ImGui overlay
     UniquePtr<TinyVK::RenderPass> renderPass;
     std::vector<TinyVK::RenderTarget> renderTargets;
@@ -77,8 +96,10 @@ private:
     // Font management
     std::vector<std::pair<std::string, ImFont*>> m_loadedFonts;
     
+    // Window management
+    std::vector<Window> m_windows;
+    
     void createDescriptorPool();
-    void destroyDescriptorPool();
     void createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager);
     void createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers);
 };

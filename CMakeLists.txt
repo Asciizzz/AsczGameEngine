@@ -53,7 +53,7 @@ file(GLOB_RECURSE SRC_FILES
     src/TinySystem/TinyChrono.cpp
     src/TinySystem/TinyWindow.cpp
     src/TinySystem/Application.cpp
-    src/TinySystem/ImGuiWrapper.cpp
+    src/TinySystem/TinyImGui.cpp
 
     src/TinyVK/System/Device.cpp
     src/TinyVK/System/Instance.cpp

@@ -2,7 +2,7 @@
 
 #include "TinySystem/TinyChrono.hpp"
 #include "TinySystem/TinyWindow.hpp"
-#include "TinySystem/ImGuiWrapper.hpp"
+#include "TinySystem/TinyImGui.hpp"
 
 #include "TinyVK/System/Device.hpp"
 #include "TinyVK/System/Instance.hpp"
@@ -44,7 +44,7 @@ private:
     UniquePtr<TinyVK::PipelineManager> pipelineManager;
 
     UniquePtr<TinyProject> project; // New gigachad system
-    UniquePtr<ImGuiWrapper> imguiWrapper; // ImGui integration
+    UniquePtr<TinyImGui> imguiWrapper; // ImGui integration
 
     // ImGui UI state
     bool showDebugWindow = true;
@@ -63,6 +63,7 @@ private:
     void mainLoop();
     void cleanup();
     void createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
+    void setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
 
     bool checkWindowResize();
 };

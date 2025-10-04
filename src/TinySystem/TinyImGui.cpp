@@ -1,12 +1,13 @@
-#include "TinySystem/ImGuiWrapper.hpp"
+#include "TinySystem/TinyImGui.hpp"
 #include "TinyVK/System/CmdBuffer.hpp"
 #include <stdexcept>
 #include <iostream>
+#include <algorithm>
 
-bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
-                       const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager) {
+bool TinyImGui::init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
+                     const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager) {
     if (m_initialized) {
-        std::cerr << "ImGuiWrapper: Already initialized!" << std::endl;
+        std::cerr << "TinyImGui: Already initialized!" << std::endl;
         return false;
     }
 
@@ -25,7 +26,6 @@ bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::D
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    // ImGui::StyleColorsLight();
 
     // Create descriptor pool for ImGui
     createDescriptorPool();
@@ -41,7 +41,7 @@ bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::D
     init_info.QueueFamily = deviceVK->queueFamilyIndices.graphicsFamily.value();
     init_info.Queue = deviceVK->graphicsQueue;
     init_info.PipelineCache = VK_NULL_HANDLE;
-    init_info.DescriptorPool = m_descriptorPool;
+    init_info.DescriptorPool = descPool;
     init_info.MinImageCount = swapchain->getImageCount();
     init_info.ImageCount = swapchain->getImageCount();
     init_info.Allocator = nullptr;
@@ -60,20 +60,22 @@ bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::D
     return true;
 }
 
-void ImGuiWrapper::cleanup() {
+void TinyImGui::cleanup() {
     if (!m_initialized) return;
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    destroyDescriptorPool();
-    
+    // Clear windows
+    m_windows.clear();
+    descPool.destroy(); // You don't really need to destroy the pool explicitly
+
     m_initialized = false;
     deviceVK = nullptr;
 }
 
-void ImGuiWrapper::newFrame() {
+void TinyImGui::newFrame() {
     if (!m_initialized) return;
 
     ImGui_ImplVulkan_NewFrame();
@@ -81,26 +83,60 @@ void ImGuiWrapper::newFrame() {
     ImGui::NewFrame();
 }
 
-void ImGuiWrapper::render(VkCommandBuffer commandBuffer) {
+void TinyImGui::addWindow(const std::string& name, std::function<void()> draw, bool* p_open) {
+    m_windows.emplace_back(name, draw, p_open);
+}
+
+void TinyImGui::removeWindow(const std::string& name) {
+    m_windows.erase(
+        std::remove_if(m_windows.begin(), m_windows.end(),
+            [&name](const Window& w) { return w.name == name; }),
+        m_windows.end()
+    );
+}
+
+void TinyImGui::clearWindows() {
+    m_windows.clear();
+}
+
+void TinyImGui::render(VkCommandBuffer commandBuffer) {
     if (!m_initialized) return;
 
+    // Render all registered windows
+    for (auto& window : m_windows) {
+        if (window.p_open) {
+            // Window has open/close control
+            if (*window.p_open) {
+                ImGui::Begin(window.name.c_str(), window.p_open);
+                if (window.draw) window.draw();
+                ImGui::End();
+            }
+        } else {
+            // Window is always open
+            ImGui::Begin(window.name.c_str());
+            if (window.draw) window.draw();
+            ImGui::End();
+        }
+    }
+
+    // Render ImGui
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 }
 
-void ImGuiWrapper::processEvent(const SDL_Event* event) {
+void TinyImGui::processEvent(const SDL_Event* event) {
     if (!m_initialized) return;
     ImGui_ImplSDL2_ProcessEvent(event);
 }
 
-void ImGuiWrapper::showDemoWindow(bool* p_open) {
+void TinyImGui::showDemoWindow(bool* p_open) {
     if (!m_initialized) return;
     ImGui::ShowDemoWindow(p_open);
 }
 
-bool ImGuiWrapper::loadCustomFont(const char* fontPath, float fontSize, const char* fontName) {
+bool TinyImGui::loadCustomFont(const char* fontPath, float fontSize, const char* fontName) {
     if (!m_initialized) {
-        std::cerr << "ImGuiWrapper: Cannot load font before initialization!" << std::endl;
+        std::cerr << "TinyImGui: Cannot load font before initialization!" << std::endl;
         return false;
     }
     
@@ -109,7 +145,7 @@ bool ImGuiWrapper::loadCustomFont(const char* fontPath, float fontSize, const ch
     // Check if file exists before attempting to load
     FILE* file = fopen(fontPath, "rb");
     if (!file) {
-        std::cerr << "ImGuiWrapper: Font file not found: " << fontPath << std::endl;
+        std::cerr << "TinyImGui: Font file not found: " << fontPath << std::endl;
         return false;
     }
     fclose(file);
@@ -117,7 +153,7 @@ bool ImGuiWrapper::loadCustomFont(const char* fontPath, float fontSize, const ch
     // Load the font
     ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, fontSize);
     if (!font) {
-        std::cerr << "ImGuiWrapper: Failed to load font from " << fontPath << std::endl;
+        std::cerr << "TinyImGui: Failed to load font from " << fontPath << std::endl;
         return false;
     }
     
@@ -129,17 +165,17 @@ bool ImGuiWrapper::loadCustomFont(const char* fontPath, float fontSize, const ch
     std::string name = fontName ? fontName : fontPath;
     m_loadedFonts.emplace_back(name, font);
     
-    std::cout << "ImGuiWrapper: Successfully loaded font '" << name << "' from " << fontPath << " at size " << fontSize << "px" << std::endl;
+    std::cout << "TinyImGui: Successfully loaded font '" << name << "' from " << fontPath << " at size " << fontSize << "px" << std::endl;
     return true;
 }
 
-void ImGuiWrapper::setFont(ImFont* font) {
+void TinyImGui::setFont(ImFont* font) {
     if (font) {
         ImGui::PushFont(font);
     }
 }
 
-ImFont* ImGuiWrapper::getFont(const char* fontName) {
+ImFont* TinyImGui::getFont(const char* fontName) {
     for (const auto& [name, font] : m_loadedFonts) {
         if (name == fontName) {
             return font;
@@ -148,60 +184,41 @@ ImFont* ImGuiWrapper::getFont(const char* fontName) {
     return nullptr;
 }
 
-void ImGuiWrapper::setGlobalFont(ImFont* font) {
+void TinyImGui::setGlobalFont(ImFont* font) {
     if (!m_initialized || !font) return;
     
     ImGuiIO& io = ImGui::GetIO();
     io.FontDefault = font;
-    std::cout << "ImGuiWrapper: Set global font to custom font" << std::endl;
+    std::cout << "TinyImGui: Set global font to custom font" << std::endl;
 }
 
-void ImGuiWrapper::resetToDefaultFont() {
+void TinyImGui::resetToDefaultFont() {
     if (!m_initialized) return;
     
     ImGuiIO& io = ImGui::GetIO();
     // Reset to the first font (which should be the default ImGui font)
     if (io.Fonts->Fonts.Size > 0) {
         io.FontDefault = io.Fonts->Fonts[0];
-        std::cout << "ImGuiWrapper: Reset to default font" << std::endl;
+        std::cout << "TinyImGui: Reset to default font" << std::endl;
     }
 }
 
-void ImGuiWrapper::createDescriptorPool() {
-    VkDescriptorPoolSize pool_sizes[] = {
-        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-    };
-
-    VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
-    pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
-    pool_info.pPoolSizes = pool_sizes;
-
-    if (vkCreateDescriptorPool(deviceVK->device, &pool_info, nullptr, &m_descriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create ImGui descriptor pool!");
-    }
+void TinyImGui::createDescriptorPool() {
+    descPool.create(deviceVK->device,
+        {
+            { VK_DESCRIPTOR_TYPE_SAMPLER, 16 },                    // Font atlas + custom textures
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32 },     // Most commonly used by ImGui
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 16 },              // Additional image sampling
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8 },              // Transform matrices, etc.
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 },              // Rarely used by ImGui
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 4 },      // Dynamic uniforms
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 4 }       // Dynamic storage (rare)
+        },
+        64 // Much more reasonable than 11,000!
+    );
 }
 
-void ImGuiWrapper::destroyDescriptorPool() {
-    if (m_descriptorPool != VK_NULL_HANDLE && deviceVK != nullptr) {
-        vkDestroyDescriptorPool(deviceVK->device, m_descriptorPool, nullptr);
-        m_descriptorPool = VK_NULL_HANDLE;
-    }
-}
-
-void ImGuiWrapper::updateRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager) {
+void TinyImGui::updateRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager) {
     if (!m_initialized) return;
 
     // Wait for device to be idle
@@ -214,9 +231,9 @@ void ImGuiWrapper::updateRenderPass(const TinyVK::Swapchain* swapchain, const Ti
     createRenderPass(swapchain, depthManager);
     // Note: render targets will be recreated later when we have access to framebuffers
 
-    // Recreate descriptor pool (old one may be invalid)
-    destroyDescriptorPool();
-    createDescriptorPool();
+    // You don't need to recreate the descriptor pool every time
+    // // Recreate descriptor pool (old one may be invalid)
+    // createDescriptorPool();
 
     // Reinitialize Vulkan backend with new render pass
     ImGui_ImplVulkan_InitInfo init_info = {};
@@ -227,7 +244,7 @@ void ImGuiWrapper::updateRenderPass(const TinyVK::Swapchain* swapchain, const Ti
     init_info.QueueFamily = deviceVK->queueFamilyIndices.graphicsFamily.value();
     init_info.Queue = deviceVK->graphicsQueue;
     init_info.PipelineCache = VK_NULL_HANDLE;
-    init_info.DescriptorPool = m_descriptorPool;
+    init_info.DescriptorPool = descPool; // implicit use
     init_info.MinImageCount = swapchain->getImageCount();
     init_info.ImageCount = swapchain->getImageCount();
     init_info.Allocator = nullptr;
@@ -241,15 +258,15 @@ void ImGuiWrapper::updateRenderPass(const TinyVK::Swapchain* swapchain, const Ti
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-VkRenderPass ImGuiWrapper::getRenderPass() const {
+VkRenderPass TinyImGui::getRenderPass() const {
     return renderPass ? renderPass->get() : VK_NULL_HANDLE;
 }
 
-TinyVK::RenderTarget* ImGuiWrapper::getRenderTarget(uint32_t imageIndex) {
+TinyVK::RenderTarget* TinyImGui::getRenderTarget(uint32_t imageIndex) {
     return (imageIndex < renderTargets.size()) ? &renderTargets[imageIndex] : nullptr;
 }
 
-void ImGuiWrapper::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFramebuffer framebuffer) {
+void TinyImGui::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFramebuffer framebuffer) {
     if (imageIndex < renderTargets.size()) {
         // Update render target with the correct framebuffer
         renderTargets[imageIndex].withFrameBuffer(framebuffer);
@@ -260,7 +277,7 @@ void ImGuiWrapper::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFr
     }
 }
 
-void ImGuiWrapper::createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager) {
+void TinyImGui::createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager) {
     auto renderPassConfig = TinyVK::RenderPassConfig::imguiOverlay(
         swapchain->getImageFormat(),
         depthManager->getDepthFormat()
@@ -268,7 +285,7 @@ void ImGuiWrapper::createRenderPass(const TinyVK::Swapchain* swapchain, const Ti
     renderPass = MakeUnique<TinyVK::RenderPass>(deviceVK->device, renderPassConfig);
 }
 
-void ImGuiWrapper::updateRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers) {
+void TinyImGui::updateRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers) {
     if (!renderPass) return;
     
     renderTargets.clear();
@@ -293,6 +310,6 @@ void ImGuiWrapper::updateRenderTargets(const TinyVK::Swapchain* swapchain, const
     }
 }
 
-void ImGuiWrapper::createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers) {
+void TinyImGui::createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers) {
     updateRenderTargets(swapchain, depthManager, framebuffers);
 }
