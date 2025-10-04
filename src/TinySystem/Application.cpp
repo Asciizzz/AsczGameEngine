@@ -624,6 +624,111 @@ void Application::createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& 
                 ImGui::EndTabItem();
             }
             
+            // Fonts Tab
+            if (ImGui::BeginTabItem("Fonts & Styling")) {
+                ImGui::Text("Custom Font Loading:");
+                ImGui::Separator();
+                
+                // Font loading controls
+                static float fontSize = 16.0f;
+                ImGui::SliderFloat("Font Size", &fontSize, 8.0f, 48.0f, "%.0f px");
+                
+                // Load font buttons
+                if (ImGui::Button("Load SpaceMono Regular", ImVec2(200, 25))) {
+                    imguiWrapper->loadCustomFont("Assets/Fonts/SpaceMono-Regular.ttf", fontSize, "SpaceMono Regular");
+                }
+                
+                if (ImGui::Button("Load SpaceMono Bold", ImVec2(200, 25))) {
+                    imguiWrapper->loadCustomFont("Assets/Fonts/SpaceMono-Bold.ttf", fontSize, "SpaceMono Bold");
+                }
+                
+                if (ImGui::Button("Load SpaceMono Italic", ImVec2(200, 25))) {
+                    imguiWrapper->loadCustomFont("Assets/Fonts/SpaceMono-Italic.ttf", fontSize, "SpaceMono Italic");
+                }
+                
+                if (ImGui::Button("Load SpaceMono Bold Italic", ImVec2(200, 25))) {
+                    imguiWrapper->loadCustomFont("Assets/Fonts/SpaceMono-BoldItalic.ttf", fontSize, "SpaceMono Bold Italic");
+                }
+                
+                ImGui::Spacing();
+                ImGui::Separator();
+                
+                // Font atlas debug info
+                ImGuiIO& io = ImGui::GetIO();
+                ImGui::Text("Font Atlas Debug:");
+                ImGui::Text("Built: %s", io.Fonts->IsBuilt() ? "Yes" : "No");
+                ImGui::Text("Font count: %d", io.Fonts->Fonts.Size);
+                
+                // Get texture data to check if atlas is built
+                unsigned char* pixels;
+                int width, height;
+                io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+                ImGui::Text("Texture size: %dx%d", width, height);
+                ImGui::Text("Pixels: %s", pixels ? "Valid" : "NULL");
+                
+                ImGui::Spacing();
+                ImGui::Separator();
+                
+                // Font selection
+                ImGui::Text("Font Selection:");
+                const auto& loadedFonts = imguiWrapper->getLoadedFonts();
+                
+                if (ImGui::Button("Reset to Default Font", ImVec2(180, 25))) {
+                    imguiWrapper->resetToDefaultFont();
+                }
+                
+                ImGui::Spacing();
+                
+                if (loadedFonts.empty()) {
+                    ImGui::Text("No custom fonts loaded. Use buttons above to load fonts.");
+                } else {
+                    for (size_t i = 0; i < loadedFonts.size(); ++i) {
+                        const auto& [fontName, font] = loadedFonts[i];
+                        
+                        if (ImGui::Button(("Set Global: " + fontName).c_str(), ImVec2(180, 25))) {
+                            imguiWrapper->setGlobalFont(font);
+                        }
+                        
+                        // Show sample text with this font
+                        ImGui::SameLine();
+                        ImGui::PushFont(font);
+                        ImGui::Text("Sample: Hello World! 123");
+                        ImGui::PopFont();
+                    }
+                }
+                
+                ImGui::Spacing();
+                ImGui::Separator();
+                
+                // Style customization
+                ImGui::Text("Style Customization:");
+                ImGuiStyle& style = ImGui::GetStyle();
+                
+                static bool showStyleEditor = false;
+                ImGui::Checkbox("Show Style Editor", &showStyleEditor);
+                
+                if (showStyleEditor) {
+                    ImGui::Begin("Style Editor", &showStyleEditor);
+                    ImGui::ShowStyleEditor();
+                    ImGui::End();
+                }
+                
+                // Quick style presets
+                if (ImGui::Button("Dark Theme")) {
+                    ImGui::StyleColorsDark();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Light Theme")) {
+                    ImGui::StyleColorsLight();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Classic Theme")) {
+                    ImGui::StyleColorsClassic();
+                }
+                
+                ImGui::EndTabItem();
+            }
+            
             ImGui::EndTabBar();
         }
         

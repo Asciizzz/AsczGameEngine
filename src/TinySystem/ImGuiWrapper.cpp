@@ -98,6 +98,75 @@ void ImGuiWrapper::showDemoWindow(bool* p_open) {
     ImGui::ShowDemoWindow(p_open);
 }
 
+bool ImGuiWrapper::loadCustomFont(const char* fontPath, float fontSize, const char* fontName) {
+    if (!m_initialized) {
+        std::cerr << "ImGuiWrapper: Cannot load font before initialization!" << std::endl;
+        return false;
+    }
+    
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Check if file exists before attempting to load
+    FILE* file = fopen(fontPath, "rb");
+    if (!file) {
+        std::cerr << "ImGuiWrapper: Font file not found: " << fontPath << std::endl;
+        return false;
+    }
+    fclose(file);
+    
+    // Load the font
+    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, fontSize);
+    if (!font) {
+        std::cerr << "ImGuiWrapper: Failed to load font from " << fontPath << std::endl;
+        return false;
+    }
+    
+    // Force rebuild of font atlas - this will invalidate existing textures
+    // and cause them to be rebuilt on the next frame
+    io.Fonts->Build();
+    
+    // Store the font with a name
+    std::string name = fontName ? fontName : fontPath;
+    m_loadedFonts.emplace_back(name, font);
+    
+    std::cout << "ImGuiWrapper: Successfully loaded font '" << name << "' from " << fontPath << " at size " << fontSize << "px" << std::endl;
+    return true;
+}
+
+void ImGuiWrapper::setFont(ImFont* font) {
+    if (font) {
+        ImGui::PushFont(font);
+    }
+}
+
+ImFont* ImGuiWrapper::getFont(const char* fontName) {
+    for (const auto& [name, font] : m_loadedFonts) {
+        if (name == fontName) {
+            return font;
+        }
+    }
+    return nullptr;
+}
+
+void ImGuiWrapper::setGlobalFont(ImFont* font) {
+    if (!m_initialized || !font) return;
+    
+    ImGuiIO& io = ImGui::GetIO();
+    io.FontDefault = font;
+    std::cout << "ImGuiWrapper: Set global font to custom font" << std::endl;
+}
+
+void ImGuiWrapper::resetToDefaultFont() {
+    if (!m_initialized) return;
+    
+    ImGuiIO& io = ImGui::GetIO();
+    // Reset to the first font (which should be the default ImGui font)
+    if (io.Fonts->Fonts.Size > 0) {
+        io.FontDefault = io.Fonts->Fonts[0];
+        std::cout << "ImGuiWrapper: Reset to default font" << std::endl;
+    }
+}
+
 void ImGuiWrapper::createDescriptorPool() {
     VkDescriptorPoolSize pool_sizes[] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
