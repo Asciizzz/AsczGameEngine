@@ -428,7 +428,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         // Distance slider for placement
         static float placementDistance = 2.0f;
-        ImGui::SliderFloat("Placement Distance", &placementDistance, 0.5f, 10.0f, "%.1f units");
+        ImGui::SliderFloat("Placement Distance", &placementDistance, 0.0f, 10.0f, "%.1f units");
         
         // Template selection
         static int selectedTemplate = 1;
