@@ -1,4 +1,5 @@
 #include "TinyVK/Render/Renderer.hpp"
+#include "TinySystem/ImGuiWrapper.hpp"
 
 #include <stdexcept>
 #include <cstring>
@@ -93,12 +94,6 @@ void Renderer::createRenderTargets() {
         depthManager->getDepthFormat()
     );
     mainRenderPass = MakeUnique<RenderPass>(device, mainRenderPassConfig);
-
-    auto imguiRenderPassConfig = RenderPassConfig::imguiOverlay(
-        swapchain->getImageFormat(),
-        depthManager->getDepthFormat()
-    );
-    imguiRenderPass = MakeUnique<RenderPass>(device, imguiRenderPassConfig);
     
     // Create swapchain framebuffers and render targets
     framebuffers.reserve(swapchain->getImageCount());
@@ -131,16 +126,28 @@ void Renderer::createRenderTargets() {
         // Store framebuffer with proper ownership
         framebuffers.push_back(std::move(framebuffer));
     }
+}
+
+void Renderer::createImGuiRenderTargets(ImGuiWrapper* imguiWrapper) {
+    if (!imguiWrapper) return;
     
-    // Create ImGui render targets (reuse swapchain framebuffers)
+    VkExtent2D extent = swapchain->getExtent();
+    
+    // Create ImGui render targets using ImGui's own render pass
     for (uint32_t i = 0; i < swapchain->getImageCount(); ++i) {
-        auto* swapchainTarget = renderTargets.getTarget("swapchain_" + std::to_string(i));
-        if (swapchainTarget) {
-            RenderTarget imguiTarget(imguiRenderPass->get(), swapchainTarget->getFramebuffer(), extent);
-            imguiTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i));
-            imguiTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView());
-            renderTargets.addTarget("imgui_" + std::to_string(i), imguiTarget);
-        }
+        RenderTarget imguiTarget(imguiWrapper->getRenderPass(), getFrameBuffer(i), extent);
+        
+        // Add swapchain image attachment (no clear needed for overlay)
+        VkClearValue colorClear{};
+        colorClear.color = {{0.0f, 0.0f, 0.0f, 0.0f}}; // Transparent
+        imguiTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i), colorClear);
+        
+        // Add depth attachment 
+        VkClearValue depthClear{};
+        depthClear.depthStencil = {1.0f, 0};
+        imguiTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView(), depthClear);
+        
+        renderTargets.addTarget("imgui_" + std::to_string(i), imguiTarget);
     }
 }
 
@@ -152,9 +159,7 @@ VkRenderPass Renderer::getOffscreenRenderPass() const {
     return postProcess ? postProcess->getOffscreenRenderPass() : VK_NULL_HANDLE;
 }
 
-VkRenderPass Renderer::getImGuiRenderPass() const {
-    return imguiRenderPass ? imguiRenderPass->get() : VK_NULL_HANDLE;
-}
+
 
 VkFramebuffer Renderer::getFrameBuffer(uint32_t imageIndex) const {
     return (imageIndex < framebuffers.size() && framebuffers[imageIndex]) ? 
@@ -317,7 +322,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
 
 
 // End frame: finalize command buffer, submit, and present
-void Renderer::endFrame(uint32_t imageIndex) {
+void Renderer::endFrame(uint32_t imageIndex, ImGuiWrapper* imguiWrapper) {
     if (imageIndex == UINT32_MAX) return;
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
@@ -333,66 +338,8 @@ void Renderer::endFrame(uint32_t imageIndex) {
     postProcess->executeEffects(currentCmd, currentFrame);
     postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
 
-    if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {
-        throw std::runtime_error("failed to record command buffer!");
-    }
-
-    VkSemaphore waitSemaphores[]   = { imageAvailableSemaphores[currentFrame] };
-    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    // SIGNAL the per-IMAGE semaphore:
-    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[imageIndex] };
-
-    VkSubmitInfo submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-    submit.waitSemaphoreCount   = 1;
-    submit.pWaitSemaphores      = waitSemaphores;
-    submit.pWaitDstStageMask    = &waitStage;
-    submit.commandBufferCount   = 1;
-    submit.pCommandBuffers      = &currentCmd;
-    submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores    = signalSemaphores;
-
-    if (vkQueueSubmit(deviceVK->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to submit draw command buffer");
-    }
-
-    // PRESENT waits on the same per-IMAGE semaphore:
-    VkPresentInfoKHR present{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-    present.waitSemaphoreCount = 1;
-    present.pWaitSemaphores    = signalSemaphores;
-    present.swapchainCount     = 1;
-    VkSwapchainKHR chains[]    = { swapchain->get() };
-    present.pSwapchains        = chains;
-    present.pImageIndices      = &imageIndex;
-
-    VkResult res = vkQueuePresentKHR(deviceVK->presentQueue, &present);
-    if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        framebufferResized = true;
-    } else if (res != VK_SUCCESS) {
-        throw std::runtime_error("failed to present");
-    }
-
-    currentFrame = (currentFrame + 1) % maxFramesInFlight;
-}
-
-void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer, VkRenderPass, VkFramebuffer)> imguiRenderFunc) {
-    if (imageIndex == UINT32_MAX) return;
-
-    VkCommandBuffer currentCmd = getCurrentCommandBuffer();
-
-    // End the offscreen render pass first before post-processing
-    if (currentRenderTarget) {
-        currentRenderTarget->endRenderPass(currentCmd);
-        currentRenderTarget = nullptr;
-    } else {
-        vkCmdEndRenderPass(currentCmd);
-    }
-
-    postProcess->executeEffects(currentCmd, currentFrame);
-    postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
-
-    // Render ImGui if a render function is provided
-    if (imguiRenderFunc) {
+    // Render ImGui if provided (before ending command buffer)
+    if (imguiWrapper) {
         // Transition swapchain image from present to color attachment
         VkImageMemoryBarrier toColorAttachment{};
         toColorAttachment.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -406,11 +353,11 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         toColorAttachment.subresourceRange.levelCount = 1;
         toColorAttachment.subresourceRange.baseArrayLayer = 0;
         toColorAttachment.subresourceRange.layerCount = 1;
-        toColorAttachment.srcAccessMask = 0;  // Already transitioned by blit in previous stage
+        toColorAttachment.srcAccessMask = 0;
         toColorAttachment.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
         vkCmdPipelineBarrier(currentCmd,
-                            VK_PIPELINE_STAGE_TRANSFER_BIT,  // Wait for the blit operation to complete
+                            VK_PIPELINE_STAGE_TRANSFER_BIT,
                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                             0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
 
@@ -418,26 +365,9 @@ void Renderer::endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer,
         auto* imguiTarget = renderTargets.getTarget("imgui_" + std::to_string(imageIndex));
         if (imguiTarget) {
             imguiTarget->render(currentCmd, [&](VkCommandBuffer cmd, VkRenderPass rp, VkFramebuffer fb) {
-                imguiRenderFunc(cmd, rp, fb);
+                imguiWrapper->render(cmd);
             });
-        } else {
-            // Fallback to old method
-            VkRenderPassBeginInfo renderPassInfo{};
-            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = getImGuiRenderPass();
-            renderPassInfo.framebuffer = getFrameBuffer(imageIndex);
-            renderPassInfo.renderArea.offset = {0, 0};
-            renderPassInfo.renderArea.extent = swapchain->getExtent();
-            renderPassInfo.clearValueCount = 0;
-            renderPassInfo.pClearValues = nullptr;
-
-            vkCmdBeginRenderPass(currentCmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            imguiRenderFunc(currentCmd, getImGuiRenderPass(), getFrameBuffer(imageIndex));
-            vkCmdEndRenderPass(currentCmd);
         }
-
-        // Note: The render pass automatically transitions the image back to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-        // as specified in its finalLayout, so no manual transition is needed
     }
 
     if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {

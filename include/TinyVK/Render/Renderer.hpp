@@ -16,6 +16,9 @@
 
 #include "TinyEngine/TinyProject.hpp"
 
+// Forward declarations
+class ImGuiWrapper;
+
 namespace TinyVK {
 
 class Renderer {
@@ -31,8 +34,7 @@ public:
     void handleWindowResize(SDL_Window* window);
 
     uint32_t beginFrame();
-    void endFrame(uint32_t imageIndex);
-    void endFrame(uint32_t imageIndex, std::function<void(VkCommandBuffer, VkRenderPass, VkFramebuffer)> imguiRenderFunc);
+    void endFrame(uint32_t imageIndex, ImGuiWrapper* imguiWrapper = nullptr);
 
     uint32_t getCurrentFrame() const { return currentFrame; }
     VkCommandBuffer getCurrentCommandBuffer() const;
@@ -44,7 +46,6 @@ public:
     // Legacy render pass getters (for backward compatibility)
     VkRenderPass getMainRenderPass() const;
     VkRenderPass getOffscreenRenderPass() const;  // Delegates to PostProcess
-    VkRenderPass getImGuiRenderPass() const;
     
     // Swapchain getters for external access
     Swapchain* getSwapChain() const { return swapchain.get(); }
@@ -85,7 +86,6 @@ private:
 
     // Properly owned resources for render targets
     UniquePtr<RenderPass> mainRenderPass;
-    UniquePtr<RenderPass> imguiRenderPass;
     UniquePtrVec<FrameBuffer> framebuffers;
 
     UniquePtr<PostProcess> postProcess;
@@ -108,6 +108,12 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void createRenderTargets();
+
+public:
+    // ImGui integration
+    void createImGuiRenderTargets(ImGuiWrapper* imguiWrapper);
+
+private:
 };
 
 }
