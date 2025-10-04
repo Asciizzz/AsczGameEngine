@@ -49,10 +49,6 @@ struct TinyPool {
     };
 
     TinyPool() = default;
-    TinyPool(uint32_t initialCapacity, uint32_t capacityStep = 16)
-    : expandStep(capacityStep) {
-        allocate(initialCapacity);
-    }
 
     // Delete copy semantics
     TinyPool(const TinyPool&) = delete;
@@ -64,54 +60,14 @@ struct TinyPool {
     std::vector<State> states;
     std::vector<uint32_t> freeList;
 
-    uint32_t capacity = 0;
     uint32_t count = 0;
-    uint32_t spaceLeft() const { return capacity - count; }
-
-    uint32_t autoExpandStep = 16; // Default expansion step
-    void setAutoExpandStep(uint32_t step) { autoExpandStep = step; }
-
-    bool resizeFlag = false; // Helpful toggleable flag for register resize logics
-    bool hasResized() const { return resizeFlag; }
-    void resetResizeFlag() { resizeFlag = false; }
 
     void clear() {
         items.clear();
         states.clear();
         freeList.clear();
-        capacity = 0;
         count = 0;
     }
-
-    TinyPool& allocate(uint32_t capacity) {
-        clear();
-
-        this->capacity = capacity;
-        items.resize(capacity);
-        states.resize(capacity);
-
-        freeList.reserve(capacity);
-        for (uint32_t i = 0; i < capacity; ++i) {
-            freeList.push_back(capacity - 1 - i);
-        }
-        return *this;
-    }
-
-    TinyPool& resize(uint32_t newCapacity) {
-        items.resize(newCapacity);
-        states.resize(newCapacity);
-        freeList.reserve(newCapacity);
-
-        for (uint32_t i = newCapacity; i-- > capacity;) {
-            freeList.push_back(i);
-        }
-
-        capacity = newCapacity;
-        resizeFlag = true;
-        return *this;
-    }
-
-    bool hasSpace() const { return !freeList.empty(); }
 
     bool isValid(TinyHandle handle) const {
         return  isOccupied(handle.index) &&
@@ -125,11 +81,19 @@ struct TinyPool {
     // ---- Type-aware insert ----
     template<typename U>
     TinyHandle insert(U&& item) {
-        while (!hasSpace()) resize(capacity + autoExpandStep);
         count++;
+        uint32_t index;
 
-        uint32_t index = freeList.back();
-        freeList.pop_back();
+        // Check if we can reuse a slot from the free list
+        if (!freeList.empty()) {
+            index = freeList.back();
+            freeList.pop_back();
+        } else {
+            // No free slots, add new item to the end
+            index = static_cast<uint32_t>(items.size());
+            items.emplace_back();
+            states.emplace_back();
+        }
 
         if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
             if constexpr (std::is_same_v<std::decay_t<U>, Type>) {
@@ -154,7 +118,7 @@ struct TinyPool {
 
     // ---- Remove ----
     void remove(uint32_t index) {
-        if (!isValid(index)) return;
+        if (!isOccupied(index)) return;
         count--;
 
         if constexpr (TinyPoolTraits<Type>::is_unique_ptr || TinyPoolTraits<Type>::is_shared_ptr) {
@@ -167,6 +131,11 @@ struct TinyPool {
         states[index].version++;
 
         freeList.push_back(index);
+    }
+
+    void remove(const TinyHandle& handle) {
+        if (!isValid(handle)) return;
+        remove(handle.index);
     }
 
     Type* get(const TinyHandle& handle) {
@@ -184,8 +153,8 @@ struct TinyPool {
     }
 
     // Reference is better since this is never null
-    std::vector<Type>& view() { return &items; }
-    const std::vector<Type>& view() const { return &items; }
+    std::vector<Type>& view() { return items; }
+    const std::vector<Type>& view() const { return items; }
 
     Type* data() { return items.data(); }
     const Type* data() const { return items.data(); }
