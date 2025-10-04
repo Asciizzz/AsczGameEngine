@@ -961,7 +961,5 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
     loadNodes(result, model, nodeToSkeletonAndBoneIndex);
 
-    printHierarchy(result.nodes);
-
     return result;
 }

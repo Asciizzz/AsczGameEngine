@@ -630,9 +630,7 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
         std::cerr << "Assets directory not found: " << assetsPath << std::endl;
         return;
     }
-    
-    std::cout << "Loading assets from: " << assetsPath << std::endl;
-    
+
     try {
         for (const auto& entry : fs::recursive_directory_iterator(assetsPath)) {
             if (entry.is_regular_file()) {
@@ -643,12 +641,10 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
                 std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
                 
                 if (extension == ".glb" || extension == ".gltf") {
-                    std::cout << "Loading model: " << filePath << std::endl;
-                    
+
                     try {
                         TinyModel model = TinyLoader::loadModel(filePath, false);
                         project->addTemplateFromModel(model);
-                        std::cout << "Successfully loaded: " << filePath << std::endl;
                     } catch (const std::exception& e) {
                         std::cerr << "Failed to load model " << filePath << ": " << e.what() << std::endl;
                     }
@@ -658,8 +654,6 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
     } catch (const std::exception& e) {
         std::cerr << "Error scanning assets directory: " << e.what() << std::endl;
     }
-    
-    std::cout << "Asset loading complete. Total templates: " << project->getTemplates().size() << std::endl;
 }
 
 void Application::cleanup() {}
