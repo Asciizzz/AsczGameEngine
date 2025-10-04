@@ -121,7 +121,8 @@ struct TinyPool {
         if (!isOccupied(index)) return;
         count--;
 
-        if constexpr (TinyPoolTraits<Type>::is_unique_ptr || TinyPoolTraits<Type>::is_shared_ptr) {
+        if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
+                    TinyPoolTraits<Type>::is_shared_ptr) {
             items[index].reset();
         } else {
             items[index] = {};
