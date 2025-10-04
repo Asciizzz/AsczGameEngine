@@ -57,7 +57,6 @@ bool ImGuiWrapper::init(SDL_Window* window, VkInstance instance, const TinyVK::D
     // Font upload is now handled automatically by ImGui
 
     m_initialized = true;
-    std::cout << "ImGui initialized successfully!" << std::endl;
     return true;
 }
 

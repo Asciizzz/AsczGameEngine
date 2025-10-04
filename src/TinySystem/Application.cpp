@@ -39,10 +39,10 @@ void Application::initComponents() {
     fpsManager = MakeUnique<TinyChrono>();
 
     auto extensions = windowManager->getRequiredVulkanExtensions();
-    vkInstance = MakeUnique<Instance>(extensions, enableValidationLayers);
-    vkInstance->createSurface(windowManager->window);
+    instanceVK = MakeUnique<Instance>(extensions, enableValidationLayers);
+    instanceVK->createSurface(windowManager->window);
 
-    deviceVK = MakeUnique<Device>(vkInstance->instance, vkInstance->surface);
+    deviceVK = MakeUnique<Device>(instanceVK->instance, instanceVK->surface);
 
     // So we dont have to write these things over and over again
     VkDevice device = deviceVK->device;
@@ -51,7 +51,7 @@ void Application::initComponents() {
     // Create renderer (which now manages depth manager, swap chain and render passes)
     renderer = MakeUnique<Renderer>(
         deviceVK.get(),
-        vkInstance->surface,
+        instanceVK->surface,
         windowManager->window,
         Application::MAX_FRAMES_IN_FLIGHT
     );
@@ -117,16 +117,13 @@ void Application::initComponents() {
     // ImGui now creates its own render pass using swapchain and depth info
     bool imguiInitSuccess = imguiWrapper->init(
         windowManager->window,
-        vkInstance->instance,
+        instanceVK->instance,
         deviceVK.get(),
         renderer->getSwapChain(),
         renderer->getDepthManager()
     );
     
     if (imguiInitSuccess) {
-        std::cout << "ImGui initialized successfully with format: " << renderer->getSwapChain()->getImageFormat() << std::endl;
-        
-        // Set up ImGui render targets with Renderer's framebuffers
         renderer->setupImGuiRenderTargets(imguiWrapper.get());
     } else {
         std::cerr << "Failed to initialize ImGui!" << std::endl;
@@ -370,10 +367,265 @@ void Application::createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& 
         
         ImGui::Spacing();
         
+        // Scene Controls
+        ImGui::Text("Scene Controls");
+        ImGui::Separator();
+        
+        // Node instance placement button
+        if (ImGui::Button("Place Object at Camera", ImVec2(180, 30))) {
+            // Same logic as the 'P' key press
+            glm::mat4 rot = glm::mat4(1.0f);
+            rot = glm::rotate(rot, camera.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
+
+            glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * 2.0f);
+            glm::mat4 model = trans * rot;
+
+            project->addNodeInstance(1, 0, model);
+            project->updateGlobalTransforms(0);
+            project->printRuntimeNodeHierarchy();
+        }
+        
+        // Additional placement options
+        ImGui::SameLine();
+        if (ImGui::Button("Place at Origin", ImVec2(120, 30))) {
+            glm::mat4 model = glm::mat4(1.0f); // Identity matrix (at origin)
+            project->addNodeInstance(1, 0, model);
+            project->updateGlobalTransforms(0);
+            project->printRuntimeNodeHierarchy();
+        }
+        
+        // Random placement button
+        if (ImGui::Button("Place Random", ImVec2(120, 30))) {
+            static std::random_device rd;
+            static std::mt19937 gen(rd());
+            static std::uniform_real_distribution<float> posDist(-10.0f, 10.0f);
+            static std::uniform_real_distribution<float> rotDist(0.0f, 6.28318f); // 0 to 2π
+            
+            glm::vec3 randomPos(posDist(gen), 0.0f, posDist(gen));
+            glm::mat4 rot = glm::rotate(glm::mat4(1.0f), rotDist(gen), glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 trans = glm::translate(glm::mat4(1.0f), randomPos);
+            glm::mat4 model = trans * rot;
+            
+            project->addNodeInstance(1, 0, model);
+            project->updateGlobalTransforms(0);
+            project->printRuntimeNodeHierarchy();
+        }
+        
+        ImGui::Spacing();
+        
         // Window controls
         ImGui::Text("Windows");
         ImGui::Separator();
         ImGui::Checkbox("Show Demo Window", &showDemoWindow);
+        ImGui::Checkbox("Show Scene Window", &showSceneWindow);
+        ImGui::Checkbox("Show ImGui Explorer", &showImGuiExplorerWindow);
+        
+        ImGui::End();
+    }
+    
+    // Scene Management Window
+    if (showSceneWindow) {
+        ImGui::Begin("Scene Manager", &showSceneWindow);
+        
+        // Object Placement Section
+        ImGui::Text("Object Placement");
+        ImGui::Separator();
+        
+        // Distance slider for placement
+        static float placementDistance = 2.0f;
+        ImGui::SliderFloat("Placement Distance", &placementDistance, 0.5f, 10.0f, "%.1f units");
+        
+        // Template selection
+        static int selectedTemplate = 1;
+        ImGui::InputInt("Template ID", &selectedTemplate);
+        if (selectedTemplate < 0) selectedTemplate = 0;
+        
+        // Placement buttons with custom distance
+        if (ImGui::Button("Place at Camera", ImVec2(140, 25))) {
+            glm::mat4 rot = glm::rotate(glm::mat4(1.0f), camera.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * placementDistance);
+            glm::mat4 model = trans * rot;
+            
+            project->addNodeInstance(selectedTemplate, 0, model);
+            project->updateGlobalTransforms(0);
+            project->printRuntimeNodeHierarchy();
+        }
+        
+        ImGui::SameLine();
+        if (ImGui::Button("Place at Origin", ImVec2(140, 25))) {
+            project->addNodeInstance(selectedTemplate, 0, glm::mat4(1.0f));
+            project->updateGlobalTransforms(0);
+            project->printRuntimeNodeHierarchy();
+        }
+        
+        // Manual position placement
+        static float manualPos[3] = {0.0f, 0.0f, 0.0f};
+        static float manualRot[3] = {0.0f, 0.0f, 0.0f};
+        
+        ImGui::Spacing();
+        ImGui::Text("Manual Placement");
+        ImGui::DragFloat3("Position", manualPos, 0.1f, -50.0f, 50.0f);
+        ImGui::DragFloat3("Rotation (degrees)", manualRot, 1.0f, -180.0f, 180.0f);
+        
+        if (ImGui::Button("Place Manually", ImVec2(140, 25))) {
+            glm::mat4 model = glm::mat4(1.0f);
+            
+            // Apply rotations (convert degrees to radians)
+            model = glm::rotate(model, glm::radians(manualRot[1]), glm::vec3(0.0f, 1.0f, 0.0f)); // Y (yaw)
+            model = glm::rotate(model, glm::radians(manualRot[0]), glm::vec3(1.0f, 0.0f, 0.0f)); // X (pitch)
+            model = glm::rotate(model, glm::radians(manualRot[2]), glm::vec3(0.0f, 0.0f, 1.0f)); // Z (roll)
+            
+            // Apply translation
+            model = glm::translate(glm::mat4(1.0f), glm::vec3(manualPos[0], manualPos[1], manualPos[2])) * model;
+            
+            project->addNodeInstance(selectedTemplate, 0, model);
+            project->updateGlobalTransforms(0);
+            project->printRuntimeNodeHierarchy();
+        }
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        
+        // Scene Info
+        ImGui::Text("Scene Information");
+        ImGui::Text("Runtime Node Count: %zu", project->getRuntimeNodes().size());
+        ImGui::Text("Mesh Render Nodes: %zu", project->getRuntimeMeshRenderIndices().size());
+        
+        // Quick node list (first few nodes)
+        ImGui::Spacing();
+        ImGui::Text("Node List (first 10):");
+        const auto& rtNodes = project->getRuntimeNodes();
+        for (size_t i = 0; i < std::min(rtNodes.size(), size_t(10)); ++i) {
+            if (rtNodes[i]) {
+                // Get registry node to display name
+                const auto* regNode = project->getRegistry()->get<TinyRNode>(rtNodes[i]->rHandle);
+                std::string nodeName = regNode ? regNode->name : "Unknown";
+                ImGui::Text("  [%zu] %s", i, nodeName.c_str());
+            }
+        }
+        
+        ImGui::End();
+    }
+    
+    // ImGui Feature Explorer Window
+    if (showImGuiExplorerWindow) {
+        ImGui::Begin("ImGui Feature Explorer", &showImGuiExplorerWindow);
+        
+        // Tabs for different feature categories
+        if (ImGui::BeginTabBar("FeatureTabs")) {
+            
+            // Basic Widgets Tab
+            if (ImGui::BeginTabItem("Basic Widgets")) {
+                static bool checkbox1 = false;
+                static bool checkbox2 = true;
+                ImGui::Checkbox("Checkbox 1", &checkbox1);
+                ImGui::Checkbox("Checkbox 2", &checkbox2);
+                
+                static int radio = 0;
+                ImGui::RadioButton("Radio 1", &radio, 0); ImGui::SameLine();
+                ImGui::RadioButton("Radio 2", &radio, 1); ImGui::SameLine();
+                ImGui::RadioButton("Radio 3", &radio, 2);
+                
+                static float slider1 = 0.5f;
+                static int slider2 = 50;
+                ImGui::SliderFloat("Float Slider", &slider1, 0.0f, 1.0f);
+                ImGui::SliderInt("Int Slider", &slider2, 0, 100);
+                
+                static float color[4] = {1.0f, 0.0f, 0.0f, 1.0f};
+                ImGui::ColorEdit4("Color Picker", color);
+                
+                ImGui::EndTabItem();
+            }
+            
+            // Input Widgets Tab
+            if (ImGui::BeginTabItem("Input Widgets")) {
+                static char textBuffer[256] = "Edit me!";
+                ImGui::InputText("Text Input", textBuffer, sizeof(textBuffer));
+                
+                static float inputFloat = 3.14159f;
+                static int inputInt = 42;
+                ImGui::InputFloat("Input Float", &inputFloat, 0.01f, 1.0f, "%.3f");
+                ImGui::InputInt("Input Int", &inputInt);
+                
+                static float dragFloat = 0.0f;
+                static int dragInt = 0;
+                ImGui::DragFloat("Drag Float", &dragFloat, 0.005f);
+                ImGui::DragInt("Drag Int", &dragInt);
+                
+                ImGui::EndTabItem();
+            }
+            
+            // Layout & Styling Tab
+            if (ImGui::BeginTabItem("Layout & Style")) {
+                ImGui::Text("Button Variations:");
+                
+                if (ImGui::Button("Normal Button")) {
+                    // Button action
+                }
+                
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Small")) {
+                    // Small button action
+                }
+                
+                if (ImGui::Button("Custom Size Button", ImVec2(200, 40))) {
+                    // Custom size button action
+                }
+                
+                ImGui::Separator();
+                
+                ImGui::Text("Text Variations:");
+                ImGui::Text("Normal text");
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Colored text");
+                ImGui::TextWrapped("This is a long text that will wrap around when it reaches the edge of the window. Very useful for descriptions and help text.");
+                
+                ImGui::Separator();
+                
+                ImGui::Text("Progress Bars:");
+                static float progress = 0.0f;
+                progress += 0.001f;
+                if (progress > 1.0f) progress = 0.0f;
+                
+                ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f));
+                ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f), "Custom Progress");
+                
+                ImGui::EndTabItem();
+            }
+            
+            // Trees & Lists Tab
+            if (ImGui::BeginTabItem("Trees & Lists")) {
+                ImGui::Text("Tree Nodes:");
+                
+                if (ImGui::TreeNode("Root Node")) {
+                    if (ImGui::TreeNode("Child 1")) {
+                        ImGui::Text("Leaf 1");
+                        ImGui::Text("Leaf 2");
+                        ImGui::TreePop();
+                    }
+                    if (ImGui::TreeNode("Child 2")) {
+                        ImGui::Text("Leaf 3");
+                        ImGui::TreePop();
+                    }
+                    ImGui::TreePop();
+                }
+                
+                ImGui::Separator();
+                
+                ImGui::Text("Selectable List:");
+                static int selected = -1;
+                for (int i = 0; i < 5; i++) {
+                    char label[32];
+                    sprintf(label, "Item %d", i);
+                    if (ImGui::Selectable(label, selected == i)) {
+                        selected = i;
+                    }
+                }
+                
+                ImGui::EndTabItem();
+            }
+            
+            ImGui::EndTabBar();
+        }
         
         ImGui::End();
     }

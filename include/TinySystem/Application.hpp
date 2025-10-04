@@ -36,7 +36,7 @@ private:
     UniquePtr<TinyWindow> windowManager;
     UniquePtr<TinyChrono> fpsManager;
 
-    UniquePtr<TinyVK::Instance> vkInstance;
+    UniquePtr<TinyVK::Instance> instanceVK;
     UniquePtr<TinyVK::Device> deviceVK;
 
     UniquePtr<TinyVK::Renderer> renderer;
@@ -49,6 +49,8 @@ private:
     // ImGui UI state
     bool showDebugWindow = true;
     bool showDemoWindow = false;
+    bool showSceneWindow = true;
+    bool showImGuiExplorerWindow = false;
 
     // Window metadata
     const char* appTitle;
