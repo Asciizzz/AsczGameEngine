@@ -51,6 +51,9 @@ private:
     bool showDemoWindow = false;
     bool showSceneWindow = true;
     bool showImGuiExplorerWindow = false;
+    
+    // Template management
+    int currentSelectedTemplate = 0;
 
     // Window metadata
     const char* appTitle;
@@ -64,6 +67,7 @@ private:
     void cleanup();
 
     void setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
+    void loadAllAssetsRecursively(const std::string& assetsPath);
 
     bool checkWindowResize();
 };

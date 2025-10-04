@@ -134,7 +134,11 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModel& model) {
         }
     }
 
-    templates.push_back(TinyTemplate(glbNoderHandle));
+    TinyTemplate newTemplate;
+    newTemplate.name = model.name;
+    newTemplate.rData = glbNoderHandle;
+
+    templates.push_back(std::move(newTemplate));
     return static_cast<uint32_t>(templates.size() - 1);
 }
 
@@ -374,6 +378,9 @@ void TinyProject::runPlayground(float dTime) {
     // Update the entire transform hierarchy every frame (no dirty flag checking)
     updateGlobalTransforms(0);
 }
+
+
+
 
 
 void deleteRNodeRecursive(TinyPool<TinyRNode>& rNodePool, uint32_t index) {

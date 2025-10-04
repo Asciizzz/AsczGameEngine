@@ -4,6 +4,9 @@
 
 #include <iostream>
 #include <random>
+#include <filesystem>
+#include <string>
+#include <algorithm>
 
 #ifdef NDEBUG // Remember to set this to false
 const bool enableValidationLayers = true;
@@ -63,16 +66,10 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    TinyModel newModel0 = TinyLoader::loadModel("Assets/Characters/Furina.glb", false);
-    TinyModel newModel1 = TinyLoader::loadModel("Assets/Characters/Furina.glb", false);
-    project->addTemplateFromModel(newModel0);
-    project->addTemplateFromModel(newModel1);
-
-    project->addNodeInstance(0);
-
-    project->printRuntimeNodeHierarchy();
-
-// PLAYGROUND END HERE 
+    // Load all models from Assets directory recursively
+    loadAllAssetsRecursively("Assets");
+    
+    project->printRuntimeNodeHierarchy();// PLAYGROUND END HERE 
 
     auto glbLayout = project->getGlbDescSetLayout();
     auto matLayout = VK_NULL_HANDLE; // Placeholder until we have a material UBO
@@ -273,31 +270,8 @@ void Application::mainLoop() {
 
 // =================================
 
-        // Press p to place
-        static bool pPressed = false;
-        if (k_state[SDL_SCANCODE_P] && !pPressed) {
-            // Place it at the camera position
-            // Rotated in the camera yaw direction
-
-            glm::mat4 rot = glm::mat4(1.0f);
-            rot = glm::rotate(rot, camRef.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
-
-            glm::mat4 trans = glm::translate(glm::mat4(1.0f), camRef.pos + camRef.forward * 2.0f);
-
-            glm::mat4 model = trans * rot;
-
-            project->addNodeInstance(1, 0, model);
-            project->updateGlobalTransforms(0);
-            
-            project->printRuntimeNodeHierarchy();
-            pPressed = true;
-        } else if (!k_state[SDL_SCANCODE_P]) {
-            pPressed = false;
-        }
-
         project->runPlayground(dTime);
 
-        // Start ImGui frame
         imguiWrapper->newFrame();
 
         project->getGlobal()->update(camRef, rendererRef.getCurrentFrame());
@@ -431,9 +405,34 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::SliderFloat("Placement Distance", &placementDistance, 0.0f, 10.0f, "%.1f units");
         
         // Template selection
-        static int selectedTemplate = 1;
-        ImGui::InputInt("Template ID", &selectedTemplate);
-        if (selectedTemplate < 0) selectedTemplate = 0;
+        static int selectedTemplate = 0;
+        ImGui::Text("Template Selection");
+        ImGui::Separator();
+        
+        // Get templates using the existing getTemplates method
+        const auto& templates = project->getTemplates();
+        
+        ImGui::Text("Available Templates (%zu):", templates.size());
+        ImGui::BeginChild("TemplateList", ImVec2(0, 150), true);
+        
+        for (int i = 0; i < (int)templates.size(); ++i) {
+            const auto& templateNode = templates[i];
+            std::string templateName = templateNode.name.empty() ? ("Template " + std::to_string(i)) : templateNode.name;
+            
+            if (ImGui::RadioButton(templateName.c_str(), &selectedTemplate, i)) {
+                // Radio button automatically sets selectedTemplate to i
+            }
+        }
+        
+        ImGui::EndChild();
+        
+        if (!templates.empty()) {
+            ImGui::Text("Selected: %s (ID: %d)", 
+                       selectedTemplate < (int)templates.size() ? templates[selectedTemplate].name.c_str() : "Invalid",
+                       selectedTemplate);
+        }
+        
+        ImGui::Spacing();
         
         // Placement buttons with custom distance
         if (ImGui::Button("Place at Camera", ImVec2(140, 25))) {
@@ -622,6 +621,45 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
     if (showDemoWindow) {
         imguiWrapper->showDemoWindow(&showDemoWindow);
     }
+}
+
+void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
+    namespace fs = std::filesystem;
+    
+    if (!fs::exists(assetsPath) || !fs::is_directory(assetsPath)) {
+        std::cerr << "Assets directory not found: " << assetsPath << std::endl;
+        return;
+    }
+    
+    std::cout << "Loading assets from: " << assetsPath << std::endl;
+    
+    try {
+        for (const auto& entry : fs::recursive_directory_iterator(assetsPath)) {
+            if (entry.is_regular_file()) {
+                std::string filePath = entry.path().string();
+                std::string extension = entry.path().extension().string();
+                
+                // Convert to lowercase for case-insensitive comparison
+                std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+                
+                if (extension == ".glb" || extension == ".gltf") {
+                    std::cout << "Loading model: " << filePath << std::endl;
+                    
+                    try {
+                        TinyModel model = TinyLoader::loadModel(filePath, false);
+                        project->addTemplateFromModel(model);
+                        std::cout << "Successfully loaded: " << filePath << std::endl;
+                    } catch (const std::exception& e) {
+                        std::cerr << "Failed to load model " << filePath << ": " << e.what() << std::endl;
+                    }
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error scanning assets directory: " << e.what() << std::endl;
+    }
+    
+    std::cout << "Asset loading complete. Total templates: " << project->getTemplates().size() << std::endl;
 }
 
 void Application::cleanup() {}

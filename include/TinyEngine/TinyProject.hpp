@@ -94,10 +94,8 @@ public:
 };
 
 struct TinyTemplate {
+    std::string name;
     std::vector<TinyHandle> rData; // Could be virtually anything - nodes, meshes, materials, textures, skeletons, animations...
-
-    TinyTemplate() = default;
-    TinyTemplate(const std::vector<TinyHandle>& rData) : rData(rData) {}
 };
 
 class TinyProject {
@@ -164,6 +162,7 @@ public:
     const std::vector<uint32_t>& getRuntimeMeshRenderIndices() const { return rtMeshRenderIdxs; }
 
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
+    const std::vector<TinyTemplate>& getTemplates() const { return templates; }
 
 private:
     const TinyVK::Device* deviceVK;

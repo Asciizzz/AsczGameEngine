@@ -940,6 +940,14 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
 
     TinyModel result;
+
+    std::string name = filePath;
+    size_t slashPos = name.find_last_of("/\\");
+    if (slashPos != std::string::npos) name = name.substr(slashPos + 1);
+    size_t dotPos = name.find_last_of('.');
+    if (dotPos != std::string::npos) name = name.substr(0, dotPos);
+    result.name = name;
+
     if (!ok || model.meshes.empty()) return result;
 
     loadTextures(result.textures, model);

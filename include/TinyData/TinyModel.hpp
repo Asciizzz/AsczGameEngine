@@ -8,6 +8,8 @@
 #include "TinyData/TinyNode.hpp"
 
 struct TinyModel {
+    std::string name;
+
     // Raw unlinked registries
     std::vector<TinyMesh> meshes;
     std::vector<std::vector<TinyHandle>> submeshesMats; // Per-mesh material indices
