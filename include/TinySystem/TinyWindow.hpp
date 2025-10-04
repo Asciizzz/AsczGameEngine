@@ -19,7 +19,9 @@ public:
     std::vector<const char*> getRequiredVulkanExtensions() const;
     void getFrameBufferSize(int& width, int& height) const;
     void waitEvents() const;
-    
+
+    Uint32 toggleFullscreen();
+
     SDL_Window* window;
     bool shouldCloseFlag;
     bool resizedFlag;

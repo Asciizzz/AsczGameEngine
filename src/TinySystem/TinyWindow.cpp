@@ -74,3 +74,14 @@ void TinyWindow::getFrameBufferSize(int& width, int& height) const {
 void TinyWindow::waitEvents() const {
     SDL_WaitEvent(nullptr);
 }
+
+Uint32 TinyWindow::toggleFullscreen() {
+    Uint32 flags = SDL_GetWindowFlags(window);
+    if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+        SDL_SetWindowFullscreen(window, 0);
+    } else {
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    }
+
+    return SDL_GetWindowFlags(window);
+}

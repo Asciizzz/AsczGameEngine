@@ -206,7 +206,6 @@ void Application::mainLoop() {
 
         static float cam_dist = 1.5f;
         static glm::vec3 camPos = camRef.pos;
-        static bool mouseLocked = true;
 
         // Check if window was resized or renderer needs to be updated
         checkWindowResize();
@@ -218,38 +217,35 @@ void Application::mainLoop() {
         }
 
         // Toggle fullscreen with F11 key
-        static bool f11Pressed = false;
-        if (k_state[SDL_SCANCODE_F11] && !f11Pressed) {
-            // Get current window flags
-            Uint32 flags = SDL_GetWindowFlags(winManager.window);
-            
-            if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-                SDL_SetWindowFullscreen(winManager.window, 0);
-            } else {
-                SDL_SetWindowFullscreen(winManager.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-            }
-            f11Pressed = true;
-        } else if (!k_state[SDL_SCANCODE_F11]) {
-            f11Pressed = false;
+        static bool fullscreenPressed = false;
+        static SDL_Scancode fullscreenKey = SDL_SCANCODE_F11;
+        if (k_state[fullscreenKey] && !fullscreenPressed) {
+            winManager.toggleFullscreen();
+
+            fullscreenPressed = true;
+        } else if (!k_state[fullscreenKey]) {
+            fullscreenPressed = false;
         }
         
         // Toggle mouse lock with F1 key
-        static bool f1Pressed = false;
-        if (k_state[SDL_SCANCODE_F1] && !f1Pressed) {
-            mouseLocked = !mouseLocked;
-            if (mouseLocked) {
+        static bool mouseFocusPressed = false;
+        static bool mouseFocus = true;
+        static SDL_Scancode mouseFocusKey = SDL_SCANCODE_Q;
+        if (k_state[mouseFocusKey] && !mouseFocusPressed) {
+            mouseFocus = !mouseFocus;
+            if (mouseFocus) {
                 SDL_SetRelativeMouseMode(SDL_TRUE);
                 SDL_WarpMouseInWindow(winManager.window, 0, 0);
             } else {
                 SDL_SetRelativeMouseMode(SDL_FALSE);
             }
-            f1Pressed = true;
-        } else if (!k_state[SDL_SCANCODE_F1]) {
-            f1Pressed = false;
+            mouseFocusPressed = true;
+        } else if (!k_state[mouseFocusKey]) {
+            mouseFocusPressed = false;
         }
 
-        // Handle mouse look when locked
-        if (mouseLocked) {
+        // Handle mouse look when focused
+        if (mouseFocus) {
             int mouseX, mouseY;
             SDL_GetRelativeMouseState(&mouseX, &mouseY);
 
@@ -262,6 +258,7 @@ void Application::mainLoop() {
     
 // ======== PLAYGROUND HERE! ========
 
+        // Press
 
         // Camera movement controls
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
@@ -272,16 +269,6 @@ void Application::mainLoop() {
         if (k_state[SDL_SCANCODE_S]) camPos -= camRef.forward * p_speed;
         if (k_state[SDL_SCANCODE_A]) camPos -= camRef.right * p_speed;
         if (k_state[SDL_SCANCODE_D]) camPos += camRef.right * p_speed;
-
-        // Camera roll controls (Q/E keys)
-        float rollSpeed = 45.0f * dTime; // 45 degrees per second
-        if (k_state[SDL_SCANCODE_Q]) camRef.rotateRoll(-rollSpeed);
-        if (k_state[SDL_SCANCODE_E]) camRef.rotateRoll(rollSpeed);
-
-        // Reset roll with R key
-        if (k_state[SDL_SCANCODE_R]) {
-            camRef.rotateRoll(camRef.getRoll() * dTime * 10.0f);
-        }
 
         camRef.pos = camPos;
 
@@ -315,7 +302,7 @@ void Application::mainLoop() {
         imguiWrapper->newFrame();
         
         // Create ImGui UI
-        createImGuiUI(fpsRef, camRef, mouseLocked, dTime);
+        createImGuiUI(fpsRef, camRef, mouseFocus, dTime);
 
         project->getGlobal()->update(camRef, rendererRef.getCurrentFrame());
 
@@ -344,7 +331,7 @@ void Application::mainLoop() {
     vkDeviceWaitIdle(deviceVK->device);
 }
 
-void Application::createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime) {
+void Application::createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseFocus, float deltaTime) {
     // Main debug window
     if (showDebugWindow) {
         ImGui::Begin("Debug Panel", &showDebugWindow);
@@ -375,7 +362,7 @@ void Application::createImGuiUI(const TinyChrono& fpsManager, const TinyCamera& 
         // Input Status
         ImGui::Text("Input");
         ImGui::Separator();
-        ImGui::Text("Mouse Locked: %s", mouseLocked ? "Yes" : "No");
+        ImGui::Text("Mouse Focused: %s", mouseFocus ? "Yes" : "No");
         ImGui::Text("Press F1 to toggle mouse lock");
         ImGui::Text("Press F11 for fullscreen");
         ImGui::Text("Press P to place object");
