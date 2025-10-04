@@ -125,6 +125,8 @@ void Application::initComponents() {
     
     if (imguiInitSuccess) {
         renderer->setupImGuiRenderTargets(imguiWrapper.get());
+
+        setupImGuiWindows(*fpsManager, *project->getCamera(), true, 0.0f);
     } else {
         std::cerr << "Failed to initialize ImGui!" << std::endl;
     }
@@ -297,13 +299,6 @@ void Application::mainLoop() {
 
         // Start ImGui frame
         imguiWrapper->newFrame();
-        
-        // Setup UI windows on first frame
-        static bool uiInitialized = false;
-        if (!uiInitialized) {
-            setupImGuiWindows(fpsRef, camRef, mouseFocus, dTime);
-            uiInitialized = true;
-        }
 
         project->getGlobal()->update(camRef, rendererRef.getCurrentFrame());
 
@@ -311,7 +306,6 @@ void Application::mainLoop() {
         if (imageIndex != UINT32_MAX) {
             // Update global UBO buffer from frame index
             uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
-            // glbUBOManager->updateUBO(camRef, currentFrameIndex);
 
             rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 

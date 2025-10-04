@@ -4,6 +4,8 @@
 #include <iostream>
 #include <algorithm>
 
+using namespace TinyVK;
+
 bool TinyImGui::init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
                      const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager) {
     if (m_initialized) {
@@ -68,7 +70,7 @@ void TinyImGui::cleanup() {
     ImGui::DestroyContext();
 
     // Clear windows
-    m_windows.clear();
+    windows.clear();
     descPool.destroy(); // You don't really need to destroy the pool explicitly
 
     m_initialized = false;
@@ -84,26 +86,26 @@ void TinyImGui::newFrame() {
 }
 
 void TinyImGui::addWindow(const std::string& name, std::function<void()> draw, bool* p_open) {
-    m_windows.emplace_back(name, draw, p_open);
+    windows.emplace_back(name, draw, p_open);
 }
 
 void TinyImGui::removeWindow(const std::string& name) {
-    m_windows.erase(
-        std::remove_if(m_windows.begin(), m_windows.end(),
+    windows.erase(
+        std::remove_if(windows.begin(), windows.end(),
             [&name](const Window& w) { return w.name == name; }),
-        m_windows.end()
+        windows.end()
     );
 }
 
 void TinyImGui::clearWindows() {
-    m_windows.clear();
+    windows.clear();
 }
 
 void TinyImGui::render(VkCommandBuffer commandBuffer) {
     if (!m_initialized) return;
 
     // Render all registered windows
-    for (auto& window : m_windows) {
+    for (auto& window : windows) {
         if (window.p_open) {
             // Window has open/close control
             if (*window.p_open) {
@@ -137,13 +139,13 @@ void TinyImGui::showDemoWindow(bool* p_open) {
 void TinyImGui::createDescriptorPool() {
     descPool.create(deviceVK->device,
         {
-            { VK_DESCRIPTOR_TYPE_SAMPLER, 16 },                    // Font atlas + custom textures
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32 },     // Most commonly used by ImGui
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 16 },              // Additional image sampling
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8 },              // Transform matrices, etc.
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 },              // Rarely used by ImGui
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 4 },      // Dynamic uniforms
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 4 }       // Dynamic storage (rare)
+            { DescType::Sampler, 16 },                    // Font atlas + custom textures
+            { DescType::CombinedImageSampler, 32 },     // Most commonly used by ImGui
+            { DescType::SampledImage, 16 },              // Additional image sampling
+            { DescType::UniformBuffer, 8 },              // Transform matrices, etc.
+            { DescType::StorageBuffer, 4 },              // Rarely used by ImGui
+            { DescType::UniformBufferDynamic, 4 },      // Dynamic uniforms
+            { DescType::StorageBufferDynamic, 4 }       // Dynamic storage (rare)
         },
         64 // Much more reasonable than 11,000!
     );

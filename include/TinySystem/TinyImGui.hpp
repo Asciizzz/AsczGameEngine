@@ -85,11 +85,8 @@ private:
     UniquePtr<TinyVK::RenderPass> renderPass;
     std::vector<TinyVK::RenderTarget> renderTargets;
     
-    // Font management
-    std::vector<std::pair<std::string, ImFont*>> m_loadedFonts;
-    
     // Window management
-    std::vector<Window> m_windows;
+    std::vector<Window> windows;
     
     void createDescriptorPool();
     void createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager);
