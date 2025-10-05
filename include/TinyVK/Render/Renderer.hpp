@@ -10,7 +10,7 @@
 #include "TinyVK/Render/Swapchain.hpp"
 #include "TinyVK/Pipeline/Pipeline_include.hpp"
 #include "TinyVK/Render/PostProcess.hpp"
-#include "TinyVK/Render/DepthManager.hpp"
+#include "TinyVK/Render/DepthImage.hpp"
 #include "TinyVK/Render/RenderPass.hpp"
 #include "TinyVK/Render/RenderTarget.hpp"
 
@@ -54,8 +54,8 @@ public:
     VkExtent2D getSwapChainExtent() const;
     uint32_t getSwapChainImageCount() const { return static_cast<uint32_t>(swapchainImageCount); }
     
-    // DepthManager getter for external access
-    DepthManager* getDepthManager() const { return depthManager.get(); }
+    // DepthImage getter for external access
+    DepthImage* getDepthManager() const { return depthImage.get(); }
     
     // PostProcess getter for external access
     PostProcess* getPostProcess() const { return postProcess.get(); }
@@ -83,7 +83,7 @@ private:
     
     // Owned components
     UniquePtr<Swapchain> swapchain;
-    UniquePtr<DepthManager> depthManager;
+    UniquePtr<DepthImage> depthImage;
 
     // Direct render target ownership (no manager needed)
     std::vector<RenderTarget> swapchainRenderTargets;

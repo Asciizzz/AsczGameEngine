@@ -104,6 +104,8 @@ ImageViewConfig& ImageViewConfig::withAutoMipLevels(uint32_t width, uint32_t hei
 
 
 void ImageVK::cleanup() {
+    if (device == VK_NULL_HANDLE) return;
+
     if (view != VK_NULL_HANDLE) vkDestroyImageView(device, view, nullptr);
 
     if (ownership == Ownership::Owned) {

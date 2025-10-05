@@ -16,8 +16,8 @@ void PostProcessEffect::cleanup(VkDevice device) {
     }
 }
 
-PostProcess::PostProcess(Device* deviceVK, Swapchain* swapchain, DepthManager* depthManager)
-    : deviceVK(deviceVK), swapchain(swapchain), depthManager(depthManager) {
+PostProcess::PostProcess(Device* deviceVK, Swapchain* swapchain, DepthImage* depthImage)
+    : deviceVK(deviceVK), swapchain(swapchain), depthImage(depthImage) {
 }
 
 PostProcess::~PostProcess() {
@@ -29,7 +29,7 @@ void PostProcess::initialize() {
     vkDeviceWaitIdle(deviceVK->device);
     
     // Validate dependencies before proceeding
-    if (!swapchain || !depthManager || !deviceVK) {
+    if (!swapchain || !depthImage || !deviceVK) {
         throw std::runtime_error("PostProcess: Invalid dependencies during initialization");
     }
     
@@ -50,7 +50,7 @@ void PostProcess::initialize() {
 void PostProcess::createOffscreenRenderPass() {
     // Create offscreen render pass for scene rendering to ping-pong images
     VkFormat colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
-    VkFormat depthFormat = depthManager->getDepthFormat();
+    VkFormat depthFormat = depthImage->getFormat();
     
     RenderPassConfig config = RenderPassConfig::offscreenRendering(colorFormat, depthFormat);
     
@@ -110,7 +110,7 @@ void PostProcess::createOffscreenFrameBuffers() {
         FrameBufferConfig fbConfig = FrameBufferConfig()
             .withRenderPass(offscreenRenderPass->get())
             .addAttachment(pingPongImages[frame]->getViewA())  // Color attachment (index 0)
-            .addAttachment(depthManager->getDepthImageView())  // Depth attachment (index 1)
+            .addAttachment(depthImage->getView())  // Depth attachment (index 1)
             .withExtent(swapchain->getExtent());
 
         bool success = framebuffer->create(fbConfig);
@@ -138,7 +138,7 @@ void PostProcess::createOffscreenRenderTargets() {
         // Add depth attachment
         VkClearValue depthClear{};
         depthClear.depthStencil = {1.0f, 0};
-        renderTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView(), depthClear);
+        renderTarget.addAttachment(depthImage->getImage(), depthImage->getView(), depthClear);
         
         offscreenRenderTargets.push_back(std::move(renderTarget));
     }
@@ -210,7 +210,7 @@ void PostProcess::createSharedDescriptors() {
 
         VkDescriptorImageInfo imageInfoDepth{};
         imageInfoDepth.imageLayout = ImageLayout::DepthStencilReadOnlyOptimal;
-        imageInfoDepth.imageView = depthManager->getDepthImageView();
+        imageInfoDepth.imageView = depthImage->getView();
         imageInfoDepth.sampler = *sampler;
 
         DescWrite()
@@ -331,7 +331,7 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     depthBarrier.newLayout = ImageLayout::DepthStencilReadOnlyOptimal;
     depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    depthBarrier.image = depthManager->getDepthImage();
+    depthBarrier.image = depthImage->getImage();
     depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     depthBarrier.subresourceRange.baseMipLevel = 0;
     depthBarrier.subresourceRange.levelCount = 1;
@@ -395,7 +395,7 @@ void PostProcess::executeEffects(VkCommandBuffer cmd, uint32_t frameIndex) {
     depthBackBarrier.newLayout = ImageLayout::DepthStencilAttachmentOptimal;
     depthBackBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     depthBackBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    depthBackBarrier.image = depthManager->getDepthImage();
+    depthBackBarrier.image = depthImage->getImage();
     depthBackBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     depthBackBarrier.subresourceRange.baseMipLevel = 0;
     depthBackBarrier.subresourceRange.levelCount = 1;

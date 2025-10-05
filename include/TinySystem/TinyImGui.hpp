@@ -7,7 +7,7 @@
 #include "TinyVK/Render/RenderPass.hpp"
 #include "TinyVK/Render/RenderTarget.hpp"
 #include "TinyVK/Render/Swapchain.hpp"
-#include "TinyVK/Render/DepthManager.hpp"
+#include "TinyVK/Render/DepthImage.hpp"
 #include "TinyVK/Resource/Descriptor.hpp"
 
 #include <SDL2/SDL.h>
@@ -33,7 +33,7 @@ public:
 
     // Initialize ImGui with SDL2 and Vulkan backends (now creates its own render pass)
     bool init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
-              const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager);
+              const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage);
 
     // Cleanup ImGui
     void cleanup();
@@ -57,7 +57,7 @@ public:
     void processEvent(const SDL_Event* event);
 
     // Update render pass after window resize (recreates internal render pass and render targets)
-    void updateRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager);
+    void updateRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage);
     
     // Get the ImGui render pass for external use
     VkRenderPass getRenderPass() const;
@@ -69,7 +69,7 @@ public:
     void renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFramebuffer framebuffer);
     
     // Update render targets with framebuffers (called by Renderer after it creates framebuffers)
-    void updateRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers);
+    void updateRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers);
 
     // Demo window for testing
     void showDemoWindow(bool* p_open = nullptr);
@@ -89,6 +89,6 @@ private:
     std::vector<Window> windows;
     
     void createDescriptorPool();
-    void createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager);
-    void createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthManager* depthManager, const std::vector<VkFramebuffer>& framebuffers);
+    void createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage);
+    void createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers);
 };

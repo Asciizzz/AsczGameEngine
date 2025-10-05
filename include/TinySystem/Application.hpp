@@ -9,7 +9,7 @@
 
 #include "TinyVK/Render/Swapchain.hpp"
 #include "TinyVK/Render/RenderPass.hpp"
-#include "TinyVK/Render/DepthManager.hpp"
+#include "TinyVK/Render/DepthImage.hpp"
 
 #include "TinyVK/Resource/DataBuffer.hpp"
 #include "TinyVK/Resource/Descriptor.hpp"

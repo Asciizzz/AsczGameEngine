@@ -69,7 +69,7 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyVK/Pipeline/Pipeline_manager.cpp
 
     src/TinyVK/Render/FrameBuffer.cpp
-    src/TinyVK/Render/DepthManager.cpp
+    src/TinyVK/Render/DepthImage.cpp
     src/TinyVK/Render/Swapchain.cpp
     src/TinyVK/Render/RenderPass.cpp
     src/TinyVK/Render/RenderTarget.cpp

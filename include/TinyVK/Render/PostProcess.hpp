@@ -7,7 +7,7 @@
 
 #include "TinyVK/Render/Swapchain.hpp"
 #include "TinyVK/Pipeline/Pipeline_compute.hpp"
-#include "TinyVK/Render/DepthManager.hpp"
+#include "TinyVK/Render/DepthImage.hpp"
 #include "TinyVK/Resource/Descriptor.hpp"
 
 #include "TinyVK/Render/FrameBuffer.hpp"
@@ -43,7 +43,7 @@ struct PostProcessEffect {
 class PostProcess {
     friend class Renderer;
 public:
-    PostProcess(Device* deviceVK, Swapchain* swapchain, DepthManager* depthManager);
+    PostProcess(Device* deviceVK, Swapchain* swapchain, DepthImage* depthImage);
     ~PostProcess();
 
     PostProcess(const PostProcess&) = delete;
@@ -83,7 +83,7 @@ private:
     
     Device* deviceVK;
     Swapchain* swapchain;
-    DepthManager* depthManager; // For offscreen framebuffer only
+    DepthImage* depthImage; // For offscreen framebuffer only
     
     // Per-frame ping-pong images
     UniquePtrVec<PingPongImages> pingPongImages;

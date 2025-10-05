@@ -13,10 +13,10 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
 
     swapchain = MakeUnique<Swapchain>(deviceVK, surface, window);
 
-    depthManager = MakeUnique<DepthManager>(deviceVK);
-    depthManager->createDepthResources(swapchain->getExtent());
+    depthImage = MakeUnique<DepthImage>(*deviceVK);
+    depthImage->create(deviceVK->pDevice, swapchain->getExtent());
 
-    postProcess = MakeUnique<PostProcess>(deviceVK, swapchain.get(), depthManager.get());
+    postProcess = MakeUnique<PostProcess>(deviceVK, swapchain.get(), depthImage.get());
     postProcess->initialize();  // PostProcess now manages its own render pass
 
     createRenderTargets();
@@ -91,7 +91,7 @@ void Renderer::createRenderTargets() {
     // Create render passes with proper ownership
     auto mainRenderPassConfig = RenderPassConfig::forwardRendering(
         swapchain->getImageFormat(), 
-        depthManager->getDepthFormat()
+        depthImage->getFormat()
     );
     mainRenderPass = MakeUnique<RenderPass>(device, mainRenderPassConfig);
     
@@ -102,7 +102,7 @@ void Renderer::createRenderTargets() {
         FrameBufferConfig fbConfig = FrameBufferConfig()
             .withRenderPass(mainRenderPass->get())
             .addAttachment(swapchain->getImageView(i))
-            .addAttachment(depthManager->getDepthImageView())
+            .addAttachment(depthImage->getView())
             .withExtent(extent);
 
         auto framebuffer = MakeUnique<FrameBuffer>(device);
@@ -122,7 +122,7 @@ void Renderer::createRenderTargets() {
         depthClear.depthStencil = {1.0f, 0};
         
         swapchainTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i), colorClear);
-        swapchainTarget.addAttachment(depthManager->getDepthImage(), depthManager->getDepthImageView(), depthClear);
+        swapchainTarget.addAttachment(depthImage->getImage(), depthImage->getView(), depthClear);
         
         swapchainRenderTargets.push_back(swapchainTarget);
         
@@ -140,7 +140,7 @@ void Renderer::setupImGuiRenderTargets(TinyImGui* imguiWrapper) {
         framebufferHandles.push_back(fb->get());
     }
     
-    imguiWrapper->updateRenderTargets(swapchain.get(), depthManager.get(), framebufferHandles);
+    imguiWrapper->updateRenderTargets(swapchain.get(), depthImage.get(), framebufferHandles);
 }
 
 
@@ -177,7 +177,7 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     SDL_GetWindowSize(window, &newWidth, &newHeight);
     
     // Recreate depth resources before recreating other resources
-    depthManager->createDepthResources(newWidth, newHeight);
+    depthImage->create(deviceVK->pDevice, newWidth, newHeight);
     
     // Now safe to cleanup and recreate Swapchain
     swapchain->cleanup();

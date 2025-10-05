@@ -2,7 +2,7 @@
 
 #include "TinyVK/Render/Swapchain.hpp"
 #include "TinyVK/Render/RenderPass.hpp"
-#include "TinyVK/Render/DepthManager.hpp"
+#include "TinyVK/Render/DepthImage.hpp"
 
 class TinyRenderer {
 public:
