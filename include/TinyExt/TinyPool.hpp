@@ -54,19 +54,22 @@ struct TinyPool {
     TinyPool(const TinyPool&) = delete;
     TinyPool& operator=(const TinyPool&) = delete;
 
+private:
     TinyPoolType poolType = TinyPoolTraits<Type>::poolType;
 
     std::vector<Type> items;
     std::vector<State> states;
     std::vector<uint32_t> freeList;
 
-    uint32_t count = 0;
+public:
+    uint32_t count() const {
+        return items.size() - freeList.size();
+    }
 
     void clear() {
         items.clear();
         states.clear();
         freeList.clear();
-        count = 0;
     }
 
     bool isValid(TinyHandle handle) const {
@@ -81,7 +84,6 @@ struct TinyPool {
     // ---- Type-aware insert ----
     template<typename U>
     TinyHandle insert(U&& item) {
-        count++;
         uint32_t index;
 
         // Check if we can reuse a slot from the free list
@@ -119,7 +121,6 @@ struct TinyPool {
     // ---- Remove ----
     void remove(uint32_t index) {
         if (!isOccupied(index)) return;
-        count--;
 
         if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
                     TinyPoolTraits<Type>::is_shared_ptr) {
