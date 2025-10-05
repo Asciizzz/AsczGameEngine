@@ -75,6 +75,8 @@ public:
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice pDevice = VK_NULL_HANDLE;
 
+    operator VkDevice() const { return device; }
+
     // Queues
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     VkQueue presentQueue  = VK_NULL_HANDLE;

@@ -61,6 +61,9 @@ void PostProcess::createPingPongImages() {
     // Use R8G8B8A8_UNORM format which supports storage images
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
     VkExtent2D extent = swapchain->getExtent();
+
+    VkDevice device = deviceVK->device;
+    VkPhysicalDevice pDevice = deviceVK->pDevice;
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         pingPongImages.push_back(MakeUnique<PingPongImages>());
@@ -68,7 +71,7 @@ void PostProcess::createPingPongImages() {
         auto& imageB = pingPongImages[frame]->imageB;
 
         ImageConfig sharedImageConfig = ImageConfig()
-            .withPhysicalDevice(deviceVK->pDevice)
+            .withPhysicalDevice(pDevice)
             .withDimensions(extent.width, extent.height)
             .withFormat(format)
             .withTiling(VK_IMAGE_TILING_OPTIMAL)
@@ -84,12 +87,12 @@ void PostProcess::createPingPongImages() {
 
         bool success = 
             imageA
-                .init(deviceVK)
+                .init(device)
                 .createImage(sharedImageConfig)
                 .createView(sharedViewConfig)
                 .isValid() &&
             imageB
-                .init(deviceVK)
+                .init(device)
                 .createImage(sharedImageConfig)
                 .createView(sharedViewConfig)
                 .isValid();
@@ -151,7 +154,7 @@ void PostProcess::createSampler() {
         .withLodRange(0.0f, 0.0f);
 
     sampler = MakeUnique<SamplerVK>();
-    sampler->init(deviceVK).create(config);
+    sampler->init(*deviceVK).create(config);
 }
 
 void PostProcess::createSharedDescriptors() {

@@ -89,7 +89,7 @@ bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& tex
 
     textureVK = TextureVK(); // Reset texture
     bool success = textureVK
-        .init(deviceVK)
+        .init(*deviceVK)
         .createImage(imageConfig)
         .createView(viewConfig)
         .createSampler(sampConfig)

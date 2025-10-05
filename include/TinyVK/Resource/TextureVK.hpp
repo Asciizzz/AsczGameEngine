@@ -111,10 +111,11 @@ public:
     };
 
     ImageVK() = default;
-    ImageVK(VkDevice device);
-    ImageVK(const Device* deviceVK);
-    ImageVK& init(VkDevice device);
-    ImageVK& init(const Device* deviceVK);
+    ImageVK(VkDevice device) : device(device) {}
+    ImageVK& init(VkDevice device) {
+        this->device = device;
+        return *this;
+    }
 
     ~ImageVK() { cleanup(); }
     void cleanup();
@@ -210,10 +211,11 @@ struct SamplerConfig {
 class SamplerVK {
 public:
     SamplerVK() = default;
-    SamplerVK(VkDevice device);
-    SamplerVK(const Device* deviceVK);
-    SamplerVK& init(VkDevice device);
-    SamplerVK& init(const Device* deviceVK);
+    SamplerVK(VkDevice device) : device(device) {}
+    SamplerVK& init(VkDevice device) {
+        this->device = device;
+        return *this;
+    }
 
     ~SamplerVK() { cleanup(); }
     void cleanup();
@@ -245,10 +247,12 @@ private:
 class TextureVK {
 public:
     TextureVK() = default;
-    TextureVK(VkDevice device);
-    TextureVK(const Device* deviceVK);
-    TextureVK& init(VkDevice device);
-    TextureVK& init(const Device* deviceVK);
+    TextureVK(VkDevice device) : image(device), sampler(device) {}
+    TextureVK& init(VkDevice device) {
+        image.init(device);
+        sampler.init(device);
+        return *this;
+    }
 
     TextureVK(const TextureVK&) = delete;
     TextureVK& operator=(const TextureVK&) = delete;

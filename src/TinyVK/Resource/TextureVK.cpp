@@ -103,24 +103,6 @@ ImageViewConfig& ImageViewConfig::withAutoMipLevels(uint32_t width, uint32_t hei
 
 
 
-
-
-ImageVK::ImageVK(VkDevice device) {
-    init(device);
-}
-ImageVK& ImageVK::init(VkDevice device) {
-    this->device = device;
-    return *this;
-}
-
-ImageVK::ImageVK(const Device* deviceVK) {
-    init(deviceVK);
-}
-ImageVK& ImageVK::init(const Device* deviceVK) {
-    device = deviceVK ? deviceVK->device : VK_NULL_HANDLE;
-    return *this;
-}
-
 void ImageVK::cleanup() {
     if (view != VK_NULL_HANDLE) vkDestroyImageView(device, view, nullptr);
 
@@ -404,21 +386,6 @@ SamplerConfig& SamplerConfig::withPhysicalDevice(VkPhysicalDevice pDevice) {
     return *this;
 }
 
-SamplerVK::SamplerVK(VkDevice device) {
-    init(device);
-}
-SamplerVK& SamplerVK::init(VkDevice device) {
-    this->device = device;
-    return *this;
-}
-
-SamplerVK::SamplerVK(const Device* deviceVK) {
-    init(deviceVK);
-}
-SamplerVK& SamplerVK::init(const Device* deviceVK) {
-    device = deviceVK ? deviceVK->device : VK_NULL_HANDLE;
-    return *this;
-}
 
 SamplerVK::SamplerVK(SamplerVK&& other) noexcept {
     device = other.device;
@@ -493,24 +460,6 @@ float SamplerVK::getMaxAnisotropy(VkPhysicalDevice pDevice, float requested) {
     return std::min(requested, properties.limits.maxSamplerAnisotropy);
 }
 
-
-
-
-TextureVK::TextureVK(VkDevice device) {
-    init(device);
-}
-TextureVK& TextureVK::init(VkDevice device) {
-    image.init(device);
-    sampler.init(device);
-    return *this;
-}
-TextureVK& TextureVK::init(const Device* deviceVK) {
-    if (deviceVK) {
-        image.init(deviceVK);
-        sampler.init(deviceVK);
-    }
-    return *this;
-}
 
 
 TextureVK::TextureVK(TextureVK&& other) noexcept

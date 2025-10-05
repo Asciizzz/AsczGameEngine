@@ -11,7 +11,7 @@ using namespace TinyVK;
 
 DepthManager::DepthManager(const Device* deviceVK)
     : deviceVK   (deviceVK)
-    , depthImage (deviceVK)
+    , depthImage (*deviceVK)
 {}
 
 void DepthManager::createDepthResources(uint32_t width, uint32_t height) {
