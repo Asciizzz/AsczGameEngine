@@ -215,13 +215,13 @@ void PostProcess::createSharedDescriptors() {
 
         DescWrite()
             // A -> B
-            .addWrite().setDstBinding(0).setDstSet(*descSet0).setDescType(DescType::CombinedImageSampler).setImageInfo({imageInfoInputA})
-            .addWrite().setDstBinding(1).setDstSet(*descSet0).setDescType(DescType::StorageImage).setImageInfo({imageInfoOutputB})
-            .addWrite().setDstBinding(2).setDstSet(*descSet0).setDescType(DescType::CombinedImageSampler).setImageInfo({imageInfoDepth})
+            .addWrite().setDstBinding(0).setDstSet(*descSet0).setType(DescType::CombinedImageSampler).setImageInfo({imageInfoInputA})
+            .addWrite().setDstBinding(1).setDstSet(*descSet0).setType(DescType::StorageImage).setImageInfo({imageInfoOutputB})
+            .addWrite().setDstBinding(2).setDstSet(*descSet0).setType(DescType::CombinedImageSampler).setImageInfo({imageInfoDepth})
             // B -> A
-            .addWrite().setDstBinding(0).setDstSet(*descSet1).setDescType(DescType::CombinedImageSampler).setImageInfo({imageInfoInputB})
-            .addWrite().setDstBinding(1).setDstSet(*descSet1).setDescType(DescType::StorageImage).setImageInfo({imageInfoOutputA})
-            .addWrite().setDstBinding(2).setDstSet(*descSet1).setDescType(DescType::CombinedImageSampler).setImageInfo({imageInfoDepth})
+            .addWrite().setDstBinding(0).setDstSet(*descSet1).setType(DescType::CombinedImageSampler).setImageInfo({imageInfoInputB})
+            .addWrite().setDstBinding(1).setDstSet(*descSet1).setType(DescType::StorageImage).setImageInfo({imageInfoOutputA})
+            .addWrite().setDstBinding(2).setDstSet(*descSet1).setType(DescType::CombinedImageSampler).setImageInfo({imageInfoDepth})
             .updateDescSets(device);
 
         descSets.push_back(std::move(descSet0));

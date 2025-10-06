@@ -42,7 +42,7 @@ void TinyGlobal::createDescResources(const TinyVK::Device* deviceVK) {
 
         DescWrite()
             .setDstSet(descSet)
-            .setDescType(DescType::UniformBuffer)
+            .setType(DescType::UniformBuffer)
             .setDescCount(1)
             .setBufferInfo({bufferInfo})
             .updateDescSets(device);

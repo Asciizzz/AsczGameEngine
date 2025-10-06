@@ -114,7 +114,7 @@ struct DescWrite {
     DescWrite& setDstBinding(uint32_t dstBinding);
     DescWrite& setDstArrayElement(uint32_t dstArrayElement);
     DescWrite& setDescCount(uint32_t count);
-    DescWrite& setDescType(VkDescriptorType type);
+    DescWrite& setType(VkDescriptorType type);
 
     DescWrite& updateDescSets(VkDevice device);
 };

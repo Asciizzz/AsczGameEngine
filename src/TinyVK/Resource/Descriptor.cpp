@@ -210,7 +210,7 @@ DescWrite& DescWrite::setDescCount(uint32_t count) {
     lastWrite().descriptorCount = count;
     return *this;
 }
-DescWrite& DescWrite::setDescType(VkDescriptorType type) {
+DescWrite& DescWrite::setType(VkDescriptorType type) {
     lastWrite().descriptorType = type;
     return *this;
 }
