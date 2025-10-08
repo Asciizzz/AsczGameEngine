@@ -279,8 +279,6 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
         const auto& regMesh = registry->get<TinyRMesh>(regMeshData->mesh);
         const auto& submeshes = regMesh->submeshes;
 
-        const auto& submeshMats = regMeshData->submeshMats;
-
         // Normally you'd bind the material based on the mesh node, but because we haven't setup the bind descriptor, ignore it
 
         // Draw each individual submeshes
@@ -297,7 +295,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
             uint32_t indexCount = submeshes[i].indexCount;
             if (indexCount == 0) continue;
 
-            uint32_t matIndex  = submeshMats[i].index;
+            uint32_t matIndex  = submeshes[i].materialIndex;
             glm::uvec4 props1 = glm::uvec4(matIndex, 0, 0, 0);
 
             // // Print submesh mats index

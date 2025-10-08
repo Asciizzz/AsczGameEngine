@@ -33,7 +33,6 @@ struct TinyNode {
     struct MeshRender {
         static constexpr Types kType = Types::MeshRender;
         TinyHandle mesh;
-        std::vector<TinyHandle> submeshMats;
         TinyHandle skeleNode;
     };
 

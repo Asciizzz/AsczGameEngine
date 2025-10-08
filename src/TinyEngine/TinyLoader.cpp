@@ -394,7 +394,7 @@ struct PrimitiveData {
     size_t vertexCount = 0;
 };
 
-void loadMesh(TinyMesh& mesh, std::vector<TinyHandle>& submeshMats, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
+void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
     std::vector<PrimitiveData> allPrimitiveDatas;
 
     // Shared data
@@ -499,14 +499,8 @@ void loadMesh(TinyMesh& mesh, std::vector<TinyHandle>& submeshMats, const tinygl
         TinySubmesh submesh;
         submesh.indexOffset = currentIndexOffset;
         submesh.indexCount = static_cast<uint32_t>(pData.indices.size());
+        submesh.materialIndex = pData.materialIndex;
         mesh.addSubmesh(submesh);
-
-        TinyHandle matHandle; // Invalid by default
-        if (pData.materialIndex >= 0) {
-            matHandle = TinyHandle(pData.materialIndex);
-        }
-
-        submeshMats.push_back(matHandle);
 
         currentVertexOffset += static_cast<uint32_t>(pData.vertexCount);
         currentIndexOffset += static_cast<uint32_t>(pData.indices.size());
@@ -543,41 +537,19 @@ void loadMesh(TinyMesh& mesh, std::vector<TinyHandle>& submeshMats, const tinygl
     // else mesh.setVertices(TinyVertexRig::makeStaticVertices(allVertices));
 }
 
-void loadMeshes(std::vector<TinyMesh>& meshes, std::vector<std::vector<TinyHandle>>& meshesMaterials, tinygltf::Model& gltfModel, bool forceStatic) {
+void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
     meshes.clear();
-    meshesMaterials.clear();
 
     for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
         TinyMesh tinyMesh;
-        std::vector<TinyHandle> submeshMats;
 
-        loadMesh(tinyMesh, submeshMats, gltfModel, gltfMesh.primitives, !forceStatic);
+        loadMesh(tinyMesh, gltfModel, gltfMesh.primitives, !forceStatic);
 
         meshes.push_back(std::move(tinyMesh));
-        meshesMaterials.push_back(std::move(submeshMats));
     }
 }
 
-
-// For legacy support - combines all meshes into one
-void loadMeshCombined(TinyMesh& mesh, std::vector<int>& submeshMats, tinygltf::Model& gltfModel, bool forceStatic) {
-    // Combined primitives
-    std::vector<tinygltf::Primitive> combinedPrimitives;
-    for (const auto& gltfMesh : gltfModel.meshes) {
-        combinedPrimitives.insert(combinedPrimitives.end(), gltfMesh.primitives.begin(), gltfMesh.primitives.end());
-    }
-
-    std::vector<TinyHandle> submeshMatsHandles;
-    loadMesh(mesh, submeshMatsHandles, gltfModel, combinedPrimitives, !forceStatic);
-
-    // Reconvert handles to indices (or -1)
-    submeshMats.clear();
-    for (const auto& handle : submeshMatsHandles) {
-        if (handle.isValid()) submeshMats.push_back(handle.index);
-        else                  submeshMats.push_back(-1);
-    }
-}
 
 // Animation target bones, leading to a complex reference layer
 
@@ -741,8 +713,6 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
     rootNode.name = "FunnyRoot";
     pushNode(std::move(rootNode));
 
-    const auto& submeshesMats = tinyModel.submeshesMats;
-
     // Skeleton parent nodes
     UnorderedMap<int, int> skeletonToModelNodeIndex;
     for (size_t skelIdx = 0; skelIdx < tinyModel.skeletons.size(); ++skelIdx) {
@@ -817,10 +787,6 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
         if (gltfNode.mesh >= 0) {
             TinyNode::MeshRender meshData;
             meshData.mesh = TinyHandle(gltfNode.mesh);
-
-            bool hasValidMaterials=(gltfNode.mesh >= 0 &&
-                                    gltfNode.mesh < (int)submeshesMats.size());
-            meshData.submeshMats = hasValidMaterials ? submeshesMats[gltfNode.mesh] : std::vector<TinyHandle>();
 
             int skeletonIndex = gltfNode.skin;
             auto it = skeletonToModelNodeIndex.find(skeletonIndex);
@@ -957,7 +923,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     if (!forceStatic) loadSkeletons(result.skeletons, nodeToSkeletonAndBoneIndex, model);
 
     bool hasRigging = !forceStatic && !result.skeletons.empty();
-    loadMeshes(result.meshes, result.submeshesMats, model, !hasRigging);
+    loadMeshes(result.meshes, model, !hasRigging);
 
     loadNodes(result, model, nodeToSkeletonAndBoneIndex);
 

@@ -28,15 +28,6 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
 }
 
 uint32_t TinyProject::addTemplateFromModel(const TinyModel& model) {
-    std::vector<TinyHandle> glbMeshrHandle; // Ensure correct mapping
-    for (const auto& mesh : model.meshes) {
-        TinyRMesh meshData;
-        meshData.import(deviceVK, mesh);
-
-        TinyHandle handle = registry->add(meshData);
-        glbMeshrHandle.push_back(handle);
-    }
-
     std::vector<TinyHandle> glbTexrHandle;
     for (const auto& texture : model.textures) {
         TinyRTexture textureData;
@@ -62,6 +53,24 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModel& model) {
 
         TinyHandle handle = registry->add(correctMat);
         glbMatrHandle.push_back(handle);
+    }
+
+    std::vector<TinyHandle> glbMeshrHandle; // Ensure correct mapping
+    for (const auto& mesh : model.meshes) {
+        TinyRMesh meshData;
+        meshData.import(deviceVK, mesh);
+
+        // Remap submeshes' material indices
+        std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes;
+        for (auto& submesh : remappedSubmeshes) {
+            bool valid = isValidIndex(submesh.materialIndex, glbMatrHandle);
+            submesh.materialIndex = valid ? glbMatrHandle[submesh.materialIndex].index : -1;
+        }
+
+        meshData.setSubmeshes(remappedSubmeshes);
+
+        TinyHandle handle = registry->add(meshData);
+        glbMeshrHandle.push_back(handle);
     }
 
     std::vector<TinyHandle> glbSkelerHandle;
@@ -109,10 +118,6 @@ uint32_t TinyProject::addTemplateFromModel(const TinyModel& model) {
             TinyNode::MeshRender trueMesh3D;
 
             trueMesh3D.mesh = glbMeshrHandle[mesh3D->mesh.index];
-            for (TinyHandle localMat : mesh3D->submeshMats) {
-                bool valid = isValidIndex(localMat.index, glbMatrHandle);
-                trueMesh3D.submeshMats.push_back(valid ? glbMatrHandle[localMat.index] : TinyHandle::invalid());
-            }
 
             bool hasValidSkeleton = isValidIndex(mesh3D->skeleNode.index, glbNoderHandle);
             bool isInNodeMap = localNodeIndexToGlobalNodeHandle.count(mesh3D->skeleNode.index) > 0;

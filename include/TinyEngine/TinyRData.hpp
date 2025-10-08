@@ -14,6 +14,7 @@ struct TinyRMesh {
     VkIndexType indexType = VK_INDEX_TYPE_UINT32;
 
     bool import(const TinyVK::Device* deviceVK, const TinyMesh& mesh);
+    void setSubmeshes(const std::vector<TinySubmesh>& subs) { submeshes = subs; }
 
     static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };

@@ -12,7 +12,6 @@ struct TinyModel {
 
     // Raw unlinked registries
     std::vector<TinyMesh> meshes;
-    std::vector<std::vector<TinyHandle>> submeshesMats; // Per-mesh material indices
 
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
