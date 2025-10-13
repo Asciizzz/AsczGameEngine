@@ -1,0 +1,117 @@
+*{
+    box-sizing: border-box;
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+body{
+    margin: 0;
+    background: #0f1720;
+    color: #e6eef6;
+}
+
+header{
+    padding: 12px 20px;
+    background: #081226;
+}
+
+.container{
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+}
+
+.left{
+    width: 45%;
+    min-width: 320px;
+}
+
+.right{
+    flex: 1;
+}
+
+.file-tree{
+    background: #071226;
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 400px;
+    height: 70vh;
+    overflow: auto;
+}
+
+.node{
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin: 2px 0;
+}
+
+.node.directory{
+    cursor: pointer;
+}
+
+.node.file{
+    cursor: default;
+}
+
+.node:hover{
+    background: #0b2742;
+}
+
+.node.selected{
+    outline: 2px solid #2b9fff;
+}
+
+.panel{
+    background: #071226;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.mount-controls{
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.mount-controls input{
+    flex: 1;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #223;
+}
+
+button{
+    background: #1a73e8;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:active{
+    transform: translateY(1px);
+}
+
+pre{
+    white-space: pre-wrap;
+    color: #cfe9ff;
+}
+
+footer{
+    padding: 10px 12px;
+    background: #081226;
+}
+
+.actions{
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.actions input{
+    flex: 1;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #223;
+}

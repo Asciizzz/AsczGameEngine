@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tiny VFS Demo</title>
+    <style>
+        *{
+            box-sizing: border-box;
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+        }
+
+        body{
+            margin: 0;
+            background: #0f1720;
+            color: #e6eef6;
+        }
+
+        header{
+            padding: 12px 20px;
+            background: #081226;
+        }
+
+        .container{
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .left{
+            width: 45%;
+            min-width: 320px;
+        }
+
+        .right{
+            flex: 1;
+        }
+
+        .file-tree{
+            background: #071226;
+            border-radius: 8px;
+            padding: 8px;
+            min-height: 400px;
+            height: 70vh;
+            overflow: auto;
+        }
+
+        .node{
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin: 2px 0;
+        }
+
+        .node.directory{
+            cursor: pointer;
+        }
+
+        .node.file{
+            cursor: default;
+        }
+
+        .node:hover{
+            background: #0b2742;
+        }
+
+        .node.selected{
+            outline: 2px solid #2b9fff;
+        }
+
+        .panel{
+            background: #071226;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .mount-controls{
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .mount-controls input{
+            flex: 1;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #223;
+        }
+
+        button{
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:active{
+            transform: translateY(1px);
+        }
+
+        pre{
+            white-space: pre-wrap;
+            color: #cfe9ff;
+        }
+
+        footer{
+            padding: 10px 12px;
+            background: #081226;
+        }
+
+        .actions{
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .actions input{
+            flex: 1;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #223;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Tiny VFS — Demo</h1>
+    </header>
+
+    <main class="container">
+        <section class="left">
+            <div class="mount-controls">
+                <input id="mountPoint" placeholder="virtual (e.g. res://)" />
+                <input id="physicalPath" placeholder="physical name (simulated)" />
+                <button id="btnMount">Mount</button>
+            </div>
+            <div id="fileTree" class="file-tree"></div>
+        </section>
+
+        <section class="right">
+            <div class="panel">
+                <h3>Selected</h3>
+                <pre id="selectedInfo">(none)</pre>
+                <div class="actions">
+                    <input id="newName" placeholder="new file/folder name" />
+                    <button id="btnCreateFile">Create File</button>
+                    <button id="btnCreateFolder">Create Folder</button>
+                    <button id="btnDelete">Delete</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Asset Manager</h3>
+                <pre id="assetInfo">(none)</pre>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <small>Demo: virtual filesystem + UI (no disk access — everything simulated)</small>
+    </footer>
+
+    <script>
+        // VFS Implementation
+        class VirtualFileSystem {
+            constructor() {
+                // mount table: { mountPoint -> physicalName }
+                this.mounts = new Map();
+                // physicalStores: { physicalName -> tree }
+                this.physicalStores = new Map();
+            }
+
+            // Create a new simulated physical store with an initial tree
+            createPhysicalStore(name, tree) {
+                this.physicalStores.set(name, tree || { name: '/', children: [] });
+            }
+
+            mount(mountPoint, physicalName) {
+                if (!mountPoint.endsWith('/')) mountPoint += '/';
+                if (!this.physicalStores.has(physicalName)) throw new Error('Unknown physical store: ' + physicalName);
+                this.mounts.set(mountPoint, physicalName);
+            }
+
+            unmount(mountPoint) {
+                if (!mountPoint.endsWith('/')) mountPoint += '/';
+                this.mounts.delete(mountPoint);
+            }
+
+            resolve(virtualPath) {
+                // returns { physicalName, relative }
+                for (let [mountPoint, physicalName] of this.mounts.entries()) {
+                    if (virtualPath === mountPoint.slice(0, -1) || virtualPath.startsWith(mountPoint)) {
+                        let rel = virtualPath.slice(mountPoint.length);
+                        if (!rel) rel = '/';
+                        return { physicalName, relative: rel };
+                    }
+                }
+                throw new Error('No mount matches: ' + virtualPath);
+            }
+
+            // Utility: walk a physical store by a path like 'assets/models/tree.fbx' or '/'
+            _walk(physicalName, relative, createIfMissing=false) {
+                const root = this.physicalStores.get(physicalName);
+                if (!root) throw new Error('No physical store: ' + physicalName);
+                if (!relative || relative === '/' ) return { parent: null, node: root };
+                const parts = relative.split('/').filter(p=>p.length);
+                let node = root;
+                let parent = null;
+                for (let i=0;i<parts.length;i++){
+                    parent = node;
+                    const part = parts[i];
+                    let child = node.children.find(c=>c.name === part);
+                    if (!child) {
+                        if (createIfMissing) {
+                            child = { name: part, children: [], isDirectory: i < parts.length-1 ? true : false };
+                            node.children.push(child);
+                        } else {
+                            return { parent: node, node: null };
+                        }
+                    }
+                    node = child;
+                }
+                return { parent, node };
+            }
+
+            exists(virtualPath) {
+                try { 
+                    const { physicalName, relative } = this.resolve(virtualPath); 
+                    return !!this._walk(physicalName, relative).node; 
+                }
+                catch(e){
+                    return false;
+                }
+            }
+
+            list(virtualPath) {
+                const { physicalName, relative } = this.resolve(virtualPath);
+                const r = this._walk(physicalName, relative);
+                if (!r.node) return [];
+                return (r.node.children||[]).map(c=>({ 
+                    name:c.name, 
+                    isDirectory: !!c.children, 
+                    path: this._joinVirtual(physicalName, relative, c.name) 
+                }));
+            }
+
+            _joinVirtual(physicalName, relative, name){
+                // return virtual path string for the child
+                for (let [mountPoint, pName] of this.mounts.entries()){
+                    if (pName === physicalName) {
+                        const base = mountPoint + (relative==='/'? '': relative + (relative.endsWith('/')? '': '/'));
+                        return base + name;
+                    }
+                }
+                return name;
+            }
+
+            scanTree(virtualPath) {
+                // returns a nested object for UI
+                const { physicalName, relative } = this.resolve(virtualPath);
+                const r = this._walk(physicalName, relative);
+                if (!r.node) return null;
+                
+                const mountRootForPhysical = (vfs, p) => {
+                    for (let [mp, pn] of vfs.mounts.entries()) {
+                        if (pn===p) return mp;
+                    }
+                    return '/';
+                };
+                
+                // build virtual prefix for this node
+                let prefix = null;
+                for (let [mp,pn] of this.mounts.entries()){
+                    if (pn===physicalName) {
+                        prefix = mp + (relative==='/'? '': relative);
+                        if (!prefix.endsWith('/')) prefix += '/';
+                        break;
+                    }
+                }
+                
+                const build = (n, curPath) => {
+                    return {
+                        name: n.name,
+                        isDirectory: !!n.children,
+                        virtualPath: curPath,
+                        children: (n.children||[]).map(c=> build(c, curPath + (curPath.endsWith('/')? '':'/') + c.name))
+                    }
+                };
+                
+                const curPath = prefix + (relative==='/'? '' : relative);
+                return build(r.node, prefix + (relative==='/'? '' : relative));
+            }
+
+            createFile(virtualParent, name){
+                const { physicalName, relative } = this.resolve(virtualParent);
+                const p = this._walk(physicalName, relative, true);
+                if (!p.node) throw new Error('Parent folder not found: ' + virtualParent);
+                // add file node
+                p.node.children.push({ 
+                    name, 
+                    isDirectory:false, 
+                    children: null, 
+                    meta: { uid: this._makeUID() } 
+                });
+            }
+
+            createFolder(virtualParent, name){
+                const { physicalName, relative } = this.resolve(virtualParent);
+                const p = this._walk(physicalName, relative, true);
+                if (!p.node) throw new Error('Parent folder not found: ' + virtualParent);
+                p.node.children.push({ 
+                    name, 
+                    isDirectory:true, 
+                    children: [], 
+                    meta: null 
+                });
+            }
+
+            delete(virtualPath){
+                const { physicalName, relative } = this.resolve(virtualPath);
+                const parts = relative.split('/').filter(Boolean);
+                if (parts.length===0) throw new Error('Cannot delete root');
+                const name = parts.pop();
+                const parentRel = parts.join('/');
+                const parent = this._walk(physicalName, parentRel);
+                if (!parent.node) throw new Error('Parent not found');
+                parent.node.children = parent.node.children.filter(c=>c.name!==name);
+            }
+
+            _makeUID(){
+                return Math.random().toString(36).slice(2,10);
+            }
+        }
+
+        // Asset Manager Implementation
+        class AssetManager {
+            constructor(vfs) {
+                this.vfs = vfs;
+                this.uidToHandle = new Map();
+                this.nextHandle = 1;
+                this.handles = new Map();
+            }
+
+            // load a virtual file (reads UID from node meta)
+            load(virtualPath) {
+                try {
+                    const { physicalName, relative } = this.vfs.resolve(virtualPath);
+                    const node = this.vfs._walk(physicalName, relative).node;
+                    if (!node || node.isDirectory) throw new Error('Not a file');
+                    const uid = node.meta && node.meta.uid ? node.meta.uid : null;
+                    const handle = { 
+                        handle: this.nextHandle++, 
+                        uid, 
+                        path: virtualPath, 
+                        loadedAt: Date.now() 
+                    };
+                    this.uidToHandle.set(uid, handle);
+                    this.handles.set(handle.handle, handle);
+                    return handle;
+                } catch (e) {
+                    console.error('Asset load error', e);
+                    return null;
+                }
+            }
+
+            getHandleByUID(uid){ 
+                return this.uidToHandle.get(uid); 
+            }
+            
+            getHandleById(id){ 
+                return this.handles.get(id); 
+            }
+        }
+
+        // Initialize VFS and Asset Manager
+        const DemoVFS = new VirtualFileSystem();
+
+        // create demo physical stores
+        DemoVFS.createPhysicalStore('proj1', {
+            name:'/', 
+            children: [
+                { 
+                    name:'assets', 
+                    isDirectory:true, 
+                    children:[
+                        { 
+                            name:'models', 
+                            isDirectory:true, 
+                            children:[ 
+                                { 
+                                    name:'tree.fbx', 
+                                    isDirectory:false, 
+                                    children:null, 
+                                    meta:{ uid:'mesh1' } 
+                                } 
+                            ] 
+                        },
+                        { 
+                            name:'textures', 
+                            isDirectory:true, 
+                            children:[ 
+                                { 
+                                    name:'wood.png', 
+                                    isDirectory:false, 
+                                    children:null, 
+                                    meta:{ uid:'tex1' } 
+                                } 
+                            ] 
+                        }
+                    ]
+                },
+                { 
+                    name:'scenes', 
+                    isDirectory:true, 
+                    children:[ 
+                        { 
+                            name:'level1.scene', 
+                            isDirectory:false, 
+                            children:null, 
+                            meta:{ uid:'scene1' } 
+                        } 
+                    ] 
+                }
+            ]
+        });
+
+        // mount default
+        DemoVFS.mount('res://', 'proj1');
+
+        const DemoAssetManager = new AssetManager(DemoVFS);
+
+        // UI Implementation
+        // Basic DOM helpers
+        const $ = s => document.querySelector(s);
+        const fileTree = $('#fileTree');
+        const selectedInfo = $('#selectedInfo');
+        const assetInfo = $('#assetInfo');
+
+        let currentRoot = 'res://';
+        let selectedVirtual = null;
+
+        function renderTree(){
+            fileTree.innerHTML = '';
+            const tree = DemoVFS.scanTree(currentRoot);
+            if (!tree) { 
+                fileTree.innerText = '(empty)'; 
+                return; 
+            }
+            const ul = document.createElement('div');
+            buildNodeUI(tree, ul);
+            fileTree.appendChild(ul);
+        }
+
+        function buildNodeUI(node, parentEl){
+            const el = document.createElement('div');
+            el.className = 'node ' + (node.isDirectory? 'directory':'file');
+            el.textContent = node.name === '/' ? currentRoot : node.name;
+            el.dataset.vpath = node.virtualPath;
+            el.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                onSelect(node.virtualPath, node);
+            });
+            if (selectedVirtual === node.virtualPath) el.classList.add('selected');
+            parentEl.appendChild(el);
+
+            if (node.isDirectory && node.children && node.children.length) {
+                const childWrap = document.createElement('div');
+                childWrap.style.paddingLeft = '12px';
+                for (const c of node.children) {
+                    buildNodeUI(c, childWrap);
+                }
+                parentEl.appendChild(childWrap);
+            }
+        }
+
+        function onSelect(vpath, node){
+            selectedVirtual = vpath;
+            selectedInfo.textContent = JSON.stringify({ 
+                vpath, 
+                isDirectory: node.isDirectory 
+            }, null, 4);
+            renderTree();
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mount button
+            $('#btnMount').addEventListener('click', ()=>{
+                const mountPoint = $('#mountPoint').value.trim();
+                const physicalName = $('#physicalPath').value.trim();
+                if (!mountPoint || !physicalName) return alert('Both fields required');
+                try{
+                    // ensure store exists
+                    if (!DemoVFS.physicalStores.has(physicalName)) {
+                        DemoVFS.createPhysicalStore(physicalName, { name:'/', children:[] });
+                    }
+                    DemoVFS.mount(mountPoint, physicalName);
+                    renderTree();
+                } catch(e){ 
+                    alert(e.message); 
+                }
+            });
+
+            // Create file button
+            $('#btnCreateFile').addEventListener('click', ()=>{
+                const name = $('#newName').value.trim();
+                if (!name) return;
+                try{ 
+                    DemoVFS.createFile(selectedVirtual||currentRoot, name); 
+                    renderTree(); 
+                }catch(e){ 
+                    alert(e.message); 
+                }
+            });
+
+            // Create folder button
+            $('#btnCreateFolder').addEventListener('click', ()=>{
+                const name = $('#newName').value.trim();
+                if (!name) return;
+                try{ 
+                    DemoVFS.createFolder(selectedVirtual||currentRoot, name); 
+                    renderTree(); 
+                }catch(e){ 
+                    alert(e.message); 
+                }
+            });
+
+            // Delete button
+            $('#btnDelete').addEventListener('click', ()=>{
+                if (!selectedVirtual) return alert('Select something first');
+                try{ 
+                    DemoVFS.delete(selectedVirtual); 
+                    selectedVirtual = null; 
+                    selectedInfo.textContent='(none)'; 
+                    renderTree(); 
+                }catch(e){ 
+                    alert(e.message); 
+                }
+            });
+
+            // Double click to load asset
+            fileTree.addEventListener('dblclick', ()=>{
+                if (!selectedVirtual) return;
+                try{
+                    const h = DemoAssetManager.load(selectedVirtual);
+                    assetInfo.textContent = JSON.stringify(h, null, 4);
+                } catch(e){ 
+                    alert(e.message); 
+                }
+            });
+
+            // Initial render
+            renderTree();
+        });
+    </script>
+</body>
+</html>
