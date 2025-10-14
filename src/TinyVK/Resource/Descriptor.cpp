@@ -22,12 +22,16 @@ DescLayout& DescLayout::operator=(DescLayout&& other) noexcept {
     return *this;
 }
 
-void DescLayout::create(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+void DescLayout::create(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings, 
+                        VkDescriptorSetLayoutCreateFlags flags, const void* pNext) {
     this->device = device;
+    this->bindingCount = static_cast<uint32_t>(bindings.size());
     destroy();
 
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.pNext        = pNext;
+    layoutInfo.flags        = flags;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings    = bindings.data();
 
@@ -64,13 +68,15 @@ DescPool& DescPool::operator=(DescPool&& other) noexcept {
     return *this;
 }
 
-void DescPool::create(VkDevice device, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets) {
+void DescPool::create(VkDevice device, const std::vector<VkDescriptorPoolSize>& poolSizes, 
+                      uint32_t maxSets, VkDescriptorPoolCreateFlags flags) {
     this->device = device;
+    this->maxSets = maxSets;
     destroy();
 
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    poolInfo.flags         = flags;
     poolInfo.maxSets       = maxSets;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes    = poolSizes.data();
@@ -85,6 +91,15 @@ void DescPool::destroy() {
 
     vkDestroyDescriptorPool(device, pool, nullptr);
     pool = VK_NULL_HANDLE;
+    maxSets = 0;
+}
+
+void DescPool::reset(VkDescriptorPoolResetFlags flags) {
+    if (pool == VK_NULL_HANDLE) return;
+    
+    if (vkResetDescriptorPool(device, pool, flags) != VK_SUCCESS) {
+        throw std::runtime_error("failed to reset descriptor pool");
+    }
 }
 
 
@@ -114,21 +129,73 @@ DescSet& DescSet::operator=(DescSet&& other) noexcept {
     return *this;
 }
 
-void DescSet::allocate(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout) {
+void DescSet::allocate(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout, 
+                       const uint32_t* variableDescriptorCounts, const void* pNext) {
     this->pool = pool;
     this->layout = layout;
     this->device = device;
 
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.pNext              = pNext;
     allocInfo.descriptorPool     = pool;
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts        = &layout;
-    allocInfo.pNext = nullptr;
+
+    // If we have variable descriptor counts, we need to set up the variable descriptor count allocate info
+    VkDescriptorSetVariableDescriptorCountAllocateInfo variableCountInfo = {};
+    if (variableDescriptorCounts != nullptr) {
+        variableCountInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+        variableCountInfo.pNext = allocInfo.pNext;
+        variableCountInfo.descriptorSetCount = 1;
+        variableCountInfo.pDescriptorCounts = variableDescriptorCounts;
+        allocInfo.pNext = &variableCountInfo;
+    }
 
     if (vkAllocateDescriptorSets(device, &allocInfo, &set) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets");
     }
+}
+
+std::vector<DescSet> DescSet::allocateBatch(VkDevice device, VkDescriptorPool pool, 
+                                             const std::vector<VkDescriptorSetLayout>& layouts,
+                                             const uint32_t* variableDescriptorCounts) {
+    if (layouts.empty()) {
+        return {};
+    }
+
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool     = pool;
+    allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+    allocInfo.pSetLayouts        = layouts.data();
+
+    VkDescriptorSetVariableDescriptorCountAllocateInfo variableCountInfo = {};
+    if (variableDescriptorCounts != nullptr) {
+        variableCountInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+        variableCountInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+        variableCountInfo.pDescriptorCounts = variableDescriptorCounts;
+        allocInfo.pNext = &variableCountInfo;
+    }
+
+    std::vector<VkDescriptorSet> vkSets(layouts.size());
+    if (vkAllocateDescriptorSets(device, &allocInfo, vkSets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate batch descriptor sets");
+    }
+
+    std::vector<DescSet> descSets;
+    descSets.reserve(layouts.size());
+    
+    for (size_t i = 0; i < layouts.size(); ++i) {
+        DescSet descSet;
+        descSet.device = device;
+        descSet.pool = pool;
+        descSet.layout = layouts[i];
+        descSet.set = vkSets[i];
+        descSets.push_back(std::move(descSet));
+    }
+
+    return descSets;
 }
 
 void DescSet::free(VkDescriptorPool pool) {
@@ -157,6 +224,7 @@ DescWrite& DescWrite::addWrite() {
     // Add storage slots for this write
     imageInfoStorage.emplace_back();
     bufferInfoStorage.emplace_back();
+    texelBufferStorage.emplace_back();
     
     return *this;
 }
@@ -194,6 +262,20 @@ DescWrite& DescWrite::setImageInfo(std::vector<VkDescriptorImageInfo> imageInfos
     return *this;
 }
 
+DescWrite& DescWrite::setTexelBufferView(std::vector<VkBufferView> texelBufferViews) {
+    // Store the texel buffer view for the current write (last one)
+    if (!writes.empty()) {
+        size_t writeIndex = writes.size() - 1;
+        if (writeIndex < texelBufferStorage.size()) {
+            texelBufferStorage[writeIndex] = std::move(texelBufferViews);
+            lastWrite().pTexelBufferView = texelBufferStorage[writeIndex].data();
+        }
+    }
+    lastWrite().pBufferInfo = nullptr;
+    lastWrite().pImageInfo = nullptr;
+    return *this;
+}
+
 DescWrite& DescWrite::setDstSet(VkDescriptorSet dstSet) {
     lastWrite().dstSet = dstSet;
     return *this;
@@ -215,7 +297,68 @@ DescWrite& DescWrite::setType(VkDescriptorType type) {
     return *this;
 }
 
-DescWrite& DescWrite::updateDescSets(VkDevice device) {
-    vkUpdateDescriptorSets(device, writeCount, writes.data(), 0, nullptr);
+DescWrite& DescWrite::setNext(const void* pNext) {
+    if (!writes.empty()) {
+        lastWrite().pNext = pNext;
+    }
     return *this;
+}
+
+DescWrite& DescWrite::addCopy() {
+    VkCopyDescriptorSet newCopy{};
+    newCopy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+    newCopy.pNext = nullptr;
+    newCopy.srcBinding = 0;
+    newCopy.srcArrayElement = 0;
+    newCopy.dstBinding = 0;
+    newCopy.dstArrayElement = 0;
+    newCopy.descriptorCount = 1;
+
+    copies.push_back(newCopy);
+    return *this;
+}
+
+VkCopyDescriptorSet& DescWrite::lastCopy() {
+    if (copies.empty()) addCopy();
+    return copies.back();
+}
+
+DescWrite& DescWrite::setSrcSet(VkDescriptorSet srcSet) {
+    lastCopy().srcSet = srcSet;
+    return *this;
+}
+
+DescWrite& DescWrite::setSrcBinding(uint32_t srcBinding) {
+    lastCopy().srcBinding = srcBinding;
+    return *this;
+}
+
+DescWrite& DescWrite::setSrcArrayElement(uint32_t srcArrayElement) {
+    lastCopy().srcArrayElement = srcArrayElement;
+    return *this;
+}
+
+DescWrite& DescWrite::setCopyDescCount(uint32_t count) {
+    lastCopy().descriptorCount = count;
+    return *this;
+}
+
+DescWrite& DescWrite::updateDescSets(VkDevice device, bool includeCopies) {
+    if (includeCopies) {
+        vkUpdateDescriptorSets(device, 
+                              static_cast<uint32_t>(writes.size()), writes.data(),
+                              static_cast<uint32_t>(copies.size()), copies.data());
+    } else {
+        vkUpdateDescriptorSets(device, writeCount, writes.data(), 0, nullptr);
+    }
+    return *this;
+}
+
+void DescWrite::clear() {
+    writes.clear();
+    copies.clear();
+    imageInfoStorage.clear();
+    bufferInfoStorage.clear();
+    texelBufferStorage.clear();
+    writeCount = 0;
 }
