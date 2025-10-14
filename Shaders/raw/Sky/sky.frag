@@ -9,10 +9,16 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 layout(location = 0) in vec2 fragScreenCoord;
 layout(location = 0) out vec4 outColor;
 
-// Simple sky colors - bright editor-style sky
-const vec3 skyTop    = vec3(0.4, 0.7, 1.0);    // Bright blue at zenith
-const vec3 skyHorizon = vec3(0.8, 0.9, 1.0);   // Light blue/white at horizon
-const vec3 groundColor = vec3(0.3, 0.3, 0.3);  // Gray ground
+// Natural sky colors - clear day sky
+const vec3 skyTop     = vec3(0.1, 0.4, 0.8);   // Deep blue at zenith
+const vec3 skyHorizon = vec3(0.6, 0.8, 0.95);  // Light blue at horizon
+const vec3 groundColor = vec3(0.2, 0.2, 0.2); // Darker ground
+
+// Sun properties
+const vec3 sunDirection = normalize(vec3(1.0)); // Static sun position
+const vec3 sunColor = vec3(1.0, 0.8, 0.7); // To offset the sky zenith
+const float sunSize = 0.01;
+const float sunIntensity = 3.0;
 
 // --------------------------------------------------
 // Sky calculation
@@ -24,7 +30,20 @@ vec3 calculateSkyColor(vec3 rayDir) {
         float t = clamp(rayDir.y, 0.0, 1.0);
         // Use power curve for more natural gradient
         t = pow(t, 0.4);
-        return mix(skyHorizon, skyTop, t);
+        vec3 skyColor = mix(skyHorizon, skyTop, t);
+        
+        // Add sun
+        float sunDot = dot(rayDir, sunDirection);
+        float sunMask = smoothstep(1.0 - sunSize, 1.0 - sunSize * 0.5, sunDot);
+        
+        // Sun glow effect
+        float sunGlow = pow(max(0.0, sunDot), 32.0) * 0.3;
+        
+        // Combine sky, sun disk, and glow
+        skyColor += sunColor * sunIntensity * sunMask;
+        skyColor += sunColor * sunGlow;
+        
+        return skyColor;
     } else {
         // Below horizon - ground
         return groundColor;

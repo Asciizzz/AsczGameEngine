@@ -33,4 +33,17 @@ struct TinyRTexture {
 
 struct TinyRSkeleton : public TinySkeleton {};
 
-struct TinyRNode : public TinyNode {}; // Naming scheme for consistency
+struct TinyRScene {
+    std::string name;
+    std::vector<TinyNode> nodes;
+    
+    // Helper methods for scene management
+    int32_t getRootNodeIndex() const {
+        // Loader creates a default root node at index 0
+        return nodes.empty() ? -1 : 0;
+    }
+    
+    bool hasNodes() const {
+        return !nodes.empty();
+    }
+};

@@ -273,10 +273,13 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
 
         const auto& transform = rtNode->globalTransform;
 
-        const auto& regNode = registry->get<TinyRNode>(rtNode->rHandle);
-        const auto& regMeshData = regNode->get<TinyNode::MeshRender>();
+        // Get mesh render component directly from runtime node
+        const auto* meshRenderComp = rtNode->get<TinyNodeRT::MeshRender>();
+        if (!meshRenderComp) continue;
 
-        const auto& regMesh = registry->get<TinyRMesh>(regMeshData->mesh);
+        const auto& regMesh = registry->get<TinyRMesh>(meshRenderComp->mesh);
+        if (!regMesh) continue;
+        
         const auto& submeshes = regMesh->submeshes;
 
         // Normally you'd bind the material based on the mesh node, but because we haven't setup the bind descriptor, ignore it

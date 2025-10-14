@@ -710,7 +710,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
 
     // Root node (index 0)
     TinyNode rootNode;
-    rootNode.name = "FunnyRoot";
+    rootNode.name = tinyModel.name.empty() ? "Model_Root" : tinyModel.name;
     pushNode(std::move(rootNode));
 
     // Skeleton parent nodes
@@ -813,7 +813,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
         }
     }
 
-    // Attach scene roots to FunnyRoot
+    // Attach scene roots to model root
     if (!model.scenes.empty()) {
         const tinygltf::Scene& scene = model.scenes[model.defaultScene >= 0 ? model.defaultScene : 0];
         for (int rootLocal : scene.nodes) {

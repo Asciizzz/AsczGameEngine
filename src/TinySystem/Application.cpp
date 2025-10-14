@@ -344,45 +344,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Text("Scene Controls");
         ImGui::Separator();
         
-        // Node instance placement button
-        if (ImGui::Button("Place Object at Camera", ImVec2(180, 30))) {
-            // Same logic as the 'P' key press
-            glm::mat4 rot = glm::mat4(1.0f);
-            rot = glm::rotate(rot, camera.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
-
-            glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * 2.0f);
-            glm::mat4 model = trans * rot;
-
-            project->addNodeInstance(1, 0, model);
-            project->updateGlobalTransforms(0);
-            project->printRuntimeNodeHierarchy();
-        }
-        
-        // Additional placement options
-        ImGui::SameLine();
-        if (ImGui::Button("Place at Origin", ImVec2(120, 30))) {
-            glm::mat4 model = glm::mat4(1.0f); // Identity matrix (at origin)
-            project->addNodeInstance(1, 0, model);
-            project->updateGlobalTransforms(0);
-            project->printRuntimeNodeHierarchy();
-        }
-        
-        // Random placement button
-        if (ImGui::Button("Place Random", ImVec2(120, 30))) {
-            static std::random_device rd;
-            static std::mt19937 gen(rd());
-            static std::uniform_real_distribution<float> posDist(-10.0f, 10.0f);
-            static std::uniform_real_distribution<float> rotDist(0.0f, 6.28318f); // 0 to 2π
-            
-            glm::vec3 randomPos(posDist(gen), 0.0f, posDist(gen));
-            glm::mat4 rot = glm::rotate(glm::mat4(1.0f), rotDist(gen), glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 trans = glm::translate(glm::mat4(1.0f), randomPos);
-            glm::mat4 model = trans * rot;
-            
-            project->addNodeInstance(1, 0, model);
-            project->updateGlobalTransforms(0);
-            project->printRuntimeNodeHierarchy();
-        }
+        // Old placement buttons removed - functionality moved to scene management section below
         
         ImGui::Spacing();
         
@@ -404,78 +366,110 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         static float placementDistance = 2.0f;
         ImGui::SliderFloat("Placement Distance", &placementDistance, 0.0f, 10.0f, "%.1f units");
         
-        // Template selection
-        static int selectedTemplate = 0;
-        ImGui::Text("Template Selection");
+        // Scene selection and instancing
+        ImGui::Text("Scene Management");
         ImGui::Separator();
         
-        // Get templates using the existing getTemplates method
-        const auto& templates = project->getTemplates();
-        
-        ImGui::Text("Available Templates (%zu):", templates.size());
-        ImGui::BeginChild("TemplateList", ImVec2(0, 150), true);
-        
-        for (int i = 0; i < (int)templates.size(); ++i) {
-            const auto& templateNode = templates[i];
-            std::string templateName = templateNode.name.empty() ? ("Template " + std::to_string(i)) : templateNode.name;
+        if (!sceneHandles.empty()) {
+            ImGui::Text("Available Scenes (%zu):", sceneHandles.size());
             
-            if (ImGui::RadioButton(templateName.c_str(), &selectedTemplate, i)) {
-                // Radio button automatically sets selectedTemplate to i
+            // Scene selection dropdown
+            std::string currentSceneName = "Unknown Scene";
+            if (currentSelectedScene < (int)sceneHandles.size()) {
+                const auto* scene = project->getRegistry()->get<TinyRScene>(sceneHandles[currentSelectedScene]);
+                if (scene && !scene->name.empty()) {
+                    currentSceneName = scene->name;
+                }
             }
-        }
-        
-        ImGui::EndChild();
-        
-        if (!templates.empty()) {
-            ImGui::Text("Selected: %s (ID: %d)", 
-                       selectedTemplate < (int)templates.size() ? templates[selectedTemplate].name.c_str() : "Invalid",
-                       selectedTemplate);
+            
+            if (ImGui::BeginCombo("Select Scene", currentSceneName.c_str())) {
+                for (int i = 0; i < (int)sceneHandles.size(); ++i) {
+                    const auto* scene = project->getRegistry()->get<TinyRScene>(sceneHandles[i]);
+                    std::string sceneName = scene && !scene->name.empty() ? scene->name : ("Scene " + std::to_string(i));
+                    
+                    bool isSelected = (currentSelectedScene == i);
+                    if (ImGui::Selectable(sceneName.c_str(), isSelected)) {
+                        currentSelectedScene = i;
+                    }
+                    if (isSelected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            
+            ImGui::Spacing();
+            
+            // Instance placement buttons
+            if (ImGui::Button("Place at Camera", ImVec2(140, 25))) {
+                if (currentSelectedScene < (int)sceneHandles.size()) {
+                    glm::mat4 rot = glm::rotate(glm::mat4(1.0f), camera.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
+                    glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * 2.0f);
+                    glm::mat4 model = trans * rot;
+                    
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], 0, model);
+                    project->updateGlobalTransforms(0);
+                }
+            }
+            
+            ImGui::SameLine();
+            if (ImGui::Button("Place at Origin", ImVec2(140, 25))) {
+                if (currentSelectedScene < (int)sceneHandles.size()) {
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], 0, glm::mat4(1.0f));
+                    project->updateGlobalTransforms(0);
+                }
+            }
+            
+            // Random placement button
+            if (ImGui::Button("Place Random", ImVec2(120, 30))) {
+                if (currentSelectedScene < (int)sceneHandles.size()) {
+                    static std::random_device rd;
+                    static std::mt19937 gen(rd());
+                    static std::uniform_real_distribution<float> posDist(-10.0f, 10.0f);
+                    static std::uniform_real_distribution<float> rotDist(0.0f, 6.28318f); // 0 to 2π
+                    
+                    glm::vec3 randomPos(posDist(gen), 0.0f, posDist(gen));
+                    glm::mat4 rot = glm::rotate(glm::mat4(1.0f), rotDist(gen), glm::vec3(0.0f, 1.0f, 0.0f));
+                    glm::mat4 trans = glm::translate(glm::mat4(1.0f), randomPos);
+                    glm::mat4 model = trans * rot;
+                    
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], 0, model);
+                    project->updateGlobalTransforms(0);
+                }
+            }
+            
+            ImGui::Spacing();
+            
+            // Manual placement controls
+            static float manualPos[3] = {0.0f, 0.0f, 0.0f};
+            static float manualRot[3] = {0.0f, 0.0f, 0.0f};
+            
+            ImGui::Text("Manual Placement");
+            ImGui::DragFloat3("Position", manualPos, 0.1f, -50.0f, 50.0f);
+            ImGui::DragFloat3("Rotation (degrees)", manualRot, 1.0f, -180.0f, 180.0f);
+            
+            if (ImGui::Button("Place Manually", ImVec2(140, 25))) {
+                if (currentSelectedScene < (int)sceneHandles.size()) {
+                    glm::mat4 model = glm::mat4(1.0f);
+                    
+                    // Apply rotations (convert degrees to radians)
+                    model = glm::rotate(model, glm::radians(manualRot[1]), glm::vec3(0.0f, 1.0f, 0.0f)); // Y (yaw)
+                    model = glm::rotate(model, glm::radians(manualRot[0]), glm::vec3(1.0f, 0.0f, 0.0f)); // X (pitch)
+                    model = glm::rotate(model, glm::radians(manualRot[2]), glm::vec3(0.0f, 0.0f, 1.0f)); // Z (roll)
+                    
+                    // Apply translation
+                    model = glm::translate(glm::mat4(1.0f), glm::vec3(manualPos[0], manualPos[1], manualPos[2])) * model;
+                    
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], 0, model);
+                    project->updateGlobalTransforms(0);
+                }
+            }
+        } else {
+            ImGui::Text("No scenes loaded. Load models to create scenes.");
         }
         
         ImGui::Spacing();
-        
-        // Placement buttons with custom distance
-        if (ImGui::Button("Place at Camera", ImVec2(140, 25))) {
-            glm::mat4 rot = glm::rotate(glm::mat4(1.0f), camera.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * placementDistance);
-            glm::mat4 model = trans * rot;
-            
-            project->addNodeInstance(selectedTemplate, 0, model);
-            project->updateGlobalTransforms(0);
-            project->printRuntimeNodeHierarchy();
-        }
-        
-        ImGui::SameLine();
-        if (ImGui::Button("Place at Origin", ImVec2(140, 25))) {
-            project->addNodeInstance(selectedTemplate, 0, glm::mat4(1.0f));
-            project->updateGlobalTransforms(0);
-            project->printRuntimeNodeHierarchy();
-        }
-        
-        // Manual position placement
-        static float manualPos[3] = {0.0f, 0.0f, 0.0f};
-        static float manualRot[3] = {0.0f, 0.0f, 0.0f};
-        
-        ImGui::Spacing();
-        ImGui::Text("Manual Placement");
-        ImGui::DragFloat3("Position", manualPos, 0.1f, -50.0f, 50.0f);
-        ImGui::DragFloat3("Rotation (degrees)", manualRot, 1.0f, -180.0f, 180.0f);
-        
-        if (ImGui::Button("Place Manually", ImVec2(140, 25))) {
-            glm::mat4 model = glm::mat4(1.0f);
-            
-            // Apply rotations (convert degrees to radians)
-            model = glm::rotate(model, glm::radians(manualRot[1]), glm::vec3(0.0f, 1.0f, 0.0f)); // Y (yaw)
-            model = glm::rotate(model, glm::radians(manualRot[0]), glm::vec3(1.0f, 0.0f, 0.0f)); // X (pitch)
-            model = glm::rotate(model, glm::radians(manualRot[2]), glm::vec3(0.0f, 0.0f, 1.0f)); // Z (roll)
-            
-            // Apply translation
-            model = glm::translate(glm::mat4(1.0f), glm::vec3(manualPos[0], manualPos[1], manualPos[2])) * model;
-            
-            project->addNodeInstance(selectedTemplate, 0, model);
-            project->updateGlobalTransforms(0);
-            project->printRuntimeNodeHierarchy();
-        }
+        ImGui::Separator();
         
         ImGui::Spacing();
         ImGui::Separator();
@@ -485,17 +479,17 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Text("Runtime Node Count: %zu", project->getRuntimeNodes().size());
         ImGui::Text("Mesh Render Nodes: %zu", project->getRuntimeMeshRenderIndices().size());
         
-        // Quick node list (first few nodes)
         ImGui::Spacing();
-        ImGui::Text("Node List (first 10):");
-        const auto& rtNodes = project->getRuntimeNodes();
-        for (size_t i = 0; i < std::min(rtNodes.size(), size_t(10)); ++i) {
-            if (rtNodes[i]) {
-                // Get registry node to display name
-                const auto* regNode = project->getRegistry()->get<TinyRNode>(rtNodes[i]->rHandle);
-                std::string nodeName = regNode ? regNode->name : "Unknown";
-                ImGui::Text("  [%zu] %s", i, nodeName.c_str());
+        
+        // Collapsible runtime node hierarchy
+        if (ImGui::CollapsingHeader("Runtime Node Hierarchy")) {
+            ImGui::BeginChild("NodeTree", ImVec2(0, 300), true);
+            if (!project->getRuntimeNodes().empty()) {
+                project->renderNodeTreeImGui(0); // Start from root node
+            } else {
+                ImGui::Text("No runtime nodes");
             }
+            ImGui::EndChild();
         }
     }, &showSceneWindow);
     
@@ -644,7 +638,8 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
 
                     try {
                         TinyModel model = TinyLoader::loadModel(filePath, false);
-                        project->addTemplateFromModel(model);
+                        TinyHandle sceneHandle = project->addSceneFromModel(model);
+                        sceneHandles.push_back(sceneHandle);
                     } catch (const std::exception& e) {
                         std::cerr << "Failed to load model " << filePath << ": " << e.what() << std::endl;
                     }

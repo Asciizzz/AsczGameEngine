@@ -7,34 +7,42 @@
 #include "TinyData/TinyCamera.hpp"
 #include "TinyEngine/TinyGlobal.hpp"
 
-struct TinyNodeRT3D {
-    TinyHandle rHandle; // Points to registry node (data for reference)
+struct TinyNodeRT {
+    // === Copied from TinyNode ===
+    std::string name = "RuntimeNode";
+    TinyNode::Scope scope = TinyNode::Scope::Global; // Runtime nodes are always global scope
     uint32_t types = TinyNode::toMask(TinyNode::Types::Node);
-
-    uint32_t parentIdx = UINT32_MAX;    // Runtime parent index (UINT32_MAX = no parent)
-    std::vector<uint32_t> childrenIdxs;   // Runtime children indices
-
+    
+    // Transform from original TinyNode (renamed from transformOverride)
+    glm::mat4 localTransform = glm::mat4(1.0f);
+    
+    // === Runtime-specific data ===
+    uint32_t parentIdx = UINT32_MAX;               // Runtime parent index (UINT32_MAX = no parent)
+    std::vector<uint32_t> childrenIdxs;           // Runtime children indices
+    
     bool isDirty = true;
-
-    glm::mat4 transformOverride = glm::mat4(1.0f);
     glm::mat4 globalTransform = glm::mat4(1.0f);
-
+    
+    // === Runtime Components (enhanced versions of TinyNode components) ===
     struct MeshRender {
         static constexpr TinyNode::Types kType = TinyNode::Types::MeshRender;
-
-        uint32_t skeleNodeRT = UINT32_MAX;
+        
+        TinyHandle mesh;                    // Copied from scene node
+        uint32_t skeleNodeRT = UINT32_MAX;  // Remapped to runtime node index
     };
 
     struct BoneAttach {
         static constexpr TinyNode::Types kType = TinyNode::Types::BoneAttach;
-
-        uint32_t skeleNodeRT = UINT32_MAX;
+        
+        uint32_t skeleNodeRT = UINT32_MAX;  // Remapped to runtime node index  
+        TinyHandle bone;                    // Copied from scene node
     };
 
     struct Skeleton {
         static constexpr TinyNode::Types kType = TinyNode::Types::Skeleton;
-
-        std::vector<glm::mat4> boneTransformsFinal;
+        
+        TinyHandle skeleRegistry;                        // Copied from scene node
+        std::vector<glm::mat4> boneTransformsFinal;      // Runtime bone transforms
     };
 
 private:
@@ -52,6 +60,45 @@ private:
     }
 
 public:
+    // Copy constructor from TinyNode
+    void copyFromSceneNode(const TinyNode& sceneNode) {
+        name = sceneNode.name;
+        scope = TinyNode::Scope::Global; // Runtime nodes are always global
+        types = sceneNode.types;
+        localTransform = sceneNode.transform;
+        
+        // Copy components with potential remapping done later
+        if (sceneNode.hasType(TinyNode::Types::MeshRender)) {
+            const auto* sceneMeshRender = sceneNode.get<TinyNode::MeshRender>();
+            if (sceneMeshRender) {
+                MeshRender rtMeshRender;
+                rtMeshRender.mesh = sceneMeshRender->mesh;
+                // skeleNodeRT will be set during scene instantiation
+                add(rtMeshRender);
+            }
+        }
+        
+        if (sceneNode.hasType(TinyNode::Types::BoneAttach)) {
+            const auto* sceneBoneAttach = sceneNode.get<TinyNode::BoneAttach>();
+            if (sceneBoneAttach) {
+                BoneAttach rtBoneAttach;
+                rtBoneAttach.bone = sceneBoneAttach->bone;
+                // skeleNodeRT will be set during scene instantiation
+                add(rtBoneAttach);
+            }
+        }
+        
+        if (sceneNode.hasType(TinyNode::Types::Skeleton)) {
+            const auto* sceneSkeleton = sceneNode.get<TinyNode::Skeleton>();
+            if (sceneSkeleton) {
+                Skeleton rtSkeleton;
+                rtSkeleton.skeleRegistry = sceneSkeleton->skeleRegistry;
+                // boneTransformsFinal will be initialized based on skeleton data
+                add(rtSkeleton);
+            }
+        }
+    }
+
     // Component management functions
     bool hasType(TinyNode::Types componentType) const {
         return (types & TinyNode::toMask(componentType)) != 0;
@@ -89,13 +136,7 @@ public:
         return hasComponent<T>() ? &getComponent<T>() : nullptr;
     }
 
-
-    void addChild(uint32_t childIndex, std::vector<std::unique_ptr<TinyNodeRT3D>>& allrtNodes);
-};
-
-struct TinyTemplate {
-    std::string name;
-    std::vector<TinyHandle> rData; // Could be virtually anything - nodes, meshes, materials, textures, skeletons, animations...
+    void addChild(uint32_t childIndex, std::vector<std::unique_ptr<TinyNodeRT>>& allrtNodes);
 };
 
 class TinyProject {
@@ -107,8 +148,8 @@ public:
     TinyProject& operator=(const TinyProject&) = delete;
     // No move semantics, where tf would you even want to move it to?
 
-    // Return the template index, which in turn contains handles to the registry
-    uint32_t addTemplateFromModel(const TinyModel& model); // Returns template index + remapping a bunch of shit (very complex) (cops called)
+    // Return the scene handle in the registry
+    TinyHandle addSceneFromModel(const TinyModel& model); // Returns scene handle - much simpler now!
 
     TinyCamera* getCamera() const { return tinyCamera.get(); }
     TinyGlobal* getGlobal() const { return tinyGlobal.get(); }
@@ -117,16 +158,16 @@ public:
 
 // All these belows are only for testing purposes
     /**
-     * Adds a node instance to the scene.
+     * Adds a scene instance to the project.
      *
-     * @param templateIndex point to the template to use.
+     * @param sceneHandle Handle to the scene in the registry to instantiate.
      * @param rootIndex point to the runtime node to inherit from (optional).
      */
-    void addNodeInstance(uint32_t templateIndex, uint32_t rootIndex = 0, glm::mat4 at = glm::mat4(1.0f));
+    void addSceneInstance(TinyHandle sceneHandle, uint32_t rootIndex = 0, glm::mat4 at = glm::mat4(1.0f));
 
 
     void printRuntimeNodeRecursive(
-        const UniquePtrVec<TinyNodeRT3D>& rtNodes,
+        const UniquePtrVec<TinyNodeRT>& rtNodes,
         TinyRegistry* registry,
         const TinyHandle& runtimeHandle,
         int depth = 0
@@ -137,6 +178,11 @@ public:
     };
 
     void printRuntimeNodeOrdered();
+
+    /**
+     * Renders an ImGui collapsible tree view of the runtime node hierarchy
+     */
+    void renderNodeTreeImGui(uint32_t nodeIndex = 0, int depth = 0);
 
     /**
      * Recursively updates global transforms for all nodes starting from the specified root.
@@ -156,13 +202,10 @@ public:
 
     // These are not official public methods, only for testing purposes
 
-    void deleteRNode(uint32_t index);
-
-    const UniquePtrVec<TinyNodeRT3D>& getRuntimeNodes() const { return rtNodes; }
+    const UniquePtrVec<TinyNodeRT>& getRuntimeNodes() const { return rtNodes; }
     const std::vector<uint32_t>& getRuntimeMeshRenderIndices() const { return rtMeshRenderIdxs; }
 
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
-    const std::vector<TinyTemplate>& getTemplates() const { return templates; }
 
 private:
     const TinyVK::Device* deviceVK;
@@ -172,8 +215,6 @@ private:
 
     UniquePtr<TinyRegistry> registry;
 
-    std::vector<TinyTemplate> templates;
-
-    UniquePtrVec<TinyNodeRT3D> rtNodes;
+    UniquePtrVec<TinyNodeRT> rtNodes;
     std::vector<uint32_t> rtMeshRenderIdxs; // Points to rtNodes with MeshRender component
 };

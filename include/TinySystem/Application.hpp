@@ -52,8 +52,9 @@ private:
     bool showSceneWindow = true;
     bool showImGuiExplorerWindow = false;
     
-    // Template management
-    int currentSelectedTemplate = 0;
+    // Scene management
+    std::vector<TinyHandle> sceneHandles;
+    int currentSelectedScene = 0;
 
     // Window metadata
     const char* appTitle;
