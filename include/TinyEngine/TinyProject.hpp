@@ -169,6 +169,11 @@ public:
      * Renders an ImGui collapsible tree view of the runtime node hierarchy
      */
     void renderNodeTreeImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
+    
+    /**
+     * Renders an ImGui collapsible tree view with node selection support
+     */
+    void renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, int depth = 0);
 
     /**
      * Recursively updates global transforms for all nodes starting from the specified root.

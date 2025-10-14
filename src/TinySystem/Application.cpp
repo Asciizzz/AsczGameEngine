@@ -61,6 +61,9 @@ void Application::initComponents() {
 
     project = MakeUnique<TinyProject>(deviceVK.get());
 
+    // Initialize selected node to root
+    selectedNodeHandle = project->getNodeHandleByIndex(0);
+
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->getCamera()->setAspectRatio(aspectRatio);
 
@@ -400,27 +403,27 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             
             // Instance placement buttons
             if (ImGui::Button("Place at Camera", ImVec2(140, 25))) {
-                if (currentSelectedScene < (int)sceneHandles.size()) {
+                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.isValid()) {
                     glm::mat4 rot = glm::rotate(glm::mat4(1.0f), camera.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
                     glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * 2.0f);
                     glm::mat4 model = trans * rot;
                     
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], project->getNodeHandleByIndex(0), model);
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, model);
                     project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
             
             ImGui::SameLine();
             if (ImGui::Button("Place at Origin", ImVec2(140, 25))) {
-                if (currentSelectedScene < (int)sceneHandles.size()) {
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], project->getNodeHandleByIndex(0), glm::mat4(1.0f));
+                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.isValid()) {
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, glm::mat4(1.0f));
                     project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
             
             // Random placement button
             if (ImGui::Button("Place Random", ImVec2(120, 30))) {
-                if (currentSelectedScene < (int)sceneHandles.size()) {
+                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.isValid()) {
                     static std::random_device rd;
                     static std::mt19937 gen(rd());
                     static std::uniform_real_distribution<float> posDist(-10.0f, 10.0f);
@@ -431,7 +434,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                     glm::mat4 trans = glm::translate(glm::mat4(1.0f), randomPos);
                     glm::mat4 model = trans * rot;
                     
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], project->getNodeHandleByIndex(0), model);
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, model);
                     project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
@@ -447,7 +450,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             ImGui::DragFloat3("Rotation (degrees)", manualRot, 1.0f, -180.0f, 180.0f);
             
             if (ImGui::Button("Place Manually", ImVec2(140, 25))) {
-                if (currentSelectedScene < (int)sceneHandles.size()) {
+                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.isValid()) {
                     glm::mat4 model = glm::mat4(1.0f);
                     
                     // Apply rotations (convert degrees to radians)
@@ -458,7 +461,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                     // Apply translation
                     model = glm::translate(glm::mat4(1.0f), glm::vec3(manualPos[0], manualPos[1], manualPos[2])) * model;
                     
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], project->getNodeHandleByIndex(0), model);
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, model);
                     project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
@@ -481,9 +484,22 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         // Collapsible runtime node hierarchy
         if (ImGui::CollapsingHeader("Runtime Node Hierarchy")) {
-            ImGui::BeginChild("NodeTree", ImVec2(0, 300), true);
+            // Display selected node info
+            if (selectedNodeHandle.isValid()) {
+                const TinyNodeRT* selectedNode = project->getRuntimeNodes().get(selectedNodeHandle);
+                if (selectedNode) {
+                    ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Selected: %s", selectedNode->name.c_str());
+                    ImGui::Text("Handle: %u.%u", selectedNodeHandle.index, selectedNodeHandle.version);
+                } else {
+                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid selection");
+                    selectedNodeHandle = project->getNodeHandleByIndex(0); // Reset to root
+                }
+            }
+            ImGui::Separator();
+            
+            ImGui::BeginChild("NodeTree", ImVec2(0, 250), true);
             if (project->getRuntimeNodes().count() > 0) {
-                project->renderNodeTreeImGui(project->getNodeHandleByIndex(0)); // Start from root node
+                project->renderSelectableNodeTreeImGui(project->getNodeHandleByIndex(0), selectedNodeHandle);
             } else {
                 ImGui::Text("No runtime nodes");
             }

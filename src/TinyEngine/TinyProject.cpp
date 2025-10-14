@@ -316,5 +316,80 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     ImGui::PopID();
 }
 
+void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, int depth) {
+    // Use root node if no valid handle provided
+    if (!nodeHandle.isValid()) {
+        nodeHandle = rootNodeHandle;
+    }
+    
+    const TinyNodeRT* node = rtNodes.get(nodeHandle);
+    if (!node) {
+        return;
+    }
+    
+    // Create a unique ID for this node
+    ImGui::PushID(static_cast<int>(nodeHandle.index));
+    
+    // Check if this node has children
+    bool hasChildren = !node->childrenHandles.empty();
+    bool isSelected = (selectedNode.index == nodeHandle.index && selectedNode.version == nodeHandle.version);
+    
+    // Create tree node flags
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    if (!hasChildren) {
+        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    }
+    if (isSelected) {
+        flags |= ImGuiTreeNodeFlags_Selected;
+    }
+    
+    // Extract position from global transform for display
+    glm::vec3 worldPos = glm::vec3(node->globalTransform[3]);
+    
+    // Create the node label with useful information
+    std::string label = node->name;
+    if (node->hasType(TinyNode::Types::MeshRender)) {
+        label += " [Mesh]";
+    }
+    if (node->hasType(TinyNode::Types::Skeleton)) {
+        label += " [Skeleton]";
+    }
+    if (node->hasType(TinyNode::Types::BoneAttach)) {
+        label += " [BoneAttach]";
+    }
+    
+    bool nodeOpen = ImGui::TreeNodeEx(label.c_str(), flags);
+    
+    // Handle selection
+    if (ImGui::IsItemClicked()) {
+        selectedNode = nodeHandle;
+    }
+    
+    // Show node details in tooltip
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        ImGui::Text("Handle: %u.%u", nodeHandle.index, nodeHandle.version);
+        ImGui::Text("Parent: %u.%u", node->parentHandle.index, node->parentHandle.version);
+        ImGui::Text("Children: %zu", node->childrenHandles.size());
+        ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
+        ImGui::Text("Type Mask: 0x%X", node->types);
+        if (isSelected) {
+            ImGui::Separator();
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "SELECTED");
+        }
+        ImGui::EndTooltip();
+    }
+    
+    // If node is open and has children, recurse for children
+    if (nodeOpen && hasChildren) {
+        for (const TinyHandle& childHandle : node->childrenHandles) {
+            renderSelectableNodeTreeImGui(childHandle, selectedNode, depth + 1);
+        }
+        ImGui::TreePop();
+    }
+    
+    ImGui::PopID();
+}
+
 // Scene deletion can be handled through registry cleanup
 // Runtime nodes are managed through the rtNodes vector directly

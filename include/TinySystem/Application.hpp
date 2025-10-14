@@ -55,6 +55,9 @@ private:
     // Scene management
     std::vector<TinyHandle> sceneHandles;
     int currentSelectedScene = 0;
+    
+    // Node selection for hierarchy interaction
+    TinyHandle selectedNodeHandle;
 
     // Window metadata
     const char* appTitle;
