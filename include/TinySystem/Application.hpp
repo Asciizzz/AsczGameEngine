@@ -51,6 +51,7 @@ private:
     bool showDemoWindow = false;
     bool showSceneWindow = true;
     bool showImGuiExplorerWindow = false;
+    bool showNodeInspectorWindow = true;
     
     // Scene management
     std::vector<TinyHandle> sceneHandles;
@@ -72,6 +73,7 @@ private:
 
     void setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
     void loadAllAssetsRecursively(const std::string& assetsPath);
+    void renderNodeInspectorWindow();
 
     bool checkWindowResize();
 };

@@ -8,6 +8,10 @@
 #include <string>
 #include <algorithm>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/euler_angles.hpp>
+
 #ifdef NDEBUG // Remember to set this to false
 const bool enableValidationLayers = true;
 #else
@@ -355,6 +359,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Checkbox("Show Demo Window", &showDemoWindow);
         ImGui::Checkbox("Show Scene Window", &showSceneWindow);
         ImGui::Checkbox("Show ImGui Explorer", &showImGuiExplorerWindow);
+        ImGui::Checkbox("Show Node Inspector", &showNodeInspectorWindow);
     }, &showDebugWindow);
     
     // Scene Manager Window
@@ -484,34 +489,6 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         // Collapsible runtime node hierarchy
         if (ImGui::CollapsingHeader("Runtime Node Hierarchy")) {
-            // Display selected node info
-            if (selectedNodeHandle.isValid()) {
-                const TinyNodeRT* selectedNode = project->getRuntimeNodes().get(selectedNodeHandle);
-                if (selectedNode) {
-                    ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Selected: %s", selectedNode->name.c_str());
-                    ImGui::Text("Handle: %u.%u", selectedNodeHandle.index, selectedNodeHandle.version);
-                    
-                    // Delete button (only show if not root node)
-                    if (selectedNodeHandle != project->getNodeHandleByIndex(0)) {
-                        ImGui::SameLine();
-                        if (ImGui::Button("Delete Node", ImVec2(100, 0))) {
-                            if (project->deleteNodeRecursive(selectedNodeHandle)) {
-                                // Successfully deleted, reset selection to root
-                                selectedNodeHandle = project->getNodeHandleByIndex(0);
-                                // Update global transforms after deletion
-                                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
-                            }
-                        }
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::SetTooltip("Delete this node and all its children recursively");
-                        }
-                    }
-                } else {
-                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid selection");
-                    selectedNodeHandle = project->getNodeHandleByIndex(0); // Reset to root
-                }
-            }
-            ImGui::Separator();
             
             ImGui::BeginChild("NodeTree", ImVec2(0, 250), true);
             if (project->getRuntimeNodes().count() > 0) {
@@ -522,6 +499,11 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             ImGui::EndChild();
         }
     }, &showSceneWindow);
+    
+    // Node Inspector Window
+    imguiWrapper->addWindow("Node Inspector", [this]() {
+        renderNodeInspectorWindow();
+    }, &showNodeInspectorWindow);
     
     // ImGui Feature Explorer Window
     imguiWrapper->addWindow("ImGui Feature Explorer", [this]() {
@@ -678,6 +660,145 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
         }
     } catch (const std::exception& e) {
         std::cerr << "Error scanning assets directory: " << e.what() << std::endl;
+    }
+}
+
+void Application::renderNodeInspectorWindow() {
+    if (!selectedNodeHandle.isValid()) {
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "No node selected");
+        ImGui::Text("Select a node from the Scene Manager to inspect it.");
+        return;
+    }
+
+    const TinyNodeRT* selectedNode = project->getRuntimeNodes().get(selectedNodeHandle);
+    if (!selectedNode) {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
+        selectedNodeHandle = project->getNodeHandleByIndex(0); // Reset to root
+        return;
+    }
+
+    // Node Header Info
+    ImGui::Text("Node: %s", selectedNode->name.c_str());
+    ImGui::Text("Handle: %u.%u", selectedNodeHandle.index, selectedNodeHandle.version);
+    // Determine node type based on components
+    std::string nodeType = "Transform Node";
+    if (selectedNode->hasType(TinyNode::Types::MeshRender)) {
+        nodeType = "Mesh Renderer";
+    } else if (selectedNode->hasType(TinyNode::Types::Skeleton)) {
+        nodeType = "Skeleton";
+    } else if (selectedNode->hasType(TinyNode::Types::BoneAttach)) {
+        nodeType = "Bone Attachment";
+    }
+    
+    ImGui::Text("Type: %s", nodeType.c_str());
+    
+    ImGui::Separator();
+
+    // Transform section
+    if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // Get the current transform
+        glm::mat4 localTransform = selectedNode->localTransform;
+        
+        // Extract translation, rotation, and scale from the matrix
+        glm::vec3 translation, rotation, scale;
+        glm::quat rotationQuat;
+        glm::vec3 skew;
+        glm::vec4 perspective;
+        glm::decompose(localTransform, scale, rotationQuat, translation, skew, perspective);
+        
+        // Convert quaternion to Euler angles (in degrees)
+        rotation = glm::degrees(glm::eulerAngles(rotationQuat));
+        
+        // Store original values to detect changes
+        glm::vec3 originalTranslation = translation;
+        glm::vec3 originalRotation = rotation;
+        glm::vec3 originalScale = scale;
+        
+        // Translation controls (Godot-style drag)
+        ImGui::Text("Position");
+        ImGui::DragFloat3("##Position", &translation.x, 0.01f, -1000.0f, 1000.0f, "%.3f");
+        
+        // Rotation controls
+        ImGui::Text("Rotation (degrees)");
+        ImGui::DragFloat3("##Rotation", &rotation.x, 0.5f, -360.0f, 360.0f, "%.1f°");
+        
+        // Scale controls
+        ImGui::Text("Scale");
+        ImGui::DragFloat3("##Scale", &scale.x, 0.01f, 0.001f, 10.0f, "%.3f");
+        
+        // Apply changes if any values changed
+        if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
+            // Convert back to matrix
+            glm::mat4 T = glm::translate(glm::mat4(1.0f), translation);
+            glm::mat4 R = glm::mat4(glm::quat(glm::radians(rotation)));
+            glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
+            
+            glm::mat4 newTransform = T * R * S;
+            
+            // Apply the new transform to the node (need to get mutable access)
+            TinyNodeRT* mutableNode = const_cast<TinyNodeRT*>(selectedNode);
+            mutableNode->localTransform = newTransform;
+            
+            // Update global transforms
+            project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+        }
+    }
+
+    // Additional Info section
+    if (ImGui::CollapsingHeader("Additional Info")) {
+        ImGui::Text("Local Transform Matrix:");
+        const glm::mat4& matrix = selectedNode->localTransform;
+        ImGui::Text("[ %6.3f %6.3f %6.3f %6.3f ]", matrix[0][0], matrix[1][0], matrix[2][0], matrix[3][0]);
+        ImGui::Text("[ %6.3f %6.3f %6.3f %6.3f ]", matrix[0][1], matrix[1][1], matrix[2][1], matrix[3][1]);
+        ImGui::Text("[ %6.3f %6.3f %6.3f %6.3f ]", matrix[0][2], matrix[1][2], matrix[2][2], matrix[3][2]);
+        ImGui::Text("[ %6.3f %6.3f %6.3f %6.3f ]", matrix[0][3], matrix[1][3], matrix[2][3], matrix[3][3]);
+        
+        // Parent info
+        if (selectedNode->parentHandle.isValid()) {
+            const TinyNodeRT* parentNode = project->getRuntimeNodes().get(selectedNode->parentHandle);
+            if (parentNode) {
+                ImGui::Text("Parent: %s (%u.%u)", parentNode->name.c_str(), 
+                           selectedNode->parentHandle.index, selectedNode->parentHandle.version);
+            }
+        } else {
+            ImGui::Text("Parent: None (Root Node)");
+        }
+        
+        ImGui::Text("Child Count: %zu", selectedNode->childrenHandles.size());
+        
+        // Component info
+        ImGui::Text("Components:");
+        if (selectedNode->hasType(TinyNode::Types::MeshRender)) {
+            ImGui::BulletText("Mesh Renderer");
+        }
+        if (selectedNode->hasType(TinyNode::Types::Skeleton)) {
+            ImGui::BulletText("Skeleton");
+        }
+        if (selectedNode->hasType(TinyNode::Types::BoneAttach)) {
+            ImGui::BulletText("Bone Attachment");
+        }
+        if (selectedNode->types == TinyNode::toMask(TinyNode::Types::Node)) {
+            ImGui::BulletText("Transform Only");
+        }
+    }
+
+    ImGui::Separator();
+    
+    // Delete button (only show if not root node)
+    if (selectedNodeHandle != project->getNodeHandleByIndex(0)) {
+        if (ImGui::Button("Delete Node", ImVec2(-1, 30))) {
+            if (project->deleteNodeRecursive(selectedNodeHandle)) {
+                // Successfully deleted, reset selection to root
+                selectedNodeHandle = project->getNodeHandleByIndex(0);
+                // Update global transforms after deletion
+                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+            }
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Delete this node and all its children recursively");
+        }
+    } else {
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Cannot delete root node");
     }
 }
 
