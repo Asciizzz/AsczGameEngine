@@ -30,12 +30,12 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TinyTexture defaultTexture = TinyTexture::createDefaultTexture();
     TinyRTexture defaultRTexture;
     defaultRTexture.import(deviceVK, defaultTexture);
-    defaultTextureHandle = registry->add(defaultRTexture);
+    defaultTextureHandle = registry->add(defaultRTexture).handle;
 
     TinyRMaterial defaultMaterial;
     defaultMaterial.setAlbTexIndex(0);
     defaultMaterial.setNrmlTexIndex(0);
-    defaultMaterialHandle = registry->add(defaultMaterial);
+    defaultMaterialHandle = registry->add(defaultMaterial).handle;
 }
 
 TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
@@ -45,7 +45,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         TinyRTexture textureData;
         textureData.import(deviceVK, texture);
 
-        TinyHandle handle = registry->add(textureData);
+        TinyHandle handle = registry->add(textureData).handle;
         glbTexrHandle.push_back(handle);
     }
 
@@ -63,7 +63,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexrHandle.size());
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexrHandle[localNrmlIndex].index : 0);
 
-        TinyHandle handle = registry->add(correctMat);
+        TinyHandle handle = registry->add(correctMat).handle;
         glbMatrHandle.push_back(handle);
     }
 
@@ -82,7 +82,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
 
         meshData.setSubmeshes(remappedSubmeshes);
 
-        TinyHandle handle = registry->add(meshData);
+        TinyHandle handle = registry->add(meshData).handle;
         glbMeshrHandle.push_back(handle);
     }
 
@@ -92,7 +92,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         TinyRSkeleton rSkeleton;
         rSkeleton.bones = skeleton.bones;
 
-        TinyHandle handle = registry->add(rSkeleton);
+        TinyHandle handle = registry->add(rSkeleton).handle;
         glbSkelerHandle.push_back(handle);
     }
 
@@ -122,7 +122,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     }
 
     // Add scene to registry and return the handle
-    return registry->add(scene);
+    return registry->add(scene).handle;
 }
 
 

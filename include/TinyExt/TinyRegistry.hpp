@@ -20,19 +20,28 @@ struct TypeHandle {
     }
 
     bool valid() const { return handle.valid() && typeHash != 0; }
+
+    template<typename T>
+    bool isType() const { return typeHash == typeid(T).hash_code() && valid(); }
 };
 
 class TinyRegistry { // For raw resource data
     struct IPool {
         virtual ~IPool() = default;
+        virtual void* getRaw(const TinyHandle& handle) = 0;
     };
 
     template<typename T>
     struct PoolWrapper : public IPool {
         TinyPool<T> pool;
+
+        void* getRaw(const TinyHandle& handle) override {
+            return pool.get(handle);
+        }
     };
 
     UnorderedMap<std::type_index, UniquePtr<IPool>> pools;
+    UnorderedMap<size_t, IPool*> hashToPool;
 
     template<typename T>
     PoolWrapper<T>* getWrapper() {
@@ -56,10 +65,14 @@ class TinyRegistry { // For raw resource data
         if (it == pools.end()) {
             auto wrapper = std::make_unique<PoolWrapper<T>>();
             auto* ptr = wrapper.get();
+            hashToPool[idx.hash_code()] = ptr; // hash for O(1) lookup
             pools[idx] = std::move(wrapper);
             return *ptr;
         }
-        return *static_cast<PoolWrapper<T>*>(pools[idx].get());
+
+        auto* existing = static_cast<PoolWrapper<T>*>(pools[idx].get());
+        hashToPool[idx.hash_code()] = existing; // map stays valid
+        return *existing;
     }
 
 public:
@@ -69,11 +82,11 @@ public:
     TinyRegistry& operator=(const TinyRegistry&) = delete;
 
     template<typename T>
-    TinyHandle add(T& data) {
+    TypeHandle add(T& data) {
         auto& pool = ensurePool<T>().pool;
         TinyHandle handle = pool.insert(std::move(data));
 
-        return handle;
+        return TypeHandle::make<T>(handle);
     }
 
     template<typename T>
@@ -88,6 +101,13 @@ public:
         return wrapper ? wrapper->pool.get(handle) : nullptr;
     }
 
+    void* get(const TypeHandle& th) {
+        if (!th.valid()) return nullptr;
+
+        auto it = hashToPool.find(th.typeHash);
+        return (it != hashToPool.end()) ? it->second->getRaw(th.handle) : nullptr;
+    }
+
     template<typename T>
     T* data() {
         auto* wrapper = getWrapper<T>(); // check validity
@@ -98,6 +118,11 @@ public:
     const T* data() const {
         auto* wrapper = getWrapper<T>(); // check validity
         return wrapper ? wrapper->pool.data() : nullptr;
+    }
+
+    void* data(size_t typeHash) {
+        auto it = hashToPool.find(typeHash);
+        return (it != hashToPool.end()) ? it->second->getRaw(TinyHandle()) : nullptr;
     }
 
     template<typename T>
@@ -117,8 +142,6 @@ public:
 
         return wrapper->pool;
     }
-
-
 
     template<typename T>
     uint32_t capacity() const {
