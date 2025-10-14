@@ -72,6 +72,18 @@ public:
     }
 
     template<typename T>
+    T* data() {
+        auto* wrapper = getWrapper<T>(); // check validity
+        return wrapper ? wrapper->pool.data() : nullptr;
+    }
+
+    template<typename T>
+    const T* data() const {
+        auto* wrapper = getWrapper<T>(); // check validity
+        return wrapper ? wrapper->pool.data() : nullptr;
+    }
+
+    template<typename T>
     TinyPool<T>& view() {
         return ensurePool<T>().pool;
     }
