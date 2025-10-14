@@ -14,11 +14,11 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     registry = MakeUnique<TinyRegistry>();
 
     // Create root runtime node
-    auto rootNode = MakeUnique<TinyNodeRT>();
-    rootNode->name = "Root";
+    TinyNodeRT rootNode;
+    rootNode.name = "Root";
     // Children will be added upon scene population
 
-    rtNodes.push_back(std::move(rootNode));
+    rootNodeHandle = rtNodes.insert(std::move(rootNode)); // Store the root handle
 
     // Create camera and global UBO manager
     tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 100.0f);
@@ -115,47 +115,56 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
 
 
 
-void TinyProject::addSceneInstance(TinyHandle sceneHandle, uint32_t rootIndex, glm::mat4 at) {
+void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle, glm::mat4 at) {
     const TinyRScene* scene = registry->get<TinyRScene>(sceneHandle);
     if (!scene || !scene->hasNodes()) {
         printf("Error: Invalid scene handle %llu or empty scene\n", sceneHandle.value);
         return;
     }
 
-    uint32_t rtRootIndex = rootIndex < rtNodes.size() ? rootIndex : 0;
-    uint32_t startRuntimeIndex = rtNodes.size(); // First runtime node index for this instance
-    
-    // Create mapping from scene node index to runtime node index
-    UnorderedMap<int32_t, uint32_t> sceneToRuntimeMap;
+    // Use the stored root handle if no valid handle is provided
+    TinyHandle actualRootHandle = rootHandle.isValid() ? rootHandle : rootNodeHandle;
+
+    // Create mapping from scene node index to runtime node handle
+    UnorderedMap<int32_t, TinyHandle> sceneToRuntimeMap;
 
     // First pass: Create all runtime nodes and copy scene node data
     for (int32_t i = 0; i < static_cast<int32_t>(scene->nodes.size()); ++i) {
         const TinyNode& sceneNode = scene->nodes[i];
         
-        auto rtNode = MakeUnique<TinyNodeRT>();
-        rtNode->copyFromSceneNode(sceneNode);
+        TinyNodeRT rtNode;
+        rtNode.copyFromSceneNode(sceneNode);
         
-        uint32_t rtIndex = rtNodes.size();
-        sceneToRuntimeMap[i] = rtIndex;
-        rtNodes.push_back(std::move(rtNode));
+        TinyHandle rtHandle = rtNodes.insert(std::move(rtNode));
+        sceneToRuntimeMap[i] = rtHandle;
     }
 
     // Second pass: Remap all references (parent/children + component skeleton references)
     for (int32_t i = 0; i < static_cast<int32_t>(scene->nodes.size()); ++i) {
         const TinyNode& sceneNode = scene->nodes[i];
-        uint32_t rtIndex = sceneToRuntimeMap[i];
-        auto& rtNode = rtNodes[rtIndex];
+        TinyHandle rtHandle = sceneToRuntimeMap[i];
+        TinyNodeRT* rtNode = rtNodes.get(rtHandle);
+        
+        if (!rtNode) continue; // Safety check
 
         // Remap parent-child relationships
         if (sceneNode.parent.isValid() && sceneNode.parent.index < scene->nodes.size()) {
             // Has parent within scene - remap to runtime parent
-            uint32_t rtParentIndex = sceneToRuntimeMap[sceneNode.parent.index];
-            rtNode->parentIdx = rtParentIndex;
-            rtNodes[rtParentIndex]->addChild(rtIndex, rtNodes);
+            TinyHandle rtParentHandle = sceneToRuntimeMap[sceneNode.parent.index];
+            rtNode->parentHandle = rtParentHandle;
+            
+            TinyNodeRT* parentNode = rtNodes.get(rtParentHandle);
+            if (parentNode) {
+                parentNode->addChild(rtHandle, rtNodes);
+            }
         } else {
             // No parent in scene - attach to project root
-            rtNode->parentIdx = rtRootIndex;
-            rtNodes[rtRootIndex]->addChild(rtIndex, rtNodes);
+            rtNode->parentHandle = actualRootHandle;
+            
+            TinyNodeRT* rootNode = rtNodes.get(actualRootHandle);
+            if (rootNode) {
+                rootNode->addChild(rtHandle, rtNodes);
+            }
         }
 
         // Apply instance transform to scene root (first node)
@@ -172,7 +181,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, uint32_t rootIndex, g
                     sceneMeshRender->skeleNode.index < scene->nodes.size()) {
                     meshRender->skeleNodeRT = sceneToRuntimeMap[sceneMeshRender->skeleNode.index];
                 }
-                rtMeshRenderIdxs.push_back(rtIndex);
+                rtMeshRenderHandles.push_back(rtHandle);
             }
         }
 
@@ -198,68 +207,13 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, uint32_t rootIndex, g
         }
     }
 
-    // Update transforms for the entire hierarchy
-    updateGlobalTransforms(0);
+    // Update transforms for the entire hierarchy  
+    updateGlobalTransforms(actualRootHandle);
 }
 
-void TinyProject::printRuntimeNodeRecursive(
-    const UniquePtrVec<TinyNodeRT>& rtNodes,
-    TinyRegistry* registry,
-    const TinyHandle& runtimeHandle,
-    int depth
-) {
-    const TinyNodeRT* rtNode = rtNodes[runtimeHandle.index].get();
 
-    // Format runtime index padded to 3 chars
-    char idxBuf[8];
-    snprintf(idxBuf, sizeof(idxBuf), "%3u", runtimeHandle.index);
-
-    // Indentation
-    std::string indent(depth * 2, ' ');
-
-    // Extract local and global positions
-    glm::vec3 localPos = glm::vec3(rtNode->localTransform[3]); // Local transform translation
-    glm::vec3 globalPos = glm::vec3(rtNode->globalTransform[3]); // Global translation
-
-    // Print: [idx] indent Name (Parent: parentIndex) -> Local (x, y, z) - Glb (x, y, z)
-    printf("[%s] %s%s (Parent: %u) -> Local (%.2f, %.2f, %.2f) - Glb (%.2f, %.2f, %.2f)\n",
-        idxBuf,
-        indent.c_str(),
-        rtNode->name.c_str(),
-        rtNode->parentIdx,
-        localPos.x, localPos.y, localPos.z,
-        globalPos.x, globalPos.y, globalPos.z);
-
-    // Recurse for children
-    for (uint32_t childIdx : rtNode->childrenIdxs) {
-        TinyHandle childHandle = TinyHandle(childIdx);
-        printRuntimeNodeRecursive(rtNodes, registry, childHandle, depth + 1);
-    }
-}
-
-void TinyProject::printRuntimeNodeOrdered() {
-    for (size_t i = 0; i < rtNodes.size(); ++i) {
-        const UniquePtr<TinyNodeRT>& runtimeNode = rtNodes[i];
-        if (!runtimeNode) continue;
-
-        // Parent index
-        uint32_t parentIndex = runtimeNode->parentIdx;
-
-        // Print in ordered flat list
-        printf("[%3zu] RuntimeNode_%zu (Parent: %u)\n",
-            i,
-            i,
-            parentIndex);
-    }
-}
-
-void TinyProject::updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4& parentGlobalTransform) {
-    // Validate the node index
-    if (rootNodeIndex == UINT32_MAX || rootNodeIndex >= rtNodes.size()) {
-        return;
-    }
-
-    UniquePtr<TinyNodeRT>& runtimeNode = rtNodes[rootNodeIndex];
+void TinyProject::updateGlobalTransforms(TinyHandle rootNodeHandle, const glm::mat4& parentGlobalTransform) {
+    TinyNodeRT* runtimeNode = rtNodes.get(rootNodeHandle);
     if (!runtimeNode) return;
 
     // Use the local transform which contains the original scene node transform + any instance overrides
@@ -272,64 +226,50 @@ void TinyProject::updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4
     runtimeNode->isDirty = false;
 
     // Recursively update all children
-    for (uint32_t childIdx : runtimeNode->childrenIdxs) {
-        updateGlobalTransforms(childIdx, runtimeNode->globalTransform);
+    for (const TinyHandle& childHandle : runtimeNode->childrenHandles) {
+        updateGlobalTransforms(childHandle, runtimeNode->globalTransform);
     }
 }
 
 // TinyNodeRT method implementation
-void TinyNodeRT::addChild(uint32_t childIndex, std::vector<std::unique_ptr<TinyNodeRT>>& allrtNodes) {
+void TinyNodeRT::addChild(TinyHandle childHandle, TinyPool<TinyNodeRT>& rtNodesPool) {
     // Add child to this node's children list
-    childrenIdxs.push_back(childIndex);
+    childrenHandles.push_back(childHandle);
     
     // Mark this node (parent) as dirty
     isDirty = true;
     
     // Mark the child node as dirty (parent will be set separately by the caller)
-    if (childIndex < allrtNodes.size() && allrtNodes[childIndex]) {
-        allrtNodes[childIndex]->isDirty = true;
+    TinyNodeRT* childNode = rtNodesPool.get(childHandle);
+    if (childNode) {
+        childNode->isDirty = true;
     }
 }
 
 void TinyProject::runPlayground(float dTime) {
     return;
-
-    // Get the root node (index 0)
-    TinyNodeRT* node0 = rtNodes[1].get();
-    TinyNodeRT* node1 = rtNodes[10].get();
-
-    // Calculate rotation: 90 degrees per second = π/2 radians per second
-    float rotationSpeed = glm::radians(90.0f); // 90 degrees per second in radians
-    float rotationThisFrame = rotationSpeed * dTime;
-    
-    // Create rotation matrix around Y axis
-    glm::mat4 rotMat0 = glm::rotate(glm::mat4(1.0f), rotationThisFrame, glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 rotMat1 = glm::rotate(glm::mat4(1.0f), -rotationThisFrame, glm::vec3(0.0f, 1.0f, 0.0f));
-    
-    // Apply rotation to the local transform
-    node0->localTransform = rotMat0 * node0->localTransform;
-    node1->localTransform = rotMat1 * node1->localTransform;
-
-    // Update the entire transform hierarchy every frame (no dirty flag checking)
-    updateGlobalTransforms(0);
 }
 
 
 
 
 
-void TinyProject::renderNodeTreeImGui(uint32_t nodeIndex, int depth) {
-    if (nodeIndex >= rtNodes.size() || !rtNodes[nodeIndex]) {
+void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
+    // Use root node if no valid handle provided
+    if (!nodeHandle.isValid()) {
+        nodeHandle = rootNodeHandle;
+    }
+    
+    const TinyNodeRT* node = rtNodes.get(nodeHandle);
+    if (!node) {
         return;
     }
-
-    const auto& node = rtNodes[nodeIndex];
     
     // Create a unique ID for this node
-    ImGui::PushID(static_cast<int>(nodeIndex));
+    ImGui::PushID(static_cast<int>(nodeHandle.index));
     
     // Check if this node has children
-    bool hasChildren = !node->childrenIdxs.empty();
+    bool hasChildren = !node->childrenHandles.empty();
     
     // Create tree node or leaf
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
@@ -357,9 +297,9 @@ void TinyProject::renderNodeTreeImGui(uint32_t nodeIndex, int depth) {
     // Show node details in tooltip
     if (ImGui::IsItemHovered()) {
         ImGui::BeginTooltip();
-        ImGui::Text("Index: %u", nodeIndex);
-        ImGui::Text("Parent: %u", node->parentIdx);
-        ImGui::Text("Children: %zu", node->childrenIdxs.size());
+        ImGui::Text("Handle: %u.%u", nodeHandle.index, nodeHandle.version);
+        ImGui::Text("Parent: %u.%u", node->parentHandle.index, node->parentHandle.version);
+        ImGui::Text("Children: %zu", node->childrenHandles.size());
         ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
         ImGui::Text("Type Mask: 0x%X", node->types);
         ImGui::EndTooltip();
@@ -367,8 +307,8 @@ void TinyProject::renderNodeTreeImGui(uint32_t nodeIndex, int depth) {
     
     // If node is open and has children, recurse for children
     if (nodeOpen && hasChildren) {
-        for (uint32_t childIdx : node->childrenIdxs) {
-            renderNodeTreeImGui(childIdx, depth + 1);
+        for (const TinyHandle& childHandle : node->childrenHandles) {
+            renderNodeTreeImGui(childHandle, depth + 1);
         }
         ImGui::TreePop();
     }

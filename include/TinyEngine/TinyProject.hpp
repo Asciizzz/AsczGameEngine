@@ -17,8 +17,8 @@ struct TinyNodeRT {
     glm::mat4 localTransform = glm::mat4(1.0f);
     
     // === Runtime-specific data ===
-    uint32_t parentIdx = UINT32_MAX;               // Runtime parent index (UINT32_MAX = no parent)
-    std::vector<uint32_t> childrenIdxs;           // Runtime children indices
+    TinyHandle parentHandle;                       // Runtime parent handle (invalid handle = no parent)
+    std::vector<TinyHandle> childrenHandles;      // Runtime children handles
     
     bool isDirty = true;
     glm::mat4 globalTransform = glm::mat4(1.0f);
@@ -28,13 +28,13 @@ struct TinyNodeRT {
         static constexpr TinyNode::Types kType = TinyNode::Types::MeshRender;
         
         TinyHandle mesh;                    // Copied from scene node
-        uint32_t skeleNodeRT = UINT32_MAX;  // Remapped to runtime node index
+        TinyHandle skeleNodeRT;             // Remapped to runtime node handle
     };
 
     struct BoneAttach {
         static constexpr TinyNode::Types kType = TinyNode::Types::BoneAttach;
         
-        uint32_t skeleNodeRT = UINT32_MAX;  // Remapped to runtime node index  
+        TinyHandle skeleNodeRT;             // Remapped to runtime node handle  
         TinyHandle bone;                    // Copied from scene node
     };
 
@@ -136,7 +136,7 @@ public:
         return hasComponent<T>() ? &getComponent<T>() : nullptr;
     }
 
-    void addChild(uint32_t childIndex, std::vector<std::unique_ptr<TinyNodeRT>>& allrtNodes);
+    void addChild(TinyHandle childHandle, TinyPool<TinyNodeRT>& rtNodesPool);
 };
 
 class TinyProject {
@@ -161,37 +161,23 @@ public:
      * Adds a scene instance to the project.
      *
      * @param sceneHandle Handle to the scene in the registry to instantiate.
-     * @param rootIndex point to the runtime node to inherit from (optional).
+     * @param rootHandle Handle to the runtime node to inherit from (optional).
      */
-    void addSceneInstance(TinyHandle sceneHandle, uint32_t rootIndex = 0, glm::mat4 at = glm::mat4(1.0f));
-
-
-    void printRuntimeNodeRecursive(
-        const UniquePtrVec<TinyNodeRT>& rtNodes,
-        TinyRegistry* registry,
-        const TinyHandle& runtimeHandle,
-        int depth = 0
-    );
-
-    void printRuntimeNodeHierarchy() {
-        printRuntimeNodeRecursive(rtNodes, registry.get(), TinyHandle(0));
-    };
-
-    void printRuntimeNodeOrdered();
+    void addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle = TinyHandle(), glm::mat4 at = glm::mat4(1.0f));
 
     /**
      * Renders an ImGui collapsible tree view of the runtime node hierarchy
      */
-    void renderNodeTreeImGui(uint32_t nodeIndex = 0, int depth = 0);
+    void renderNodeTreeImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
 
     /**
      * Recursively updates global transforms for all nodes starting from the specified root.
      * Always processes all nodes regardless of dirty state for guaranteed correctness.
      * 
-     * @param rootNodeIndex Index to the root node to start the recursive update from
+     * @param rootNodeHandle Handle to the root node to start the recursive update from
      * @param parentGlobalTransform Global transform of the parent (identity for root nodes)
      */
-    void updateGlobalTransforms(uint32_t rootNodeIndex, const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
+    void updateGlobalTransforms(TinyHandle rootNodeHandle, const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
 
     /**
@@ -202,8 +188,12 @@ public:
 
     // These are not official public methods, only for testing purposes
 
-    const UniquePtrVec<TinyNodeRT>& getRuntimeNodes() const { return rtNodes; }
-    const std::vector<uint32_t>& getRuntimeMeshRenderIndices() const { return rtMeshRenderIdxs; }
+    const TinyPool<TinyNodeRT>& getRuntimeNodes() const { return rtNodes; }
+    const std::vector<TinyHandle>& getRuntimeMeshRenderHandles() const { return rtMeshRenderHandles; }
+    TinyHandle getRootNodeHandle() const { return rootNodeHandle; }
+    
+    // Helper to get handle by index (useful for UI that thinks in indices)
+    TinyHandle getNodeHandleByIndex(uint32_t index) const { return rtNodes.getHandleByIndex(index); }
 
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
 
@@ -215,6 +205,7 @@ private:
 
     UniquePtr<TinyRegistry> registry;
 
-    UniquePtrVec<TinyNodeRT> rtNodes;
-    std::vector<uint32_t> rtMeshRenderIdxs; // Points to rtNodes with MeshRender component
+    TinyPool<TinyNodeRT> rtNodes;
+    TinyHandle rootNodeHandle; // Handle to the root node
+    std::vector<TinyHandle> rtMeshRenderHandles; // Handles to rtNodes with MeshRender component
 };

@@ -68,8 +68,6 @@ void Application::initComponents() {
 
     // Load all models from Assets directory recursively
     loadAllAssetsRecursively("Assets");
-    
-    project->printRuntimeNodeHierarchy();// PLAYGROUND END HERE 
 
     auto glbLayout = project->getGlbDescSetLayout();
     auto matLayout = VK_NULL_HANDLE; // Placeholder until we have a material UBO
@@ -407,16 +405,16 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                     glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * 2.0f);
                     glm::mat4 model = trans * rot;
                     
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], 0, model);
-                    project->updateGlobalTransforms(0);
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], project->getNodeHandleByIndex(0), model);
+                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
             
             ImGui::SameLine();
             if (ImGui::Button("Place at Origin", ImVec2(140, 25))) {
                 if (currentSelectedScene < (int)sceneHandles.size()) {
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], 0, glm::mat4(1.0f));
-                    project->updateGlobalTransforms(0);
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], project->getNodeHandleByIndex(0), glm::mat4(1.0f));
+                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
             
@@ -433,8 +431,8 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                     glm::mat4 trans = glm::translate(glm::mat4(1.0f), randomPos);
                     glm::mat4 model = trans * rot;
                     
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], 0, model);
-                    project->updateGlobalTransforms(0);
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], project->getNodeHandleByIndex(0), model);
+                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
             
@@ -460,8 +458,8 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                     // Apply translation
                     model = glm::translate(glm::mat4(1.0f), glm::vec3(manualPos[0], manualPos[1], manualPos[2])) * model;
                     
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], 0, model);
-                    project->updateGlobalTransforms(0);
+                    project->addSceneInstance(sceneHandles[currentSelectedScene], project->getNodeHandleByIndex(0), model);
+                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
         } else {
@@ -476,16 +474,16 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         // Scene Info
         ImGui::Text("Scene Information");
-        ImGui::Text("Runtime Node Count: %zu", project->getRuntimeNodes().size());
-        ImGui::Text("Mesh Render Nodes: %zu", project->getRuntimeMeshRenderIndices().size());
+        ImGui::Text("Runtime Node Count: %u", project->getRuntimeNodes().count());
+        ImGui::Text("Mesh Render Nodes: %zu", project->getRuntimeMeshRenderHandles().size());
         
         ImGui::Spacing();
         
         // Collapsible runtime node hierarchy
         if (ImGui::CollapsingHeader("Runtime Node Hierarchy")) {
             ImGui::BeginChild("NodeTree", ImVec2(0, 300), true);
-            if (!project->getRuntimeNodes().empty()) {
-                project->renderNodeTreeImGui(0); // Start from root node
+            if (project->getRuntimeNodes().count() > 0) {
+                project->renderNodeTreeImGui(project->getNodeHandleByIndex(0)); // Start from root node
             } else {
                 ImGui::Text("No runtime nodes");
             }

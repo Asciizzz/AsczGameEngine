@@ -154,6 +154,14 @@ public:
         return const_cast<TinyPool<Type>*>(this)->get(handle);
     }
 
+    // Get handle by index (useful for accessing items by their position)
+    TinyHandle getHandleByIndex(uint32_t index) const {
+        if (index >= items.size() || !states[index].occupied) {
+            return TinyHandle(); // Return invalid handle
+        }
+        return TinyHandle(index, states[index].version);
+    }
+
     // Reference is better since this is never null
     std::vector<Type>& view() { return items; }
     const std::vector<Type>& view() const { return items; }
