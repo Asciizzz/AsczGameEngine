@@ -8,6 +8,7 @@
 #include <string>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -379,21 +380,11 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
     
     // Scene Manager Window
     imguiWrapper->addWindow("Scene Manager", [this, &camera]() {
-        // Object Placement Section
-        ImGui::Text("Object Placement");
-        ImGui::Separator();
-        
-        // Distance slider for placement
-        static float placementDistance = 2.0f;
-        ImGui::SliderFloat("Placement Distance", &placementDistance, 0.0f, 10.0f, "%.1f units");
-        
-        // Scene selection and instancing
-        ImGui::Text("Scene Management");
+        // Scene placement section
+        ImGui::Text("Scene Placement");
         ImGui::Separator();
         
         if (!sceneHandles.empty()) {
-            ImGui::Text("Available Scenes (%zu):", sceneHandles.size());
-            
             // Scene selection dropdown
             std::string currentSceneName = "Unknown Scene";
             if (currentSelectedScene < (int)sceneHandles.size()) {
@@ -421,76 +412,19 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             
             ImGui::Spacing();
             
-            // Instance placement buttons
-            if (ImGui::Button("Place at Camera", ImVec2(140, 25))) {
-                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.valid()) {
-                    glm::mat4 rot = glm::rotate(glm::mat4(1.0f), camera.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
-                    glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * 2.0f);
-                    glm::mat4 model = trans * rot;
-                    
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, model);
-                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
-                }
-            }
-            
-            ImGui::SameLine();
-            if (ImGui::Button("Place at Origin", ImVec2(140, 25))) {
+            // Single place button
+            if (ImGui::Button("Place", ImVec2(-1, 30))) {
                 if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.valid()) {
                     project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, glm::mat4(1.0f));
                     project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
             }
-            
-            // Random placement button
-            if (ImGui::Button("Place Random", ImVec2(120, 30))) {
-                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.valid()) {
-                    static std::random_device rd;
-                    static std::mt19937 gen(rd());
-                    static std::uniform_real_distribution<float> posDist(-10.0f, 10.0f);
-                    static std::uniform_real_distribution<float> rotDist(0.0f, 6.28318f); // 0 to 2π
-                    
-                    glm::vec3 randomPos(posDist(gen), 0.0f, posDist(gen));
-                    glm::mat4 rot = glm::rotate(glm::mat4(1.0f), rotDist(gen), glm::vec3(0.0f, 1.0f, 0.0f));
-                    glm::mat4 trans = glm::translate(glm::mat4(1.0f), randomPos);
-                    glm::mat4 model = trans * rot;
-                    
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, model);
-                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
-                }
-            }
-            
-            ImGui::Spacing();
-            
-            // Manual placement controls
-            static float manualPos[3] = {0.0f, 0.0f, 0.0f};
-            static float manualRot[3] = {0.0f, 0.0f, 0.0f};
-            
-            ImGui::Text("Manual Placement");
-            ImGui::DragFloat3("Position", manualPos, 0.1f, -50.0f, 50.0f);
-            ImGui::DragFloat3("Rotation (degrees)", manualRot, 1.0f, -180.0f, 180.0f);
-            
-            if (ImGui::Button("Place Manually", ImVec2(140, 25))) {
-                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.valid()) {
-                    glm::mat4 model = glm::mat4(1.0f);
-                    
-                    // Apply rotations (convert degrees to radians)
-                    model = glm::rotate(model, glm::radians(manualRot[1]), glm::vec3(0.0f, 1.0f, 0.0f)); // Y (yaw)
-                    model = glm::rotate(model, glm::radians(manualRot[0]), glm::vec3(1.0f, 0.0f, 0.0f)); // X (pitch)
-                    model = glm::rotate(model, glm::radians(manualRot[2]), glm::vec3(0.0f, 0.0f, 1.0f)); // Z (roll)
-                    
-                    // Apply translation
-                    model = glm::translate(glm::mat4(1.0f), glm::vec3(manualPos[0], manualPos[1], manualPos[2])) * model;
-                    
-                    project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, model);
-                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
-                }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Place selected scene at world origin");
             }
         } else {
             ImGui::Text("No scenes loaded. Load models to create scenes.");
         }
-        
-        ImGui::Spacing();
-        ImGui::Separator();
         
         ImGui::Spacing();
         ImGui::Separator();
@@ -502,17 +436,20 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         ImGui::Spacing();
         
-        // Collapsible runtime node hierarchy
-        if (ImGui::CollapsingHeader("Runtime Node Hierarchy")) {
-            
-            ImGui::BeginChild("NodeTree", ImVec2(0, 250), true);
-            if (project->getRuntimeNodes().count() > 0) {
-                project->renderSelectableNodeTreeImGui(project->getNodeHandleByIndex(0), selectedNodeHandle);
-            } else {
-                ImGui::Text("No runtime nodes");
-            }
-            ImGui::EndChild();
+        // Expanded runtime node hierarchy
+        ImGui::Text("Node Hierarchy");
+        ImGui::Separator();
+        
+        // Calculate remaining window space for the node tree
+        float availableHeight = ImGui::GetContentRegionAvail().y - 20; // Leave some padding
+        
+        ImGui::BeginChild("NodeTree", ImVec2(0, availableHeight), true);
+        if (project->getRuntimeNodes().count() > 0) {
+            project->renderSelectableNodeTreeImGui(project->getNodeHandleByIndex(0), selectedNodeHandle);
+        } else {
+            ImGui::Text("No runtime nodes");
         }
+        ImGui::EndChild();
     }, &showSceneWindow);
     
     // Node Inspector Window
@@ -687,6 +624,8 @@ void Application::renderNodeInspectorWindow() {
         return;
     }
 
+    bool isRootNode = (selectedNodeHandle == project->getNodeHandleByIndex(0));
+
     // Node Header Info
     ImGui::Text("Node: %s", selectedNode->name.c_str());
     ImGui::Text("Handle: %u_v%u", selectedNodeHandle.index, selectedNodeHandle.version);
@@ -705,7 +644,7 @@ void Application::renderNodeInspectorWindow() {
     ImGui::Separator();
 
     // Transform section
-    if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen) && !isRootNode) {
         // Get the current transform
         glm::mat4 localTransform = selectedNode->localTransform;
         
@@ -714,7 +653,40 @@ void Application::renderNodeInspectorWindow() {
         glm::quat rotationQuat;
         glm::vec3 skew;
         glm::vec4 perspective;
-        glm::decompose(localTransform, scale, rotationQuat, translation, skew, perspective);
+        
+        // Check if decomposition is valid
+        bool validDecomposition = glm::decompose(localTransform, scale, rotationQuat, translation, skew, perspective);
+        
+        if (!validDecomposition) {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
+            if (ImGui::Button("Reset Transform")) {
+                TinyNodeRT* mutableNode = const_cast<TinyNodeRT*>(selectedNode);
+                mutableNode->localTransform = glm::mat4(1.0f);
+                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+            }
+            return;
+        }
+        
+        // Validate extracted values for NaN/infinity
+        auto isValidVec3 = [](const glm::vec3& v) {
+            return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+        };
+        
+        if (!isValidVec3(translation) || !isValidVec3(scale)) {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
+            if (ImGui::Button("Reset Transform")) {
+                TinyNodeRT* mutableNode = const_cast<TinyNodeRT*>(selectedNode);
+                mutableNode->localTransform = glm::mat4(1.0f);
+                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+            }
+            return;
+        }
+        
+        // Clamp scale to prevent zero/negative values
+        const float MIN_SCALE = 0.001f;
+        scale.x = std::max(MIN_SCALE, std::abs(scale.x));
+        scale.y = std::max(MIN_SCALE, std::abs(scale.y));
+        scale.z = std::max(MIN_SCALE, std::abs(scale.z));
         
         // Convert quaternion to Euler angles (in degrees)
         rotation = glm::degrees(glm::eulerAngles(rotationQuat));
@@ -727,30 +699,84 @@ void Application::renderNodeInspectorWindow() {
         // Translation controls (Godot-style drag)
         ImGui::Text("Position");
         ImGui::DragFloat3("##Position", &translation.x, 0.01f, -1000.0f, 1000.0f, "%.3f");
+        ImGui::SameLine();
+        if (ImGui::Button("To Cam")) {
+            translation = project->getCamera()->pos;
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Set position to camera location");
+        }
         
         // Rotation controls
         ImGui::Text("Rotation (degrees)");
         ImGui::DragFloat3("##Rotation", &rotation.x, 0.5f, -360.0f, 360.0f, "%.1f°");
         
-        // Scale controls
+        // Scale controls with safety limits
         ImGui::Text("Scale");
-        ImGui::DragFloat3("##Scale", &scale.x, 0.01f, 0.001f, 10.0f, "%.3f");
+        ImGui::DragFloat3("##Scale", &scale.x, 0.01f, MIN_SCALE, 10.0f, "%.3f");
+        
+        // Enforce minimum scale values in real-time
+        scale.x = std::max(MIN_SCALE, scale.x);
+        scale.y = std::max(MIN_SCALE, scale.y);
+        scale.z = std::max(MIN_SCALE, scale.z);
+        
+        // Uniform scale button
+        ImGui::SameLine();
+        if (ImGui::Button("Uniform")) {
+            float avgScale = (scale.x + scale.y + scale.z) / 3.0f;
+            scale = glm::vec3(avgScale);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Set all scale components to their average");
+        }
+        
+        // Reset buttons
+        if (ImGui::Button("Reset Position")) {
+            translation = glm::vec3(0.0f);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset Rotation")) {
+            rotation = glm::vec3(0.0f);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset Scale")) {
+            scale = glm::vec3(1.0f);
+        }
         
         // Apply changes if any values changed
         if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
-            // Convert back to matrix
-            glm::mat4 T = glm::translate(glm::mat4(1.0f), translation);
-            glm::mat4 R = glm::mat4(glm::quat(glm::radians(rotation)));
-            glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
-            
-            glm::mat4 newTransform = T * R * S;
-            
-            // Apply the new transform to the node (need to get mutable access)
-            TinyNodeRT* mutableNode = const_cast<TinyNodeRT*>(selectedNode);
-            mutableNode->localTransform = newTransform;
-            
-            // Update global transforms
-            project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+            // Validate inputs before applying
+            if (isValidVec3(translation) && isValidVec3(rotation) && isValidVec3(scale)) {
+                // Convert back to matrix
+                glm::mat4 T = glm::translate(glm::mat4(1.0f), translation);
+                glm::mat4 R = glm::mat4(glm::quat(glm::radians(rotation)));
+                glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
+                
+                glm::mat4 newTransform = T * R * S;
+                
+                // Validate the resulting matrix
+                bool matrixValid = true;
+                for (int i = 0; i < 4; ++i) {
+                    for (int j = 0; j < 4; ++j) {
+                        if (!std::isfinite(newTransform[i][j])) {
+                            matrixValid = false;
+                            break;
+                        }
+                    }
+                    if (!matrixValid) break;
+                }
+                
+                if (matrixValid) {
+                    // Apply the new transform to the node
+                    TinyNodeRT* mutableNode = const_cast<TinyNodeRT*>(selectedNode);
+                    mutableNode->localTransform = newTransform;
+                    
+                    // Update global transforms
+                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                } else {
+                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid transform - changes ignored");
+                }
+            }
         }
     }
 
@@ -793,9 +819,9 @@ void Application::renderNodeInspectorWindow() {
     }
 
     ImGui::Separator();
-    
+
     // Delete button (only show if not root node)
-    if (selectedNodeHandle != project->getNodeHandleByIndex(0)) {
+    if (!isRootNode) {
         if (ImGui::Button("Delete Node", ImVec2(-1, 30))) {
             if (project->deleteNodeRecursive(selectedNodeHandle)) {
                 // Successfully deleted, reset selection to root
@@ -805,10 +831,10 @@ void Application::renderNodeInspectorWindow() {
             }
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Delete this node and all its children recursively");
+            ImGui::SetTooltip("Delete this node and all its children");
         }
     } else {
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Cannot delete root node");
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Root node cannot be deleted");
     }
 }
 

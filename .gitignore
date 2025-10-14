@@ -17,6 +17,7 @@ Super_Luigi_64/
 
 guide.md
 Guides/
+docs/
 
 # Custom binary files for my game
 *.ascz

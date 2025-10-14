@@ -405,9 +405,10 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     // Show node details in tooltip
     if (ImGui::IsItemHovered()) {
         ImGui::BeginTooltip();
-        ImGui::Text("Handle: %u.%u", nodeHandle.index, nodeHandle.version);
-        ImGui::Text("Parent: %u.%u", node->parentHandle.index, node->parentHandle.version);
+        ImGui::Text("Handle: %u_v%u", nodeHandle.index, nodeHandle.version);
+        ImGui::Text("Parent: %u_v%u", node->parentHandle.index, node->parentHandle.version);
         ImGui::Text("Children: %zu", node->childrenHandles.size());
+        
         ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
         ImGui::Text("Type Mask: 0x%X", node->types);
         ImGui::EndTooltip();
@@ -505,8 +506,8 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
     // Show node details in tooltip
     if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
         ImGui::BeginTooltip();
-        ImGui::Text("Handle: %u.%u", nodeHandle.index, nodeHandle.version);
-        ImGui::Text("Parent: %u.%u", node->parentHandle.index, node->parentHandle.version);
+        ImGui::Text("Handle: %u_v%u", nodeHandle.index, nodeHandle.version);
+        ImGui::Text("Parent: %u_v%u", node->parentHandle.index, node->parentHandle.version);
         ImGui::Text("Children: %zu", node->childrenHandles.size());
         ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
         ImGui::Text("Type Mask: 0x%X", node->types);
