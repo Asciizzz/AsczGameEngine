@@ -12,17 +12,14 @@ struct TinyNodeRT {
     std::string name = "RuntimeNode";
     TinyNode::Scope scope = TinyNode::Scope::Global; // Runtime nodes are always global scope
     uint32_t types = TinyNode::toMask(TinyNode::Types::Node);
-    
-    // Transform from original TinyNode (renamed from transformOverride)
-    glm::mat4 localTransform = glm::mat4(1.0f);
-    
+
     // === Runtime-specific data ===
-    TinyHandle parentHandle;                       // Runtime parent handle (invalid handle = no parent)
-    std::vector<TinyHandle> childrenHandles;      // Runtime children handles
-    
-    bool isDirty = true;
+    TinyHandle parentHandle;   
+    std::vector<TinyHandle> childrenHandles;
+
+    glm::mat4 localTransform = glm::mat4(1.0f);
     glm::mat4 globalTransform = glm::mat4(1.0f);
-    
+
     // === Runtime Components (enhanced versions of TinyNode components) ===
     struct MeshRender {
         static constexpr TinyNode::Types kType = TinyNode::Types::MeshRender;

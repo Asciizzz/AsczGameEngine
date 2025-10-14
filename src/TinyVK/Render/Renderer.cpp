@@ -305,9 +305,6 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
 
             glm::uvec4 props1 = glm::uvec4(matIndex, 0, 0, 0);
 
-            // // Print submesh mats index
-            // printf("Submesh %zu uses material index %u\n", i, submeshMats[i].index);
-
             // Offset 0: global transform
             // Offset 64: other properties (1)
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transform);

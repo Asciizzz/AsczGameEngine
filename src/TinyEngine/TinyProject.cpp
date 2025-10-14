@@ -234,9 +234,6 @@ void TinyProject::updateGlobalTransforms(TinyHandle rootNodeHandle, const glm::m
     // Calculate global transform: parent global * local transform
     runtimeNode->globalTransform = parentGlobalTransform * localTransform;
 
-    // Mark this node as clean
-    runtimeNode->isDirty = false;
-
     // Recursively update all children
     for (const TinyHandle& childHandle : runtimeNode->childrenHandles) {
         updateGlobalTransforms(childHandle, runtimeNode->globalTransform);
@@ -270,7 +267,6 @@ bool TinyProject::deleteNodeRecursive(TinyHandle nodeHandle) {
                 std::remove(parentChildren.begin(), parentChildren.end(), nodeHandle),
                 parentChildren.end()
             );
-            parentNode->isDirty = true; // Mark parent as dirty since children changed
         }
     }
 
@@ -340,17 +336,14 @@ bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle
                 std::remove(parentChildren.begin(), parentChildren.end(), nodeHandle),
                 parentChildren.end()
             );
-            currentParent->isDirty = true;
         }
     }
     
     // Add to new parent's children list
     newParent->childrenHandles.push_back(nodeHandle);
-    newParent->isDirty = true;
-    
+
     // Update the node's parent handle
     nodeToMove->parentHandle = newParentHandle;
-    nodeToMove->isDirty = true;
     
     return true;
 }
@@ -359,15 +352,6 @@ bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle
 void TinyNodeRT::addChild(TinyHandle childHandle, TinyPool<TinyNodeRT>& rtNodesPool) {
     // Add child to this node's children list
     childrenHandles.push_back(childHandle);
-    
-    // Mark this node (parent) as dirty
-    isDirty = true;
-    
-    // Mark the child node as dirty (parent will be set separately by the caller)
-    TinyNodeRT* childNode = rtNodesPool.get(childHandle);
-    if (childNode) {
-        childNode->isDirty = true;
-    }
 }
 
 void TinyProject::runPlayground(float dTime) {
