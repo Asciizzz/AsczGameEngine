@@ -176,6 +176,15 @@ public:
     void renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, int depth = 0);
 
     /**
+     * Recursively deletes a node and all its children from the runtime hierarchy.
+     * Also removes the node from its parent's children list and cleans up mesh render handles.
+     * 
+     * @param nodeHandle Handle to the node to delete
+     * @return true if the node was successfully deleted, false if handle was invalid
+     */
+    bool deleteNodeRecursive(TinyHandle nodeHandle);
+
+    /**
      * Recursively updates global transforms for all nodes starting from the specified root.
      * Always processes all nodes regardless of dirty state for guaranteed correctness.
      * 

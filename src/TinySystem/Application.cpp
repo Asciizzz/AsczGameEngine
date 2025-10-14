@@ -490,6 +490,22 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                 if (selectedNode) {
                     ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Selected: %s", selectedNode->name.c_str());
                     ImGui::Text("Handle: %u.%u", selectedNodeHandle.index, selectedNodeHandle.version);
+                    
+                    // Delete button (only show if not root node)
+                    if (selectedNodeHandle != project->getNodeHandleByIndex(0)) {
+                        ImGui::SameLine();
+                        if (ImGui::Button("Delete Node", ImVec2(100, 0))) {
+                            if (project->deleteNodeRecursive(selectedNodeHandle)) {
+                                // Successfully deleted, reset selection to root
+                                selectedNodeHandle = project->getNodeHandleByIndex(0);
+                                // Update global transforms after deletion
+                                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                            }
+                        }
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("Delete this node and all its children recursively");
+                        }
+                    }
                 } else {
                     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid selection");
                     selectedNodeHandle = project->getNodeHandleByIndex(0); // Reset to root

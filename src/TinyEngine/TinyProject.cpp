@@ -1,5 +1,6 @@
 #include "TinyEngine/TinyProject.hpp"
 #include <imgui.h>
+#include <algorithm>
 
 using NTypes = TinyNode::Types;
 
@@ -229,6 +230,51 @@ void TinyProject::updateGlobalTransforms(TinyHandle rootNodeHandle, const glm::m
     for (const TinyHandle& childHandle : runtimeNode->childrenHandles) {
         updateGlobalTransforms(childHandle, runtimeNode->globalTransform);
     }
+}
+
+bool TinyProject::deleteNodeRecursive(TinyHandle nodeHandle) {
+    TinyNodeRT* nodeToDelete = rtNodes.get(nodeHandle);
+    if (!nodeToDelete) {
+        return false; // Invalid handle
+    }
+
+    // Don't allow deletion of root node
+    if (nodeHandle == rootNodeHandle) {
+        return false;
+    }
+
+    // First, recursively delete all children
+    // We need to copy the children handles because we'll be modifying the vector during iteration
+    std::vector<TinyHandle> childrenToDelete = nodeToDelete->childrenHandles;
+    for (const TinyHandle& childHandle : childrenToDelete) {
+        deleteNodeRecursive(childHandle); // This will remove each child from the pool
+    }
+
+    // Remove this node from its parent's children list
+    if (nodeToDelete->parentHandle.isValid()) {
+        TinyNodeRT* parentNode = rtNodes.get(nodeToDelete->parentHandle);
+        if (parentNode) {
+            auto& parentChildren = parentNode->childrenHandles;
+            parentChildren.erase(
+                std::remove(parentChildren.begin(), parentChildren.end(), nodeHandle),
+                parentChildren.end()
+            );
+            parentNode->isDirty = true; // Mark parent as dirty since children changed
+        }
+    }
+
+    // Remove from mesh render handles if this node has a MeshRender component
+    if (nodeToDelete->hasComponent<TinyNodeRT::MeshRender>()) {
+        rtMeshRenderHandles.erase(
+            std::remove(rtMeshRenderHandles.begin(), rtMeshRenderHandles.end(), nodeHandle),
+            rtMeshRenderHandles.end()
+        );
+    }
+
+    // Finally, remove the node from the pool
+    rtNodes.remove(nodeHandle);
+
+    return true;
 }
 
 // TinyNodeRT method implementation
