@@ -679,7 +679,7 @@ void Application::renderNodeInspectorWindow() {
 
     // Node Header Info
     ImGui::Text("Node: %s", selectedNode->name.c_str());
-    ImGui::Text("Handle: %u.%u", selectedNodeHandle.index, selectedNodeHandle.version);
+    ImGui::Text("Handle: %u_v%u", selectedNodeHandle.index, selectedNodeHandle.version);
     // Determine node type based on components
     std::string nodeType = "Transform Node";
     if (selectedNode->hasType(TinyNode::Types::MeshRender)) {
@@ -757,7 +757,7 @@ void Application::renderNodeInspectorWindow() {
         if (selectedNode->parentHandle.isValid()) {
             const TinyNodeRT* parentNode = project->getRuntimeNodes().get(selectedNode->parentHandle);
             if (parentNode) {
-                ImGui::Text("Parent: %s (%u.%u)", parentNode->name.c_str(), 
+                ImGui::Text("Parent: %s (%u_v%u)", parentNode->name.c_str(), 
                            selectedNode->parentHandle.index, selectedNode->parentHandle.version);
             }
         } else {
