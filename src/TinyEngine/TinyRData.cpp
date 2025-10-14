@@ -38,6 +38,8 @@ VkIndexType TinyRMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
 }
 
 bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& texture) {
+    name = texture.name;
+
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(

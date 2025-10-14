@@ -1,11 +1,12 @@
 #pragma once
 
 #include "TinyData/TinyVertex.hpp"
+#include "TinyExt/TinyHandle.hpp"
 
 struct TinySubmesh {
     uint32_t indexOffset = 0;
     uint32_t indexCount = 0;
-    int materialIndex = -1;
+    TinyHandle material;
 };
 
 // Uniform mesh structure that holds raw data only

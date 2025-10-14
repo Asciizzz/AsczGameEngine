@@ -13,7 +13,9 @@ union TinyHandle {
     uint64_t value;
 
     TinyHandle() : value(UINT64_MAX) {}
-    TinyHandle(uint64_t v) : value(v) {}
+    TinyHandle(uint32_t index, uint32_t version = 0) {
+        *this = make(index, version);
+    }
 
     /**
     * Create a handle
@@ -26,11 +28,6 @@ union TinyHandle {
         handle.index = static_cast<uint32_t>(index);
         handle.version = static_cast<uint32_t>(version);
         return handle;
-    }
-
-    template<typename IndexType, typename VersionType>
-    TinyHandle(IndexType index, VersionType version = 0) {
-        *this = make(index, version);
     }
 
     // Value operators

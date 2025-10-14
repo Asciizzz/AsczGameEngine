@@ -25,6 +25,17 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 100.0f);
     tinyGlobal = MakeUnique<TinyGlobal>(2);
     tinyGlobal->createVkResources(deviceVK);
+
+    // Create default material and texture
+    TinyTexture defaultTexture = TinyTexture::createDefaultTexture();
+    TinyRTexture defaultRTexture;
+    defaultRTexture.import(deviceVK, defaultTexture);
+    defaultTextureHandle = registry->add(defaultRTexture);
+
+    TinyRMaterial defaultMaterial;
+    defaultMaterial.setAlbTexIndex(0);
+    defaultMaterial.setNrmlTexIndex(0);
+    defaultMaterialHandle = registry->add(defaultMaterial);
 }
 
 TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
@@ -65,8 +76,8 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         // Remap submeshes' material indices
         std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes;
         for (auto& submesh : remappedSubmeshes) {
-            bool valid = isValidIndex(submesh.materialIndex, glbMatrHandle);
-            submesh.materialIndex = valid ? glbMatrHandle[submesh.materialIndex].index : -1;
+            bool valid = isValidIndex(submesh.material.index, glbMatrHandle);
+            submesh.material = valid ? glbMatrHandle[submesh.material.index] : TinyHandle();
         }
 
         meshData.setSubmeshes(remappedSubmeshes);

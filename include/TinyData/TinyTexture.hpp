@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <string>
 
 // Raw texture data (no Vulkan handles)
 struct TinyTexture {
@@ -11,6 +12,10 @@ struct TinyTexture {
     int channels = 0;
     std::vector<uint8_t> data;
 
+    std::string name;
+    TinyTexture(const std::string& n = "") : name(n) {}
+
+    TinyTexture& setName(const std::string& n);
     TinyTexture& setDimensions(int w, int h);
     TinyTexture& setChannels(int c);
     TinyTexture& setData(const std::vector<uint8_t>& d);

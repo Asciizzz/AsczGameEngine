@@ -27,6 +27,7 @@ struct TinyRMaterial {
 };
 
 struct TinyRTexture {
+    std::string name;
     TinyVK::TextureVK textureVK;
     bool import(const TinyVK::Device* deviceVK, const TinyTexture& texture);
 };

@@ -299,7 +299,10 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
             uint32_t indexCount = submeshes[i].indexCount;
             if (indexCount == 0) continue;
 
-            uint32_t matIndex  = submeshes[i].materialIndex;
+            TinyHandle matHandle = submeshes[i].material;
+            const TinyRMaterial* material = registry->get<TinyRMaterial>(matHandle);
+            uint32_t matIndex = material ? matHandle.index : 0;
+
             glm::uvec4 props1 = glm::uvec4(matIndex, 0, 0, 0);
 
             // // Print submesh mats index

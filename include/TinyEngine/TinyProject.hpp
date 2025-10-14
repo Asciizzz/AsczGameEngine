@@ -232,4 +232,11 @@ private:
     TinyPool<TinyNodeRT> rtNodes;
     TinyHandle rootNodeHandle; // Handle to the root node
     std::vector<TinyHandle> rtMeshRenderHandles; // Handles to rtNodes with MeshRender component
+
+    TinyHandle defaultMaterialHandle;
+    TinyHandle defaultTextureHandle;
+
+    TinyVK::DescLayout matDescLayout;
+    TinyVK::DescPool matDescPool;
+    TinyVK::DescSet matDescSet;
 };

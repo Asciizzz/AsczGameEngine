@@ -73,6 +73,7 @@ TinyTexture TinyLoader::loadTexture(const std::string& filePath) {
         texture.height = 0;
         texture.channels = 0;
         texture.data.clear();
+        texture.name = filePath;
         texture.makeHash();
         return texture;
     }
@@ -329,6 +330,7 @@ void loadTextures(std::vector<TinyTexture>& textures, tinygltf::Model& model) {
         if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
             const auto& image = model.images[gltfTexture.source];
             texture.
+                setName(image.name).
                 setDimensions(image.width, image.height).
                 setChannels(image.component).
                 setData(image.image).
@@ -499,7 +501,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         TinySubmesh submesh;
         submesh.indexOffset = currentIndexOffset;
         submesh.indexCount = static_cast<uint32_t>(pData.indices.size());
-        submesh.materialIndex = pData.materialIndex;
+        submesh.material = pData.materialIndex >= 0 ? TinyHandle(pData.materialIndex) : TinyHandle::invalid();
         mesh.addSubmesh(submesh);
 
         currentVertexOffset += static_cast<uint32_t>(pData.vertexCount);

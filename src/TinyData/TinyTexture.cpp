@@ -1,5 +1,10 @@
 #include "TinyData/TinyTexture.hpp"
 
+
+TinyTexture& TinyTexture::setName(const std::string& n) {
+    name = n;
+    return *this;
+}
 TinyTexture& TinyTexture::setDimensions(int w, int h) {
     width = w;
     height = h;
