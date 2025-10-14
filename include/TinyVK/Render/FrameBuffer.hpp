@@ -34,7 +34,7 @@ public:
     VkFramebuffer get() const { return framebuffer; }
     operator VkFramebuffer() const { return framebuffer; }
 
-    bool isValid() const { return framebuffer != VK_NULL_HANDLE; }
+    bool valid() const { return framebuffer != VK_NULL_HANDLE; }
 
     bool create(const FrameBufferConfig& config);
     static VkFramebuffer create(VkDevice device, const FrameBufferConfig& config);

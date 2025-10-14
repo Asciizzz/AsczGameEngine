@@ -102,7 +102,7 @@ struct DescSet {
     void free(VkDescriptorPool pool);
     
     // Utility methods
-    bool isValid() const { return set != VK_NULL_HANDLE; }
+    bool valid() const { return set != VK_NULL_HANDLE; }
 
 private:
     VkDevice device = VK_NULL_HANDLE;

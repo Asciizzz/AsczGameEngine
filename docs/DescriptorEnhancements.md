@@ -84,7 +84,7 @@ void allocate(VkDevice device,
 
 **New Methods:**
 - `static std::vector<DescSet> allocateBatch(...)` - Allocate multiple descriptor sets in one call
-- `bool isValid() const` - Check if the descriptor set is valid
+- `bool valid() const` - Check if the descriptor set is valid
 
 **Usage Examples:**
 ```cpp
@@ -250,7 +250,7 @@ DescWrite()
 No migration is required - all existing code continues to work. To take advantage of new features:
 
 1. **Add flags where needed**: Simply add flag parameters to existing `create()` calls
-2. **Use new utility methods**: Leverage `reset()`, `isValid()`, and count methods for better management
+2. **Use new utility methods**: Leverage `reset()`, `valid()`, and count methods for better management
 3. **Enable copy operations**: Use `addCopy()` and `updateDescSets(device, true)` for descriptor copying
 4. **Support texel buffers**: Use `setTexelBufferView()` for texel buffer descriptors
 

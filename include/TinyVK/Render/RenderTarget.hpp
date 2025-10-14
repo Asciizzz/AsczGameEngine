@@ -87,7 +87,7 @@ public:
     const std::vector<RenderAttachment>& getAttachments() const { return attachments; }
 
     // State queries
-    bool isValid() const { return renderPass != VK_NULL_HANDLE && framebuffer != VK_NULL_HANDLE; }
+    bool valid() const { return renderPass != VK_NULL_HANDLE && framebuffer != VK_NULL_HANDLE; }
     bool hasAttachments() const { return !attachments.empty(); }
 
 private:

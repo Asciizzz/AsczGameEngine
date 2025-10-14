@@ -93,7 +93,7 @@ bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& tex
         .createImage(imageConfig)
         .createView(viewConfig)
         .createSampler(sampConfig)
-        .isValid();
+        .valid();
 
     if (!success) return false;
 

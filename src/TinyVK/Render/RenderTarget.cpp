@@ -45,7 +45,7 @@ RenderTarget& RenderTarget::clearAttachments() {
 
 
 void RenderTarget::beginRenderPass(VkCommandBuffer cmd, VkSubpassContents contents) const {
-    if (!isValid()) return;
+    if (!valid()) return;
     
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

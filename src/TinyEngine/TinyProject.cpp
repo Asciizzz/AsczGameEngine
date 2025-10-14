@@ -135,7 +135,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
     }
 
     // Use the stored root handle if no valid handle is provided
-    TinyHandle actualRootHandle = rootHandle.isValid() ? rootHandle : rootNodeHandle;
+    TinyHandle actualRootHandle = rootHandle.valid() ? rootHandle : rootNodeHandle;
 
     // Create mapping from scene node index to runtime node handle
     UnorderedMap<int32_t, TinyHandle> sceneToRuntimeMap;
@@ -160,7 +160,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
         if (!rtNode) continue; // Safety check
 
         // Remap parent-child relationships
-        if (sceneNode.parent.isValid() && sceneNode.parent.index < scene->nodes.size()) {
+        if (sceneNode.parent.valid() && sceneNode.parent.index < scene->nodes.size()) {
             // Has parent within scene - remap to runtime parent
             TinyHandle rtParentHandle = sceneToRuntimeMap[sceneNode.parent.index];
             rtNode->parentHandle = rtParentHandle;
@@ -189,7 +189,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
             auto* meshRender = rtNode->get<TinyNodeRT::MeshRender>();
             if (meshRender) {
                 const auto* sceneMeshRender = sceneNode.get<TinyNode::MeshRender>();
-                if (sceneMeshRender && sceneMeshRender->skeleNode.isValid() && 
+                if (sceneMeshRender && sceneMeshRender->skeleNode.valid() && 
                     sceneMeshRender->skeleNode.index < scene->nodes.size()) {
                     meshRender->skeleNodeRT = sceneToRuntimeMap[sceneMeshRender->skeleNode.index];
                 }
@@ -201,7 +201,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
             auto* boneAttach = rtNode->get<TinyNodeRT::BoneAttach>();
             if (boneAttach) {
                 const auto* sceneBoneAttach = sceneNode.get<TinyNode::BoneAttach>();
-                if (sceneBoneAttach && sceneBoneAttach->skeleNode.isValid() && 
+                if (sceneBoneAttach && sceneBoneAttach->skeleNode.valid() && 
                     sceneBoneAttach->skeleNode.index < scene->nodes.size()) {
                     boneAttach->skeleNodeRT = sceneToRuntimeMap[sceneBoneAttach->skeleNode.index];
                 }
@@ -259,7 +259,7 @@ bool TinyProject::deleteNodeRecursive(TinyHandle nodeHandle) {
     }
 
     // Remove this node from its parent's children list
-    if (nodeToDelete->parentHandle.isValid()) {
+    if (nodeToDelete->parentHandle.valid()) {
         TinyNodeRT* parentNode = rtNodes.get(nodeToDelete->parentHandle);
         if (parentNode) {
             auto& parentChildren = parentNode->childrenHandles;
@@ -286,7 +286,7 @@ bool TinyProject::deleteNodeRecursive(TinyHandle nodeHandle) {
 
 bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {
     // Validate handles
-    if (!nodeHandle.isValid() || !newParentHandle.isValid()) {
+    if (!nodeHandle.valid() || !newParentHandle.valid()) {
         return false;
     }
     
@@ -328,7 +328,7 @@ bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle
     }
     
     // Remove from current parent's children list
-    if (nodeToMove->parentHandle.isValid()) {
+    if (nodeToMove->parentHandle.valid()) {
         TinyNodeRT* currentParent = rtNodes.get(nodeToMove->parentHandle);
         if (currentParent) {
             auto& parentChildren = currentParent->childrenHandles;
@@ -364,7 +364,7 @@ void TinyProject::runPlayground(float dTime) {
 
 void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     // Use root node if no valid handle provided
-    if (!nodeHandle.isValid()) {
+    if (!nodeHandle.valid()) {
         nodeHandle = rootNodeHandle;
     }
     
@@ -426,7 +426,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 
 void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, int depth) {
     // Use root node if no valid handle provided
-    if (!nodeHandle.isValid()) {
+    if (!nodeHandle.valid()) {
         nodeHandle = rootNodeHandle;
     }
     

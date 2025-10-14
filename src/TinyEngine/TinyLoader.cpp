@@ -820,7 +820,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
         const tinygltf::Scene& scene = model.scenes[model.defaultScene >= 0 ? model.defaultScene : 0];
         for (int rootLocal : scene.nodes) {
             int rootGlobal = localToGlobal[rootLocal];
-            if (rootGlobal >= 0 && !nodes[rootGlobal].parent.isValid()) {
+            if (rootGlobal >= 0 && !nodes[rootGlobal].parent.valid()) {
                 parentAndChild(0, rootGlobal);
             }
         }

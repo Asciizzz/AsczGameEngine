@@ -423,7 +423,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             
             // Instance placement buttons
             if (ImGui::Button("Place at Camera", ImVec2(140, 25))) {
-                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.isValid()) {
+                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.valid()) {
                     glm::mat4 rot = glm::rotate(glm::mat4(1.0f), camera.getYaw(true), glm::vec3(0.0f, 1.0f, 0.0f));
                     glm::mat4 trans = glm::translate(glm::mat4(1.0f), camera.pos + camera.forward * 2.0f);
                     glm::mat4 model = trans * rot;
@@ -435,7 +435,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             
             ImGui::SameLine();
             if (ImGui::Button("Place at Origin", ImVec2(140, 25))) {
-                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.isValid()) {
+                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.valid()) {
                     project->addSceneInstance(sceneHandles[currentSelectedScene], selectedNodeHandle, glm::mat4(1.0f));
                     project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
                 }
@@ -443,7 +443,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             
             // Random placement button
             if (ImGui::Button("Place Random", ImVec2(120, 30))) {
-                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.isValid()) {
+                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.valid()) {
                     static std::random_device rd;
                     static std::mt19937 gen(rd());
                     static std::uniform_real_distribution<float> posDist(-10.0f, 10.0f);
@@ -470,7 +470,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             ImGui::DragFloat3("Rotation (degrees)", manualRot, 1.0f, -180.0f, 180.0f);
             
             if (ImGui::Button("Place Manually", ImVec2(140, 25))) {
-                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.isValid()) {
+                if (currentSelectedScene < (int)sceneHandles.size() && selectedNodeHandle.valid()) {
                     glm::mat4 model = glm::mat4(1.0f);
                     
                     // Apply rotations (convert degrees to radians)
@@ -674,7 +674,7 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
 }
 
 void Application::renderNodeInspectorWindow() {
-    if (!selectedNodeHandle.isValid()) {
+    if (!selectedNodeHandle.valid()) {
         ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "No node selected");
         ImGui::Text("Select a node from the Scene Manager to inspect it.");
         return;
@@ -764,7 +764,7 @@ void Application::renderNodeInspectorWindow() {
         ImGui::Text("[ %6.3f %6.3f %6.3f %6.3f ]", matrix[0][3], matrix[1][3], matrix[2][3], matrix[3][3]);
         
         // Parent info
-        if (selectedNode->parentHandle.isValid()) {
+        if (selectedNode->parentHandle.valid()) {
             const TinyNodeRT* parentNode = project->getRuntimeNodes().get(selectedNode->parentHandle);
             if (parentNode) {
                 ImGui::Text("Parent: %s (%u_v%u)", parentNode->name.c_str(), 

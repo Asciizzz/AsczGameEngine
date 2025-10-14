@@ -145,7 +145,7 @@ public:
     uint32_t getArrayLayers() const { return arrayLayers; }
     VkImageLayout getCurrentLayout() const { return layout; }
 
-    bool isValid() const { return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE; }
+    bool valid() const { return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE; }
     bool hasImage() const { return image != VK_NULL_HANDLE; }
     bool hasView() const { return view != VK_NULL_HANDLE; }
 
@@ -233,7 +233,7 @@ public:
     VkSampler get() const { return sampler; }
     operator VkSampler() const { return sampler; } // Implicit conversion
 
-    bool isValid() const { return sampler != VK_NULL_HANDLE; }
+    bool valid() const { return sampler != VK_NULL_HANDLE; }
 
 private:
     VkDevice device = VK_NULL_HANDLE;
@@ -280,7 +280,7 @@ public:
     TextureVK& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
     TextureVK& generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice);
 
-    bool isValid() const { return image.isValid() && sampler.isValid(); }
+    bool valid() const { return image.valid() && sampler.valid(); }
 
 private:
     ImageVK image;
