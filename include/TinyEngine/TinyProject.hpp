@@ -185,6 +185,16 @@ public:
     bool deleteNodeRecursive(TinyHandle nodeHandle);
 
     /**
+     * Reparents a node to a new parent. Removes the node from its current parent's children
+     * and adds it to the new parent's children list. Updates the node's parentHandle.
+     * 
+     * @param nodeHandle Handle to the node to reparent
+     * @param newParentHandle Handle to the new parent node
+     * @return true if reparenting was successful, false if invalid handles or would create cycle
+     */
+    bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
+
+    /**
      * Recursively updates global transforms for all nodes starting from the specified root.
      * Always processes all nodes regardless of dirty state for guaranteed correctness.
      * 

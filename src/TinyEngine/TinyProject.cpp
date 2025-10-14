@@ -277,6 +277,73 @@ bool TinyProject::deleteNodeRecursive(TinyHandle nodeHandle) {
     return true;
 }
 
+bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {
+    // Validate handles
+    if (!nodeHandle.isValid() || !newParentHandle.isValid()) {
+        return false;
+    }
+    
+    // Can't reparent root node
+    if (nodeHandle == rootNodeHandle) {
+        return false;
+    }
+    
+    // Can't reparent to itself
+    if (nodeHandle == newParentHandle) {
+        return false;
+    }
+    
+    TinyNodeRT* nodeToMove = rtNodes.get(nodeHandle);
+    TinyNodeRT* newParent = rtNodes.get(newParentHandle);
+    
+    if (!nodeToMove || !newParent) {
+        return false;
+    }
+    
+    // Check for cycles: make sure new parent is not a descendant of the node we're moving
+    std::function<bool(TinyHandle)> isDescendant = [this, newParentHandle, &isDescendant](TinyHandle ancestor) -> bool {
+        const TinyNodeRT* node = rtNodes.get(ancestor);
+        if (!node) return false;
+        
+        for (const TinyHandle& childHandle : node->childrenHandles) {
+            if (childHandle == newParentHandle) {
+                return true; // Found cycle
+            }
+            if (isDescendant(childHandle)) {
+                return true; // Found cycle in descendant
+            }
+        }
+        return false;
+    };
+    
+    if (isDescendant(nodeHandle)) {
+        return false; // Would create a cycle
+    }
+    
+    // Remove from current parent's children list
+    if (nodeToMove->parentHandle.isValid()) {
+        TinyNodeRT* currentParent = rtNodes.get(nodeToMove->parentHandle);
+        if (currentParent) {
+            auto& parentChildren = currentParent->childrenHandles;
+            parentChildren.erase(
+                std::remove(parentChildren.begin(), parentChildren.end(), nodeHandle),
+                parentChildren.end()
+            );
+            currentParent->isDirty = true;
+        }
+    }
+    
+    // Add to new parent's children list
+    newParent->childrenHandles.push_back(nodeHandle);
+    newParent->isDirty = true;
+    
+    // Update the node's parent handle
+    nodeToMove->parentHandle = newParentHandle;
+    nodeToMove->isDirty = true;
+    
+    return true;
+}
+
 // TinyNodeRT method implementation
 void TinyNodeRT::addChild(TinyHandle childHandle, TinyPool<TinyNodeRT>& rtNodesPool) {
     // Add child to this node's children list
@@ -411,8 +478,37 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
         selectedNode = nodeHandle;
     }
     
+    // Drag and drop source (only if not root node)
+    if (nodeHandle != rootNodeHandle && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+        // Set payload to carry the node handle
+        ImGui::SetDragDropPayload("NODE_HANDLE", &nodeHandle, sizeof(TinyHandle));
+        
+        // Display preview
+        ImGui::Text("Moving: %s", node->name.c_str());
+        ImGui::EndDragDropSource();
+    }
+    
+    // Drag and drop target
+    if (ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
+            TinyHandle draggedNode = *(const TinyHandle*)payload->Data;
+            
+            // Attempt to reparent the dragged node to this node
+            if (reparentNode(draggedNode, nodeHandle)) {
+                // Update global transforms after reparenting
+                updateGlobalTransforms(rootNodeHandle);
+                
+                // If the dragged node was selected, keep it selected
+                if (selectedNode == draggedNode) {
+                    selectedNode = draggedNode;
+                }
+            }
+        }
+        ImGui::EndDragDropTarget();
+    }
+    
     // Show node details in tooltip
-    if (ImGui::IsItemHovered()) {
+    if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
         ImGui::BeginTooltip();
         ImGui::Text("Handle: %u.%u", nodeHandle.index, nodeHandle.version);
         ImGui::Text("Parent: %u.%u", node->parentHandle.index, node->parentHandle.version);
