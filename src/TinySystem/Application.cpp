@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <string>
 #include <algorithm>
+#include <chrono>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -311,11 +312,26 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
     
     // Debug Panel Window
     imguiWrapper->addWindow("Debug Panel", [this, &fpsManager, &camera, mouseFocus, deltaTime]() {
-        // FPS and Performance
+        // FPS and Performance (update display only every second)
+        static auto lastFPSUpdate = std::chrono::steady_clock::now();
+        static float displayFPS = 0.0f;
+        static float displayFrameTime = 0.0f;
+        static float displayAvgFPS = 0.0f;
+        
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFPSUpdate);
+        
+        if (elapsed.count() >= 1000) { // Update every 1000ms (1 second)
+            displayFPS = fpsManager.currentFPS;
+            displayFrameTime = fpsManager.frameTimeMs;
+            displayAvgFPS = fpsManager.getAverageFPS();
+            lastFPSUpdate = now;
+        }
+        
         ImGui::Text("Performance");
         ImGui::Separator();
-        ImGui::Text("FPS: %.1f (%.2f ms)", fpsManager.currentFPS, fpsManager.frameTimeMs);
-        ImGui::Text("Avg FPS: %.1f", fpsManager.getAverageFPS());
+        ImGui::Text("FPS: %.1f (%.2f ms)", displayFPS, displayFrameTime);
+        ImGui::Text("Avg FPS: %.1f", displayAvgFPS);
         ImGui::Text("Delta Time: %.4f s", deltaTime);
         
         ImGui::Spacing();
@@ -356,10 +372,9 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         // Window controls
         ImGui::Text("Windows");
         ImGui::Separator();
-        ImGui::Checkbox("Show Demo Window", &showDemoWindow);
         ImGui::Checkbox("Show Scene Window", &showSceneWindow);
-        ImGui::Checkbox("Show ImGui Explorer", &showImGuiExplorerWindow);
         ImGui::Checkbox("Show Node Inspector", &showNodeInspectorWindow);
+        ImGui::Checkbox("Show ImGui Explorer", &showImGuiExplorerWindow);
     }, &showDebugWindow);
     
     // Scene Manager Window
@@ -622,11 +637,6 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             ImGui::EndTabBar();
         }
     }, &showImGuiExplorerWindow);
-    
-    // Demo window (handled separately with showDemoWindow function)
-    if (showDemoWindow) {
-        imguiWrapper->showDemoWindow(&showDemoWindow);
-    }
 }
 
 void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
