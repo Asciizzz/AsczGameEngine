@@ -172,7 +172,7 @@ public:
     template<typename T>
     uint32_t count() const {
         auto* wrapper = getWrapper<T>(); // check validity
-        return wrapper ? wrapper->pool.count : 0;
+        return wrapper ? wrapper->pool.count() : 0;
     }
 
     template<typename T>

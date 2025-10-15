@@ -9,27 +9,6 @@
 #include <type_traits>
 #include <sstream>
 
-//
-// TinyFS: virtual project filesystem using handle-based nodes (TinyPool).
-//
-// Features:
-//  - handle-safe dynamic tree (no raw pointers between nodes)
-//  - unified creation for folders and files (templated for file data insertion)
-//  - safe remove (copies children list before recursion)
-//  - move with cycle prevention (no moving a node under its own descendant)
-//  - robust getFullPath (collect parts + reverse)
-//  - getFileData<T>(handle) to fetch typed registry payload
-//  - debugPrint() with ASCII tree and ANSI red highlight for files
-//
-// Assumptions (adapt to your exact TinyPool / TinyRegistry API):
-//  - fnodes.insert(TinyFNode&&) -> TinyHandle (handle type)
-//  - fnodes.isValid(TinyHandle) or fnodes.get(handle) returns nullptr if invalid
-//  - fnodes.get(handle) -> TinyFNode*
-//  - registry.add(data) -> TypeHandle (object with valid() or equivalent)
-//  - registry.get<T>(TypeHandle) -> T*
-//  - registry.remove(TypeHandle)
-//
-
 struct TinyFNode {
     std::string name;                     // segment name (relative)
     TinyHandle parent;                    // parent node handle
@@ -197,6 +176,99 @@ public:
         debugPrintRecursive(rootHandle_, /*indentPrefix=*/"", /*isLast=*/true);
     }
 
+    // Access to file system nodes (needed for UI)
+    const TinyPool<TinyFNode>& getFNodes() const { return fnodes; }
+    TinyPool<TinyFNode>& getFNodes() { return fnodes; }
+
+    // ---------- Scene Management Helpers ----------
+    
+    // Find or create a folder path (e.g., "Characters/Humanoid")
+    TinyHandle ensureFolderPath(const std::string& path) {
+        if (path.empty()) return rootHandle_;
+        
+        std::vector<std::string> segments;
+        std::stringstream ss(path);
+        std::string segment;
+        
+        while (std::getline(ss, segment, '/')) {
+            if (!segment.empty()) {
+                segments.push_back(segment);
+            }
+        }
+        
+        TinyHandle currentHandle = rootHandle_;
+        
+        for (const auto& segmentName : segments) {
+            TinyHandle childHandle = findChildByName(currentHandle, segmentName);
+            if (!childHandle.valid()) {
+                // Create the folder
+                childHandle = addFolder(currentHandle, segmentName);
+            }
+            currentHandle = childHandle;
+        }
+        
+        return currentHandle;
+    }
+    
+    // Find a child node by name
+    TinyHandle findChildByName(TinyHandle parentHandle, const std::string& name) const {
+        const TinyFNode* parent = fnodes.get(parentHandle);
+        if (!parent) return TinyHandle();
+        
+        for (TinyHandle childHandle : parent->children) {
+            const TinyFNode* child = fnodes.get(childHandle);
+            if (child && child->name == name) {
+                return childHandle;
+            }
+        }
+        return TinyHandle();
+    }
+    
+    // Get all files of a specific type in a folder
+    template<typename T>
+    std::vector<std::pair<TinyHandle, T*>> getFilesOfType(TinyHandle folderHandle) const {
+        std::vector<std::pair<TinyHandle, T*>> result;
+        const TinyFNode* folder = fnodes.get(folderHandle);
+        if (!folder) return result;
+        
+        for (TinyHandle childHandle : folder->children) {
+            const TinyFNode* child = fnodes.get(childHandle);
+            if (child && child->isFile() && child->tHandle.isType<T>()) {
+                T* data = static_cast<T*>(registry.get(child->tHandle));
+                if (data) {
+                    result.emplace_back(childHandle, data);
+                }
+            }
+        }
+        return result;
+    }
+    
+    // Get folder path as string
+    std::string getFolderPath(TinyHandle folderHandle) const {
+        if (!fnodes.isValid(folderHandle) || folderHandle == rootHandle_) {
+            return "";
+        }
+        
+        std::vector<std::string> pathSegments;
+        TinyHandle current = folderHandle;
+        
+        while (current.valid() && current != rootHandle_) {
+            const TinyFNode* node = fnodes.get(current);
+            if (!node) break;
+            pathSegments.push_back(node->name);
+            current = node->parent;
+        }
+        
+        std::reverse(pathSegments.begin(), pathSegments.end());
+        
+        std::string path;
+        for (size_t i = 0; i < pathSegments.size(); ++i) {
+            if (i > 0) path += "/";
+            path += pathSegments[i];
+        }
+        return path;
+    }
+
 private:
     TinyPool<TinyFNode> fnodes;
     TinyRegistry registry;
@@ -268,4 +340,5 @@ private:
             debugPrintRecursive(children[i], childPrefix, childIsLast);
         }
     }
+
 };

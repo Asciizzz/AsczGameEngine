@@ -521,6 +521,7 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
     
     // Drag and drop target
     if (ImGui::BeginDragDropTarget()) {
+        // Accept node reparenting
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
             TinyHandle draggedNode = *(const TinyHandle*)payload->Data;
             
@@ -535,6 +536,27 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
                 }
             }
         }
+        
+        // Accept scene drops (from filesystem nodes)
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_FNODE")) {
+            TinyHandle sceneFNodeHandle = *(const TinyHandle*)payload->Data;
+            
+            // Get the filesystem node to access its TypeHandle
+            const TinyFNode* sceneFile = tinyFS->getFNodes().get(sceneFNodeHandle);
+            if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyRScene>()) {
+                // Extract the registry handle from the TypeHandle
+                TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
+                
+                // Verify the scene exists and instantiate it at this node
+                const TinyRScene* scene = tinyFS->registryRef().get<TinyRScene>(sceneRegistryHandle);
+                if (scene) {
+                    // Place the scene at this node
+                    addSceneInstance(sceneRegistryHandle, nodeHandle, glm::mat4(1.0f));
+                    updateGlobalTransforms(rootNodeHandle);
+                }
+            }
+        }
+        
         ImGui::EndDragDropTarget();
     }
     

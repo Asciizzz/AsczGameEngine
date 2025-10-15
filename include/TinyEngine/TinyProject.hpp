@@ -217,6 +217,8 @@ public:
     TinyHandle getNodeHandleByIndex(uint32_t index) const { return rtNodes.getHandle(index); }
 
     const TinyRegistry& registryRef() const { return tinyFS->registryRef(); }
+    TinyFS& filesystem() { return *tinyFS; }
+    const TinyFS& filesystem() const { return *tinyFS; }
 
 private:
     const TinyVK::Device* deviceVK;
