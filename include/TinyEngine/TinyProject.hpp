@@ -214,7 +214,7 @@ public:
     TinyHandle getRootNodeHandle() const { return rootNodeHandle; }
     
     // Helper to get handle by index (useful for UI that thinks in indices)
-    TinyHandle getNodeHandleByIndex(uint32_t index) const { return rtNodes.getHandleByIndex(index); }
+    TinyHandle getNodeHandleByIndex(uint32_t index) const { return rtNodes.getHandle(index); }
 
     const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
 

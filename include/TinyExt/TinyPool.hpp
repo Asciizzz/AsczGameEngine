@@ -155,11 +155,9 @@ public:
     }
 
     // Get handle by index (useful for accessing items by their position)
-    TinyHandle getHandleByIndex(uint32_t index) const {
-        if (index >= items.size() || !states[index].occupied) {
-            return TinyHandle(); // Return invalid handle
-        }
-        return TinyHandle(index, states[index].version);
+    TinyHandle getHandle(uint32_t index) const {
+        if (isOccupied(index)) return TinyHandle(index, states[index].version);
+        return TinyHandle(); // Invalid handle
     }
 
     // Reference is better since this is never null
