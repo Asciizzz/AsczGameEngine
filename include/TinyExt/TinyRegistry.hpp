@@ -28,15 +28,20 @@ struct TypeHandle {
 class TinyRegistry { // For raw resource data
     struct IPool {
         virtual ~IPool() = default;
-        virtual void* getRaw(const TinyHandle& handle) = 0;
+        virtual void* get(const TinyHandle& handle) = 0;
+        virtual void remove(const TinyHandle& handle) = 0;
     };
 
     template<typename T>
     struct PoolWrapper : public IPool {
         TinyPool<T> pool;
 
-        void* getRaw(const TinyHandle& handle) override {
+        void* get(const TinyHandle& handle) override {
             return pool.get(handle);
+        }
+
+        void remove(const TinyHandle& handle) override {
+            pool.remove(handle);
         }
     };
 
@@ -105,7 +110,22 @@ public:
         if (!th.valid()) return nullptr;
 
         auto it = hashToPool.find(th.typeHash);
-        return (it != hashToPool.end()) ? it->second->getRaw(th.handle) : nullptr;
+        return (it != hashToPool.end()) ? it->second->get(th.handle) : nullptr;
+    }
+
+    template<typename T>
+    void remove(const TinyHandle& handle) {
+        auto* wrapper = getWrapper<T>(); // check validity
+        if (wrapper) wrapper->pool.remove(handle);
+    }
+
+    void remove(const TypeHandle& th) {
+        if (!th.valid()) return;
+
+        auto it = hashToPool.find(th.typeHash);
+        if (it != hashToPool.end()) {
+            it->second->remove(th.handle);
+        }
     }
 
     template<typename T>
@@ -122,7 +142,7 @@ public:
 
     void* data(size_t typeHash) {
         auto it = hashToPool.find(typeHash);
-        return (it != hashToPool.end()) ? it->second->getRaw(TinyHandle()) : nullptr;
+        return (it != hashToPool.end()) ? it->second->get(TinyHandle()) : nullptr;
     }
 
     template<typename T>
