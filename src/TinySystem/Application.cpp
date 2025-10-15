@@ -404,10 +404,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Text("Loaded Scenes: %u", totalScenes);
         ImGui::Text("Runtime Node Count: %u", project->getRuntimeNodes().count());
         ImGui::Text("Mesh Render Nodes: %zu", project->getRuntimeMeshRenderHandles().size());
-        
-        ImGui::Spacing();
-        ImGui::Text("💡 Tip: Drag scenes from library onto nodes to instantiate them");
-        
+
         ImGui::Spacing();
         ImGui::Separator();
         
