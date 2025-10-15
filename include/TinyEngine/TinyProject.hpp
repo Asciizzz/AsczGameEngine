@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TinyExt/TinyRegistry.hpp"
+#include "TinyExt/TinyFS.hpp"
 
 #include "TinyEngine/TinyRData.hpp"
 
@@ -216,7 +216,7 @@ public:
     // Helper to get handle by index (useful for UI that thinks in indices)
     TinyHandle getNodeHandleByIndex(uint32_t index) const { return rtNodes.getHandle(index); }
 
-    const UniquePtr<TinyRegistry>& getRegistry() const { return registry; }
+    const TinyRegistry& registryRef() const { return tinyFS->registryRef(); }
 
 private:
     const TinyVK::Device* deviceVK;
@@ -224,7 +224,7 @@ private:
     UniquePtr<TinyGlobal> tinyGlobal;
     UniquePtr<TinyCamera> tinyCamera;
 
-    UniquePtr<TinyRegistry> registry;
+    UniquePtr<TinyFS> tinyFS;
 
     TinyPool<TinyNodeRT> rtNodes;
     TinyHandle rootNodeHandle; // Handle to the root node

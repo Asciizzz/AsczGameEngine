@@ -12,7 +12,11 @@ bool isValidIndex(int index, const std::vector<T>& vec) {
 
 
 TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
-    registry = MakeUnique<TinyRegistry>();
+    // registry = MakeUnique<TinyRegistry>();
+    tinyFS = MakeUnique<TinyFS>();
+
+    TinyHandle registryHandle = tinyFS->addFolder(".registry");
+    tinyFS->setRegistryHandle(registryHandle);
 
     // Create root runtime node
     TinyNodeRT rootNode;
@@ -30,23 +34,39 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TinyTexture defaultTexture = TinyTexture::createDefaultTexture();
     TinyRTexture defaultRTexture;
     defaultRTexture.import(deviceVK, defaultTexture);
-    defaultTextureHandle = registry->add(defaultRTexture).handle;
+
+    defaultTextureHandle = tinyFS->addToRegistry(defaultRTexture).handle;
 
     TinyRMaterial defaultMaterial;
     defaultMaterial.setAlbTexIndex(0);
     defaultMaterial.setNrmlTexIndex(0);
-    defaultMaterialHandle = registry->add(defaultMaterial).handle;
+
+    defaultMaterialHandle = tinyFS->addToRegistry(defaultMaterial).handle;
 }
 
 TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
+    // Create a folder for the model
+    TinyHandle fnModelFolder = tinyFS->addFolder(model.name);
+    TinyHandle fnTexFolder = tinyFS->addFolder(fnModelFolder, "Textures");
+    TinyHandle fnMatFolder = tinyFS->addFolder(fnModelFolder, "Materials");
+    TinyHandle fnMeshFolder = tinyFS->addFolder(fnModelFolder, "Meshes");
+    TinyHandle fnSkeleFolder = tinyFS->addFolder(fnModelFolder, "Skeletons");
+    TinyHandle fnSceneFolder = tinyFS->addFolder(fnModelFolder, "Scenes");
+
+    // Note: fnHandle - handle to file node in TinyFS's fnodes
+    //       tHandle - handle to the actual data in the registry (infused with Type info for TinyFS usage)
+
     // Import textures to registry
     std::vector<TinyHandle> glbTexrHandle;
     for (const auto& texture : model.textures) {
         TinyRTexture textureData;
         textureData.import(deviceVK, texture);
 
-        TinyHandle handle = registry->add(textureData).handle;
-        glbTexrHandle.push_back(handle);
+        // TinyHandle handle = registry->add(textureData).handle;
+        TinyHandle fnHandle = tinyFS->addFile(fnTexFolder, texture.name, &textureData);
+        TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+
+        glbTexrHandle.push_back(tHandle.handle);
     }
 
     // Import materials to registry with remapped texture references
@@ -63,8 +83,11 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexrHandle.size());
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexrHandle[localNrmlIndex].index : 0);
 
-        TinyHandle handle = registry->add(correctMat).handle;
-        glbMatrHandle.push_back(handle);
+        // TinyHandle handle = registry->add(correctMat).handle;
+        TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, "Material", &correctMat);
+        TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+
+        glbMatrHandle.push_back(tHandle.handle);
     }
 
     // Import meshes to registry with remapped material references
@@ -82,8 +105,10 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
 
         meshData.setSubmeshes(remappedSubmeshes);
 
-        TinyHandle handle = registry->add(meshData).handle;
-        glbMeshrHandle.push_back(handle);
+        TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, "Mesh", &meshData);
+        TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+
+        glbMeshrHandle.push_back(tHandle.handle);
     }
 
     // Import skeletons to registry
@@ -92,8 +117,11 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         TinyRSkeleton rSkeleton;
         rSkeleton.bones = skeleton.bones;
 
-        TinyHandle handle = registry->add(rSkeleton).handle;
-        glbSkelerHandle.push_back(handle);
+        // TinyHandle handle = registry->add(rSkeleton).handle;
+        TinyHandle fnHandle = tinyFS->addFile(fnSkeleFolder, "Skeleton", &rSkeleton);
+        TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+
+        glbSkelerHandle.push_back(tHandle.handle);
     }
 
     // Create scene with nodes - preserve hierarchy but remap resource references
@@ -122,13 +150,20 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     }
 
     // Add scene to registry and return the handle
-    return registry->add(scene).handle;
+    TinyHandle fnHandle = tinyFS->addFile(fnSceneFolder, "Scene", &scene);
+    TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+
+    return tHandle.handle;
 }
 
 
 
 void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle, glm::mat4 at) {
-    const TinyRScene* scene = registry->get<TinyRScene>(sceneHandle);
+    // const TinyRScene* scene = registry->get<TinyRScene>(sceneHandle);
+
+    const auto& registry = tinyFS->registryRef();
+    const TinyRScene* scene = registry.get<TinyRScene>(sceneHandle);
+
     if (!scene || !scene->hasNodes()) {
         printf("Error: Invalid scene handle %llu or empty scene\n", sceneHandle.value);
         return;
@@ -211,10 +246,10 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
         if (rtNode->hasType(NTypes::Skeleton)) {
             auto* skeleton = rtNode->get<TinyNodeRT::Skeleton>();
             if (skeleton) {
-                const auto* skeleData = registry->get<TinyRSkeleton>(skeleton->skeleRegistry);
-                if (skeleData) {
+                const auto& skeleData = registry.get<TinyRSkeleton>(skeleton->skeleRegistry);
+
+                if (skeleData)
                     skeleton->boneTransformsFinal.resize(skeleData->bones.size(), glm::mat4(1.0f));
-                }
             }
         }
     }

@@ -379,7 +379,9 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
     }, &showDebugWindow);
     
     // Scene Manager Window
-    imguiWrapper->addWindow("Scene Manager", [this, &camera]() {
+    const TinyRegistry& registry = project->registryRef();
+
+    imguiWrapper->addWindow("Scene Manager", [this, &camera, &registry]() {
         // Scene placement section
         ImGui::Text("Scene Placement");
         ImGui::Separator();
@@ -388,15 +390,14 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             // Scene selection dropdown
             std::string currentSceneName = "Unknown Scene";
             if (currentSelectedScene < (int)sceneHandles.size()) {
-                const auto* scene = project->getRegistry()->get<TinyRScene>(sceneHandles[currentSelectedScene]);
-                if (scene && !scene->name.empty()) {
-                    currentSceneName = scene->name;
-                }
+                const auto* scene = registry.get<TinyRScene>(sceneHandles[currentSelectedScene]);
+                if (scene && !scene->name.empty()) currentSceneName = scene->name;
             }
             
             if (ImGui::BeginCombo("Select Scene", currentSceneName.c_str())) {
                 for (int i = 0; i < (int)sceneHandles.size(); ++i) {
-                    const auto* scene = project->getRegistry()->get<TinyRScene>(sceneHandles[i]);
+                    // const auto* scene = project->registryRef()->get<TinyRScene>(sceneHandles[i]);
+                    const auto* scene = registry.get<TinyRScene>(sceneHandles[i]);
                     std::string sceneName = scene && !scene->name.empty() ? scene->name : ("Scene " + std::to_string(i));
                     
                     bool isSelected = (currentSelectedScene == i);

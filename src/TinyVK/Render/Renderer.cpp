@@ -259,7 +259,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
     const auto& rtNodes = project->getRuntimeNodes();
     const auto& rtMeshRenderHandles = project->getRuntimeMeshRenderHandles();
 
-    const auto& registry = project->getRegistry();
+    const auto& registry = project->registryRef();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     rPipeline->bindCmd(currentCmd);
@@ -278,7 +278,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
         const auto* meshRenderComp = rtNode->get<TinyNodeRT::MeshRender>();
         if (!meshRenderComp) continue;
 
-        const auto& regMesh = registry->get<TinyRMesh>(meshRenderComp->mesh);
+        const auto& regMesh = registry.get<TinyRMesh>(meshRenderComp->mesh);
         if (!regMesh) continue;
         
         const auto& submeshes = regMesh->submeshes;
@@ -300,7 +300,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
             if (indexCount == 0) continue;
 
             TinyHandle matHandle = submeshes[i].material;
-            const TinyRMaterial* material = registry->get<TinyRMaterial>(matHandle);
+            const TinyRMaterial* material = registry.get<TinyRMaterial>(matHandle);
             uint32_t matIndex = material ? matHandle.index : 0;
 
             glm::uvec4 props1 = glm::uvec4(matIndex, 0, 0, 0);
