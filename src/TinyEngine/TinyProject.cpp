@@ -73,6 +73,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     std::vector<TinyHandle> glbMatrHandle;
     for (const auto& material : model.materials) {
         TinyRMaterial correctMat;
+        correctMat.name = material.name; // Copy material name
 
         // Remap the material's texture indices
         uint32_t localAlbIndex = material.localAlbTexture;
@@ -84,7 +85,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexrHandle[localNrmlIndex].index : 0);
 
         // TinyHandle handle = registry->add(correctMat).handle;
-        TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, "Material", &correctMat);
+        TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, material.name, &correctMat);
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
         glbMatrHandle.push_back(tHandle.handle);
@@ -105,7 +106,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
 
         meshData.setSubmeshes(remappedSubmeshes);
 
-        TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, "Mesh", &meshData);
+        TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, mesh.name, &meshData);
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
         glbMeshrHandle.push_back(tHandle.handle);

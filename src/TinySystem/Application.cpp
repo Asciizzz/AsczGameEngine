@@ -681,8 +681,6 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         // Tooltip with file info
                         if (ImGui::IsItemHovered()) {
                             ImGui::BeginTooltip();
-                            ImGui::Text("File: %s", child->name.c_str());
-                            
                             // Show file type based on TypeHandle
                             if (child->tHandle.isType<TinyRTexture>()) {
                                 ImGui::Text("Type: Texture");

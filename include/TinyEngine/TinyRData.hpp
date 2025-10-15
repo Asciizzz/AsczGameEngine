@@ -5,8 +5,10 @@
 #include "TinyVK/Resource/TextureVK.hpp"
 #include "TinyVK/Resource/Descriptor.hpp"
 #include "TinyVK/Resource/DataBuffer.hpp"
+#include <string>
 
 struct TinyRMesh {
+    std::string name; // Mesh name from source data
     TinyVK::DataBuffer vertexBuffer;
     TinyVK::DataBuffer indexBuffer;
     std::vector<TinySubmesh> submeshes;
@@ -20,6 +22,7 @@ struct TinyRMesh {
 };
 
 struct TinyRMaterial {
+    std::string name; // Material name from source data
     glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
 
     void setAlbTexIndex(uint32_t index) { texIndices.x = index; }

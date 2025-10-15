@@ -364,8 +364,14 @@ void loadTextures(std::vector<TinyTexture>& textures, tinygltf::Model& model) {
 void loadMaterials(std::vector<TinyMaterial>& materials, tinygltf::Model& model, const std::vector<TinyTexture>& textures) {
     materials.clear();
     materials.reserve(model.materials.size());
-    for (const auto& gltfMaterial : model.materials) {
+    for (size_t matIndex = 0; matIndex < model.materials.size(); matIndex++) {
+        const auto& gltfMaterial = model.materials[matIndex];
         TinyMaterial material;
+
+        // Set material name from glTF
+        material.name = gltfMaterial.name.empty() ? 
+            TinyLoader::sanitizeAsciiz("Material", "material", matIndex) : 
+            TinyLoader::sanitizeAsciiz(gltfMaterial.name, "material", matIndex);
 
         int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
         if (albedoTexIndex >= 0 && albedoTexIndex < static_cast<int>(textures.size())) {
@@ -545,6 +551,11 @@ void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool 
     for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
         TinyMesh tinyMesh;
+
+        // Set mesh name from glTF
+        tinyMesh.name = gltfMesh.name.empty() ? 
+            TinyLoader::sanitizeAsciiz("Mesh", "mesh", meshIndex) : 
+            TinyLoader::sanitizeAsciiz(gltfMesh.name, "mesh", meshIndex);
 
         loadMesh(tinyMesh, gltfModel, gltfMesh.primitives, !forceStatic);
 

@@ -1,8 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 struct TinyMaterial {
+    std::string name; // Material name from glTF
+    
     bool shading = true;
     int toonLevel = 0;
 

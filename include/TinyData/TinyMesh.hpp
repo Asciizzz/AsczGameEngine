@@ -2,6 +2,7 @@
 
 #include "TinyData/TinyVertex.hpp"
 #include "TinyExt/TinyHandle.hpp"
+#include <string>
 
 struct TinySubmesh {
     uint32_t indexOffset = 0;
@@ -11,6 +12,8 @@ struct TinySubmesh {
 
 // Uniform mesh structure that holds raw data only
 struct TinyMesh {
+    std::string name; // Mesh name from glTF
+    
     TinyVertexLayout vertexLayout;
     enum class IndexType {
         Uint8  = 0,

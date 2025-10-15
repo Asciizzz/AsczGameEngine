@@ -7,6 +7,8 @@
 using namespace TinyVK;
 
 bool TinyRMesh::import(const TinyVK::Device* deviceVK, const TinyMesh& mesh) {
+    name = mesh.name; // Copy mesh name
+    
     const auto& vertexData = mesh.vertexData;
     const auto& indexData = mesh.indexData;
 
