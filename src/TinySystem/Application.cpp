@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstring>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -374,7 +375,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Text("Windows");
         ImGui::Separator();
         ImGui::Checkbox("Show Scene Window", &showSceneWindow);
-        ImGui::Checkbox("Show Node Inspector", &showNodeInspectorWindow);
+        ImGui::Checkbox("Show Inspector", &showInspectorWindow);
         ImGui::Checkbox("Show ImGui Explorer", &showImGuiExplorerWindow);
     }, &showDebugWindow);
     
@@ -390,6 +391,12 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         // Render folder tree with drag-drop
         float libraryHeight = ImGui::GetContentRegionAvail().y * 0.6f; // Use 60% of window for library
         ImGui::BeginChild("SceneLibrary", ImVec2(0, libraryHeight), true);
+        
+        // Clear node selection when clicking in folder tree area (but not on items)
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
+            selectedNodeHandle = TinyHandle();
+        }
+        
         renderSceneFolderTree(fs, fs.rootHandle());
         ImGui::EndChild();
         
@@ -415,6 +422,12 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         float hierarchyHeight = ImGui::GetContentRegionAvail().y - 20; // Leave some padding
         
         ImGui::BeginChild("NodeTree", ImVec2(0, hierarchyHeight), true);
+        
+        // Clear folder selection when clicking in node tree area
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0)) {
+            selectedFolderHandle = TinyHandle();
+        }
+        
         if (project->getRuntimeNodes().count() > 0) {
             project->renderSelectableNodeTreeImGui(project->getNodeHandleByIndex(0), selectedNodeHandle);
         } else {
@@ -424,10 +437,10 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::EndChild();
     }, &showSceneWindow);
     
-    // Node Inspector Window
-    imguiWrapper->addWindow("Node Inspector", [this]() {
-        renderNodeInspectorWindow();
-    }, &showNodeInspectorWindow);
+    // Inspector Window
+    imguiWrapper->addWindow("Inspector", [this]() {
+        renderInspectorWindow();
+    }, &showInspectorWindow);
     
     // ImGui Feature Explorer Window
     imguiWrapper->addWindow("ImGui Feature Explorer", [this]() {
@@ -589,16 +602,63 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
     if (folderHandle != fs.rootHandle()) {
         ImGui::PushID(folderHandle.index);
         
-        // Folder icon and name (white color)
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White
+        // Check if this folder is selected
+        bool isFolderSelected = (selectedFolderHandle == folderHandle);
+        
+        // Folder icon and name (white color, highlighted if selected)
+        ImVec4 folderColor = isFolderSelected ? 
+            ImVec4(0.0f, 0.8f, 1.0f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // Blue if selected, white otherwise
+        ImGui::PushStyleColor(ImGuiCol_Text, folderColor);
         bool nodeOpen = ImGui::TreeNode(folder->name.c_str());
         ImGui::PopStyleColor();
+        
+        // Handle folder selection
+        if (ImGui::IsItemClicked()) {
+            selectedFolderHandle = folderHandle;
+            selectedNodeHandle = TinyHandle(); // Clear node selection
+        }
+        
+        // Drag source for folders
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            ImGui::SetDragDropPayload("FOLDER_HANDLE", &folderHandle, sizeof(TinyHandle));
+            ImGui::Text("Moving folder: %s", folder->name.c_str());
+            ImGui::EndDragDropSource();
+        }
+        
+        // Drag drop target for folders and files
+        if (ImGui::BeginDragDropTarget()) {
+            // Accept folders being dropped
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
+                TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
+                if (draggedFolder != folderHandle) { // Can't drop folder on itself
+                    fs.moveFNode(draggedFolder, folderHandle);
+                }
+            }
+            
+            // Accept files being dropped  
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+                TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
+                fs.moveFNode(draggedFile, folderHandle);
+            }
+            
+            // Accept scene drops (existing functionality)
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_FNODE")) {
+                TinyHandle sceneFNodeHandle = *(const TinyHandle*)payload->Data;
+                const TinyFNode* sceneFile = fs.getFNodes().get(sceneFNodeHandle);
+                if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyRScene>()) {
+                    TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
+                    project->addSceneInstance(sceneRegistryHandle, selectedNodeHandle, glm::mat4(1.0f));
+                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
         
         if (nodeOpen) {
             // Render children with proper indentation
             for (TinyHandle childHandle : folder->children) {
                 const TinyFNode* child = fs.getFNodes().get(childHandle);
-                if (!child) continue;
+                if (!child || childHandle == fs.regHandle()) continue; // Skip invalid or registry node
                 
                 if (child->type == TinyFNode::Type::Folder) {
                     renderSceneFolderTree(fs, childHandle, depth + 1);
@@ -640,10 +700,19 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             
                             ImGui::PopStyleColor(2); // Pop both colors
                             
-                            // Drag source - drag the filesystem node handle
+                            // Drag source for scene files - different behavior based on modifier keys
                             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                                ImGui::SetDragDropPayload("SCENE_FNODE", &childHandle, sizeof(TinyHandle));
-                                ImGui::Text("Dragging scene: %s", child->name.c_str());
+                                bool ctrlPressed = ImGui::GetIO().KeyCtrl;
+                                
+                                if (ctrlPressed) {
+                                    // Ctrl+drag: Scene instantiation into nodes
+                                    ImGui::SetDragDropPayload("SCENE_FNODE", &childHandle, sizeof(TinyHandle));
+                                    ImGui::Text("Instantiate scene: %s", child->name.c_str());
+                                } else {
+                                    // Normal drag: File moving between folders
+                                    ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
+                                    ImGui::Text("Moving file: %s", child->name.c_str());
+                                }
                                 ImGui::EndDragDropSource();
                             }
                             
@@ -653,7 +722,8 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                 ImGui::Text("Scene: %s", scene->name.c_str());
                                 ImGui::Text("Nodes: %zu", scene->nodes.size());
                                 ImGui::Text("Double-click to place at selected node");
-                                ImGui::Text("Or drag to runtime node in hierarchy");
+                                ImGui::Text("Drag to move between folders");
+                                ImGui::Text("Ctrl+drag to instantiate into nodes");
                                 ImGui::EndTooltip();
                             }
                         }
@@ -677,6 +747,13 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         }
                         
                         ImGui::PopStyleColor(2); // Pop both colors
+                        
+                        // Drag source for other files
+                        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                            ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
+                            ImGui::Text("Moving file: %s", child->name.c_str());
+                            ImGui::EndDragDropSource();
+                        }
                         
                         // Tooltip with file info
                         if (ImGui::IsItemHovered()) {
@@ -709,7 +786,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         // Root folder - just render children without tree node but with consistent styling
         for (TinyHandle childHandle : folder->children) {
             const TinyFNode* child = fs.getFNodes().get(childHandle);
-            if (!child) continue;
+            if (!child || childHandle == fs.regHandle()) continue;
             
             if (child->type == TinyFNode::Type::Folder) {
                 renderSceneFolderTree(fs, childHandle, depth);
@@ -748,10 +825,19 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         
                         ImGui::PopStyleColor(2); // Pop both colors
                         
-                        // Drag source - filesystem node handle
+                        // Drag source for root scene files - different behavior based on modifier keys
                         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                            ImGui::SetDragDropPayload("SCENE_FNODE", &childHandle, sizeof(TinyHandle));
-                            ImGui::Text("Dragging scene: %s", child->name.c_str());
+                            bool ctrlPressed = ImGui::GetIO().KeyCtrl;
+                            
+                            if (ctrlPressed) {
+                                // Ctrl+drag: Scene instantiation into nodes
+                                ImGui::SetDragDropPayload("SCENE_FNODE", &childHandle, sizeof(TinyHandle));
+                                ImGui::Text("Instantiate scene: %s", child->name.c_str());
+                            } else {
+                                // Normal drag: File moving between folders
+                                ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
+                                ImGui::Text("Moving file: %s", child->name.c_str());
+                            }
                             ImGui::EndDragDropSource();
                         }
                     }
@@ -775,18 +861,151 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                     }
                     
                     ImGui::PopStyleColor(2); // Pop both colors
+                    
+                    // Drag source for other root files
+                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                        ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
+                        ImGui::Text("Moving file: %s", child->name.c_str());
+                        ImGui::EndDragDropSource();
+                    }
                 }
                 
                 ImGui::PopID();
             }
         }
+        
+        // Add drag-drop target to root folder (invisible area at bottom)
+        ImGui::InvisibleButton("RootDropTarget", ImVec2(-1, 20));
+        if (ImGui::BeginDragDropTarget()) {
+            // Accept folders being dropped to root
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
+                TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
+                fs.moveFNode(draggedFolder, fs.rootHandle());
+            }
+            
+            // Accept files being dropped to root
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+                TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
+                fs.moveFNode(draggedFile, fs.rootHandle());
+            }
+            
+            ImGui::EndDragDropTarget();
+        }
     }
 }
 
-void Application::renderNodeInspectorWindow() {
+void Application::renderInspectorWindow() {
+    // Determine what to inspect based on selection
+    if (selectedFolderHandle.valid()) {
+        // Folder Inspector
+        TinyFS& fs = project->filesystem();
+        const TinyFNode* selectedFolder = fs.getFNodes().get(selectedFolderHandle);
+        if (!selectedFolder) {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid folder selection");
+            selectedFolderHandle = TinyHandle(); // Clear invalid selection
+            return;
+        }
+        
+        // Folder Header Info
+        ImGui::Text("📁 Folder Inspector");
+        ImGui::Separator();
+        
+        // Folder name editing
+        static char folderNameBuffer[256];
+        static bool folderNameEdit = false;
+        
+        if (!folderNameEdit) {
+            ImGui::Text("Name: %s", selectedFolder->name.c_str());
+            ImGui::SameLine();
+            if (ImGui::Button("Rename")) {
+                folderNameEdit = true;
+                strcpy_s(folderNameBuffer, sizeof(folderNameBuffer), selectedFolder->name.c_str());
+            }
+        } else {
+            ImGui::InputText("##FolderName", folderNameBuffer, sizeof(folderNameBuffer));
+            ImGui::SameLine();
+            if (ImGui::Button("Save")) {
+                // Directly modify the folder name
+                TinyFNode* folderNode = const_cast<TinyFNode*>(fs.getFNodes().get(selectedFolderHandle));
+                if (folderNode) {
+                    folderNode->name = std::string(folderNameBuffer);
+                }
+                folderNameEdit = false;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel")) {
+                folderNameEdit = false;
+            }
+        }
+        
+        ImGui::Text("Handle: %u_v%u", selectedFolderHandle.index, selectedFolderHandle.version);
+        ImGui::Text("Children: %zu", selectedFolder->children.size());
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        
+        // Folder actions
+        ImGui::Text("Actions:");
+        
+        // Create new folder button
+        if (ImGui::Button("Create Subfolder", ImVec2(-1, 30))) {
+            static int folderCounter = 1;
+            std::string newFolderName = "New Folder " + std::to_string(folderCounter++);
+            fs.addFolder(selectedFolderHandle, newFolderName);
+        }
+        
+        ImGui::Spacing();
+        
+        // Delete folder button (only if not root and empty or user confirms)
+        if (selectedFolderHandle != fs.rootHandle()) {
+            bool canDelete = selectedFolder->children.empty();
+            if (!canDelete) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.3f, 0.3f, 1.0f));
+            }
+            
+            if (ImGui::Button("Delete Folder", ImVec2(-1, 30))) {
+                if (canDelete) {
+                    fs.removeFNode(selectedFolderHandle);
+                    selectedFolderHandle = TinyHandle(); // Clear selection
+                } else {
+                    ImGui::OpenPopup("ConfirmDelete");
+                }
+            }
+            
+            if (!canDelete) {
+                ImGui::PopStyleColor();
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Folder contains items. Click to delete anyway.");
+                }
+            }
+            
+            // Confirmation popup for non-empty folder deletion
+            if (ImGui::BeginPopupModal("ConfirmDelete", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("This folder contains %zu items.", selectedFolder->children.size());
+                ImGui::Text("Are you sure you want to delete it and all its contents?");
+                ImGui::Separator();
+                
+                if (ImGui::Button("Delete", ImVec2(120, 0))) {
+                    fs.removeFNode(selectedFolderHandle);
+                    selectedFolderHandle = TinyHandle(); // Clear selection
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+        } else {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Root folder cannot be deleted");
+        }
+        
+        return;
+    }
+    
     if (!selectedNodeHandle.valid()) {
-        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "No node selected");
-        ImGui::Text("Select a node from the Scene Manager to inspect it.");
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Nothing selected");
+        ImGui::Text("Select a node or folder to inspect it.");
         return;
     }
 

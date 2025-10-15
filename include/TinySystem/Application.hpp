@@ -51,12 +51,15 @@ private:
     bool showDemoWindow = false;
     bool showSceneWindow = true;
     bool showImGuiExplorerWindow = false;
-    bool showNodeInspectorWindow = true;
+    bool showInspectorWindow = true;
     
     // Scene management (now handled via TinyFS folder structure)
     
     // Node selection for hierarchy interaction
     TinyHandle selectedNodeHandle;
+    
+    // Folder selection for filesystem interaction
+    TinyHandle selectedFolderHandle;
 
     // Window metadata
     const char* appTitle;
@@ -71,7 +74,7 @@ private:
 
     void setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
     void loadAllAssetsRecursively(const std::string& assetsPath);
-    void renderNodeInspectorWindow();
+    void renderInspectorWindow();
     void renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int depth = 0);
 
     bool checkWindowResize();

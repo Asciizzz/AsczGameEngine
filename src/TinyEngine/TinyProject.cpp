@@ -569,10 +569,6 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
         ImGui::Text("Children: %zu", node->childrenHandles.size());
         ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
         ImGui::Text("Type Mask: 0x%X", node->types);
-        if (isSelected) {
-            ImGui::Separator();
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "SELECTED");
-        }
         ImGui::EndTooltip();
     }
     
