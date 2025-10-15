@@ -59,73 +59,84 @@ Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3
 
 ## Engine Architecture
 
-* Buckle up, this is going to be a wild ride.
-* The engine is designed around **three layers** of asset handling:
+* **TinyFS + Registry System** - dual-layer asset management.
+* Organized file structures with proper resource handling.
 
-### 1. Raw Import (TinyModel)
+### Data Pipeline
 
-* First stage when importing (e.g. from glTF).
-* Contains:
+#### 1. **TinyLoader** - Asset Import
+* Converts glTF models to `TinyModel` format.
+* Extracts meshes, materials, textures, skeletons, and scene hierarchy.
+* Materials and meshes now receive proper names from source data.
+* Raw data stage before engine processing.
 
-  * **Raw components**: meshes, materials, textures, skeletons, animations, etc.
-  * **Scene nodes (local)**: hierarchy of objects pointing to those components.
-* Think of this as a **staging area** - raw, unlinked data before the engine makes sense of it.
+#### 2. **TinyFS** - Virtual File System
+* Two-layer architecture:
+  * **Filesystem layer**: Hierarchical folder organization.
+  * **Registry layer**: GPU resources and processed data storage.
+* Auto-generates folder structures: `Textures/`, `Materials/`, `Meshes/`, `Skeletons/`, `Scenes/`.
+* **TypeHandle system**: Type-safe links between filesystem and registry layers.
+* Full drag & drop support for file management.
 
-### 2. Global Resource Registry
+#### 3. **Scene Management**
+* **Library scenes**: Reusable templates stored in TinyFS.
+* **Runtime instances**: Active game objects in the scene hierarchy.
+* Scene instantiation via drag & drop from library to runtime nodes.
+* **Handle-based references**: Type-safe resource management without pointer issues.
 
-* Converts a `TinyModel` into engine-managed resources:
-  * Pushes meshes, materials, textures, etc. into **global registries**.
-  * Each resource that uses other resources gets a **handle** (an ID) that:
-    * Keeps track of type (mesh/material/etc.).
-    * Prevents invalid references.
-    * Allows safe sharing across multiple prefabs.
-  * Ensures **deduplication** - one material can be reused across many prefabs.
+### UI System
 
-### 3. Template Layer (Scene Composition)
-
-* The scene graph from the `TinyModel` is rebuilt into a template.
-  * They store **references (handles)** to global resource registries.
-  * They define **structure** (hierarchy, transforms, which resources are linked).
-  * **Ownership matters**:
-    * If they own the resources, they can modify them directly.
-    * If they reference other templates' resources, they can't modify them, simple as that.
-  * Overrides (variants with modifications) are **not implemented yet**, but the handle system allows for it later, hopefully.
-
-* Note: Templates are basically just reusable node
+* **Scene Manager**: File browser with drag & drop scene instantiation.
+* **Inspector**: Context-sensitive panel for nodes and folder management.
+* **Gimbal lock mitigation**: Rotation controls that work past ±90°.
+* **Visual feedback**: Color-coded file types with hover states.
 
 ---
 
-### Work flow:
+### Workflow
 
-* Import gltf models, convert into TinyModel: Raw data components and Scene construct (nodes). Raw data do not have any sort of link or relation with each other, nodes will construct the scene and makes the necessary link
+**Asset Import Process**
+* Place glTF models in the Assets folder.
+* TinyLoader processes the model and extracts components.
+* TinyFS automatically creates organized folder structure.
 
-* For example: Importing a Human.gltf with 6 meshes (6 materials and 1 textures) for 6 body parts, all share the same skin/skeleton
-
-##### Register data:
-
+**Generated Structure:**
 ```
-Meshes    [0, 1, 2, 3, 4, 5] - for 6 body parts
-Textures  [0] - image + sampler
-Materials [0, 1, 2, 3, 4, 5] - all uses Textures[0]
-Skeleton  [0] - contains a bunch of bones
-```
-
-##### Scene hierarchy
-
-```
-Reg.Nodes{}:
-
-[0]Root <Node3D>
-[1]  Armature<Skeleton3D> ==Reg=> Skeleton[0]
-[2]    BodyPart0<MeshRender3D> ==Reg=> Meshes[0] - Nodes[1] - Materials[0]
-[3]    BodyPart1<MeshRender3D> ==Reg=> Meshes[1] - Nodes[1] - Materials[1]
-[4]    BodyPart2<MeshRender3D> ==Reg=> Meshes[2] - Nodes[1] - Materials[2]
-[5]    BodyPart3<MeshRender3D> ==Reg=> Meshes[3] - Nodes[1] - Materials[3]
-[6]    BodyPart4<MeshRender3D> ==Reg=> Meshes[4] - Nodes[1] - Materials[4]
-[7]    BodyPart5<MeshRender3D> ==Reg=> Meshes[5] - Nodes[1] - Materials[5]
+Human/
+├── Textures/
+│   └── skin_texture.png
+├── Materials/
+│   ├── head_material
+│   ├── body_material
+│   ├── arms_material
+│   └── legs_material (all reference skin_texture)
+├── Meshes/
+│   ├── head_mesh
+│   ├── body_mesh
+│   ├── arms_mesh
+│   └── legs_mesh
+├── Skeletons/
+│   └── armature_skeleton
+└── Scenes/
+    └── Human_scene (complete prefab)
 ```
 
-Note: In `BodyParts<MeshRender3D>`, mesh reference the Node containing the skeleton, NOT the Skeleton itself
+**Usage**
+* **Normal drag**: File organization between folders.
+* **Ctrl+drag scene to node**: Scene instantiation in runtime hierarchy.
+* **Selection**: Inspector displays node properties or folder management options.
+
+**Asset Management**
+* Properly named resources from source data.
+* No auto-generated names like "Material_47".
+* Organized hierarchy maintains relationships.
+
+**Handle System**
+* `TinyHandle` provides type-safe resource references.
+* **Type safety**: Prevents incorrect resource type usage.
+* **Version tracking**: Handles detect when referenced data is deleted.
+* **Cross-layer linking**: Filesystem nodes reference registry data safely.
+* Eliminates dangling pointer issues.
 
 ---
 
