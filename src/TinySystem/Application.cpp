@@ -861,13 +861,25 @@ void Application::renderNodeInspectorWindow() {
         scale.y = std::max(MIN_SCALE, std::abs(scale.y));
         scale.z = std::max(MIN_SCALE, std::abs(scale.z));
         
-        // Convert quaternion to Euler angles (in degrees)
+        // Convert quaternion to Euler angles (in degrees) - but handle gimbal lock
         rotation = glm::degrees(glm::eulerAngles(rotationQuat));
+        
+        // Normalize angles to [-180, 180] range to avoid discontinuities
+        auto normalizeAngle = [](float angle) {
+            while (angle > 180.0f) angle -= 360.0f;
+            while (angle < -180.0f) angle += 360.0f;
+            return angle;
+        };
+        
+        rotation.x = normalizeAngle(rotation.x);
+        rotation.y = normalizeAngle(rotation.y);
+        rotation.z = normalizeAngle(rotation.z);
         
         // Store original values to detect changes
         glm::vec3 originalTranslation = translation;
         glm::vec3 originalRotation = rotation;
         glm::vec3 originalScale = scale;
+        glm::quat originalQuaternion = rotationQuat;
         
         // Translation controls (Godot-style drag)
         ImGui::Text("Position");
@@ -880,9 +892,56 @@ void Application::renderNodeInspectorWindow() {
             ImGui::SetTooltip("Set position to camera location");
         }
         
-        // Rotation controls
+        // Rotation controls with gimbal lock mitigation
         ImGui::Text("Rotation (degrees)");
-        ImGui::DragFloat3("##Rotation", &rotation.x, 0.5f, -360.0f, 360.0f, "%.1f°");
+        
+        // Individual axis rotation sliders with ±180 degree range
+        bool rotationChanged = false;
+        
+        ImGui::Text("Pitch (X)");
+        float pitchDegrees = rotation.x;
+        if (ImGui::DragFloat("##RotX", &pitchDegrees, 0.5f, -89.0f, 89.0f, "%.1f°")) {
+            rotation.x = pitchDegrees;
+            rotationChanged = true;
+        }
+        
+        ImGui::Text("Yaw (Y)"); 
+        float yawDegrees = rotation.y;
+        if (ImGui::DragFloat("##RotY", &yawDegrees, 0.5f, -180.0f, 180.0f, "%.1f°")) {
+            rotation.y = yawDegrees;
+            rotationChanged = true;
+        }
+        
+        ImGui::Text("Roll (Z)");
+        float rollDegrees = rotation.z;
+        if (ImGui::DragFloat("##RotZ", &rollDegrees, 0.5f, -180.0f, 180.0f, "%.1f°")) {
+            rotation.z = rollDegrees;
+            rotationChanged = true;
+        }
+        
+        // Alternative: Direct quaternion manipulation buttons for gimbal-lock-free rotation
+        ImGui::Spacing();
+        ImGui::Text("Quick Rotations (Gimbal-Lock Free):");
+        
+        if (ImGui::Button("Rot +90° Y")) {
+            rotationQuat = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0)) * rotationQuat;
+            rotationChanged = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Rot -90° Y")) {
+            rotationQuat = glm::angleAxis(glm::radians(-90.0f), glm::vec3(0, 1, 0)) * rotationQuat;
+            rotationChanged = true;
+        }
+        
+        if (ImGui::Button("Rot +90° X")) {
+            rotationQuat = glm::angleAxis(glm::radians(90.0f), glm::vec3(1, 0, 0)) * rotationQuat;
+            rotationChanged = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Rot -90° X")) {
+            rotationQuat = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0)) * rotationQuat;
+            rotationChanged = true;
+        }
         
         // Scale controls with safety limits
         ImGui::Text("Scale");
@@ -904,12 +963,15 @@ void Application::renderNodeInspectorWindow() {
         }
         
         // Reset buttons
+        ImGui::Spacing();
         if (ImGui::Button("Reset Position")) {
             translation = glm::vec3(0.0f);
         }
         ImGui::SameLine();
         if (ImGui::Button("Reset Rotation")) {
             rotation = glm::vec3(0.0f);
+            rotationQuat = glm::quat(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
+            rotationChanged = true;
         }
         ImGui::SameLine();
         if (ImGui::Button("Reset Scale")) {
@@ -917,13 +979,28 @@ void Application::renderNodeInspectorWindow() {
         }
         
         // Apply changes if any values changed
-        if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
+        if (translation != originalTranslation || rotation != originalRotation || scale != originalScale || rotationChanged) {
             // Validate inputs before applying
-            if (isValidVec3(translation) && isValidVec3(rotation) && isValidVec3(scale)) {
-                // Convert back to matrix
+            if (isValidVec3(translation) && isValidVec3(scale)) {
                 glm::mat4 T = glm::translate(glm::mat4(1.0f), translation);
-                glm::mat4 R = glm::mat4(glm::quat(glm::radians(rotation)));
                 glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
+                glm::mat4 R;
+                
+                // Use updated quaternion if we used direct quaternion manipulation, otherwise convert from Euler
+                if (rotationChanged && (rotationQuat != originalQuaternion)) {
+                    // Direct quaternion manipulation was used
+                    R = glm::mat4_cast(rotationQuat);
+                } else if (rotation != originalRotation) {
+                    // Euler angle sliders were used - convert to quaternion
+                    glm::quat qX = glm::angleAxis(glm::radians(rotation.x), glm::vec3(1, 0, 0));
+                    glm::quat qY = glm::angleAxis(glm::radians(rotation.y), glm::vec3(0, 1, 0));
+                    glm::quat qZ = glm::angleAxis(glm::radians(rotation.z), glm::vec3(0, 0, 1));
+                    rotationQuat = qY * qX * qZ; // YXZ order to minimize gimbal lock
+                    R = glm::mat4_cast(rotationQuat);
+                } else {
+                    // No rotation change
+                    R = glm::mat4_cast(rotationQuat);
+                }
                 
                 glm::mat4 newTransform = T * R * S;
                 
