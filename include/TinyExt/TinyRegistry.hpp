@@ -174,4 +174,9 @@ public:
         auto* wrapper = getWrapper<T>(); // check validity
         return wrapper ? wrapper->pool.count : 0;
     }
+
+    template<typename T>
+    static size_t typeHash() {
+        return std::type_index(typeid(T)).hash_code();
+    }
 };
