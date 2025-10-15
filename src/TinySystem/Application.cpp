@@ -349,26 +349,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                    camera.getYaw(true) * 57.2958f, // Convert radians to degrees
                    camera.getPitch(true) * 57.2958f,
                    camera.getRoll() * 57.2958f);
-        
-        ImGui::Spacing();
-        
-        // Input Status
-        ImGui::Text("Input");
-        ImGui::Separator();
-        ImGui::Text("Mouse Focused: %s", mouseFocus ? "Yes" : "No");
-        ImGui::Text("Press F1 to toggle mouse lock");
-        ImGui::Text("Press F11 for fullscreen");
-        ImGui::Text("Press P to place object");
-        ImGui::Text("WASD: Move | QE: Roll | R: Reset Roll");
-        
-        ImGui::Spacing();
-        
-        // Scene Controls
-        ImGui::Text("Scene Controls");
-        ImGui::Separator();
-        
-        // Old placement buttons removed - functionality moved to scene management section below
-        
+
         ImGui::Spacing();
         
         // Window controls
@@ -376,7 +357,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Separator();
         ImGui::Checkbox("Show Scene Window", &showSceneWindow);
         ImGui::Checkbox("Show Inspector", &showInspectorWindow);
-        ImGui::Checkbox("Show ImGui Explorer", &showImGuiExplorerWindow);
+        ImGui::Checkbox("Show Editor Settings", &showEditorSettingsWindow);
     }, &showDebugWindow);
     
     // Scene Manager Window
@@ -442,123 +423,52 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         renderInspectorWindow();
     }, &showInspectorWindow);
     
-    // ImGui Feature Explorer Window
-    imguiWrapper->addWindow("ImGui Feature Explorer", [this]() {
-        // Tabs for different feature categories
-        if (ImGui::BeginTabBar("FeatureTabs")) {
-            
-            // Basic Widgets Tab
-            if (ImGui::BeginTabItem("Basic Widgets")) {
-                static bool checkbox1 = false;
-                static bool checkbox2 = true;
-                ImGui::Checkbox("Checkbox 1", &checkbox1);
-                ImGui::Checkbox("Checkbox 2", &checkbox2);
-                
-                static int radio = 0;
-                ImGui::RadioButton("Radio 1", &radio, 0); ImGui::SameLine();
-                ImGui::RadioButton("Radio 2", &radio, 1); ImGui::SameLine();
-                ImGui::RadioButton("Radio 3", &radio, 2);
-                
-                static float slider1 = 0.5f;
-                static int slider2 = 50;
-                ImGui::SliderFloat("Float Slider", &slider1, 0.0f, 1.0f);
-                ImGui::SliderInt("Int Slider", &slider2, 0, 100);
-                
-                static float color[4] = {1.0f, 0.0f, 0.0f, 1.0f};
-                ImGui::ColorEdit4("Color Picker", color);
-                
-                ImGui::EndTabItem();
-            }
-            
-            // Input Widgets Tab
-            if (ImGui::BeginTabItem("Input Widgets")) {
-                static char textBuffer[256] = "Edit me!";
-                ImGui::InputText("Text Input", textBuffer, sizeof(textBuffer));
-                
-                static float inputFloat = 3.14159f;
-                static int inputInt = 42;
-                ImGui::InputFloat("Input Float", &inputFloat, 0.01f, 1.0f, "%.3f");
-                ImGui::InputInt("Input Int", &inputInt);
-                
-                static float dragFloat = 0.0f;
-                static int dragInt = 0;
-                ImGui::DragFloat("Drag Float", &dragFloat, 0.005f);
-                ImGui::DragInt("Drag Int", &dragInt);
-                
-                ImGui::EndTabItem();
-            }
-            
-            // Layout & Styling Tab
-            if (ImGui::BeginTabItem("Layout & Style")) {
-                ImGui::Text("Button Variations:");
-                
-                if (ImGui::Button("Normal Button")) {
-                    // Button action
-                }
-                
-                ImGui::SameLine();
-                if (ImGui::SmallButton("Small")) {
-                    // Small button action
-                }
-                
-                if (ImGui::Button("Custom Size Button", ImVec2(200, 40))) {
-                    // Custom size button action
-                }
-                
-                ImGui::Separator();
-                
-                ImGui::Text("Text Variations:");
-                ImGui::Text("Normal text");
-                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Colored text");
-                ImGui::TextWrapped("This is a long text that will wrap around when it reaches the edge of the window. Very useful for descriptions and help text.");
-                
-                ImGui::Separator();
-                
-                ImGui::Text("Progress Bars:");
-                static float progress = 0.0f;
-                progress += 0.001f;
-                if (progress > 1.0f) progress = 0.0f;
-                
-                ImGui::ProgressBar(progress, ImVec2(0.0f, 0.0f));
-                ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f), "Custom Progress");
-                
-                ImGui::EndTabItem();
-            }
-            
-            // Trees & Lists Tab
-            if (ImGui::BeginTabItem("Trees & Lists")) {
-                ImGui::Text("Tree Nodes:");
-                
-                if (ImGui::TreeNode("Root Node")) {
-                    if (ImGui::TreeNode("Child 1")) {
-                        ImGui::Text("Leaf content 1");
-                        ImGui::TreePop();
-                    }
-                    if (ImGui::TreeNode("Child 2")) {
-                        ImGui::Text("Leaf content 2");
-                        ImGui::TreePop();
-                    }
-                    ImGui::TreePop();
-                }
-                
-                ImGui::Separator();
-                
-                ImGui::Text("Selectable List:");
-                static int selected = -1;
-                for (int i = 0; i < 5; i++) {
-                    char label[32];
-                    sprintf(label, "Item %d", i);
-                    if (ImGui::Selectable(label, selected == i)) {
-                        selected = i;
-                    }
-                }
-                
-                ImGui::EndTabItem();
-            }
-            
-            ImGui::EndTabBar();
+    // Editor Settings Window
+    imguiWrapper->addWindow("Editor Settings", [this]() {
+        ImGui::Text("UI & Display");
+        ImGui::Separator();
+        
+        // Font scaling for better readability
+        static float fontScale = 1.0f;
+        ImGui::Text("Font Scale");
+        if (ImGui::SliderFloat("##FontScale", &fontScale, 0.5f, 3.0f, "%.1fx")) {
+            ImGui::GetIO().FontGlobalScale = fontScale;
         }
-    }, &showImGuiExplorerWindow);
+        
+        ImGui::Spacing();
+        
+        // Quick preset buttons
+        ImGui::Text("Presets:");
+        if (ImGui::Button("Small##FontPreset")) {
+            fontScale = 0.8f;
+            ImGui::GetIO().FontGlobalScale = fontScale;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Normal##FontPreset")) {
+            fontScale = 1.0f;
+            ImGui::GetIO().FontGlobalScale = fontScale;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Large##FontPreset")) {
+            fontScale = 1.5f;
+            ImGui::GetIO().FontGlobalScale = fontScale;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("XL##FontPreset")) {
+            fontScale = 2.0f;
+            ImGui::GetIO().FontGlobalScale = fontScale;
+        }
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        
+        // Future settings placeholder
+        ImGui::TextDisabled("More settings will be added here...");
+        ImGui::TextDisabled("• Theme selection");
+        ImGui::TextDisabled("• Window layout presets"); 
+        ImGui::TextDisabled("• Performance options");
+        ImGui::TextDisabled("• Keybind customization");
+    }, &showEditorSettingsWindow);
 }
 
 void Application::loadAllAssetsRecursively(const std::string& assetsPath) {

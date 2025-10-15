@@ -50,7 +50,7 @@ private:
     bool showDebugWindow = true;
     bool showDemoWindow = false;
     bool showSceneWindow = true;
-    bool showImGuiExplorerWindow = false;
+    bool showEditorSettingsWindow = false;
     bool showInspectorWindow = true;
     
     // Scene management (now handled via TinyFS folder structure)
