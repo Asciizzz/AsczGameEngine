@@ -15,7 +15,17 @@ struct TinyFNode {
     std::vector<TinyHandle> children;     // child node handles
     TypeHandle tHandle;                   // metadata / registry handle if file
     enum class Type { Folder, File, Other } type = Type::Folder;
-    bool hidden = false;                  // whether this node should be hidden in UI
+    
+    struct CFG {
+        bool hidden = false;
+        bool deletable = true;
+    } cfg;
+
+    TinyFNode& setHidden(bool h) { cfg.hidden = h; return *this; }
+    bool isHidden() const { return cfg.hidden; }
+
+    TinyFNode& setDeletable(bool d) { cfg.deletable = d; return *this; }
+    bool isDeletable() const { return cfg.deletable; }
 
     bool isFile() const { return type == Type::File; }
     bool hasData() const { return tHandle.valid(); }
@@ -52,7 +62,7 @@ public:
         if (!fnodes.isValid(h)) return;
 
         TinyFNode* node = fnodes.get(h);
-        node->hidden = true; // hide from UI
+        node->setHidden(true).setDeletable(false);
 
         regHandle_ = h;
     }
@@ -60,21 +70,21 @@ public:
     // ---------- Creation ----------
 
     // Folder creation (non-template overload)
-    TinyHandle addFolder(TinyHandle parentHandle, const std::string& name, bool hidden = false) {
-        return addFNodeImpl<void>(parentHandle, name, nullptr, hidden);
+    TinyHandle addFolder(TinyHandle parentHandle, const std::string& name, TinyFNode::CFG cfg = {}) {
+        return addFNodeImpl<void>(parentHandle, name, nullptr, cfg);
     }
-    TinyHandle addFolder(const std::string& name, bool hidden = false) {
-        return addFolder(rootHandle_, name, hidden);
+    TinyHandle addFolder(const std::string& name, TinyFNode::CFG cfg = {}) {
+        return addFolder(rootHandle_, name, cfg);
     }
 
     // File creation (templated, pass pointer to data)
     template<typename T>
-    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T* data, bool hidden = false) {
-        return addFNodeImpl<T>(parentHandle, name, data, hidden);
+    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T* data, TinyFNode::CFG cfg = {}) {
+        return addFNodeImpl<T>(parentHandle, name, data, cfg);
     }
     template<typename T>
-    TinyHandle addFile(const std::string& name, T* data, bool hidden = false) {
-        return addFile(rootHandle_, name, data, hidden);
+    TinyHandle addFile(const std::string& name, T* data, TinyFNode::CFG cfg = {}) {
+        return addFile(rootHandle_, name, data, cfg);
     }
 
     template<typename T>
@@ -113,7 +123,7 @@ public:
     // ---------- Safe recursive remove ----------
     void removeFNode(TinyHandle handle) {
         TinyFNode* node = fnodes.get(handle);
-        if (!node) return;
+        if (!node || !node->isDeletable()) return;
 
         // copy children to avoid mutation during recursion
         std::vector<TinyHandle> childCopy = node->children;
@@ -165,9 +175,9 @@ public:
     // ---------- Data retrieval ----------
     template<typename T>
     T* getFileData(TinyHandle fileHandle) {
-        if (!fnodes.isValid(fileHandle)) return nullptr;
         TinyFNode* node = fnodes.get(fileHandle);
         if (!node || !node->hasMeta()) return nullptr;
+
         return registry.get<T>(node->tHandle);
     }
 
@@ -184,7 +194,7 @@ public:
 
     // Access to file system nodes (needed for UI)
     const TinyPool<TinyFNode>& getFNodes() const { return fnodes; }
-    TinyPool<TinyFNode>& getFNodes() { return fnodes; }
+    // TinyPool<TinyFNode>& getFNodes() { return fnodes; } // No non-const access to prevent external mutations
 
 private:
     TinyPool<TinyFNode> fnodes;
@@ -194,13 +204,13 @@ private:
 
     // Implementation function: templated but uses if constexpr to allow T=void
     template<typename T>
-    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T* data, bool hidden) {
+    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T* data, TinyFNode::CFG cfg) {
         if (!fnodes.isValid(parentHandle)) return TinyHandle(); // invalid parent
 
         TinyFNode child;
         child.name = name;
         child.parent = parentHandle;
-        child.hidden = hidden;
+        child.cfg = cfg;
 
         if constexpr (!std::is_same_v<T, void>) {
             if (data) {

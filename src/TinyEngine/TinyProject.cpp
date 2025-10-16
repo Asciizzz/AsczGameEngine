@@ -151,7 +151,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     }
 
     // Add scene to registry and return the handle
-    TinyHandle fnHandle = tinyFS->addFile(fnSceneFolder, "Scene", &scene);
+    TinyHandle fnHandle = tinyFS->addFile(fnSceneFolder, scene.name, &scene);
     TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
     return tHandle.handle;
