@@ -568,7 +568,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
             // Render children with proper indentation
             for (TinyHandle childHandle : folder->children) {
                 const TinyFNode* child = fs.getFNodes().get(childHandle);
-                if (!child || childHandle == fs.regHandle()) continue; // Skip invalid or registry node
+                if (!child || child->hidden) continue; // Skip invalid or hidden nodes
                 
                 if (child->type == TinyFNode::Type::Folder) {
                     renderSceneFolderTree(fs, childHandle, depth + 1);
@@ -696,7 +696,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         // Root folder - just render children without tree node but with consistent styling
         for (TinyHandle childHandle : folder->children) {
             const TinyFNode* child = fs.getFNodes().get(childHandle);
-            if (!child || childHandle == fs.regHandle()) continue;
+            if (!child || child->hidden) continue; // Skip invalid or hidden nodes
             
             if (child->type == TinyFNode::Type::Folder) {
                 renderSceneFolderTree(fs, childHandle, depth);

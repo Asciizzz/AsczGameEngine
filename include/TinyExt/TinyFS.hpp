@@ -15,6 +15,7 @@ struct TinyFNode {
     std::vector<TinyHandle> children;     // child node handles
     TypeHandle tHandle;                   // metadata / registry handle if file
     enum class Type { Folder, File, Other } type = Type::Folder;
+    bool hidden = false;                  // whether this node should be hidden in UI
 
     bool isFile() const { return type == Type::File; }
     bool hasData() const { return tHandle.valid(); }
@@ -48,27 +49,32 @@ public:
 
     // Explicitly set registry folder handle (if you create it manually)
     void setRegistryHandle(TinyHandle h) {
-        if (fnodes.isValid(h)) regHandle_ = h;
+        if (!fnodes.isValid(h)) return;
+
+        TinyFNode* node = fnodes.get(h);
+        node->hidden = true; // hide from UI
+
+        regHandle_ = h;
     }
 
     // ---------- Creation ----------
 
     // Folder creation (non-template overload)
-    TinyHandle addFolder(TinyHandle parentHandle, const std::string& name) {
-        return addFNodeImpl<void>(parentHandle, name, nullptr);
+    TinyHandle addFolder(TinyHandle parentHandle, const std::string& name, bool hidden = false) {
+        return addFNodeImpl<void>(parentHandle, name, nullptr, hidden);
     }
-    TinyHandle addFolder(const std::string& name) {
-        return addFolder(rootHandle_, name);
+    TinyHandle addFolder(const std::string& name, bool hidden = false) {
+        return addFolder(rootHandle_, name, hidden);
     }
 
     // File creation (templated, pass pointer to data)
     template<typename T>
-    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T* data) {
-        return addFNodeImpl<T>(parentHandle, name, data);
+    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T* data, bool hidden = false) {
+        return addFNodeImpl<T>(parentHandle, name, data, hidden);
     }
     template<typename T>
-    TinyHandle addFile(const std::string& name, T* data) {
-        return addFile(rootHandle_, name, data);
+    TinyHandle addFile(const std::string& name, T* data, bool hidden = false) {
+        return addFile(rootHandle_, name, data, hidden);
     }
 
     template<typename T>
@@ -188,11 +194,13 @@ private:
 
     // Implementation function: templated but uses if constexpr to allow T=void
     template<typename T>
-    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T* data) {
+    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T* data, bool hidden) {
         if (!fnodes.isValid(parentHandle)) return TinyHandle(); // invalid parent
+
         TinyFNode child;
         child.name = name;
         child.parent = parentHandle;
+        child.hidden = hidden;
 
         if constexpr (!std::is_same_v<T, void>) {
             if (data) {
