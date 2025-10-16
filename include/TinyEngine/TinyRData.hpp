@@ -86,7 +86,21 @@ struct TinyRTexture : public TinyTexture {
     bool vkCreate(const TinyVK::Device* deviceVK);
 };
 
-struct TinyRSkeleton : public TinySkeleton {};
+struct TinyRSkeleton : public TinySkeleton {
+    // Additional runtime data can be added here if needed
+    TinyRSkeleton() = default;
+    explicit TinyRSkeleton(const TinySkeleton& skeleton) : TinySkeleton(skeleton) {}
+
+    void set(const TinySkeleton& skeleton) {
+        TinySkeleton::operator=(skeleton);
+    }
+    
+    TinyRSkeleton(const TinyRSkeleton&) = delete;
+    TinyRSkeleton& operator=(const TinyRSkeleton&) = delete;
+
+    TinyRSkeleton(TinyRSkeleton&&) = default;
+    TinyRSkeleton& operator=(TinyRSkeleton&&) = default;
+};
 
 
 
