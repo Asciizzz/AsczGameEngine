@@ -111,4 +111,5 @@ struct TinyRScene {
     TinyHandle rootNode;
 
     void addSceneToNode(const TinyRScene& scene, TinyHandle parent = TinyHandle());
+    void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 };

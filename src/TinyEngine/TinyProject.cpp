@@ -130,6 +130,11 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     // Since we are mostly loading this model in a vacuum
     // The pool structure initially matches the model's node array 1:1
 
+    if (!model.nodes.empty()) {
+        // First node is root (should be correct according to TinyLoader implementation)
+        scene.rootNode = TinyHandle(0, 1);
+    }
+
     for (const auto& node : model.nodes) {
         TinyRNode rtNode = node; // Copy node data
 
@@ -150,6 +155,8 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
                 if (skeleData) skeleton->boneTransformsFinal.resize(skeleData->bones.size(), glm::mat4(1.0f));
             }
         }
+
+        scene.nodes.insert(std::move(rtNode));
     }
 
     // Add scene to registry and return the handle
