@@ -24,52 +24,23 @@ public:
     VkDescriptorSetLayout getGlbDescSetLayout() const { return tinyGlobal->getDescLayout(); }
     VkDescriptorSet getGlbDescSet(uint32_t idx) const { return tinyGlobal->getDescSet(idx); }
 
-// All these belows are only for testing purposes
     /**
-     * Adds a scene instance to the project.
+     * Adds a scene instance to the active scene.
      *
      * @param sceneHandle Handle to the scene in the registry to instantiate.
-     * @param rootHandle Handle to the runtime node to inherit from (optional).
+     * @param parentNode Handle to the node in active scene to add as child of (optional - uses root if invalid).
      */
-    void addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle = TinyHandle(), glm::mat4 at = glm::mat4(1.0f));
+    void addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode = TinyHandle());
 
     /**
-     * Renders an ImGui collapsible tree view of the runtime node hierarchy
+     * Renders an ImGui collapsible tree view of the active scene node hierarchy
      */
     void renderNodeTreeImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
     
     /**
-     * Renders an ImGui collapsible tree view with node selection support
+     * Renders an ImGui collapsible tree view with node selection support for the active scene
      */
     void renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, int depth = 0);
-
-    /**
-     * Recursively deletes a node and all its children from the runtime hierarchy.
-     * Also removes the node from its parent's children list and cleans up mesh render handles.
-     * 
-     * @param nodeHandle Handle to the node to delete
-     * @return true if the node was successfully deleted, false if handle was invalid
-     */
-    bool deleteNodeRecursive(TinyHandle nodeHandle);
-
-    /**
-     * Reparents a node to a new parent. Removes the node from its current parent's children
-     * and adds it to the new parent's children list. Updates the node's parentHandle.
-     * 
-     * @param nodeHandle Handle to the node to reparent
-     * @param newParentHandle Handle to the new parent node
-     * @return true if reparenting was successful, false if invalid handles or would create cycle
-     */
-    bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
-
-    /**
-     * Recursively updates global transforms for all nodes starting from the specified root.
-     * Always processes all nodes regardless of dirty state for guaranteed correctness.
-     * 
-     * @param rootNodeHandle Handle to the root node to start the recursive update from
-     * @param parentGlobalTransform Global transform of the parent (identity for root nodes)
-     */
-    void updateGlobalTransforms(TinyHandle rootNodeHandle, const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
 
     /**
@@ -78,14 +49,15 @@ public:
      */
     void runPlayground(float dTime);
 
-    // These are not official public methods, only for testing purposes
-
-    const TinyPool<TinyRNode>& getRuntimeNodes() const { return rtNodes; }
-    const std::vector<TinyHandle>& getRuntimeMeshRenderHandles() const { return rtMeshRenderHandles; }
-    TinyHandle getRootNodeHandle() const { return rootNodeHandle; }
+    // Active scene access methods
+    TinyRScene* getActiveScene() const { return tinyFS->registryRef().get<TinyRScene>(activeSceneHandle); }
+    TinyHandle getActiveSceneHandle() const { return activeSceneHandle; }
     
-    // Helper to get handle by index (useful for UI that thinks in indices)
-    TinyHandle getNodeHandleByIndex(uint32_t index) const { return rtNodes.getHandle(index); }
+    // Helper methods for UI compatibility
+    TinyHandle getRootNodeHandle() const { 
+        TinyRScene* scene = getActiveScene();
+        return scene ? scene->rootNode : TinyHandle();
+    }
 
     const TinyRegistry& registryRef() const { return tinyFS->registryRef(); }
     TinyFS& filesystem() { return *tinyFS; }
@@ -99,9 +71,7 @@ private:
 
     UniquePtr<TinyFS> tinyFS;
 
-    TinyPool<TinyRNode> rtNodes;
-    TinyHandle rootNodeHandle; // Handle to the root node
-    std::vector<TinyHandle> rtMeshRenderHandles; // Handles to rtNodes with MeshRender component
+    TinyHandle activeSceneHandle; // Handle to the active scene in registry
 
     TinyHandle defaultMaterialHandle;
     TinyHandle defaultTextureHandle;

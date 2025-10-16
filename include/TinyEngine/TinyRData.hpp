@@ -112,4 +112,8 @@ struct TinyRScene {
 
     void addSceneToNode(const TinyRScene& scene, TinyHandle parent = TinyHandle());
     void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
+    
+    // Scene manipulation functions (moved from TinyProject)
+    bool deleteNodeRecursive(TinyHandle nodeHandle);
+    bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
 };

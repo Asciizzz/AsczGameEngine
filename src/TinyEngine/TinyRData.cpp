@@ -228,3 +228,103 @@ void TinyRScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& pare
         updateGlbTransform(childHandle, node->globalTransform);
     }
 }
+
+bool TinyRScene::deleteNodeRecursive(TinyHandle nodeHandle) {
+    TinyRNode* nodeToDelete = nodes.get(nodeHandle);
+    if (!nodeToDelete) {
+        return false; // Invalid handle
+    }
+
+    // Don't allow deletion of root node
+    if (nodeHandle == rootNode) {
+        return false;
+    }
+
+    // First, recursively delete all children
+    // We need to copy the children handles because we'll be modifying the vector during iteration
+    std::vector<TinyHandle> childrenToDelete = nodeToDelete->childrenHandles;
+    for (const TinyHandle& childHandle : childrenToDelete) {
+        deleteNodeRecursive(childHandle); // This will remove each child from the pool
+    }
+
+    // Remove this node from its parent's children list
+    if (nodeToDelete->parentHandle.valid()) {
+        TinyRNode* parentNode = nodes.get(nodeToDelete->parentHandle);
+        if (parentNode) {
+            auto& parentChildren = parentNode->childrenHandles;
+            parentChildren.erase(
+                std::remove(parentChildren.begin(), parentChildren.end(), nodeHandle),
+                parentChildren.end()
+            );
+        }
+    }
+
+    // Finally, remove the node from the pool
+    nodes.remove(nodeHandle);
+
+    return true;
+}
+
+bool TinyRScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {
+    // Validate handles
+    if (!nodeHandle.valid() || !newParentHandle.valid()) {
+        return false;
+    }
+    
+    // Can't reparent root node
+    if (nodeHandle == rootNode) {
+        return false;
+    }
+    
+    // Can't reparent to itself
+    if (nodeHandle == newParentHandle) {
+        return false;
+    }
+    
+    TinyRNode* nodeToMove = nodes.get(nodeHandle);
+    TinyRNode* newParent = nodes.get(newParentHandle);
+    
+    if (!nodeToMove || !newParent) {
+        return false;
+    }
+    
+    // Check for cycles: make sure new parent is not a descendant of the node we're moving
+    std::function<bool(TinyHandle)> isDescendant = [this, newParentHandle, &isDescendant](TinyHandle ancestor) -> bool {
+        const TinyRNode* node = nodes.get(ancestor);
+        if (!node) return false;
+        
+        for (const TinyHandle& childHandle : node->childrenHandles) {
+            if (childHandle == newParentHandle) {
+                return true; // Found cycle
+            }
+            if (isDescendant(childHandle)) {
+                return true; // Found cycle in descendant
+            }
+        }
+        return false;
+    };
+    
+    if (isDescendant(nodeHandle)) {
+        return false; // Would create a cycle
+    }
+    
+    // Remove from current parent's children list
+    if (nodeToMove->parentHandle.valid()) {
+        TinyRNode* currentParent = nodes.get(nodeToMove->parentHandle);
+        if (currentParent) {
+            auto& parentChildren = currentParent->childrenHandles;
+            parentChildren.erase(
+                std::remove(parentChildren.begin(), parentChildren.end(), nodeHandle),
+                parentChildren.end()
+            );
+        }
+    }
+    
+    // Add to new parent's children list
+    newParent->childrenHandles.push_back(nodeHandle);
+
+    // Update the node's parent handle
+    nodeToMove->parentHandle = newParentHandle;
+    
+    return true;
+}
