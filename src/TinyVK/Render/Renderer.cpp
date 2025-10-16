@@ -269,13 +269,13 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
     rPipeline->bindSets(currentCmd, &glbSet, 1);
 
     for (const TinyHandle& meshHandle : rtMeshRenderHandles) {
-        const TinyNodeRT* rtNode = rtNodes.get(meshHandle);
+        const TinyRNode* rtNode = rtNodes.get(meshHandle);
         if (!rtNode) continue;
 
         const auto& transform = rtNode->globalTransform;
 
         // Get mesh render component directly from runtime node
-        const auto* meshRenderComp = rtNode->get<TinyNodeRT::MeshRender>();
+        const auto* meshRenderComp = rtNode->get<TinyRNode::MeshRender>();
         if (!meshRenderComp) continue;
 
         const auto& regMesh = registry.get<TinyRMesh>(meshRenderComp->mesh);

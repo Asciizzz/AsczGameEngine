@@ -19,7 +19,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS->setRegistryHandle(registryHandle);
 
     // Create root runtime node
-    TinyNodeRT rootNode;
+    TinyRNode rootNode;
     rootNode.name = "Root";
     // Children will be added upon scene population
 
@@ -51,7 +51,6 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     TinyHandle fnMatFolder = tinyFS->addFolder(fnModelFolder, "Materials");
     TinyHandle fnMeshFolder = tinyFS->addFolder(fnModelFolder, "Meshes");
     TinyHandle fnSkeleFolder = tinyFS->addFolder(fnModelFolder, "Skeletons");
-    TinyHandle fnSceneFolder = tinyFS->addFolder(fnModelFolder, "Scenes");
 
     // Note: fnHandle - handle to file node in TinyFS's fnodes
     //       tHandle - handle to the actual data in the registry (infused with Type info for TinyFS usage)
@@ -151,7 +150,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     }
 
     // Add scene to registry and return the handle
-    TinyHandle fnHandle = tinyFS->addFile(fnSceneFolder, scene.name, &scene);
+    TinyHandle fnHandle = tinyFS->addFile(fnModelFolder, scene.name, &scene);
     TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
     return tHandle.handle;
@@ -180,7 +179,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
     for (int32_t i = 0; i < static_cast<int32_t>(scene->nodes.size()); ++i) {
         const TinyNode& sceneNode = scene->nodes[i];
         
-        TinyNodeRT rtNode;
+        TinyRNode rtNode;
         rtNode.copyFromSceneNode(sceneNode);
         
         TinyHandle rtHandle = rtNodes.insert(std::move(rtNode));
@@ -191,7 +190,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
     for (int32_t i = 0; i < static_cast<int32_t>(scene->nodes.size()); ++i) {
         const TinyNode& sceneNode = scene->nodes[i];
         TinyHandle rtHandle = sceneToRuntimeMap[i];
-        TinyNodeRT* rtNode = rtNodes.get(rtHandle);
+        TinyRNode* rtNode = rtNodes.get(rtHandle);
         
         if (!rtNode) continue; // Safety check
 
@@ -201,7 +200,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
             TinyHandle rtParentHandle = sceneToRuntimeMap[sceneNode.parent.index];
             rtNode->parentHandle = rtParentHandle;
             
-            TinyNodeRT* parentNode = rtNodes.get(rtParentHandle);
+            TinyRNode* parentNode = rtNodes.get(rtParentHandle);
             if (parentNode) {
                 parentNode->addChild(rtHandle, rtNodes);
             }
@@ -209,7 +208,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
             // No parent in scene - attach to project root
             rtNode->parentHandle = actualRootHandle;
             
-            TinyNodeRT* rootNode = rtNodes.get(actualRootHandle);
+            TinyRNode* rootNode = rtNodes.get(actualRootHandle);
             if (rootNode) {
                 rootNode->addChild(rtHandle, rtNodes);
             }
@@ -222,7 +221,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
 
         // Remap skeleton node references in components
         if (rtNode->hasType(NTypes::MeshRender)) {
-            auto* meshRender = rtNode->get<TinyNodeRT::MeshRender>();
+            auto* meshRender = rtNode->get<TinyRNode::MeshRender>();
             if (meshRender) {
                 const auto* sceneMeshRender = sceneNode.get<TinyNode::MeshRender>();
                 if (sceneMeshRender && sceneMeshRender->skeleNode.valid() && 
@@ -234,7 +233,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
         }
 
         if (rtNode->hasType(NTypes::BoneAttach)) {
-            auto* boneAttach = rtNode->get<TinyNodeRT::BoneAttach>();
+            auto* boneAttach = rtNode->get<TinyRNode::BoneAttach>();
             if (boneAttach) {
                 const auto* sceneBoneAttach = sceneNode.get<TinyNode::BoneAttach>();
                 if (sceneBoneAttach && sceneBoneAttach->skeleNode.valid() && 
@@ -245,7 +244,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
         }
 
         if (rtNode->hasType(NTypes::Skeleton)) {
-            auto* skeleton = rtNode->get<TinyNodeRT::Skeleton>();
+            auto* skeleton = rtNode->get<TinyRNode::Skeleton>();
             if (skeleton) {
                 const auto& skeleData = registry.get<TinyRSkeleton>(skeleton->skeleRegistry);
 
@@ -261,7 +260,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
 
 
 void TinyProject::updateGlobalTransforms(TinyHandle rootNodeHandle, const glm::mat4& parentGlobalTransform) {
-    TinyNodeRT* runtimeNode = rtNodes.get(rootNodeHandle);
+    TinyRNode* runtimeNode = rtNodes.get(rootNodeHandle);
     if (!runtimeNode) return;
 
     // Use the local transform which contains the original scene node transform + any instance overrides
@@ -277,7 +276,7 @@ void TinyProject::updateGlobalTransforms(TinyHandle rootNodeHandle, const glm::m
 }
 
 bool TinyProject::deleteNodeRecursive(TinyHandle nodeHandle) {
-    TinyNodeRT* nodeToDelete = rtNodes.get(nodeHandle);
+    TinyRNode* nodeToDelete = rtNodes.get(nodeHandle);
     if (!nodeToDelete) {
         return false; // Invalid handle
     }
@@ -296,7 +295,7 @@ bool TinyProject::deleteNodeRecursive(TinyHandle nodeHandle) {
 
     // Remove this node from its parent's children list
     if (nodeToDelete->parentHandle.valid()) {
-        TinyNodeRT* parentNode = rtNodes.get(nodeToDelete->parentHandle);
+        TinyRNode* parentNode = rtNodes.get(nodeToDelete->parentHandle);
         if (parentNode) {
             auto& parentChildren = parentNode->childrenHandles;
             parentChildren.erase(
@@ -307,7 +306,7 @@ bool TinyProject::deleteNodeRecursive(TinyHandle nodeHandle) {
     }
 
     // Remove from mesh render handles if this node has a MeshRender component
-    if (nodeToDelete->hasComponent<TinyNodeRT::MeshRender>()) {
+    if (nodeToDelete->hasComponent<TinyRNode::MeshRender>()) {
         rtMeshRenderHandles.erase(
             std::remove(rtMeshRenderHandles.begin(), rtMeshRenderHandles.end(), nodeHandle),
             rtMeshRenderHandles.end()
@@ -336,8 +335,8 @@ bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle
         return false;
     }
     
-    TinyNodeRT* nodeToMove = rtNodes.get(nodeHandle);
-    TinyNodeRT* newParent = rtNodes.get(newParentHandle);
+    TinyRNode* nodeToMove = rtNodes.get(nodeHandle);
+    TinyRNode* newParent = rtNodes.get(newParentHandle);
     
     if (!nodeToMove || !newParent) {
         return false;
@@ -345,7 +344,7 @@ bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle
     
     // Check for cycles: make sure new parent is not a descendant of the node we're moving
     std::function<bool(TinyHandle)> isDescendant = [this, newParentHandle, &isDescendant](TinyHandle ancestor) -> bool {
-        const TinyNodeRT* node = rtNodes.get(ancestor);
+        const TinyRNode* node = rtNodes.get(ancestor);
         if (!node) return false;
         
         for (const TinyHandle& childHandle : node->childrenHandles) {
@@ -365,7 +364,7 @@ bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle
     
     // Remove from current parent's children list
     if (nodeToMove->parentHandle.valid()) {
-        TinyNodeRT* currentParent = rtNodes.get(nodeToMove->parentHandle);
+        TinyRNode* currentParent = rtNodes.get(nodeToMove->parentHandle);
         if (currentParent) {
             auto& parentChildren = currentParent->childrenHandles;
             parentChildren.erase(
@@ -384,12 +383,6 @@ bool TinyProject::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle
     return true;
 }
 
-// TinyNodeRT method implementation
-void TinyNodeRT::addChild(TinyHandle childHandle, TinyPool<TinyNodeRT>& rtNodesPool) {
-    // Add child to this node's children list
-    childrenHandles.push_back(childHandle);
-}
-
 void TinyProject::runPlayground(float dTime) {
     return;
 }
@@ -404,7 +397,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         nodeHandle = rootNodeHandle;
     }
     
-    const TinyNodeRT* node = rtNodes.get(nodeHandle);
+    const TinyRNode* node = rtNodes.get(nodeHandle);
     if (!node) {
         return;
     }
@@ -467,7 +460,7 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
         nodeHandle = rootNodeHandle;
     }
     
-    const TinyNodeRT* node = rtNodes.get(nodeHandle);
+    const TinyRNode* node = rtNodes.get(nodeHandle);
     if (!node) {
         return;
     }

@@ -1002,7 +1002,7 @@ void Application::renderInspectorWindow() {
         return;
     }
 
-    const TinyNodeRT* selectedNode = project->getRuntimeNodes().get(selectedSceneNodeHandle);
+    const TinyRNode* selectedNode = project->getRuntimeNodes().get(selectedSceneNodeHandle);
     if (!selectedNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
         selectedSceneNodeHandle = project->getNodeHandleByIndex(0); // Reset to root
@@ -1045,7 +1045,7 @@ void Application::renderInspectorWindow() {
         if (!validDecomposition) {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
             if (ImGui::Button("Reset Transform")) {
-                TinyNodeRT* mutableNode = const_cast<TinyNodeRT*>(selectedNode);
+                TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
                 mutableNode->localTransform = glm::mat4(1.0f);
                 project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
             }
@@ -1060,7 +1060,7 @@ void Application::renderInspectorWindow() {
         if (!isValidVec3(translation) || !isValidVec3(scale)) {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
             if (ImGui::Button("Reset Transform")) {
-                TinyNodeRT* mutableNode = const_cast<TinyNodeRT*>(selectedNode);
+                TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
                 mutableNode->localTransform = glm::mat4(1.0f);
                 project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
             }
@@ -1230,7 +1230,7 @@ void Application::renderInspectorWindow() {
                 
                 if (matrixValid) {
                     // Apply the new transform to the node
-                    TinyNodeRT* mutableNode = const_cast<TinyNodeRT*>(selectedNode);
+                    TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
                     mutableNode->localTransform = newTransform;
                     
                     // Update global transforms
@@ -1253,7 +1253,7 @@ void Application::renderInspectorWindow() {
         
         // Parent info
         if (selectedNode->parentHandle.valid()) {
-            const TinyNodeRT* parentNode = project->getRuntimeNodes().get(selectedNode->parentHandle);
+            const TinyRNode* parentNode = project->getRuntimeNodes().get(selectedNode->parentHandle);
             if (parentNode) {
                 ImGui::Text("Parent: %s (%u_v%u)", parentNode->name.c_str(), 
                            selectedNode->parentHandle.index, selectedNode->parentHandle.version);
