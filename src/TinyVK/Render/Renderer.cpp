@@ -272,9 +272,6 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
         const TinyNodeRT* rtNode = rtNodes.get(meshHandle);
         if (!rtNode) continue;
 
-        // Print node name
-        std::cout << "Rendering node: " << rtNode->name << std::endl;
-
         const auto& transform = rtNode->globalTransform;
 
         // Get mesh render component directly from runtime node
