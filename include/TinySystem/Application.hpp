@@ -60,6 +60,9 @@ private:
     
     // Filesystem node selection (folders and files)
     TinyHandle selectedFNodeHandle;
+    
+    // Deferred deletion system to handle resource cleanup after frame completion
+    std::vector<TinyHandle> pendingDeletions;
 
     // Window metadata
     const char* appTitle;
@@ -76,6 +79,10 @@ private:
     void loadAllAssetsRecursively(const std::string& assetsPath);
     void renderInspectorWindow();
     void renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int depth = 0);
+    
+    // Deferred deletion methods
+    void queueForDeletion(TinyHandle handle);
+    void processPendingDeletions();
 
     bool checkWindowResize();
 };

@@ -295,6 +295,9 @@ void Application::mainLoop() {
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex, imguiWrapper.get());
+            
+            // Process any pending deletions after the frame is complete
+            processPendingDeletions();
         };
 
         // Clean window title - FPS info now in ImGui
@@ -927,7 +930,7 @@ void Application::renderInspectorWindow() {
                 if (selectedFNode->isFile()) {
                     ImGui::OpenPopup("ConfirmFileDelete");
                 } else {
-                    fs.removeFNode(selectedFNodeHandle);
+                    queueForDeletion(selectedFNodeHandle);
                     selectedFNodeHandle = TinyHandle();
                 }
             } else {
@@ -955,7 +958,7 @@ void Application::renderInspectorWindow() {
             ImGui::Separator();
             
             if (ImGui::Button("Delete", ImVec2(120, 0))) {
-                fs.removeFNode(selectedFNodeHandle);
+                queueForDeletion(selectedFNodeHandle);
                 selectedFNodeHandle = TinyHandle();
                 ImGui::CloseCurrentPopup();
             }
@@ -972,7 +975,7 @@ void Application::renderInspectorWindow() {
             ImGui::Separator();
             
             if (ImGui::Button("Delete", ImVec2(120, 0))) {
-                fs.removeFNode(selectedFNodeHandle);
+                queueForDeletion(selectedFNodeHandle);
                 selectedFNodeHandle = TinyHandle();
                 ImGui::CloseCurrentPopup();
             }
@@ -1317,6 +1320,22 @@ void Application::renderInspectorWindow() {
     } else {
         ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Root node cannot be deleted");
     }
+}
+
+void Application::queueForDeletion(TinyHandle handle) {
+    pendingDeletions.push_back(handle);
+}
+
+void Application::processPendingDeletions() {
+    if (pendingDeletions.empty()) return;
+    
+    TinyFS& fs = project->filesystem();
+    
+    for (TinyHandle handle : pendingDeletions) {
+        fs.removeFNode(handle);
+    }
+    
+    pendingDeletions.clear();
 }
 
 void Application::cleanup() {}
