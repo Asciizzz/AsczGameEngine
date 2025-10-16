@@ -32,8 +32,8 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
 
     // Create default material and texture
     TinyTexture defaultTexture = TinyTexture::createDefaultTexture();
-    TinyRTexture defaultRTexture;
-    defaultRTexture.import(deviceVK, defaultTexture);
+    TinyRTexture defaultRTexture = TinyRTexture(defaultTexture);
+    defaultRTexture.vkCreate(deviceVK);
 
     defaultTextureHandle = tinyFS->addToRegistry(defaultRTexture).handle;
 
@@ -58,11 +58,11 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     // Import textures to registry
     std::vector<TinyHandle> glbTexrHandle;
     for (const auto& texture : model.textures) {
-        TinyRTexture textureData;
-        textureData.import(deviceVK, texture);
+        TinyRTexture rTexture = TinyRTexture();
+        rTexture.vkCreate(deviceVK);
 
         // TinyHandle handle = registry->add(textureData).handle;
-        TinyHandle fnHandle = tinyFS->addFile(fnTexFolder, texture.name, &textureData);
+        TinyHandle fnHandle = tinyFS->addFile(fnTexFolder, texture.name, std::move(&rTexture));
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
         glbTexrHandle.push_back(tHandle.handle);
@@ -93,8 +93,8 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     // Import meshes to registry with remapped material references
     std::vector<TinyHandle> glbMeshrHandle;
     for (const auto& mesh : model.meshes) {
-        TinyRMesh meshData;
-        meshData.import(deviceVK, mesh);
+        TinyRMesh meshData = TinyRMesh(mesh);
+        meshData.vkCreate(deviceVK);
 
         // Remap submeshes' material indices
         std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes;

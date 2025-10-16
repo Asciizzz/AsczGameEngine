@@ -6,12 +6,7 @@
 
 using namespace TinyVK;
 
-bool TinyRMesh::import(const TinyVK::Device* deviceVK, const TinyMesh& mesh) {
-    name = mesh.name; // Copy mesh name
-    
-    const auto& vertexData = mesh.vertexData;
-    const auto& indexData = mesh.indexData;
-
+bool TinyRMesh::vkCreate(const TinyVK::Device* deviceVK) {
     if (vertexData.empty() || indexData.empty()) return false;
 
     vertexBuffer
@@ -23,9 +18,6 @@ bool TinyRMesh::import(const TinyVK::Device* deviceVK, const TinyMesh& mesh) {
         .setDataSize(indexData.size())
         .setUsageFlags(BufferUsage::Index)
         .createDeviceLocalBuffer(deviceVK, indexData.data());
-
-    vertexLayout = mesh.vertexLayout;
-    indexType = tinyToVkIndexType(mesh.indexType);
 
     return true;
 }
@@ -39,19 +31,17 @@ VkIndexType TinyRMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
     }
 }
 
-bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& texture) {
-    name = texture.name;
-
+bool TinyRTexture::vkCreate(const TinyVK::Device* deviceVK) {
     // Get appropriate Vulkan format and convert data if needed
-    VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(texture.channels);
+    VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
-        texture.channels, texture.width, texture.height, texture.data.data());
+        channels, width, height, data.data());
 
     // Calculate image size based on Vulkan format requirements
-    int vulkanChannels = (texture.channels == 3) ? 4 : texture.channels; // RGB becomes RGBA
-    VkDeviceSize imageSize = texture.width * texture.height * vulkanChannels;
+    int vulkanChannels = (channels == 3) ? 4 : channels; // RGB becomes RGBA
+    VkDeviceSize imageSize = width * height * vulkanChannels;
 
-    if (texture.data.empty()) return false;
+    if (data.empty()) return false;
 
     // Create staging buffer for texture data upload
     DataBuffer stagingBuffer;
@@ -64,7 +54,7 @@ bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& tex
 
     ImageConfig imageConfig = ImageConfig()
         .withPhysicalDevice(deviceVK->pDevice)
-        .withDimensions(texture.width, texture.height)
+        .withDimensions(width, height)
         .withAutoMipLevels()
         .withFormat(textureFormat)
         .withUsage(ImageUsage::Sampled | ImageUsage::TransferDst | ImageUsage::TransferSrc)
@@ -73,7 +63,7 @@ bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& tex
 
     ImageViewConfig viewConfig = ImageViewConfig()
         .withAspectMask(ImageAspect::Color)
-        .withAutoMipLevels(texture.width, texture.height);
+        .withAutoMipLevels(width, height);
 
     // A quick function to convert TinyTexture::AddressMode to VkSamplerAddressMode
     auto convertAddressMode = [](TinyTexture::AddressMode mode) {
@@ -87,7 +77,7 @@ bool TinyRTexture::import(const TinyVK::Device* deviceVK, const TinyTexture& tex
 
     SamplerConfig sampConfig = SamplerConfig()
     // The only thing we care about right now is address mode
-        .withAddressModes(convertAddressMode(texture.addressMode));
+        .withAddressModes(convertAddressMode(addressMode));
 
     textureVK = TextureVK(); // Reset texture
     bool success = textureVK

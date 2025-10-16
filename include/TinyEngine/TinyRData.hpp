@@ -10,17 +10,16 @@
 
 #include <string>
 
-struct TinyRMesh {
-    std::string name; // Mesh name from source data
+struct TinyRMesh : public TinyMesh {
+    // Runtime Vulkan resources
     TinyVK::DataBuffer vertexBuffer;
     TinyVK::DataBuffer indexBuffer;
-    std::vector<TinySubmesh> submeshes;
-    TinyVertexLayout vertexLayout;
-    VkIndexType indexType = VK_INDEX_TYPE_UINT32;
+    VkIndexType vkIndexType = VK_INDEX_TYPE_UINT16;
 
-    // Delete copy semantics, allow move semantics
+    // Default constructor for internal pool use only - creates invalid state
     TinyRMesh() = default;
-    ~TinyRMesh() = default;
+    explicit TinyRMesh(const TinyMesh& mesh)
+        : TinyMesh(mesh), vkIndexType(tinyToVkIndexType(indexType)) {}
 
     TinyRMesh(const TinyRMesh&) = delete;
     TinyRMesh& operator=(const TinyRMesh&) = delete;
@@ -28,24 +27,63 @@ struct TinyRMesh {
     TinyRMesh(TinyRMesh&&) = default;
     TinyRMesh& operator=(TinyRMesh&&) = default;
 
-    bool import(const TinyVK::Device* deviceVK, const TinyMesh& mesh);
-    void setSubmeshes(const std::vector<TinySubmesh>& subs) { submeshes = subs; }
+    // Set mesh data after default construction
+    void set(const TinyMesh& mesh) {
+        static_cast<TinyMesh&>(*this) = mesh; // Copy base class data
+        vkIndexType = tinyToVkIndexType(indexType);
+    }
+
+    // Check if this mesh has valid data
+    bool isValid() const {
+        return !vertexData.empty() && !indexData.empty();
+    }
+
+    // Create Vulkan buffers from the mesh data
+    bool vkCreate(const TinyVK::Device* deviceVK);
 
     static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };
 
 struct TinyRMaterial {
     std::string name; // Material name from source data
-    glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved
+    glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved (remapped registry indices)
+
+    // Constructor from TinyMaterial - converts local texture indices to registry indices
+    TinyRMaterial() = default;
+    TinyRMaterial(const TinyMaterial& material) : name(material.name) {
+        // Note: texture indices will be remapped during scene loading
+        // material.localAlbTexture and material.localNrmlTexture are converted to registry indices
+    }
 
     void setAlbTexIndex(uint32_t index) { texIndices.x = index; }
     void setNrmlTexIndex(uint32_t index) { texIndices.y = index; }
 };
 
-struct TinyRTexture {
-    std::string name;
+struct TinyRTexture : public TinyTexture {
+    // Runtime Vulkan resources
     TinyVK::TextureVK textureVK;
-    bool import(const TinyVK::Device* deviceVK, const TinyTexture& texture);
+
+    // Default constructor for internal pool use only - creates invalid state
+    TinyRTexture() = default;
+    explicit TinyRTexture(const TinyTexture& texture) : TinyTexture(texture) {}
+
+    void set(const TinyTexture& texture) {
+        TinyTexture::operator=(texture);
+    }
+    
+    TinyRTexture(const TinyRTexture&) = delete;
+    TinyRTexture& operator=(const TinyRTexture&) = delete;
+
+    TinyRTexture(TinyRTexture&&) = default;
+    TinyRTexture& operator=(TinyRTexture&&) = default;
+
+    // Check if this texture has valid data
+    bool isValid() const {
+        return !data.empty() && width > 0 && height > 0;
+    }
+
+    // Create Vulkan texture from the texture data
+    bool vkCreate(const TinyVK::Device* deviceVK);
 };
 
 struct TinyRSkeleton : public TinySkeleton {};
