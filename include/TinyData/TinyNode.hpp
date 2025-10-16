@@ -24,33 +24,31 @@ struct TinyNode {
     };
     uint32_t types = toMask(Types::Node);
 
-    TinyHandle parent;
-    std::vector<TinyHandle> children;
+    // Hierarchy data - can be either local indices or runtime handles depending on scope
+    TinyHandle parentHandle;
+    std::vector<TinyHandle> childrenHandles;
 
-    glm::mat4 transform = glm::mat4(1.0f);
+    // Transform data - both local and runtime
+    glm::mat4 localTransform = glm::mat4(1.0f);   // Local/original transform
+    glm::mat4 globalTransform = glm::mat4(1.0f);  // Runtime computed global transform
 
-    // Component definitions
+    // Component definitions with runtime capabilities
     struct MeshRender {
         static constexpr Types kType = Types::MeshRender;
-        TinyHandle mesh;
-        TinyHandle skeleNode;
+        TinyHandle meshHandle;                // Handle to mesh in registry
+        TinyHandle skeleNodeHandle;           // Handle to skeleton node (NOT skeleton in registry)
     };
 
     struct BoneAttach {
         static constexpr Types kType = Types::BoneAttach;
-        TinyHandle skeleNode; // Point to a Skeleton node
-        TinyHandle bone; // Index in skeleton
+        TinyHandle skeleNodeHandle;
+        uint32_t boneIndex;
     };
 
-    /** Keep in mind very clear distinction between:
-    ** @param skeleNode: local index to the model's node array that contains the skeleton
-        -> reference a node
-    ** @param skeleRegistry: global index to the registry's skeleton array
-        -> reference a skeleton
-    */
     struct Skeleton {
         static constexpr Types kType = Types::Skeleton;
-        TinyHandle skeleRegistry;
+        TinyHandle skeleHandle;
+        std::vector<glm::mat4> boneTransformsFinal;
     };
 
 protected: // RNode inherits from this
@@ -111,3 +109,6 @@ public:
         return hasComponent<T>() ? &getComponent<T>() : nullptr;
     }
 };
+
+// Alias for naming consistency - TinyRNode is now just TinyNode
+using TinyRNode = TinyNode;

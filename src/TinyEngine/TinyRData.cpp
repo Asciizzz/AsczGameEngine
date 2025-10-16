@@ -6,7 +6,7 @@
 
 using namespace TinyVK;
 
-bool TinyRMesh::vkCreate(const TinyVK::Device* deviceVK) {
+bool TinyRMesh::create(const TinyVK::Device* deviceVK) {
     if (vertexData.empty() || indexData.empty()) return false;
 
     vertexBuffer
@@ -31,7 +31,7 @@ VkIndexType TinyRMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
     }
 }
 
-bool TinyRTexture::vkCreate(const TinyVK::Device* deviceVK) {
+bool TinyRTexture::create(const TinyVK::Device* deviceVK) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(

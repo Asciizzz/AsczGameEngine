@@ -33,7 +33,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     // Create default material and texture
     TinyTexture defaultTexture = TinyTexture::createDefaultTexture();
     TinyRTexture defaultRTexture = TinyRTexture(defaultTexture);
-    defaultRTexture.vkCreate(deviceVK);
+    defaultRTexture.create(deviceVK);
 
     defaultTextureHandle = tinyFS->addToRegistry(defaultRTexture).handle;
 
@@ -59,7 +59,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     std::vector<TinyHandle> glbTexRHandle;
     for (const auto& texture : model.textures) {
         TinyRTexture rTexture = TinyRTexture();
-        rTexture.vkCreate(deviceVK);
+        rTexture.create(deviceVK);
 
         // TinyHandle handle = registry->add(textureData).handle;
         TinyHandle fnHandle = tinyFS->addFile(fnTexFolder, texture.name, std::move(&rTexture));
@@ -94,7 +94,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     std::vector<TinyHandle> glbMeshRHandle;
     for (const auto& mesh : model.meshes) {
         TinyRMesh rMesh = TinyRMesh(mesh);
-        rMesh.vkCreate(deviceVK);
+        rMesh.create(deviceVK);
 
         // Remap submeshes' material indices
         std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes;
@@ -133,8 +133,8 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         // Remap MeshRender component's mesh reference
         if (node.hasType(NTypes::MeshRender)) {
             auto* meshRender = node.get<TinyNode::MeshRender>();
-            if (meshRender && isValidIndex(meshRender->mesh.index, glbMeshRHandle)) {
-                meshRender->mesh = glbMeshRHandle[meshRender->mesh.index];
+            if (meshRender && isValidIndex(meshRender->meshHandle.index, glbMeshRHandle)) {
+                meshRender->meshHandle = glbMeshRHandle[meshRender->meshHandle.index];
             }
             // Note: skeleNode references remain as local indices within the scene
         }
@@ -142,8 +142,8 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         // Remap Skeleton component's registry reference
         if (node.hasType(NTypes::Skeleton)) {
             auto* skeleton = node.get<TinyNode::Skeleton>();
-            if (skeleton && isValidIndex(skeleton->skeleRegistry.index, glbSkeleRHandle)) {
-                skeleton->skeleRegistry = glbSkeleRHandle[skeleton->skeleRegistry.index];
+            if (skeleton && isValidIndex(skeleton->skeleHandle.index, glbSkeleRHandle)) {
+                skeleton->skeleHandle = glbSkeleRHandle[skeleton->skeleHandle.index];
             }
         }
     }
@@ -177,11 +177,8 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
     // First pass: Create all runtime nodes and copy scene node data
     for (int32_t i = 0; i < static_cast<int32_t>(scene->nodes.size()); ++i) {
         const TinyNode& sceneNode = scene->nodes[i];
-        
-        TinyRNode rtNode;
-        rtNode.copyFromSceneNode(sceneNode);
-        
-        TinyHandle rtHandle = rtNodes.insert(std::move(rtNode));
+
+        TinyHandle rtHandle = rtNodes.insert(std::move(sceneNode));
         sceneToRuntimeMap[i] = rtHandle;
     }
 
@@ -194,11 +191,11 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
         if (!rtNode) continue; // Safety check
 
         // Remap parent-child relationships
-        if (sceneNode.parent.valid() && sceneNode.parent.index < scene->nodes.size()) {
+        if (sceneNode.parentHandle.valid() && sceneNode.parentHandle.index < scene->nodes.size()) {
             // Has parent within scene - remap to runtime parent
-            TinyHandle rtParentHandle = sceneToRuntimeMap[sceneNode.parent.index];
+            TinyHandle rtParentHandle = sceneToRuntimeMap[sceneNode.parentHandle.index];
             rtNode->parentHandle = rtParentHandle;
-            
+
             TinyRNode* parentNode = rtNodes.get(rtParentHandle);
             if (parentNode) {
                 parentNode->childrenHandles.push_back(rtHandle);
@@ -223,9 +220,9 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
             auto* meshRender = rtNode->get<TinyRNode::MeshRender>();
             if (meshRender) {
                 const auto* sceneMeshRender = sceneNode.get<TinyNode::MeshRender>();
-                if (sceneMeshRender && sceneMeshRender->skeleNode.valid() && 
-                    sceneMeshRender->skeleNode.index < scene->nodes.size()) {
-                    meshRender->skeleNodeRT = sceneToRuntimeMap[sceneMeshRender->skeleNode.index];
+                if (sceneMeshRender && sceneMeshRender->skeleNodeHandle.valid() && 
+                    sceneMeshRender->skeleNodeHandle.index < scene->nodes.size()) {
+                    meshRender->skeleNodeHandle = sceneToRuntimeMap[sceneMeshRender->skeleNodeHandle.index];
                 }
                 rtMeshRenderHandles.push_back(rtHandle);
             }
@@ -235,9 +232,9 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
             auto* boneAttach = rtNode->get<TinyRNode::BoneAttach>();
             if (boneAttach) {
                 const auto* sceneBoneAttach = sceneNode.get<TinyNode::BoneAttach>();
-                if (sceneBoneAttach && sceneBoneAttach->skeleNode.valid() && 
-                    sceneBoneAttach->skeleNode.index < scene->nodes.size()) {
-                    boneAttach->skeleNodeRT = sceneToRuntimeMap[sceneBoneAttach->skeleNode.index];
+                if (sceneBoneAttach && sceneBoneAttach->skeleNodeHandle.valid() && 
+                    sceneBoneAttach->skeleNodeHandle.index < scene->nodes.size()) {
+                    boneAttach->skeleNodeHandle = sceneToRuntimeMap[sceneBoneAttach->skeleNodeHandle.index];
                 }
             }
         }
@@ -245,7 +242,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
         if (rtNode->hasType(NTypes::Skeleton)) {
             auto* skeleton = rtNode->get<TinyRNode::Skeleton>();
             if (skeleton) {
-                const auto& skeleData = registry.get<TinyRSkeleton>(skeleton->skeleRegistry);
+                const auto& skeleData = registry.get<TinyRSkeleton>(skeleton->skeleHandle);
 
                 if (skeleData)
                     skeleton->boneTransformsFinal.resize(skeleData->bones.size(), glm::mat4(1.0f));

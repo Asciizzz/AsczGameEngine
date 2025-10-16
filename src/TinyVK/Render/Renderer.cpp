@@ -278,7 +278,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
         const auto* meshRenderComp = rtNode->get<TinyRNode::MeshRender>();
         if (!meshRenderComp) continue;
 
-        const auto& regMesh = registry.get<TinyRMesh>(meshRenderComp->mesh);
+        const auto& regMesh = registry.get<TinyRMesh>(meshRenderComp->meshHandle);
         if (!regMesh) continue;
         
         const auto& submeshes = regMesh->submeshes;
