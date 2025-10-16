@@ -558,6 +558,26 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
             }
         }
         
+        // Also accept FILE_HANDLE payloads and check if they're scene files
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+            TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
+            
+            // Get the filesystem node to check if it's a scene file
+            const TinyFNode* fileNode = tinyFS->getFNodes().get(fileNodeHandle);
+            if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRScene>()) {
+                // This is a scene file - instantiate it at this node
+                TinyHandle sceneRegistryHandle = fileNode->tHandle.handle;
+                
+                // Verify the scene exists and instantiate it at this node
+                const TinyRScene* scene = tinyFS->registryRef().get<TinyRScene>(sceneRegistryHandle);
+                if (scene) {
+                    // Place the scene at this node
+                    addSceneInstance(sceneRegistryHandle, nodeHandle, glm::mat4(1.0f));
+                    updateGlobalTransforms(rootNodeHandle);
+                }
+            }
+        }
+        
         ImGui::EndDragDropTarget();
     }
     

@@ -559,16 +559,6 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                 fs.moveFNode(draggedFile, folderHandle);
             }
             
-            // Accept scene drops (existing functionality)
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_FNODE")) {
-                TinyHandle sceneFNodeHandle = *(const TinyHandle*)payload->Data;
-                const TinyFNode* sceneFile = fs.getFNodes().get(sceneFNodeHandle);
-                if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyRScene>()) {
-                    TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
-                    project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle, glm::mat4(1.0f));
-                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
-                }
-            }
             ImGui::EndDragDropTarget();
         }
         
@@ -623,19 +613,13 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             
                             ImGui::PopStyleColor(3); // Pop all three colors
                             
-                            // Drag source for scene files - different behavior based on modifier keys
+                            // Drag source for scene files - use FILE_HANDLE but scene targets will handle instantiation
                             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                                bool ctrlPressed = ImGui::GetIO().KeyCtrl;
-                                
-                                if (ctrlPressed) {
-                                    // Ctrl+drag: Scene instantiation into nodes
-                                    ImGui::SetDragDropPayload("SCENE_FNODE", &childHandle, sizeof(TinyHandle));
-                                    ImGui::Text("Instantiate scene: %s", child->name.c_str());
-                                } else {
-                                    // Normal drag: File moving between folders
-                                    ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
-                                    ImGui::Text("Moving file: %s", child->name.c_str());
-                                }
+                                // Use FILE_HANDLE as the primary payload since it works for both operations
+                                ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
+                                ImGui::Text("Scene: %s", child->name.c_str());
+                                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
+                                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
                                 ImGui::EndDragDropSource();
                             }
                             
@@ -645,8 +629,8 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                 ImGui::Text("Scene: %s", scene->name.c_str());
                                 ImGui::Text("Nodes: %zu", scene->nodes.size());
                                 ImGui::Text("Double-click to place at selected node");
-                                ImGui::Text("Drag to move between folders");
-                                ImGui::Text("Ctrl+drag to instantiate into nodes");
+                                ImGui::Text("Drag to folders: Move file");
+                                ImGui::Text("Drag to nodes: Instantiate scene");
                                 ImGui::EndTooltip();
                             }
                         }
@@ -742,19 +726,13 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         
                         ImGui::PopStyleColor(3); // Pop all three colors
                         
-                        // Drag source for root scene files - different behavior based on modifier keys
+                        // Drag source for root scene files - use FILE_HANDLE but scene targets will handle instantiation
                         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                            bool ctrlPressed = ImGui::GetIO().KeyCtrl;
-                            
-                            if (ctrlPressed) {
-                                // Ctrl+drag: Scene instantiation into nodes
-                                ImGui::SetDragDropPayload("SCENE_FNODE", &childHandle, sizeof(TinyHandle));
-                                ImGui::Text("Instantiate scene: %s", child->name.c_str());
-                            } else {
-                                // Normal drag: File moving between folders
-                                ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
-                                ImGui::Text("Moving file: %s", child->name.c_str());
-                            }
+                            // Use FILE_HANDLE as the primary payload since it works for both operations
+                            ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
+                            ImGui::Text("Scene: %s", child->name.c_str());
+                            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
+                            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
                             ImGui::EndDragDropSource();
                         }
                     }
