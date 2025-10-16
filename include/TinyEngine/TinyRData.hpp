@@ -178,11 +178,6 @@ public:
     const T* get() const {
         return hasComponent<T>() ? &getComponent<T>() : nullptr;
     }
-
-    // Very faulty implementation, just for demonstration
-    void addChild(TinyHandle childHandle, TinyPool<TinyRNode>& rtNodesPool) {
-        childrenHandles.push_back(childHandle);
-    }
 };
 
 

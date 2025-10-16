@@ -202,7 +202,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
             
             TinyRNode* parentNode = rtNodes.get(rtParentHandle);
             if (parentNode) {
-                parentNode->addChild(rtHandle, rtNodes);
+                parentNode->childrenHandles.push_back(rtHandle);
             }
         } else {
             // No parent in scene - attach to project root
@@ -210,7 +210,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle
             
             TinyRNode* rootNode = rtNodes.get(actualRootHandle);
             if (rootNode) {
-                rootNode->addChild(rtHandle, rtNodes);
+                rootNode->childrenHandles.push_back(rtHandle);
             }
         }
 
