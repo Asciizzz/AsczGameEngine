@@ -55,11 +55,11 @@ private:
     
     // Scene management (now handled via TinyFS folder structure)
     
-    // Node selection for hierarchy interaction
-    TinyHandle selectedNodeHandle;
+    // Runtime scene node selection for hierarchy interaction
+    TinyHandle selectedSceneNodeHandle;
     
-    // Folder selection for filesystem interaction
-    TinyHandle selectedFolderHandle;
+    // Filesystem node selection (folders and files)
+    TinyHandle selectedFNodeHandle;
 
     // Window metadata
     const char* appTitle;

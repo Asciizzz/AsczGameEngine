@@ -108,8 +108,12 @@ public:
 
                 items[index] = std::make_unique<typename TinyPoolTraits<Type>::element_type>(std::move(item));
             }
-        } else {
+        } else if constexpr (std::is_copy_assignable_v<Type> || std::is_move_assignable_v<Type>) {
             items[index] = std::forward<U>(item);
+        } else {
+            // For non-assignable types, use placement new
+            items[index].~Type();
+            new(&items[index]) Type(std::forward<U>(item));
         }
 
         states[index].occupied = true;
@@ -125,8 +129,12 @@ public:
         if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
                     TinyPoolTraits<Type>::is_shared_ptr) {
             items[index].reset();
-        } else {
+        } else if constexpr(std::is_copy_assignable_v<Type>) {
             items[index] = {};
+        } else {
+            // For non-copyable types, use placement new to reconstruct
+            items[index].~Type();
+            new(&items[index]) Type{};
         }
 
         states[index].occupied = false;

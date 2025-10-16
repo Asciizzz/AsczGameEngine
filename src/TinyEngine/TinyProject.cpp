@@ -106,7 +106,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
 
         meshData.setSubmeshes(remappedSubmeshes);
 
-        TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, mesh.name, &meshData);
+        TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, mesh.name, std::move(&meshData));
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
         glbMeshrHandle.push_back(tHandle.handle);

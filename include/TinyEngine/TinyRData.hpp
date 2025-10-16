@@ -15,6 +15,16 @@ struct TinyRMesh {
     TinyVertexLayout vertexLayout;
     VkIndexType indexType = VK_INDEX_TYPE_UINT32;
 
+    // Delete copy semantics, allow move semantics
+    TinyRMesh() = default;
+    ~TinyRMesh() = default;
+
+    TinyRMesh(const TinyRMesh&) = delete;
+    TinyRMesh& operator=(const TinyRMesh&) = delete;
+    
+    TinyRMesh(TinyRMesh&&) = default;
+    TinyRMesh& operator=(TinyRMesh&&) = default;
+
     bool import(const TinyVK::Device* deviceVK, const TinyMesh& mesh);
     void setSubmeshes(const std::vector<TinySubmesh>& subs) { submeshes = subs; }
 
