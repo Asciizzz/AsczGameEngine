@@ -697,7 +697,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         for (TinyHandle childHandle : folder->children) {
             const TinyFNode* child = fs.getFNodes().get(childHandle);
             if (!child || child->hidden) continue; // Skip invalid or hidden nodes
-            
+
             if (child->type == TinyFNode::Type::Folder) {
                 renderSceneFolderTree(fs, childHandle, depth);
             } else if (child->type == TinyFNode::Type::File) {
