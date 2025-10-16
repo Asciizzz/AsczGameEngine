@@ -102,18 +102,13 @@ struct TinyRSkeleton : public TinySkeleton {
     TinyRSkeleton& operator=(TinyRSkeleton&&) = default;
 };
 
+using TinyRNode = TinyNode; // Alias for name consistency
+
 
 struct TinyRScene {
     std::string name;
-    std::vector<TinyNode> nodes;
+    TinyPool<TinyRNode> nodes;
+    TinyHandle rootNode;
 
-    // Helper methods for scene management
-    int32_t getRootNodeIndex() const {
-        // Loader creates a default root node at index 0
-        return nodes.empty() ? -1 : 0;
-    }
-    
-    bool hasNodes() const {
-        return !nodes.empty();
-    }
+    void addSceneToNode(const TinyRScene& scene, TinyHandle parent = TinyHandle());
 };

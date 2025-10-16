@@ -283,7 +283,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
         
         const auto& submeshes = regMesh->submeshes;
 
-        // Normally you'd bind the material based on the mesh node, but because we haven't setup the bind descriptor, ignore it
+        // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
 
         // Draw each individual submeshes
         VkBuffer vertexBuffer = regMesh->vertexBuffer;

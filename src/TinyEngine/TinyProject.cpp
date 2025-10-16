@@ -126,24 +126,28 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     // Create scene with nodes - preserve hierarchy but remap resource references
     TinyRScene scene;
     scene.name = model.name;
-    scene.nodes = model.nodes; // Start with a copy of the original hierarchy
 
-    // Only remap resource references in components, keep hierarchy intact
-    for (auto& node : scene.nodes) {
+    // Since we are mostly loading this model in a vacuum
+    // The pool structure initially matches the model's node array 1:1
+
+    for (const auto& node : model.nodes) {
+        TinyRNode rtNode = node; // Copy node data
+
         // Remap MeshRender component's mesh reference
-        if (node.hasType(NTypes::MeshRender)) {
-            auto* meshRender = node.get<TinyNode::MeshRender>();
-            if (meshRender && isValidIndex(meshRender->meshHandle.index, glbMeshRHandle)) {
-                meshRender->meshHandle = glbMeshRHandle[meshRender->meshHandle.index];
-            }
-            // Note: skeleNode references remain as local indices within the scene
+        if (rtNode.hasType(NTypes::MeshRender)) {
+            auto* meshRender = rtNode.get<TinyRNode::MeshRender>();
+            if (meshRender) meshRender->meshHandle = glbMeshRHandle[meshRender->meshHandle.index];
         }
 
         // Remap Skeleton component's registry reference
-        if (node.hasType(NTypes::Skeleton)) {
-            auto* skeleton = node.get<TinyNode::Skeleton>();
-            if (skeleton && isValidIndex(skeleton->skeleHandle.index, glbSkeleRHandle)) {
+        if (rtNode.hasType(NTypes::Skeleton)) {
+            auto* skeleton = rtNode.get<TinyRNode::Skeleton>();
+            if (skeleton) {
                 skeleton->skeleHandle = glbSkeleRHandle[skeleton->skeleHandle.index];
+
+                // Construct the final bone transforms array (set to identity, resolve through skeleton later)
+                const auto& skeleData = registryRef().get<TinyRSkeleton>(skeleton->skeleHandle);
+                if (skeleData) skeleton->boneTransformsFinal.resize(skeleData->bones.size(), glm::mat4(1.0f));
             }
         }
     }
@@ -160,13 +164,10 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
 void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle rootHandle, glm::mat4 at) {
     // const TinyRScene* scene = registry->get<TinyRScene>(sceneHandle);
 
-    const auto& registry = tinyFS->registryRef();
+    const auto& registry = registryRef();
     const TinyRScene* scene = registry.get<TinyRScene>(sceneHandle);
 
-    if (!scene || !scene->hasNodes()) {
-        printf("Error: Invalid scene handle %llu or empty scene\n", sceneHandle.value);
-        return;
-    }
+    if (!scene) return;
 
     // Use the stored root handle if no valid handle is provided
     TinyHandle actualRootHandle = rootHandle.valid() ? rootHandle : rootNodeHandle;
@@ -538,7 +539,7 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
                 TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
                 
                 // Verify the scene exists and instantiate it at this node
-                const TinyRScene* scene = tinyFS->registryRef().get<TinyRScene>(sceneRegistryHandle);
+                const TinyRScene* scene = registryRef().get<TinyRScene>(sceneRegistryHandle);
                 if (scene) {
                     // Place the scene at this node
                     addSceneInstance(sceneRegistryHandle, nodeHandle, glm::mat4(1.0f));
@@ -558,7 +559,7 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
                 TinyHandle sceneRegistryHandle = fileNode->tHandle.handle;
                 
                 // Verify the scene exists and instantiate it at this node
-                const TinyRScene* scene = tinyFS->registryRef().get<TinyRScene>(sceneRegistryHandle);
+                const TinyRScene* scene = registryRef().get<TinyRScene>(sceneRegistryHandle);
                 if (scene) {
                     // Place the scene at this node
                     addSceneInstance(sceneRegistryHandle, nodeHandle, glm::mat4(1.0f));

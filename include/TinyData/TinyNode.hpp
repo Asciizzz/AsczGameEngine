@@ -109,6 +109,3 @@ public:
         return hasComponent<T>() ? &getComponent<T>() : nullptr;
     }
 };
-
-// Alias for naming consistency - TinyRNode is now just TinyNode
-using TinyRNode = TinyNode;

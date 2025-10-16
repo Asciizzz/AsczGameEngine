@@ -162,6 +162,22 @@ public:
         return const_cast<TinyPool<Type>*>(this)->get(handle);
     }
 
+    // Reserved for special cases
+    Type* get(uint32_t index) {
+        if (isOccupied(index)) {
+            if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
+                return items[index].get();
+            } else {
+                return &items[index];
+            }
+        }
+        return nullptr;
+    }
+
+    const Type* get(uint32_t index) const {
+        return const_cast<TinyPool<Type>*>(this)->get(index);
+    }
+
     // Get handle by index (useful for accessing items by their position)
     TinyHandle getHandle(uint32_t index) const {
         if (isOccupied(index)) return TinyHandle(index, states[index].version);
