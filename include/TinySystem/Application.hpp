@@ -49,7 +49,6 @@ private:
     // ImGui UI state
     bool showDebugWindow = true;
     bool showDemoWindow = false;
-    bool showSceneWindow = true;
     bool showEditorSettingsWindow = false;
     bool showInspectorWindow = true;
     

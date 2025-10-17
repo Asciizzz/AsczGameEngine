@@ -315,7 +315,103 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
     // Clear any existing windows first
     imguiWrapper->clearWindows();
     
-    // Debug Panel Window
+    // Main Editor Window - full size, no scroll bars
+    const TinyRegistry& registry = project->registryRef();
+    TinyFS& fs = project->filesystem();
+
+    imguiWrapper->addWindow("Editor", [this, &camera, &registry, &fs]() {
+        // Static variable to store splitter position (persists between frames)
+        static float splitterPos = 0.5f; // Start with 50% for hierarchy, 50% for file explorer
+        
+        // Get full available space
+        float totalHeight = ImGui::GetContentRegionAvail().y;
+        
+        // Calculate section heights based on splitter position
+        float hierarchyHeight = totalHeight * splitterPos;
+        float explorerHeight = totalHeight * (1.0f - splitterPos);
+        
+        // =============================================================================
+        // HIERARCHY SECTION (TOP)
+        // =============================================================================
+        
+        // Active Scene Name Header
+        TinyRScene* activeScene = project->getActiveScene();
+        if (activeScene) {
+            ImGui::Text("Active Scene: %s", activeScene->name.c_str());
+            
+            // Show full scene info on hover
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::Text("Scene: %s", activeScene->name.c_str());
+                ImGui::Text("Total Nodes: %u", activeScene->nodes.count());
+                ImGui::Text("Handle: %u_v%u", project->getActiveSceneHandle().index, project->getActiveSceneHandle().version);
+                ImGui::EndTooltip();
+            }
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "No Active Scene");
+        }
+        
+        ImGui::Separator();
+        
+        // Hierarchy Tree with background
+        ImGui::BeginChild("Hierarchy", ImVec2(0, hierarchyHeight - 30), ImGuiChildFlags_Borders);
+        
+        // Clear filesystem selection when clicking in node tree area
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
+            selectedFNodeHandle = TinyHandle();
+        }
+        
+        if (activeScene && activeScene->nodes.count() > 0) {
+            project->renderSelectableNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle);
+        } else {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
+        }
+        ImGui::EndChild();
+        
+        // =============================================================================
+        // HORIZONTAL SPLITTER
+        // =============================================================================
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 0.8f));
+        
+        ImGui::Button("##HorizontalSplitter", ImVec2(-1, 4));
+        
+        if (ImGui::IsItemActive()) {
+            float mouseDelta = ImGui::GetIO().MouseDelta.y;
+            splitterPos += mouseDelta / totalHeight;
+            splitterPos = std::max(0.2f, std::min(0.8f, splitterPos)); // Clamp between 20% and 80%
+        }
+        
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        }
+        
+        ImGui::PopStyleColor(3);
+        
+        // =============================================================================
+        // FILE EXPLORER SECTION (BOTTOM)
+        // =============================================================================
+        
+        ImGui::Text("File Explorer");
+        ImGui::Separator();
+        
+        // File Explorer with background
+        ImGui::BeginChild("FileExplorer", ImVec2(0, explorerHeight - 30), ImGuiChildFlags_Borders);
+        
+        // Clear scene node selection when clicking in file tree area (but not on items)
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
+            selectedSceneNodeHandle = TinyHandle();
+        }
+        
+        renderSceneFolderTree(fs, fs.rootHandle());
+        ImGui::EndChild();
+        
+    });  // End Editor window
+    
+    // Debug Panel Window (smaller, optional)
     imguiWrapper->addWindow("Debug Panel", [this, &fpsManager, &camera, mouseFocus, deltaTime]() {
         // FPS and Performance (update display only every second)
         static auto lastFPSUpdate = std::chrono::steady_clock::now();
@@ -358,111 +454,9 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         // Window controls
         ImGui::Text("Windows");
         ImGui::Separator();
-        ImGui::Checkbox("Show Scene Window", &showSceneWindow);
         ImGui::Checkbox("Show Inspector", &showInspectorWindow);
         ImGui::Checkbox("Show Editor Settings", &showEditorSettingsWindow);
     }, &showDebugWindow);
-    
-    // Scene Manager Window
-    const TinyRegistry& registry = project->registryRef();
-    TinyFS& fs = project->filesystem();
-
-    imguiWrapper->addWindow("Scene Manager", [this, &camera, &registry, &fs]() {
-        // Static variable to store splitter position (persists between frames)
-        static float splitterPos = 0.6f; // Start with 60% for hierarchy, 40% for library
-        
-        // Calculate available space and reserve space for bottom UI elements
-        float totalHeight = ImGui::GetContentRegionAvail().y;
-        float reservedBottomSpace = 120; // Space for stats and debug buttons
-        float availableHeight = totalHeight - reservedBottomSpace;
-        
-        // Calculate section heights based on splitter position
-        float hierarchyHeight = availableHeight * splitterPos;
-        float libraryHeight = availableHeight * (1.0f - splitterPos);
-        
-        // Runtime Node Hierarchy section (top)
-        ImGui::Text("Runtime Node Hierarchy");
-        ImGui::Separator();
-        
-        ImGui::BeginChild("NodeTree", ImVec2(0, hierarchyHeight), true);
-        
-        // Clear filesystem selection when clicking in node tree area
-        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0)) {
-            selectedFNodeHandle = TinyHandle();
-        }
-        
-        TinyRScene* activeScene = project->getActiveScene();
-        if (activeScene && activeScene->nodes.count() > 0) {
-            project->renderSelectableNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle);
-        } else {
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
-        }
-        ImGui::EndChild();
-        
-        // Horizontal splitter bar
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 0.8f));
-        
-        ImGui::Button("##Splitter", ImVec2(-1, 4));
-        
-        if (ImGui::IsItemActive()) {
-            float mouseDelta = ImGui::GetIO().MouseDelta.y;
-            splitterPos += mouseDelta / availableHeight;
-            splitterPos = std::max(0.1f, std::min(0.9f, splitterPos)); // Clamp between 10% and 90%
-        }
-        
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-        }
-        
-        ImGui::PopStyleColor(3);
-        
-        // Scene Library section (bottom)
-        ImGui::Text("Scene Library");
-        
-        ImGui::BeginChild("SceneLibrary", ImVec2(0, libraryHeight), true);
-        
-        // Clear filesystem node selection when clicking in folder tree area (but not on items)
-        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
-            selectedSceneNodeHandle = TinyHandle();
-            selectedFNodeHandle = TinyHandle();
-        }
-        
-        renderSceneFolderTree(fs, fs.rootHandle());
-        ImGui::EndChild();
-        
-        ImGui::Spacing();
-        ImGui::Separator();
-        
-        // Scene Library and Runtime Info
-        ImGui::Text("Project Statistics");
-        
-        // Count scenes in library
-        uint32_t totalScenes = fs.registryRef().count<TinyRScene>();
-        ImGui::Text("Loaded Scenes: %u", totalScenes);
-        
-        // Show active scene info
-        if (activeScene) {
-            ImGui::Text("Active Scene: %s", activeScene->name.c_str());
-            ImGui::Text("Active Scene Nodes: %u", activeScene->nodes.count());
-        } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "No Active Scene");
-            ImGui::Text("Active Scene Nodes: 0");
-        }
-
-        ImGui::Spacing();
-        
-        // Debug buttons
-        if (ImGui::Button("Debug Tree")) {
-            project->debugPrintHierarchyTree();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Debug Flat")) {
-            project->debugPrintHierarchyFlat();
-        }
-    }, &showSceneWindow);
     
     // Inspector Window
     imguiWrapper->addWindow("Inspector", [this]() {

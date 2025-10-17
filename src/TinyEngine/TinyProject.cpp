@@ -442,6 +442,14 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
         flags |= ImGuiTreeNodeFlags_Selected;
     }
     
+    // Force open if this node is in the expanded set
+    bool forceOpen = isNodeExpanded(nodeHandle);
+    
+    // Set the default open state (this will be overridden by user interaction)
+    if (forceOpen) {
+        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+    }
+    
     // Extract position from global transform for display
     glm::vec3 worldPos = glm::vec3(node->globalTransform[3]);
     
@@ -458,6 +466,17 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
     }
     
     bool nodeOpen = ImGui::TreeNodeEx(label.c_str(), flags);
+    
+    // Track expansion state changes (only for nodes with children)
+    if (hasChildren) {
+        if (nodeOpen && !forceOpen) {
+            // User expanded this node manually
+            expandedNodes.insert(nodeHandle);
+        } else if (!nodeOpen && isNodeExpanded(nodeHandle)) {
+            // User collapsed this node manually
+            expandedNodes.erase(nodeHandle);
+        }
+    }
     
     // Handle selection
     if (ImGui::IsItemClicked()) {
@@ -485,6 +504,9 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
                 // Update global transforms after reparenting
                 activeScene->updateGlbTransform();
                 
+                // Auto-expand the parent chain to show the newly dropped node
+                expandParentChain(nodeHandle);
+                
                 // If the dragged node was selected, keep it selected
                 if (selectedNode == draggedNode) {
                     selectedNode = draggedNode;
@@ -507,6 +529,9 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
                 if (scene) {
                     // Place the scene at this node
                     addSceneInstance(sceneRegistryHandle, nodeHandle);
+                    
+                    // Auto-expand the parent chain to show the newly instantiated scene
+                    expandParentChain(nodeHandle);
                 }
             }
         }
@@ -531,6 +556,9 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
                     if (scene) {
                         // Place the scene at this node
                         addSceneInstance(sceneRegistryHandle, nodeHandle);
+                        
+                        // Auto-expand the parent chain to show the newly instantiated scene
+                        expandParentChain(nodeHandle);
                     }
                 }
             }
@@ -561,11 +589,30 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
     ImGui::PopID();
 }
 
-
-
-
-
-
+void TinyProject::expandParentChain(TinyHandle nodeHandle) {
+    TinyRScene* activeScene = getActiveScene();
+    if (!activeScene) return;
+    
+    // Get the target node
+    const TinyRNode* targetNode = activeScene->nodes.get(nodeHandle);
+    if (!targetNode) return;
+    
+    // Walk up the parent chain and expand all parents
+    TinyHandle currentHandle = targetNode->parentHandle;
+    while (currentHandle.valid()) {
+        expandedNodes.insert(currentHandle);
+        
+        const TinyRNode* currentNode = activeScene->nodes.get(currentHandle);
+        if (!currentNode) break;
+        
+        currentHandle = currentNode->parentHandle;
+    }
+    
+    // Also expand the target node itself if it has children
+    if (!targetNode->childrenHandles.empty()) {
+        expandedNodes.insert(nodeHandle);
+    }
+}
 
 // Scene deletion can be handled through registry cleanup
 // Runtime nodes are managed through the rtNodes vector directly

@@ -7,6 +7,8 @@
 #include "TinyData/TinyCamera.hpp"
 #include "TinyEngine/TinyGlobal.hpp"
 
+#include <unordered_set>
+
 class TinyProject {
 public:
     TinyProject(const TinyVK::Device* deviceVK);
@@ -74,6 +76,12 @@ public:
     TinyFS& filesystem() { return *tinyFS; }
     const TinyFS& filesystem() const { return *tinyFS; }
 
+    // Node expansion state management for UI
+    void expandNode(TinyHandle nodeHandle) { expandedNodes.insert(nodeHandle); }
+    void collapseNode(TinyHandle nodeHandle) { expandedNodes.erase(nodeHandle); }
+    bool isNodeExpanded(TinyHandle nodeHandle) const { return expandedNodes.count(nodeHandle) > 0; }
+    void expandParentChain(TinyHandle nodeHandle); // Expand all parents up to root
+
 private:
     const TinyVK::Device* deviceVK;
 
@@ -83,6 +91,9 @@ private:
     UniquePtr<TinyFS> tinyFS;
 
     TinyHandle activeSceneHandle; // Handle to the active scene in registry
+
+    // UI state: track expanded nodes in the hierarchy
+    std::unordered_set<TinyHandle> expandedNodes;
 
     TinyHandle defaultMaterialHandle;
     TinyHandle defaultTextureHandle;
