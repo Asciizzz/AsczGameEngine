@@ -278,8 +278,6 @@ void Application::mainLoop() {
 
 // =================================
 
-        project->runPlayground(dTime);
-
         imguiWrapper->newFrame();
 
         project->getGlobal()->update(camRef, rendererRef.getCurrentFrame());
@@ -366,10 +364,25 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         }
         
         if (activeScene && activeScene->nodes.count() > 0) {
-            project->renderSelectableNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle, heldNodeHandle);
+            // Set up context menu callbacks
+            project->onAddChildNode = [this](TinyHandle nodeHandle) {
+                createNewChildNode(nodeHandle);
+            };
+            project->onDeleteNode = [this](TinyHandle nodeHandle) {
+                selectedSceneNodeHandle = nodeHandle; // Set as selected for deletion
+                deleteSelectedNode();
+            };
+            
+            project->renderNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle, heldNodeHandle);
         } else {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
+            
+            // Context menu for empty hierarchy when no scene is active
+            if (ImGui::BeginPopupContextWindow("EmptyHierarchyContextMenu")) {
+                ImGui::TextDisabled("No Active Scene");
+                ImGui::EndPopup();
+            }
         }
         ImGui::EndChild();
         
@@ -402,29 +415,6 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Text("File Explorer");
         ImGui::Separator();
         
-        // Add File/Folder Dropdown Button
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.6f, 0.3f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.7f, 0.4f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
-        
-        if (ImGui::Button("Add +", ImVec2(60, 25))) {
-            ImGui::OpenPopup("AddFileFolder");
-        }
-        ImGui::PopStyleColor(3);
-        
-        // Add File/Folder Popup Menu
-        if (ImGui::BeginPopup("AddFileFolder")) {
-            if (ImGui::MenuItem("Add Folder")) {
-                createNewFolder();
-            }
-            if (ImGui::MenuItem("Add Scene")) {
-                createNewScene();
-            }
-            ImGui::EndPopup();
-        }
-        
-        ImGui::Separator();
-        
         // File Explorer with background
         ImGui::BeginChild("FileExplorer", ImVec2(0, explorerHeight - 30), ImGuiChildFlags_Borders);
         
@@ -433,7 +423,19 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             selectedSceneNodeHandle = TinyHandle();
         }
         
-        renderSceneFolderTree(fs, fs.rootHandle());
+        // Set up file explorer context menu callbacks
+        project->onAddFolder = [this](TinyHandle parentFolder) {
+            createNewFolder(parentFolder);
+        };
+        project->onAddScene = [this](TinyHandle parentFolder) {
+            createNewScene(parentFolder);
+        };
+        project->onDeleteFile = [this](TinyHandle fileHandle) {
+            queueForDeletion(fileHandle);
+        };
+        
+        project->renderFileExplorerImGui(selectedFNodeHandle);
+        
         ImGui::EndChild();
         
     });  // End Editor window
@@ -587,6 +589,12 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
         
+        // Auto-expand folder if requested
+        if (autoExpandFolderHandle.valid() && autoExpandFolderHandle == folderHandle) {
+            ImGui::SetNextItemOpen(true);
+            autoExpandFolderHandle = TinyHandle(); // Clear after using
+        }
+        
         bool nodeOpen = ImGui::TreeNodeEx(folder->name.c_str(), 
             ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick |
             (isFolderSelected ? ImGuiTreeNodeFlags_Selected : 0));
@@ -627,6 +635,9 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         
         // Context menu for folders
         if (ImGui::BeginPopupContextItem()) {
+            ImGui::Text("%s", folder->name.c_str());
+            ImGui::Separator();
+            
             if (ImGui::MenuItem("Add Folder")) {
                 createNewFolder(folderHandle);
             }
@@ -634,8 +645,8 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                 createNewScene(folderHandle);
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Delete", nullptr, false, folder->cfg.deletable)) {
-                if (folder->cfg.deletable) {
+            if (ImGui::MenuItem("Delete", nullptr, false, folder->isDeletable())) {
+                if (folder->isDeletable()) {
                     queueForDeletion(folderHandle);
                 }
             }
@@ -718,6 +729,9 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             
                             // Context menu for scene files
                             if (ImGui::BeginPopupContextItem()) {
+                                ImGui::Text("%s", child->name.c_str());
+                                ImGui::Separator();
+                                
                                 // Get scene handle from TypeHandle
                                 TinyHandle sceneRegistryHandle = child->tHandle.handle;
                                 bool isCurrentlyActive = (project->getActiveSceneHandle() == sceneRegistryHandle);
@@ -738,8 +752,8 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                     // TODO: Implement scene duplication
                                 }
                                 
-                                if (ImGui::MenuItem("Delete", nullptr, false, child->cfg.deletable)) {
-                                    if (child->cfg.deletable) {
+                                if (ImGui::MenuItem("Delete", nullptr, false, child->isDeletable())) {
+                                    if (child->isDeletable()) {
                                         queueForDeletion(childHandle);
                                     }
                                 }
@@ -801,8 +815,11 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         
                         // Context menu for other file types
                         if (ImGui::BeginPopupContextItem()) {
-                            if (ImGui::MenuItem("Delete", nullptr, false, child->cfg.deletable)) {
-                                if (child->cfg.deletable) {
+                            ImGui::Text("%s", child->name.c_str());
+                            ImGui::Separator();
+                            
+                            if (ImGui::MenuItem("Delete", nullptr, false, child->isDeletable())) {
+                                if (child->isDeletable()) {
                                     queueForDeletion(childHandle);
                                 }
                             }
@@ -879,6 +896,40 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
                             ImGui::EndDragDropSource();
                         }
+                        
+                        // Context menu for root-level scene files
+                        if (ImGui::BeginPopupContextItem()) {
+                            ImGui::Text("%s", child->name.c_str());
+                            ImGui::Separator();
+                            
+                            // Get scene handle from TypeHandle
+                            TinyHandle sceneRegistryHandle = child->tHandle.handle;
+                            bool isCurrentlyActive = (project->getActiveSceneHandle() == sceneRegistryHandle);
+                            
+                            if (isCurrentlyActive) {
+                                ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
+                            } else {
+                                if (ImGui::MenuItem("Make Active Scene")) {
+                                    if (project->setActiveScene(sceneRegistryHandle)) {
+                                        selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
+                                    }
+                                }
+                            }
+                            
+                            ImGui::Separator();
+                            
+                            if (ImGui::MenuItem("Duplicate Scene")) {
+                                // TODO: Implement scene duplication
+                            }
+                            
+                            if (ImGui::MenuItem("Delete", nullptr, false, child->isDeletable())) {
+                                if (child->isDeletable()) {
+                                    queueForDeletion(childHandle);
+                                }
+                            }
+                            
+                            ImGui::EndPopup();
+                        }
                     }
                 } else {
                     // Other root-level files
@@ -908,8 +959,11 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                     
                     // Context menu for root-level files
                     if (ImGui::BeginPopupContextItem()) {
-                        if (ImGui::MenuItem("Delete", nullptr, false, child->cfg.deletable)) {
-                            if (child->cfg.deletable) {
+                        ImGui::Text("%s", child->name.c_str());
+                        ImGui::Separator();
+                        
+                        if (ImGui::MenuItem("Delete", nullptr, false, child->isDeletable())) {
+                            if (child->isDeletable()) {
                                 queueForDeletion(childHandle);
                             }
                         }
@@ -1050,26 +1104,6 @@ void Application::renderNodeInspector() {
     ImGui::Text("Children: %zu", selectedNode->childrenHandles.size());
     
     ImGui::Spacing();
-    
-    // NEW CHILD BUTTON
-    if (ImGui::Button("New Child", ImVec2(-1, 0))) {
-        createNewChildNode(selectedSceneNodeHandle);
-    }
-    
-    // DELETE NODE BUTTON (red and shiny)
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
-    
-    // Only show delete button if not root node
-    if (!isRootNode) {
-        if (ImGui::Button("Delete Node", ImVec2(-1, 0))) {
-            deleteSelectedNode();
-        }
-    }
-    
-    ImGui::PopStyleColor(3);
-    
     ImGui::Separator();
     
     // SCROLLABLE COMPONENTS SECTION 
@@ -1154,7 +1188,7 @@ void Application::processPendingDeletions() {
     for (TinyHandle handle : pendingDeletions) {
         fs.removeFNode(handle);
     }
-    
+
     pendingDeletions.clear();
 }
 
@@ -1212,43 +1246,8 @@ void Application::renderFileSystemInspector() {
     
     ImGui::Spacing();
     
-    // === SHARED: DELETE BUTTON ===
-    if (selectedFNode->cfg.deletable) {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
-        
-        if (ImGui::Button("Delete", ImVec2(-1, 30))) {
-            queueForDeletion(selectedFNodeHandle);
-        }
-        
-        ImGui::PopStyleColor(3);
-        ImGui::Spacing();
-    }
-    
-    // === FOLDER-SPECIFIC: ADD BUTTON ===
+    // === FOLDER-SPECIFIC: FOLDER INFO ===
     if (isFolder) {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.6f, 0.3f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.7f, 0.4f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
-        
-        if (ImGui::Button("Add +", ImVec2(-1, 30))) {
-            ImGui::OpenPopup("AddToFolder");
-        }
-        ImGui::PopStyleColor(3);
-        
-        // Add popup menu
-        if (ImGui::BeginPopup("AddToFolder")) {
-            if (ImGui::MenuItem("Add Folder")) {
-                createNewFolder(selectedFNodeHandle);
-            }
-            if (ImGui::MenuItem("Add Scene")) {
-                createNewScene(selectedFNodeHandle);
-            }
-            ImGui::EndPopup();
-        }
-        
-        ImGui::Spacing();
         ImGui::Separator();
         
         // Folder info
@@ -1484,7 +1483,7 @@ void Application::renderMeshRenderComponent(TinyRNode* selectedNode) {
         
         // Skeleton Node Handle field with enhanced drag-drop support  
         ImGui::Text("Skeleton Node:");
-        bool skeleModified = renderEnhancedHandleField("##SkeletonNodeHandle", meshComp->skeleNodeHandle, "SkeletonNode",
+        bool skeleModified = renderEnhancedHandleField("##MeshRenderer_SkeletonNodeHandle", meshComp->skeleNodeHandle, "SkeletonNode",
             "Drag a skeleton node from the Hierarchy",
             "Select skeleton node for bone animation");
         
@@ -1598,7 +1597,7 @@ void Application::renderBoneAttachComponent(TinyRNode* selectedNode) {
             
             // Skeleton Node Handle field with enhanced drag-drop support
             ImGui::Text("Skeleton Node:");
-            bool skeleModified = renderEnhancedHandleField("##SkeletonNodeHandle", boneComp->skeleNodeHandle, "SkeletonNode",
+            bool skeleModified = renderEnhancedHandleField("##BoneAttach_SkeletonNodeHandle", boneComp->skeleNodeHandle, "SkeletonNode",
                 "Drag a skeleton node from the Hierarchy",
                 "Select skeleton node to attach to");
             
@@ -1921,7 +1920,7 @@ void Application::deleteSelectedNode() {
     const TinyRNode* nodeToDelete = activeScene->nodes.get(selectedSceneNodeHandle);
     TinyHandle parentHandle = nodeToDelete ? nodeToDelete->parentHandle : TinyHandle();
     
-    // Delete the node and all its children
+    // Delete the scene node directly (scene nodes are not filesystem resources)
     if (activeScene->deleteNodeRecursive(selectedSceneNodeHandle)) {
         // Select parent after deletion
         if (parentHandle.valid()) {
@@ -1970,6 +1969,12 @@ void Application::createNewFolder(TinyHandle parentFolderHandle) {
         if (newFolderHandle.valid()) {
             // Select the newly created folder
             selectedFNodeHandle = newFolderHandle;
+            
+            // Auto-expand the parent folder to show the new folder
+            if (parentFolderHandle.valid()) {
+                // Store the parent handle for next frame expansion
+                autoExpandFolderHandle = parentFolderHandle;
+            }
         }
     }
 }
@@ -2021,6 +2026,12 @@ void Application::createNewScene(TinyHandle parentFolderHandle) {
         if (newFileHandle.valid()) {
             // Select the newly created scene file
             selectedFNodeHandle = newFileHandle;
+            
+            // Auto-expand the parent folder to show the new file
+            if (parentFolderHandle.valid()) {
+                // Store the parent handle for next frame expansion
+                autoExpandFolderHandle = parentFolderHandle;
+            }
         }
     }
 }

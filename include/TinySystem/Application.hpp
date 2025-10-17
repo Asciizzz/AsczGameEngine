@@ -60,9 +60,10 @@ private:
     
     // Filesystem node selection (folders and files)
     TinyHandle selectedFNodeHandle;
+    TinyHandle autoExpandFolderHandle; // Folder to auto-expand on next render
     
     // Deferred deletion system to handle resource cleanup after frame completion
-    std::vector<TinyHandle> pendingDeletions;
+    std::vector<TinyHandle> pendingDeletions; // Universal deletion queue for all handle types
 
     // Window metadata
     const char* appTitle;

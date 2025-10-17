@@ -242,176 +242,7 @@ bool TinyProject::setActiveScene(TinyHandle sceneHandle) {
 }
 
 
-
-
-void TinyProject::runPlayground(float dTime) {
-    return;
-}
-
-void TinyProject::debugPrintHierarchyTree(TinyHandle nodeHandle, int depth) {
-    TinyRScene* activeScene = getActiveScene();
-    if (!activeScene) {
-        std::cout << "No active scene!" << std::endl;
-        return;
-    }
-
-    // Use root node if no valid handle provided
-    if (!nodeHandle.valid()) {
-        nodeHandle = activeScene->rootNode;
-        std::cout << "=== SCENE HIERARCHY TREE ===" << std::endl;
-        std::cout << "Active scene handle: " << activeSceneHandle.index << "_v" << activeSceneHandle.version << std::endl;
-        std::cout << "Root node handle: " << nodeHandle.index << "_v" << nodeHandle.version << std::endl;
-        std::cout << "Total nodes in pool: " << activeScene->nodes.count() << std::endl;
-        std::cout << "--- Tree Structure ---" << std::endl;
-    }
-
-    const TinyRNode* node = activeScene->nodes.get(nodeHandle);
-    if (!node) {
-        for (int i = 0; i < depth; i++) std::cout << "  ";
-        std::cout << "[INVALID NODE: " << nodeHandle.index << "_v" << nodeHandle.version << "]" << std::endl;
-        return;
-    }
-
-    // Print indented node info
-    for (int i = 0; i < depth; i++) std::cout << "  ";
-    std::cout << "- " << node->name << " (" << nodeHandle.index << "_v" << nodeHandle.version << ")";
-    
-    // Add type info
-    if (node->hasType(TinyNode::Types::MeshRender)) std::cout << " [Mesh]";
-    if (node->hasType(TinyNode::Types::Skeleton)) std::cout << " [Skeleton]";
-    if (node->hasType(TinyNode::Types::BoneAttach)) std::cout << " [BoneAttach]";
-    
-    // Parent info
-    if (node->parentHandle.valid()) {
-        std::cout << " (parent: " << node->parentHandle.index << "_v" << node->parentHandle.version << ")";
-    } else {
-        std::cout << " (ROOT)";
-    }
-    
-    // Children count
-    std::cout << " [" << node->childrenHandles.size() << " children]" << std::endl;
-
-    // Recurse for children
-    for (const TinyHandle& childHandle : node->childrenHandles) {
-        debugPrintHierarchyTree(childHandle, depth + 1);
-    }
-}
-
-void TinyProject::debugPrintHierarchyFlat() {
-    TinyRScene* activeScene = getActiveScene();
-    if (!activeScene) {
-        std::cout << "No active scene!" << std::endl;
-        return;
-    }
-
-    std::cout << "=== SCENE HIERARCHY FLAT ===" << std::endl;
-    std::cout << "Active scene handle: " << activeSceneHandle.index << "_v" << activeSceneHandle.version << std::endl;
-    std::cout << "Root node handle: " << activeScene->rootNode.index << "_v" << activeScene->rootNode.version << std::endl;
-    std::cout << "Total pool capacity: " << activeScene->nodes.view().size() << std::endl;
-    std::cout << "Active nodes in pool: " << activeScene->nodes.count() << std::endl;
-    std::cout << "--- All Nodes (by pool index) ---" << std::endl;
-
-    // Iterate through all pool slots
-    for (uint32_t i = 0; i < activeScene->nodes.view().size(); ++i) {
-        if (!activeScene->nodes.isOccupied(i)) continue;
-        
-        TinyHandle handle = activeScene->nodes.getHandle(i);
-        const TinyRNode* node = activeScene->nodes.get(handle);
-        
-        if (!node) continue;
-
-        std::cout << "[" << i << "] " << handle.index << "_v" << handle.version 
-                  << " '" << node->name << "'";
-        
-        // Add type info
-        if (node->hasType(TinyNode::Types::MeshRender)) std::cout << " [Mesh]";
-        if (node->hasType(TinyNode::Types::Skeleton)) std::cout << " [Skeleton]";
-        if (node->hasType(TinyNode::Types::BoneAttach)) std::cout << " [BoneAttach]";
-        
-        // Parent/children info
-        std::cout << " | Parent: ";
-        if (node->parentHandle.valid()) {
-            std::cout << node->parentHandle.index << "_v" << node->parentHandle.version;
-        } else {
-            std::cout << "NONE";
-        }
-        
-        std::cout << " | Children(" << node->childrenHandles.size() << "): ";
-        for (size_t j = 0; j < node->childrenHandles.size(); ++j) {
-            if (j > 0) std::cout << ", ";
-            const TinyHandle& ch = node->childrenHandles[j];
-            std::cout << ch.index << "_v" << ch.version;
-        }
-        std::cout << std::endl;
-    }
-    std::cout << "=========================" << std::endl;
-}
-
-void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
-    TinyRScene* activeScene = getActiveScene();
-    if (!activeScene) return;
-    
-    // Use root node if no valid handle provided
-    if (!nodeHandle.valid()) {
-        nodeHandle = activeScene->rootNode;
-    }
-    
-    const TinyRNode* node = activeScene->nodes.get(nodeHandle);
-    if (!node) return;
-    
-    // Create a unique ID for this node
-    ImGui::PushID(static_cast<int>(nodeHandle.index));
-    
-    // Check if this node has children
-    bool hasChildren = !node->childrenHandles.empty();
-    
-    // Create tree node or leaf
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    if (!hasChildren) {
-        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-    }
-    
-    // Extract position from global transform for display
-    glm::vec3 worldPos = glm::vec3(node->globalTransform[3]);
-    
-    // Create the node label with useful information
-    std::string label = node->name;
-    if (node->hasType(TinyNode::Types::MeshRender)) {
-        label += " [Mesh]";
-    }
-    if (node->hasType(TinyNode::Types::Skeleton)) {
-        label += " [Skeleton]";
-    }
-    if (node->hasType(TinyNode::Types::BoneAttach)) {
-        label += " [BoneAttach]";
-    }
-    
-    bool nodeOpen = ImGui::TreeNodeEx(label.c_str(), flags);
-    
-    // Show node details in tooltip
-    if (ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip();
-        ImGui::Text("Handle: %u_v%u", nodeHandle.index, nodeHandle.version);
-        ImGui::Text("Parent: %u_v%u", node->parentHandle.index, node->parentHandle.version);
-        ImGui::Text("Children: %zu", node->childrenHandles.size());
-        
-        ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
-        ImGui::Text("Type Mask: 0x%X", node->types);
-        ImGui::EndTooltip();
-    }
-    
-    // If node is open and has children, recurse for children
-    if (nodeOpen && hasChildren) {
-        for (const TinyHandle& childHandle : node->childrenHandles) {
-            renderNodeTreeImGui(childHandle, depth + 1);
-        }
-        ImGui::TreePop();
-    }
-    
-    ImGui::PopID();
-}
-
-void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, TinyHandle& heldNode, int depth) {
+void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, TinyHandle& heldNode, int depth) {
     TinyRScene* activeScene = getActiveScene();
     if (!activeScene) return;
     
@@ -451,24 +282,9 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
     if (forceOpen) {
         ImGui::SetNextItemOpen(true, ImGuiCond_Always);
     }
-    
-    // Extract position from global transform for display
-    glm::vec3 worldPos = glm::vec3(node->globalTransform[3]);
-    
-    // Create the node label with useful information
-    std::string label = node->name;
-    if (node->hasType(TinyNode::Types::MeshRender)) {
-        label += " [Mesh]";
-    }
-    if (node->hasType(TinyNode::Types::Skeleton)) {
-        label += " [Skeleton]";
-    }
-    if (node->hasType(TinyNode::Types::BoneAttach)) {
-        label += " [BoneAttach]";
-    }
-    
-    bool nodeOpen = ImGui::TreeNodeEx(label.c_str(), flags);
-    
+
+    bool nodeOpen = ImGui::TreeNodeEx(node->name.c_str(), flags);
+
     // Track expansion state changes (only for nodes with children)
     if (hasChildren) {
         if (nodeOpen && !forceOpen) {
@@ -587,21 +403,77 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
         ImGui::EndDragDropTarget();
     }
     
-    // Show node details in tooltip
+    // Context menu for individual nodes
+    if (ImGui::BeginPopupContextItem()) {
+        ImGui::Text("%s", node->name.c_str());
+        ImGui::Separator();
+        
+        // Show component types in context menu
+        std::string typeLabel = "";
+        if (node->hasType(TinyNode::Types::MeshRender)) {
+            typeLabel += "[Mesh] ";
+        }
+        if (node->hasType(TinyNode::Types::BoneAttach)) {
+            typeLabel += "[BoneAttach] ";
+        }
+        if (node->hasType(TinyNode::Types::Skeleton)) {
+            typeLabel += "[Skeleton] ";
+        }
+        
+        if (!typeLabel.empty()) {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s", typeLabel.c_str());
+            ImGui::Separator();
+        }
+        
+        if (ImGui::MenuItem("Add Child")) {
+            if (onAddChildNode) {
+                onAddChildNode(nodeHandle);
+            }
+        }
+        
+        // Only show delete for non-root nodes
+        if (nodeHandle != activeScene->rootNode) {
+            if (ImGui::MenuItem("Delete Node")) {
+                if (onDeleteNode) {
+                    onDeleteNode(nodeHandle);
+                }
+            }
+        }
+        
+        ImGui::EndPopup();
+    }
+    
+    // Show node details in tooltip (slicker version like the old function)
     if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
         ImGui::BeginTooltip();
-        ImGui::Text("Handle: %u_v%u", nodeHandle.index, nodeHandle.version);
-        ImGui::Text("Parent: %u_v%u", node->parentHandle.index, node->parentHandle.version);
-        ImGui::Text("Children: %zu", node->childrenHandles.size());
-        ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
-        ImGui::Text("Type Mask: 0x%X", node->types);
+
+        // Create the node label with useful information
+        std::string typeLabel = "";
+        if (node->hasType(TinyNode::Types::MeshRender)) {
+            typeLabel += "[Mesh] ";
+        }
+        if (node->hasType(TinyNode::Types::BoneAttach)) {
+            typeLabel += "[BoneAttach] ";
+        }
+        if (node->hasType(TinyNode::Types::Skeleton)) {
+            typeLabel += "[Skeleton] ";
+        }
+
+        typeLabel = typeLabel.empty() ? "[None]" : typeLabel;
+        
+        ImGui::Text("Types: %s", typeLabel.c_str());
+
+        if (!node->childrenHandles.empty()) {
+            ImGui::Text("Children: %zu", node->childrenHandles.size());
+        }
+        
         ImGui::EndTooltip();
     }
     
     // If node is open and has children, recurse for children
     if (nodeOpen && hasChildren) {
         for (const TinyHandle& childHandle : node->childrenHandles) {
-            renderSelectableNodeTreeImGui(childHandle, selectedNode, heldNode, depth + 1);
+            renderNodeTreeImGui(childHandle, selectedNode, heldNode, depth + 1);
         }
         ImGui::TreePop();
     }
@@ -610,6 +482,21 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
     ImGui::PopStyleColor(2); // Pop HeaderHovered and Header
     
     ImGui::PopID();
+    
+    // Context menu for empty hierarchy area - only if we're at root level
+    if (depth == 0) {
+        if (ImGui::BeginPopupContextWindow("HierarchyContextMenu")) {
+            ImGui::Text("Hierarchy");
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Add Root Node")) {
+                if (onAddChildNode) {
+                    onAddChildNode(activeScene->rootNode);
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
 }
 
 void TinyProject::expandParentChain(TinyHandle nodeHandle) {
@@ -639,3 +526,262 @@ void TinyProject::expandParentChain(TinyHandle nodeHandle) {
 
 // Scene deletion can be handled through registry cleanup
 // Runtime nodes are managed through the rtNodes vector directly
+
+void TinyProject::renderFileExplorerImGui(TinyHandle& selectedFile, int depth) {
+    TinyFS& fs = filesystem();
+    
+    // Start with root folder
+    renderFileFolderTree(fs, fs.rootHandle(), selectedFile, depth);
+    
+    // Context menu for empty space in file explorer
+    if (ImGui::BeginPopupContextWindow("FileExplorerContextMenu")) {
+        ImGui::Text("File Explorer");
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("Add Folder")) {
+            if (onAddFolder) {
+                onAddFolder(TinyHandle()); // Root folder
+            }
+        }
+        if (ImGui::MenuItem("Add Scene")) {
+            if (onAddScene) {
+                onAddScene(TinyHandle()); // Root folder
+            }
+        }
+        
+        ImGui::EndPopup();
+    }
+}
+
+void TinyProject::renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, TinyHandle& selectedFile, int depth) {
+    const TinyFNode* folder = fs.getFNodes().get(folderHandle);
+    if (!folder) return;
+    
+    // Skip root node display
+    if (folderHandle != fs.rootHandle()) {
+        ImGui::PushID(folderHandle.index);
+        
+        // Check if this folder is selected
+        bool isFolderSelected = (selectedFile == folderHandle);
+        
+        // Use consistent styling with node hierarchy
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
+        
+        bool nodeOpen = ImGui::TreeNodeEx(folder->name.c_str(), 
+            ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick |
+            (isFolderSelected ? ImGuiTreeNodeFlags_Selected : 0));
+        
+        ImGui::PopStyleColor(3);
+        
+        // Handle folder selection
+        if (ImGui::IsItemClicked()) {
+            selectedFile = folderHandle;
+        }
+        
+        // Drag source for folders
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            ImGui::SetDragDropPayload("FOLDER_HANDLE", &folderHandle, sizeof(TinyHandle));
+            ImGui::Text("Moving folder: %s", folder->name.c_str());
+            ImGui::EndDragDropSource();
+        }
+        
+        // Drag drop target for folders and files
+        if (ImGui::BeginDragDropTarget()) {
+            // Accept folders being dropped
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
+                TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
+                if (draggedFolder != folderHandle) { // Can't drop folder on itself
+                    fs.moveFNode(draggedFolder, folderHandle);
+                }
+            }
+            
+            // Accept files being dropped  
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+                TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
+                fs.moveFNode(draggedFile, folderHandle);
+            }
+            
+            ImGui::EndDragDropTarget();
+        }
+        
+        // Context menu for folders - same style as node hierarchy
+        if (ImGui::BeginPopupContextItem()) {
+            ImGui::Text("%s", folder->name.c_str());
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Add Folder")) {
+                if (onAddFolder) {
+                    onAddFolder(folderHandle);
+                }
+            }
+            if (ImGui::MenuItem("Add Scene")) {
+                if (onAddScene) {
+                    onAddScene(folderHandle);
+                }
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Delete", nullptr, false, folder->isDeletable())) {
+                if (folder->isDeletable() && onDeleteFile) {
+                    onDeleteFile(folderHandle);
+                }
+            }
+            ImGui::EndPopup();
+        }
+        
+        if (nodeOpen) {
+            // Render children with proper indentation
+            for (TinyHandle childHandle : folder->children) {
+                const TinyFNode* child = fs.getFNodes().get(childHandle);
+                if (!child || child->isHidden()) continue; // Skip invalid or hidden nodes
+
+                if (child->type == TinyFNode::Type::Folder) {
+                    renderFileFolderTree(fs, childHandle, selectedFile, depth + 1);
+                } else if (child->type == TinyFNode::Type::File) {
+                    renderFileItem(fs, childHandle, selectedFile);
+                }
+            }
+            ImGui::TreePop();
+        }
+        
+        ImGui::PopID();
+    } else {
+        // Root folder - just render children without tree node
+        for (TinyHandle childHandle : folder->children) {
+            const TinyFNode* child = fs.getFNodes().get(childHandle);
+            if (!child || child->isHidden()) continue; // Skip invalid or hidden nodes
+
+            if (child->type == TinyFNode::Type::Folder) {
+                renderFileFolderTree(fs, childHandle, selectedFile, depth);
+            } else if (child->type == TinyFNode::Type::File) {
+                renderFileItem(fs, childHandle, selectedFile);
+            }
+        }
+    }
+}
+
+void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle, TinyHandle& selectedFile) {
+    const TinyFNode* file = fs.getFNodes().get(fileHandle);
+    if (!file) return;
+    
+    ImGui::PushID(fileHandle.index);
+    
+    bool isSelected = (selectedFile == fileHandle);
+    
+    if (file->tHandle.isType<TinyRScene>()) {
+        // Scene file
+        TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(file->tHandle));
+        if (scene) {
+            std::string sceneName = file->name;
+            
+            // Check if this is the active scene for red backdrop
+            TinyHandle sceneRegistryHandle = file->tHandle.handle;
+            bool isActiveScene = (getActiveSceneHandle() == sceneRegistryHandle);
+            
+            // Add permanent red backdrop for active scene files
+            if (isActiveScene) {
+                ImVec2 itemSize = ImGui::CalcTextSize(sceneName.c_str());
+                ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+                ImVec2 itemMax = ImVec2(cursorPos.x + ImGui::GetContentRegionAvail().x, cursorPos.y + itemSize.y);
+                ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(200, 50, 50, 100)); // Red backdrop
+            }
+            
+            // Set colors for scene files: gray text, normal selection behavior
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Subtle hover background
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
+            
+            if (ImGui::Selectable(sceneName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                selectedFile = fileHandle;
+                
+                // Double-click handling would need to be passed to Application
+                if (ImGui::IsMouseDoubleClicked(0)) {
+                    // This would need a callback for double-click scene placement
+                }
+            }
+            
+            ImGui::PopStyleColor(3);
+            
+            // Drag source for scene files
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                ImGui::SetDragDropPayload("FILE_HANDLE", &fileHandle, sizeof(TinyHandle));
+                ImGui::Text("Scene: %s", file->name.c_str());
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
+                ImGui::EndDragDropSource();
+            }
+            
+            // Context menu for scene files - same style as node hierarchy
+            if (ImGui::BeginPopupContextItem()) {
+                ImGui::Text("%s", file->name.c_str());
+                ImGui::Separator();
+                
+                // Get scene handle from TypeHandle
+                TinyHandle sceneRegistryHandle = file->tHandle.handle;
+                bool isCurrentlyActive = (getActiveSceneHandle() == sceneRegistryHandle);
+                
+                if (isCurrentlyActive) {
+                    ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
+                } else {
+                    if (ImGui::MenuItem("Make Active Scene")) {
+                        setActiveScene(sceneRegistryHandle);
+                    }
+                }
+                
+                ImGui::Separator();
+                
+                if (ImGui::MenuItem("Duplicate Scene")) {
+                    // TODO: Implement scene duplication
+                }
+                
+                if (ImGui::MenuItem("Delete", nullptr, false, file->isDeletable())) {
+                    if (file->isDeletable() && onDeleteFile) {
+                        onDeleteFile(fileHandle);
+                    }
+                }
+                
+                ImGui::EndPopup();
+            }
+        }
+    } else {
+        // Other file types
+        std::string fileName = file->name;
+        
+        // Set colors for other files: gray text, gray selection background
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.2f, 0.2f, 0.2f, 0.3f)); // Subtle hover background
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
+        
+        ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_None);
+        
+        // Handle file selection
+        if (ImGui::IsItemClicked()) {
+            selectedFile = fileHandle;
+        }
+        
+        ImGui::PopStyleColor(3);
+        
+        // Drag source for other files
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            ImGui::SetDragDropPayload("FILE_HANDLE", &fileHandle, sizeof(TinyHandle));
+            ImGui::Text("Moving file: %s", file->name.c_str());
+            ImGui::EndDragDropSource();
+        }
+        
+        // Context menu for other file types - same style as node hierarchy
+        if (ImGui::BeginPopupContextItem()) {
+            ImGui::Text("%s", file->name.c_str());
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Delete", nullptr, false, file->isDeletable())) {
+                if (file->isDeletable() && onDeleteFile) {
+                    onDeleteFile(fileHandle);
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
+    
+    ImGui::PopID();
+}

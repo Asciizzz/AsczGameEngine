@@ -35,25 +35,23 @@ public:
     void addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode = TinyHandle());
 
     /**
-     * Renders an ImGui collapsible tree view of the active scene node hierarchy
-     */
-    void renderNodeTreeImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
-    
-    /**
      * Renders an ImGui collapsible tree view with node selection support for the active scene
      */
-    void renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, TinyHandle& heldNode, int depth = 0);
-
-
-    /**
-     * Playground function for testing - rotates root node by 90 degrees per second
-     * @param dTime Delta time in seconds
-     */
-    void runPlayground(float dTime);
-
-    // Debug functions
-    void debugPrintHierarchyTree(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
-    void debugPrintHierarchyFlat();
+    void renderNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, TinyHandle& heldNode, int depth = 0);
+    void renderFileExplorerImGui(TinyHandle& selectedFile, int depth = 0);
+    
+    // Helper functions for file explorer
+    void renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, TinyHandle& selectedFile, int depth);
+    void renderFileItem(TinyFS& fs, TinyHandle fileHandle, TinyHandle& selectedFile);
+    
+    // Context menu callbacks - set these to handle context menu actions
+    std::function<void(TinyHandle)> onAddChildNode = nullptr;
+    std::function<void(TinyHandle)> onDeleteNode = nullptr;
+    
+    // File explorer context menu callbacks
+    std::function<void(TinyHandle)> onAddFolder = nullptr;      // parentFolder (or invalid for root)
+    std::function<void(TinyHandle)> onAddScene = nullptr;       // parentFolder (or invalid for root)
+    std::function<void(TinyHandle)> onDeleteFile = nullptr;     // fileHandle
 
     // Active scene access methods
     TinyRScene* getActiveScene() const { return tinyFS->registryRef().get<TinyRScene>(activeSceneHandle); }
