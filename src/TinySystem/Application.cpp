@@ -1422,39 +1422,50 @@ void Application::renderComponentsInspector(const TinyRNode* selectedNode) {
     if (selectedNode->hasComponent<TinyNode::MeshRender>()) {
         renderMeshRenderComponent(mutableNode);
         ImGui::Spacing();
+        ImGui::Spacing(); // Extra spacing between components
     }
     
     // 2. Bone Attach Component (second priority)  
     if (selectedNode->hasComponent<TinyNode::BoneAttach>()) {
         renderBoneAttachComponent(mutableNode);
         ImGui::Spacing();
+        ImGui::Spacing(); // Extra spacing between components
     }
     
     // 3. Skeleton Component (third priority)
     if (selectedNode->hasComponent<TinyNode::Skeleton>()) {
         renderSkeletonComponent(mutableNode);
         ImGui::Spacing();
+        ImGui::Spacing(); // Extra spacing between components
     }
 }
 
 void Application::renderMeshRenderComponent(TinyRNode* selectedNode) {
-    // Dynamic component - no fixed container, just content with separator
-    ImGui::Separator();
+    // Component container with styled background
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.2f, 0.8f)); // Dark blue-gray background
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.3f, 0.4f, 0.6f)); // Subtle border
     
-    // Header with remove button
-    ImGui::Text("Mesh Renderer");
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
-    if (ImGui::Button("Remove##MeshRender", ImVec2(65, 0))) {
-        selectedNode->remove<TinyNode::MeshRender>();
+    if (ImGui::BeginChild("MeshRendererComponent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
+        // Header with remove button
+        ImGui::Text("Mesh Renderer");
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+        if (ImGui::Button("Remove##MeshRender", ImVec2(65, 0))) {
+            selectedNode->remove<TinyNode::MeshRender>();
+            ImGui::PopStyleColor(3);
+            ImGui::EndChild();
+            ImGui::PopStyleColor(2);
+            ImGui::PopStyleVar(2);
+            return;
+        }
         ImGui::PopStyleColor(3);
-        return;
+        
+        ImGui::Separator();
     }
-    ImGui::PopStyleColor(3);
-    
-    ImGui::Separator();
     
     TinyNode::MeshRender* meshComp = selectedNode->get<TinyNode::MeshRender>();
     if (meshComp) {
@@ -1505,25 +1516,35 @@ void Application::renderMeshRenderComponent(TinyRNode* selectedNode) {
         ImGui::Spacing();
     }
     
-    ImGui::Separator();
+    ImGui::EndChild();
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(2);
 }
 
 void Application::renderSkeletonComponent(TinyRNode* selectedNode) {
-    // Dynamic component - no fixed container
-    ImGui::Separator();
+    // Component container with styled background
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.2f, 0.15f, 0.15f, 0.8f)); // Dark red-gray background
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.4f, 0.3f, 0.3f, 0.6f)); // Subtle border
     
-    // Header with remove button
-    ImGui::Text("Skeleton");
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 65);
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    if (ImGui::Button("Remove##Skeleton", ImVec2(60, 0))) {
-        selectedNode->remove<TinyNode::Skeleton>();
+    if (ImGui::BeginChild("SkeletonComponent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
+        // Header with remove button
+        ImGui::Text("Skeleton");
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 65);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+        if (ImGui::Button("Remove##Skeleton", ImVec2(60, 0))) {
+            selectedNode->remove<TinyNode::Skeleton>();
+            ImGui::PopStyleColor(1);
+            ImGui::EndChild();
+            ImGui::PopStyleColor(2);
+            ImGui::PopStyleVar(2);
+            return;
+        }
         ImGui::PopStyleColor(1);
-        return;
+        ImGui::Separator();
     }
-    ImGui::PopStyleColor(1);
-    ImGui::Separator();
-        
+
     TinyNode::Skeleton* skeleComp = selectedNode->get<TinyNode::Skeleton>();
     if (skeleComp) {
         ImGui::Spacing();
@@ -1572,24 +1593,33 @@ void Application::renderSkeletonComponent(TinyRNode* selectedNode) {
         ImGui::Spacing();
     }
     
-    ImGui::Separator();
+    ImGui::EndChild();
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(2);
 }
 
 void Application::renderBoneAttachComponent(TinyRNode* selectedNode) {
-    // Dynamic component - no fixed container
-    ImGui::Separator();
+    // Component container with styled background
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.2f, 0.15f, 0.8f)); // Dark green-gray background
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.4f, 0.3f, 0.6f)); // Subtle border
     
-    // Header with remove button
-    ImGui::Text("Bone Attachment");
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 65);
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    if (ImGui::Button("Remove##BoneAttach", ImVec2(60, 0))) {
-        selectedNode->remove<TinyNode::BoneAttach>();
+    if (ImGui::BeginChild("BoneAttachComponent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
+        // Header with remove button
+        ImGui::Text("Bone Attachment");
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 65);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+        if (ImGui::Button("Remove##BoneAttach", ImVec2(60, 0))) {
+            selectedNode->remove<TinyNode::BoneAttach>();
+            ImGui::PopStyleColor(1);
+            ImGui::EndChild();
+            ImGui::PopStyleColor(2);
+            ImGui::PopStyleVar(2);
+            return;
+        }
         ImGui::PopStyleColor(1);
-        return;
-    }
-    ImGui::PopStyleColor(1);
-    ImGui::Separator();
+        ImGui::Separator();
         
         TinyNode::BoneAttach* boneComp = selectedNode->get<TinyNode::BoneAttach>();
         if (boneComp) {
@@ -1684,8 +1714,11 @@ void Application::renderBoneAttachComponent(TinyRNode* selectedNode) {
             
             ImGui::Spacing();
         }
-        
-    ImGui::Separator();
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(2);
 }
 
 bool Application::renderHandleField(const char* label, TinyHandle& handle, const char* targetType, const char* tooltip) {
