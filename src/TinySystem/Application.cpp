@@ -1113,7 +1113,7 @@ void Application::renderNodeInspector() {
     TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
     
     // Helper function to render a component with consistent styling
-    auto renderComponent = [&](const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove = nullptr) {
+    auto renderComponent = [&](const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onAction = nullptr) {
         // Component container with styled background
         ImGui::PushStyleColor(ImGuiCol_ChildBg, backgroundColor);
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
@@ -1123,36 +1123,68 @@ void Application::renderNodeInspector() {
         // Create unique ID for this component
         std::string childId = std::string(componentName) + "Component";
         
-        if (ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
-            // Header with optional remove button
+        // CRITICAL: Always call EndChild() regardless of BeginChild() return value!
+        bool childVisible = ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+        
+        bool actionTriggered = false;
+        if (childVisible) {
+            // Header with optional action button (Add or Remove)
+            // Gray out component name if it's inactive (showRemoveButton = false means it's a placeholder)
+            if (!showRemoveButton) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 0.8f)); // Grayed out text
+            }
             ImGui::Text("%s", componentName);
+            if (!showRemoveButton) {
+                ImGui::PopStyleColor(); // Pop the grayed text color
+            }
             
-            if (showRemoveButton && onRemove) {
+            if (onAction) {
                 ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
                 
-                std::string buttonId = "Remove##" + std::string(componentName);
-                if (ImGui::Button(buttonId.c_str(), ImVec2(65, 0))) {
-                    onRemove(); // Call the removal function
-                    ImGui::PopStyleColor(3);
-                    ImGui::EndChild();
-                    ImGui::PopStyleColor(2);
-                    ImGui::PopStyleVar(2);
-                    return; // Exit early since component was removed
+                if (showRemoveButton) {
+                    // Remove button (red)
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+                    
+                    std::string buttonId = "Remove##" + std::string(componentName);
+                    if (ImGui::Button(buttonId.c_str(), ImVec2(65, 0))) {
+                        actionTriggered = true;
+                    }
+                } else {
+                    // Add button (green)
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));
+                    
+                    std::string buttonId = "Add##" + std::string(componentName);
+                    if (ImGui::Button(buttonId.c_str(), ImVec2(65, 0))) {
+                        actionTriggered = true;
+                    }
                 }
                 ImGui::PopStyleColor(3);
             }
             
-            ImGui::Separator();
-            
-            // Render the component-specific content
-            if (renderContent) {
-                renderContent();
+            // Only show separator and content for active components
+            if (!actionTriggered && showRemoveButton) {
+                ImGui::Separator();
+                
+                // Render the component-specific content
+                if (renderContent) {
+                    renderContent();
+                }
             }
-            
-            ImGui::EndChild();
+        }
+        
+        // CRITICAL: Always call EndChild() - this was the bug!
+        ImGui::EndChild();
+        
+        // Call onAction after EndChild to avoid ImGui state corruption
+        if (actionTriggered && onAction) {
+            onAction();
+            ImGui::PopStyleColor(2);
+            ImGui::PopStyleVar(2);
+            return; // Exit early since action was triggered
         }
         
         ImGui::PopStyleColor(2);
@@ -1274,7 +1306,7 @@ void Application::renderNodeInspector() {
         }
     });
     
-    // Render Mesh Renderer Component
+    // Mesh Renderer Component - Always show
     if (selectedNode->hasComponent<TinyNode::MeshRender>()) {
         renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
             // Mesh Renderer content
@@ -1329,9 +1361,16 @@ void Application::renderNodeInspector() {
         }, [&]() {
             mutableNode->remove<TinyNode::MeshRender>();
         });
+    } else {
+        // Show grayed-out placeholder for missing Mesh Renderer component
+        renderComponent("Mesh Renderer", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
+            // Minimal placeholder - no content, just the header with add button
+        }, [&]() {
+            mutableNode->add(TinyNode::MeshRender{});
+        });
     }
     
-    // Render Bone Attachment Component  
+    // Bone Attachment Component - Always show
     if (selectedNode->hasComponent<TinyNode::BoneAttach>()) {
         renderComponent("Bone Attachment", ImVec4(0.15f, 0.2f, 0.15f, 0.8f), ImVec4(0.3f, 0.4f, 0.3f, 0.6f), true, [&]() {
             // Bone Attachment content
@@ -1426,9 +1465,16 @@ void Application::renderNodeInspector() {
         }, [&]() {
             mutableNode->remove<TinyNode::BoneAttach>();
         });
+    } else {
+        // Show grayed-out placeholder for missing Bone Attachment component
+        renderComponent("Bone Attachment", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
+            // Minimal placeholder - no content, just the header with add button
+        }, [&]() {
+            mutableNode->add(TinyNode::BoneAttach{});
+        });
     }
     
-    // Render Skeleton Component
+    // Skeleton Component - Always show
     if (selectedNode->hasComponent<TinyNode::Skeleton>()) {
         renderComponent("Skeleton", ImVec4(0.2f, 0.15f, 0.15f, 0.8f), ImVec4(0.4f, 0.3f, 0.3f, 0.6f), true, [&]() {
             // Skeleton content
@@ -1476,51 +1522,16 @@ void Application::renderNodeInspector() {
         }, [&]() {
             mutableNode->remove<TinyNode::Skeleton>();
         });
+    } else {
+        // Show grayed-out placeholder for missing Skeleton component
+        renderComponent("Skeleton", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
+            // Minimal placeholder - no content, just the header with add button
+        }, [&]() {
+            mutableNode->add(TinyNode::Skeleton{});
+        });
     }
     
     ImGui::EndChild();
-    
-    // ADD COMPONENT DROPDOWN at bottom
-    // Check which components are missing
-    std::vector<std::pair<std::string, TinyNode::Types>> missingComponents;
-    
-    if (!selectedNode->hasComponent<TinyNode::MeshRender>()) {
-        missingComponents.push_back({"Mesh Renderer", TinyNode::Types::MeshRender});
-    }
-    if (!selectedNode->hasComponent<TinyNode::Skeleton>()) {
-        missingComponents.push_back({"Skeleton", TinyNode::Types::Skeleton});
-    }
-    if (!selectedNode->hasComponent<TinyNode::BoneAttach>()) {
-        missingComponents.push_back({"Bone Attachment", TinyNode::Types::BoneAttach});
-    }
-    
-    // Only show dropdown if there are missing components
-    if (!missingComponents.empty()) {
-        ImGui::Text("Add Component:");
-        ImGui::SameLine();
-        
-        // Set specific width for combo to prevent overflow
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 10); // -10 for padding
-        if (ImGui::BeginCombo("##AddComponent", "Select...")) {
-            for (const auto& comp : missingComponents) {
-                if (ImGui::Selectable(comp.first.c_str())) {
-                    // Add the selected component
-                    switch (comp.second) {
-                        case TinyNode::Types::MeshRender:
-                            mutableNode->add(TinyNode::MeshRender{});
-                            break;
-                        case TinyNode::Types::Skeleton:
-                            mutableNode->add(TinyNode::Skeleton{});
-                            break;
-                        case TinyNode::Types::BoneAttach:
-                            mutableNode->add(TinyNode::BoneAttach{});
-                            break;
-                    }
-                }
-            }
-            ImGui::EndCombo();
-        }
-    }
 }
 
 void Application::queueForDeletion(TinyHandle handle) {
