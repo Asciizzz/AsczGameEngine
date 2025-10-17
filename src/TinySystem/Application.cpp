@@ -1901,7 +1901,7 @@ void Application::createNewChildNode(TinyHandle parentNodeHandle) {
     if (!activeScene) return;
     
     // Create a new node as a child of the specified parent
-    TinyHandle newNodeHandle = activeScene->addNewNode(parentNodeHandle, "New Node");
+    TinyHandle newNodeHandle = activeScene->addNode(parentNodeHandle, "New Node");
     
     if (newNodeHandle.valid()) {
         // Select the newly created node in the Inspector
@@ -1931,7 +1931,7 @@ void Application::deleteSelectedNode() {
     TinyHandle parentHandle = nodeToDelete ? nodeToDelete->parentHandle : TinyHandle();
     
     // Delete the scene node directly (scene nodes are not filesystem resources)
-    if (activeScene->deleteNodeRecursive(selectedSceneNodeHandle)) {
+    if (activeScene->removeNode(selectedSceneNodeHandle)) {
         // Select parent after deletion
         if (parentHandle.valid()) {
             selectedSceneNodeHandle = parentHandle;

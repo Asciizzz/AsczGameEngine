@@ -110,27 +110,14 @@ struct TinyRScene {
     TinyPool<TinyRNode> nodes;
     TinyHandle rootNode;
 
-    void addSceneToNode(const TinyRScene& scene, TinyHandle parent = TinyHandle());
     void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
-    
-    // Scene manipulation functions (moved from TinyProject)
-    bool deleteNodeRecursive(TinyHandle nodeHandle);
+
+    TinyHandle addNode(TinyHandle parentHandle = TinyHandle(), const std::string& nodeName = "New Node");
+    void addScene(const TinyRScene& scene, TinyHandle parentHandle = TinyHandle());
+    bool removeNode(TinyHandle nodeHandle);
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
-
-    TinyHandle addNewNode(TinyHandle parentHandle = TinyHandle(), const std::string& nodeName = "New Node");
     
-    TinyRNode* getNode(TinyHandle nodeHandle) {
-        return nodes.get(nodeHandle);
-    }
-    const TinyRNode* getNode(TinyHandle nodeHandle) const {
-        return nodes.get(nodeHandle);
-    }
-
-    bool renameNode(TinyHandle nodeHandle, const std::string& newName) {
-        TinyRNode* node = nodes.get(nodeHandle);
-        if (!node) return false;
-
-        node->name = newName;
-        return true;
-    }
+    TinyRNode* getNode(TinyHandle nodeHandle);
+    const TinyRNode* getNode(TinyHandle nodeHandle) const;
+    bool renameNode(TinyHandle nodeHandle, const std::string& newName);
 };

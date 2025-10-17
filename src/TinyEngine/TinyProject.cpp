@@ -217,8 +217,8 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode
     // Use root node if no valid parent provided
     TinyHandle actualParent = parentNode.valid() ? parentNode : activeScene->rootNode;
     
-    // Use the scene's addSceneToNode method to merge the source scene into active scene
-    activeScene->addSceneToNode(*sourceScene, actualParent);
+    // Use the scene's addScene method to merge the source scene into active scene
+    activeScene->addScene(*sourceScene, actualParent);
     
     // Update transforms for the entire active scene
     activeScene->updateGlbTransform();
