@@ -25,7 +25,7 @@ struct TinyFNode {
     bool isHidden() const { return cfg.hidden; }
 
     TinyFNode& setDeletable(bool d) { cfg.deletable = d; return *this; }
-    bool isDeletable() const { return cfg.deletable; }
+    bool deletable() const { return cfg.deletable; }
 
     bool isFile() const { return type == Type::File; }
     bool hasData() const { return tHandle.valid(); }
@@ -123,7 +123,7 @@ public:
     // ---------- Safe recursive remove ----------
     void removeFNode(TinyHandle handle) {
         TinyFNode* node = fnodes.get(handle);
-        if (!node || !node->isDeletable()) return;
+        if (!node || !node->deletable()) return;
 
         // copy children to avoid mutation during recursion
         std::vector<TinyHandle> childCopy = node->children;

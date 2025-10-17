@@ -382,28 +382,9 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             };
             
             project->renderNodeTreeImGui();
-            
-            // Context menu for empty hierarchy space (when scene is active)
-            if (ImGui::BeginPopupContextWindow("HierarchyContextMenu")) {
-                ImGui::Text("Hierarchy");
-                ImGui::Separator();
-                
-                if (ImGui::MenuItem("Add Node")) {
-                    // Add to selected node if one is selected, otherwise add to root
-                    TinyHandle targetParent = project->selectedSceneNodeHandle.valid() ? project->selectedSceneNodeHandle : project->getRootNodeHandle();
-                    createNewChildNode(targetParent);
-                }
-                ImGui::EndPopup();
-            }
         } else {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
-            
-            // Context menu for empty hierarchy when no scene is active
-            if (ImGui::BeginPopupContextWindow("EmptyHierarchyContextMenu")) {
-                ImGui::TextDisabled("No Active Scene");
-                ImGui::EndPopup();
-            }
         }
         ImGui::EndChild();
         
@@ -670,25 +651,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
             ImGui::EndDragDropTarget();
         }
         
-        // Context menu for folders
-        if (ImGui::BeginPopupContextItem()) {
-            ImGui::Text("%s", folder->name.c_str());
-            ImGui::Separator();
-            
-            if (ImGui::MenuItem("Add Folder")) {
-                createNewFolder(folderHandle);
-            }
-            if (ImGui::MenuItem("Add Scene")) {
-                createNewScene(folderHandle);
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Delete", nullptr, false, folder->isDeletable())) {
-                if (folder->isDeletable()) {
-                    queueForDeletion(folderHandle);
-                }
-            }
-            ImGui::EndPopup();
-        }
+
         
         if (nodeOpen) {
             // Render children with proper indentation
@@ -764,40 +727,6 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                 ImGui::EndDragDropSource();
                             }
                             
-                            // Context menu for scene files
-                            if (ImGui::BeginPopupContextItem()) {
-                                ImGui::Text("%s", child->name.c_str());
-                                ImGui::Separator();
-                                
-                                // Get scene handle from TypeHandle
-                                TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                                bool isCurrentlyActive = (project->getActiveSceneHandle() == sceneRegistryHandle);
-                                
-                                if (isCurrentlyActive) {
-                                    ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
-                                } else {
-                                    if (ImGui::MenuItem("Make Active Scene")) {
-                                        if (project->setActiveScene(sceneRegistryHandle)) {
-                                            project->selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
-                                        }
-                                    }
-                                }
-                                
-                                ImGui::Separator();
-                                
-                                if (ImGui::MenuItem("Duplicate Scene")) {
-                                    // TODO: Implement scene duplication
-                                }
-                                
-                                if (ImGui::MenuItem("Delete", nullptr, false, child->isDeletable())) {
-                                    if (child->isDeletable()) {
-                                        queueForDeletion(childHandle);
-                                    }
-                                }
-                                
-                                ImGui::EndPopup();
-                            }
-                            
                             // Tooltip with scene info
                             if (ImGui::IsItemHovered()) {
                                 ImGui::BeginTooltip();
@@ -850,18 +779,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             ImGui::EndTooltip();
                         }
                         
-                        // Context menu for other file types
-                        if (ImGui::BeginPopupContextItem()) {
-                            ImGui::Text("%s", child->name.c_str());
-                            ImGui::Separator();
-                            
-                            if (ImGui::MenuItem("Delete", nullptr, false, child->isDeletable())) {
-                                if (child->isDeletable()) {
-                                    queueForDeletion(childHandle);
-                                }
-                            }
-                            ImGui::EndPopup();
-                        }
+
                     }
                     
                     ImGui::PopID();
@@ -934,39 +852,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             ImGui::EndDragDropSource();
                         }
                         
-                        // Context menu for root-level scene files
-                        if (ImGui::BeginPopupContextItem()) {
-                            ImGui::Text("%s", child->name.c_str());
-                            ImGui::Separator();
-                            
-                            // Get scene handle from TypeHandle
-                            TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                            bool isCurrentlyActive = (project->getActiveSceneHandle() == sceneRegistryHandle);
-                            
-                            if (isCurrentlyActive) {
-                                ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
-                            } else {
-                                if (ImGui::MenuItem("Make Active Scene")) {
-                                    if (project->setActiveScene(sceneRegistryHandle)) {
-                                        project->selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
-                                    }
-                                }
-                            }
-                            
-                            ImGui::Separator();
-                            
-                            if (ImGui::MenuItem("Duplicate Scene")) {
-                                // TODO: Implement scene duplication
-                            }
-                            
-                            if (ImGui::MenuItem("Delete", nullptr, false, child->isDeletable())) {
-                                if (child->isDeletable()) {
-                                    queueForDeletion(childHandle);
-                                }
-                            }
-                            
-                            ImGui::EndPopup();
-                        }
+
                     }
                 } else {
                     // Other root-level files
@@ -994,18 +880,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         ImGui::EndDragDropSource();
                     }
                     
-                    // Context menu for root-level files
-                    if (ImGui::BeginPopupContextItem()) {
-                        ImGui::Text("%s", child->name.c_str());
-                        ImGui::Separator();
-                        
-                        if (ImGui::MenuItem("Delete", nullptr, false, child->isDeletable())) {
-                            if (child->isDeletable()) {
-                                queueForDeletion(childHandle);
-                            }
-                        }
-                        ImGui::EndPopup();
-                    }
+
                 }
                 
                 ImGui::PopID();

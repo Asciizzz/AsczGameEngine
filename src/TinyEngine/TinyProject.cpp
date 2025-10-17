@@ -408,7 +408,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         selectedSceneNodeHandle = nodeHandle;
     }
     
-    // Context menu for individual nodes
+    // Context menu for nodes - direct manipulation
     if (ImGui::BeginPopupContextItem()) {
         ImGui::Text("%s", node->name.c_str());
         ImGui::Separator();
@@ -430,17 +430,21 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             ImGui::Separator();
         }
         
-        if (ImGui::MenuItem("Add Child")) {
-            if (onAddChildNode) {
-                onAddChildNode(nodeHandle);
+        if (ImGui::MenuItem("Add Child Node")) {
+            TinyRScene* scene = getActiveScene();
+            if (scene) {
+                TinyHandle newNodeHandle = scene->addNode(nodeHandle, "New Node");
+                selectedSceneNodeHandle = newNodeHandle;
+                expandNode(nodeHandle); // Expand parent to show new child
             }
         }
         
         // Only show delete for non-root nodes
         if (nodeHandle != activeScene->rootNode) {
             if (ImGui::MenuItem("Delete Node")) {
-                if (onDeleteNode) {
-                    onDeleteNode(nodeHandle);
+                TinyRScene* scene = getActiveScene();
+                if (scene && scene->removeNode(nodeHandle)) {
+                    selectedSceneNodeHandle = TinyHandle(); // Clear selection
                 }
             }
         }
@@ -523,24 +527,36 @@ void TinyProject::renderFileExplorerImGui(int depth) {
     // Start with root folder
     renderFileFolderTree(fs, fs.rootHandle(), depth);
     
-    // Context menu for empty space in file explorer
+    // Context menu for empty space in file explorer - direct manipulation
     if (ImGui::BeginPopupContextWindow("FileExplorerContextMenu")) {
         ImGui::Text("File Explorer");
         ImGui::Separator();
         
         if (ImGui::MenuItem("Add Folder")) {
-            if (onAddFolder) {
-                // Add to selected folder if one is selected, otherwise add to root
-                TinyHandle targetParent = selectedFNodeHandle.valid() ? selectedFNodeHandle : TinyHandle();
-                onAddFolder(targetParent);
-            }
+            // Add to selected folder if one is selected, otherwise add to root
+            TinyHandle targetParent = selectedFNodeHandle.valid() ? selectedFNodeHandle : TinyHandle();
+            if (!targetParent.valid()) targetParent = fs.rootHandle();
+            
+            TinyHandle newFolderHandle = fs.addFolder(targetParent, "New Folder");
+            selectedFNodeHandle = newFolderHandle;
         }
         if (ImGui::MenuItem("Add Scene")) {
-            if (onAddScene) {
-                // Add to selected folder if one is selected, otherwise add to root
-                TinyHandle targetParent = selectedFNodeHandle.valid() ? selectedFNodeHandle : TinyHandle();
-                onAddScene(targetParent);
-            }
+            // Add to selected folder if one is selected, otherwise add to root
+            TinyHandle targetParent = selectedFNodeHandle.valid() ? selectedFNodeHandle : TinyHandle();
+            if (!targetParent.valid()) targetParent = fs.rootHandle();
+            
+            TinyRScene newScene;
+            newScene.name = "New Scene";
+            
+            // Create root node for the scene
+            TinyRNode rootNode;
+            rootNode.name = "Root";
+            newScene.rootNode = newScene.nodes.insert(rootNode);
+            
+            // Add scene to registry and create file node
+            TinyRScene* scenePtr = &newScene;
+            TinyHandle fileHandle = fs.addFile(targetParent, "New Scene", scenePtr);
+            selectedFNodeHandle = fileHandle;
         }
         
         ImGui::EndPopup();
@@ -579,6 +595,43 @@ void TinyProject::renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, int 
             selectedFNodeHandle = folderHandle;
         }
         
+        // Context menu for folders - direct manipulation
+        if (ImGui::BeginPopupContextItem()) {
+            ImGui::Text("%s", folder->name.c_str());
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Add Folder")) {
+                TinyFS& fs = filesystem();
+                TinyHandle newFolderHandle = fs.addFolder(folderHandle, "New Folder");
+                selectedFNodeHandle = newFolderHandle;
+            }
+            if (ImGui::MenuItem("Add Scene")) {
+                TinyFS& fs = filesystem();
+                TinyRScene newScene;
+                newScene.name = "New Scene";
+                
+                // Create root node for the scene
+                TinyRNode rootNode;
+                rootNode.name = "Root";
+                newScene.rootNode = newScene.nodes.insert(rootNode);
+                
+                // Add scene to registry and create file node
+                TinyRScene* scenePtr = &newScene;
+                TinyHandle fileHandle = fs.addFile(folderHandle, "New Scene", scenePtr);
+                selectedFNodeHandle = fileHandle;
+            }
+            
+            ImGui::Separator();
+            if (ImGui::MenuItem("Delete", nullptr, false, folder->deletable())) {
+                if (folder->deletable()) {
+                    TinyFS& fs = filesystem();
+                    fs.removeFNode(folderHandle);
+                    selectedFNodeHandle = TinyHandle(); // Clear selection
+                }
+            }
+            ImGui::EndPopup();
+        }
+        
         // Drag source for folders
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
             ImGui::SetDragDropPayload("FOLDER_HANDLE", &folderHandle, sizeof(TinyHandle));
@@ -605,29 +658,7 @@ void TinyProject::renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, int 
             ImGui::EndDragDropTarget();
         }
         
-        // Context menu for folders - same style as node hierarchy
-        if (ImGui::BeginPopupContextItem()) {
-            ImGui::Text("%s", folder->name.c_str());
-            ImGui::Separator();
-            
-            if (ImGui::MenuItem("Add Folder")) {
-                if (onAddFolder) {
-                    onAddFolder(folderHandle);
-                }
-            }
-            if (ImGui::MenuItem("Add Scene")) {
-                if (onAddScene) {
-                    onAddScene(folderHandle);
-                }
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Delete")) {
-                if (folder->isDeletable() && onDeleteFile) {
-                    onDeleteFile(folderHandle);
-                }
-            }
-            ImGui::EndPopup();
-        }
+
         
         if (nodeOpen) {
             // Render children with proper indentation
@@ -705,18 +736,7 @@ void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
                 selectedFNodeHandle = fileHandle;
             }
             
-            ImGui::PopStyleColor(3);
-            
-            // Drag source for scene files
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                ImGui::SetDragDropPayload("FILE_HANDLE", &fileHandle, sizeof(TinyHandle));
-                ImGui::Text("Scene: %s", file->name.c_str());
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
-                ImGui::EndDragDropSource();
-            }
-            
-            // Context menu for scene files - same style as node hierarchy
+            // Context menu for scene files - direct manipulation
             if (ImGui::BeginPopupContextItem()) {
                 ImGui::Text("%s", file->name.c_str());
                 ImGui::Separator();
@@ -729,7 +749,9 @@ void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
                     ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
                 } else {
                     if (ImGui::MenuItem("Make Active Scene")) {
-                        setActiveScene(sceneRegistryHandle);
+                        if (setActiveScene(sceneRegistryHandle)) {
+                            selectedSceneNodeHandle = getRootNodeHandle(); // Reset node selection to root
+                        }
                     }
                 }
                 
@@ -737,16 +759,32 @@ void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
                 
                 if (ImGui::MenuItem("Duplicate Scene")) {
                     // TODO: Implement scene duplication
+                    ImGui::Text("Not implemented yet");
                 }
                 
-                if (ImGui::MenuItem("Delete")) {
-                    if (file->isDeletable() && onDeleteFile) {
-                        onDeleteFile(fileHandle);
+                if (ImGui::MenuItem("Delete", nullptr, false, file->deletable())) {
+                    if (file->deletable()) {
+                        TinyFS& fs = filesystem();
+                        fs.removeFNode(fileHandle);
+                        selectedFNodeHandle = TinyHandle(); // Clear selection
                     }
                 }
                 
                 ImGui::EndPopup();
             }
+            
+            ImGui::PopStyleColor(3);
+            
+            // Drag source for scene files
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                ImGui::SetDragDropPayload("FILE_HANDLE", &fileHandle, sizeof(TinyHandle));
+                ImGui::Text("Scene: %s", file->name.c_str());
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
+                ImGui::EndDragDropSource();
+            }
+            
+
         }
     } else {
         // Other file types
@@ -769,6 +807,21 @@ void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
             selectedFNodeHandle = fileHandle;
         }
         
+        // Context menu for other file types - direct manipulation
+        if (ImGui::BeginPopupContextItem()) {
+            ImGui::Text("%s", file->name.c_str());
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Delete", nullptr, false, file->deletable())) {
+                if (file->deletable()) {
+                    TinyFS& fs = filesystem();
+                    fs.removeFNode(fileHandle);
+                    selectedFNodeHandle = TinyHandle(); // Clear selection
+                }
+            }
+            ImGui::EndPopup();
+        }
+        
         ImGui::PopStyleColor(3);
         
         // Drag source for other files
@@ -778,18 +831,7 @@ void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
             ImGui::EndDragDropSource();
         }
         
-        // Context menu for other file types - same style as node hierarchy
-        if (ImGui::BeginPopupContextItem()) {
-            ImGui::Text("%s", file->name.c_str());
-            ImGui::Separator();
-            
-            if (ImGui::MenuItem("Delete")) {
-                if (file->isDeletable() && onDeleteFile) {
-                    onDeleteFile(fileHandle);
-                }
-            }
-            ImGui::EndPopup();
-        }
+
     }
     
     ImGui::PopID();
