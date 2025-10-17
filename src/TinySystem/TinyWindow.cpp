@@ -85,3 +85,7 @@ Uint32 TinyWindow::toggleFullscreen() {
 
     return SDL_GetWindowFlags(window);
 }
+
+void TinyWindow::maximizeWindow() {
+    SDL_MaximizeWindow(window);
+}

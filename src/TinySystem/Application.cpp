@@ -135,6 +135,9 @@ void Application::initComponents() {
     } else {
         std::cerr << "Failed to initialize ImGui!" << std::endl;
     }
+
+    windowManager->maximizeWindow();
+    checkWindowResize();
 }
 
 void Application::featuresTestingGround() {}
@@ -1143,9 +1146,9 @@ void Application::renderNodeInspector() {
     };
     
     // Render Transform component (always present, no delete button)
-    renderComponent("Transform", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), false, [&]() {
-        // Transform component content
-        if (!isRootNode) {
+    renderComponent("Transform", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), true, [&]() {
+        // Transform component content - now available for all nodes including root
+        {
             // Get the current transform
             glm::mat4 localTransform = selectedNode->localTransform;
             

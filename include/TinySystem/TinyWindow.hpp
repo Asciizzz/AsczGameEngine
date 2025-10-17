@@ -21,6 +21,7 @@ public:
     void waitEvents() const;
 
     Uint32 toggleFullscreen();
+    void maximizeWindow();
 
     SDL_Window* window;
     bool shouldCloseFlag;

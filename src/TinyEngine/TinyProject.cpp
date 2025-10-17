@@ -555,8 +555,9 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         
         // Create tree node flags
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        // Always show arrow for folders (even empty ones), but prevent tree push if no children
         if (!hasChildren) {
-            flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+            flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen; // Don't push tree state, but keep the arrow
         }
         if (isSelected) {
             flags |= ImGuiTreeNodeFlags_Selected;
