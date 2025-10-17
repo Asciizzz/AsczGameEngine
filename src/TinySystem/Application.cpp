@@ -368,12 +368,22 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
     TinyFS& fs = project->filesystem();
 
     imguiWrapper->addWindow("Scene Manager", [this, &camera, &registry, &fs]() {
-        // Runtime Node Hierarchy section (now on top)
+        // Static variable to store splitter position (persists between frames)
+        static float splitterPos = 0.6f; // Start with 60% for hierarchy, 40% for library
+        
+        // Calculate available space and reserve space for bottom UI elements
+        float totalHeight = ImGui::GetContentRegionAvail().y;
+        float reservedBottomSpace = 120; // Space for stats and debug buttons
+        float availableHeight = totalHeight - reservedBottomSpace;
+        
+        // Calculate section heights based on splitter position
+        float hierarchyHeight = availableHeight * splitterPos;
+        float libraryHeight = availableHeight * (1.0f - splitterPos);
+        
+        // Runtime Node Hierarchy section (top)
         ImGui::Text("Runtime Node Hierarchy");
         ImGui::Separator();
         
-        // Use 60% of window for node hierarchy (was bottom, now top)
-        float hierarchyHeight = ImGui::GetContentRegionAvail().y * 0.6f;
         ImGui::BeginChild("NodeTree", ImVec2(0, hierarchyHeight), true);
         
         // Clear filesystem selection when clicking in node tree area
@@ -390,14 +400,28 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         }
         ImGui::EndChild();
         
-        ImGui::Spacing();
-        ImGui::Separator();
+        // Horizontal splitter bar
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 0.8f));
         
-        // Scene Library section (now on bottom)
+        ImGui::Button("##Splitter", ImVec2(-1, 4));
+        
+        if (ImGui::IsItemActive()) {
+            float mouseDelta = ImGui::GetIO().MouseDelta.y;
+            splitterPos += mouseDelta / availableHeight;
+            splitterPos = std::max(0.1f, std::min(0.9f, splitterPos)); // Clamp between 10% and 90%
+        }
+        
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        }
+        
+        ImGui::PopStyleColor(3);
+        
+        // Scene Library section (bottom)
         ImGui::Text("Scene Library");
         
-        // Render folder tree with drag-drop - use remaining space
-        float libraryHeight = ImGui::GetContentRegionAvail().y - 150; // Leave space for stats and buttons
         ImGui::BeginChild("SceneLibrary", ImVec2(0, libraryHeight), true);
         
         // Clear filesystem node selection when clicking in folder tree area (but not on items)
