@@ -626,6 +626,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 TinyHandle newFolderHandle = fs.addFolder(nodeHandle, "New Folder");
                 selectedFNodeHandle = newFolderHandle;
             }
+
             if (ImGui::MenuItem("Add Scene")) {
                 TinyRScene newScene;
                 newScene.name = "New Scene";
@@ -686,16 +687,16 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             // Scene file
             std::string sceneName = node->name;
             
-            // Check if this is the active scene for red backdrop
+            // Check if this is the active scene for green backdrop
             TinyHandle sceneRegistryHandle = node->tHandle.handle;
             bool isActiveScene = (getActiveSceneHandle() == sceneRegistryHandle);
             
-            // Add permanent red backdrop for active scene files
+            // Add permanent green backdrop for active scene files
             if (isActiveScene) {
                 ImVec2 itemSize = ImGui::CalcTextSize(sceneName.c_str());
                 ImVec2 cursorPos = ImGui::GetCursorScreenPos();
                 ImVec2 itemMax = ImVec2(cursorPos.x + ImGui::GetContentRegionAvail().x, cursorPos.y + itemSize.y);
-                ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(200, 50, 50, 100)); // Red backdrop
+                ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(50, 200, 50, 100)); // green backdrop
             }
             
             // Set colors for scene files

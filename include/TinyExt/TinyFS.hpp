@@ -139,8 +139,7 @@ private:
         TinyFNode* node = fnodes.get(handle);
         if (!node) return;
 
-        // If node is non-deletable, can't remove it
-        if (!node->deletable()) return;
+        // Note: We can assume node is deletable since non-deletable nodes are moved, not recursed
 
         // copy children to avoid mutation during recursion
         std::vector<TinyHandle> childCopy = node->children;
