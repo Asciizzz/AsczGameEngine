@@ -344,7 +344,6 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                 ImGui::BeginTooltip();
                 ImGui::Text("Scene: %s", activeScene->name.c_str());
                 ImGui::Text("Total Nodes: %u", activeScene->nodes.count());
-                ImGui::Text("Handle: %u_v%u", project->getActiveSceneHandle().index, project->getActiveSceneHandle().version);
                 ImGui::EndTooltip();
             }
         } else {
@@ -401,6 +400,29 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         // =============================================================================
         
         ImGui::Text("File Explorer");
+        ImGui::Separator();
+        
+        // Add File/Folder Dropdown Button
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.6f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.7f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
+        
+        if (ImGui::Button("Add +", ImVec2(60, 25))) {
+            ImGui::OpenPopup("AddFileFolder");
+        }
+        ImGui::PopStyleColor(3);
+        
+        // Add File/Folder Popup Menu
+        if (ImGui::BeginPopup("AddFileFolder")) {
+            if (ImGui::MenuItem("Add Folder")) {
+                createNewFolder();
+            }
+            if (ImGui::MenuItem("Add Scene")) {
+                createNewScene();
+            }
+            ImGui::EndPopup();
+        }
+        
         ImGui::Separator();
         
         // File Explorer with background
@@ -977,8 +999,6 @@ void Application::renderNodeInspector() {
         activeScene->renameNode(selectedSceneNodeHandle, std::string(nameBuffer));
     }
     
-    ImGui::Text("Handle: %u_v%u", selectedSceneNodeHandle.index, selectedSceneNodeHandle.version);
-    
     // Show parent and children count
     if (selectedNode->parentHandle.valid()) {
         const TinyRNode* parentNode = activeScene->nodes.get(selectedNode->parentHandle);
@@ -1152,8 +1172,6 @@ void Application::renderFileSystemInspector() {
         }
     }
     
-    ImGui::Text("Handle: %u_v%u", selectedFNodeHandle.index, selectedFNodeHandle.version);
-    
     if (selectedFNode->isFile()) {
         // File-specific information
         std::string fileType = "Unknown";
@@ -1197,9 +1215,6 @@ void Application::renderFileSystemInspector() {
         }
         
         ImGui::Text("Type: %s", fileType.c_str());
-        if (selectedFNode->tHandle.valid()) {
-            ImGui::Text("Registry Handle: %u_v%u", selectedFNode->tHandle.handle.index, selectedFNode->tHandle.handle.version);
-        }
     } else {
         ImGui::Text("Children: %zu", selectedFNode->children.size());
     }
@@ -1590,9 +1605,7 @@ bool Application::renderHandleField(const char* label, TinyHandle& handle, const
     
     // Create a drag-drop target area
     std::string fieldId = std::string("##") + label + "Field";
-    std::string displayText = handle.valid() ? 
-        (std::to_string(handle.index) + "_v" + std::to_string(handle.version)) : 
-        "None (drag here)";
+    std::string displayText = handle.valid() ? "Assigned" : "None (drag here)";
     
     // Make the field look like a drag-drop zone
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
@@ -1667,21 +1680,21 @@ bool Application::renderEnhancedHandleField(const char* fieldId, TinyHandle& han
         if (strcmp(targetType, "Mesh") == 0) {
             const TinyRegistry& registry = project->registryRef();
             const TinyRMesh* mesh = registry.get<TinyRMesh>(handle);
-            displayText = mesh ? mesh->name : ("Mesh_" + std::to_string(handle.index));
+            displayText = mesh ? mesh->name : "Unknown Mesh";
         } else if (strcmp(targetType, "Skeleton") == 0) {
             const TinyRegistry& registry = project->registryRef();
             const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(handle);
-            displayText = skeleton ? skeleton->name : ("Skeleton_" + std::to_string(handle.index));
+            displayText = skeleton ? skeleton->name : "Unknown Skeleton";
         } else if (strcmp(targetType, "SkeletonNode") == 0) {
             TinyRScene* activeScene = project->getActiveScene();
             if (activeScene) {
                 const TinyRNode* node = activeScene->nodes.get(handle);
-                displayText = node ? node->name : ("Node_" + std::to_string(handle.index));
+                displayText = node ? node->name : "Unknown Node";
             } else {
-                displayText = "Node_" + std::to_string(handle.index);
+                displayText = "Unknown Node";
             }
         } else {
-            displayText = std::to_string(handle.index) + "_v" + std::to_string(handle.version);
+            displayText = "Unknown Resource";
         }
         
         buttonColor = ImVec4(0.2f, 0.4f, 0.2f, 1.0f);   // Green tint for valid handle
