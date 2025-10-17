@@ -84,9 +84,8 @@ private:
     // Inspector helper functions
     void renderFileSystemInspector();
     void renderNodeInspector();
-    void renderTransformInspector(const TinyRNode* selectedNode, bool isRootNode);
-    void renderComponentsInspector(const TinyRNode* selectedNode);
-    void renderNodeDeleteButton(const TinyRNode* selectedNode);
+    void renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove);
+
     void createNewChildNode(TinyHandle parentNodeHandle);
     void deleteSelectedNode();
     
@@ -95,14 +94,9 @@ private:
     void createNewScene(TinyHandle parentFolderHandle = TinyHandle());
     
     // Component-specific inspectors
-    void renderMeshRenderComponent(TinyRNode* selectedNode);
-    void renderSkeletonComponent(TinyRNode* selectedNode);
-    void renderBoneAttachComponent(TinyRNode* selectedNode);
-    void renderAddComponentDropdown(const TinyRNode* selectedNode);
     
     // Drag-drop helper for component fields
-    bool renderHandleField(const char* label, TinyHandle& handle, const char* targetType, const char* tooltip = nullptr);
-    bool renderEnhancedHandleField(const char* fieldId, TinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description = nullptr);
+    bool renderHandleField(const char* fieldId, TinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description = nullptr);
     
     // Deferred deletion methods
     void queueForDeletion(TinyHandle handle);

@@ -1110,30 +1110,377 @@ void Application::renderNodeInspector() {
     float remainingHeight = ImGui::GetContentRegionAvail().y - 35; // Reserve space for add component dropdown
     ImGui::BeginChild("ComponentsScrollable", ImVec2(0, remainingHeight), false);
     
-    // Transform component (dynamic sizing, no remove button)
-    ImGui::Separator();
-    ImGui::Text("Transform");
-    ImGui::Indent();
-    renderTransformInspector(selectedNode, isRootNode);
-    ImGui::Unindent();
-    ImGui::Separator();
+    TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
     
-    ImGui::Spacing();
+    // Helper function to render a component with consistent styling
+    auto renderComponent = [&](const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove = nullptr) {
+        // Component container with styled background
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, backgroundColor);
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+        ImGui::PushStyleColor(ImGuiCol_Border, borderColor);
+        
+        // Create unique ID for this component
+        std::string childId = std::string(componentName) + "Component";
+        
+        if (ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
+            // Header with optional remove button
+            ImGui::Text("%s", componentName);
+            
+            if (showRemoveButton && onRemove) {
+                ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+                
+                std::string buttonId = "Remove##" + std::string(componentName);
+                if (ImGui::Button(buttonId.c_str(), ImVec2(65, 0))) {
+                    onRemove(); // Call the removal function
+                    ImGui::PopStyleColor(3);
+                    ImGui::EndChild();
+                    ImGui::PopStyleColor(2);
+                    ImGui::PopStyleVar(2);
+                    return; // Exit early since component was removed
+                }
+                ImGui::PopStyleColor(3);
+            }
+            
+            ImGui::Separator();
+            
+            // Render the component-specific content
+            if (renderContent) {
+                renderContent();
+            }
+            
+            ImGui::EndChild();
+        }
+        
+        ImGui::PopStyleColor(2);
+        ImGui::PopStyleVar(2);
+        
+        // Add spacing between components
+        ImGui::Spacing();
+        ImGui::Spacing();
+    };
     
-    // Other components
-    renderComponentsInspector(selectedNode);
+    // Render Transform component (always present, no delete button)
+    renderComponent("Transform", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), false, [&]() {
+        // Transform component content
+        if (!isRootNode) {
+            // Get the current transform
+            glm::mat4 localTransform = selectedNode->localTransform;
+            
+            // Extract translation, rotation, and scale from the matrix
+            glm::vec3 translation, rotation, scale;
+            glm::quat rotationQuat;
+            glm::vec3 skew;
+            glm::vec4 perspective;
+            
+            // Check if decomposition is valid
+            bool validDecomposition = glm::decompose(localTransform, scale, rotationQuat, translation, skew, perspective);
+            
+            if (!validDecomposition) {
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
+                if (ImGui::Button("Reset Transform")) {
+                    TinyRNode* mutableSelectedNode = const_cast<TinyRNode*>(selectedNode);
+                    mutableSelectedNode->localTransform = glm::mat4(1.0f);
+                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                }
+                return;
+            }
+            
+            // Validate extracted values for NaN/infinity
+            auto isValidVec3 = [](const glm::vec3& v) {
+                return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+            };
+            
+            if (!isValidVec3(translation) || !isValidVec3(scale)) {
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
+                if (ImGui::Button("Reset Transform")) {
+                    TinyRNode* mutableSelectedNode = const_cast<TinyRNode*>(selectedNode);
+                    mutableSelectedNode->localTransform = glm::mat4(1.0f);
+                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                }
+                return;
+            }
+            
+            // Clamp scale to prevent zero/negative values
+            const float MIN_SCALE = 0.001f;
+            scale.x = std::max(MIN_SCALE, std::abs(scale.x));
+            scale.y = std::max(MIN_SCALE, std::abs(scale.y));
+            scale.z = std::max(MIN_SCALE, std::abs(scale.z));
+            
+            // Convert quaternion to Euler angles (in degrees)
+            rotation = glm::degrees(glm::eulerAngles(rotationQuat));
+            
+            // Normalize angles to [-180, 180] range
+            auto normalizeAngle = [](float angle) {
+                while (angle > 180.0f) angle -= 360.0f;
+                while (angle < -180.0f) angle += 360.0f;
+                return angle;
+            };
+            
+            rotation.x = normalizeAngle(rotation.x);
+            rotation.y = normalizeAngle(rotation.y);
+            rotation.z = normalizeAngle(rotation.z);
+            
+            // Store original values to detect changes
+            glm::vec3 originalTranslation = translation;
+            glm::vec3 originalRotation = rotation;
+            glm::vec3 originalScale = scale;
+            
+            ImGui::Spacing();
+            
+            // Translation controls
+            ImGui::Text("Position");
+            ImGui::DragFloat3("##Position", &translation.x, 0.01f, -1000.0f, 1000.0f, "%.3f");
+            ImGui::SameLine();
+            if (ImGui::Button("To Cam")) {
+                translation = project->getCamera()->pos;
+            }
+            
+            // Rotation controls
+            ImGui::Text("Rotation (degrees)");
+            ImGui::DragFloat3("##Rotation", &rotation.x, 0.5f, -180.0f, 180.0f, "%.1f°");
+            
+            // Scale controls
+            ImGui::Text("Scale");
+            ImGui::DragFloat3("##Scale", &scale.x, 0.01f, MIN_SCALE, 10.0f, "%.3f");
+            ImGui::SameLine();
+            if (ImGui::Button("Uniform")) {
+                float avgScale = (scale.x + scale.y + scale.z) / 3.0f;
+                scale = glm::vec3(avgScale);
+            }
+            
+            // Apply changes if any values changed
+            if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
+                if (isValidVec3(translation) && isValidVec3(scale)) {
+                    // Convert back to quaternion and reconstruct matrix
+                    glm::quat newRotQuat = glm::quat(glm::radians(rotation));
+                    
+                    // Create transform matrix: T * R * S
+                    glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), translation);
+                    glm::mat4 rotateMat = glm::mat4_cast(newRotQuat);
+                    glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
+                    
+                    TinyRNode* mutableSelectedNode = const_cast<TinyRNode*>(selectedNode);
+                    mutableSelectedNode->localTransform = translateMat * rotateMat * scaleMat;
+                    
+                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                }
+            }
+            
+            ImGui::Spacing();
+        }
+    });
+    
+    // Render Mesh Renderer Component
+    if (selectedNode->hasComponent<TinyNode::MeshRender>()) {
+        renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
+            // Mesh Renderer content
+            TinyNode::MeshRender* meshComp = mutableNode->get<TinyNode::MeshRender>();
+            if (!meshComp) return;
+            
+            ImGui::Spacing();
+            
+            // Mesh Handle field with enhanced drag-drop support
+            ImGui::Text("Mesh Resource:");
+            bool meshModified = renderHandleField("##MeshHandle", meshComp->meshHandle, "Mesh", 
+                "Drag a mesh file from the File Explorer", 
+                "Select mesh resource for rendering");
+            
+            // Show mesh information if valid
+            if (meshComp->meshHandle.valid()) {
+                const TinyRegistry& registry = project->registryRef();
+                const TinyRMesh* mesh = registry.get<TinyRMesh>(meshComp->meshHandle);
+                if (mesh) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", mesh->name.c_str());
+                } else {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
+                }
+            }
+            
+            ImGui::Spacing();
+            
+            // Skeleton Node Handle field with enhanced drag-drop support  
+            ImGui::Text("Skeleton Node:");
+            bool skeleModified = renderHandleField("##MeshRenderer_SkeletonNodeHandle", meshComp->skeleNodeHandle, "SkeletonNode",
+                "Drag a skeleton node from the Hierarchy",
+                "Select skeleton node for bone animation");
+            
+            // Show skeleton node information if valid
+            if (meshComp->skeleNodeHandle.valid()) {
+                TinyRScene* activeScene = project->getActiveScene();
+                if (activeScene) {
+                    const TinyRNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
+                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", skeleNode->name.c_str());
+                    } else {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid/No Skeleton");
+                    }
+                }
+            }
+            
+            ImGui::Spacing();
+        }, [&]() {
+            mutableNode->remove<TinyNode::MeshRender>();
+        });
+    }
+    
+    // Render Bone Attachment Component  
+    if (selectedNode->hasComponent<TinyNode::BoneAttach>()) {
+        renderComponent("Bone Attachment", ImVec4(0.15f, 0.2f, 0.15f, 0.8f), ImVec4(0.3f, 0.4f, 0.3f, 0.6f), true, [&]() {
+            // Bone Attachment content
+            TinyNode::BoneAttach* boneComp = mutableNode->get<TinyNode::BoneAttach>();
+            if (!boneComp) return;
+            
+            ImGui::Spacing();
+            
+            // Skeleton Node Handle field with enhanced drag-drop support
+            ImGui::Text("Skeleton Node:");
+            bool skeleModified = renderHandleField("##BoneAttach_SkeletonNodeHandle", boneComp->skeleNodeHandle, "SkeletonNode",
+                "Drag a skeleton node from the Hierarchy",
+                "Select skeleton node to attach to");
+            
+            // Show skeleton node information if valid
+            if (boneComp->skeleNodeHandle.valid()) {
+                TinyRScene* activeScene = project->getActiveScene();
+                if (activeScene) {
+                    const TinyRNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
+                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", skeleNode->name.c_str());
+                    } else {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid/No Skeleton");
+                    }
+                }
+            }
+            
+            ImGui::Spacing();
+            
+            // Bone Index field with validation
+            ImGui::Text("Bone Index:");
+            int boneIndex = static_cast<int>(boneComp->boneIndex);
+            
+            // Determine max bone count for validation
+            int maxBoneIndex = 255; // Default max
+            if (boneComp->skeleNodeHandle.valid()) {
+                TinyRScene* activeScene = project->getActiveScene();
+                if (activeScene) {
+                    const TinyRNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
+                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
+                        const TinyNode::Skeleton* skeleComp = skeleNode->get<TinyNode::Skeleton>();
+                        if (skeleComp && skeleComp->skeleHandle.valid()) {
+                            const TinyRegistry& registry = project->registryRef();
+                            const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(skeleComp->skeleHandle);
+                            if (skeleton) {
+                                maxBoneIndex = static_cast<int>(skeleton->bones.size()) - 1;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (ImGui::DragInt("##BoneIndex", &boneIndex, 1.0f, 0, maxBoneIndex)) {
+                boneComp->boneIndex = static_cast<size_t>(std::max(0, boneIndex));
+            }
+            
+            // Show validation status
+            ImGui::SameLine();
+            if (boneIndex <= maxBoneIndex && boneComp->skeleNodeHandle.valid()) {
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Valid bone index (%d/%d)", boneIndex, maxBoneIndex);
+                }
+            } else {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Invalid bone index (max: %d)", maxBoneIndex);
+                }
+            }
+            
+            ImGui::Spacing();
+            
+            // Component status
+            ImGui::Separator();
+            ImGui::Text("Status:");
+            ImGui::SameLine();
+            
+            bool hasValidSkeleton = boneComp->skeleNodeHandle.valid();
+            bool hasValidBoneIndex = boneIndex <= maxBoneIndex;
+            
+            if (hasValidSkeleton && hasValidBoneIndex) {
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Ready for bone attachment");
+            } else if (hasValidSkeleton) {
+                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.5f, 1.0f), "Invalid bone index");
+            } else {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing skeleton node");
+            }
+            
+            ImGui::Spacing();
+        }, [&]() {
+            mutableNode->remove<TinyNode::BoneAttach>();
+        });
+    }
+    
+    // Render Skeleton Component
+    if (selectedNode->hasComponent<TinyNode::Skeleton>()) {
+        renderComponent("Skeleton", ImVec4(0.2f, 0.15f, 0.15f, 0.8f), ImVec4(0.4f, 0.3f, 0.3f, 0.6f), true, [&]() {
+            // Skeleton content
+            TinyNode::Skeleton* skeleComp = mutableNode->get<TinyNode::Skeleton>();
+            if (!skeleComp) return;
+            
+            ImGui::Spacing();
+            
+            // Skeleton Handle field
+            ImGui::Text("Skeleton Resource:");
+            bool skeleModified = renderHandleField("##SkeletonHandle", skeleComp->skeleHandle, "Skeleton",
+                "Drag a skeleton file from the File Explorer",
+                "Select skeleton resource for bone data");
+            
+            // Show skeleton information if valid
+            if (skeleComp->skeleHandle.valid()) {
+                const TinyRegistry& registry = project->registryRef();
+                const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(skeleComp->skeleHandle);
+                if (skeleton) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
+                } else {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
+                }
+            }
+            
+            ImGui::Spacing();
+            
+            // Show bone transform count (read-only)
+            ImGui::Text("Active Bone Transforms: %zu", skeleComp->boneTransformsFinal.size());
+            
+            // Component status
+            ImGui::Separator();
+            ImGui::Text("Status:");
+            ImGui::SameLine();
+            
+            if (skeleComp->skeleHandle.valid()) {
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Skeleton loaded and ready");
+            } else {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing skeleton resource");
+            }
+            
+            ImGui::Spacing();
+        }, [&]() {
+            mutableNode->remove<TinyNode::Skeleton>();
+        });
+    }
     
     ImGui::EndChild();
     
     // ADD COMPONENT DROPDOWN at bottom
-    renderAddComponentDropdown(selectedNode);
-}
-
-void Application::renderAddComponentDropdown(const TinyRNode* selectedNode) {
-    if (!selectedNode) return;
-    
-    TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
-    
     // Check which components are missing
     std::vector<std::pair<std::string, TinyNode::Types>> missingComponents;
     
@@ -1310,488 +1657,57 @@ void Application::renderFileSystemInspector() {
     }
 }
 
-void Application::renderTransformInspector(const TinyRNode* selectedNode, bool isRootNode) {
-    // Simple transform section without dropdown - just the controls
-    if (!isRootNode) {
-        // Get the current transform
-        glm::mat4 localTransform = selectedNode->localTransform;
-        
-        // Extract translation, rotation, and scale from the matrix
-        glm::vec3 translation, rotation, scale;
-        glm::quat rotationQuat;
-        glm::vec3 skew;
-        glm::vec4 perspective;
-        
-        // Check if decomposition is valid
-        bool validDecomposition = glm::decompose(localTransform, scale, rotationQuat, translation, skew, perspective);
-        
-        if (!validDecomposition) {
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
-            if (ImGui::Button("Reset Transform")) {
-                TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
-                mutableNode->localTransform = glm::mat4(1.0f);
-                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
-            }
-            return;
-        }
-        
-        // Validate extracted values for NaN/infinity
-        auto isValidVec3 = [](const glm::vec3& v) {
-            return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
-        };
-        
-        if (!isValidVec3(translation) || !isValidVec3(scale)) {
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
-            if (ImGui::Button("Reset Transform")) {
-                TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
-                mutableNode->localTransform = glm::mat4(1.0f);
-                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
-            }
-            return;
-        }
-        
-        // Clamp scale to prevent zero/negative values
-        const float MIN_SCALE = 0.001f;
-        scale.x = std::max(MIN_SCALE, std::abs(scale.x));
-        scale.y = std::max(MIN_SCALE, std::abs(scale.y));
-        scale.z = std::max(MIN_SCALE, std::abs(scale.z));
-        
-        // Convert quaternion to Euler angles (in degrees)
-        rotation = glm::degrees(glm::eulerAngles(rotationQuat));
-        
-        // Normalize angles to [-180, 180] range
-        auto normalizeAngle = [](float angle) {
-            while (angle > 180.0f) angle -= 360.0f;
-            while (angle < -180.0f) angle += 360.0f;
-            return angle;
-        };
-        
-        rotation.x = normalizeAngle(rotation.x);
-        rotation.y = normalizeAngle(rotation.y);
-        rotation.z = normalizeAngle(rotation.z);
-        
-        // Store original values to detect changes
-        glm::vec3 originalTranslation = translation;
-        glm::vec3 originalRotation = rotation;
-        glm::vec3 originalScale = scale;
-        
-        // Translation controls
-        ImGui::Text("Position");
-        ImGui::DragFloat3("##Position", &translation.x, 0.01f, -1000.0f, 1000.0f, "%.3f");
-        ImGui::SameLine();
-        if (ImGui::Button("To Cam")) {
-            translation = project->getCamera()->pos;
-        }
-        
-        // Rotation controls
-        ImGui::Text("Rotation (degrees)");
-        ImGui::DragFloat3("##Rotation", &rotation.x, 0.5f, -180.0f, 180.0f, "%.1f°");
-        
-        // Scale controls
-        ImGui::Text("Scale");
-        ImGui::DragFloat3("##Scale", &scale.x, 0.01f, MIN_SCALE, 10.0f, "%.3f");
-        ImGui::SameLine();
-        if (ImGui::Button("Uniform")) {
-            float avgScale = (scale.x + scale.y + scale.z) / 3.0f;
-            scale = glm::vec3(avgScale);
-        }
-        
-        // Apply changes if any values changed
-        if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
-            if (isValidVec3(translation) && isValidVec3(scale)) {
-                // Reconstruct matrix from components
-                glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), translation);
-                glm::mat4 rotationMatrix = glm::eulerAngleXYZ(glm::radians(rotation.x), glm::radians(rotation.y), glm::radians(rotation.z));
-                glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
-                
-                glm::mat4 newTransform = translationMatrix * rotationMatrix * scaleMatrix;
-                
-                TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
-                mutableNode->localTransform = newTransform;
-                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
-            }
-        }
-    }
-}
-
-void Application::renderComponentsInspector(const TinyRNode* selectedNode) {
-    TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
-    
-    // Render existing components in the specified order: Mesh -> Bone -> Skeleton
-    // 1. Mesh Renderer Component (first priority)
-    if (selectedNode->hasComponent<TinyNode::MeshRender>()) {
-        renderMeshRenderComponent(mutableNode);
-        ImGui::Spacing();
-        ImGui::Spacing(); // Extra spacing between components
-    }
-    
-    // 2. Bone Attach Component (second priority)  
-    if (selectedNode->hasComponent<TinyNode::BoneAttach>()) {
-        renderBoneAttachComponent(mutableNode);
-        ImGui::Spacing();
-        ImGui::Spacing(); // Extra spacing between components
-    }
-    
-    // 3. Skeleton Component (third priority)
-    if (selectedNode->hasComponent<TinyNode::Skeleton>()) {
-        renderSkeletonComponent(mutableNode);
-        ImGui::Spacing();
-        ImGui::Spacing(); // Extra spacing between components
-    }
-}
-
-void Application::renderMeshRenderComponent(TinyRNode* selectedNode) {
+void Application::renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove) {
     // Component container with styled background
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.2f, 0.8f)); // Dark blue-gray background
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, backgroundColor);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.3f, 0.4f, 0.6f)); // Subtle border
+    ImGui::PushStyleColor(ImGuiCol_Border, borderColor);
     
-    if (ImGui::BeginChild("MeshRendererComponent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
-        // Header with remove button
-        ImGui::Text("Mesh Renderer");
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
-        if (ImGui::Button("Remove##MeshRender", ImVec2(65, 0))) {
-            selectedNode->remove<TinyNode::MeshRender>();
+    // Create unique ID for this component
+    std::string childId = std::string(componentName) + "Component";
+    
+    if (ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
+        // Header with optional remove button
+        ImGui::Text("%s", componentName);
+        
+        if (showRemoveButton && onRemove) {
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+            
+            std::string buttonId = "Remove##" + std::string(componentName);
+            if (ImGui::Button(buttonId.c_str(), ImVec2(65, 0))) {
+                onRemove(); // Call the removal function
+                ImGui::PopStyleColor(3);
+                ImGui::EndChild();
+                ImGui::PopStyleColor(2);
+                ImGui::PopStyleVar(2);
+                return; // Exit early since component was removed
+            }
             ImGui::PopStyleColor(3);
-            ImGui::EndChild();
-            ImGui::PopStyleColor(2);
-            ImGui::PopStyleVar(2);
-            return;
         }
-        ImGui::PopStyleColor(3);
         
         ImGui::Separator();
-    }
-    
-    TinyNode::MeshRender* meshComp = selectedNode->get<TinyNode::MeshRender>();
-    if (meshComp) {
-        ImGui::Spacing();
         
-        // Mesh Handle field with enhanced drag-drop support
-        ImGui::Text("Mesh Resource:");
-        bool meshModified = renderEnhancedHandleField("##MeshHandle", meshComp->meshHandle, "Mesh", 
-            "Drag a mesh file from the File Explorer", 
-            "Select mesh resource for rendering");
-        
-        // Show mesh information if valid
-        if (meshComp->meshHandle.valid()) {
-            const TinyRegistry& registry = project->registryRef();
-            const TinyRMesh* mesh = registry.get<TinyRMesh>(meshComp->meshHandle);
-            if (mesh) {
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", mesh->name.c_str());
-            } else {
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
-            }
+        // Render the component-specific content
+        if (renderContent) {
+            renderContent();
         }
         
-        ImGui::Spacing();
-        
-        // Skeleton Node Handle field with enhanced drag-drop support  
-        ImGui::Text("Skeleton Node:");
-        bool skeleModified = renderEnhancedHandleField("##MeshRenderer_SkeletonNodeHandle", meshComp->skeleNodeHandle, "SkeletonNode",
-            "Drag a skeleton node from the Hierarchy",
-            "Select skeleton node for bone animation");
-        
-        // Show skeleton node information if valid
-        if (meshComp->skeleNodeHandle.valid()) {
-            TinyRScene* activeScene = project->getActiveScene();
-            if (activeScene) {
-                const TinyRNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
-                if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", skeleNode->name.c_str());
-                } else {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid/No Skeleton");
-                }
-            }
-        }
-        
-        ImGui::Spacing();
+        ImGui::EndChild();
     }
     
-    ImGui::EndChild();
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(2);
+    
+    // Add spacing between components
+    ImGui::Spacing();
+    ImGui::Spacing();
 }
 
-void Application::renderSkeletonComponent(TinyRNode* selectedNode) {
-    // Component container with styled background
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.2f, 0.15f, 0.15f, 0.8f)); // Dark red-gray background
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.4f, 0.3f, 0.3f, 0.6f)); // Subtle border
-    
-    if (ImGui::BeginChild("SkeletonComponent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
-        // Header with remove button
-        ImGui::Text("Skeleton");
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 65);
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-        if (ImGui::Button("Remove##Skeleton", ImVec2(60, 0))) {
-            selectedNode->remove<TinyNode::Skeleton>();
-            ImGui::PopStyleColor(1);
-            ImGui::EndChild();
-            ImGui::PopStyleColor(2);
-            ImGui::PopStyleVar(2);
-            return;
-        }
-        ImGui::PopStyleColor(1);
-        ImGui::Separator();
-    }
-
-    TinyNode::Skeleton* skeleComp = selectedNode->get<TinyNode::Skeleton>();
-    if (skeleComp) {
-        ImGui::Spacing();
-        
-        // Skeleton Handle field
-        ImGui::Text("Skeleton Resource:");
-        bool skeleModified = renderEnhancedHandleField("##SkeletonHandle", skeleComp->skeleHandle, "Skeleton",
-            "Drag a skeleton file from the File Explorer",
-            "Select skeleton resource for bone data");
-        
-        // Show skeleton information if valid
-        if (skeleComp->skeleHandle.valid()) {
-            const TinyRegistry& registry = project->registryRef();
-            const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(skeleComp->skeleHandle);
-            if (skeleton) {
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
-                if (ImGui::IsItemHovered()) {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("Skeleton Resource");
-                    ImGui::Text("Bones: %zu", skeleton->bones.size());
-                    ImGui::EndTooltip();
-                }
-            } else {
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
-            }
-        }
-        
-        ImGui::Spacing();
-        
-        // Show bone transform count (read-only)
-        ImGui::Text("Active Bone Transforms: %zu", skeleComp->boneTransformsFinal.size());
-        
-        // Component status
-        ImGui::Separator();
-        ImGui::Text("Status:");
-        ImGui::SameLine();
-        
-        if (skeleComp->skeleHandle.valid()) {
-            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Skeleton loaded and ready");
-        } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing skeleton resource");
-        }
-        
-        ImGui::Spacing();
-    }
-    
-    ImGui::EndChild();
-    ImGui::PopStyleColor(2);
-    ImGui::PopStyleVar(2);
-}
-
-void Application::renderBoneAttachComponent(TinyRNode* selectedNode) {
-    // Component container with styled background
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.2f, 0.15f, 0.8f)); // Dark green-gray background
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.4f, 0.3f, 0.6f)); // Subtle border
-    
-    if (ImGui::BeginChild("BoneAttachComponent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
-        // Header with remove button
-        ImGui::Text("Bone Attachment");
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 65);
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-        if (ImGui::Button("Remove##BoneAttach", ImVec2(60, 0))) {
-            selectedNode->remove<TinyNode::BoneAttach>();
-            ImGui::PopStyleColor(1);
-            ImGui::EndChild();
-            ImGui::PopStyleColor(2);
-            ImGui::PopStyleVar(2);
-            return;
-        }
-        ImGui::PopStyleColor(1);
-        ImGui::Separator();
-        
-        TinyNode::BoneAttach* boneComp = selectedNode->get<TinyNode::BoneAttach>();
-        if (boneComp) {
-            ImGui::Spacing();
-            
-            // Skeleton Node Handle field with enhanced drag-drop support
-            ImGui::Text("Skeleton Node:");
-            bool skeleModified = renderEnhancedHandleField("##BoneAttach_SkeletonNodeHandle", boneComp->skeleNodeHandle, "SkeletonNode",
-                "Drag a skeleton node from the Hierarchy",
-                "Select skeleton node to attach to");
-            
-            // Show skeleton node information if valid
-            if (boneComp->skeleNodeHandle.valid()) {
-                TinyRScene* activeScene = project->getActiveScene();
-                if (activeScene) {
-                    const TinyRNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
-                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
-                        ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::BeginTooltip();
-                            ImGui::Text("Skeleton Node: %s", skeleNode->name.c_str());
-                            const TinyNode::Skeleton* skelComp = skeleNode->get<TinyNode::Skeleton>();
-                            if (skelComp) {
-                                ImGui::Text("Available Bones: %zu", skelComp->boneTransformsFinal.size());
-                            }
-                            ImGui::EndTooltip();
-                        }
-                    } else {
-                        ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid/No Skeleton");
-                    }
-                }
-            }
-            
-            ImGui::Spacing();
-            
-            // Bone Index field with validation
-            ImGui::Text("Bone Index:");
-            int boneIndex = static_cast<int>(boneComp->boneIndex);
-            
-            // Determine max bone count for validation
-            int maxBoneIndex = 255; // Default max
-            if (boneComp->skeleNodeHandle.valid()) {
-                TinyRScene* activeScene = project->getActiveScene();
-                if (activeScene) {
-                    const TinyRNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
-                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
-                        const TinyNode::Skeleton* skelComp = skeleNode->get<TinyNode::Skeleton>();
-                        if (skelComp && !skelComp->boneTransformsFinal.empty()) {
-                            maxBoneIndex = static_cast<int>(skelComp->boneTransformsFinal.size() - 1);
-                        }
-                    }
-                }
-            }
-            
-            if (ImGui::DragInt("##BoneIndex", &boneIndex, 1.0f, 0, maxBoneIndex)) {
-                boneComp->boneIndex = static_cast<uint32_t>(boneIndex);
-            }
-            
-            // Show validation status
-            ImGui::SameLine();
-            if (boneIndex <= maxBoneIndex && boneComp->skeleNodeHandle.valid()) {
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("Valid bone index (%d/%d)", boneIndex, maxBoneIndex);
-                }
-            } else {
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗");
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("Invalid bone index (max: %d)", maxBoneIndex);
-                }
-            }
-            
-            ImGui::Spacing();
-            
-            // Component status
-            ImGui::Separator();
-            ImGui::Text("Status:");
-            ImGui::SameLine();
-            
-            bool hasValidSkeleton = boneComp->skeleNodeHandle.valid();
-            bool hasValidBoneIndex = boneIndex <= maxBoneIndex;
-            
-            if (hasValidSkeleton && hasValidBoneIndex) {
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Ready for bone attachment");
-            } else if (hasValidSkeleton) {
-                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.5f, 1.0f), "Invalid bone index");
-            } else {
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing skeleton node");
-            }
-            
-            ImGui::Spacing();
-        }
-    }
-
-    ImGui::EndChild();
-    ImGui::PopStyleColor(2);
-    ImGui::PopStyleVar(2);
-}
-
-bool Application::renderHandleField(const char* label, TinyHandle& handle, const char* targetType, const char* tooltip) {
-    bool modified = false;
-    
-    ImGui::Text("%s", label);
-    
-    // Create a drag-drop target area
-    std::string fieldId = std::string("##") + label + "Field";
-    std::string displayText = handle.valid() ? "Assigned" : "None (drag here)";
-    
-    // Make the field look like a drag-drop zone
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.7f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.8f, 1.0f));
-    
-    if (ImGui::Button((displayText + fieldId).c_str(), ImVec2(-1, 25))) {
-        // Clear handle on click
-        handle = TinyHandle();
-        modified = true;
-    }
-    
-    ImGui::PopStyleColor(3);
-    
-    if (tooltip && ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("%s", tooltip);
-    }
-    
-    // Handle drag-drop
-    if (ImGui::BeginDragDropTarget()) {
-        // Accept different payload types based on target type
-        if (strcmp(targetType, "Mesh") == 0) {
-            // Accept mesh files from file explorer
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
-                TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
-                const TinyFNode* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
-                if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRMesh>()) {
-                    handle = fileNode->tHandle.handle; // Use registry handle
-                    modified = true;
-                }
-            }
-        } else if (strcmp(targetType, "Skeleton") == 0) {
-            // Accept skeleton files from file explorer
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
-                TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
-                const TinyFNode* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
-                if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRSkeleton>()) {
-                    handle = fileNode->tHandle.handle; // Use registry handle
-                    modified = true;
-                }
-            }
-        } else if (strcmp(targetType, "SkeletonNode") == 0) {
-            // Accept skeleton nodes from hierarchy
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
-                TinyHandle nodeHandle = *(const TinyHandle*)payload->Data;
-                TinyRScene* activeScene = project->getActiveScene();
-                if (activeScene) {
-                    const TinyRNode* node = activeScene->nodes.get(nodeHandle);
-                    if (node && node->hasComponent<TinyNode::Skeleton>()) {
-                        handle = nodeHandle; // Use node handle directly
-                        modified = true;
-                    }
-                }
-            }
-        }
-        
-        ImGui::EndDragDropTarget();
-    }
-    
-    return modified;
-}
-
-bool Application::renderEnhancedHandleField(const char* fieldId, TinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description) {
+bool Application::renderHandleField(const char* fieldId, TinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description) {
     bool modified = false;
     
     // Create enhanced drag-drop target area with better styling
@@ -1905,19 +1821,6 @@ bool Application::renderEnhancedHandleField(const char* fieldId, TinyHandle& han
     return modified;
 }
 
-void Application::renderNodeDeleteButton(const TinyRNode* selectedNode) {
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
-    
-    if (ImGui::Button("Delete Node", ImVec2(-1, 30))) {
-        // Add confirmation logic here if needed
-        // For now, just clear the selection
-        selectedSceneNodeHandle = project->getRootNodeHandle();
-    }
-    
-    ImGui::PopStyleColor(3);
-}
 
 void Application::createNewChildNode(TinyHandle parentNodeHandle) {
     TinyRScene* activeScene = project->getActiveScene();
