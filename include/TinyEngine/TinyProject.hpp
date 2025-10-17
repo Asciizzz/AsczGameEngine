@@ -44,11 +44,7 @@ public:
      * Renders an ImGui collapsible tree view with node selection support for the active scene
      */
     void renderNodeTreeImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
-    void renderFileExplorerImGui(int depth = 0);
-    
-    // Helper functions for file explorer
-    void renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, int depth);
-    void renderFileItem(TinyFS& fs, TinyHandle fileHandle);
+    void renderFileExplorerImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
     
     // Context menu callbacks - set these to handle context menu actions
     std::function<void(TinyHandle)> onAddChildNode = nullptr;

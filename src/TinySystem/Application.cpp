@@ -448,8 +448,8 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             queueForDeletion(fileHandle);
         };
         
-        project->renderFileExplorerImGui(0);
-        
+        project->renderFileExplorerImGui();
+
         ImGui::EndChild();
         
         // Pop the scrollbar styling
@@ -657,7 +657,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
             // Render children with proper indentation
             for (TinyHandle childHandle : folder->children) {
                 const TinyFNode* child = fs.getFNodes().get(childHandle);
-                if (!child || child->isHidden()) continue; // Skip invalid or hidden nodes
+                if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
 
                 if (child->type == TinyFNode::Type::Folder) {
                     renderSceneFolderTree(fs, childHandle, depth + 1);
@@ -794,7 +794,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         // Root folder - just render children without tree node but with consistent styling
         for (TinyHandle childHandle : folder->children) {
             const TinyFNode* child = fs.getFNodes().get(childHandle);
-            if (!child || child->isHidden()) continue; // Skip invalid or hidden nodes
+            if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
 
             if (child->type == TinyFNode::Type::Folder) {
                 renderSceneFolderTree(fs, childHandle, depth);

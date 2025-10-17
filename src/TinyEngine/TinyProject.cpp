@@ -328,6 +328,11 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
     }
     
+    // Select node on right-click (immediate selection before context menu)
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        selectedSceneNodeHandle = nodeHandle;
+    }
+    
     // Drag and drop target
     if (ImGui::BeginDragDropTarget()) {
         // Accept node reparenting
@@ -401,11 +406,6 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         }
         
         ImGui::EndDragDropTarget();
-    }
-    
-    // Select node on right-click (before context menu appears)
-    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-        selectedSceneNodeHandle = nodeHandle;
     }
     
     // Context menu for nodes - direct manipulation
@@ -518,95 +518,106 @@ void TinyProject::expandParentChain(TinyHandle nodeHandle) {
     }
 }
 
-// Scene deletion can be handled through registry cleanup
-// Runtime nodes are managed through the rtNodes vector directly
 
-void TinyProject::renderFileExplorerImGui(int depth) {
+
+
+
+void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
     TinyFS& fs = filesystem();
     
-    // Start with root folder
-    renderFileFolderTree(fs, fs.rootHandle(), depth);
-    
-    // Context menu for empty space in file explorer - direct manipulation
-    if (ImGui::BeginPopupContextWindow("FileExplorerContextMenu")) {
-        ImGui::Text("File Explorer");
-        ImGui::Separator();
-        
-        if (ImGui::MenuItem("Add Folder")) {
-            // Add to selected folder if one is selected, otherwise add to root
-            TinyHandle targetParent = selectedFNodeHandle.valid() ? selectedFNodeHandle : TinyHandle();
-            if (!targetParent.valid()) targetParent = fs.rootHandle();
-            
-            TinyHandle newFolderHandle = fs.addFolder(targetParent, "New Folder");
-            selectedFNodeHandle = newFolderHandle;
-        }
-        if (ImGui::MenuItem("Add Scene")) {
-            // Add to selected folder if one is selected, otherwise add to root
-            TinyHandle targetParent = selectedFNodeHandle.valid() ? selectedFNodeHandle : TinyHandle();
-            if (!targetParent.valid()) targetParent = fs.rootHandle();
-            
-            TinyRScene newScene;
-            newScene.name = "New Scene";
-            
-            // Create root node for the scene
-            TinyRNode rootNode;
-            rootNode.name = "Root";
-            newScene.rootNode = newScene.nodes.insert(rootNode);
-            
-            // Add scene to registry and create file node
-            TinyRScene* scenePtr = &newScene;
-            TinyHandle fileHandle = fs.addFile(targetParent, "New Scene", scenePtr);
-            selectedFNodeHandle = fileHandle;
-        }
-        
-        ImGui::EndPopup();
+    // Use root handle if no valid handle provided
+    if (!nodeHandle.valid()) {
+        nodeHandle = fs.rootHandle();
     }
-}
-
-void TinyProject::renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, int depth) {
-    const TinyFNode* folder = fs.getFNodes().get(folderHandle);
-    if (!folder) return;
     
-    // Skip root node display
-    if (folderHandle != fs.rootHandle()) {
-        ImGui::PushID(folderHandle.index);
+    const TinyFNode* node = fs.getFNodes().get(nodeHandle);
+    if (!node) return;
+    
+    // Create a unique ID for this node
+    ImGui::PushID(static_cast<int>(nodeHandle.index));
+    
+    // Check if this node has children and is selected
+    bool hasChildren = !node->children.empty();
+    bool isSelected = (selectedFNodeHandle.index == nodeHandle.index && selectedFNodeHandle.version == nodeHandle.version);
+    
+    if (node->type == TinyFNode::Type::Folder) {
+        // Display root folder as ".root" instead of full path
+        std::string displayName = (nodeHandle == fs.rootHandle()) ? ".root" : node->name;
         
-        // Check if this folder is selected
-        bool isFolderSelected = (selectedFNodeHandle == folderHandle);
-        
-        // Use consistent styling with node hierarchy
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
-        
-        bool nodeOpen = ImGui::TreeNodeEx(folder->name.c_str(), 
-            ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick |
-            (isFolderSelected ? ImGuiTreeNodeFlags_Selected : 0));
-        
-        ImGui::PopStyleColor(3);
-        
-        // Handle folder selection
-        if (ImGui::IsItemClicked()) {
-            selectedFNodeHandle = folderHandle;
+        // Create tree node flags
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        if (!hasChildren) {
+            flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        }
+        if (isSelected) {
+            flags |= ImGuiTreeNodeFlags_Selected;
         }
         
-        // Select folder on right-click (before context menu appears)
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-            selectedFNodeHandle = folderHandle;
+        // Add consistent styling to match node hierarchy theme
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Gray hover background (same as nodes)
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background (same as nodes)
+        
+        bool nodeOpen = ImGui::TreeNodeEx(displayName.c_str(), flags);
+        
+        // Pop the style colors for folders right after TreeNodeEx
+        ImGui::PopStyleColor(2);
+        
+        // Handle selection - only select on mouse release if we didn't drag
+        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            // Check if this was a click (no significant drag distance)
+            ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+            float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
+            
+            // Only select if drag distance was minimal (treat as click)
+            if (dragDistance < 5.0f) { // 5 pixel tolerance
+                selectedFNodeHandle = nodeHandle;
+            }
+            
+            // Reset drag delta for next interaction
+            ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+        }
+        
+        // Select folder on right-click (immediate selection before context menu)
+        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+            selectedFNodeHandle = nodeHandle;
+        }
+        
+        // Drag source for folders
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            ImGui::SetDragDropPayload("FOLDER_HANDLE", &nodeHandle, sizeof(TinyHandle));
+            ImGui::Text("Moving: %s", displayName.c_str());
+            ImGui::EndDragDropSource();
+        }
+        
+        // Drag drop target for folders and files
+        if (ImGui::BeginDragDropTarget()) {
+            // Accept folders being dropped
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
+                TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
+                if (draggedFolder != nodeHandle) { // Can't drop folder on itself
+                    fs.moveFNode(draggedFolder, nodeHandle);
+                }
+            }
+            
+            // Accept files being dropped  
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+                TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
+                fs.moveFNode(draggedFile, nodeHandle);
+            }
+            
+            ImGui::EndDragDropTarget();
         }
         
         // Context menu for folders - direct manipulation
         if (ImGui::BeginPopupContextItem()) {
-            ImGui::Text("%s", folder->name.c_str());
+            ImGui::Text("%s", displayName.c_str());
             ImGui::Separator();
             
             if (ImGui::MenuItem("Add Folder")) {
-                TinyFS& fs = filesystem();
-                TinyHandle newFolderHandle = fs.addFolder(folderHandle, "New Folder");
+                TinyHandle newFolderHandle = fs.addFolder(nodeHandle, "New Folder");
                 selectedFNodeHandle = newFolderHandle;
             }
             if (ImGui::MenuItem("Add Scene")) {
-                TinyFS& fs = filesystem();
                 TinyRScene newScene;
                 newScene.name = "New Scene";
                 
@@ -617,96 +628,38 @@ void TinyProject::renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, int 
                 
                 // Add scene to registry and create file node
                 TinyRScene* scenePtr = &newScene;
-                TinyHandle fileHandle = fs.addFile(folderHandle, "New Scene", scenePtr);
+                TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", scenePtr);
                 selectedFNodeHandle = fileHandle;
             }
             
             ImGui::Separator();
-            if (ImGui::MenuItem("Delete", nullptr, false, folder->deletable())) {
-                if (folder->deletable()) {
-                    TinyFS& fs = filesystem();
-                    fs.removeFNode(folderHandle);
+            if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
+                if (node->deletable()) {
+                    fs.removeFNode(nodeHandle);
                     selectedFNodeHandle = TinyHandle(); // Clear selection
                 }
             }
             ImGui::EndPopup();
         }
         
-        // Drag source for folders
-        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-            ImGui::SetDragDropPayload("FOLDER_HANDLE", &folderHandle, sizeof(TinyHandle));
-            ImGui::Text("Moving folder: %s", folder->name.c_str());
-            ImGui::EndDragDropSource();
-        }
-        
-        // Drag drop target for folders and files
-        if (ImGui::BeginDragDropTarget()) {
-            // Accept folders being dropped
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
-                TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
-                if (draggedFolder != folderHandle) { // Can't drop folder on itself
-                    fs.moveFNode(draggedFolder, folderHandle);
-                }
-            }
-            
-            // Accept files being dropped  
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
-                TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
-                fs.moveFNode(draggedFile, folderHandle);
-            }
-            
-            ImGui::EndDragDropTarget();
-        }
-        
-
-        
-        if (nodeOpen) {
-            // Render children with proper indentation
-            for (TinyHandle childHandle : folder->children) {
+        // If folder is open and has children, recurse for children
+        if (nodeOpen && hasChildren) {
+            for (const TinyHandle& childHandle : node->children) {
                 const TinyFNode* child = fs.getFNodes().get(childHandle);
-                if (!child || child->isHidden()) continue; // Skip invalid or hidden nodes
-
-                if (child->type == TinyFNode::Type::Folder) {
-                    renderFileFolderTree(fs, childHandle, depth + 1);
-                } else if (child->type == TinyFNode::Type::File) {
-                    renderFileItem(fs, childHandle);
-                }
+                if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
+                
+                renderFileExplorerImGui(childHandle, depth + 1);
             }
             ImGui::TreePop();
         }
         
-        ImGui::PopID();
-    } else {
-        // Root folder - just render children without tree node
-        for (TinyHandle childHandle : folder->children) {
-            const TinyFNode* child = fs.getFNodes().get(childHandle);
-            if (!child || child->isHidden()) continue; // Skip invalid or hidden nodes
-
-            if (child->type == TinyFNode::Type::Folder) {
-                renderFileFolderTree(fs, childHandle, depth);
-            } else if (child->type == TinyFNode::Type::File) {
-                renderFileItem(fs, childHandle);
-            }
-        }
-    }
-}
-
-void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
-    const TinyFNode* file = fs.getFNodes().get(fileHandle);
-    if (!file) return;
-    
-    ImGui::PushID(fileHandle.index);
-    
-    bool isSelected = (selectedFNodeHandle == fileHandle);
-    
-    if (file->tHandle.isType<TinyRScene>()) {
-        // Scene file
-        TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(file->tHandle));
-        if (scene) {
-            std::string sceneName = file->name;
+    } else if (node->type == TinyFNode::Type::File) {
+        if (node->tHandle.isType<TinyRScene>()) {
+            // Scene file
+            std::string sceneName = node->name;
             
             // Check if this is the active scene for red backdrop
-            TinyHandle sceneRegistryHandle = file->tHandle.handle;
+            TinyHandle sceneRegistryHandle = node->tHandle.handle;
             bool isActiveScene = (getActiveSceneHandle() == sceneRegistryHandle);
             
             // Add permanent red backdrop for active scene files
@@ -717,32 +670,36 @@ void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
                 ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(200, 50, 50, 100)); // Red backdrop
             }
             
-            // Set colors for scene files: gray text, normal selection behavior
+            // Set colors for scene files
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Subtle hover background
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background (same as nodes)
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background (same as nodes)
             
             if (ImGui::Selectable(sceneName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
-                selectedFNodeHandle = fileHandle;
-                
-                // Double-click handling would need to be passed to Application
-                if (ImGui::IsMouseDoubleClicked(0)) {
-                    // This would need a callback for double-click scene placement
-                }
+                selectedFNodeHandle = nodeHandle;
             }
             
-            // Select scene file on right-click (before context menu appears)
-            if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-                selectedFNodeHandle = fileHandle;
+            // Select scene file on right-click (immediate selection before context menu)
+            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+                selectedFNodeHandle = nodeHandle;
+            }
+            
+            // Drag source for scene files
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
+                ImGui::Text("Scene: %s", node->name.c_str());
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
+                ImGui::EndDragDropSource();
             }
             
             // Context menu for scene files - direct manipulation
             if (ImGui::BeginPopupContextItem()) {
-                ImGui::Text("%s", file->name.c_str());
+                ImGui::Text("%s", node->name.c_str());
                 ImGui::Separator();
                 
                 // Get scene handle from TypeHandle
-                TinyHandle sceneRegistryHandle = file->tHandle.handle;
+                TinyHandle sceneRegistryHandle = node->tHandle.handle;
                 bool isCurrentlyActive = (getActiveSceneHandle() == sceneRegistryHandle);
                 
                 if (isCurrentlyActive) {
@@ -756,16 +713,9 @@ void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
                 }
                 
                 ImGui::Separator();
-                
-                if (ImGui::MenuItem("Duplicate Scene")) {
-                    // TODO: Implement scene duplication
-                    ImGui::Text("Not implemented yet");
-                }
-                
-                if (ImGui::MenuItem("Delete", nullptr, false, file->deletable())) {
-                    if (file->deletable()) {
-                        TinyFS& fs = filesystem();
-                        fs.removeFNode(fileHandle);
+                if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
+                    if (node->deletable()) {
+                        fs.removeFNode(nodeHandle);
                         selectedFNodeHandle = TinyHandle(); // Clear selection
                     }
                 }
@@ -775,64 +725,52 @@ void TinyProject::renderFileItem(TinyFS& fs, TinyHandle fileHandle) {
             
             ImGui::PopStyleColor(3);
             
-            // Drag source for scene files
+        } else {
+            // Other file types
+            std::string fileName = node->name;
+            
+            // Set colors for other files
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
+            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background (same as nodes)
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background (same as nodes)
+            
+            ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_None);
+            
+            // Handle file selection
+            if (ImGui::IsItemClicked()) {
+                selectedFNodeHandle = nodeHandle;
+            }
+            
+            // Select file on right-click (immediate selection before context menu)
+            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+                selectedFNodeHandle = nodeHandle;
+            }
+            
+            // Drag source for other files
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                ImGui::SetDragDropPayload("FILE_HANDLE", &fileHandle, sizeof(TinyHandle));
-                ImGui::Text("Scene: %s", file->name.c_str());
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
+                ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
+                ImGui::Text("Moving file: %s", node->name.c_str());
                 ImGui::EndDragDropSource();
             }
             
-
-        }
-    } else {
-        // Other file types
-        std::string fileName = file->name;
-        
-        // Set colors for other files: gray text, gray selection background
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.2f, 0.2f, 0.2f, 0.3f)); // Subtle hover background
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
-        
-        ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_None);
-        
-        // Handle file selection
-        if (ImGui::IsItemClicked()) {
-            selectedFNodeHandle = fileHandle;
-        }
-        
-        // Select file on right-click (before context menu appears)
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-            selectedFNodeHandle = fileHandle;
-        }
-        
-        // Context menu for other file types - direct manipulation
-        if (ImGui::BeginPopupContextItem()) {
-            ImGui::Text("%s", file->name.c_str());
-            ImGui::Separator();
-            
-            if (ImGui::MenuItem("Delete", nullptr, false, file->deletable())) {
-                if (file->deletable()) {
-                    TinyFS& fs = filesystem();
-                    fs.removeFNode(fileHandle);
-                    selectedFNodeHandle = TinyHandle(); // Clear selection
+            // Context menu for other file types - direct manipulation
+            if (ImGui::BeginPopupContextItem()) {
+                ImGui::Text("%s", node->name.c_str());
+                ImGui::Separator();
+                
+                if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
+                    if (node->deletable()) {
+                        fs.removeFNode(nodeHandle);
+                        selectedFNodeHandle = TinyHandle(); // Clear selection
+                    }
                 }
+                ImGui::EndPopup();
             }
-            ImGui::EndPopup();
+            
+            ImGui::PopStyleColor(3);
         }
-        
-        ImGui::PopStyleColor(3);
-        
-        // Drag source for other files
-        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-            ImGui::SetDragDropPayload("FILE_HANDLE", &fileHandle, sizeof(TinyHandle));
-            ImGui::Text("Moving file: %s", file->name.c_str());
-            ImGui::EndDragDropSource();
-        }
-        
-
     }
     
     ImGui::PopID();
 }
+

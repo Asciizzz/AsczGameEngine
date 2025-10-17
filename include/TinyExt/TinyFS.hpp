@@ -22,7 +22,7 @@ struct TinyFNode {
     } cfg;
 
     TinyFNode& setHidden(bool h) { cfg.hidden = h; return *this; }
-    bool isHidden() const { return cfg.hidden; }
+    bool hidden() const { return cfg.hidden; }
 
     TinyFNode& setDeletable(bool d) { cfg.deletable = d; return *this; }
     bool deletable() const { return cfg.deletable; }
@@ -35,9 +35,10 @@ class TinyFS {
 public:
     TinyFS() {
         TinyFNode rootNode;
-        rootNode.name = ".";      // default root name; can be set via setRoot()
-        rootNode.parent = TinyHandle(); // invalid
+        rootNode.name = ".root";
+        rootNode.parent = TinyHandle();
         rootNode.type = TinyFNode::Type::Folder;
+        rootNode.cfg.deletable = false; // root is not deletable
 
         // Insert root and store explicitly the returned handle
         rootHandle_ = fnodes.insert(std::move(rootNode));
@@ -124,6 +125,12 @@ public:
     void removeFNode(TinyHandle handle) {
         TinyFNode* node = fnodes.get(handle);
         if (!node || !node->deletable()) return;
+
+        // If node is non-deletable, move it to root instead
+        if (!node->deletable()) {
+            moveFNode(handle, rootHandle_);
+            return;
+        }
 
         // copy children to avoid mutation during recursion
         std::vector<TinyHandle> childCopy = node->children;
