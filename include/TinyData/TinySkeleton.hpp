@@ -18,9 +18,13 @@ struct TinyBone {
 };
 
 struct TinySkeleton {
+    std::string name;
     std::vector<TinyBone> bones;
 
-    void clear() { bones.clear(); }
+    void clear() { 
+        name.clear();
+        bones.clear(); 
+    }
     uint32_t insert(const TinyBone& bone);
 
     void debugPrintHierarchy() const;

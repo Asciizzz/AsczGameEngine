@@ -361,8 +361,13 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             selectedFNodeHandle = TinyHandle();
         }
         
+        // Clear held node when mouse is released and no dragging is happening
+        if (heldNodeHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            heldNodeHandle = TinyHandle();
+        }
+        
         if (activeScene && activeScene->nodes.count() > 0) {
-            project->renderSelectableNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle);
+            project->renderSelectableNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle, heldNodeHandle);
         } else {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
@@ -1582,7 +1587,27 @@ bool Application::renderEnhancedHandleField(const char* fieldId, TinyHandle& han
     ImVec4 buttonColor, hoveredColor, activeColor;
     
     if (handle.valid()) {
-        displayText = std::to_string(handle.index) + "_v" + std::to_string(handle.version);
+        // Get the actual name based on target type
+        if (strcmp(targetType, "Mesh") == 0) {
+            const TinyRegistry& registry = project->registryRef();
+            const TinyRMesh* mesh = registry.get<TinyRMesh>(handle);
+            displayText = mesh ? mesh->name : ("Mesh_" + std::to_string(handle.index));
+        } else if (strcmp(targetType, "Skeleton") == 0) {
+            const TinyRegistry& registry = project->registryRef();
+            const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(handle);
+            displayText = skeleton ? skeleton->name : ("Skeleton_" + std::to_string(handle.index));
+        } else if (strcmp(targetType, "SkeletonNode") == 0) {
+            TinyRScene* activeScene = project->getActiveScene();
+            if (activeScene) {
+                const TinyRNode* node = activeScene->nodes.get(handle);
+                displayText = node ? node->name : ("Node_" + std::to_string(handle.index));
+            } else {
+                displayText = "Node_" + std::to_string(handle.index);
+            }
+        } else {
+            displayText = std::to_string(handle.index) + "_v" + std::to_string(handle.version);
+        }
+        
         buttonColor = ImVec4(0.2f, 0.4f, 0.2f, 1.0f);   // Green tint for valid handle
         hoveredColor = ImVec4(0.3f, 0.5f, 0.3f, 1.0f);
         activeColor = ImVec4(0.1f, 0.3f, 0.1f, 1.0f);

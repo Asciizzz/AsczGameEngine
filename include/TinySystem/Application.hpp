@@ -55,7 +55,8 @@ private:
     // Scene management (now handled via TinyFS folder structure)
     
     // Runtime scene node selection for hierarchy interaction
-    TinyHandle selectedSceneNodeHandle;
+    TinyHandle selectedSceneNodeHandle;  // Currently active node for Inspector/editing
+    TinyHandle heldNodeHandle;           // Temporarily held node for drag operations
     
     // Filesystem node selection (folders and files)
     TinyHandle selectedFNodeHandle;

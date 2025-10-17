@@ -570,6 +570,9 @@ void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
     if (skin.joints.empty()) return;
 
     skeleton.clear();
+    
+    // Set skeleton name from skin name, or create a default name
+    skeleton.name = !skin.name.empty() ? skin.name : ("Skeleton_" + std::to_string(skeletonIndex));
 
     // Create the node-to-bone mapping
     for (int i = 0; i < skin.joints.size(); ++i) {

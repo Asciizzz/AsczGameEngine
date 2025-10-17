@@ -414,7 +414,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     ImGui::PopID();
 }
 
-void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, int depth) {
+void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, TinyHandle& heldNode, int depth) {
     TinyRScene* activeScene = getActiveScene();
     if (!activeScene) return;
     
@@ -432,6 +432,7 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
     // Check if this node has children
     bool hasChildren = !node->childrenHandles.empty();
     bool isSelected = (selectedNode.index == nodeHandle.index && selectedNode.version == nodeHandle.version);
+    bool isHeld = (heldNode.index == nodeHandle.index && heldNode.version == nodeHandle.version);
     
     // Create tree node flags
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
@@ -478,19 +479,36 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
         }
     }
     
-    // Handle selection
-    if (ImGui::IsItemClicked()) {
-        selectedNode = nodeHandle;
-    }
-    
     // Drag and drop source (only if not root node)
+    bool isDragging = false;
     if (nodeHandle != activeScene->rootNode && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+        isDragging = true;
+        heldNode = nodeHandle;  // Set the held node during drag
+        
         // Set payload to carry the node handle
         ImGui::SetDragDropPayload("NODE_HANDLE", &nodeHandle, sizeof(TinyHandle));
         
         // Display preview
         ImGui::Text("Moving: %s", node->name.c_str());
         ImGui::EndDragDropSource();
+    }
+    
+    // Clear held node when not actively dragging from this item
+    // Note: held node will be cleared in the drag drop target accept logic
+    
+    // Handle selection - only select on mouse release if we didn't drag
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        // Check if this was a click (no significant drag distance)
+        ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+        float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
+        
+        // Only select if drag distance was minimal (treat as click)
+        if (dragDistance < 5.0f) { // 5 pixel tolerance
+            selectedNode = nodeHandle;
+        }
+        
+        // Reset drag delta for next interaction
+        ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
     }
     
     // Drag and drop target
@@ -507,10 +525,11 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
                 // Auto-expand the parent chain to show the newly dropped node
                 expandParentChain(nodeHandle);
                 
-                // If the dragged node was selected, keep it selected
-                if (selectedNode == draggedNode) {
-                    selectedNode = draggedNode;
-                }
+                // Keep the dragged node selected (maintain selection across drag operations)
+                selectedNode = draggedNode;
+                
+                // Clear held state after successful drop
+                heldNode = TinyHandle();
             }
         }
         
@@ -581,7 +600,7 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
     // If node is open and has children, recurse for children
     if (nodeOpen && hasChildren) {
         for (const TinyHandle& childHandle : node->childrenHandles) {
-            renderSelectableNodeTreeImGui(childHandle, selectedNode, depth + 1);
+            renderSelectableNodeTreeImGui(childHandle, selectedNode, heldNode, depth + 1);
         }
         ImGui::TreePop();
     }

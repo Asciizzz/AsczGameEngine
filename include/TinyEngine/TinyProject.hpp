@@ -42,7 +42,7 @@ public:
     /**
      * Renders an ImGui collapsible tree view with node selection support for the active scene
      */
-    void renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, int depth = 0);
+    void renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, TinyHandle& heldNode, int depth = 0);
 
 
     /**
