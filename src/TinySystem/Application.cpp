@@ -924,7 +924,33 @@ void Application::renderNodeInspector() {
     bool isRootNode = (selectedSceneNodeHandle == project->getRootNodeHandle());
 
     // GENERAL INFO SECTION (non-scrollable)
-    ImGui::Text("Node: %s", selectedNode->name.c_str());
+    // Editable node name field
+    ImGui::Text("Name:");
+    ImGui::SameLine();
+    
+    // Create a unique ID for the input field
+    std::string inputId = "##NodeName_" + std::to_string(selectedSceneNodeHandle.index);
+    
+    // Static buffer to hold the name during editing
+    static char nameBuffer[256];
+    static TinyHandle lastSelectedNode;
+    
+    // Initialize buffer if we switched to a different node
+    if (lastSelectedNode != selectedSceneNodeHandle) {
+        strncpy_s(nameBuffer, selectedNode->name.c_str(), sizeof(nameBuffer) - 1);
+        nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+        lastSelectedNode = selectedSceneNodeHandle;
+    }
+    
+    // Editable text input
+    ImGui::SetNextItemWidth(-1); // Use full available width
+    bool enterPressed = ImGui::InputText(inputId.c_str(), nameBuffer, sizeof(nameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+    
+    // Apply rename on Enter or when focus is lost
+    if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
+        activeScene->renameNode(selectedSceneNodeHandle, std::string(nameBuffer));
+    }
+    
     ImGui::Text("Handle: %u_v%u", selectedSceneNodeHandle.index, selectedSceneNodeHandle.version);
     
     // Show parent and children count
@@ -1070,30 +1096,33 @@ void Application::renderFileSystemInspector() {
     }
     ImGui::Separator();
     
-    // Name editing
-    static char nameBuffer[256];
-    static bool nameEdit = false;
+    // Editable file name field
+    ImGui::Text("Name:");
+    ImGui::SameLine();
     
-    if (!nameEdit) {
-        ImGui::Text("Name: %s", selectedFNode->name.c_str());
-        ImGui::SameLine();
-        if (ImGui::Button("Rename")) {
-            nameEdit = true;
-            strcpy_s(nameBuffer, sizeof(nameBuffer), selectedFNode->name.c_str());
-        }
-    } else {
-        ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer));
-        ImGui::SameLine();
-        if (ImGui::Button("Save")) {
-            TinyFNode* mutableNode = const_cast<TinyFNode*>(fs.getFNodes().get(selectedFNodeHandle));
-            if (mutableNode) {
-                mutableNode->name = std::string(nameBuffer);
-            }
-            nameEdit = false;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel")) {
-            nameEdit = false;
+    // Create a unique ID for the input field
+    std::string fileInputId = "##FileName_" + std::to_string(selectedFNodeHandle.index);
+    
+    // Static buffer to hold the name during editing
+    static char fileNameBuffer[256];
+    static TinyHandle lastSelectedFile;
+    
+    // Initialize buffer if we switched to a different file/folder
+    if (lastSelectedFile != selectedFNodeHandle) {
+        strncpy_s(fileNameBuffer, selectedFNode->name.c_str(), sizeof(fileNameBuffer) - 1);
+        fileNameBuffer[sizeof(fileNameBuffer) - 1] = '\0';
+        lastSelectedFile = selectedFNodeHandle;
+    }
+    
+    // Editable text input
+    ImGui::SetNextItemWidth(-1); // Use full available width
+    bool fileEnterPressed = ImGui::InputText(fileInputId.c_str(), fileNameBuffer, sizeof(fileNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+    
+    // Apply rename on Enter or when focus is lost
+    if (fileEnterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
+        TinyFNode* mutableNode = const_cast<TinyFNode*>(fs.getFNodes().get(selectedFNodeHandle));
+        if (mutableNode) {
+            mutableNode->name = std::string(fileNameBuffer);
         }
     }
     
