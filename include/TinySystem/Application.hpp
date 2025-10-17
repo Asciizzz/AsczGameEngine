@@ -86,6 +86,8 @@ private:
     void renderTransformInspector(const TinyRNode* selectedNode, bool isRootNode);
     void renderComponentsInspector(const TinyRNode* selectedNode);
     void renderNodeDeleteButton(const TinyRNode* selectedNode);
+    void createNewChildNode(TinyHandle parentNodeHandle);
+    void deleteSelectedNode();
     
     // Component-specific inspectors
     void renderMeshRenderComponent(TinyRNode* selectedNode);

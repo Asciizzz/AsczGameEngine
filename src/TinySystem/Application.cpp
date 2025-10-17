@@ -938,6 +938,27 @@ void Application::renderNodeInspector() {
     }
     ImGui::Text("Children: %zu", selectedNode->childrenHandles.size());
     
+    ImGui::Spacing();
+    
+    // NEW CHILD BUTTON
+    if (ImGui::Button("New Child", ImVec2(-1, 0))) {
+        createNewChildNode(selectedSceneNodeHandle);
+    }
+    
+    // DELETE NODE BUTTON (red and shiny)
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+    
+    // Only show delete button if not root node
+    if (!isRootNode) {
+        if (ImGui::Button("Delete Node", ImVec2(-1, 0))) {
+            deleteSelectedNode();
+        }
+    }
+    
+    ImGui::PopStyleColor(3);
+    
     ImGui::Separator();
     
     // SCROLLABLE COMPONENTS SECTION 
@@ -1705,4 +1726,52 @@ void Application::renderNodeDeleteButton(const TinyRNode* selectedNode) {
     }
     
     ImGui::PopStyleColor(3);
+}
+
+void Application::createNewChildNode(TinyHandle parentNodeHandle) {
+    TinyRScene* activeScene = project->getActiveScene();
+    if (!activeScene) return;
+    
+    // Create a new node as a child of the specified parent
+    TinyHandle newNodeHandle = activeScene->addNewNode(parentNodeHandle, "New Node");
+    
+    if (newNodeHandle.valid()) {
+        // Select the newly created node in the Inspector
+        selectedSceneNodeHandle = newNodeHandle;
+        
+        // Update global transforms after adding the new node
+        activeScene->updateGlbTransform();
+        
+        // Auto-expand the parent to show the new node
+        project->expandNode(parentNodeHandle);
+    }
+}
+
+void Application::deleteSelectedNode() {
+    TinyRScene* activeScene = project->getActiveScene();
+    if (!activeScene || !selectedSceneNodeHandle.valid()) {
+        return;
+    }
+    
+    // Don't delete root node
+    if (selectedSceneNodeHandle == project->getRootNodeHandle()) {
+        return;
+    }
+    
+    // Store parent handle before deletion
+    const TinyRNode* nodeToDelete = activeScene->nodes.get(selectedSceneNodeHandle);
+    TinyHandle parentHandle = nodeToDelete ? nodeToDelete->parentHandle : TinyHandle();
+    
+    // Delete the node and all its children
+    if (activeScene->deleteNodeRecursive(selectedSceneNodeHandle)) {
+        // Select parent after deletion
+        if (parentHandle.valid()) {
+            selectedSceneNodeHandle = parentHandle;
+        } else {
+            selectedSceneNodeHandle = project->getRootNodeHandle();
+        }
+        
+        // Update global transforms after deletion
+        activeScene->updateGlbTransform();
+    }
 }

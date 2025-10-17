@@ -116,4 +116,21 @@ struct TinyRScene {
     // Scene manipulation functions (moved from TinyProject)
     bool deleteNodeRecursive(TinyHandle nodeHandle);
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
+
+    TinyHandle addNewNode(TinyHandle parentHandle = TinyHandle(), const std::string& nodeName = "New Node");
+    
+    TinyRNode* getNode(TinyHandle nodeHandle) {
+        return nodes.get(nodeHandle);
+    }
+    const TinyRNode* getNode(TinyHandle nodeHandle) const {
+        return nodes.get(nodeHandle);
+    }
+
+    bool renameNode(TinyHandle nodeHandle, const std::string& newName) {
+        TinyRNode* node = nodes.get(nodeHandle);
+        if (!node) return false;
+
+        node->name = newName;
+        return true;
+    }
 };

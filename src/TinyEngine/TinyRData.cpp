@@ -333,3 +333,40 @@ bool TinyRScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle)
     
     return true;
 }
+
+TinyHandle TinyRScene::addNewNode(TinyHandle parentHandle, const std::string& nodeName) {
+    // If no parent specified, use root node
+    if (!parentHandle.valid()) {
+        parentHandle = rootNode;
+    }
+    
+    // Validate parent exists
+    TinyRNode* parentNode = nodes.get(parentHandle);
+    if (!parentNode) {
+        return TinyHandle(); // Invalid parent handle
+    }
+    
+    // Create a new blank node
+    TinyRNode newNode;
+    newNode.name = nodeName;
+    newNode.localTransform = glm::mat4(1.0f); // Identity transform
+    newNode.globalTransform = glm::mat4(1.0f);
+    newNode.parentHandle = parentHandle;
+    newNode.types = 0; // No components
+    
+    // Add the node to the pool first
+    TinyHandle newNodeHandle = nodes.insert(std::move(newNode));
+    
+    // Re-get parent pointer after potential pool reallocation
+    parentNode = nodes.get(parentHandle);
+    if (!parentNode) {
+        // This shouldn't happen, but safety check
+        nodes.remove(newNodeHandle);
+        return TinyHandle();
+    }
+    
+    // Add to parent's children list
+    parentNode->childrenHandles.push_back(newNodeHandle);
+    
+    return newNodeHandle;
+}
