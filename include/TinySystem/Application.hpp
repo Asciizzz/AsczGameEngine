@@ -89,6 +89,10 @@ private:
     void createNewChildNode(TinyHandle parentNodeHandle);
     void deleteSelectedNode();
     
+    // File/Folder management
+    void createNewFolder(TinyHandle parentFolderHandle = TinyHandle());
+    void createNewScene(TinyHandle parentFolderHandle = TinyHandle());
+    
     // Component-specific inspectors
     void renderMeshRenderComponent(TinyRNode* selectedNode);
     void renderSkeletonComponent(TinyRNode* selectedNode);

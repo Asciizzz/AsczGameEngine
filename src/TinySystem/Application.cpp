@@ -625,6 +625,23 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
             ImGui::EndDragDropTarget();
         }
         
+        // Context menu for folders
+        if (ImGui::BeginPopupContextItem()) {
+            if (ImGui::MenuItem("Add Folder")) {
+                createNewFolder(folderHandle);
+            }
+            if (ImGui::MenuItem("Add Scene")) {
+                createNewScene(folderHandle);
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Delete", nullptr, false, folder->cfg.deletable)) {
+                if (folder->cfg.deletable) {
+                    queueForDeletion(folderHandle);
+                }
+            }
+            ImGui::EndPopup();
+        }
+        
         if (nodeOpen) {
             // Render children with proper indentation
             for (TinyHandle childHandle : folder->children) {
@@ -721,8 +738,10 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                     // TODO: Implement scene duplication
                                 }
                                 
-                                if (child->cfg.deletable && ImGui::MenuItem("Delete")) {
-                                    // TODO: Add deletion confirmation and logic
+                                if (ImGui::MenuItem("Delete", nullptr, false, child->cfg.deletable)) {
+                                    if (child->cfg.deletable) {
+                                        queueForDeletion(childHandle);
+                                    }
                                 }
                                 
                                 ImGui::EndPopup();
@@ -778,6 +797,16 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                 ImGui::Text("Type: Asset");
                             }
                             ImGui::EndTooltip();
+                        }
+                        
+                        // Context menu for other file types
+                        if (ImGui::BeginPopupContextItem()) {
+                            if (ImGui::MenuItem("Delete", nullptr, false, child->cfg.deletable)) {
+                                if (child->cfg.deletable) {
+                                    queueForDeletion(childHandle);
+                                }
+                            }
+                            ImGui::EndPopup();
                         }
                     }
                     
@@ -875,6 +904,16 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
                         ImGui::Text("Moving file: %s", child->name.c_str());
                         ImGui::EndDragDropSource();
+                    }
+                    
+                    // Context menu for root-level files
+                    if (ImGui::BeginPopupContextItem()) {
+                        if (ImGui::MenuItem("Delete", nullptr, false, child->cfg.deletable)) {
+                            if (child->cfg.deletable) {
+                                queueForDeletion(childHandle);
+                            }
+                        }
+                        ImGui::EndPopup();
                     }
                 }
                 
@@ -1134,51 +1173,99 @@ void Application::renderFileSystemInspector() {
         return;
     }
     
-    // Header based on type
-    if (selectedFNode->isFile()) {
-        ImGui::Text("File Inspector");
-    } else {
-        ImGui::Text("Folder Inspector");
-    }
+    bool isFile = selectedFNode->isFile();
+    bool isFolder = !isFile;
+    
+    // === SHARED HEADER ===
+    ImGui::Text("%s Inspector", isFile ? "File" : "Folder");
     ImGui::Separator();
     
-    // Editable file name field
-    ImGui::Text("Name:");
+    // === SHARED: EDITABLE NAME FIELD ===
+    ImGui::Text("FName:");
     ImGui::SameLine();
     
     // Create a unique ID for the input field
-    std::string fileInputId = "##FileName_" + std::to_string(selectedFNodeHandle.index);
+    std::string inputId = "##FNodeName_" + std::to_string(selectedFNodeHandle.index);
     
     // Static buffer to hold the name during editing
-    static char fileNameBuffer[256];
-    static TinyHandle lastSelectedFile;
+    static char nameBuffer[256];
+    static TinyHandle lastSelectedFNode;
     
     // Initialize buffer if we switched to a different file/folder
-    if (lastSelectedFile != selectedFNodeHandle) {
-        strncpy_s(fileNameBuffer, selectedFNode->name.c_str(), sizeof(fileNameBuffer) - 1);
-        fileNameBuffer[sizeof(fileNameBuffer) - 1] = '\0';
-        lastSelectedFile = selectedFNodeHandle;
+    if (lastSelectedFNode != selectedFNodeHandle) {
+        strncpy_s(nameBuffer, selectedFNode->name.c_str(), sizeof(nameBuffer) - 1);
+        nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+        lastSelectedFNode = selectedFNodeHandle;
     }
     
     // Editable text input
     ImGui::SetNextItemWidth(-1); // Use full available width
-    bool fileEnterPressed = ImGui::InputText(fileInputId.c_str(), fileNameBuffer, sizeof(fileNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+    bool enterPressed = ImGui::InputText(inputId.c_str(), nameBuffer, sizeof(nameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
     
     // Apply rename on Enter or when focus is lost
-    if (fileEnterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
+    if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
         TinyFNode* mutableNode = const_cast<TinyFNode*>(fs.getFNodes().get(selectedFNodeHandle));
         if (mutableNode) {
-            mutableNode->name = std::string(fileNameBuffer);
+            mutableNode->name = std::string(nameBuffer);
         }
     }
     
-    if (selectedFNode->isFile()) {
-        // File-specific information
+    ImGui::Spacing();
+    
+    // === SHARED: DELETE BUTTON ===
+    if (selectedFNode->cfg.deletable) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+        
+        if (ImGui::Button("Delete", ImVec2(-1, 30))) {
+            queueForDeletion(selectedFNodeHandle);
+        }
+        
+        ImGui::PopStyleColor(3);
+        ImGui::Spacing();
+    }
+    
+    // === FOLDER-SPECIFIC: ADD BUTTON ===
+    if (isFolder) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.6f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.7f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
+        
+        if (ImGui::Button("Add +", ImVec2(-1, 30))) {
+            ImGui::OpenPopup("AddToFolder");
+        }
+        ImGui::PopStyleColor(3);
+        
+        // Add popup menu
+        if (ImGui::BeginPopup("AddToFolder")) {
+            if (ImGui::MenuItem("Add Folder")) {
+                createNewFolder(selectedFNodeHandle);
+            }
+            if (ImGui::MenuItem("Add Scene")) {
+                createNewScene(selectedFNodeHandle);
+            }
+            ImGui::EndPopup();
+        }
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        
+        // Folder info
+        ImGui::Text("Children: %zu", selectedFNode->children.size());
+    }
+    
+    // === FILE-SPECIFIC: TYPE INFORMATION ===
+    if (isFile) {
+        ImGui::Separator();
+        
+        // Determine file type and show specific information
         std::string fileType = "Unknown";
         if (selectedFNode->tHandle.isType<TinyRScene>()) {
             fileType = "Scene";
             TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(selectedFNode->tHandle));
             if (scene) {
+                ImGui::Text("Type: %s", fileType.c_str());
                 ImGui::Text("Scene Nodes: %u", scene->nodes.count());
                 
                 // Make Active Scene button
@@ -1199,24 +1286,28 @@ void Application::renderFileSystemInspector() {
                     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
                     
                     if (ImGui::Button("Make Active", ImVec2(-1, 30))) {
-                        project->setActiveScene(sceneRegistryHandle);
+                        if (project->setActiveScene(sceneRegistryHandle)) {
+                            selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
+                        }
                     }
                     ImGui::PopStyleColor(3);
                 }
             }
         } else if (selectedFNode->tHandle.isType<TinyRTexture>()) {
             fileType = "Texture";
+            ImGui::Text("Type: %s", fileType.c_str());
         } else if (selectedFNode->tHandle.isType<TinyRMaterial>()) {
             fileType = "Material";
+            ImGui::Text("Type: %s", fileType.c_str());
         } else if (selectedFNode->tHandle.isType<TinyRMesh>()) {
             fileType = "Mesh";
+            ImGui::Text("Type: %s", fileType.c_str());
         } else if (selectedFNode->tHandle.isType<TinyRSkeleton>()) {
             fileType = "Skeleton";
+            ImGui::Text("Type: %s", fileType.c_str());
+        } else {
+            ImGui::Text("Type: %s", fileType.c_str());
         }
-        
-        ImGui::Text("Type: %s", fileType.c_str());
-    } else {
-        ImGui::Text("Children: %zu", selectedFNode->children.size());
     }
 }
 
@@ -1841,5 +1932,95 @@ void Application::deleteSelectedNode() {
         
         // Update global transforms after deletion
         activeScene->updateGlbTransform();
+    }
+}
+
+void Application::createNewFolder(TinyHandle parentFolderHandle) {
+    TinyFS& fs = project->filesystem();
+    
+    // Use root handle if no parent specified
+    TinyHandle targetParent = parentFolderHandle.valid() ? parentFolderHandle : fs.rootHandle();
+    
+    // Create new folder with default name
+    std::string folderName = "New Folder";
+    
+    // Check for name conflicts by iterating through children
+    const TinyFNode* parentNode = fs.getFNodes().get(targetParent);
+    if (parentNode) {
+        int counter = 1;
+        std::string finalName = folderName;
+        bool nameExists = true;
+        
+        while (nameExists) {
+            nameExists = false;
+            for (TinyHandle childHandle : parentNode->children) {
+                const TinyFNode* child = fs.getFNodes().get(childHandle);
+                if (child && child->name == finalName) {
+                    nameExists = true;
+                    finalName = folderName + " " + std::to_string(counter);
+                    counter++;
+                    break;
+                }
+            }
+        }
+        
+        // Create the folder using the correct API
+        TinyHandle newFolderHandle = fs.addFolder(targetParent, finalName);
+        
+        if (newFolderHandle.valid()) {
+            // Select the newly created folder
+            selectedFNodeHandle = newFolderHandle;
+        }
+    }
+}
+
+void Application::createNewScene(TinyHandle parentFolderHandle) {
+    TinyFS& fs = project->filesystem();
+    
+    // Use root handle if no parent specified  
+    TinyHandle targetParent = parentFolderHandle.valid() ? parentFolderHandle : fs.rootHandle();
+    
+    // Create new scene with default name
+    std::string sceneName = "New Scene";
+    
+    // Check for name conflicts by iterating through children
+    const TinyFNode* parentNode = fs.getFNodes().get(targetParent);
+    if (parentNode) {
+        int counter = 1;
+        std::string finalName = sceneName;
+        bool nameExists = true;
+        
+        while (nameExists) {
+            nameExists = false;
+            for (TinyHandle childHandle : parentNode->children) {
+                const TinyFNode* child = fs.getFNodes().get(childHandle);
+                if (child && child->name == finalName) {
+                    nameExists = true;
+                    finalName = sceneName + " " + std::to_string(counter);
+                    counter++;
+                    break;
+                }
+            }
+        }
+        
+        // Create a minimal scene with just a root node
+        TinyRScene newScene;
+        newScene.name = finalName;
+        
+        // Add a root node to the scene
+        TinyRNode rootNode;
+        rootNode.name = "Root";
+        rootNode.localTransform = glm::mat4(1.0f);
+        
+        TinyHandle rootNodeHandle = newScene.nodes.insert(std::move(rootNode));
+        newScene.rootNode = rootNodeHandle;
+        
+        // Create file node in filesystem using the correct API
+        TinyHandle newFileHandle = fs.addFile(targetParent, finalName, &newScene);
+        
+        if (newFileHandle.valid()) {
+            // Select the newly created scene file
+            selectedFNodeHandle = newFileHandle;
+        }
     }
 }
