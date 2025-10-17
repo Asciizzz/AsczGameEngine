@@ -21,10 +21,7 @@ struct TinyFNode {
         bool deletable = true;
     } cfg;
 
-    TinyFNode& setHidden(bool h) { cfg.hidden = h; return *this; }
     bool hidden() const { return cfg.hidden; }
-
-    TinyFNode& setDeletable(bool d) { cfg.deletable = d; return *this; }
     bool deletable() const { return cfg.deletable; }
 
     bool isFile() const { return type == Type::File; }
@@ -63,7 +60,8 @@ public:
         if (!fnodes.isValid(h)) return;
 
         TinyFNode* node = fnodes.get(h);
-        node->setHidden(true).setDeletable(false);
+        node->cfg.deletable = false; // make non-deletable
+        node->cfg.hidden = true;     // hide the registry folder
 
         regHandle_ = h;
     }
@@ -126,16 +124,37 @@ public:
         TinyFNode* node = fnodes.get(handle);
         if (!node || !node->deletable()) return;
 
-        // If node is non-deletable, move it to root instead
-        if (!node->deletable()) {
-            moveFNode(handle, rootHandle_);
-            return;
+        // Public interface - use the node's parent as the rescue parent
+        TinyHandle rescueParent = node->parent;
+        if (!fnodes.isValid(rescueParent)) {
+            rescueParent = rootHandle_;
         }
+
+        removeFNodeRecursive(handle, rescueParent);
+    }
+
+private:
+    // Internal recursive function that tracks the original parent for non-deletable rescues
+    void removeFNodeRecursive(TinyHandle handle, TinyHandle rescueParent) {
+        TinyFNode* node = fnodes.get(handle);
+        if (!node) return;
+
+        // If node is non-deletable, can't remove it
+        if (!node->deletable()) return;
 
         // copy children to avoid mutation during recursion
         std::vector<TinyHandle> childCopy = node->children;
         for (TinyHandle ch : childCopy) {
-            removeFNode(ch);
+            TinyFNode* child = fnodes.get(ch);
+            if (!child) continue;
+            
+            if (child->deletable()) {
+                // Child is deletable - remove it recursively (pass along the same rescue parent)
+                removeFNodeRecursive(ch, rescueParent);
+            } else {
+                // Child is non-deletable - move it to the original rescue parent
+                moveFNode(ch, rescueParent);
+            }
         }
 
         // if file / has data, remove registry entry
@@ -156,6 +175,8 @@ public:
         // finally remove node from pool
         fnodes.remove(handle);
     }
+
+public:
 
     // ---------- Path resolution ----------
     std::string getFullPath(TinyHandle handle) const {
