@@ -12,6 +12,12 @@
 class TinyProject {
 public:
     TinyProject(const TinyVK::Device* deviceVK);
+    
+    // UI Selection State - public for easy access from Application
+    TinyHandle selectedSceneNodeHandle;
+    TinyHandle heldSceneNodeHandle;
+    TinyHandle selectedFNodeHandle;
+    TinyHandle autoExpandFolderHandle;
 
     // Delete copy
     TinyProject(const TinyProject&) = delete;
@@ -37,12 +43,12 @@ public:
     /**
      * Renders an ImGui collapsible tree view with node selection support for the active scene
      */
-    void renderNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, TinyHandle& heldNode, int depth = 0);
-    void renderFileExplorerImGui(TinyHandle& selectedFile, int depth = 0);
+    void renderNodeTreeImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
+    void renderFileExplorerImGui(int depth = 0);
     
     // Helper functions for file explorer
-    void renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, TinyHandle& selectedFile, int depth);
-    void renderFileItem(TinyFS& fs, TinyHandle fileHandle, TinyHandle& selectedFile);
+    void renderFileFolderTree(TinyFS& fs, TinyHandle folderHandle, int depth);
+    void renderFileItem(TinyFS& fs, TinyHandle fileHandle);
     
     // Context menu callbacks - set these to handle context menu actions
     std::function<void(TinyHandle)> onAddChildNode = nullptr;

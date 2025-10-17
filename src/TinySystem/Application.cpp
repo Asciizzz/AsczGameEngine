@@ -69,7 +69,7 @@ void Application::initComponents() {
     project = MakeUnique<TinyProject>(deviceVK.get());
 
     // Initialize selected node to root
-    selectedSceneNodeHandle = project->getRootNodeHandle();
+    project->selectedSceneNodeHandle = project->getRootNodeHandle();
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->getCamera()->setAspectRatio(aspectRatio);
@@ -363,12 +363,12 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         // Clear filesystem selection when clicking in node tree area
         if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
-            selectedFNodeHandle = TinyHandle();
+            project->selectedFNodeHandle = TinyHandle();
         }
         
         // Clear held node when mouse is released and no dragging is happening
-        if (heldNodeHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            heldNodeHandle = TinyHandle();
+        if (project->heldSceneNodeHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            project->heldSceneNodeHandle = TinyHandle();
         }
         
         if (activeScene && activeScene->nodes.count() > 0) {
@@ -377,11 +377,24 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
                 createNewChildNode(nodeHandle);
             };
             project->onDeleteNode = [this](TinyHandle nodeHandle) {
-                selectedSceneNodeHandle = nodeHandle; // Set as selected for deletion
+                project->selectedSceneNodeHandle = nodeHandle; // Set as selected for deletion
                 deleteSelectedNode();
             };
             
-            project->renderNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle, heldNodeHandle);
+            project->renderNodeTreeImGui();
+            
+            // Context menu for empty hierarchy space (when scene is active)
+            if (ImGui::BeginPopupContextWindow("HierarchyContextMenu")) {
+                ImGui::Text("Hierarchy");
+                ImGui::Separator();
+                
+                if (ImGui::MenuItem("Add Node")) {
+                    // Add to selected node if one is selected, otherwise add to root
+                    TinyHandle targetParent = project->selectedSceneNodeHandle.valid() ? project->selectedSceneNodeHandle : project->getRootNodeHandle();
+                    createNewChildNode(targetParent);
+                }
+                ImGui::EndPopup();
+            }
         } else {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
@@ -440,7 +453,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         // Clear scene node selection when clicking in file tree area (but not on items)
         if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
-            selectedSceneNodeHandle = TinyHandle();
+            project->selectedSceneNodeHandle = TinyHandle();
         }
         
         // Set up file explorer context menu callbacks
@@ -454,7 +467,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             queueForDeletion(fileHandle);
         };
         
-        project->renderFileExplorerImGui(selectedFNodeHandle);
+        project->renderFileExplorerImGui(0);
         
         ImGui::EndChild();
         
@@ -606,7 +619,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         ImGui::PushID(folderHandle.index);
         
         // Check if this folder is selected
-        bool isFolderSelected = (selectedFNodeHandle == folderHandle);
+        bool isFolderSelected = (project->selectedFNodeHandle == folderHandle);
         
         // Use Selectable for consistent highlighting with files
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
@@ -614,9 +627,9 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
         
         // Auto-expand folder if requested
-        if (autoExpandFolderHandle.valid() && autoExpandFolderHandle == folderHandle) {
+        if (project->autoExpandFolderHandle.valid() && project->autoExpandFolderHandle == folderHandle) {
             ImGui::SetNextItemOpen(true);
-            autoExpandFolderHandle = TinyHandle(); // Clear after using
+            project->autoExpandFolderHandle = TinyHandle(); // Clear after using
         }
         
         bool nodeOpen = ImGui::TreeNodeEx(folder->name.c_str(), 
@@ -627,7 +640,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
         
         // Handle folder selection
         if (ImGui::IsItemClicked()) {
-            selectedFNodeHandle = folderHandle;
+            project->selectedFNodeHandle = folderHandle;
             // Keep scene node selection when selecting files/folders
         }
         
@@ -691,7 +704,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                     
                     ImGui::PushID(childHandle.index);
                     
-                    bool isSelected = (selectedFNodeHandle == childHandle);
+                    bool isSelected = (project->selectedFNodeHandle == childHandle);
                     
                     if (child->tHandle.isType<TinyRScene>()) {
                         // This is a scene file - get the actual scene data from registry
@@ -719,13 +732,13 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             
                             if (ImGui::Selectable(sceneName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
                                 // Single click to select file
-                                selectedFNodeHandle = childHandle;
+                                project->selectedFNodeHandle = childHandle;
                                 // Keep scene node selection when selecting files
                                 
-                                if (ImGui::IsMouseDoubleClicked(0) && selectedSceneNodeHandle.valid()) {
+                                if (ImGui::IsMouseDoubleClicked(0) && project->selectedSceneNodeHandle.valid()) {
                                     // Double-click to place scene at selected node
                                     TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                                    project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle);
+                                    project->addSceneInstance(sceneRegistryHandle, project->selectedSceneNodeHandle);
                                     if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                                 }
                             }
@@ -765,7 +778,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                 } else {
                                     if (ImGui::MenuItem("Make Active Scene")) {
                                         if (project->setActiveScene(sceneRegistryHandle)) {
-                                            selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
+                                            project->selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
                                         }
                                     }
                                 }
@@ -806,7 +819,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         
                         // Handle file selection
                         if (ImGui::IsItemClicked()) {
-                            selectedFNodeHandle = childHandle;
+                            project->selectedFNodeHandle = childHandle;
                             // Keep scene node selection when selecting files
                         }
                         
@@ -870,7 +883,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
             } else if (child->type == TinyFNode::Type::File) {
                 ImGui::PushID(childHandle.index);
                 
-                bool isSelected = (selectedFNodeHandle == childHandle);
+                bool isSelected = (project->selectedFNodeHandle == childHandle);
                 
                 if (child->tHandle.isType<TinyRScene>()) {
                     // Root-level scene files
@@ -898,13 +911,13 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         
                         if (ImGui::Selectable(sceneName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
                             // Single click to select file
-                            selectedFNodeHandle = childHandle;
+                            project->selectedFNodeHandle = childHandle;
                             // Keep scene node selection when selecting files
                             
-                            if (ImGui::IsMouseDoubleClicked(0) && selectedSceneNodeHandle.valid()) {
+                            if (ImGui::IsMouseDoubleClicked(0) && project->selectedSceneNodeHandle.valid()) {
                                 // Double-click placement - use registry handle from TypeHandle
                                 TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                                project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle);
+                                project->addSceneInstance(sceneRegistryHandle, project->selectedSceneNodeHandle);
                                 if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                             }
                         }
@@ -935,7 +948,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             } else {
                                 if (ImGui::MenuItem("Make Active Scene")) {
                                     if (project->setActiveScene(sceneRegistryHandle)) {
-                                        selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
+                                        project->selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
                                     }
                                 }
                             }
@@ -968,7 +981,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                     
                     // Handle file selection
                     if (ImGui::IsItemClicked()) {
-                        selectedFNodeHandle = childHandle;
+                        project->selectedFNodeHandle = childHandle;
                         // Keep scene node selection when selecting files
                     }
                     
@@ -1099,20 +1112,20 @@ void Application::renderNodeInspector() {
         return;
     }
 
-    if (!selectedSceneNodeHandle.valid()) {
+    if (!project->selectedSceneNodeHandle.valid()) {
         ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "No node selected");
         ImGui::Text("Select a scene node from the hierarchy.");
         return;
     }
 
-    const TinyRNode* selectedNode = activeScene->nodes.get(selectedSceneNodeHandle);
+    const TinyRNode* selectedNode = activeScene->nodes.get(project->selectedSceneNodeHandle);
     if (!selectedNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
-        selectedSceneNodeHandle = project->getRootNodeHandle();
+        project->selectedSceneNodeHandle = project->getRootNodeHandle();
         return;
     }
 
-    bool isRootNode = (selectedSceneNodeHandle == project->getRootNodeHandle());
+    bool isRootNode = (project->selectedSceneNodeHandle == project->getRootNodeHandle());
 
     // GENERAL INFO SECTION (non-scrollable)
     // Editable node name field
@@ -1120,17 +1133,17 @@ void Application::renderNodeInspector() {
     ImGui::SameLine();
     
     // Create a unique ID for the input field
-    std::string inputId = "##NodeName_" + std::to_string(selectedSceneNodeHandle.index);
+    std::string inputId = "##NodeName_" + std::to_string(project->selectedSceneNodeHandle.index);
     
     // Static buffer to hold the name during editing
     static char nameBuffer[256];
     static TinyHandle lastSelectedNode;
     
     // Initialize buffer if we switched to a different node
-    if (lastSelectedNode != selectedSceneNodeHandle) {
+    if (lastSelectedNode != project->selectedSceneNodeHandle) {
         strncpy_s(nameBuffer, selectedNode->name.c_str(), sizeof(nameBuffer) - 1);
         nameBuffer[sizeof(nameBuffer) - 1] = '\0';
-        lastSelectedNode = selectedSceneNodeHandle;
+        lastSelectedNode = project->selectedSceneNodeHandle;
     }
     
     // Editable text input
@@ -1139,7 +1152,7 @@ void Application::renderNodeInspector() {
     
     // Apply rename on Enter or when focus is lost
     if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
-        activeScene->renameNode(selectedSceneNodeHandle, std::string(nameBuffer));
+        activeScene->renameNode(project->selectedSceneNodeHandle, std::string(nameBuffer));
     }
     
     // Show parent and children count
@@ -1621,10 +1634,10 @@ void Application::cleanup() {}
 
 void Application::renderFileSystemInspector() {
     TinyFS& fs = project->filesystem();
-    const TinyFNode* selectedFNode = fs.getFNodes().get(selectedFNodeHandle);
+    const TinyFNode* selectedFNode = fs.getFNodes().get(project->selectedFNodeHandle);
     if (!selectedFNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid filesystem node selection");
-        selectedFNodeHandle = TinyHandle(); // Clear invalid selection
+        project->selectedFNodeHandle = TinyHandle(); // Clear invalid selection
         return;
     }
     
@@ -1640,17 +1653,17 @@ void Application::renderFileSystemInspector() {
     ImGui::SameLine();
     
     // Create a unique ID for the input field
-    std::string inputId = "##FNodeName_" + std::to_string(selectedFNodeHandle.index);
+    std::string inputId = "##FNodeName_" + std::to_string(project->selectedFNodeHandle.index);
     
     // Static buffer to hold the name during editing
     static char nameBuffer[256];
     static TinyHandle lastSelectedFNode;
     
     // Initialize buffer if we switched to a different file/folder
-    if (lastSelectedFNode != selectedFNodeHandle) {
+    if (lastSelectedFNode != project->selectedFNodeHandle) {
         strncpy_s(nameBuffer, selectedFNode->name.c_str(), sizeof(nameBuffer) - 1);
         nameBuffer[sizeof(nameBuffer) - 1] = '\0';
-        lastSelectedFNode = selectedFNodeHandle;
+        lastSelectedFNode = project->selectedFNodeHandle;
     }
     
     // Editable text input
@@ -1659,7 +1672,7 @@ void Application::renderFileSystemInspector() {
     
     // Apply rename on Enter or when focus is lost
     if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
-        TinyFNode* mutableNode = const_cast<TinyFNode*>(fs.getFNodes().get(selectedFNodeHandle));
+        TinyFNode* mutableNode = const_cast<TinyFNode*>(fs.getFNodes().get(project->selectedFNodeHandle));
         if (mutableNode) {
             mutableNode->name = std::string(nameBuffer);
         }
@@ -1707,7 +1720,7 @@ void Application::renderFileSystemInspector() {
                     
                     if (ImGui::Button("Make Active", ImVec2(-1, 30))) {
                         if (project->setActiveScene(sceneRegistryHandle)) {
-                            selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
+                            project->selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
                         }
                     }
                     ImGui::PopStyleColor(3);
@@ -1905,7 +1918,7 @@ void Application::createNewChildNode(TinyHandle parentNodeHandle) {
     
     if (newNodeHandle.valid()) {
         // Select the newly created node in the Inspector
-        selectedSceneNodeHandle = newNodeHandle;
+        project->selectedSceneNodeHandle = newNodeHandle;
         
         // Update global transforms after adding the new node
         activeScene->updateGlbTransform();
@@ -1917,26 +1930,26 @@ void Application::createNewChildNode(TinyHandle parentNodeHandle) {
 
 void Application::deleteSelectedNode() {
     TinyRScene* activeScene = project->getActiveScene();
-    if (!activeScene || !selectedSceneNodeHandle.valid()) {
+    if (!activeScene || !project->selectedSceneNodeHandle.valid()) {
         return;
     }
     
     // Don't delete root node
-    if (selectedSceneNodeHandle == project->getRootNodeHandle()) {
+    if (project->selectedSceneNodeHandle == project->getRootNodeHandle()) {
         return;
     }
     
     // Store parent handle before deletion
-    const TinyRNode* nodeToDelete = activeScene->nodes.get(selectedSceneNodeHandle);
+    const TinyRNode* nodeToDelete = activeScene->nodes.get(project->selectedSceneNodeHandle);
     TinyHandle parentHandle = nodeToDelete ? nodeToDelete->parentHandle : TinyHandle();
     
     // Delete the scene node directly (scene nodes are not filesystem resources)
-    if (activeScene->removeNode(selectedSceneNodeHandle)) {
+    if (activeScene->removeNode(project->selectedSceneNodeHandle)) {
         // Select parent after deletion
         if (parentHandle.valid()) {
-            selectedSceneNodeHandle = parentHandle;
+            project->selectedSceneNodeHandle = parentHandle;
         } else {
-            selectedSceneNodeHandle = project->getRootNodeHandle();
+            project->selectedSceneNodeHandle = project->getRootNodeHandle();
         }
         
         // Update global transforms after deletion
@@ -1978,12 +1991,12 @@ void Application::createNewFolder(TinyHandle parentFolderHandle) {
         
         if (newFolderHandle.valid()) {
             // Select the newly created folder
-            selectedFNodeHandle = newFolderHandle;
+            project->selectedFNodeHandle = newFolderHandle;
             
             // Auto-expand the parent folder to show the new folder
             if (parentFolderHandle.valid()) {
                 // Store the parent handle for next frame expansion
-                autoExpandFolderHandle = parentFolderHandle;
+                project->autoExpandFolderHandle = parentFolderHandle;
             }
         }
     }
@@ -2035,12 +2048,12 @@ void Application::createNewScene(TinyHandle parentFolderHandle) {
         
         if (newFileHandle.valid()) {
             // Select the newly created scene file
-            selectedFNodeHandle = newFileHandle;
+            project->selectedFNodeHandle = newFileHandle;
             
             // Auto-expand the parent folder to show the new file
             if (parentFolderHandle.valid()) {
                 // Store the parent handle for next frame expansion
-                autoExpandFolderHandle = parentFolderHandle;
+                project->autoExpandFolderHandle = parentFolderHandle;
             }
         }
     }

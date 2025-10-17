@@ -51,17 +51,7 @@ private:
     bool showDemoWindow = false;
     bool showEditorSettingsWindow = false;
     bool showInspectorWindow = true;
-    
-    // Scene management (now handled via TinyFS folder structure)
-    
-    // Runtime scene node selection for hierarchy interaction
-    TinyHandle selectedSceneNodeHandle;  // Currently active node for Inspector/editing
-    TinyHandle heldNodeHandle;           // Temporarily held node for drag operations
-    
-    // Filesystem node selection (folders and files)
-    TinyHandle selectedFNodeHandle;
-    TinyHandle autoExpandFolderHandle; // Folder to auto-expand on next render
-    
+
     // Deferred deletion system to handle resource cleanup after frame completion
     std::vector<TinyHandle> pendingDeletions; // Universal deletion queue for all handle types
 
