@@ -18,23 +18,20 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TinyHandle registryHandle = tinyFS->addFolder(".registry");
     tinyFS->setRegistryHandle(registryHandle);
 
-    // Create CoreScene (the active scene with a single root node)
-    TinyRScene coreScene;
-    coreScene.name = "CoreScene";
+    // Create Main Scene (the active scene with a single root node)
+    TinyRScene mainScene;
+    mainScene.name = "Main Scene";
     
-    // Create root node for the core scene
+    // Create root node for the main scene 
     TinyRNode rootNode;
     rootNode.name = "Root";
-    rootNode.localTransform = glm::mat4(1.0f);
-    rootNode.globalTransform = glm::mat4(1.0f);
-    
-    coreScene.rootNode = coreScene.nodes.insert(std::move(rootNode));
-    
+    mainScene.rootNode = mainScene.nodes.insert(std::move(rootNode));
+
     // Create "Main Scene" as a non-deletable file in root directory
     TinyFNode::CFG sceneConfig;
     sceneConfig.deletable = false; // Make it non-deletable
     
-    TinyHandle mainSceneFileHandle = tinyFS->addFile(tinyFS->rootHandle(), "Main Scene", &coreScene, sceneConfig);
+    TinyHandle mainSceneFileHandle = tinyFS->addFile(tinyFS->rootHandle(), "Main Scene", &mainScene, sceneConfig);
     TypeHandle mainSceneTypeHandle = tinyFS->getTHandle(mainSceneFileHandle);
     activeSceneHandle = mainSceneTypeHandle.handle; // Point to the actual scene in registry
 
@@ -443,6 +440,10 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
         flags |= ImGuiTreeNodeFlags_Selected;
     }
     
+    // Add consistent styling to match File explorer theme
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Gray hover background (same as File explorer)
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background (same as File explorer)
+    
     // Force open if this node is in the expanded set
     bool forceOpen = isNodeExpanded(nodeHandle);
     
@@ -604,6 +605,9 @@ void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandl
         }
         ImGui::TreePop();
     }
+    
+    // Pop the style colors we pushed earlier
+    ImGui::PopStyleColor(2); // Pop HeaderHovered and Header
     
     ImGui::PopID();
 }

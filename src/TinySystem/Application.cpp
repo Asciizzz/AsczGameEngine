@@ -625,7 +625,20 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                         if (scene) {
                             std::string sceneName = child->name;
                             
-                            // Set colors for scene files: gray text, gray selection background
+                            // Check if this is the active scene for red backdrop
+                            TinyHandle sceneRegistryHandle = child->tHandle.handle;
+                            bool isActiveScene = (project->getActiveSceneHandle() == sceneRegistryHandle);
+                            
+                            // Add permanent red backdrop for active scene files
+                            if (isActiveScene) {
+                                // Draw red background rectangle behind the text
+                                ImVec2 itemSize = ImGui::CalcTextSize(sceneName.c_str());
+                                ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+                                ImVec2 itemMax = ImVec2(cursorPos.x + ImGui::GetContentRegionAvail().x, cursorPos.y + itemSize.y);
+                                ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(200, 50, 50, 100)); // Red backdrop
+                            }
+                            
+                            // Set colors for scene files: gray text, normal selection behavior
                             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
                             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Subtle hover background
                             ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
@@ -772,6 +785,19 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                     TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(child->tHandle));
                     if (scene) {
                         std::string sceneName = child->name;
+                        
+                        // Check if this is the active scene for red backdrop
+                        TinyHandle sceneRegistryHandle = child->tHandle.handle;
+                        bool isActiveScene = (project->getActiveSceneHandle() == sceneRegistryHandle);
+                        
+                        // Add permanent red backdrop for active scene files (SAME AS FOLDER FILES)
+                        if (isActiveScene) {
+                            // Draw red background rectangle behind the text
+                            ImVec2 itemSize = ImGui::CalcTextSize(sceneName.c_str());
+                            ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+                            ImVec2 itemMax = ImVec2(cursorPos.x + ImGui::GetContentRegionAvail().x, cursorPos.y + itemSize.y);
+                            ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(200, 50, 50, 100)); // Red backdrop
+                        }
                         
                         // Set colors for scene files: gray text, gray selection background
                         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
