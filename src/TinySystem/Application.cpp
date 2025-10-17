@@ -351,7 +351,15 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Separator();
         
         // Hierarchy Tree with background
-        ImGui::BeginChild("Hierarchy", ImVec2(0, hierarchyHeight - 30), ImGuiChildFlags_Borders);
+        // Apply thin scrollbar styling to match component inspector
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
+        
+        ImGui::BeginChild("Hierarchy", ImVec2(0, hierarchyHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
         
         // Clear filesystem selection when clicking in node tree area
         if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
@@ -386,6 +394,10 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         }
         ImGui::EndChild();
         
+        // Pop the scrollbar styling
+        ImGui::PopStyleColor(4); // ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
+        ImGui::PopStyleVar(2); // ScrollbarSize, ScrollbarRounding
+        
         // =============================================================================
         // HORIZONTAL SPLITTER
         // =============================================================================
@@ -416,7 +428,15 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         ImGui::Separator();
         
         // File Explorer with background
-        ImGui::BeginChild("FileExplorer", ImVec2(0, explorerHeight - 30), ImGuiChildFlags_Borders);
+        // Apply thin scrollbar styling to match component inspector
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
+        
+        ImGui::BeginChild("FileExplorer", ImVec2(0, explorerHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
         
         // Clear scene node selection when clicking in file tree area (but not on items)
         if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
@@ -437,6 +457,10 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         project->renderFileExplorerImGui(selectedFNodeHandle);
         
         ImGui::EndChild();
+        
+        // Pop the scrollbar styling
+        ImGui::PopStyleColor(4); // ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
+        ImGui::PopStyleVar(2); // ScrollbarSize, ScrollbarRounding
         
     });  // End Editor window
     
@@ -1011,9 +1035,22 @@ void Application::renderInspectorWindow() {
     // NODE INSPECTOR (TOP) - Always exists
     ImGui::Text("Node Inspector");
     ImGui::Separator();
-    ImGui::BeginChild("NodeInspectorPane", ImVec2(0, nodeInspectorHeight - 30), ImGuiChildFlags_Borders);
+    
+    // Apply thin scrollbar styling to match component inspector
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
+    
+    ImGui::BeginChild("NodeInspectorPane", ImVec2(0, nodeInspectorHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     renderNodeInspector();
     ImGui::EndChild();
+    
+    // Pop the scrollbar styling
+    ImGui::PopStyleColor(4); // ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
+    ImGui::PopStyleVar(2); // ScrollbarSize, ScrollbarRounding
     
     // HORIZONTAL SPLITTER (exact same as Editor window)
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
@@ -1037,9 +1074,22 @@ void Application::renderInspectorWindow() {
     // FILE INSPECTOR (BOTTOM) - Always exists
     ImGui::Text("File Inspector");
     ImGui::Separator();
-    ImGui::BeginChild("FileInspectorPane", ImVec2(0, fileInspectorHeight - 30), ImGuiChildFlags_Borders);
+    
+    // Apply thin scrollbar styling to match component inspector
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
+    
+    ImGui::BeginChild("FileInspectorPane", ImVec2(0, fileInspectorHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     renderFileSystemInspector();
     ImGui::EndChild();
+    
+    // Pop the scrollbar styling
+    ImGui::PopStyleColor(4); // ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
+    ImGui::PopStyleVar(2); // ScrollbarSize, ScrollbarRounding
 }
 
 void Application::renderNodeInspector() {
@@ -1117,7 +1167,7 @@ void Application::renderNodeInspector() {
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
     
-    ImGui::BeginChild("ComponentsScrollable", ImVec2(0, remainingHeight), ImGuiChildFlags_AlwaysUseWindowPadding);
+    ImGui::BeginChild("ComponentsScrollable", ImVec2(0, remainingHeight), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     
     TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
     
