@@ -214,6 +214,8 @@ void TinyRScene::addSceneToNode(const TinyRScene& sceneA, TinyHandle parentNodeH
             }
         }
     }
+
+    updateGlbTransform(parentNodeHandle); // Update transforms after adding new nodes
 }
 
 void TinyRScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {

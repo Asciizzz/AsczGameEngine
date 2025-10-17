@@ -368,12 +368,36 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
     TinyFS& fs = project->filesystem();
 
     imguiWrapper->addWindow("Scene Manager", [this, &camera, &registry, &fs]() {
-        // Scene Library section with folder structure
-        ImGui::Text("Scene Library");
+        // Runtime Node Hierarchy section (now on top)
+        ImGui::Text("Runtime Node Hierarchy");
         ImGui::Separator();
         
-        // Render folder tree with drag-drop
-        float libraryHeight = ImGui::GetContentRegionAvail().y * 0.6f; // Use 60% of window for library
+        // Use 60% of window for node hierarchy (was bottom, now top)
+        float hierarchyHeight = ImGui::GetContentRegionAvail().y * 0.6f;
+        ImGui::BeginChild("NodeTree", ImVec2(0, hierarchyHeight), true);
+        
+        // Clear filesystem selection when clicking in node tree area
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0)) {
+            selectedFNodeHandle = TinyHandle();
+        }
+        
+        TinyRScene* activeScene = project->getActiveScene();
+        if (activeScene && activeScene->nodes.count() > 0) {
+            project->renderSelectableNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle);
+        } else {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
+        }
+        ImGui::EndChild();
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        
+        // Scene Library section (now on bottom)
+        ImGui::Text("Scene Library");
+        
+        // Render folder tree with drag-drop - use remaining space
+        float libraryHeight = ImGui::GetContentRegionAvail().y - 150; // Leave space for stats and buttons
         ImGui::BeginChild("SceneLibrary", ImVec2(0, libraryHeight), true);
         
         // Clear filesystem node selection when clicking in folder tree area (but not on items)
@@ -395,15 +419,16 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         uint32_t totalScenes = fs.registryRef().count<TinyRScene>();
         ImGui::Text("Loaded Scenes: %u", totalScenes);
         
-        TinyRScene* activeScene = project->getActiveScene();
+        // Show active scene info
         if (activeScene) {
+            ImGui::Text("Active Scene: %s", activeScene->name.c_str());
             ImGui::Text("Active Scene Nodes: %u", activeScene->nodes.count());
         } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "No Active Scene");
             ImGui::Text("Active Scene Nodes: 0");
         }
 
         ImGui::Spacing();
-        ImGui::Separator();
         
         // Debug buttons
         if (ImGui::Button("Debug Tree")) {
@@ -413,28 +438,6 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         if (ImGui::Button("Debug Flat")) {
             project->debugPrintHierarchyFlat();
         }
-        
-        ImGui::Separator();
-        
-        // Expanded runtime node hierarchy
-        ImGui::Text("Runtime Node Hierarchy");
-        
-        // Calculate remaining window space for the node tree
-        float hierarchyHeight = ImGui::GetContentRegionAvail().y - 60; // Leave some padding for debug buttons
-        
-        ImGui::BeginChild("NodeTree", ImVec2(0, hierarchyHeight), true);
-        
-        // Clear filesystem selection when clicking in node tree area
-        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0)) {
-            selectedFNodeHandle = TinyHandle();
-        }
-        if (activeScene && activeScene->nodes.count() > 0) {
-            project->renderSelectableNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle);
-        } else {
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
-        }
-        ImGui::EndChild();
     }, &showSceneWindow);
     
     // Inspector Window
@@ -638,14 +641,40 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                 ImGui::EndDragDropSource();
                             }
                             
+                            // Context menu for scene files
+                            if (ImGui::BeginPopupContextItem()) {
+                                // Get scene handle from TypeHandle
+                                TinyHandle sceneRegistryHandle = child->tHandle.handle;
+                                bool isCurrentlyActive = (project->getActiveSceneHandle() == sceneRegistryHandle);
+                                
+                                if (isCurrentlyActive) {
+                                    ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
+                                } else {
+                                    if (ImGui::MenuItem("Make Active Scene")) {
+                                        if (project->setActiveScene(sceneRegistryHandle)) {
+                                            selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
+                                        }
+                                    }
+                                }
+                                
+                                ImGui::Separator();
+                                
+                                if (ImGui::MenuItem("Duplicate Scene")) {
+                                    // TODO: Implement scene duplication
+                                }
+                                
+                                if (child->cfg.deletable && ImGui::MenuItem("Delete")) {
+                                    // TODO: Add deletion confirmation and logic
+                                }
+                                
+                                ImGui::EndPopup();
+                            }
+                            
                             // Tooltip with scene info
                             if (ImGui::IsItemHovered()) {
                                 ImGui::BeginTooltip();
                                 ImGui::Text("Scene: %s", scene->name.c_str());
                                 ImGui::Text("Nodes: %u", scene->nodes.count());
-                                ImGui::Text("Double-click to place at selected node");
-                                ImGui::Text("Drag to folders: Move file");
-                                ImGui::Text("Drag to nodes: Instantiate scene");
                                 ImGui::EndTooltip();
                             }
                         }
@@ -816,9 +845,9 @@ void Application::renderInspectorWindow() {
         
         // Header based on type
         if (selectedFNode->isFile()) {
-            ImGui::Text("📄 File Inspector");
+            ImGui::Text("File Inspector");
         } else {
-            ImGui::Text("📁 Folder Inspector");
+            ImGui::Text("Folder Inspector");
         }
         ImGui::Separator();
         
@@ -860,6 +889,34 @@ void Application::renderInspectorWindow() {
                 TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(selectedFNode->tHandle));
                 if (scene) {
                     ImGui::Text("Scene Nodes: %u", scene->nodes.count());
+                    
+                    // Make Active Scene button
+                    ImGui::Spacing();
+                    TinyHandle sceneRegistryHandle = selectedFNode->tHandle.handle;
+                    bool isActiveScene = (project->getActiveSceneHandle() == sceneRegistryHandle);
+                    
+                    if (isActiveScene) {
+                        // Gray out button if already active
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+                        ImGui::Button("Active Scene", ImVec2(-1, 30));
+                        ImGui::PopStyleColor(4);
+                    } else {
+                        // Normal green button for non-active scenes
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                        
+                        if (ImGui::Button("Make Active", ImVec2(-1, 30))) {
+                            if (project->setActiveScene(sceneRegistryHandle)) {
+                                // Successfully switched active scene
+                                // Optionally show a status message or do nothing
+                            }
+                        }
+                        ImGui::PopStyleColor(3);
+                    }
                 }
             } else if (selectedFNode->tHandle.isType<TinyRTexture>()) {
                 fileType = "Texture";
@@ -900,48 +957,62 @@ void Application::renderInspectorWindow() {
         bool canDelete = true;
         std::string deleteButtonText = selectedFNode->isFile() ? "Delete File" : "Delete Folder";
         
-        if (!selectedFNode->isFile()) {
-            // For folders, check if empty
-            canDelete = selectedFNode->children.empty();
+        if (selectedFNode->isFile()) {
+            // For files, check if it's deletable
+            canDelete = selectedFNode->isDeletable();
+        } else {
+            // For folders, check if empty and deletable
+            canDelete = selectedFNode->children.empty() && selectedFNode->isDeletable();
             if (selectedFNodeHandle == fs.rootHandle()) {
                 canDelete = false; // Never delete root
             }
         }
         
-        if (!canDelete && !selectedFNode->isFile()) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.3f, 0.3f, 1.0f));
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
-        }
-        
-        if (ImGui::Button(deleteButtonText.c_str(), ImVec2(-1, 30))) {
-            if (selectedFNodeHandle == fs.rootHandle()) {
-                // Do nothing for root
-            } else if (canDelete || selectedFNode->isFile()) {
-                if (selectedFNode->isFile()) {
-                    ImGui::OpenPopup("ConfirmFileDelete");
-                } else {
-                    queueForDeletion(selectedFNodeHandle);
-                    selectedFNodeHandle = TinyHandle();
-                }
+        // Only show delete button if item is deletable
+        if (selectedFNode->isDeletable() && selectedFNodeHandle != fs.rootHandle()) {
+            if (!canDelete && !selectedFNode->isFile()) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.3f, 0.3f, 1.0f));
             } else {
-                ImGui::OpenPopup("ConfirmFolderDelete");
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
             }
-        }
-        
-        if (!canDelete && !selectedFNode->isFile()) {
-            ImGui::PopStyleColor(1);
-            if (ImGui::IsItemHovered()) {
-                if (selectedFNodeHandle == fs.rootHandle()) {
-                    ImGui::SetTooltip("Root folder cannot be deleted");
+            
+            if (ImGui::Button(deleteButtonText.c_str(), ImVec2(-1, 30))) {
+                if (canDelete || selectedFNode->isFile()) {
+                    if (selectedFNode->isFile()) {
+                        ImGui::OpenPopup("ConfirmFileDelete");
+                    } else {
+                        queueForDeletion(selectedFNodeHandle);
+                        selectedFNodeHandle = TinyHandle();
+                    }
                 } else {
+                    ImGui::OpenPopup("ConfirmFolderDelete");
+                }
+            }
+            
+            if (!canDelete && !selectedFNode->isFile()) {
+                ImGui::PopStyleColor(1);
+                if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Folder contains items. Click to delete anyway.");
                 }
+            } else {
+                ImGui::PopStyleColor(3);
             }
-        } else {
-            ImGui::PopStyleColor(3);
+        }
+        // If not deletable, show a grayed out indicator instead
+        else if (!selectedFNode->isDeletable()) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+            
+            ImGui::Button("Protected", ImVec2(-1, 30));
+            
+            ImGui::PopStyleColor(4);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("This item is protected and cannot be deleted");
+            }
         }
         
         // Confirmation popups

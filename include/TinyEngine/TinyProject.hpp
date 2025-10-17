@@ -57,6 +57,13 @@ public:
     TinyRScene* getActiveScene() const { return tinyFS->registryRef().get<TinyRScene>(activeSceneHandle); }
     TinyHandle getActiveSceneHandle() const { return activeSceneHandle; }
     
+    /**
+     * Switch the active scene to a different scene from the registry.
+     * @param sceneHandle Handle to a TinyRScene in the registry to make active
+     * @return true if successful, false if the handle is invalid or not a scene
+     */
+    bool setActiveScene(TinyHandle sceneHandle);
+    
     // Helper methods for UI compatibility
     TinyHandle getRootNodeHandle() const { 
         TinyRScene* scene = getActiveScene();
