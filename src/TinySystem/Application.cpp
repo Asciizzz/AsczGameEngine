@@ -851,33 +851,37 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
 
 void Application::renderInspectorWindow() {
     // Inspector Window: Node Inspector (top) + File Inspector (bottom) with splitter
-    // Both sections always exist, show empty state when nothing selected
+    // Use exact same technique as Editor window to avoid scrollbars
     
     static float splitterPos = 0.6f; // Node inspector gets 60% by default
     
-    float availY = ImGui::GetContentRegionAvail().y;
-    const float splitterBarHeight = 8.0f;
+    // Get full available space (same as Editor window)
+    float totalHeight = ImGui::GetContentRegionAvail().y;
     
-    // Calculate heights ensuring the total equals availY exactly
-    float nodeInspectorH = (availY - splitterBarHeight) * splitterPos;
-    float fileInspectorH = (availY - splitterBarHeight) * (1.0f - splitterPos);
+    // Calculate section heights based on splitter position (same as Editor window)
+    float nodeInspectorHeight = totalHeight * splitterPos;
+    float fileInspectorHeight = totalHeight * (1.0f - splitterPos);
     
     // NODE INSPECTOR (TOP) - Always exists
-    ImGui::BeginChild("NodeInspectorPane", ImVec2(0, nodeInspectorH), true);
+    ImGui::Text("Node Inspector");
+    ImGui::Separator();
+    ImGui::BeginChild("NodeInspectorPane", ImVec2(0, nodeInspectorHeight - 30), ImGuiChildFlags_Borders);
     renderNodeInspector();
     ImGui::EndChild();
     
-    // HORIZONTAL SPLITTER
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+    // HORIZONTAL SPLITTER (exact same as Editor window)
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 0.8f));
     
-    ImGui::Button("##splitter", ImVec2(-1, splitterBarHeight));
+    ImGui::Button("##InspectorSplitter", ImVec2(-1, 4));
+    
     if (ImGui::IsItemActive()) {
-        float delta = ImGui::GetIO().MouseDelta.y / availY;
-        splitterPos += delta;
-        splitterPos = glm::clamp(splitterPos, 0.2f, 0.8f); // Constrain between 20% and 80%
+        float mouseDelta = ImGui::GetIO().MouseDelta.y;
+        splitterPos += mouseDelta / totalHeight;
+        splitterPos = std::max(0.2f, std::min(0.8f, splitterPos)); // Clamp between 20% and 80%
     }
+    
     if (ImGui::IsItemHovered()) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
     }
@@ -885,7 +889,9 @@ void Application::renderInspectorWindow() {
     ImGui::PopStyleColor(3);
     
     // FILE INSPECTOR (BOTTOM) - Always exists
-    ImGui::BeginChild("FileInspectorPane", ImVec2(0, fileInspectorH), true);
+    ImGui::Text("File Inspector");
+    ImGui::Separator();
+    ImGui::BeginChild("FileInspectorPane", ImVec2(0, fileInspectorHeight - 30), ImGuiChildFlags_Borders);
     renderFileSystemInspector();
     ImGui::EndChild();
 }
@@ -929,18 +935,17 @@ void Application::renderNodeInspector() {
     
     ImGui::Separator();
     
-    // SCROLLABLE COMPONENTS SECTION
-    float remainingHeight = ImGui::GetContentRegionAvail().y - 50; // Reserve space for add component dropdown
+    // SCROLLABLE COMPONENTS SECTION 
+    float remainingHeight = ImGui::GetContentRegionAvail().y - 35; // Reserve space for add component dropdown
     ImGui::BeginChild("ComponentsScrollable", ImVec2(0, remainingHeight), false);
     
-    // Transform component (styled as bordered component, no remove button)
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.15f, 1.0f));
-    ImGui::BeginChild("TransformComponent", ImVec2(0, 200), true);
-    ImGui::Text("Transform");
+    // Transform component (dynamic sizing, no remove button)
     ImGui::Separator();
+    ImGui::Text("Transform");
+    ImGui::Indent();
     renderTransformInspector(selectedNode, isRootNode);
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
+    ImGui::Unindent();
+    ImGui::Separator();
     
     ImGui::Spacing();
     
@@ -976,6 +981,8 @@ void Application::renderAddComponentDropdown(const TinyRNode* selectedNode) {
         ImGui::Text("Add Component:");
         ImGui::SameLine();
         
+        // Set specific width for combo to prevent overflow
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 10); // -10 for padding
         if (ImGui::BeginCombo("##AddComponent", "Select...")) {
             for (const auto& comp : missingComponents) {
                 if (ImGui::Selectable(comp.first.c_str())) {
@@ -1118,7 +1125,8 @@ void Application::renderFileSystemInspector() {
 }
 
 void Application::renderTransformInspector(const TinyRNode* selectedNode, bool isRootNode) {
-    if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen) && !isRootNode) {
+    // Simple transform section without dropdown - just the controls
+    if (!isRootNode) {
         // Get the current transform
         glm::mat4 localTransform = selectedNode->localTransform;
         
@@ -1244,10 +1252,11 @@ void Application::renderComponentsInspector(const TinyRNode* selectedNode) {
 }
 
 void Application::renderMeshRenderComponent(TinyRNode* selectedNode) {
-    // Create a collapsible header for the component
-    bool componentOpen = ImGui::CollapsingHeader("Mesh Renderer Component", ImGuiTreeNodeFlags_DefaultOpen);
+    // Dynamic component - no fixed container, just content with separator
+    ImGui::Separator();
     
-    // Add remove button in the same line as the header
+    // Header with remove button
+    ImGui::Text("Mesh Renderer");
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
@@ -1259,190 +1268,142 @@ void Application::renderMeshRenderComponent(TinyRNode* selectedNode) {
     }
     ImGui::PopStyleColor(3);
     
-    if (componentOpen) {
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.15f, 1.0f));
-        ImGui::BeginChild("MeshRenderComponentContent", ImVec2(0, 140), ImGuiChildFlags_Borders);
+    ImGui::Separator();
+    
+    TinyNode::MeshRender* meshComp = selectedNode->get<TinyNode::MeshRender>();
+    if (meshComp) {
+        ImGui::Spacing();
         
-        TinyNode::MeshRender* meshComp = selectedNode->get<TinyNode::MeshRender>();
-        if (meshComp) {
-            ImGui::Spacing();
-            
-            // Mesh Handle field with enhanced drag-drop support
-            ImGui::Text("Mesh Resource:");
-            bool meshModified = renderEnhancedHandleField("##MeshHandle", meshComp->meshHandle, "Mesh", 
-                "Drag a mesh file from the File Explorer", 
-                "Select mesh resource for rendering");
-            
-            // Show mesh information if valid
-            if (meshComp->meshHandle.valid()) {
-                const TinyRegistry& registry = project->registryRef();
-                const TinyRMesh* mesh = registry.get<TinyRMesh>(meshComp->meshHandle);
-                if (mesh) {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("Mesh: %s", mesh->name.c_str());
-                        ImGui::Text("Vertices: %zu", mesh->vertexData.size());
-                        ImGui::Text("Indices: %zu", mesh->indexData.size());
-                        ImGui::EndTooltip();
-                    }
-                } else {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
-                }
-            }
-            
-            ImGui::Spacing();
-            
-            // Skeleton Node Handle field with enhanced drag-drop support  
-            ImGui::Text("Skeleton Node:");
-            bool skeleModified = renderEnhancedHandleField("##SkeletonNodeHandle", meshComp->skeleNodeHandle, "SkeletonNode",
-                "Drag a skeleton node from the Hierarchy",
-                "Select skeleton node for bone animation");
-            
-            // Show skeleton node information if valid
-            if (meshComp->skeleNodeHandle.valid()) {
-                TinyRScene* activeScene = project->getActiveScene();
-                if (activeScene) {
-                    const TinyRNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
-                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
-                        ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::BeginTooltip();
-                            ImGui::Text("Skeleton Node: %s", skeleNode->name.c_str());
-                            const TinyNode::Skeleton* skelComp = skeleNode->get<TinyNode::Skeleton>();
-                            if (skelComp) {
-                                ImGui::Text("Bone Transforms: %zu", skelComp->boneTransformsFinal.size());
-                            }
-                            ImGui::EndTooltip();
-                        }
-                    } else {
-                        ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid/No Skeleton");
-                    }
-                }
-            }
-            
-            ImGui::Spacing();
-            
-            // Component status summary
-            ImGui::Separator();
-            ImGui::Text("Status:");
-            ImGui::SameLine();
-            
-            bool hasMesh = meshComp->meshHandle.valid();
-            bool hasSkeleton = meshComp->skeleNodeHandle.valid();
-            
-            if (hasMesh && hasSkeleton) {
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Ready for animated rendering");
-            } else if (hasMesh) {
-                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.5f, 1.0f), "Ready for static rendering");
+        // Mesh Handle field with enhanced drag-drop support
+        ImGui::Text("Mesh Resource:");
+        bool meshModified = renderEnhancedHandleField("##MeshHandle", meshComp->meshHandle, "Mesh", 
+            "Drag a mesh file from the File Explorer", 
+            "Select mesh resource for rendering");
+        
+        // Show mesh information if valid
+        if (meshComp->meshHandle.valid()) {
+            const TinyRegistry& registry = project->registryRef();
+            const TinyRMesh* mesh = registry.get<TinyRMesh>(meshComp->meshHandle);
+            if (mesh) {
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", mesh->name.c_str());
             } else {
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing mesh resource");
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
             }
-            
-            ImGui::Spacing();
         }
         
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
+        ImGui::Spacing();
+        
+        // Skeleton Node Handle field with enhanced drag-drop support  
+        ImGui::Text("Skeleton Node:");
+        bool skeleModified = renderEnhancedHandleField("##SkeletonNodeHandle", meshComp->skeleNodeHandle, "SkeletonNode",
+            "Drag a skeleton node from the Hierarchy",
+            "Select skeleton node for bone animation");
+        
+        // Show skeleton node information if valid
+        if (meshComp->skeleNodeHandle.valid()) {
+            TinyRScene* activeScene = project->getActiveScene();
+            if (activeScene) {
+                const TinyRNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
+                if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", skeleNode->name.c_str());
+                } else {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid/No Skeleton");
+                }
+            }
+        }
+        
+        ImGui::Spacing();
     }
+    
+    ImGui::Separator();
 }
 
 void Application::renderSkeletonComponent(TinyRNode* selectedNode) {
-    // Create a collapsible header for the component
-    bool componentOpen = ImGui::CollapsingHeader("Skeleton Component", ImGuiTreeNodeFlags_DefaultOpen);
+    // Dynamic component - no fixed container
+    ImGui::Separator();
     
-    // Add remove button in the same line as the header
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
+    // Header with remove button
+    ImGui::Text("Skeleton");
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 65);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
-    if (ImGui::Button("Remove##Skeleton", ImVec2(65, 0))) {
+    if (ImGui::Button("Remove##Skeleton", ImVec2(60, 0))) {
         selectedNode->remove<TinyNode::Skeleton>();
-        ImGui::PopStyleColor(3);
+        ImGui::PopStyleColor(1);
         return;
     }
-    ImGui::PopStyleColor(3);
-    
-    if (componentOpen) {
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.15f, 1.0f));
-        ImGui::BeginChild("SkeletonComponentContent", ImVec2(0, 120), ImGuiChildFlags_Borders);
+    ImGui::PopStyleColor(1);
+    ImGui::Separator();
         
-        TinyNode::Skeleton* skeleComp = selectedNode->get<TinyNode::Skeleton>();
-        if (skeleComp) {
-            ImGui::Spacing();
-            
-            // Skeleton Handle field with enhanced drag-drop support
-            ImGui::Text("Skeleton Resource:");
-            bool skeleModified = renderEnhancedHandleField("##SkeletonHandle", skeleComp->skeleHandle, "Skeleton",
-                "Drag a skeleton file from the File Explorer",
-                "Select skeleton resource for bone data");
-            
-            // Show skeleton information if valid
-            if (skeleComp->skeleHandle.valid()) {
-                const TinyRegistry& registry = project->registryRef();
-                const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(skeleComp->skeleHandle);
-                if (skeleton) {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("Skeleton Resource");
-                        ImGui::Text("Bones: %zu", skeleton->bones.size());
-                        ImGui::EndTooltip();
-                    }
-                } else {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
+    TinyNode::Skeleton* skeleComp = selectedNode->get<TinyNode::Skeleton>();
+    if (skeleComp) {
+        ImGui::Spacing();
+        
+        // Skeleton Handle field
+        ImGui::Text("Skeleton Resource:");
+        bool skeleModified = renderEnhancedHandleField("##SkeletonHandle", skeleComp->skeleHandle, "Skeleton",
+            "Drag a skeleton file from the File Explorer",
+            "Select skeleton resource for bone data");
+        
+        // Show skeleton information if valid
+        if (skeleComp->skeleHandle.valid()) {
+            const TinyRegistry& registry = project->registryRef();
+            const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(skeleComp->skeleHandle);
+            if (skeleton) {
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Skeleton Resource");
+                    ImGui::Text("Bones: %zu", skeleton->bones.size());
+                    ImGui::EndTooltip();
                 }
-            }
-            
-            ImGui::Spacing();
-            
-            // Show bone transform count (read-only)
-            ImGui::Text("Active Bone Transforms: %zu", skeleComp->boneTransformsFinal.size());
-            
-            // Component status
-            ImGui::Separator();
-            ImGui::Text("Status:");
-            ImGui::SameLine();
-            
-            if (skeleComp->skeleHandle.valid()) {
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Skeleton loaded and ready");
             } else {
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing skeleton resource");
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
             }
-            
-            ImGui::Spacing();
         }
         
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
+        ImGui::Spacing();
+        
+        // Show bone transform count (read-only)
+        ImGui::Text("Active Bone Transforms: %zu", skeleComp->boneTransformsFinal.size());
+        
+        // Component status
+        ImGui::Separator();
+        ImGui::Text("Status:");
+        ImGui::SameLine();
+        
+        if (skeleComp->skeleHandle.valid()) {
+            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Skeleton loaded and ready");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing skeleton resource");
+        }
+        
+        ImGui::Spacing();
     }
+    
+    ImGui::Separator();
 }
 
 void Application::renderBoneAttachComponent(TinyRNode* selectedNode) {
-    // Create a collapsible header for the component
-    bool componentOpen = ImGui::CollapsingHeader("Bone Attachment Component", ImGuiTreeNodeFlags_DefaultOpen);
+    // Dynamic component - no fixed container
+    ImGui::Separator();
     
-    // Add remove button in the same line as the header
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
+    // Header with remove button
+    ImGui::Text("Bone Attachment");
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 65);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
-    if (ImGui::Button("Remove##BoneAttach", ImVec2(65, 0))) {
+    if (ImGui::Button("Remove##BoneAttach", ImVec2(60, 0))) {
         selectedNode->remove<TinyNode::BoneAttach>();
-        ImGui::PopStyleColor(3);
+        ImGui::PopStyleColor(1);
         return;
     }
-    ImGui::PopStyleColor(3);
-    
-    if (componentOpen) {
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.15f, 1.0f));
-        ImGui::BeginChild("BoneAttachComponentContent", ImVec2(0, 140), ImGuiChildFlags_Borders);
+    ImGui::PopStyleColor(1);
+    ImGui::Separator();
         
         TinyNode::BoneAttach* boneComp = selectedNode->get<TinyNode::BoneAttach>();
         if (boneComp) {
@@ -1538,9 +1499,7 @@ void Application::renderBoneAttachComponent(TinyRNode* selectedNode) {
             ImGui::Spacing();
         }
         
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
-    }
+    ImGui::Separator();
 }
 
 bool Application::renderHandleField(const char* label, TinyHandle& handle, const char* targetType, const char* tooltip) {
