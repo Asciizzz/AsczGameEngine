@@ -481,7 +481,16 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     
     // If node is open and has children, recurse for children
     if (nodeOpen && hasChildren) {
-        for (const TinyHandle& childHandle : node->childrenHandles) {
+        // Create a sorted copy of children handles by node name
+        std::vector<TinyHandle> sortedChildren(node->childrenHandles.begin(), node->childrenHandles.end());
+        std::sort(sortedChildren.begin(), sortedChildren.end(), [activeScene](const TinyHandle& a, const TinyHandle& b) {
+            const TinyRNode* nodeA = activeScene->nodes.get(a);
+            const TinyRNode* nodeB = activeScene->nodes.get(b);
+            if (!nodeA || !nodeB) return false;
+            return nodeA->name < nodeB->name;
+        });
+        
+        for (const TinyHandle& childHandle : sortedChildren) {
             renderNodeTreeImGui(childHandle, depth + 1);
         }
         ImGui::TreePop();
@@ -644,10 +653,29 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         
         // If folder is open and has children, recurse for children
         if (nodeOpen && hasChildren) {
+            // Create a sorted copy of children handles - folders first, then files, both sorted by name
+            std::vector<TinyHandle> sortedChildren;
             for (const TinyHandle& childHandle : node->children) {
                 const TinyFNode* child = fs.getFNodes().get(childHandle);
                 if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
+                sortedChildren.push_back(childHandle);
+            }
+            
+            std::sort(sortedChildren.begin(), sortedChildren.end(), [&fs](const TinyHandle& a, const TinyHandle& b) {
+                const TinyFNode* nodeA = fs.getFNodes().get(a);
+                const TinyFNode* nodeB = fs.getFNodes().get(b);
+                if (!nodeA || !nodeB) return false;
                 
+                // Folders come before files
+                if (nodeA->type != nodeB->type) {
+                    return nodeA->type == TinyFNode::Type::Folder;
+                }
+                
+                // Within same type, sort by name
+                return nodeA->name < nodeB->name;
+            });
+            
+            for (const TinyHandle& childHandle : sortedChildren) {
                 renderFileExplorerImGui(childHandle, depth + 1);
             }
             ImGui::TreePop();
