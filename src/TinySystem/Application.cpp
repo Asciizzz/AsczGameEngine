@@ -1108,7 +1108,16 @@ void Application::renderNodeInspector() {
     
     // SCROLLABLE COMPONENTS SECTION 
     float remainingHeight = ImGui::GetContentRegionAvail().y - 35; // Reserve space for add component dropdown
-    ImGui::BeginChild("ComponentsScrollable", ImVec2(0, remainingHeight), false);
+    
+    // Customize scrollbar appearance for this specific window
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar (default is usually 14-16)
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
+    
+    ImGui::BeginChild("ComponentsScrollable", ImVec2(0, remainingHeight), ImGuiChildFlags_AlwaysUseWindowPadding);
     
     TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
     
@@ -1532,6 +1541,10 @@ void Application::renderNodeInspector() {
     }
     
     ImGui::EndChild();
+    
+    // Pop the scrollbar style customizations
+    ImGui::PopStyleColor(4); // Pop ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
+    ImGui::PopStyleVar(2); // Pop ScrollbarSize, ScrollbarRounding
 }
 
 void Application::queueForDeletion(TinyHandle handle) {
