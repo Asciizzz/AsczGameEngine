@@ -1,7 +1,6 @@
 #pragma once
 
 #include "TinyExt/TinyPool.hpp"
-#include "TinyExt/TinyHandle.hpp"
 
 #include <typeindex>
 
