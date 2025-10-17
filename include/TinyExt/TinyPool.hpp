@@ -50,10 +50,6 @@ struct TinyPool {
 
     TinyPool() = default;
 
-    // Delete copy semantics
-    TinyPool(const TinyPool&) = delete;
-    TinyPool& operator=(const TinyPool&) = delete;
-
 private:
     TinyPoolType poolType = TinyPoolTraits<Type>::poolType;
 

@@ -201,7 +201,10 @@ void TinyRScene::addSceneToNode(const TinyRScene& sceneA, TinyHandle parentNodeH
     if (parentNode) {
         // Find nodes that were root nodes in scene A (had invalid parent or parent not in scene)
         for (const auto& [oldIndex, newHandle] : handleMap) {
-            TinyHandle oldHandle_A = TinyHandle{oldIndex, 0}; // Version doesn't matter for lookup
+            // Get the actual handle from scene A using the index
+            TinyHandle oldHandle_A = sceneA.nodes.getHandle(oldIndex);
+            if (!oldHandle_A.valid()) continue;
+            
             const TinyRNode* originalA = sceneA.nodes.get(oldHandle_A);
             
             if (originalA && (!originalA->parentHandle.valid() || 

@@ -49,6 +49,10 @@ public:
      */
     void runPlayground(float dTime);
 
+    // Debug functions
+    void debugPrintHierarchyTree(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
+    void debugPrintHierarchyFlat();
+
     // Active scene access methods
     TinyRScene* getActiveScene() const { return tinyFS->registryRef().get<TinyRScene>(activeSceneHandle); }
     TinyHandle getActiveSceneHandle() const { return activeSceneHandle; }

@@ -10,6 +10,7 @@
 
 struct TinyNode {
     std::string name = "Node";
+    TinyNode() = default;
 
     enum class Scope {
         Local, // Local with model

@@ -136,13 +136,9 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
     TinyRScene scene;
     scene.name = model.name;
 
-    // Since we are mostly loading this model in a vacuum
-    // The pool structure initially matches the model's node array 1:1
-
-    if (!model.nodes.empty()) {
-        // First node is root (should be correct according to TinyLoader implementation)
-        scene.rootNode = TinyHandle(0, 1);
-    }
+    // First pass: Insert all nodes and collect their actual handles
+    std::vector<TinyHandle> nodeHandles;
+    nodeHandles.reserve(model.nodes.size());
 
     for (const auto& node : model.nodes) {
         TinyRNode rtNode = node; // Copy node data
@@ -165,7 +161,40 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
             }
         }
 
-        scene.nodes.insert(std::move(rtNode));
+        // Insert and capture the actual handle returned by the pool
+        TinyHandle actualHandle = scene.nodes.insert(rtNode);
+        nodeHandles.push_back(actualHandle);
+    }
+
+    // Set the root node to the first node's actual handle
+    if (!nodeHandles.empty()) {
+        scene.rootNode = nodeHandles[0];
+    }
+
+    // Second pass: Remap parent/child relationships using actual handles
+    for (size_t i = 0; i < model.nodes.size(); ++i) {
+        TinyRNode* rtNode = scene.nodes.get(nodeHandles[i]);
+        if (!rtNode) continue;
+
+        const TinyNode& originalNode = model.nodes[i];
+
+        // Clear existing children since we'll rebuild them with correct handles
+        rtNode->childrenHandles.clear();
+
+        // Remap parent handle
+        if (originalNode.parentHandle.valid() && 
+            originalNode.parentHandle.index < nodeHandles.size()) {
+            rtNode->parentHandle = nodeHandles[originalNode.parentHandle.index];
+        } else {
+            rtNode->parentHandle = TinyHandle(); // Invalid handle for root
+        }
+
+        // Remap children handles
+        for (const TinyHandle& childHandle : originalNode.childrenHandles) {
+            if (childHandle.valid() && childHandle.index < nodeHandles.size()) {
+                rtNode->childrenHandles.push_back(nodeHandles[childHandle.index]);
+            }
+        }
     }
 
     // Add scene to registry and return the handle
@@ -199,6 +228,310 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode
 
 void TinyProject::runPlayground(float dTime) {
     return;
+}
+
+void TinyProject::debugPrintHierarchyTree(TinyHandle nodeHandle, int depth) {
+    TinyRScene* activeScene = getActiveScene();
+    if (!activeScene) {
+        std::cout << "No active scene!" << std::endl;
+        return;
+    }
+
+    // Use root node if no valid handle provided
+    if (!nodeHandle.valid()) {
+        nodeHandle = activeScene->rootNode;
+        std::cout << "=== SCENE HIERARCHY TREE ===" << std::endl;
+        std::cout << "Active scene handle: " << activeSceneHandle.index << "_v" << activeSceneHandle.version << std::endl;
+        std::cout << "Root node handle: " << nodeHandle.index << "_v" << nodeHandle.version << std::endl;
+        std::cout << "Total nodes in pool: " << activeScene->nodes.count() << std::endl;
+        std::cout << "--- Tree Structure ---" << std::endl;
+    }
+
+    const TinyRNode* node = activeScene->nodes.get(nodeHandle);
+    if (!node) {
+        for (int i = 0; i < depth; i++) std::cout << "  ";
+        std::cout << "[INVALID NODE: " << nodeHandle.index << "_v" << nodeHandle.version << "]" << std::endl;
+        return;
+    }
+
+    // Print indented node info
+    for (int i = 0; i < depth; i++) std::cout << "  ";
+    std::cout << "- " << node->name << " (" << nodeHandle.index << "_v" << nodeHandle.version << ")";
+    
+    // Add type info
+    if (node->hasType(TinyNode::Types::MeshRender)) std::cout << " [Mesh]";
+    if (node->hasType(TinyNode::Types::Skeleton)) std::cout << " [Skeleton]";
+    if (node->hasType(TinyNode::Types::BoneAttach)) std::cout << " [BoneAttach]";
+    
+    // Parent info
+    if (node->parentHandle.valid()) {
+        std::cout << " (parent: " << node->parentHandle.index << "_v" << node->parentHandle.version << ")";
+    } else {
+        std::cout << " (ROOT)";
+    }
+    
+    // Children count
+    std::cout << " [" << node->childrenHandles.size() << " children]" << std::endl;
+
+    // Recurse for children
+    for (const TinyHandle& childHandle : node->childrenHandles) {
+        debugPrintHierarchyTree(childHandle, depth + 1);
+    }
+}
+
+void TinyProject::debugPrintHierarchyFlat() {
+    TinyRScene* activeScene = getActiveScene();
+    if (!activeScene) {
+        std::cout << "No active scene!" << std::endl;
+        return;
+    }
+
+    std::cout << "=== SCENE HIERARCHY FLAT ===" << std::endl;
+    std::cout << "Active scene handle: " << activeSceneHandle.index << "_v" << activeSceneHandle.version << std::endl;
+    std::cout << "Root node handle: " << activeScene->rootNode.index << "_v" << activeScene->rootNode.version << std::endl;
+    std::cout << "Total pool capacity: " << activeScene->nodes.view().size() << std::endl;
+    std::cout << "Active nodes in pool: " << activeScene->nodes.count() << std::endl;
+    std::cout << "--- All Nodes (by pool index) ---" << std::endl;
+
+    // Iterate through all pool slots
+    for (uint32_t i = 0; i < activeScene->nodes.view().size(); ++i) {
+        if (!activeScene->nodes.isOccupied(i)) continue;
+        
+        TinyHandle handle = activeScene->nodes.getHandle(i);
+        const TinyRNode* node = activeScene->nodes.get(handle);
+        
+        if (!node) continue;
+
+        std::cout << "[" << i << "] " << handle.index << "_v" << handle.version 
+                  << " '" << node->name << "'";
+        
+        // Add type info
+        if (node->hasType(TinyNode::Types::MeshRender)) std::cout << " [Mesh]";
+        if (node->hasType(TinyNode::Types::Skeleton)) std::cout << " [Skeleton]";
+        if (node->hasType(TinyNode::Types::BoneAttach)) std::cout << " [BoneAttach]";
+        
+        // Parent/children info
+        std::cout << " | Parent: ";
+        if (node->parentHandle.valid()) {
+            std::cout << node->parentHandle.index << "_v" << node->parentHandle.version;
+        } else {
+            std::cout << "NONE";
+        }
+        
+        std::cout << " | Children(" << node->childrenHandles.size() << "): ";
+        for (size_t j = 0; j < node->childrenHandles.size(); ++j) {
+            if (j > 0) std::cout << ", ";
+            const TinyHandle& ch = node->childrenHandles[j];
+            std::cout << ch.index << "_v" << ch.version;
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "=========================" << std::endl;
+}
+
+void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
+    TinyRScene* activeScene = getActiveScene();
+    if (!activeScene) return;
+    
+    // Use root node if no valid handle provided
+    if (!nodeHandle.valid()) {
+        nodeHandle = activeScene->rootNode;
+    }
+    
+    const TinyRNode* node = activeScene->nodes.get(nodeHandle);
+    if (!node) return;
+    
+    // Create a unique ID for this node
+    ImGui::PushID(static_cast<int>(nodeHandle.index));
+    
+    // Check if this node has children
+    bool hasChildren = !node->childrenHandles.empty();
+    
+    // Create tree node or leaf
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    if (!hasChildren) {
+        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    }
+    
+    // Extract position from global transform for display
+    glm::vec3 worldPos = glm::vec3(node->globalTransform[3]);
+    
+    // Create the node label with useful information
+    std::string label = node->name;
+    if (node->hasType(TinyNode::Types::MeshRender)) {
+        label += " [Mesh]";
+    }
+    if (node->hasType(TinyNode::Types::Skeleton)) {
+        label += " [Skeleton]";
+    }
+    if (node->hasType(TinyNode::Types::BoneAttach)) {
+        label += " [BoneAttach]";
+    }
+    
+    bool nodeOpen = ImGui::TreeNodeEx(label.c_str(), flags);
+    
+    // Show node details in tooltip
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        ImGui::Text("Handle: %u_v%u", nodeHandle.index, nodeHandle.version);
+        ImGui::Text("Parent: %u_v%u", node->parentHandle.index, node->parentHandle.version);
+        ImGui::Text("Children: %zu", node->childrenHandles.size());
+        
+        ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
+        ImGui::Text("Type Mask: 0x%X", node->types);
+        ImGui::EndTooltip();
+    }
+    
+    // If node is open and has children, recurse for children
+    if (nodeOpen && hasChildren) {
+        for (const TinyHandle& childHandle : node->childrenHandles) {
+            renderNodeTreeImGui(childHandle, depth + 1);
+        }
+        ImGui::TreePop();
+    }
+    
+    ImGui::PopID();
+}
+
+void TinyProject::renderSelectableNodeTreeImGui(TinyHandle nodeHandle, TinyHandle& selectedNode, int depth) {
+    TinyRScene* activeScene = getActiveScene();
+    if (!activeScene) return;
+    
+    // Use root node if no valid handle provided
+    if (!nodeHandle.valid()) {
+        nodeHandle = activeScene->rootNode;
+    }
+    
+    const TinyRNode* node = activeScene->nodes.get(nodeHandle);
+    if (!node) return;
+    
+    // Create a unique ID for this node
+    ImGui::PushID(static_cast<int>(nodeHandle.index));
+    
+    // Check if this node has children
+    bool hasChildren = !node->childrenHandles.empty();
+    bool isSelected = (selectedNode.index == nodeHandle.index && selectedNode.version == nodeHandle.version);
+    
+    // Create tree node flags
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    if (!hasChildren) {
+        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    }
+    if (isSelected) {
+        flags |= ImGuiTreeNodeFlags_Selected;
+    }
+    
+    // Extract position from global transform for display
+    glm::vec3 worldPos = glm::vec3(node->globalTransform[3]);
+    
+    // Create the node label with useful information
+    std::string label = node->name;
+    if (node->hasType(TinyNode::Types::MeshRender)) {
+        label += " [Mesh]";
+    }
+    if (node->hasType(TinyNode::Types::Skeleton)) {
+        label += " [Skeleton]";
+    }
+    if (node->hasType(TinyNode::Types::BoneAttach)) {
+        label += " [BoneAttach]";
+    }
+    
+    bool nodeOpen = ImGui::TreeNodeEx(label.c_str(), flags);
+    
+    // Handle selection
+    if (ImGui::IsItemClicked()) {
+        selectedNode = nodeHandle;
+    }
+    
+    // Drag and drop source (only if not root node)
+    if (nodeHandle != activeScene->rootNode && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+        // Set payload to carry the node handle
+        ImGui::SetDragDropPayload("NODE_HANDLE", &nodeHandle, sizeof(TinyHandle));
+        
+        // Display preview
+        ImGui::Text("Moving: %s", node->name.c_str());
+        ImGui::EndDragDropSource();
+    }
+    
+    // Drag and drop target
+    if (ImGui::BeginDragDropTarget()) {
+        // Accept node reparenting
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
+            TinyHandle draggedNode = *(const TinyHandle*)payload->Data;
+            
+            // Attempt to reparent the dragged node to this node
+            if (activeScene->reparentNode(draggedNode, nodeHandle)) {
+                // Update global transforms after reparenting
+                activeScene->updateGlbTransform();
+                
+                // If the dragged node was selected, keep it selected
+                if (selectedNode == draggedNode) {
+                    selectedNode = draggedNode;
+                }
+            }
+        }
+        
+        // Accept scene drops (from filesystem nodes)
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_FNODE")) {
+            TinyHandle sceneFNodeHandle = *(const TinyHandle*)payload->Data;
+            
+            // Get the filesystem node to access its TypeHandle
+            const TinyFNode* sceneFile = tinyFS->getFNodes().get(sceneFNodeHandle);
+            if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyRScene>()) {
+                // Extract the registry handle from the TypeHandle
+                TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
+                
+                // Verify the scene exists and instantiate it at this node
+                const TinyRScene* scene = registryRef().get<TinyRScene>(sceneRegistryHandle);
+                if (scene) {
+                    // Place the scene at this node
+                    addSceneInstance(sceneRegistryHandle, nodeHandle);
+                }
+            }
+        }
+        
+        // Also accept FILE_HANDLE payloads and check if they're scene files
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+            TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
+            
+            // Get the filesystem node to check if it's a scene file
+            const TinyFNode* fileNode = tinyFS->getFNodes().get(fileNodeHandle);
+            if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRScene>()) {
+                // This is a scene file - instantiate it at this node
+                TinyHandle sceneRegistryHandle = fileNode->tHandle.handle;
+                
+                // Verify the scene exists and instantiate it at this node
+                const TinyRScene* scene = registryRef().get<TinyRScene>(sceneRegistryHandle);
+                if (scene) {
+                    // Place the scene at this node
+                    addSceneInstance(sceneRegistryHandle, nodeHandle);
+                }
+            }
+        }
+        
+        ImGui::EndDragDropTarget();
+    }
+    
+    // Show node details in tooltip
+    if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+        ImGui::BeginTooltip();
+        ImGui::Text("Handle: %u_v%u", nodeHandle.index, nodeHandle.version);
+        ImGui::Text("Parent: %u_v%u", node->parentHandle.index, node->parentHandle.version);
+        ImGui::Text("Children: %zu", node->childrenHandles.size());
+        ImGui::Text("World Position: (%.2f, %.2f, %.2f)", worldPos.x, worldPos.y, worldPos.z);
+        ImGui::Text("Type Mask: 0x%X", node->types);
+        ImGui::EndTooltip();
+    }
+    
+    // If node is open and has children, recurse for children
+    if (nodeOpen && hasChildren) {
+        for (const TinyHandle& childHandle : node->childrenHandles) {
+            renderSelectableNodeTreeImGui(childHandle, selectedNode, depth + 1);
+        }
+        ImGui::TreePop();
+    }
+    
+    ImGui::PopID();
 }
 
 

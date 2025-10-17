@@ -256,8 +256,8 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 
 
 void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipeline) const {
-    const auto& rtNodes = project->getRuntimeNodes();
-    const auto& rtMeshRenderHandles = project->getRuntimeMeshRenderHandles();
+    const TinyRScene* activeScene = project->getActiveScene();
+    if (!activeScene) return;
 
     const auto& registry = project->registryRef();
 
@@ -268,9 +268,14 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
     VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
     rPipeline->bindSets(currentCmd, &glbSet, 1);
 
-    for (const TinyHandle& meshHandle : rtMeshRenderHandles) {
-        const TinyRNode* rtNode = rtNodes.get(meshHandle);
-        if (!rtNode) continue;
+    // Iterate through all nodes in the active scene to find mesh renderers
+    const auto& sceneNodes = activeScene->nodes.view();
+    for (uint32_t i = 0; i < sceneNodes.size(); ++i) {
+        if (!activeScene->nodes.isOccupied(i)) continue;
+        
+        TinyHandle nodeHandle = activeScene->nodes.getHandle(i);
+        const TinyRNode* rtNode = activeScene->nodes.get(nodeHandle);
+        if (!rtNode || !rtNode->hasComponent<TinyRNode::MeshRender>()) continue;
 
         const auto& transform = rtNode->globalTransform;
 

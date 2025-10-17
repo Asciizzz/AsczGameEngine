@@ -69,7 +69,7 @@ void Application::initComponents() {
     project = MakeUnique<TinyProject>(deviceVK.get());
 
     // Initialize selected node to root
-    selectedSceneNodeHandle = project->getNodeHandleByIndex(0);
+    selectedSceneNodeHandle = project->getRootNodeHandle();
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->getCamera()->setAspectRatio(aspectRatio);
@@ -394,17 +394,33 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         // Count scenes in library
         uint32_t totalScenes = fs.registryRef().count<TinyRScene>();
         ImGui::Text("Loaded Scenes: %u", totalScenes);
-        ImGui::Text("Runtime Node Count: %u", project->getRuntimeNodes().count());
-        ImGui::Text("Mesh Render Nodes: %zu", project->getRuntimeMeshRenderHandles().size());
+        
+        TinyRScene* activeScene = project->getActiveScene();
+        if (activeScene) {
+            ImGui::Text("Active Scene Nodes: %u", activeScene->nodes.count());
+        } else {
+            ImGui::Text("Active Scene Nodes: 0");
+        }
 
         ImGui::Spacing();
+        ImGui::Separator();
+        
+        // Debug buttons
+        if (ImGui::Button("Debug Tree")) {
+            project->debugPrintHierarchyTree();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Debug Flat")) {
+            project->debugPrintHierarchyFlat();
+        }
+        
         ImGui::Separator();
         
         // Expanded runtime node hierarchy
         ImGui::Text("Runtime Node Hierarchy");
         
         // Calculate remaining window space for the node tree
-        float hierarchyHeight = ImGui::GetContentRegionAvail().y - 20; // Leave some padding
+        float hierarchyHeight = ImGui::GetContentRegionAvail().y - 60; // Leave some padding for debug buttons
         
         ImGui::BeginChild("NodeTree", ImVec2(0, hierarchyHeight), true);
         
@@ -412,11 +428,10 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0)) {
             selectedFNodeHandle = TinyHandle();
         }
-        
-        if (project->getRuntimeNodes().count() > 0) {
-            project->renderSelectableNodeTreeImGui(project->getNodeHandleByIndex(0), selectedSceneNodeHandle);
+        if (activeScene && activeScene->nodes.count() > 0) {
+            project->renderSelectableNodeTreeImGui(project->getRootNodeHandle(), selectedSceneNodeHandle);
         } else {
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No runtime nodes");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
         }
         ImGui::EndChild();
@@ -597,8 +612,8 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                                 if (ImGui::IsMouseDoubleClicked(0) && selectedSceneNodeHandle.valid()) {
                                     // Double-click to place scene at selected node
                                     TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                                    project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle, glm::mat4(1.0f));
-                                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                                    project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle);
+                                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                                 }
                             }
                             
@@ -627,7 +642,7 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             if (ImGui::IsItemHovered()) {
                                 ImGui::BeginTooltip();
                                 ImGui::Text("Scene: %s", scene->name.c_str());
-                                ImGui::Text("Nodes: %zu", scene->nodes.size());
+                                ImGui::Text("Nodes: %u", scene->nodes.count());
                                 ImGui::Text("Double-click to place at selected node");
                                 ImGui::Text("Drag to folders: Move file");
                                 ImGui::Text("Drag to nodes: Instantiate scene");
@@ -719,8 +734,8 @@ void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int
                             if (ImGui::IsMouseDoubleClicked(0) && selectedSceneNodeHandle.valid()) {
                                 // Double-click placement - use registry handle from TypeHandle
                                 TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                                project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle, glm::mat4(1.0f));
-                                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                                project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle);
+                                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                             }
                         }
                         
@@ -844,7 +859,7 @@ void Application::renderInspectorWindow() {
                 fileType = "Scene";
                 TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(selectedFNode->tHandle));
                 if (scene) {
-                    ImGui::Text("Scene Nodes: %zu", scene->nodes.size());
+                    ImGui::Text("Scene Nodes: %u", scene->nodes.count());
                 }
             } else if (selectedFNode->tHandle.isType<TinyRTexture>()) {
                 fileType = "Texture";
@@ -985,8 +1000,8 @@ void Application::renderInspectorWindow() {
             ImGui::Text("Scene Actions:");
             if (ImGui::Button("Instantiate at Selected Node", ImVec2(-1, 25))) {
                 TinyHandle sceneRegistryHandle = selectedFNode->tHandle.handle;
-                project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle, glm::mat4(1.0f));
-                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                project->addSceneInstance(sceneRegistryHandle, selectedSceneNodeHandle);
+                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
             }
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Add this scene as a child of the selected runtime node");
@@ -1002,14 +1017,20 @@ void Application::renderInspectorWindow() {
         return;
     }
 
-    const TinyRNode* selectedNode = project->getRuntimeNodes().get(selectedSceneNodeHandle);
+    TinyRScene* activeScene = project->getActiveScene();
+    if (!activeScene) {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No active scene");
+        return;
+    }
+    
+    const TinyRNode* selectedNode = activeScene->nodes.get(selectedSceneNodeHandle);
     if (!selectedNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
-        selectedSceneNodeHandle = project->getNodeHandleByIndex(0); // Reset to root
+        selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset to root
         return;
     }
 
-    bool isRootNode = (selectedSceneNodeHandle == project->getNodeHandleByIndex(0));
+    bool isRootNode = (selectedSceneNodeHandle == project->getRootNodeHandle());
 
     // Node Header Info
     ImGui::Text("Node: %s", selectedNode->name.c_str());
@@ -1047,7 +1068,7 @@ void Application::renderInspectorWindow() {
             if (ImGui::Button("Reset Transform")) {
                 TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
                 mutableNode->localTransform = glm::mat4(1.0f);
-                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
             }
             return;
         }
@@ -1062,7 +1083,7 @@ void Application::renderInspectorWindow() {
             if (ImGui::Button("Reset Transform")) {
                 TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
                 mutableNode->localTransform = glm::mat4(1.0f);
-                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
             }
             return;
         }
@@ -1234,7 +1255,7 @@ void Application::renderInspectorWindow() {
                     mutableNode->localTransform = newTransform;
                     
                     // Update global transforms
-                    project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                 } else {
                     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid transform - changes ignored");
                 }
@@ -1253,7 +1274,7 @@ void Application::renderInspectorWindow() {
         
         // Parent info
         if (selectedNode->parentHandle.valid()) {
-            const TinyRNode* parentNode = project->getRuntimeNodes().get(selectedNode->parentHandle);
+            const TinyRNode* parentNode = activeScene->nodes.get(selectedNode->parentHandle);
             if (parentNode) {
                 ImGui::Text("Parent: %s (%u_v%u)", parentNode->name.c_str(), 
                            selectedNode->parentHandle.index, selectedNode->parentHandle.version);
@@ -1285,11 +1306,11 @@ void Application::renderInspectorWindow() {
     // Delete button (only show if not root node)
     if (!isRootNode) {
         if (ImGui::Button("Delete Node", ImVec2(-1, 30))) {
-            if (project->deleteNodeRecursive(selectedSceneNodeHandle)) {
+            if (activeScene->deleteNodeRecursive(selectedSceneNodeHandle)) {
                 // Successfully deleted, reset selection to root
-                selectedSceneNodeHandle = project->getNodeHandleByIndex(0);
+                selectedSceneNodeHandle = project->getRootNodeHandle();
                 // Update global transforms after deletion
-                project->updateGlobalTransforms(project->getNodeHandleByIndex(0));
+                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
             }
         }
         if (ImGui::IsItemHovered()) {
