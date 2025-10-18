@@ -21,11 +21,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     // Create Main Scene (the active scene with a single root node)
     TinyRScene mainScene;
     mainScene.name = "Main Scene";
-    
-    // Create root node for the main scene 
-    TinyRNode rootNode;
-    rootNode.name = "Root";
-    mainScene.rootNode = mainScene.nodes.insert(std::move(rootNode));
+    mainScene.addRoot("Root");
 
     // Create "Main Scene" as a non-deletable file in root directory
     TinyFNode::CFG sceneConfig;
@@ -163,13 +159,13 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
         }
 
         // Insert and capture the actual handle returned by the pool
-        TinyHandle actualHandle = scene.nodes.insert(rtNode);
+        TinyHandle actualHandle = scene.nodes.add(rtNode);
         nodeHandles.push_back(actualHandle);
     }
 
     // Set the root node to the first node's actual handle
     if (!nodeHandles.empty()) {
-        scene.rootNode = nodeHandles[0];
+        scene.rootHandle = nodeHandles[0];
     }
 
     // Second pass: Remap parent/child relationships using actual handles
@@ -215,7 +211,7 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode
     if (!sourceScene || !activeScene) return;
 
     // Use root node if no valid parent provided
-    TinyHandle actualParent = parentNode.valid() ? parentNode : activeScene->rootNode;
+    TinyHandle actualParent = parentNode.valid() ? parentNode : activeScene->rootHandle;
     
     // Use the scene's addScene method to merge the source scene into active scene
     activeScene->addScene(*sourceScene, actualParent);
@@ -247,10 +243,8 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     if (!activeScene) return;
     
     // Use root node if no valid handle provided
-    if (!nodeHandle.valid()) {
-        nodeHandle = activeScene->rootNode;
-    }
-    
+    if (!nodeHandle.valid()) nodeHandle = activeScene->rootHandle;
+
     const TinyRNode* node = activeScene->nodes.get(nodeHandle);
     if (!node) return;
     
@@ -298,7 +292,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     
     // Drag and drop source (only if not root node)
     bool isDragging = false;
-    if (nodeHandle != activeScene->rootNode && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+    if (nodeHandle != activeScene->rootHandle && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
         isDragging = true;
         heldSceneNodeHandle = nodeHandle;  // Set the held node during drag
         
@@ -433,14 +427,14 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         if (ImGui::MenuItem("Add Child Node")) {
             TinyRScene* scene = getActiveScene();
             if (scene) {
-                TinyHandle newNodeHandle = scene->addNode(nodeHandle, "New Node");
+                TinyHandle newNodeHandle = scene->addNode("New Node", nodeHandle);
                 selectedSceneNodeHandle = newNodeHandle;
                 expandNode(nodeHandle); // Expand parent to show new child
             }
         }
         
         // Only show delete for non-root nodes
-        if (nodeHandle != activeScene->rootNode) {
+        if (nodeHandle != activeScene->rootHandle) {
             if (ImGui::MenuItem("Delete Node")) {
                 TinyRScene* scene = getActiveScene();
                 if (scene && scene->removeNode(nodeHandle)) {
@@ -631,11 +625,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             if (ImGui::MenuItem("Add Scene")) {
                 TinyRScene newScene;
                 newScene.name = "New Scene";
-                
-                // Create root node for the scene
-                TinyRNode rootNode;
-                rootNode.name = "Root";
-                newScene.rootNode = newScene.nodes.insert(rootNode);
+                newScene.addRoot("Root");
                 
                 // Add scene to registry and create file node
                 TinyRScene* scenePtr = &newScene;

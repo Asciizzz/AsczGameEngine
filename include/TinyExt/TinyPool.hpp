@@ -77,9 +77,9 @@ public:
         return index < items.size() && states[index].occupied;
     }
 
-    // ---- Type-aware insert ----
+    // ---- Type-aware add ----
     template<typename U>
-    TinyHandle insert(U&& item) {
+    TinyHandle add(U&& item) {
         uint32_t index;
 
         // Check if we can reuse a slot from the free list

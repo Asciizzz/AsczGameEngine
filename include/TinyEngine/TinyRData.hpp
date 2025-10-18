@@ -108,11 +108,16 @@ using TinyRNode = TinyNode; // Alias for name consistency
 struct TinyRScene {
     std::string name;
     TinyPool<TinyRNode> nodes;
-    TinyHandle rootNode;
+    TinyHandle rootHandle;
+
+    TinyRScene() = default;
 
     void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
-    TinyHandle addNode(TinyHandle parentHandle = TinyHandle(), const std::string& nodeName = "New Node");
+    TinyHandle addRoot(const std::string& nodeName = "Root");
+    TinyHandle addNode(const std::string& nodeName = "New Node", TinyHandle parentHandle = TinyHandle());
+    TinyHandle addNode(const TinyRNode& nodeData, TinyHandle parentHandle = TinyHandle());
+
     void addScene(const TinyRScene& scene, TinyHandle parentHandle = TinyHandle());
     bool removeNode(TinyHandle nodeHandle);
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);

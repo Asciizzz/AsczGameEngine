@@ -88,7 +88,7 @@ public:
     template<typename T>
     TypeHandle add(T& data) {
         auto& pool = ensurePool<T>().pool;
-        TinyHandle handle = pool.insert(std::move(data));
+        TinyHandle handle = pool.add(std::move(data));
 
         return TypeHandle::make<T>(handle);
     }

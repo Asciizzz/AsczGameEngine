@@ -79,10 +79,6 @@ private:
     void createNewChildNode(TinyHandle parentNodeHandle);
     void deleteSelectedNode();
     
-    // File/Folder management
-    void createNewFolder(TinyHandle parentFolderHandle = TinyHandle());
-    void createNewScene(TinyHandle parentFolderHandle = TinyHandle());
-    
     // Component-specific inspectors
     
     // Drag-drop helper for component fields

@@ -69,7 +69,7 @@ public:
     // Helper methods for UI compatibility
     TinyHandle getRootNodeHandle() const { 
         TinyRScene* scene = getActiveScene();
-        return scene ? scene->rootNode : TinyHandle();
+        return scene ? scene->rootHandle : TinyHandle();
     }
 
     const TinyRegistry& registryRef() const { return tinyFS->registryRef(); }

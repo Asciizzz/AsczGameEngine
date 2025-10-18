@@ -102,12 +102,35 @@ bool TinyRTexture::create(const TinyVK::Device* deviceVK) {
 }
 
 
+void TinyRScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
+    // Use root node if no valid handle provided
+    TinyHandle actualNode = nodeHandle.valid() ? nodeHandle : rootHandle;
+    
+    TinyRNode* node = nodes.get(actualNode);
+    if (!node) return;
+    
+    // Calculate global transform: parent global * local transform
+    node->globalTransform = parentGlobalTransform * node->localTransform;
+    
+    // Recursively update all children
+    for (const TinyHandle& childHandle : node->childrenHandles) {
+        updateGlbTransform(childHandle, node->globalTransform);
+    }
+}
 
+TinyHandle TinyRScene::addRoot(const std::string& nodeName) {
+    // Create a new root node
+    TinyRNode rootNode;
+    rootNode.name = nodeName;
 
+    rootHandle = nodes.add(std::move(rootNode));
 
-TinyHandle TinyRScene::addNode(TinyHandle parentHandle, const std::string& nodeName) {
+    return rootHandle;
+}
+
+TinyHandle TinyRScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
     // If no parent specified, use root node
-    if (!parentHandle.valid()) parentHandle = rootNode;
+    if (!parentHandle.valid()) parentHandle = rootHandle;
     
     // Validate parent exists
     TinyRNode* parentNode = nodes.get(parentHandle);
@@ -124,7 +147,39 @@ TinyHandle TinyRScene::addNode(TinyHandle parentHandle, const std::string& nodeN
     newNode.types = 0; // No components
     
     // Add the node to the pool first
-    TinyHandle newNodeHandle = nodes.insert(std::move(newNode));
+    TinyHandle newNodeHandle = nodes.add(std::move(newNode));
+    
+    // Re-get parent pointer after potential pool reallocation
+    parentNode = nodes.get(parentHandle);
+    if (!parentNode) {
+        // This shouldn't happen, but safety check
+        nodes.remove(newNodeHandle);
+        return TinyHandle();
+    }
+    
+    // Add to parent's children list
+    parentNode->childrenHandles.push_back(newNodeHandle);
+    
+    return newNodeHandle;
+}
+
+TinyHandle TinyRScene::addNode(const TinyRNode& nodeData, TinyHandle parentHandle) {
+    // If no parent specified, use root node
+    if (!parentHandle.valid()) parentHandle = rootHandle;
+    
+    // Validate parent exists
+    TinyRNode* parentNode = nodes.get(parentHandle);
+    if (!parentNode) {
+        return TinyHandle(); // Invalid parent handle
+    }
+    
+    // Create a copy of the provided node data
+    TinyRNode newNode = nodeData;
+    newNode.parentHandle = parentHandle; // Ensure correct parent
+    // Note: childrenHandles will be empty initially
+    
+    // Add the node to the pool
+    TinyHandle newNodeHandle = nodes.add(std::move(newNode));
     
     // Re-get parent pointer after potential pool reallocation
     parentNode = nodes.get(parentHandle);
@@ -141,12 +196,11 @@ TinyHandle TinyRScene::addNode(TinyHandle parentHandle, const std::string& nodeN
 }
 
 
-// TinyRScene implementation
 void TinyRScene::addScene(const TinyRScene& sceneA, TinyHandle parentHandle) {
     if (sceneA.nodes.count() == 0) return;
 
     // Default to root node if no parent specified
-    if (!parentHandle.valid()) parentHandle = rootNode;
+    if (!parentHandle.valid()) parentHandle = rootHandle;
 
     // Create mapping from scene A handles to scene B handles
     std::unordered_map<uint32_t, TinyHandle> handleMap; // A_index -> B_handle
@@ -164,7 +218,7 @@ void TinyRScene::addScene(const TinyRScene& sceneA, TinyHandle parentHandle) {
         
         // Copy the node and insert into scene B
         TinyRNode nodeCopy = *nodeA;
-        TinyHandle newHandle_B = nodes.insert(std::move(nodeCopy));
+        TinyHandle newHandle_B = nodes.add(std::move(nodeCopy));
         
         // Store the mapping: A's index -> B's handle
         handleMap[oldHandle_A.index] = newHandle_B;
@@ -258,26 +312,10 @@ void TinyRScene::addScene(const TinyRScene& sceneA, TinyHandle parentHandle) {
     updateGlbTransform(parentHandle); // Update transforms after adding new nodes
 }
 
-void TinyRScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
-    // Use root node if no valid handle provided
-    TinyHandle actualNode = nodeHandle.valid() ? nodeHandle : rootNode;
-    
-    TinyRNode* node = nodes.get(actualNode);
-    if (!node) return;
-    
-    // Calculate global transform: parent global * local transform
-    node->globalTransform = parentGlobalTransform * node->localTransform;
-    
-    // Recursively update all children
-    for (const TinyHandle& childHandle : node->childrenHandles) {
-        updateGlbTransform(childHandle, node->globalTransform);
-    }
-}
-
 bool TinyRScene::removeNode(TinyHandle nodeHandle) {
     TinyRNode* nodeToDelete = nodes.get(nodeHandle);
     // Is Non-existent or root
-    if (!nodeToDelete || nodeHandle == rootNode) return false;
+    if (!nodeToDelete || nodeHandle == rootHandle) return false;
 
     // First, recursively delete all children
     // We need to copy the children handles because we'll be modifying the vector during iteration
@@ -311,7 +349,7 @@ bool TinyRScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle)
     }
     
     // Can't reparent root node
-    if (nodeHandle == rootNode) {
+    if (nodeHandle == rootHandle) {
         return false;
     }
     

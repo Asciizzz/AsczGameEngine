@@ -38,7 +38,7 @@ public:
         rootNode.cfg.deletable = false; // root is not deletable
 
         // Insert root and store explicitly the returned handle
-        rootHandle_ = fnodes.insert(std::move(rootNode));
+        rootHandle_ = fnodes.add(std::move(rootNode));
     }
 
     // ---------- Basic access ----------
@@ -246,7 +246,7 @@ private:
             }
         }
 
-        TinyHandle h = fnodes.insert(std::move(child));
+        TinyHandle h = fnodes.add(std::move(child));
         // parent might have been invalidated in a multithreaded scenario; guard
         if (fnodes.isValid(parentHandle)) {
             TinyFNode* parent = fnodes.get(parentHandle);

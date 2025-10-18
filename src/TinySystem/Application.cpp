@@ -440,17 +440,6 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
             project->selectedSceneNodeHandle = TinyHandle();
         }
         
-        // Set up file explorer context menu callbacks
-        project->onAddFolder = [this](TinyHandle parentFolder) {
-            createNewFolder(parentFolder);
-        };
-        project->onAddScene = [this](TinyHandle parentFolder) {
-            createNewScene(parentFolder);
-        };
-        project->onDeleteFile = [this](TinyHandle fileHandle) {
-            queueForDeletion(fileHandle);
-        };
-        
         project->renderFileExplorerImGui();
 
         ImGui::EndChild();
@@ -1792,7 +1781,7 @@ void Application::createNewChildNode(TinyHandle parentNodeHandle) {
     if (!activeScene) return;
     
     // Create a new node as a child of the specified parent
-    TinyHandle newNodeHandle = activeScene->addNode(parentNodeHandle, "New Node");
+    TinyHandle newNodeHandle = activeScene->addNode("New Node", parentNodeHandle);
     
     if (newNodeHandle.valid()) {
         // Select the newly created node in the Inspector
@@ -1832,107 +1821,5 @@ void Application::deleteSelectedNode() {
         
         // Update global transforms after deletion
         activeScene->updateGlbTransform();
-    }
-}
-
-void Application::createNewFolder(TinyHandle parentFolderHandle) {
-    TinyFS& fs = project->filesystem();
-    
-    // Use root handle if no parent specified
-    TinyHandle targetParent = parentFolderHandle.valid() ? parentFolderHandle : fs.rootHandle();
-    
-    // Create new folder with default name
-    std::string folderName = "New Folder";
-    
-    // Check for name conflicts by iterating through children
-    const TinyFNode* parentNode = fs.getFNodes().get(targetParent);
-    if (parentNode) {
-        int counter = 1;
-        std::string finalName = folderName;
-        bool nameExists = true;
-        
-        while (nameExists) {
-            nameExists = false;
-            for (TinyHandle childHandle : parentNode->children) {
-                const TinyFNode* child = fs.getFNodes().get(childHandle);
-                if (child && child->name == finalName) {
-                    nameExists = true;
-                    finalName = folderName + " " + std::to_string(counter);
-                    counter++;
-                    break;
-                }
-            }
-        }
-        
-        // Create the folder using the correct API
-        TinyHandle newFolderHandle = fs.addFolder(targetParent, finalName);
-        
-        if (newFolderHandle.valid()) {
-            // Select the newly created folder
-            project->selectedFNodeHandle = newFolderHandle;
-            
-            // Auto-expand the parent folder to show the new folder
-            if (parentFolderHandle.valid()) {
-                // Store the parent handle for next frame expansion
-                project->autoExpandFolderHandle = parentFolderHandle;
-            }
-        }
-    }
-}
-
-void Application::createNewScene(TinyHandle parentFolderHandle) {
-    TinyFS& fs = project->filesystem();
-    
-    // Use root handle if no parent specified  
-    TinyHandle targetParent = parentFolderHandle.valid() ? parentFolderHandle : fs.rootHandle();
-    
-    // Create new scene with default name
-    std::string sceneName = "New Scene";
-    
-    // Check for name conflicts by iterating through children
-    const TinyFNode* parentNode = fs.getFNodes().get(targetParent);
-    if (parentNode) {
-        int counter = 1;
-        std::string finalName = sceneName;
-        bool nameExists = true;
-        
-        while (nameExists) {
-            nameExists = false;
-            for (TinyHandle childHandle : parentNode->children) {
-                const TinyFNode* child = fs.getFNodes().get(childHandle);
-                if (child && child->name == finalName) {
-                    nameExists = true;
-                    finalName = sceneName + " " + std::to_string(counter);
-                    counter++;
-                    break;
-                }
-            }
-        }
-        
-        // Create a minimal scene with just a root node
-        TinyRScene newScene;
-        newScene.name = finalName;
-        
-        // Add a root node to the scene
-        TinyRNode rootNode;
-        rootNode.name = "Root";
-        rootNode.localTransform = glm::mat4(1.0f);
-        
-        TinyHandle rootNodeHandle = newScene.nodes.insert(std::move(rootNode));
-        newScene.rootNode = rootNodeHandle;
-        
-        // Create file node in filesystem using the correct API
-        TinyHandle newFileHandle = fs.addFile(targetParent, finalName, &newScene);
-        
-        if (newFileHandle.valid()) {
-            // Select the newly created scene file
-            project->selectedFNodeHandle = newFileHandle;
-            
-            // Auto-expand the parent folder to show the new file
-            if (parentFolderHandle.valid()) {
-                // Store the parent handle for next frame expansion
-                project->autoExpandFolderHandle = parentFolderHandle;
-            }
-        }
     }
 }
