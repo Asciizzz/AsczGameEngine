@@ -1,4 +1,5 @@
 #include "TinyEngine/TinyProject.hpp"
+#include "TinyEngine/TinyLoader.hpp"
 #include <imgui.h>
 #include <algorithm>
 #include <filesystem>
@@ -703,22 +704,16 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             }
             
             if (ImGui::MenuItem("Load Model...")) {
-                // TODO: Open file dialog to select model file
-                // For now, show a placeholder message
-                ImGui::OpenPopup("LoadModelDialog");
-            }
-            
-            // Load Model Dialog (placeholder for now)
-            if (ImGui::BeginPopupModal("LoadModelDialog", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text("Model loading functionality not yet implemented.");
-                ImGui::Text("This would open a file dialog to select .glb/.gltf files");
-                ImGui::Text("and load them into the folder: %s", displayName.c_str());
-                
-                ImGui::Separator();
-                if (ImGui::Button("Close")) {
-                    ImGui::CloseCurrentPopup();
+                // Open file dialog starting from Assets directory or current working directory
+                std::filesystem::path startPath = "Assets";
+                if (!std::filesystem::exists(startPath)) {
+                    startPath = std::filesystem::current_path();
                 }
-                ImGui::EndPopup();
+                std::cout << "Opening file dialog with path: " << startPath << std::endl;
+                g_fileDialog.open(startPath, nodeHandle);
+                std::cout << "Dialog isOpen: " << g_fileDialog.isOpen << std::endl;
+                ImGui::OpenPopup("Load Model File");
+                std::cout << "Opened popup 'Load Model File'" << std::endl;
             }
             
             ImGui::Separator();
@@ -876,5 +871,141 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
     }
     
     ImGui::PopID();
+    
+    // Render file dialog if open
+    if (g_fileDialog.isOpen) {
+        std::cout << "Rendering file dialog..." << std::endl;
+        // Open popup every frame while dialog should be open
+        if (!ImGui::IsPopupOpen("Load Model File")) {
+            ImGui::OpenPopup("Load Model File");
+        }
+        renderFileDialog();
+    }
+}
+
+void TinyProject::renderFileDialog() {
+    std::cout << "renderFileDialog called, isOpen: " << g_fileDialog.isOpen << std::endl;
+    if (ImGui::BeginPopupModal("Load Model File", &g_fileDialog.isOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
+        std::cout << "Modal popup opened successfully!" << std::endl;
+        // Current path display
+        ImGui::Text("Path: %s", g_fileDialog.currentPath.string().c_str());
+        
+        ImGui::Separator();
+        
+        // File list
+        ImGui::BeginChild("FileList", ImVec2(600, 400), true);
+        
+        // Parent directory button
+        if (g_fileDialog.currentPath.has_parent_path()) {
+            if (ImGui::Selectable(".. (Parent Directory)", false)) {
+                g_fileDialog.currentPath = g_fileDialog.currentPath.parent_path();
+                g_fileDialog.refreshFileList();
+                g_fileDialog.selectedFile.clear();
+            }
+        }
+        
+        // File and directory listing
+        for (const auto& entry : g_fileDialog.currentFiles) {
+            std::string fileName = entry.path().filename().string();
+            bool isDirectory = entry.is_directory();
+            bool isModelFile = !isDirectory && g_fileDialog.isModelFile(entry.path());
+            
+            // Color coding: directories in blue, model files in green, others in gray
+            if (isDirectory) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.8f, 1.0f, 1.0f)); // Light blue
+                fileName = "📁 " + fileName;
+            } else if (isModelFile) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f)); // Light green
+                fileName = "📄 " + fileName;
+            } else {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Gray
+                fileName = "📄 " + fileName;
+            }
+            
+            bool isSelected = (g_fileDialog.selectedFile == entry.path().string());
+            
+            if (ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                if (isDirectory) {
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        // Navigate into directory
+                        g_fileDialog.currentPath = entry.path();
+                        g_fileDialog.refreshFileList();
+                        g_fileDialog.selectedFile.clear();
+                    }
+                } else if (isModelFile) {
+                    g_fileDialog.selectedFile = entry.path().string();
+                    
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        // Double-click to load model
+                        loadModelFromPath(entry.path().string(), g_fileDialog.targetFolder);
+                        g_fileDialog.isOpen = false;
+                    }
+                }
+            }
+            
+            ImGui::PopStyleColor();
+        }
+        
+        ImGui::EndChild();
+        
+        ImGui::Separator();
+        
+        // Selected file display
+        if (!g_fileDialog.selectedFile.empty()) {
+            std::filesystem::path selectedPath(g_fileDialog.selectedFile);
+            ImGui::Text("Selected: %s", selectedPath.filename().string().c_str());
+        } else {
+            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No file selected");
+        }
+        
+        ImGui::Separator();
+        
+        // Action buttons
+        bool canLoad = !g_fileDialog.selectedFile.empty() && 
+                      g_fileDialog.isModelFile(std::filesystem::path(g_fileDialog.selectedFile));
+        
+        if (ImGui::Button("Load", ImVec2(120, 0))) {
+            if (canLoad) {
+                loadModelFromPath(g_fileDialog.selectedFile, g_fileDialog.targetFolder);
+                g_fileDialog.isOpen = false;
+            }
+        }
+        
+        if (!canLoad) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.6f, 1.0f), "Please select a .glb or .gltf file");
+        }
+        
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            g_fileDialog.isOpen = false;
+        }
+        
+        ImGui::EndPopup();
+    } else if (g_fileDialog.isOpen) {
+        // Open the popup if it's not already open
+        ImGui::OpenPopup("Load Model File");
+    }
+}
+
+void TinyProject::loadModelFromPath(const std::string& filePath, TinyHandle targetFolder) {
+    try {
+        // Load the model using TinyLoader
+        TinyModel model = TinyLoader::loadModel(filePath);
+        
+        // Add the model scene to the project in the specified folder
+        TinyHandle sceneHandle = addSceneFromModel(model, targetFolder);
+        
+        if (sceneHandle.valid()) {
+            // Success! The model has been loaded and added to the project
+            // The scene is now available in the file explorer under the target folder
+            printf("Successfully loaded model: %s\n", filePath.c_str());
+        } else {
+            printf("Failed to add model scene to project: %s\n", filePath.c_str());
+        }
+        
+    } catch (const std::exception& e) {
+        printf("Error loading model %s: %s\n", filePath.c_str(), e.what());
+    }
 }
 

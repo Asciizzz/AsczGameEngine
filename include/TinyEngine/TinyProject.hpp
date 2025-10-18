@@ -49,6 +49,8 @@ public:
      */
     void renderNodeTreeImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
     void renderFileExplorerImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
+    void renderFileDialog();
+    void loadModelFromPath(const std::string& filePath, TinyHandle targetFolder);
 
     // Active scene access methods
     TinyRScene* getActiveScene() const { return tinyFS->registryRef().get<TinyRScene>(activeSceneHandle); }
