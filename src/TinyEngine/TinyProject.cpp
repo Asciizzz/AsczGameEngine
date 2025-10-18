@@ -1,6 +1,8 @@
 #include "TinyEngine/TinyProject.hpp"
 #include <imgui.h>
 #include <algorithm>
+#include <filesystem>
+#include <string>
 
 using NTypes = TinyNode::Types;
 
@@ -9,6 +11,52 @@ template<typename T>
 bool isValidIndex(int index, const std::vector<T>& vec) {
     return index >= 0 && index < static_cast<int>(vec.size());
 }
+
+// File dialog state
+struct FileDialog {
+    bool isOpen = false;
+    std::filesystem::path currentPath;
+    std::vector<std::filesystem::directory_entry> currentFiles;
+    std::string selectedFile;
+    TinyHandle targetFolder;
+    
+    void open(const std::filesystem::path& startPath, TinyHandle folder) {
+        isOpen = true;
+        currentPath = startPath;
+        targetFolder = folder;
+        selectedFile.clear();
+        refreshFileList();
+    }
+    
+    void refreshFileList() {
+        currentFiles.clear();
+        try {
+            if (std::filesystem::exists(currentPath) && std::filesystem::is_directory(currentPath)) {
+                for (const auto& entry : std::filesystem::directory_iterator(currentPath)) {
+                    currentFiles.push_back(entry);
+                }
+                
+                // Sort: directories first, then files, both alphabetically
+                std::sort(currentFiles.begin(), currentFiles.end(), [](const auto& a, const auto& b) {
+                    if (a.is_directory() != b.is_directory()) {
+                        return a.is_directory(); // Directories first
+                    }
+                    return a.path().filename() < b.path().filename();
+                });
+            }
+        } catch (const std::exception&) {
+            // Handle permission errors or other filesystem issues
+        }
+    }
+    
+    bool isModelFile(const std::filesystem::path& path) {
+        auto ext = path.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        return ext == ".glb" || ext == ".gltf";
+    }
+};
+
+static FileDialog g_fileDialog;
 
 
 TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
@@ -50,9 +98,14 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     defaultMaterialHandle = tinyFS->addToRegistry(defaultMaterial).handle;
 }
 
-TinyHandle TinyProject::addSceneFromModel(const TinyModel& model) {
-    // Create a folder for the model
-    TinyHandle fnModelFolder = tinyFS->addFolder(model.name);
+TinyHandle TinyProject::addSceneFromModel(const TinyModel& model, TinyHandle parentFolder) {
+    // Use root folder if no valid parent provided
+    if (!parentFolder.valid()) {
+        parentFolder = tinyFS->rootHandle();
+    }
+    
+    // Create a folder for the model in the specified parent
+    TinyHandle fnModelFolder = tinyFS->addFolder(parentFolder, model.name);
     TinyHandle fnTexFolder = tinyFS->addFolder(fnModelFolder, "Textures");
     TinyHandle fnMatFolder = tinyFS->addFolder(fnModelFolder, "Materials");
     TinyHandle fnMeshFolder = tinyFS->addFolder(fnModelFolder, "Meshes");
@@ -647,6 +700,25 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 TinyRScene* scenePtr = &newScene;
                 TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", scenePtr);
                 selectedFNodeHandle = fileHandle;
+            }
+            
+            if (ImGui::MenuItem("Load Model...")) {
+                // TODO: Open file dialog to select model file
+                // For now, show a placeholder message
+                ImGui::OpenPopup("LoadModelDialog");
+            }
+            
+            // Load Model Dialog (placeholder for now)
+            if (ImGui::BeginPopupModal("LoadModelDialog", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Model loading functionality not yet implemented.");
+                ImGui::Text("This would open a file dialog to select .glb/.gltf files");
+                ImGui::Text("and load them into the folder: %s", displayName.c_str());
+                
+                ImGui::Separator();
+                if (ImGui::Button("Close")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
             
             ImGui::Separator();

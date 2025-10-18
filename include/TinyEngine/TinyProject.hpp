@@ -25,7 +25,7 @@ public:
     // No move semantics, where tf would you even want to move it to?
 
     // Return the scene handle in the registry
-    TinyHandle addSceneFromModel(const TinyModel& model); // Returns scene handle - much simpler now!
+    TinyHandle addSceneFromModel(const TinyModel& model, TinyHandle parentFolder = TinyHandle()); // Returns scene handle - much simpler now!
 
     TinyCamera* getCamera() const { return tinyCamera.get(); }
     TinyGlobal* getGlobal() const { return tinyGlobal.get(); }
