@@ -312,16 +312,20 @@ void TinyRScene::addScene(const TinyRScene& sceneA, TinyHandle parentHandle) {
     updateGlbTransform(parentHandle); // Update transforms after adding new nodes
 }
 
-bool TinyRScene::removeNode(TinyHandle nodeHandle) {
+bool TinyRScene::removeNode(TinyHandle nodeHandle, bool recursive) {
     TinyRNode* nodeToDelete = nodes.get(nodeHandle);
-    // Is Non-existent or root
     if (!nodeToDelete || nodeHandle == rootHandle) return false;
 
-    // First, recursively delete all children
-    // We need to copy the children handles because we'll be modifying the vector during iteration
     std::vector<TinyHandle> childrenToDelete = nodeToDelete->childrenHandles;
     for (const TinyHandle& childHandle : childrenToDelete) {
-        removeNode(childHandle); // This will remove each child from the pool
+        // removeNode(childHandle); // This will remove each child from the pool
+
+        // If recursive, remove children, otherwise attach them to the deleted node's parent
+        if (recursive) {
+            removeNode(childHandle, true);
+        } else {
+            reparentNode(childHandle, nodeToDelete->parentHandle);
+        }
     }
 
     // Remove this node from its parent's children list
@@ -340,6 +344,10 @@ bool TinyRScene::removeNode(TinyHandle nodeHandle) {
     nodes.remove(nodeHandle);
 
     return true;
+}
+
+bool TinyRScene::flattenNode(TinyHandle nodeHandle) {
+    return removeNode(nodeHandle, false);
 }
 
 bool TinyRScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {

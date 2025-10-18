@@ -16,17 +16,38 @@ bool isValidIndex(int index, const std::vector<T>& vec) {
 // File dialog state
 struct FileDialog {
     bool isOpen = false;
+    bool justOpened = false;  // Flag to track when we need to call ImGui::OpenPopup
+    bool shouldClose = false; // Flag to handle delayed closing
     std::filesystem::path currentPath;
     std::vector<std::filesystem::directory_entry> currentFiles;
     std::string selectedFile;
     TinyHandle targetFolder;
     
     void open(const std::filesystem::path& startPath, TinyHandle folder) {
+        // Don't open if we're in the process of closing
+        if (shouldClose) return;
+        
         isOpen = true;
+        justOpened = true;  // Mark that we need to open the popup
         currentPath = startPath;
         targetFolder = folder;
         selectedFile.clear();
         refreshFileList();
+    }
+    
+    void close() {
+        shouldClose = true;  // Mark for closing instead of immediate close
+        selectedFile.clear();
+        targetFolder = TinyHandle();
+    }
+    
+    void update() {
+        // Handle delayed closing after ImGui has processed the popup
+        if (shouldClose && !ImGui::IsPopupOpen("Load Model File")) {
+            isOpen = false;
+            justOpened = false;
+            shouldClose = false;
+        }
     }
     
     void refreshFileList() {
@@ -248,11 +269,12 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model, TinyHandle par
         }
     }
 
-    // Add scene to registry and return the handle
+    // Add scene to registry
     TinyHandle fnHandle = tinyFS->addFile(fnModelFolder, scene.name, &scene);
     TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
-    return tHandle.handle;
+    // Return the model folder handle instead of the scene handle
+    return fnModelFolder;
 }
 
 
@@ -478,7 +500,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             ImGui::Separator();
         }
         
-        if (ImGui::MenuItem("Add Child Node")) {
+        if (ImGui::MenuItem("Add Child")) {
             TinyRScene* scene = getActiveScene();
             if (scene) {
                 TinyHandle newNodeHandle = scene->addNode("New Node", nodeHandle);
@@ -487,13 +509,21 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             }
         }
         
-        // Only show delete for non-root nodes
-        if (nodeHandle != activeScene->rootHandle) {
-            if (ImGui::MenuItem("Delete Node")) {
-                TinyRScene* scene = getActiveScene();
-                if (scene && scene->removeNode(nodeHandle)) {
-                    selectedSceneNodeHandle = TinyHandle(); // Clear selection
-                }
+        ImGui::Separator();
+
+        bool isRootNode = (nodeHandle == activeScene->rootHandle);
+        if (ImGui::MenuItem("Delete", nullptr, false, !isRootNode)) {
+            TinyRScene* scene = getActiveScene();
+            if (scene && scene->removeNode(nodeHandle)) {
+                selectedSceneNodeHandle = TinyHandle(); // Clear selection
+            }
+        }
+
+        if (ImGui::MenuItem("Flatten", nullptr, false, !isRootNode && hasChildren)) {
+            TinyRScene* scene = getActiveScene();
+            TinyHandle parentHandle = node->parentHandle;
+            if (scene && scene->flattenNode(nodeHandle)) {
+                selectedSceneNodeHandle = parentHandle; // Select the parent node after flattening
             }
         }
         
@@ -575,6 +605,28 @@ void TinyProject::expandParentChain(TinyHandle nodeHandle) {
     }
 }
 
+void TinyProject::expandFNodeParentChain(TinyHandle fNodeHandle) {
+    // Get the target file node
+    const TinyFS::Node* targetFNode = tinyFS->getFNodes().get(fNodeHandle);
+    if (!targetFNode) return;
+    
+    // Walk up the parent chain and expand all parents
+    TinyHandle currentHandle = targetFNode->parent;
+    while (currentHandle.valid()) {
+        expandedFNodes.insert(currentHandle);
+        
+        const TinyFS::Node* currentFNode = tinyFS->getFNodes().get(currentHandle);
+        if (!currentFNode) break;
+        
+        currentHandle = currentFNode->parent;
+    }
+    
+    // Also expand the target node itself if it's a folder with children
+    if (!targetFNode->isFile() && !targetFNode->children.empty()) {
+        expandedFNodes.insert(fNodeHandle);
+    }
+}
+
 
 
 void TinyProject::processPendingDeletions() {
@@ -631,7 +683,26 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Gray hover background (same as nodes)
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background (same as nodes)
         
+        // Force open if this node is in the expanded set
+        bool forceOpen = isFNodeExpanded(nodeHandle);
+        
+        // Set the default open state (this will be overridden by user interaction)
+        if (forceOpen) {
+            ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+        }
+        
         bool nodeOpen = ImGui::TreeNodeEx(displayName.c_str(), flags);
+        
+        // Track expansion state changes (only for folders with children)
+        if (hasChildren) {
+            if (nodeOpen && !forceOpen) {
+                // User expanded this folder manually
+                expandedFNodes.insert(nodeHandle);
+            } else if (!nodeOpen && isFNodeExpanded(nodeHandle)) {
+                // User collapsed this folder manually
+                expandedFNodes.erase(nodeHandle);
+            }
+        }
         
         // Pop the style colors for folders right after TreeNodeEx
         ImGui::PopStyleColor(2);
@@ -690,6 +761,8 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             if (ImGui::MenuItem("Add Folder")) {
                 TinyHandle newFolderHandle = fs.addFolder(nodeHandle, "New Folder");
                 selectedFNodeHandle = newFolderHandle;
+                // Expand parent chain to show the new folder
+                expandFNodeParentChain(newFolderHandle);
             }
 
             if (ImGui::MenuItem("Add Scene")) {
@@ -701,22 +774,12 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 TinyRScene* scenePtr = &newScene;
                 TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", scenePtr);
                 selectedFNodeHandle = fileHandle;
+                // Expand parent chain to show the new scene
+                expandFNodeParentChain(fileHandle);
             }
-            
-            if (ImGui::MenuItem("Load Model...")) {
-                // Open file dialog starting from Assets directory or current working directory
-                std::filesystem::path startPath = "Assets";
-                if (!std::filesystem::exists(startPath)) {
-                    startPath = std::filesystem::current_path();
-                }
-                std::cout << "Opening file dialog with path: " << startPath << std::endl;
-                g_fileDialog.open(startPath, nodeHandle);
-                std::cout << "Dialog isOpen: " << g_fileDialog.isOpen << std::endl;
-                ImGui::OpenPopup("Load Model File");
-                std::cout << "Opened popup 'Load Model File'" << std::endl;
-            }
-            
+
             ImGui::Separator();
+
             if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
                 if (node->deletable()) queueFNodeForDeletion(nodeHandle);
             }
@@ -725,6 +788,15 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             if (ImGui::MenuItem("Flatten", nullptr, false, node->deletable())) {
                 if (node->deletable()) fs.flattenFNode(nodeHandle);
             }
+
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Load Model...")) {
+                // Start from current working directory for full file system access
+                std::filesystem::path startPath = std::filesystem::current_path();
+                g_fileDialog.open(startPath, nodeHandle);
+            }
+
             ImGui::EndPopup();
         }
         
@@ -871,22 +943,21 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
     }
     
     ImGui::PopID();
-    
-    // Render file dialog if open
-    if (g_fileDialog.isOpen) {
-        std::cout << "Rendering file dialog..." << std::endl;
-        // Open popup every frame while dialog should be open
-        if (!ImGui::IsPopupOpen("Load Model File")) {
-            ImGui::OpenPopup("Load Model File");
-        }
-        renderFileDialog();
-    }
 }
 
 void TinyProject::renderFileDialog() {
-    std::cout << "renderFileDialog called, isOpen: " << g_fileDialog.isOpen << std::endl;
-    if (ImGui::BeginPopupModal("Load Model File", &g_fileDialog.isOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
-        std::cout << "Modal popup opened successfully!" << std::endl;
+    // Update the dialog state first
+    g_fileDialog.update();
+    
+    // Only open the popup once when first requested, right before trying to begin it
+    if (g_fileDialog.justOpened && !ImGui::IsPopupOpen("Load Model File")) {
+        ImGui::OpenPopup("Load Model File");
+        g_fileDialog.justOpened = false;
+    }
+    
+    // Use a local variable for the open state to avoid ImGui modifying our state directly
+    bool modalOpen = g_fileDialog.isOpen && !g_fileDialog.shouldClose;
+    if (ImGui::BeginPopupModal("Load Model File", &modalOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
         // Current path display
         ImGui::Text("Path: %s", g_fileDialog.currentPath.string().c_str());
         
@@ -913,13 +984,13 @@ void TinyProject::renderFileDialog() {
             // Color coding: directories in blue, model files in green, others in gray
             if (isDirectory) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.8f, 1.0f, 1.0f)); // Light blue
-                fileName = "📁 " + fileName;
+                fileName = "[DIR] " + fileName;
             } else if (isModelFile) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f)); // Light green
-                fileName = "📄 " + fileName;
+                fileName = "[MDL] " + fileName;
             } else {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Gray
-                fileName = "📄 " + fileName;
+                fileName = "[FILE] " + fileName;
             }
             
             bool isSelected = (g_fileDialog.selectedFile == entry.path().string());
@@ -938,7 +1009,8 @@ void TinyProject::renderFileDialog() {
                     if (ImGui::IsMouseDoubleClicked(0)) {
                         // Double-click to load model
                         loadModelFromPath(entry.path().string(), g_fileDialog.targetFolder);
-                        g_fileDialog.isOpen = false;
+                        g_fileDialog.close();
+                        ImGui::CloseCurrentPopup();
                     }
                 }
             }
@@ -967,7 +1039,8 @@ void TinyProject::renderFileDialog() {
         if (ImGui::Button("Load", ImVec2(120, 0))) {
             if (canLoad) {
                 loadModelFromPath(g_fileDialog.selectedFile, g_fileDialog.targetFolder);
-                g_fileDialog.isOpen = false;
+                g_fileDialog.close();
+                ImGui::CloseCurrentPopup();
             }
         }
         
@@ -978,13 +1051,16 @@ void TinyProject::renderFileDialog() {
         
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-            g_fileDialog.isOpen = false;
+            g_fileDialog.close();
+            ImGui::CloseCurrentPopup();
         }
         
+        // Handle close button (X) or ESC key
+        if (!modalOpen) {
+            g_fileDialog.close();
+        }
+
         ImGui::EndPopup();
-    } else if (g_fileDialog.isOpen) {
-        // Open the popup if it's not already open
-        ImGui::OpenPopup("Load Model File");
     }
 }
 
@@ -993,15 +1069,24 @@ void TinyProject::loadModelFromPath(const std::string& filePath, TinyHandle targ
         // Load the model using TinyLoader
         TinyModel model = TinyLoader::loadModel(filePath);
         
-        // Add the model scene to the project in the specified folder
-        TinyHandle sceneHandle = addSceneFromModel(model, targetFolder);
+        // Add the model to the project in the specified folder (returns model folder handle)
+        TinyHandle modelFolderHandle = addSceneFromModel(model, targetFolder);
         
-        if (sceneHandle.valid()) {
+        if (modelFolderHandle.valid()) {
             // Success! The model has been loaded and added to the project
-            // The scene is now available in the file explorer under the target folder
+            
+            // Select the newly created model folder
+            selectedFNodeHandle = modelFolderHandle;
+            
+            // Expand the target folder to show the newly imported model folder
+            expandedFNodes.insert(targetFolder);
+            
+            // Also expand the parent chain of the target folder to ensure it's visible
+            expandFNodeParentChain(targetFolder);
+            
             printf("Successfully loaded model: %s\n", filePath.c_str());
         } else {
-            printf("Failed to add model scene to project: %s\n", filePath.c_str());
+            printf("Failed to add model to project: %s\n", filePath.c_str());
         }
         
     } catch (const std::exception& e) {

@@ -79,9 +79,6 @@ void Application::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    // Load all models from Assets directory recursively
-    loadAllAssetsRecursively("Assets");
-
     auto glbLayout = project->getGlbDescSetLayout();
     auto matLayout = VK_NULL_HANDLE; // Placeholder until we have a material UBO
     auto texLayout = VK_NULL_HANDLE; // Placeholder until we have a texture UBO
@@ -434,6 +431,9 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         }
         
         project->renderFileExplorerImGui();
+        
+        // Render the file dialog once per frame, outside the file explorer tree
+        project->renderFileDialog();
 
         ImGui::EndChild();
         

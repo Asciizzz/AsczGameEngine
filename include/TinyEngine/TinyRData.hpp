@@ -119,7 +119,8 @@ struct TinyRScene {
     TinyHandle addNode(const TinyRNode& nodeData, TinyHandle parentHandle = TinyHandle());
 
     void addScene(const TinyRScene& scene, TinyHandle parentHandle = TinyHandle());
-    bool removeNode(TinyHandle nodeHandle);
+    bool removeNode(TinyHandle nodeHandle, bool recursive = true);
+    bool flattenNode(TinyHandle nodeHandle);
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
     
     TinyRNode* getNode(TinyHandle nodeHandle);

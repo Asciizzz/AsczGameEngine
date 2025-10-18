@@ -79,6 +79,12 @@ public:
     bool isNodeExpanded(TinyHandle nodeHandle) const { return expandedNodes.count(nodeHandle) > 0; }
     void expandParentChain(TinyHandle nodeHandle); // Expand all parents up to root
     
+    // File node expansion state management for UI
+    void expandFNode(TinyHandle fNodeHandle) { expandedFNodes.insert(fNodeHandle); }
+    void collapseFNode(TinyHandle fNodeHandle) { expandedFNodes.erase(fNodeHandle); }
+    bool isFNodeExpanded(TinyHandle fNodeHandle) const { return expandedFNodes.count(fNodeHandle) > 0; }
+    void expandFNodeParentChain(TinyHandle fNodeHandle); // Expand all parents up to root
+    
     // Pending deletion system for safe resource cleanup
     void queueFNodeForDeletion(TinyHandle handle) { pendingFNodeDeletions.push_back(handle); }
     void processPendingDeletions(); // Call after renderer endFrame()
@@ -94,8 +100,9 @@ private:
 
     TinyHandle activeSceneHandle; // Handle to the active scene in registry
 
-    // UI state: track expanded nodes in the hierarchy
+    // UI state: track expanded nodes in the hierarchy and file explorer
     std::unordered_set<TinyHandle> expandedNodes;
+    std::unordered_set<TinyHandle> expandedFNodes;
     
     // Pending deletion system to avoid mid-frame Vulkan resource deletion
     std::vector<TinyHandle> pendingFNodeDeletions;
