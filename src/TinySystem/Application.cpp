@@ -1174,50 +1174,55 @@ void Application::renderFileSystemInspector() {
     ImGui::Text("%s Inspector", isFile ? "File" : "Folder");
     ImGui::Separator();
     
-    // === SHARED: EDITABLE NAME FIELD ===
+    // === EDITABLE NAME FIELD - Only for root node ===
+    bool isRootNode = (project->selectedFNodeHandle == fs.rootHandle());
+    
     ImGui::Text("FName:");
     ImGui::SameLine();
-    
-    // Create a unique ID for the input field
-    std::string inputId = "##FNodeName_" + std::to_string(project->selectedFNodeHandle.index);
 
-    // Static buffer to hold the name during editing
-    static char nameBuffer[256];
-    static TinyHandle lastSelectedFNode;
-    
-    // Initialize buffer if we switched to a different file/folder
-    if (lastSelectedFNode != project->selectedFNodeHandle) {
-        strncpy_s(nameBuffer, selectedFNode->name.c_str(), sizeof(nameBuffer) - 1);
-        nameBuffer[sizeof(nameBuffer) - 1] = '\0';
-        lastSelectedFNode = project->selectedFNodeHandle;
-    }
-    
-    // Editable text input
-    ImGui::SetNextItemWidth(-1); // Use full available width
-    bool enterPressed = ImGui::InputText(inputId.c_str(), nameBuffer, sizeof(nameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
-    
-    // Apply rename on Enter or when focus is lost
-    if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
-        TinyFNode* mutableNode = const_cast<TinyFNode*>(fs.getFNodes().get(project->selectedFNodeHandle));
-        if (mutableNode) {
-            mutableNode->name = std::string(nameBuffer);
+    if (isRootNode) {
+        // Only display name
+        ImGui::Text("%s", selectedFNode->name.c_str());
+    } else {
+        // Create a unique ID for the input field
+        std::string inputId = "##FNodeName_" + std::to_string(project->selectedFNodeHandle.index);
+
+        // Static buffer to hold the name during editing
+        static char nameBuffer[256];
+        static TinyHandle lastSelectedFNode;
+        
+        // Initialize buffer if we switched to a different file/folder
+        if (lastSelectedFNode != project->selectedFNodeHandle) {
+            strncpy_s(nameBuffer, selectedFNode->name.c_str(), sizeof(nameBuffer) - 1);
+            nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+            lastSelectedFNode = project->selectedFNodeHandle;
         }
+        
+        // Editable text input
+        ImGui::SetNextItemWidth(-1); // Use full available width
+        bool enterPressed = ImGui::InputText(inputId.c_str(), nameBuffer, sizeof(nameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+        
+        // Apply rename on Enter or when focus is lost
+        if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
+            TinyFNode* mutableNode = const_cast<TinyFNode*>(fs.getFNodes().get(project->selectedFNodeHandle));
+            if (mutableNode) {
+                mutableNode->name = std::string(nameBuffer);
+            }
+        }
+        
+        ImGui::Spacing();
     }
-    
-    ImGui::Spacing();
-    
+
+    ImGui::Separator();
+
     // === FOLDER-SPECIFIC: FOLDER INFO ===
     if (isFolder) {
-        ImGui::Separator();
-        
         // Folder info
         ImGui::Text("Children: %zu", selectedFNode->children.size());
     }
     
     // === FILE-SPECIFIC: TYPE INFORMATION ===
     if (isFile) {
-        ImGui::Separator();
-        
         // Determine file type and show specific information
         std::string fileType = "Unknown";
         if (selectedFNode->tHandle.isType<TinyRScene>()) {
