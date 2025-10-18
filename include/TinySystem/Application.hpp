@@ -52,9 +52,6 @@ private:
     bool showEditorSettingsWindow = false;
     bool showInspectorWindow = true;
 
-    // Deferred deletion system to handle resource cleanup after frame completion
-    std::vector<TinyHandle> pendingDeletions; // Universal deletion queue for all handle types
-
     // Window metadata
     const char* appTitle;
     uint32_t appWidth;
@@ -65,24 +62,16 @@ private:
     void mainLoop();
     void cleanup();
 
-    void setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
     void loadAllAssetsRecursively(const std::string& assetsPath);
+
+    void setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
+
     void renderInspectorWindow();
-    void renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int depth = 0);
-    
-    // Inspector helper functions
     void renderFileSystemInspector();
     void renderNodeInspector();
     void renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove);
-    
-    // Component-specific inspectors
-    
-    // Drag-drop helper for component fields
+
     bool renderHandleField(const char* fieldId, TinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description = nullptr);
-    
-    // Deferred deletion methods
-    void queueForDeletion(TinyHandle handle);
-    void processPendingDeletions();
 
     bool checkWindowResize();
 };

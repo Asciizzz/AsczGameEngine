@@ -32,6 +32,10 @@ public:
     VkDescriptorSetLayout getGlbDescSetLayout() const { return tinyGlobal->getDescLayout(); }
     VkDescriptorSet getGlbDescSet(uint32_t idx) const { return tinyGlobal->getDescSet(idx); }
 
+    void updateGlobal(uint32_t frameIndex) {
+        tinyGlobal->update(*tinyCamera, frameIndex);
+    }
+
     /**
      * Adds a scene instance to the active scene.
      *
@@ -45,15 +49,6 @@ public:
      */
     void renderNodeTreeImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
     void renderFileExplorerImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
-    
-    // Context menu callbacks - set these to handle context menu actions
-    std::function<void(TinyHandle)> onAddChildNode = nullptr;
-    std::function<void(TinyHandle)> onDeleteNode = nullptr;
-    
-    // File explorer context menu callbacks
-    std::function<void(TinyHandle)> onAddFolder = nullptr;      // parentFolder (or invalid for root)
-    std::function<void(TinyHandle)> onAddScene = nullptr;       // parentFolder (or invalid for root)
-    std::function<void(TinyHandle)> onDeleteFile = nullptr;     // fileHandle
 
     // Active scene access methods
     TinyRScene* getActiveScene() const { return tinyFS->registryRef().get<TinyRScene>(activeSceneHandle); }
@@ -81,6 +76,11 @@ public:
     void collapseNode(TinyHandle nodeHandle) { expandedNodes.erase(nodeHandle); }
     bool isNodeExpanded(TinyHandle nodeHandle) const { return expandedNodes.count(nodeHandle) > 0; }
     void expandParentChain(TinyHandle nodeHandle); // Expand all parents up to root
+    
+    // Pending deletion system for safe resource cleanup
+    void queueFNodeForDeletion(TinyHandle handle) { pendingFNodeDeletions.push_back(handle); }
+    void processPendingDeletions(); // Call after renderer endFrame()
+    bool hasPendingDeletions() const { return !pendingFNodeDeletions.empty(); }
 
 private:
     const TinyVK::Device* deviceVK;
@@ -94,6 +94,9 @@ private:
 
     // UI state: track expanded nodes in the hierarchy
     std::unordered_set<TinyHandle> expandedNodes;
+    
+    // Pending deletion system to avoid mid-frame Vulkan resource deletion
+    std::vector<TinyHandle> pendingFNodeDeletions;
 
     TinyHandle defaultMaterialHandle;
     TinyHandle defaultTextureHandle;

@@ -36,6 +36,10 @@ Application::~Application() {
     cleanup();
 }
 
+void Application::cleanup() {
+    // No clean up needed for now
+}
+
 void Application::run() {
     mainLoop();
 
@@ -280,7 +284,7 @@ void Application::mainLoop() {
 
         imguiWrapper->newFrame();
 
-        project->getGlobal()->update(camRef, rendererRef.getCurrentFrame());
+        project->updateGlobal(rendererRef.getCurrentFrame());
 
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
@@ -293,10 +297,11 @@ void Application::mainLoop() {
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex, imguiWrapper.get());
-            
+
             // Process any pending deletions after the frame is complete
-            processPendingDeletions();
-        };
+            // to avoid deleting resources in used by Vulkan
+            project->processPendingDeletions();
+        }
 
         // Clean window title - FPS info now in ImGui
         static bool titleSet = false;
@@ -571,326 +576,10 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
     }
 }
 
-void Application::renderSceneFolderTree(TinyFS& fs, TinyHandle folderHandle, int depth) {
-    const TinyFNode* folder = fs.getFNodes().get(folderHandle);
-    if (!folder) return;
-    
-    // Skip root node display
-    if (folderHandle != fs.rootHandle()) {
-        ImGui::PushID(folderHandle.index);
-        
-        // Check if this folder is selected
-        bool isFolderSelected = (project->selectedFNodeHandle == folderHandle);
-        
-        // Use Selectable for consistent highlighting with files
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White text
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
-        
-        // Auto-expand folder if requested
-        if (project->autoExpandFolderHandle.valid() && project->autoExpandFolderHandle == folderHandle) {
-            ImGui::SetNextItemOpen(true);
-            project->autoExpandFolderHandle = TinyHandle(); // Clear after using
-        }
-        
-        bool nodeOpen = ImGui::TreeNodeEx(folder->name.c_str(), 
-            ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick |
-            (isFolderSelected ? ImGuiTreeNodeFlags_Selected : 0));
-        
-        ImGui::PopStyleColor(3);
-        
-        // Handle folder selection
-        if (ImGui::IsItemClicked()) {
-            project->selectedFNodeHandle = folderHandle;
-            // Keep scene node selection when selecting files/folders
-        }
-        
-        // Drag source for folders
-        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-            ImGui::SetDragDropPayload("FOLDER_HANDLE", &folderHandle, sizeof(TinyHandle));
-            ImGui::Text("Moving folder: %s", folder->name.c_str());
-            ImGui::EndDragDropSource();
-        }
-        
-        // Drag drop target for folders and files
-        if (ImGui::BeginDragDropTarget()) {
-            // Accept folders being dropped
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
-                TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
-                if (draggedFolder != folderHandle) { // Can't drop folder on itself
-                    fs.moveFNode(draggedFolder, folderHandle);
-                }
-            }
-            
-            // Accept files being dropped  
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
-                TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
-                fs.moveFNode(draggedFile, folderHandle);
-            }
-            
-            ImGui::EndDragDropTarget();
-        }
-        
-
-        
-        if (nodeOpen) {
-            // Render children with proper indentation
-            for (TinyHandle childHandle : folder->children) {
-                const TinyFNode* child = fs.getFNodes().get(childHandle);
-                if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
-
-                if (child->type == TinyFNode::Type::Folder) {
-                    renderSceneFolderTree(fs, childHandle, depth + 1);
-                } else if (child->type == TinyFNode::Type::File) {
-                    // Add indentation for files within folders
-                    ImGui::Indent();
-                    
-                    ImGui::PushID(childHandle.index);
-                    
-                    bool isSelected = (project->selectedFNodeHandle == childHandle);
-                    
-                    if (child->tHandle.isType<TinyRScene>()) {
-                        // This is a scene file - get the actual scene data from registry
-                        TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(child->tHandle));
-                        if (scene) {
-                            std::string sceneName = child->name;
-                            
-                            // Check if this is the active scene for red backdrop
-                            TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                            bool isActiveScene = (project->getActiveSceneHandle() == sceneRegistryHandle);
-                            
-                            // Add permanent red backdrop for active scene files
-                            if (isActiveScene) {
-                                // Draw red background rectangle behind the text
-                                ImVec2 itemSize = ImGui::CalcTextSize(sceneName.c_str());
-                                ImVec2 cursorPos = ImGui::GetCursorScreenPos();
-                                ImVec2 itemMax = ImVec2(cursorPos.x + ImGui::GetContentRegionAvail().x, cursorPos.y + itemSize.y);
-                                ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(200, 50, 50, 100)); // Red backdrop
-                            }
-                            
-                            // Set colors for scene files: gray text, normal selection behavior
-                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
-                            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Subtle hover background
-                            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
-                            
-                            if (ImGui::Selectable(sceneName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
-                                // Single click to select file
-                                project->selectedFNodeHandle = childHandle;
-                                // Keep scene node selection when selecting files
-                                
-                                if (ImGui::IsMouseDoubleClicked(0) && project->selectedSceneNodeHandle.valid()) {
-                                    // Double-click to place scene at selected node
-                                    TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                                    project->addSceneInstance(sceneRegistryHandle, project->selectedSceneNodeHandle);
-                                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
-                                }
-                            }
-                            
-                            // Override text color to white when hovered
-                            if (ImGui::IsItemHovered()) {
-                                ImGui::SameLine();
-                                ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ImGui::CalcTextSize(sceneName.c_str()).x - ImGui::GetStyle().ItemSpacing.x);
-                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White on hover
-                                ImGui::Text("%s", sceneName.c_str());
-                                ImGui::PopStyleColor();
-                            }
-                            
-                            ImGui::PopStyleColor(3); // Pop all three colors
-                            
-                            // Drag source for scene files - use FILE_HANDLE but scene targets will handle instantiation
-                            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                                // Use FILE_HANDLE as the primary payload since it works for both operations
-                                ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
-                                ImGui::Text("Scene: %s", child->name.c_str());
-                                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
-                                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
-                                ImGui::EndDragDropSource();
-                            }
-                            
-                            // Tooltip with scene info
-                            if (ImGui::IsItemHovered()) {
-                                ImGui::BeginTooltip();
-                                ImGui::Text("Scene: %s", scene->name.c_str());
-                                ImGui::Text("Nodes: %u", scene->nodes.count());
-                                ImGui::EndTooltip();
-                            }
-                        }
-                    } else {
-                        // Other file types - display with hover effect but not interactive
-                        std::string fileName = child->name;
-                        
-                        // Set colors for other files: gray text, gray selection background
-                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
-                        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.2f, 0.2f, 0.2f, 0.3f)); // Subtle hover background
-                        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
-                        
-                        ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_None);
-                        
-                        // Handle file selection
-                        if (ImGui::IsItemClicked()) {
-                            project->selectedFNodeHandle = childHandle;
-                            // Keep scene node selection when selecting files
-                        }
-                        
-                        ImGui::PopStyleColor(3); // Pop all three colors
-                        
-                        // Drag source for other files
-                        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                            ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
-                            ImGui::Text("Moving file: %s", child->name.c_str());
-                            ImGui::EndDragDropSource();
-                        }
-                        
-                        // Tooltip with file info
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::BeginTooltip();
-                            // Show file type based on TypeHandle
-                            if (child->tHandle.isType<TinyRTexture>()) {
-                                ImGui::Text("Type: Texture");
-                            } else if (child->tHandle.isType<TinyRMaterial>()) {
-                                ImGui::Text("Type: Material");
-                            } else if (child->tHandle.isType<TinyRMesh>()) {
-                                ImGui::Text("Type: Mesh");
-                            } else if (child->tHandle.isType<TinyRSkeleton>()) {
-                                ImGui::Text("Type: Skeleton");
-                            } else {
-                                ImGui::Text("Type: Asset");
-                            }
-                            ImGui::EndTooltip();
-                        }
-                        
-
-                    }
-                    
-                    ImGui::PopID();
-                    ImGui::Unindent();
-                }
-            }
-            ImGui::TreePop();
-        }
-        
-        ImGui::PopID();
-    } else {
-        // Root folder - just render children without tree node but with consistent styling
-        for (TinyHandle childHandle : folder->children) {
-            const TinyFNode* child = fs.getFNodes().get(childHandle);
-            if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
-
-            if (child->type == TinyFNode::Type::Folder) {
-                renderSceneFolderTree(fs, childHandle, depth);
-            } else if (child->type == TinyFNode::Type::File) {
-                ImGui::PushID(childHandle.index);
-                
-                bool isSelected = (project->selectedFNodeHandle == childHandle);
-                
-                if (child->tHandle.isType<TinyRScene>()) {
-                    // Root-level scene files
-                    TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(child->tHandle));
-                    if (scene) {
-                        std::string sceneName = child->name;
-                        
-                        // Check if this is the active scene for red backdrop
-                        TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                        bool isActiveScene = (project->getActiveSceneHandle() == sceneRegistryHandle);
-                        
-                        // Add permanent red backdrop for active scene files (SAME AS FOLDER FILES)
-                        if (isActiveScene) {
-                            // Draw red background rectangle behind the text
-                            ImVec2 itemSize = ImGui::CalcTextSize(sceneName.c_str());
-                            ImVec2 cursorPos = ImGui::GetCursorScreenPos();
-                            ImVec2 itemMax = ImVec2(cursorPos.x + ImGui::GetContentRegionAvail().x, cursorPos.y + itemSize.y);
-                            ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(200, 50, 50, 100)); // Red backdrop
-                        }
-                        
-                        // Set colors for scene files: gray text, gray selection background
-                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
-                        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Subtle hover background
-                        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
-                        
-                        if (ImGui::Selectable(sceneName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
-                            // Single click to select file
-                            project->selectedFNodeHandle = childHandle;
-                            // Keep scene node selection when selecting files
-                            
-                            if (ImGui::IsMouseDoubleClicked(0) && project->selectedSceneNodeHandle.valid()) {
-                                // Double-click placement - use registry handle from TypeHandle
-                                TinyHandle sceneRegistryHandle = child->tHandle.handle;
-                                project->addSceneInstance(sceneRegistryHandle, project->selectedSceneNodeHandle);
-                                if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
-                            }
-                        }
-                        
-                        ImGui::PopStyleColor(3); // Pop all three colors
-                        
-                        // Drag source for root scene files - use FILE_HANDLE but scene targets will handle instantiation
-                        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                            // Use FILE_HANDLE as the primary payload since it works for both operations
-                            ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
-                            ImGui::Text("Scene: %s", child->name.c_str());
-                            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
-                            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
-                            ImGui::EndDragDropSource();
-                        }
-                        
-
-                    }
-                } else {
-                    // Other root-level files
-                    std::string fileName = child->name;
-                    
-                    // Set colors for other files: gray text, gray selection background
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
-                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.2f, 0.2f, 0.2f, 0.3f)); // Subtle hover background
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background
-                    
-                    ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_None);
-                    
-                    // Handle file selection
-                    if (ImGui::IsItemClicked()) {
-                        project->selectedFNodeHandle = childHandle;
-                        // Keep scene node selection when selecting files
-                    }
-                    
-                    ImGui::PopStyleColor(3); // Pop all three colors
-                    
-                    // Drag source for other root files
-                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                        ImGui::SetDragDropPayload("FILE_HANDLE", &childHandle, sizeof(TinyHandle));
-                        ImGui::Text("Moving file: %s", child->name.c_str());
-                        ImGui::EndDragDropSource();
-                    }
-                    
-
-                }
-                
-                ImGui::PopID();
-            }
-        }
-        
-        // Add drag-drop target to root folder (invisible area at bottom)
-        ImGui::InvisibleButton("RootDropTarget", ImVec2(-1, 20));
-        if (ImGui::BeginDragDropTarget()) {
-            // Accept folders being dropped to root
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
-                TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
-                fs.moveFNode(draggedFolder, fs.rootHandle());
-            }
-            
-            // Accept files being dropped to root
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
-                TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
-                fs.moveFNode(draggedFile, fs.rootHandle());
-            }
-            
-            ImGui::EndDragDropTarget();
-        }
-    }
-}
-
 void Application::renderInspectorWindow() {
     // Inspector Window: Node Inspector (top) + File Inspector (bottom) with splitter
     // Use exact same technique as Editor window to avoid scrollbars
-    
+
     static float splitterPos = 0.6f; // Node inspector gets 60% by default
     
     // Get full available space (same as Editor window)
@@ -1244,20 +933,21 @@ void Application::renderNodeInspector() {
             
             // Mesh Handle field with enhanced drag-drop support
             ImGui::Text("Mesh Resource:");
-            bool meshModified = renderHandleField("##MeshHandle", meshComp->meshHandle, "Mesh", 
+
+            // Check if mesh resource is valid
+            renderHandleField("##MeshHandle", meshComp->meshHandle, "Mesh",
                 "Drag a mesh file from the File Explorer", 
                 "Select mesh resource for rendering");
-            
+
             // Show mesh information if valid
             if (meshComp->meshHandle.valid()) {
-                const TinyRegistry& registry = project->registryRef();
-                const TinyRMesh* mesh = registry.get<TinyRMesh>(meshComp->meshHandle);
+                const TinyRMesh* mesh = project->registryRef().get<TinyRMesh>(meshComp->meshHandle);
                 if (mesh) {
                     ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", mesh->name.c_str());
+                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", mesh->name.c_str());
                 } else {
                     ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
                 }
             }
             
@@ -1268,7 +958,7 @@ void Application::renderNodeInspector() {
             bool skeleModified = renderHandleField("##MeshRenderer_SkeletonNodeHandle", meshComp->skeleNodeHandle, "SkeletonNode",
                 "Drag a skeleton node from the Hierarchy",
                 "Select skeleton node for bone animation");
-            
+
             // Show skeleton node information if valid
             if (meshComp->skeleNodeHandle.valid()) {
                 TinyRScene* activeScene = project->getActiveScene();
@@ -1276,10 +966,10 @@ void Application::renderNodeInspector() {
                     const TinyRNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
                         ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", skeleNode->name.c_str());
+                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
                     } else {
                         ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid/No Skeleton");
+                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid/No Skeleton");
                     }
                 }
             }
@@ -1465,27 +1155,8 @@ void Application::renderNodeInspector() {
     ImGui::PopStyleVar(2); // Pop ScrollbarSize, ScrollbarRounding
 }
 
-void Application::queueForDeletion(TinyHandle handle) {
-    pendingDeletions.push_back(handle);
-}
 
-void Application::processPendingDeletions() {
-    if (pendingDeletions.empty()) return;
-    
-    TinyFS& fs = project->filesystem();
-    
-    for (TinyHandle handle : pendingDeletions) {
-        fs.removeFNode(handle);
-    }
 
-    pendingDeletions.clear();
-}
-
-void Application::cleanup() {}
-
-// ===================================================================
-// INSPECTOR HELPER FUNCTIONS - Component Creation/Modification System
-// ===================================================================
 
 void Application::renderFileSystemInspector() {
     TinyFS& fs = project->filesystem();
@@ -1509,7 +1180,7 @@ void Application::renderFileSystemInspector() {
     
     // Create a unique ID for the input field
     std::string inputId = "##FNodeName_" + std::to_string(project->selectedFNodeHandle.index);
-    
+
     // Static buffer to hold the name during editing
     static char nameBuffer[256];
     static TinyHandle lastSelectedFNode;
@@ -1672,7 +1343,7 @@ bool Application::renderHandleField(const char* fieldId, TinyHandle& handle, con
                 const TinyRNode* node = activeScene->nodes.get(handle);
                 displayText = node ? node->name : "Unknown Node";
             } else {
-                displayText = "Unknown Node";
+                displayText = "No Node";
             }
         } else {
             displayText = "Unknown Resource";
@@ -1682,7 +1353,7 @@ bool Application::renderHandleField(const char* fieldId, TinyHandle& handle, con
         hoveredColor = ImVec4(0.3f, 0.5f, 0.3f, 1.0f);
         activeColor = ImVec4(0.1f, 0.3f, 0.1f, 1.0f);
     } else {
-        displayText = "None - Drop here";
+        displayText = "None";
         buttonColor = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);   // Gray for empty
         hoveredColor = ImVec4(0.4f, 0.4f, 0.6f, 1.0f); // Blue tint on hover
         activeColor = ImVec4(0.2f, 0.2f, 0.4f, 1.0f);

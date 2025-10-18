@@ -523,6 +523,22 @@ void TinyProject::expandParentChain(TinyHandle nodeHandle) {
 
 
 
+void TinyProject::processPendingDeletions() {
+    if (pendingFNodeDeletions.empty()) return;
+    
+    TinyFS& fs = filesystem();
+    
+    for (TinyHandle handle : pendingFNodeDeletions) {
+        fs.removeFNode(handle);
+        
+        // Clear selection if the selected file was deleted
+        if (selectedFNodeHandle == handle) {
+            selectedFNodeHandle = TinyHandle();
+        }
+    }
+
+    pendingFNodeDeletions.clear();
+}
 
 
 void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
@@ -635,10 +651,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             
             ImGui::Separator();
             if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
-                if (node->deletable()) {
-                    fs.removeFNode(nodeHandle);
-                    selectedFNodeHandle = TinyHandle(); // Clear selection
-                }
+                if (node->deletable()) queueFNodeForDeletion(nodeHandle);
             }
             ImGui::EndPopup();
         }
@@ -734,10 +747,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 
                 ImGui::Separator();
                 if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
-                    if (node->deletable()) {
-                        fs.removeFNode(nodeHandle);
-                        selectedFNodeHandle = TinyHandle(); // Clear selection
-                    }
+                    if (node->deletable()) queueFNodeForDeletion(nodeHandle);
                 }
                 
                 ImGui::EndPopup();
@@ -779,10 +789,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 ImGui::Separator();
                 
                 if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
-                    if (node->deletable()) {
-                        fs.removeFNode(nodeHandle);
-                        selectedFNodeHandle = TinyHandle(); // Clear selection
-                    }
+                    if (node->deletable()) pendingFNodeDeletions.push_back(nodeHandle);
                 }
                 ImGui::EndPopup();
             }
