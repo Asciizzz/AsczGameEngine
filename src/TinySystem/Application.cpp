@@ -27,7 +27,6 @@ Application::Application(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
 
     initComponents();
-    featuresTestingGround();
 }
 
 Application::~Application() {
@@ -139,8 +138,6 @@ void Application::initComponents() {
     windowManager->maximizeWindow();
     checkWindowResize();
 }
-
-void Application::featuresTestingGround() {}
 
 bool Application::checkWindowResize() {
     if (!windowManager->resizedFlag && !renderer->isResizeNeeded()) return false;
@@ -375,15 +372,6 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         }
         
         if (activeScene && activeScene->nodes.count() > 0) {
-            // Set up context menu callbacks
-            project->onAddChildNode = [this](TinyHandle nodeHandle) {
-                createNewChildNode(nodeHandle);
-            };
-            project->onDeleteNode = [this](TinyHandle nodeHandle) {
-                project->selectedSceneNodeHandle = nodeHandle; // Set as selected for deletion
-                deleteSelectedNode();
-            };
-            
             project->renderNodeTreeImGui();
         } else {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
@@ -1773,53 +1761,4 @@ bool Application::renderHandleField(const char* fieldId, TinyHandle& handle, con
     }
     
     return modified;
-}
-
-
-void Application::createNewChildNode(TinyHandle parentNodeHandle) {
-    TinyRScene* activeScene = project->getActiveScene();
-    if (!activeScene) return;
-    
-    // Create a new node as a child of the specified parent
-    TinyHandle newNodeHandle = activeScene->addNode("New Node", parentNodeHandle);
-    
-    if (newNodeHandle.valid()) {
-        // Select the newly created node in the Inspector
-        project->selectedSceneNodeHandle = newNodeHandle;
-        
-        // Update global transforms after adding the new node
-        activeScene->updateGlbTransform();
-        
-        // Auto-expand the parent to show the new node
-        project->expandNode(parentNodeHandle);
-    }
-}
-
-void Application::deleteSelectedNode() {
-    TinyRScene* activeScene = project->getActiveScene();
-    if (!activeScene || !project->selectedSceneNodeHandle.valid()) {
-        return;
-    }
-    
-    // Don't delete root node
-    if (project->selectedSceneNodeHandle == project->getRootNodeHandle()) {
-        return;
-    }
-    
-    // Store parent handle before deletion
-    const TinyRNode* nodeToDelete = activeScene->nodes.get(project->selectedSceneNodeHandle);
-    TinyHandle parentHandle = nodeToDelete ? nodeToDelete->parentHandle : TinyHandle();
-    
-    // Delete the scene node directly (scene nodes are not filesystem resources)
-    if (activeScene->removeNode(project->selectedSceneNodeHandle)) {
-        // Select parent after deletion
-        if (parentHandle.valid()) {
-            project->selectedSceneNodeHandle = parentHandle;
-        } else {
-            project->selectedSceneNodeHandle = project->getRootNodeHandle();
-        }
-        
-        // Update global transforms after deletion
-        activeScene->updateGlbTransform();
-    }
 }

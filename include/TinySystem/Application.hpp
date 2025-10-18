@@ -61,7 +61,6 @@ private:
     uint32_t appHeight;
 
     // Functions that actually do things
-    void featuresTestingGround();
     void initComponents();
     void mainLoop();
     void cleanup();
@@ -75,9 +74,6 @@ private:
     void renderFileSystemInspector();
     void renderNodeInspector();
     void renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove);
-
-    void createNewChildNode(TinyHandle parentNodeHandle);
-    void deleteSelectedNode();
     
     // Component-specific inspectors
     
