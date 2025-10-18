@@ -1160,7 +1160,7 @@ void Application::renderNodeInspector() {
 
 void Application::renderFileSystemInspector() {
     TinyFS& fs = project->filesystem();
-    const TinyFNode* selectedFNode = fs.getFNodes().get(project->selectedFNodeHandle);
+    const TinyFS::Node* selectedFNode = fs.getFNodes().get(project->selectedFNodeHandle);
     if (!selectedFNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid filesystem node selection");
         project->selectedFNodeHandle = TinyHandle(); // Clear invalid selection
@@ -1204,7 +1204,7 @@ void Application::renderFileSystemInspector() {
         
         // Apply rename on Enter or when focus is lost
         if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
-            TinyFNode* mutableNode = const_cast<TinyFNode*>(fs.getFNodes().get(project->selectedFNodeHandle));
+            TinyFS::Node* mutableNode = const_cast<TinyFS::Node*>(fs.getFNodes().get(project->selectedFNodeHandle));
             if (mutableNode) {
                 mutableNode->name = std::string(nameBuffer);
             }
@@ -1401,7 +1401,7 @@ bool Application::renderHandleField(const char* fieldId, TinyHandle& handle, con
             // Accept mesh files from file explorer
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                 TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
-                const TinyFNode* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
+                const TinyFS::Node* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
                 if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRMesh>()) {
                     handle = fileNode->tHandle.handle; // Use registry handle
                     modified = true;
@@ -1411,7 +1411,7 @@ bool Application::renderHandleField(const char* fieldId, TinyHandle& handle, con
             // Accept skeleton files from file explorer
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                 TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
-                const TinyFNode* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
+                const TinyFS::Node* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
                 if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRSkeleton>()) {
                     handle = fileNode->tHandle.handle; // Use registry handle
                     modified = true;

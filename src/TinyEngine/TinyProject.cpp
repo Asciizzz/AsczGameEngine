@@ -24,9 +24,9 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     mainScene.addRoot("Root");
 
     // Create "Main Scene" as a non-deletable file in root directory
-    TinyFNode::CFG sceneConfig;
+    TinyFS::Node::CFG sceneConfig;
     sceneConfig.deletable = false; // Make it non-deletable
-    
+
     TinyHandle mainSceneFileHandle = tinyFS->addFile(tinyFS->rootHandle(), "Main Scene", &mainScene, sceneConfig);
     TypeHandle mainSceneTypeHandle = tinyFS->getTHandle(mainSceneFileHandle);
     activeSceneHandle = mainSceneTypeHandle.handle; // Point to the actual scene in registry
@@ -354,7 +354,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             TinyHandle sceneFNodeHandle = *(const TinyHandle*)payload->Data;
             
             // Get the filesystem node to access its TypeHandle
-            const TinyFNode* sceneFile = tinyFS->getFNodes().get(sceneFNodeHandle);
+            const TinyFS::Node* sceneFile = tinyFS->getFNodes().get(sceneFNodeHandle);
             if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyRScene>()) {
                 // Extract the registry handle from the TypeHandle
                 TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
@@ -376,7 +376,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
             
             // Get the filesystem node to check if it's a scene file
-            const TinyFNode* fileNode = tinyFS->getFNodes().get(fileNodeHandle);
+            const TinyFS::Node* fileNode = tinyFS->getFNodes().get(fileNodeHandle);
             if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRScene>()) {
                 // This is a scene file - instantiate it at this node
                 TinyHandle sceneRegistryHandle = fileNode->tHandle.handle;
@@ -549,7 +549,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         nodeHandle = fs.rootHandle();
     }
     
-    const TinyFNode* node = fs.getFNodes().get(nodeHandle);
+    const TinyFS::Node* node = fs.getFNodes().get(nodeHandle);
     if (!node) return;
     
     // Create a unique ID for this node
@@ -559,7 +559,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
     bool hasChildren = !node->children.empty();
     bool isSelected = (selectedFNodeHandle.index == nodeHandle.index && selectedFNodeHandle.version == nodeHandle.version);
     
-    if (node->type == TinyFNode::Type::Folder) {
+    if (node->type == TinyFS::Node::Type::Folder) {
         // Display root folder as ".root" instead of full path
         std::string displayName = (nodeHandle == fs.rootHandle()) ? ".root" : node->name;
         
@@ -653,6 +653,11 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
                 if (node->deletable()) queueFNodeForDeletion(nodeHandle);
             }
+
+            // Folder operations don't affect file, no need for pending deletion
+            if (ImGui::MenuItem("Flatten", nullptr, false, node->deletable())) {
+                if (node->deletable()) fs.flattenFNode(nodeHandle);
+            }
             ImGui::EndPopup();
         }
         
@@ -661,19 +666,19 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             // Create a sorted copy of children handles - folders first, then files, both sorted by name
             std::vector<TinyHandle> sortedChildren;
             for (const TinyHandle& childHandle : node->children) {
-                const TinyFNode* child = fs.getFNodes().get(childHandle);
+                const TinyFS::Node* child = fs.getFNodes().get(childHandle);
                 if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
                 sortedChildren.push_back(childHandle);
             }
             
             std::sort(sortedChildren.begin(), sortedChildren.end(), [&fs](const TinyHandle& a, const TinyHandle& b) {
-                const TinyFNode* nodeA = fs.getFNodes().get(a);
-                const TinyFNode* nodeB = fs.getFNodes().get(b);
+                const TinyFS::Node* nodeA = fs.getFNodes().get(a);
+                const TinyFS::Node* nodeB = fs.getFNodes().get(b);
                 if (!nodeA || !nodeB) return false;
                 
                 // Folders come before files
                 if (nodeA->type != nodeB->type) {
-                    return nodeA->type == TinyFNode::Type::Folder;
+                    return nodeA->type == TinyFS::Node::Type::Folder;
                 }
                 
                 // Within same type, sort by name
@@ -686,7 +691,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             ImGui::TreePop();
         }
         
-    } else if (node->type == TinyFNode::Type::File) {
+    } else if (node->type == TinyFS::Node::Type::File) {
         if (node->tHandle.isType<TinyRScene>()) {
             // Scene file
             std::string sceneName = node->name;

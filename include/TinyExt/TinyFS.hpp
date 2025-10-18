@@ -9,32 +9,33 @@
 #include <type_traits>
 #include <sstream>
 
-struct TinyFNode {
-    std::string name;                     // segment name (relative)
-    TinyHandle parent;                    // parent node handle
-    std::vector<TinyHandle> children;     // child node handles
-    TypeHandle tHandle;                   // metadata / registry handle if file
-    enum class Type { Folder, File, Other } type = Type::Folder;
-    
-    struct CFG {
-        bool hidden = false;
-        bool deletable = true;
-    } cfg;
-
-    bool hidden() const { return cfg.hidden; }
-    bool deletable() const { return cfg.deletable; }
-
-    bool isFile() const { return type == Type::File; }
-    bool hasData() const { return tHandle.valid(); }
-};
-
 class TinyFS {
 public:
+    struct Node {
+        std::string name;                     // segment name (relative)
+        TinyHandle parent;                    // parent node handle
+        std::vector<TinyHandle> children;     // child node handles
+        TypeHandle tHandle;                   // metadata / registry handle if file
+
+        enum class Type { Folder, File, Other } type = Type::Folder;
+
+        struct CFG {
+            bool hidden = false;
+            bool deletable = true;
+        } cfg;
+
+        bool hidden() const { return cfg.hidden; }
+        bool deletable() const { return cfg.deletable; }
+
+        bool isFile() const { return type == Type::File; }
+        bool hasData() const { return tHandle.valid(); }
+    };
+
     TinyFS() {
-        TinyFNode rootNode;
+        Node rootNode;
         rootNode.name = ".root";
         rootNode.parent = TinyHandle();
-        rootNode.type = TinyFNode::Type::Folder;
+        rootNode.type = Node::Type::Folder;
         rootNode.cfg.deletable = false; // root is not deletable
 
         // Insert root and store explicitly the returned handle
@@ -51,7 +52,7 @@ public:
 
     // Set root display name (full on-disk path etc.)
     void setRootPath(const std::string& rootPath) {
-        TinyFNode* root = fnodes.get(rootHandle_);
+        Node* root = fnodes.get(rootHandle_);
         if (root) root->name = rootPath;
     }
 
@@ -59,7 +60,7 @@ public:
     void setRegistryHandle(TinyHandle h) {
         if (!fnodes.isValid(h)) return;
 
-        TinyFNode* node = fnodes.get(h);
+        Node* node = fnodes.get(h);
         node->cfg.deletable = false; // make non-deletable
         node->cfg.hidden = true;     // hide the registry folder
 
@@ -69,20 +70,20 @@ public:
     // ---------- Creation ----------
 
     // Folder creation (non-template overload)
-    TinyHandle addFolder(TinyHandle parentHandle, const std::string& name, TinyFNode::CFG cfg = {}) {
+    TinyHandle addFolder(TinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
         return addFNodeImpl<void>(parentHandle, name, nullptr, cfg);
     }
-    TinyHandle addFolder(const std::string& name, TinyFNode::CFG cfg = {}) {
+    TinyHandle addFolder(const std::string& name, Node::CFG cfg = {}) {
         return addFolder(rootHandle_, name, cfg);
     }
 
     // File creation (templated, pass pointer to data)
     template<typename T>
-    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T* data, TinyFNode::CFG cfg = {}) {
+    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T* data, Node::CFG cfg = {}) {
         return addFNodeImpl<T>(parentHandle, name, data, cfg);
     }
     template<typename T>
-    TinyHandle addFile(const std::string& name, T* data, TinyFNode::CFG cfg = {}) {
+    TinyHandle addFile(const std::string& name, T* data, Node::CFG cfg = {}) {
         return addFile(rootHandle_, name, data, cfg);
     }
 
@@ -101,12 +102,12 @@ public:
         // prevent moving under descendant (no cycles)
         if (isAncestor(nodeHandle, newParent)) return;
 
-        TinyFNode* node = fnodes.get(nodeHandle);
+        Node* node = fnodes.get(nodeHandle);
         if (!node) return;
 
         // remove from old parent children vector
         if (fnodes.isValid(node->parent)) {
-            TinyFNode* oldParent = fnodes.get(node->parent);
+            Node* oldParent = fnodes.get(node->parent);
             if (oldParent) {
                 auto& s = oldParent->children;
                 s.erase(std::remove(s.begin(), s.end(), nodeHandle), s.end());
@@ -115,13 +116,13 @@ public:
 
         // attach to new parent
         node->parent = newParent;
-        TinyFNode* newP = fnodes.get(newParent);
+        Node* newP = fnodes.get(newParent);
         if (newP) newP->children.push_back(nodeHandle);
     }
 
     // ---------- Safe recursive remove ----------
-    void removeFNode(TinyHandle handle) {
-        TinyFNode* node = fnodes.get(handle);
+    void removeFNode(TinyHandle handle, bool recursive = true) {
+        Node* node = fnodes.get(handle);
         if (!node || !node->deletable()) return;
 
         // Public interface - use the node's parent as the rescue parent
@@ -130,52 +131,12 @@ public:
             rescueParent = rootHandle_;
         }
 
-        removeFNodeRecursive(handle, rescueParent);
+        removeFNodeRecursive(handle, rescueParent, recursive);
     }
 
-private:
-    // Internal recursive function that tracks the original parent for non-deletable rescues
-    void removeFNodeRecursive(TinyHandle handle, TinyHandle rescueParent) {
-        TinyFNode* node = fnodes.get(handle);
-        if (!node) return;
-
-        // Note: We can assume node is deletable since non-deletable nodes are moved, not recursed
-
-        // copy children to avoid mutation during recursion
-        std::vector<TinyHandle> childCopy = node->children;
-        for (TinyHandle ch : childCopy) {
-            TinyFNode* child = fnodes.get(ch);
-            if (!child) continue;
-            
-            if (child->deletable()) {
-                // Child is deletable - remove it recursively (pass along the same rescue parent)
-                removeFNodeRecursive(ch, rescueParent);
-            } else {
-                // Child is non-deletable - move it to the original rescue parent
-                moveFNode(ch, rescueParent);
-            }
-        }
-
-        // if file / has data, remove registry entry
-        if (node->hasData()) {
-            registry.remove(node->tHandle);
-            node->tHandle = TypeHandle(); // invalidate
-        }
-
-        // remove from parent children list
-        if (fnodes.isValid(node->parent)) {
-            TinyFNode* parent = fnodes.get(node->parent);
-            if (parent) {
-                auto& s = parent->children;
-                s.erase(std::remove(s.begin(), s.end(), handle), s.end());
-            }
-        }
-
-        // finally remove node from pool
-        fnodes.remove(handle);
+    void flattenFNode(TinyHandle handle) {
+        removeFNode(handle, false);
     }
-
-public:
 
     // ---------- Path resolution ----------
     std::string getFullPath(TinyHandle handle) const {
@@ -184,7 +145,7 @@ public:
         std::vector<std::string> parts;
         TinyHandle cur = handle;
         while (fnodes.isValid(cur)) {
-            const TinyFNode* n = fnodes.get(cur);
+            const Node* n = fnodes.get(cur);
             if (!n) break;
             parts.push_back(n->name);
             if (cur == rootHandle_) break;
@@ -202,39 +163,33 @@ public:
     // ---------- Data retrieval ----------
     template<typename T>
     T* getFileData(TinyHandle fileHandle) {
-        TinyFNode* node = fnodes.get(fileHandle);
+        Node* node = fnodes.get(fileHandle);
         if (!node || !node->hasMeta()) return nullptr;
 
         return registry.get<T>(node->tHandle);
     }
 
     TypeHandle getTHandle(TinyHandle handle) const {
-        const TinyFNode* node = fnodes.get(handle);
+        const Node* node = fnodes.get(handle);
         return node ? node->tHandle : TypeHandle();
     }
 
-    // ---------- Debug print (ANSI colors + tree lines) ----------
-    // Files are printed in red. Works on terminals that support ANSI.
-    void debugPrint() const {
-        debugPrintRecursive(rootHandle_, /*indentPrefix=*/"", /*isLast=*/true);
-    }
-
     // Access to file system nodes (needed for UI)
-    const TinyPool<TinyFNode>& getFNodes() const { return fnodes; }
-    // TinyPool<TinyFNode>& getFNodes() { return fnodes; } // No non-const access to prevent external mutations
+    const TinyPool<Node>& getFNodes() const { return fnodes; }
+    // TinyPool<Node>& getFNodes() { return fnodes; } // No non-const access to prevent external mutations
 
 private:
-    TinyPool<TinyFNode> fnodes;
+    TinyPool<Node> fnodes;
     TinyRegistry registry;
     TinyHandle rootHandle_{};
     TinyHandle regHandle_{};
 
     // Implementation function: templated but uses if constexpr to allow T=void
     template<typename T>
-    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T* data, TinyFNode::CFG cfg) {
+    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T* data, Node::CFG cfg) {
         if (!fnodes.isValid(parentHandle)) return TinyHandle(); // invalid parent
 
-        TinyFNode child;
+        Node child;
         child.name = name;
         child.parent = parentHandle;
         child.cfg = cfg;
@@ -242,17 +197,58 @@ private:
         if constexpr (!std::is_same_v<T, void>) {
             if (data) {
                 child.tHandle = registry.add(*data);
-                child.type = TinyFNode::Type::File;
+                child.type = Node::Type::File;
             }
         }
 
         TinyHandle h = fnodes.add(std::move(child));
         // parent might have been invalidated in a multithreaded scenario; guard
         if (fnodes.isValid(parentHandle)) {
-            TinyFNode* parent = fnodes.get(parentHandle);
+            Node* parent = fnodes.get(parentHandle);
             if (parent) parent->children.push_back(h);
         }
         return h;
+    }
+
+    // Internal recursive function that tracks the original parent for non-deletable rescues
+    void removeFNodeRecursive(TinyHandle handle, TinyHandle rescueParent, bool recursive) {
+        Node* node = fnodes.get(handle);
+        if (!node) return;
+
+        // Note: We can assume node is deletable since non-deletable nodes are moved, not recursed
+
+        // copy children to avoid mutation during recursion
+        std::vector<TinyHandle> childCopy = node->children;
+        for (TinyHandle ch : childCopy) {
+            Node* child = fnodes.get(ch);
+            if (!child) continue;
+            
+            if (child->deletable() && recursive) {
+                // Child is deletable and we're in normal delete mode - remove it recursively
+                removeFNodeRecursive(ch, rescueParent, recursive);
+            } else {
+                // Child is non-deletable OR we're in flatten mode - move it to the rescue parent
+                moveFNode(ch, rescueParent);
+            }
+        }
+
+        // if file / has data, remove registry entry
+        if (node->hasData()) {
+            registry.remove(node->tHandle);
+            node->tHandle = TypeHandle(); // invalidate
+        }
+
+        // remove from parent children list
+        if (fnodes.isValid(node->parent)) {
+            Node* parent = fnodes.get(node->parent);
+            if (parent) {
+                auto& s = parent->children;
+                s.erase(std::remove(s.begin(), s.end(), handle), s.end());
+            }
+        }
+
+        // finally remove node from pool
+        fnodes.remove(handle);
     }
 
     // helper: check if maybeAncestor is ancestor of maybeDescendant
@@ -262,39 +258,11 @@ private:
         while (fnodes.isValid(cur)) {
             if (cur == maybeAncestor) return true;
             if (cur == rootHandle_) break;
-            const TinyFNode* n = fnodes.get(cur);
+            const Node* n = fnodes.get(cur);
             if (!n) break;
             cur = n->parent;
         }
         return false;
-    }
-
-    // Pretty recursive print using branch characters
-    void debugPrintRecursive(TinyHandle handle, std::string indentPrefix, bool isLast) const {
-        if (!fnodes.isValid(handle)) return;
-        const TinyFNode* node = fnodes.get(handle);
-        if (!node) return;
-
-        // connector
-        std::string connector = indentPrefix.empty() ? "" : (isLast ? "└─ " : "├─ ");
-        // print line
-        if (node->isFile()) {
-            // red for files
-            std::cout << indentPrefix << connector << "\033[31m" << node->name << "\033[0m\n";
-        } else {
-            std::cout << indentPrefix << connector << node->name << "\n";
-        }
-
-        // prepare next prefix
-        std::string childPrefix = indentPrefix;
-        if (!indentPrefix.empty()) childPrefix += (isLast ? "   " : "│  ");
-
-        // iterate children
-        const auto& children = node->children;
-        for (size_t i = 0; i < children.size(); ++i) {
-            bool childIsLast = (i + 1 == children.size());
-            debugPrintRecursive(children[i], childPrefix, childIsLast);
-        }
     }
 
 };
