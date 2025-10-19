@@ -6,31 +6,6 @@
 
 using namespace TinyVK;
 
-bool TinyRMesh::create(const TinyVK::Device* deviceVK) {
-    if (vertexData.empty() || indexData.empty()) return false;
-
-    vertexBuffer
-        .setDataSize(vertexData.size())
-        .setUsageFlags(BufferUsage::Vertex)
-        .createDeviceLocalBuffer(deviceVK, vertexData.data());
-
-    indexBuffer
-        .setDataSize(indexData.size())
-        .setUsageFlags(BufferUsage::Index)
-        .createDeviceLocalBuffer(deviceVK, indexData.data());
-
-    return true;
-}
-
-VkIndexType TinyRMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
-    switch (type) {
-        case TinyMesh::IndexType::Uint8:  return VK_INDEX_TYPE_UINT8;
-        case TinyMesh::IndexType::Uint16: return VK_INDEX_TYPE_UINT16;
-        case TinyMesh::IndexType::Uint32: return VK_INDEX_TYPE_UINT32;
-        default: throw std::runtime_error("Unsupported index type in TinyMesh");
-    }
-}
-
 bool TinyRTexture::create(const TinyVK::Device* deviceVK) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(channels);

@@ -571,7 +571,7 @@ void TinyApp::renderSceneNodeInspector() {
 
             // Show mesh information if valid
             if (meshComp->meshHandle.valid()) {
-                const TinyRMesh* mesh = project->registryRef().get<TinyRMesh>(meshComp->meshHandle);
+                const TinyMesh* mesh = project->registryRef().get<TinyMesh>(meshComp->meshHandle);
                 if (mesh) {
                     ImGui::SameLine();
                     ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", mesh->name.c_str());
@@ -902,7 +902,7 @@ void TinyApp::renderFileSystemInspector() {
         } else if (selectedFNode->tHandle.isType<TinyRMaterial>()) {
             fileType = "Material";
             ImGui::Text("Type: %s", fileType.c_str());
-        } else if (selectedFNode->tHandle.isType<TinyRMesh>()) {
+        } else if (selectedFNode->tHandle.isType<TinyMesh>()) {
             fileType = "Mesh";
             ImGui::Text("Type: %s", fileType.c_str());
         } else if (selectedFNode->tHandle.isType<TinyRSkeleton>()) {
@@ -975,7 +975,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
         // Get the actual name based on target type
         if (strcmp(targetType, "Mesh") == 0) {
             const TinyRegistry& registry = project->registryRef();
-            const TinyRMesh* mesh = registry.get<TinyRMesh>(handle);
+            const TinyMesh* mesh = registry.get<TinyMesh>(handle);
             displayText = mesh ? mesh->name : "Unknown Mesh";
         } else if (strcmp(targetType, "Skeleton") == 0) {
             const TinyRegistry& registry = project->registryRef();
@@ -1041,7 +1041,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                 TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
                 const TinyFS::Node* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
-                if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRMesh>()) {
+                if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyMesh>()) {
                     handle = fileNode->tHandle.handle; // Use registry handle
                     modified = true;
                 }

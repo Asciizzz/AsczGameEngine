@@ -123,7 +123,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     defaultMaterialHandle = tinyFS->addToRegistry(defaultMaterial).handle;
 }
 
-TinyHandle TinyProject::addSceneFromModel(const TinyModel& model, TinyHandle parentFolder) {
+TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFolder) {
     // Use root folder if no valid parent provided
     if (!parentFolder.valid()) {
         parentFolder = tinyFS->rootHandle();
@@ -176,10 +176,7 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model, TinyHandle par
 
     // Import meshes to registry with remapped material references
     std::vector<TinyHandle> glbMeshRHandle;
-    for (const auto& mesh : model.meshes) {
-        TinyRMesh rMesh = TinyRMesh(mesh);
-        rMesh.create(deviceVK);
-
+    for (auto& mesh : model.meshes) {
         // Remap submeshes' material indices
         std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes;
         for (auto& submesh : remappedSubmeshes) {
@@ -187,9 +184,11 @@ TinyHandle TinyProject::addSceneFromModel(const TinyModel& model, TinyHandle par
             submesh.material = valid ? glmMatRHandle[submesh.material.index] : TinyHandle();
         }
 
-        rMesh.setSubmeshes(remappedSubmeshes);
+        mesh.createBuffers(deviceVK);
 
-        TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, mesh.name, std::move(&rMesh));
+        mesh.setSubmeshes(remappedSubmeshes);
+
+        TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, mesh.name, std::move(&mesh));
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
         glbMeshRHandle.push_back(tHandle.handle);

@@ -2,6 +2,8 @@
 
 #include "TinyData/TinyVertex.hpp"
 #include "TinyExt/TinyHandle.hpp"
+#include "TinyVK/Resource/DataBuffer.hpp"
+
 #include <string>
 
 struct TinySubmesh {
@@ -12,6 +14,12 @@ struct TinySubmesh {
 
 // Uniform mesh structure that holds raw data only
 struct TinyMesh {
+    TinyMesh(const TinyMesh&) = delete;
+    TinyMesh& operator=(const TinyMesh&) = delete;
+
+    TinyMesh(TinyMesh&&) = default;
+    TinyMesh& operator=(TinyMesh&&) = default;
+
     std::string name; // Mesh name from glTF
     
     TinyVertexLayout vertexLayout;
@@ -28,8 +36,7 @@ struct TinyMesh {
     std::vector<uint8_t> indexData;
 
     size_t vertexCount = 0;
-    size_t indexCount = 0; 
-
+    size_t indexCount = 0;
     // Useful for reconstructing data (rarely needed)
     size_t indexStride = 0;
 
@@ -64,4 +71,13 @@ struct TinyMesh {
     }
 
     static IndexType sizeToIndexType(size_t size);
+
+    // Buffers for runtime use
+    TinyVK::DataBuffer vertexBuffer;
+    TinyVK::DataBuffer indexBuffer;
+    VkIndexType vkIndexType = VK_INDEX_TYPE_UINT16;
+
+    bool createBuffers(const TinyVK::Device* deviceVK);
+
+    static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };

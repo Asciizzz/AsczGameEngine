@@ -10,40 +10,6 @@
 
 #include <string>
 
-struct TinyRMesh : public TinyMesh {
-    // Runtime Vulkan resources
-    TinyVK::DataBuffer vertexBuffer;
-    TinyVK::DataBuffer indexBuffer;
-    VkIndexType vkIndexType = VK_INDEX_TYPE_UINT16;
-
-    // Default constructor for internal pool use only - creates invalid state
-    TinyRMesh() = default;
-    explicit TinyRMesh(const TinyMesh& mesh)
-        : TinyMesh(mesh), vkIndexType(tinyToVkIndexType(indexType)) {}
-
-    TinyRMesh(const TinyRMesh&) = delete;
-    TinyRMesh& operator=(const TinyRMesh&) = delete;
-    
-    TinyRMesh(TinyRMesh&&) = default;
-    TinyRMesh& operator=(TinyRMesh&&) = default;
-
-    // Set mesh data after default construction
-    void set(const TinyMesh& mesh) {
-        static_cast<TinyMesh&>(*this) = mesh; // Copy base class data
-        vkIndexType = tinyToVkIndexType(indexType);
-    }
-
-    // Check if this mesh has valid data
-    bool isValid() const {
-        return !vertexData.empty() && !indexData.empty();
-    }
-
-    // Create Vulkan buffers from the mesh data
-    bool create(const TinyVK::Device* deviceVK);
-
-    static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
-};
-
 struct TinyRMaterial {
     std::string name; // Material name from source data
     glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved (remapped registry indices)
