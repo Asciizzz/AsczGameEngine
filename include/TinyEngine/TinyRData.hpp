@@ -25,33 +25,6 @@ struct TinyRMaterial {
     void setNrmlTexIndex(uint32_t index) { texIndices.y = index; }
 };
 
-struct TinyRTexture : public TinyTexture {
-    // Runtime Vulkan resources
-    TinyVK::TextureVK textureVK;
-
-    // Default constructor for internal pool use only - creates invalid state
-    TinyRTexture() = default;
-    explicit TinyRTexture(const TinyTexture& texture) : TinyTexture(texture) {}
-
-    void set(const TinyTexture& texture) {
-        TinyTexture::operator=(texture);
-    }
-    
-    TinyRTexture(const TinyRTexture&) = delete;
-    TinyRTexture& operator=(const TinyRTexture&) = delete;
-
-    TinyRTexture(TinyRTexture&&) = default;
-    TinyRTexture& operator=(TinyRTexture&&) = default;
-
-    // Check if this texture has valid data
-    bool isValid() const {
-        return !data.empty() && width > 0 && height > 0;
-    }
-
-    // Create Vulkan texture from the texture data
-    bool create(const TinyVK::Device* deviceVK);
-};
-
 struct TinyRSkeleton : public TinySkeleton {
     // Additional runtime data can be added here if needed
     TinyRSkeleton() = default;

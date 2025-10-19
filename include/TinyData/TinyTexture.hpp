@@ -1,11 +1,21 @@
 #pragma once
 
-#include <vector>
+#include "TinyVK/Resource/TextureVK.hpp"
+
 #include <cstdint>
 #include <string>
 
 // Raw texture data (no Vulkan handles)
 struct TinyTexture {
+    TinyTexture(const TinyTexture&) = delete;
+    TinyTexture& operator=(const TinyTexture&) = delete;
+
+    TinyTexture(TinyTexture&&) = default;
+    TinyTexture& operator=(TinyTexture&&) = default;
+
+    // Vulkan texture representation
+    TinyVK::TextureVK textureVK;
+
     // Image
     int width = 0;
     int height = 0;
@@ -33,6 +43,9 @@ struct TinyTexture {
         addressMode = mode;
         return *this;
     }
+
+
+    bool vkCreate(const TinyVK::Device* deviceVK);
 
     static TinyTexture createDefaultTexture();
 };

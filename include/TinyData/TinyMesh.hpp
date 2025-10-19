@@ -77,7 +77,7 @@ struct TinyMesh {
     TinyVK::DataBuffer indexBuffer;
     VkIndexType vkIndexType = VK_INDEX_TYPE_UINT16;
 
-    bool createBuffers(const TinyVK::Device* deviceVK);
+    bool vkCreate(const TinyVK::Device* deviceVK);
 
     static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
 };

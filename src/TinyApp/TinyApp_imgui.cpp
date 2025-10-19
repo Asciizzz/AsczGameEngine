@@ -896,7 +896,7 @@ void TinyApp::renderFileSystemInspector() {
                     ImGui::PopStyleColor(3);
                 }
             }
-        } else if (selectedFNode->tHandle.isType<TinyRTexture>()) {
+        } else if (selectedFNode->tHandle.isType<TinyTexture>()) {
             fileType = "Texture";
             ImGui::Text("Type: %s", fileType.c_str());
         } else if (selectedFNode->tHandle.isType<TinyRMaterial>()) {

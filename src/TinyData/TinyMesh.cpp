@@ -31,7 +31,7 @@ TinyMesh::IndexType TinyMesh::sizeToIndexType(size_t size) {
 
 
 
-bool TinyMesh::createBuffers(const TinyVK::Device* deviceVK) {
+bool TinyMesh::vkCreate(const TinyVK::Device* deviceVK) {
     if (vertexData.empty() || indexData.empty()) return false;
 
     vertexBuffer
