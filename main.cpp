@@ -30,7 +30,7 @@ void testLua() {
     if (luaL_dostring(L, script1) != LUA_OK) {
         std::cerr << "ERROR: " << lua_tostring(L, -1) << std::endl;
     } else {
-        std::cout << "✓ Arithmetic test passed!" << std::endl;
+        std::cout << "Arithmetic test passed!" << std::endl;
     }
     
     // Test 2: String manipulation
