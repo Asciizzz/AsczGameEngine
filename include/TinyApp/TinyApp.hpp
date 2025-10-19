@@ -62,8 +62,6 @@ private:
     void mainLoop();
     void cleanup();
 
-    void loadAllAssetsRecursively(const std::string& assetsPath);
-
     void setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseLocked, float deltaTime);
 
     void renderInspectorWindow();

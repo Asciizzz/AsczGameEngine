@@ -88,8 +88,8 @@ file(GLOB_RECURSE SRC_FILES
     src/TinySystem/TinyWindow.cpp
     src/TinySystem/TinyImGui.cpp
 
-    src/TinyApp/TinyApp_init.cpp
-    src/TinyApp/TinyApp_loop.cpp
+    src/TinyApp/TinyApp_basic.cpp
+    src/TinyApp/TinyApp_imgui.cpp
 
     src/TinyVK/System/Device.cpp
     src/TinyVK/System/Instance.cpp
