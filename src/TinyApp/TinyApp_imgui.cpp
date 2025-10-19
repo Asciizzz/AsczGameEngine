@@ -34,7 +34,7 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         // Active Scene Name Header
         TinyScene* activeScene = project->getActiveScene();
         if (activeScene) {
-            ImGui::Text("Active Scene: %s", activeScene->name.c_str());
+            ImGui::Text("%s", activeScene->name.c_str());
             
             // Show full scene info on hover
             if (ImGui::IsItemHovered()) {

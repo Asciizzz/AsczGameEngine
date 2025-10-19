@@ -541,12 +541,14 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     
     // If node is open and has children, recurse for children
     if (nodeOpen && hasChildren) {
-        // Create a sorted copy of children handles by node name
+        // Sort by name and by whether they have children
         std::vector<TinyHandle> sortedChildren(node->childrenHandles.begin(), node->childrenHandles.end());
         std::sort(sortedChildren.begin(), sortedChildren.end(), [activeScene](const TinyHandle& a, const TinyHandle& b) {
             const TinyNode* nodeA = activeScene->nodes.get(a);
             const TinyNode* nodeB = activeScene->nodes.get(b);
             if (!nodeA || !nodeB) return false;
+            if (nodeA->childrenHandles.empty() && !nodeB->childrenHandles.empty()) return false;
+            if (!nodeA->childrenHandles.empty() && nodeB->childrenHandles.empty()) return true;
             return nodeA->name < nodeB->name;
         });
         
@@ -838,68 +840,68 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         }
         
     } else if (node->type == TinyFS::Node::Type::File) {
+        // General file handling - completely generic
+        std::string fileName = node->name;
+        
+        // Type-specific visual styling before rendering
         if (node->tHandle.isType<TinyScene>()) {
-            // Scene file
-            std::string sceneName = node->name;
-            
-            // Check if this is the active scene for green backdrop
+            // Scene files: Check for active scene green backdrop
             TinyHandle sceneRegistryHandle = node->tHandle.handle;
             bool isActiveScene = (getActiveSceneHandle() == sceneRegistryHandle);
             
-            // Add permanent green backdrop for active scene files
             if (isActiveScene) {
-                ImVec2 itemSize = ImGui::CalcTextSize(sceneName.c_str());
+                ImVec2 itemSize = ImGui::CalcTextSize(fileName.c_str());
                 ImVec2 cursorPos = ImGui::GetCursorScreenPos();
                 ImVec2 itemMax = ImVec2(cursorPos.x + ImGui::GetContentRegionAvail().x, cursorPos.y + itemSize.y);
                 ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(50, 200, 50, 100)); // green backdrop
             }
+        }
+        // Add other file type styling here as needed
+        // else if (node->tHandle.isType<TinyMesh>()) {
+        //     // Mesh files: maybe blue tint?
+        // }
+        
+        // Set consistent colors for all files
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background
+        
+        // Render file item (selectable for interaction but simple)
+        ImGui::Selectable(fileName.c_str(), isSelected);
+        
+        // Generic selection handling
+        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+            float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
             
-            // Set colors for scene files
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background (same as nodes)
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background (same as nodes)
-            
-            if (ImGui::Selectable(sceneName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
-                // Don't select immediately - let the drag detection handle it below
-            }
-            
-            // Handle selection - only select on mouse release if we didn't drag
-            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-                // Check if this was a click (no significant drag distance)
-                ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
-                float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
-                
-                // Only select if drag distance was minimal (treat as click)
-                if (dragDistance < 5.0f) { // 5 pixel tolerance
-                    selectFileNode(nodeHandle);
-                }
-                
-                // Reset drag delta for next interaction
-                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
-            }
-            
-            // Select scene file on right-click (immediate selection before context menu)
-            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+            if (dragDistance < 5.0f) { // 5 pixel tolerance
                 selectFileNode(nodeHandle);
             }
             
-            // Drag source for scene files
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                // Set this scene file as held when dragging begins
-                holdFileNode(nodeHandle);
-                ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
-                ImGui::Text("Scene: %s", node->name.c_str());
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on nodes to instantiate");
-                ImGui::EndDragDropSource();
-            }
+            ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+        }
+        
+        // Select on right-click
+        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+            selectFileNode(nodeHandle);
+        }
+        
+        // Generic drag source
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            holdFileNode(nodeHandle);
+            ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
+            ImGui::Text("%s", fileName.c_str());
+            ImGui::EndDragDropSource();
+        }
+        
+        // Generic context menu with type-specific options
+        if (ImGui::BeginPopupContextItem()) {
+            ImGui::Text("%s", fileName.c_str());
+            ImGui::Separator();
             
-            // Context menu for scene files - direct manipulation
-            if (ImGui::BeginPopupContextItem()) {
-                ImGui::Text("%s", node->name.c_str());
-                ImGui::Separator();
-                
-                // Get scene handle from TypeHandle
+            // Type-specific context menu options
+            if (node->tHandle.isType<TinyScene>()) {
+                // Scene file options
                 TinyHandle sceneRegistryHandle = node->tHandle.handle;
                 bool isCurrentlyActive = (getActiveSceneHandle() == sceneRegistryHandle);
                 
@@ -908,74 +910,43 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 } else {
                     if (ImGui::MenuItem("Make Active Scene")) {
                         if (setActiveScene(sceneRegistryHandle)) {
-                            selectSceneNode(getRootNodeHandle()); // Reset node selection to root
+                            selectSceneNode(getRootNodeHandle());
                         }
                     }
                 }
-                
+            } else if (node->tHandle.isType<TinyMesh>()) {
+                // Mesh file options
+                if (ImGui::MenuItem("Preview Mesh")) {
+                    // TODO: Add mesh preview functionality
+                }
+            } else if (node->tHandle.isType<TinyTexture>()) {
+                // Texture file options
+                if (ImGui::MenuItem("Preview Texture")) {
+                    // TODO: Add texture preview functionality
+                }
+            } else if (node->tHandle.isType<TinyRMaterial>()) {
+                // Material file options
+                if (ImGui::MenuItem("Edit Material")) {
+                    // TODO: Add material editor functionality
+                }
+            }
+            // Add more file types as needed...
+            
+            // Common separator before delete (only if there were type-specific options)
+            if (node->tHandle.isType<TinyScene>() || node->tHandle.isType<TinyMesh>() || 
+                node->tHandle.isType<TinyTexture>() || node->tHandle.isType<TinyRMaterial>()) {
                 ImGui::Separator();
-                if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
-                    if (node->deletable()) queueFNodeForDeletion(nodeHandle);
-                }
-                
-                ImGui::EndPopup();
             }
             
-            ImGui::PopStyleColor(3);
-            
-        } else {
-            // Other file types
-            std::string fileName = node->name;
-            
-            // Set colors for other files
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background (same as nodes)
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background (same as nodes)
-            
-            ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_None);
-            
-            // Handle selection - only select on mouse release if we didn't drag
-            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-                // Check if this was a click (no significant drag distance)
-                ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
-                float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
-                
-                // Only select if drag distance was minimal (treat as click)
-                if (dragDistance < 5.0f) { // 5 pixel tolerance
-                    selectFileNode(nodeHandle);
-                }
-                
-                // Reset drag delta for next interaction
-                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+            // Common delete option for all files
+            if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
+                if (node->deletable()) queueFNodeForDeletion(nodeHandle);
             }
             
-            // Select file on right-click (immediate selection before context menu)
-            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-                selectFileNode(nodeHandle);
-            }
-            
-            // Drag source for other files
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                // Set this file as held when dragging begins
-                holdFileNode(nodeHandle);
-                ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
-                ImGui::Text("Moving file: %s", node->name.c_str());
-                ImGui::EndDragDropSource();
-            }
-            
-            // Context menu for other file types - direct manipulation
-            if (ImGui::BeginPopupContextItem()) {
-                ImGui::Text("%s", node->name.c_str());
-                ImGui::Separator();
-                
-                if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
-                    if (node->deletable()) pendingFNodeDeletions.push_back(nodeHandle);
-                }
-                ImGui::EndPopup();
-            }
-            
-            ImGui::PopStyleColor(3);
+            ImGui::EndPopup();
         }
+        
+        ImGui::PopStyleColor(3);
     }
     
     // Clear held handle if no drag operation is active
@@ -1075,7 +1046,7 @@ void TinyProject::renderFileDialog() {
         
         // Action buttons
         bool canLoad = !g_fileDialog.selectedFile.empty() && 
-                      g_fileDialog.isModelFile(std::filesystem::path(g_fileDialog.selectedFile));
+                        g_fileDialog.isModelFile(std::filesystem::path(g_fileDialog.selectedFile));
         
         if (ImGui::Button("Load", ImVec2(120, 0))) {
             if (canLoad) {
@@ -1124,10 +1095,6 @@ void TinyProject::loadModelFromPath(const std::string& filePath, TinyHandle targ
             
             // Also expand the parent chain of the target folder to ensure it's visible
             expandFNodeParentChain(targetFolder);
-            
-            printf("Successfully loaded model: %s\n", filePath.c_str());
-        } else {
-            printf("Failed to add model to project: %s\n", filePath.c_str());
         }
         
     } catch (const std::exception& e) {

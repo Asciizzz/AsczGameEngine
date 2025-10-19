@@ -542,8 +542,13 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         }
     }
 
-    if (hasRigging) mesh.setVertices(allVertices);
-    else mesh.setVertices(TinyVertexRig::makeStatic(allVertices));
+    // ==================== IMPORTANT ====================
+    // For now, we always load as rigged vertices.
+
+    mesh.setVertices(allVertices);
+
+    // if (hasRigging) mesh.setVertices(allVertices);
+    // else mesh.setVertices(TinyVertexRig::makeStatic(allVertices));
 }
 
 void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
@@ -947,7 +952,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
     }
 
     // Convert OBJ materials to TinyMaterials
-    std::cout << "Loading " << objMaterials.size() << " materials from OBJ" << std::endl;
     result.materials.reserve(objMaterials.size());
     for (size_t matIndex = 0; matIndex < objMaterials.size(); matIndex++) {
         const auto& objMat = objMaterials[matIndex];
@@ -956,12 +960,8 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
             sanitizeAsciiz("Material", "material", matIndex) : 
             sanitizeAsciiz(objMat.name, "material", matIndex);
 
-        std::cout << "Processing material " << matIndex << ": " << material.name << std::endl;
-
         // Load diffuse texture if present
         if (!objMat.diffuse_texname.empty()) {
-            std::cout << "  Found diffuse texture: " << objMat.diffuse_texname << std::endl;
-            
             // Construct full texture path
             std::string texturePath = objMat.diffuse_texname;
             if (texturePath.find("/") == std::string::npos && texturePath.find("\\") == std::string::npos) {
@@ -971,8 +971,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
                     texturePath = filePath.substr(0, lastSlash + 1) + texturePath;
                 }
             }
-            
-            std::cout << "  Loading texture from: " << texturePath << std::endl;
+
             TinyTexture texture = loadTexture(texturePath);
             if (texture.width > 0 && texture.height > 0) {
                 // Extract just the filename for the texture name
@@ -989,12 +988,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
                 result.textures.push_back(std::move(texture));
                 uint32_t textureIndex = static_cast<uint32_t>(result.textures.size() - 1);
                 material.setAlbedoTexture(textureIndex, textureHash);
-                std::cout << "  Texture loaded successfully: " << width << "x" << height << std::endl;
-            } else {
-                std::cout << "  Failed to load texture!" << std::endl;
             }
-        } else {
-            std::cout << "  No diffuse texture specified" << std::endl;
         }
 
         result.materials.push_back(std::move(material));
@@ -1002,8 +996,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
 
     // Group faces by material to create separate meshes per material
     std::map<int, std::vector<size_t>> materialToFaces; // material_id -> face indices
-    
-    std::cout << "Processing " << shapes.size() << " shapes to group faces by material..." << std::endl;
+
     for (const auto& shape : shapes) {
         const auto& mesh = shape.mesh;
         
@@ -1013,11 +1006,6 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
             materialToFaces[materialId].push_back(faceIndex);
             faceIndex += mesh.num_face_vertices[i]; // Move to next face
         }
-    }
-
-    std::cout << "Found " << materialToFaces.size() << " material groups:" << std::endl;
-    for (const auto& [matId, faces] : materialToFaces) {
-        std::cout << "  Material " << matId << ": " << faces.size() << " faces" << std::endl;
     }
 
     // Create meshes for each material
