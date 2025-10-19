@@ -50,6 +50,40 @@ file(GLOB_RECURSE SRC_FILES
     include/.ext/imgui/backends/imgui_impl_sdl2.cpp
     include/.ext/imgui/backends/imgui_impl_vulkan.cpp
 
+    # Lua source files (excluding lua.c and luac.c which contain main functions)
+    include/.ext/luacpp/lapi.c
+    include/.ext/luacpp/lauxlib.c
+    include/.ext/luacpp/lbaselib.c
+    include/.ext/luacpp/lcode.c
+    include/.ext/luacpp/lcorolib.c
+    include/.ext/luacpp/lctype.c
+    include/.ext/luacpp/ldblib.c
+    include/.ext/luacpp/ldebug.c
+    include/.ext/luacpp/ldo.c
+    include/.ext/luacpp/ldump.c
+    include/.ext/luacpp/lfunc.c
+    include/.ext/luacpp/lgc.c
+    include/.ext/luacpp/linit.c
+    include/.ext/luacpp/liolib.c
+    include/.ext/luacpp/llex.c
+    include/.ext/luacpp/lmathlib.c
+    include/.ext/luacpp/lmem.c
+    include/.ext/luacpp/loadlib.c
+    include/.ext/luacpp/lobject.c
+    include/.ext/luacpp/lopcodes.c
+    include/.ext/luacpp/loslib.c
+    include/.ext/luacpp/lparser.c
+    include/.ext/luacpp/lstate.c
+    include/.ext/luacpp/lstring.c
+    include/.ext/luacpp/lstrlib.c
+    include/.ext/luacpp/ltable.c
+    include/.ext/luacpp/ltablib.c
+    include/.ext/luacpp/ltm.c
+    include/.ext/luacpp/lundump.c
+    include/.ext/luacpp/lutf8lib.c
+    include/.ext/luacpp/lvm.c
+    include/.ext/luacpp/lzio.c
+
     src/TinySystem/TinyChrono.cpp
     src/TinySystem/TinyWindow.cpp
     src/TinySystem/Application.cpp
@@ -98,6 +132,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/.ext/tiny3d
     ${CMAKE_SOURCE_DIR}/include/.ext/Helpers
     ${CMAKE_SOURCE_DIR}/include/.ext/imgui
+    ${CMAKE_SOURCE_DIR}/include/.ext/luacpp
 
     ${CMAKE_SOURCE_DIR}/include/TinySystem
     ${CMAKE_SOURCE_DIR}/include/TinyVK
