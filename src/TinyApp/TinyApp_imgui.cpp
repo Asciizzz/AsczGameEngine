@@ -292,7 +292,7 @@ void TinyApp::renderSceneNodeInspector() {
         return;
     }
 
-    const TinyRNode* selectedNode = activeScene->nodes.get(selectedSceneNodeHandle);
+    const TinyNode* selectedNode = activeScene->nodes.get(selectedSceneNodeHandle);
     if (!selectedNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
         project->selectSceneNode(project->getRootNodeHandle());
@@ -331,7 +331,7 @@ void TinyApp::renderSceneNodeInspector() {
     
     // Show parent and children count
     if (selectedNode->parentHandle.valid()) {
-        const TinyRNode* parentNode = activeScene->nodes.get(selectedNode->parentHandle);
+        const TinyNode* parentNode = activeScene->nodes.get(selectedNode->parentHandle);
         if (parentNode) {
             ImGui::Text("Parent: %s", parentNode->name.c_str());
         }
@@ -356,7 +356,7 @@ void TinyApp::renderSceneNodeInspector() {
     
     ImGui::BeginChild("ComponentsScrollable", ImVec2(0, remainingHeight), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     
-    TinyRNode* mutableNode = const_cast<TinyRNode*>(selectedNode);
+    TinyNode* mutableNode = const_cast<TinyNode*>(selectedNode);
     
     // Helper function to render a component with consistent styling
     auto renderComponent = [&](const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onAction = nullptr) {
@@ -460,7 +460,7 @@ void TinyApp::renderSceneNodeInspector() {
             if (!validDecomposition) {
                 ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
                 if (ImGui::Button("Reset Transform")) {
-                    TinyRNode* mutableSelectedNode = const_cast<TinyRNode*>(selectedNode);
+                    TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = glm::mat4(1.0f);
                     if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                 }
@@ -475,7 +475,7 @@ void TinyApp::renderSceneNodeInspector() {
             if (!isValidVec3(translation) || !isValidVec3(scale)) {
                 ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
                 if (ImGui::Button("Reset Transform")) {
-                    TinyRNode* mutableSelectedNode = const_cast<TinyRNode*>(selectedNode);
+                    TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = glm::mat4(1.0f);
                     if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                 }
@@ -541,7 +541,7 @@ void TinyApp::renderSceneNodeInspector() {
                     glm::mat4 rotateMat = glm::mat4_cast(newRotQuat);
                     glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
                     
-                    TinyRNode* mutableSelectedNode = const_cast<TinyRNode*>(selectedNode);
+                    TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = translateMat * rotateMat * scaleMat;
                     
                     if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
@@ -593,7 +593,7 @@ void TinyApp::renderSceneNodeInspector() {
             if (meshComp->skeleNodeHandle.valid()) {
                 TinyRScene* activeScene = project->getActiveScene();
                 if (activeScene) {
-                    const TinyRNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
+                    const TinyNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
                         ImGui::SameLine();
                         ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
@@ -636,7 +636,7 @@ void TinyApp::renderSceneNodeInspector() {
             if (boneComp->skeleNodeHandle.valid()) {
                 TinyRScene* activeScene = project->getActiveScene();
                 if (activeScene) {
-                    const TinyRNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
+                    const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
                         ImGui::SameLine();
                         ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", skeleNode->name.c_str());
@@ -658,12 +658,12 @@ void TinyApp::renderSceneNodeInspector() {
             if (boneComp->skeleNodeHandle.valid()) {
                 TinyRScene* activeScene = project->getActiveScene();
                 if (activeScene) {
-                    const TinyRNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
+                    const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
                         const TinyNode::Skeleton* skeleComp = skeleNode->get<TinyNode::Skeleton>();
                         if (skeleComp && skeleComp->skeleHandle.valid()) {
                             const TinyRegistry& registry = project->registryRef();
-                            const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(skeleComp->skeleHandle);
+                            const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp->skeleHandle);
                             if (skeleton) {
                                 maxBoneIndex = static_cast<int>(skeleton->bones.size()) - 1;
                             }
@@ -739,7 +739,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Show skeleton information if valid
             if (skeleComp->skeleHandle.valid()) {
                 const TinyRegistry& registry = project->registryRef();
-                const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(skeleComp->skeleHandle);
+                const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp->skeleHandle);
                 if (skeleton) {
                     ImGui::SameLine();
                     ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
@@ -905,7 +905,7 @@ void TinyApp::renderFileSystemInspector() {
         } else if (selectedFNode->tHandle.isType<TinyMesh>()) {
             fileType = "Mesh";
             ImGui::Text("Type: %s", fileType.c_str());
-        } else if (selectedFNode->tHandle.isType<TinyRSkeleton>()) {
+        } else if (selectedFNode->tHandle.isType<TinySkeleton>()) {
             fileType = "Skeleton";
             ImGui::Text("Type: %s", fileType.c_str());
         } else {
@@ -979,12 +979,12 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             displayText = mesh ? mesh->name : "Unknown Mesh";
         } else if (strcmp(targetType, "Skeleton") == 0) {
             const TinyRegistry& registry = project->registryRef();
-            const TinyRSkeleton* skeleton = registry.get<TinyRSkeleton>(handle);
+            const TinySkeleton* skeleton = registry.get<TinySkeleton>(handle);
             displayText = skeleton ? skeleton->name : "Unknown Skeleton";
         } else if (strcmp(targetType, "SkeletonNode") == 0) {
             TinyRScene* activeScene = project->getActiveScene();
             if (activeScene) {
-                const TinyRNode* node = activeScene->nodes.get(handle);
+                const TinyNode* node = activeScene->nodes.get(handle);
                 displayText = node ? node->name : "Unknown Node";
             } else {
                 displayText = "No Node";
@@ -1051,7 +1051,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                 TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
                 const TinyFS::Node* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
-                if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRSkeleton>()) {
+                if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinySkeleton>()) {
                     handle = fileNode->tHandle.handle; // Use registry handle
                     modified = true;
                 }
@@ -1062,7 +1062,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
                 TinyHandle nodeHandle = *(const TinyHandle*)payload->Data;
                 TinyRScene* activeScene = project->getActiveScene();
                 if (activeScene) {
-                    const TinyRNode* node = activeScene->nodes.get(nodeHandle);
+                    const TinyNode* node = activeScene->nodes.get(nodeHandle);
                     if (node && node->hasComponent<TinyNode::Skeleton>()) {
                         handle = nodeHandle; // Use node handle directly
                         modified = true;

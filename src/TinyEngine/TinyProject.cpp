@@ -194,11 +194,9 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
 
     // Import skeletons to registry
     std::vector<TinyHandle> glbSkeleRHandle;
-    for (const auto& skeleton : model.skeletons) {
-        TinyRSkeleton rSkeleton = TinyRSkeleton(skeleton);
-
+    for (auto& skeleton : model.skeletons) {
         // TinyHandle handle = registry->add(rSkeleton).handle;
-        TinyHandle fnHandle = tinyFS->addFile(fnSkeleFolder, "Skeleton", &rSkeleton);
+        TinyHandle fnHandle = tinyFS->addFile(fnSkeleFolder, "Skeleton", std::move(&skeleton));
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
         glbSkeleRHandle.push_back(tHandle.handle);
@@ -213,22 +211,22 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
     nodeHandles.reserve(model.nodes.size());
 
     for (const auto& node : model.nodes) {
-        TinyRNode rtNode = node; // Copy node data
+        TinyNode rtNode = node; // Copy node data
 
         // Remap MeshRender component's mesh reference
         if (rtNode.hasType(NTypes::MeshRender)) {
-            auto* meshRender = rtNode.get<TinyRNode::MeshRender>();
+            auto* meshRender = rtNode.get<TinyNode::MeshRender>();
             if (meshRender) meshRender->meshHandle = glbMeshRHandle[meshRender->meshHandle.index];
         }
 
         // Remap Skeleton component's registry reference
         if (rtNode.hasType(NTypes::Skeleton)) {
-            auto* skeleton = rtNode.get<TinyRNode::Skeleton>();
+            auto* skeleton = rtNode.get<TinyNode::Skeleton>();
             if (skeleton) {
                 skeleton->skeleHandle = glbSkeleRHandle[skeleton->skeleHandle.index];
 
                 // Construct the final bone transforms array (set to identity, resolve through skeleton later)
-                const auto& skeleData = registryRef().get<TinyRSkeleton>(skeleton->skeleHandle);
+                const auto& skeleData = registryRef().get<TinySkeleton>(skeleton->skeleHandle);
                 if (skeleData) skeleton->boneTransformsFinal.resize(skeleData->bones.size(), glm::mat4(1.0f));
             }
         }
@@ -245,7 +243,7 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
 
     // Second pass: Remap parent/child relationships using actual handles
     for (size_t i = 0; i < model.nodes.size(); ++i) {
-        TinyRNode* rtNode = scene.nodes.get(nodeHandles[i]);
+        TinyNode* rtNode = scene.nodes.get(nodeHandles[i]);
         if (!rtNode) continue;
 
         const TinyNode& originalNode = model.nodes[i];
@@ -321,7 +319,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     // Use root node if no valid handle provided
     if (!nodeHandle.valid()) nodeHandle = activeScene->rootHandle;
 
-    const TinyRNode* node = activeScene->nodes.get(nodeHandle);
+    const TinyNode* node = activeScene->nodes.get(nodeHandle);
     if (!node) return;
     
     // Create a unique ID for this node
@@ -562,8 +560,8 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         // Create a sorted copy of children handles by node name
         std::vector<TinyHandle> sortedChildren(node->childrenHandles.begin(), node->childrenHandles.end());
         std::sort(sortedChildren.begin(), sortedChildren.end(), [activeScene](const TinyHandle& a, const TinyHandle& b) {
-            const TinyRNode* nodeA = activeScene->nodes.get(a);
-            const TinyRNode* nodeB = activeScene->nodes.get(b);
+            const TinyNode* nodeA = activeScene->nodes.get(a);
+            const TinyNode* nodeB = activeScene->nodes.get(b);
             if (!nodeA || !nodeB) return false;
             return nodeA->name < nodeB->name;
         });
@@ -585,7 +583,7 @@ void TinyProject::expandParentChain(TinyHandle nodeHandle) {
     if (!activeScene) return;
     
     // Get the target node
-    const TinyRNode* targetNode = activeScene->nodes.get(nodeHandle);
+    const TinyNode* targetNode = activeScene->nodes.get(nodeHandle);
     if (!targetNode) return;
     
     // Walk up the parent chain and expand all parents
@@ -593,7 +591,7 @@ void TinyProject::expandParentChain(TinyHandle nodeHandle) {
     while (currentHandle.valid()) {
         expandedNodes.insert(currentHandle);
         
-        const TinyRNode* currentNode = activeScene->nodes.get(currentHandle);
+        const TinyNode* currentNode = activeScene->nodes.get(currentHandle);
         if (!currentNode) break;
         
         currentHandle = currentNode->parentHandle;

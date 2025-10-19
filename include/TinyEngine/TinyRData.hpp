@@ -25,28 +25,9 @@ struct TinyRMaterial {
     void setNrmlTexIndex(uint32_t index) { texIndices.y = index; }
 };
 
-struct TinyRSkeleton : public TinySkeleton {
-    // Additional runtime data can be added here if needed
-    TinyRSkeleton() = default;
-    explicit TinyRSkeleton(const TinySkeleton& skeleton) : TinySkeleton(skeleton) {}
-
-    void set(const TinySkeleton& skeleton) {
-        TinySkeleton::operator=(skeleton);
-    }
-    
-    TinyRSkeleton(const TinyRSkeleton&) = delete;
-    TinyRSkeleton& operator=(const TinyRSkeleton&) = delete;
-
-    TinyRSkeleton(TinyRSkeleton&&) = default;
-    TinyRSkeleton& operator=(TinyRSkeleton&&) = default;
-};
-
-using TinyRNode = TinyNode; // Alias for name consistency
-
-
 struct TinyRScene {
     std::string name;
-    TinyPool<TinyRNode> nodes;
+    TinyPool<TinyNode> nodes;
     TinyHandle rootHandle;
 
     TinyRScene() = default;
@@ -55,14 +36,14 @@ struct TinyRScene {
 
     TinyHandle addRoot(const std::string& nodeName = "Root");
     TinyHandle addNode(const std::string& nodeName = "New Node", TinyHandle parentHandle = TinyHandle());
-    TinyHandle addNode(const TinyRNode& nodeData, TinyHandle parentHandle = TinyHandle());
+    TinyHandle addNode(const TinyNode& nodeData, TinyHandle parentHandle = TinyHandle());
 
     void addScene(const TinyRScene& scene, TinyHandle parentHandle = TinyHandle());
     bool removeNode(TinyHandle nodeHandle, bool recursive = true);
     bool flattenNode(TinyHandle nodeHandle);
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
     
-    TinyRNode* getNode(TinyHandle nodeHandle);
-    const TinyRNode* getNode(TinyHandle nodeHandle) const;
+    TinyNode* getNode(TinyHandle nodeHandle);
+    const TinyNode* getNode(TinyHandle nodeHandle) const;
     bool renameNode(TinyHandle nodeHandle, const std::string& newName);
 };
