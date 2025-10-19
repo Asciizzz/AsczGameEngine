@@ -8,6 +8,7 @@
 #include <iostream>
 #include <type_traits>
 #include <sstream>
+#include <cctype>
 
 class TinyFS {
 public:
@@ -28,10 +29,22 @@ public:
         bool deletable() const { return cfg.deletable; }
 
         bool isFile() const { return type == Type::File; }
+        bool isFolder() const { return type == Type::Folder; }
+
         bool hasData() const { return tHandle.valid(); }
+
+        bool hasChild(TinyHandle childHandle) const {
+            return std::find(children.begin(), children.end(), childHandle) != children.end();
+        }
+
+        bool addChild(TinyHandle childHandle) {
+            if (hasChild(childHandle)) return false;
+            children.push_back(childHandle);
+            return true;
+        }
     };
 
-    TinyFS() {
+    TinyFS(bool caseSensitive = false) : caseSensitive_(caseSensitive) {
         Node rootNode;
         rootNode.name = ".root";
         rootNode.parent = TinyHandle();
@@ -45,6 +58,10 @@ public:
     // ---------- Basic access ----------
     TinyHandle rootHandle() const { return rootHandle_; }
     TinyHandle regHandle() const { return regHandle_; }
+
+    // Case sensitivity control
+    bool isCaseSensitive() const { return caseSensitive_; }
+    void setCaseSensitive(bool caseSensitive) { caseSensitive_ = caseSensitive; }
 
     // Optional: expose registry for read-only access
     const TinyRegistry& registryRef() const { return registry; }
@@ -95,15 +112,15 @@ public:
     }
 
     // ---------- Move with cycle prevention ----------
-    void moveFNode(TinyHandle nodeHandle, TinyHandle newParent) {
-        if (!fnodes.isValid(nodeHandle) || !fnodes.isValid(newParent)) return;
-        if (nodeHandle == newParent) return;
+    bool moveFNode(TinyHandle nodeHandle, TinyHandle newParent) {
+        if (nodeHandle == newParent) return false; // Move to self
 
         // prevent moving under descendant (no cycles)
-        if (isAncestor(nodeHandle, newParent)) return;
+        Node* parent = fnodes.get(newParent);
+        if (parent && parent->hasChild(nodeHandle)) return false;
 
         Node* node = fnodes.get(nodeHandle);
-        if (!node) return;
+        if (!node || hasRepeatName(newParent, node->name)) return false;
 
         // remove from old parent children vector
         if (fnodes.isValid(node->parent)) {
@@ -118,12 +135,14 @@ public:
         node->parent = newParent;
         Node* newP = fnodes.get(newParent);
         if (newP) newP->children.push_back(nodeHandle);
+
+        return true;
     }
 
     // ---------- Safe recursive remove ----------
-    void removeFNode(TinyHandle handle, bool recursive = true) {
+    bool removeFNode(TinyHandle handle, bool recursive = true) {
         Node* node = fnodes.get(handle);
-        if (!node || !node->deletable()) return;
+        if (!node || !node->deletable()) return false;
 
         // Public interface - use the node's parent as the rescue parent
         TinyHandle rescueParent = node->parent;
@@ -131,11 +150,11 @@ public:
             rescueParent = rootHandle_;
         }
 
-        removeFNodeRecursive(handle, rescueParent, recursive);
+        return removeFNodeRecursive(handle, rescueParent, recursive);
     }
 
-    void flattenFNode(TinyHandle handle) {
-        removeFNode(handle, false);
+    bool flattenFNode(TinyHandle handle) {
+        return removeFNode(handle, false);
     }
 
     // ---------- Path resolution ----------
@@ -164,7 +183,7 @@ public:
     template<typename T>
     T* getFileData(TinyHandle fileHandle) {
         Node* node = fnodes.get(fileHandle);
-        if (!node || !node->hasMeta()) return nullptr;
+        if (!node || !node->hasData()) return nullptr;
 
         return registry.get<T>(node->tHandle);
     }
@@ -174,15 +193,89 @@ public:
         return node ? node->tHandle : TypeHandle();
     }
 
-    // Access to file system nodes (needed for UI)
+    // Access to file system nodes (no non-const to prevent mutation)
     const TinyPool<Node>& getFNodes() const { return fnodes; }
-    // TinyPool<Node>& getFNodes() { return fnodes; } // No non-const access to prevent external mutations
+
+    template<typename T>
+    void setExt(const std::string& ext) {
+        typeHashToExtension[typeid(T).hash_code()] = ext;
+    }
+
+    template<typename T>
+    std::string getExt() const {
+        auto it = typeHashToExtension.find(typeid(T).hash_code());
+        return (it != typeHashToExtension.end()) ? it->second : "afile";
+    }
+
+    std::string getFileExt(TinyHandle fileHandle) const {
+        const Node* node = fnodes.get(fileHandle);
+        if (!node || !node->isFile()) return std::string();
+
+        return typeHashToExtension.count(node->tHandle.typeHash) ?
+            typeHashToExtension.at(node->tHandle.typeHash) : std::string();
+    }
 
 private:
     TinyPool<Node> fnodes;
     TinyRegistry registry;
     TinyHandle rootHandle_{};
     TinyHandle regHandle_{};
+    bool caseSensitive_{false}; // Global case sensitivity setting
+
+    // Type to .extension map
+    UnorderedMap<size_t, std::string> typeHashToExtension;
+
+    bool namesEqual(const std::string& a, const std::string& b) const {
+        if (caseSensitive_) {
+            return a == b;
+        } else {
+            // Case-insensitive comparison
+            if (a.size() != b.size()) return false;
+            return std::equal(a.begin(), a.end(), b.begin(), [](char c1, char c2) {
+                return std::tolower(c1) == std::tolower(c2);
+            });
+        }
+    }
+
+    bool hasRepeatName(TinyHandle parentHandle, const std::string& name) const {
+        if (!fnodes.isValid(parentHandle)) return false;
+
+        const Node* parent = fnodes.get(parentHandle);
+        if (!parent) return false;
+
+        for (const TinyHandle& childHandle : parent->children) {
+            const Node* child = fnodes.get(childHandle);
+            if (!child) continue;
+
+            if (namesEqual(child->name, name)) return true;
+        }
+
+        return false;
+    }
+
+    std::string resolveRepeatName(TinyHandle parentHandle, const std::string& baseName) const {
+        if (!fnodes.isValid(parentHandle)) return baseName;
+
+        // Check if parent has children with the same name
+        const Node* parent = fnodes.get(parentHandle);
+        if (!parent) return baseName;
+
+        std::string resolvedName = baseName;
+        size_t maxNumberedIndex = 0;
+
+        for (const TinyHandle& childHandle : parent->children) {
+            const Node* child = fnodes.get(childHandle);
+            if (!child) continue;
+
+            // Check if name matches baseName exactly
+            if (namesEqual(child->name, resolvedName)) {
+                maxNumberedIndex += 1;
+                resolvedName = baseName + " (" + std::to_string(maxNumberedIndex) + ")";
+            }
+        }
+
+        return resolvedName;
+    }
 
     // Implementation function: templated but uses if constexpr to allow T=void
     template<typename T>
@@ -190,7 +283,7 @@ private:
         if (!fnodes.isValid(parentHandle)) return TinyHandle(); // invalid parent
 
         Node child;
-        child.name = name;
+        child.name = resolveRepeatName(parentHandle, name);
         child.parent = parentHandle;
         child.cfg = cfg;
 
@@ -205,15 +298,15 @@ private:
         // parent might have been invalidated in a multithreaded scenario; guard
         if (fnodes.isValid(parentHandle)) {
             Node* parent = fnodes.get(parentHandle);
-            if (parent) parent->children.push_back(h);
+            if (parent) parent->addChild(h);
         }
         return h;
     }
 
     // Internal recursive function that tracks the original parent for non-deletable rescues
-    void removeFNodeRecursive(TinyHandle handle, TinyHandle rescueParent, bool recursive) {
+    bool removeFNodeRecursive(TinyHandle handle, TinyHandle rescueParent, bool recursive) {
         Node* node = fnodes.get(handle);
-        if (!node) return;
+        if (!node) return false;
 
         // Note: We can assume node is deletable since non-deletable nodes are moved, not recursed
 
@@ -249,20 +342,7 @@ private:
 
         // finally remove node from pool
         fnodes.remove(handle);
-    }
-
-    // helper: check if maybeAncestor is ancestor of maybeDescendant
-    bool isAncestor(TinyHandle maybeAncestor, TinyHandle maybeDescendant) const {
-        if (!fnodes.isValid(maybeAncestor) || !fnodes.isValid(maybeDescendant)) return false;
-        TinyHandle cur = maybeDescendant;
-        while (fnodes.isValid(cur)) {
-            if (cur == maybeAncestor) return true;
-            if (cur == rootHandle_) break;
-            const Node* n = fnodes.get(cur);
-            if (!n) break;
-            cur = n->parent;
-        }
-        return false;
+        return true;
     }
 
 };

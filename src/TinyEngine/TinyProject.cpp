@@ -88,6 +88,13 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TinyHandle registryHandle = tinyFS->addFolder(".registry");
     tinyFS->setRegistryHandle(registryHandle);
 
+    tinyFS->setExt<TinyScene>("ascn");
+    tinyFS->setExt<TinyTexture>("atex");
+    tinyFS->setExt<TinyRMaterial>("amat"); // Soon to be replaced with TinyMaterial
+    tinyFS->setExt<TinyMesh>("amsh");
+    tinyFS->setExt<TinySkeleton>("askl");
+    tinyFS->setExt<TinyAnimation>("anim");
+
     // Create Main Scene (the active scene with a single root node)
     TinyScene mainScene;
     mainScene.name = "Main Scene";
@@ -143,7 +150,6 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
     for (auto& texture : model.textures) {
         texture.vkCreate(deviceVK);
 
-        // TinyHandle handle = registry->add(textureData).handle;
         TinyHandle fnHandle = tinyFS->addFile(fnTexFolder, texture.name, std::move(&texture));
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
@@ -154,7 +160,7 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
     std::vector<TinyHandle> glmMatRHandle;
     for (const auto& material : model.materials) {
         TinyRMaterial correctMat;
-        correctMat.name = material.name; // Copy material name
+        correctMat.name = material.name;
 
         // Remap the material's texture indices
         uint32_t localAlbIndex = material.localAlbTexture;
@@ -165,8 +171,7 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
         bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexRHandle.size());
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRHandle[localNrmlIndex].index : 0);
 
-        // TinyHandle handle = registry->add(correctMat).handle;
-        TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, material.name, &correctMat);
+        TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, correctMat.name, &correctMat);
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
         glmMatRHandle.push_back(tHandle.handle);
@@ -195,7 +200,6 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
     // Import skeletons to registry
     std::vector<TinyHandle> glbSkeleRHandle;
     for (auto& skeleton : model.skeletons) {
-        // TinyHandle handle = registry->add(rSkeleton).handle;
         TinyHandle fnHandle = tinyFS->addFile(fnSkeleFolder, skeleton.name, std::move(&skeleton));
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
@@ -672,7 +676,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
     bool hasChildren = !node->children.empty();
     bool isSelected = (selectedHandle.isFile() && selectedHandle.handle.index == nodeHandle.index && selectedHandle.handle.version == nodeHandle.version);
     
-    if (node->type == TinyFS::Node::Type::Folder) {
+    if (node->isFolder()) {
         // Display root folder as ".root" instead of full path
         std::string displayName = (nodeHandle == fs.rootHandle()) ? ".root" : node->name;
         
@@ -825,11 +829,23 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 if (!nodeA || !nodeB) return false;
                 
                 // Folders come before files
-                if (nodeA->type != nodeB->type) {
-                    return nodeA->type == TinyFS::Node::Type::Folder;
+                if (nodeA->type != nodeB->type) return nodeA->isFolder();
+                
+                // Within files, first sort by extension, then by name
+                if (nodeA->isFile() && nodeB->isFile()) {
+                    std::string extA = fs.getFileExt(a);
+                    std::string extB = fs.getFileExt(b);
+                    
+                    // If extensions are different, sort by extension
+                    if (extA != extB) {
+                        return extA < extB;
+                    }
+                    
+                    // If extensions are same (or both empty), sort by name
+                    return nodeA->name < nodeB->name;
                 }
                 
-                // Within same type, sort by name
+                // For folders or other types, just sort by name
                 return nodeA->name < nodeB->name;
             });
             
@@ -839,35 +855,35 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             ImGui::TreePop();
         }
         
-    } else if (node->type == TinyFS::Node::Type::File) {
+    } else if (node->isFile()) {
         // General file handling - completely generic
         std::string fileName = node->name;
-        
-        // Type-specific visual styling before rendering
-        if (node->tHandle.isType<TinyScene>()) {
-            // Scene files: Check for active scene green backdrop
-            TinyHandle sceneRegistryHandle = node->tHandle.handle;
-            bool isActiveScene = (getActiveSceneHandle() == sceneRegistryHandle);
-            
-            if (isActiveScene) {
-                ImVec2 itemSize = ImGui::CalcTextSize(fileName.c_str());
-                ImVec2 cursorPos = ImGui::GetCursorScreenPos();
-                ImVec2 itemMax = ImVec2(cursorPos.x + ImGui::GetContentRegionAvail().x, cursorPos.y + itemSize.y);
-                ImGui::GetWindowDrawList()->AddRectFilled(cursorPos, itemMax, IM_COL32(50, 200, 50, 100)); // green backdrop
-            }
-        }
-        // Add other file type styling here as needed
-        // else if (node->tHandle.isType<TinyMesh>()) {
-        //     // Mesh files: maybe blue tint?
-        // }
-        
+        std::string fileExt = fs.getFileExt(nodeHandle);
+
         // Set consistent colors for all files
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray text
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background
         
-        // Render file item (selectable for interaction but simple)
-        ImGui::Selectable(fileName.c_str(), isSelected);
+        // Create a selectable item for the full filename + extension
+        std::string fullDisplayName = fileExt.empty() ? fileName : (fileName + "." + fileExt);
+        ImGui::Selectable(("##file_" + std::to_string(nodeHandle.index)).c_str(), isSelected);
+        
+        // Render the filename and extension with different colors on top of the selectable
+        ImGui::SameLine(0, 0); // No spacing, start from beginning of selectable
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemInnerSpacing.x); // Add some padding
+        
+        // Render filename in white
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f)); // White text
+        ImGui::Text("%s", fileName.c_str());
+        ImGui::PopStyleColor();
+        
+        // Render extension in gray if it exists
+        if (!fileExt.empty()) {
+            ImGui::SameLine(0, 0); // No spacing between filename and extension
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.35f, 0.35f, 1.0f)); // Even grayer text
+            ImGui::Text(".%s", fileExt.c_str());
+            ImGui::PopStyleColor();
+        }
         
         // Generic selection handling
         if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
@@ -946,7 +962,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             ImGui::EndPopup();
         }
         
-        ImGui::PopStyleColor(3);
+        ImGui::PopStyleColor(2);
     }
     
     // Clear held handle if no drag operation is active
