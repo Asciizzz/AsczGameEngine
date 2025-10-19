@@ -90,6 +90,7 @@
         "valarray": "cpp",
         "*.rh": "cpp",
         "cfloat": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "any": "cpp"
     }
 }

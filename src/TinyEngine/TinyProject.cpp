@@ -74,7 +74,7 @@ struct FileDialog {
     bool isModelFile(const std::filesystem::path& path) {
         auto ext = path.extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-        return ext == ".glb" || ext == ".gltf";
+        return ext == ".glb" || ext == ".gltf" || ext == ".obj";
     }
 };
 
@@ -105,7 +105,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     selectedHandle = SelectHandle(mainScene.rootHandle, SelectHandle::Type::Scene);
 
     // Create camera and global UBO manager
-    tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 100.0f);
+    tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
     tinyGlobal = MakeUnique<TinyGlobal>(2);
     tinyGlobal->createVkResources(deviceVK);
 
@@ -481,23 +481,6 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         ImGui::Text("%s", node->name.c_str());
         ImGui::Separator();
         
-        // Show component types in context menu
-        std::string typeLabel = "";
-        if (node->hasType(TinyNode::Types::MeshRender)) {
-            typeLabel += "[Mesh] ";
-        }
-        if (node->hasType(TinyNode::Types::BoneAttach)) {
-            typeLabel += "[BoneAttach] ";
-        }
-        if (node->hasType(TinyNode::Types::Skeleton)) {
-            typeLabel += "[Skeleton] ";
-        }
-        
-        if (!typeLabel.empty()) {
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s", typeLabel.c_str());
-            ImGui::Separator();
-        }
-        
         if (ImGui::MenuItem("Add Child")) {
             TinyScene* scene = getActiveScene();
             if (scene) {
@@ -546,6 +529,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 
         typeLabel = typeLabel.empty() ? "[None]" : typeLabel;
         
+        ImGui::Text("%s", node->name.c_str());
         ImGui::Text("Types: %s", typeLabel.c_str());
 
         if (!node->childrenHandles.empty()) {

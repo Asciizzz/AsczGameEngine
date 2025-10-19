@@ -26,6 +26,7 @@ struct TinyVertexLayout {
 
 
 
+struct TinyVertexRig; // Forward declaration
 struct TinyVertexStatic {
     // Compact 48 byte data layout
     // Note: 0 handedness for no normal map
@@ -54,6 +55,10 @@ struct TinyVertexStatic {
     static TinyVertexLayout getLayout();
     static VkVertexInputBindingDescription getBindingDescription();
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+
+    // Normally only for debugging
+    static TinyVertexRig makeRigged(const TinyVertexStatic& staticVertex);
+    static std::vector<TinyVertexRig> makeRigged(const std::vector<TinyVertexStatic>& staticVertices);
 };
 
 struct TinyVertexRig {
@@ -86,6 +91,6 @@ struct TinyVertexRig {
     static VkVertexInputBindingDescription getBindingDescription();
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 
-    static TinyVertexStatic makeStaticVertex(const TinyVertexRig& rigVertex);
-    static std::vector<TinyVertexStatic> makeStaticVertices(const std::vector<TinyVertexRig>& rigVertices);
+    static TinyVertexStatic makeStatic(const TinyVertexRig& rigVertex);
+    static std::vector<TinyVertexStatic> makeStatic(const std::vector<TinyVertexRig>& rigVertices);
 };

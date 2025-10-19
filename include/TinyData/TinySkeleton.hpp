@@ -18,6 +18,14 @@ struct TinyBone {
 };
 
 struct TinySkeleton {
+    TinySkeleton() = default;
+
+    TinySkeleton(const TinySkeleton&) = delete;
+    TinySkeleton& operator=(const TinySkeleton&) = delete;
+
+    TinySkeleton(TinySkeleton&&) = default;
+    TinySkeleton& operator=(TinySkeleton&&) = default;
+
     std::string name;
     std::vector<TinyBone> bones;
 

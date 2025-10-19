@@ -12,7 +12,7 @@ union TinyHandle {
     // Full pack representation
     uint64_t value;
 
-    TinyHandle() : value(UINT64_MAX) {}
+    constexpr TinyHandle() : value(UINT64_MAX) {}
     TinyHandle(uint32_t index, uint32_t version = 0) {
         *this = make(index, version);
     }
@@ -31,12 +31,12 @@ union TinyHandle {
     }
 
     // Value operators
-    bool operator==(const TinyHandle& other) const { return value == other.value; }
-    bool operator!=(const TinyHandle& other) const { return value != other.value; }
+    constexpr bool operator==(const TinyHandle& other) const { return value == other.value; }
+    constexpr bool operator!=(const TinyHandle& other) const { return value != other.value; }
 
-    static TinyHandle invalid() { return TinyHandle(); }
-    bool valid() const { return value != UINT64_MAX && index != UINT32_MAX; }
-    void invalidate() { value = UINT64_MAX; }
+    constexpr static TinyHandle invalid() { return TinyHandle(); }
+    constexpr bool valid() const { return value != UINT64_MAX && index != UINT32_MAX; }
+    constexpr void invalidate() { value = UINT64_MAX; }
 };
 
 namespace std {

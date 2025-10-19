@@ -65,6 +65,23 @@ std::vector<VkVertexInputAttributeDescription> TinyVertexStatic::getAttributeDes
     return getLayout().getAttributeDescriptions();
 }
 
+// Make rigged vertex from static vertex (for debugging)
+TinyVertexRig TinyVertexStatic::makeRigged(const TinyVertexStatic& staticVertex) {
+    TinyVertexRig rigVertex;
+    rigVertex.pos_tu = staticVertex.pos_tu;
+    rigVertex.nrml_tv = staticVertex.nrml_tv;
+    rigVertex.tangent = staticVertex.tangent;
+    return rigVertex;
+}
+
+std::vector<TinyVertexRig> TinyVertexStatic::makeRigged(const std::vector<TinyVertexStatic>& staticVertices) {
+    std::vector<TinyVertexRig> rigVertices;
+    for (const auto& staticV : staticVertices) {
+        rigVertices.push_back(makeRigged(staticV));
+    }
+    return rigVertices;
+}
+
 
 // Skinning vertex data
 TinyVertexRig& TinyVertexRig::setPosition(const glm::vec3& position) {
@@ -125,7 +142,7 @@ std::vector<VkVertexInputAttributeDescription> TinyVertexRig::getAttributeDescri
 }
 
 
-TinyVertexStatic TinyVertexRig::makeStaticVertex(const TinyVertexRig& rigVertex) {
+TinyVertexStatic TinyVertexRig::makeStatic(const TinyVertexRig& rigVertex) {
     TinyVertexStatic staticVertex;
     staticVertex.pos_tu = rigVertex.pos_tu;
     staticVertex.nrml_tv = rigVertex.nrml_tv;
@@ -133,10 +150,10 @@ TinyVertexStatic TinyVertexRig::makeStaticVertex(const TinyVertexRig& rigVertex)
     return staticVertex;
 }
 
-std::vector<TinyVertexStatic> TinyVertexRig::makeStaticVertices(const std::vector<TinyVertexRig>& rigVertices) {
+std::vector<TinyVertexStatic> TinyVertexRig::makeStatic(const std::vector<TinyVertexRig>& rigVertices) {
     std::vector<TinyVertexStatic> staticVertices;
     for (const auto& rigV : rigVertices) {
-        staticVertices.push_back(makeStaticVertex(rigV));
+        staticVertices.push_back(makeStatic(rigV));
     }
     return staticVertices;
 }

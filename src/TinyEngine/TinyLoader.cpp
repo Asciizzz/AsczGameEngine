@@ -1,4 +1,5 @@
 #include "TinyEngine/TinyLoader.hpp"
+#include ".ext/Templates.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include ".ext/tiny3d/stb_image.h"
@@ -17,6 +18,10 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <unordered_map>
+#include <map>
+#include <tuple>
+#include <functional>
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -288,12 +293,6 @@ static glm::mat4 makeLocalFromNode(const tinygltf::Node& node) {
     }
 }
 
-// OBJ loader implementation using tiny_obj_loader
-TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath, bool forceStatic) {
-    return TinyModel(); // OBJ loading not implemented yet
-}
-
-
 TinyModel TinyLoader::loadModel(const std::string& filePath, bool forceStatic) {
     std::string ext;
     size_t dotPos = filePath.find_last_of('.');
@@ -305,7 +304,7 @@ TinyModel TinyLoader::loadModel(const std::string& filePath, bool forceStatic) {
     if (ext == ".gltf" || ext == ".glb") {
         return loadModelFromGLTF(filePath, forceStatic);
     } else if (ext == ".obj") {
-        return loadModelFromOBJ(filePath, forceStatic);
+        return loadModelFromOBJ(filePath);
     } else {
         return TinyModel(); // Unsupported format
     }
@@ -543,10 +542,8 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         }
     }
 
-    mesh.setVertices(allVertices);
-
-    // if (hasRigging) mesh.setVertices(allVertices);
-    // else mesh.setVertices(TinyVertexRig::makeStaticVertices(allVertices));
+    if (hasRigging) mesh.setVertices(allVertices);
+    else mesh.setVertices(TinyVertexRig::makeStatic(allVertices));
 }
 
 void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
@@ -899,6 +896,287 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     loadMeshes(result.meshes, model, !hasRigging);
 
     loadNodes(result, model, nodeToSkeletonAndBoneIndex);
+
+    return result;
+}
+
+
+
+
+
+
+
+
+// OBJ loader implementation using tiny_obj_loader
+TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
+    TinyModel result;
+    
+    // Extract model name from file path
+    std::string name = filePath;
+    size_t slashPos = name.find_last_of("/\\");
+    if (slashPos != std::string::npos) name = name.substr(slashPos + 1);
+    size_t dotPos = name.find_last_of('.');
+    if (dotPos != std::string::npos) name = name.substr(0, dotPos);
+    result.name = name;
+
+    // Load OBJ file using tinyobjloader
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> objMaterials;
+    std::string warn, err;
+
+    // Extract directory path for MTL file lookup
+    std::string mtlDir = "";
+    size_t lastSlash = filePath.find_last_of("/\\");
+    if (lastSlash != std::string::npos) {
+        mtlDir = filePath.substr(0, lastSlash + 1);
+    }
+
+    bool success = tinyobj::LoadObj(&attrib, &shapes, &objMaterials, &warn, &err, filePath.c_str(), mtlDir.c_str());
+    
+    if (!warn.empty()) {
+        std::cout << "Warning: " << warn << std::endl;
+    }
+    
+    if (!err.empty()) {
+        std::cerr << "Error: " << err << std::endl;
+    }
+    
+    if (!success) {
+        return result; // Return empty model on failure
+    }
+
+    // Convert OBJ materials to TinyMaterials
+    std::cout << "Loading " << objMaterials.size() << " materials from OBJ" << std::endl;
+    result.materials.reserve(objMaterials.size());
+    for (size_t matIndex = 0; matIndex < objMaterials.size(); matIndex++) {
+        const auto& objMat = objMaterials[matIndex];
+        TinyMaterial material;
+        material.name = objMat.name.empty() ? 
+            sanitizeAsciiz("Material", "material", matIndex) : 
+            sanitizeAsciiz(objMat.name, "material", matIndex);
+
+        std::cout << "Processing material " << matIndex << ": " << material.name << std::endl;
+
+        // Load diffuse texture if present
+        if (!objMat.diffuse_texname.empty()) {
+            std::cout << "  Found diffuse texture: " << objMat.diffuse_texname << std::endl;
+            
+            // Construct full texture path
+            std::string texturePath = objMat.diffuse_texname;
+            if (texturePath.find("/") == std::string::npos && texturePath.find("\\") == std::string::npos) {
+                // Relative path, combine with model directory
+                size_t lastSlash = filePath.find_last_of("/\\");
+                if (lastSlash != std::string::npos) {
+                    texturePath = filePath.substr(0, lastSlash + 1) + texturePath;
+                }
+            }
+            
+            std::cout << "  Loading texture from: " << texturePath << std::endl;
+            TinyTexture texture = loadTexture(texturePath);
+            if (texture.width > 0 && texture.height > 0) {
+                // Extract just the filename for the texture name
+                std::string textureName = objMat.diffuse_texname;
+                size_t lastSlash = textureName.find_last_of("/\\");
+                if (lastSlash != std::string::npos) {
+                    textureName = textureName.substr(lastSlash + 1);
+                }
+                texture.setName(textureName);
+                
+                int width = texture.width;
+                int height = texture.height;
+                uint64_t textureHash = texture.hash;
+                result.textures.push_back(std::move(texture));
+                uint32_t textureIndex = static_cast<uint32_t>(result.textures.size() - 1);
+                material.setAlbedoTexture(textureIndex, textureHash);
+                std::cout << "  Texture loaded successfully: " << width << "x" << height << std::endl;
+            } else {
+                std::cout << "  Failed to load texture!" << std::endl;
+            }
+        } else {
+            std::cout << "  No diffuse texture specified" << std::endl;
+        }
+
+        result.materials.push_back(std::move(material));
+    }
+
+    // Group faces by material to create separate meshes per material
+    std::map<int, std::vector<size_t>> materialToFaces; // material_id -> face indices
+    
+    std::cout << "Processing " << shapes.size() << " shapes to group faces by material..." << std::endl;
+    for (const auto& shape : shapes) {
+        const auto& mesh = shape.mesh;
+        
+        size_t faceIndex = 0;
+        for (size_t i = 0; i < mesh.num_face_vertices.size(); i++) {
+            int materialId = mesh.material_ids.empty() ? -1 : mesh.material_ids[i];
+            materialToFaces[materialId].push_back(faceIndex);
+            faceIndex += mesh.num_face_vertices[i]; // Move to next face
+        }
+    }
+
+    std::cout << "Found " << materialToFaces.size() << " material groups:" << std::endl;
+    for (const auto& [matId, faces] : materialToFaces) {
+        std::cout << "  Material " << matId << ": " << faces.size() << " faces" << std::endl;
+    }
+
+    // Create meshes for each material
+    result.meshes.reserve(materialToFaces.size());
+    
+    for (const auto& [materialId, faceIndices] : materialToFaces) {
+        TinyMesh mesh;
+        
+        // Create mesh name based on material
+        if (materialId >= 0 && materialId < static_cast<int>(objMaterials.size())) {
+            mesh.name = sanitizeAsciiz(objMaterials[materialId].name, "mesh", result.meshes.size());
+        } else {
+            mesh.name = "Mesh_" + std::to_string(result.meshes.size());
+        }
+
+        std::vector<TinyVertexStatic> vertices;
+        std::vector<uint32_t> indices;
+        
+        // Custom hasher for vertex key tuple
+        struct VertexKeyHasher {
+            std::size_t operator()(const std::tuple<int, int, int>& t) const {
+                return std::get<0>(t) ^ (std::get<1>(t) << 11) ^ (std::get<2>(t) << 22);
+            }
+        };
+        
+        std::unordered_map<std::tuple<int, int, int>, uint32_t, VertexKeyHasher> vertexMap;
+
+        uint32_t currentVertexIndex = 0;
+
+        // Process all shapes for this material
+        for (const auto& shape : shapes) {
+            const auto& objMesh = shape.mesh;
+            
+            size_t faceVertexIndex = 0;
+            for (size_t faceIdx = 0; faceIdx < objMesh.num_face_vertices.size(); faceIdx++) {
+                int faceMaterialId = objMesh.material_ids.empty() ? -1 : objMesh.material_ids[faceIdx];
+                
+                // Skip faces that don't belong to this material
+                if (faceMaterialId != materialId) {
+                    faceVertexIndex += objMesh.num_face_vertices[faceIdx];
+                    continue;
+                }
+
+                unsigned int faceVertexCount = objMesh.num_face_vertices[faceIdx];
+                
+                // Triangulate face if necessary (convert quads+ to triangles)
+                std::vector<uint32_t> faceIndices;
+                
+                for (unsigned int v = 0; v < faceVertexCount; v++) {
+                    tinyobj::index_t idx = objMesh.indices[faceVertexIndex + v];
+                    
+                    // Create vertex key for deduplication
+                    std::tuple<int, int, int> vertexKey = std::make_tuple(idx.vertex_index, idx.normal_index, idx.texcoord_index);
+                    
+                    uint32_t vertexIndex;
+                    auto it = vertexMap.find(vertexKey);
+                    if (it != vertexMap.end()) {
+                        // Reuse existing vertex
+                        vertexIndex = it->second;
+                    } else {
+                        // Create new vertex
+                        TinyVertexStatic vertex;
+                        
+                        // Position
+                        if (idx.vertex_index >= 0) {
+                            vertex.setPosition(glm::vec3(
+                                attrib.vertices[3 * idx.vertex_index + 0],
+                                attrib.vertices[3 * idx.vertex_index + 1],
+                                attrib.vertices[3 * idx.vertex_index + 2]
+                            ));
+                        }
+                        
+                        // Normal
+                        if (idx.normal_index >= 0) {
+                            vertex.setNormal(glm::vec3(
+                                attrib.normals[3 * idx.normal_index + 0],
+                                attrib.normals[3 * idx.normal_index + 1],
+                                attrib.normals[3 * idx.normal_index + 2]
+                            ));
+                        }
+                        
+                        // Texture coordinates
+                        if (idx.texcoord_index >= 0) {
+                            vertex.setTextureUV(glm::vec2(
+                                attrib.texcoords[2 * idx.texcoord_index + 0],
+                                1.0f - attrib.texcoords[2 * idx.texcoord_index + 1] // Flip V coordinate
+                            ));
+                        }
+                        
+                        // Set default tangent (will be computed later if needed)
+                        vertex.setTangent(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+                        
+                        vertexIndex = currentVertexIndex++;
+                        vertices.push_back(vertex);
+                        vertexMap[vertexKey] = vertexIndex;
+                    }
+                    
+                    faceIndices.push_back(vertexIndex);
+                }
+                
+                // Convert face to triangles (fan triangulation for n > 3)
+                if (faceVertexCount >= 3) {
+                    for (unsigned int t = 1; t < faceVertexCount - 1; t++) {
+                        indices.push_back(faceIndices[0]);
+                        indices.push_back(faceIndices[t]);
+                        indices.push_back(faceIndices[t + 1]);
+                    }
+                }
+                
+                faceVertexIndex += faceVertexCount;
+            }
+        }
+
+        // Set mesh data
+        // mesh.setVertices(vertices);
+        
+        // ================== IMPORTANT ==================
+        // THIS IS DEBUGGING, REMOVE LATER
+        mesh.setVertices(TinyVertexStatic::makeRigged(vertices));
+
+        mesh.setIndices(indices);
+
+        // Create single submesh covering entire mesh
+        TinySubmesh submesh;
+        submesh.indexOffset = 0;
+        submesh.indexCount = static_cast<uint32_t>(indices.size());
+        submesh.material = (materialId >= 0) ? TinyHandle(materialId) : TinyHandle::invalid();
+        mesh.addSubmesh(submesh);
+
+        result.meshes.push_back(std::move(mesh));
+    }
+
+    // Create scene hierarchy: Root node + one child node per mesh
+    result.nodes.clear();
+    result.nodes.reserve(1 + result.meshes.size());
+
+    // Root node (index 0)
+    TinyNode rootNode;
+    rootNode.name = result.name.empty() ? "OBJ_Root" : result.name;
+    result.nodes.push_back(std::move(rootNode));
+
+    // Child nodes for each mesh (representing each material group)
+    for (size_t meshIndex = 0; meshIndex < result.meshes.size(); meshIndex++) {
+        TinyNode meshNode;
+        meshNode.name = result.meshes[meshIndex].name + "_Node";
+        meshNode.localTransform = glm::mat4(1.0f); // Identity transform
+        
+        // Set parent-child relationship
+        meshNode.parentHandle = TinyHandle(0); // Parent is root node
+        result.nodes[0].childrenHandles.push_back(TinyHandle(static_cast<uint32_t>(meshIndex + 1)));
+
+        // Add MeshRender component
+        TinyNode::MeshRender meshRender;
+        meshRender.meshHandle = TinyHandle(static_cast<uint32_t>(meshIndex));
+        meshRender.skeleNodeHandle = TinyHandle::invalid(); // No skeleton for OBJ
+        meshNode.add<TinyNode::MeshRender>(std::move(meshRender));
+
+        result.nodes.push_back(std::move(meshNode));
+    }
 
     return result;
 }

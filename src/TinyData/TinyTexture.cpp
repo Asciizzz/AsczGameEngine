@@ -26,13 +26,13 @@ TinyTexture& TinyTexture::setData(const std::vector<uint8_t>& d) {
 uint64_t TinyTexture::makeHash() {
     const uint64_t FNV_offset = 1469598103934665603ULL;
     const uint64_t FNV_prime  = 1099511628211ULL;
-    uint64_t h = FNV_offset;
+    hash = FNV_offset;
 
     auto fnv1a = [&](auto value) {
         const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&value);
         for (size_t i = 0; i < sizeof(value); i++) {
-            h ^= bytes[i];
-            h *= FNV_prime;
+            hash ^= bytes[i];
+            hash *= FNV_prime;
         }
     };
 
@@ -47,11 +47,11 @@ uint64_t TinyTexture::makeHash() {
 
     // Image data
     for (auto b : data) {
-        h ^= b;
-        h *= FNV_prime;
+        hash ^= b;
+        hash *= FNV_prime;
     }
 
-    return h;
+    return hash;
 }
 
 TinyTexture TinyTexture::createDefaultTexture() {

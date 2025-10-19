@@ -113,6 +113,12 @@ public:
     }
 
     template<typename T>
+    T* get(const TypeHandle& th) {
+        assert(th.isType<T>() && "TypeHandle does not match requested type T");
+        return static_cast<T*>(get(th));
+    }
+
+    template<typename T>
     void remove(const TinyHandle& handle) {
         auto* wrapper = getWrapper<T>(); // check validity
         if (wrapper) wrapper->pool.remove(handle);

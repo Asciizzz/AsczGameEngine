@@ -864,16 +864,20 @@ void TinyApp::renderFileSystemInspector() {
     if (isFile) {
         // Determine file type and show specific information
         std::string fileType = "Unknown";
-        if (selectedFNode->tHandle.isType<TinyScene>()) {
+        TypeHandle tHandle = selectedFNode->tHandle;
+
+        if (tHandle.isType<TinyScene>()) {
             fileType = "Scene";
-            TinyScene* scene = static_cast<TinyScene*>(fs.registryRef().get(selectedFNode->tHandle));
+            ImGui::Text("Type: %s", fileType.c_str());
+
+            // Extended data
+            TinyScene* scene = fs.registryRef().get<TinyScene>(tHandle);
             if (scene) {
-                ImGui::Text("Type: %s", fileType.c_str());
                 ImGui::Text("Scene Nodes: %u", scene->nodes.count());
                 
                 // Make Active Scene button
                 ImGui::Spacing();
-                TinyHandle sceneRegistryHandle = selectedFNode->tHandle.handle;
+                TinyHandle sceneRegistryHandle = tHandle.handle;
                 bool isActiveScene = (project->getActiveSceneHandle() == sceneRegistryHandle);
                 
                 if (isActiveScene) {
@@ -896,16 +900,24 @@ void TinyApp::renderFileSystemInspector() {
                     ImGui::PopStyleColor(3);
                 }
             }
-        } else if (selectedFNode->tHandle.isType<TinyTexture>()) {
+        } else if (tHandle.isType<TinyTexture>()) {
             fileType = "Texture";
             ImGui::Text("Type: %s", fileType.c_str());
-        } else if (selectedFNode->tHandle.isType<TinyRMaterial>()) {
+
+            // Extended data
+            const TinyTexture* texture = fs.registryRef().get<TinyTexture>(tHandle);
+            if (texture) {
+                ImGui::Text("Dimensions: %dx%d", texture->width, texture->height);
+                ImGui::Text("Channels: %d", texture->channels);
+                ImGui::Text("Hash: %u", texture->hash);
+            }
+        } else if (tHandle.isType<TinyRMaterial>()) {
             fileType = "Material";
             ImGui::Text("Type: %s", fileType.c_str());
-        } else if (selectedFNode->tHandle.isType<TinyMesh>()) {
+        } else if (tHandle.isType<TinyMesh>()) {
             fileType = "Mesh";
             ImGui::Text("Type: %s", fileType.c_str());
-        } else if (selectedFNode->tHandle.isType<TinySkeleton>()) {
+        } else if (tHandle.isType<TinySkeleton>()) {
             fileType = "Skeleton";
             ImGui::Text("Type: %s", fileType.c_str());
         } else {

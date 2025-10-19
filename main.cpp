@@ -44,7 +44,7 @@ void testLua() {
     if (luaL_dostring(L, script2) != LUA_OK) {
         std::cerr << "ERROR: " << lua_tostring(L, -1) << std::endl;
     } else {
-        std::cout << "✓ String test passed!" << std::endl;
+        std::cout << "String test passed!" << std::endl;
     }
     
     // Test 3: Function definition and calling
@@ -61,7 +61,7 @@ void testLua() {
     if (luaL_dostring(L, script3) != LUA_OK) {
         std::cerr << "ERROR: " << lua_tostring(L, -1) << std::endl;
     } else {
-        std::cout << "✓ Function test passed!" << std::endl;
+        std::cout << "Function test passed!" << std::endl;
     }
     
     // Test 4: Get value from Lua back to C++
@@ -69,9 +69,9 @@ void testLua() {
     lua_getglobal(L, "result");  // Get the 'result' variable we set earlier
     if (lua_isnumber(L, -1)) {
         int result = (int)lua_tonumber(L, -1);
-        std::cout << "✓ Got result from Lua: " << result << std::endl;
+        std::cout << "Got result from Lua: " << result << std::endl;
     } else {
-        std::cout << "✗ Failed to get result from Lua" << std::endl;
+        std::cout << "Failed to get result from Lua" << std::endl;
     }
     lua_pop(L, 1);  // Clean up stack
     
