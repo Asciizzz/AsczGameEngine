@@ -34,17 +34,71 @@ public:
         bool hasData() const { return tHandle.valid(); }
 
         bool hasChild(TinyHandle childHandle) const {
+            // Check if childHandle exists in children vector
             return std::find(children.begin(), children.end(), childHandle) != children.end();
         }
 
-        bool addChild(TinyHandle childHandle) {
-            if (hasChild(childHandle)) return false;
+        int childIndex(TinyHandle childHandle) const {
+            // Return the index of the child if found, -1 otherwise
+            auto it = std::find(children.begin(), children.end(), childHandle);
+            return (it != children.end()) ? static_cast<int>(std::distance(children.begin(), it)) : -1;
+        }
+
+        int addChild(TinyHandle childHandle) {
+            if (hasChild(childHandle)) return -1;
             children.push_back(childHandle);
-            return true;
+            return static_cast<int>(children.size()) - 1;
+        }
+
+        bool removeChild(TinyHandle childHandle) {
+            int index = childIndex(childHandle);
+            if (index != -1) {
+                children.erase(children.begin() + index);
+                return true;
+            }
+            return false;
         }
     };
 
-    TinyFS(bool caseSensitive = false) : caseSensitive_(caseSensitive) {
+    struct TypeExt {
+        std::string ext;
+        uint8_t priority = 0;
+        float color[3];
+
+        // Assume folder, max priority
+        TypeExt(const std::string& ext = "", uint8_t priority = UINT8_MAX, float r = 1.0f, float g = 1.0f, float b = 1.0f)
+            : ext(ext), priority(priority) {
+            color[0] = r;
+            color[1] = g;
+            color[2] = b;
+        }
+
+        // Helpful comparison operator for sorting
+        // Order: priority desc, then ext asc
+        bool operator<(const TypeExt& other) const {
+            if (priority != other.priority) {
+                return priority > other.priority; // Higher priority first
+            }
+            return ext < other.ext; // Lexicographical order
+        }
+
+        bool operator>(const TypeExt& other) const {
+            return other < *this;
+        }
+
+        // Compare for equality
+        bool operator==(const TypeExt& other) const {
+            return 
+                ext == other.ext &&
+                priority == other.priority &&
+                color[0] == other.color[0] &&
+                color[1] == other.color[1] &&
+                color[2] == other.color[2];
+        }
+    };
+
+
+    TinyFS() {
         Node rootNode;
         rootNode.name = ".root";
         rootNode.parent = TinyHandle();
@@ -56,14 +110,14 @@ public:
     }
 
     // ---------- Basic access ----------
+
     TinyHandle rootHandle() const { return rootHandle_; }
-    TinyHandle regHandle() const { return regHandle_; }
 
     // Case sensitivity control
-    bool isCaseSensitive() const { return caseSensitive_; }
+    bool caseSensitive() const { return caseSensitive_; }
     void setCaseSensitive(bool caseSensitive) { caseSensitive_ = caseSensitive; }
 
-    // Optional: expose registry for read-only access
+    // Expose registry for access
     const TinyRegistry& registryRef() const { return registry; }
     TinyRegistry& registryRef() { return registry; }
 
@@ -71,17 +125,6 @@ public:
     void setRootPath(const std::string& rootPath) {
         Node* root = fnodes.get(rootHandle_);
         if (root) root->name = rootPath;
-    }
-
-    // Explicitly set registry folder handle (if you create it manually)
-    void setRegistryHandle(TinyHandle h) {
-        if (!fnodes.isValid(h)) return;
-
-        Node* node = fnodes.get(h);
-        node->cfg.deletable = false; // make non-deletable
-        node->cfg.hidden = true;     // hide the registry folder
-
-        regHandle_ = h;
     }
 
     // ---------- Creation ----------
@@ -120,21 +163,22 @@ public:
         if (parent && parent->hasChild(nodeHandle)) return false;
 
         Node* node = fnodes.get(nodeHandle);
-        if (!node || hasRepeatName(newParent, node->name)) return false;
+        if (!node) return false;
+
+        // resolve name conflicts
+        node->name = resolveRepeatName(newParent, node->name);
 
         // remove from old parent children vector
         if (fnodes.isValid(node->parent)) {
             Node* oldParent = fnodes.get(node->parent);
-            if (oldParent) {
-                auto& s = oldParent->children;
-                s.erase(std::remove(s.begin(), s.end(), nodeHandle), s.end());
-            }
+            if (oldParent) oldParent->removeChild(nodeHandle);
         }
+
+        Node* newP = fnodes.get(newParent);
+        if (newP) newP->addChild(nodeHandle);
 
         // attach to new parent
         node->parent = newParent;
-        Node* newP = fnodes.get(newParent);
-        if (newP) newP->children.push_back(nodeHandle);
 
         return true;
     }
@@ -197,33 +241,45 @@ public:
     const TinyPool<Node>& getFNodes() const { return fnodes; }
 
     template<typename T>
-    void setExt(const std::string& ext) {
-        typeHashToExtension[typeid(T).hash_code()] = ext;
+    void setTypeExt(const std::string& ext, uint8_t priority = 0, float r = 1.0f, float g = 1.0f, float b = 1.0f) {
+        TypeExt typeExt;
+        typeExt.ext = ext;
+        typeExt.priority = priority;
+        typeExt.color[0] = r;
+        typeExt.color[1] = g;
+        typeExt.color[2] = b;
+        typeHashToExt[typeid(T).hash_code()] = typeExt;
     }
 
+    // Get the full TypeExt info for a type
     template<typename T>
-    std::string getExt() const {
-        auto it = typeHashToExtension.find(typeid(T).hash_code());
-        return (it != typeHashToExtension.end()) ? it->second : "afile";
+    TypeExt getTypeExt() const {
+        auto it = typeHashToExt.find(typeid(T).hash_code());
+        return (it != typeHashToExt.end()) ? it->second : TypeExt();
     }
 
-    std::string getFileExt(TinyHandle fileHandle) const {
+    // Get the full TypeExt info for a file
+    TypeExt getFileTypeExt(TinyHandle fileHandle) const {
         const Node* node = fnodes.get(fileHandle);
-        if (!node || !node->isFile()) return std::string();
 
-        return typeHashToExtension.count(node->tHandle.typeHash) ?
-            typeHashToExtension.at(node->tHandle.typeHash) : std::string();
+        // Invalid, minimum priority
+        if (!node) return TypeExt("", 0);
+
+        // Folder type, max priority
+        if (node->isFolder()) return TypeExt("", UINT8_MAX);
+
+        return typeHashToExt.count(node->tHandle.typeHash) ?
+            typeHashToExt.at(node->tHandle.typeHash) : TypeExt();
     }
 
 private:
     TinyPool<Node> fnodes;
     TinyRegistry registry;
     TinyHandle rootHandle_{};
-    TinyHandle regHandle_{};
     bool caseSensitive_{false}; // Global case sensitivity setting
 
-    // Type to .extension map
-    UnorderedMap<size_t, std::string> typeHashToExtension;
+    // Type to extension info map (using new TypeExt structure)
+    UnorderedMap<size_t, TypeExt> typeHashToExt;
 
     bool namesEqual(const std::string& a, const std::string& b) const {
         if (caseSensitive_) {

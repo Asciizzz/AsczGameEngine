@@ -85,15 +85,12 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     // registry = MakeUnique<TinyRegistry>();
     tinyFS = MakeUnique<TinyFS>();
 
-    TinyHandle registryHandle = tinyFS->addFolder(".registry");
-    tinyFS->setRegistryHandle(registryHandle);
-
-    tinyFS->setExt<TinyScene>("ascn");
-    tinyFS->setExt<TinyTexture>("atex");
-    tinyFS->setExt<TinyRMaterial>("amat"); // Soon to be replaced with TinyMaterial
-    tinyFS->setExt<TinyMesh>("amsh");
-    tinyFS->setExt<TinySkeleton>("askl");
-    tinyFS->setExt<TinyAnimation>("anim");
+    tinyFS->setTypeExt<TinyScene>("ascn");
+    tinyFS->setTypeExt<TinyTexture>("atex");
+    tinyFS->setTypeExt<TinyRMaterial>("amat"); // Soon to be replaced with TinyMaterial
+    tinyFS->setTypeExt<TinyMesh>("amsh");
+    tinyFS->setTypeExt<TinySkeleton>("askl");
+    tinyFS->setTypeExt<TinyAnimation>("anim");
 
     // Create Main Scene (the active scene with a single root node)
     TinyScene mainScene;
@@ -753,14 +750,26 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
                 TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
                 if (draggedFolder != nodeHandle) { // Can't drop folder on itself
-                    fs.moveFNode(draggedFolder, nodeHandle);
+                    if (fs.moveFNode(draggedFolder, nodeHandle)) {
+                        // Auto-expand the target folder and select the moved folder
+                        expandedFNodes.insert(nodeHandle);
+                        selectFileNode(draggedFolder);
+                        expandFNodeParentChain(draggedFolder); // Ensure parent chain is expanded
+                        clearHeld(); // Clear held state after successful move
+                    }
                 }
             }
             
             // Accept files being dropped  
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                 TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
-                fs.moveFNode(draggedFile, nodeHandle);
+                if (fs.moveFNode(draggedFile, nodeHandle)) {
+                    // Auto-expand the target folder and select the moved file
+                    expandedFNodes.insert(nodeHandle);
+                    selectFileNode(draggedFile);
+                    expandFNodeParentChain(draggedFile); // Ensure parent chain is expanded
+                    clearHeld(); // Clear held state after successful move
+                }
             }
             
             ImGui::EndDragDropTarget();
@@ -831,34 +840,29 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 // Folders come before files
                 if (nodeA->type != nodeB->type) return nodeA->isFolder();
                 
-                // Within files, first sort by extension, then by name
+                // Within files, first sort by extension (priority to ext name)
                 if (nodeA->isFile() && nodeB->isFile()) {
-                    std::string extA = fs.getFileExt(a);
-                    std::string extB = fs.getFileExt(b);
-                    
-                    // If extensions are different, sort by extension
-                    if (extA != extB) {
-                        return extA < extB;
-                    }
-                    
-                    // If extensions are same (or both empty), sort by name
-                    return nodeA->name < nodeB->name;
+                    TinyFS::TypeExt extA = fs.getFileTypeExt(a);
+                    TinyFS::TypeExt extB = fs.getFileTypeExt(b);
+
+                    if (extA < extB) return true;
+                    else if (extA > extB) return false;
                 }
-                
-                // For folders or other types, just sort by name
+
                 return nodeA->name < nodeB->name;
             });
             
             for (const TinyHandle& childHandle : sortedChildren) {
                 renderFileExplorerImGui(childHandle, depth + 1);
             }
+
             ImGui::TreePop();
         }
         
     } else if (node->isFile()) {
         // General file handling - completely generic
         std::string fileName = node->name;
-        std::string fileExt = fs.getFileExt(nodeHandle);
+        std::string fileExt = fs.getFileTypeExt(nodeHandle).ext;
 
         // Set consistent colors for all files
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
@@ -866,7 +870,13 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         
         // Create a selectable item for the full filename + extension
         std::string fullDisplayName = fileExt.empty() ? fileName : (fileName + "." + fileExt);
-        ImGui::Selectable(("##file_" + std::to_string(nodeHandle.index)).c_str(), isSelected);
+        bool wasClicked = ImGui::Selectable(("##file_" + std::to_string(nodeHandle.index)).c_str(), isSelected);
+        
+        // Capture interaction state immediately after the Selectable
+        bool itemHovered = ImGui::IsItemHovered();
+        bool leftClicked = itemHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left);
+        bool rightClicked = itemHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right);
+        bool dragStarted = itemHovered && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None);
         
         // Render the filename and extension with different colors on top of the selectable
         ImGui::SameLine(0, 0); // No spacing, start from beginning of selectable
@@ -885,8 +895,8 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             ImGui::PopStyleColor();
         }
         
-        // Generic selection handling
-        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        // Generic selection handling using captured state
+        if (leftClicked) {
             ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
             float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
             
@@ -897,13 +907,14 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
         }
         
-        // Select on right-click
-        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        // Select on right-click using captured state
+        if (rightClicked) {
             selectFileNode(nodeHandle);
+            ImGui::OpenPopup(("FileContext_" + std::to_string(nodeHandle.index)).c_str());
         }
         
-        // Generic drag source
-        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+        // Generic drag source using captured state
+        if (dragStarted) {
             holdFileNode(nodeHandle);
             ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
             ImGui::Text("%s", fileName.c_str());
@@ -911,7 +922,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         }
         
         // Generic context menu with type-specific options
-        if (ImGui::BeginPopupContextItem()) {
+        if (ImGui::BeginPopup(("FileContext_" + std::to_string(nodeHandle.index)).c_str())) {
             ImGui::Text("%s", fileName.c_str());
             ImGui::Separator();
             
