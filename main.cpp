@@ -1,5 +1,5 @@
 #define SDL_MAIN_HANDLED
-#include "TinySystem/Application.hpp"
+#include "TinyApp/TinyApp.hpp"
 #include <iostream>
 #include <stdexcept>
 
@@ -89,7 +89,7 @@ int main() {
     
     try {
         // Peak 2009 window engineering
-        Application app("AszcEngine", 1600, 900);
+        TinyApp app("AszcEngine", 1600, 900);
         app.run();
     } catch (const std::exception& e) {
         // Plot twist: things broke

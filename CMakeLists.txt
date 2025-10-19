@@ -86,8 +86,10 @@ file(GLOB_RECURSE SRC_FILES
 
     src/TinySystem/TinyChrono.cpp
     src/TinySystem/TinyWindow.cpp
-    src/TinySystem/Application.cpp
     src/TinySystem/TinyImGui.cpp
+
+    src/TinyApp/TinyApp_init.cpp
+    src/TinyApp/TinyApp_loop.cpp
 
     src/TinyVK/System/Device.cpp
     src/TinyVK/System/Instance.cpp
@@ -134,11 +136,12 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/.ext/imgui
     ${CMAKE_SOURCE_DIR}/include/.ext/luacpp
 
-    ${CMAKE_SOURCE_DIR}/include/TinySystem
     ${CMAKE_SOURCE_DIR}/include/TinyVK
     ${CMAKE_SOURCE_DIR}/include/TinyExt
     ${CMAKE_SOURCE_DIR}/include/TinyData
     ${CMAKE_SOURCE_DIR}/include/TinyEngine
+    ${CMAKE_SOURCE_DIR}/include/TinySystem
+    ${CMAKE_SOURCE_DIR}/include/TinyApp        
 )
 
 

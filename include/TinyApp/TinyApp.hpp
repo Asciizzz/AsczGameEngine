@@ -19,16 +19,16 @@
 
 #include "TinyEngine/TinyProject.hpp"
 
-class Application {
+class TinyApp {
 public:
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
-    Application(const char* title = "Vulkan Application", uint32_t width = 800, uint32_t height = 600);
-    ~Application();
+    TinyApp(const char* title = "Vulkan TinyApp", uint32_t width = 800, uint32_t height = 600);
+    ~TinyApp();
 
     // Modern C++ says no sharing
-    Application(const Application&) = delete;
-    Application& operator=(const Application&) = delete;
+    TinyApp(const TinyApp&) = delete;
+    TinyApp& operator=(const TinyApp&) = delete;
 
     void run();
 

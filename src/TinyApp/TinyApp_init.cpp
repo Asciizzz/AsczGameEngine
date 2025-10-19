@@ -1,4 +1,4 @@
-#include "TinySystem/Application.hpp"
+#include "TinyApp/TinyApp.hpp"
 
 #include "TinyEngine/TinyLoader.hpp"
 
@@ -7,9 +7,6 @@
 #include <filesystem>
 #include <string>
 #include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <cstring>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -23,30 +20,30 @@ const bool enableValidationLayers = true;
 
 using namespace TinyVK;
 
-Application::Application(const char* title, uint32_t width, uint32_t height)
+TinyApp::TinyApp(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
 
     initComponents();
 }
 
-Application::~Application() {
+TinyApp::~TinyApp() {
     if (imguiWrapper) {
         imguiWrapper->cleanup();
     }
     cleanup();
 }
 
-void Application::cleanup() {
+void TinyApp::cleanup() {
     // No clean up needed for now
 }
 
-void Application::run() {
+void TinyApp::run() {
     mainLoop();
 
-    printf("Application exited successfully. See you next time!\n");
+    printf("TinyApp exited successfully. See you next time!\n");
 }
 
-void Application::initComponents() {
+void TinyApp::initComponents() {
 
     windowManager = MakeUnique<TinyWindow>(appTitle, appWidth, appHeight);
     fpsManager = MakeUnique<TinyChrono>();
@@ -66,7 +63,7 @@ void Application::initComponents() {
         deviceVK.get(),
         instanceVK->surface,
         windowManager->window,
-        Application::MAX_FRAMES_IN_FLIGHT
+        TinyApp::MAX_FRAMES_IN_FLIGHT
     );
 
     project = MakeUnique<TinyProject>(deviceVK.get());
@@ -140,7 +137,7 @@ void Application::initComponents() {
     checkWindowResize();
 }
 
-bool Application::checkWindowResize() {
+bool TinyApp::checkWindowResize() {
     if (!windowManager->resizedFlag && !renderer->isResizeNeeded()) return false;
 
     windowManager->resizedFlag = false;
@@ -169,7 +166,7 @@ bool Application::checkWindowResize() {
 }
 
 
-void Application::mainLoop() {
+void TinyApp::mainLoop() {
     SDL_SetRelativeMouseMode(SDL_TRUE); // Start with mouse locked
 
     // Create references to avoid arrow spam
@@ -311,7 +308,7 @@ void Application::mainLoop() {
     vkDeviceWaitIdle(deviceVK->device);
 }
 
-void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseFocus, float deltaTime) {
+void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseFocus, float deltaTime) {
     // Clear any existing windows first
     imguiWrapper->clearWindows();
     
@@ -543,7 +540,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
     }, &showEditorSettingsWindow);
 }
 
-void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
+void TinyApp::loadAllAssetsRecursively(const std::string& assetsPath) {
     namespace fs = std::filesystem;
     
     if (!fs::exists(assetsPath) || !fs::is_directory(assetsPath)) {
@@ -576,7 +573,7 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
     }
 }
 
-void Application::renderInspectorWindow() {
+void TinyApp::renderInspectorWindow() {
     // Unified Inspector Window: Show details for whatever is currently selected
     ImGui::Text("Inspector");
     ImGui::Separator();
@@ -613,7 +610,7 @@ void Application::renderInspectorWindow() {
     ImGui::PopStyleVar(2);
 }
 
-void Application::renderSceneNodeInspector() {
+void TinyApp::renderSceneNodeInspector() {
     TinyRScene* activeScene = project->getActiveScene();
     if (!activeScene) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No active scene");
@@ -1124,7 +1121,7 @@ void Application::renderSceneNodeInspector() {
 
 
 
-void Application::renderFileSystemInspector() {
+void TinyApp::renderFileSystemInspector() {
     TinyFS& fs = project->filesystem();
     
     // Get the selected file node handle from unified selection
@@ -1250,7 +1247,7 @@ void Application::renderFileSystemInspector() {
     }
 }
 
-void Application::renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove) {
+void TinyApp::renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove) {
     // Component container with styled background
     ImGui::PushStyleColor(ImGuiCol_ChildBg, backgroundColor);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
@@ -1300,7 +1297,7 @@ void Application::renderComponent(const char* componentName, ImVec4 backgroundCo
     ImGui::Spacing();
 }
 
-bool Application::renderHandleField(const char* fieldId, TinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description) {
+bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description) {
     bool modified = false;
     
     // Create enhanced drag-drop target area with better styling
