@@ -21,7 +21,7 @@ struct TypeHandle {
     bool valid() const { return handle.valid() && typeHash != 0; }
 
     template<typename T>
-    bool isType() const { return typeHash == typeid(T).hash_code() && valid(); }
+    bool isType() const { return valid() && typeHash == typeid(T).hash_code(); }
 };
 
 class TinyRegistry { // For raw resource data

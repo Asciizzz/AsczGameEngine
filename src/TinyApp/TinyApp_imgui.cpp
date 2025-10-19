@@ -59,12 +59,7 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
         
         ImGui::BeginChild("Hierarchy", ImVec2(0, hierarchyHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-        
-        // Clear filesystem selection when clicking in node tree area
-        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
-            project->clearSelection();
-        }
-        
+
         // Clear held node when mouse is released and no dragging is happening
         if (project->heldHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
             project->clearHeld();
@@ -121,11 +116,6 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
         
         ImGui::BeginChild("FileExplorer", ImVec2(0, explorerHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-        
-        // Clear scene node selection when clicking in file tree area (but not on items)
-        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
-            project->clearSelection();
-        }
         
         project->renderFileExplorerImGui();
         
@@ -248,7 +238,6 @@ void TinyApp::renderInspectorWindow() {
     // Check what type of selection we have
     if (!project->selectedHandle.valid()) {
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No selection");
-        ImGui::Text("Select a scene node or file to inspect its properties.");
         return;
     }
     

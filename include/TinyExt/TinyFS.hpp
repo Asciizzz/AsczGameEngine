@@ -28,6 +28,8 @@ public:
         bool hidden() const { return cfg.hidden; }
         bool deletable() const { return cfg.deletable; }
 
+        template<typename T>
+        bool isType() const { return tHandle.isType<T>(); }
         bool isFile() const { return type == Type::File; }
         bool isFolder() const { return type == Type::Folder; }
 
@@ -62,7 +64,7 @@ public:
 
     struct TypeExt {
         std::string ext;
-        uint8_t priority = 0;
+        uint8_t priority;
         float color[3];
 
         // Assume folder, max priority

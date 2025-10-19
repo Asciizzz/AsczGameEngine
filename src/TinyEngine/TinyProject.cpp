@@ -496,8 +496,11 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         bool isRootNode = (nodeHandle == activeScene->rootHandle);
         if (ImGui::MenuItem("Delete", nullptr, false, !isRootNode)) {
             TinyScene* scene = getActiveScene();
-            if (scene && scene->removeNode(nodeHandle)) {
-                clearSelection(); // Clear selection
+            if (scene) {
+                TinyNode* parentNode = scene->getNode(node->parentHandle);
+                if (parentNode) selectSceneNode(node->parentHandle);
+
+                scene->removeNode(nodeHandle);
             }
         }
 
@@ -620,11 +623,13 @@ void TinyProject::processPendingDeletions() {
     TinyFS& fs = filesystem();
     
     for (TinyHandle handle : pendingFNodeDeletions) {
+        const TinyFS::Node* node = fs.getFNodes().get(handle);
+        TinyHandle parentHandle = node ? node->parent : TinyHandle();
+
         fs.removeFNode(handle);
-        
-        // Clear selection if the selected file was deleted
-        if (selectedHandle.isFile() && selectedHandle.handle == handle) {
-            clearSelection();
+
+        if (selectedHandle.handle == handle) {
+            selectFileNode(parentHandle);
         }
     }
 
