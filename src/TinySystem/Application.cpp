@@ -71,8 +71,8 @@ void Application::initComponents() {
 
     project = MakeUnique<TinyProject>(deviceVK.get());
 
-    // Initialize selected node to root
-    project->selectedSceneNodeHandle = project->getRootNodeHandle();
+    // Initialize selected handle to root scene node (already done in TinyProject constructor)
+    // project->selectSceneNode(project->getRootNodeHandle());
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->getCamera()->setAspectRatio(aspectRatio);
@@ -365,12 +365,12 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         // Clear filesystem selection when clicking in node tree area
         if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
-            project->selectedFNodeHandle = TinyHandle();
+            project->clearSelection();
         }
         
         // Clear held node when mouse is released and no dragging is happening
-        if (project->heldSceneNodeHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            project->heldSceneNodeHandle = TinyHandle();
+        if (project->heldHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            project->clearHeld();
         }
         
         if (activeScene && activeScene->nodes.count() > 0) {
@@ -427,7 +427,7 @@ void Application::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCame
         
         // Clear scene node selection when clicking in file tree area (but not on items)
         if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
-            project->selectedSceneNodeHandle = TinyHandle();
+            project->clearSelection();
         }
         
         project->renderFileExplorerImGui();
@@ -577,99 +577,65 @@ void Application::loadAllAssetsRecursively(const std::string& assetsPath) {
 }
 
 void Application::renderInspectorWindow() {
-    // Inspector Window: Node Inspector (top) + File Inspector (bottom) with splitter
-    // Use exact same technique as Editor window to avoid scrollbars
-
-    static float splitterPos = 0.6f; // Node inspector gets 60% by default
-    
-    // Get full available space (same as Editor window)
-    float totalHeight = ImGui::GetContentRegionAvail().y;
-    
-    // Calculate section heights based on splitter position (same as Editor window)
-    float nodeInspectorHeight = totalHeight * splitterPos;
-    float fileInspectorHeight = totalHeight * (1.0f - splitterPos);
-    
-    // NODE INSPECTOR (TOP) - Always exists
-    ImGui::Text("Node Inspector");
+    // Unified Inspector Window: Show details for whatever is currently selected
+    ImGui::Text("Inspector");
     ImGui::Separator();
     
-    // Apply thin scrollbar styling to match component inspector
-    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar
-    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
+    // Check what type of selection we have
+    if (!project->selectedHandle.valid()) {
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No selection");
+        ImGui::Text("Select a scene node or file to inspect its properties.");
+        return;
+    }
     
-    ImGui::BeginChild("NodeInspectorPane", ImVec2(0, nodeInspectorHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-    renderNodeInspector();
+    // Apply thin scrollbar styling for the main content area
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f);
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+    
+    ImGui::BeginChild("UnifiedInspectorContent", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+    
+    if (project->selectedHandle.isScene()) {
+        // Render scene node inspector
+        renderSceneNodeInspector();
+    } else if (project->selectedHandle.isFile()) {
+        // Render file system inspector
+        renderFileSystemInspector();
+    }
+    
     ImGui::EndChild();
     
     // Pop the scrollbar styling
-    ImGui::PopStyleColor(4); // ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
-    ImGui::PopStyleVar(2); // ScrollbarSize, ScrollbarRounding
-    
-    // HORIZONTAL SPLITTER (exact same as Editor window)
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 0.8f));
-    
-    ImGui::Button("##InspectorSplitter", ImVec2(-1, 4));
-    
-    if (ImGui::IsItemActive()) {
-        float mouseDelta = ImGui::GetIO().MouseDelta.y;
-        splitterPos += mouseDelta / totalHeight;
-        splitterPos = std::max(0.2f, std::min(0.8f, splitterPos)); // Clamp between 20% and 80%
-    }
-    
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-    }
-    
-    ImGui::PopStyleColor(3);
-    
-    // FILE INSPECTOR (BOTTOM) - Always exists
-    ImGui::Text("File Inspector");
-    ImGui::Separator();
-    
-    // Apply thin scrollbar styling to match component inspector
-    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar
-    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
-    
-    ImGui::BeginChild("FileInspectorPane", ImVec2(0, fileInspectorHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-    renderFileSystemInspector();
-    ImGui::EndChild();
-    
-    // Pop the scrollbar styling
-    ImGui::PopStyleColor(4); // ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
-    ImGui::PopStyleVar(2); // ScrollbarSize, ScrollbarRounding
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(2);
 }
 
-void Application::renderNodeInspector() {
+void Application::renderSceneNodeInspector() {
     TinyRScene* activeScene = project->getActiveScene();
     if (!activeScene) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No active scene");
         return;
     }
 
-    if (!project->selectedSceneNodeHandle.valid()) {
-        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "No node selected");
-        ImGui::Text("Select a scene node from the hierarchy.");
+    // Get the selected scene node handle from unified selection
+    TinyHandle selectedSceneNodeHandle = project->getSelectedSceneNode();
+    if (!selectedSceneNodeHandle.valid()) {
+        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "No scene node selected");
+        ImGui::Text("This should not happen in unified selection.");
         return;
     }
 
-    const TinyRNode* selectedNode = activeScene->nodes.get(project->selectedSceneNodeHandle);
+    const TinyRNode* selectedNode = activeScene->nodes.get(selectedSceneNodeHandle);
     if (!selectedNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
-        project->selectedSceneNodeHandle = project->getRootNodeHandle();
+        project->selectSceneNode(project->getRootNodeHandle());
         return;
     }
 
-    bool isRootNode = (project->selectedSceneNodeHandle == project->getRootNodeHandle());
+    bool isRootNode = (selectedSceneNodeHandle == project->getRootNodeHandle());
 
     // GENERAL INFO SECTION (non-scrollable)
     // Editable node name field
@@ -677,17 +643,17 @@ void Application::renderNodeInspector() {
     ImGui::SameLine();
     
     // Create a unique ID for the input field
-    std::string inputId = "##NodeName_" + std::to_string(project->selectedSceneNodeHandle.index);
+    std::string inputId = "##NodeName_" + std::to_string(selectedSceneNodeHandle.index);
     
     // Static buffer to hold the name during editing
     static char nameBuffer[256];
     static TinyHandle lastSelectedNode;
     
     // Initialize buffer if we switched to a different node
-    if (lastSelectedNode != project->selectedSceneNodeHandle) {
+    if (lastSelectedNode != selectedSceneNodeHandle) {
         strncpy_s(nameBuffer, selectedNode->name.c_str(), sizeof(nameBuffer) - 1);
         nameBuffer[sizeof(nameBuffer) - 1] = '\0';
-        lastSelectedNode = project->selectedSceneNodeHandle;
+        lastSelectedNode = selectedSceneNodeHandle;
     }
     
     // Editable text input
@@ -696,7 +662,7 @@ void Application::renderNodeInspector() {
     
     // Apply rename on Enter or when focus is lost
     if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
-        activeScene->renameNode(project->selectedSceneNodeHandle, std::string(nameBuffer));
+        activeScene->renameNode(selectedSceneNodeHandle, std::string(nameBuffer));
     }
     
     // Show parent and children count
@@ -1160,10 +1126,19 @@ void Application::renderNodeInspector() {
 
 void Application::renderFileSystemInspector() {
     TinyFS& fs = project->filesystem();
-    const TinyFS::Node* selectedFNode = fs.getFNodes().get(project->selectedFNodeHandle);
+    
+    // Get the selected file node handle from unified selection
+    TinyHandle selectedFNodeHandle = project->getSelectedFileNode();
+    if (!selectedFNodeHandle.valid()) {
+        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "No file selected");
+        ImGui::Text("This should not happen in unified selection.");
+        return;
+    }
+    
+    const TinyFS::Node* selectedFNode = fs.getFNodes().get(selectedFNodeHandle);
     if (!selectedFNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid filesystem node selection");
-        project->selectedFNodeHandle = TinyHandle(); // Clear invalid selection
+        project->clearSelection(); // Clear invalid selection
         return;
     }
     
@@ -1175,7 +1150,7 @@ void Application::renderFileSystemInspector() {
     ImGui::Separator();
     
     // === EDITABLE NAME FIELD - Only for root node ===
-    bool isRootNode = (project->selectedFNodeHandle == fs.rootHandle());
+    bool isRootNode = (selectedFNodeHandle == fs.rootHandle());
     
     ImGui::Text("FName:");
     ImGui::SameLine();
@@ -1185,17 +1160,17 @@ void Application::renderFileSystemInspector() {
         ImGui::Text("%s", selectedFNode->name.c_str());
     } else {
         // Create a unique ID for the input field
-        std::string inputId = "##FNodeName_" + std::to_string(project->selectedFNodeHandle.index);
+        std::string inputId = "##FNodeName_" + std::to_string(selectedFNodeHandle.index);
 
         // Static buffer to hold the name during editing
         static char nameBuffer[256];
         static TinyHandle lastSelectedFNode;
         
         // Initialize buffer if we switched to a different file/folder
-        if (lastSelectedFNode != project->selectedFNodeHandle) {
+        if (lastSelectedFNode != selectedFNodeHandle) {
             strncpy_s(nameBuffer, selectedFNode->name.c_str(), sizeof(nameBuffer) - 1);
             nameBuffer[sizeof(nameBuffer) - 1] = '\0';
-            lastSelectedFNode = project->selectedFNodeHandle;
+            lastSelectedFNode = selectedFNodeHandle;
         }
         
         // Editable text input
@@ -1204,7 +1179,7 @@ void Application::renderFileSystemInspector() {
         
         // Apply rename on Enter or when focus is lost
         if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
-            TinyFS::Node* mutableNode = const_cast<TinyFS::Node*>(fs.getFNodes().get(project->selectedFNodeHandle));
+            TinyFS::Node* mutableNode = const_cast<TinyFS::Node*>(fs.getFNodes().get(selectedFNodeHandle));
             if (mutableNode) {
                 mutableNode->name = std::string(nameBuffer);
             }
@@ -1251,7 +1226,7 @@ void Application::renderFileSystemInspector() {
                     
                     if (ImGui::Button("Make Active", ImVec2(-1, 30))) {
                         if (project->setActiveScene(sceneRegistryHandle)) {
-                            project->selectedSceneNodeHandle = project->getRootNodeHandle(); // Reset node selection
+                            project->selectSceneNode(project->getRootNodeHandle()); // Reset node selection
                         }
                     }
                     ImGui::PopStyleColor(3);

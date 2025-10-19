@@ -68,7 +68,7 @@ private:
 
     void renderInspectorWindow();
     void renderFileSystemInspector();
-    void renderNodeInspector();
+    void renderSceneNodeInspector();  // Renamed from renderNodeInspector
     void renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove);
 
     bool renderHandleField(const char* fieldId, TinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description = nullptr);

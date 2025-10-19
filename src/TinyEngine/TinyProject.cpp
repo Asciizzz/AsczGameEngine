@@ -101,6 +101,9 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TypeHandle mainSceneTypeHandle = tinyFS->getTHandle(mainSceneFileHandle);
     activeSceneHandle = mainSceneTypeHandle.handle; // Point to the actual scene in registry
 
+    // Initialize unified selection system - select the root scene node by default
+    selectedHandle = SelectHandle(mainScene.rootHandle, SelectHandle::Type::Scene);
+
     // Create camera and global UBO manager
     tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 100.0f);
     tinyGlobal = MakeUnique<TinyGlobal>(2);
@@ -329,8 +332,8 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     
     // Check if this node has children
     bool hasChildren = !node->childrenHandles.empty();
-    bool isSelected = (selectedSceneNodeHandle.index == nodeHandle.index && selectedSceneNodeHandle.version == nodeHandle.version);
-    bool isHeld = (heldSceneNodeHandle.index == nodeHandle.index && heldSceneNodeHandle.version == nodeHandle.version);
+    bool isSelected = (selectedHandle.isScene() && selectedHandle.handle.index == nodeHandle.index && selectedHandle.handle.version == nodeHandle.version);
+    bool isHeld = (heldHandle.isScene() && heldHandle.handle.index == nodeHandle.index && heldHandle.handle.version == nodeHandle.version);
     
     // Create tree node flags
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
@@ -370,7 +373,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     bool isDragging = false;
     if (nodeHandle != activeScene->rootHandle && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
         isDragging = true;
-        heldSceneNodeHandle = nodeHandle;  // Set the held node during drag
+        holdSceneNode(nodeHandle);  // Set the held node during drag
         
         // Set payload to carry the node handle
         ImGui::SetDragDropPayload("NODE_HANDLE", &nodeHandle, sizeof(TinyHandle));
@@ -391,7 +394,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         
         // Only select if drag distance was minimal (treat as click)
         if (dragDistance < 5.0f) { // 5 pixel tolerance
-            selectedSceneNodeHandle = nodeHandle;
+            selectSceneNode(nodeHandle);
         }
         
         // Reset drag delta for next interaction
@@ -400,7 +403,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     
     // Select node on right-click (immediate selection before context menu)
     if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-        selectedSceneNodeHandle = nodeHandle;
+        selectSceneNode(nodeHandle);
     }
     
     // Drag and drop target
@@ -418,10 +421,10 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
                 expandParentChain(nodeHandle);
                 
                 // Keep the dragged node selected (maintain selection across drag operations)
-                selectedSceneNodeHandle = draggedNode;
+                selectSceneNode(draggedNode);
                 
                 // Clear held state after successful drop
-                heldSceneNodeHandle = TinyHandle();
+                clearHeld();
             }
         }
         
@@ -504,7 +507,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             TinyRScene* scene = getActiveScene();
             if (scene) {
                 TinyHandle newNodeHandle = scene->addNode("New Node", nodeHandle);
-                selectedSceneNodeHandle = newNodeHandle;
+                selectSceneNode(newNodeHandle);
                 expandNode(nodeHandle); // Expand parent to show new child
             }
         }
@@ -515,7 +518,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         if (ImGui::MenuItem("Delete", nullptr, false, !isRootNode)) {
             TinyRScene* scene = getActiveScene();
             if (scene && scene->removeNode(nodeHandle)) {
-                selectedSceneNodeHandle = TinyHandle(); // Clear selection
+                clearSelection(); // Clear selection
             }
         }
 
@@ -523,7 +526,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             TinyRScene* scene = getActiveScene();
             TinyHandle parentHandle = node->parentHandle;
             if (scene && scene->flattenNode(nodeHandle)) {
-                selectedSceneNodeHandle = parentHandle; // Select the parent node after flattening
+                selectSceneNode(parentHandle); // Select the parent node after flattening
             }
         }
         
@@ -638,12 +641,35 @@ void TinyProject::processPendingDeletions() {
         fs.removeFNode(handle);
         
         // Clear selection if the selected file was deleted
-        if (selectedFNodeHandle == handle) {
-            selectedFNodeHandle = TinyHandle();
+        if (selectedHandle.isFile() && selectedHandle.handle == handle) {
+            clearSelection();
         }
     }
 
     pendingFNodeDeletions.clear();
+}
+
+void TinyProject::selectFileNode(TinyHandle fileHandle) {
+    // Check if the file handle is valid
+    if (!fileHandle.valid()) {
+        clearSelection();
+        return;
+    }
+    
+    // Get the filesystem node
+    TinyFS& fs = filesystem();
+    const TinyFS::Node* node = fs.getFNodes().get(fileHandle);
+    if (!node) {
+        // Invalid node, clear selection
+        clearSelection();
+        return;
+    }
+    
+    // Only select if it's an actual file, not a folder
+    if (node->isFile()) {
+        selectedHandle = SelectHandle(fileHandle, SelectHandle::Type::File);
+    }
+    // If it's a folder, ignore the selection (don't set selectedHandle)
 }
 
 
@@ -663,7 +689,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
     
     // Check if this node has children and is selected
     bool hasChildren = !node->children.empty();
-    bool isSelected = (selectedFNodeHandle.index == nodeHandle.index && selectedFNodeHandle.version == nodeHandle.version);
+    bool isSelected = (selectedHandle.isFile() && selectedHandle.handle.index == nodeHandle.index && selectedHandle.handle.version == nodeHandle.version);
     
     if (node->type == TinyFS::Node::Type::Folder) {
         // Display root folder as ".root" instead of full path
@@ -715,7 +741,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             
             // Only select if drag distance was minimal (treat as click)
             if (dragDistance < 5.0f) { // 5 pixel tolerance
-                selectedFNodeHandle = nodeHandle;
+                selectFileNode(nodeHandle);
             }
             
             // Reset drag delta for next interaction
@@ -724,11 +750,13 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         
         // Select folder on right-click (immediate selection before context menu)
         if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-            selectedFNodeHandle = nodeHandle;
+            selectFileNode(nodeHandle);
         }
         
         // Drag source for folders
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            // Set this folder as held when dragging begins
+            holdFileNode(nodeHandle);
             ImGui::SetDragDropPayload("FOLDER_HANDLE", &nodeHandle, sizeof(TinyHandle));
             ImGui::Text("Moving: %s", displayName.c_str());
             ImGui::EndDragDropSource();
@@ -760,7 +788,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             
             if (ImGui::MenuItem("Add Folder")) {
                 TinyHandle newFolderHandle = fs.addFolder(nodeHandle, "New Folder");
-                selectedFNodeHandle = newFolderHandle;
+                selectFileNode(newFolderHandle);
                 // Expand parent chain to show the new folder
                 expandFNodeParentChain(newFolderHandle);
             }
@@ -773,7 +801,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 // Add scene to registry and create file node
                 TinyRScene* scenePtr = &newScene;
                 TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", scenePtr);
-                selectedFNodeHandle = fileHandle;
+                selectFileNode(fileHandle);
                 // Expand parent chain to show the new scene
                 expandFNodeParentChain(fileHandle);
             }
@@ -853,16 +881,33 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background (same as nodes)
             
             if (ImGui::Selectable(sceneName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
-                selectedFNodeHandle = nodeHandle;
+                // Don't select immediately - let the drag detection handle it below
+            }
+            
+            // Handle selection - only select on mouse release if we didn't drag
+            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                // Check if this was a click (no significant drag distance)
+                ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+                float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
+                
+                // Only select if drag distance was minimal (treat as click)
+                if (dragDistance < 5.0f) { // 5 pixel tolerance
+                    selectFileNode(nodeHandle);
+                }
+                
+                // Reset drag delta for next interaction
+                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
             }
             
             // Select scene file on right-click (immediate selection before context menu)
             if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-                selectedFNodeHandle = nodeHandle;
+                selectFileNode(nodeHandle);
             }
             
             // Drag source for scene files
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                // Set this scene file as held when dragging begins
+                holdFileNode(nodeHandle);
                 ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
                 ImGui::Text("Scene: %s", node->name.c_str());
                 ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drop on folders to move");
@@ -884,7 +929,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 } else {
                     if (ImGui::MenuItem("Make Active Scene")) {
                         if (setActiveScene(sceneRegistryHandle)) {
-                            selectedSceneNodeHandle = getRootNodeHandle(); // Reset node selection to root
+                            selectSceneNode(getRootNodeHandle()); // Reset node selection to root
                         }
                     }
                 }
@@ -910,18 +955,30 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             
             ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_None);
             
-            // Handle file selection
-            if (ImGui::IsItemClicked()) {
-                selectedFNodeHandle = nodeHandle;
+            // Handle selection - only select on mouse release if we didn't drag
+            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                // Check if this was a click (no significant drag distance)
+                ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+                float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
+                
+                // Only select if drag distance was minimal (treat as click)
+                if (dragDistance < 5.0f) { // 5 pixel tolerance
+                    selectFileNode(nodeHandle);
+                }
+                
+                // Reset drag delta for next interaction
+                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
             }
             
             // Select file on right-click (immediate selection before context menu)
             if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-                selectedFNodeHandle = nodeHandle;
+                selectFileNode(nodeHandle);
             }
             
             // Drag source for other files
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                // Set this file as held when dragging begins
+                holdFileNode(nodeHandle);
                 ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
                 ImGui::Text("Moving file: %s", node->name.c_str());
                 ImGui::EndDragDropSource();
@@ -940,6 +997,11 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             
             ImGui::PopStyleColor(3);
         }
+    }
+    
+    // Clear held handle if no drag operation is active
+    if (heldHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+        clearHeld();
     }
     
     ImGui::PopID();
@@ -1076,7 +1138,7 @@ void TinyProject::loadModelFromPath(const std::string& filePath, TinyHandle targ
             // Success! The model has been loaded and added to the project
             
             // Select the newly created model folder
-            selectedFNodeHandle = modelFolderHandle;
+            selectFileNode(modelFolderHandle);
             
             // Expand the target folder to show the newly imported model folder
             expandedFNodes.insert(targetFolder);
