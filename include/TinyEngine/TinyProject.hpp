@@ -2,7 +2,9 @@
 
 #include "TinyExt/TinyFS.hpp"
 
-#include "TinyEngine/TinyRData.hpp"
+#include "TinyEngine/TinyRData.hpp" // Soon to be deprecated
+#include "TinyData/TinyModel.hpp"
+#include "TinyData/TinyScene.hpp"
 
 #include "TinyData/TinyCamera.hpp"
 #include "TinyEngine/TinyGlobal.hpp"
@@ -76,19 +78,19 @@ public:
     void loadModelFromPath(const std::string& filePath, TinyHandle targetFolder);
 
     // Active scene access methods
-    TinyRScene* getActiveScene() const { return tinyFS->registryRef().get<TinyRScene>(activeSceneHandle); }
+    TinyScene* getActiveScene() const { return tinyFS->registryRef().get<TinyScene>(activeSceneHandle); }
     TinyHandle getActiveSceneHandle() const { return activeSceneHandle; }
     
     /**
      * Switch the active scene to a different scene from the registry.
-     * @param sceneHandle Handle to a TinyRScene in the registry to make active
+     * @param sceneHandle Handle to a TinyScene in the registry to make active
      * @return true if successful, false if the handle is invalid or not a scene
      */
     bool setActiveScene(TinyHandle sceneHandle);
     
     // Helper methods for UI compatibility
     TinyHandle getRootNodeHandle() const { 
-        TinyRScene* scene = getActiveScene();
+        TinyScene* scene = getActiveScene();
         return scene ? scene->rootHandle : TinyHandle();
     }
 

@@ -32,7 +32,7 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         // =============================================================================
         
         // Active Scene Name Header
-        TinyRScene* activeScene = project->getActiveScene();
+        TinyScene* activeScene = project->getActiveScene();
         if (activeScene) {
             ImGui::Text("Active Scene: %s", activeScene->name.c_str());
             
@@ -278,7 +278,7 @@ void TinyApp::renderInspectorWindow() {
 }
 
 void TinyApp::renderSceneNodeInspector() {
-    TinyRScene* activeScene = project->getActiveScene();
+    TinyScene* activeScene = project->getActiveScene();
     if (!activeScene) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No active scene");
         return;
@@ -462,7 +462,7 @@ void TinyApp::renderSceneNodeInspector() {
                 if (ImGui::Button("Reset Transform")) {
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = glm::mat4(1.0f);
-                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                    if (TinyScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                 }
                 return;
             }
@@ -477,7 +477,7 @@ void TinyApp::renderSceneNodeInspector() {
                 if (ImGui::Button("Reset Transform")) {
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = glm::mat4(1.0f);
-                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                    if (TinyScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                 }
                 return;
             }
@@ -544,7 +544,7 @@ void TinyApp::renderSceneNodeInspector() {
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = translateMat * rotateMat * scaleMat;
                     
-                    if (TinyRScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                    if (TinyScene* scene = project->getActiveScene()) scene->updateGlbTransform();
                 }
             }
             
@@ -591,7 +591,7 @@ void TinyApp::renderSceneNodeInspector() {
 
             // Show skeleton node information if valid
             if (meshComp->skeleNodeHandle.valid()) {
-                TinyRScene* activeScene = project->getActiveScene();
+                TinyScene* activeScene = project->getActiveScene();
                 if (activeScene) {
                     const TinyNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
@@ -634,7 +634,7 @@ void TinyApp::renderSceneNodeInspector() {
             
             // Show skeleton node information if valid
             if (boneComp->skeleNodeHandle.valid()) {
-                TinyRScene* activeScene = project->getActiveScene();
+                TinyScene* activeScene = project->getActiveScene();
                 if (activeScene) {
                     const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
@@ -656,7 +656,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Determine max bone count for validation
             int maxBoneIndex = 255; // Default max
             if (boneComp->skeleNodeHandle.valid()) {
-                TinyRScene* activeScene = project->getActiveScene();
+                TinyScene* activeScene = project->getActiveScene();
                 if (activeScene) {
                     const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
@@ -864,9 +864,9 @@ void TinyApp::renderFileSystemInspector() {
     if (isFile) {
         // Determine file type and show specific information
         std::string fileType = "Unknown";
-        if (selectedFNode->tHandle.isType<TinyRScene>()) {
+        if (selectedFNode->tHandle.isType<TinyScene>()) {
             fileType = "Scene";
-            TinyRScene* scene = static_cast<TinyRScene*>(fs.registryRef().get(selectedFNode->tHandle));
+            TinyScene* scene = static_cast<TinyScene*>(fs.registryRef().get(selectedFNode->tHandle));
             if (scene) {
                 ImGui::Text("Type: %s", fileType.c_str());
                 ImGui::Text("Scene Nodes: %u", scene->nodes.count());
@@ -982,7 +982,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             const TinySkeleton* skeleton = registry.get<TinySkeleton>(handle);
             displayText = skeleton ? skeleton->name : "Unknown Skeleton";
         } else if (strcmp(targetType, "SkeletonNode") == 0) {
-            TinyRScene* activeScene = project->getActiveScene();
+            TinyScene* activeScene = project->getActiveScene();
             if (activeScene) {
                 const TinyNode* node = activeScene->nodes.get(handle);
                 displayText = node ? node->name : "Unknown Node";
@@ -1060,7 +1060,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             // Accept skeleton nodes from hierarchy
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
                 TinyHandle nodeHandle = *(const TinyHandle*)payload->Data;
-                TinyRScene* activeScene = project->getActiveScene();
+                TinyScene* activeScene = project->getActiveScene();
                 if (activeScene) {
                     const TinyNode* node = activeScene->nodes.get(nodeHandle);
                     if (node && node->hasComponent<TinyNode::Skeleton>()) {

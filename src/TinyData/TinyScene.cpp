@@ -1,13 +1,7 @@
-#include "TinyEngine/TinyRData.hpp"
-
-#include "TinyVK/System/CmdBuffer.hpp"
-
-#include <stdexcept>
-
-using namespace TinyVK;
+#include "TinyData/TinyScene.hpp"
 
 
-void TinyRScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
+void TinyScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
     // Use root node if no valid handle provided
     TinyHandle actualNode = nodeHandle.valid() ? nodeHandle : rootHandle;
     
@@ -23,7 +17,7 @@ void TinyRScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& pare
     }
 }
 
-TinyHandle TinyRScene::addRoot(const std::string& nodeName) {
+TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     // Create a new root node
     TinyNode rootNode;
     rootNode.name = nodeName;
@@ -33,7 +27,7 @@ TinyHandle TinyRScene::addRoot(const std::string& nodeName) {
     return rootHandle;
 }
 
-TinyHandle TinyRScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
+TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
     // If no parent specified, use root node
     if (!parentHandle.valid()) parentHandle = rootHandle;
     
@@ -68,7 +62,7 @@ TinyHandle TinyRScene::addNode(const std::string& nodeName, TinyHandle parentHan
     return newNodeHandle;
 }
 
-TinyHandle TinyRScene::addNode(const TinyNode& nodeData, TinyHandle parentHandle) {
+TinyHandle TinyScene::addNode(const TinyNode& nodeData, TinyHandle parentHandle) {
     // If no parent specified, use root node
     if (!parentHandle.valid()) parentHandle = rootHandle;
     
@@ -101,7 +95,7 @@ TinyHandle TinyRScene::addNode(const TinyNode& nodeData, TinyHandle parentHandle
 }
 
 
-void TinyRScene::addScene(const TinyRScene& sceneA, TinyHandle parentHandle) {
+void TinyScene::addScene(const TinyScene& sceneA, TinyHandle parentHandle) {
     if (sceneA.nodes.count() == 0) return;
 
     // Default to root node if no parent specified
@@ -217,7 +211,7 @@ void TinyRScene::addScene(const TinyRScene& sceneA, TinyHandle parentHandle) {
     updateGlbTransform(parentHandle); // Update transforms after adding new nodes
 }
 
-bool TinyRScene::removeNode(TinyHandle nodeHandle, bool recursive) {
+bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
     TinyNode* nodeToDelete = nodes.get(nodeHandle);
     if (!nodeToDelete || nodeHandle == rootHandle) return false;
 
@@ -251,11 +245,11 @@ bool TinyRScene::removeNode(TinyHandle nodeHandle, bool recursive) {
     return true;
 }
 
-bool TinyRScene::flattenNode(TinyHandle nodeHandle) {
+bool TinyScene::flattenNode(TinyHandle nodeHandle) {
     return removeNode(nodeHandle, false);
 }
 
-bool TinyRScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {
+bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {
     // Validate handles
     if (!nodeHandle.valid() || !newParentHandle.valid()) {
         return false;
@@ -320,15 +314,15 @@ bool TinyRScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle)
 }
 
 
-TinyNode* TinyRScene::getNode(TinyHandle nodeHandle) {
+TinyNode* TinyScene::getNode(TinyHandle nodeHandle) {
     return nodes.get(nodeHandle);
 }
 
-const TinyNode* TinyRScene::getNode(TinyHandle nodeHandle) const {
+const TinyNode* TinyScene::getNode(TinyHandle nodeHandle) const {
     return nodes.get(nodeHandle);
 }
 
-bool TinyRScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
+bool TinyScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
     TinyNode* node = nodes.get(nodeHandle);
     if (!node) return false;
 

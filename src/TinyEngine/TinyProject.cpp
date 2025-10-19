@@ -89,7 +89,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS->setRegistryHandle(registryHandle);
 
     // Create Main Scene (the active scene with a single root node)
-    TinyRScene mainScene;
+    TinyScene mainScene;
     mainScene.name = "Main Scene";
     mainScene.addRoot("Root");
 
@@ -203,7 +203,7 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
     }
 
     // Create scene with nodes - preserve hierarchy but remap resource references
-    TinyRScene scene;
+    TinyScene scene;
     scene.name = model.name;
 
     // First pass: Insert all nodes and collect their actual handles
@@ -279,8 +279,8 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
 
 void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode) {
     const auto& registry = registryRef();
-    const TinyRScene* sourceScene = registry.get<TinyRScene>(sceneHandle);
-    TinyRScene* activeScene = getActiveScene();
+    const TinyScene* sourceScene = registry.get<TinyScene>(sceneHandle);
+    TinyScene* activeScene = getActiveScene();
     
     if (!sourceScene || !activeScene) return;
 
@@ -295,8 +295,8 @@ void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode
 }
 
 bool TinyProject::setActiveScene(TinyHandle sceneHandle) {
-    // Verify the handle points to a valid TinyRScene in the registry
-    const TinyRScene* scene = registryRef().get<TinyRScene>(sceneHandle);
+    // Verify the handle points to a valid TinyScene in the registry
+    const TinyScene* scene = registryRef().get<TinyScene>(sceneHandle);
     if (!scene) {
         return false; // Invalid handle or not a scene
     }
@@ -305,7 +305,7 @@ bool TinyProject::setActiveScene(TinyHandle sceneHandle) {
     activeSceneHandle = sceneHandle;
 
     // Update transforms for the new active scene
-    TinyRScene* activeScene = getActiveScene();
+    TinyScene* activeScene = getActiveScene();
     if (activeScene) activeScene->updateGlbTransform();
     
     return true;
@@ -313,7 +313,7 @@ bool TinyProject::setActiveScene(TinyHandle sceneHandle) {
 
 
 void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
-    TinyRScene* activeScene = getActiveScene();
+    TinyScene* activeScene = getActiveScene();
     if (!activeScene) return;
     
     // Use root node if no valid handle provided
@@ -429,12 +429,12 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             
             // Get the filesystem node to access its TypeHandle
             const TinyFS::Node* sceneFile = tinyFS->getFNodes().get(sceneFNodeHandle);
-            if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyRScene>()) {
+            if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyScene>()) {
                 // Extract the registry handle from the TypeHandle
                 TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
                 
                 // Verify the scene exists and instantiate it at this node
-                const TinyRScene* scene = registryRef().get<TinyRScene>(sceneRegistryHandle);
+                const TinyScene* scene = registryRef().get<TinyScene>(sceneRegistryHandle);
                 if (scene) {
                     // Place the scene at this node
                     addSceneInstance(sceneRegistryHandle, nodeHandle);
@@ -451,7 +451,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             
             // Get the filesystem node to check if it's a scene file
             const TinyFS::Node* fileNode = tinyFS->getFNodes().get(fileNodeHandle);
-            if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyRScene>()) {
+            if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyScene>()) {
                 // This is a scene file - instantiate it at this node
                 TinyHandle sceneRegistryHandle = fileNode->tHandle.handle;
                 
@@ -461,7 +461,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
                     ImGui::SetTooltip("Cannot drop a scene into itself!");
                 } else {
                     // Verify the scene exists and instantiate it at this node
-                    const TinyRScene* scene = registryRef().get<TinyRScene>(sceneRegistryHandle);
+                    const TinyScene* scene = registryRef().get<TinyScene>(sceneRegistryHandle);
                     if (scene) {
                         // Place the scene at this node
                         addSceneInstance(sceneRegistryHandle, nodeHandle);
@@ -499,7 +499,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         }
         
         if (ImGui::MenuItem("Add Child")) {
-            TinyRScene* scene = getActiveScene();
+            TinyScene* scene = getActiveScene();
             if (scene) {
                 TinyHandle newNodeHandle = scene->addNode("New Node", nodeHandle);
                 selectSceneNode(newNodeHandle);
@@ -511,14 +511,14 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 
         bool isRootNode = (nodeHandle == activeScene->rootHandle);
         if (ImGui::MenuItem("Delete", nullptr, false, !isRootNode)) {
-            TinyRScene* scene = getActiveScene();
+            TinyScene* scene = getActiveScene();
             if (scene && scene->removeNode(nodeHandle)) {
                 clearSelection(); // Clear selection
             }
         }
 
         if (ImGui::MenuItem("Flatten", nullptr, false, !isRootNode && hasChildren)) {
-            TinyRScene* scene = getActiveScene();
+            TinyScene* scene = getActiveScene();
             TinyHandle parentHandle = node->parentHandle;
             if (scene && scene->flattenNode(nodeHandle)) {
                 selectSceneNode(parentHandle); // Select the parent node after flattening
@@ -579,7 +579,7 @@ void TinyProject::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 }
 
 void TinyProject::expandParentChain(TinyHandle nodeHandle) {
-    TinyRScene* activeScene = getActiveScene();
+    TinyScene* activeScene = getActiveScene();
     if (!activeScene) return;
     
     // Get the target node
@@ -789,12 +789,12 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             }
 
             if (ImGui::MenuItem("Add Scene")) {
-                TinyRScene newScene;
+                TinyScene newScene;
                 newScene.name = "New Scene";
                 newScene.addRoot("Root");
                 
                 // Add scene to registry and create file node
-                TinyRScene* scenePtr = &newScene;
+                TinyScene* scenePtr = &newScene;
                 TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", scenePtr);
                 selectFileNode(fileHandle);
                 // Expand parent chain to show the new scene
@@ -854,7 +854,7 @@ void TinyProject::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         }
         
     } else if (node->type == TinyFS::Node::Type::File) {
-        if (node->tHandle.isType<TinyRScene>()) {
+        if (node->tHandle.isType<TinyScene>()) {
             // Scene file
             std::string sceneName = node->name;
             

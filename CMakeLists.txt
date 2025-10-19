@@ -26,6 +26,7 @@ else()
 endif()
 
 file(GLOB_RECURSE SRC_FILES
+    src/TinyData/TinyCamera.cpp
     src/TinyData/TinyVertex.cpp
     src/TinyData/TinyMesh.cpp
     src/TinyData/TinyMaterial.cpp
@@ -33,7 +34,7 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyData/TinySkeleton.cpp
     src/TinyData/TinyAnimation.cpp
     src/TinyData/TinyNode.cpp
-    src/TinyData/TinyCamera.cpp
+    src/TinyData/TinyScene.cpp
     
     src/TinyEngine/TinyRData.cpp
     src/TinyEngine/TinyGlobal.cpp
