@@ -14,6 +14,8 @@ struct TinySubmesh {
 
 // Uniform mesh structure that holds raw data only
 struct TinyMesh {
+    TinyMesh() = default;
+
     TinyMesh(const TinyMesh&) = delete;
     TinyMesh& operator=(const TinyMesh&) = delete;
 
@@ -23,21 +25,11 @@ struct TinyMesh {
     std::string name; // Mesh name from glTF
     
     TinyVertexLayout vertexLayout;
-    enum class IndexType {
-        Uint8  = 0,
-        Uint16 = 1,
-        Uint32 = 2
-    } indexType = IndexType::Uint32; // You can use the value for comparison
-
-    TinyMesh() = default;
-
-    // Raw byte data
-    std::vector<uint8_t> vertexData;
-    std::vector<uint8_t> indexData;
-
+    std::vector<uint8_t> vertexData; // raw bytes
     size_t vertexCount = 0;
+
+    std::vector<uint8_t> indexData; // raw bytes
     size_t indexCount = 0;
-    // Useful for reconstructing data (rarely needed)
     size_t indexStride = 0;
 
     std::vector<TinySubmesh> submeshes;
@@ -70,14 +62,12 @@ struct TinyMesh {
         return *this;
     }
 
-    static IndexType sizeToIndexType(size_t size);
 
     // Buffers for runtime use
     TinyVK::DataBuffer vertexBuffer;
     TinyVK::DataBuffer indexBuffer;
-    VkIndexType vkIndexType = VK_INDEX_TYPE_UINT16;
+    VkIndexType indexType = VK_INDEX_TYPE_UINT16;
 
     bool vkCreate(const TinyVK::Device* deviceVK);
-
-    static VkIndexType tinyToVkIndexType(TinyMesh::IndexType type);
+    static VkIndexType sizeToIndexType(size_t size);
 };

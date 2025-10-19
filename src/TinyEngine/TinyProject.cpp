@@ -196,7 +196,7 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
     std::vector<TinyHandle> glbSkeleRHandle;
     for (auto& skeleton : model.skeletons) {
         // TinyHandle handle = registry->add(rSkeleton).handle;
-        TinyHandle fnHandle = tinyFS->addFile(fnSkeleFolder, "Skeleton", std::move(&skeleton));
+        TinyHandle fnHandle = tinyFS->addFile(fnSkeleFolder, skeleton.name, std::move(&skeleton));
         TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
 
         glbSkeleRHandle.push_back(tHandle.handle);

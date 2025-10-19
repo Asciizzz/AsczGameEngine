@@ -19,16 +19,6 @@ TinyMesh& TinyMesh::writeSubmesh(const TinySubmesh& sub, uint32_t index) {
     return *this;
 }
 
-TinyMesh::IndexType TinyMesh::sizeToIndexType(size_t size) {
-    switch (size) {
-        case sizeof(uint8_t):  return IndexType::Uint8;
-        case sizeof(uint16_t): return IndexType::Uint16;
-        case sizeof(uint32_t): return IndexType::Uint32;
-        default:               return IndexType::Uint32;
-    }
-}
-
-
 
 
 bool TinyMesh::vkCreate(const TinyVK::Device* deviceVK) {
@@ -47,11 +37,11 @@ bool TinyMesh::vkCreate(const TinyVK::Device* deviceVK) {
     return true;
 }
 
-VkIndexType TinyMesh::tinyToVkIndexType(TinyMesh::IndexType type) {
-    switch (type) {
-        case TinyMesh::IndexType::Uint8:  return VK_INDEX_TYPE_UINT8;
-        case TinyMesh::IndexType::Uint16: return VK_INDEX_TYPE_UINT16;
-        case TinyMesh::IndexType::Uint32: return VK_INDEX_TYPE_UINT32;
-        default: throw std::runtime_error("Unsupported index type in TinyMesh");
+VkIndexType TinyMesh::sizeToIndexType(size_t size) {
+    switch (size) {
+        case sizeof(uint8_t):  return VK_INDEX_TYPE_UINT8;
+        case sizeof(uint16_t): return VK_INDEX_TYPE_UINT16;
+        case sizeof(uint32_t): return VK_INDEX_TYPE_UINT32;
+        default: throw std::runtime_error("Unsupported index size in TinyMesh");
     }
 }

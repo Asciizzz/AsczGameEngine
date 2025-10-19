@@ -639,10 +639,10 @@ void TinyApp::renderSceneNodeInspector() {
                     const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
                         ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s", skeleNode->name.c_str());
+                        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
                     } else {
                         ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid/No Skeleton");
+                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid/No Skeleton");
                     }
                 }
             }

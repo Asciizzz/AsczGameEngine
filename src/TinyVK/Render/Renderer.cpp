@@ -293,7 +293,7 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
         // Draw each individual submeshes
         VkBuffer vertexBuffer = regMesh->vertexBuffer;
         VkBuffer indexBuffer = regMesh->indexBuffer;
-        VkIndexType indexType = regMesh->vkIndexType;
+        VkIndexType indexType = regMesh->indexType;
 
         VkBuffer buffers[] = { vertexBuffer };
         VkDeviceSize offsets[] = { 0 };

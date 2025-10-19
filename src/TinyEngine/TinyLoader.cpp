@@ -406,7 +406,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
     std::vector<PrimitiveData> allPrimitiveDatas;
 
     // Shared data
-    TinyMesh::IndexType largestIndexType = TinyMesh::IndexType::Uint8;
+    VkIndexType largestIndexType = VK_INDEX_TYPE_UINT8;
 
     // First pass: gather all primitive data and determine largest index type
     for (const auto& primitive : primitives) {
@@ -444,26 +444,30 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         };
 
         // Do 2 things: find the current index type, and append indices to pd.indices
-        TinyMesh::IndexType currentType;
+        VkIndexType currentType;
         switch (indexAccessor.componentType) {
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: 
                 appendIndices(uint8_t{});
-                currentType = TinyMesh::IndexType::Uint8;
+                currentType = VK_INDEX_TYPE_UINT8;
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
                 appendIndices(uint16_t{});
-                currentType = TinyMesh::IndexType::Uint16;
+                currentType = VK_INDEX_TYPE_UINT16;
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
                 appendIndices(uint32_t{});
-                currentType = TinyMesh::IndexType::Uint32;
+                currentType = VK_INDEX_TYPE_UINT32;
                 break;
             default:
                 throw std::runtime_error("Unsupported index component type");
         }
 
         // Update largest index type
-        if (currentType > largestIndexType) largestIndexType = currentType;
+        if (currentType == VK_INDEX_TYPE_UINT32) {
+            largestIndexType = VK_INDEX_TYPE_UINT32;
+        } else if (currentType == VK_INDEX_TYPE_UINT16 && largestIndexType != VK_INDEX_TYPE_UINT32) {
+            largestIndexType = VK_INDEX_TYPE_UINT16;
+        }
 
         pData.materialIndex = primitive.material;
         allPrimitiveDatas.push_back(std::move(pData));
@@ -515,7 +519,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
     }
 
     switch (largestIndexType) {
-        case TinyMesh::IndexType::Uint8: {
+        case VK_INDEX_TYPE_UINT8: {
             std::vector<uint8_t> indices8;
             indices8.reserve(allIndices.size());
             for (uint32_t idx : allIndices) {
@@ -524,7 +528,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
             mesh.setIndices(indices8);
             break;
         }
-        case TinyMesh::IndexType::Uint16: {
+        case VK_INDEX_TYPE_UINT16: {
             std::vector<uint16_t> indices16;
             indices16.reserve(allIndices.size());
             for (uint32_t idx : allIndices) {
@@ -533,7 +537,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
             mesh.setIndices(indices16);
             break;
         }
-        case TinyMesh::IndexType::Uint32: {
+        case VK_INDEX_TYPE_UINT32: {
             mesh.setIndices(allIndices);
             break;
         }
