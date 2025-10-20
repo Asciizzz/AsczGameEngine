@@ -48,30 +48,23 @@ struct TinyNode {
 
     struct Skeleton {
         static constexpr Types kType = Types::Skeleton;
-        TinyHandle skeleHandle;
-        std::vector<glm::mat4> boneTransformsFinal;
+        TinyHandle skeleHandle;   // Original skeleton data
+        TinyHandle skeleRtHandle; // Runtime skeleton data
     };
 
-protected: // RNode inherits from this
-
-    // Store all components in a tuple - completely generic!
+private:
     std::tuple<MeshRender, BoneAttach, Skeleton> components;
 
-    // Template magic to get component by type from tuple
     template<typename T>
-    T& getComponent() {
-        return std::get<T>(components);
-    }
+    T& getComponent() { return std::get<T>(components); }
 
     template<typename T>
-    const T& getComponent() const {
-        return std::get<T>(components);
-    }
+    const T& getComponent() const { return std::get<T>(components); }
 
-public:
     static constexpr uint32_t toMask(Types t) {
         return static_cast<uint32_t>(t);
     }
+public:
 
     // Component management functions
     bool hasType(Types componentType) const {
@@ -101,12 +94,8 @@ public:
     }
 
     template<typename T>
-    T* get() {
-        return hasComponent<T>() ? &getComponent<T>() : nullptr;
-    }
+    T* get() { return hasComponent<T>() ? &getComponent<T>() : nullptr; }
 
     template<typename T>
-    const T* get() const {
-        return hasComponent<T>() ? &getComponent<T>() : nullptr;
-    }
+    const T* get() const { return hasComponent<T>() ? &getComponent<T>() : nullptr; }
 };

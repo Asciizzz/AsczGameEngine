@@ -1,50 +1,50 @@
 #include "TinyData/TinySkeleton.hpp"
-#include <iostream>
-#include <iomanip>
 
-uint32_t TinySkeleton::insert(const TinyBone& bone) {
-    bones.push_back(bone);
-    return static_cast<uint32_t>(bones.size() - 1);
+using namespace TinyVK;
+
+void TinySkeletonRT::set(const TinySkeleton& skeleton) {
+    boneNames.clear();
+    boneParents.clear();
+    boneChildren.clear();
+    boneInverseBindMatrices.clear();
+    boneLocalBindTransforms.clear();
+
+    for (const auto& bone :skeleton.bones) {
+        boneNames.push_back(bone.name);
+        boneParents.push_back(bone.parent);
+        boneChildren.push_back(bone.children);
+        boneInverseBindMatrices.push_back(bone.inverseBindMatrix);
+        boneLocalBindTransforms.push_back(bone.localBindTransform);
+
+        // Default final transform to identity
+        boneTransformsFinal.push_back(glm::mat4(1.0f));
+    }
 }
 
+void TinySkeletonRT::vkCreate(const TinyVK::Device* deviceVK, VkDescriptorPool descPool, VkDescriptorSetLayout descSetLayout) {
+    // Create GPU buffer for final bone transforms
+    VkDeviceSize bufferSize = sizeof(glm::mat4) * boneTransformsFinal.size();
 
-void TinySkeleton::debugPrintHierarchy() const {
-    std::cout << "Skeleton Hierarchy (" << bones.size() << " bones):\n";
-    std::cout << std::string(50, '=') << "\n";
-    
-    // Find root bones (those with parent index -1)
-    for (int i = 0; i < static_cast<int>(bones.size()); ++i) {
-        if (bones[i].parent == -1) {
-            debugPrintRecursive(i, 0);
-        }
-    }
+    // Bone buffer is host visible for easy updates
+    boneFinalBuffer
+        .setDataSize(bufferSize)
+        .setUsageFlags(BufferUsage::Uniform)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(deviceVK)
+        .mapAndCopy(boneTransformsFinal.data());
 
-    std::cout << std::string(50, '=') << "\n";
-}
+    // Create descriptor set for skinning shader
+    boneDescSet.allocate(deviceVK->device, descPool, descSetLayout);
 
-void TinySkeleton::debugPrintRecursive(int boneIndex, int depth) const {
-    if (boneIndex < 0 || boneIndex >= static_cast<int>(bones.size())) {
-        return;
-    }
+    VkDescriptorBufferInfo boneBufferInfo{};
+    boneBufferInfo.buffer = boneFinalBuffer; // Implicit conversion
+    boneBufferInfo.offset = 0;
+    boneBufferInfo.range = bufferSize;
 
-    const auto& bone = bones[boneIndex];
-    
-    // Print indentation
-    for (int i = 0; i < depth; ++i) {
-        std::cout << "  ";
-    }
-    
-    // Print bone info
-    std::cout << "[" << boneIndex << "] " << bone.name;
-
-    if (bone.parent != -1) {
-        std::cout << " (parent: " << bones[bone.parent].name << ")";
-    } else {
-        std::cout << " (root)";
-    }
-    std::cout << "\n";
-
-    for (const auto& childIndex : bone.children) {
-        debugPrintRecursive(childIndex, depth + 1);
-    }
+    DescWrite()
+        .setDstSet(boneDescSet)
+        .setType(DescType::UniformBuffer)
+        .setDescCount(1)
+        .setBufferInfo({boneBufferInfo})
+        .updateDescSets(deviceVK->device);
 }

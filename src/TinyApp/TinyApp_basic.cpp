@@ -287,7 +287,7 @@ void TinyApp::mainLoop() {
 
             // Process any pending deletions after the frame is complete
             // to avoid deleting resources in used by Vulkan
-            project->processPendingDeletions();
+            processPendingDeletions();
         }
 
         // Clean window title - FPS info now in ImGui

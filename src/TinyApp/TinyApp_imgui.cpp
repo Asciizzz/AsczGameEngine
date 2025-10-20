@@ -6,6 +6,11 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
+#include <imgui.h>
+#include <algorithm>
+#include <filesystem>
+#include <string>
+
 using namespace TinyVK;
 
 void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& camera, bool mouseFocus, float deltaTime) {
@@ -61,12 +66,12 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         ImGui::BeginChild("Hierarchy", ImVec2(0, hierarchyHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
         // Clear held node when mouse is released and no dragging is happening
-        if (project->heldHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            project->clearHeld();
+        if (heldHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            clearHeld();
         }
         
         if (activeScene && activeScene->nodes.count() > 0) {
-            project->renderNodeTreeImGui();
+            renderNodeTreeImGui();
         } else {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
@@ -117,10 +122,10 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         
         ImGui::BeginChild("FileExplorer", ImVec2(0, explorerHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
         
-        project->renderFileExplorerImGui();
+        renderFileExplorerImGui();
         
         // Render the file dialog once per frame, outside the file explorer tree
-        project->renderFileDialog();
+        renderFileDialog();
 
         ImGui::EndChild();
         
@@ -236,7 +241,7 @@ void TinyApp::renderInspectorWindow() {
     ImGui::Separator();
     
     // Check what type of selection we have
-    if (!project->selectedHandle.valid()) {
+    if (!selectedHandle.valid()) {
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No selection");
         return;
     }
@@ -251,10 +256,10 @@ void TinyApp::renderInspectorWindow() {
     
     ImGui::BeginChild("UnifiedInspectorContent", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     
-    if (project->selectedHandle.isScene()) {
+    if (selectedHandle.isScene()) {
         // Render scene node inspector
         renderSceneNodeInspector();
-    } else if (project->selectedHandle.isFile()) {
+    } else if (selectedHandle.isFile()) {
         // Render file system inspector
         renderFileSystemInspector();
     }
@@ -274,7 +279,7 @@ void TinyApp::renderSceneNodeInspector() {
     }
 
     // Get the selected scene node handle from unified selection
-    TinyHandle selectedSceneNodeHandle = project->getSelectedSceneNode();
+    TinyHandle selectedSceneNodeHandle = getSelectedSceneNode();
     if (!selectedSceneNodeHandle.valid()) {
         ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "No scene node selected");
         ImGui::Text("This should not happen in unified selection.");
@@ -284,7 +289,7 @@ void TinyApp::renderSceneNodeInspector() {
     const TinyNode* selectedNode = activeScene->nodes.get(selectedSceneNodeHandle);
     if (!selectedNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
-        project->selectSceneNode(project->getRootNodeHandle());
+        selectSceneNode(project->getRootNodeHandle());
         return;
     }
 
@@ -740,9 +745,6 @@ void TinyApp::renderSceneNodeInspector() {
             
             ImGui::Spacing();
             
-            // Show bone transform count (read-only)
-            ImGui::Text("Active Bone Transforms: %zu", skeleComp->boneTransformsFinal.size());
-            
             // Component status
             ImGui::Separator();
             ImGui::Text("Status:");
@@ -781,7 +783,7 @@ void TinyApp::renderFileSystemInspector() {
     TinyFS& fs = project->filesystem();
     
     // Get the selected file node handle from unified selection
-    TinyHandle selectedFNodeHandle = project->getSelectedFileNode();
+    TinyHandle selectedFNodeHandle = getSelectedFileNode();
     if (!selectedFNodeHandle.valid()) {
         ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "No file selected");
         ImGui::Text("This should not happen in unified selection.");
@@ -791,7 +793,7 @@ void TinyApp::renderFileSystemInspector() {
     const TinyFS::Node* selectedFNode = fs.getFNodes().get(selectedFNodeHandle);
     if (!selectedFNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid filesystem node selection");
-        project->clearSelection(); // Clear invalid selection
+        clearSelection(); // Clear invalid selection
         return;
     }
     
@@ -883,7 +885,7 @@ void TinyApp::renderFileSystemInspector() {
                     
                     if (ImGui::Button("Make Active", ImVec2(-1, 30))) {
                         if (project->setActiveScene(sceneRegistryHandle)) {
-                            project->selectSceneNode(project->getRootNodeHandle()); // Reset node selection
+                            selectSceneNode(project->getRootNodeHandle()); // Reset node selection
                         }
                     }
                     ImGui::PopStyleColor(3);
@@ -1077,4 +1079,877 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
     }
     
     return modified;
+}
+
+// FileDialog method implementations
+void FileDialog::open(const std::filesystem::path& startPath, TinyHandle folder) {
+    // Don't open if we're in the process of closing
+    if (shouldClose) return;
+    
+    isOpen = true;
+    justOpened = true;  // Mark that we need to open the popup
+    currentPath = startPath;
+    targetFolder = folder;
+    selectedFile.clear();
+    refreshFileList();
+}
+
+void FileDialog::close() {
+    shouldClose = true;  // Mark for closing instead of immediate close
+    selectedFile.clear();
+    targetFolder = TinyHandle();
+}
+
+void FileDialog::update() {
+    // Handle delayed closing after ImGui has processed the popup
+    if (shouldClose && !ImGui::IsPopupOpen("Load Model File")) {
+        isOpen = false;
+        justOpened = false;
+        shouldClose = false;
+    }
+}
+
+void FileDialog::refreshFileList() {
+    currentFiles.clear();
+    try {
+        if (std::filesystem::exists(currentPath) && std::filesystem::is_directory(currentPath)) {
+            for (const auto& entry : std::filesystem::directory_iterator(currentPath)) {
+                currentFiles.push_back(entry);
+            }
+            
+            // Sort: directories first, then files, both alphabetically
+            std::sort(currentFiles.begin(), currentFiles.end(), [](const auto& a, const auto& b) {
+                if (a.is_directory() != b.is_directory()) {
+                    return a.is_directory(); // Directories first
+                }
+                return a.path().filename() < b.path().filename();
+            });
+        }
+    } catch (const std::exception&) {
+        // Handle permission errors or other filesystem issues
+    }
+}
+
+bool FileDialog::isModelFile(const std::filesystem::path& path) {
+    auto ext = path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    return ext == ".glb" || ext == ".gltf" || ext == ".obj";
+}
+
+void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
+    TinyScene* activeScene = project->getActiveScene();
+    if (!activeScene) return;
+    
+    // Use root node if no valid handle provided
+    if (!nodeHandle.valid()) nodeHandle = activeScene->rootHandle;
+
+    const TinyNode* node = activeScene->nodes.get(nodeHandle);
+    if (!node) return;
+    
+    // Create a unique ID for this node
+    ImGui::PushID(static_cast<int>(nodeHandle.index));
+    
+    // Check if this node has children
+    bool hasChildren = !node->childrenHandles.empty();
+    bool isSelected = (selectedHandle.isScene() && selectedHandle.handle.index == nodeHandle.index && selectedHandle.handle.version == nodeHandle.version);
+    bool isHeld = (heldHandle.isScene() && heldHandle.handle.index == nodeHandle.index && heldHandle.handle.version == nodeHandle.version);
+    
+    // Create tree node flags
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    if (!hasChildren) {
+        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    }
+    if (isSelected) {
+        flags |= ImGuiTreeNodeFlags_Selected;
+    }
+    
+    // Add consistent styling to match File explorer theme
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Gray hover background (same as File explorer)
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background (same as File explorer)
+    
+    // Force open if this node is in the expanded set
+    bool forceOpen = isNodeExpanded(nodeHandle);
+    
+    // Set the default open state (this will be overridden by user interaction)
+    if (forceOpen) {
+        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+    }
+
+    bool nodeOpen = ImGui::TreeNodeEx(node->name.c_str(), flags);
+
+    // Track expansion state changes (only for nodes with children)
+    if (hasChildren) {
+        if (nodeOpen && !forceOpen) {
+            // User expanded this node manually
+            expandedNodes.insert(nodeHandle);
+        } else if (!nodeOpen && isNodeExpanded(nodeHandle)) {
+            // User collapsed this node manually
+            expandedNodes.erase(nodeHandle);
+        }
+    }
+    
+    // Drag and drop source (only if not root node)
+    bool isDragging = false;
+    if (nodeHandle != activeScene->rootHandle && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+        isDragging = true;
+        holdSceneNode(nodeHandle);  // Set the held node during drag
+        
+        // Set payload to carry the node handle
+        ImGui::SetDragDropPayload("NODE_HANDLE", &nodeHandle, sizeof(TinyHandle));
+        
+        // Display preview
+        ImGui::Text("Moving: %s", node->name.c_str());
+        ImGui::EndDragDropSource();
+    }
+    
+    // Clear held node when not actively dragging from this item
+    // Note: held node will be cleared in the drag drop target accept logic
+    
+    // Handle selection - only select on mouse release if we didn't drag
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        // Check if this was a click (no significant drag distance)
+        ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+        float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
+        
+        // Only select if drag distance was minimal (treat as click)
+        if (dragDistance < 5.0f) { // 5 pixel tolerance
+            selectSceneNode(nodeHandle);
+        }
+        
+        // Reset drag delta for next interaction
+        ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+    }
+    
+    // Select node on right-click (immediate selection before context menu)
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        selectSceneNode(nodeHandle);
+    }
+    
+    // Drag and drop target
+    if (ImGui::BeginDragDropTarget()) {
+        // Accept node reparenting
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
+            TinyHandle draggedNode = *(const TinyHandle*)payload->Data;
+            
+            // Attempt to reparent the dragged node to this node
+            if (activeScene->reparentNode(draggedNode, nodeHandle)) {
+                // Update global transforms after reparenting
+                activeScene->updateGlbTransform();
+                
+                // Auto-expand the parent chain to show the newly dropped node
+                expandParentChain(nodeHandle);
+                
+                // Keep the dragged node selected (maintain selection across drag operations)
+                selectSceneNode(draggedNode);
+                
+                // Clear held state after successful drop
+                clearHeld();
+            }
+        }
+        
+        // Accept scene drops (from filesystem nodes)
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_FNODE")) {
+            TinyHandle sceneFNodeHandle = *(const TinyHandle*)payload->Data;
+            
+            // Get the filesystem node to access its TypeHandle
+            const TinyFS::Node* sceneFile = project->filesystem().getFNodes().get(sceneFNodeHandle);
+            if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyScene>()) {
+                // Extract the registry handle from the TypeHandle
+                TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
+                
+                // Verify the scene exists and instantiate it at this node
+                const TinyScene* scene = project->registryRef().get<TinyScene>(sceneRegistryHandle);
+                if (scene) {
+                    // Place the scene at this node
+                    project->addSceneInstance(sceneRegistryHandle, nodeHandle);
+                    
+                    // Auto-expand the parent chain to show the newly instantiated scene
+                    expandParentChain(nodeHandle);
+                }
+            }
+        }
+        
+        // Also accept FILE_HANDLE payloads and check if they're scene files
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+            TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
+            
+            // Get the filesystem node to check if it's a scene file
+            const TinyFS::Node* fileNode = project->filesystem().getFNodes().get(fileNodeHandle);
+            if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyScene>()) {
+                // This is a scene file - instantiate it at this node
+                TinyHandle sceneRegistryHandle = fileNode->tHandle.handle;
+                
+                // Safety check: prevent dropping a scene into itself
+                if (sceneRegistryHandle == project->getActiveSceneHandle()) {
+                    // Cannot drop active scene into itself - ignore the operation
+                    ImGui::SetTooltip("Cannot drop a scene into itself!");
+                } else {
+                    // Verify the scene exists and instantiate it at this node
+                    const TinyScene* scene = project->registryRef().get<TinyScene>(sceneRegistryHandle);
+                    if (scene) {
+                        // Place the scene at this node
+                        project->addSceneInstance(sceneRegistryHandle, nodeHandle);
+                        
+                        // Auto-expand the parent chain to show the newly instantiated scene
+                        expandParentChain(nodeHandle);
+                    }
+                }
+            }
+        }
+        
+        ImGui::EndDragDropTarget();
+    }
+    
+    // Context menu for nodes - direct manipulation
+    if (ImGui::BeginPopupContextItem()) {
+        ImGui::Text("%s", node->name.c_str());
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("Add Child")) {
+            TinyScene* scene = project->getActiveScene();
+            if (scene) {
+                TinyHandle newNodeHandle = scene->addNode("New Node", nodeHandle);
+                selectSceneNode(newNodeHandle);
+                expandNode(nodeHandle); // Expand parent to show new child
+            }
+        }
+        
+        ImGui::Separator();
+
+        bool isRootNode = (nodeHandle == activeScene->rootHandle);
+        if (ImGui::MenuItem("Delete", nullptr, false, !isRootNode)) {
+            TinyScene* scene = project->getActiveScene();
+            if (scene) {
+                TinyNode* parentNode = scene->getNode(node->parentHandle);
+                if (parentNode) selectSceneNode(node->parentHandle);
+
+                scene->removeNode(nodeHandle);
+            }
+        }
+
+        if (ImGui::MenuItem("Flatten", nullptr, false, !isRootNode && hasChildren)) {
+            TinyScene* scene = project->getActiveScene();
+            TinyHandle parentHandle = node->parentHandle;
+            if (scene && scene->flattenNode(nodeHandle)) {
+                selectSceneNode(parentHandle); // Select the parent node after flattening
+            }
+        }
+        
+        ImGui::EndPopup();
+    }
+    
+    // Show node details in tooltip (slicker version like the old function)
+    if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+        ImGui::BeginTooltip();
+
+        // Create the node label with useful information
+        std::string typeLabel = "";
+        if (node->hasType(TinyNode::Types::MeshRender)) {
+            typeLabel += "[Mesh] ";
+        }
+        if (node->hasType(TinyNode::Types::BoneAttach)) {
+            typeLabel += "[BoneAttach] ";
+        }
+        if (node->hasType(TinyNode::Types::Skeleton)) {
+            typeLabel += "[Skeleton] ";
+        }
+
+        typeLabel = typeLabel.empty() ? "[None]" : typeLabel;
+        
+        ImGui::Text("%s", node->name.c_str());
+        ImGui::Text("Types: %s", typeLabel.c_str());
+
+        if (!node->childrenHandles.empty()) {
+            ImGui::Text("Children: %zu", node->childrenHandles.size());
+        }
+        
+        ImGui::EndTooltip();
+    }
+    
+    // If node is open and has children, recurse for children
+    if (nodeOpen && hasChildren) {
+        // Sort by name and by whether they have children
+        std::vector<TinyHandle> sortedChildren(node->childrenHandles.begin(), node->childrenHandles.end());
+        std::sort(sortedChildren.begin(), sortedChildren.end(), [activeScene](const TinyHandle& a, const TinyHandle& b) {
+            const TinyNode* nodeA = activeScene->nodes.get(a);
+            const TinyNode* nodeB = activeScene->nodes.get(b);
+            if (!nodeA || !nodeB) return false;
+            if (nodeA->childrenHandles.empty() && !nodeB->childrenHandles.empty()) return false;
+            if (!nodeA->childrenHandles.empty() && nodeB->childrenHandles.empty()) return true;
+            return nodeA->name < nodeB->name;
+        });
+        
+        for (const TinyHandle& childHandle : sortedChildren) {
+            renderNodeTreeImGui(childHandle, depth + 1);
+        }
+        ImGui::TreePop();
+    }
+    
+    // Pop the style colors we pushed earlier
+    ImGui::PopStyleColor(2); // Pop HeaderHovered and Header
+    
+    ImGui::PopID();
+}
+
+void TinyApp::expandParentChain(TinyHandle nodeHandle) {
+    TinyScene* activeScene = project->getActiveScene();
+    if (!activeScene) return;
+    
+    // Get the target node
+    const TinyNode* targetNode = activeScene->nodes.get(nodeHandle);
+    if (!targetNode) return;
+    
+    // Walk up the parent chain and expand all parents
+    TinyHandle currentHandle = targetNode->parentHandle;
+    while (currentHandle.valid()) {
+        expandedNodes.insert(currentHandle);
+        
+        const TinyNode* currentNode = activeScene->nodes.get(currentHandle);
+        if (!currentNode) break;
+        
+        currentHandle = currentNode->parentHandle;
+    }
+    
+    // Also expand the target node itself if it has children
+    if (!targetNode->childrenHandles.empty()) {
+        expandedNodes.insert(nodeHandle);
+    }
+}
+
+void TinyApp::expandFNodeParentChain(TinyHandle fNodeHandle) {
+    // Get the target file node
+    const TinyFS::Node* targetFNode = project->filesystem().getFNodes().get(fNodeHandle);
+    if (!targetFNode) return;
+    
+    // Walk up the parent chain and expand all parents
+    TinyHandle currentHandle = targetFNode->parent;
+    while (currentHandle.valid()) {
+        expandedFNodes.insert(currentHandle);
+        
+        const TinyFS::Node* currentFNode = project->filesystem().getFNodes().get(currentHandle);
+        if (!currentFNode) break;
+        
+        currentHandle = currentFNode->parent;
+    }
+    
+    // Also expand the target node itself if it's a folder with children
+    if (!targetFNode->isFile() && !targetFNode->children.empty()) {
+        expandedFNodes.insert(fNodeHandle);
+    }
+}
+
+void TinyApp::processPendingDeletions() {
+    if (pendingFNodeDeletions.empty()) return;
+
+    TinyFS& fs = project->filesystem();
+    
+    for (TinyHandle handle : pendingFNodeDeletions) {
+        const TinyFS::Node* node = fs.getFNodes().get(handle);
+        TinyHandle parentHandle = node ? node->parent : TinyHandle();
+
+        fs.removeFNode(handle);
+
+        if (selectedHandle.handle == handle) {
+            selectFileNode(parentHandle);
+        }
+    }
+
+    pendingFNodeDeletions.clear();
+}
+
+void TinyApp::selectFileNode(TinyHandle fileHandle) {
+    // Check if the file handle is valid
+    if (!fileHandle.valid()) {
+        clearSelection();
+        return;
+    }
+    
+    // Get the filesystem node
+    TinyFS& fs = project->filesystem();
+    const TinyFS::Node* node = fs.getFNodes().get(fileHandle);
+    if (!node) {
+        // Invalid node, clear selection
+        clearSelection();
+        return;
+    }
+    
+    // Only select if it's an actual file, not a folder
+    if (node->isFile()) {
+        selectedHandle = SelectHandle(fileHandle, SelectHandle::Type::File);
+    }
+    // If it's a folder, ignore the selection (don't set selectedHandle)
+}
+
+void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
+    TinyFS& fs = project->filesystem();
+    
+    // Use root handle if no valid handle provided
+    if (!nodeHandle.valid()) {
+        nodeHandle = fs.rootHandle();
+    }
+    
+    const TinyFS::Node* node = fs.getFNodes().get(nodeHandle);
+    if (!node) return;
+    
+    // Create a unique ID for this node
+    ImGui::PushID(static_cast<int>(nodeHandle.index));
+    
+    // Check if this node has children and is selected
+    bool hasChildren = !node->children.empty();
+    bool isSelected = (selectedHandle.isFile() && selectedHandle.handle.index == nodeHandle.index && selectedHandle.handle.version == nodeHandle.version);
+    
+    if (node->isFolder()) {
+        // Display root folder as ".root" instead of full path
+        std::string displayName = (nodeHandle == fs.rootHandle()) ? ".root" : node->name;
+        
+        // Create tree node flags
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        // Always show arrow for folders (even empty ones), but prevent tree push if no children
+        if (!hasChildren) {
+            flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen; // Don't push tree state, but keep the arrow
+        }
+        if (isSelected) {
+            flags |= ImGuiTreeNodeFlags_Selected;
+        }
+        
+        // Add consistent styling to match node hierarchy theme
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Gray hover background (same as nodes)
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background (same as nodes)
+        
+        // Force open if this node is in the expanded set
+        bool forceOpen = isFNodeExpanded(nodeHandle);
+        
+        // Set the default open state (this will be overridden by user interaction)
+        if (forceOpen) {
+            ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+        }
+        
+        bool nodeOpen = ImGui::TreeNodeEx(displayName.c_str(), flags);
+        
+        // Track expansion state changes (only for folders with children)
+        if (hasChildren) {
+            if (nodeOpen && !forceOpen) {
+                // User expanded this folder manually
+                expandedFNodes.insert(nodeHandle);
+            } else if (!nodeOpen && isFNodeExpanded(nodeHandle)) {
+                // User collapsed this folder manually
+                expandedFNodes.erase(nodeHandle);
+            }
+        }
+        
+        // Pop the style colors for folders right after TreeNodeEx
+        ImGui::PopStyleColor(2);
+        
+        // Handle selection - only select on mouse release if we didn't drag
+        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            // Check if this was a click (no significant drag distance)
+            ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+            float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
+            
+            // Only select if drag distance was minimal (treat as click)
+            if (dragDistance < 5.0f) { // 5 pixel tolerance
+                selectFileNode(nodeHandle);
+            }
+            
+            // Reset drag delta for next interaction
+            ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+        }
+        
+        // Select folder on right-click (immediate selection before context menu)
+        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+            selectFileNode(nodeHandle);
+        }
+        
+        // Drag source for folders
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            // Set this folder as held when dragging begins
+            holdFileNode(nodeHandle);
+            ImGui::SetDragDropPayload("FOLDER_HANDLE", &nodeHandle, sizeof(TinyHandle));
+            ImGui::Text("Moving: %s", displayName.c_str());
+            ImGui::EndDragDropSource();
+        }
+        
+        // Drag drop target for folders and files
+        if (ImGui::BeginDragDropTarget()) {
+            // Accept folders being dropped
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
+                TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
+                if (draggedFolder != nodeHandle) { // Can't drop folder on itself
+                    if (fs.moveFNode(draggedFolder, nodeHandle)) {
+                        // Auto-expand the target folder and select the moved folder
+                        expandedFNodes.insert(nodeHandle);
+                        selectFileNode(draggedFolder);
+                        expandFNodeParentChain(draggedFolder); // Ensure parent chain is expanded
+                        clearHeld(); // Clear held state after successful move
+                    }
+                }
+            }
+            
+            // Accept files being dropped  
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+                TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
+                if (fs.moveFNode(draggedFile, nodeHandle)) {
+                    // Auto-expand the target folder and select the moved file
+                    expandedFNodes.insert(nodeHandle);
+                    selectFileNode(draggedFile);
+                    expandFNodeParentChain(draggedFile); // Ensure parent chain is expanded
+                    clearHeld(); // Clear held state after successful move
+                }
+            }
+            
+            ImGui::EndDragDropTarget();
+        }
+        
+        // Context menu for folders - direct manipulation
+        if (ImGui::BeginPopupContextItem()) {
+            ImGui::Text("%s", displayName.c_str());
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Add Folder")) {
+                TinyHandle newFolderHandle = fs.addFolder(nodeHandle, "New Folder");
+                selectFileNode(newFolderHandle);
+                // Expand parent chain to show the new folder
+                expandFNodeParentChain(newFolderHandle);
+            }
+
+            if (ImGui::MenuItem("Add Scene")) {
+                TinyScene newScene;
+                newScene.name = "New Scene";
+                newScene.addRoot("Root");
+                
+                // Add scene to registry and create file node
+                TinyScene* scenePtr = &newScene;
+                TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", scenePtr);
+                selectFileNode(fileHandle);
+                // Expand parent chain to show the new scene
+                expandFNodeParentChain(fileHandle);
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
+                if (node->deletable()) queueFNodeForDeletion(nodeHandle);
+            }
+
+            // Folder operations don't affect file, no need for pending deletion
+            if (ImGui::MenuItem("Flatten", nullptr, false, node->deletable())) {
+                if (node->deletable()) fs.flattenFNode(nodeHandle);
+            }
+
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Load Model...")) {
+                // Start from current working directory for full file system access
+                std::filesystem::path startPath = std::filesystem::current_path();
+                fileDialog.open(startPath, nodeHandle);
+            }
+
+            ImGui::EndPopup();
+        }
+        
+        // If folder is open and has children, recurse for children
+        if (nodeOpen && hasChildren) {
+            // Create a sorted copy of children handles - folders first, then files, both sorted by name
+            std::vector<TinyHandle> sortedChildren;
+            for (const TinyHandle& childHandle : node->children) {
+                const TinyFS::Node* child = fs.getFNodes().get(childHandle);
+                if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
+                sortedChildren.push_back(childHandle);
+            }
+            
+            std::sort(sortedChildren.begin(), sortedChildren.end(), [&fs](const TinyHandle& a, const TinyHandle& b) {
+                const TinyFS::Node* nodeA = fs.getFNodes().get(a);
+                const TinyFS::Node* nodeB = fs.getFNodes().get(b);
+                if (!nodeA || !nodeB) return false;
+                
+                // Folders come before files
+                if (nodeA->type != nodeB->type) return nodeA->isFolder();
+                
+                // Within files, first sort by extension (priority to ext name)
+                if (nodeA->isFile() && nodeB->isFile()) {
+                    TinyFS::TypeExt extA = fs.getFileTypeExt(a);
+                    TinyFS::TypeExt extB = fs.getFileTypeExt(b);
+
+                    if (extA < extB) return true;
+                    else if (extA > extB) return false;
+                }
+
+                return nodeA->name < nodeB->name;
+            });
+            
+            for (const TinyHandle& childHandle : sortedChildren) {
+                renderFileExplorerImGui(childHandle, depth + 1);
+            }
+
+            ImGui::TreePop();
+        }
+        
+    } else if (node->isFile()) {
+        // General file handling - completely generic
+        std::string fileName = node->name;
+        std::string fileExt = fs.getFileTypeExt(nodeHandle).ext;
+
+        // Set consistent colors for all files
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background
+        
+        // Create a selectable item for the full filename + extension
+        std::string fullDisplayName = fileExt.empty() ? fileName : (fileName + "." + fileExt);
+        bool wasClicked = ImGui::Selectable(("##file_" + std::to_string(nodeHandle.index)).c_str(), isSelected);
+        
+        // Capture interaction state immediately after the Selectable
+        bool itemHovered = ImGui::IsItemHovered();
+        bool leftClicked = itemHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left);
+        bool rightClicked = itemHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right);
+        bool dragStarted = itemHovered && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None);
+        
+        // Render the filename and extension with different colors on top of the selectable
+        ImGui::SameLine(0, 0); // No spacing, start from beginning of selectable
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemInnerSpacing.x); // Add some padding
+        
+        // Render filename in white
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f)); // White text
+        ImGui::Text("%s", fileName.c_str());
+        ImGui::PopStyleColor();
+        
+        // Render extension in gray if it exists
+        if (!fileExt.empty()) {
+            ImGui::SameLine(0, 0); // No spacing between filename and extension
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.35f, 0.35f, 1.0f)); // Even grayer text
+            ImGui::Text(".%s", fileExt.c_str());
+            ImGui::PopStyleColor();
+        }
+        
+        // Generic selection handling using captured state
+        if (leftClicked) {
+            ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+            float dragDistance = sqrtf(dragDelta.x * dragDelta.x + dragDelta.y * dragDelta.y);
+            
+            if (dragDistance < 5.0f) { // 5 pixel tolerance
+                selectFileNode(nodeHandle);
+            }
+            
+            ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+        }
+        
+        // Select on right-click using captured state
+        if (rightClicked) {
+            selectFileNode(nodeHandle);
+            ImGui::OpenPopup(("FileContext_" + std::to_string(nodeHandle.index)).c_str());
+        }
+        
+        // Generic drag source using captured state
+        if (dragStarted) {
+            holdFileNode(nodeHandle);
+            ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(TinyHandle));
+            ImGui::Text("%s", fileName.c_str());
+            ImGui::EndDragDropSource();
+        }
+        
+        // Generic context menu with type-specific options
+        if (ImGui::BeginPopup(("FileContext_" + std::to_string(nodeHandle.index)).c_str())) {
+            ImGui::Text("%s", fileName.c_str());
+            ImGui::Separator();
+            
+            // Type-specific context menu options
+            if (node->tHandle.isType<TinyScene>()) {
+                // Scene file options
+                TinyHandle sceneRegistryHandle = node->tHandle.handle;
+                bool isCurrentlyActive = (project->getActiveSceneHandle() == sceneRegistryHandle);
+                
+                if (isCurrentlyActive) {
+                    ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
+                } else {
+                    if (ImGui::MenuItem("Make Active Scene")) {
+                        if (project->setActiveScene(sceneRegistryHandle)) {
+                            selectSceneNode(project->getRootNodeHandle());
+                        }
+                    }
+                }
+            } else if (node->tHandle.isType<TinyMesh>()) {
+                // Mesh file options
+                if (ImGui::MenuItem("Preview Mesh")) {
+                    // TODO: Add mesh preview functionality
+                }
+            } else if (node->tHandle.isType<TinyTexture>()) {
+                // Texture file options
+                if (ImGui::MenuItem("Preview Texture")) {
+                    // TODO: Add texture preview functionality
+                }
+            } else if (node->tHandle.isType<TinyRMaterial>()) {
+                // Material file options
+                if (ImGui::MenuItem("Edit Material")) {
+                    // TODO: Add material editor functionality
+                }
+            }
+            // Add more file types as needed...
+            
+            // Common separator before delete (only if there were type-specific options)
+            if (node->tHandle.isType<TinyScene>() || node->tHandle.isType<TinyMesh>() || 
+                node->tHandle.isType<TinyTexture>() || node->tHandle.isType<TinyRMaterial>()) {
+                ImGui::Separator();
+            }
+            
+            // Common delete option for all files
+            if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
+                if (node->deletable()) queueFNodeForDeletion(nodeHandle);
+            }
+            
+            ImGui::EndPopup();
+        }
+        
+        ImGui::PopStyleColor(2);
+    }
+    
+    // Clear held handle if no drag operation is active
+    if (heldHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+        clearHeld();
+    }
+    
+    ImGui::PopID();
+}
+
+void TinyApp::renderFileDialog() {
+    // Update the dialog state first
+    fileDialog.update();
+    
+    // Only open the popup once when first requested, right before trying to begin it
+    if (fileDialog.justOpened && !ImGui::IsPopupOpen("Load Model File")) {
+        ImGui::OpenPopup("Load Model File");
+        fileDialog.justOpened = false;
+    }
+    
+    // Use a local variable for the open state to avoid ImGui modifying our state directly
+    bool modalOpen = fileDialog.isOpen && !fileDialog.shouldClose;
+    if (ImGui::BeginPopupModal("Load Model File", &modalOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
+        // Current path display
+        ImGui::Text("Path: %s", fileDialog.currentPath.string().c_str());
+        
+        ImGui::Separator();
+        
+        // File list
+        ImGui::BeginChild("FileList", ImVec2(600, 400), true);
+        
+        // Parent directory button
+        if (fileDialog.currentPath.has_parent_path()) {
+            if (ImGui::Selectable(".. (Parent Directory)", false)) {
+                fileDialog.currentPath = fileDialog.currentPath.parent_path();
+                fileDialog.refreshFileList();
+                fileDialog.selectedFile.clear();
+            }
+        }
+        
+        // File and directory listing
+        for (const auto& entry : fileDialog.currentFiles) {
+            std::string fileName = entry.path().filename().string();
+            bool isDirectory = entry.is_directory();
+            bool isModelFile = !isDirectory && fileDialog.isModelFile(entry.path());
+            
+            // Color coding: directories in blue, model files in green, others in gray
+            if (isDirectory) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.8f, 1.0f, 1.0f)); // Light blue
+                fileName = "[DIR] " + fileName;
+            } else if (isModelFile) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f)); // Light green
+                fileName = "[MDL] " + fileName;
+            } else {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Gray
+                fileName = "[FILE] " + fileName;
+            }
+            
+            bool isSelected = (fileDialog.selectedFile == entry.path().string());
+            
+            if (ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                if (isDirectory) {
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        // Navigate into directory
+                        fileDialog.currentPath = entry.path();
+                        fileDialog.refreshFileList();
+                        fileDialog.selectedFile.clear();
+                    }
+                } else if (isModelFile) {
+                    fileDialog.selectedFile = entry.path().string();
+                    
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        // Double-click to load model
+                        loadModelFromPath(entry.path().string(), fileDialog.targetFolder);
+                        fileDialog.close();
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+            }
+            
+            ImGui::PopStyleColor();
+        }
+        
+        ImGui::EndChild();
+        
+        ImGui::Separator();
+        
+        // Selected file display
+        if (!fileDialog.selectedFile.empty()) {
+            std::filesystem::path selectedPath(fileDialog.selectedFile);
+            ImGui::Text("Selected: %s", selectedPath.filename().string().c_str());
+        } else {
+            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No file selected");
+        }
+        
+        ImGui::Separator();
+        
+        // Action buttons
+        bool canLoad = !fileDialog.selectedFile.empty() && 
+                        fileDialog.isModelFile(std::filesystem::path(fileDialog.selectedFile));
+        
+        if (ImGui::Button("Load", ImVec2(120, 0))) {
+            if (canLoad) {
+                loadModelFromPath(fileDialog.selectedFile, fileDialog.targetFolder);
+                fileDialog.close();
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        
+        if (!canLoad) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.6f, 1.0f), "Please select a .glb or .gltf file");
+        }
+        
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            fileDialog.close();
+            ImGui::CloseCurrentPopup();
+        }
+        
+        // Handle close button (X) or ESC key
+        if (!modalOpen) {
+            fileDialog.close();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+void TinyApp::loadModelFromPath(const std::string& filePath, TinyHandle targetFolder) {
+    try {
+        // Load the model using TinyLoader
+        TinyModel model = TinyLoader::loadModel(filePath);
+        
+        // Add the model to the project in the specified folder (returns model folder handle)
+        TinyHandle modelFolderHandle = project->addSceneFromModel(model, targetFolder);
+        
+        if (modelFolderHandle.valid()) {
+            // Success! The model has been loaded and added to the project
+            
+            // Select the newly created model folder
+            selectFileNode(modelFolderHandle);
+            
+            // Expand the target folder to show the newly imported model folder
+            expandedFNodes.insert(targetFolder);
+            
+            // Also expand the parent chain of the target folder to ensure it's visible
+            expandFNodeParentChain(targetFolder);
+        }
+        
+    } catch (const std::exception& e) {
+        printf("Error loading model %s: %s\n", filePath.c_str(), e.what());
+    }
 }

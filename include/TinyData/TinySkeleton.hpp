@@ -5,7 +5,9 @@
 #include <glm/gtc/quaternion.hpp>
 #include <cstdint>
 
-#include ".ext/Templates.hpp"
+#include "TinyExt/TinyHandle.hpp"
+#include "TinyVK/Resource/DataBuffer.hpp"
+#include "TinyVK/Resource/Descriptor.hpp"
 
 struct TinyBone {
     std::string name;
@@ -33,9 +35,38 @@ struct TinySkeleton {
         name.clear();
         bones.clear(); 
     }
-    uint32_t insert(const TinyBone& bone);
+    uint32_t insert(const TinyBone& bone) {
+        bones.push_back(bone);
+        return static_cast<uint32_t>(bones.size() - 1);
+    }
+};
 
-    void debugPrintHierarchy() const;
-private:
-    void debugPrintRecursive(int boneIndex, int depth) const;
+struct TinySkeletonRT {
+    TinySkeletonRT() = default;
+    ~TinySkeletonRT() = default;
+
+    TinySkeletonRT(const TinySkeletonRT&) = delete;
+    TinySkeletonRT& operator=(const TinySkeletonRT&) = delete;
+
+    TinySkeletonRT(TinySkeletonRT&&) = default;
+    TinySkeletonRT& operator=(TinySkeletonRT&&) = default;
+
+    // Create SoA copy of TinySkeleton for runtime use
+    std::vector<std::string> boneNames;
+    std::vector<int> boneParents;
+    std::vector<std::vector<int>> boneChildren;
+    std::vector<glm::mat4> boneInverseBindMatrices;
+    std::vector<glm::mat4> boneLocalBindTransforms;
+
+    std::vector<glm::mat4> boneTransformsFinal; // Final bone transforms for skinning
+    TinyVK::DataBuffer boneFinalBuffer; // GPU buffer for final bone transforms
+
+    TinyVK::DescSet boneDescSet; // Descriptor set for skinning shader usage
+
+    // Initialization and creation
+    void set(const TinySkeleton& skeleton);
+    void vkCreate(const TinyVK::Device* deviceVK, VkDescriptorPool descPool, VkDescriptorSetLayout descSetLayout);
+
+    // Runtime update
+    void update();
 };
