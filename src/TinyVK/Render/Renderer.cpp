@@ -255,8 +255,7 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 }
 
 
-void Renderer::drawScene(const TinyProject* project, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
-    const TinyScene* activeScene = project->getActiveScene();
+void Renderer::drawScene(const TinyProject* project, const TinyScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
     if (!activeScene) return;
 
     const auto& registry = project->registryRef();

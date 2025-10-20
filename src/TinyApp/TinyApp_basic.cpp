@@ -55,6 +55,9 @@ void TinyApp::initComponents() {
     );
 
     project = MakeUnique<TinyProject>(deviceVK.get());
+    
+    // Initialize the active scene handle (moved from TinyProject for better separation)
+    activeSceneHandle = project->getInitialSceneHandle();
 
     // Initialize selected handle to root scene node (already done in TinyProject constructor)
     // project->selectSceneNode(project->getRootNodeHandle());
@@ -279,7 +282,7 @@ void TinyApp::mainLoop() {
 
             rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
-            rendererRef.drawScene(project.get(),PIPELINE_INSTANCE(pipelineManager.get(), "TestRigged"),
+            rendererRef.drawScene(project.get(), getActiveScene(), PIPELINE_INSTANCE(pipelineManager.get(), "TestRigged"),
                                                 PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic"));
 
             // End frame with ImGui rendering integrated

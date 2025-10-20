@@ -37,7 +37,7 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         // =============================================================================
         
         // Active Scene Name Header
-        TinyScene* activeScene = project->getActiveScene();
+        TinyScene* activeScene = getActiveScene();
         if (activeScene) {
             ImGui::Text("%s", activeScene->name.c_str());
             
@@ -272,7 +272,7 @@ void TinyApp::renderInspectorWindow() {
 }
 
 void TinyApp::renderSceneNodeInspector() {
-    TinyScene* activeScene = project->getActiveScene();
+    TinyScene* activeScene = getActiveScene();
     if (!activeScene) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No active scene");
         return;
@@ -289,11 +289,11 @@ void TinyApp::renderSceneNodeInspector() {
     const TinyNode* selectedNode = activeScene->nodes.get(selectedSceneNodeHandle);
     if (!selectedNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
-        selectSceneNode(project->getRootNodeHandle());
+        selectSceneNode(activeSceneRootHandle());
         return;
     }
 
-    bool isRootNode = (selectedSceneNodeHandle == project->getRootNodeHandle());
+    bool isRootNode = (selectedSceneNodeHandle == activeSceneRootHandle());
 
     // GENERAL INFO SECTION (non-scrollable)
     // Editable node name field
@@ -456,7 +456,7 @@ void TinyApp::renderSceneNodeInspector() {
                 if (ImGui::Button("Reset Transform")) {
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = glm::mat4(1.0f);
-                    if (TinyScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                    if (TinyScene* scene = getActiveScene()) scene->updateGlbTransform();
                 }
                 return;
             }
@@ -471,7 +471,7 @@ void TinyApp::renderSceneNodeInspector() {
                 if (ImGui::Button("Reset Transform")) {
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = glm::mat4(1.0f);
-                    if (TinyScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                    if (TinyScene* scene = getActiveScene()) scene->updateGlbTransform();
                 }
                 return;
             }
@@ -538,7 +538,7 @@ void TinyApp::renderSceneNodeInspector() {
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
                     mutableSelectedNode->localTransform = translateMat * rotateMat * scaleMat;
                     
-                    if (TinyScene* scene = project->getActiveScene()) scene->updateGlbTransform();
+                    if (TinyScene* scene = getActiveScene()) scene->updateGlbTransform();
                 }
             }
             
@@ -585,7 +585,7 @@ void TinyApp::renderSceneNodeInspector() {
 
             // Show skeleton node information if valid
             if (meshComp->skeleNodeHandle.valid()) {
-                TinyScene* activeScene = project->getActiveScene();
+                TinyScene* activeScene = getActiveScene();
                 if (activeScene) {
                     const TinyNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
@@ -628,7 +628,7 @@ void TinyApp::renderSceneNodeInspector() {
             
             // Show skeleton node information if valid
             if (boneComp->skeleNodeHandle.valid()) {
-                TinyScene* activeScene = project->getActiveScene();
+                TinyScene* activeScene = getActiveScene();
                 if (activeScene) {
                     const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
@@ -650,7 +650,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Determine max bone count for validation
             int maxBoneIndex = 255; // Default max
             if (boneComp->skeleNodeHandle.valid()) {
-                TinyScene* activeScene = project->getActiveScene();
+                TinyScene* activeScene = getActiveScene();
                 if (activeScene) {
                     const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
                     if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
@@ -869,7 +869,7 @@ void TinyApp::renderFileSystemInspector() {
                 // Make Active Scene button
                 ImGui::Spacing();
                 TinyHandle sceneRegistryHandle = tHandle.handle;
-                bool isActiveScene = (project->getActiveSceneHandle() == sceneRegistryHandle);
+                bool isActiveScene = (getActiveSceneHandle() == sceneRegistryHandle);
                 
                 if (isActiveScene) {
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
@@ -884,8 +884,8 @@ void TinyApp::renderFileSystemInspector() {
                     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
                     
                     if (ImGui::Button("Make Active", ImVec2(-1, 30))) {
-                        if (project->setActiveScene(sceneRegistryHandle)) {
-                            selectSceneNode(project->getRootNodeHandle()); // Reset node selection
+                        if (setActiveScene(sceneRegistryHandle)) {
+                            selectSceneNode(activeSceneRootHandle()); // Reset node selection
                         }
                     }
                     ImGui::PopStyleColor(3);
@@ -985,7 +985,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             const TinySkeleton* skeleton = registry.get<TinySkeleton>(handle);
             displayText = skeleton ? skeleton->name : "Unknown Skeleton";
         } else if (strcmp(targetType, "SkeletonNode") == 0) {
-            TinyScene* activeScene = project->getActiveScene();
+            TinyScene* activeScene = getActiveScene();
             if (activeScene) {
                 const TinyNode* node = activeScene->nodes.get(handle);
                 displayText = node ? node->name : "Unknown Node";
@@ -1063,7 +1063,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             // Accept skeleton nodes from hierarchy
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
                 TinyHandle nodeHandle = *(const TinyHandle*)payload->Data;
-                TinyScene* activeScene = project->getActiveScene();
+                TinyScene* activeScene = getActiveScene();
                 if (activeScene) {
                     const TinyNode* node = activeScene->nodes.get(nodeHandle);
                     if (node && node->hasComponent<TinyNode::Skeleton>()) {
@@ -1137,7 +1137,7 @@ bool FileDialog::isModelFile(const std::filesystem::path& path) {
 }
 
 void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
-    TinyScene* activeScene = project->getActiveScene();
+    TinyScene* activeScene = getActiveScene();
     if (!activeScene) return;
     
     // Use root node if no valid handle provided
@@ -1261,7 +1261,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
                 const TinyScene* scene = project->registryRef().get<TinyScene>(sceneRegistryHandle);
                 if (scene) {
                     // Place the scene at this node
-                    project->addSceneInstance(sceneRegistryHandle, nodeHandle);
+                    project->addSceneInstance(sceneRegistryHandle, getActiveSceneHandle(), nodeHandle);
                     
                     // Auto-expand the parent chain to show the newly instantiated scene
                     expandParentChain(nodeHandle);
@@ -1280,7 +1280,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
                 TinyHandle sceneRegistryHandle = fileNode->tHandle.handle;
                 
                 // Safety check: prevent dropping a scene into itself
-                if (sceneRegistryHandle == project->getActiveSceneHandle()) {
+                if (sceneRegistryHandle == getActiveSceneHandle()) {
                     // Cannot drop active scene into itself - ignore the operation
                     ImGui::SetTooltip("Cannot drop a scene into itself!");
                 } else {
@@ -1288,7 +1288,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
                     const TinyScene* scene = project->registryRef().get<TinyScene>(sceneRegistryHandle);
                     if (scene) {
                         // Place the scene at this node
-                        project->addSceneInstance(sceneRegistryHandle, nodeHandle);
+                        project->addSceneInstance(sceneRegistryHandle, getActiveSceneHandle(), nodeHandle);
                         
                         // Auto-expand the parent chain to show the newly instantiated scene
                         expandParentChain(nodeHandle);
@@ -1306,7 +1306,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         ImGui::Separator();
         
         if (ImGui::MenuItem("Add Child")) {
-            TinyScene* scene = project->getActiveScene();
+            TinyScene* scene = getActiveScene();
             if (scene) {
                 TinyHandle newNodeHandle = scene->addNode("New Node", nodeHandle);
                 selectSceneNode(newNodeHandle);
@@ -1318,7 +1318,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 
         bool isRootNode = (nodeHandle == activeScene->rootHandle);
         if (ImGui::MenuItem("Delete", nullptr, false, !isRootNode)) {
-            TinyScene* scene = project->getActiveScene();
+            TinyScene* scene = getActiveScene();
             if (scene) {
                 TinyNode* parentNode = scene->getNode(node->parentHandle);
                 if (parentNode) selectSceneNode(node->parentHandle);
@@ -1328,7 +1328,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         }
 
         if (ImGui::MenuItem("Flatten", nullptr, false, !isRootNode && hasChildren)) {
-            TinyScene* scene = project->getActiveScene();
+            TinyScene* scene = getActiveScene();
             TinyHandle parentHandle = node->parentHandle;
             if (scene && scene->flattenNode(nodeHandle)) {
                 selectSceneNode(parentHandle); // Select the parent node after flattening
@@ -1392,7 +1392,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 }
 
 void TinyApp::expandParentChain(TinyHandle nodeHandle) {
-    TinyScene* activeScene = project->getActiveScene();
+    TinyScene* activeScene = getActiveScene();
     if (!activeScene) return;
     
     // Get the target node
@@ -1755,14 +1755,14 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             if (node->tHandle.isType<TinyScene>()) {
                 // Scene file options
                 TinyHandle sceneRegistryHandle = node->tHandle.handle;
-                bool isCurrentlyActive = (project->getActiveSceneHandle() == sceneRegistryHandle);
+                bool isCurrentlyActive = (getActiveSceneHandle() == sceneRegistryHandle);
                 
                 if (isCurrentlyActive) {
                     ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
                 } else {
                     if (ImGui::MenuItem("Make Active Scene")) {
-                        if (project->setActiveScene(sceneRegistryHandle)) {
-                            selectSceneNode(project->getRootNodeHandle());
+                        if (setActiveScene(sceneRegistryHandle)) {
+                            selectSceneNode(activeSceneRootHandle());
                         }
                     }
                 }
@@ -1952,4 +1952,21 @@ void TinyApp::loadModelFromPath(const std::string& filePath, TinyHandle targetFo
     } catch (const std::exception& e) {
         printf("Error loading model %s: %s\n", filePath.c_str(), e.what());
     }
+}
+
+bool TinyApp::setActiveScene(TinyHandle sceneHandle) {
+    // Verify the handle points to a valid TinyScene in the registry
+    const TinyScene* scene = project->registryRef().get<TinyScene>(sceneHandle);
+    if (!scene) {
+        return false; // Invalid handle or not a scene
+    }
+    
+    // Switch the active scene
+    activeSceneHandle = sceneHandle;
+
+    // Update transforms for the new active scene
+    TinyScene* activeScene = getActiveScene();
+    if (activeScene) activeScene->updateGlbTransform();
+    
+    return true;
 }

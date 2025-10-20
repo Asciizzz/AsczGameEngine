@@ -31,35 +31,25 @@ public:
     }
 
     /**
-     * Adds a scene instance to the active scene.
+     * Adds a scene instance from one scene to another scene.
      *
-     * @param sceneHandle Handle to the scene in the registry to instantiate.
-     * @param parentNode Handle to the node in active scene to add as child of (optional - uses root if invalid).
+     * @param fromHandle Handle to the source scene in the registry to instantiate.
+     * @param toHandle Handle to the target scene to add the instance to.
+     * @param parentHandle Handle to the node in target scene to add as child of (optional - uses root if invalid).
      */
-    void addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode = TinyHandle());
+    void addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle = TinyHandle());
 
 
 
-    // Active scene access methods
-    TinyScene* getActiveScene() const { return tinyFS->registryRef().get<TinyScene>(activeSceneHandle); }
-    TinyHandle getActiveSceneHandle() const { return activeSceneHandle; }
-    
-    /**
-     * Switch the active scene to a different scene from the registry.
-     * @param sceneHandle Handle to a TinyScene in the registry to make active
-     * @return true if successful, false if the handle is invalid or not a scene
-     */
-    bool setActiveScene(TinyHandle sceneHandle);
-    
-    // Helper methods for UI compatibility
-    TinyHandle getRootNodeHandle() const { 
-        TinyScene* scene = getActiveScene();
-        return scene ? scene->rootHandle : TinyHandle();
-    }
 
+
+    TinyRegistry& registryRef() { return tinyFS->registryRef(); }
     const TinyRegistry& registryRef() const { return tinyFS->registryRef(); }
     TinyFS& filesystem() { return *tinyFS; }
     const TinyFS& filesystem() const { return *tinyFS; }
+    
+    // Get the initial scene handle (for TinyApp to set as active scene)
+    TinyHandle getInitialSceneHandle() const { return initialSceneHandle; }
 
 private:
     const TinyVK::Device* deviceVK;
@@ -69,8 +59,7 @@ private:
 
     UniquePtr<TinyFS> tinyFS;
 
-    TinyHandle activeSceneHandle; // Handle to the active scene in registry
-
+    TinyHandle initialSceneHandle; // Handle to the initial "Main Scene" created during construction
     TinyHandle defaultMaterialHandle;
     TinyHandle defaultTextureHandle;
 

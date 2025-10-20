@@ -31,7 +31,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
 
     TinyHandle mainSceneFileHandle = tinyFS->addFile(tinyFS->rootHandle(), "Main Scene", &mainScene, sceneConfig);
     TypeHandle mainSceneTypeHandle = tinyFS->getTHandle(mainSceneFileHandle);
-    activeSceneHandle = mainSceneTypeHandle.handle; // Point to the actual scene in registry
+    initialSceneHandle = mainSceneTypeHandle.handle; // Store the initial scene handle
 
     // Create camera and global UBO manager
     tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
@@ -201,37 +201,22 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
 
 
 
-void TinyProject::addSceneInstance(TinyHandle sceneHandle, TinyHandle parentNode) {
-    const auto& registry = registryRef();
-    const TinyScene* sourceScene = registry.get<TinyScene>(sceneHandle);
-    TinyScene* activeScene = getActiveScene();
+void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle) {
+    auto& registry = registryRef();
+    const TinyScene* sourceScene = registry.get<TinyScene>(fromHandle);
+    TinyScene* targetScene = registry.get<TinyScene>(toHandle);
     
-    if (!sourceScene || !activeScene) return;
+    if (!sourceScene || !targetScene) return;
 
     // Use root node if no valid parent provided
-    TinyHandle actualParent = parentNode.valid() ? parentNode : activeScene->rootHandle;
+    TinyHandle actualParent = parentHandle.valid() ? parentHandle : targetScene->rootHandle;
     
-    // Use the scene's addScene method to merge the source scene into active scene
-    activeScene->addScene(*sourceScene, actualParent);
+    // Use the scene's addScene method to merge the source scene into target scene
+    targetScene->addScene(*sourceScene, actualParent);
     
-    // Update transforms for the entire active scene
-    activeScene->updateGlbTransform();
+    // Update transforms for the entire target scene
+    targetScene->updateGlbTransform();
 }
 
-bool TinyProject::setActiveScene(TinyHandle sceneHandle) {
-    // Verify the handle points to a valid TinyScene in the registry
-    const TinyScene* scene = registryRef().get<TinyScene>(sceneHandle);
-    if (!scene) {
-        return false; // Invalid handle or not a scene
-    }
-    
-    // Switch the active scene
-    activeSceneHandle = sceneHandle;
 
-    // Update transforms for the new active scene
-    TinyScene* activeScene = getActiveScene();
-    if (activeScene) activeScene->updateGlbTransform();
-    
-    return true;
-}
 

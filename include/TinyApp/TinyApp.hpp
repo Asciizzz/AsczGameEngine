@@ -110,6 +110,9 @@ private:
     
     // File dialog state
     FileDialog fileDialog;
+    
+    // Active scene state (moved from TinyProject for better separation)
+    TinyHandle activeSceneHandle; // Handle to the active scene in registry
 
     // Window metadata
     const char* appTitle;
@@ -185,4 +188,13 @@ private:
     void renderFileExplorerImGui(TinyHandle nodeHandle = TinyHandle(), int depth = 0);
     void renderFileDialog();
     void loadModelFromPath(const std::string& filePath, TinyHandle targetFolder);
+    
+    // Active scene management (moved from TinyProject for better separation)
+    TinyScene* getActiveScene() const { return project->registryRef().get<TinyScene>(activeSceneHandle); }
+    TinyHandle getActiveSceneHandle() const { return activeSceneHandle; }
+    bool setActiveScene(TinyHandle sceneHandle);
+    TinyHandle activeSceneRootHandle() const { 
+        TinyScene* scene = getActiveScene();
+        return scene ? scene->rootHandle : TinyHandle();
+    }
 };
