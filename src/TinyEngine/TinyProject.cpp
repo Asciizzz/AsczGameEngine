@@ -141,18 +141,16 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
 
         // Remap MeshRender component's mesh reference
         if (rtNode.hasType(NTypes::MeshRender)) {
-            auto* meshRender = rtNode.get<TinyNode::MeshRender>();
-            if (meshRender) meshRender->meshHandle = glbMeshRHandle[meshRender->meshHandle.index];
+            auto* meshRenderComp = rtNode.get<TinyNode::MeshRender>();
+            if (meshRenderComp)
+                meshRenderComp->meshHandle = glbMeshRHandle[meshRenderComp->meshHandle.index];
         }
 
         // Remap Skeleton component's registry reference
         if (rtNode.hasType(NTypes::Skeleton)) {
-            auto* skeleton = rtNode.get<TinyNode::Skeleton>();
-            if (skeleton) {
-                skeleton->skeleHandle = glbSkeleRHandle[skeleton->skeleHandle.index];
-
-                // Runtime data already imbedded
-            }
+            auto* skeletonComp = rtNode.get<TinyNode::Skeleton>();
+            if (skeletonComp)
+                skeletonComp->skeleHandle = glbSkeleRHandle[skeletonComp->skeleHandle.index];
         }
 
         // Insert and capture the actual handle returned by the pool
