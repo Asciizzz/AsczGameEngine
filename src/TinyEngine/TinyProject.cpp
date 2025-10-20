@@ -3,6 +3,8 @@
 
 using NTypes = TinyNode::Types;
 
+using namespace TinyVK;
+
 // A quick function for range validation
 template<typename T>
 bool isValidIndex(int index, const std::vector<T>& vec) {
@@ -10,7 +12,6 @@ bool isValidIndex(int index, const std::vector<T>& vec) {
 }
 
 TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
-    // registry = MakeUnique<TinyRegistry>();
     tinyFS = MakeUnique<TinyFS>();
 
     tinyFS->setTypeExt<TinyScene>("ascn");
@@ -19,6 +20,8 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS->setTypeExt<TinyMesh>("amsh");
     tinyFS->setTypeExt<TinySkeleton>("askl");
     tinyFS->setTypeExt<TinyAnimation>("anim");
+
+    vkCreateSkinResource();
 
     // Create Main Scene (the active scene with a single root node)
     TinyScene mainScene;
@@ -51,7 +54,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     defaultMaterialHandle = tinyFS->addToRegistry(defaultMaterial).handle;
 }
 
-TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFolder) {
+TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     // Use root folder if no valid parent provided
     if (!parentFolder.valid()) {
         parentFolder = tinyFS->rootHandle();
@@ -218,3 +221,40 @@ void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, T
 
 
 
+
+
+
+
+void TinyProject::vkCreateSkinResource() {
+    VkDeviceSize bufferSize = sizeof(glm::mat4);
+    std::vector<glm::mat4> singleBone = { glm::mat4(1.0f) };
+
+    skinBuffer
+        .setDataSize(bufferSize)
+        .setUsageFlags(BufferUsage::Uniform)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(deviceVK)
+        .mapAndCopy(singleBone.data());
+
+    skinDescLayout.create(*deviceVK, {
+        {0, DescType::UniformBuffer, 1, ShaderStage::Vertex, nullptr}
+    });
+
+    skinDescPool.create(*deviceVK, {
+        {DescType::UniformBuffer, 1}
+    }, 1);
+
+    skinDescSet.allocate(*deviceVK, skinDescPool, skinDescLayout);
+
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = skinBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range  = sizeof(glm::mat4);
+
+    DescWrite()
+        .setDstSet(skinDescSet)
+        .setType(DescType::UniformBuffer)
+        .setDescCount(1)
+        .setBufferInfo({ bufferInfo })
+        .updateDescSets(deviceVK->device);
+}

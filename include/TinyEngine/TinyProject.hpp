@@ -19,7 +19,7 @@ public:
     // No move semantics, where tf would you even want to move it to?
 
     // Return the scene handle in the registry
-    TinyHandle addSceneFromModel(TinyModel& model, TinyHandle parentFolder = TinyHandle()); // Returns scene handle - much simpler now!
+    TinyHandle addModel(TinyModel& model, TinyHandle parentFolder = TinyHandle()); // Returns scene handle - much simpler now!
 
     TinyCamera* getCamera() const { return tinyCamera.get(); }
     TinyGlobal* getGlobal() const { return tinyGlobal.get(); }
@@ -38,9 +38,6 @@ public:
      * @param parentHandle Handle to the node in target scene to add as child of (optional - uses root if invalid).
      */
     void addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle = TinyHandle());
-
-
-
 
 
     TinyRegistry& registryRef() { return tinyFS->registryRef(); }
@@ -66,4 +63,11 @@ private:
     TinyVK::DescLayout matDescLayout;
     TinyVK::DescPool matDescPool;
     TinyVK::DescSet matDescSet;
+
+    TinyVK::DataBuffer skinBuffer;
+    TinyVK::DescLayout skinDescLayout;
+    TinyVK::DescPool skinDescPool;
+    TinyVK::DescSet skinDescSet;
+
+    void vkCreateSkinResource();
 };

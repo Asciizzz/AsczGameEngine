@@ -1932,7 +1932,7 @@ void TinyApp::loadModelFromPath(const std::string& filePath, TinyHandle targetFo
         TinyModel model = TinyLoader::loadModel(filePath);
         
         // Add the model to the project in the specified folder (returns model folder handle)
-        TinyHandle modelFolderHandle = project->addSceneFromModel(model, targetFolder);
+        TinyHandle modelFolderHandle = project->addModel(model, targetFolder);
         
         if (modelFolderHandle.valid()) {
             // Success! The model has been loaded and added to the project

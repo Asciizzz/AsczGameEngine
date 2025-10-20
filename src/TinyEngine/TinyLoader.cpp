@@ -733,12 +733,14 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
     // Skeleton parent nodes
     UnorderedMap<int, int> skeletonToModelNodeIndex;
     for (size_t skeleIdx = 0; skeleIdx < tinyModel.skeletons.size(); ++skeleIdx) {
+        const TinySkeleton& skeleton = tinyModel.skeletons[skeleIdx];
+
         TinyNode skeleNode;
-        skeleNode.name = "Skeleton_" + std::to_string(skeleIdx);
+        skeleNode.name = "Skeleton_" + skeleton.name;
 
         TinyNode::Skeleton skele3D;
         skele3D.skeleHandle = TinyHandle(skeleIdx);
-        skele3D.resize(tinyModel.skeletons[skeleIdx].bones.size());
+        skele3D.set(skeleton.bones);
 
         skeleNode.add<TinyNode::Skeleton>(std::move(skele3D));
 

@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <tuple>
 
+#include "TinyData/TinySkeleton.hpp"
+
 struct TinyNode {
     std::string name = "Node";
     TinyNode() = default;
@@ -53,10 +55,44 @@ struct TinyNode {
         // Runtime skeleton data here
         std::vector<glm::mat4> localPose; // Manipulatable (by animation or by user)
         std::vector<glm::mat4> finalPose; // Final computed pose for skinning
+        std::vector<glm::mat4> skinData;  // What will be sent to the shader
 
-        void resize(size_t boneCount) {
+        Skeleton() {
+            // Set 1 identity matrix by default
+            localPose.push_back(glm::mat4(1.0f));
+            finalPose.push_back(glm::mat4(1.0f));
+            skinData.push_back(glm::mat4(1.0f));
+        }
+
+        void set(const std::vector<TinyBone>& bones) {
+            size_t boneCount = bones.size();
             localPose.resize(boneCount, glm::mat4(1.0f));
             finalPose.resize(boneCount, glm::mat4(1.0f));
+            skinData.resize(boneCount, glm::mat4(1.0f));
+
+            for (size_t i = 0; i < boneCount; ++i) {
+                localPose[i] = bones[i].localBindTransform;
+            }
+        }
+
+        void calcSkinData(const std::vector<glm::mat4>& invBindMatrices) {
+            if (invBindMatrices.size() != finalPose.size()) {
+                throw std::runtime_error("Inverse bind matrices size does not match final pose size in Skeleton component.");
+            }
+            for (size_t i = 0; i < finalPose.size(); ++i) {
+                skinData[i] = finalPose[i] * invBindMatrices[i];
+            }
+        }
+
+        void updateFinalPose(const std::vector<TinyBone>& bones) {
+            for (size_t i = 0; i < bones.size(); ++i) {
+                const TinyBone& bone = bones[i];
+                if (bone.parent == -1) {
+                    finalPose[i] = localPose[i];
+                } else {
+                    finalPose[i] = finalPose[bone.parent] * localPose[i];
+                }
+            }
         }
     };
 
