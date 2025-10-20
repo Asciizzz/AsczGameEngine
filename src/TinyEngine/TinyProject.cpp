@@ -619,7 +619,7 @@ void TinyProject::expandFNodeParentChain(TinyHandle fNodeHandle) {
 
 void TinyProject::processPendingDeletions() {
     if (pendingFNodeDeletions.empty()) return;
-    
+
     TinyFS& fs = filesystem();
     
     for (TinyHandle handle : pendingFNodeDeletions) {

@@ -90,10 +90,14 @@ void TinyApp::initComponents() {
     auto vriggedBind = vriggedLayout.getBindingDescription();
     auto vriggedAttrs = vriggedLayout.getAttributeDescriptions();
 
-    vertexInputVKs["Test"] = VertexInputVK()
+    vertexInputVKs["TestRigged"] = VertexInputVK()
         .setBindings({ vriggedBind })
         .setAttributes({ vriggedAttrs });
-    
+
+    vertexInputVKs["TestStatic"] = VertexInputVK()
+        .setBindings({ vstaticBind })
+        .setAttributes({ vstaticAttrs });
+
     // Use offscreen render pass for pipeline creation
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
     PIPELINE_INIT(pipelineManager.get(), device, offscreenRenderPass, namedLayouts, vertexInputVKs);
@@ -275,7 +279,8 @@ void TinyApp::mainLoop() {
 
             rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
-            rendererRef.drawScene(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Test"));
+            rendererRef.drawScene(project.get(),PIPELINE_INSTANCE(pipelineManager.get(), "TestRigged"),
+                                                PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic"));
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex, imguiWrapper.get());

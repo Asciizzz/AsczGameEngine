@@ -49,6 +49,7 @@ TinyVertexStatic& TinyVertexStatic::setTangent(const glm::vec4& tang) {
 
 TinyVertexLayout TinyVertexStatic::getLayout() {
     TinyVertexLayout layout;
+    layout.type = TinyVertexLayout::Type::Static;
     layout.stride = sizeof(TinyVertexStatic);
     layout.attributes = {
         {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexStatic, pos_tu)},
@@ -123,6 +124,7 @@ TinyVertexRig& TinyVertexRig::setWeights(const glm::vec4& weights, bool normaliz
 
 TinyVertexLayout TinyVertexRig::getLayout() {
     TinyVertexLayout layout;
+    layout.type = TinyVertexLayout::Type::Rigged;
     layout.stride = sizeof(TinyVertexRig);
     layout.attributes = {
         {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, pos_tu)},

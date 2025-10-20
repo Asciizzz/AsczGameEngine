@@ -542,13 +542,8 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         }
     }
 
-    // ==================== IMPORTANT ====================
-    // For now, we always load as rigged vertices.
-
-    mesh.setVertices(allVertices);
-
-    // if (hasRigging) mesh.setVertices(allVertices);
-    // else mesh.setVertices(TinyVertexRig::makeStatic(allVertices));
+    if (hasRigging) mesh.setVertices(allVertices);
+    else mesh.setVertices(TinyVertexRig::makeStatic(allVertices));
 }
 
 void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
@@ -1120,12 +1115,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
         }
 
         // Set mesh data
-        // mesh.setVertices(vertices);
-        
-        // ================== IMPORTANT ==================
-        // THIS IS DEBUGGING, REMOVE LATER
-        mesh.setVertices(TinyVertexStatic::makeRigged(vertices));
-
+        mesh.setVertices(vertices);
         mesh.setIndices(indices);
 
         // Create single submesh covering entire mesh

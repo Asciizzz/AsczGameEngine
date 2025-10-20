@@ -19,6 +19,11 @@ struct TinyVertexLayout {
     };
     std::vector<Attribute> attributes;
 
+    enum class Type {
+        Static,
+        Rigged
+    } type = Type::Static;
+
     // Utility to generate Vulkan descriptions once
     VkVertexInputBindingDescription getBindingDescription() const;
     std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() const;

@@ -255,18 +255,15 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 }
 
 
-void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipeline) const {
+void Renderer::drawScene(const TinyProject* project, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
     const TinyScene* activeScene = project->getActiveScene();
     if (!activeScene) return;
 
     const auto& registry = project->registryRef();
 
-    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
-    rPipeline->bindCmd(currentCmd);
 
-    // Bind only the global descriptor set (set 0) for test pipeline
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
-    rPipeline->bindSets(currentCmd, &glbSet, 1);
 
     // Iterate through all nodes in the active scene to find mesh renderers
     const auto& sceneNodes = activeScene->nodes.view();
@@ -299,6 +296,14 @@ void Renderer::drawScene(const TinyProject* project, const PipelineRaster* rPipe
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
         vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
+
+        TinyVertexLayout vertexLayout = regMesh->vertexLayout;
+        bool isRigged = vertexLayout.type == TinyVertexLayout::Type::Rigged;
+        const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
+
+        // Bind pipeline and descriptor sets
+        rPipeline->bindCmd(currentCmd);
+        rPipeline->bindSets(currentCmd, &glbSet, 1);
 
         for (size_t i = 0; i < submeshes.size(); ++i) {
             uint32_t indexCount = submeshes[i].indexCount;

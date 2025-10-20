@@ -62,7 +62,7 @@ public:
 
     void drawSky(const TinyProject* project, const PipelineRaster* skyPipeline) const;
 
-    void drawScene(const TinyProject* project, const PipelineRaster* rPipeline) const;
+    void drawScene(const TinyProject* project, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const;
 
     // Get swapchain framebuffer for external ImGui rendering
     VkFramebuffer getFrameBuffer(uint32_t imageIndex) const;
