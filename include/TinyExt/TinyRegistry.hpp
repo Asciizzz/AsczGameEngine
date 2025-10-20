@@ -85,6 +85,9 @@ public:
     TinyRegistry(const TinyRegistry&) = delete;
     TinyRegistry& operator=(const TinyRegistry&) = delete;
 
+    TinyRegistry(TinyRegistry&&) = default;
+    TinyRegistry& operator=(TinyRegistry&&) = default;
+
     template<typename T>
     TypeHandle add(T& data) {
         auto& pool = ensurePool<T>().pool;

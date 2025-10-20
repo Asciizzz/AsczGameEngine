@@ -49,7 +49,15 @@ struct TinyNode {
     struct Skeleton {
         static constexpr Types kType = Types::Skeleton;
         TinyHandle skeleHandle;   // Original skeleton data
-        TinyHandle skeleRtHandle; // Runtime skeleton data
+
+        // Runtime skeleton data here
+        std::vector<glm::mat4> localPose; // Manipulatable (by animation or by user)
+        std::vector<glm::mat4> finalPose; // Final computed pose for skinning
+
+        void resize(size_t boneCount) {
+            localPose.resize(boneCount, glm::mat4(1.0f));
+            finalPose.resize(boneCount, glm::mat4(1.0f));
+        }
     };
 
 private:

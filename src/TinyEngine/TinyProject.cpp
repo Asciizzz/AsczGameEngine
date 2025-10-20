@@ -29,7 +29,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TinyFS::Node::CFG sceneConfig;
     sceneConfig.deletable = false; // Make it non-deletable
 
-    TinyHandle mainSceneFileHandle = tinyFS->addFile(tinyFS->rootHandle(), "Main Scene", &mainScene, sceneConfig);
+    TinyHandle mainSceneFileHandle = tinyFS->addFile(tinyFS->rootHandle(), "Main Scene", std::move(&mainScene), sceneConfig);
     TypeHandle mainSceneTypeHandle = tinyFS->getTHandle(mainSceneFileHandle);
     initialSceneHandle = mainSceneTypeHandle.handle; // Store the initial scene handle
 
@@ -151,7 +151,7 @@ TinyHandle TinyProject::addSceneFromModel(TinyModel& model, TinyHandle parentFol
             if (skeleton) {
                 skeleton->skeleHandle = glbSkeleRHandle[skeleton->skeleHandle.index];
 
-                // Add the runtime skeleton data in the future
+                // Runtime data already imbedded
             }
         }
 

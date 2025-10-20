@@ -866,7 +866,7 @@ void TinyApp::renderFileSystemInspector() {
             if (scene) {
                 ImGui::Text("Scene Nodes: %u", scene->nodes.count());
                 
-                // Make Active Scene button
+                // Make Active button
                 ImGui::Spacing();
                 TinyHandle sceneRegistryHandle = tHandle.handle;
                 bool isActiveScene = (getActiveSceneHandle() == sceneRegistryHandle);
@@ -1616,10 +1616,8 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 TinyScene newScene;
                 newScene.name = "New Scene";
                 newScene.addRoot("Root");
-                
-                // Add scene to registry and create file node
-                TinyScene* scenePtr = &newScene;
-                TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", scenePtr);
+
+                TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", std::move(&newScene));
                 selectFileNode(fileHandle);
                 // Expand parent chain to show the new scene
                 expandFNodeParentChain(fileHandle);
@@ -1760,7 +1758,7 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 if (isCurrentlyActive) {
                     ImGui::TextColored(ImVec4(0.7f, 1.0f, 0.7f, 1.0f), "Active Scene");
                 } else {
-                    if (ImGui::MenuItem("Make Active Scene")) {
+                    if (ImGui::MenuItem("Make Active")) {
                         if (setActiveScene(sceneRegistryHandle)) {
                             selectSceneNode(activeSceneRootHandle());
                         }
