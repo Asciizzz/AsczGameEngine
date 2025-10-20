@@ -145,13 +145,14 @@ DataBuffer& DataBuffer::uploadData(const void* data) {
     return *this;
 }
 
-DataBuffer& DataBuffer::copyData(const void* data) {
-    memcpy(mapped, data, dataSize);
+DataBuffer& DataBuffer::copyData(const void* data, size_t size, size_t offset) {
+    if (size == 0) size = dataSize;
+    memcpy(static_cast<char*>(mapped) + offset, data, size);
     return *this;
 }
 
-DataBuffer& DataBuffer::mapAndCopy(const void* data) {
-    mapMemory().copyData(data);
+DataBuffer& DataBuffer::mapAndCopy(const void* data, size_t size, size_t offset) {
+    mapMemory().copyData(data, size, offset);
     return *this;
 }
 

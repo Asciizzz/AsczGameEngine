@@ -75,17 +75,26 @@ struct TinyNode {
             }
         }
 
-        void calcSkinData(const std::vector<glm::mat4>& invBindMatrices) {
-            if (invBindMatrices.size() != finalPose.size()) {
+        void calcSkinData(const std::vector<TinyBone>& bones) {
+            if (bones.size() != finalPose.size()) {
                 throw std::runtime_error("Inverse bind matrices size does not match final pose size in Skeleton component.");
             }
+
+            updateFinalPose(bones);
+
             for (size_t i = 0; i < finalPose.size(); ++i) {
-                skinData[i] = finalPose[i] * invBindMatrices[i];
+                skinData[i] = finalPose[i] * bones[i].inverseBindMatrix;
             }
         }
 
         void updateFinalPose(const std::vector<TinyBone>& bones) {
             for (size_t i = 0; i < bones.size(); ++i) {
+                // Spin the first bone for 0 reason
+                if (i == 4) {
+                    float angle = static_cast<float>(glm::radians(1.0f));
+                    localPose[i] = glm::rotate(localPose[i], angle, glm::vec3(1.0f, 1.0f, 1.0f));
+                }
+
                 const TinyBone& bone = bones[i];
                 if (bone.parent == -1) {
                     finalPose[i] = localPose[i];

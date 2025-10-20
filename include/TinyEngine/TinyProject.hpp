@@ -11,6 +11,8 @@
 
 class TinyProject {
 public:
+    static constexpr size_t maxSkinMatrices = 1024;
+
     TinyProject(const TinyVK::Device* deviceVK);
 
     // Delete copy
@@ -23,8 +25,17 @@ public:
 
     TinyCamera* getCamera() const { return tinyCamera.get(); }
     TinyGlobal* getGlobal() const { return tinyGlobal.get(); }
+
+    // Descriptor accessors
+
     VkDescriptorSetLayout getGlbDescSetLayout() const { return tinyGlobal->getDescLayout(); }
     VkDescriptorSet getGlbDescSet(uint32_t idx) const { return tinyGlobal->getDescSet(idx); }
+
+    VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
+    VkDescriptorSet getSkinDescSet(uint32_t idx) const { return skinDescSets[idx].get(); }
+    void updateSkin(const std::vector<glm::mat4>& skinData, uint32_t frameIndex);
+
+    // Global UBO update
 
     void updateGlobal(uint32_t frameIndex) {
         tinyGlobal->update(*tinyCamera, frameIndex);
@@ -39,12 +50,12 @@ public:
      */
     void addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle = TinyHandle());
 
-
+    // Filesystem and registry accessors
     TinyRegistry& registryRef() { return tinyFS->registryRef(); }
     const TinyRegistry& registryRef() const { return tinyFS->registryRef(); }
     TinyFS& filesystem() { return *tinyFS; }
     const TinyFS& filesystem() const { return *tinyFS; }
-    
+
     // Get the initial scene handle (for TinyApp to set as active scene)
     TinyHandle getInitialSceneHandle() const { return initialSceneHandle; }
 
@@ -64,10 +75,11 @@ private:
     TinyVK::DescPool matDescPool;
     TinyVK::DescSet matDescSet;
 
-    TinyVK::DataBuffer skinBuffer;
     TinyVK::DescLayout skinDescLayout;
     TinyVK::DescPool skinDescPool;
-    TinyVK::DescSet skinDescSet;
+    // One per frame in flight
+    std::vector<TinyVK::DescSet> skinDescSets; 
+    std::vector<TinyVK::DataBuffer> skinBuffers;
 
     void vkCreateSkinResource();
 };

@@ -67,16 +67,13 @@ void TinyApp::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    auto glbLayout = project->getGlbDescSetLayout();
-    auto matLayout = VK_NULL_HANDLE; // Placeholder until we have a material UBO
-    auto texLayout = VK_NULL_HANDLE; // Placeholder until we have a texture UBO
-
     pipelineManager = MakeUnique<PipelineManager>();
     pipelineManager->loadPipelinesFromJson("Config/pipelines.json");
 
     // Initialize all pipelines with the manager using named layouts
     UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
-        {"global", glbLayout}
+        {"global", project->getGlbDescSetLayout()},
+        {"skin", project->getSkinDescSetLayout()},
     };
     
     // Create named vertex inputs

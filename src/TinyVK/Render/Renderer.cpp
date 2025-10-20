@@ -255,7 +255,7 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 }
 
 
-void Renderer::drawScene(const TinyProject* project, const TinyScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
+void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
     if (!activeScene) return;
 
     const auto& registry = project->registryRef();
@@ -264,32 +264,30 @@ void Renderer::drawScene(const TinyProject* project, const TinyScene* activeScen
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
 
+    TinyHandle curSkeleNodeHandle;
+
     // Iterate through all nodes in the active scene to find mesh renderers
     const auto& sceneNodes = activeScene->nodes.view();
     for (uint32_t i = 0; i < sceneNodes.size(); ++i) {
-        if (!activeScene->nodes.isOccupied(i)) continue;
-        
+        if (!activeScene->nodes.isOccupied(i)) continue; // Node not occupied
+
         TinyHandle nodeHandle = activeScene->nodes.getHandle(i);
         const TinyNode* rtNode = activeScene->nodes.get(nodeHandle);
-        if (!rtNode || !rtNode->hasComponent<TinyNode::MeshRender>()) continue;
-
-        const auto& transform = rtNode->globalTransform;
+        if (!rtNode) continue; // No runtime node
 
         // Get mesh render component directly from runtime node
         const auto* meshRenderComp = rtNode->get<TinyNode::MeshRender>();
-        if (!meshRenderComp) continue;
+        if (!meshRenderComp) continue; // No mesh render component
 
-        const auto& regMesh = registry.get<TinyMesh>(meshRenderComp->meshHandle);
-        if (!regMesh) continue;
-        
-        const auto& submeshes = regMesh->submeshes;
-
-        // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
+        TinyHandle meshHandle = meshRenderComp->meshHandle;
+        const auto& regMesh = registry.get<TinyMesh>(meshHandle);
+        if (!regMesh) continue; // No mesh found
 
         // Draw each individual submeshes
         VkBuffer vertexBuffer = regMesh->vertexBuffer;
         VkBuffer indexBuffer = regMesh->indexBuffer;
         VkIndexType indexType = regMesh->indexType;
+        const auto& submeshes = regMesh->submeshes; // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
 
         VkBuffer buffers[] = { vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
@@ -299,11 +297,37 @@ void Renderer::drawScene(const TinyProject* project, const TinyScene* activeScen
         TinyVertexLayout vertexLayout = regMesh->vertexLayout;
         bool isRigged = vertexLayout.type == TinyVertexLayout::Type::Rigged;
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
-
-        // Bind pipeline and descriptor sets
         rPipeline->bindCmd(currentCmd);
-        rPipeline->bindSets(currentCmd, &glbSet, 1);
 
+        if (rPipeline == plRigged) {
+            // Skeleton data retrieval
+            TinyHandle skeleNodeHandle = meshRenderComp->skeleNodeHandle;
+            TinyNode* skeleNode = activeScene->nodes.get(skeleNodeHandle);
+            if (skeleNode) { // Get skeleton component if available
+                TinyNode::Skeleton* skeleComp = skeleNode->get<TinyNode::Skeleton>();
+                if (skeleComp && skeleNodeHandle != curSkeleNodeHandle) {
+                    curSkeleNodeHandle = skeleNodeHandle; // Set new skeleton node
+
+                    // Retrieve skeleton data
+                    const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp->skeleHandle);
+                    if (skeleton) {
+                        skeleComp->calcSkinData(skeleton->bones);
+                        project->updateSkin(skeleComp->skinData, currentFrame);
+                    }
+                }
+            }
+
+            VkDescriptorSet sets[2] = {
+                glbSet,
+                project->getSkinDescSet(currentFrame)
+            };
+
+            rPipeline->bindSets(currentCmd, sets, 2);
+        } else {
+            rPipeline->bindSets(currentCmd, &glbSet, 1);
+        }
+
+        const auto& transform = rtNode->globalTransform;
         for (size_t i = 0; i < submeshes.size(); ++i) {
             uint32_t indexCount = submeshes[i].indexCount;
             if (indexCount == 0) continue;

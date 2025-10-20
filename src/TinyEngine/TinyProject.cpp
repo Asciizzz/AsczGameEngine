@@ -221,40 +221,58 @@ void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, T
 
 
 
+void TinyProject::updateSkin(const std::vector<glm::mat4>& skinData, uint32_t frameIndex) {
+    if (frameIndex >= skinBuffers.size()) return; // Invalid frame index
 
+    // Copy skin data to the appropriate buffer
+    skinBuffers[frameIndex].copyData(skinData.data(), sizeof(glm::mat4) * skinData.size());
+}
 
 
 
 void TinyProject::vkCreateSkinResource() {
-    VkDeviceSize bufferSize = sizeof(glm::mat4);
+    VkDeviceSize bufferSize = sizeof(glm::mat4) * maxSkinMatrices;
     std::vector<glm::mat4> singleBone = { glm::mat4(1.0f) };
 
-    skinBuffer
-        .setDataSize(bufferSize)
-        .setUsageFlags(BufferUsage::Uniform)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVK)
-        .mapAndCopy(singleBone.data());
-
     skinDescLayout.create(*deviceVK, {
-        {0, DescType::UniformBuffer, 1, ShaderStage::Vertex, nullptr}
+        {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr}
     });
 
     skinDescPool.create(*deviceVK, {
-        {DescType::UniformBuffer, 1}
-    }, 1);
+        {DescType::StorageBuffer, 1}
+    }, 2);
 
-    skinDescSet.allocate(*deviceVK, skinDescPool, skinDescLayout);
+    skinDescSets.clear();
+    skinBuffers.clear();
 
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = skinBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range  = sizeof(glm::mat4);
+    for (size_t i = 0; i < 2; ++i) { // Assuming 2 frames in flight
+        // Create buffer
+        DataBuffer skinBuffer;
+        skinBuffer
+            .setDataSize(bufferSize)
+            .setUsageFlags(BufferUsage::Storage)
+            .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+            .createBuffer(deviceVK)
+            .mapAndCopy(singleBone.data());
 
-    DescWrite()
-        .setDstSet(skinDescSet)
-        .setType(DescType::UniformBuffer)
-        .setDescCount(1)
-        .setBufferInfo({ bufferInfo })
-        .updateDescSets(deviceVK->device);
+        skinBuffers.push_back(std::move(skinBuffer));
+
+        // Create descriptor set
+        DescSet descSet;
+        descSet.allocate(*deviceVK, skinDescPool.get(), skinDescLayout.get());
+
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = skinBuffers.back(); // Avoid dangling reference
+        bufferInfo.offset = 0;
+        bufferInfo.range  = bufferSize;
+
+        DescWrite()
+            .setDstSet(descSet)
+            .setType(DescType::StorageBuffer)
+            .setDescCount(1)
+            .setBufferInfo({ bufferInfo })
+            .updateDescSets(deviceVK->device);
+
+        skinDescSets.push_back(std::move(descSet));
+    }
 }

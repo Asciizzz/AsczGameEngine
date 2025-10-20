@@ -130,7 +130,7 @@ void TinyScene::addScene(const TinyScene& sceneA, TinyHandle parentHandle) {
         TinyHandle oldHandle_A = sceneA.nodes.getHandle(i);
         if (!oldHandle_A.valid()) continue;
         
-        const TinyNode* originalNodeA = sceneA.nodes.get(oldHandle_A);
+        const TinyNode* originalNodeA = sceneA.getNode(oldHandle_A);
         if (!originalNodeA) continue;
         
         // Find our copied node in scene B
@@ -185,6 +185,19 @@ void TinyScene::addScene(const TinyScene& sceneA, TinyHandle parentHandle) {
                 if (skeleIt != handleMap.end()) {
                     boneAttach->skeleNodeHandle = skeleIt->second;
                 }
+            }
+        }
+
+        if (nodeB->hasComponent<TinyNode::Skeleton>()) {
+            // Copy entire component data from scene A to B
+            auto* skeletonComp = nodeB->get<TinyNode::Skeleton>();
+            const TinyNode::Skeleton* originalSkeleComp = originalNodeA->get<TinyNode::Skeleton>();
+
+            if (skeletonComp && originalSkeleComp) {
+                skeletonComp->skeleHandle = originalSkeleComp->skeleHandle;
+                skeletonComp->localPose = originalSkeleComp->localPose;
+                skeletonComp->finalPose = originalSkeleComp->finalPose;
+                skeletonComp->skinData = originalSkeleComp->skinData;
             }
         }
     }

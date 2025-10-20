@@ -736,10 +736,10 @@ void TinyApp::renderSceneNodeInspector() {
                 const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp->skeleHandle);
                 if (skeleton) {
                     ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓ %s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
+                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
                 } else {
                     ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗ Invalid");
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
                 }
             }
             
