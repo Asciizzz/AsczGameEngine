@@ -1878,18 +1878,13 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 const TinyFS::Node* nodeB = fs.getFNodes().get(b);
                 if (!nodeA || !nodeB) return false;
                 
-                // Folders come before files
-                if (nodeA->type != nodeB->type) return nodeA->isFolder();
-                
-                // Within files, first sort by extension (priority to ext name)
-                if (nodeA->isFile() && nodeB->isFile()) {
-                    TinyFS::TypeExt extA = fs.getFileTypeExt(a);
-                    TinyFS::TypeExt extB = fs.getFileTypeExt(b);
+                TinyFS::TypeExt extA = fs.getFileTypeExt(a);
+                TinyFS::TypeExt extB = fs.getFileTypeExt(b);
 
-                    if (extA < extB) return true;
-                    else if (extA > extB) return false;
-                }
+                // No need for folder check, automatically set max priority
 
+                if (extA < extB) return true;
+                else if (extA > extB) return false;
                 return nodeA->name < nodeB->name;
             });
             

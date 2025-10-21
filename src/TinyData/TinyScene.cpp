@@ -1,5 +1,8 @@
 #include "TinyData/TinyScene.hpp"
 
+#include <stdexcept>
+#include <thread>
+
 TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     // Create a new root node
     TinyNode rootNode(nodeName);
@@ -48,14 +51,10 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
         if (parentNode) parentNode->removeChild(nodeHandle);
     }
 
-    // Resolve specific removal logic
-    if (nodeToDelete->has<TinyNode::Skeleton>()) {
-        TinyNode::Skeleton* skelComp = nodeToDelete->get<TinyNode::Skeleton>();
-        if (skelComp && skelComp->rtSkeleHandle.valid()) {
-            // Future implementation: Remove TinySkeletonRT from runtime registry
-            // rtRegistry.remove<TinySkeletonRT>(skelComp->rtSkeleHandle);
-        }
-    }
+    nodeRemoveComp<TinyNode::Node3D>(nodeHandle);
+    nodeRemoveComp<TinyNode::MeshRender>(nodeHandle);
+    nodeRemoveComp<TinyNode::BoneAttach>(nodeHandle);
+    nodeRemoveComp<TinyNode::Skeleton>(nodeHandle);
 
     nodes.remove(nodeHandle);
 
@@ -348,6 +347,9 @@ void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
 
     // Remove skeleton runtime data
     if (compPtr->rtSkeleHandle.valid() && rtRegistry.has<TinySkeletonRT>(compPtr->rtSkeleHandle)) {
+        // Stall a few ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(59));
+        
         rtRegistry.remove<TinySkeletonRT>(compPtr->rtSkeleHandle);
     }
 
