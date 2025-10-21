@@ -11,7 +11,7 @@
 
 class TinyProject {
 public:
-    static constexpr size_t maxSkinMatrices = 1024;
+    static constexpr size_t maxSkeletons = 1024;
 
     TinyProject(const TinyVK::Device* deviceVK);
 

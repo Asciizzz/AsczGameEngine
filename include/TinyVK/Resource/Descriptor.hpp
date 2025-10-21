@@ -76,7 +76,7 @@ private:
 
 struct DescSet {
     DescSet() = default;
-    ~DescSet() = default;
+    ~DescSet(); // CRITICAL: Custom destructor for automatic cleanup
 
     DescSet(const DescSet&) = delete;
     DescSet& operator=(const DescSet&) = delete;

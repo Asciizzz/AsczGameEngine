@@ -14,12 +14,12 @@ bool validIndex(TinyHandle handle, const std::vector<T>& vec) {
 TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS = MakeUnique<TinyFS>();
 
-    tinyFS->setTypeExt<TinyScene>("ascn");
-    tinyFS->setTypeExt<TinyTexture>("atex");
-    tinyFS->setTypeExt<TinyRMaterial>("amat"); // Soon to be replaced with TinyMaterial
-    tinyFS->setTypeExt<TinyMesh>("amsh");
-    tinyFS->setTypeExt<TinySkeleton>("askl");
-    tinyFS->setTypeExt<TinyAnimation>("anim");
+    tinyFS->setTypeExt<TinyScene>("ascn", 0, 0.8f, 1.0f, 0.8f);
+    tinyFS->setTypeExt<TinyTexture>("atex", 0, 0.8f, 0.8f, 1.0f);
+    tinyFS->setTypeExt<TinyRMaterial>("amat", 0, 1.0f, 0.8f, 1.0f);
+    tinyFS->setTypeExt<TinyMesh>("amsh", 0, 1.0f, 1.0f, 0.8f);
+    tinyFS->setTypeExt<TinySkeleton>("askl", 0, 1.0f, 0.6f, 0.4f);
+    tinyFS->setTypeExt<TinyAnimation>("anim", 0, 0.8f, 1.0f, 0.6f);
 
     vkCreateSceneResources();
 
@@ -210,7 +210,6 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
             TinyNode::Skeleton remappedSkelComp;
             remappedSkelComp.skeleHandle = newSkeleHandle;
-            remappedSkelComp.rtSkeleHandle.invalidate(); // Will be created at runtime
 
             scene.nodeAddComp<TinyNode::Skeleton>(nodeHandle, remappedSkelComp);
         }
@@ -235,7 +234,7 @@ void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, T
     targetScene->addScene(fromHandle, parentHandle);
     
     // Update transforms for the entire target scene
-    targetScene->updateGlbTransform();
+    targetScene->update();
 }
 
 
@@ -246,7 +245,7 @@ void TinyProject::vkCreateSceneResources() {
 
     skinDescPool.create(*deviceVK, {
         {DescType::StorageBuffer, 1}
-    }, 2);
+    }, maxSkeletons);
 
     sharedReq.fsRegistry = &registryRef();
     sharedReq.device = deviceVK;

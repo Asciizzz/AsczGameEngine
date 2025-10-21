@@ -122,6 +122,21 @@ public:
     }
 
     template<typename T>
+    bool has(const TinyHandle& handle) const {
+        auto* wrapper = getWrapper<T>(); // check validity
+        return wrapper ? wrapper->pool.isValid(handle) : false;
+    }
+
+    bool has(const TypeHandle& th) const {
+        if (!th.valid()) return false;
+
+        auto it = hashToPool.find(th.typeHash);
+        if (it == hashToPool.end()) return false;
+
+        return it->second->get(th.handle) != nullptr;
+    }
+
+    template<typename T>
     void remove(const TinyHandle& handle) {
         auto* wrapper = getWrapper<T>(); // check validity
         if (wrapper) wrapper->pool.remove(handle);

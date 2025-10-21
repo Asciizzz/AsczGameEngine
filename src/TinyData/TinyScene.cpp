@@ -179,26 +179,6 @@ bool TinyScene::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHan
 
 
 
-void TinyScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
-    // Use root node if no valid handle provided
-    TinyHandle actualNode = nodeHandle.valid() ? nodeHandle : rootHandle();
-    
-    TinyNode* node = nodes.get(actualNode);
-    if (!node) return;
-
-    TinyNode::Node3D* transform = node->get<TinyNode::Node3D>();
-    if (!transform) node->add<TinyNode::Node3D>();
-
-    // Calculate global transform: parent global * local transform
-    transform->global = parentGlobalTransform * transform->local;
-
-    // Recursively update all children
-    for (const TinyHandle& childHandle : node->childrenHandles) {
-        updateGlbTransform(childHandle, transform->global);
-    }
-}
-
-
 void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
     const TinyScene* from = sceneReq.fsRegistry->get<TinyScene>(sceneHandle);
     if (!from || from->nodes.count() == 0) return;
@@ -285,5 +265,123 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
         }
     }
 
-    updateGlbTransform(parentHandle); // Update transforms after adding new nodes
+    update(parentHandle); // Update transforms after adding new nodes
+}
+
+
+
+
+
+void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
+    TinyHandle realHandle = nodeHandle.valid() ? nodeHandle : rootHandle();
+
+    TinyNode* node = nodes.get(realHandle);
+    if (!node) return;
+
+    // Update transform component
+
+    TinyNode::Node3D* transform = node->get<TinyNode::Node3D>();
+    if (!transform) node->add<TinyNode::Node3D>();
+
+    transform->global = parentGlobalTransform * transform->local;
+
+    // Update skeleton component if exists
+    updateNodeSkeleton(realHandle);
+
+    // Recursively update all children
+    for (const TinyHandle& childHandle : node->childrenHandles) {
+        updateRecursive(childHandle, transform->global);
+    }
+}
+
+void TinyScene::update(TinyHandle nodeHandle) {
+    // Use root node if no valid handle provided
+    TinyHandle realHandle = nodeHandle.valid() ? nodeHandle : rootHandle();
+    
+    TinyNode* node = nodes.get(realHandle);
+    if (!node) return;
+
+// Update everything recursively
+
+    glm::mat4 parentGlobal = glm::mat4(1.0f);
+    const TinyNode* parent = nodes.get(node->parentHandle);
+    if (parent) parentGlobal = parent->get<TinyNode::Node3D>()->global;
+
+    updateRecursive(realHandle, parentGlobal);
+}
+
+
+TinyHandle TinyScene::nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skeletonHandle) {
+    TinyNode* node = nodes.get(nodeHandle);
+    if (!node) return TinyHandle();
+
+    nodeRemoveCompSkeleton(nodeHandle); // Remove existing skeleton component if any
+
+    TinyNode::Skeleton* compPtr = node->add<TinyNode::Skeleton>();
+
+    const TinySkeleton* fsSkele = sceneReq.fsRegistry->get<TinySkeleton>(skeletonHandle);
+    if (!fsSkele) {
+        compPtr->skeleHandle = TinyHandle();
+        return TinyHandle();
+    }
+
+    // CRITICAL FIX: Set the skeleton handle BEFORE initializing runtime data
+    compPtr->skeleHandle = skeletonHandle;
+
+    TinySkeletonRT rtSkele;
+    rtSkele.init(skeletonHandle, *fsSkele); // FIXED: Use skeletonHandle parameter, not compPtr->skeleHandle
+    rtSkele.vkCreate(sceneReq.device, sceneReq.skinDescPool, sceneReq.skinDescLayout);
+
+    compPtr->rtSkeleHandle = addRT<TinySkeletonRT>(std::move(rtSkele));
+    updateNodeSkeleton(nodeHandle);
+
+    // Return the runtime skeleton handle
+    return compPtr->rtSkeleHandle;
+}
+
+void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
+    TinyNode* node = nodes.get(nodeHandle);
+    if (!node) return;
+
+    TinyNode::Skeleton* compPtr = node->get<TinyNode::Skeleton>();
+    if (!compPtr) return; // No skeleton component exists
+
+    // Remove skeleton runtime data
+    if (compPtr->rtSkeleHandle.valid() && rtRegistry.has<TinySkeletonRT>(compPtr->rtSkeleHandle)) {
+        rtRegistry.remove<TinySkeletonRT>(compPtr->rtSkeleHandle);
+    }
+
+    node->remove<TinyNode::Skeleton>();
+}
+
+
+
+
+
+void TinyScene::updateNodeSkeleton(TinyHandle nodeHandle) {
+    // Retrieve skeleton component
+    TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
+    if (!compPtr) return;
+
+    // Retrieve runtime skeleton data
+    TinySkeletonRT* rtSkele = rtRegistry.get<TinySkeletonRT>(compPtr->rtSkeleHandle);
+    if (!rtSkele) return;
+
+    rtSkele->update();
+}
+
+
+VkDescriptorSet TinyScene::getNodeSkeletonDescSet(TinyHandle nodeHandle) const {
+    const TinyNode* node = nodes.get(nodeHandle);
+    if (!node) return VK_NULL_HANDLE;
+
+    // Retrieve skeleton component
+    const TinyNode::Skeleton* compPtr = node->get<TinyNode::Skeleton>();
+    if (!compPtr) return VK_NULL_HANDLE;
+
+    // Retrieve runtime skeleton data
+    const TinySkeletonRT* rtSkele = rtRegistry.get<TinySkeletonRT>(compPtr->rtSkeleHandle);
+    if (!rtSkele) return VK_NULL_HANDLE;
+
+    return rtSkele->descSet;
 }

@@ -116,6 +116,11 @@ DescSet::DescSet(DescSet&& other) noexcept {
 }
 DescSet& DescSet::operator=(DescSet&& other) noexcept {
     if (this != &other) {
+        // Clean up current resources before taking new ones
+        if (set != VK_NULL_HANDLE && pool != VK_NULL_HANDLE) {
+            vkFreeDescriptorSets(device, pool, 1, &set);
+        }
+        
         device = other.device;
         set = other.set;
         layout = other.layout;
@@ -129,8 +134,16 @@ DescSet& DescSet::operator=(DescSet&& other) noexcept {
     return *this;
 }
 
+DescSet::~DescSet() {
+    // CRITICAL FIX: Automatic descriptor set cleanup to prevent pool exhaustion
+    if (set != VK_NULL_HANDLE && pool != VK_NULL_HANDLE) {
+        vkFreeDescriptorSets(device, pool, 1, &set);
+        // printf("    DescSet destructor: freed descriptor set from pool\n"); // Uncomment for debugging
+    }
+}
+
 void DescSet::allocate(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout, 
-                       const uint32_t* variableDescriptorCounts, const void* pNext) {
+                    const uint32_t* variableDescriptorCounts, const void* pNext) {
     this->pool = pool;
     this->layout = layout;
     this->device = device;

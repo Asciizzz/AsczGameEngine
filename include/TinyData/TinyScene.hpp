@@ -42,6 +42,8 @@ struct TinyScene {
         sceneReq = req;
     }
 
+    bool valid() const { return sceneReq.valid(); }
+
     // --------- Node management ---------
 
     // No add node by TinyNode because of component logic
@@ -67,17 +69,13 @@ struct TinyScene {
     bool setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHandle>& newChildren);
 
     void addScene(TinyHandle sceneHandle, TinyHandle parentHandle = TinyHandle());
-    void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
+    
+    // -------- General update ---------
+    
+    void updateRecursive(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
+    void update(TinyHandle nodeHandle = TinyHandle());
 
     // -------- Component management --------- 
-
-    template<typename T>
-    T* nodeComp(TinyHandle nodeHandle) {
-        TinyNode* node = nodes.get(nodeHandle);
-        if (!node) return nullptr;
-
-        return node->get<T>();
-    }
 
     template<typename T>
     const T* nodeComp(TinyHandle nodeHandle) const {
@@ -94,25 +92,12 @@ struct TinyScene {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
-        node->add<T>(componentData);
-        T* compPtr = node->get<T>();
-        if (!compPtr) return;
-
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            // Create a new runtime skeleton
-            const TinySkeleton* fsSkele = fsRegistry->get<TinySkeleton>(compPtr->skeleHandle);
-            if (fsSkele) {
-                TinySkeletonRT rtSkele;
-                rtSkele.init(compPtr->skeleHandle, *fsSkele);
-                rtSkele.vkCreate(sceneReq.device, sceneReq.skinDescPool, sceneReq.skinDescLayout);
-
-                compPtr->rtSkeleHandle = addRT<TinySkeletonRT>(std::move(rtSkele));
-            } else {
-                compPtr->rtSkeleHandle = TinyHandle(); // Invalid handle
-            }
+            nodeAddCompSkeleton(nodeHandle, componentData.skeleHandle);
+        } else {
+            // Add component as normal
+            node->add<T>(componentData);
         }
-
-        // Other component-specific logic can go here
     }
 
     template<typename T>
@@ -122,18 +107,26 @@ struct TinyScene {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
-        // Resolve component removal logic
-        T* compPtr = node->get<T>();
-        if (!compPtr) return;
-
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            removeRT<TinySkeletonRT>(compPtr->rtSkeleHandle);
+            nodeRemoveCompSkeleton(nodeHandle);
+        } else {
+            node->remove<T>();
         }
-
-        node->remove<T>();
     }
 
-    bool valid() const { return sceneReq.valid(); }
+    template<typename T>
+    T copyComp(TinyHandle nodeHandle) const {
+        const TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return T(); // Empty/default
+
+        return node->getCopy<T>();
+    }
+
+    // --------- Specific component logic ---------
+
+    void updateNodeSkeleton(TinyHandle nodeHandle);
+
+    VkDescriptorSet getNodeSkeletonDescSet(TinyHandle nodeHandle) const;
 
 private:
     TinyPool<TinyNode> nodes;
@@ -142,7 +135,21 @@ private:
     TinyRegistry rtRegistry; // Runtime registry data for node
     TinySceneReq sceneReq;   // Scene requirements
 
-    // --------- Runtime registry access ----------
+    // --------- Complex component logic ---------
+
+    // Non-const access only for internal use
+    template<typename T>
+    T* nodeComp(TinyHandle nodeHandle) {
+        TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return nullptr;
+
+        return node->get<T>();
+    }
+
+    TinyHandle nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skeletonHandle);
+    void nodeRemoveCompSkeleton(TinyHandle nodeHandle);
+
+    // ---------- Runtime registry access ----------
 
     // Access node by index, only for internal use
     TinyNode* fromIndex(uint32_t index) {
