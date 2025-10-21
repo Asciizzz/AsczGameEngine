@@ -19,6 +19,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS->setTypeExt<TinyRMaterial>("amat", 0, 1.0f, 0.8f, 1.0f);
     tinyFS->setTypeExt<TinyMesh>("amsh", 0, 1.0f, 1.0f, 0.8f);
     tinyFS->setTypeExt<TinySkeleton>("askl", 0, 1.0f, 0.6f, 0.4f);
+    tinyFS->setTypeExt<TinySkeletonRT>("rskl", 0, 1.0f, 0.4f, 0.2f);
     tinyFS->setTypeExt<TinyAnimation>("anim", 0, 0.8f, 1.0f, 0.6f);
 
     vkCreateSceneResources();
@@ -34,7 +35,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     sceneConfig.deletable = false; // Make it non-deletable
 
     TinyHandle mainSceneFileHandle = tinyFS->addFile(tinyFS->rootHandle(), "Main Scene", std::move(&mainScene), sceneConfig);
-    TypeHandle mainSceneTypeHandle = tinyFS->getTHandle(mainSceneFileHandle);
+    TypeHandle mainSceneTypeHandle = tinyFS->fTypeHandle(mainSceneFileHandle);
     initialSceneHandle = mainSceneTypeHandle.handle; // Store the initial scene handle
 
     // Create camera and global UBO manager
@@ -77,7 +78,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         texture.vkCreate(deviceVK);
 
         TinyHandle fnHandle = tinyFS->addFile(fnTexFolder, texture.name, std::move(&texture));
-        TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+        TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
 
         glbTexRHandle.push_back(tHandle.handle);
     }
@@ -98,7 +99,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRHandle[localNrmlIndex].index : 0);
 
         TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, correctMat.name, &correctMat);
-        TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+        TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
 
         glmMatRHandle.push_back(tHandle.handle);
     }
@@ -118,7 +119,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         mesh.setSubmeshes(remappedSubmeshes);
 
         TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, mesh.name, std::move(&mesh));
-        TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+        TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
 
         glbMeshRHandle.push_back(tHandle.handle);
     }
@@ -127,7 +128,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     std::vector<TinyHandle> glbSkeleRHandle;
     for (auto& skeleton : model.skeletons) {
         TinyHandle fnHandle = tinyFS->addFile(fnSkeleFolder, skeleton.name, std::move(&skeleton));
-        TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+        TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
 
         glbSkeleRHandle.push_back(tHandle.handle);
     }
@@ -217,7 +218,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
     // Add scene to registry
     TinyHandle fnHandle = tinyFS->addFile(fnModelFolder, scene.name, &scene);
-    TypeHandle tHandle = tinyFS->getTHandle(fnHandle);
+    TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
 
     // Return the model folder handle instead of the scene handle
     return fnModelFolder;
