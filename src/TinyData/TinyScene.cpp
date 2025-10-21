@@ -143,10 +143,6 @@ const TinyNode* TinyScene::node(TinyHandle nodeHandle) const {
     return nodes.get(nodeHandle);
 }
 
-uint32_t TinyScene::nodeCount() const {
-    return nodes.count();
-}
-
 const std::vector<TinyNode>& TinyScene::nodeView() const {
     return nodes.view();
 }
@@ -158,6 +154,12 @@ bool TinyScene::nodeValid(TinyHandle nodeHandle) const {
 bool TinyScene::nodeOccupied(uint32_t index) const {
     return nodes.isOccupied(index);
 }
+
+uint32_t TinyScene::nodeCount() const {
+    return nodes.count();
+}
+
+
 
 TinyHandle TinyScene::nodeParent(TinyHandle nodeHandle) const {
     const TinyNode* node = nodes.get(nodeHandle);
@@ -184,6 +186,7 @@ bool TinyScene::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHan
     node->childrenHandles = newChildren;
     return true;
 }
+
 
 
 

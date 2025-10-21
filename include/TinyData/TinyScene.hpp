@@ -34,14 +34,13 @@ struct TinyScene {
 
     // TinyNode* node(TinyHandle nodeHandle);
     const TinyNode* node(TinyHandle nodeHandle) const;
-    uint32_t nodeCount() const;
     const std::vector<TinyNode>& nodeView() const;
     bool nodeValid(TinyHandle nodeHandle) const;
     bool nodeOccupied(uint32_t index) const;
+    uint32_t nodeCount() const;
 
     TinyHandle nodeParent(TinyHandle nodeHandle) const;
     std::vector<TinyHandle> nodeChildren(TinyHandle nodeHandle) const;
-
     bool setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle);
     bool setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHandle>& newChildren);
 
@@ -61,7 +60,7 @@ struct TinyScene {
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
             // Add new TinySkeletonRT to runtime registry (for the time being put TinyNode as placeholder)
-            compPtr->rtSkeleHandle = addRT<TinyNode>(TinyNode()).handle;
+            compPtr->rtSkeleHandle = addRT<TinyNode>(TinyNode());
         }
 
         // Other component-specific logic can go here
@@ -73,13 +72,11 @@ struct TinyScene {
         if (!node) return;
 
         // Resolve component removal logic
+        T* compPtr = node->get<T>();
+        if (!compPtr) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            TinyNode::Skeleton* skelComp = node->get<TinyNode::Skeleton>();
-            if (skelComp && skelComp->rtSkeleHandle.valid()) {
-                // Future implementation: Remove TinySkeletonRT
-                // rtRegistry.remove<TinySkeletonRT>(skelComp->rtSkeleHandle);
-            }
+            removeRT<TinyNode>(compPtr->rtSkeleHandle); // For now TinyNode as placeholder
         }
 
         node->remove<T>();
@@ -110,8 +107,13 @@ private: // Immutable data
     // --------- Runtime registry access ----------
 
     template<typename T>
-    TypeHandle addRT(T& data) {
-        return rtRegistry.add<T>(std::move(data));
+    TinyHandle addRT(T& data) {
+        return rtRegistry.add<T>(std::move(data)).handle;
+    }
+
+    template<typename T>
+    void removeRT(const TinyHandle& handle) {
+        rtRegistry.remove<T>(handle);
     }
 
     template<typename T>
