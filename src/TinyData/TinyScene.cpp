@@ -82,28 +82,18 @@ bool TinyScene::flattenNode(TinyHandle nodeHandle) {
 }
 
 bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {
-    // Validate handles
-    if (!nodeHandle.valid() || !newParentHandle.valid()) {
+    // Can't reparent root node or self
+    if (nodeHandle == rootHandle() || nodeHandle == newParentHandle) {
         return false;
     }
-    
-    // Can't reparent root node
-    if (nodeHandle == rootHandle()) {
-        return false;
-    }
-    
-    // Can't reparent to itself
-    if (nodeHandle == newParentHandle) {
-        return false;
-    }
-    
+
+    // Set parent to root if invalid
+    if (!newParentHandle.valid()) newParentHandle = rootHandle();
+
     TinyNode* nodeToMove = nodes.get(nodeHandle);
     TinyNode* newParent = nodes.get(newParentHandle);
-    
-    if (!nodeToMove || !newParent) {
-        return false;
-    }
-    
+    if (!nodeToMove || !newParent) return false;
+
     // Check for cycles: make sure new parent is not a descendant of the node we're moving
     std::function<bool(TinyHandle)> isDescendant = [this, newParentHandle, &isDescendant](TinyHandle ancestor) -> bool {
         const TinyNode* node = nodes.get(ancestor);
@@ -125,23 +115,13 @@ bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) 
     }
     
     // Remove from current parent's children list
-    if (nodeToMove->parentHandle.valid()) {
-        TinyNode* currentParent = nodes.get(nodeToMove->parentHandle);
-        if (currentParent) {
-            auto& parentChildren = currentParent->childrenHandles;
-            parentChildren.erase(
-                std::remove(parentChildren.begin(), parentChildren.end(), nodeHandle),
-                parentChildren.end()
-            );
-        }
-    }
-    
-    // Add to new parent's children list
-    newParent->childrenHandles.push_back(nodeHandle);
+    TinyNode* currentParent = nodes.get(nodeToMove->parentHandle);
+    if (currentParent) currentParent->removeChild(nodeHandle);
 
-    // Update the node's parent handle
-    nodeToMove->parentHandle = newParentHandle;
-    
+    // Add to new parent's children list
+    newParent->addChild(nodeHandle);
+
+    nodeToMove->setParent(newParentHandle);
     return true;
 }
 
@@ -155,9 +135,9 @@ bool TinyScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
 
 
 
-TinyNode* TinyScene::node(TinyHandle nodeHandle) {
-    return nodes.get(nodeHandle);
-}
+// TinyNode* TinyScene::node(TinyHandle nodeHandle) {
+//     return nodes.get(nodeHandle);
+// }
 
 const TinyNode* TinyScene::node(TinyHandle nodeHandle) const {
     return nodes.get(nodeHandle);
@@ -179,8 +159,31 @@ bool TinyScene::nodeOccupied(uint32_t index) const {
     return nodes.isOccupied(index);
 }
 
+TinyHandle TinyScene::nodeParent(TinyHandle nodeHandle) const {
+    const TinyNode* node = nodes.get(nodeHandle);
+    return node ? node->parentHandle : TinyHandle();
+}
 
+std::vector<TinyHandle> TinyScene::nodeChildren(TinyHandle nodeHandle) const {
+    const TinyNode* node = nodes.get(nodeHandle);
+    return node ? node->childrenHandles : std::vector<TinyHandle>();
+}
 
+bool TinyScene::setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle) {
+    TinyNode* node = nodes.get(nodeHandle);
+    if (!node) return false;
+
+    node->setParent(newParentHandle);
+    return true;
+}
+
+bool TinyScene::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHandle>& newChildren) {
+    TinyNode* node = nodes.get(nodeHandle);
+    if (!node) return false;
+
+    node->childrenHandles = newChildren;
+    return true;
+}
 
 
 

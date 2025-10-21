@@ -32,13 +32,19 @@ struct TinyScene {
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
     bool renameNode(TinyHandle nodeHandle, const std::string& newName);
 
-    TinyNode* node(TinyHandle nodeHandle);
+    // TinyNode* node(TinyHandle nodeHandle);
     const TinyNode* node(TinyHandle nodeHandle) const;
     uint32_t nodeCount() const;
     const std::vector<TinyNode>& nodeView() const;
     bool nodeValid(TinyHandle nodeHandle) const;
     bool nodeOccupied(uint32_t index) const;
-    
+
+    TinyHandle nodeParent(TinyHandle nodeHandle) const;
+    std::vector<TinyHandle> nodeChildren(TinyHandle nodeHandle) const;
+
+    bool setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle);
+    bool setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHandle>& newChildren);
+
     void addScene(TinyHandle sceneHandle, TinyHandle parentHandle = TinyHandle());
     void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
@@ -55,7 +61,7 @@ struct TinyScene {
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
             // Add new TinySkeletonRT to runtime registry (for the time being put TinyNode as placeholder)
-            compPtr->rtSkeleHandle = addRT<TinyNode>(TinyNode());
+            compPtr->rtSkeleHandle = addRT<TinyNode>(TinyNode()).handle;
         }
 
         // Other component-specific logic can go here

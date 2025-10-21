@@ -133,33 +133,15 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     }
 
     // Create scene with nodes - preserve hierarchy but remap resource references
-    TinyScene scene;
-    scene.name = model.name;
+    TinyScene scene(model.name);
     scene.setFsRegistry(registryRef());
 
-    // First pass: Insert all nodes and collect their actual handles
+    // First pass: Insert empty nodes
     std::vector<TinyHandle> nodeHandles;
     nodeHandles.reserve(model.nodes.size());
 
     for (const auto& node : model.nodes) {
-        TinyNode rtNode = node; // Copy node data
-
-        // Remap MeshRender component's mesh reference
-        if (rtNode.has<TinyNode::MeshRender>()) {
-            auto* meshRenderComp = rtNode.get<TinyNode::MeshRender>();
-            if (meshRenderComp)
-                meshRenderComp->meshHandle = glbMeshRHandle[meshRenderComp->meshHandle.index];
-        }
-
-        // Remap Skeleton component's registry reference
-        if (rtNode.has<TinyNode::Skeleton>()) {
-            auto* skeletonComp = rtNode.get<TinyNode::Skeleton>();
-            if (skeletonComp)
-                skeletonComp->skeleHandle = glbSkeleRHandle[skeletonComp->skeleHandle.index];
-        }
-
-        // Insert and capture the actual handle returned by the pool
-        TinyHandle actualHandle = scene.addNodeRaw(std::move(rtNode));
+        TinyHandle actualHandle = scene.addNodeRaw(TinyNode(node.name));
         nodeHandles.push_back(actualHandle);
     }
 
@@ -168,29 +150,71 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         scene.setRoot(nodeHandles[0]);
     }
 
-    // Second pass: Remap parent/child relationships using actual handles
+    // Second pass: Remap parent/child relationships and add components
     for (size_t i = 0; i < model.nodes.size(); ++i) {
-        TinyNode* rtNode = scene.node(nodeHandles[i]);
-        if (!rtNode) continue;
+        TinyHandle nodeHandle = nodeHandles[i];
+
+        TinyHandle parentHandle;
+        std::vector<TinyHandle> childrenHandles;
 
         const TinyNode& originalNode = model.nodes[i];
-
-        // Clear existing children since we'll rebuild them with correct handles
-        rtNode->childrenHandles.clear();
 
         // Remap parent handle
         if (originalNode.parentHandle.valid() && 
             originalNode.parentHandle.index < nodeHandles.size()) {
-            rtNode->parentHandle = nodeHandles[originalNode.parentHandle.index];
+            parentHandle = nodeHandles[originalNode.parentHandle.index];
         } else {
-            rtNode->parentHandle = TinyHandle(); // Invalid handle for root
+            parentHandle.invalidate(); // No parent
         }
 
         // Remap children handles
         for (const TinyHandle& childHandle : originalNode.childrenHandles) {
             if (childHandle.valid() && childHandle.index < nodeHandles.size()) {
-                rtNode->childrenHandles.push_back(nodeHandles[childHandle.index]);
+                childrenHandles.push_back(nodeHandles[childHandle.index]);
             }
+        }
+
+        scene.setNodeParent(nodeHandle, parentHandle);
+        scene.setNodeChildren(nodeHandle, childrenHandles);
+
+        // Add component with scene API to ensure proper handling
+
+        if (originalNode.has<TinyNode::MeshRender>()) {
+            const TinyNode::MeshRender* ogMeshComp = originalNode.get<TinyNode::MeshRender>();
+
+            TinyHandle newMeshHandle;
+            if (ogMeshComp->meshHandle.valid() && 
+                ogMeshComp->meshHandle.index < glbMeshRHandle.size()) {
+                newMeshHandle = glbMeshRHandle[ogMeshComp->meshHandle.index];
+            }
+
+            TinyHandle newSkeleNodeHandle;
+            if (ogMeshComp->skeleNodeHandle.valid() && 
+                ogMeshComp->skeleNodeHandle.index < nodeHandles.size()) {
+                newSkeleNodeHandle = nodeHandles[ogMeshComp->skeleNodeHandle.index];
+            }
+
+            TinyNode::MeshRender newMeshComp;
+            newMeshComp.meshHandle = newMeshHandle;
+            newMeshComp.skeleNodeHandle = newSkeleNodeHandle;
+
+            scene.nodeAddComp<TinyNode::MeshRender>(nodeHandle, newMeshComp);
+        }
+
+        if (originalNode.has<TinyNode::Skeleton>()) {
+            const TinyNode::Skeleton* ogSkelComp = originalNode.get<TinyNode::Skeleton>();
+
+            TinyHandle newSkeleHandle;
+            if (ogSkelComp->skeleHandle.valid() && 
+                ogSkelComp->skeleHandle.index < glbSkeleRHandle.size()) {
+                newSkeleHandle = glbSkeleRHandle[ogSkelComp->skeleHandle.index];
+            }
+
+            TinyNode::Skeleton remappedSkelComp;
+            remappedSkelComp.skeleHandle = newSkeleHandle;
+            remappedSkelComp.rtSkeleHandle.invalidate(); // Will be created at runtime
+
+            scene.nodeAddComp<TinyNode::Skeleton>(nodeHandle, remappedSkelComp);
         }
     }
 
