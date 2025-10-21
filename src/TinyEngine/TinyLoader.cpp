@@ -727,6 +727,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
 
     // Root node (index 0)
     TinyNode rootNode;
+    rootNode.add<TinyNode::Transform>();
     rootNode.name = tinyModel.name.empty() ? "Model_Root" : tinyModel.name;
     pushNode(std::move(rootNode));
 
@@ -774,7 +775,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
 
         const tinygltf::Node& gltfNode = model.nodes[i];
         TinyNode& target = nodes[globalIdx];
-        TinyNode::Transform* transformComp = target.get<TinyNode::Transform>();
+        TinyNode::Transform* transformComp = target.add<TinyNode::Transform>();
 
         // Transform
         glm::mat4 matrix(1.0f);
@@ -1137,12 +1138,14 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
 
     // Root node (index 0)
     TinyNode rootNode;
+    rootNode.add<TinyNode::Transform>();
     rootNode.name = result.name.empty() ? "OBJ_Root" : result.name;
     result.nodes.push_back(std::move(rootNode));
 
     // Child nodes for each mesh (representing each material group)
     for (size_t meshIndex = 0; meshIndex < result.meshes.size(); meshIndex++) {
         TinyNode meshNode;
+        meshNode.add<TinyNode::Transform>();
         meshNode.name = result.meshes[meshIndex].name + "_Node";
 
         // Set parent-child relationship

@@ -20,10 +20,7 @@ struct TinyNode {
         BoneAttach    = 1 << 3
     };
 
-    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {
-        // Add default Transform component
-        add<Transform>(Transform());
-    }
+    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
 
     // Hierarchy data - can be either local indices or runtime handles depending on scope
     TinyHandle parentHandle;
@@ -76,14 +73,21 @@ struct TinyNode {
     }
 
     template<typename T>
-    void add(const T& componentData) {
+    T* add(const T& componentData) {
         setType(T::kType, true);
         getComponent<T>() = componentData;
+        return &getComponent<T>();
+    }
+
+    template<typename T>
+    T* add() {
+        setType(T::kType, true);
+        getComponent<T>() = T();
+        return &getComponent<T>();
     }
 
     template<typename T>
     void remove() {
-        if (T::kType == Types::Transform) return; // Cannot remove Transform component
         setType(T::kType, false);
     }
 
