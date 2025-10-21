@@ -125,8 +125,8 @@ public:
     void setCaseSensitive(bool caseSensitive) { caseSensitive_ = caseSensitive; }
 
     // Expose registry for access
-    const TinyRegistry& registryRef() const { return registry; }
-    TinyRegistry& registryRef() { return registry; }
+    const TinyRegistry& registry() const { return registry_; }
+    TinyRegistry& registry() { return registry_; }
 
     // Set root display name (full on-disk path etc.)
     void setRootPath(const std::string& rootPath) {
@@ -158,7 +158,7 @@ public:
     TypeHandle addToRegistry(T&& val) {
         // Remove const and reference qualifiers (f you too)
         using CleanT = std::remove_cv_t<std::remove_reference_t<T>>;
-        return registry.add<CleanT>(std::forward<T>(val));
+        return registry_.add<CleanT>(std::forward<T>(val));
     }
 
     // ---------- Move with cycle prevention ----------
@@ -236,7 +236,7 @@ public:
         Node* node = fnodes.get(fileHandle);
         if (!node || !node->hasData()) return nullptr;
 
-        return registry.get<T>(node->tHandle);
+        return registry_.get<T>(node->tHandle);
     }
 
     TypeHandle getTHandle(TinyHandle handle) const {
@@ -281,8 +281,8 @@ public:
 
 private:
     TinyPool<Node> fnodes;
-    TinyRegistry registry;
-    TinyHandle rootHandle_{};
+    TinyRegistry registry_;
+    TinyHandle rootHandle_;
     bool caseSensitive_{false}; // Global case sensitivity setting
 
     // Type to extension info map (using new TypeExt structure)
@@ -352,7 +352,7 @@ private:
 
         if constexpr (!std::is_same_v<T, void>) {
             if (data) {
-                child.tHandle = registry.add(*data);
+                child.tHandle = registry_.add(*data);
                 child.type = Node::Type::File;
             }
         }
@@ -390,7 +390,7 @@ private:
 
         // if file / has data, remove registry entry
         if (node->hasData()) {
-            registry.remove(node->tHandle);
+            registry_.remove(node->tHandle);
             node->tHandle = TypeHandle(); // invalidate
         }
 

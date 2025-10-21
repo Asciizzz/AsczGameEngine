@@ -51,10 +51,12 @@ public:
     void addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle = TinyHandle());
 
     // Filesystem and registry accessors
-    TinyRegistry& registryRef() { return tinyFS->registryRef(); }
-    const TinyRegistry& registryRef() const { return tinyFS->registryRef(); }
+    TinyRegistry& registryRef() { return tinyFS->registry(); }
+    const TinyRegistry& registryRef() const { return tinyFS->registry(); }
     TinyFS& filesystem() { return *tinyFS; }
     const TinyFS& filesystem() const { return *tinyFS; }
+
+    const TinyVK::Device* vkDevice() const { return deviceVK; }
 
     // Get the initial scene handle (for TinyApp to set as active scene)
     TinyHandle getInitialSceneHandle() const { return initialSceneHandle; }

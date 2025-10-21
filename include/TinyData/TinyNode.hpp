@@ -97,6 +97,12 @@ struct TinyNode {
     template<typename T>
     const T* get() const { return has<T>() ? &getComponent<T>() : nullptr; }
 
+    template<typename T>
+    T getCopy() const {
+        if (!has<T>()) return T(); // Empty/default
+        return getComponent<T>();
+    }
+
 private:
     std::tuple<
         Node3D,

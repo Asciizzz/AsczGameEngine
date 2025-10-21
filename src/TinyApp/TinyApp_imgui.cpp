@@ -862,7 +862,7 @@ void TinyApp::renderFileSystemInspector() {
             ImGui::Text("Type: %s", fileType.c_str());
 
             // Extended data
-            TinyScene* scene = fs.registryRef().get<TinyScene>(tHandle);
+            TinyScene* scene = fs.registry().get<TinyScene>(tHandle);
             if (scene) {
                 ImGui::Text("Scene Nodes: %u", scene->nodeCount());
                 
@@ -896,7 +896,7 @@ void TinyApp::renderFileSystemInspector() {
             ImGui::Text("Type: %s", fileType.c_str());
 
             // Extended data
-            const TinyTexture* texture = fs.registryRef().get<TinyTexture>(tHandle);
+            const TinyTexture* texture = fs.registry().get<TinyTexture>(tHandle);
             if (texture) {
                 ImGui::Text("Dimensions: %dx%d", texture->width, texture->height);
                 ImGui::Text("Channels: %d", texture->channels);
@@ -1616,7 +1616,8 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 TinyScene newScene;
                 newScene.name = "New Scene";
                 newScene.addRoot("Root");
-                newScene.setFsRegistry(project->registryRef());
+                newScene.setFsRegistry(&project->registryRef());
+                newScene.setVkDevice(project->vkDevice());
 
                 TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", std::move(&newScene));
                 selectFileNode(fileHandle);

@@ -1,7 +1,9 @@
 #pragma once
 
-#include "TinyData/TinyNode.hpp"
 #include "TinyExt/TinyRegistry.hpp"
+
+#include "TinyData/TinyNode.hpp"
+#include "TinyData/TinySceneRT.hpp"
 
 struct TinySkelePlaceholder {};
 
@@ -9,7 +11,8 @@ struct TinyScene {
     std::string name;
 
     TinyScene(const std::string& sceneName = "New Scene") : name(sceneName) {}
-    void setFsRegistry(const TinyRegistry& registry) { fsRegistry = &registry; }
+    void setFsRegistry(const TinyRegistry* registry) { fsRegistry = registry; }
+    void setVkDevice(const TinyVK::Device* dev) { device = dev; }
 
     TinyScene(const TinyScene&) = delete;
     TinyScene& operator=(const TinyScene&) = delete;
@@ -27,6 +30,7 @@ struct TinyScene {
 
     // No add node by TinyNode because of component logic
     TinyHandle addNode(const std::string& nodeName = "New Node", TinyHandle parentHandle = TinyHandle());
+    TinyHandle addNodeRaw(const std::string& nodeName); // Raw add without components
 
     bool removeNode(TinyHandle nodeHandle, bool recursive = true);
     bool flattenNode(TinyHandle nodeHandle);
@@ -38,6 +42,7 @@ struct TinyScene {
     const std::vector<TinyNode>& nodeView() const;
     bool nodeValid(TinyHandle nodeHandle) const;
     bool nodeOccupied(uint32_t index) const;
+    TinyHandle nodeHandle(uint32_t index) const;
     uint32_t nodeCount() const;
 
     TinyHandle nodeParent(TinyHandle nodeHandle) const;
@@ -49,6 +54,22 @@ struct TinyScene {
     void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
     // -------- Component management --------- 
+
+    template<typename T>
+    T* nodeComp(TinyHandle nodeHandle) {
+        TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return nullptr;
+
+        return node->get<T>();
+    }
+
+    template<typename T>
+    const T* nodeComp(TinyHandle nodeHandle) const {
+        const TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return nullptr;
+
+        return node->get<T>();
+    }
 
     template<typename T>
     void nodeAddComp(TinyHandle nodeHandle, const T& componentData = T()) {
@@ -82,29 +103,28 @@ struct TinyScene {
         node->remove<T>();
     }
 
-    template<typename T>
-    T* nodeComp(TinyHandle nodeHandle) {
-        TinyNode* node = nodes.get(nodeHandle);
-        if (!node) return nullptr;
-
-        return node->get<T>();
+    bool ready() const {
+        return device != nullptr && fsRegistry != nullptr;
     }
 
-    template<typename T>
-    const T* nodeComp(TinyHandle nodeHandle) const {
-        const TinyNode* node = nodes.get(nodeHandle);
-        if (!node) return nullptr;
-
-        return node->get<T>();
-    }
-
-private: // Immutable data
+private:
     TinyPool<TinyNode> nodes;
     TinyHandle rootHandle_{};
-    TinyRegistry rtRegistry; // Runtime registry data for node
+
+    TinyRegistry rtRegistry;                  // Runtime registry data for node
     const TinyRegistry* fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
+    const TinyVK::Device* device = nullptr;   // For GPU resource creation
 
     // --------- Runtime registry access ----------
+
+    // Access node by index, only for internal use
+    TinyNode* fromIndex(uint32_t index) {
+        return nodes.get(nodeHandle(index));
+    }
+
+    const TinyNode* fromIndex(uint32_t index) const {
+        return nodes.get(nodeHandle(index));
+    }
 
     template<typename T>
     TinyHandle addRT(T& data) {

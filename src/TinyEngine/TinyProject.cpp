@@ -27,7 +27,8 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TinyScene mainScene;
     mainScene.name = "Main Scene";
     mainScene.addRoot("Root");
-    mainScene.setFsRegistry(registryRef());
+    mainScene.setFsRegistry(&registryRef());
+    mainScene.setVkDevice(deviceVK);
 
     // Create "Main Scene" as a non-deletable file in root directory
     TinyFS::Node::CFG sceneConfig;
@@ -134,21 +135,20 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
     // Create scene with nodes - preserve hierarchy but remap resource references
     TinyScene scene(model.name);
-    scene.setFsRegistry(registryRef());
+    scene.setFsRegistry(&registryRef());
+    scene.setVkDevice(deviceVK);
 
-    // First pass: Insert empty nodes
+    // First pass: Insert empty nodes and store their handles
     std::vector<TinyHandle> nodeHandles;
     nodeHandles.reserve(model.nodes.size());
 
     for (const auto& node : model.nodes) {
-        TinyHandle actualHandle = scene.addNodeRaw(TinyNode(node.name));
-        nodeHandles.push_back(actualHandle);
+        nodeHandles.push_back(scene.addNodeRaw(node.name));
     }
 
     // Set the root node to the first node's actual handle
-    if (!nodeHandles.empty()) {
-        scene.setRoot(nodeHandles[0]);
-    }
+    // This in theory should be correct if you load the proper model
+    if (!nodeHandles.empty()) scene.setRoot(nodeHandles[0]);
 
     // Second pass: Remap parent/child relationships and add components
     for (size_t i = 0; i < model.nodes.size(); ++i) {
@@ -162,8 +162,6 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         // Remap parent handle
         if (validIndex(originalNode.parentHandle, nodeHandles)) {
             parentHandle = nodeHandles[originalNode.parentHandle.index];
-        } else {
-            parentHandle.invalidate(); // No parent
         }
 
         // Remap children handles
@@ -232,8 +230,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
 
 void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle) {
-    auto& registry = registryRef();
-    TinyScene* targetScene = registry.get<TinyScene>(toHandle);
+    TinyScene* targetScene = registryRef().get<TinyScene>(toHandle);
     if (!targetScene) return;
 
     // Use root node if no valid parent provided

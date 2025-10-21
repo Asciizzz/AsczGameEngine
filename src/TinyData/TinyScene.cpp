@@ -10,11 +10,25 @@ TinyHandle TinyScene::addRoot(const std::string& nodeName) {
 }
 
 TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
-    TinyNode newNode;
+    TinyNode newNode(nodeName);
     newNode.add<TinyNode::Node3D>();
-    newNode.name = nodeName;
 
-    return addNode(newNode, parentHandle);
+    if (!parentHandle.valid()) parentHandle = rootHandle();
+    TinyNode* parentNode = nodes.get(parentHandle);
+    if (!parentNode) return TinyHandle();
+
+    newNode.setParent(parentHandle);
+    TinyHandle newNodeHandle = nodes.add(std::move(newNode));
+
+    parentNode = nodes.get(parentHandle); // Re-fetch in case of invalidation
+    parentNode->addChild(newNodeHandle);
+
+    return newNodeHandle;
+}
+
+TinyHandle TinyScene::addNodeRaw(const std::string& nodeName) {
+    TinyNode newNode(nodeName);
+    return nodes.add(std::move(newNode));
 }
 
 bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
@@ -126,6 +140,10 @@ bool TinyScene::nodeOccupied(uint32_t index) const {
     return nodes.isOccupied(index);
 }
 
+TinyHandle TinyScene::nodeHandle(uint32_t index) const {
+    return nodes.getHandle(index);
+}
+
 uint32_t TinyScene::nodeCount() const {
     return nodes.count();
 }
@@ -182,123 +200,196 @@ void TinyScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& paren
 
 
 void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
-    const TinyScene* sceneA = fsRegistry ? fsRegistry->get<TinyScene>(sceneHandle) : nullptr;
-
-    if (!sceneA || sceneA->nodes.count() == 0) return;
+    const TinyScene* from = fsRegistry ? fsRegistry->get<TinyScene>(sceneHandle) : nullptr;
+    if (!from || from->nodes.count() == 0) return;
 
     // Default to root node if no parent specified
     if (!parentHandle.valid()) parentHandle = rootHandle();
 
-    // Create mapping from scene A handles to scene B handles
-    std::unordered_map<uint32_t, TinyHandle> handleMap; // A_index -> B_handle
+    // // Create mapping from scene A handles to scene B handles
+    // std::unordered_map<uint32_t, TinyHandle> handleMap; // A_index -> B_handle
     
-    // First pass: Insert all valid nodes from scene A into scene B and build the mapping
-    const auto& sceneA_items = sceneA->nodeView();
-    for (uint32_t i = 0; i < sceneA_items.size(); ++i) {
-        if (!sceneA->nodes.isOccupied(i)) continue;
+    // // First pass: Insert all valid nodes from scene A into scene B and build the mapping
+    // const auto& sceneA_items = sceneA->nodeView();
+    // for (uint32_t i = 0; i < sceneA_items.size(); ++i) {
+    //     if (!sceneA->nodeOccupied(i)) continue;
 
-        TinyHandle oldHandle_A = sceneA->nodes.getHandle(i);
-        if (!oldHandle_A.valid()) continue;
+    //     TinyHandle oldHandle_A = sceneA->nodes.getHandle(i);
+    //     if (!oldHandle_A.valid()) continue;
 
-        const TinyNode* nodeA = sceneA->nodes.get(oldHandle_A);
-        if (!nodeA) continue;
+    //     const TinyNode* nodeA = sceneA->nodes.get(oldHandle_A);
+    //     if (!nodeA) continue;
         
-        // Copy the node and insert into scene B
-        TinyNode nodeCopy = *nodeA;
-        TinyHandle newHandle_B = nodes.add(std::move(nodeCopy));
+    //     // Copy the node and insert into scene B
+    //     TinyNode nodeCopy = *nodeA;
+    //     TinyHandle newHandle_B = nodes.add(std::move(nodeCopy));
         
-        // Store the mapping: A's index -> B's handle
-        handleMap[oldHandle_A.index] = newHandle_B;
+    //     // Store the mapping: A's index -> B's handle
+    //     handleMap[oldHandle_A.index] = newHandle_B;
+    // }
+    
+    // // Second pass: Remap all node references using the handle mapping
+    // for (uint32_t i = 0; i < sceneA_items.size(); ++i) {
+    //     TinyHandle oldHandle_A = sceneA->nodes.getHandle(i);
+    //     const TinyNode* originalNodeA = sceneA->node(oldHandle_A);
+
+    //     // Find our copied node in scene B
+    //     auto it = handleMap.find(oldHandle_A.index);
+    //     if (it == handleMap.end()) continue;
+        
+    //     TinyHandle newHandle_B = it->second;
+    //     TinyNode* nodeB = nodes.get(newHandle_B);
+    //     if (!nodeB) continue;
+        
+    //     // Clear existing children since we'll rebuild them
+    //     nodeB->childrenHandles.clear();
+        
+    //     // Remap parent handle
+    //     if (originalNodeA->parentHandle.valid()) {
+    //         auto parentIt = handleMap.find(originalNodeA->parentHandle.index);
+    //         if (parentIt != handleMap.end()) {
+    //             // Parent is within the imported scene - remap to new handle
+    //             nodeB->parentHandle = parentIt->second;
+    //         } else {
+    //             // Parent not in imported scene - this must be a root node, attach to specified parent
+    //             nodeB->parentHandle = parentHandle;
+    //         }
+    //     } else {
+    //         // No parent in original scene - attach to specified parent
+    //         nodeB->parentHandle = parentHandle;
+    //     }
+        
+    //     // Remap children handles
+    //     for (const TinyHandle& childHandle_A : originalNodeA->childrenHandles) {
+    //         auto childIt = handleMap.find(childHandle_A.index);
+    //         if (childIt != handleMap.end()) {
+    //             nodeB->childrenHandles.push_back(childIt->second);
+    //         }
+    //     }
+        
+    //     // Remap component node references
+    //     if (nodeB->has<TinyNode::MeshRender>()) {
+    //         auto* meshRender = nodeB->get<TinyNode::MeshRender>();
+    //         if (meshRender && meshRender->skeleNodeHandle.valid()) {
+    //             auto skeleIt = handleMap.find(meshRender->skeleNodeHandle.index);
+    //             if (skeleIt != handleMap.end()) {
+    //                 meshRender->skeleNodeHandle = skeleIt->second;
+    //             }
+    //         }
+    //     }
+        
+    //     if (nodeB->has<TinyNode::BoneAttach>()) {
+    //         auto* boneAttach = nodeB->get<TinyNode::BoneAttach>();
+    //         if (boneAttach && boneAttach->skeleNodeHandle.valid()) {
+    //             auto skeleIt = handleMap.find(boneAttach->skeleNodeHandle.index);
+    //             if (skeleIt != handleMap.end()) {
+    //                 boneAttach->skeleNodeHandle = skeleIt->second;
+    //             }
+    //         }
+    //     }
+
+    //     if (nodeB->has<TinyNode::Skeleton>()) {
+    //         // Copy entire component data from scene A to B
+    //         auto* skeletonComp = nodeB->get<TinyNode::Skeleton>();
+    //         const TinyNode::Skeleton* originalSkeleComp = originalNodeA->get<TinyNode::Skeleton>();
+
+    //         if (skeletonComp && originalSkeleComp) {
+    //             skeletonComp->skeleHandle = originalSkeleComp->skeleHandle;
+    //             // Runtime logic here
+    //         }
+    //     }
+    // }
+    
+    // // Finally, add the scene A's root nodes as children of the specified parent
+    // TinyNode* parentNode = nodes.get(parentHandle);
+    // if (parentNode) {
+    //     // Find nodes that were root nodes in scene A (had invalid parent or parent not in scene)
+    //     for (const auto& [oldIndex, newHandle] : handleMap) {
+    //         // Get the actual handle from scene A using the index
+    //         TinyHandle oldHandle_A = sceneA->nodes.getHandle(oldIndex);
+    //         if (!oldHandle_A.valid()) continue;
+
+    //         const TinyNode* originalA = sceneA->nodes.get(oldHandle_A);
+
+    //         if (originalA && (!originalA->parentHandle.valid() || 
+    //             handleMap.find(originalA->parentHandle.index) == handleMap.end())) {
+    //             // This was a root node in scene A, add it as child of our parent
+    //             parentNode->childrenHandles.push_back(newHandle);
+    //         }
+    //     }
+    // }
+
+    // First pass: Add all nodes from 'from' scene as raw nodes
+
+    std::vector<TinyHandle> toHandles;
+    const auto& from_items = from->nodeView();
+    for (uint32_t i = 0; i < from_items.size(); ++i) {
+        if (!from->nodeOccupied(i)) continue;
+
+        const TinyNode* fromNode = from->fromIndex(i);
+        toHandles.push_back(addNodeRaw(fromNode->name));
     }
-    
-    // Second pass: Remap all node references using the handle mapping
-    for (uint32_t i = 0; i < sceneA_items.size(); ++i) {
-        TinyHandle oldHandle_A = sceneA->nodes.getHandle(i);
-        const TinyNode* originalNodeA = sceneA->node(oldHandle_A);
 
-        // Find our copied node in scene B
-        auto it = handleMap.find(oldHandle_A.index);
-        if (it == handleMap.end()) continue;
-        
-        TinyHandle newHandle_B = it->second;
-        TinyNode* nodeB = nodes.get(newHandle_B);
-        if (!nodeB) continue;
-        
-        // Clear existing children since we'll rebuild them
-        nodeB->childrenHandles.clear();
-        
-        // Remap parent handle
-        if (originalNodeA->parentHandle.valid()) {
-            auto parentIt = handleMap.find(originalNodeA->parentHandle.index);
-            if (parentIt != handleMap.end()) {
-                // Parent is within the imported scene - remap to new handle
-                nodeB->parentHandle = parentIt->second;
-            } else {
-                // Parent not in imported scene - this must be a root node, attach to specified parent
-                nodeB->parentHandle = parentHandle;
-            }
-        } else {
-            // No parent in original scene - attach to specified parent
-            nodeB->parentHandle = parentHandle;
-        }
-        
-        // Remap children handles
-        for (const TinyHandle& childHandle_A : originalNodeA->childrenHandles) {
-            auto childIt = handleMap.find(childHandle_A.index);
-            if (childIt != handleMap.end()) {
-                nodeB->childrenHandles.push_back(childIt->second);
-            }
-        }
-        
-        // Remap component node references
-        if (nodeB->has<TinyNode::MeshRender>()) {
-            auto* meshRender = nodeB->get<TinyNode::MeshRender>();
-            if (meshRender && meshRender->skeleNodeHandle.valid()) {
-                auto skeleIt = handleMap.find(meshRender->skeleNodeHandle.index);
-                if (skeleIt != handleMap.end()) {
-                    meshRender->skeleNodeHandle = skeleIt->second;
-                }
-            }
-        }
-        
-        if (nodeB->has<TinyNode::BoneAttach>()) {
-            auto* boneAttach = nodeB->get<TinyNode::BoneAttach>();
-            if (boneAttach && boneAttach->skeleNodeHandle.valid()) {
-                auto skeleIt = handleMap.find(boneAttach->skeleNodeHandle.index);
-                if (skeleIt != handleMap.end()) {
-                    boneAttach->skeleNodeHandle = skeleIt->second;
-                }
-            }
+    // Second pass: Construct nodes with proper remapped components
+
+    for (uint32_t i = 0; i < from_items.size(); ++i) {
+        const TinyNode* fromNode = from->fromIndex(i);
+        if (!fromNode) continue;
+
+        TinyHandle toHandle = toHandles[i];
+
+        TinyNode* toNode = nodes.get(toHandle);
+        if (!toNode) continue; // Should not happen
+
+        // Resolve parent-self relationships
+        if (fromNode->parentHandle.valid()) {
+            toNode->setParent(toHandles[fromNode->parentHandle.index]);
+        } else { // <-- Root node in 'from' scene
+            // Add child to parent
+            TinyNode* parentNode = nodes.get(parentHandle);
+            if (parentNode) parentNode->addChild(toHandle);
+
+            toNode->setParent(parentHandle);
         }
 
-        if (nodeB->has<TinyNode::Skeleton>()) {
-            // Copy entire component data from scene A to B
-            auto* skeletonComp = nodeB->get<TinyNode::Skeleton>();
-            const TinyNode::Skeleton* originalSkeleComp = originalNodeA->get<TinyNode::Skeleton>();
-
-            if (skeletonComp && originalSkeleComp) {
-                skeletonComp->skeleHandle = originalSkeleComp->skeleHandle;
-                // Runtime logic here
-            }
+        // Resolve self-children relationships
+        std::vector<TinyHandle> toChildren;
+        for (const TinyHandle& childHandle : fromNode->childrenHandles) {
+            if (childHandle.index >= toHandles.size()) continue;
+            toNode->addChild(toHandles[childHandle.index]);
         }
-    }
-    
-    // Finally, add the scene A's root nodes as children of the specified parent
-    TinyNode* parentNode = nodes.get(parentHandle);
-    if (parentNode) {
-        // Find nodes that were root nodes in scene A (had invalid parent or parent not in scene)
-        for (const auto& [oldIndex, newHandle] : handleMap) {
-            // Get the actual handle from scene A using the index
-            TinyHandle oldHandle_A = sceneA->nodes.getHandle(oldIndex);
-            if (!oldHandle_A.valid()) continue;
 
-            const TinyNode* originalA = sceneA->nodes.get(oldHandle_A);
+        // Resolve components
+        if (fromNode->has<TinyNode::Node3D>()) {
+            TinyNode::Node3D toTransform = fromNode->getCopy<TinyNode::Node3D>();
+            nodeAddComp<TinyNode::Node3D>(toHandle, toTransform);
+        }
 
-            if (originalA && (!originalA->parentHandle.valid() || 
-                handleMap.find(originalA->parentHandle.index) == handleMap.end())) {
-                // This was a root node in scene A, add it as child of our parent
-                parentNode->childrenHandles.push_back(newHandle);
+        if (fromNode->has<TinyNode::MeshRender>()) {
+            TinyNode::MeshRender toMeshRender = fromNode->getCopy<TinyNode::MeshRender>();
+            // Remap skeleton node handle
+            if (toMeshRender.skeleNodeHandle.valid()) {
+                toMeshRender.skeleNodeHandle = toHandles[toMeshRender.skeleNodeHandle.index];
             }
+
+            nodeAddComp<TinyNode::MeshRender>(toHandle, toMeshRender);
+        }
+
+        if (fromNode->has<TinyNode::BoneAttach>()) {
+            TinyNode::BoneAttach toBoneAttach = fromNode->getCopy<TinyNode::BoneAttach>();
+            // Remap skeleton node handle
+            if (toBoneAttach.skeleNodeHandle.valid()) {
+                toBoneAttach.skeleNodeHandle = toHandles[toBoneAttach.skeleNodeHandle.index];
+            }
+
+            nodeAddComp<TinyNode::BoneAttach>(toHandle, toBoneAttach);
+        }
+
+        if (fromNode->has<TinyNode::Skeleton>()) {
+            TinyNode::Skeleton toSkeleton = fromNode->getCopy<TinyNode::Skeleton>();
+
+            // This add function will create runtime skeleton data as needed
+            nodeAddComp<TinyNode::Skeleton>(toHandle, toSkeleton);
         }
     }
 
