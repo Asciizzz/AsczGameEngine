@@ -159,18 +159,18 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         }
 
         // Insert and capture the actual handle returned by the pool
-        TinyHandle actualHandle = scene.nodes.add(rtNode);
+        TinyHandle actualHandle = scene.addNodeRaw(std::move(rtNode));
         nodeHandles.push_back(actualHandle);
     }
 
     // Set the root node to the first node's actual handle
     if (!nodeHandles.empty()) {
-        scene.rootHandle = nodeHandles[0];
+        scene.setRoot(nodeHandles[0]);
     }
 
     // Second pass: Remap parent/child relationships using actual handles
     for (size_t i = 0; i < model.nodes.size(); ++i) {
-        TinyNode* rtNode = scene.nodes.get(nodeHandles[i]);
+        TinyNode* rtNode = scene.node(nodeHandles[i]);
         if (!rtNode) continue;
 
         const TinyNode& originalNode = model.nodes[i];

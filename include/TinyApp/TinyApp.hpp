@@ -195,6 +195,6 @@ private:
     bool setActiveScene(TinyHandle sceneHandle);
     TinyHandle activeSceneRootHandle() const { 
         TinyScene* scene = getActiveScene();
-        return scene ? scene->rootHandle : TinyHandle();
+        return scene ? scene->rootHandle() : TinyHandle();
     }
 };

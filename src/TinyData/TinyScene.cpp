@@ -3,7 +3,7 @@
 
 void TinyScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
     // Use root node if no valid handle provided
-    TinyHandle actualNode = nodeHandle.valid() ? nodeHandle : rootHandle;
+    TinyHandle actualNode = nodeHandle.valid() ? nodeHandle : rootHandle();
     
     TinyNode* node = nodes.get(actualNode);
     if (!node) return;
@@ -22,76 +22,48 @@ TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     TinyNode rootNode;
     rootNode.name = nodeName;
 
-    rootHandle = nodes.add(std::move(rootNode));
+    rootHandle_ = nodes.add(std::move(rootNode));
 
-    return rootHandle;
+    return rootHandle();
 }
 
 TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
-    // If no parent specified, use root node
-    if (!parentHandle.valid()) parentHandle = rootHandle;
-    
-    // Validate parent exists
-    TinyNode* parentNode = nodes.get(parentHandle);
-    if (!parentNode) {
-        return TinyHandle(); // Invalid parent handle
-    }
-    
-    // Create a new blank node
     TinyNode newNode;
     newNode.name = nodeName;
-    newNode.localTransform = glm::mat4(1.0f); // Identity transform
-    newNode.globalTransform = glm::mat4(1.0f);
-    newNode.parentHandle = parentHandle;
-    newNode.types = 0; // No components
-    
-    // Add the node to the pool first
-    TinyHandle newNodeHandle = nodes.add(std::move(newNode));
-    
-    // Re-get parent pointer after potential pool reallocation
-    parentNode = nodes.get(parentHandle);
-    if (!parentNode) {
-        // This shouldn't happen, but safety check
-        nodes.remove(newNodeHandle);
-        return TinyHandle();
-    }
-    
-    // Add to parent's children list
-    parentNode->childrenHandles.push_back(newNodeHandle);
-    
-    return newNodeHandle;
+
+    return addNode(newNode, parentHandle);
 }
 
 TinyHandle TinyScene::addNode(const TinyNode& nodeData, TinyHandle parentHandle) {
-    // If no parent specified, use root node
-    if (!parentHandle.valid()) parentHandle = rootHandle;
-    
-    // Validate parent exists
+    if (!parentHandle.valid()) parentHandle = rootHandle();
+
     TinyNode* parentNode = nodes.get(parentHandle);
-    if (!parentNode) {
-        return TinyHandle(); // Invalid parent handle
-    }
-    
-    // Create a copy of the provided node data
+    if (!parentNode) return TinyHandle(); // Invalid parent handle
+
     TinyNode newNode = nodeData;
-    newNode.parentHandle = parentHandle; // Ensure correct parent
-    // Note: childrenHandles will be empty initially
+    newNode.parentHandle = parentHandle;
+
+// Resolve specific logic
     
+    // If node has Skeleton component, create TinySkeletonRT in runtime registry
+    if (newNode.has<TinyNode::Skeleton>()) {
+        // Future implementation: Add TinySkeletonRT to runtime registry
+    }
+
+// ------------------------
+
     // Add the node to the pool
     TinyHandle newNodeHandle = nodes.add(std::move(newNode));
-    
-    // Re-get parent pointer after potential pool reallocation
+
+    // Re-get parent pointer after pool reallocation because of memory and stuff
     parentNode = nodes.get(parentHandle);
-    if (!parentNode) {
-        // This shouldn't happen, but safety check
-        nodes.remove(newNodeHandle);
-        return TinyHandle();
-    }
-    
-    // Add to parent's children list
     parentNode->childrenHandles.push_back(newNodeHandle);
-    
+
     return newNodeHandle;
+}
+
+TinyHandle TinyScene::addNodeRaw(const TinyNode& nodeData) {
+    return nodes.add(nodeData);
 }
 
 
@@ -101,7 +73,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
     if (!sceneA || sceneA->nodes.count() == 0) return;
 
     // Default to root node if no parent specified
-    if (!parentHandle.valid()) parentHandle = rootHandle;
+    if (!parentHandle.valid()) parentHandle = rootHandle();
 
     // Create mapping from scene A handles to scene B handles
     std::unordered_map<uint32_t, TinyHandle> handleMap; // A_index -> B_handle
@@ -132,7 +104,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
         TinyHandle oldHandle_A = sceneA->nodes.getHandle(i);
         if (!oldHandle_A.valid()) continue;
 
-        const TinyNode* originalNodeA = sceneA->getNode(oldHandle_A);
+        const TinyNode* originalNodeA = sceneA->node(oldHandle_A);
         if (!originalNodeA) continue;
         
         // Find our copied node in scene B
@@ -170,7 +142,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
         }
         
         // Remap component node references
-        if (nodeB->hasComponent<TinyNode::MeshRender>()) {
+        if (nodeB->has<TinyNode::MeshRender>()) {
             auto* meshRender = nodeB->get<TinyNode::MeshRender>();
             if (meshRender && meshRender->skeleNodeHandle.valid()) {
                 auto skeleIt = handleMap.find(meshRender->skeleNodeHandle.index);
@@ -180,7 +152,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
             }
         }
         
-        if (nodeB->hasComponent<TinyNode::BoneAttach>()) {
+        if (nodeB->has<TinyNode::BoneAttach>()) {
             auto* boneAttach = nodeB->get<TinyNode::BoneAttach>();
             if (boneAttach && boneAttach->skeleNodeHandle.valid()) {
                 auto skeleIt = handleMap.find(boneAttach->skeleNodeHandle.index);
@@ -190,7 +162,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
             }
         }
 
-        if (nodeB->hasComponent<TinyNode::Skeleton>()) {
+        if (nodeB->has<TinyNode::Skeleton>()) {
             // Copy entire component data from scene A to B
             auto* skeletonComp = nodeB->get<TinyNode::Skeleton>();
             const TinyNode::Skeleton* originalSkeleComp = originalNodeA->get<TinyNode::Skeleton>();
@@ -228,7 +200,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
 
 bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
     TinyNode* nodeToDelete = nodes.get(nodeHandle);
-    if (!nodeToDelete || nodeHandle == rootHandle) return false;
+    if (!nodeToDelete || nodeHandle == rootHandle()) return false;
 
     std::vector<TinyHandle> childrenToDelete = nodeToDelete->childrenHandles;
     for (const TinyHandle& childHandle : childrenToDelete) {
@@ -271,7 +243,7 @@ bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) 
     }
     
     // Can't reparent root node
-    if (nodeHandle == rootHandle) {
+    if (nodeHandle == rootHandle()) {
         return false;
     }
     
@@ -328,19 +300,28 @@ bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) 
     return true;
 }
 
-
-TinyNode* TinyScene::getNode(TinyHandle nodeHandle) {
-    return nodes.get(nodeHandle);
-}
-
-const TinyNode* TinyScene::getNode(TinyHandle nodeHandle) const {
-    return nodes.get(nodeHandle);
-}
-
 bool TinyScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
     TinyNode* node = nodes.get(nodeHandle);
     if (!node) return false;
 
     node->name = newName;
     return true;
+}
+
+
+
+TinyNode* TinyScene::node(TinyHandle nodeHandle) {
+    return nodes.get(nodeHandle);
+}
+
+const TinyNode* TinyScene::node(TinyHandle nodeHandle) const {
+    return nodes.get(nodeHandle);
+}
+
+uint32_t TinyScene::nodeCount() const {
+    return nodes.count();
+}
+
+const std::vector<TinyNode>& TinyScene::nodeView() const {
+    return nodes.view();
 }

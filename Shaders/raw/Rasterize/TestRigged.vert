@@ -27,6 +27,8 @@ layout(location = 3) out vec4 fragTangent;
 layout(location = 4) out uint fragMaterialIndex;
 
 void main() {
+
+/*
     // --- Apply morph targets ---
     vec3 basePos   = inPos_Tu.xyz;
     vec3 baseNormal = inNrml_Tv.xyz;
@@ -50,8 +52,12 @@ void main() {
         skinnedNormal  += w * mat3(boneMat) * baseNormal;
         skinnedTangent += w * mat3(boneMat) * inTangent.xyz;
     }
+*/
 
-    vec4 worldPos = transform.model * skinnedPos;
+    // vec4 worldPos = transform.model * skinnedPos;
+    vec4 worldPos = transform.model * vec4(inPos_Tu.xyz, 1.0); // No skinning applied
+    vec3 skinnedNormal = inNrml_Tv.xyz; // No skinning applied
+    vec3 skinnedTangent = inTangent.xyz; // No skinning applied
 
     gl_Position = glb.proj * glb.view * worldPos;
 

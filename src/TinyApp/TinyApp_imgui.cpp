@@ -45,7 +45,7 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
                 ImGui::Text("Scene: %s", activeScene->name.c_str());
-                ImGui::Text("Total Nodes: %u", activeScene->nodes.count());
+                ImGui::Text("Total Nodes: %u", activeScene->nodeCount());
                 ImGui::EndTooltip();
             }
         } else {
@@ -70,7 +70,7 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
             clearHeld();
         }
         
-        if (activeScene && activeScene->nodes.count() > 0) {
+        if (activeScene && activeScene->nodeCount() > 0) {
             renderNodeTreeImGui();
         } else {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
@@ -286,7 +286,7 @@ void TinyApp::renderSceneNodeInspector() {
         return;
     }
 
-    const TinyNode* selectedNode = activeScene->nodes.get(selectedSceneNodeHandle);
+    const TinyNode* selectedNode = activeScene->node(selectedSceneNodeHandle);
     if (!selectedNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid node selection");
         selectSceneNode(activeSceneRootHandle());
@@ -325,7 +325,7 @@ void TinyApp::renderSceneNodeInspector() {
     
     // Show parent and children count
     if (selectedNode->parentHandle.valid()) {
-        const TinyNode* parentNode = activeScene->nodes.get(selectedNode->parentHandle);
+        const TinyNode* parentNode = activeScene->node(selectedNode->parentHandle);
         if (parentNode) {
             ImGui::Text("Parent: %s", parentNode->name.c_str());
         }
@@ -547,7 +547,7 @@ void TinyApp::renderSceneNodeInspector() {
     });
     
     // Mesh Renderer Component - Always show
-    if (selectedNode->hasComponent<TinyNode::MeshRender>()) {
+    if (selectedNode->has<TinyNode::MeshRender>()) {
         renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
             // Mesh Renderer content
             TinyNode::MeshRender* meshComp = mutableNode->get<TinyNode::MeshRender>();
@@ -587,8 +587,8 @@ void TinyApp::renderSceneNodeInspector() {
             if (meshComp->skeleNodeHandle.valid()) {
                 TinyScene* activeScene = getActiveScene();
                 if (activeScene) {
-                    const TinyNode* skeleNode = activeScene->nodes.get(meshComp->skeleNodeHandle);
-                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
+                    const TinyNode* skeleNode = activeScene->node(meshComp->skeleNodeHandle);
+                    if (skeleNode && skeleNode->has<TinyNode::Skeleton>()) {
                         ImGui::SameLine();
                         ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
                     } else {
@@ -612,7 +612,7 @@ void TinyApp::renderSceneNodeInspector() {
     }
     
     // Bone Attachment Component - Always show
-    if (selectedNode->hasComponent<TinyNode::BoneAttach>()) {
+    if (selectedNode->has<TinyNode::BoneAttach>()) {
         renderComponent("Bone Attachment", ImVec4(0.15f, 0.2f, 0.15f, 0.8f), ImVec4(0.3f, 0.4f, 0.3f, 0.6f), true, [&]() {
             // Bone Attachment content
             TinyNode::BoneAttach* boneComp = mutableNode->get<TinyNode::BoneAttach>();
@@ -630,8 +630,8 @@ void TinyApp::renderSceneNodeInspector() {
             if (boneComp->skeleNodeHandle.valid()) {
                 TinyScene* activeScene = getActiveScene();
                 if (activeScene) {
-                    const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
-                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
+                    const TinyNode* skeleNode = activeScene->node(boneComp->skeleNodeHandle);
+                    if (skeleNode && skeleNode->has<TinyNode::Skeleton>()) {
                         ImGui::SameLine();
                         ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
                     } else {
@@ -652,8 +652,8 @@ void TinyApp::renderSceneNodeInspector() {
             if (boneComp->skeleNodeHandle.valid()) {
                 TinyScene* activeScene = getActiveScene();
                 if (activeScene) {
-                    const TinyNode* skeleNode = activeScene->nodes.get(boneComp->skeleNodeHandle);
-                    if (skeleNode && skeleNode->hasComponent<TinyNode::Skeleton>()) {
+                    const TinyNode* skeleNode = activeScene->node(boneComp->skeleNodeHandle);
+                    if (skeleNode && skeleNode->has<TinyNode::Skeleton>()) {
                         const TinyNode::Skeleton* skeleComp = skeleNode->get<TinyNode::Skeleton>();
                         if (skeleComp && skeleComp->skeleHandle.valid()) {
                             const TinyRegistry& registry = project->registryRef();
@@ -716,7 +716,7 @@ void TinyApp::renderSceneNodeInspector() {
     }
     
     // Skeleton Component - Always show
-    if (selectedNode->hasComponent<TinyNode::Skeleton>()) {
+    if (selectedNode->has<TinyNode::Skeleton>()) {
         renderComponent("Skeleton", ImVec4(0.2f, 0.15f, 0.15f, 0.8f), ImVec4(0.4f, 0.3f, 0.3f, 0.6f), true, [&]() {
             // Skeleton content
             TinyNode::Skeleton* skeleComp = mutableNode->get<TinyNode::Skeleton>();
@@ -864,7 +864,7 @@ void TinyApp::renderFileSystemInspector() {
             // Extended data
             TinyScene* scene = fs.registryRef().get<TinyScene>(tHandle);
             if (scene) {
-                ImGui::Text("Scene Nodes: %u", scene->nodes.count());
+                ImGui::Text("Scene Nodes: %u", scene->nodeCount());
                 
                 // Make Active button
                 ImGui::Spacing();
@@ -987,7 +987,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
         } else if (strcmp(targetType, "SkeletonNode") == 0) {
             TinyScene* activeScene = getActiveScene();
             if (activeScene) {
-                const TinyNode* node = activeScene->nodes.get(handle);
+                const TinyNode* node = activeScene->node(handle);
                 displayText = node ? node->name : "Unknown Node";
             } else {
                 displayText = "No Node";
@@ -1065,8 +1065,8 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
                 TinyHandle nodeHandle = *(const TinyHandle*)payload->Data;
                 TinyScene* activeScene = getActiveScene();
                 if (activeScene) {
-                    const TinyNode* node = activeScene->nodes.get(nodeHandle);
-                    if (node && node->hasComponent<TinyNode::Skeleton>()) {
+                    const TinyNode* node = activeScene->node(nodeHandle);
+                    if (node && node->has<TinyNode::Skeleton>()) {
                         handle = nodeHandle; // Use node handle directly
                         modified = true;
                     }
@@ -1141,9 +1141,9 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     if (!activeScene) return;
     
     // Use root node if no valid handle provided
-    if (!nodeHandle.valid()) nodeHandle = activeScene->rootHandle;
+    if (!nodeHandle.valid()) nodeHandle = activeScene->rootHandle();
 
-    const TinyNode* node = activeScene->nodes.get(nodeHandle);
+    const TinyNode* node = activeScene->node(nodeHandle);
     if (!node) return;
     
     // Create a unique ID for this node
@@ -1190,7 +1190,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     
     // Drag and drop source (only if not root node)
     bool isDragging = false;
-    if (nodeHandle != activeScene->rootHandle && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+    if (nodeHandle != activeScene->rootHandle() && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
         isDragging = true;
         holdSceneNode(nodeHandle);  // Set the held node during drag
         
@@ -1316,11 +1316,11 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         
         ImGui::Separator();
 
-        bool isRootNode = (nodeHandle == activeScene->rootHandle);
+        bool isRootNode = (nodeHandle == activeScene->rootHandle());
         if (ImGui::MenuItem("Delete", nullptr, false, !isRootNode)) {
             TinyScene* scene = getActiveScene();
             if (scene) {
-                TinyNode* parentNode = scene->getNode(node->parentHandle);
+                const TinyNode* parentNode = scene->node(node->parentHandle);
                 if (parentNode) selectSceneNode(node->parentHandle);
 
                 scene->removeNode(nodeHandle);
@@ -1371,8 +1371,8 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         // Sort by name and by whether they have children
         std::vector<TinyHandle> sortedChildren(node->childrenHandles.begin(), node->childrenHandles.end());
         std::sort(sortedChildren.begin(), sortedChildren.end(), [activeScene](const TinyHandle& a, const TinyHandle& b) {
-            const TinyNode* nodeA = activeScene->nodes.get(a);
-            const TinyNode* nodeB = activeScene->nodes.get(b);
+            const TinyNode* nodeA = activeScene->node(a);
+            const TinyNode* nodeB = activeScene->node(b);
             if (!nodeA || !nodeB) return false;
             if (nodeA->childrenHandles.empty() && !nodeB->childrenHandles.empty()) return false;
             if (!nodeA->childrenHandles.empty() && nodeB->childrenHandles.empty()) return true;
@@ -1396,7 +1396,7 @@ void TinyApp::expandParentChain(TinyHandle nodeHandle) {
     if (!activeScene) return;
     
     // Get the target node
-    const TinyNode* targetNode = activeScene->nodes.get(nodeHandle);
+    const TinyNode* targetNode = activeScene->node(nodeHandle);
     if (!targetNode) return;
     
     // Walk up the parent chain and expand all parents
@@ -1404,7 +1404,7 @@ void TinyApp::expandParentChain(TinyHandle nodeHandle) {
     while (currentHandle.valid()) {
         expandedNodes.insert(currentHandle);
         
-        const TinyNode* currentNode = activeScene->nodes.get(currentHandle);
+        const TinyNode* currentNode = activeScene->node(currentHandle);
         if (!currentNode) break;
         
         currentHandle = currentNode->parentHandle;

@@ -5,11 +5,6 @@
 
 struct TinyScene {
     std::string name;
-    TinyPool<TinyNode> nodes;
-    TinyHandle rootHandle;
-    // Runtime registry data for node
-    TinyRegistry rtRegistry;
-    const TinyRegistry* fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
 
     TinyScene(const std::string& sceneName = "New Scene") : name(sceneName) {}
     void setFsRegistry(const TinyRegistry& registry) { fsRegistry = &registry; }
@@ -20,20 +15,56 @@ struct TinyScene {
     TinyScene(TinyScene&&) = default;
     TinyScene& operator=(TinyScene&&) = default;
 
-    void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
+
+    // --------- Root management ---------
 
     TinyHandle addRoot(const std::string& nodeName = "Root");
+    void setRoot(TinyHandle handle) { rootHandle_ = handle; }
+    TinyHandle rootHandle() const { return rootHandle_; }
+
+    // --------- Node management ---------
+
     TinyHandle addNode(const std::string& nodeName = "New Node", TinyHandle parentHandle = TinyHandle());
     TinyHandle addNode(const TinyNode& nodeData, TinyHandle parentHandle = TinyHandle());
+    TinyHandle addNodeRaw(const TinyNode& nodeData);
 
     void addScene(TinyHandle sceneHandle, TinyHandle parentHandle = TinyHandle());
     bool removeNode(TinyHandle nodeHandle, bool recursive = true);
     bool flattenNode(TinyHandle nodeHandle);
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
-    
-    TinyNode* getNode(TinyHandle nodeHandle);
-    const TinyNode* getNode(TinyHandle nodeHandle) const;
     bool renameNode(TinyHandle nodeHandle, const std::string& newName);
+
+    void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
+
+    TinyNode* node(TinyHandle nodeHandle);
+    const TinyNode* node(TinyHandle nodeHandle) const;
+    uint32_t nodeCount() const;
+    const std::vector<TinyNode>& nodeView() const;
+
+    // -------- Component management --------- 
+
+    template<typename T>
+    void nodeAddComponent(TinyHandle nodeHandle, const T& componentData = T()) {
+        TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return;
+
+        // Resolve component data logic
+
+        if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
+            // If adding Skeleton component, initialize runtime data
+            // Future implementation: Add TinySkeletonRT to runtime registry
+        }
+
+        node->add<T>(componentData);
+    }
+
+    template<typename T>
+    void nodeRemoveComponent(TinyHandle nodeHandle) {
+        TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return;
+
+        node->remove<T>();
+    }
 
     // Runtime registry access
 
@@ -62,4 +93,15 @@ struct TinyScene {
         return rtRegistry.get<T>(th);
     }
 
+    template<typename T>
+    const T* getRT(const TypeHandle& th) const {
+        assert(th.isType<T>() && "TypeHandle does not match requested type T");
+        return rtRegistry.get<T>(th);
+    }
+
+private: // Immutable data
+    TinyPool<TinyNode> nodes;
+    TinyHandle rootHandle_{};
+    TinyRegistry rtRegistry; // Runtime registry data for node
+    const TinyRegistry* fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
 };

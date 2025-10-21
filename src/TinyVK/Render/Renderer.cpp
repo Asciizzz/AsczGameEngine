@@ -260,23 +260,18 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
 
     const auto& registry = project->registryRef();
 
-
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
 
     TinyHandle curSkeleNodeHandle;
 
     // Iterate through all nodes in the active scene to find mesh renderers
-    const auto& sceneNodes = activeScene->nodes.view();
+    const auto& sceneNodes = activeScene->nodeView();
     for (uint32_t i = 0; i < sceneNodes.size(); ++i) {
-        if (!activeScene->nodes.isOccupied(i)) continue; // Node not occupied
-
-        TinyHandle nodeHandle = activeScene->nodes.getHandle(i);
-        const TinyNode* rtNode = activeScene->nodes.get(nodeHandle);
-        if (!rtNode) continue; // No runtime node
+        const TinyNode& rtNode = sceneNodes[i];
 
         // Get mesh render component directly from runtime node
-        const auto* meshRenderComp = rtNode->get<TinyNode::MeshRender>();
+        const auto* meshRenderComp = rtNode.get<TinyNode::MeshRender>();
         if (!meshRenderComp) continue; // No mesh render component
 
         TinyHandle meshHandle = meshRenderComp->meshHandle;
@@ -299,35 +294,9 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 
-        if (rPipeline == plRigged) {
-            // Skeleton data retrieval
-            TinyHandle skeleNodeHandle = meshRenderComp->skeleNodeHandle;
-            TinyNode* skeleNode = activeScene->nodes.get(skeleNodeHandle);
-            if (skeleNode) { // Get skeleton component if available
-                TinyNode::Skeleton* skeleComp = skeleNode->get<TinyNode::Skeleton>();
-                if (skeleComp && skeleNodeHandle != curSkeleNodeHandle) {
-                    curSkeleNodeHandle = skeleNodeHandle; // Set new skeleton node
+        rPipeline->bindSets(currentCmd, &glbSet, 1);
 
-                    // Retrieve skeleton data
-                    const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp->skeleHandle);
-                    if (skeleton) {
-                        skeleComp->calcSkinData(skeleton->bones);
-                        project->updateSkin(skeleComp->skinData, currentFrame);
-                    }
-                }
-            }
-
-            VkDescriptorSet sets[2] = {
-                glbSet,
-                project->getSkinDescSet(currentFrame)
-            };
-
-            rPipeline->bindSets(currentCmd, sets, 2);
-        } else {
-            rPipeline->bindSets(currentCmd, &glbSet, 1);
-        }
-
-        const auto& transform = rtNode->globalTransform;
+        const auto& transform = rtNode.globalTransform;
         for (size_t i = 0; i < submeshes.size(); ++i) {
             uint32_t indexCount = submeshes[i].indexCount;
             if (indexCount == 0) continue;

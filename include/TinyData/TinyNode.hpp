@@ -99,33 +99,14 @@ struct TinyNode {
         }
     };
 
-private:
-    std::tuple<MeshRender, BoneAttach, Skeleton> components;
-
-    template<typename T>
-    T& getComponent() { return std::get<T>(components); }
-
-    template<typename T>
-    const T& getComponent() const { return std::get<T>(components); }
-
-    static constexpr uint32_t toMask(Types t) {
-        return static_cast<uint32_t>(t);
-    }
-public:
-
     // Component management functions
     bool hasType(Types componentType) const {
         return (types & toMask(componentType)) != 0;
     }
 
-    void setType(Types componentType, bool state) {
-        if (state) types |= toMask(componentType);
-        else       types &= ~toMask(componentType);
-    }
-
     // Completely generic template functions - no knowledge of specific components!
     template<typename T>
-    bool hasComponent() const {
+    bool has() const {
         return hasType(T::kType);
     }
 
@@ -141,8 +122,26 @@ public:
     }
 
     template<typename T>
-    T* get() { return hasComponent<T>() ? &getComponent<T>() : nullptr; }
+    T* get() { return has<T>() ? &getComponent<T>() : nullptr; }
 
     template<typename T>
-    const T* get() const { return hasComponent<T>() ? &getComponent<T>() : nullptr; }
+    const T* get() const { return has<T>() ? &getComponent<T>() : nullptr; }
+
+private:
+    std::tuple<MeshRender, BoneAttach, Skeleton> components;
+
+    template<typename T>
+    T& getComponent() { return std::get<T>(components); }
+
+    template<typename T>
+    const T& getComponent() const { return std::get<T>(components); }
+
+    static constexpr uint32_t toMask(Types t) {
+        return static_cast<uint32_t>(t);
+    }
+
+    void setType(Types componentType, bool state) {
+        if (state) types |= toMask(componentType);
+        else       types &= ~toMask(componentType);
+    }
 };
