@@ -20,7 +20,10 @@ struct TinyNode {
         BoneAttach    = 1 << 3
     };
 
-    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
+    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {
+        // Add default Transform component
+        add<Transform>();
+    }
 
     // Hierarchy data - can be either local indices or runtime handles depending on scope
     TinyHandle parentHandle;

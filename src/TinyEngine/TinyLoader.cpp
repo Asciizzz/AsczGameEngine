@@ -721,7 +721,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
     };
 
     auto parentAndChild = [&](int parentIndex, int childIndex) {
-        nodes[parentIndex].childrenHandles.push_back(TinyHandle(childIndex));
+        nodes[parentIndex].addChild(TinyHandle(childIndex));
         nodes[childIndex].setParent(TinyHandle(parentIndex));
     };
 
@@ -736,8 +736,8 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
     for (size_t skeleIdx = 0; skeleIdx < tinyModel.skeletons.size(); ++skeleIdx) {
         const TinySkeleton& skeleton = tinyModel.skeletons[skeleIdx];
 
-        TinyNode skeleNode;
-        skeleNode.name = "Skeleton_" + skeleton.name;
+        TinyNode skeleNode(skeleton.name);
+        skeleNode.add<TinyNode::Transform>();
 
         TinyNode::Skeleton skele3D;
         skele3D.skeleHandle = TinyHandle(skeleIdx);

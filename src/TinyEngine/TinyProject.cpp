@@ -178,6 +178,12 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
         // Add component with scene API to ensure proper handling
+        if (originalNode.has<TinyNode::Transform>()) {
+            const TinyNode::Transform* ogTransform = originalNode.get<TinyNode::Transform>();
+            TinyNode::Transform newTransform = *ogTransform;
+
+            scene.nodeAddComp<TinyNode::Transform>(nodeHandle, newTransform);
+        }
 
         if (originalNode.has<TinyNode::MeshRender>()) {
             const TinyNode::MeshRender* ogMeshComp = originalNode.get<TinyNode::MeshRender>();
