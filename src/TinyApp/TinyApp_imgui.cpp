@@ -440,8 +440,10 @@ void TinyApp::renderSceneNodeInspector() {
         // Transform component content - now available for all nodes including root
         {
             // Get the current transform
-            glm::mat4 localTransform = selectedNode->localTransform;
-            
+            TinyNode::Transform* transformComp = mutableNode->get<TinyNode::Transform>();
+
+            glm::mat4 local = transformComp->local;
+
             // Extract translation, rotation, and scale from the matrix
             glm::vec3 translation, rotation, scale;
             glm::quat rotationQuat;
@@ -449,13 +451,13 @@ void TinyApp::renderSceneNodeInspector() {
             glm::vec4 perspective;
             
             // Check if decomposition is valid
-            bool validDecomposition = glm::decompose(localTransform, scale, rotationQuat, translation, skew, perspective);
+            bool validDecomposition = glm::decompose(local, scale, rotationQuat, translation, skew, perspective);
             
             if (!validDecomposition) {
                 ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
                 if (ImGui::Button("Reset Transform")) {
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
-                    mutableSelectedNode->localTransform = glm::mat4(1.0f);
+                    transformComp->local = glm::mat4(1.0f);
                     if (TinyScene* scene = getActiveScene()) scene->updateGlbTransform();
                 }
                 return;
@@ -470,7 +472,7 @@ void TinyApp::renderSceneNodeInspector() {
                 ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
                 if (ImGui::Button("Reset Transform")) {
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
-                    mutableSelectedNode->localTransform = glm::mat4(1.0f);
+                    transformComp->local = glm::mat4(1.0f);
                     if (TinyScene* scene = getActiveScene()) scene->updateGlbTransform();
                 }
                 return;
@@ -536,8 +538,8 @@ void TinyApp::renderSceneNodeInspector() {
                     glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
                     
                     TinyNode* mutableSelectedNode = const_cast<TinyNode*>(selectedNode);
-                    mutableSelectedNode->localTransform = translateMat * rotateMat * scaleMat;
-                    
+                    transformComp->local = translateMat * rotateMat * scaleMat;
+
                     if (TinyScene* scene = getActiveScene()) scene->updateGlbTransform();
                 }
             }

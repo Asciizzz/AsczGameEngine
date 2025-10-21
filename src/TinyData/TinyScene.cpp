@@ -196,13 +196,15 @@ void TinyScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& paren
     
     TinyNode* node = nodes.get(actualNode);
     if (!node) return;
-    
+
+    TinyNode::Transform* transform = node->get<TinyNode::Transform>();
+
     // Calculate global transform: parent global * local transform
-    node->globalTransform = parentGlobalTransform * node->localTransform;
-    
+    transform->global = parentGlobalTransform * transform->local;
+
     // Recursively update all children
     for (const TinyHandle& childHandle : node->childrenHandles) {
-        updateGlbTransform(childHandle, node->globalTransform);
+        updateGlbTransform(childHandle, transform->global);
     }
 }
 

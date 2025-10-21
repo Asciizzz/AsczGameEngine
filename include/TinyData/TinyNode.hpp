@@ -14,13 +14,16 @@ struct TinyNode {
     std::string name = "Node";
 
     enum class Types : uint32_t {
-        Node          = 1 << 0,
+        Transform     = 1 << 0,
         MeshRender    = 1 << 1,
         Skeleton      = 1 << 2,
         BoneAttach    = 1 << 3
     };
 
-    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
+    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {
+        // Add default Transform component
+        add<Transform>(Transform());
+    }
 
     // Hierarchy data - can be either local indices or runtime handles depending on scope
     TinyHandle parentHandle;
@@ -39,8 +42,11 @@ struct TinyNode {
     }
 
     // Transform data - both local and runtime
-    glm::mat4 localTransform = glm::mat4(1.0f);   // Local/original transform
-    glm::mat4 globalTransform = glm::mat4(1.0f);  // Runtime computed global transform
+    struct Transform {
+        static constexpr Types kType = Types::Transform;
+        glm::mat4 local = glm::mat4(1.0f);
+        glm::mat4 global = glm::mat4(1.0f);
+    };
 
     // Component definitions with runtime capabilities
     struct MeshRender {
@@ -77,6 +83,7 @@ struct TinyNode {
 
     template<typename T>
     void remove() {
+        if (T::kType == Types::Transform) return; // Cannot remove Transform component
         setType(T::kType, false);
     }
 
@@ -87,9 +94,14 @@ struct TinyNode {
     const T* get() const { return has<T>() ? &getComponent<T>() : nullptr; }
 
 private:
-    std::tuple<MeshRender, BoneAttach, Skeleton> components;
+    std::tuple<
+        Transform,
+        MeshRender,
+        BoneAttach,
+        Skeleton
+    > components;
 
-    uint32_t types = toMask(Types::Node);
+    uint32_t types = toMask(Types::Transform);
 
     template<typename T>
     T& getComponent() { return std::get<T>(components); }

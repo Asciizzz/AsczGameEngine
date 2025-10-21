@@ -774,6 +774,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
 
         const tinygltf::Node& gltfNode = model.nodes[i];
         TinyNode& target = nodes[globalIdx];
+        TinyNode::Transform* transformComp = target.get<TinyNode::Transform>();
 
         // Transform
         glm::mat4 matrix(1.0f);
@@ -801,7 +802,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
         }
 
         // Set transform in base class
-        target.localTransform = matrix;
+        transformComp->local = matrix;
 
         if (gltfNode.mesh >= 0) {
             TinyNode::MeshRender meshData;
@@ -1143,8 +1144,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
     for (size_t meshIndex = 0; meshIndex < result.meshes.size(); meshIndex++) {
         TinyNode meshNode;
         meshNode.name = result.meshes[meshIndex].name + "_Node";
-        meshNode.localTransform = glm::mat4(1.0f); // Identity transform
-        
+
         // Set parent-child relationship
         meshNode.setParent(TinyHandle(0)); // Parent is root node
         result.nodes[0].addChild(TinyHandle(static_cast<uint32_t>(meshIndex + 1)));
