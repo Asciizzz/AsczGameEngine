@@ -89,12 +89,6 @@ struct TinyNode {
 
         void updateFinalPose(const std::vector<TinyBone>& bones) {
             for (size_t i = 0; i < bones.size(); ++i) {
-                // Spin the first bone for 0 reason
-                if (i == 4) {
-                    float angle = static_cast<float>(glm::radians(1.0f));
-                    localPose[i] = glm::rotate(localPose[i], angle, glm::vec3(1.0f, 1.0f, 1.0f));
-                }
-
                 const TinyBone& bone = bones[i];
                 if (bone.parent == -1) {
                     finalPose[i] = localPose[i];

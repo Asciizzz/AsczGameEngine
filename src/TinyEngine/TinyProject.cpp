@@ -27,6 +27,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TinyScene mainScene;
     mainScene.name = "Main Scene";
     mainScene.addRoot("Root");
+    mainScene.setFsRegistry(registryRef());
 
     // Create "Main Scene" as a non-deletable file in root directory
     TinyFS::Node::CFG sceneConfig;
@@ -134,6 +135,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     // Create scene with nodes - preserve hierarchy but remap resource references
     TinyScene scene;
     scene.name = model.name;
+    scene.setFsRegistry(registryRef());
 
     // First pass: Insert all nodes and collect their actual handles
     std::vector<TinyHandle> nodeHandles;
@@ -204,16 +206,12 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
 void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle) {
     auto& registry = registryRef();
-    const TinyScene* sourceScene = registry.get<TinyScene>(fromHandle);
     TinyScene* targetScene = registry.get<TinyScene>(toHandle);
-    
-    if (!sourceScene || !targetScene) return;
+    if (!targetScene) return;
 
     // Use root node if no valid parent provided
-    TinyHandle actualParent = parentHandle.valid() ? parentHandle : targetScene->rootHandle;
-    
     // Use the scene's addScene method to merge the source scene into target scene
-    targetScene->addScene(*sourceScene, actualParent);
+    targetScene->addScene(fromHandle, parentHandle);
     
     // Update transforms for the entire target scene
     targetScene->updateGlbTransform();

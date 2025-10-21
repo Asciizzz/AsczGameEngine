@@ -95,8 +95,10 @@ TinyHandle TinyScene::addNode(const TinyNode& nodeData, TinyHandle parentHandle)
 }
 
 
-void TinyScene::addScene(const TinyScene& sceneA, TinyHandle parentHandle) {
-    if (sceneA.nodes.count() == 0) return;
+void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
+    const TinyScene* sceneA = fsRegistry ? fsRegistry->get<TinyScene>(sceneHandle) : nullptr;
+
+    if (!sceneA || sceneA->nodes.count() == 0) return;
 
     // Default to root node if no parent specified
     if (!parentHandle.valid()) parentHandle = rootHandle;
@@ -105,14 +107,14 @@ void TinyScene::addScene(const TinyScene& sceneA, TinyHandle parentHandle) {
     std::unordered_map<uint32_t, TinyHandle> handleMap; // A_index -> B_handle
     
     // First pass: Insert all valid nodes from scene A into scene B and build the mapping
-    const auto& sceneA_items = sceneA.nodes.view();
+    const auto& sceneA_items = sceneA->nodes.view();
     for (uint32_t i = 0; i < sceneA_items.size(); ++i) {
-        if (!sceneA.nodes.isOccupied(i)) continue;
-        
-        TinyHandle oldHandle_A = sceneA.nodes.getHandle(i);
+        if (!sceneA->nodes.isOccupied(i)) continue;
+
+        TinyHandle oldHandle_A = sceneA->nodes.getHandle(i);
         if (!oldHandle_A.valid()) continue;
-        
-        const TinyNode* nodeA = sceneA.nodes.get(oldHandle_A);
+
+        const TinyNode* nodeA = sceneA->nodes.get(oldHandle_A);
         if (!nodeA) continue;
         
         // Copy the node and insert into scene B
@@ -125,12 +127,12 @@ void TinyScene::addScene(const TinyScene& sceneA, TinyHandle parentHandle) {
     
     // Second pass: Remap all node references using the handle mapping
     for (uint32_t i = 0; i < sceneA_items.size(); ++i) {
-        if (!sceneA.nodes.isOccupied(i)) continue;
-        
-        TinyHandle oldHandle_A = sceneA.nodes.getHandle(i);
+        if (!sceneA->nodes.isOccupied(i)) continue;
+
+        TinyHandle oldHandle_A = sceneA->nodes.getHandle(i);
         if (!oldHandle_A.valid()) continue;
-        
-        const TinyNode* originalNodeA = sceneA.getNode(oldHandle_A);
+
+        const TinyNode* originalNodeA = sceneA->getNode(oldHandle_A);
         if (!originalNodeA) continue;
         
         // Find our copied node in scene B
@@ -208,11 +210,11 @@ void TinyScene::addScene(const TinyScene& sceneA, TinyHandle parentHandle) {
         // Find nodes that were root nodes in scene A (had invalid parent or parent not in scene)
         for (const auto& [oldIndex, newHandle] : handleMap) {
             // Get the actual handle from scene A using the index
-            TinyHandle oldHandle_A = sceneA.nodes.getHandle(oldIndex);
+            TinyHandle oldHandle_A = sceneA->nodes.getHandle(oldIndex);
             if (!oldHandle_A.valid()) continue;
-            
-            const TinyNode* originalA = sceneA.nodes.get(oldHandle_A);
-            
+
+            const TinyNode* originalA = sceneA->nodes.get(oldHandle_A);
+
             if (originalA && (!originalA->parentHandle.valid() || 
                 handleMap.find(originalA->parentHandle.index) == handleMap.end())) {
                 // This was a root node in scene A, add it as child of our parent

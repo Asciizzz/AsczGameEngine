@@ -9,9 +9,10 @@ struct TinyScene {
     TinyHandle rootHandle;
     // Runtime registry data for node
     TinyRegistry rtRegistry;
-        // For example, a node with runtime skeleton data
+    const TinyRegistry* fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
 
-    TinyScene() = default;
+    TinyScene(const std::string& sceneName = "New Scene") : name(sceneName) {}
+    void setFsRegistry(const TinyRegistry& registry) { fsRegistry = &registry; }
 
     TinyScene(const TinyScene&) = delete;
     TinyScene& operator=(const TinyScene&) = delete;
@@ -25,7 +26,7 @@ struct TinyScene {
     TinyHandle addNode(const std::string& nodeName = "New Node", TinyHandle parentHandle = TinyHandle());
     TinyHandle addNode(const TinyNode& nodeData, TinyHandle parentHandle = TinyHandle());
 
-    void addScene(const TinyScene& scene, TinyHandle parentHandle = TinyHandle());
+    void addScene(TinyHandle sceneHandle, TinyHandle parentHandle = TinyHandle());
     bool removeNode(TinyHandle nodeHandle, bool recursive = true);
     bool flattenNode(TinyHandle nodeHandle);
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
