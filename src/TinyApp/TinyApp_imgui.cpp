@@ -793,7 +793,6 @@ void TinyApp::renderSceneNodeInspector() {
                 
                 if (ImGui::Button("Refresh All to Bind Pose", ImVec2(-1, 0))) {
                     rtSkeleton->refreshAll();
-                    printf("All bones refreshed to bind pose\n");
                 }
                 ImGui::PopStyleColor(3);
                 
@@ -895,7 +894,6 @@ void TinyApp::renderSceneNodeInspector() {
                     
                     if (ImGui::Button(("Refresh Bone " + std::to_string(selectedBoneIndex) + " to Bind Pose").c_str(), ImVec2(-1, 0))) {
                         rtSkeleton->refresh(selectedBoneIndex, true);
-                        printf("Bone %d refreshed to bind pose\n", selectedBoneIndex);
                     }
                     ImGui::PopStyleColor(3);
                     

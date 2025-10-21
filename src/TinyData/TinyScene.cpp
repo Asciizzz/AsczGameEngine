@@ -284,8 +284,12 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
 
     transform->global = parentGlobalTransform * transform->local;
 
-    // Update skeleton component if exists
-    updateNodeSkeleton(realHandle);
+    // Retrieve skeleton component if exists
+    TinyNode::Skeleton* skeletonComp = node->get<TinyNode::Skeleton>();
+    if (skeletonComp) {
+        TinySkeletonRT* rtSkele = getRT<TinySkeletonRT>(skeletonComp->rtSkeleHandle);
+        if (rtSkele) rtSkele->update();
+    }
 
     // Recursively update all children
     for (const TinyHandle& childHandle : node->childrenHandles) {
@@ -332,7 +336,9 @@ TinyHandle TinyScene::nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skel
     rtSkele.vkCreate(sceneReq.device, sceneReq.skinDescPool, sceneReq.skinDescLayout);
 
     compPtr->rtSkeleHandle = addRT<TinySkeletonRT>(std::move(rtSkele));
-    updateNodeSkeleton(nodeHandle);
+
+    TinySkeletonRT* rtSkelePtr = getRT<TinySkeletonRT>(compPtr->rtSkeleHandle);
+    if (rtSkelePtr) rtSkelePtr->update(); // Initial update to set poses
 
     // Return the runtime skeleton handle
     return compPtr->rtSkeleHandle;
@@ -355,20 +361,6 @@ void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
 }
 
 
-
-
-
-void TinyScene::updateNodeSkeleton(TinyHandle nodeHandle) {
-    // Retrieve skeleton component
-    TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
-    if (!compPtr) return;
-
-    // Retrieve runtime skeleton data from TinyFS registry
-    TinySkeletonRT* rtSkele = getRT<TinySkeletonRT>(compPtr->rtSkeleHandle);
-    if (!rtSkele) return;
-
-    rtSkele->update();
-}
 
 
 VkDescriptorSet TinyScene::getNodeSkeletonDescSet(TinyHandle nodeHandle) const {

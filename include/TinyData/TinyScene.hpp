@@ -120,8 +120,6 @@ struct TinyScene {
 
     // --------- Specific component logic ---------
 
-    void updateNodeSkeleton(TinyHandle nodeHandle);
-
     VkDescriptorSet getNodeSkeletonDescSet(TinyHandle nodeHandle) const;
 
     // --------- Runtime registry access (public) ---------

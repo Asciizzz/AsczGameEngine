@@ -65,6 +65,8 @@ void TinySkeletonRT::vkCreate(const TinyVK::Device* deviceVK, VkDescriptorPool d
 }
 
 void TinySkeletonRT::updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform) {
+    if (boneIndex >= skeleton->bones.size()) return;
+
     const TinyBone& bone = skeleton->bones[boneIndex];
 
     finalPose[boneIndex] = parentTransform * localPose[boneIndex];
