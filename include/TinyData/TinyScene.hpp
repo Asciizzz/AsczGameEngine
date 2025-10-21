@@ -15,7 +15,6 @@ struct TinyScene {
     TinyScene(TinyScene&&) = default;
     TinyScene& operator=(TinyScene&&) = default;
 
-
     // --------- Root management ---------
 
     TinyHandle addRoot(const std::string& nodeName = "Root");
@@ -28,13 +27,10 @@ struct TinyScene {
     TinyHandle addNode(const TinyNode& nodeData, TinyHandle parentHandle = TinyHandle());
     TinyHandle addNodeRaw(const TinyNode& nodeData);
 
-    void addScene(TinyHandle sceneHandle, TinyHandle parentHandle = TinyHandle());
     bool removeNode(TinyHandle nodeHandle, bool recursive = true);
     bool flattenNode(TinyHandle nodeHandle);
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
     bool renameNode(TinyHandle nodeHandle, const std::string& newName);
-
-    void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
     TinyNode* node(TinyHandle nodeHandle);
     const TinyNode* node(TinyHandle nodeHandle) const;
@@ -42,6 +38,9 @@ struct TinyScene {
     const std::vector<TinyNode>& nodeView() const;
     bool nodeValid(TinyHandle nodeHandle) const;
     bool nodeOccupied(uint32_t index) const;
+    
+    void addScene(TinyHandle sceneHandle, TinyHandle parentHandle = TinyHandle());
+    void updateGlbTransform(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
     // -------- Component management --------- 
 

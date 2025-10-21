@@ -97,6 +97,11 @@ public:
                 color[1] == other.color[1] &&
                 color[2] == other.color[2];
         }
+
+        // Implicit conversion to string for easy access
+        operator std::string() const { return ext; }
+
+        bool empty() const { return ext.empty(); }
     };
 
 

@@ -1686,16 +1686,16 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
     } else if (node->isFile()) {
         // General file handling - completely generic
         std::string fileName = node->name;
-        std::string fileExt = fs.getFileTypeExt(nodeHandle).ext;
+        TinyFS::TypeExt fileExt = fs.getFileTypeExt(nodeHandle);
 
         // Set consistent colors for all files
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Selection background
         
         // Create a selectable item for the full filename + extension
-        std::string fullDisplayName = fileExt.empty() ? fileName : (fileName + "." + fileExt);
+        std::string fullDisplayName = fileExt.empty() ? fileName : (fileName + "." + fileExt.ext);
         bool wasClicked = ImGui::Selectable(("##file_" + std::to_string(nodeHandle.index)).c_str(), isSelected);
-        
+
         // Capture interaction state immediately after the Selectable
         bool itemHovered = ImGui::IsItemHovered();
         bool leftClicked = itemHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left);
@@ -1714,8 +1714,8 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         // Render extension in gray if it exists
         if (!fileExt.empty()) {
             ImGui::SameLine(0, 0); // No spacing between filename and extension
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.35f, 0.35f, 1.0f)); // Even grayer text
-            ImGui::Text(".%s", fileExt.c_str());
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(fileExt.color[0], fileExt.color[1], fileExt.color[2], 1.0f)); // Even grayer text
+            ImGui::Text(".%s", fileExt.ext.c_str());
             ImGui::PopStyleColor();
         }
         
