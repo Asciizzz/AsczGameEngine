@@ -353,8 +353,7 @@ void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
 
     // Remove skeleton runtime data using TinyFS pending deletion system
     if (compPtr->rtSkeleHandle.valid() && fs()->rHas<TinySkeletonRT>(compPtr->rtSkeleHandle)) {
-        // Use TinyFS pending deletion for safe Vulkan resource cleanup
-        fs()->rPendingDelete<TinySkeletonRT>(compPtr->rtSkeleHandle);
+        fs()->rRemove<TinySkeletonRT>(compPtr->rtSkeleHandle);
     }
 
     node->remove<TinyNode::Skeleton>();

@@ -292,42 +292,26 @@ public:
 
     // ---------- Registry data management ----------
 
-    void* rGet(TypeHandle th) {
-        return registry_.get(th);
-    }
+    void* rGet(TypeHandle th) { return registry_.get(th); }
 
-    const void* rGet(TypeHandle th) const {
-        return registry_.get(th);
-    }
+    const void* rGet(TypeHandle th) const { return registry_.get(th); }
 
     template<typename T>
-    T* rGet(TypeHandle th) {
-        return registry_.get<T>(th);
-    }
+    T* rGet(TypeHandle th) { return registry_.get<T>(th); }
 
     template<typename T>
-    const T* rGet(TypeHandle th) const {
-        return registry_.get<T>(th);
-    }
+    const T* rGet(TypeHandle th) const { return registry_.get<T>(th);}
 
     template<typename T>
-    T* rGet(TinyHandle h) {
-        return registry_.get<T>(h);
-    }
+    T* rGet(TinyHandle h) { return registry_.get<T>(h); }
 
     template<typename T>
-    const T* rGet(TinyHandle h) const {
-        return registry_.get<T>(h);
-    }
+    const T* rGet(TinyHandle h) const { return registry_.get<T>(h); }
 
     template<typename T>
-    bool rHas(const TinyHandle& handle) const {
-        return registry_.has<T>(handle);
-    }
+    bool rHas(const TinyHandle& handle) const { return registry_.has<T>(handle); }
 
-    bool rHas(const TypeHandle& th) const {
-        return registry_.has(th);
-    }
+    bool rHas(const TypeHandle& th) const { return registry_.has(th); }
 
     template<typename T>
     TypeHandle rAdd(T&& val) {
@@ -341,23 +325,23 @@ public:
     }
 
     void rRemove(const TypeHandle& th) {
+        if (!registry_.has(th)) return; // nothing to remove :/
+
         if (safeDelete(th.typeHash)) {
-            // Queue for pending deletion if not safe to delete immediately
-            rPendingDeletions.push_back(th);
+            execDelete(th); // Safe to delete immediately
         } else {
-            // Safe to delete immediately
-            registry_.remove(th);
+            rQueueDelete(th); // Queue for pending deletion
         }
     }
 
     // Pending deletion system for registry data
-    void rPendingDelete(const TypeHandle& th) {
-        rPendingDeletions.push_back(th);
+    template<typename T>
+    void rQueueDelete(const TinyHandle& handle) {
+        rQueueDelete(TypeHandle::make<T>(handle));
     }
 
-    template<typename T>
-    void rPendingDelete(const TinyHandle& handle) {
-        rPendingDelete(TypeHandle::make<T>(handle));
+    void rQueueDelete(const TypeHandle& th) {
+        rPendingDeletions.push_back(th);
     }
 
     // Execute all pending deletions
@@ -368,13 +352,8 @@ public:
         rPendingDeletions.clear();
     }
 
-    // Get pending deletions count
-    size_t rPendingDeletionsCount() const {
-        return rPendingDeletions.size();
-    }
-
     // Get pending deletions (read-only access for external systems like renderer)
-    const std::vector<TypeHandle>& rGetPendingDeletions() const {
+    const std::vector<TypeHandle>& rPendingDel() const {
         return rPendingDeletions;
     }
 
@@ -391,6 +370,15 @@ private:
 
     // Pending deletion system for registry data
     std::vector<TypeHandle> rPendingDeletions;
+
+    template<typename T> // True delete
+    void execDelete(const TinyHandle& handle) {
+        registry_.remove<T>(handle); 
+    }
+
+    void execDelete(const TypeHandle& th) {
+        registry_.remove(th);
+    }
 
     bool namesEqual(const std::string& a, const std::string& b) const {
         if (caseSensitive_) {
@@ -492,11 +480,9 @@ private:
             }
         }
 
-        // if file / has data, either remove or append to deletion queue
         if (node->hasData()) {
-
-            bool safeDel = fSafeDelete(handle);
-            rRemove(node->tHandle); // Special remove function which either deletes or queues based on type
+            // Special remove (instant delete or queue)
+            rRemove(node->tHandle);
         }
 
         // remove from parent children list
