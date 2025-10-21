@@ -63,13 +63,29 @@ public:
     };
 
     struct TypeExt {
-        std::string ext;  // Meta extension
+        // Identification
+        std::string ext;
+        bool safeDelete; // CRITICAL
         uint8_t priority;
+
+        // Safe Delete explanation:
+        // =
+        // Some files' data contains Vulkan resources which
+        // could potentially be in use (command buffers etc.)
+        // thus cannot be safely deleted at arbitrary times.
+        // -
+        // This flag indicates whether the file can be instantly
+        // delete or add to a pending deletion queue for further
+        // deletion processing.
+        // -
+        // For safety, all types default safeDelete = false;
+
+        // Style
         float color[3];
 
         // Assume folder, max priority
-        TypeExt(const std::string& ext = "", uint8_t priority = UINT8_MAX, float r = 1.0f, float g = 1.0f, float b = 1.0f)
-            : ext(ext), priority(priority) {
+        TypeExt(const std::string& ext = "", bool safeDelete = false, uint8_t priority = UINT8_MAX, float r = 1.0f, float g = 1.0f, float b = 1.0f)
+        : ext(ext), priority(priority), safeDelete(safeDelete) {
             color[0] = r;
             color[1] = g;
             color[2] = b;
@@ -150,15 +166,9 @@ public:
         return addFile(rootHandle_, name, data, cfg);
     }
 
-    template<typename T>
-    TypeHandle addToRegistry(T&& val) {
-        // Remove const and reference qualifiers (f you too)
-        using CleanT = std::remove_cv_t<std::remove_reference_t<T>>;
-        return registry_.add<CleanT>(std::forward<T>(val));
-    }
-
     // ---------- Move with cycle prevention ----------
-    bool moveFNode(TinyHandle nodeHandle, TinyHandle newParent) {
+    
+    bool fMove(TinyHandle nodeHandle, TinyHandle newParent) {
         if (nodeHandle == newParent) return false; // Move to self
 
         // prevent moving under descendant (no cycles)
@@ -187,7 +197,8 @@ public:
     }
 
     // ---------- Safe recursive remove ----------
-    bool removeFNode(TinyHandle handle, bool recursive = true) {
+
+    bool fRemove(TinyHandle handle, bool recursive = true) {
         Node* node = fnodes_.get(handle);
         if (!node || !node->deletable()) return false;
 
@@ -197,11 +208,11 @@ public:
             rescueParent = rootHandle_;
         }
 
-        return removeFNodeRecursive(handle, rescueParent, recursive);
+        return fRemoveRecursive(handle, rescueParent, recursive);
     }
 
-    bool flattenFNode(TinyHandle handle) {
-        return removeFNode(handle, false);
+    bool fFlatten(TinyHandle handle) {
+        return fRemove(handle, false);
     }
 
     // ---------- Data retrieval ----------
@@ -223,9 +234,10 @@ public:
     const TinyPool<Node>& fNodes() const { return fnodes_; }
 
     template<typename T>
-    void setTypeExt(const std::string& ext, uint8_t priority = 0, float r = 1.0f, float g = 1.0f, float b = 1.0f) {
+    void setTypeExt(const std::string& ext, bool safeDelete = true, uint8_t priority = 0, float r = 1.0f, float g = 1.0f, float b = 1.0f) {
         TypeExt typeExt;
         typeExt.ext = ext;
+        typeExt.safeDelete = safeDelete;
         typeExt.priority = priority;
         typeExt.color[0] = r;
         typeExt.color[1] = g;
@@ -234,10 +246,14 @@ public:
     }
 
     // Get the full TypeExt info for a type
+    TypeExt typeExt(size_t typeHash) const {
+        auto it = typeHashToExt.find(typeHash);
+        return (it != typeHashToExt.end()) ? it->second : TypeExt();
+    }
+
     template<typename T>
     TypeExt typeExt() const {
-        auto it = typeHashToExt.find(typeid(T).hash_code());
-        return (it != typeHashToExt.end()) ? it->second : TypeExt();
+        return typeExt(typeid(T).hash_code());
     }
 
     // Get the full TypeExt info for a file
@@ -245,14 +261,25 @@ public:
         const Node* node = fnodes_.get(fileHandle);
 
         // Invalid, minimum priority
-        if (!node) return TypeExt("", 0);
+        if (!node) return TypeExt();
 
         // Folder type, max priority
-        if (node->isFolder()) return TypeExt("", UINT8_MAX);
+        if (node->isFolder()) return TypeExt("", true, UINT8_MAX);
 
-        return
-            typeHashToExt.count(node->tHandle.typeHash) ?
-            typeHashToExt.at(node->tHandle.typeHash) : TypeExt();
+        return typeExt(node->tHandle.typeHash);
+    }
+
+    bool fSafeDelete(TinyHandle fileHandle) const {
+        return fTypeExt(fileHandle).safeDelete;
+    }
+
+    template<typename T>
+    bool safeDelete() const {
+        return typeExt<T>().safeDelete;
+    }
+
+    bool safeDelete(size_t typeHash) const {
+        return typeExt(typeHash).safeDelete;
     }
 
     // Retrieve registry data
@@ -267,6 +294,28 @@ public:
     template<typename T>
     const T* rData(TinyHandle fileHandle) const {
         return const_cast<TinyFS*>(this)->rData<T>(fileHandle);
+    }
+
+    // Registry access wrappers
+
+    template<typename T>
+    TypeHandle rAdd(T&& val) {
+        using CleanT = std::remove_cv_t<std::remove_reference_t<T>>;
+        return registry_.add<CleanT>(std::forward<T>(val));
+    }
+
+    template<typename T>
+    void rRemove(const TinyHandle& handle) {
+        rRemove(TypeHandle::make<T>(handle));
+    }
+
+    void rRemove(const TypeHandle& th) {
+        if (safeDelete(th.typeHash)) {
+            registry_.remove(th);
+        } else {
+            // Different logic in the future
+            registry_.remove(th);
+        }
     }
 
     const TinyRegistry& registry() const { return registry_; }
@@ -360,7 +409,7 @@ private:
     }
 
     // Internal recursive function that tracks the original parent for non-deletable rescues
-    bool removeFNodeRecursive(TinyHandle handle, TinyHandle rescueParent, bool recursive) {
+    bool fRemoveRecursive(TinyHandle handle, TinyHandle rescueParent, bool recursive) {
         Node* node = fnodes_.get(handle);
         if (!node) return false;
 
@@ -374,26 +423,24 @@ private:
             
             if (child->deletable() && recursive) {
                 // Child is deletable and we're in normal delete mode - remove it recursively
-                removeFNodeRecursive(ch, rescueParent, recursive);
+                fRemoveRecursive(ch, rescueParent, recursive);
             } else {
                 // Child is non-deletable OR we're in flatten mode - move it to the rescue parent
-                moveFNode(ch, rescueParent);
+                fMove(ch, rescueParent);
             }
         }
 
-        // if file / has data, remove registry entry
+        // if file / has data, either remove or append to deletion queue
         if (node->hasData()) {
-            registry_.remove(node->tHandle);
-            node->tHandle = TypeHandle(); // invalidate
+
+            bool safeDel = fSafeDelete(handle);
+            rRemove(node->tHandle); // Special remove function which either deletes or queues based on type
         }
 
         // remove from parent children list
         if (fnodes_.isValid(node->parent)) {
             Node* parent = fnodes_.get(node->parent);
-            if (parent) {
-                auto& s = parent->children;
-                s.erase(std::remove(s.begin(), s.end(), handle), s.end());
-            }
+            parent->removeChild(handle);
         }
 
         // finally remove node from pool

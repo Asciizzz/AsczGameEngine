@@ -14,13 +14,14 @@ bool validIndex(TinyHandle handle, const std::vector<T>& vec) {
 TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS = MakeUnique<TinyFS>();
 
-    tinyFS->setTypeExt<TinyScene>("ascn", 0, 0.8f, 1.0f, 0.8f);
-    tinyFS->setTypeExt<TinyTexture>("atex", 0, 0.8f, 0.8f, 1.0f);
-    tinyFS->setTypeExt<TinyRMaterial>("amat", 0, 1.0f, 0.8f, 1.0f);
-    tinyFS->setTypeExt<TinyMesh>("amsh", 0, 1.0f, 1.0f, 0.8f);
-    tinyFS->setTypeExt<TinySkeleton>("askl", 0, 1.0f, 0.6f, 0.4f);
-    tinyFS->setTypeExt<TinySkeletonRT>("rskl", 0, 1.0f, 0.4f, 0.2f);
-    tinyFS->setTypeExt<TinyAnimation>("anim", 0, 0.8f, 1.0f, 0.6f);
+    // ext - safeDelete - priority - r - g - b
+    tinyFS->setTypeExt<TinyScene>     ("ascn", false, 0, 0.8f, 1.0f, 0.8f);
+    tinyFS->setTypeExt<TinyTexture>   ("atex", false, 0, 0.8f, 0.8f, 1.0f);
+    tinyFS->setTypeExt<TinyRMaterial> ("amat", true,  0, 1.0f, 0.8f, 1.0f);
+    tinyFS->setTypeExt<TinyMesh>      ("amsh", false, 0, 1.0f, 1.0f, 0.8f);
+    tinyFS->setTypeExt<TinySkeleton>  ("askl", true,  0, 1.0f, 0.6f, 0.4f);
+    tinyFS->setTypeExt<TinySkeletonRT>("rskl", false, 0, 1.0f, 0.4f, 0.2f);
+    tinyFS->setTypeExt<TinyAnimation> ("anim", false, 0, 0.8f, 1.0f, 0.6f);
 
     vkCreateSceneResources();
 
@@ -47,13 +48,13 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     TinyTexture defaultTexture = TinyTexture::createDefaultTexture();
     defaultTexture.vkCreate(deviceVK);
 
-    defaultTextureHandle = tinyFS->addToRegistry(defaultTexture).handle;
+    defaultTextureHandle = tinyFS->rAdd(defaultTexture).handle;
 
     TinyRMaterial defaultMaterial;
     defaultMaterial.setAlbTexIndex(0);
     defaultMaterial.setNrmlTexIndex(0);
 
-    defaultMaterialHandle = tinyFS->addToRegistry(defaultMaterial).handle;
+    defaultMaterialHandle = tinyFS->rAdd(defaultMaterial).handle;
 }
 
 TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {

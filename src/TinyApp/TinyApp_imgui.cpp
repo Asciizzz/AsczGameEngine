@@ -1665,7 +1665,7 @@ void TinyApp::processPendingDeletions() {
         const TinyFS::Node* node = fs.fNodes().get(handle);
         TinyHandle parentHandle = node ? node->parent : TinyHandle();
 
-        fs.removeFNode(handle);
+        fs.fRemove(handle);
 
         if (selectedHandle.handle == handle) {
             selectFileNode(parentHandle);
@@ -1793,7 +1793,7 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FOLDER_HANDLE")) {
                 TinyHandle draggedFolder = *(const TinyHandle*)payload->Data;
                 if (draggedFolder != nodeHandle) { // Can't drop folder on itself
-                    if (fs.moveFNode(draggedFolder, nodeHandle)) {
+                    if (fs.fMove(draggedFolder, nodeHandle)) {
                         // Auto-expand the target folder and select the moved folder
                         expandedFNodes.insert(nodeHandle);
                         selectFileNode(draggedFolder);
@@ -1806,7 +1806,7 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             // Accept files being dropped  
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                 TinyHandle draggedFile = *(const TinyHandle*)payload->Data;
-                if (fs.moveFNode(draggedFile, nodeHandle)) {
+                if (fs.fMove(draggedFile, nodeHandle)) {
                     // Auto-expand the target folder and select the moved file
                     expandedFNodes.insert(nodeHandle);
                     selectFileNode(draggedFile);
@@ -1849,7 +1849,7 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
 
             // Folder operations don't affect file, no need for pending deletion
             if (ImGui::MenuItem("Flatten", nullptr, false, node->deletable())) {
-                if (node->deletable()) fs.flattenFNode(nodeHandle);
+                if (node->deletable()) fs.fFlatten(nodeHandle);
             }
 
             ImGui::Separator();
