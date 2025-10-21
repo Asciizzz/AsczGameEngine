@@ -249,7 +249,7 @@ void TinyProject::vkCreateSceneResources() {
         {DescType::StorageBuffer, 1}
     }, maxSkeletons);
 
-    sharedReq.fsRegistry = &registryRef();
+    sharedReq.fs = &filesystem();
     sharedReq.device = deviceVK;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;

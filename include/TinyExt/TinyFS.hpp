@@ -311,11 +311,40 @@ public:
 
     void rRemove(const TypeHandle& th) {
         if (safeDelete(th.typeHash)) {
-            registry_.remove(th);
+            // Queue for pending deletion if not safe to delete immediately
+            rPendingDeletions.push_back(th);
         } else {
-            // Different logic in the future
+            // Safe to delete immediately
             registry_.remove(th);
         }
+    }
+
+    // Pending deletion system for registry data
+    void rPendingDelete(const TypeHandle& th) {
+        rPendingDeletions.push_back(th);
+    }
+
+    template<typename T>
+    void rPendingDelete(const TinyHandle& handle) {
+        rPendingDelete(TypeHandle::make<T>(handle));
+    }
+
+    // Execute all pending deletions
+    void rExecPendingDeletions() {
+        for (const auto& th : rPendingDeletions) {
+            registry_.remove(th);
+        }
+        rPendingDeletions.clear();
+    }
+
+    // Get pending deletions count
+    size_t rPendingDeletionsCount() const {
+        return rPendingDeletions.size();
+    }
+
+    // Get pending deletions (read-only access for external systems like renderer)
+    const std::vector<TypeHandle>& rGetPendingDeletions() const {
+        return rPendingDeletions;
     }
 
     const TinyRegistry& registry() const { return registry_; }
@@ -329,6 +358,9 @@ private:
 
     // Type to extension info map (using new TypeExt structure)
     UnorderedMap<size_t, TypeExt> typeHashToExt;
+
+    // Pending deletion system for registry data
+    std::vector<TypeHandle> rPendingDeletions;
 
     bool namesEqual(const std::string& a, const std::string& b) const {
         if (caseSensitive_) {

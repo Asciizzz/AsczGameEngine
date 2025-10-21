@@ -1,20 +1,20 @@
 #pragma once
 
-#include "TinyExt/TinyRegistry.hpp"
+#include "TinyExt/TinyFS.hpp"
 
 #include "TinyData/TinyNode.hpp"
 #include "TinyData/TinySceneRT.hpp"
 
 // TinyScene requirements
 struct TinySceneReq {
-    const TinyRegistry*   fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
-    const TinyVK::Device* device     = nullptr;   // For GPU resource creation
+    TinyFS*               fs = nullptr;          // Pointer to filesystem for resource lookups and registry management
+    const TinyVK::Device* device     = nullptr;  // For GPU resource creation
 
     VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
     VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
 
     bool valid() const {
-        return  fsRegistry != nullptr && device != nullptr &&
+        return  fs != nullptr && device != nullptr &&
                 skinDescPool   != VK_NULL_HANDLE &&
                 skinDescLayout != VK_NULL_HANDLE;
     }
@@ -87,8 +87,6 @@ struct TinyScene {
 
     template<typename T>
     void nodeAddComp(TinyHandle nodeHandle, const T& componentData = T()) {
-        const TinyRegistry* fsRegistry = sceneReq.fsRegistry;
-
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
@@ -102,8 +100,6 @@ struct TinyScene {
 
     template<typename T>
     void nodeRemoveComp(TinyHandle nodeHandle) {
-        const TinyRegistry* fsRegistry = sceneReq.fsRegistry;
-
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
@@ -132,22 +128,30 @@ struct TinyScene {
 
     template<typename T>
     T* getRT(const TinyHandle& handle) {
-        return rtRegistry.get<T>(handle);
+        if (!sceneReq.fs) return nullptr;
+        return registry().get<T>(handle);
     }
 
     template<typename T>
     const T* getRT(const TinyHandle& handle) const {
-        return rtRegistry.get<T>(handle);
+        if (!sceneReq.fs) return nullptr;
+        return registry().get<T>(handle);
     }
 
 private:
     TinyPool<TinyNode> nodes;
     TinyHandle rootHandle_{};
 
-    TinyRegistry rtRegistry; // Runtime registry data for node
     TinySceneReq sceneReq;   // Scene requirements
 
     // --------- Complex component logic ---------
+
+    // Convenience access
+    TinyFS* fs() { return sceneReq.fs; }
+    const TinyFS* fs() const { return sceneReq.fs; }
+
+    TinyRegistry& registry() { return fs()->registry(); }
+    const TinyRegistry& registry() const { return fs()->registry(); }
 
     // Non-const access only for internal use
     template<typename T>
@@ -161,7 +165,7 @@ private:
     TinyHandle nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skeletonHandle);
     void nodeRemoveCompSkeleton(TinyHandle nodeHandle);
 
-    // ---------- Runtime registry access (private) ----------
+    // ---------- Runtime registry access via TinyFS (private) ----------
 
     // Access node by index, only for internal use
     TinyNode* fromIndex(uint32_t index) {
@@ -174,27 +178,32 @@ private:
 
     template<typename T>
     TinyHandle addRT(T& data) {
-        return rtRegistry.add<T>(std::move(data)).handle;
+        if (!sceneReq.fs) return TinyHandle{};
+        return sceneReq.fs->rAdd<T>(std::move(data)).handle;
     }
 
     template<typename T>
     void removeRT(const TinyHandle& handle) {
-        rtRegistry.remove<T>(handle);
+        if (!sceneReq.fs) return;
+        sceneReq.fs->rRemove<T>(handle);
     }
 
     void* getRT(const TypeHandle& th) {
-        return rtRegistry.get(th);
+        if (!sceneReq.fs) return nullptr;
+        return registry().get(th);
     }
 
     template<typename T>
     T* getRT(const TypeHandle& th) {
         assert(th.isType<T>() && "TypeHandle does not match requested type T");
-        return rtRegistry.get<T>(th);
+        if (!sceneReq.fs) return nullptr;
+        return registry().get<T>(th);
     }
 
     template<typename T>
     const T* getRT(const TypeHandle& th) const {
         assert(th.isType<T>() && "TypeHandle does not match requested type T");
-        return rtRegistry.get<T>(th);
+        if (!sceneReq.fs) return nullptr;
+        return registry().get<T>(th);
     }
 };
