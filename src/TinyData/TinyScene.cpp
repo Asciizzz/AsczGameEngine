@@ -75,7 +75,15 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
         }
     }
 
-    // Finally, remove the node from the pool
+    // Resolve specific removal logic
+    if (nodeToDelete->has<TinyNode::Skeleton>()) {
+        TinyNode::Skeleton* skelComp = nodeToDelete->get<TinyNode::Skeleton>();
+        if (skelComp && skelComp->rtSkeleHandle.valid()) {
+            // Future implementation: Remove TinySkeletonRT from runtime registry
+            // rtRegistry.remove<TinySkeletonRT>(skelComp->rtSkeleHandle);
+        }
+    }
+
     nodes.remove(nodeHandle);
 
     return true;

@@ -12,12 +12,6 @@
 
 struct TinyNode {
     std::string name = "Node";
-    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
-
-    enum class Scope {
-        Local, // Local with model
-        Global // Global registry
-    } scope = Scope::Local;
 
     enum class Types : uint32_t {
         Node          = 1 << 0,
@@ -25,11 +19,24 @@ struct TinyNode {
         Skeleton      = 1 << 2,
         BoneAttach    = 1 << 3
     };
-    uint32_t types = toMask(Types::Node);
+
+    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
 
     // Hierarchy data - can be either local indices or runtime handles depending on scope
     TinyHandle parentHandle;
     std::vector<TinyHandle> childrenHandles;
+
+    void setParent(TinyHandle newParent) {
+        parentHandle = newParent;
+    }
+
+    void addChild(TinyHandle childHandle) {
+        childrenHandles.push_back(childHandle);
+    }
+
+    void removeChild(TinyHandle childHandle) {
+        childrenHandles.erase(std::remove(childrenHandles.begin(), childrenHandles.end(), childHandle), childrenHandles.end());
+    }
 
     // Transform data - both local and runtime
     glm::mat4 localTransform = glm::mat4(1.0f);   // Local/original transform
@@ -55,9 +62,6 @@ struct TinyNode {
     };
 
     // Component management functions
-    bool hasType(Types componentType) const {
-        return (types & toMask(componentType)) != 0;
-    }
 
     // Completely generic template functions - no knowledge of specific components!
     template<typename T>
@@ -85,6 +89,8 @@ struct TinyNode {
 private:
     std::tuple<MeshRender, BoneAttach, Skeleton> components;
 
+    uint32_t types = toMask(Types::Node);
+
     template<typename T>
     T& getComponent() { return std::get<T>(components); }
 
@@ -98,5 +104,9 @@ private:
     void setType(Types componentType, bool state) {
         if (state) types |= toMask(componentType);
         else       types &= ~toMask(componentType);
+    }
+
+    bool hasType(Types componentType) const {
+        return (types & toMask(componentType)) != 0;
     }
 };

@@ -1344,13 +1344,13 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 
         // Create the node label with useful information
         std::string typeLabel = "";
-        if (node->hasType(TinyNode::Types::MeshRender)) {
+        if (node->has<TinyNode::MeshRender>()) {
             typeLabel += "[Mesh] ";
         }
-        if (node->hasType(TinyNode::Types::BoneAttach)) {
+        if (node->has<TinyNode::BoneAttach>()) {
             typeLabel += "[BoneAttach] ";
         }
-        if (node->hasType(TinyNode::Types::Skeleton)) {
+        if (node->has<TinyNode::Skeleton>()) {
             typeLabel += "[Skeleton] ";
         }
 

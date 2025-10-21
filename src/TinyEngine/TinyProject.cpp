@@ -145,14 +145,14 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         TinyNode rtNode = node; // Copy node data
 
         // Remap MeshRender component's mesh reference
-        if (rtNode.hasType(NTypes::MeshRender)) {
+        if (rtNode.has<TinyNode::MeshRender>()) {
             auto* meshRenderComp = rtNode.get<TinyNode::MeshRender>();
             if (meshRenderComp)
                 meshRenderComp->meshHandle = glbMeshRHandle[meshRenderComp->meshHandle.index];
         }
 
         // Remap Skeleton component's registry reference
-        if (rtNode.hasType(NTypes::Skeleton)) {
+        if (rtNode.has<TinyNode::Skeleton>()) {
             auto* skeletonComp = rtNode.get<TinyNode::Skeleton>();
             if (skeletonComp)
                 skeletonComp->skeleHandle = glbSkeleRHandle[skeletonComp->skeleHandle.index];
