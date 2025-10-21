@@ -22,23 +22,22 @@ TinyHandle TinyScene::addNode(const TinyNode& nodeData, TinyHandle parentHandle)
     if (!parentNode) return TinyHandle(); // Invalid parent handle
 
     TinyNode newNode = nodeData;
-    newNode.parentHandle = parentHandle;
+    newNode.setParent(parentHandle);
 
 // Resolve specific logic
-    
+
     // If node has Skeleton component, create TinySkeletonRT in runtime registry
     if (newNode.has<TinyNode::Skeleton>()) {
         // Future implementation: Add TinySkeletonRT to runtime registry
     }
 
-// ------------------------
 
     // Add the node to the pool
     TinyHandle newNodeHandle = nodes.add(std::move(newNode));
 
     // Re-get parent pointer after pool reallocation because of memory and stuff
     parentNode = nodes.get(parentHandle);
-    parentNode->childrenHandles.push_back(newNodeHandle);
+    parentNode->addChild(newNodeHandle);
 
     return newNodeHandle;
 }
@@ -53,26 +52,15 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
 
     std::vector<TinyHandle> childrenToDelete = nodeToDelete->childrenHandles;
     for (const TinyHandle& childHandle : childrenToDelete) {
-        // removeNode(childHandle); // This will remove each child from the pool
-
         // If recursive, remove children, otherwise attach them to the deleted node's parent
-        if (recursive) {
-            removeNode(childHandle, true);
-        } else {
-            reparentNode(childHandle, nodeToDelete->parentHandle);
-        }
+        if (recursive) removeNode(childHandle, true);
+        else reparentNode(childHandle, nodeToDelete->parentHandle);
     }
 
     // Remove this node from its parent's children list
     if (nodeToDelete->parentHandle.valid()) {
         TinyNode* parentNode = nodes.get(nodeToDelete->parentHandle);
-        if (parentNode) {
-            auto& parentChildren = parentNode->childrenHandles;
-            parentChildren.erase(
-                std::remove(parentChildren.begin(), parentChildren.end(), nodeHandle),
-                parentChildren.end()
-            );
-        }
+        if (parentNode) parentNode->removeChild(nodeHandle);
     }
 
     // Resolve specific removal logic

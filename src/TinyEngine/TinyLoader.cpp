@@ -722,7 +722,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
 
     auto parentAndChild = [&](int parentIndex, int childIndex) {
         nodes[parentIndex].childrenHandles.push_back(TinyHandle(childIndex));
-        nodes[childIndex].parentHandle= TinyHandle(parentIndex);
+        nodes[childIndex].setParent(TinyHandle(parentIndex));
     };
 
     // Root node (index 0)
@@ -1146,8 +1146,8 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
         meshNode.localTransform = glm::mat4(1.0f); // Identity transform
         
         // Set parent-child relationship
-        meshNode.parentHandle = TinyHandle(0); // Parent is root node
-        result.nodes[0].childrenHandles.push_back(TinyHandle(static_cast<uint32_t>(meshIndex + 1)));
+        meshNode.setParent(TinyHandle(0)); // Parent is root node
+        result.nodes[0].addChild(TinyHandle(static_cast<uint32_t>(meshIndex + 1)));
 
         // Add MeshRender component
         TinyNode::MeshRender meshRender;
