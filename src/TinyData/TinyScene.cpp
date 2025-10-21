@@ -3,7 +3,7 @@
 TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     // Create a new root node
     TinyNode rootNode(nodeName);
-    rootNode.add<TinyNode::Transform>();
+    rootNode.add<TinyNode::Node3D>();
     setRoot(nodes.add(std::move(rootNode)));
 
     return rootHandle();
@@ -11,7 +11,7 @@ TinyHandle TinyScene::addRoot(const std::string& nodeName) {
 
 TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
     TinyNode newNode;
-    newNode.add<TinyNode::Transform>();
+    newNode.add<TinyNode::Node3D>();
     newNode.name = nodeName;
 
     return addNode(newNode, parentHandle);
@@ -24,7 +24,7 @@ TinyHandle TinyScene::addNode(const TinyNode& nodeData, TinyHandle parentHandle)
     if (!parentNode) return TinyHandle(); // Invalid parent handle
 
     TinyNode newNode = nodeData;
-    newNode.add<TinyNode::Transform>();
+    newNode.add<TinyNode::Node3D>();
     newNode.setParent(parentHandle);
 
 // Resolve specific logic
@@ -200,8 +200,8 @@ void TinyScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& paren
     TinyNode* node = nodes.get(actualNode);
     if (!node) return;
 
-    TinyNode::Transform* transform = node->get<TinyNode::Transform>();
-    if (!transform) node->add<TinyNode::Transform>();
+    TinyNode::Node3D* transform = node->get<TinyNode::Node3D>();
+    if (!transform) node->add<TinyNode::Node3D>();
 
     // Calculate global transform: parent global * local transform
     transform->global = parentGlobalTransform * transform->local;

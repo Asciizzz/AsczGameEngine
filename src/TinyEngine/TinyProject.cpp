@@ -7,8 +7,8 @@ using namespace TinyVK;
 
 // A quick function for range validation
 template<typename T>
-bool isValidIndex(int index, const std::vector<T>& vec) {
-    return index >= 0 && index < static_cast<int>(vec.size());
+bool validIndex(TinyHandle handle, const std::vector<T>& vec) {
+    return handle.valid() && handle.index < vec.size();
 }
 
 TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
@@ -109,7 +109,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         // Remap submeshes' material indices
         std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes;
         for (auto& submesh : remappedSubmeshes) {
-            bool valid = isValidIndex(submesh.material.index, glmMatRHandle);
+            bool valid = validIndex(submesh.material, glmMatRHandle);
             submesh.material = valid ? glmMatRHandle[submesh.material.index] : TinyHandle();
         }
 
@@ -160,8 +160,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         const TinyNode& originalNode = model.nodes[i];
 
         // Remap parent handle
-        if (originalNode.parentHandle.valid() && 
-            originalNode.parentHandle.index < nodeHandles.size()) {
+        if (validIndex(originalNode.parentHandle, nodeHandles)) {
             parentHandle = nodeHandles[originalNode.parentHandle.index];
         } else {
             parentHandle.invalidate(); // No parent
@@ -169,7 +168,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
         // Remap children handles
         for (const TinyHandle& childHandle : originalNode.childrenHandles) {
-            if (childHandle.valid() && childHandle.index < nodeHandles.size()) {
+            if (validIndex(childHandle, nodeHandles)) {
                 childrenHandles.push_back(nodeHandles[childHandle.index]);
             }
         }
@@ -178,19 +177,18 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
         // Add component with scene API to ensure proper handling
-        if (originalNode.has<TinyNode::Transform>()) {
-            const TinyNode::Transform* ogTransform = originalNode.get<TinyNode::Transform>();
-            TinyNode::Transform newTransform = *ogTransform;
+        if (originalNode.has<TinyNode::Node3D>()) {
+            const TinyNode::Node3D* ogTransform = originalNode.get<TinyNode::Node3D>();
+            TinyNode::Node3D newTransform = *ogTransform;
 
-            scene.nodeAddComp<TinyNode::Transform>(nodeHandle, newTransform);
+            scene.nodeAddComp<TinyNode::Node3D>(nodeHandle, newTransform);
         }
 
         if (originalNode.has<TinyNode::MeshRender>()) {
             const TinyNode::MeshRender* ogMeshComp = originalNode.get<TinyNode::MeshRender>();
 
             TinyHandle newMeshHandle;
-            if (ogMeshComp->meshHandle.valid() && 
-                ogMeshComp->meshHandle.index < glbMeshRHandle.size()) {
+            if (validIndex(ogMeshComp->meshHandle, glbMeshRHandle)) {
                 newMeshHandle = glbMeshRHandle[ogMeshComp->meshHandle.index];
             }
 
@@ -211,8 +209,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             const TinyNode::Skeleton* ogSkelComp = originalNode.get<TinyNode::Skeleton>();
 
             TinyHandle newSkeleHandle;
-            if (ogSkelComp->skeleHandle.valid() && 
-                ogSkelComp->skeleHandle.index < glbSkeleRHandle.size()) {
+            if (validIndex(ogSkelComp->skeleHandle, glbSkeleRHandle)) {
                 newSkeleHandle = glbSkeleRHandle[ogSkelComp->skeleHandle.index];
             }
 

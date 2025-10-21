@@ -296,7 +296,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
 
         rPipeline->bindSets(currentCmd, &glbSet, 1);
 
-        const auto& transform = rtNode.get<TinyNode::Transform>()->global;
+        const auto& transform = rtNode.get<TinyNode::Node3D>()->global;
         for (size_t i = 0; i < submeshes.size(); ++i) {
             uint32_t indexCount = submeshes[i].indexCount;
             if (indexCount == 0) continue;

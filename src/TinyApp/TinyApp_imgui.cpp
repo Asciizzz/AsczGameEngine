@@ -440,7 +440,7 @@ void TinyApp::renderSceneNodeInspector() {
         // Transform component content - now available for all nodes including root
         {
             // Get the current transform
-            TinyNode::Transform* transformComp = mutableNode->get<TinyNode::Transform>();
+            TinyNode::Node3D* transformComp = mutableNode->get<TinyNode::Node3D>();
 
             glm::mat4 local = transformComp->local;
 

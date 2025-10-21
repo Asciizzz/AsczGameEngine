@@ -21,8 +21,7 @@ struct TinyNode {
     };
 
     TinyNode(const std::string& nodeName = "Node") : name(nodeName) {
-        // Add default Transform component
-        add<Transform>();
+        add<Node3D>();
     }
 
     // Hierarchy data - can be either local indices or runtime handles depending on scope
@@ -42,7 +41,7 @@ struct TinyNode {
     }
 
     // Transform data - both local and runtime
-    struct Transform {
+    struct Node3D {
         static constexpr Types kType = Types::Transform;
         glm::mat4 local = glm::mat4(1.0f);
         glm::mat4 global = glm::mat4(1.0f);
@@ -102,7 +101,7 @@ struct TinyNode {
 
 private:
     std::tuple<
-        Transform,
+        Node3D,
         MeshRender,
         BoneAttach,
         Skeleton

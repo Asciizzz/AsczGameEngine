@@ -3,6 +3,8 @@
 #include "TinyData/TinyNode.hpp"
 #include "TinyExt/TinyRegistry.hpp"
 
+struct TinySkelePlaceholder {};
+
 struct TinyScene {
     std::string name;
 
@@ -59,8 +61,7 @@ struct TinyScene {
         if (!compPtr) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            // Add new TinySkeletonRT to runtime registry (for the time being put TinyNode as placeholder)
-            compPtr->rtSkeleHandle = addRT<TinyNode>(TinyNode());
+            compPtr->rtSkeleHandle = addRT<TinySkelePlaceholder>(TinySkelePlaceholder());
         }
 
         // Other component-specific logic can go here
@@ -76,7 +77,7 @@ struct TinyScene {
         if (!compPtr) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            removeRT<TinyNode>(compPtr->rtSkeleHandle); // For now TinyNode as placeholder
+            removeRT<TinySkelePlaceholder>(compPtr->rtSkeleHandle);
         }
 
         node->remove<T>();
