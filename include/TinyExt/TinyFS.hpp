@@ -291,6 +291,9 @@ public:
     }
 
     // ---------- Registry data management ----------
+    
+    // No non-const access for safety
+    const TinyRegistry& registry() const { return registry_; }
 
     void* rGet(TypeHandle th) { return registry_.get(th); }
 
@@ -327,37 +330,45 @@ public:
     void rRemove(const TypeHandle& th) {
         if (!registry_.has(th)) return; // nothing to remove :/
 
-        if (safeDelete(th.typeHash)) {
-            execDelete(th); // Safe to delete immediately
-        } else {
-            rQueueDelete(th); // Queue for pending deletion
-        }
+        if (safeDelete(th.typeHash)) execRemove(th); // Safe to remove immediately
+        else                         rQueueRemove(th); // Queue for pending removal
     }
 
     // Pending deletion system for registry data
     template<typename T>
-    void rQueueDelete(const TinyHandle& handle) {
-        rQueueDelete(TypeHandle::make<T>(handle));
+    void rQueueRemove(const TinyHandle& handle) {
+        rQueueRemove(TypeHandle::make<T>(handle));
     }
 
-    void rQueueDelete(const TypeHandle& th) {
-        rPendingDeletions.push_back(th);
-    }
-
-    // Execute all pending deletions
-    void rExecPendingDeletions() {
-        for (const auto& th : rPendingDeletions) {
-            registry_.remove(th);
-        }
-        rPendingDeletions.clear();
+    void rQueueRemove(const TypeHandle& th) {
+        rPendingRemove_.push_back(th);
     }
 
     // Get pending deletions (read-only access for external systems like renderer)
-    const std::vector<TypeHandle>& rPendingDel() const {
-        return rPendingDeletions;
+    const std::vector<TypeHandle>& rPendingRemove() const {
+        return rPendingRemove_;
     }
 
-    const TinyRegistry& registry() const { return registry_; }
+    void rExecPendingRemove(uint32_t index) {
+        if (index >= rPendingRemove_.size()) return;
+        const TypeHandle& th = rPendingRemove_[index];
+        execRemove(th);
+    }
+
+    bool rPendingResolved() {
+        bool allResolved = true;
+        for (const auto& th : rPendingRemove_) {
+            if (registry_.has(th)) {
+                allResolved = false;
+                break;
+            }
+        }
+
+        // Clear only if all resolved
+        if (allResolved) rPendingRemove_.clear();
+
+        return allResolved;
+    }
 
 private:
     TinyPool<Node> fnodes_;
@@ -368,15 +379,14 @@ private:
     // Type to extension info map (using new TypeExt structure)
     UnorderedMap<size_t, TypeExt> typeHashToExt;
 
-    // Pending deletion system for registry data
-    std::vector<TypeHandle> rPendingDeletions;
+    std::vector<TypeHandle> rPendingRemove_;
 
     template<typename T> // True delete
-    void execDelete(const TinyHandle& handle) {
+    void execRemove(const TinyHandle& handle) {
         registry_.remove<T>(handle); 
     }
 
-    void execDelete(const TypeHandle& th) {
+    void execRemove(const TypeHandle& th) {
         registry_.remove(th);
     }
 
