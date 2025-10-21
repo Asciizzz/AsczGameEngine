@@ -45,29 +45,63 @@ struct TinyScene {
     // -------- Component management --------- 
 
     template<typename T>
-    void nodeAddComponent(TinyHandle nodeHandle, const T& componentData = T()) {
+    void nodeAddComp(TinyHandle nodeHandle, const T& componentData = T()) {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
-        // Resolve component data logic
+        node->add<T>(componentData);
+        T* compPtr = node->get<T>();
+        if (!compPtr) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            // If adding Skeleton component, initialize runtime data
-            // Future implementation: Add TinySkeletonRT to runtime registry
+            // Add new TinySkeletonRT to runtime registry (for the time being put TinyNode as placeholder)
+            compPtr->rtSkeleHandle = addRT<TinyNode>(TinyNode());
         }
 
-        node->add<T>(componentData);
+        // Other component-specific logic can go here
     }
 
     template<typename T>
-    void nodeRemoveComponent(TinyHandle nodeHandle) {
+    void nodeRemoveComp(TinyHandle nodeHandle) {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
+
+        // Resolve component removal logic
+
+        if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
+            TinyNode::Skeleton* skelComp = node->get<TinyNode::Skeleton>();
+            if (skelComp && skelComp->rtSkeleHandle.valid()) {
+                // Future implementation: Remove TinySkeletonRT
+                // rtRegistry.remove<TinySkeletonRT>(skelComp->rtSkeleHandle);
+            }
+        }
 
         node->remove<T>();
     }
 
-    // Runtime registry access
+    template<typename T>
+    T* nodeComp(TinyHandle nodeHandle) {
+        TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return nullptr;
+
+        return node->get<T>();
+    }
+
+    template<typename T>
+    const T* nodeComp(TinyHandle nodeHandle) const {
+        const TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return nullptr;
+
+        return node->get<T>();
+    }
+
+private: // Immutable data
+    TinyPool<TinyNode> nodes;
+    TinyHandle rootHandle_{};
+    TinyRegistry rtRegistry; // Runtime registry data for node
+    const TinyRegistry* fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
+
+    // --------- Runtime registry access ----------
 
     template<typename T>
     TypeHandle addRT(T& data) {
@@ -99,10 +133,4 @@ struct TinyScene {
         assert(th.isType<T>() && "TypeHandle does not match requested type T");
         return rtRegistry.get<T>(th);
     }
-
-private: // Immutable data
-    TinyPool<TinyNode> nodes;
-    TinyHandle rootHandle_{};
-    TinyRegistry rtRegistry; // Runtime registry data for node
-    const TinyRegistry* fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
 };

@@ -237,14 +237,9 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
     
     // Second pass: Remap all node references using the handle mapping
     for (uint32_t i = 0; i < sceneA_items.size(); ++i) {
-        if (!sceneA->nodes.isOccupied(i)) continue;
-
         TinyHandle oldHandle_A = sceneA->nodes.getHandle(i);
-        if (!oldHandle_A.valid()) continue;
-
         const TinyNode* originalNodeA = sceneA->node(oldHandle_A);
-        if (!originalNodeA) continue;
-        
+
         // Find our copied node in scene B
         auto it = handleMap.find(oldHandle_A.index);
         if (it == handleMap.end()) continue;
