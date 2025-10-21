@@ -129,13 +129,13 @@ struct TinyScene {
     template<typename T>
     T* getRT(const TinyHandle& handle) {
         if (!sceneReq.fs) return nullptr;
-        return registry().get<T>(handle);
+        return fs()->rGet<T>(handle);
     }
 
     template<typename T>
     const T* getRT(const TinyHandle& handle) const {
         if (!sceneReq.fs) return nullptr;
-        return registry().get<T>(handle);
+        return fs()->rGet<T>(handle);
     }
 
 private:
@@ -149,9 +149,6 @@ private:
     // Convenience access
     TinyFS* fs() { return sceneReq.fs; }
     const TinyFS* fs() const { return sceneReq.fs; }
-
-    TinyRegistry& registry() { return fs()->registry(); }
-    const TinyRegistry& registry() const { return fs()->registry(); }
 
     // Non-const access only for internal use
     template<typename T>
@@ -179,31 +176,31 @@ private:
     template<typename T>
     TinyHandle addRT(T& data) {
         if (!sceneReq.fs) return TinyHandle{};
-        return sceneReq.fs->rAdd<T>(std::move(data)).handle;
+        return fs()->rAdd<T>(std::move(data)).handle;
     }
 
     template<typename T>
     void removeRT(const TinyHandle& handle) {
         if (!sceneReq.fs) return;
-        sceneReq.fs->rRemove<T>(handle);
+        fs()->rRemove<T>(handle);
     }
 
     void* getRT(const TypeHandle& th) {
         if (!sceneReq.fs) return nullptr;
-        return registry().get(th);
+        return fs()->rGet(th);
     }
 
     template<typename T>
     T* getRT(const TypeHandle& th) {
         assert(th.isType<T>() && "TypeHandle does not match requested type T");
         if (!sceneReq.fs) return nullptr;
-        return registry().get<T>(th);
+        return fs()->rGet<T>(th);
     }
 
     template<typename T>
     const T* getRT(const TypeHandle& th) const {
         assert(th.isType<T>() && "TypeHandle does not match requested type T");
         if (!sceneReq.fs) return nullptr;
-        return registry().get<T>(th);
+        return fs()->rGet<T>(th);
     }
 };

@@ -49,10 +49,8 @@ public:
     void addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle = TinyHandle());
 
     // Filesystem and registry accessors
-    TinyRegistry& registryRef() { return tinyFS->registry(); }
-    const TinyRegistry& registryRef() const { return tinyFS->registry(); }
-    TinyFS& filesystem() { return *tinyFS; }
-    const TinyFS& filesystem() const { return *tinyFS; }
+    TinyFS& fs() { return *tinyFS; }
+    const TinyFS& fs() const { return *tinyFS; }
 
     const TinySceneReq& sceneReq() const { return sharedReq; }
 

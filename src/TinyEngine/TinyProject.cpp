@@ -15,13 +15,13 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS = MakeUnique<TinyFS>();
 
     // ext - safeDelete - priority - r - g - b
-    tinyFS->setTypeExt<TinyScene>     ("ascn", false, 0, 0.8f, 1.0f, 0.8f);
-    tinyFS->setTypeExt<TinyTexture>   ("atex", false, 0, 0.8f, 0.8f, 1.0f);
-    tinyFS->setTypeExt<TinyRMaterial> ("amat", true,  0, 1.0f, 0.8f, 1.0f);
-    tinyFS->setTypeExt<TinyMesh>      ("amsh", false, 0, 1.0f, 1.0f, 0.8f);
-    tinyFS->setTypeExt<TinySkeleton>  ("askl", true,  0, 1.0f, 0.6f, 0.4f);
-    tinyFS->setTypeExt<TinySkeletonRT>("rskl", false, 0, 1.0f, 0.4f, 0.2f);
-    tinyFS->setTypeExt<TinyAnimation> ("anim", false, 0, 0.8f, 1.0f, 0.6f);
+    tinyFS->setTypeExt<TinyScene>     ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
+    tinyFS->setTypeExt<TinyTexture>   ("atex", false, 0, 0.4f, 0.4f, 1.0f);
+    tinyFS->setTypeExt<TinyRMaterial> ("amat", true,  0, 1.0f, 0.4f, 1.0f);
+    tinyFS->setTypeExt<TinyMesh>      ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
+    tinyFS->setTypeExt<TinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f);
+    tinyFS->setTypeExt<TinySkeletonRT>("rskl", false, 0, 1.0f, 0.4f, 0.8f);
+    tinyFS->setTypeExt<TinyAnimation> ("anim", false, 0, 0.8f, 1.0f, 0.4f);
 
     vkCreateSceneResources();
 
@@ -228,7 +228,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
 
 void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle) {
-    TinyScene* targetScene = registryRef().get<TinyScene>(toHandle);
+    TinyScene* targetScene = fs().rGet<TinyScene>(toHandle);
     if (!targetScene) return;
 
     // Use root node if no valid parent provided
@@ -249,7 +249,7 @@ void TinyProject::vkCreateSceneResources() {
         {DescType::StorageBuffer, 1}
     }, maxSkeletons);
 
-    sharedReq.fs = &filesystem();
+    sharedReq.fs = &fs();
     sharedReq.device = deviceVK;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;

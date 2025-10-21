@@ -1,5 +1,7 @@
 #include "TinyApp/TinyApp.hpp"
 
+#include <iostream>
+
 #ifdef NDEBUG // Remember to set this to false
 const bool enableValidationLayers = true;
 #else

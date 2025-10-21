@@ -258,7 +258,7 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
     if (!activeScene) return;
 
-    const auto& registry = project->registryRef();
+    const TinyFS& fs = project->fs();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
     VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
@@ -276,7 +276,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         if (!meshRenderComp) continue; // No mesh render component
 
         TinyHandle meshHandle = meshRenderComp->meshHandle;
-        const auto& regMesh = registry.get<TinyMesh>(meshHandle);
+        const auto& regMesh = fs.rGet<TinyMesh>(meshHandle);
         if (!regMesh) continue; // No mesh found
 
         // Draw each individual submeshes
@@ -307,7 +307,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
             if (indexCount == 0) continue;
 
             TinyHandle matHandle = submeshes[i].material;
-            const TinyRMaterial* material = registry.get<TinyRMaterial>(matHandle);
+            const TinyRMaterial* material = fs.rGet<TinyRMaterial>(matHandle);
             uint32_t matIndex = material ? matHandle.index : 0;
 
             glm::uvec4 props1 = glm::uvec4(matIndex, isRigged, 0, 0);

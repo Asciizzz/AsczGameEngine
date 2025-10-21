@@ -3,6 +3,7 @@
 #include "TinyExt/TinyPool.hpp"
 
 #include <typeindex>
+#include <assert.h>
 
 struct TypeHandle {
     TinyHandle handle;
@@ -115,10 +116,20 @@ public:
         return (it != hashToPool.end()) ? it->second->get(th.handle) : nullptr;
     }
 
+    const void* get(const TypeHandle& th) const {
+        return const_cast<TinyRegistry*>(this)->get(th);
+    }
+
     template<typename T>
     T* get(const TypeHandle& th) {
         assert(th.isType<T>() && "TypeHandle does not match requested type T");
         return static_cast<T*>(get(th));
+    }
+
+    template<typename T>
+    const T* get(const TypeHandle& th) const {
+        assert(th.isType<T>() && "TypeHandle does not match requested type T");
+        return static_cast<const T*>(get(th));
     }
 
     template<typename T>

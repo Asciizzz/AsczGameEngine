@@ -2,13 +2,8 @@
 
 #include "TinyExt/TinyRegistry.hpp"
 
-#include <algorithm>
 #include <string>
-#include <vector>
-#include <iostream>
-#include <type_traits>
 #include <sstream>
-#include <cctype>
 
 class TinyFS {
 public:
@@ -196,7 +191,7 @@ public:
         return true;
     }
 
-    // ---------- Safe recursive remove ----------
+    // ---------- "Safe" recursive remove ----------
 
     bool fRemove(TinyHandle handle, bool recursive = true) {
         Node* node = fnodes_.get(handle);
@@ -215,7 +210,7 @@ public:
         return fRemove(handle, false);
     }
 
-    // ---------- Data retrieval ----------
+    // ---------- Data Inspection ----------
 
     template<typename T>
     T* fData(TinyHandle fileHandle) {
@@ -230,8 +225,21 @@ public:
         return node ? node->tHandle : TypeHandle();
     }
 
-    // Access to file system nodes (no non-const to prevent mutation)
+    template<typename T>
+    bool fIs(TinyHandle fileHandle) const {
+        const Node* node = fnodes_.get(fileHandle);
+        return node ? node->isType<T>() : false;
+    }
+
+    // ---------- Node access ----------
+
+    const Node* fNode(TinyHandle fileHandle) const {
+        return fnodes_.get(fileHandle);
+    }
+
     const TinyPool<Node>& fNodes() const { return fnodes_; }
+
+    // ---------- Type extension management ----------
 
     template<typename T>
     void setTypeExt(const std::string& ext, bool safeDelete = true, uint8_t priority = 0, float r = 1.0f, float g = 1.0f, float b = 1.0f) {
@@ -282,21 +290,44 @@ public:
         return typeExt(typeHash).safeDelete;
     }
 
-    // Retrieve registry data
-    template<typename T>
-    T* rData(TinyHandle fileHandle) {
-        Node* node = fnodes_.get(fileHandle);
-        if (!node || !node->hasData()) return nullptr;
+    // ---------- Registry data management ----------
 
-        return registry_.get<T>(node->tHandle);
+    void* rGet(TypeHandle th) {
+        return registry_.get(th);
+    }
+
+    const void* rGet(TypeHandle th) const {
+        return registry_.get(th);
     }
 
     template<typename T>
-    const T* rData(TinyHandle fileHandle) const {
-        return const_cast<TinyFS*>(this)->rData<T>(fileHandle);
+    T* rGet(TypeHandle th) {
+        return registry_.get<T>(th);
     }
 
-    // Registry access wrappers
+    template<typename T>
+    const T* rGet(TypeHandle th) const {
+        return registry_.get<T>(th);
+    }
+
+    template<typename T>
+    T* rGet(TinyHandle h) {
+        return registry_.get<T>(h);
+    }
+
+    template<typename T>
+    const T* rGet(TinyHandle h) const {
+        return registry_.get<T>(h);
+    }
+
+    template<typename T>
+    bool rHas(const TinyHandle& handle) const {
+        return registry_.has<T>(handle);
+    }
+
+    bool rHas(const TypeHandle& th) const {
+        return registry_.has(th);
+    }
 
     template<typename T>
     TypeHandle rAdd(T&& val) {
@@ -348,7 +379,6 @@ public:
     }
 
     const TinyRegistry& registry() const { return registry_; }
-    TinyRegistry& registry() { return registry_; }
 
 private:
     TinyPool<Node> fnodes_;

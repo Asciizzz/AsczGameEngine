@@ -18,10 +18,9 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
     imguiWrapper->clearWindows();
     
     // Main Editor Window - full size, no scroll bars
-    const TinyRegistry& registry = project->registryRef();
-    TinyFS& fs = project->filesystem();
+    const TinyFS& fs = project->fs();
 
-    imguiWrapper->addWindow("Editor", [this, &camera, &registry, &fs]() {
+    imguiWrapper->addWindow("Editor", [this, &camera, &fs]() {
         // Static variable to store splitter position (persists between frames)
         static float splitterPos = 0.5f; // Start with 50% for hierarchy, 50% for file explorer
         
@@ -272,6 +271,8 @@ void TinyApp::renderInspectorWindow() {
 }
 
 void TinyApp::renderSceneNodeInspector() {
+    const TinyFS& fs = project->fs();
+
     TinyScene* activeScene = getActiveScene();
     if (!activeScene) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No active scene");
@@ -569,7 +570,7 @@ void TinyApp::renderSceneNodeInspector() {
 
             // Show mesh information if valid
             if (meshComp.meshHandle.valid()) {
-                const TinyMesh* mesh = project->registryRef().get<TinyMesh>(meshComp.meshHandle);
+                const TinyMesh* mesh = fs.rGet<TinyMesh>(meshComp.meshHandle);
                 if (mesh) {
                     ImGui::SameLine();
                     ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", mesh->name.c_str());
@@ -661,8 +662,7 @@ void TinyApp::renderSceneNodeInspector() {
                 if (skeleNode && skeleNode->has<TinyNode::Skeleton>()) {
                     const TinyNode::Skeleton* skeleComp = skeleNode->get<TinyNode::Skeleton>();
                     if (skeleComp && skeleComp->skeleHandle.valid()) {
-                        const TinyRegistry& registry = project->registryRef();
-                        const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp->skeleHandle);
+                        const TinySkeleton* skeleton = fs.rGet<TinySkeleton>(skeleComp->skeleHandle);
                         if (skeleton) {
                             maxBoneIndex = static_cast<int>(skeleton->bones.size()) - 1;
                         }
@@ -743,8 +743,7 @@ void TinyApp::renderSceneNodeInspector() {
                 "Select skeleton resource for bone data");
             
             // Show skeleton information if valid
-            const TinyRegistry& registry = project->registryRef();
-            const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp.skeleHandle);
+            const TinySkeleton* skeleton = fs.rGet<TinySkeleton>(skeleComp.skeleHandle);
             TinySkeletonRT* rtSkeleton = nullptr;
             
             if (skeleton) {
@@ -998,7 +997,7 @@ void TinyApp::renderSceneNodeInspector() {
 
 
 void TinyApp::renderFileSystemInspector() {
-    TinyFS& fs = project->filesystem();
+    const TinyFS& fs = project->fs();
     
     // Get the selected file node handle from unified selection
     TinyHandle selectedFNodeHandle = getSelectedFileNode();
@@ -1008,7 +1007,7 @@ void TinyApp::renderFileSystemInspector() {
         return;
     }
     
-    const TinyFS::Node* selectedFNode = fs.fNodes().get(selectedFNodeHandle);
+    const TinyFS::Node* selectedFNode = fs.fNode(selectedFNodeHandle);
     if (!selectedFNode) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid filesystem node selection");
         clearSelection(); // Clear invalid selection
@@ -1052,7 +1051,7 @@ void TinyApp::renderFileSystemInspector() {
         
         // Apply rename on Enter or when focus is lost
         if (enterPressed || (ImGui::IsItemDeactivatedAfterEdit())) {
-            TinyFS::Node* mutableNode = const_cast<TinyFS::Node*>(fs.fNodes().get(selectedFNodeHandle));
+            TinyFS::Node* mutableNode = const_cast<TinyFS::Node*>(fs.fNode(selectedFNodeHandle));
             if (mutableNode) {
                 mutableNode->name = std::string(nameBuffer);
             }
@@ -1080,7 +1079,7 @@ void TinyApp::renderFileSystemInspector() {
             ImGui::Text("Type: %s", fileType.c_str());
 
             // Extended data
-            TinyScene* scene = fs.registry().get<TinyScene>(tHandle);
+            const TinyScene* scene = fs.rGet<TinyScene>(tHandle.handle);
             if (scene) {
                 ImGui::Text("Scene Nodes: %u", scene->nodeCount());
                 
@@ -1191,16 +1190,16 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
     // Create enhanced drag-drop target area with better styling
     std::string displayText;
     ImVec4 buttonColor, hoveredColor, activeColor;
+
+    const TinyFS& fs = project->fs();
     
     if (handle.valid()) {
         // Get the actual name based on target type
         if (strcmp(targetType, "Mesh") == 0) {
-            const TinyRegistry& registry = project->registryRef();
-            const TinyMesh* mesh = registry.get<TinyMesh>(handle);
+            const TinyMesh* mesh = fs.rGet<TinyMesh>(handle);
             displayText = mesh ? mesh->name : "Unknown Mesh";
         } else if (strcmp(targetType, "Skeleton") == 0) {
-            const TinyRegistry& registry = project->registryRef();
-            const TinySkeleton* skeleton = registry.get<TinySkeleton>(handle);
+            const TinySkeleton* skeleton = fs.rGet<TinySkeleton>(handle);
             displayText = skeleton ? skeleton->name : "Unknown Skeleton";
         } else if (strcmp(targetType, "SkeletonNode") == 0) {
             TinyScene* activeScene = getActiveScene();
@@ -1261,7 +1260,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             // Accept mesh files from file explorer
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                 TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
-                const TinyFS::Node* fileNode = project->filesystem().fNodes().get(fileNodeHandle);
+                const TinyFS::Node* fileNode = project->fs().fNode(fileNodeHandle);
                 if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyMesh>()) {
                     handle = fileNode->tHandle.handle; // Use registry handle
                     modified = true;
@@ -1271,7 +1270,7 @@ bool TinyApp::renderHandleField(const char* fieldId, TinyHandle& handle, const c
             // Accept skeleton files from file explorer
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                 TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
-                const TinyFS::Node* fileNode = project->filesystem().fNodes().get(fileNodeHandle);
+                const TinyFS::Node* fileNode = project->fs().fNode(fileNodeHandle);
                 if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinySkeleton>()) {
                     handle = fileNode->tHandle.handle; // Use registry handle
                     modified = true;
@@ -1355,6 +1354,8 @@ bool FileDialog::isModelFile(const std::filesystem::path& path) {
 }
 
 void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
+    const TinyFS& fs = project->fs();
+
     TinyScene* activeScene = getActiveScene();
     if (!activeScene) return;
     
@@ -1470,13 +1471,13 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             TinyHandle sceneFNodeHandle = *(const TinyHandle*)payload->Data;
             
             // Get the filesystem node to access its TypeHandle
-            const TinyFS::Node* sceneFile = project->filesystem().fNodes().get(sceneFNodeHandle);
+            const TinyFS::Node* sceneFile = project->fs().fNode(sceneFNodeHandle);
             if (sceneFile && sceneFile->isFile() && sceneFile->tHandle.isType<TinyScene>()) {
                 // Extract the registry handle from the TypeHandle
                 TinyHandle sceneRegistryHandle = sceneFile->tHandle.handle;
                 
                 // Verify the scene exists and instantiate it at this node
-                const TinyScene* scene = project->registryRef().get<TinyScene>(sceneRegistryHandle);
+                const TinyScene* scene = fs.rGet<TinyScene>(sceneRegistryHandle);
                 if (scene) {
                     // Place the scene at this node
                     project->addSceneInstance(sceneRegistryHandle, getActiveSceneHandle(), nodeHandle);
@@ -1492,7 +1493,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             TinyHandle fileNodeHandle = *(const TinyHandle*)payload->Data;
             
             // Get the filesystem node to check if it's a scene file
-            const TinyFS::Node* fileNode = project->filesystem().fNodes().get(fileNodeHandle);
+            const TinyFS::Node* fileNode = project->fs().fNode(fileNodeHandle);
             if (fileNode && fileNode->isFile() && fileNode->tHandle.isType<TinyScene>()) {
                 // This is a scene file - instantiate it at this node
                 TinyHandle sceneRegistryHandle = fileNode->tHandle.handle;
@@ -1503,7 +1504,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
                     ImGui::SetTooltip("Cannot drop a scene into itself!");
                 } else {
                     // Verify the scene exists and instantiate it at this node
-                    const TinyScene* scene = project->registryRef().get<TinyScene>(sceneRegistryHandle);
+                    const TinyScene* scene = fs.rGet<TinyScene>(sceneRegistryHandle);
                     if (scene) {
                         // Place the scene at this node
                         project->addSceneInstance(sceneRegistryHandle, getActiveSceneHandle(), nodeHandle);
@@ -1636,7 +1637,7 @@ void TinyApp::expandParentChain(TinyHandle nodeHandle) {
 
 void TinyApp::expandFNodeParentChain(TinyHandle fNodeHandle) {
     // Get the target file node
-    const TinyFS::Node* targetFNode = project->filesystem().fNodes().get(fNodeHandle);
+    const TinyFS::Node* targetFNode = project->fs().fNode(fNodeHandle);
     if (!targetFNode) return;
     
     // Walk up the parent chain and expand all parents
@@ -1644,7 +1645,7 @@ void TinyApp::expandFNodeParentChain(TinyHandle fNodeHandle) {
     while (currentHandle.valid()) {
         expandedFNodes.insert(currentHandle);
         
-        const TinyFS::Node* currentFNode = project->filesystem().fNodes().get(currentHandle);
+        const TinyFS::Node* currentFNode = project->fs().fNode(currentHandle);
         if (!currentFNode) break;
         
         currentHandle = currentFNode->parent;
@@ -1659,10 +1660,10 @@ void TinyApp::expandFNodeParentChain(TinyHandle fNodeHandle) {
 void TinyApp::processPendingDeletions() {
     if (pendingFNodeDeletions.empty()) return;
 
-    TinyFS& fs = project->filesystem();
-    
+    TinyFS& fs = project->fs();
+
     for (TinyHandle handle : pendingFNodeDeletions) {
-        const TinyFS::Node* node = fs.fNodes().get(handle);
+        const TinyFS::Node* node = fs.fNode(handle);
         TinyHandle parentHandle = node ? node->parent : TinyHandle();
 
         fs.fRemove(handle);
@@ -1683,8 +1684,8 @@ void TinyApp::selectFileNode(TinyHandle fileHandle) {
     }
     
     // Get the filesystem node
-    TinyFS& fs = project->filesystem();
-    const TinyFS::Node* node = fs.fNodes().get(fileHandle);
+    const TinyFS& fs = project->fs();
+    const TinyFS::Node* node = fs.fNode(fileHandle);
     if (!node) {
         // Invalid node, clear selection
         clearSelection();
@@ -1699,14 +1700,14 @@ void TinyApp::selectFileNode(TinyHandle fileHandle) {
 }
 
 void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
-    TinyFS& fs = project->filesystem();
+    TinyFS& fs = project->fs();
     
     // Use root handle if no valid handle provided
     if (!nodeHandle.valid()) {
         nodeHandle = fs.rootHandle();
     }
     
-    const TinyFS::Node* node = fs.fNodes().get(nodeHandle);
+    const TinyFS::Node* node = fs.fNode(nodeHandle);
     if (!node) return;
     
     // Create a unique ID for this node
@@ -1868,14 +1869,14 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             // Create a sorted copy of children handles - folders first, then files, both sorted by name
             std::vector<TinyHandle> sortedChildren;
             for (const TinyHandle& childHandle : node->children) {
-                const TinyFS::Node* child = fs.fNodes().get(childHandle);
+                const TinyFS::Node* child = fs.fNode(childHandle);
                 if (!child || child->hidden()) continue; // Skip invalid or hidden nodes
                 sortedChildren.push_back(childHandle);
             }
             
             std::sort(sortedChildren.begin(), sortedChildren.end(), [&fs](const TinyHandle& a, const TinyHandle& b) {
-                const TinyFS::Node* nodeA = fs.fNodes().get(a);
-                const TinyFS::Node* nodeB = fs.fNodes().get(b);
+                const TinyFS::Node* nodeA = fs.fNode(a);
+                const TinyFS::Node* nodeB = fs.fNode(b);
                 if (!nodeA || !nodeB) return false;
                 
                 TinyFS::TypeExt extA = fs.fTypeExt(a);
@@ -2167,7 +2168,7 @@ void TinyApp::loadModelFromPath(const std::string& filePath, TinyHandle targetFo
 
 bool TinyApp::setActiveScene(TinyHandle sceneHandle) {
     // Verify the handle points to a valid TinyScene in the registry
-    const TinyScene* scene = project->registryRef().get<TinyScene>(sceneHandle);
+    const TinyScene* scene = project->fs().rGet<TinyScene>(sceneHandle);
     if (!scene) {
         return false; // Invalid handle or not a scene
     }
