@@ -30,11 +30,9 @@ public:
 
     VkDescriptorSetLayout getGlbDescSetLayout() const { return tinyGlobal->getDescLayout(); }
     VkDescriptorSet getGlbDescSet(uint32_t idx) const { return tinyGlobal->getDescSet(idx); }
-
+    
     VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
-    VkDescriptorSet getSkinDescSet(uint32_t idx) const { return skinDescSets[idx].get(); }
-    void updateSkin(const std::vector<glm::mat4>& skinData, uint32_t frameIndex);
-
+    
     // Global UBO update
 
     void updateGlobal(uint32_t frameIndex) {
@@ -55,6 +53,8 @@ public:
     const TinyRegistry& registryRef() const { return tinyFS->registry(); }
     TinyFS& filesystem() { return *tinyFS; }
     const TinyFS& filesystem() const { return *tinyFS; }
+
+    const TinySceneReq& sceneReq() const { return sharedReq; }
 
     const TinyVK::Device* vkDevice() const { return deviceVK; }
 
@@ -79,9 +79,7 @@ private:
 
     TinyVK::DescLayout skinDescLayout;
     TinyVK::DescPool skinDescPool;
-    // One per frame in flight
-    std::vector<TinyVK::DescSet> skinDescSets; 
-    std::vector<TinyVK::DataBuffer> skinBuffers;
 
-    void vkCreateSkinResource();
+    TinySceneReq sharedReq;
+    void vkCreateSceneResources();
 };

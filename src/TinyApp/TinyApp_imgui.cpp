@@ -1613,11 +1613,9 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             }
 
             if (ImGui::MenuItem("Add Scene")) {
-                TinyScene newScene;
-                newScene.name = "New Scene";
+                TinyScene newScene("New Scene");
                 newScene.addRoot("Root");
-                newScene.setFsRegistry(&project->registryRef());
-                newScene.setVkDevice(project->vkDevice());
+                newScene.setSceneReq(project->sceneReq());
 
                 TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", std::move(&newScene));
                 selectFileNode(fileHandle);

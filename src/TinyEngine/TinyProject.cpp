@@ -21,14 +21,13 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS->setTypeExt<TinySkeleton>("askl");
     tinyFS->setTypeExt<TinyAnimation>("anim");
 
-    vkCreateSkinResource();
+    vkCreateSceneResources();
 
     // Create Main Scene (the active scene with a single root node)
     TinyScene mainScene;
     mainScene.name = "Main Scene";
     mainScene.addRoot("Root");
-    mainScene.setFsRegistry(&registryRef());
-    mainScene.setVkDevice(deviceVK);
+    mainScene.setSceneReq(sceneReq());
 
     // Create "Main Scene" as a non-deletable file in root directory
     TinyFS::Node::CFG sceneConfig;
@@ -135,8 +134,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
     // Create scene with nodes - preserve hierarchy but remap resource references
     TinyScene scene(model.name);
-    scene.setFsRegistry(&registryRef());
-    scene.setVkDevice(deviceVK);
+    scene.setSceneReq(sceneReq());
 
     // First pass: Insert empty nodes and store their handles
     std::vector<TinyHandle> nodeHandles;
@@ -175,7 +173,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
         // Add component with scene API to ensure proper handling
-        if (originalNode.has<TinyNode::Node3D>()) {
+        if (originalNode.has<TinyNode::Node3D>()) { // Should have, otherwise wtf are you doing
             const TinyNode::Node3D* ogTransform = originalNode.get<TinyNode::Node3D>();
             TinyNode::Node3D newTransform = *ogTransform;
 
@@ -191,8 +189,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             }
 
             TinyHandle newSkeleNodeHandle;
-            if (ogMeshComp->skeleNodeHandle.valid() && 
-                ogMeshComp->skeleNodeHandle.index < nodeHandles.size()) {
+            if (validIndex(ogMeshComp->skeleNodeHandle, nodeHandles)) {
                 newSkeleNodeHandle = nodeHandles[ogMeshComp->skeleNodeHandle.index];
             }
 
@@ -242,20 +239,7 @@ void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, T
 }
 
 
-
-void TinyProject::updateSkin(const std::vector<glm::mat4>& skinData, uint32_t frameIndex) {
-    if (frameIndex >= skinBuffers.size()) return; // Invalid frame index
-
-    // Copy skin data to the appropriate buffer
-    skinBuffers[frameIndex].copyData(skinData.data(), sizeof(glm::mat4) * skinData.size());
-}
-
-
-
-void TinyProject::vkCreateSkinResource() {
-    VkDeviceSize bufferSize = sizeof(glm::mat4) * maxSkinMatrices;
-    std::vector<glm::mat4> singleBone = { glm::mat4(1.0f) };
-
+void TinyProject::vkCreateSceneResources() {
     skinDescLayout.create(*deviceVK, {
         {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr}
     });
@@ -264,37 +248,8 @@ void TinyProject::vkCreateSkinResource() {
         {DescType::StorageBuffer, 1}
     }, 2);
 
-    skinDescSets.clear();
-    skinBuffers.clear();
-
-    for (size_t i = 0; i < 2; ++i) { // Assuming 2 frames in flight
-        // Create buffer
-        DataBuffer skinBuffer;
-        skinBuffer
-            .setDataSize(bufferSize)
-            .setUsageFlags(BufferUsage::Storage)
-            .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-            .createBuffer(deviceVK)
-            .mapAndCopy(singleBone.data());
-
-        skinBuffers.push_back(std::move(skinBuffer));
-
-        // Create descriptor set
-        DescSet descSet;
-        descSet.allocate(*deviceVK, skinDescPool.get(), skinDescLayout.get());
-
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = skinBuffers.back(); // Avoid dangling reference
-        bufferInfo.offset = 0;
-        bufferInfo.range  = bufferSize;
-
-        DescWrite()
-            .setDstSet(descSet)
-            .setType(DescType::StorageBuffer)
-            .setDescCount(1)
-            .setBufferInfo({ bufferInfo })
-            .updateDescSets(deviceVK->device);
-
-        skinDescSets.push_back(std::move(descSet));
-    }
+    sharedReq.fsRegistry = &registryRef();
+    sharedReq.device = deviceVK;
+    sharedReq.skinDescPool = skinDescPool;
+    sharedReq.skinDescLayout = skinDescLayout;
 }

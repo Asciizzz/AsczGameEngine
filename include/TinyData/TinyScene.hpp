@@ -5,14 +5,25 @@
 #include "TinyData/TinyNode.hpp"
 #include "TinyData/TinySceneRT.hpp"
 
-struct TinySkelePlaceholder {};
+// TinyScene requirements
+struct TinySceneReq {
+    const TinyRegistry*   fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
+    const TinyVK::Device* device     = nullptr;   // For GPU resource creation
+
+    VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
+    VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
+
+    bool valid() const {
+        return  fsRegistry != nullptr && device != nullptr &&
+                skinDescPool   != VK_NULL_HANDLE &&
+                skinDescLayout != VK_NULL_HANDLE;
+    }
+};
 
 struct TinyScene {
     std::string name;
 
     TinyScene(const std::string& sceneName = "New Scene") : name(sceneName) {}
-    void setFsRegistry(const TinyRegistry* registry) { fsRegistry = registry; }
-    void setVkDevice(const TinyVK::Device* dev) { device = dev; }
 
     TinyScene(const TinyScene&) = delete;
     TinyScene& operator=(const TinyScene&) = delete;
@@ -20,11 +31,16 @@ struct TinyScene {
     TinyScene(TinyScene&&) = default;
     TinyScene& operator=(TinyScene&&) = default;
 
-    // --------- Root management ---------
+    // --------- Core management ---------
 
     TinyHandle addRoot(const std::string& nodeName = "Root");
     void setRoot(TinyHandle handle) { rootHandle_ = handle; }
     TinyHandle rootHandle() const { return rootHandle_; }
+
+    void setSceneReq(const TinySceneReq& req) {
+        if (!req.valid()) throw std::invalid_argument("Invalid TinySceneReq provided to TinyScene");
+        sceneReq = req;
+    }
 
     // --------- Node management ---------
 
@@ -73,6 +89,8 @@ struct TinyScene {
 
     template<typename T>
     void nodeAddComp(TinyHandle nodeHandle, const T& componentData = T()) {
+        const TinyRegistry* fsRegistry = sceneReq.fsRegistry;
+
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
@@ -81,7 +99,17 @@ struct TinyScene {
         if (!compPtr) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            compPtr->rtSkeleHandle = addRT<TinySkelePlaceholder>(TinySkelePlaceholder());
+            // Create a new runtime skeleton
+            const TinySkeleton* fsSkele = fsRegistry->get<TinySkeleton>(compPtr->skeleHandle);
+            if (fsSkele) {
+                TinySkeletonRT rtSkele;
+                rtSkele.init(compPtr->skeleHandle, *fsSkele);
+                rtSkele.vkCreate(sceneReq.device, sceneReq.skinDescPool, sceneReq.skinDescLayout);
+
+                compPtr->rtSkeleHandle = addRT<TinySkeletonRT>(std::move(rtSkele));
+            } else {
+                compPtr->rtSkeleHandle = TinyHandle(); // Invalid handle
+            }
         }
 
         // Other component-specific logic can go here
@@ -89,6 +117,8 @@ struct TinyScene {
 
     template<typename T>
     void nodeRemoveComp(TinyHandle nodeHandle) {
+        const TinyRegistry* fsRegistry = sceneReq.fsRegistry;
+
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
@@ -97,23 +127,20 @@ struct TinyScene {
         if (!compPtr) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            removeRT<TinySkelePlaceholder>(compPtr->rtSkeleHandle);
+            removeRT<TinySkeletonRT>(compPtr->rtSkeleHandle);
         }
 
         node->remove<T>();
     }
 
-    bool ready() const {
-        return device != nullptr && fsRegistry != nullptr;
-    }
+    bool valid() const { return sceneReq.valid(); }
 
 private:
     TinyPool<TinyNode> nodes;
     TinyHandle rootHandle_{};
 
-    TinyRegistry rtRegistry;                  // Runtime registry data for node
-    const TinyRegistry* fsRegistry = nullptr; // Pointer to filesystem registry for resource lookups
-    const TinyVK::Device* device = nullptr;   // For GPU resource creation
+    TinyRegistry rtRegistry; // Runtime registry data for node
+    TinySceneReq sceneReq;   // Scene requirements
 
     // --------- Runtime registry access ----------
 
