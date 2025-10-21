@@ -63,7 +63,7 @@ public:
     };
 
     struct TypeExt {
-        std::string ext;
+        std::string ext;  // Meta extension
         uint8_t priority;
         float color[3];
 
