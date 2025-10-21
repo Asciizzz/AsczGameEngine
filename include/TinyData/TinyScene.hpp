@@ -25,9 +25,8 @@ struct TinyScene {
 
     // --------- Node management ---------
 
+    // No add node by TinyNode because of component logic
     TinyHandle addNode(const std::string& nodeName = "New Node", TinyHandle parentHandle = TinyHandle());
-    TinyHandle addNode(const TinyNode& nodeData, TinyHandle parentHandle = TinyHandle());
-    TinyHandle addNodeRaw(const TinyNode& nodeData);
 
     bool removeNode(TinyHandle nodeHandle, bool recursive = true);
     bool flattenNode(TinyHandle nodeHandle);

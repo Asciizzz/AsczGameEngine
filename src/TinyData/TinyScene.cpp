@@ -17,38 +17,6 @@ TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHand
     return addNode(newNode, parentHandle);
 }
 
-TinyHandle TinyScene::addNode(const TinyNode& nodeData, TinyHandle parentHandle) {
-    if (!parentHandle.valid()) parentHandle = rootHandle();
-
-    TinyNode* parentNode = nodes.get(parentHandle);
-    if (!parentNode) return TinyHandle(); // Invalid parent handle
-
-    TinyNode newNode = nodeData;
-    newNode.add<TinyNode::Node3D>();
-    newNode.setParent(parentHandle);
-
-// Resolve specific logic
-
-    // If node has Skeleton component, create TinySkeletonRT in runtime registry
-    if (newNode.has<TinyNode::Skeleton>()) {
-        // Future implementation: Add TinySkeletonRT to runtime registry
-    }
-
-
-    // Add the node to the pool
-    TinyHandle newNodeHandle = nodes.add(std::move(newNode));
-
-    // Re-get parent pointer after pool reallocation because of memory and stuff
-    parentNode = nodes.get(parentHandle);
-    parentNode->addChild(newNodeHandle);
-
-    return newNodeHandle;
-}
-
-TinyHandle TinyScene::addNodeRaw(const TinyNode& nodeData) {
-    return nodes.add(nodeData);
-}
-
 bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
     TinyNode* nodeToDelete = nodes.get(nodeHandle);
     if (!nodeToDelete || nodeHandle == rootHandle()) return false;
