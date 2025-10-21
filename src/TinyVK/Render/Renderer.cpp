@@ -431,10 +431,10 @@ void Renderer::processPendingResourceDeletions(TinyProject* project) {
     if (!allFences.empty()) {
         // Wait for all frames to complete with a reasonable timeout (1 second)
         VkResult result = vkWaitForFences(deviceVK->device, 
-                                         static_cast<uint32_t>(allFences.size()), 
-                                         allFences.data(), 
-                                         VK_TRUE, 
-                                         1000000000); // 1 second timeout in nanoseconds
+                                        static_cast<uint32_t>(allFences.size()), 
+                                        allFences.data(), 
+                                        VK_TRUE, 
+                                        1000000000); // 1 second timeout in nanoseconds
 
         if (result == VK_TIMEOUT) {
             // Log warning but continue - GPU might be hung, but we can't wait forever
@@ -445,25 +445,12 @@ void Renderer::processPendingResourceDeletions(TinyProject* project) {
         }
     }
     
-    // Now it's safe to delete the resources
-    // Process each pending removal
+    // Safe to delete resources now
     for (size_t i = 0; i < pendingRemoval.size(); ++i) {
         const TypeHandle& th = pendingRemoval[i];
 
-        // Every component has their own destructor, no need for explicit calls here
-        // Hopefully?
-
-        std::string type;
-        if (th.isType<TinyRMaterial>()) { type = "TinyRMaterial"; }
-        else if (th.isType<TinyMesh>()) { type = "TinyMesh"; }
-        else if (th.isType<TinyTexture>()) { type = "TinyTexture"; }
-        else if (th.isType<TinySkeletonRT>()) { type = "TinySkeletonRT"; }
-        else if (th.isType<TinySkeleton>()) { type = "TinySkeleton"; }
-        else if (th.isType<TinyScene>()) { type = "TinyScene"; }
-        else { type = "UnknownType"; }
-
-        printf("Info: Deleting resource of type: %s\n", type.c_str());
-
+        // Every component has their own destructor
+        // no need for explicit calls
         fs.rExecPendingRemove(i);
     }
     
