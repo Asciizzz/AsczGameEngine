@@ -269,6 +269,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
     const auto& sceneNodes = activeScene->nodeView();
     for (uint32_t i = 0; i < sceneNodes.size(); ++i) {
         const TinyNode& rtNode = sceneNodes[i];
+        TinyHandle nodeHandle = activeScene->nodeHandle(i);
 
         // Get mesh render component directly from runtime node
         const auto* meshRenderComp = rtNode.get<TinyNode::MeshRender>();
@@ -294,7 +295,11 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 
-        rPipeline->bindSets(currentCmd, &glbSet, 1);
+        // Retrieve skeleton descriptor set if rigged
+        TinyHandle skeleNodeHandle = meshRenderComp->skeleNodeHandle;
+        VkDescriptorSet skinSet = activeScene->getNodeSkeletonDescSet(skeleNodeHandle);
+        VkDescriptorSet sets[2] = { glbSet, skinSet };
+        rPipeline->bindSets(currentCmd, sets, 2);
 
         const auto& transform = rtNode.get<TinyNode::Node3D>()->global;
         for (size_t i = 0; i < submeshes.size(); ++i) {
@@ -305,7 +310,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
             const TinyRMaterial* material = registry.get<TinyRMaterial>(matHandle);
             uint32_t matIndex = material ? matHandle.index : 0;
 
-            glm::uvec4 props1 = glm::uvec4(matIndex, 0, 0, 0);
+            glm::uvec4 props1 = glm::uvec4(matIndex, isRigged, 0, 0);
 
             // Offset 0: global transform
             // Offset 64: other properties (1)

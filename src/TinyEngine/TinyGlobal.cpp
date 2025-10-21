@@ -36,7 +36,7 @@ void TinyGlobal::createDescResources(const TinyVK::Device* deviceVK) {
         descSet.allocate(device, descPool, descLayout);
 
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = dataBuffer[i].get();
+        bufferInfo.buffer = dataBuffer[i];
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(TinyGlobal::UBO);
 

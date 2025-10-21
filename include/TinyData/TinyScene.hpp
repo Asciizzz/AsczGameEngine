@@ -128,6 +128,18 @@ struct TinyScene {
 
     VkDescriptorSet getNodeSkeletonDescSet(TinyHandle nodeHandle) const;
 
+    // --------- Runtime registry access (public) ---------
+
+    template<typename T>
+    T* getRT(const TinyHandle& handle) {
+        return rtRegistry.get<T>(handle);
+    }
+
+    template<typename T>
+    const T* getRT(const TinyHandle& handle) const {
+        return rtRegistry.get<T>(handle);
+    }
+
 private:
     TinyPool<TinyNode> nodes;
     TinyHandle rootHandle_{};
@@ -149,7 +161,7 @@ private:
     TinyHandle nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skeletonHandle);
     void nodeRemoveCompSkeleton(TinyHandle nodeHandle);
 
-    // ---------- Runtime registry access ----------
+    // ---------- Runtime registry access (private) ----------
 
     // Access node by index, only for internal use
     TinyNode* fromIndex(uint32_t index) {
@@ -168,16 +180,6 @@ private:
     template<typename T>
     void removeRT(const TinyHandle& handle) {
         rtRegistry.remove<T>(handle);
-    }
-
-    template<typename T>
-    T* getRT(const TinyHandle& handle) {
-        return rtRegistry.get<T>(handle);
-    }
-
-    template<typename T>
-    const T* getRT(const TinyHandle& handle) const {
-        return rtRegistry.get<T>(handle);
     }
 
     void* getRT(const TypeHandle& th) {

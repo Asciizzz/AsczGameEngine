@@ -743,16 +743,19 @@ void TinyApp::renderSceneNodeInspector() {
                 "Select skeleton resource for bone data");
             
             // Show skeleton information if valid
-            if (skeleComp.skeleHandle.valid()) {
-                const TinyRegistry& registry = project->registryRef();
-                const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp.skeleHandle);
-                if (skeleton) {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
-                } else {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
-                }
+            const TinyRegistry& registry = project->registryRef();
+            const TinySkeleton* skeleton = registry.get<TinySkeleton>(skeleComp.skeleHandle);
+            TinySkeletonRT* rtSkeleton = nullptr;
+            
+            if (skeleton) {
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
+                
+                // Get runtime skeleton data for animation
+                rtSkeleton = activeScene->getRT<TinySkeletonRT>(skeleComp.rtSkeleHandle);
+            } else if (skeleComp.skeleHandle.valid()) {
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
             }
             
             ImGui::Spacing();
@@ -762,8 +765,10 @@ void TinyApp::renderSceneNodeInspector() {
             ImGui::Text("Status:");
             ImGui::SameLine();
             
-            if (skeleComp.skeleHandle.valid()) {
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Skeleton loaded and ready");
+            if (skeleton && rtSkeleton) {
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Skeleton loaded and ready for animation");
+            } else if (skeleton) {
+                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.5f, 1.0f), "Skeleton loaded but no runtime data");
             } else {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing skeleton resource");
             }
@@ -774,6 +779,197 @@ void TinyApp::renderSceneNodeInspector() {
                 printf("Skeleton handle changed from %u to %u, updating component...\n", 
                        originalSkeleHandle.index, skeleComp.skeleHandle.index);
                 activeScene->nodeAddComp<TinyNode::Skeleton>(selectedSceneNodeHandle, skeleComp);
+            }
+            
+            // ===== BONE HIERARCHY EDITOR =====
+            if (skeleton && rtSkeleton && !skeleton->bones.empty()) {
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Text("Bone Animation Editor");
+                
+                // Global controls
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.7f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.5f, 0.1f, 1.0f));
+                
+                if (ImGui::Button("Refresh All to Bind Pose", ImVec2(-1, 0))) {
+                    rtSkeleton->refreshAll();
+                    printf("All bones refreshed to bind pose\n");
+                }
+                ImGui::PopStyleColor(3);
+                
+                ImGui::Spacing();
+                
+                // Static variables for bone selection
+                static int selectedBoneIndex = -1;
+                static TinyHandle lastSkeletonHandle;
+                
+                // Reset selection if skeleton changed
+                if (skeleComp.skeleHandle != lastSkeletonHandle) {
+                    selectedBoneIndex = -1;
+                    lastSkeletonHandle = skeleComp.skeleHandle;
+                }
+                
+                // Bone hierarchy tree (similar to scene explorer)
+                ImGui::Text("Bone Hierarchy:");
+                ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f);
+                ImGui::BeginChild("BoneHierarchy", ImVec2(0, 150), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+                
+                // Helper function to render bone tree recursively
+                std::function<void(int, int)> renderBoneTree = [&](int boneIndex, int depth) {
+                    if (boneIndex < 0 || boneIndex >= static_cast<int>(skeleton->bones.size())) return;
+                    
+                    const TinyBone& bone = skeleton->bones[boneIndex];
+                    
+                    ImGui::PushID(boneIndex);
+                    
+                    // Check if this bone has children
+                    bool hasChildren = !bone.children.empty();
+                    bool isSelected = (selectedBoneIndex == boneIndex);
+                    
+                    // Create tree node flags
+                    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+                    if (!hasChildren) {
+                        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+                    }
+                    if (isSelected) {
+                        flags |= ImGuiTreeNodeFlags_Selected;
+                    }
+                    
+                    // Styling for bone items
+                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.3f, 0.3f, 0.6f));
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.5f, 0.3f, 0.3f, 0.8f));
+                    
+                    // Create label with bone index
+                    std::string boneLabel = std::to_string(boneIndex) + ": " + bone.name;
+                    bool nodeOpen = ImGui::TreeNodeEx(boneLabel.c_str(), flags);
+                    
+                    // Handle selection
+                    if (ImGui::IsItemClicked()) {
+                        selectedBoneIndex = boneIndex;
+                    }
+                    
+                    // Show bone tooltip with details
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Bone Index: %d", boneIndex);
+                        ImGui::Text("Name: %s", bone.name.c_str());
+                        ImGui::Text("Parent: %d", bone.parent);
+                        ImGui::Text("Children: %zu", bone.children.size());
+                        ImGui::EndTooltip();
+                    }
+                    
+                    // If node is open and has children, render children
+                    if (nodeOpen && hasChildren) {
+                        for (int childIndex : bone.children) {
+                            renderBoneTree(childIndex, depth + 1);
+                        }
+                        ImGui::TreePop();
+                    }
+                    
+                    ImGui::PopStyleColor(2);
+                    ImGui::PopID();
+                };
+                
+                // Start with root bones (bones with parent = -1)
+                for (int i = 0; i < static_cast<int>(skeleton->bones.size()); ++i) {
+                    if (skeleton->bones[i].parent == -1) {
+                        renderBoneTree(i, 0);
+                    }
+                }
+                
+                ImGui::EndChild();
+                ImGui::PopStyleVar();
+                
+                // ===== BONE TRANSFORM EDITOR =====
+                if (selectedBoneIndex >= 0 && selectedBoneIndex < static_cast<int>(skeleton->bones.size())) {
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    
+                    const TinyBone& selectedBone = skeleton->bones[selectedBoneIndex];
+                    ImGui::Text("Transform Editor - Bone %d: %s", selectedBoneIndex, selectedBone.name.c_str());
+                    
+                    // Refresh button for selected bone
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                    
+                    if (ImGui::Button(("Refresh Bone " + std::to_string(selectedBoneIndex) + " to Bind Pose").c_str(), ImVec2(-1, 0))) {
+                        rtSkeleton->refresh(selectedBoneIndex, true);
+                        printf("Bone %d refreshed to bind pose\n", selectedBoneIndex);
+                    }
+                    ImGui::PopStyleColor(3);
+                    
+                    ImGui::Spacing();
+                    
+                    // Get current local pose matrix
+                    glm::mat4 localPose = rtSkeleton->localPose[selectedBoneIndex];
+                    
+                    // Decompose matrix into translation, rotation, scale
+                    glm::vec3 translation, rotation, scale;
+                    glm::quat rotationQuat;
+                    glm::vec3 skew;
+                    glm::vec4 perspective;
+                    
+                    bool validDecomposition = glm::decompose(localPose, scale, rotationQuat, translation, skew, perspective);
+                    
+                    if (validDecomposition) {
+                        // Convert quaternion to Euler angles (in degrees)
+                        rotation = glm::degrees(glm::eulerAngles(rotationQuat));
+                        
+                        // Normalize angles to [-180, 180] range
+                        auto normalizeAngle = [](float angle) {
+                            while (angle > 180.0f) angle -= 360.0f;
+                            while (angle < -180.0f) angle += 360.0f;
+                            return angle;
+                        };
+                        
+                        rotation.x = normalizeAngle(rotation.x);
+                        rotation.y = normalizeAngle(rotation.y);
+                        rotation.z = normalizeAngle(rotation.z);
+                        
+                        // Store original values to detect changes
+                        glm::vec3 originalTranslation = translation;
+                        glm::vec3 originalRotation = rotation;
+                        glm::vec3 originalScale = scale;
+                        
+                        // Transform controls
+                        ImGui::Text("Position");
+                        ImGui::DragFloat3("##BonePosition", &translation.x, 0.01f, -100.0f, 100.0f, "%.3f");
+                        
+                        ImGui::Text("Rotation (degrees)");
+                        ImGui::DragFloat3("##BoneRotation", &rotation.x, 0.5f, -180.0f, 180.0f, "%.1f°");
+                        
+                        ImGui::Text("Scale");
+                        ImGui::DragFloat3("##BoneScale", &scale.x, 0.01f, 0.001f, 10.0f, "%.3f");
+                        
+                        // Apply changes if any values changed
+                        if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
+                            // Rebuild transformation matrix
+                            glm::quat newRotQuat = glm::quat(glm::radians(rotation));
+                            
+                            glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), translation);
+                            glm::mat4 rotateMat = glm::mat4_cast(newRotQuat);
+                            glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
+                            
+                            // Update the local pose and recalculate
+                            rtSkeleton->localPose[selectedBoneIndex] = translateMat * rotateMat * scaleMat;
+                            rtSkeleton->update();
+                        }
+                        
+                    } else {
+                        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid transformation matrix!");
+                        
+                        if (ImGui::Button("Reset to Identity")) {
+                            rtSkeleton->localPose[selectedBoneIndex] = glm::mat4(1.0f);
+                            rtSkeleton->update();
+                        }
+                    }
+                    
+                } else {
+                    ImGui::Spacing();
+                    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Select a bone to edit its transformation");
+                }
             }
             
             ImGui::Spacing();

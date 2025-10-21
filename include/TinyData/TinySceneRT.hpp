@@ -25,13 +25,15 @@ struct TinySkeletonRT {
     std::vector<glm::mat4> localPose;
     std::vector<glm::mat4> finalPose;
     std::vector<glm::mat4> skinData;
+    void refresh(uint32_t boneIndex, bool reupdate = true);
+    void refreshAll();
 
     // Vulkan resources for skinning
     TinyVK::DescSet    descSet;
     TinyVK::DataBuffer skinBuffer;
     void vkCreate(const TinyVK::Device* deviceVK, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout);
 
-    void recursiveUpdate(uint32_t boneIndex, const glm::mat4& parentTransform);
+    void updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform);
 
     // Global update
     void update();
