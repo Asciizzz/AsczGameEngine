@@ -105,9 +105,6 @@ private:
     std::unordered_set<TinyHandle> expandedNodes;
     std::unordered_set<TinyHandle> expandedFNodes;
     
-    // Pending deletion system to avoid mid-frame Vulkan resource deletion
-    std::vector<TinyHandle> pendingFNodeDeletions;
-    
     // File dialog state
     FileDialog fileDialog;
     
@@ -148,11 +145,6 @@ private:
     void collapseFNode(TinyHandle fNodeHandle) { expandedFNodes.erase(fNodeHandle); }
     bool isFNodeExpanded(TinyHandle fNodeHandle) const { return expandedFNodes.count(fNodeHandle) > 0; }
     void expandFNodeParentChain(TinyHandle fNodeHandle); // Expand all parents up to root
-    
-    // Pending deletion system for safe resource cleanup
-    void queueFNodeForDeletion(TinyHandle handle) { pendingFNodeDeletions.push_back(handle); }
-    void processPendingDeletions(); // Call after renderer endFrame()
-    bool hasPendingDeletions() const { return !pendingFNodeDeletions.empty(); }
 
     // Unified selection system methods
     void selectSceneNode(TinyHandle nodeHandle) { selectedHandle = SelectHandle(nodeHandle, SelectHandle::Type::Scene); }

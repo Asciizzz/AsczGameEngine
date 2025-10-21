@@ -1655,25 +1655,6 @@ void TinyApp::expandFNodeParentChain(TinyHandle fNodeHandle) {
     }
 }
 
-void TinyApp::processPendingDeletions() {
-    if (pendingFNodeDeletions.empty()) return;
-
-    TinyFS& fs = project->fs();
-
-    for (TinyHandle handle : pendingFNodeDeletions) {
-        const TinyFS::Node* node = fs.fNode(handle);
-        TinyHandle parentHandle = node ? node->parent : TinyHandle();
-
-        fs.fRemove(handle);
-
-        if (selectedHandle.handle == handle) {
-            selectFileNode(parentHandle);
-        }
-    }
-
-    pendingFNodeDeletions.clear();
-}
-
 void TinyApp::selectFileNode(TinyHandle fileHandle) {
     // Check if the file handle is valid
     if (!fileHandle.valid()) {
@@ -1843,7 +1824,11 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             ImGui::Separator();
 
             if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
-                if (node->deletable()) queueFNodeForDeletion(nodeHandle);
+                TinyHandle parentHandle = node->parent;
+                fs.fRemove(nodeHandle);
+                if (selectedHandle.handle == nodeHandle) {
+                    selectFileNode(parentHandle);
+                }
             }
 
             // Folder operations don't affect file, no need for pending deletion
@@ -2002,7 +1987,11 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
             
             // Common delete option for all files
             if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
-                if (node->deletable()) queueFNodeForDeletion(nodeHandle);
+                TinyHandle parentHandle = node->parent;
+                fs.fRemove(nodeHandle);
+                if (selectedHandle.handle == nodeHandle) {
+                    selectFileNode(parentHandle);
+                }
             }
             
             ImGui::EndPopup();

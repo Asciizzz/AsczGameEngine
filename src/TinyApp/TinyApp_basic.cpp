@@ -286,10 +286,6 @@ void TinyApp::mainLoop() {
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex, imguiWrapper.get());
-
-            // Process any pending deletions after the frame is complete
-            // to avoid deleting resources in used by Vulkan
-            processPendingDeletions();
         }
 
         // Clean window title - FPS info now in ImGui
