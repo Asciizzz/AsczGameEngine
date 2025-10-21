@@ -40,6 +40,8 @@ struct TinyScene {
     const TinyNode* node(TinyHandle nodeHandle) const;
     uint32_t nodeCount() const;
     const std::vector<TinyNode>& nodeView() const;
+    bool nodeValid(TinyHandle nodeHandle) const;
+    bool nodeOccupied(uint32_t index) const;
 
     // -------- Component management --------- 
 

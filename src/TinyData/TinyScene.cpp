@@ -19,10 +19,8 @@ void TinyScene::updateGlbTransform(TinyHandle nodeHandle, const glm::mat4& paren
 
 TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     // Create a new root node
-    TinyNode rootNode;
-    rootNode.name = nodeName;
-
-    rootHandle_ = nodes.add(std::move(rootNode));
+    TinyNode rootNode(nodeName);
+    setRoot(nodes.add(std::move(rootNode)));
 
     return rootHandle();
 }
@@ -79,7 +77,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
     std::unordered_map<uint32_t, TinyHandle> handleMap; // A_index -> B_handle
     
     // First pass: Insert all valid nodes from scene A into scene B and build the mapping
-    const auto& sceneA_items = sceneA->nodes.view();
+    const auto& sceneA_items = sceneA->nodeView();
     for (uint32_t i = 0; i < sceneA_items.size(); ++i) {
         if (!sceneA->nodes.isOccupied(i)) continue;
 
@@ -169,9 +167,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
 
             if (skeletonComp && originalSkeleComp) {
                 skeletonComp->skeleHandle = originalSkeleComp->skeleHandle;
-                skeletonComp->localPose = originalSkeleComp->localPose;
-                skeletonComp->finalPose = originalSkeleComp->finalPose;
-                skeletonComp->skinData = originalSkeleComp->skinData;
+                // Runtime logic here
             }
         }
     }
@@ -324,4 +320,12 @@ uint32_t TinyScene::nodeCount() const {
 
 const std::vector<TinyNode>& TinyScene::nodeView() const {
     return nodes.view();
+}
+
+bool TinyScene::nodeValid(TinyHandle nodeHandle) const {
+    return nodes.isValid(nodeHandle);
+}
+
+bool TinyScene::nodeOccupied(uint32_t index) const {
+    return nodes.isOccupied(index);
 }
