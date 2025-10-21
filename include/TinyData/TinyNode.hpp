@@ -20,9 +20,7 @@ struct TinyNode {
         BoneAttach    = 1 << 3
     };
 
-    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {
-        add<Node3D>();
-    }
+    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
 
     // Hierarchy data - can be either local indices or runtime handles depending on scope
     TinyHandle parentHandle;
