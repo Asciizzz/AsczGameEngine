@@ -208,6 +208,15 @@ void TinyApp::mainLoop() {
 
         const Uint8* k_state = SDL_GetKeyboardState(nullptr);
 
+        static float escHoldTime = 0.0f;
+        // Hold esc for 1 second to quit
+        if (k_state[SDL_SCANCODE_ESCAPE]) {
+            escHoldTime += dTime;
+            if (escHoldTime >= 1.0f) winManager.shouldCloseFlag = true;
+        } else {
+            escHoldTime = 0.0f;
+        }
+
         // Toggle fullscreen with F11 key
         static bool fullscreenPressed = false;
         static SDL_Scancode fullscreenKey = SDL_SCANCODE_F11;
@@ -266,13 +275,8 @@ void TinyApp::mainLoop() {
 
 // =================================
 
-        printf("Progress: ");
-
         imguiWrapper->newFrame();
-        printf("Imgui - ");
-
         project->updateGlobal(rendererRef.getCurrentFrame());
-        printf("Glb - ");
 
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
@@ -288,7 +292,6 @@ void TinyApp::mainLoop() {
                 PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic"),
                 getSelectedSceneNode()
             );
-            printf("Draw - ");
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex, imguiWrapper.get());
@@ -297,8 +300,6 @@ void TinyApp::mainLoop() {
             // This ensures GPU is not using the resources before deletion
             // rendererRef.processPendingResourceDeletions(project.get());
         }
-
-        printf("End\n");
 
         // Clean window title - FPS info now in ImGui
         static bool titleSet = false;

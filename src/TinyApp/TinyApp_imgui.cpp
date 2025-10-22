@@ -1352,12 +1352,8 @@ bool FileDialog::isModelFile(const std::filesystem::path& path) {
 void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     const TinyFS& fs = project->fs();
 
-    printf("%u", depth);
-
     TinyScene* activeScene = getActiveScene();
     if (!activeScene) return;
-    
-    printf("%d", depth);
 
     // Use root node if no valid handle provided
     if (!nodeHandle.valid()) nodeHandle = activeScene->rootHandle();

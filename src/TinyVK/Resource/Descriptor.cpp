@@ -138,7 +138,6 @@ DescSet::~DescSet() {
     // CRITICAL FIX: Automatic descriptor set cleanup to prevent pool exhaustion
     if (set != VK_NULL_HANDLE && pool != VK_NULL_HANDLE) {
         vkFreeDescriptorSets(device, pool, 1, &set);
-        // printf("    DescSet destructor: freed descriptor set from pool\n"); // Uncomment for debugging
     }
 }
 
