@@ -8,8 +8,6 @@
 #include <cstdint>
 #include <tuple>
 
-#include "TinyData/TinySkeleton.hpp"
-
 struct TinyNode {
     std::string name = "Node";
 

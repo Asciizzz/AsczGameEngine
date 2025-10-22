@@ -3,7 +3,7 @@
 #include "TinyExt/TinyFS.hpp"
 
 #include "TinyData/TinyNode.hpp"
-#include "TinyData/TinySceneRT.hpp"
+#include "TinyData/TinySkeleton.hpp"
 
 // TinyScene requirements
 struct TinySceneReq {
