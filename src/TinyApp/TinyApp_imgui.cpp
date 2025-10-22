@@ -1550,6 +1550,9 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         }
         
         ImGui::EndPopup();
+
+        // CRITICAL: Re-fetch node pointer after potential modifications
+        node = activeScene->node(nodeHandle);
     }
     
 
@@ -1584,7 +1587,22 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     
     // If node is open and has children, recurse for children
     if (nodeOpen && hasChildren) {
-        for (const TinyHandle& childHandle : node->childrenHandles) {
+        // Sort children by have-children? -> name
+        std::vector<TinyHandle> sortedChildren = node->childrenHandles;
+        std::sort(sortedChildren.begin(), sortedChildren.end(), [&](const TinyHandle& a, const TinyHandle& b) {
+            const TinyNode* nodeA = activeScene->node(a);
+            const TinyNode* nodeB = activeScene->node(b);
+            // First sort by whether they have children
+            bool aHasChildren = nodeA && !nodeA->childrenHandles.empty();
+            bool bHasChildren = nodeB && !nodeB->childrenHandles.empty();
+            if (aHasChildren != bHasChildren) return aHasChildren;
+            // Otherwise sort by name
+            std::string nameA = nodeA ? nodeA->name : "";
+            std::string nameB = nodeB ? nodeB->name : "";
+            return nameA < nameB;
+        });
+
+        for (const TinyHandle& childHandle : sortedChildren) {
             renderNodeTreeImGui(childHandle, depth + 1);
         }
         ImGui::TreePop();
