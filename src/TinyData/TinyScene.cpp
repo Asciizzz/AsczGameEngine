@@ -119,9 +119,6 @@ bool TinyScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
 
 
 
-// TinyNode* TinyScene::node(TinyHandle nodeHandle) {
-//     return nodes.get(nodeHandle);
-// }
 
 const TinyNode* TinyScene::node(TinyHandle nodeHandle) const {
     return nodes.get(nodeHandle);
@@ -280,7 +277,9 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     // Update transform component
 
     TinyNode::Node3D* transform = node->get<TinyNode::Node3D>();
-    if (!transform) node->add<TinyNode::Node3D>();
+    if (!transform) {
+        throw std::runtime_error("Node missing Node3D component during updateRecursive");
+    }
 
     transform->global = parentGlobalTransform * transform->local;
 

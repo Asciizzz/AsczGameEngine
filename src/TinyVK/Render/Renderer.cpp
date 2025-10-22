@@ -300,6 +300,9 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         VkDescriptorSet skinSet = project->skinDescSet(activeScene, skeleNodeHandle);
 
         if (isRigged) {
+            isRigged = skinSet != VK_NULL_HANDLE;
+
+            skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
             VkDescriptorSet sets[2] = { glbSet, skinSet };
             rPipeline->bindSets(currentCmd, sets, 2);
         } else {
