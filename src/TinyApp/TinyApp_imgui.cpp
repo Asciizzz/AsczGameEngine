@@ -751,7 +751,7 @@ void TinyApp::renderSceneNodeInspector() {
                 ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
                 
                 // Get runtime skeleton data for animation
-                rtSkeleton = activeScene->getRT<TinySkeletonRT>(skeleComp.rtSkeleHandle);
+                rtSkeleton = activeScene->rGet<TinySkeletonRT>(skeleComp.rtSkeleHandle);
             } else if (skeleComp.skeleHandle.valid()) {
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");

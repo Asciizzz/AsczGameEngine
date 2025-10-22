@@ -48,7 +48,7 @@ struct TinyScene {
 
     // No add node by TinyNode because of component logic
     TinyHandle addNode(const std::string& nodeName = "New Node", TinyHandle parentHandle = TinyHandle());
-    TinyHandle addNodeRaw(const std::string& nodeName); // Raw add without components
+    TinyHandle addNodeRaw(const std::string& nodeName = "New Node");
 
     bool removeNode(TinyHandle nodeHandle, bool recursive = true);
     bool flattenNode(TinyHandle nodeHandle);
@@ -91,7 +91,7 @@ struct TinyScene {
         if (!node) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            nodeAddCompSkeleton(nodeHandle, componentData.skeleHandle);
+            nodeAddCompSkeleton(nodeHandle, componentData.rtSkeleHandle);
         } else {
             node->add<T>(componentData);
         }
@@ -124,13 +124,13 @@ struct TinyScene {
     // --------- Runtime registry access (public) ---------
 
     template<typename T>
-    T* getRT(const TinyHandle& handle) {
+    T* rGet(const TinyHandle& handle) {
         if (!sceneReq.fs) return nullptr;
         return fs()->rGet<T>(handle);
     }
 
     template<typename T>
-    const T* getRT(const TinyHandle& handle) const {
+    const T* rGet(const TinyHandle& handle) const {
         if (!sceneReq.fs) return nullptr;
         return fs()->rGet<T>(handle);
     }
@@ -171,32 +171,30 @@ private:
     }
 
     template<typename T>
-    TinyHandle addRT(T& data) {
+    TinyHandle rAdd(T& data) {
         if (!sceneReq.fs) return TinyHandle{};
         return fs()->rAdd<T>(std::move(data)).handle;
     }
 
     template<typename T>
-    void removeRT(const TinyHandle& handle) {
+    void rRemove(const TinyHandle& handle) {
         if (!sceneReq.fs) return;
         fs()->rRemove<T>(handle);
     }
 
-    void* getRT(const TypeHandle& th) {
+    void* rGet(const TypeHandle& th) {
         if (!sceneReq.fs) return nullptr;
         return fs()->rGet(th);
     }
 
     template<typename T>
-    T* getRT(const TypeHandle& th) {
-        assert(th.isType<T>() && "TypeHandle does not match requested type T");
+    T* rGet(const TypeHandle& th) {
         if (!sceneReq.fs) return nullptr;
         return fs()->rGet<T>(th);
     }
 
     template<typename T>
-    const T* getRT(const TypeHandle& th) const {
-        assert(th.isType<T>() && "TypeHandle does not match requested type T");
+    const T* rGet(const TypeHandle& th) const {
         if (!sceneReq.fs) return nullptr;
         return fs()->rGet<T>(th);
     }
