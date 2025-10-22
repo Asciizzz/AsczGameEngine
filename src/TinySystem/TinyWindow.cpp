@@ -4,7 +4,7 @@
 
 TinyWindow::TinyWindow(const char* title, uint32_t width, uint32_t height)
     : window(nullptr), shouldCloseFlag(false), resizedFlag(false), 
-        windowWidth(width), windowHeight(height) {
+        width(width), height(height) {
     
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         throw std::runtime_error("Failed to initialize SDL");

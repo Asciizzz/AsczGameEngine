@@ -26,5 +26,5 @@ public:
     SDL_Window* window;
     bool shouldCloseFlag;
     bool resizedFlag;
-    uint32_t windowWidth, windowHeight;
+    uint32_t width, height;
 };
