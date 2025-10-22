@@ -129,10 +129,14 @@ struct TinyScene {
         return fs()->rGet<T>(handle);
     }
 
-    // --------- Specific component logic ---------
+    // --------- Specific component's data access ---------
+
+    // You are not allowed to modify the node component identity directly
+    // BUT, you are allowed to modify the data inside the component
 
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
-    TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle); // Exposable runtime skeleton access
+    // Exposable runtime skeleton access
+    TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle);
     // TinyAnimeRT* nAnimationRT(TinyHandle nodeHandle);
 
 private:

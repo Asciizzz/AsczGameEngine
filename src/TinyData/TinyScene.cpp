@@ -277,18 +277,13 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     // Update transform component
 
     TinyNode::Node3D* transform = node->get<TinyNode::Node3D>();
-    if (!transform) {
-        throw std::runtime_error("Node missing Node3D component during updateRecursive");
-    }
+    if (!transform) return; // Prolly a special type node like animation for example
 
     transform->global = parentGlobalTransform * transform->local;
 
-    // Retrieve skeleton component if exists
-    TinyNode::Skeleton* skeletonComp = node->get<TinyNode::Skeleton>();
-    if (skeletonComp) {
-        TinySkeletonRT* rtSkele = rGet<TinySkeletonRT>(skeletonComp->pSkeleHandle);
-        if (rtSkele) rtSkele->update();
-    }
+    // Update skeleton component if exists
+    TinySkeletonRT* rtSkele = nSkeletonRT(realHandle);
+    if (rtSkele) rtSkele->update();
 
     // Recursively update all children
     for (const TinyHandle& childHandle : node->childrenHandles) {
@@ -353,7 +348,7 @@ void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
 }
 
 
-// --------- Specific component logic ---------
+// --------- Specific component's data access ---------
 
 VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
     // Retrieve skeleton component
