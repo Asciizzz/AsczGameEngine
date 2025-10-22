@@ -209,12 +209,26 @@ void TinyApp::mainLoop() {
         const Uint8* k_state = SDL_GetKeyboardState(nullptr);
 
         static float escHoldTime = 0.0f;
-        // Hold esc for 1 second to quit
+        static bool mouseFocusPressed = false;
+        static bool mouseFocus = true;
+        // Hold esc for 1 second to quit, otherwise toggle mouse focus
         if (k_state[SDL_SCANCODE_ESCAPE]) {
             escHoldTime += dTime;
             if (escHoldTime >= 1.0f) winManager.shouldCloseFlag = true;
+
+            if (!mouseFocusPressed) {
+                mouseFocus = !mouseFocus;
+                mouseFocusPressed = true;
+                if (mouseFocus) {
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                    SDL_WarpMouseInWindow(winManager.window, 0, 0);
+                } else {
+                    SDL_SetRelativeMouseMode(SDL_FALSE);
+                }
+            }
         } else {
             escHoldTime = 0.0f;
+            mouseFocusPressed = false;
         }
 
         // Toggle fullscreen with F11 key
@@ -226,23 +240,6 @@ void TinyApp::mainLoop() {
             fullscreenPressed = true;
         } else if (!k_state[fullscreenKey]) {
             fullscreenPressed = false;
-        }
-        
-        // Toggle mouse lock with F1 key
-        static bool mouseFocusPressed = false;
-        static bool mouseFocus = true;
-        static SDL_Scancode mouseFocusKey = SDL_SCANCODE_Q;
-        if (k_state[mouseFocusKey] && !mouseFocusPressed) {
-            mouseFocus = !mouseFocus;
-            if (mouseFocus) {
-                SDL_SetRelativeMouseMode(SDL_TRUE);
-                SDL_WarpMouseInWindow(winManager.window, 0, 0);
-            } else {
-                SDL_SetRelativeMouseMode(SDL_FALSE);
-            }
-            mouseFocusPressed = true;
-        } else if (!k_state[mouseFocusKey]) {
-            mouseFocusPressed = false;
         }
 
         // Handle mouse look when focused
