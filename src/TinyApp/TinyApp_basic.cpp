@@ -282,7 +282,7 @@ void TinyApp::mainLoop() {
             rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
             rendererRef.drawScene(project.get(), getActiveScene(), PIPELINE_INSTANCE(pipelineManager.get(), "TestRigged"),
-                                                PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic"));
+                                                PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic"), getSelectedSceneNode());
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex, imguiWrapper.get());

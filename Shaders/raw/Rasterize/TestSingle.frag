@@ -5,6 +5,7 @@ layout(location = 1) in vec3 fragWorldPos;
 layout(location = 2) in vec3 fragWorldNrml;
 layout(location = 3) in vec4 fragTangent;
 layout(location = 4) in flat uint fragMaterialIndex;
+layout(location = 5) in flat uint fragSpecial;
 
 layout(location = 0) out vec4 outColor;
 
@@ -23,8 +24,10 @@ void main() {
     float intensity = abs(dot(normalize(fragWorldNrml), vec3(0.0, 1.0, 0.0)));
     intensity = 0.5 + intensity * 0.5;
 
-    // For the time being, set the color based on the material index % 7
-    outColor = rainbowColors[fragMaterialIndex % 7] * intensity;
+    // // For the time being, set the color based on the material index % 7
+    // outColor = rainbowColors[fragMaterialIndex % 7] * intensity;
 
-    // outColor = vec4(vec3(intensity), 1.0);
+    // Highlight special fragments in red
+    vec3 color = (fragSpecial == 1u) ? vec3(1.0, 0.6, 0.6) : vec3(1.0, 1.0, 1.0);
+    outColor = vec4(color * intensity, 1.0);
 }

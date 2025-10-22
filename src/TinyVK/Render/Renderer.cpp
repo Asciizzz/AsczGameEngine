@@ -255,7 +255,7 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 }
 
 
-void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
+void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, TinyHandle selectedNodeHandle) const {
     if (!activeScene) return;
 
     const TinyFS& fs = project->fs();
@@ -311,6 +311,10 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         }
 
         const auto& transform = rtNode.get<TinyNode::Node3D>()->global;
+        
+        // Check if this node is the selected node for highlighting
+        bool isSelectedNode = selectedNodeHandle.valid() && (nodeHandle == selectedNodeHandle);
+        
         for (size_t i = 0; i < submeshes.size(); ++i) {
             uint32_t indexCount = submeshes[i].indexCount;
             if (indexCount == 0) continue;
@@ -319,7 +323,9 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
             const TinyRMaterial* material = fs.rGet<TinyRMaterial>(matHandle);
             uint32_t matIndex = material ? matHandle.index : 0;
 
-            glm::uvec4 props1 = glm::uvec4(matIndex, isRigged, 0, 0);
+            // Set special value to 1 for selected nodes, 0 for others
+            uint32_t specialValue = isSelectedNode ? 1 : 0;
+            glm::uvec4 props1 = glm::uvec4(matIndex, isRigged, specialValue, 0);
 
             // Offset 0: global transform
             // Offset 64: other properties (1)
