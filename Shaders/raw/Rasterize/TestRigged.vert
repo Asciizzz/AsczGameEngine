@@ -2,7 +2,7 @@
 
 layout(push_constant) uniform PushConstant {
     mat4 model;
-    uvec4 props1; // .x = material index, .y = static flag
+    uvec4 props1; // .x = material index, .y = static flag, .z = special value
 } pConst;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
@@ -25,9 +25,9 @@ layout(location = 1) out vec3 fragWorldPos;
 layout(location = 2) out vec3 fragWorldNrml;
 layout(location = 3) out vec4 fragTangent;
 layout(location = 4) out uint fragMaterialIndex;
+layout(location = 5) out uint fragSpecial;
 
 void main() {
-
 
     // --- Apply morph targets ---
     vec3 basePos   = inPos_Tu.xyz;
@@ -71,4 +71,5 @@ void main() {
     fragTangent = vec4(normalize(mat3(pConst.model) * skinnedTangent), inTangent.w);
 
     fragMaterialIndex = pConst.props1.x;
+    fragSpecial       = pConst.props1.z;
 }
