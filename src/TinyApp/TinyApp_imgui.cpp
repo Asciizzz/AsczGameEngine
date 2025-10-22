@@ -1361,10 +1361,8 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     const TinyNode* node = activeScene->node(nodeHandle);
     if (!node) return;
     
-    
     // Create a unique ID for this node
     ImGui::PushID(static_cast<int>(nodeHandle.index));
-    
 
     // Check if this node has children
     bool hasChildren = !node->childrenHandles.empty();
@@ -1379,41 +1377,32 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     if (isSelected) {
         flags |= ImGuiTreeNodeFlags_Selected;
     }
-    
+
     // Add consistent styling to match File explorer theme
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Gray hover background (same as File explorer)
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background (same as File explorer)
-    
 
     // Force open if this node is in the expanded set
     bool forceOpen = isNodeExpanded(nodeHandle);
 
     // Set the default open state (this will be overridden by user interaction)
-    if (forceOpen) {
-        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-    }
+    if (forceOpen) ImGui::SetNextItemOpen(true, ImGuiCond_Always);
 
     bool nodeOpen = ImGui::TreeNodeEx(node->name.c_str(), flags);
-    
 
     // Track expansion state changes (only for nodes with children)
     if (hasChildren) {
-        if (nodeOpen && !forceOpen) {
-            // User expanded this node manually
-            expandedNodes.insert(nodeHandle);
-        } else if (!nodeOpen && isNodeExpanded(nodeHandle)) {
-            // User collapsed this node manually
-            expandedNodes.erase(nodeHandle);
-        }
+        // Manual expansion/collapse tracking
+        if (nodeOpen && !forceOpen) expandedNodes.insert(nodeHandle);
+        else if (!nodeOpen && isNodeExpanded(nodeHandle)) expandedNodes.erase(nodeHandle);
     }
-    
     
     // Drag and drop source (only if not root node)
     bool isDragging = false;
     if (nodeHandle != activeScene->rootHandle() && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
         isDragging = true;
         holdSceneNode(nodeHandle);  // Set the held node during drag
-        
+
         // Set payload to carry the node handle
         ImGui::SetDragDropPayload("NODE_HANDLE", &nodeHandle, sizeof(TinyHandle));
         
@@ -1421,8 +1410,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         ImGui::Text("Moving: %s", node->name.c_str());
         ImGui::EndDragDropSource();
     }
-    
-    
+
     // Clear held node when not actively dragging from this item
     // Note: held node will be cleared in the drag drop target accept logic
     
