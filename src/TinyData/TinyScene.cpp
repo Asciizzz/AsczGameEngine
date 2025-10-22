@@ -181,6 +181,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
 
     // Default to root node if no parent specified
     if (!parentHandle.valid()) parentHandle = rootHandle();
+    printf("Parent: %u-%u\n", parentHandle.index, parentHandle.version);
 
     // First pass: Add all nodes from 'from' scene as raw nodes
 
@@ -210,8 +211,8 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
         } else { // <-- Root node in 'from' scene
             // Add child to parent
             TinyNode* parentNode = nodes.get(parentHandle);
-            if (parentNode) parentNode->addChild(toHandle);
 
+            if (parentNode) parentNode->addChild(toHandle);
             toNode->setParent(parentHandle);
         }
 

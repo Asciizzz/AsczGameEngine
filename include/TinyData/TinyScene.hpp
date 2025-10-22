@@ -198,4 +198,21 @@ private:
         if (!sceneReq.fs) return nullptr;
         return fs()->rGet<T>(th);
     }
+
+
+
+    // Debug function
+    void printNodeHierarchy(TinyHandle nodeHandle = TinyHandle(), int depth = 0) const {
+        const TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return;
+
+        for (int i = 0; i < depth; ++i) {
+            printf("  ");
+        }
+        printf("- %s (Parent: %u_%u)\n", node->name.c_str(), node->parentHandle.index, node->parentHandle.version);
+
+        for (const TinyHandle& childHandle : node->childrenHandles) {
+            printNodeHierarchy(childHandle, depth + 1);
+        }
+    }
 };

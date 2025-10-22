@@ -775,8 +775,6 @@ void TinyApp::renderSceneNodeInspector() {
             // CRITICAL FIX: Only apply changes if skeleton handle actually changed
             // This prevents rapid create/destroy cycles that exhaust descriptor pool
             if (skeleModified && (skeleComp.skeleHandle != originalSkeleHandle)) {
-                printf("Skeleton handle changed from %u to %u, updating component...\n", 
-                       originalSkeleHandle.index, skeleComp.skeleHandle.index);
                 activeScene->nodeAddComp<TinyNode::Skeleton>(selectedSceneNodeHandle, skeleComp);
             }
             
@@ -1354,18 +1352,24 @@ bool FileDialog::isModelFile(const std::filesystem::path& path) {
 void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     const TinyFS& fs = project->fs();
 
+    printf("%u", depth);
+
     TinyScene* activeScene = getActiveScene();
     if (!activeScene) return;
     
+    printf("%d", depth);
+
     // Use root node if no valid handle provided
     if (!nodeHandle.valid()) nodeHandle = activeScene->rootHandle();
 
     const TinyNode* node = activeScene->node(nodeHandle);
     if (!node) return;
     
+    
     // Create a unique ID for this node
     ImGui::PushID(static_cast<int>(nodeHandle.index));
     
+
     // Check if this node has children
     bool hasChildren = !node->childrenHandles.empty();
     bool isSelected = (selectedHandle.isScene() && selectedHandle.handle.index == nodeHandle.index && selectedHandle.handle.version == nodeHandle.version);
@@ -1384,15 +1388,17 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Gray hover background (same as File explorer)
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background (same as File explorer)
     
+
     // Force open if this node is in the expanded set
     bool forceOpen = isNodeExpanded(nodeHandle);
-    
+
     // Set the default open state (this will be overridden by user interaction)
     if (forceOpen) {
         ImGui::SetNextItemOpen(true, ImGuiCond_Always);
     }
 
     bool nodeOpen = ImGui::TreeNodeEx(node->name.c_str(), flags);
+    
 
     // Track expansion state changes (only for nodes with children)
     if (hasChildren) {
@@ -1404,6 +1410,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             expandedNodes.erase(nodeHandle);
         }
     }
+    
     
     // Drag and drop source (only if not root node)
     bool isDragging = false;
@@ -1418,6 +1425,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         ImGui::Text("Moving: %s", node->name.c_str());
         ImGui::EndDragDropSource();
     }
+    
     
     // Clear held node when not actively dragging from this item
     // Note: held node will be cleared in the drag drop target accept logic
@@ -1437,10 +1445,12 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
     }
     
+    
     // Select node on right-click (immediate selection before context menu)
     if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
         selectSceneNode(nodeHandle);
     }
+    
     
     // Drag and drop target
     if (ImGui::BeginDragDropTarget()) {
@@ -1479,7 +1489,8 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
                 if (scene) {
                     // Place the scene at this node
                     project->addSceneInstance(sceneRegistryHandle, getActiveSceneHandle(), nodeHandle);
-                    
+                    // CRITICAL: Set the nodeptr again to avoid dangling held state
+                    node = activeScene->node(nodeHandle);
                     // Auto-expand the parent chain to show the newly instantiated scene
                     expandParentChain(nodeHandle);
                 }
@@ -1506,16 +1517,18 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
                     if (scene) {
                         // Place the scene at this node
                         project->addSceneInstance(sceneRegistryHandle, getActiveSceneHandle(), nodeHandle);
-                        
+                        // CRITICAL: Set the nodeptr again to avoid dangling held state
+                        node = activeScene->node(nodeHandle);
                         // Auto-expand the parent chain to show the newly instantiated scene
                         expandParentChain(nodeHandle);
                     }
                 }
             }
         }
-        
+
         ImGui::EndDragDropTarget();
     }
+    
     
     // Context menu for nodes - direct manipulation
     if (ImGui::BeginPopupContextItem()) {
@@ -1555,6 +1568,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         ImGui::EndPopup();
     }
     
+
     // Show node details in tooltip (slicker version like the old function)
     if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
         ImGui::BeginTooltip();
@@ -1583,24 +1597,15 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         ImGui::EndTooltip();
     }
     
+    
     // If node is open and has children, recurse for children
     if (nodeOpen && hasChildren) {
-        // Sort by name and by whether they have children
-        std::vector<TinyHandle> sortedChildren(node->childrenHandles.begin(), node->childrenHandles.end());
-        std::sort(sortedChildren.begin(), sortedChildren.end(), [activeScene](const TinyHandle& a, const TinyHandle& b) {
-            const TinyNode* nodeA = activeScene->node(a);
-            const TinyNode* nodeB = activeScene->node(b);
-            if (!nodeA || !nodeB) return false;
-            if (nodeA->childrenHandles.empty() && !nodeB->childrenHandles.empty()) return false;
-            if (!nodeA->childrenHandles.empty() && nodeB->childrenHandles.empty()) return true;
-            return nodeA->name < nodeB->name;
-        });
-        
-        for (const TinyHandle& childHandle : sortedChildren) {
+        for (const TinyHandle& childHandle : node->childrenHandles) {
             renderNodeTreeImGui(childHandle, depth + 1);
         }
         ImGui::TreePop();
     }
+    
     
     // Pop the style colors we pushed earlier
     ImGui::PopStyleColor(2); // Pop HeaderHovered and Header
@@ -2149,7 +2154,7 @@ void TinyApp::loadModelFromPath(const std::string& filePath, TinyHandle targetFo
         }
         
     } catch (const std::exception& e) {
-        printf("Error loading model %s: %s\n", filePath.c_str(), e.what());
+        throw std::runtime_error(std::string("Failed to load model from path '") + filePath + "': " + e.what());
     }
 }
 

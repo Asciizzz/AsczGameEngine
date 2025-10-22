@@ -26,8 +26,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     vkCreateSceneResources();
 
     // Create Main Scene (the active scene with a single root node)
-    TinyScene mainScene;
-    mainScene.name = "Main Scene";
+    TinyScene mainScene("Main Scene");
     mainScene.addRoot("Root");
     mainScene.setSceneReq(sceneReq());
 
