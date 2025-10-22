@@ -186,7 +186,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             // const TinyNode::Node3D* ogTransform = originalNode.get<TinyNode::Node3D>();
             TinyNode::Node3D newTransform = originalNode.getCopy<TinyNode::Node3D>();
 
-            scene.nodeAddComp<TinyNode::Node3D>(nodeHandle, newTransform);
+            scene.addComp<TinyNode::Node3D>(nodeHandle, newTransform);
         }
 
         if (originalNode.has<TinyNode::MeshRender>()) {
@@ -200,7 +200,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
                 newMeshRender.skeleNodeHandle = nodeHandles[newMeshRender.skeleNodeHandle.index];
             }
 
-            scene.nodeAddComp<TinyNode::MeshRender>(nodeHandle, newMeshRender);
+            scene.addComp<TinyNode::MeshRender>(nodeHandle, newMeshRender);
         }
 
         if (originalNode.has<TinyNode::BoneAttach>()) {
@@ -210,7 +210,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
                 newBoneAttach.skeleNodeHandle = nodeHandles[newBoneAttach.skeleNodeHandle.index];
             }
 
-            scene.nodeAddComp<TinyNode::BoneAttach>(nodeHandle, newBoneAttach);
+            scene.addComp<TinyNode::BoneAttach>(nodeHandle, newBoneAttach);
         }
 
         if (originalNode.has<TinyNode::Skeleton>()) {
@@ -220,7 +220,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
                 newSkeleComp.pSkeleHandle = glbSkeleRHandle[newSkeleComp.pSkeleHandle.index];
             }
 
-            scene.nodeAddComp<TinyNode::Skeleton>(nodeHandle, newSkeleComp);
+            scene.addComp<TinyNode::Skeleton>(nodeHandle, newSkeleComp);
         }
     }
 

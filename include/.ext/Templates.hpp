@@ -27,3 +27,7 @@ template<typename K, typename V> using UnorderedMap = std::unordered_map<K, V>;
 #include <variant>
 template<typename... Ts>
 using MonoVariant = std::variant<std::monostate, Ts...>;
+
+
+template<typename A, typename B>
+inline constexpr bool type_eq = std::is_same_v<A, B>;

@@ -37,7 +37,7 @@ public:
     
     // Get skin descriptor set with automatic fallback to dummy
     VkDescriptorSet skinDescSet(TinyScene* scene, TinyHandle nodeHandle) const {
-        return scene->getNodeSkeletonDescSet(nodeHandle);
+        return scene->nSkeleDescSet(nodeHandle);
     }
     
     // Global UBO update

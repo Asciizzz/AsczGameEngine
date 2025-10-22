@@ -51,10 +51,10 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
         if (parentNode) parentNode->removeChild(nodeHandle);
     }
 
-    nodeRemoveComp<TinyNode::Node3D>(nodeHandle);
-    nodeRemoveComp<TinyNode::MeshRender>(nodeHandle);
-    nodeRemoveComp<TinyNode::BoneAttach>(nodeHandle);
-    nodeRemoveComp<TinyNode::Skeleton>(nodeHandle);
+    removeComp<TinyNode::Node3D>(nodeHandle);
+    removeComp<TinyNode::MeshRender>(nodeHandle);
+    removeComp<TinyNode::BoneAttach>(nodeHandle);
+    removeComp<TinyNode::Skeleton>(nodeHandle);
 
     nodes.remove(nodeHandle);
 
@@ -227,7 +227,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
         // Transform component
         if (fromNode->has<TinyNode::Node3D>()) {
             TinyNode::Node3D toTransform = fromNode->getCopy<TinyNode::Node3D>();
-            nodeAddComp<TinyNode::Node3D>(toHandle, toTransform);
+            addComp<TinyNode::Node3D>(toHandle, toTransform);
         }
 
         // MeshRender component
@@ -238,7 +238,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
                 toMeshRender.skeleNodeHandle = toHandles[toMeshRender.skeleNodeHandle.index];
             }
 
-            nodeAddComp<TinyNode::MeshRender>(toHandle, toMeshRender);
+            addComp<TinyNode::MeshRender>(toHandle, toMeshRender);
         }
 
         // BoneAttach component
@@ -249,7 +249,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
                 toBoneAttach.skeleNodeHandle = toHandles[toBoneAttach.skeleNodeHandle.index];
             }
 
-            nodeAddComp<TinyNode::BoneAttach>(toHandle, toBoneAttach);
+            addComp<TinyNode::BoneAttach>(toHandle, toBoneAttach);
         }
 
         // Skeleton component
@@ -257,7 +257,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
             TinyNode::Skeleton toSkeleton = fromNode->getCopy<TinyNode::Skeleton>();
 
             // This add function will create runtime skeleton data as needed
-            nodeAddComp<TinyNode::Skeleton>(toHandle, toSkeleton);
+            addComp<TinyNode::Skeleton>(toHandle, toSkeleton);
         }
     }
 
@@ -353,9 +353,9 @@ void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
 }
 
 
+// --------- Specific component logic ---------
 
-
-VkDescriptorSet TinyScene::getNodeSkeletonDescSet(TinyHandle nodeHandle) const {
+VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
     // Retrieve skeleton component
     const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
     if (!compPtr) return VK_NULL_HANDLE;
@@ -365,4 +365,9 @@ VkDescriptorSet TinyScene::getNodeSkeletonDescSet(TinyHandle nodeHandle) const {
     if (!rtSkele) return VK_NULL_HANDLE;
 
     return rtSkele->descSet;
+}
+
+TinySkeletonRT* TinyScene::nSkeletonRT(TinyHandle nodeHandle) {
+    const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
+    return compPtr ? rGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
 }

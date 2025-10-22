@@ -86,11 +86,11 @@ struct TinyScene {
     }
 
     template<typename T>
-    void nodeAddComp(TinyHandle nodeHandle, const T& componentData = T()) {
+    void addComp(TinyHandle nodeHandle, const T& componentData = T()) {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
-        if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
+        if constexpr (type_eq<T, TinyNode::Skeleton>) {
             nodeAddCompSkeleton(nodeHandle, componentData.pSkeleHandle);
         } else {
             node->add<T>(componentData);
@@ -98,11 +98,11 @@ struct TinyScene {
     }
 
     template<typename T>
-    void nodeRemoveComp(TinyHandle nodeHandle) {
+    void removeComp(TinyHandle nodeHandle) {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node || !node->has<T>()) return;
 
-        if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
+        if constexpr (type_eq<T, TinyNode::Skeleton>) {
             nodeRemoveCompSkeleton(nodeHandle);
         } else {
             node->remove<T>();
@@ -114,10 +114,6 @@ struct TinyScene {
         const TinyNode* node = nodes.get(nodeHandle);
         return node ? node->getCopy<T>() : T();
     }
-
-    // --------- Specific component logic ---------
-
-    VkDescriptorSet getNodeSkeletonDescSet(TinyHandle nodeHandle) const;
 
     // --------- Runtime registry access (public) ---------
 
@@ -132,6 +128,12 @@ struct TinyScene {
         if (!sceneReq.fs) return nullptr;
         return fs()->rGet<T>(handle);
     }
+
+    // --------- Specific component logic ---------
+
+    VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
+    TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle); // Exposable runtime skeleton access
+    // TinyAnimeRT* nAnimationRT(TinyHandle nodeHandle);
 
 private:
     TinyPool<TinyNode> nodes;
@@ -157,7 +159,7 @@ private:
     TinyHandle nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skeletonHandle);
     void nodeRemoveCompSkeleton(TinyHandle nodeHandle);
 
-    // ---------- Runtime registry access via TinyFS (private) ----------
+    // ---------- Runtime registry access (private) ----------
 
     // Access node by index, only for internal use
     TinyNode* fromIndex(uint32_t index) {

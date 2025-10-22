@@ -457,7 +457,7 @@ void TinyApp::renderSceneNodeInspector() {
                     // Create reset component and re-add using TinyScene
                     TinyNode::Node3D resetComp;
                     resetComp.local = glm::mat4(1.0f);
-                    activeScene->nodeAddComp<TinyNode::Node3D>(selectedSceneNodeHandle, resetComp);
+                    activeScene->addComp<TinyNode::Node3D>(selectedSceneNodeHandle, resetComp);
                     activeScene->update();
                 }
                 return;
@@ -474,7 +474,7 @@ void TinyApp::renderSceneNodeInspector() {
                     // Create reset component and re-add using TinyScene
                     TinyNode::Node3D resetComp;
                     resetComp.local = glm::mat4(1.0f);
-                    activeScene->nodeAddComp<TinyNode::Node3D>(selectedSceneNodeHandle, resetComp);
+                    activeScene->addComp<TinyNode::Node3D>(selectedSceneNodeHandle, resetComp);
                     activeScene->update();
                 }
                 return;
@@ -541,7 +541,7 @@ void TinyApp::renderSceneNodeInspector() {
                     
                     // Create modified component copy and re-add using TinyScene
                     comp.local = translateMat * rotateMat * scaleMat;
-                    activeScene->nodeAddComp<TinyNode::Node3D>(selectedSceneNodeHandle, comp);
+                    activeScene->addComp<TinyNode::Node3D>(selectedSceneNodeHandle, comp);
                     activeScene->update();
                 }
             }
@@ -603,13 +603,13 @@ void TinyApp::renderSceneNodeInspector() {
             
             // Apply changes using copy->modify->reapply pattern
             if (componentModified) {
-                activeScene->nodeAddComp<TinyNode::MeshRender>(selectedSceneNodeHandle, meshComp);
+                activeScene->addComp<TinyNode::MeshRender>(selectedSceneNodeHandle, meshComp);
             }
             
             ImGui::Spacing();
         }, [&]() {
             // Remove component using TinyScene method
-            activeScene->nodeRemoveComp<TinyNode::MeshRender>(selectedSceneNodeHandle);
+            activeScene->removeComp<TinyNode::MeshRender>(selectedSceneNodeHandle);
         });
     } else {
         // Show grayed-out placeholder for missing Mesh Renderer component
@@ -617,7 +617,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add component using TinyScene method
-            activeScene->nodeAddComp<TinyNode::MeshRender>(selectedSceneNodeHandle, TinyNode::MeshRender{});
+            activeScene->addComp<TinyNode::MeshRender>(selectedSceneNodeHandle, TinyNode::MeshRender{});
         });
     }
     
@@ -710,13 +710,13 @@ void TinyApp::renderSceneNodeInspector() {
             
             // Apply changes using copy->modify->reapply pattern
             if (componentModified) {
-                activeScene->nodeAddComp<TinyNode::BoneAttach>(selectedSceneNodeHandle, boneComp);
+                activeScene->addComp<TinyNode::BoneAttach>(selectedSceneNodeHandle, boneComp);
             }
             
             ImGui::Spacing();
         }, [&]() {
             // Remove component using TinyScene method
-            activeScene->nodeRemoveComp<TinyNode::BoneAttach>(selectedSceneNodeHandle);
+            activeScene->removeComp<TinyNode::BoneAttach>(selectedSceneNodeHandle);
         });
     } else {
         // Show grayed-out placeholder for missing Bone Attachment component
@@ -724,7 +724,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add component using TinyScene method
-            activeScene->nodeAddComp<TinyNode::BoneAttach>(selectedSceneNodeHandle, TinyNode::BoneAttach{});
+            activeScene->addComp<TinyNode::BoneAttach>(selectedSceneNodeHandle, TinyNode::BoneAttach{});
         });
     }
     
@@ -776,7 +776,7 @@ void TinyApp::renderSceneNodeInspector() {
             // If the user changed the skeleton, update the component and reapply
             if (skeleModified && staticSkeletonHandle != originalPSkeleHandle) {
                 skeleComp.pSkeleHandle = staticSkeletonHandle;
-                activeScene->nodeAddComp<TinyNode::Skeleton>(selectedSceneNodeHandle, skeleComp);
+                activeScene->addComp<TinyNode::Skeleton>(selectedSceneNodeHandle, skeleComp);
             }
 
             // ===== BONE HIERARCHY EDITOR =====
@@ -971,7 +971,7 @@ void TinyApp::renderSceneNodeInspector() {
             ImGui::Spacing();
         }, [&]() {
             // Remove component using TinyScene specialized method for skeleton
-            activeScene->nodeRemoveComp<TinyNode::Skeleton>(selectedSceneNodeHandle);
+            activeScene->removeComp<TinyNode::Skeleton>(selectedSceneNodeHandle);
         });
     } else {
         // Show grayed-out placeholder for missing Skeleton component
@@ -979,7 +979,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add empty skeleton component using TinyScene method
-            activeScene->nodeAddComp<TinyNode::Skeleton>(selectedSceneNodeHandle, TinyNode::Skeleton{});
+            activeScene->addComp<TinyNode::Skeleton>(selectedSceneNodeHandle, TinyNode::Skeleton{});
         });
     }
     

@@ -10,17 +10,17 @@
 
 struct TinyNode {
     std::string name = "Node";
+    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
 
     enum class Types : uint32_t {
         Transform     = 1 << 0,
         MeshRender    = 1 << 1,
         Skeleton      = 1 << 2,
-        BoneAttach    = 1 << 3
+        BoneAttach    = 1 << 3,
+        Animation     = 1 << 4
     };
 
-    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
 
-    // Hierarchy data - can be either local indices or runtime handles depending on scope
     TinyHandle parentHandle;
     std::vector<TinyHandle> childrenHandles;
 
@@ -46,8 +46,8 @@ struct TinyNode {
     // Component definitions with runtime capabilities
     struct MeshRender {
         static constexpr Types kType = Types::MeshRender;
-        TinyHandle meshHandle;                // Handle to mesh in registry
-        TinyHandle skeleNodeHandle;           // Handle to skeleton node (NOT skeleton in registry)
+        TinyHandle meshHandle;      // Handle to mesh in registry
+        TinyHandle skeleNodeHandle; // Handle to skeleton "NODE" (NOT skeleton in registry)
     };
 
     struct BoneAttach {
@@ -58,7 +58,12 @@ struct TinyNode {
 
     struct Skeleton {
         static constexpr Types kType = Types::Skeleton;
-        TinyHandle pSkeleHandle; // Polytype skeleton handle
+        TinyHandle pSkeleHandle; // Polytype
+    };
+
+    struct Animation {
+        static constexpr Types kType = Types::Animation;
+        TinyHandle pAnimeHandle; // Polytype
     };
 
     // Component management functions
