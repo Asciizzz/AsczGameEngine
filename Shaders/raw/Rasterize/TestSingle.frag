@@ -21,8 +21,8 @@ vec4 rainbowColors[7] = vec4[7](
 );
 
 void main() {
-    float intensity = abs(dot(normalize(fragWorldNrml), vec3(0.0, 1.0, 0.0)));
-    intensity = 0.5 + intensity * 0.5;
+    float intensity = abs(dot(fragWorldNrml, normalize(vec3(1.0, 1.0, 1.0))));
+    intensity = 0.1 + intensity * 0.9;
 
     // // For the time being, set the color based on the material index % 7
     // outColor = rainbowColors[fragMaterialIndex % 7] * intensity;

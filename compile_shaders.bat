@@ -1,13 +1,5 @@
 @echo off
 
-REM Static mesh rasterization shaders
-glslc Shaders/raw/Rasterize/StaticMesh.vert -o Shaders/bin/Rasterize/StaticMesh.vert.spv
-glslc Shaders/raw/Rasterize/StaticMesh.frag -o Shaders/bin/Rasterize/StaticMesh.frag.spv
-
-REM Skinning shaders
-glslc Shaders/raw/Rasterize/RigMesh.vert -o Shaders/bin/Rasterize/RigMesh.vert.spv
-glslc Shaders/raw/Rasterize/RigMesh.frag -o Shaders/bin/Rasterize/RigMesh.frag.spv
-
 REM Inefficient but really cool sky shaders
 glslc Shaders/raw/Sky/sky.vert -o Shaders/bin/Sky/sky.vert.spv
 glslc Shaders/raw/Sky/sky.frag -o Shaders/bin/Sky/sky.frag.spv

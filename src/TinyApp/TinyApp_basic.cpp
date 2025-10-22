@@ -207,10 +207,6 @@ void TinyApp::mainLoop() {
         checkWindowResize();
 
         const Uint8* k_state = SDL_GetKeyboardState(nullptr);
-        if (k_state[SDL_SCANCODE_ESCAPE]) {
-            winManager.shouldCloseFlag = true;
-            break;
-        }
 
         // Toggle fullscreen with F11 key
         static bool fullscreenPressed = false;
@@ -281,8 +277,13 @@ void TinyApp::mainLoop() {
 
             rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
-            rendererRef.drawScene(project.get(), getActiveScene(), PIPELINE_INSTANCE(pipelineManager.get(), "TestRigged"),
-                                                PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic"), getSelectedSceneNode());
+            rendererRef.drawScene(
+                project.get(),
+                getActiveScene(),
+                PIPELINE_INSTANCE(pipelineManager.get(), "TestRigged"),
+                PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic"),
+                getSelectedSceneNode()
+            );
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex, imguiWrapper.get());
