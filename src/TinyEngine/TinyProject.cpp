@@ -21,7 +21,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS->setTypeExt<TinyMesh>      ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
     tinyFS->setTypeExt<TinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f);
     tinyFS->setTypeExt<TinySkeletonRT>("rskl", false, 0, 1.0f, 0.4f, 0.8f);
-    tinyFS->setTypeExt<TinyAnimation> ("anim", false, 0, 0.8f, 1.0f, 0.4f);
+    tinyFS->setTypeExt<TinyAnime> ("anim", false, 0, 0.8f, 1.0f, 0.4f);
 
     vkCreateSceneResources();
 

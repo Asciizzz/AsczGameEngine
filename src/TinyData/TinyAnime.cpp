@@ -1,10 +1,10 @@
-#include "TinyData/TinyAnimation.hpp"
+#include "TinyData/TinyAnime.hpp"
 
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
 
-TinyAnimationSampler& TinyAnimationSampler::setInterpolation(const std::string& interpStr) {
+TinyAnimeSampler& TinyAnimeSampler::setInterpolation(const std::string& interpStr) {
     setInterpolation(InterpolationType::Linear);
 
     if (interpStr == "STEP") setInterpolation(InterpolationType::Step); else
@@ -13,12 +13,12 @@ TinyAnimationSampler& TinyAnimationSampler::setInterpolation(const std::string& 
     return *this;
 }
 
-TinyAnimationSampler& TinyAnimationSampler::setInterpolation(const InterpolationType interpType) {
+TinyAnimeSampler& TinyAnimeSampler::setInterpolation(const InterpolationType interpType) {
     interpolation = interpType;
     return *this;
 }
 
-TinyAnimationChannel& TinyAnimationChannel::setTargetPath(const std::string& pathStr) {
+TinyAnimeChannel& TinyAnimeChannel::setTargetPath(const std::string& pathStr) {
     if (pathStr == "translation") targetPath = TargetPath::Translation; else
     if (pathStr == "rotation")    targetPath = TargetPath::Rotation;    else
     if (pathStr == "scale")       targetPath = TargetPath::Scale;       else
@@ -28,14 +28,14 @@ TinyAnimationChannel& TinyAnimationChannel::setTargetPath(const std::string& pat
 }
 
 
-void TinyAnimation::clear() {
+void TinyAnime::clear() {
     name.clear();
     samplers.clear();
     channels.clear();
     duration = 0.0f;
 }
 
-void TinyAnimation::computeDuration() {
+void TinyAnime::computeDuration() {
     duration = 0.0f;
     
     for (const auto& sampler : samplers) {
@@ -46,7 +46,7 @@ void TinyAnimation::computeDuration() {
     }
 }
 
-int TinyAnimation::findChannelForBone(int boneIndex, TinyAnimationChannel::TargetPath path) const {
+int TinyAnime::findChannelForBone(int boneIndex, TinyAnimeChannel::TargetPath path) const {
     for (int i = 0; i < static_cast<int>(channels.size()); ++i) {
         if (channels[i].targetIndex == boneIndex && channels[i].targetPath == path) {
             return i;

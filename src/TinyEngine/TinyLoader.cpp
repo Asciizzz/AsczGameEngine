@@ -653,13 +653,13 @@ struct ChannelToSkeletonMap {
     }
 };
 
-void loadAnimation(TinyAnimation& animation, ChannelToSkeletonMap& channelToSkeletonMap, const tinygltf::Model& model, const tinygltf::Animation& gltfAnim, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
+void loadAnimation(TinyAnime& animation, ChannelToSkeletonMap& channelToSkeletonMap, const tinygltf::Model& model, const tinygltf::Animation& gltfAnim, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
     animation.clear();
     animation.name = gltfAnim.name;
 
     for (const auto& gltfSampler : gltfAnim.samplers) {
 
-        TinyAnimationSampler sampler;
+        TinyAnimeSampler sampler;
 
         // Read time values
         if (gltfSampler.input >= 0) {
@@ -676,7 +676,7 @@ void loadAnimation(TinyAnimation& animation, ChannelToSkeletonMap& channelToSkel
     }
 
     for (const auto& gltfChannel : gltfAnim.channels) {
-        TinyAnimationChannel channel;
+        TinyAnimeChannel channel;
         channel.samplerIndex = gltfChannel.sampler;
 
         auto it = nodeToSkeletonAndBoneIndex.find(gltfChannel.target_node);
@@ -693,14 +693,14 @@ void loadAnimation(TinyAnimation& animation, ChannelToSkeletonMap& channelToSkel
     }
 }
 
-void loadAnimations(std::vector<TinyAnimation>& animations, std::vector<ChannelToSkeletonMap>& ChannelToSkeletonMaps, tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
+void loadAnimations(std::vector<TinyAnime>& animations, std::vector<ChannelToSkeletonMap>& ChannelToSkeletonMaps, tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
     animations.clear();
     ChannelToSkeletonMaps.clear();
 
     for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
         const tinygltf::Animation& gltfAnim = model.animations[animIndex];
 
-        TinyAnimation animation;
+        TinyAnime animation;
         ChannelToSkeletonMap channelToSkeletonMap;
         loadAnimation(animation, channelToSkeletonMap, model, gltfAnim, nodeToSkeletonAndBoneIndex);
 

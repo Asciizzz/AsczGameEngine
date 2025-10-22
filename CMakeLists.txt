@@ -32,11 +32,11 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyData/TinyMaterial.cpp
     src/TinyData/TinyTexture.cpp
     src/TinyData/TinySkeleton.cpp
-    src/TinyData/TinyAnimation.cpp
     src/TinyData/TinyNode.cpp
+    src/TinyData/TinyAnime.cpp
     src/TinyData/TinyScene.cpp
     src/TinyData/TinySceneRT.cpp
-    
+
     src/TinyEngine/TinyRData.cpp
     src/TinyEngine/TinyGlobal.cpp
     src/TinyEngine/TinyProject.cpp

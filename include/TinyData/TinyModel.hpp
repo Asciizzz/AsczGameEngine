@@ -4,7 +4,7 @@
 #include "TinyData/TinyMaterial.hpp"
 #include "TinyData/TinyTexture.hpp"
 #include "TinyData/TinySkeleton.hpp"
-#include "TinyData/TinyAnimation.hpp"
+#include "TinyData/TinyAnime.hpp"
 #include "TinyData/TinyNode.hpp"
 
 struct TinyModel {
@@ -16,7 +16,7 @@ struct TinyModel {
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
     std::vector<TinySkeleton> skeletons;
-    std::vector<TinyAnimation> animations;
+    std::vector<TinyAnime> animations;
 
     std::vector<TinyNode> nodes;
 };

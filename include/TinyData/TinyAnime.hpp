@@ -8,7 +8,7 @@
 
 #include ".ext/Templates.hpp"
 
-struct TinyAnimationSampler {
+struct TinyAnimeSampler {
     std::vector<float> inputTimes;        // keyframe times
     std::vector<glm::vec4> outputValues;  // generic container
                                           // vec3 for translation/scale, vec4 for rotation, vecN for weights
@@ -18,11 +18,11 @@ struct TinyAnimationSampler {
         CubicSpline
     } interpolation = InterpolationType::Linear;
 
-    TinyAnimationSampler& setInterpolation(const std::string& interpStr);
-    TinyAnimationSampler& setInterpolation(const InterpolationType interpType);
+    TinyAnimeSampler& setInterpolation(const std::string& interpStr);
+    TinyAnimeSampler& setInterpolation(const InterpolationType interpType);
 };
 
-struct TinyAnimationChannel {
+struct TinyAnimeChannel {
     uint32_t nodeIndex = 0;
     uint32_t samplerIndex = 0;    // link to sampler
 
@@ -32,8 +32,8 @@ struct TinyAnimationChannel {
         Scale,
         Weights
     } targetPath;
-    TinyAnimationChannel& setTargetPath(const std::string& pathStr);
-    TinyAnimationChannel& setTargetPath(const TargetPath path);
+    TinyAnimeChannel& setTargetPath(const std::string& pathStr);
+    TinyAnimeChannel& setTargetPath(const TargetPath path);
 
     enum class TargetType {
         Node,
@@ -43,16 +43,16 @@ struct TinyAnimationChannel {
     uint32_t targetIndex = 0;
 };
 
-struct TinyAnimation {
+struct TinyAnime {
     std::string name;
     
-    std::vector<TinyAnimationSampler> samplers;
-    std::vector<TinyAnimationChannel> channels;
+    std::vector<TinyAnimeSampler> samplers;
+    std::vector<TinyAnimeChannel> channels;
     float duration = 0.0f;  // Computed from all samplers
 
     void clear();
 
     // Helper methods
     void computeDuration();
-    int findChannelForBone(int boneIndex, TinyAnimationChannel::TargetPath path) const;
+    int findChannelForBone(int boneIndex, TinyAnimeChannel::TargetPath path) const;
 };
