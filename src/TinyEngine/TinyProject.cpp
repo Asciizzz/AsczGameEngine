@@ -57,6 +57,15 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     defaultMaterialHandle = tinyFS->rAdd(defaultMaterial).handle;
 }
 
+TinyProject::~TinyProject() {
+    // Cleanup everything first before destroying pools
+    tinyGlobal.reset();
+    tinyCamera.reset();
+    tinyFS.reset();
+}
+
+
+
 TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     // Use root folder if no valid parent provided
     if (!parentFolder.valid()) {

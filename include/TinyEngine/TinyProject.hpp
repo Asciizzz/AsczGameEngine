@@ -14,6 +14,7 @@ public:
     static constexpr size_t maxSkeletons = 1024;
 
     TinyProject(const TinyVK::Device* deviceVK);
+    ~TinyProject();
 
     // Delete copy
     TinyProject(const TinyProject&) = delete;
