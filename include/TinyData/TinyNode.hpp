@@ -58,8 +58,7 @@ struct TinyNode {
 
     struct Skeleton {
         static constexpr Types kType = Types::Skeleton;
-        TinyHandle skeleHandle;   // Original skeleton data
-        TinyHandle rtSkeleHandle; // Runtime skeleton data
+        TinyHandle pSkeleHandle; // Polytype skeleton handle
     };
 
     // Component management functions
@@ -97,8 +96,7 @@ struct TinyNode {
 
     template<typename T>
     T getCopy() const {
-        if (!has<T>()) return T(); // Empty/default
-        return getComponent<T>();
+        return has<T>() ? getComponent<T>() : T();
     }
 
 private:

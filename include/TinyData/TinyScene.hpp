@@ -91,7 +91,7 @@ struct TinyScene {
         if (!node) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
-            nodeAddCompSkeleton(nodeHandle, componentData.rtSkeleHandle);
+            nodeAddCompSkeleton(nodeHandle, componentData.pSkeleHandle);
         } else {
             node->add<T>(componentData);
         }
@@ -100,7 +100,7 @@ struct TinyScene {
     template<typename T>
     void nodeRemoveComp(TinyHandle nodeHandle) {
         TinyNode* node = nodes.get(nodeHandle);
-        if (!node) return;
+        if (!node || !node->has<T>()) return;
 
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
             nodeRemoveCompSkeleton(nodeHandle);
@@ -112,9 +112,7 @@ struct TinyScene {
     template<typename T>
     T copyComp(TinyHandle nodeHandle) const {
         const TinyNode* node = nodes.get(nodeHandle);
-        if (!node) return T(); // Empty/default
-
-        return node->getCopy<T>();
+        return node ? node->getCopy<T>() : T();
     }
 
     // --------- Specific component logic ---------

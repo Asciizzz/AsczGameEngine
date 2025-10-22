@@ -206,8 +206,8 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         if (originalNode.has<TinyNode::Skeleton>()) {
             TinyNode::Skeleton newSkeleComp = originalNode.getCopy<TinyNode::Skeleton>();
 
-            if (validIndex(newSkeleComp.skeleHandle, glbSkeleRHandle)) {
-                newSkeleComp.skeleHandle = glbSkeleRHandle[newSkeleComp.skeleHandle.index];
+            if (validIndex(newSkeleComp.pSkeleHandle, glbSkeleRHandle)) {
+                newSkeleComp.pSkeleHandle = glbSkeleRHandle[newSkeleComp.pSkeleHandle.index];
             }
 
             scene.nodeAddComp<TinyNode::Skeleton>(nodeHandle, newSkeleComp);

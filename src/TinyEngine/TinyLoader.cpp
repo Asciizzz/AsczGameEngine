@@ -740,7 +740,7 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
         skeleNode.add<TinyNode::Node3D>();
 
         TinyNode::Skeleton skele3D;
-        skele3D.skeleHandle = TinyHandle(skeleIdx);
+        skele3D.pSkeleHandle = TinyHandle(skeleIdx);
 
         skeleNode.add<TinyNode::Skeleton>(std::move(skele3D));
 

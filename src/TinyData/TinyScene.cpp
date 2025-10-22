@@ -286,7 +286,7 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     // Retrieve skeleton component if exists
     TinyNode::Skeleton* skeletonComp = node->get<TinyNode::Skeleton>();
     if (skeletonComp) {
-        TinySkeletonRT* rtSkele = rGet<TinySkeletonRT>(skeletonComp->rtSkeleHandle);
+        TinySkeletonRT* rtSkele = rGet<TinySkeletonRT>(skeletonComp->pSkeleHandle);
         if (rtSkele) rtSkele->update();
     }
 
@@ -323,24 +323,21 @@ TinyHandle TinyScene::nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skel
     
     const TinySkeleton* fsSkele = fs()->rGet<TinySkeleton>(skeletonHandle);
     if (!fsSkele) {
-        compPtr->skeleHandle = TinyHandle();
+        compPtr->pSkeleHandle = TinyHandle();
         return TinyHandle();
     }
 
-    // CRITICAL FIX: Set the skeleton handle BEFORE initializing runtime data
-    compPtr->skeleHandle = skeletonHandle;
-
     TinySkeletonRT rtSkele;
-    rtSkele.init(skeletonHandle, *fsSkele); // FIXED: Use skeletonHandle parameter, not compPtr->skeleHandle
+    rtSkele.init(skeletonHandle, *fsSkele);
     rtSkele.vkCreate(sceneReq.device, sceneReq.skinDescPool, sceneReq.skinDescLayout);
 
-    compPtr->rtSkeleHandle = rAdd<TinySkeletonRT>(std::move(rtSkele));
+    compPtr->pSkeleHandle = rAdd<TinySkeletonRT>(std::move(rtSkele));
 
-    TinySkeletonRT* rtSkelePtr = rGet<TinySkeletonRT>(compPtr->rtSkeleHandle);
+    TinySkeletonRT* rtSkelePtr = rGet<TinySkeletonRT>(compPtr->pSkeleHandle);
     if (rtSkelePtr) rtSkelePtr->update(); // Initial update to set poses
 
     // Return the runtime skeleton handle
-    return compPtr->rtSkeleHandle;
+    return compPtr->pSkeleHandle;
 }
 
 void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
@@ -350,10 +347,7 @@ void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
     TinyNode::Skeleton* compPtr = node->get<TinyNode::Skeleton>();
     if (!compPtr) return; // No skeleton component exists
 
-    // Remove skeleton runtime data using TinyFS pending deletion system
-    if (compPtr->rtSkeleHandle.valid() && fs()->rHas<TinySkeletonRT>(compPtr->rtSkeleHandle)) {
-        fs()->rRemove<TinySkeletonRT>(compPtr->rtSkeleHandle);
-    }
+    fs()->rRemove<TinySkeletonRT>(compPtr->pSkeleHandle);
 
     node->remove<TinyNode::Skeleton>();
 }
@@ -367,7 +361,7 @@ VkDescriptorSet TinyScene::getNodeSkeletonDescSet(TinyHandle nodeHandle) const {
     if (!compPtr) return VK_NULL_HANDLE;
 
     // Retrieve runtime skeleton data from TinyFS registry
-    const TinySkeletonRT* rtSkele = rGet<TinySkeletonRT>(compPtr->rtSkeleHandle);
+    const TinySkeletonRT* rtSkele = rGet<TinySkeletonRT>(compPtr->pSkeleHandle);
     if (!rtSkele) return VK_NULL_HANDLE;
 
     return rtSkele->descSet;

@@ -661,10 +661,11 @@ void TinyApp::renderSceneNodeInspector() {
                 const TinyNode* skeleNode = activeScene->node(boneComp.skeleNodeHandle);
                 if (skeleNode && skeleNode->has<TinyNode::Skeleton>()) {
                     const TinyNode::Skeleton* skeleComp = skeleNode->get<TinyNode::Skeleton>();
-                    if (skeleComp && skeleComp->skeleHandle.valid()) {
-                        const TinySkeleton* skeleton = fs.rGet<TinySkeleton>(skeleComp->skeleHandle);
-                        if (skeleton) {
-                            maxBoneIndex = static_cast<int>(skeleton->bones.size()) - 1;
+                    if (skeleComp) {
+                        // Retrieve runtime skeleton data
+                        const TinySkeletonRT* rtSkeleton = activeScene->rGet<TinySkeletonRT>(skeleComp->pSkeleHandle);
+                        if (rtSkeleton) {
+                            maxBoneIndex = static_cast<int>(rtSkeleton->skinData.size()) - 1;
                         }
                     }
                 }
@@ -730,54 +731,54 @@ void TinyApp::renderSceneNodeInspector() {
     // Skeleton Component - Always show
     if (selectedNode->has<TinyNode::Skeleton>()) {
         renderComponent("Skeleton", ImVec4(0.2f, 0.15f, 0.15f, 0.8f), ImVec4(0.4f, 0.3f, 0.3f, 0.6f), true, [&]() {
-            // Get component copy using TinyScene method
+            // Copy the component for editing
             TinyNode::Skeleton skeleComp = activeScene->copyComp<TinyNode::Skeleton>(selectedSceneNodeHandle);
-            TinyHandle originalSkeleHandle = skeleComp.skeleHandle; // Store original to detect actual changes
-            
+            TinyHandle originalPSkeleHandle = skeleComp.pSkeleHandle;
+
+            // If pSkeleHandle is a runtime skeleton, remap to static skeleton handle for editing
+            TinyHandle staticSkeletonHandle = skeleComp.pSkeleHandle;
+            TinySkeletonRT* rtSkeleton = activeScene->rGet<TinySkeletonRT>(skeleComp.pSkeleHandle);
+            if (rtSkeleton) {
+                staticSkeletonHandle = rtSkeleton->skeleHandle;
+            }
+
             ImGui::Spacing();
-            
-            // Skeleton Handle field
+            // Skeleton Handle field - always edit the static skeleton handle
             ImGui::Text("Skeleton Resource:");
-            bool skeleModified = renderHandleField("##SkeletonHandle", skeleComp.skeleHandle, "Skeleton",
+            bool skeleModified = renderHandleField("##SkeletonHandle", staticSkeletonHandle, "Skeleton",
                 "Drag a skeleton file from the File Explorer",
                 "Select skeleton resource for bone data");
-            
+
             // Show skeleton information if valid
-            const TinySkeleton* skeleton = fs.rGet<TinySkeleton>(skeleComp.skeleHandle);
-            TinySkeletonRT* rtSkeleton = nullptr;
-            
+            const TinySkeleton* skeleton = fs.rGet<TinySkeleton>(staticSkeletonHandle);
             if (skeleton) {
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
-                
-                // Get runtime skeleton data for animation
-                rtSkeleton = activeScene->rGet<TinySkeletonRT>(skeleComp.rtSkeleHandle);
-            } else if (skeleComp.skeleHandle.valid()) {
+            } else if (staticSkeletonHandle.valid()) {
                 ImGui::SameLine();
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid skeleton resource");
             }
-            
+
             ImGui::Spacing();
-            
-            // Component status
             ImGui::Separator();
             ImGui::Text("Status:");
             ImGui::SameLine();
-            
             if (skeleton && rtSkeleton) {
                 ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Skeleton loaded and ready for animation");
             } else if (skeleton) {
-                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.5f, 1.0f), "Skeleton loaded but no runtime data");
+                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.5f, 1.0f), "Skeleton loaded but no runtime data initialized");
+            } else if (rtSkeleton) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.3f, 1.0f), "Runtime skeleton exists but source skeleton missing");
             } else {
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Missing skeleton resource");
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No skeleton resource assigned");
             }
-            
-            // CRITICAL FIX: Only apply changes if skeleton handle actually changed
-            // This prevents rapid create/destroy cycles that exhaust descriptor pool
-            if (skeleModified && (skeleComp.skeleHandle != originalSkeleHandle)) {
+
+            // If the user changed the skeleton, update the component and reapply
+            if (skeleModified && staticSkeletonHandle != originalPSkeleHandle) {
+                skeleComp.pSkeleHandle = staticSkeletonHandle;
                 activeScene->nodeAddComp<TinyNode::Skeleton>(selectedSceneNodeHandle, skeleComp);
             }
-            
+
             // ===== BONE HIERARCHY EDITOR =====
             if (skeleton && rtSkeleton && !skeleton->bones.empty()) {
                 ImGui::Spacing();
@@ -800,10 +801,10 @@ void TinyApp::renderSceneNodeInspector() {
                 static int selectedBoneIndex = -1;
                 static TinyHandle lastSkeletonHandle;
                 
-                // Reset selection if skeleton changed
-                if (skeleComp.skeleHandle != lastSkeletonHandle) {
+                // Reset selection if skeleton changed (track by static skeleton handle)
+                if (staticSkeletonHandle != lastSkeletonHandle) {
                     selectedBoneIndex = -1;
-                    lastSkeletonHandle = skeleComp.skeleHandle;
+                    lastSkeletonHandle = staticSkeletonHandle;
                 }
                 
                 // Bone hierarchy tree (similar to scene explorer)
@@ -1897,7 +1898,7 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
         
         // Create a selectable item for the full filename + extension
         std::string fullDisplayName = fileExt.empty() ? fileName : (fileName + "." + fileExt.ext);
-        bool wasClicked = ImGui::Selectable(("##file_" + std::to_string(nodeHandle.index)).c_str(), isSelected);
+        bool wasClicked = ImGui::Selectable(("##file_" + std::to_string(nodeHandle.index)).c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick);
 
         // Capture interaction state immediately after the Selectable
         bool itemHovered = ImGui::IsItemHovered();
