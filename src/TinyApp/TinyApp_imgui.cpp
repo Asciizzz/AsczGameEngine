@@ -415,7 +415,7 @@ void TinyApp::renderSceneNodeInspector() {
             }
         }
         
-        // CRITICAL: Always call EndChild() - this was the bug!
+        // CRITICAL: Always call EndChild()
         ImGui::EndChild();
         
         // Call onAction after EndChild to avoid ImGui state corruption
