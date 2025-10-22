@@ -203,6 +203,16 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             scene.nodeAddComp<TinyNode::MeshRender>(nodeHandle, newMeshRender);
         }
 
+        if (originalNode.has<TinyNode::BoneAttach>()) {
+            TinyNode::BoneAttach newBoneAttach = originalNode.getCopy<TinyNode::BoneAttach>();
+
+            if (validIndex(newBoneAttach.skeleNodeHandle, nodeHandles)) {
+                newBoneAttach.skeleNodeHandle = nodeHandles[newBoneAttach.skeleNodeHandle.index];
+            }
+
+            scene.nodeAddComp<TinyNode::BoneAttach>(nodeHandle, newBoneAttach);
+        }
+
         if (originalNode.has<TinyNode::Skeleton>()) {
             TinyNode::Skeleton newSkeleComp = originalNode.getCopy<TinyNode::Skeleton>();
 
