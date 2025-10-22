@@ -295,11 +295,11 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 
-        // Retrieve skeleton descriptor set if rigged
+        // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
         TinyHandle skeleNodeHandle = meshRenderComp->skeleNodeHandle;
-        VkDescriptorSet skinSet = activeScene->getNodeSkeletonDescSet(skeleNodeHandle);
+        VkDescriptorSet skinSet = project->skinDescSet(activeScene, skeleNodeHandle);
 
-        if (skinSet != VK_NULL_HANDLE && isRigged) {
+        if (isRigged) {
             VkDescriptorSet sets[2] = { glbSet, skinSet };
             rPipeline->bindSets(currentCmd, sets, 2);
         } else {

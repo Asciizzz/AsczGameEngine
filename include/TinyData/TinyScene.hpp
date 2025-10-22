@@ -93,7 +93,6 @@ struct TinyScene {
         if constexpr (std::is_same_v<T, TinyNode::Skeleton>) {
             nodeAddCompSkeleton(nodeHandle, componentData.skeleHandle);
         } else {
-            // Add component as normal
             node->add<T>(componentData);
         }
     }

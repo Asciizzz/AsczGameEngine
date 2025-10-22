@@ -33,6 +33,13 @@ public:
     VkDescriptorSet getGlbDescSet(uint32_t idx) const { return tinyGlobal->getDescSet(idx); }
     
     VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
+    VkDescriptorSet getDummySkinDescSet() const { return dummySkinDescSet.get(); }
+    
+    // Get skin descriptor set with automatic fallback to dummy
+    VkDescriptorSet skinDescSet(TinyScene* scene, TinyHandle nodeHandle) const {
+        VkDescriptorSet skinSet = scene->getNodeSkeletonDescSet(nodeHandle);
+        return (skinSet != VK_NULL_HANDLE) ? skinSet : dummySkinDescSet.get();
+    }
     
     // Global UBO update
 
@@ -78,7 +85,12 @@ private:
 
     TinyVK::DescLayout skinDescLayout;
     TinyVK::DescPool skinDescPool;
+    
+    // Dummy skin descriptor set for rigged meshes without skeleton
+    TinyVK::DescSet dummySkinDescSet;
+    TinyVK::DataBuffer dummySkinBuffer;
 
     TinySceneReq sharedReq;
     void vkCreateSceneResources();
+    void createDummySkinDescriptorSet();
 };

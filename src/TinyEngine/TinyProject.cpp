@@ -149,7 +149,6 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
     // First pass: Insert empty nodes and store their handles
     std::vector<TinyHandle> nodeHandles;
-    nodeHandles.reserve(model.nodes.size());
 
     for (const auto& node : model.nodes) {
         nodeHandles.push_back(scene.addNodeRaw(node.name));
@@ -184,45 +183,35 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
         // Add component with scene API to ensure proper handling
-        if (originalNode.has<TinyNode::Node3D>()) { // Should have, otherwise wtf are you doing
-            const TinyNode::Node3D* ogTransform = originalNode.get<TinyNode::Node3D>();
-            TinyNode::Node3D newTransform = *ogTransform;
+        if (originalNode.has<TinyNode::Node3D>()) {
+            // const TinyNode::Node3D* ogTransform = originalNode.get<TinyNode::Node3D>();
+            TinyNode::Node3D newTransform = originalNode.getCopy<TinyNode::Node3D>();
 
             scene.nodeAddComp<TinyNode::Node3D>(nodeHandle, newTransform);
         }
 
         if (originalNode.has<TinyNode::MeshRender>()) {
-            const TinyNode::MeshRender* ogMeshComp = originalNode.get<TinyNode::MeshRender>();
+            TinyNode::MeshRender newMeshRender = originalNode.getCopy<TinyNode::MeshRender>();
 
-            TinyHandle newMeshHandle;
-            if (validIndex(ogMeshComp->meshHandle, glbMeshRHandle)) {
-                newMeshHandle = glbMeshRHandle[ogMeshComp->meshHandle.index];
+            if (validIndex(newMeshRender.meshHandle, glbMeshRHandle)) {
+                newMeshRender.meshHandle = glbMeshRHandle[newMeshRender.meshHandle.index];
             }
 
-            TinyHandle newSkeleNodeHandle;
-            if (validIndex(ogMeshComp->skeleNodeHandle, nodeHandles)) {
-                newSkeleNodeHandle = nodeHandles[ogMeshComp->skeleNodeHandle.index];
+            if (validIndex(newMeshRender.skeleNodeHandle, nodeHandles)) {
+                newMeshRender.skeleNodeHandle = nodeHandles[newMeshRender.skeleNodeHandle.index];
             }
 
-            TinyNode::MeshRender newMeshComp;
-            newMeshComp.meshHandle = newMeshHandle;
-            newMeshComp.skeleNodeHandle = newSkeleNodeHandle;
-
-            scene.nodeAddComp<TinyNode::MeshRender>(nodeHandle, newMeshComp);
+            scene.nodeAddComp<TinyNode::MeshRender>(nodeHandle, newMeshRender);
         }
 
         if (originalNode.has<TinyNode::Skeleton>()) {
-            const TinyNode::Skeleton* ogSkelComp = originalNode.get<TinyNode::Skeleton>();
+            TinyNode::Skeleton newSkeleComp = originalNode.getCopy<TinyNode::Skeleton>();
 
-            TinyHandle newSkeleHandle;
-            if (validIndex(ogSkelComp->skeleHandle, glbSkeleRHandle)) {
-                newSkeleHandle = glbSkeleRHandle[ogSkelComp->skeleHandle.index];
+            if (validIndex(newSkeleComp.skeleHandle, glbSkeleRHandle)) {
+                newSkeleComp.skeleHandle = glbSkeleRHandle[newSkeleComp.skeleHandle.index];
             }
 
-            TinyNode::Skeleton remappedSkelComp;
-            remappedSkelComp.skeleHandle = newSkeleHandle;
-
-            scene.nodeAddComp<TinyNode::Skeleton>(nodeHandle, remappedSkelComp);
+            scene.nodeAddComp<TinyNode::Skeleton>(nodeHandle, newSkeleComp);
         }
     }
 
@@ -258,8 +247,40 @@ void TinyProject::vkCreateSceneResources() {
         {DescType::StorageBuffer, 1}
     }, maxSkeletons);
 
+    // Create dummy skin descriptor set for rigged meshes without skeleton
+    createDummySkinDescriptorSet();
+
     sharedReq.fs = &fs();
     sharedReq.device = deviceVK;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;
+}
+
+void TinyProject::createDummySkinDescriptorSet() {
+    // Create dummy descriptor set (allocate from same pool as real skeletons)
+    dummySkinDescSet.allocate(deviceVK->device, skinDescPool.get(), skinDescLayout.get());
+
+    // Create dummy skin buffer with 1 identity matrix
+    glm::mat4 identityMatrix = glm::mat4(1.0f);
+    VkDeviceSize bufferSize = sizeof(glm::mat4);
+    
+    dummySkinBuffer
+        .setDataSize(bufferSize)
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(deviceVK)
+        .mapAndCopy(&identityMatrix);
+
+    // Update descriptor set with dummy buffer info
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = dummySkinBuffer.get();
+    bufferInfo.offset = 0;
+    bufferInfo.range = bufferSize;
+
+    DescWrite()
+        .setDstSet(dummySkinDescSet)
+        .setType(DescType::StorageBuffer)
+        .setDescCount(1)
+        .setBufferInfo({ bufferInfo })
+        .updateDescSets(deviceVK->device);
 }

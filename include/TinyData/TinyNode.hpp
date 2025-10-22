@@ -111,7 +111,7 @@ private:
         Skeleton
     > components;
 
-    uint32_t types = toMask(Types::Transform);
+    uint32_t types = 0;
 
     template<typename T>
     T& getComponent() { return std::get<T>(components); }

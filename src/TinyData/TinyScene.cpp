@@ -363,11 +363,8 @@ void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
 
 
 VkDescriptorSet TinyScene::getNodeSkeletonDescSet(TinyHandle nodeHandle) const {
-    const TinyNode* node = nodes.get(nodeHandle);
-    if (!node) return VK_NULL_HANDLE;
-
     // Retrieve skeleton component
-    const TinyNode::Skeleton* compPtr = node->get<TinyNode::Skeleton>();
+    const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
     if (!compPtr) return VK_NULL_HANDLE;
 
     // Retrieve runtime skeleton data from TinyFS registry
