@@ -111,9 +111,7 @@ public:
     }
 
     void flushRm() {
-        for (const auto& th : pendingRemoves) {
-            remove(th);
-        }
+        for (const auto& th : pendingRemoves) remove(th);
         pendingRemoves.clear();
     }
 
@@ -152,8 +150,7 @@ public:
 
     template<typename T>
     const T* get(const TypeHandle& th) const {
-        assert(th.isType<T>() && "TypeHandle does not match requested type T");
-        return static_cast<const T*>(get(th));
+        return const_cast<TinyRegistry*>(this)->get<T>(th);
     }
 
     template<typename T>
