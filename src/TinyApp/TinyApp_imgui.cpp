@@ -662,7 +662,7 @@ void TinyApp::renderSceneNodeInspector() {
                     const TinyNode::Skeleton* skeleComp = skeleNode->get<TinyNode::Skeleton>();
                     if (skeleComp) {
                         // Retrieve runtime skeleton data
-                        const TinySkeletonRT* rtSkeleton = activeScene->rGet<TinySkeletonRT>(skeleComp->pSkeleHandle);
+                        const TinySkeletonRT* rtSkeleton = activeScene->rtGet<TinySkeletonRT>(skeleComp->pSkeleHandle);
                         if (rtSkeleton) {
                             maxBoneIndex = static_cast<int>(rtSkeleton->skinData.size()) - 1;
                         }

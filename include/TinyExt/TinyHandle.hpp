@@ -46,3 +46,24 @@ namespace std {
         }
     };
 }
+
+#include <typeindex>
+struct TypeHandle {
+    TinyHandle handle;
+    size_t typeHash;
+
+    TypeHandle() : typeHash(0) {}
+
+    template<typename T>
+    static TypeHandle make(TinyHandle h) {
+        TypeHandle th;
+        th.handle = h;
+        th.typeHash = typeid(T).hash_code();
+        return th;
+    }
+
+    bool valid() const { return handle.valid() && typeHash != 0; }
+
+    template<typename T>
+    bool isType() const { return valid() && typeHash == typeid(T).hash_code(); }
+};

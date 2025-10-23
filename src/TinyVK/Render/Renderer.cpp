@@ -427,14 +427,11 @@ void Renderer::endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper) {
     currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }
 
-void Renderer::processPendingResourceDeletions(TinyProject* project) {
-    if (!project) return;
-    
+void Renderer::processPendingRemovals(TinyProject* project, TinyScene* activeScene) {
     TinyFS& fs = project->fs();
-    const std::vector<TypeHandle>& pendingRemoval = fs.rPendingRemove();
-    
-    if (pendingRemoval.empty()) return;
-    
+    // No pending removals anywhere
+    if (!fs.rHasPendingRm() && (activeScene && !activeScene->rtHasPendingRm())) return;
+
     // Wait for ALL in-flight fences to ensure no resources are in use by GPU
     // This is the safest approach - wait for all frames to complete
     std::vector<VkFence> allFences;
@@ -456,22 +453,13 @@ void Renderer::processPendingResourceDeletions(TinyProject* project) {
             // Log warning but continue - GPU might be hung, but we can't wait forever
             printf("Warning: Timeout waiting for GPU to finish before deleting resources\n");
         } else if (result != VK_SUCCESS) {
-            printf("Warning: Error waiting for GPU fences before resource deletion\n");
             return; // Don't delete if we can't confirm GPU is done
         }
     }
     
-    // Safe to delete resources now
-    for (size_t i = 0; i < pendingRemoval.size(); ++i) {
-        const TypeHandle& th = pendingRemoval[i];
-
-        // Every component has their own destructor
-        // no need for explicit calls
-        fs.rExecPendingRemove(i);
-    }
-    
-    // Check if all pending deletions are resolved and clear the list
-    fs.rPendingResolved();
+    // Safely flush pending removals now
+    fs.rFlushRm();
+    if (activeScene) activeScene->rtFlushRm();
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {

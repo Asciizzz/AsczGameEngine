@@ -2,28 +2,7 @@
 
 #include "TinyExt/TinyPool.hpp"
 
-#include <typeindex>
 #include <assert.h>
-
-struct TypeHandle {
-    TinyHandle handle;
-    size_t typeHash;
-
-    TypeHandle() : typeHash(0) {}
-
-    template<typename T>
-    static TypeHandle make(TinyHandle h) {
-        TypeHandle th;
-        th.handle = h;
-        th.typeHash = typeid(T).hash_code();
-        return th;
-    }
-
-    bool valid() const { return handle.valid() && typeHash != 0; }
-
-    template<typename T>
-    bool isType() const { return valid() && typeHash == typeid(T).hash_code(); }
-};
 
 class TinyRegistry { // For raw resource data
     struct IPool {
@@ -80,6 +59,24 @@ class TinyRegistry { // For raw resource data
         return *existing;
     }
 
+    std::vector<TypeHandle> pendingRemoves;
+
+    // Remove execution
+    template<typename T>
+    void remove(const TinyHandle& handle) {
+        auto* wrapper = getWrapper<T>(); // check validity
+        if (wrapper) wrapper->pool.remove(handle);
+    }
+
+    void remove(const TypeHandle& th) {
+        if (!th.valid()) return;
+
+        auto it = hashToPool.find(th.typeHash);
+        if (it != hashToPool.end()) {
+            it->second->remove(th.handle);
+        }
+    }
+
 public:
     TinyRegistry() = default;
 
@@ -95,6 +92,33 @@ public:
         TinyHandle handle = pool.add(std::move(data));
 
         return TypeHandle::make<T>(handle);
+    }
+
+    template<typename T>
+    void instaRm(const TinyHandle& handle) {
+        remove<T>(handle);
+    }
+    void instaRm(const TypeHandle& th) {
+        remove(th);
+    }
+
+    template<typename T> // For unsafe removal (vulkan resources for example)
+    void queueRm(const TinyHandle& handle) {
+        pendingRemoves.push_back(TypeHandle::make<T>(handle));
+    }
+    void queueRm(const TypeHandle& th) {
+        pendingRemoves.push_back(th);
+    }
+
+    void flushRm() {
+        for (const auto& th : pendingRemoves) {
+            remove(th);
+        }
+        pendingRemoves.clear();
+    }
+
+    bool hasPendingRm() const {
+        return !pendingRemoves.empty();
     }
 
     template<typename T>
@@ -145,21 +169,6 @@ public:
         if (it == hashToPool.end()) return false;
 
         return it->second->get(th.handle) != nullptr;
-    }
-
-    template<typename T>
-    void remove(const TinyHandle& handle) {
-        auto* wrapper = getWrapper<T>(); // check validity
-        if (wrapper) wrapper->pool.remove(handle);
-    }
-
-    void remove(const TypeHandle& th) {
-        if (!th.valid()) return;
-
-        auto it = hashToPool.find(th.typeHash);
-        if (it != hashToPool.end()) {
-            it->second->remove(th.handle);
-        }
     }
 
     template<typename T>

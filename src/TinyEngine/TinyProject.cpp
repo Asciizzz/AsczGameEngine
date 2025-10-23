@@ -233,12 +233,11 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
 
 void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle) {
-    TinyScene* targetScene = fs().rGet<TinyScene>(toHandle);
-    if (!targetScene) return;
+    const TinyScene* fromScene = fs().rGet<TinyScene>(fromHandle);
+    TinyScene* toScene = fs().rGet<TinyScene>(toHandle);
+    if (toHandle == fromHandle || !toScene || !fromScene) return;
 
-    // Use root node if no valid parent provided
-    // Use the scene's addScene method to merge the source scene into target scene
-    targetScene->addScene(fromHandle, parentHandle);
+    toScene->addScene(fromScene, parentHandle);
 }
 
 
@@ -254,7 +253,6 @@ void TinyProject::vkCreateSceneResources() {
     // Create dummy skin descriptor set for rigged meshes without skeleton
     createDummySkinDescriptorSet();
 
-    sharedReq.fs = &fs();
     sharedReq.deviceVK = deviceVK;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;

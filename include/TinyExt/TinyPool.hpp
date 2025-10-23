@@ -113,7 +113,6 @@ public:
         }
 
         states[index].occupied = true;
-        states[index].version++;
 
         return TinyHandle(index, states[index].version);
     }

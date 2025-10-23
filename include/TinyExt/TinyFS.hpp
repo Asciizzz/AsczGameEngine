@@ -330,45 +330,18 @@ public:
     void rRemove(const TypeHandle& th) {
         if (!registry_.has(th)) return; // nothing to remove :/
 
-        if (safeDelete(th.typeHash)) execRemove(th); // Safe to remove immediately
-        else                         rQueueRemove(th); // Queue for pending removal
+        if (safeDelete(th.typeHash)) registry_.instaRm(th); // Safe to remove instantly
+        else                         registry_.queueRm(th); // Queue for pending removal
     }
 
-    // Pending deletion system for registry data
-    template<typename T>
-    void rQueueRemove(const TinyHandle& handle) {
-        rQueueRemove(TypeHandle::make<T>(handle));
+    void rFlushRm() {
+        registry_.flushRm();
     }
 
-    void rQueueRemove(const TypeHandle& th) {
-        rPendingRemove_.push_back(th);
+    bool rHasPendingRm() const {
+        return registry_.hasPendingRm();
     }
 
-    // Get pending deletions (read-only access for external systems like renderer)
-    const std::vector<TypeHandle>& rPendingRemove() const {
-        return rPendingRemove_;
-    }
-
-    void rExecPendingRemove(uint32_t index) {
-        if (index >= rPendingRemove_.size()) return;
-        const TypeHandle& th = rPendingRemove_[index];
-        execRemove(th);
-    }
-
-    bool rPendingResolved() {
-        bool allResolved = true;
-        for (const auto& th : rPendingRemove_) {
-            if (registry_.has(th)) {
-                allResolved = false;
-                break;
-            }
-        }
-
-        // Clear only if all resolved
-        if (allResolved) rPendingRemove_.clear();
-
-        return allResolved;
-    }
 
 private:
     TinyPool<Node> fnodes_;
@@ -378,17 +351,6 @@ private:
 
     // Type to extension info map (using new TypeExt structure)
     UnorderedMap<size_t, TypeExt> typeHashToExt;
-
-    std::vector<TypeHandle> rPendingRemove_;
-
-    template<typename T> // True delete
-    void execRemove(const TinyHandle& handle) {
-        registry_.remove<T>(handle); 
-    }
-
-    void execRemove(const TypeHandle& th) {
-        registry_.remove(th);
-    }
 
     bool namesEqual(const std::string& a, const std::string& b) const {
         if (caseSensitive_) {
@@ -490,10 +452,8 @@ private:
             }
         }
 
-        if (node->hasData()) {
-            // Special remove (instant delete or queue)
-            rRemove(node->tHandle);
-        }
+        // Special removal of data (queue vs instant depending on safeDelete)
+        if (node->hasData()) rRemove(node->tHandle);
 
         // remove from parent children list
         if (fnodes_.isValid(node->parent)) {

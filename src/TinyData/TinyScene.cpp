@@ -182,8 +182,7 @@ bool TinyScene::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHan
 
 
 
-void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
-    const TinyScene* from = fs()->rGet<TinyScene>(sceneHandle);
+void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
     if (!from || from->nodes.count() == 0) return;
 
     // Default to root node if no parent specified
@@ -321,12 +320,11 @@ TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
 
     // Create new empty valid runtime skeleton
     TinySkeletonRT rtSkele(sceneReq.deviceVK, sceneReq.skinDescPool, sceneReq.skinDescLayout);
-
     // Repurpose pHandle into runtime skeleton handle
-    compPtr->pSkeleHandle = rAdd<TinySkeletonRT>(std::move(rtSkele));
+    compPtr->pSkeleHandle = rtAdd<TinySkeletonRT>(std::move(rtSkele));
 
     // Return the runtime skeleton
-    return rGet<TinySkeletonRT>(compPtr->pSkeleHandle);
+    return rtGet<TinySkeletonRT>(compPtr->pSkeleHandle);
 }
 
 TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {

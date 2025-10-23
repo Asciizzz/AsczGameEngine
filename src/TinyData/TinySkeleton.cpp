@@ -37,9 +37,6 @@ void TinySkeletonRT::copy(const TinySkeletonRT* other) {
     skeleHandle = other->skeleHandle;
     skeleton = other->skeleton;
 
-    if (skeleton) printf("Copying TinySkeletonRT | handle %u_%u with %zu bones.\n", skeleHandle.index, skeleHandle.version, skeleton->bones.size());
-    else          printf("Copying TinySkeletonRT | handle %u_%u with 0 bones.\n", skeleHandle.index, skeleHandle.version);
-
     localPose = other->localPose;
     finalPose = other->finalPose;
     skinData = other->skinData;

@@ -65,7 +65,7 @@ public:
     void drawScene(TinyProject* project, TinyScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, TinyHandle selectedNodeHandle = TinyHandle()) const;
 
     // Safe resource deletion with Vulkan synchronization
-    void processPendingResourceDeletions(TinyProject* project);
+    void processPendingRemovals(TinyProject* project, TinyScene* activeScene);
 
     // Get swapchain framebuffer for external ImGui rendering
     VkFramebuffer getFrameBuffer(uint32_t imageIndex) const;

@@ -75,7 +75,7 @@ struct TinySkeletonRT {
     // Global update
     void update();
 
-    VkDescriptorSet descSet() const { return descSet_; }
+    VkDescriptorSet descSet() const { return hasSkeleton() ? descSet_.get() : VK_NULL_HANDLE; }
     bool hasSkeleton() const {
         return  vkValid &&
                 skeleton != nullptr &&
