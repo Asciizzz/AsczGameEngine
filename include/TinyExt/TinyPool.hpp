@@ -150,28 +150,7 @@ struct TinyPool {
     Type* data() { return items.data(); }
     const Type* data() const { return items.data(); }
 
-    // ---- CRITICAL: Remove ----
-
-    // Not safe, not recommended
-    // void remove(uint32_t index) {
-    //     if (!isOccupied(index)) return;
-
-    //     if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
-    //                 TinyPoolTraits<Type>::is_shared_ptr) {
-    //         items[index].reset();
-    //     } else if constexpr(std::is_copy_assignable_v<Type>) {
-    //         items[index] = {};
-    //     } else {
-    //         // For non-copyable types, use placement new to reconstruct
-    //         items[index].~Type();
-    //         new(&items[index]) Type{};
-    //     }
-
-    //     states[index].occupied = false;
-    //     states[index].version++;
-
-    //     freeList.push_back(index);
-    // }
+    // ---- CRITICAL: Aware removal ----
 
     void instaRm(const TinyHandle& handle) {
         remove(handle);
@@ -181,15 +160,26 @@ struct TinyPool {
         if (valid(handle)) pendingRms.push_back(handle);
     }
 
+    const std::vector<TinyHandle>& listRms() const {
+        return pendingRms;
+    }
+
+    void flushRm(uint32_t index) {
+        if (index >= pendingRms.size()) return;
+        remove(pendingRms[index]);
+    }
+
     void flushAllRms() {
         for (const auto& handle : pendingRms) remove(handle);
         pendingRms.clear();
     }
 
-    const std::vector<TinyHandle>& listRms() const {
-        return pendingRms;
+    bool hasPendingRms() const {
+        return !pendingRms.empty();
     }
 
+
+    // Soon to be private
     void remove(const TinyHandle& handle) {
         if (!valid(handle)) return;
 

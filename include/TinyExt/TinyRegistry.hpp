@@ -8,20 +8,23 @@ class TinyRegistry { // For raw resource data
     struct IPool {
         virtual ~IPool() = default;
         virtual void* get(const TinyHandle& handle) = 0;
-        virtual void remove(const TinyHandle& handle) = 0;
+        virtual void instaRm(const TinyHandle& handle) = 0;
+        virtual void queueRm(const TinyHandle& handle) = 0;
+        virtual void flushRm(uint32_t count) = 0;
+        virtual void flushAllRms() = 0;
+        virtual bool hasPendingRms() const = 0;
     };
 
     template<typename T>
     struct PoolWrapper : public IPool {
         TinyPool<T> pool;
 
-        void* get(const TinyHandle& handle) override {
-            return pool.get(handle);
-        }
-
-        void remove(const TinyHandle& handle) override {
-            pool.remove(handle);
-        }
+        void* get(const TinyHandle& handle) override { return pool.get(handle); }
+        void instaRm(const TinyHandle& handle) override { pool.instaRm(handle); }
+        void queueRm(const TinyHandle& handle) override { pool.queueRm(handle); }
+        void flushRm(uint32_t count) override { pool.flushRm(count); }
+        void flushAllRms() override { pool.flushAllRms(); }
+        bool hasPendingRms() const override { return pool.hasPendingRms(); }
     };
 
     UnorderedMap<std::type_index, UniquePtr<IPool>> pools;
@@ -65,7 +68,7 @@ class TinyRegistry { // For raw resource data
     template<typename T>
     void remove(const TinyHandle& handle) {
         auto* wrapper = getWrapper<T>(); // check validity
-        if (wrapper) wrapper->pool.remove(handle);
+        if (wrapper) wrapper->pool.instaRm(handle);
     }
 
     void remove(const TypeHandle& th) {
@@ -73,7 +76,7 @@ class TinyRegistry { // For raw resource data
 
         auto it = hashToPool.find(th.typeHash);
         if (it != hashToPool.end()) {
-            it->second->remove(th.handle);
+            it->second->instaRm(th.handle);
         }
     }
 
