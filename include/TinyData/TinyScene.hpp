@@ -37,7 +37,10 @@ private:
 public:
     std::string name;
 
-    TinyScene(const std::string& sceneName = "New Scene") : name(sceneName) {}
+    TinyScene(const std::string& sceneName = "New Scene") : name(sceneName) {
+        TinyPool<TinySkeletonRT>& skeleRTPool = rtRegistry.make<TinySkeletonRT>();
+        skeleRTPool.alloc(1024); // Preallocate 1024 runtime skeletons
+    }
 
     TinyScene(const TinyScene&) = delete;
     TinyScene& operator=(const TinyScene&) = delete;
@@ -201,7 +204,6 @@ private:
     TinySceneReq sceneReq;   // Scene requirements
 
     TinyRegistry rtRegistry; // Local runtime registry for this scene
-
 
     // Non-const access only for internal use
     template<typename T>

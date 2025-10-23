@@ -46,13 +46,14 @@ struct TinyPool {
     TinyPool() = default;
 
     void alloc(uint32_t size) {
+        // Push in reverse so that lower indices are used first
         for (uint32_t i = 0; i < size; ++i) {
             uint32_t index = static_cast<uint32_t>(items.size());
             items.emplace_back();
             states.emplace_back();
             states[index].occupied = false;
             states[index].version = 0;
-            freeList.push_back(index);
+            freeList.insert(freeList.begin(), index);
         }
     }
 

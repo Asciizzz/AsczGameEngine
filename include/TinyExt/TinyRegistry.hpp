@@ -91,6 +91,11 @@ public:
         TinyHandle handle = pool.add(std::move(data));
 
         return TypeHandle::make<T>(handle);
+    } 
+
+    template<typename T>
+    TinyPool<T>& make() {
+        return ensurePool<T>().pool;
     }
 
     template<typename T>
