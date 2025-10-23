@@ -40,6 +40,7 @@ void TinySkeletonRT::copy(const TinySkeletonRT& other) {
     localPose = other.localPose;
     finalPose = other.finalPose;
     skinData = other.skinData;
+    printf("Copied TinySkeletonRT with %zu bones.\n", localPose.size());
 
     vkCreate();
     update();
