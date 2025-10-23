@@ -330,18 +330,33 @@ public:
     void rRemove(const TypeHandle& th) {
         if (!registry_.has(th)) return; // nothing to remove :/
 
-        if (safeDelete(th.typeHash)) registry_.instaRm(th); // Safe to remove instantly
-        else                         registry_.queueRm(th); // Queue for pending removal
+        if (safeDelete(th.typeHash)) registry_.tInstaRm(th); // Safe to remove instantly
+        else                         registry_.tQueueRm(th); // Queue for pending removal
     }
 
-    void rFlushAllRms() {
-        registry_.flushAllRms();
+    template<typename T>
+    bool rTHasPendingRms() const {
+        return registry_.tHasPendingRms<T>();
     }
+
+    template<typename T>
+    void rTFlushRm(uint32_t index) {
+        registry_.tFlushRm<T>(index);
+    }
+
+    template<typename T>
+    void rTFlushAllRms() {
+        registry_.tFlushAllRms<T>();
+    }
+
 
     bool rHasPendingRms() const {
         return registry_.hasPendingRms();
     }
 
+    void rFlushAllRms() {
+        registry_.flushAllRms();
+    }
 
 private:
     TinyPool<Node> fnodes_;

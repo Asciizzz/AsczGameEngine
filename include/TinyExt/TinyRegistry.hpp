@@ -10,7 +10,7 @@ class TinyRegistry { // For raw resource data
         virtual void* get(const TinyHandle& handle) = 0;
         virtual void instaRm(const TinyHandle& handle) = 0;
         virtual void queueRm(const TinyHandle& handle) = 0;
-        virtual void flushRm(uint32_t count) = 0;
+        virtual void flushRm(uint32_t index) = 0;
         virtual void flushAllRms() = 0;
         virtual bool hasPendingRms() const = 0;
     };
@@ -22,7 +22,7 @@ class TinyRegistry { // For raw resource data
         void* get(const TinyHandle& handle) override { return pool.get(handle); }
         void instaRm(const TinyHandle& handle) override { pool.instaRm(handle); }
         void queueRm(const TinyHandle& handle) override { pool.queueRm(handle); }
-        void flushRm(uint32_t count) override { pool.flushRm(count); }
+        void flushRm(uint32_t index) override { pool.flushRm(index); }
         void flushAllRms() override { pool.flushAllRms(); }
         bool hasPendingRms() const override { return pool.hasPendingRms(); }
     };
@@ -62,8 +62,6 @@ class TinyRegistry { // For raw resource data
         return *existing;
     }
 
-    std::vector<TypeHandle> pendingRemoves;
-
     // Remove execution
     template<typename T>
     void remove(const TinyHandle& handle) {
@@ -96,29 +94,56 @@ public:
     }
 
     template<typename T>
-    void instaRm(const TinyHandle& handle) {
+    void tInstaRm(const TinyHandle& handle) {
         remove<T>(handle);
     }
-    void instaRm(const TypeHandle& th) {
+    void tInstaRm(const TypeHandle& th) {
         remove(th);
     }
 
     template<typename T> // For unsafe removal (vulkan resources for example)
-    void queueRm(const TinyHandle& handle) {
-        pendingRemoves.push_back(TypeHandle::make<T>(handle));
+    void tQueueRm(const TinyHandle& handle) {
+        auto* wrapper = getWrapper<T>(); // check validity
+        if (wrapper) wrapper->pool.queueRm(handle);
     }
-    void queueRm(const TypeHandle& th) {
-        pendingRemoves.push_back(th);
+    void tQueueRm(const TypeHandle& th) {
+        auto it = hashToPool.find(th.typeHash);
+        if (it != hashToPool.end()) {
+            it->second->queueRm(th.handle);
+        }
     }
 
-    void flushAllRms() {
-        for (const auto& th : pendingRemoves) remove(th);
-        pendingRemoves.clear();
+    template<typename T>
+    void tFlushRm(uint32_t index) {
+        auto* wrapper = getWrapper<T>(); // check validity
+        if (wrapper) wrapper->pool.flushRm(index);
     }
 
-    bool hasPendingRms() const {
-        return !pendingRemoves.empty();
+    template<typename T>
+    void tFlushAllRms() {
+        auto* wrapper = getWrapper<T>(); // check validity
+        if (wrapper) wrapper->pool.flushAllRms();
     }
+
+    template<typename T>
+    bool tHasPendingRms() const {
+        auto* wrapper = getWrapper<T>(); // check validity
+        return wrapper ? wrapper->pool.hasPendingRms() : false;
+    }
+
+    void flushAllRms() { // Every pool
+        for (auto& [typeIdx, poolPtr] : pools) {
+            poolPtr->flushAllRms();
+        }
+    }
+
+    bool hasPendingRms() const { // At least one pool has pending removals
+        for (const auto& [typeIdx, poolPtr] : pools) {
+            if (poolPtr->hasPendingRms()) return true;
+        }
+        return false;
+    }
+
 
     template<typename T>
     T* get(const TinyHandle& handle) {

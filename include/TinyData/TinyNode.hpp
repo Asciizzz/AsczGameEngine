@@ -105,7 +105,8 @@ private:
         Transform,
         MeshRender,
         BoneAttach,
-        Skeleton
+        Skeleton,
+        Animation
     > components;
 
     uint32_t types = 0;

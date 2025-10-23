@@ -168,19 +168,31 @@ public:
         return rtRegistry.get<T>(th);
     }
 
-    void rtFlushAllRms() {
-        rtRegistry.flushAllRms();
+    template<typename T>
+    bool rtTHasPendingRms() const {
+        return rtRegistry.tHasPendingRms<T>();
     }
 
+    template<typename T>
+    void rtTFlushAllRms() {
+        rtRegistry.tFlushAllRms<T>();
+    }
+
+
     bool rtHasPendingRms() const {
-        return rtRegistry.hasPendingRms();
+        return // Add more in the future if needed
+            rtTHasPendingRms<TinySkeletonRT>(); // &&
+            // rtTHasPendingRms<TinyAnimeRT>();
+    }
+
+    void rtFlushAllRms() {
+        rtTFlushAllRms<TinySkeletonRT>();
+        // rtTFlushAllRms<TinyAnimeRT>();
     }
 
     // --------- Specific component's data access ---------
 
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
-
-    // TinyAnimeRT* nAnimationRT(TinyHandle nodeHandle);
 
 private:
     TinyPool<TinyNode> nodes;
@@ -234,9 +246,9 @@ private:
     void rtRemove(const TinyHandle& handle) {
         // CRITICAL: Special handling for dangerous type (vulkan related)
         if constexpr (type_eq<T, TinySkeletonRT>) {
-            rtRegistry.queueRm<T>(handle);
+            rtRegistry.tQueueRm<T>(handle);
         } else {
-            rtRegistry.instaRm<T>(handle);
+            rtRegistry.tInstaRm<T>(handle);
         }
     }
 

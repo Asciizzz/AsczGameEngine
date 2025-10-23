@@ -430,7 +430,9 @@ void Renderer::endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper) {
 void Renderer::processPendingRemovals(TinyProject* project, TinyScene* activeScene) {
     TinyFS& fs = project->fs();
     // No pending removals anywhere
-    if (!fs.rHasPendingRms() && (activeScene && !activeScene->rtHasPendingRms())) return;
+    if (!fs.rHasPendingRms() &&
+        (activeScene && !activeScene->rtHasPendingRms())
+    ) return;
 
     // Wait for ALL in-flight fences to ensure no resources are in use by GPU
     // This is the safest approach - wait for all frames to complete

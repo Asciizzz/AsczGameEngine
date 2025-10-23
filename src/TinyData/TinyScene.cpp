@@ -62,6 +62,7 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
     removeComp<TinyNode::MeshRender>(nodeHandle);
     removeComp<TinyNode::BoneAttach>(nodeHandle);
     removeComp<TinyNode::Skeleton>(nodeHandle);
+    removeComp<TinyNode::Animation>(nodeHandle);
 
     nodes.remove(nodeHandle);
 
@@ -328,8 +329,13 @@ TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
 }
 
 TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
-    // Placeholder for future implementation
-    return nullptr;
+    TinyNode::Animation* compPtr = nodeCompRaw<TinyNode::Animation>(nodeHandle);
+    if (!compPtr) return nullptr; // Unable to add animation component (should not happen)
+
+    TinyAnimeRT rtAnime;
+    compPtr->pAnimeHandle = rtAdd<TinyAnimeRT>(std::move(rtAnime));
+
+    return rtGet<TinyAnimeRT>(compPtr->pAnimeHandle);
 }
 
 
