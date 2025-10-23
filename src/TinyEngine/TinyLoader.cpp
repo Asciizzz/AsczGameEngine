@@ -645,73 +645,71 @@ void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::
 }
 
 
-struct ChannelToSkeletonMap {
-    UnorderedMap<int, int> channelToSkeletonIndex;
+// struct ChannelToSkeletonMap {
+//     UnorderedMap<int, int> channelToSkeletonIndex;
 
-    void set(int channelIndex, int skeletonIndex) {
-        channelToSkeletonIndex[channelIndex] = skeletonIndex;
-    }
-};
+//     void set(int channelIndex, int skeletonIndex) {
+//         channelToSkeletonIndex[channelIndex] = skeletonIndex;
+//     }
+// };
 
-void loadAnimation(TinyAnime& animation, ChannelToSkeletonMap& channelToSkeletonMap, const tinygltf::Model& model, const tinygltf::Animation& gltfAnim, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
-    animation.clear();
-    animation.name = gltfAnim.name;
+// void loadAnimation(TinyAnime& animation, ChannelToSkeletonMap& channelToSkeletonMap, const tinygltf::Model& model, const tinygltf::Animation& gltfAnim, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
+//     animation.clear();
+//     animation.name = gltfAnim.name;
 
-    for (const auto& gltfSampler : gltfAnim.samplers) {
+//     for (const auto& gltfSampler : gltfAnim.samplers) {
 
-        TinyAnimeSampler sampler;
+//         TinyAnimeSampler sampler;
 
-        // Read time values
-        if (gltfSampler.input >= 0) {
-            readAccessor(model, gltfSampler.input, sampler.inputTimes);
-        }
+//         // Read time values
+//         if (gltfSampler.input >= 0) {
+//             readAccessor(model, gltfSampler.input, sampler.inputTimes);
+//         }
 
-        // Read output generically
-        if (gltfSampler.output >= 0) {
-            readAccessor(model, gltfSampler.output, sampler.outputValues);
-        }
+//         // Read output generically
+//         if (gltfSampler.output >= 0) {
+//             readAccessor(model, gltfSampler.output, sampler.outputValues);
+//         }
 
-        sampler.setInterpolation(gltfSampler.interpolation);
-        animation.samplers.push_back(std::move(sampler));
-    }
+//         sampler.setInterpolation(gltfSampler.interpolation);
+//         animation.samplers.push_back(std::move(sampler));
+//     }
 
-    for (const auto& gltfChannel : gltfAnim.channels) {
-        TinyAnimeChannel channel;
-        channel.samplerIndex = gltfChannel.sampler;
+//     for (const auto& gltfChannel : gltfAnim.channels) {
+//         TinyAnimeChannel channel;
+//         channel.samplerIndex = gltfChannel.sampler;
 
-        auto it = nodeToSkeletonAndBoneIndex.find(gltfChannel.target_node);
-        if (it != nodeToSkeletonAndBoneIndex.end()) {
-            int channelIndex = animation.channels.size();
+//         auto it = nodeToSkeletonAndBoneIndex.find(gltfChannel.target_node);
+//         if (it != nodeToSkeletonAndBoneIndex.end()) {
+//             int channelIndex = animation.channels.size();
 
-            channelToSkeletonMap.set(channelIndex, it->second.first);
-            channel.targetIndex = it->second.second;
-        }
+//             channelToSkeletonMap.set(channelIndex, it->second.first);
+//             channel.targetIndex = it->second.second;
+//         }
 
-        channel.setTargetPath(gltfChannel.target_path);
+//         channel.setTargetPath(gltfChannel.target_path);
 
-        animation.channels.push_back(std::move(channel));
-    }
-}
+//         animation.channels.push_back(std::move(channel));
+//     }
+// }
 
-void loadAnimations(std::vector<TinyAnime>& animations, std::vector<ChannelToSkeletonMap>& ChannelToSkeletonMaps, tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
-    animations.clear();
-    ChannelToSkeletonMaps.clear();
+// void loadAnimations(std::vector<TinyAnime>& animations, std::vector<ChannelToSkeletonMap>& ChannelToSkeletonMaps, tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
+//     animations.clear();
+//     ChannelToSkeletonMaps.clear();
 
-    for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
-        const tinygltf::Animation& gltfAnim = model.animations[animIndex];
+//     for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
+//         const tinygltf::Animation& gltfAnim = model.animations[animIndex];
 
-        TinyAnime animation;
-        ChannelToSkeletonMap channelToSkeletonMap;
-        loadAnimation(animation, channelToSkeletonMap, model, gltfAnim, nodeToSkeletonAndBoneIndex);
+//         TinyAnime animation;
+//         ChannelToSkeletonMap channelToSkeletonMap;
+//         loadAnimation(animation, channelToSkeletonMap, model, gltfAnim, nodeToSkeletonAndBoneIndex);
 
-        animations.push_back(std::move(animation));
-        ChannelToSkeletonMaps.push_back(std::move(channelToSkeletonMap));
-    }
-}
+//         animations.push_back(std::move(animation));
+//         ChannelToSkeletonMaps.push_back(std::move(channelToSkeletonMap));
+//     }
+// }
 
-void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
-               const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex)
-{
+void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& nodeToSkeletonAndBoneIndex) {
     std::vector<TinyNode> nodes;
 
     auto pushNode = [&](TinyNode&& node) -> int {
@@ -850,18 +848,6 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
 
 
 
-// Helper to print vector<TinyHandle> nicely
-std::string formatVector(const std::vector<TinyHandle>& vec) {
-    std::string result = "[";
-    for (size_t i = 0; i < vec.size(); ++i) {
-        result += std::to_string(vec[i].index);
-        if (i + 1 < vec.size()) result += ", ";
-    }
-    result += "]";
-    return result;
-}
-
-
 TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
@@ -899,6 +885,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     loadMeshes(result.meshes, model, !hasRigging);
 
     loadNodes(result, model, nodeToSkeletonAndBoneIndex);
+    // loadAnimations(result, model, nodeToSkeletonAndBoneIndex);
 
     return result;
 }

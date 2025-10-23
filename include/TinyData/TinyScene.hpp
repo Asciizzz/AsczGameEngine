@@ -202,7 +202,6 @@ private:
 
     TinyRegistry rtRegistry; // Local runtime registry for this scene
 
-    // --------- Complex component logic ---------
 
     // Non-const access only for internal use
     template<typename T>
