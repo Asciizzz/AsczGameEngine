@@ -12,7 +12,7 @@
 
 ##### [ ] Animation System (priority: High)
 
-* Add animation system now that skeletons are working properly. Just don't delete them right now unless you want to turn your pc into a work of art (descriptor set being deleted mid <Pipeline - Command Buffer> usage issue).
+* Add animation system now that skeletons are working properly.
 
 ##### [ ] Ray Tracing? (priority: LOW)
 
