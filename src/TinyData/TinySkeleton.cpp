@@ -6,25 +6,23 @@ using namespace TinyVK;
 
 
 TinySkeletonRT::TinySkeletonRT(const TinyVK::Device* deviceVK, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout)
-: vkValid(true) {
-    this->deviceVK = deviceVK;
-
+: vkValid(true), deviceVK(deviceVK) {
     descSet_.allocate(deviceVK->device, descPool, descLayout);
 }
 
 void TinySkeletonRT::set(TinyHandle skeletonHandle, const TinySkeleton* skeleton) {
     if (!vkValid || skeleton == nullptr) return;
 
-    this->skeleHandle = skeletonHandle;
-    this->skeleton = skeleton;
+    skeleHandle_ = skeletonHandle;
+    skelePtr_ = skeleton;
 
-    localPose.resize(skeleton->bones.size(), glm::mat4(1.0f));
-    finalPose.resize(skeleton->bones.size(), glm::mat4(1.0f));
-    skinData.resize(skeleton->bones.size(), glm::mat4(1.0f));
+    localPose_.resize(skelePtr_->bones.size(), glm::mat4(1.0f));
+    finalPose_.resize(skelePtr_->bones.size(), glm::mat4(1.0f));
+    skinData_.resize(skelePtr_->bones.size(), glm::mat4(1.0f));
 
     // Initialize local pose to bind pose
-    for (size_t i = 0; i < skeleton->bones.size(); ++i) {
-        localPose[i] = skeleton->bones[i].localBindTransform;
+    for (size_t i = 0; i < skelePtr_->bones.size(); ++i) {
+        localPose_[i] = skelePtr_->bones[i].localBindTransform;
     }
 
     vkCreate();
@@ -34,12 +32,12 @@ void TinySkeletonRT::set(TinyHandle skeletonHandle, const TinySkeleton* skeleton
 void TinySkeletonRT::copy(const TinySkeletonRT* other) {
     if (!vkValid || !other->vkValid) return;
 
-    skeleHandle = other->skeleHandle;
-    skeleton = other->skeleton;
+    skeleHandle_ = other->skeleHandle_;
+    skelePtr_ = other->skelePtr_;
 
-    localPose = other->localPose;
-    finalPose = other->finalPose;
-    skinData = other->skinData;
+    localPose_ = other->localPose_;
+    finalPose_ = other->finalPose_;
+    skinData_ = other->skinData_;
 
     vkCreate();
     update();
@@ -49,13 +47,13 @@ void TinySkeletonRT::vkCreate() {
     if (!hasSkeleton()) return;
 
     // Create skinning data buffer
-    VkDeviceSize bufferSize = sizeof(glm::mat4) * skinData.size();
+    VkDeviceSize bufferSize = sizeof(glm::mat4) * skinData_.size();
     skinBuffer_
         .setDataSize(bufferSize)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK)
-        .mapAndCopy(skinData.data());
+        .mapAndCopy(skinData_.data());
 
     // Update descriptor set with skin buffer info
     VkDescriptorBufferInfo bufferInfo{};
@@ -73,46 +71,57 @@ void TinySkeletonRT::vkCreate() {
 
 void TinySkeletonRT::refresh(uint32_t boneIndex, bool reupdate) {
     // Reinitialize local pose of specific bone to bind pose
-    if (boneIndex >= skeleton->bones.size()) return;
+    if (boneIndex >= skelePtr_->bones.size()) return;
 
-    localPose[boneIndex] = skeleton->bones[boneIndex].localBindTransform;
-    if (reupdate) update();
+    localPose_[boneIndex] = skelePtr_->bones[boneIndex].localBindTransform;
+    if (reupdate) update(boneIndex);
 }
 
 void TinySkeletonRT::refreshAll() {
-    // Reinitialize all local poses to bind poses
-    for (size_t i = 0; i < skeleton->bones.size(); ++i) {
-        localPose[i] = skeleton->bones[i].localBindTransform;
+    for (size_t i = 0; i < skelePtr_->bones.size(); ++i) {
+        localPose_[i] = skelePtr_->bones[i].localBindTransform;
     }
-
-    update();
+    updateFlat();
 }
 
 void TinySkeletonRT::updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform) {
-    if (boneIndex >= skeleton->bones.size()) return;
+    if (boneIndex >= skelePtr_->bones.size()) return;
 
-    const TinyBone& bone = skeleton->bones[boneIndex];
+    const TinyBone& bone = skelePtr_->bones[boneIndex];
 
-    finalPose[boneIndex] = parentTransform * localPose[boneIndex];
-    skinData[boneIndex] = finalPose[boneIndex] * bone.inverseBindMatrix;
+    finalPose_[boneIndex] = parentTransform * localPose_[boneIndex];
+    skinData_[boneIndex] = finalPose_[boneIndex] * bone.inverseBindMatrix;
 
     for (int childIndex : bone.children) {
-        updateRecursive(childIndex, finalPose[boneIndex]);
+        updateRecursive(childIndex, finalPose_[boneIndex]);
+    }
+}
+
+void TinySkeletonRT::updateFlat() {
+    for (size_t i = 0; i < skelePtr_->bones.size(); ++i) {
+        const TinyBone& bone = skelePtr_->bones[i];
+
+        glm::mat4 parentTransform = glm::mat4(1.0f);
+        if (bone.parent != -1) {
+            parentTransform = finalPose_[bone.parent];
+        }
+
+        finalPose_[i] = parentTransform * localPose_[i];
+        skinData_[i] = finalPose_[i] * bone.inverseBindMatrix;
     }
 }
 
 void TinySkeletonRT::update(uint32_t index) {
     if (!hasSkeleton() || index >= boneCount()) return;
 
-    // Retrieve parent
-    glm::mat4 parentTransform = glm::mat4(1.0f);
-    if (skeleton->bones[index].parent != -1) {
-        uint32_t parentIndex = static_cast<uint32_t>(skeleton->bones[index].parent);
-        parentTransform = finalPose[parentIndex];
+    if (index == 0) {
+        updateFlat();
+    } else {
+        // Retrieve parent
+        glm::mat4 parentTransform = finalPose_[skelePtr_->bones[index].parent];
+        updateRecursive(index, parentTransform);
     }
 
-    updateRecursive(0, parentTransform);
-
     // Upload updated skin data to GPU
-    skinBuffer_.copyData(skinData.data());
+    skinBuffer_.copyData(skinData_.data());
 }

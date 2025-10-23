@@ -47,8 +47,6 @@ struct TinySkeleton {
 #include "TinyVK/Resource/Descriptor.hpp"
 
 struct TinySkeletonRT {
-    TinyHandle skeleHandle; // Handle to TinySkeleton in fsRegistry
-    const TinySkeleton* skeleton = nullptr;
 
     // Default constructor means this skeleton is f*cked
     TinySkeletonRT() : vkValid(false) {}
@@ -66,9 +64,6 @@ struct TinySkeletonRT {
     void set(TinyHandle skeleHandle, const TinySkeleton* skeleton);
     void copy(const TinySkeletonRT* other);
 
-    std::vector<glm::mat4> localPose;
-    std::vector<glm::mat4> finalPose;
-    std::vector<glm::mat4> skinData;
     void refresh(uint32_t boneIndex, bool reupdate = true);
     void refreshAll();
 
@@ -77,14 +72,32 @@ struct TinySkeletonRT {
 
     VkDescriptorSet descSet() const { return hasSkeleton() ? descSet_.get() : VK_NULL_HANDLE; }
     uint32_t boneCount() const {
-        return (localPose.size() == skeleton->bones.size()) ? static_cast<uint32_t>(skeleton->bones.size()) : 0;
+        return (localPose_.size() == skelePtr_->bones.size()) ? static_cast<uint32_t>(skelePtr_->bones.size()) : 0;
     }
     bool hasSkeleton() const {
-        return  vkValid && skeleton != nullptr;
+        return  vkValid && skelePtr_ != nullptr;
     }
+
+    glm::mat4 localPose(uint32_t index) const { return localPose_[index]; }
+    void setLocalPose(uint32_t index, const glm::mat4& pose = glm::mat4(1.0f)) {
+        if (index >= localPose_.size()) return;
+
+        localPose_[index] = pose;
+        update(index);
+    }
+
+    const TinySkeleton* skeleton() const { return skelePtr_; }
+    TinyHandle skeleHandle() const { return skeleHandle_; }
 
 private:
     bool vkValid = false;
+
+    TinyHandle skeleHandle_;
+    const TinySkeleton* skelePtr_ = nullptr;
+
+    std::vector<glm::mat4> localPose_;
+    std::vector<glm::mat4> finalPose_;
+    std::vector<glm::mat4> skinData_;
 
     const TinyVK::Device* deviceVK = nullptr;
     TinyVK::DescSet    descSet_;
@@ -93,4 +106,5 @@ private:
     void vkCreate();
     
     void updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform);
+    void updateFlat();
 };

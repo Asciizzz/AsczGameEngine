@@ -5,6 +5,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 class TinyCamera {
@@ -71,5 +72,61 @@ public:
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
 
-    glm::mat4 getMVP() const { return projectionMatrix * viewMatrix; }
+    glm::mat4 getVP() const { return projectionMatrix * viewMatrix; }
+
+    struct Plane {
+        glm::vec4 eq; // Plane equation: ax + by + cz + d = 0
+    };
+
+    static void extractFrustumPlanes(const glm::mat4& VP, Plane planes[6]) {
+        glm::vec4 r0 = glm::row(VP, 0);
+        glm::vec4 r1 = glm::row(VP, 1);
+        glm::vec4 r2 = glm::row(VP, 2);
+        glm::vec4 r3 = glm::row(VP, 3);
+
+        planes[0].eq = r3 + r0; // Left
+        planes[1].eq = r3 - r0; // Right
+        planes[2].eq = r3 + r1; // Bottom
+        planes[3].eq = r3 - r1; // Top
+        planes[4].eq = r3 + r2; // Near
+        planes[5].eq = r3 - r2; // Far
+
+        // Normalize planes
+        for (int i = 0; i < 6; ++i) {
+            glm::vec3 n = glm::vec3(planes[i].eq);
+            float len = glm::length(n);
+            planes[i].eq /= len;
+        }
+    }
+
+    bool collideAABB(glm::vec3 abMin, glm::vec3 abMax, glm::mat4 transform) {
+        Plane planes[6];
+        extractFrustumPlanes(getVP(), planes);
+
+        // Transform camera frustum planes into the AABB's local space
+        glm::mat4 invTrans = glm::transpose(glm::inverse(transform));
+        for (int i = 0; i < 6; ++i) planes[i].eq = invTrans * planes[i].eq;
+
+        // Now test the *local* AABB against those transformed planes
+        for (int i = 0; i < 6; ++i) {
+            glm::vec3 n = glm::vec3(planes[i].eq);
+            float d = planes[i].eq.w;
+
+            // Choose the vertex most likely to be outside the plane
+            glm::vec3 p = abMin;
+            if (n.x >= 0) p.x = abMax.x;
+            if (n.y >= 0) p.y = abMax.y;
+            if (n.z >= 0) p.z = abMax.z;
+
+            // Signed distance from plane
+            float dist = glm::dot(n, p) + d;
+
+            // If it's completely outside any plane, there’s no collision
+            if (dist < 0.0f)
+                return false;
+        }
+
+        // Otherwise it intersects or is fully inside the frustum
+        return true;
+    }
 };

@@ -279,6 +279,15 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         const auto& regMesh = fs.rGet<TinyMesh>(meshHandle);
         if (!regMesh) continue; // No mesh found
 
+        const auto* transform = rtNode.get<TinyNode::Transform>();
+        glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
+
+        bool cameraCollide = project->getCamera()->collideAABB(
+            regMesh->abMin, regMesh->abMax, transformMat
+        );
+
+        if (!cameraCollide) continue;
+
         // Draw each individual submeshes
         VkBuffer vertexBuffer = regMesh->vertexBuffer;
         VkBuffer indexBuffer = regMesh->indexBuffer;
@@ -309,9 +318,6 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
             rPipeline->bindSets(currentCmd, &glbSet, 1);
             isRigged = false;
         }
-
-        const auto* transform = rtNode.get<TinyNode::Transform>();
-        glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
 
         // Check if this node is the selected node for highlighting
         bool isSelectedNode = selectedNodeHandle.valid() && (nodeHandle == selectedNodeHandle);

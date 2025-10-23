@@ -23,7 +23,7 @@ struct TinyMesh {
     TinyMesh& operator=(TinyMesh&&) = default;
 
     std::string name; // Mesh name from glTF
-    
+
     TinyVertexLayout vertexLayout;
     std::vector<uint8_t> vertexData; // raw bytes
     size_t vertexCount = 0;
@@ -62,6 +62,13 @@ struct TinyMesh {
         return *this;
     }
 
+    // BETA! AABB
+    glm::vec3 abMin = glm::vec3(0.0f);
+    glm::vec3 abMax = glm::vec3(0.0f);
+    void updateAABB(const glm::vec3& point) {
+        abMin = glm::min(abMin, point);
+        abMax = glm::max(abMax, point);
+    }
 
     // Buffers for runtime use
     TinyVK::DataBuffer vertexBuffer;

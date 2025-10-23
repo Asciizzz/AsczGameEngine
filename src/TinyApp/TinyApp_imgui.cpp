@@ -664,7 +664,7 @@ void TinyApp::renderSceneNodeInspector() {
                         // Retrieve runtime skeleton data
                         const TinySkeletonRT* rtSkeleton = activeScene->rtGet<TinySkeletonRT>(skeleComp->pSkeleHandle);
                         if (rtSkeleton) {
-                            maxBoneIndex = static_cast<int>(rtSkeleton->skinData.size()) - 1;
+                            maxBoneIndex = static_cast<int>(rtSkeleton->boneCount() - 1); // Zero-based index
                         }
                     }
                 }
@@ -732,12 +732,12 @@ void TinyApp::renderSceneNodeInspector() {
             ImGui::Spacing();
             // Skeleton Handle field - always edit the static skeleton handle
             ImGui::Text("Skeleton Resource:");
-            bool skeleModified = renderHandleField("##SkeletonHandle", rtSkeleComp->skeleHandle, "Skeleton",
+            bool skeleModified = renderHandleField("##SkeletonHandle", rtSkeleComp->skeleHandle(), "Skeleton",
                 "Drag a skeleton file from the File Explorer",
                 "Select skeleton resource for bone data");
 
             // Show skeleton information if valid
-            const TinySkeleton* skeleton = rtSkeleComp->skeleton;
+            const TinySkeleton* skeleton = rtSkeleComp->skeleton();
             if (skeleton) {
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
@@ -768,7 +768,7 @@ void TinyApp::renderSceneNodeInspector() {
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.5f, 0.1f, 1.0f));
                 
                 if (ImGui::Button("Refresh All to Bind Pose", ImVec2(-1, 0))) {
-                    rtSkeleComp->refresh(-1, true);
+                    rtSkeleComp->refreshAll();
                 }
                 ImGui::PopStyleColor(3);
                 
@@ -779,9 +779,9 @@ void TinyApp::renderSceneNodeInspector() {
                 static TinyHandle lastSkeletonHandle;
                 
                 // Reset selection if skeleton changed (track by static skeleton handle)
-                if (lastSkeletonHandle != rtSkeleComp->skeleHandle) {
+                if (lastSkeletonHandle != rtSkeleComp->skeleHandle()) {
                     selectedBoneIndex = -1;
-                    lastSkeletonHandle = rtSkeleComp->skeleHandle;
+                    lastSkeletonHandle = rtSkeleComp->skeleHandle();
                 }
                 
                 // Bone hierarchy tree (similar to scene explorer)
@@ -876,7 +876,7 @@ void TinyApp::renderSceneNodeInspector() {
                     ImGui::Spacing();
                     
                     // Get current local pose matrix
-                    glm::mat4 localPose = rtSkeleComp->localPose[selectedBoneIndex];
+                    glm::mat4 localPose = rtSkeleComp->localPose(selectedBoneIndex);
 
                     // Decompose matrix into translation, rotation, scale
                     glm::vec3 translation, rotation, scale;
@@ -924,17 +924,16 @@ void TinyApp::renderSceneNodeInspector() {
                             glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), translation);
                             glm::mat4 rotateMat = glm::mat4_cast(newRotQuat);
                             glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
-                            
+
                             // Update the local pose and recalculate
-                            rtSkeleComp->localPose[selectedBoneIndex] = translateMat * rotateMat * scaleMat;
-                            rtSkeleComp->update();
+                            rtSkeleComp->setLocalPose(selectedBoneIndex, translateMat * rotateMat * scaleMat);
                         }
                         
                     } else {
                         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid transformation matrix!");
                         
                         if (ImGui::Button("Reset to Identity")) {
-                            rtSkeleComp->localPose[selectedBoneIndex] = glm::mat4(1.0f);
+                            rtSkeleComp->setLocalPose(selectedBoneIndex);
                             rtSkeleComp->update();
                         }
                     }
