@@ -56,3 +56,10 @@ struct TinyAnime {
     void computeDuration();
     int findChannelForBone(int boneIndex, TinyAnimeChannel::TargetPath path) const;
 };
+
+// Above are obsolete legacy structures kept for reference.
+
+
+struct TinyAnimeRT {
+    // Place holder
+};

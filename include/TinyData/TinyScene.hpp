@@ -90,10 +90,13 @@ struct TinyScene {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
+        removeComp<T>(nodeHandle);
+        node->add<T>(componentData);
+
         if constexpr (type_eq<T, TinyNode::Skeleton>) {
-            nodeAddCompSkeleton(nodeHandle, componentData.pSkeleHandle);
-        } else {
-            node->add<T>(componentData);
+            addSkeletonRT(nodeHandle);
+        } else if constexpr (type_eq<T, TinyNode::Animation>) {
+            addAnimationRT(nodeHandle);
         }
     }
 
@@ -103,10 +106,11 @@ struct TinyScene {
         if (!node || !node->has<T>()) return;
 
         if constexpr (type_eq<T, TinyNode::Skeleton>) {
-            nodeRemoveCompSkeleton(nodeHandle);
-        } else {
-            node->remove<T>();
+            TinySkeletonRT* rtSkele = nSkeletonRT(nodeHandle);
+            if (rtSkele) rRemove<TinySkeletonRT>(rtSkele->skeleHandle);
         }
+
+        node->remove<T>();
     }
 
     template<typename T>
@@ -134,11 +138,15 @@ struct TinyScene {
     // You are not allowed to modify the node component identity directly
     // BUT, you are allowed to modify the data inside the component
 
-    VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
-    
     // Exposable runtime access
     TinyNode::Transform* nTransform(TinyHandle nodeHandle);
+    const TinyNode::Transform* nTransform(TinyHandle nodeHandle) const;
+
     TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle);
+    const TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle) const;
+    const TinySkeleton* nSkeleton(TinyHandle nodeHandle) const;
+    VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
+
     // TinyAnimeRT* nAnimationRT(TinyHandle nodeHandle);
 
 private:
@@ -162,8 +170,10 @@ private:
         return node->get<T>();
     }
 
-    TinyHandle nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skeletonHandle);
-    void nodeRemoveCompSkeleton(TinyHandle nodeHandle);
+    // ---------- Runtime component management ----------
+
+    TinyHandle addSkeletonRT(TinyHandle nodeHandle);
+    TinyHandle addAnimationRT(TinyHandle nodeHandle);
 
     // ---------- Runtime registry access (private) ----------
 

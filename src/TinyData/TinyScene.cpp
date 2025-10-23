@@ -300,55 +300,65 @@ void TinyScene::update(TinyHandle nodeHandle) {
     TinyNode* node = nodes.get(realHandle);
     if (!node) return;
 
-// Update everything recursively
-
+    // Update everything recursively
     TinyNode::Transform* parentTransform = nTransform(node->parentHandle);
     updateRecursive(realHandle, parentTransform ? parentTransform->global : glm::mat4(1.0f));
 }
 
 
-TinyHandle TinyScene::nodeAddCompSkeleton(TinyHandle nodeHandle, TinyHandle skeletonHandle) {
-    TinyNode* node = nodes.get(nodeHandle);
-    if (!node) return TinyHandle();
+TinyHandle TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
+    TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
+    if (!compPtr) return TinyHandle(); // Unable to add skeleton component (should not happen)
 
-    nodeRemoveCompSkeleton(nodeHandle); // Remove existing skeleton component if any
-
-    TinyNode::Skeleton* compPtr = node->add<TinyNode::Skeleton>();
-    
-    const TinySkeleton* fsSkele = fs()->rGet<TinySkeleton>(skeletonHandle);
+    const TinySkeleton* fsSkele = fs()->rGet<TinySkeleton>(compPtr->pSkeleHandle);
     if (!fsSkele) {
         compPtr->pSkeleHandle = TinyHandle();
         return TinyHandle();
     }
 
     TinySkeletonRT rtSkele;
-    rtSkele.init(skeletonHandle, *fsSkele);
+    rtSkele.init(compPtr->pSkeleHandle, *fsSkele);
     rtSkele.vkCreate(sceneReq.device, sceneReq.skinDescPool, sceneReq.skinDescLayout);
 
+    // Repurpose pHandle into runtime skeleton handle
     compPtr->pSkeleHandle = rAdd<TinySkeletonRT>(std::move(rtSkele));
 
-    TinySkeletonRT* rtSkelePtr = rGet<TinySkeletonRT>(compPtr->pSkeleHandle);
+    TinySkeletonRT* rtSkelePtr = nSkeletonRT(nodeHandle);
     if (rtSkelePtr) rtSkelePtr->update(); // Initial update to set poses
 
     // Return the runtime skeleton handle
     return compPtr->pSkeleHandle;
 }
 
-void TinyScene::nodeRemoveCompSkeleton(TinyHandle nodeHandle) {
-    TinyNode* node = nodes.get(nodeHandle);
-    if (!node) return;
-
-    TinyNode::Skeleton* compPtr = node->get<TinyNode::Skeleton>();
-    if (!compPtr) return; // No skeleton component exists
-
-    fs()->rRemove<TinySkeletonRT>(compPtr->pSkeleHandle);
-
-    node->remove<TinyNode::Skeleton>();
+TinyHandle TinyScene::addAnimationRT(TinyHandle nodeHandle) {
+    // Placeholder for future implementation
+    return TinyHandle();
 }
 
 
 // --------- Specific component's data access ---------
 
+
+TinyNode::Transform* TinyScene::nTransform(TinyHandle nodeHandle) {
+    return nodeComp<TinyNode::Transform>(nodeHandle);
+}
+const TinyNode::Transform* TinyScene::nTransform(TinyHandle nodeHandle) const {
+    return nodeComp<TinyNode::Transform>(nodeHandle);
+}
+
+TinySkeletonRT* TinyScene::nSkeletonRT(TinyHandle nodeHandle) {
+    const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
+    return compPtr ? rGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
+}
+const TinySkeletonRT* TinyScene::nSkeletonRT(TinyHandle nodeHandle) const {
+    const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
+    return compPtr ? rGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
+}
+// skeleton blueprint is not modifiable 
+const TinySkeleton* TinyScene::nSkeleton(TinyHandle nodeHandle) const {
+    const TinySkeletonRT* rtSkele = nSkeletonRT(nodeHandle);
+    return rtSkele ? rtSkele->skeleton : nullptr;
+}
 VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
     // Retrieve skeleton component
     const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
@@ -359,14 +369,4 @@ VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
     if (!rtSkele) return VK_NULL_HANDLE;
 
     return rtSkele->descSet;
-}
-
-
-TinyNode::Transform* TinyScene::nTransform(TinyHandle nodeHandle) {
-    return nodeComp<TinyNode::Transform>(nodeHandle);
-}
-
-TinySkeletonRT* TinyScene::nSkeletonRT(TinyHandle nodeHandle) {
-    const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
-    return compPtr ? rGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
 }
