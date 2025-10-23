@@ -737,7 +737,6 @@ void loadNodes(TinyModel& tinyModel, const tinygltf::Model& model,
         const TinySkeleton& skeleton = tinyModel.skeletons[skeleIdx];
 
         TinyNode skeleNode(skeleton.name);
-        skeleNode.add<TinyNode::Transform>();
 
         TinyNode::Skeleton skele3D;
         skele3D.pSkeleHandle = TinyHandle(skeleIdx);

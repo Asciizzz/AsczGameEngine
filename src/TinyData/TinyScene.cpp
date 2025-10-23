@@ -276,7 +276,7 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
 
     // Update transform component
 
-    TinyNode::Transform* transform = node->get<TinyNode::Transform>();
+    TinyNode::Transform* transform = nTransform(realHandle);
     glm::mat4 transformMat = glm::mat4(1.0f);
     if (transform) {
         transformMat = parentGlobalTransform * transform->local;
@@ -302,8 +302,8 @@ void TinyScene::update(TinyHandle nodeHandle) {
 
 // Update everything recursively
 
-    glm::mat4 parentGlobal = nGlbMat4(node->parentHandle);
-    updateRecursive(realHandle, parentGlobal);
+    TinyNode::Transform* parentTransform = nTransform(node->parentHandle);
+    updateRecursive(realHandle, parentTransform ? parentTransform->global : glm::mat4(1.0f));
 }
 
 
@@ -362,9 +362,8 @@ VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
 }
 
 
-glm::mat4 TinyScene::nGlbMat4(TinyHandle nodeHandle) const {
-    const TinyNode::Transform* transform = nodeComp<TinyNode::Transform>(nodeHandle);
-    return transform ? transform->global : glm::mat4(1.0f);
+TinyNode::Transform* TinyScene::nTransform(TinyHandle nodeHandle) {
+    return nodeComp<TinyNode::Transform>(nodeHandle);
 }
 
 TinySkeletonRT* TinyScene::nSkeletonRT(TinyHandle nodeHandle) {

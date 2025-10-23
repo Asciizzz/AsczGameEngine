@@ -16,7 +16,6 @@ public:
     TinyProject(const TinyVK::Device* deviceVK);
     ~TinyProject();
 
-    // Delete copy
     TinyProject(const TinyProject&) = delete;
     TinyProject& operator=(const TinyProject&) = delete;
     // No move semantics, where tf would you even want to move it to?
@@ -31,7 +30,7 @@ public:
 
     VkDescriptorSetLayout getGlbDescSetLayout() const { return tinyGlobal->getDescLayout(); }
     VkDescriptorSet getGlbDescSet(uint32_t idx) const { return tinyGlobal->getDescSet(idx); }
-    
+
     VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
     VkDescriptorSet getDummySkinDescSet() const { return dummySkinDescSet.get(); }
     
@@ -46,25 +45,17 @@ public:
         tinyGlobal->update(*tinyCamera, frameIndex);
     }
 
-    /**
-     * Adds a scene instance from one scene to another scene.
-     *
-     * @param fromHandle Handle to the source scene in the registry to instantiate.
-     * @param toHandle Handle to the target scene to add the instance to.
-     * @param parentHandle Handle to the node in target scene to add as child of (optional - uses root if invalid).
-     */
     void addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle = TinyHandle());
+
 
     // Filesystem and registry accessors
     TinyFS& fs() { return *tinyFS; }
     const TinyFS& fs() const { return *tinyFS; }
 
     const TinySceneReq& sceneReq() const { return sharedReq; }
-
     const TinyVK::Device* vkDevice() const { return deviceVK; }
 
-    // Get the initial scene handle (for TinyApp to set as active scene)
-    TinyHandle getInitialSceneHandle() const { return initialSceneHandle; }
+    TinyHandle initialSceneHandle;
 
 private:
     const TinyVK::Device* deviceVK;
@@ -74,7 +65,6 @@ private:
 
     UniquePtr<TinyFS> tinyFS;
 
-    TinyHandle initialSceneHandle; // Handle to the initial "Main Scene" created during construction
     TinyHandle defaultMaterialHandle;
     TinyHandle defaultTextureHandle;
 

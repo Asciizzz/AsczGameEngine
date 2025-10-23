@@ -137,7 +137,7 @@ struct TinyScene {
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
     
     // Exposable runtime access
-    glm::mat4 nGlbMat4(TinyHandle nodeHandle) const;
+    TinyNode::Transform* nTransform(TinyHandle nodeHandle);
     TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle);
     // TinyAnimeRT* nAnimationRT(TinyHandle nodeHandle);
 

@@ -59,7 +59,7 @@ void TinyApp::initComponents() {
     project = MakeUnique<TinyProject>(deviceVK.get());
     
     // Initialize the active scene handle (moved from TinyProject for better separation)
-    activeSceneHandle = project->getInitialSceneHandle();
+    activeSceneHandle = project->initialSceneHandle;
 
     // Initialize selected handle to root scene node (already done in TinyProject constructor)
     // project->selectSceneNode(project->getRootNodeHandle());
