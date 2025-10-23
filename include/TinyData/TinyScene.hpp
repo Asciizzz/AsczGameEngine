@@ -168,12 +168,12 @@ public:
         return rtRegistry.get<T>(th);
     }
 
-    void rtFlushRm() {
-        rtRegistry.flushRm();
+    void rtFlushAllRms() {
+        rtRegistry.flushAllRms();
     }
 
-    bool rtHasPendingRm() const {
-        return rtRegistry.hasPendingRm();
+    bool rtHasPendingRms() const {
+        return rtRegistry.hasPendingRms();
     }
 
     // --------- Specific component's data access ---------

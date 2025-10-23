@@ -43,19 +43,6 @@ struct TinyPoolTraits<std::shared_ptr<T>> {
 // TinyPoolRaw with type-aware methods
 template<typename Type>
 struct TinyPool {
-private:
-    struct State {
-        bool occupied = false;
-        uint32_t version = 0;
-    };
-
-    TinyPoolType poolType = TinyPoolTraits<Type>::poolType;
-
-    std::vector<Type> items;
-    std::vector<State> states;
-    std::vector<uint32_t> freeList;
-
-public:
     TinyPool() = default;
 
     uint32_t count() const {
@@ -117,30 +104,7 @@ public:
         return TinyHandle(index, states[index].version);
     }
 
-    // ---- Remove ----
-    void remove(uint32_t index) {
-        if (!isOccupied(index)) return;
-
-        if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
-                    TinyPoolTraits<Type>::is_shared_ptr) {
-            items[index].reset();
-        } else if constexpr(std::is_copy_assignable_v<Type>) {
-            items[index] = {};
-        } else {
-            // For non-copyable types, use placement new to reconstruct
-            items[index].~Type();
-            new(&items[index]) Type{};
-        }
-
-        states[index].occupied = false;
-        states[index].version++;
-
-        freeList.push_back(index);
-    }
-
-    void remove(const TinyHandle& handle) {
-        if (valid(handle)) remove(handle.index);
-    }
+    // ---- Getters ----
 
     Type* get(const TinyHandle& handle) {
         bool isValid = valid(handle);
@@ -159,7 +123,8 @@ public:
     // Reserved for special cases
     Type* get(uint32_t index) {
         if (isOccupied(index)) {
-            if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
+            if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
+                        TinyPoolTraits<Type>::is_shared_ptr) {
                 return items[index].get();
             } else {
                 return &items[index];
@@ -184,4 +149,81 @@ public:
 
     Type* data() { return items.data(); }
     const Type* data() const { return items.data(); }
+
+    // ---- CRITICAL: Remove ----
+
+    // Not safe, not recommended
+    // void remove(uint32_t index) {
+    //     if (!isOccupied(index)) return;
+
+    //     if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
+    //                 TinyPoolTraits<Type>::is_shared_ptr) {
+    //         items[index].reset();
+    //     } else if constexpr(std::is_copy_assignable_v<Type>) {
+    //         items[index] = {};
+    //     } else {
+    //         // For non-copyable types, use placement new to reconstruct
+    //         items[index].~Type();
+    //         new(&items[index]) Type{};
+    //     }
+
+    //     states[index].occupied = false;
+    //     states[index].version++;
+
+    //     freeList.push_back(index);
+    // }
+
+    void instaRm(const TinyHandle& handle) {
+        remove(handle);
+    }
+
+    void queueRm(const TinyHandle& handle) {
+        if (valid(handle)) pendingRms.push_back(handle);
+    }
+
+    void flushAllRms() {
+        for (const auto& handle : pendingRms) remove(handle);
+        pendingRms.clear();
+    }
+
+    const std::vector<TinyHandle>& listRms() const {
+        return pendingRms;
+    }
+
+    void remove(const TinyHandle& handle) {
+        if (!valid(handle)) return;
+
+        uint32_t index = handle.index;
+
+        if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
+                    TinyPoolTraits<Type>::is_shared_ptr) {
+            items[index].reset();
+        } else if constexpr(std::is_copy_assignable_v<Type>) {
+            items[index] = {};
+        } else {
+            // For non-copyable types, use placement new to reconstruct
+            items[index].~Type();
+            new(&items[index]) Type{};
+        }
+
+        states[index].occupied = false;
+        states[index].version++;
+
+        freeList.push_back(index);
+    }
+
+private:
+    struct State {
+        bool occupied = false;
+        uint32_t version = 0;
+    };
+
+    TinyPoolType poolType = TinyPoolTraits<Type>::poolType;
+
+    std::vector<Type> items;
+    std::vector<State> states;
+    std::vector<uint32_t> freeList;
+
+    // Pending removals for deferred deletion (some types require this)
+    std::vector<TinyHandle> pendingRms;
 };

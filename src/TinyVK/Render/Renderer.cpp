@@ -430,7 +430,7 @@ void Renderer::endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper) {
 void Renderer::processPendingRemovals(TinyProject* project, TinyScene* activeScene) {
     TinyFS& fs = project->fs();
     // No pending removals anywhere
-    if (!fs.rHasPendingRm() && (activeScene && !activeScene->rtHasPendingRm())) return;
+    if (!fs.rHasPendingRms() && (activeScene && !activeScene->rtHasPendingRms())) return;
 
     // Wait for ALL in-flight fences to ensure no resources are in use by GPU
     // This is the safest approach - wait for all frames to complete
@@ -458,8 +458,8 @@ void Renderer::processPendingRemovals(TinyProject* project, TinyScene* activeSce
     }
     
     // Safely flush pending removals now
-    fs.rFlushRm();
-    if (activeScene) activeScene->rtFlushRm();
+    fs.rFlushAllRms();
+    if (activeScene) activeScene->rtFlushAllRms();
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {

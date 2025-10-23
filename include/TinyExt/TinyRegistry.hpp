@@ -110,12 +110,12 @@ public:
         pendingRemoves.push_back(th);
     }
 
-    void flushRm() {
+    void flushAllRms() {
         for (const auto& th : pendingRemoves) remove(th);
         pendingRemoves.clear();
     }
 
-    bool hasPendingRm() const {
+    bool hasPendingRms() const {
         return !pendingRemoves.empty();
     }
 

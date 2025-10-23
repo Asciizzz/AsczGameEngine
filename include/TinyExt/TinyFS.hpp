@@ -334,12 +334,12 @@ public:
         else                         registry_.queueRm(th); // Queue for pending removal
     }
 
-    void rFlushRm() {
-        registry_.flushRm();
+    void rFlushAllRms() {
+        registry_.flushAllRms();
     }
 
-    bool rHasPendingRm() const {
-        return registry_.hasPendingRm();
+    bool rHasPendingRms() const {
+        return registry_.hasPendingRms();
     }
 
 
