@@ -306,14 +306,14 @@ void TinyScene::update(TinyHandle nodeHandle) {
 }
 
 
-TinyHandle TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
+TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
     TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
-    if (!compPtr) return TinyHandle(); // Unable to add skeleton component (should not happen)
+    if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
 
     const TinySkeleton* fsSkele = fs()->rGet<TinySkeleton>(compPtr->pSkeleHandle);
     if (!fsSkele) {
         compPtr->pSkeleHandle = TinyHandle();
-        return TinyHandle();
+        return nullptr;
     }
 
     TinySkeletonRT rtSkele;
@@ -326,13 +326,13 @@ TinyHandle TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
     TinySkeletonRT* rtSkelePtr = nSkeletonRT(nodeHandle);
     if (rtSkelePtr) rtSkelePtr->update(); // Initial update to set poses
 
-    // Return the runtime skeleton handle
-    return compPtr->pSkeleHandle;
+    // Return the runtime skeleton
+    return rtSkelePtr;
 }
 
-TinyHandle TinyScene::addAnimationRT(TinyHandle nodeHandle) {
+TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
     // Placeholder for future implementation
-    return TinyHandle();
+    return nullptr;
 }
 
 

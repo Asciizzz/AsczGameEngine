@@ -3,6 +3,7 @@
 #include "TinyExt/TinyFS.hpp"
 
 #include "TinyData/TinyNode.hpp"
+#include "TinyData/TinyAnime.hpp"
 #include "TinyData/TinySkeleton.hpp"
 
 // TinyScene requirements
@@ -21,6 +22,20 @@ struct TinySceneReq {
 };
 
 struct TinyScene {
+
+private:
+
+    // -------- writeComp's RTResolver ---------
+    template<typename T>
+    struct RTResolver { using type = T; }; // Most type return themselves
+
+    // Special types
+    template<> struct RTResolver<TinyNode::Skeleton> { using type = TinySkeletonRT; };
+    template<> struct RTResolver<TinyNode::Animation> { using type = TinyAnimeRT; };
+
+    template<typename T> using RTResolver_t = typename RTResolver<T>::type;
+
+public:
     std::string name;
 
     TinyScene(const std::string& sceneName = "New Scene") : name(sceneName) {}
@@ -86,17 +101,19 @@ struct TinyScene {
     }
 
     template<typename T>
-    void writeComp(TinyHandle nodeHandle, const T& componentData = T()) {
+    RTResolver_t<T>* writeComp(TinyHandle nodeHandle, const T& componentData = T()) {
         TinyNode* node = nodes.get(nodeHandle);
-        if (!node) return;
+        if (!node) return nullptr;
 
         removeComp<T>(nodeHandle);
         node->add<T>(componentData);
 
         if constexpr (type_eq<T, TinyNode::Skeleton>) {
-            addSkeletonRT(nodeHandle);
+            return addSkeletonRT(nodeHandle);
         } else if constexpr (type_eq<T, TinyNode::Animation>) {
-            addAnimationRT(nodeHandle);
+            return addAnimationRT(nodeHandle);
+        } else { // Other types return themselves
+            return nodeComp<T>(nodeHandle);
         }
     }
 
@@ -172,8 +189,8 @@ private:
 
     // ---------- Runtime component management ----------
 
-    TinyHandle addSkeletonRT(TinyHandle nodeHandle);
-    TinyHandle addAnimationRT(TinyHandle nodeHandle);
+    TinySkeletonRT* addSkeletonRT(TinyHandle nodeHandle);
+    TinyAnimeRT* addAnimationRT(TinyHandle nodeHandle);
 
     // ---------- Runtime registry access (private) ----------
 
