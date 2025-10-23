@@ -43,14 +43,12 @@ struct TinyPoolTraits<std::shared_ptr<T>> {
 // TinyPoolRaw with type-aware methods
 template<typename Type>
 struct TinyPool {
+private:
     struct State {
         bool occupied = false;
         uint32_t version = 0;
     };
 
-    TinyPool() = default;
-
-private:
     TinyPoolType poolType = TinyPoolTraits<Type>::poolType;
 
     std::vector<Type> items;
@@ -58,6 +56,8 @@ private:
     std::vector<uint32_t> freeList;
 
 public:
+    TinyPool() = default;
+
     uint32_t count() const {
         return items.size() - freeList.size();
     }
