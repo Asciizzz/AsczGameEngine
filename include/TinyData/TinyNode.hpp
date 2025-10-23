@@ -37,7 +37,7 @@ struct TinyNode {
     }
 
     // Transform data - both local and runtime
-    struct Node3D {
+    struct Transform {
         static constexpr Types kType = Types::Transform;
         glm::mat4 local = glm::mat4(1.0f);
         glm::mat4 global = glm::mat4(1.0f);
@@ -106,7 +106,7 @@ struct TinyNode {
 
 private:
     std::tuple<
-        Node3D,
+        Transform,
         MeshRender,
         BoneAttach,
         Skeleton

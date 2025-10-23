@@ -86,7 +86,7 @@ struct TinyScene {
     }
 
     template<typename T>
-    void addComp(TinyHandle nodeHandle, const T& componentData = T()) {
+    void writeComp(TinyHandle nodeHandle, const T& componentData = T()) {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return;
 
@@ -135,7 +135,9 @@ struct TinyScene {
     // BUT, you are allowed to modify the data inside the component
 
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
-    // Exposable runtime skeleton access
+    
+    // Exposable runtime access
+    glm::mat4 nGlbMat4(TinyHandle nodeHandle) const;
     TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle);
     // TinyAnimeRT* nAnimationRT(TinyHandle nodeHandle);
 

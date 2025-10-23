@@ -310,8 +310,9 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
             isRigged = false;
         }
 
-        const auto& transform = rtNode.get<TinyNode::Node3D>()->global;
-        
+        const auto* transform = rtNode.get<TinyNode::Transform>();
+        glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
+
         // Check if this node is the selected node for highlighting
         bool isSelectedNode = selectedNodeHandle.valid() && (nodeHandle == selectedNodeHandle);
         
@@ -329,7 +330,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
 
             // Offset 0: global transform
             // Offset 64: other properties (1)
-            rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transform);
+            rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transformMat);
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
 
             uint32_t indexOffset = submeshes[i].indexOffset;

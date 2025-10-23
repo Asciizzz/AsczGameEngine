@@ -182,11 +182,11 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
         // Add component with scene API to ensure proper handling
-        if (originalNode.has<TinyNode::Node3D>()) {
-            // const TinyNode::Node3D* ogTransform = originalNode.get<TinyNode::Node3D>();
-            TinyNode::Node3D newTransform = originalNode.getCopy<TinyNode::Node3D>();
+        if (originalNode.has<TinyNode::Transform>()) {
+            // const TinyNode::Transform* ogTransform = originalNode.get<TinyNode::Transform>();
+            TinyNode::Transform newTransform = originalNode.getCopy<TinyNode::Transform>();
 
-            scene.addComp<TinyNode::Node3D>(nodeHandle, newTransform);
+            scene.writeComp<TinyNode::Transform>(nodeHandle, newTransform);
         }
 
         if (originalNode.has<TinyNode::MeshRender>()) {
@@ -200,7 +200,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
                 newMeshRender.skeleNodeHandle = nodeHandles[newMeshRender.skeleNodeHandle.index];
             }
 
-            scene.addComp<TinyNode::MeshRender>(nodeHandle, newMeshRender);
+            scene.writeComp<TinyNode::MeshRender>(nodeHandle, newMeshRender);
         }
 
         if (originalNode.has<TinyNode::BoneAttach>()) {
@@ -210,7 +210,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
                 newBoneAttach.skeleNodeHandle = nodeHandles[newBoneAttach.skeleNodeHandle.index];
             }
 
-            scene.addComp<TinyNode::BoneAttach>(nodeHandle, newBoneAttach);
+            scene.writeComp<TinyNode::BoneAttach>(nodeHandle, newBoneAttach);
         }
 
         if (originalNode.has<TinyNode::Skeleton>()) {
@@ -220,7 +220,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
                 newSkeleComp.pSkeleHandle = glbSkeleRHandle[newSkeleComp.pSkeleHandle.index];
             }
 
-            scene.addComp<TinyNode::Skeleton>(nodeHandle, newSkeleComp);
+            scene.writeComp<TinyNode::Skeleton>(nodeHandle, newSkeleComp);
         }
     }
 
@@ -241,9 +241,6 @@ void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, T
     // Use root node if no valid parent provided
     // Use the scene's addScene method to merge the source scene into target scene
     targetScene->addScene(fromHandle, parentHandle);
-    
-    // Update transforms for the entire target scene
-    targetScene->update();
 }
 
 

@@ -6,7 +6,7 @@
 TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     // Create a new root node
     TinyNode rootNode(nodeName);
-    rootNode.add<TinyNode::Node3D>();
+    rootNode.add<TinyNode::Transform>();
     setRoot(nodes.add(std::move(rootNode)));
 
     return rootHandle();
@@ -14,7 +14,7 @@ TinyHandle TinyScene::addRoot(const std::string& nodeName) {
 
 TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
     TinyNode newNode(nodeName);
-    newNode.add<TinyNode::Node3D>();
+    newNode.add<TinyNode::Transform>();
 
     if (!parentHandle.valid()) parentHandle = rootHandle();
     TinyNode* parentNode = nodes.get(parentHandle);
@@ -51,7 +51,7 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
         if (parentNode) parentNode->removeChild(nodeHandle);
     }
 
-    removeComp<TinyNode::Node3D>(nodeHandle);
+    removeComp<TinyNode::Transform>(nodeHandle);
     removeComp<TinyNode::MeshRender>(nodeHandle);
     removeComp<TinyNode::BoneAttach>(nodeHandle);
     removeComp<TinyNode::Skeleton>(nodeHandle);
@@ -225,9 +225,9 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
         // Resolve components
 
         // Transform component
-        if (fromNode->has<TinyNode::Node3D>()) {
-            TinyNode::Node3D toTransform = fromNode->getCopy<TinyNode::Node3D>();
-            addComp<TinyNode::Node3D>(toHandle, toTransform);
+        if (fromNode->has<TinyNode::Transform>()) {
+            TinyNode::Transform toTransform = fromNode->getCopy<TinyNode::Transform>();
+            writeComp<TinyNode::Transform>(toHandle, toTransform);
         }
 
         // MeshRender component
@@ -238,7 +238,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
                 toMeshRender.skeleNodeHandle = toHandles[toMeshRender.skeleNodeHandle.index];
             }
 
-            addComp<TinyNode::MeshRender>(toHandle, toMeshRender);
+            writeComp<TinyNode::MeshRender>(toHandle, toMeshRender);
         }
 
         // BoneAttach component
@@ -249,7 +249,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
                 toBoneAttach.skeleNodeHandle = toHandles[toBoneAttach.skeleNodeHandle.index];
             }
 
-            addComp<TinyNode::BoneAttach>(toHandle, toBoneAttach);
+            writeComp<TinyNode::BoneAttach>(toHandle, toBoneAttach);
         }
 
         // Skeleton component
@@ -257,7 +257,7 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
             TinyNode::Skeleton toSkeleton = fromNode->getCopy<TinyNode::Skeleton>();
 
             // This add function will create runtime skeleton data as needed
-            addComp<TinyNode::Skeleton>(toHandle, toSkeleton);
+            writeComp<TinyNode::Skeleton>(toHandle, toSkeleton);
         }
     }
 
@@ -276,10 +276,12 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
 
     // Update transform component
 
-    TinyNode::Node3D* transform = node->get<TinyNode::Node3D>();
-    if (!transform) return; // Prolly a special type node like animation for example
-
-    transform->global = parentGlobalTransform * transform->local;
+    TinyNode::Transform* transform = node->get<TinyNode::Transform>();
+    glm::mat4 transformMat = glm::mat4(1.0f);
+    if (transform) {
+        transformMat = parentGlobalTransform * transform->local;
+        transform->global = transformMat;
+    }
 
     // Update skeleton component if exists
     TinySkeletonRT* rtSkele = nSkeletonRT(realHandle);
@@ -287,7 +289,7 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
 
     // Recursively update all children
     for (const TinyHandle& childHandle : node->childrenHandles) {
-        updateRecursive(childHandle, transform->global);
+        updateRecursive(childHandle, transformMat);
     }
 }
 
@@ -300,10 +302,7 @@ void TinyScene::update(TinyHandle nodeHandle) {
 
 // Update everything recursively
 
-    glm::mat4 parentGlobal = glm::mat4(1.0f);
-    const TinyNode* parent = nodes.get(node->parentHandle);
-    if (parent) parentGlobal = parent->get<TinyNode::Node3D>()->global;
-
+    glm::mat4 parentGlobal = nGlbMat4(node->parentHandle);
     updateRecursive(realHandle, parentGlobal);
 }
 
@@ -360,6 +359,12 @@ VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
     if (!rtSkele) return VK_NULL_HANDLE;
 
     return rtSkele->descSet;
+}
+
+
+glm::mat4 TinyScene::nGlbMat4(TinyHandle nodeHandle) const {
+    const TinyNode::Transform* transform = nodeComp<TinyNode::Transform>(nodeHandle);
+    return transform ? transform->global : glm::mat4(1.0f);
 }
 
 TinySkeletonRT* TinyScene::nSkeletonRT(TinyHandle nodeHandle) {

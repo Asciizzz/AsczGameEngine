@@ -435,120 +435,133 @@ void TinyApp::renderSceneNodeInspector() {
     };
     
     // Render Transform component (always present, no delete button)
-    renderComponent("Node 3D", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), true, [&]() {
-        {
-            // Get component copy using TinyScene method
-            TinyNode::Node3D comp = activeScene->copyComp<TinyNode::Node3D>(selectedSceneNodeHandle);
-            
-            glm::mat4 local = comp.local;
+    if (selectedNode->has<TinyNode::Transform>()) {
+        renderComponent("Transform", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), true, [&]() {
+            {
+                // Get component copy using TinyScene method
+                TinyNode::Transform comp = activeScene->copyComp<TinyNode::Transform>(selectedSceneNodeHandle);
+                
+                glm::mat4 local = comp.local;
 
-            // Extract translation, rotation, and scale from the matrix
-            glm::vec3 translation, rotation, scale;
-            glm::quat rotationQuat;
-            glm::vec3 skew;
-            glm::vec4 perspective;
-            
-            // Check if decomposition is valid
-            bool validDecomposition = glm::decompose(local, scale, rotationQuat, translation, skew, perspective);
-            
-            if (!validDecomposition) {
-                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
-                if (ImGui::Button("Reset Transform")) {
-                    // Create reset component and re-add using TinyScene
-                    TinyNode::Node3D resetComp;
-                    resetComp.local = glm::mat4(1.0f);
-                    activeScene->addComp<TinyNode::Node3D>(selectedSceneNodeHandle, resetComp);
-                    activeScene->update();
+                // Extract translation, rotation, and scale from the matrix
+                glm::vec3 translation, rotation, scale;
+                glm::quat rotationQuat;
+                glm::vec3 skew;
+                glm::vec4 perspective;
+                
+                // Check if decomposition is valid
+                bool validDecomposition = glm::decompose(local, scale, rotationQuat, translation, skew, perspective);
+                
+                if (!validDecomposition) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
+                    if (ImGui::Button("Reset Transform")) {
+                        // Create reset component and re-add using TinyScene
+                        TinyNode::Transform resetComp;
+                        resetComp.local = glm::mat4(1.0f);
+                        activeScene->writeComp<TinyNode::Transform>(selectedSceneNodeHandle, resetComp);
+                        activeScene->update(selectedSceneNodeHandle);
+                    }
+                    return;
                 }
-                return;
-            }
-            
-            // Validate extracted values for NaN/infinity
-            auto isValidVec3 = [](const glm::vec3& v) {
-                return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
-            };
-            
-            if (!isValidVec3(translation) || !isValidVec3(scale)) {
-                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
-                if (ImGui::Button("Reset Transform")) {
-                    // Create reset component and re-add using TinyScene
-                    TinyNode::Node3D resetComp;
-                    resetComp.local = glm::mat4(1.0f);
-                    activeScene->addComp<TinyNode::Node3D>(selectedSceneNodeHandle, resetComp);
-                    activeScene->update();
+                
+                // Validate extracted values for NaN/infinity
+                auto isValidVec3 = [](const glm::vec3& v) {
+                    return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+                };
+                
+                if (!isValidVec3(translation) || !isValidVec3(scale)) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
+                    if (ImGui::Button("Reset Transform")) {
+                        // Create reset component and re-add using TinyScene
+                        TinyNode::Transform resetComp;
+                        resetComp.local = glm::mat4(1.0f);
+                        activeScene->writeComp<TinyNode::Transform>(selectedSceneNodeHandle, resetComp);
+                        activeScene->update(selectedSceneNodeHandle);
+                    }
+                    return;
                 }
-                return;
-            }
-            
-            // Clamp scale to prevent zero/negative values
-            const float MIN_SCALE = 0.001f;
-            scale.x = std::max(MIN_SCALE, std::abs(scale.x));
-            scale.y = std::max(MIN_SCALE, std::abs(scale.y));
-            scale.z = std::max(MIN_SCALE, std::abs(scale.z));
-            
-            // Convert quaternion to Euler angles (in degrees)
-            rotation = glm::degrees(glm::eulerAngles(rotationQuat));
-            
-            // Normalize angles to [-180, 180] range
-            auto normalizeAngle = [](float angle) {
-                while (angle > 180.0f) angle -= 360.0f;
-                while (angle < -180.0f) angle += 360.0f;
-                return angle;
-            };
-            
-            rotation.x = normalizeAngle(rotation.x);
-            rotation.y = normalizeAngle(rotation.y);
-            rotation.z = normalizeAngle(rotation.z);
-            
-            // Store original values to detect changes
-            glm::vec3 originalTranslation = translation;
-            glm::vec3 originalRotation = rotation;
-            glm::vec3 originalScale = scale;
-            
-            ImGui::Spacing();
-            
-            // Translation controls
-            ImGui::Text("Position");
-            ImGui::DragFloat3("##Position", &translation.x, 0.01f, -1000.0f, 1000.0f, "%.3f");
-            ImGui::SameLine();
-            if (ImGui::Button("To Cam")) {
-                translation = project->getCamera()->pos;
-            }
-            
-            // Rotation controls
-            ImGui::Text("Rotation (degrees)");
-            ImGui::DragFloat3("##Rotation", &rotation.x, 0.5f, -180.0f, 180.0f, "%.1f°");
-            
-            // Scale controls
-            ImGui::Text("Scale");
-            ImGui::DragFloat3("##Scale", &scale.x, 0.01f, MIN_SCALE, 10.0f, "%.3f");
-            ImGui::SameLine();
-            if (ImGui::Button("Uniform")) {
-                float avgScale = (scale.x + scale.y + scale.z) / 3.0f;
-                scale = glm::vec3(avgScale);
-            }
-            
-            // Apply changes if any values changed (copy->modify->reapply pattern)
-            if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
-                if (isValidVec3(translation) && isValidVec3(scale)) {
-                    // Convert back to quaternion and reconstruct matrix
-                    glm::quat newRotQuat = glm::quat(glm::radians(rotation));
-                    
-                    // Create transform matrix: T * R * S
-                    glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), translation);
-                    glm::mat4 rotateMat = glm::mat4_cast(newRotQuat);
-                    glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
-                    
-                    // Create modified component copy and re-add using TinyScene
-                    comp.local = translateMat * rotateMat * scaleMat;
-                    activeScene->addComp<TinyNode::Node3D>(selectedSceneNodeHandle, comp);
-                    activeScene->update();
+                
+                // Clamp scale to prevent zero/negative values
+                const float MIN_SCALE = 0.001f;
+                scale.x = std::max(MIN_SCALE, std::abs(scale.x));
+                scale.y = std::max(MIN_SCALE, std::abs(scale.y));
+                scale.z = std::max(MIN_SCALE, std::abs(scale.z));
+                
+                // Convert quaternion to Euler angles (in degrees)
+                rotation = glm::degrees(glm::eulerAngles(rotationQuat));
+                
+                // Normalize angles to [-180, 180] range
+                auto normalizeAngle = [](float angle) {
+                    while (angle > 180.0f) angle -= 360.0f;
+                    while (angle < -180.0f) angle += 360.0f;
+                    return angle;
+                };
+                
+                rotation.x = normalizeAngle(rotation.x);
+                rotation.y = normalizeAngle(rotation.y);
+                rotation.z = normalizeAngle(rotation.z);
+                
+                // Store original values to detect changes
+                glm::vec3 originalTranslation = translation;
+                glm::vec3 originalRotation = rotation;
+                glm::vec3 originalScale = scale;
+                
+                ImGui::Spacing();
+                
+                // Translation controls
+                ImGui::Text("Position");
+                ImGui::DragFloat3("##Position", &translation.x, 0.01f, -1000.0f, 1000.0f, "%.3f");
+                ImGui::SameLine();
+                if (ImGui::Button("To Cam")) {
+                    translation = project->getCamera()->pos;
                 }
+                
+                // Rotation controls
+                ImGui::Text("Rotation (degrees)");
+                ImGui::DragFloat3("##Rotation", &rotation.x, 0.5f, -180.0f, 180.0f, "%.1f°");
+                
+                // Scale controls
+                ImGui::Text("Scale");
+                ImGui::DragFloat3("##Scale", &scale.x, 0.01f, MIN_SCALE, 10.0f, "%.3f");
+                ImGui::SameLine();
+                if (ImGui::Button("Uniform")) {
+                    float avgScale = (scale.x + scale.y + scale.z) / 3.0f;
+                    scale = glm::vec3(avgScale);
+                }
+                
+                // Apply changes if any values changed (copy->modify->reapply pattern)
+                if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
+                    if (isValidVec3(translation) && isValidVec3(scale)) {
+                        // Convert back to quaternion and reconstruct matrix
+                        glm::quat newRotQuat = glm::quat(glm::radians(rotation));
+                        
+                        // Create transform matrix: T * R * S
+                        glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), translation);
+                        glm::mat4 rotateMat = glm::mat4_cast(newRotQuat);
+                        glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
+                        
+                        // Create modified component copy and re-add using TinyScene
+                        comp.local = translateMat * rotateMat * scaleMat;
+                        activeScene->writeComp<TinyNode::Transform>(selectedSceneNodeHandle, comp);
+                        activeScene->update(selectedSceneNodeHandle); // Only update this node
+                    }
+                }
+                
+                ImGui::Spacing();
             }
-            
-            ImGui::Spacing();
-        }
-    });
+        }, [&]() {
+            // Remove component using TinyScene method
+            activeScene->removeComp<TinyNode::Transform>(selectedSceneNodeHandle);
+        });
+    } else {
+        // Show grayed-out placeholder for missing Transform component
+        renderComponent("Transform", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
+            // Minimal placeholder - no content, just the header with add button
+        }, [&]() {
+            // Add component using TinyScene method
+            activeScene->writeComp<TinyNode::Transform>(selectedSceneNodeHandle, TinyNode::Transform{});
+        });
+    }
     
     // Mesh Renderer Component - Always show
     if (selectedNode->has<TinyNode::MeshRender>()) {
@@ -603,7 +616,7 @@ void TinyApp::renderSceneNodeInspector() {
             
             // Apply changes using copy->modify->reapply pattern
             if (componentModified) {
-                activeScene->addComp<TinyNode::MeshRender>(selectedSceneNodeHandle, meshComp);
+                activeScene->writeComp<TinyNode::MeshRender>(selectedSceneNodeHandle, meshComp);
             }
             
             ImGui::Spacing();
@@ -617,7 +630,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add component using TinyScene method
-            activeScene->addComp<TinyNode::MeshRender>(selectedSceneNodeHandle, TinyNode::MeshRender{});
+            activeScene->writeComp<TinyNode::MeshRender>(selectedSceneNodeHandle, TinyNode::MeshRender{});
         });
     }
     
@@ -710,7 +723,7 @@ void TinyApp::renderSceneNodeInspector() {
             
             // Apply changes using copy->modify->reapply pattern
             if (componentModified) {
-                activeScene->addComp<TinyNode::BoneAttach>(selectedSceneNodeHandle, boneComp);
+                activeScene->writeComp<TinyNode::BoneAttach>(selectedSceneNodeHandle, boneComp);
             }
             
             ImGui::Spacing();
@@ -724,7 +737,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add component using TinyScene method
-            activeScene->addComp<TinyNode::BoneAttach>(selectedSceneNodeHandle, TinyNode::BoneAttach{});
+            activeScene->writeComp<TinyNode::BoneAttach>(selectedSceneNodeHandle, TinyNode::BoneAttach{});
         });
     }
     
@@ -776,7 +789,7 @@ void TinyApp::renderSceneNodeInspector() {
             // If the user changed the skeleton, update the component and reapply
             if (skeleModified && staticSkeletonHandle != originalPSkeleHandle) {
                 skeleComp.pSkeleHandle = staticSkeletonHandle;
-                activeScene->addComp<TinyNode::Skeleton>(selectedSceneNodeHandle, skeleComp);
+                activeScene->writeComp<TinyNode::Skeleton>(selectedSceneNodeHandle, skeleComp);
             }
 
             // ===== BONE HIERARCHY EDITOR =====
@@ -979,7 +992,7 @@ void TinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add empty skeleton component using TinyScene method
-            activeScene->addComp<TinyNode::Skeleton>(selectedSceneNodeHandle, TinyNode::Skeleton{});
+            activeScene->writeComp<TinyNode::Skeleton>(selectedSceneNodeHandle, TinyNode::Skeleton{});
         });
     }
     
@@ -1445,9 +1458,9 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             
             // Attempt to reparent the dragged node to this node
             if (activeScene->reparentNode(draggedNode, nodeHandle)) {
-                // Update global transforms after reparenting
-                activeScene->update();
-                
+                // Update the newly reparented node
+                activeScene->update(nodeHandle);
+
                 // Auto-expand the parent chain to show the newly dropped node
                 expandParentChain(nodeHandle);
                 
@@ -1563,8 +1576,11 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 
         // Create the node label with useful information
         std::string typeLabel = "";
+        if (node->has<TinyNode::Transform>()) {
+            typeLabel += "[Transform] ";
+        }
         if (node->has<TinyNode::MeshRender>()) {
-            typeLabel += "[Mesh] ";
+            typeLabel += "[MeshRender] ";
         }
         if (node->has<TinyNode::BoneAttach>()) {
             typeLabel += "[BoneAttach] ";
