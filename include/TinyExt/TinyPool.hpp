@@ -68,7 +68,7 @@ public:
         freeList.clear();
     }
 
-    bool isValid(TinyHandle handle) const {
+    bool valid(TinyHandle handle) const {
         return  isOccupied(handle.index) &&
                 states[handle.index].version == handle.version;
     }
@@ -139,17 +139,16 @@ public:
     }
 
     void remove(const TinyHandle& handle) {
-        if (!isValid(handle)) return;
-        remove(handle.index);
+        if (valid(handle)) remove(handle.index);
     }
 
     Type* get(const TinyHandle& handle) {
-        bool valid = isValid(handle);
+        bool isValid = valid(handle);
 
         if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
-            return valid ? items[handle.index].get() : nullptr;
+            return isValid ? items[handle.index].get() : nullptr;
         } else {
-            return valid ? &items[handle.index] : nullptr;
+            return isValid ? &items[handle.index] : nullptr;
         }
     }
 

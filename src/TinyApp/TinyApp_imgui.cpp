@@ -461,11 +461,11 @@ void TinyApp::renderSceneNodeInspector() {
                 }
                 
                 // Validate extracted values for NaN/infinity
-                auto isValidVec3 = [](const glm::vec3& v) {
+                auto validVec3 = [](const glm::vec3& v) {
                     return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
                 };
                 
-                if (!isValidVec3(translation) || !isValidVec3(scale)) {
+                if (!validVec3(translation) || !validVec3(scale)) {
                     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
                     if (ImGui::Button("Reset Transform")) {
                         compPtr->local = glm::mat4(1.0f);
@@ -524,7 +524,7 @@ void TinyApp::renderSceneNodeInspector() {
                 
                 // Apply changes if any values changed (copy->modify->reapply pattern)
                 if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
-                    if (isValidVec3(translation) && isValidVec3(scale)) {
+                    if (validVec3(translation) && validVec3(scale)) {
                         // Convert back to quaternion and reconstruct matrix
                         glm::quat newRotQuat = glm::quat(glm::radians(rotation));
                         

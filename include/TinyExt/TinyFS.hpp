@@ -177,7 +177,7 @@ public:
         node->name = resolveRepeatName(newParent, node->name);
 
         // remove from old parent children vector
-        if (fnodes_.isValid(node->parent)) {
+        if (fnodes_.valid(node->parent)) {
             Node* oldParent = fnodes_.get(node->parent);
             if (oldParent) oldParent->removeChild(nodeHandle);
         }
@@ -199,7 +199,7 @@ public:
 
         // Public interface - use the node's parent as the rescue parent
         TinyHandle rescueParent = node->parent;
-        if (!fnodes_.isValid(rescueParent)) {
+        if (!fnodes_.valid(rescueParent)) {
             rescueParent = rootHandle_;
         }
 
@@ -365,7 +365,7 @@ private:
     }
 
     bool hasRepeatName(TinyHandle parentHandle, const std::string& name) const {
-        if (!fnodes_.isValid(parentHandle)) return false;
+        if (!fnodes_.valid(parentHandle)) return false;
 
         const Node* parent = fnodes_.get(parentHandle);
         if (!parent) return false;
@@ -381,7 +381,7 @@ private:
     }
 
     std::string resolveRepeatName(TinyHandle parentHandle, const std::string& baseName) const {
-        if (!fnodes_.isValid(parentHandle)) return baseName;
+        if (!fnodes_.valid(parentHandle)) return baseName;
 
         // Check if parent has children with the same name
         const Node* parent = fnodes_.get(parentHandle);
@@ -407,7 +407,7 @@ private:
     // Implementation function: templated but uses if constexpr to allow T=void
     template<typename T>
     TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T* data, Node::CFG cfg) {
-        if (!fnodes_.isValid(parentHandle)) return TinyHandle(); // invalid parent
+        if (!fnodes_.valid(parentHandle)) return TinyHandle(); // invalid parent
 
         Node child;
         child.name = resolveRepeatName(parentHandle, name);
@@ -423,7 +423,7 @@ private:
 
         TinyHandle h = fnodes_.add(std::move(child));
         // parent might have been invalidated in a multithreaded scenario; guard
-        if (fnodes_.isValid(parentHandle)) {
+        if (fnodes_.valid(parentHandle)) {
             Node* parent = fnodes_.get(parentHandle);
             if (parent) parent->addChild(h);
         }
@@ -456,7 +456,7 @@ private:
         if (node->hasData()) rRemove(node->tHandle);
 
         // remove from parent children list
-        if (fnodes_.isValid(node->parent)) {
+        if (fnodes_.valid(node->parent)) {
             Node* parent = fnodes_.get(node->parent);
             parent->removeChild(handle);
         }

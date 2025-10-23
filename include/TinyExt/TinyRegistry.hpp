@@ -156,7 +156,7 @@ public:
     template<typename T>
     bool has(const TinyHandle& handle) const {
         auto* wrapper = getWrapper<T>(); // check validity
-        return wrapper ? wrapper->pool.isValid(handle) : false;
+        return wrapper ? wrapper->pool.valid(handle) : false;
     }
 
     bool has(const TypeHandle& th) const {

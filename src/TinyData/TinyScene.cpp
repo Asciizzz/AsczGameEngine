@@ -136,7 +136,7 @@ const std::vector<TinyNode>& TinyScene::nodeView() const {
 }
 
 bool TinyScene::nodeValid(TinyHandle nodeHandle) const {
-    return nodes.isValid(nodeHandle);
+    return nodes.valid(nodeHandle);
 }
 
 bool TinyScene::nodeOccupied(uint32_t index) const {
