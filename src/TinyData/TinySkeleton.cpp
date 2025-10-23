@@ -4,20 +4,73 @@ using namespace TinyVK;
 
 // ========================== TINY SKELETON RT ==========================
 
-void TinySkeletonRT::init(TinyHandle skeletonHandle, const TinySkeleton& skeleton) {
-    this->skeleHandle = skeletonHandle;
-    this->skeleton = &skeleton;
 
-    localPose.resize(skeleton.bones.size(), glm::mat4(1.0f));
-    finalPose.resize(skeleton.bones.size(), glm::mat4(1.0f));
-    skinData.resize(skeleton.bones.size(), glm::mat4(1.0f));
+TinySkeletonRT::TinySkeletonRT(const TinyVK::Device* deviceVK, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout)
+: vkValid(true) {
+    this->deviceVK = deviceVK;
+
+    descSet_.allocate(deviceVK->device, descPool, descLayout);
+}
+
+void TinySkeletonRT::set(TinyHandle skeletonHandle, const TinySkeleton* skeleton) {
+    if (!vkValid || skeleton == nullptr) return;
+
+    this->skeleHandle = skeletonHandle;
+    this->skeleton = skeleton;
+
+    localPose.resize(skeleton->bones.size(), glm::mat4(1.0f));
+    finalPose.resize(skeleton->bones.size(), glm::mat4(1.0f));
+    skinData.resize(skeleton->bones.size(), glm::mat4(1.0f));
 
     // Initialize local pose to bind pose
-    for (size_t i = 0; i < skeleton.bones.size(); ++i) {
-        localPose[i] = skeleton.bones[i].localBindTransform;
+    for (size_t i = 0; i < skeleton->bones.size(); ++i) {
+        localPose[i] = skeleton->bones[i].localBindTransform;
     }
 
+    vkCreate();
     update();
+}
+
+void TinySkeletonRT::copy(const TinySkeletonRT& other) {
+    if (!vkValid || !other.vkValid) return;
+
+    skeleHandle = other.skeleHandle;
+    skeleton = other.skeleton;
+
+    localPose = other.localPose;
+    finalPose = other.finalPose;
+    skinData = other.skinData;
+
+    vkCreate();
+    update();
+}
+
+void TinySkeletonRT::vkCreate() {
+    if (!hasSkeleton()) return;
+
+    // Create skinning data buffer
+    VkDeviceSize bufferSize = sizeof(glm::mat4) * skinData.size();
+    skinBuffer_
+        .setDataSize(bufferSize)
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(deviceVK)
+        .mapAndCopy(skinData.data());
+
+    // Update descriptor set with skin buffer info
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = skinBuffer_;
+    bufferInfo.offset = 0;
+    bufferInfo.range = bufferSize;
+
+    DescWrite()
+        .setDstSet(descSet_)
+        .setType(DescType::StorageBuffer)
+        .setDescCount(1)
+        .setBufferInfo({ bufferInfo })
+        .updateDescSets(deviceVK->device);
+
+    printf("Vulkan resources created for TinySkeletonRT with %zu bones.\n", skeleton->bones.size());
 }
 
 void TinySkeletonRT::refresh(uint32_t boneIndex, bool reupdate) {
@@ -37,33 +90,6 @@ void TinySkeletonRT::refreshAll() {
     update();
 }
 
-void TinySkeletonRT::vkCreate(const TinyVK::Device* deviceVK, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout) {
-    // Create descriptor set
-    descSet.allocate(deviceVK->device, descPool, descLayout);
-
-    // Create skinning data buffer
-    VkDeviceSize bufferSize = sizeof(glm::mat4) * skinData.size();
-    skinBuffer
-        .setDataSize(bufferSize)
-        .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVK)
-        .mapAndCopy(skinData.data());
-
-    // Update descriptor set with skin buffer info
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = skinBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = bufferSize;
-
-    DescWrite()
-        .setDstSet(descSet)
-        .setType(DescType::StorageBuffer)
-        .setDescCount(1)
-        .setBufferInfo({ bufferInfo })
-        .updateDescSets(deviceVK->device);
-}
-
 void TinySkeletonRT::updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform) {
     if (boneIndex >= skeleton->bones.size()) return;
 
@@ -78,8 +104,10 @@ void TinySkeletonRT::updateRecursive(uint32_t boneIndex, const glm::mat4& parent
 }
 
 void TinySkeletonRT::update() {
+    if (!hasSkeleton()) return;
+
     updateRecursive(0, glm::mat4(1.0f));
 
     // Upload updated skin data to GPU
-    skinBuffer.copyData(skinData.data());
+    skinBuffer_.copyData(skinData.data());
 }

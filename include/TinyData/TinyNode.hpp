@@ -89,8 +89,9 @@ struct TinyNode {
     }
 
     template<typename T>
-    void remove() {
+    bool remove() {
         setType(T::kType, false);
+        return true;
     }
 
     template<typename T>
@@ -98,11 +99,6 @@ struct TinyNode {
 
     template<typename T>
     const T* get() const { return has<T>() ? &getComponent<T>() : nullptr; }
-
-    template<typename T>
-    T getCopy() const {
-        return has<T>() ? getComponent<T>() : T();
-    }
 
 private:
     std::tuple<

@@ -34,8 +34,8 @@ union TinyHandle {
     constexpr bool operator==(const TinyHandle& other) const { return value == other.value; }
     constexpr bool operator!=(const TinyHandle& other) const { return value != other.value; }
 
-    constexpr static TinyHandle invalid() { return TinyHandle(); }
     constexpr bool valid() const { return value != UINT64_MAX && index != UINT32_MAX; }
+    constexpr bool invalid() const { return !valid(); }
     constexpr void invalidate() { value = UINT64_MAX; }
 };
 

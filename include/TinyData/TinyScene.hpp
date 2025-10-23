@@ -8,14 +8,14 @@
 
 // TinyScene requirements
 struct TinySceneReq {
-    TinyFS*               fs = nullptr;          // Pointer to filesystem for resource lookups and registry management
-    const TinyVK::Device* device     = nullptr;  // For GPU resource creation
+    TinyFS*               fs       = nullptr; // Pointer to filesystem for resource lookups and registry management
+    const TinyVK::Device* deviceVK = nullptr; // For GPU resource creation
 
     VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
     VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
 
     bool valid() const {
-        return  fs != nullptr && device != nullptr &&
+        return  fs != nullptr && deviceVK != nullptr &&
                 skinDescPool   != VK_NULL_HANDLE &&
                 skinDescLayout != VK_NULL_HANDLE;
     }
@@ -93,47 +93,55 @@ public:
     // -------- Component management --------- 
 
     template<typename T>
-    const T* nodeComp(TinyHandle nodeHandle) const {
-        const TinyNode* node = nodes.get(nodeHandle);
+    RTResolver_t<T>* nodeComp(TinyHandle nodeHandle) {
+        TinyNode* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
-        return node->get<T>();
+        if constexpr (type_eq<T, TinyNode::Skeleton>) {
+            TinyNode::Skeleton* compPtr = node->get<TinyNode::Skeleton>();
+            return compPtr ? rGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
+        } else if constexpr (type_eq<T, TinyNode::Animation>) {
+            TinyNode::Animation* compPtr = node->get<TinyNode::Animation>();
+            return compPtr ? rGet<TinyAnimeRT>(compPtr->pAnimeHandle) : nullptr;
+        } else { // Other types return themselves
+            return node->get<T>();
+        }
     }
 
     template<typename T>
-    RTResolver_t<T>* writeComp(TinyHandle nodeHandle, const T& componentData = T()) {
+    const RTResolver_t<T>* nodeComp(TinyHandle nodeHandle) const {
+        return const_cast<TinyScene*>(this)->nodeComp<T>(nodeHandle);
+    }
+
+    template<typename T>
+    RTResolver_t<T>* writeComp(TinyHandle nodeHandle) {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
         removeComp<T>(nodeHandle);
-        node->add<T>(componentData);
+        node->add<T>();
 
         if constexpr (type_eq<T, TinyNode::Skeleton>) {
             return addSkeletonRT(nodeHandle);
         } else if constexpr (type_eq<T, TinyNode::Animation>) {
             return addAnimationRT(nodeHandle);
         } else { // Other types return themselves
-            return nodeComp<T>(nodeHandle);
+            return nodeCompRaw<T>(nodeHandle);
         }
     }
 
     template<typename T>
-    void removeComp(TinyHandle nodeHandle) {
+    bool removeComp(TinyHandle nodeHandle) {
         TinyNode* node = nodes.get(nodeHandle);
-        if (!node || !node->has<T>()) return;
+        if (!node || !node->has<T>()) return false;
 
         if constexpr (type_eq<T, TinyNode::Skeleton>) {
-            TinySkeletonRT* rtSkele = nSkeletonRT(nodeHandle);
+            TinySkeletonRT* rtSkele = nodeComp<T>(nodeHandle);
             if (rtSkele) rRemove<TinySkeletonRT>(rtSkele->skeleHandle);
+            printf("Removed SkeletonRT from node %u_%u\n", nodeHandle.index, nodeHandle.version);
         }
 
-        node->remove<T>();
-    }
-
-    template<typename T>
-    T copyComp(TinyHandle nodeHandle) const {
-        const TinyNode* node = nodes.get(nodeHandle);
-        return node ? node->getCopy<T>() : T();
+        return node->remove<T>();
     }
 
     // --------- Runtime registry access (public) ---------
@@ -152,16 +160,6 @@ public:
 
     // --------- Specific component's data access ---------
 
-    // You are not allowed to modify the node component identity directly
-    // BUT, you are allowed to modify the data inside the component
-
-    // Exposable runtime access
-    TinyNode::Transform* nTransform(TinyHandle nodeHandle);
-    const TinyNode::Transform* nTransform(TinyHandle nodeHandle) const;
-
-    TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle);
-    const TinySkeletonRT* nSkeletonRT(TinyHandle nodeHandle) const;
-    const TinySkeleton* nSkeleton(TinyHandle nodeHandle) const;
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
 
     // TinyAnimeRT* nAnimationRT(TinyHandle nodeHandle);
@@ -180,8 +178,16 @@ private:
 
     // Non-const access only for internal use
     template<typename T>
-    T* nodeComp(TinyHandle nodeHandle) {
+    T* nodeCompRaw(TinyHandle nodeHandle) {
         TinyNode* node = nodes.get(nodeHandle);
+        if (!node) return nullptr;
+
+        return node->get<T>();
+    }
+
+    template<typename T>
+    const T* nodeCompRaw(TinyHandle nodeHandle) const {
+        const TinyNode* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
         return node->get<T>();
@@ -248,4 +254,24 @@ private:
             printNodeHierarchy(childHandle, depth + 1);
         }
     }
+
+
+    // Special
+    template<typename T, typename NodeT>
+    static auto nodeCompImpl(NodeT* node) -> RTResolver_t<T>* {
+        if (!node) return nullptr;
+
+        if constexpr (type_eq<T, TinyNode::Skeleton>) {
+            auto* compPtr = node->template get<TinyNode::Skeleton>();
+            if (!compPtr) return nullptr;
+            return node->template rGet<TinySkeletonRT>(compPtr->pSkeleHandle);
+        } else if constexpr (type_eq<T, TinyNode::Animation>) {
+            auto* compPtr = node->template get<TinyNode::Animation>();
+            if (!compPtr) return nullptr;
+            return node->template rGet<TinyAnimeRT>(compPtr->pAnimeHandle);
+        } else {
+            return node->template get<T>();
+        }
+    }
+
 };

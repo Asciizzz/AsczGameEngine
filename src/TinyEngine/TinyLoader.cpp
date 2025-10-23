@@ -510,7 +510,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         TinySubmesh submesh;
         submesh.indexOffset = currentIndexOffset;
         submesh.indexCount = static_cast<uint32_t>(pData.indices.size());
-        submesh.material = pData.materialIndex >= 0 ? TinyHandle(pData.materialIndex) : TinyHandle::invalid();
+        submesh.material = pData.materialIndex >= 0 ? TinyHandle(pData.materialIndex) : TinyHandle();
         mesh.addSubmesh(submesh);
 
         currentVertexOffset += static_cast<uint32_t>(pData.vertexCount);
@@ -1125,7 +1125,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
         TinySubmesh submesh;
         submesh.indexOffset = 0;
         submesh.indexCount = static_cast<uint32_t>(indices.size());
-        submesh.material = (materialId >= 0) ? TinyHandle(materialId) : TinyHandle::invalid();
+        submesh.material = (materialId >= 0) ? TinyHandle(materialId) : TinyHandle();
         mesh.addSubmesh(submesh);
 
         result.meshes.push_back(std::move(mesh));
@@ -1154,7 +1154,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
         // Add MeshRender component
         TinyNode::MeshRender meshRender;
         meshRender.meshHandle = TinyHandle(static_cast<uint32_t>(meshIndex));
-        meshRender.skeleNodeHandle = TinyHandle::invalid(); // No skeleton for OBJ
+        meshRender.skeleNodeHandle = TinyHandle(); // No skeleton for OBJ
         meshNode.add<TinyNode::MeshRender>(std::move(meshRender));
 
         result.nodes.push_back(std::move(meshNode));

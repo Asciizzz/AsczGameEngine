@@ -50,7 +50,10 @@ struct TinySkeletonRT {
     TinyHandle skeleHandle; // Handle to TinySkeleton in fsRegistry
     const TinySkeleton* skeleton = nullptr;
 
-    TinySkeletonRT() = default;
+    // Default constructor means this skeleton is f*cked
+    TinySkeletonRT() : vkValid(false) {}
+    TinySkeletonRT(const TinyVK::Device* deviceVK, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout);
+
     ~TinySkeletonRT() = default;
 
     TinySkeletonRT(const TinySkeletonRT&) = delete;
@@ -60,7 +63,8 @@ struct TinySkeletonRT {
     TinySkeletonRT& operator=(TinySkeletonRT&&) = default;
 
     // Bone runtime data
-    void init(TinyHandle skeletonHandle, const TinySkeleton& skeleton);
+    void set(TinyHandle skeleHandle, const TinySkeleton* skeleton);
+    void copy(const TinySkeletonRT& other);
 
     std::vector<glm::mat4> localPose;
     std::vector<glm::mat4> finalPose;
@@ -68,13 +72,20 @@ struct TinySkeletonRT {
     void refresh(uint32_t boneIndex, bool reupdate = true);
     void refreshAll();
 
-    // Vulkan resources for skinning
-    TinyVK::DescSet    descSet;
-    TinyVK::DataBuffer skinBuffer;
-    void vkCreate(const TinyVK::Device* deviceVK, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout);
-
-    void updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform);
-
     // Global update
     void update();
+
+    VkDescriptorSet descSet() const { return descSet_; }
+    bool hasSkeleton() const { return vkValid && skeleton != nullptr; }
+
+private:
+    bool vkValid = false;
+
+    const TinyVK::Device* deviceVK = nullptr;
+    TinyVK::DescSet    descSet_;
+    TinyVK::DataBuffer skinBuffer_;
+
+    void vkCreate();
+    
+    void updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform);
 };

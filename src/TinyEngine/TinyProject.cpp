@@ -183,44 +183,42 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
         // Add component with scene API to ensure proper handling
         if (originalNode.has<TinyNode::Transform>()) {
-            // const TinyNode::Transform* ogTransform = originalNode.get<TinyNode::Transform>();
-            TinyNode::Transform newTransform = originalNode.getCopy<TinyNode::Transform>();
-
-            scene.writeComp<TinyNode::Transform>(nodeHandle, newTransform);
+            const auto* ogTransform = originalNode.get<TinyNode::Transform>();
+            auto* newTransform = scene.writeComp<TinyNode::Transform>(nodeHandle);
+            *newTransform = *ogTransform;
         }
 
         if (originalNode.has<TinyNode::MeshRender>()) {
-            TinyNode::MeshRender newMeshRender = originalNode.getCopy<TinyNode::MeshRender>();
+            const auto* ogMeshRender = originalNode.get<TinyNode::MeshRender>();
+            auto* newMeshRender = scene.writeComp<TinyNode::MeshRender>(nodeHandle);
 
-            if (validIndex(newMeshRender.meshHandle, glbMeshRHandle)) {
-                newMeshRender.meshHandle = glbMeshRHandle[newMeshRender.meshHandle.index];
+            if (validIndex(ogMeshRender->meshHandle, glbMeshRHandle)) {
+                newMeshRender->meshHandle = glbMeshRHandle[ogMeshRender->meshHandle.index];
             }
 
-            if (validIndex(newMeshRender.skeleNodeHandle, nodeHandles)) {
-                newMeshRender.skeleNodeHandle = nodeHandles[newMeshRender.skeleNodeHandle.index];
+            if (validIndex(ogMeshRender->skeleNodeHandle, nodeHandles)) {
+                newMeshRender->skeleNodeHandle = nodeHandles[ogMeshRender->skeleNodeHandle.index];
             }
-
-            scene.writeComp<TinyNode::MeshRender>(nodeHandle, newMeshRender);
         }
 
         if (originalNode.has<TinyNode::BoneAttach>()) {
-            TinyNode::BoneAttach newBoneAttach = originalNode.getCopy<TinyNode::BoneAttach>();
+            const auto* ogBoneAttach = originalNode.get<TinyNode::BoneAttach>();
+            auto* newBoneAttach = scene.writeComp<TinyNode::BoneAttach>(nodeHandle);
 
-            if (validIndex(newBoneAttach.skeleNodeHandle, nodeHandles)) {
-                newBoneAttach.skeleNodeHandle = nodeHandles[newBoneAttach.skeleNodeHandle.index];
+            if (validIndex(ogBoneAttach->skeleNodeHandle, nodeHandles)) {
+                newBoneAttach->skeleNodeHandle = nodeHandles[ogBoneAttach->skeleNodeHandle.index];
             }
-
-            scene.writeComp<TinyNode::BoneAttach>(nodeHandle, newBoneAttach);
         }
 
         if (originalNode.has<TinyNode::Skeleton>()) {
-            TinyNode::Skeleton newSkeleComp = originalNode.getCopy<TinyNode::Skeleton>();
+            const auto* ogSkeleComp = originalNode.get<TinyNode::Skeleton>();
+            auto* newSkeleRT = scene.writeComp<TinyNode::Skeleton>(nodeHandle);
 
-            if (validIndex(newSkeleComp.pSkeleHandle, glbSkeleRHandle)) {
-                newSkeleComp.pSkeleHandle = glbSkeleRHandle[newSkeleComp.pSkeleHandle.index];
+            if (validIndex(ogSkeleComp->pSkeleHandle, glbSkeleRHandle)) {
+                // Construct new skeleton runtime from the original skeleton
+                TinyHandle skeleHandle = glbSkeleRHandle[ogSkeleComp->pSkeleHandle.index];
+                newSkeleRT->set(skeleHandle, fs().rGet<TinySkeleton>(skeleHandle));
             }
-
-            scene.writeComp<TinyNode::Skeleton>(nodeHandle, newSkeleComp);
         }
     }
 
@@ -257,7 +255,7 @@ void TinyProject::vkCreateSceneResources() {
     createDummySkinDescriptorSet();
 
     sharedReq.fs = &fs();
-    sharedReq.device = deviceVK;
+    sharedReq.deviceVK = deviceVK;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;
 }
@@ -269,7 +267,7 @@ void TinyProject::createDummySkinDescriptorSet() {
     // Create dummy skin buffer with 1 identity matrix
     glm::mat4 identityMatrix = glm::mat4(1.0f);
     VkDeviceSize bufferSize = sizeof(glm::mat4);
-    
+
     dummySkinBuffer
         .setDataSize(bufferSize)
         .setUsageFlags(BufferUsage::Storage)

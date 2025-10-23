@@ -3,6 +3,13 @@
 #include <stdexcept>
 #include <thread>
 
+template<typename T>
+bool validIndex(TinyHandle handle, const std::vector<T>& vec) {
+    return handle.valid() && handle.index < vec.size();
+}
+
+
+
 TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     // Create a new root node
     TinyNode rootNode(nodeName);
@@ -196,7 +203,8 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
     // Second pass: Construct nodes with proper remapped components
 
     for (uint32_t i = 0; i < from_items.size(); ++i) {
-        const TinyNode* fromNode = from->fromIndex(i);
+        TinyHandle fromHandle = from->nodeHandle(i);
+        const TinyNode* fromNode = from->node(fromHandle);
         if (!fromNode) continue;
 
         TinyHandle toHandle = toHandles[i];
@@ -224,40 +232,47 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
 
         // Resolve components
 
-        // Transform component
         if (fromNode->has<TinyNode::Transform>()) {
-            TinyNode::Transform toTransform = fromNode->getCopy<TinyNode::Transform>();
-            writeComp<TinyNode::Transform>(toHandle, toTransform);
+            const auto* fromTransform = fromNode->get<TinyNode::Transform>();
+            auto* toTransform = writeComp<TinyNode::Transform>(toHandle);
+            *toTransform = *fromTransform;
         }
 
-        // MeshRender component
         if (fromNode->has<TinyNode::MeshRender>()) {
-            TinyNode::MeshRender toMeshRender = fromNode->getCopy<TinyNode::MeshRender>();
-            // Remap skeleton node handle
-            if (toMeshRender.skeleNodeHandle.valid()) {
-                toMeshRender.skeleNodeHandle = toHandles[toMeshRender.skeleNodeHandle.index];
-            }
+            const auto* fromMeshRender = fromNode->get<TinyNode::MeshRender>();
+            auto* toMeshRender = writeComp<TinyNode::MeshRender>(toHandle);
 
-            writeComp<TinyNode::MeshRender>(toHandle, toMeshRender);
+            toMeshRender->meshHandle = fromMeshRender->meshHandle;
+
+            if (validIndex(fromMeshRender->skeleNodeHandle, toHandles)) {
+                toMeshRender->skeleNodeHandle = toHandles[fromMeshRender->skeleNodeHandle.index];
+            }
         }
 
         // BoneAttach component
         if (fromNode->has<TinyNode::BoneAttach>()) {
-            TinyNode::BoneAttach toBoneAttach = fromNode->getCopy<TinyNode::BoneAttach>();
-            // Remap skeleton node handle
-            if (toBoneAttach.skeleNodeHandle.valid()) {
-                toBoneAttach.skeleNodeHandle = toHandles[toBoneAttach.skeleNodeHandle.index];
+            const auto* fromBoneAttach = fromNode->get<TinyNode::BoneAttach>();
+            auto* toBoneAttach = writeComp<TinyNode::BoneAttach>(toHandle);
+
+            if (validIndex(fromBoneAttach->skeleNodeHandle, toHandles)) {
+                toBoneAttach->skeleNodeHandle = toHandles[fromBoneAttach->skeleNodeHandle.index];
             }
 
-            writeComp<TinyNode::BoneAttach>(toHandle, toBoneAttach);
+            toBoneAttach->boneIndex = fromBoneAttach->boneIndex;
         }
 
         // Skeleton component
         if (fromNode->has<TinyNode::Skeleton>()) {
-            TinyNode::Skeleton toSkeleton = fromNode->getCopy<TinyNode::Skeleton>();
+            // TinyNode::Skeleton toSkeleton = fromNode->getCopy<TinyNode::Skeleton>();
 
-            // This add function will create runtime skeleton data as needed
-            writeComp<TinyNode::Skeleton>(toHandle, toSkeleton);
+            // // This add function will create runtime skeleton data as needed
+            // writeComp<TinyNode::Skeleton>(toHandle, toSkeleton);
+
+            // Retrieve ACTUAL skeleton data
+            const auto* fromSkeleRT = from->nodeComp<TinyNode::Skeleton>(fromHandle);
+            auto* toSkeleRT = writeComp<TinyNode::Skeleton>(toHandle); // Will generate new runtime skeleton
+            // toSkeleRT->set(fromSkeleRT->skeleHandle, fromSkeleRT->skeleton);
+            toSkeleRT->copy(*fromSkeleRT);
         }
     }
 
@@ -276,7 +291,7 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
 
     // Update transform component
 
-    TinyNode::Transform* transform = nTransform(realHandle);
+    TinyNode::Transform* transform = nodeComp<TinyNode::Transform>(realHandle);
     glm::mat4 transformMat = glm::mat4(1.0f);
     if (transform) {
         transformMat = parentGlobalTransform * transform->local;
@@ -284,7 +299,7 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     }
 
     // Update skeleton component if exists
-    TinySkeletonRT* rtSkele = nSkeletonRT(realHandle);
+    TinySkeletonRT* rtSkele = nodeComp<TinyNode::Skeleton>(realHandle);
     if (rtSkele) rtSkele->update();
 
     // Recursively update all children
@@ -301,33 +316,23 @@ void TinyScene::update(TinyHandle nodeHandle) {
     if (!node) return;
 
     // Update everything recursively
-    TinyNode::Transform* parentTransform = nTransform(node->parentHandle);
+    TinyNode::Transform* parentTransform = nodeComp<TinyNode::Transform>(node->parentHandle);
     updateRecursive(realHandle, parentTransform ? parentTransform->global : glm::mat4(1.0f));
 }
 
 
 TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
-    TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
+    TinyNode::Skeleton* compPtr = nodeCompRaw<TinyNode::Skeleton>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
 
-    const TinySkeleton* fsSkele = fs()->rGet<TinySkeleton>(compPtr->pSkeleHandle);
-    if (!fsSkele) {
-        compPtr->pSkeleHandle = TinyHandle();
-        return nullptr;
-    }
-
-    TinySkeletonRT rtSkele;
-    rtSkele.init(compPtr->pSkeleHandle, *fsSkele);
-    rtSkele.vkCreate(sceneReq.device, sceneReq.skinDescPool, sceneReq.skinDescLayout);
+    // Create new empty valid runtime skeleton
+    TinySkeletonRT rtSkele(sceneReq.deviceVK, sceneReq.skinDescPool, sceneReq.skinDescLayout);
 
     // Repurpose pHandle into runtime skeleton handle
     compPtr->pSkeleHandle = rAdd<TinySkeletonRT>(std::move(rtSkele));
 
-    TinySkeletonRT* rtSkelePtr = nSkeletonRT(nodeHandle);
-    if (rtSkelePtr) rtSkelePtr->update(); // Initial update to set poses
-
     // Return the runtime skeleton
-    return rtSkelePtr;
+    return rGet<TinySkeletonRT>(compPtr->pSkeleHandle);
 }
 
 TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
@@ -338,35 +343,9 @@ TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
 
 // --------- Specific component's data access ---------
 
-
-TinyNode::Transform* TinyScene::nTransform(TinyHandle nodeHandle) {
-    return nodeComp<TinyNode::Transform>(nodeHandle);
-}
-const TinyNode::Transform* TinyScene::nTransform(TinyHandle nodeHandle) const {
-    return nodeComp<TinyNode::Transform>(nodeHandle);
-}
-
-TinySkeletonRT* TinyScene::nSkeletonRT(TinyHandle nodeHandle) {
-    const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
-    return compPtr ? rGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
-}
-const TinySkeletonRT* TinyScene::nSkeletonRT(TinyHandle nodeHandle) const {
-    const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
-    return compPtr ? rGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
-}
-// skeleton blueprint is not modifiable 
-const TinySkeleton* TinyScene::nSkeleton(TinyHandle nodeHandle) const {
-    const TinySkeletonRT* rtSkele = nSkeletonRT(nodeHandle);
-    return rtSkele ? rtSkele->skeleton : nullptr;
-}
 VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
-    // Retrieve skeleton component
-    const TinyNode::Skeleton* compPtr = nodeComp<TinyNode::Skeleton>(nodeHandle);
-    if (!compPtr) return VK_NULL_HANDLE;
-
     // Retrieve runtime skeleton data from TinyFS registry
-    const TinySkeletonRT* rtSkele = rGet<TinySkeletonRT>(compPtr->pSkeleHandle);
-    if (!rtSkele) return VK_NULL_HANDLE;
-
-    return rtSkele->descSet;
+    const TinySkeletonRT* rtSkele = nodeComp<TinyNode::Skeleton>(nodeHandle);
+    return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
 }
+
