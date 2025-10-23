@@ -64,7 +64,7 @@ struct TinySkeletonRT {
 
     // Bone runtime data
     void set(TinyHandle skeleHandle, const TinySkeleton* skeleton);
-    void copy(const TinySkeletonRT& other);
+    void copy(const TinySkeletonRT* other);
 
     std::vector<glm::mat4> localPose;
     std::vector<glm::mat4> finalPose;
@@ -76,7 +76,11 @@ struct TinySkeletonRT {
     void update();
 
     VkDescriptorSet descSet() const { return descSet_; }
-    bool hasSkeleton() const { return vkValid && skeleton != nullptr; }
+    bool hasSkeleton() const {
+        return  vkValid &&
+                skeleton != nullptr &&
+                localPose.size() == skeleton->bones.size();
+    }
 
 private:
     bool vkValid = false;

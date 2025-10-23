@@ -31,16 +31,18 @@ void TinySkeletonRT::set(TinyHandle skeletonHandle, const TinySkeleton* skeleton
     update();
 }
 
-void TinySkeletonRT::copy(const TinySkeletonRT& other) {
-    if (!vkValid || !other.vkValid) return;
+void TinySkeletonRT::copy(const TinySkeletonRT* other) {
+    if (!vkValid || !other->vkValid) return;
 
-    skeleHandle = other.skeleHandle;
-    skeleton = other.skeleton;
+    skeleHandle = other->skeleHandle;
+    skeleton = other->skeleton;
 
-    localPose = other.localPose;
-    finalPose = other.finalPose;
-    skinData = other.skinData;
-    printf("Copied TinySkeletonRT with %zu bones.\n", localPose.size());
+    if (skeleton) printf("Copying TinySkeletonRT | handle %u_%u with %zu bones.\n", skeleHandle.index, skeleHandle.version, skeleton->bones.size());
+    else          printf("Copying TinySkeletonRT | handle %u_%u with 0 bones.\n", skeleHandle.index, skeleHandle.version);
+
+    localPose = other->localPose;
+    finalPose = other->finalPose;
+    skinData = other->skinData;
 
     vkCreate();
     update();
@@ -70,8 +72,6 @@ void TinySkeletonRT::vkCreate() {
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
         .updateDescSets(deviceVK->device);
-
-    printf("Vulkan resources created for TinySkeletonRT with %zu bones.\n", skeleton->bones.size());
 }
 
 void TinySkeletonRT::refresh(uint32_t boneIndex, bool reupdate) {

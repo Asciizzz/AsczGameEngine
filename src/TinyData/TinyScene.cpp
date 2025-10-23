@@ -263,16 +263,10 @@ void TinyScene::addScene(TinyHandle sceneHandle, TinyHandle parentHandle) {
 
         // Skeleton component
         if (fromNode->has<TinyNode::Skeleton>()) {
-            // TinyNode::Skeleton toSkeleton = fromNode->getCopy<TinyNode::Skeleton>();
-
-            // // This add function will create runtime skeleton data as needed
-            // writeComp<TinyNode::Skeleton>(toHandle, toSkeleton);
-
-            // Retrieve ACTUAL skeleton data
+            // Copy runtime skeleton data
+            auto* toSkeleRT = writeComp<TinyNode::Skeleton>(toHandle);
             const auto* fromSkeleRT = from->nodeComp<TinyNode::Skeleton>(fromHandle);
-            auto* toSkeleRT = writeComp<TinyNode::Skeleton>(toHandle); // Will generate new runtime skeleton
-            // toSkeleRT->set(fromSkeleRT->skeleHandle, fromSkeleRT->skeleton);
-            toSkeleRT->copy(*fromSkeleRT);
+            toSkeleRT->copy(fromSkeleRT);
         }
     }
 
