@@ -72,8 +72,6 @@ class TinyRegistry { // For raw resource data
     }
 
     void remove(const TypeHandle& th) {
-        if (!th.valid()) return;
-
         auto it = hashToPool.find(th.typeHash);
         if (it != hashToPool.end()) {
             it->second->instaRm(th.handle);
