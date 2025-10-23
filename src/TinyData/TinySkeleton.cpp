@@ -101,10 +101,17 @@ void TinySkeletonRT::updateRecursive(uint32_t boneIndex, const glm::mat4& parent
     }
 }
 
-void TinySkeletonRT::update() {
-    if (!hasSkeleton()) return;
+void TinySkeletonRT::update(uint32_t index) {
+    if (!hasSkeleton() || index >= boneCount()) return;
 
-    updateRecursive(0, glm::mat4(1.0f));
+    // Retrieve parent
+    glm::mat4 parentTransform = glm::mat4(1.0f);
+    if (skeleton->bones[index].parent != -1) {
+        uint32_t parentIndex = static_cast<uint32_t>(skeleton->bones[index].parent);
+        parentTransform = finalPose[parentIndex];
+    }
+
+    updateRecursive(0, parentTransform);
 
     // Upload updated skin data to GPU
     skinBuffer_.copyData(skinData.data());

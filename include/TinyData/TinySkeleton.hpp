@@ -73,13 +73,14 @@ struct TinySkeletonRT {
     void refreshAll();
 
     // Global update
-    void update();
+    void update(uint32_t index = 0);
 
     VkDescriptorSet descSet() const { return hasSkeleton() ? descSet_.get() : VK_NULL_HANDLE; }
+    uint32_t boneCount() const {
+        return (localPose.size() == skeleton->bones.size()) ? static_cast<uint32_t>(skeleton->bones.size()) : 0;
+    }
     bool hasSkeleton() const {
-        return  vkValid &&
-                skeleton != nullptr &&
-                localPose.size() == skeleton->bones.size();
+        return  vkValid && skeleton != nullptr;
     }
 
 private:

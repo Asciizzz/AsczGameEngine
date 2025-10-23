@@ -296,6 +296,17 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     TinySkeletonRT* rtSkele = nodeComp<TinyNode::Skeleton>(realHandle);
     if (rtSkele) rtSkele->update();
 
+    // Update bone attachments transforms
+    TinyNode::BoneAttach* boneAttach = nodeComp<TinyNode::BoneAttach>(realHandle);
+    if (boneAttach) {
+        // TinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
+        // TinySkeletonRT* skeleRT = nodeComp<TinyNode::Skeleton>(skeleNodeHandle);
+        // if (skeleRT) {
+        //     // Update global transform of that skeleton's bone
+        //     skeleRT->update(boneAttach->boneIndex);
+        // }
+    }
+
     // Recursively update all children
     for (const TinyHandle& childHandle : node->childrenHandles) {
         updateRecursive(childHandle, transformMat);

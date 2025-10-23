@@ -45,6 +45,17 @@ template<typename Type>
 struct TinyPool {
     TinyPool() = default;
 
+    void alloc(uint32_t size) {
+        for (uint32_t i = 0; i < size; ++i) {
+            uint32_t index = static_cast<uint32_t>(items.size());
+            items.emplace_back();
+            states.emplace_back();
+            states[index].occupied = false;
+            states[index].version = 0;
+            freeList.push_back(index);
+        }
+    }
+
     uint32_t count() const {
         return items.size() - freeList.size();
     }
