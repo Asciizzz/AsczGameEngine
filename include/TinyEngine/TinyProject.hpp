@@ -38,6 +38,11 @@ public:
     VkDescriptorSet skinDescSet(TinyScene* scene, TinyHandle nodeHandle) const {
         return scene->nSkeleDescSet(nodeHandle);
     }
+
+    uint32_t skeletonNodeBoneCount(TinyScene* scene, TinyHandle nodeHandle) const {
+        const TinySkeletonRT* skeleRT = scene->nodeComp<TinyNode::Skeleton>(nodeHandle);
+        return skeleRT ? skeleRT->boneCount() : 0;
+    }
     
     // Global UBO update
 

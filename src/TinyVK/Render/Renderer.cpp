@@ -309,6 +309,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
         TinyHandle skeleNodeHandle = meshRenderComp->skeleNodeHandle;
         VkDescriptorSet skinSet = project->skinDescSet(activeScene, skeleNodeHandle);
+        uint32_t boneCount = project->skeletonNodeBoneCount(activeScene, skeleNodeHandle);
 
         if (isRigged) {
             isRigged = skinSet != VK_NULL_HANDLE;
@@ -334,7 +335,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
 
             // Set special value to 1 for selected nodes, 0 for others
             uint32_t specialValue = isSelectedNode ? 1 : 0;
-            glm::uvec4 props1 = glm::uvec4(matIndex, isRigged, specialValue, 0);
+            glm::uvec4 props1 = glm::uvec4(matIndex, isRigged, specialValue, boneCount);
 
             // Offset 0: global transform
             // Offset 64: other properties (1)
