@@ -10,9 +10,8 @@
 struct TinyModel {
     std::string name;
 
-    // Raw unlinked registries
+    // All local space
     std::vector<TinyMesh> meshes;
-
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
     std::vector<TinySkeleton> skeletons;

@@ -85,3 +85,98 @@ glm::vec4 TinyAnimeRT::Sampler::evaluate(float time) const {
             return glm::vec4(0.0f);
     }
 }
+
+glm::mat4 TinyAnimeRT::getTransform(const TinyScene* scene, const TinyAnimeRT::Channel& channel) const {
+    if (scene == nullptr || channel.sampler >= samplers.size()) return glm::mat4(1.0f);
+
+    // Return transform component of node
+    if (channel.type == Channel::Type::Node) {
+        const TinyNode::Transform* nodeTransform = scene->nodeComp<TinyNode::Transform>(channel.node);
+        return nodeTransform ? nodeTransform->local : glm::mat4(1.0f);
+    // Return transform component of bone
+    } else if (channel.type == Channel::Type::Bone) {
+        const TinySkeletonRT* skeletonRT = scene->nodeComp<TinyNode::Skeleton>(channel.node);
+        return (skeletonRT && skeletonRT->boneValid(channel.index)) ? skeletonRT->localPose(channel.index) : glm::mat4(1.0f);
+    }
+
+    return glm::mat4(1.0f);
+}
+
+void TinyAnimeRT::writeTransform(TinyScene* scene, const Channel& channel, const glm::mat4& transform) const {
+    if (scene == nullptr) return;
+
+    // Write transform component of node
+    if (channel.type == Channel::Type::Node) {
+        TinyNode::Transform* nodeTransform = scene->nodeComp<TinyNode::Transform>(channel.node);
+        if (nodeTransform) nodeTransform->local = transform;
+    // Write transform component of bone
+    } else if (channel.type == Channel::Type::Bone) {
+        TinySkeletonRT* skeletonRT = scene->nodeComp<TinyNode::Skeleton>(channel.node);
+        if (skeletonRT && skeletonRT->boneValid(channel.index)) {
+            skeletonRT->setLocalPose(channel.index, transform);
+        }
+    }
+}
+
+
+
+glm::mat4 recomposeTransform(
+    const glm::mat4& original,
+    const glm::vec3* newTranslation = nullptr,
+    const glm::quat* newRotation = nullptr,
+    const glm::vec3* newScale = nullptr
+) {
+    // Extract existing components
+    glm::vec3 translation = glm::vec3(original[3]);
+    glm::quat rotation = glm::quat_cast(original);
+
+    glm::vec3 scale;
+    scale.x = glm::length(glm::vec3(original[0]));
+    scale.y = glm::length(glm::vec3(original[1]));
+    scale.z = glm::length(glm::vec3(original[2]));
+
+    // Replace with new components if provided
+    if (newTranslation) translation = *newTranslation;
+    if (newRotation)    rotation = *newRotation;
+    if (newScale)       scale = *newScale;
+
+    // Recompose transform
+    return glm::translate(glm::mat4(1.0f), translation) *
+           glm::mat4_cast(rotation) *
+           glm::scale(glm::mat4(1.0f), scale);
+}
+
+void TinyAnimeRT::update(TinyScene* scene, float deltaTime) {
+    if (scene == nullptr || !valid()) return;
+
+    time += deltaTime;
+    if (loop) time = fmod(time, duration);
+    else      time = std::min(time, duration);
+
+    for (auto& channel : channels) {
+        auto& sampler = samplers[channel.sampler];
+
+        glm::mat4 transform = getTransform(scene, channel);
+        glm::vec4 value = sampler.evaluate(time);
+
+        switch (channel.path) {
+            case Channel::Path::T: { // Translation
+                glm::vec3 t(value.x, value.y, value.z);
+                transform = recomposeTransform(transform, &t, nullptr, nullptr);
+                break;
+            }
+            case Channel::Path::R: { // Rotation (quaternion stored in vec4)
+                glm::quat r(value.w, value.x, value.y, value.z); // Note the order (w, x, y, z)
+                transform = recomposeTransform(transform, nullptr, &r, nullptr);
+                break;
+            }
+            case Channel::Path::S: { // Scale
+                glm::vec3 s(value.x, value.y, value.z);
+                transform = recomposeTransform(transform, nullptr, nullptr, &s);
+                break;
+            }
+        }
+
+        writeTransform(scene, channel, transform);
+    }
+}

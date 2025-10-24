@@ -74,11 +74,15 @@ struct TinySkeletonRT {
     uint32_t boneCount() const {
         return (localPose_.size() == skelePtr_->bones.size()) ? static_cast<uint32_t>(skelePtr_->bones.size()) : 0;
     }
+    bool boneValid(uint32_t index) const {
+        return hasSkeleton() && index < boneCount();
+    }
     bool hasSkeleton() const {
         return  vkValid && skelePtr_ != nullptr;
     }
 
     glm::mat4 localPose(uint32_t index) const { return localPose_[index]; }
+    glm::mat4& localPose(uint32_t index) { return localPose_[index]; }
     void setLocalPose(uint32_t index, const glm::mat4& pose = glm::mat4(1.0f)) {
         if (index >= localPose_.size()) return;
 

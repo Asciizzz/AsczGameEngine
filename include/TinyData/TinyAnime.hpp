@@ -54,6 +54,10 @@ struct TinyAnimeRT {
     bool loop = true;
 
     void stop() { time = 0.0f; }
+    bool valid() const { return !channels.empty() && !samplers.empty(); }
+
+    glm::mat4 getTransform(const TinyScene* scene, const Channel& channel) const;
+    void writeTransform(TinyScene* scene, const Channel& channel, const glm::mat4& transform) const;
 
     void update(TinyScene* scene, float deltaTime);
 };
