@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-AsczGameEngine Project Backup Script
-Creates timestamped backups of essential project files and folders.
 
-Usage: python backup_project.py
+Create a backup in the format: AYYMMDD_HHMMSS
+
 """
 
 import os
@@ -15,7 +14,7 @@ def create_backup():
     # Get current date in AYYMMDD format (A = last digit of year)
     now = datetime.datetime.now()
     year_last_2_digit = now.year % 100
-    date_str = f"A{year_last_2_digit}{now.month:02d}{now.day:02d}"
+    date_str = f"A{year_last_2_digit}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.minute:02d}{now.second:02d}"
     
     # Define paths
     project_root = Path(__file__).parent
