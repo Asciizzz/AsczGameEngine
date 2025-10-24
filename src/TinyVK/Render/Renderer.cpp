@@ -284,11 +284,11 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         const auto* transform = rtNode.get<TinyNode::Transform>();
         glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
 
-        bool cameraCollide = project->getCamera()->collideAABB(
-            regMesh->abMin, regMesh->abMax, transformMat
-        );
-
-        if (!cameraCollide) continue;
+        // This shi is genuinely so buggy xd
+        // bool cameraCollide = project->getCamera()->collideAABB(
+        //     regMesh->abMin, regMesh->abMax, transformMat
+        // );
+        // if (!cameraCollide) continue;
 
         // Draw each individual submeshes
         VkBuffer vertexBuffer = regMesh->vertexBuffer;

@@ -858,18 +858,17 @@ void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, cons
         }
     }
 
-    // print the node (flat)
-
-    for (const auto& node : nodes) {
-        printf("Node: %s, Parent: %u, Children: [ ",
-            node.name.c_str(),
-            node.parentHandle.index
-        );
-        for (const auto& childHandle : node.childrenHandles) {
-            printf("%u ", childHandle.index);
-        }
-        printf("]\n");
-    }
+    // print the nodes (flat)
+    // for (const auto& node : nodes) {
+    //     printf("Node: %s, Parent: %u, Children: [ ",
+    //         node.name.c_str(),
+    //         node.parentHandle.index
+    //     );
+    //     for (const auto& childHandle : node.childrenHandles) {
+    //         printf("%u ", childHandle.index);
+    //     }
+    //     printf("]\n");
+    // }
 
     tinyModel.nodes = std::move(nodes);
 }
