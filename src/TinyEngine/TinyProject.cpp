@@ -140,6 +140,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         glbSkeleRHandle.push_back(tHandle.handle);
     }
 
+    // If scene has no nodes, return early
+    if (model.nodes.empty()) return fnModelFolder;
+
     // Create scene with nodes - preserve hierarchy but remap resource references
     TinyScene scene(model.name);
     scene.setSceneReq(sceneReq());
@@ -167,7 +170,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         // Remap parent handle
         if (validIndex(originalNode.parentHandle, nodeHandles)) {
             parentHandle = nodeHandles[originalNode.parentHandle.index];
-        }
+        };
 
         // Remap children handles
         for (const TinyHandle& childHandle : originalNode.childrenHandles) {
@@ -206,6 +209,8 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             if (validIndex(ogBoneAttach->skeleNodeHandle, nodeHandles)) {
                 newBoneAttach->skeleNodeHandle = nodeHandles[ogBoneAttach->skeleNodeHandle.index];
             }
+
+            newBoneAttach->boneIndex = ogBoneAttach->boneIndex;
         }
 
         if (originalNode.has<TinyNode::Skeleton>()) {

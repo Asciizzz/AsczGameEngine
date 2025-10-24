@@ -166,7 +166,7 @@ std::vector<TinyHandle> TinyScene::nodeChildren(TinyHandle nodeHandle) const {
 
 bool TinyScene::setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle) {
     TinyNode* node = nodes.get(nodeHandle);
-    if (!node) return false;
+    if (!node || !nodes.valid(newParentHandle)) return false;
 
     node->setParent(newParentHandle);
     return true;
@@ -176,7 +176,10 @@ bool TinyScene::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHan
     TinyNode* node = nodes.get(nodeHandle);
     if (!node) return false;
 
-    node->childrenHandles = newChildren;
+    // node->childrenHandles = newChildren;
+    for (const TinyHandle& childHandle : newChildren) {
+        if (nodes.valid(childHandle)) node->addChild(childHandle);
+    }
     return true;
 }
 

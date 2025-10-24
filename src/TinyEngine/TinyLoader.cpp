@@ -710,157 +710,8 @@ void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::
 //     }
 // }
 
+
 void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, const tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex) {
-    std::vector<TinyNode> nodes;
-
-    auto pushNode = [&](TinyNode&& node) -> int {
-        int index = static_cast<int>(nodes.size());
-        nodes.push_back(std::move(node));
-        return index;
-    };
-
-    auto parentAndChild = [&](int parentIndex, int childIndex) {
-        nodes[parentIndex].addChild(TinyHandle(childIndex));
-        nodes[childIndex].setParent(TinyHandle(parentIndex));
-    };
-
-    // Root node (index 0)
-    TinyNode rootNode;
-    rootNode.add<TinyNode::Transform>();
-    rootNode.name = tinyModel.name.empty() ? "Model_Root" : tinyModel.name;
-    pushNode(std::move(rootNode));
-
-    // Skeleton parent nodes
-    UnorderedMap<int, int> skeletonToModelNodeIndex;
-    for (size_t skeleIdx = 0; skeleIdx < tinyModel.skeletons.size(); ++skeleIdx) {
-        const TinySkeleton& skeleton = tinyModel.skeletons[skeleIdx];
-
-        TinyNode skeleNode(skeleton.name);
-
-        TinyNode::Skeleton skele3D;
-        skele3D.pSkeleHandle = TinyHandle(skeleIdx);
-
-        skeleNode.add<TinyNode::Skeleton>(std::move(skele3D));
-
-        int skeleNodeIndex = pushNode(std::move(skeleNode));
-        skeletonToModelNodeIndex[(int)skeleIdx] = skeleNodeIndex;
-
-        parentAndChild(0, skeleNodeIndex); // Child of root
-    }
-
-    // First pass: reserve only for non-joints
-    gltfNodeToModelNode.resize(model.nodes.size(), -1);
-
-    for (size_t i = 0; i < model.nodes.size(); ++i) {
-        // if (gltfNodeToSkeletonAndBoneIndex.find((int)i) != gltfNodeToSkeletonAndBoneIndex.end()) {
-        //     continue; // It's a joint node -> skip
-        // }
-
-        TinyNode placeholder;
-        placeholder.name = model.nodes[i].name.empty() ? "Node" : model.nodes[i].name;
-
-        int modelIdx = pushNode(std::move(placeholder));
-        gltfNodeToModelNode[i] = modelIdx;
-    }
-
-    // Second pass: parent-child wiring (skip joints)
-    for (size_t i = 0; i < model.nodes.size(); ++i) {
-        int parentModel = gltfNodeToModelNode[i];
-        if (parentModel < 0) continue; // skip joint as parent
-
-        const tinygltf::Node& gltfNode = model.nodes[i];
-        for (int childGltf : gltfNode.children) {
-            int childModel = gltfNodeToModelNode[childGltf];
-            if (childModel < 0) continue; // skip joint as child
-            parentAndChild(parentModel, childModel);
-        }
-    }
-
-    // Third pass: fill in non-joint nodes
-    for (size_t i = 0; i < model.nodes.size(); ++i) {
-        int globalIdx = gltfNodeToModelNode[i];
-        if (globalIdx < 0) continue; // skip joints
-
-        const tinygltf::Node& gltfNode = model.nodes[i];
-        TinyNode& target = nodes[globalIdx];
-        TinyNode::Transform* transformComp = target.add<TinyNode::Transform>();
-
-        // Transform
-        glm::mat4 matrix(1.0f);
-        if (!gltfNode.matrix.empty()) {
-            matrix = glm::make_mat4(gltfNode.matrix.data());
-        } else {
-            glm::vec3 translation(0.0f);
-            glm::quat rotation(1.0f, 0.0f, 0.0f, 0.0f);
-            glm::vec3 scale(1.0f);
-
-            if (!gltfNode.translation.empty())
-                translation = glm::make_vec3(gltfNode.translation.data());
-            if (!gltfNode.rotation.empty())
-                rotation = glm::quat(
-                    gltfNode.rotation[3],
-                    gltfNode.rotation[0],
-                    gltfNode.rotation[1],
-                    gltfNode.rotation[2]);
-            if (!gltfNode.scale.empty())
-                scale = glm::make_vec3(gltfNode.scale.data());
-
-            matrix = glm::translate(glm::mat4(1.0f), translation) *
-                     glm::mat4_cast(rotation) *
-                     glm::scale(glm::mat4(1.0f), scale);
-        }
-
-        // Set transform in base class
-        transformComp->local = matrix;
-
-        if (gltfNode.mesh >= 0) {
-            TinyNode::MeshRender meshData;
-            meshData.meshHandle = TinyHandle(gltfNode.mesh);
-
-            int skeletonIndex = gltfNode.skin;
-            auto it = skeletonToModelNodeIndex.find(skeletonIndex);
-            if (it != skeletonToModelNodeIndex.end()) {
-                meshData.skeleNodeHandle = TinyHandle(it->second);
-            }
-
-            // // Find this node parent
-            // // int parentModelIdx = model.nodes[i].parent;
-
-            // target.add<TinyNode::MeshRender>(std::move(meshData));
-
-            // auto itBone = gltfNodeToSkeletonAndBoneIndex.find((int)i);
-            // if (itBone != gltfNodeToSkeletonAndBoneIndex.end()) {
-            //     // This node is associated with a bone
-            //     int skeleIdx = itBone->second.first;
-            //     int boneIdx = itBone->second.second;
-
-            //     auto skeleIt = skeletonToModelNodeIndex.find(skeleIdx);
-            //     if (skeleIt != skeletonToModelNodeIndex.end()) {
-            //         TinyNode::BoneAttach boneAttach;
-            //         boneAttach.skeleNodeHandle = TinyHandle(skeleIt->second);
-            //         boneAttach.boneIndex = boneIdx;
-            //         target.add<TinyNode::BoneAttach>(std::move(boneAttach));
-            //     }
-            // }
-        }
-    }
-
-    // Attach scene roots to model root
-    if (!model.scenes.empty()) {
-        const tinygltf::Scene& scene = model.scenes[model.defaultScene >= 0 ? model.defaultScene : 0];
-        for (int rootLocal : scene.nodes) {
-            int rootModel = gltfNodeToModelNode[rootLocal];
-            if (rootModel >= 0 && !nodes[rootModel].parentHandle.valid()) {
-                parentAndChild(0, rootModel);
-            }
-        }
-    }
-
-    tinyModel.nodes = std::move(nodes);
-}
-
-
-void loadNodesNew(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, const tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex) {
     std::vector<TinyNode> nodes;
 
     auto pushNode = [&](TinyNode&& node) -> int {
@@ -882,22 +733,6 @@ void loadNodesNew(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, c
 
     nodes[0].addChild(TinyHandle(skeletonRootModelIndex));
     nodes[skeletonRootModelIndex].setParent(TinyHandle(0));
-
-    UnorderedMap<int, int> gltfRootToModelNode;
-    const tinygltf::Scene& scene = model.scenes[model.defaultScene >= 0 ? model.defaultScene : 0];
-    for (int rootLocal : scene.nodes) {
-        const tinygltf::Node& gltfNode = model.nodes[rootLocal];
-
-        TinyNode rootNode;
-        rootNode.name = "LRoot_" + (gltfNode.name.empty() ? std::to_string(rootLocal) : gltfNode.name);
-        rootNode.add<TinyNode::Transform>();
-
-        int rootModelIndex = pushNode(std::move(rootNode));
-        gltfRootToModelNode[rootLocal] = rootModelIndex;
-
-        nodes[0].addChild(TinyHandle(rootModelIndex));
-        nodes[rootModelIndex].setParent(TinyHandle(0));
-    }
 
     // Skeleton parent nodes
     UnorderedMap<int, int> skeletonToModelNodeIndex;
@@ -987,9 +822,9 @@ void loadNodesNew(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, c
             if (!nGltf.scale.empty())
                 scale = glm::make_vec3(nGltf.scale.data());
 
-            matrix = glm::translate(glm::mat4(1.0f), translation) *
-                     glm::mat4_cast(rotation) *
-                     glm::scale(glm::mat4(1.0f), scale);
+            matrix= glm::translate(glm::mat4(1.0f), translation) *
+                    glm::mat4_cast(rotation) *
+                    glm::scale(glm::mat4(1.0f), scale);
         }
         transformComp->local = matrix;
 
@@ -1004,22 +839,36 @@ void loadNodesNew(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, c
             }
 
             nModel.add<TinyNode::MeshRender>(std::move(meshData));
-        }
 
+            // Check if the parent of this node is a joint
+            auto itBone = gltfNodeToSkeletonAndBoneIndex.find(parentGltfIndex);
+            if (itBone != gltfNodeToSkeletonAndBoneIndex.end()) {
+                // This node is associated with a bone
+                int skeleIdx = itBone->second.first;
+                int boneIdx = itBone->second.second;
+
+                auto skeleIt = skeletonToModelNodeIndex.find(skeleIdx);
+                if (skeleIt != skeletonToModelNodeIndex.end()) {
+                    TinyNode::BoneAttach boneAttach;
+                    boneAttach.skeleNodeHandle = TinyHandle(skeleIt->second);
+                    boneAttach.boneIndex = boneIdx;
+                    nModel.add<TinyNode::BoneAttach>(std::move(boneAttach));
+                }
+            }
+        }
     }
 
-    // Debug print child-parent relationships flat (Format: Name <parent_index> - [<child_index>, ...])
-    for (int i = 0; i < nodes.size(); ++i) {
-        const TinyNode& node = nodes[i];
+    // print the node (flat)
 
-        std::cout << "Node " << i << " (" << node.name << ") <" 
-                  << (node.parentHandle.valid() ? std::to_string(node.parentHandle.index) : "none") 
-                  << "> - [ ";
-        for (const TinyHandle& childHandle : node.childrenHandles) {
-            int childIdx = childHandle.index;
-            std::cout << childIdx << " ";
+    for (const auto& node : nodes) {
+        printf("Node: %s, Parent: %u, Children: [ ",
+            node.name.c_str(),
+            node.parentHandle.index
+        );
+        for (const auto& childHandle : node.childrenHandles) {
+            printf("%u ", childHandle.index);
         }
-        std::cout << "]" << std::endl;
+        printf("]\n");
     }
 
     tinyModel.nodes = std::move(nodes);
@@ -1065,7 +914,7 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
 
     std::vector<int> gltfNodeToModelNode;
     // loadNodes(result, gltfNodeToModelNode, model, gltfNodeToSkeletonAndBoneIndex);
-    loadNodesNew(result, gltfNodeToModelNode, model, gltfNodeToSkeletonAndBoneIndex);
+    loadNodes(result, gltfNodeToModelNode, model, gltfNodeToSkeletonAndBoneIndex);
         
     // loadAnimations(result, model, gltfNodeToSkeletonAndBoneIndex);
 
