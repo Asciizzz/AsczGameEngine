@@ -646,72 +646,7 @@ void loadSkeletons(std::vector<TinySkeleton>& skeletons, UnorderedMap<int, std::
 }
 
 
-// struct ChannelToSkeletonMap {
-//     UnorderedMap<int, int> channelToSkeletonIndex;
-
-//     void set(int channelIndex, int skeletonIndex) {
-//         channelToSkeletonIndex[channelIndex] = skeletonIndex;
-//     }
-// };
-
-// void loadAnimation(TinyAnime& animation, ChannelToSkeletonMap& channelToSkeletonMap, const tinygltf::Model& model, const tinygltf::Animation& gltfAnim, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex) {
-//     animation.clear();
-//     animation.name = gltfAnim.name;
-
-//     for (const auto& gltfSampler : gltfAnim.samplers) {
-
-//         TinyAnimeSampler sampler;
-
-//         // Read time values
-//         if (gltfSampler.input >= 0) {
-//             readAccessor(model, gltfSampler.input, sampler.inputTimes);
-//         }
-
-//         // Read output generically
-//         if (gltfSampler.output >= 0) {
-//             readAccessor(model, gltfSampler.output, sampler.outputValues);
-//         }
-
-//         sampler.setInterpolation(gltfSampler.interpolation);
-//         animation.samplers.push_back(std::move(sampler));
-//     }
-
-//     for (const auto& gltfChannel : gltfAnim.channels) {
-//         TinyAnimeChannel channel;
-//         channel.samplerIndex = gltfChannel.sampler;
-
-//         auto it = gltfNodeToSkeletonAndBoneIndex.find(gltfChannel.target_node);
-//         if (it != gltfNodeToSkeletonAndBoneIndex.end()) {
-//             int channelIndex = animation.channels.size();
-
-//             channelToSkeletonMap.set(channelIndex, it->second.first);
-//             channel.targetIndex = it->second.second;
-//         }
-
-//         channel.setTargetPath(gltfChannel.target_path);
-
-//         animation.channels.push_back(std::move(channel));
-//     }
-// }
-
-// void loadAnimations(std::vector<TinyAnime>& animations, std::vector<ChannelToSkeletonMap>& ChannelToSkeletonMaps, tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex) {
-//     animations.clear();
-//     ChannelToSkeletonMaps.clear();
-
-//     for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
-//         const tinygltf::Animation& gltfAnim = model.animations[animIndex];
-
-//         TinyAnime animation;
-//         ChannelToSkeletonMap channelToSkeletonMap;
-//         loadAnimation(animation, channelToSkeletonMap, model, gltfAnim, gltfNodeToSkeletonAndBoneIndex);
-
-//         animations.push_back(std::move(animation));
-//         ChannelToSkeletonMaps.push_back(std::move(channelToSkeletonMap));
-//     }
-// }
-
-
-void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, const tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex) {
+void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, UnorderedMap<int, int>& skeletonToModelNodeIndex, const tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex) {
     std::vector<TinyNode> nodes;
 
     auto pushNode = [&](TinyNode&& node) -> int {
@@ -735,7 +670,7 @@ void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, cons
     nodes[skeletonRootModelIndex].setParent(TinyHandle(0));
 
     // Skeleton parent nodes
-    UnorderedMap<int, int> skeletonToModelNodeIndex;
+    skeletonToModelNodeIndex.clear();
     for (size_t skeleIdx = 0; skeleIdx < tinyModel.skeletons.size(); ++skeleIdx) {
         // We only need this skeleton for the name
         const TinySkeleton& skeleton = tinyModel.skeletons[skeleIdx];
@@ -752,6 +687,8 @@ void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, cons
         // Child of skeleton root
         nodes[skeletonRootModelIndex].addChild(TinyHandle(skeleNodeIndex)); 
         nodes[skeleNodeIndex].setParent(TinyHandle(skeletonRootModelIndex));
+
+        skeletonToModelNodeIndex[(int)skeleIdx] = skeleNodeIndex;
     }
 
     std::vector<int> gltfNodeParent(model.nodes.size(), -1);
@@ -858,21 +795,116 @@ void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, cons
         }
     }
 
-    // print the nodes (flat)
-    // for (const auto& node : nodes) {
-    //     printf("Node: %s, Parent: %u, Children: [ ",
-    //         node.name.c_str(),
-    //         node.parentHandle.index
-    //     );
-    //     for (const auto& childHandle : node.childrenHandles) {
-    //         printf("%u ", childHandle.index);
-    //     }
-    //     printf("]\n");
-    // }
-
     tinyModel.nodes = std::move(nodes);
 }
 
+
+void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const std::vector<int>& gltfNodeToModelNode, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex, const UnorderedMap<int, int>& skeletonToModelNodeIndex) {
+    tinyModel.animations.clear();
+
+    // Append a new node animation
+    TinyNode animRootNode;
+    animRootNode.name = "AnimeRoot";
+
+    int animRootNodeIndex = static_cast<int>(tinyModel.nodes.size());
+    tinyModel.nodes.push_back(std::move(animRootNode));
+
+    tinyModel.nodes[0].addChild(TinyHandle(animRootNodeIndex));
+    tinyModel.nodes[animRootNodeIndex].setParent(TinyHandle(0));
+
+    for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
+        const tinygltf::Animation& gltfAnim = model.animations[animIndex];
+        TinyAnimeRT tinyAnim; // (animation in this context simply cannot act as blueprint, must be scene-contextual)
+
+        tinyAnim.name = TinyLoader::sanitizeAsciiz(gltfAnim.name, "animation", animIndex);
+
+        // Process channels and samplers here...
+
+        for (const auto& gltfSampler : gltfAnim.samplers) {
+            TinyAnimeRT::Sampler sampler;
+
+            if (gltfSampler.input >= 0) {
+                readAccessor(model, gltfSampler.input, sampler.times);
+            }
+
+            if (gltfSampler.output >= 0) {
+                readAccessor(model, gltfSampler.output, sampler.values);
+            }
+
+            // sampler.interp = 
+            if (gltfSampler.interpolation == "LINEAR") {
+                sampler.interp = TinyAnimeRT::Sampler::Interp::Linear;
+            } else if (gltfSampler.interpolation == "STEP") {
+                sampler.interp = TinyAnimeRT::Sampler::Interp::Step;
+            } else if (gltfSampler.interpolation == "CUBICSPLINE") {
+                sampler.interp = TinyAnimeRT::Sampler::Interp::CubicSpline;
+            } else {
+                sampler.interp = TinyAnimeRT::Sampler::Interp::Linear; // Default
+            }
+
+            tinyAnim.samplers.push_back(std::move(sampler));
+        }
+
+        for (const auto& gltfChannel : gltfAnim.channels) {
+            TinyAnimeRT::Channel channel;
+            channel.sampler = gltfChannel.sampler;
+
+            // Retrieve the target node
+            int gltfTargetNode = gltfChannel.target_node;
+
+            int modelNodeIndex = gltfNodeToModelNode[gltfTargetNode];
+            // TinyNode& modelNode = tinyModel.nodes[modelNodeIndex];
+
+            // Check if it's a joint node
+            auto jointIt = gltfNodeToSkeletonAndBoneIndex.find(gltfTargetNode);
+            bool isJoint = (jointIt != gltfNodeToSkeletonAndBoneIndex.end());
+
+            if (isJoint) {
+                int skeletonIndex = jointIt->second.first;
+                int boneIndex = jointIt->second.second;
+
+                auto skeleNodeIt = skeletonToModelNodeIndex.find(skeletonIndex);
+                if (skeleNodeIt != skeletonToModelNodeIndex.end()) {
+                    int skeleNodeModelIndex = skeleNodeIt->second;
+
+                    channel.target = TinyAnimeRT::Channel::Target::Bone;
+                    channel.node = TinyHandle(skeleNodeModelIndex);
+                    channel.index = boneIndex;
+                }
+            } else {
+                channel.node = TinyHandle(modelNodeIndex);
+            }
+
+            // Determine the property being animated
+            const std::string& path = gltfChannel.target_path;
+            if (path == "translation") {
+                channel.path = TinyAnimeRT::Channel::Path::T;
+            } else if (path == "rotation") {
+                channel.path = TinyAnimeRT::Channel::Path::R;
+            } else if (path == "scale") {
+                channel.path = TinyAnimeRT::Channel::Path::S;
+            } else if (path == "weights") {
+                channel.path = TinyAnimeRT::Channel::Path::W;
+            } else {
+                continue; // Unsupported property
+            }
+        }
+
+        // Construct an animation node for this animation
+        TinyNode animNode;
+        animNode.name = tinyAnim.name;
+
+        TinyNode::Animation* animeComp = animNode.add<TinyNode::Animation>();
+        animeComp->pAnimeHandle = TinyHandle(tinyModel.animations.size());
+        tinyModel.animations.push_back(std::move(tinyAnim));
+
+        // Push the animation node under the animation root
+        int animNodeIndex = static_cast<int>(tinyModel.nodes.size());
+        tinyModel.nodes.push_back(std::move(animNode));
+        tinyModel.nodes[animRootNodeIndex].addChild(TinyHandle(animNodeIndex));
+        tinyModel.nodes[animNodeIndex].setParent(TinyHandle(animRootNodeIndex));
+    }
+}
 
 
 TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceStatic) {
@@ -912,10 +944,10 @@ TinyModel TinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     loadMeshes(result.meshes, model, !hasRigging);
 
     std::vector<int> gltfNodeToModelNode;
-    // loadNodes(result, gltfNodeToModelNode, model, gltfNodeToSkeletonAndBoneIndex);
-    loadNodes(result, gltfNodeToModelNode, model, gltfNodeToSkeletonAndBoneIndex);
-        
-    // loadAnimations(result, model, gltfNodeToSkeletonAndBoneIndex);
+    UnorderedMap<int, int> skeletonToModelNodeIndex;
+    loadNodes(result, gltfNodeToModelNode, skeletonToModelNodeIndex, model, gltfNodeToSkeletonAndBoneIndex);
+
+    loadAnimations(result, model, gltfNodeToModelNode, gltfNodeToSkeletonAndBoneIndex, skeletonToModelNodeIndex);
 
     return result;
 }

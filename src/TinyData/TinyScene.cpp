@@ -252,7 +252,6 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
             }
         }
 
-        // BoneAttach component
         if (fromNode->has<TinyNode::BoneAttach>()) {
             const auto* fromBoneAttach = fromNode->get<TinyNode::BoneAttach>();
             auto* toBoneAttach = writeComp<TinyNode::BoneAttach>(toHandle);
@@ -264,12 +263,23 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
             toBoneAttach->boneIndex = fromBoneAttach->boneIndex;
         }
 
-        // Skeleton component
         if (fromNode->has<TinyNode::Skeleton>()) {
-            // Copy runtime skeleton data
             auto* toSkeleRT = writeComp<TinyNode::Skeleton>(toHandle);
-            const auto* fromSkeleRT = from->nodeComp<TinyNode::Skeleton>(fromHandle);
+            const auto* fromSkeleRT = from->rtResolve<TinyNode::Skeleton>(fromHandle);
             toSkeleRT->copy(fromSkeleRT);
+        }
+
+        if (fromNode->has<TinyNode::Animation>()) {
+            auto* toAnimeRT = writeComp<TinyNode::Animation>(toHandle);
+            const auto* fromAnimeRT = from->rtResolve<TinyNode::Animation>(fromHandle);
+            
+            *toAnimeRT = *fromAnimeRT;
+
+            for (auto& channel : toAnimeRT->channels) {
+                if (validIndex(channel.node, toHandles)) {
+                    channel.node = toHandles[channel.node.index];
+                }
+            }
         }
     }
 
@@ -287,19 +297,19 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     if (!node) return;
 
     // Update transform component
-    TinyNode::Transform* transform = nodeComp<TinyNode::Transform>(realHandle);
+    TinyNode::Transform* transform = rtResolve<TinyNode::Transform>(realHandle);
     glm::mat4 localMat = transform ? transform->local : glm::mat4(1.0f);
     glm::mat4 transformMat = parentGlobalTransform * localMat;
 
     // Update skeleton component
-    TinySkeletonRT* rtSkele = nodeComp<TinyNode::Skeleton>(realHandle);
+    TinySkeletonRT* rtSkele = rtResolve<TinyNode::Skeleton>(realHandle);
     if (rtSkele) rtSkele->update();
 
     // Update bone attachments transforms
-    TinyNode::BoneAttach* boneAttach = nodeComp<TinyNode::BoneAttach>(realHandle);
+    TinyNode::BoneAttach* boneAttach = rtResolve<TinyNode::BoneAttach>(realHandle);
     if (boneAttach) {
         TinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
-        TinySkeletonRT* skeleRT = nodeComp<TinyNode::Skeleton>(skeleNodeHandle);
+        TinySkeletonRT* skeleRT = rtResolve<TinyNode::Skeleton>(skeleNodeHandle);
         if (skeleRT) transformMat = transformMat * skeleRT->finalPose(boneAttach->boneIndex);
     }
 
@@ -320,7 +330,7 @@ void TinyScene::update(TinyHandle nodeHandle) {
     if (!node) return;
 
     // Update everything recursively
-    TinyNode::Transform* parentTransform = nodeComp<TinyNode::Transform>(node->parentHandle);
+    TinyNode::Transform* parentTransform = rtResolve<TinyNode::Transform>(node->parentHandle);
     updateRecursive(realHandle, parentTransform ? parentTransform->global : glm::mat4(1.0f));
 }
 
@@ -354,7 +364,7 @@ TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
 
 VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
     // Retrieve runtime skeleton data from TinyFS registry
-    const TinySkeletonRT* rtSkele = nodeComp<TinyNode::Skeleton>(nodeHandle);
+    const TinySkeletonRT* rtSkele = rtResolve<TinyNode::Skeleton>(nodeHandle);
     return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
 }
 

@@ -438,7 +438,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::Transform>()) {
         renderComponent("Transform", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), true, [&]() {
             {
-                TinyNode::Transform* compPtr = activeScene->nodeComp<TinyNode::Transform>(selectedSceneNodeHandle);
+                TinyNode::Transform* compPtr = activeScene->rtResolve<TinyNode::Transform>(selectedSceneNodeHandle);
 
                 glm::mat4 local = compPtr->local;
 
@@ -558,7 +558,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::MeshRender>()) {
         renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
             // Get component copy using TinyScene method
-            TinyNode::MeshRender* compPtr = activeScene->nodeComp<TinyNode::MeshRender>(selectedSceneNodeHandle);
+            TinyNode::MeshRender* compPtr = activeScene->rtResolve<TinyNode::MeshRender>(selectedSceneNodeHandle);
             bool componentModified = false;
             
             ImGui::Spacing();
@@ -624,7 +624,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::BoneAttach>()) {
         renderComponent("Bone Attachment", ImVec4(0.15f, 0.2f, 0.15f, 0.8f), ImVec4(0.3f, 0.4f, 0.3f, 0.6f), true, [&]() {
             // Get component copy using TinyScene method
-            TinyNode::BoneAttach* compPtr = activeScene->nodeComp<TinyNode::BoneAttach>(selectedSceneNodeHandle);
+            TinyNode::BoneAttach* compPtr = activeScene->rtResolve<TinyNode::BoneAttach>(selectedSceneNodeHandle);
             bool componentModified = false;
             
             ImGui::Spacing();
@@ -726,7 +726,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::Skeleton>()) {
         renderComponent("Skeleton", ImVec4(0.2f, 0.15f, 0.15f, 0.8f), ImVec4(0.4f, 0.3f, 0.3f, 0.6f), true, [&]() {
             // Retrieve the component (using TinyScene special method which return appropriate runtime/static data)
-            TinySkeletonRT* rtSkeleComp = activeScene->nodeComp<TinyNode::Skeleton>(selectedSceneNodeHandle);
+            TinySkeletonRT* rtSkeleComp = activeScene->rtResolve<TinyNode::Skeleton>(selectedSceneNodeHandle);
             bool hasSkeleton = rtSkeleComp->hasSkeleton();
 
             ImGui::Spacing();
@@ -1540,23 +1540,16 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
 
         // Create the node label with useful information
         std::string typeLabel = "";
-        if (node->has<TinyNode::Transform>()) {
-            typeLabel += "[Transform] ";
-        }
-        if (node->has<TinyNode::MeshRender>()) {
-            typeLabel += "[MeshRender] ";
-        }
-        if (node->has<TinyNode::BoneAttach>()) {
-            typeLabel += "[BoneAttach] ";
-        }
-        if (node->has<TinyNode::Skeleton>()) {
-            typeLabel += "[Skeleton] ";
-        }
+        if (node->has<TinyNode::Transform>())  typeLabel += " [Transform]";
+        if (node->has<TinyNode::MeshRender>()) typeLabel += " [MeshRender]";
+        if (node->has<TinyNode::BoneAttach>()) typeLabel += " [BoneAttach]";
+        if (node->has<TinyNode::Skeleton>())   typeLabel += " [Skeleton]";
+        if (node->has<TinyNode::Animation>())  typeLabel += " [Animation]";
 
-        typeLabel = typeLabel.empty() ? "[None]" : typeLabel;
-        
+        typeLabel = typeLabel.empty() ? " [None]" : typeLabel;
+
         ImGui::Text("%s", node->name.c_str());
-        ImGui::Text("Types: %s", typeLabel.c_str());
+        ImGui::Text("Types:%s", typeLabel.c_str());
 
         if (!node->childrenHandles.empty()) {
             ImGui::Text("Children: %zu", node->childrenHandles.size());

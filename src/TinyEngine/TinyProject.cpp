@@ -222,6 +222,20 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
                 newSkeleRT->set(glbSkeleRHandle[ogSkeleComp->pSkeleHandle.index]);
             }
         }
+
+        if (originalNode.has<TinyNode::Animation>()) {
+            const auto* ogAnimeComp = originalNode.get<TinyNode::Animation>();
+            auto* newAnimeComp = scene.writeComp<TinyNode::Animation>(nodeHandle);
+
+            // Very complex: remapping of every animation channel's node
+            *newAnimeComp = model.animations[ogAnimeComp->pAnimeHandle.index];
+
+            for (auto& channel : newAnimeComp->channels) {
+                if (validIndex(channel.node, nodeHandles)) {
+                    channel.node = nodeHandles[channel.node.index];
+                }
+            }
+        }
     }
 
     // Add scene to registry

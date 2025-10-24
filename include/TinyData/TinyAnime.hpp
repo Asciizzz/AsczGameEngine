@@ -8,8 +8,6 @@
 
 #include "TinyExt/TinyHandle.hpp"
 
-// Above are obsolete legacy structures kept for reference.
-
 struct TinyScene;
 struct TinyAnimeRT {
     struct Sampler {
@@ -34,11 +32,11 @@ struct TinyAnimeRT {
             T, R, S, W
         } path = Path::T;
 
-        enum class Type {
+        enum class Target {
             Node,
             Bone,
             Morph
-        } type = Type::Node;
+        } target = Target::Node;
 
         // Will be remapped upon scene import
         TinyHandle node;
