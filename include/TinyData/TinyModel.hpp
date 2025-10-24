@@ -16,7 +16,7 @@ struct TinyModel {
     std::vector<TinyMaterial> materials;
     std::vector<TinyTexture> textures;
     std::vector<TinySkeleton> skeletons;
-    std::vector<TinyAnime> animations;
+    std::vector<TinyAnimeRT> animations;
 
     std::vector<TinyNode> nodes;
 };

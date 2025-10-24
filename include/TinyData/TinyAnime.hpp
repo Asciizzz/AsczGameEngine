@@ -6,60 +6,54 @@
 #include <cstdint>
 #include <string>
 
-#include ".ext/Templates.hpp"
-
-struct TinyAnimeSampler {
-    std::vector<float> inputTimes;        // keyframe times
-    std::vector<glm::vec4> outputValues;  // generic container
-                                          // vec3 for translation/scale, vec4 for rotation, vecN for weights
-    enum class InterpolationType {
-        Linear,
-        Step,
-        CubicSpline
-    } interpolation = InterpolationType::Linear;
-
-    TinyAnimeSampler& setInterpolation(const std::string& interpStr);
-    TinyAnimeSampler& setInterpolation(const InterpolationType interpType);
-};
-
-struct TinyAnimeChannel {
-    uint32_t nodeIndex = 0;
-    uint32_t samplerIndex = 0;    // link to sampler
-
-    enum class TargetPath {
-        Translation,
-        Rotation,
-        Scale,
-        Weights
-    } targetPath;
-    TinyAnimeChannel& setTargetPath(const std::string& pathStr);
-    TinyAnimeChannel& setTargetPath(const TargetPath path);
-
-    enum class TargetType {
-        Node,
-        Bone, 
-        Morph
-    } targetType = TargetType::Node;
-    uint32_t targetIndex = 0;
-};
-
-struct TinyAnime {
-    std::string name;
-    
-    std::vector<TinyAnimeSampler> samplers;
-    std::vector<TinyAnimeChannel> channels;
-    float duration = 0.0f;  // Computed from all samplers
-
-    void clear();
-
-    // Helper methods
-    void computeDuration();
-    int findChannelForBone(int boneIndex, TinyAnimeChannel::TargetPath path) const;
-};
+#include "TinyExt/TinyHandle.hpp"
 
 // Above are obsolete legacy structures kept for reference.
 
-
+struct TinyScene;
 struct TinyAnimeRT {
-    // Place holder
+    struct Sampler {
+        std::vector<float> times;
+        std::vector<glm::vec4> values;
+        enum class Interp {
+            Linear,     // One vec4 per keyframe
+            Step,       // Same
+            CubicSpline // triplets [inTangent, value, outTangent] 
+        } interp = Interp::Linear;
+
+        glm::vec4 firstKeyframe() const;
+        glm::vec4 lastKeyframe() const;
+
+        glm::vec4 evaluate(float time) const;
+    };
+
+    struct Channel {
+        uint32_t sampler = 0;
+
+        enum class Path {
+            T, R, S, W
+        } path = Path::T;
+
+        enum class Type {
+            Node,
+            Bone,
+            Morph
+        } type = Type::Node;
+
+        // Will be remapped upon scene import
+        TinyHandle node;
+        uint32_t index = 0;
+    };
+
+    std::string name;
+    std::vector<Sampler> samplers;
+    std::vector<Channel> channels;
+
+    float duration = 0.0f;
+    float time = 0.0f;
+    bool loop = true;
+
+    void stop() { time = 0.0f; }
+
+    void update(TinyScene* scene, float deltaTime);
 };
