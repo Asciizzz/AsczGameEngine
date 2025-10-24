@@ -876,18 +876,16 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
             }
 
             // Determine the property being animated
+
+            using AnimePath = TinyAnimeRT::Channel::Path;
             const std::string& path = gltfChannel.target_path;
-            if (path == "translation") {
-                channel.path = TinyAnimeRT::Channel::Path::T;
-            } else if (path == "rotation") {
-                channel.path = TinyAnimeRT::Channel::Path::R;
-            } else if (path == "scale") {
-                channel.path = TinyAnimeRT::Channel::Path::S;
-            } else if (path == "weights") {
-                channel.path = TinyAnimeRT::Channel::Path::W;
-            } else {
-                continue; // Unsupported property
-            }
+            if (path == "translation")   channel.path = AnimePath::T;
+            else if (path == "rotation") channel.path = AnimePath::R;
+            else if (path == "scale")    channel.path = AnimePath::S;
+            else if (path == "weights")  channel.path = AnimePath::W;
+            else continue; // Unsupported path
+
+            tinyAnim.channels.push_back(std::move(channel));
         }
 
         // Construct an animation node for this animation

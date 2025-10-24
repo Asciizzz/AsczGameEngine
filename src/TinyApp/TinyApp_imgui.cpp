@@ -958,6 +958,63 @@ void TinyApp::renderSceneNodeInspector() {
             activeScene->writeComp<TinyNode::Skeleton>(selectedSceneNodeHandle);
         });
     }
+
+    if (selectedNode->has<TinyNode::Animation>()) {
+        renderComponent("Animation", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
+            // Get component copy using TinyScene method
+            TinyAnimeRT* compPtr = activeScene->rtResolve<TinyNode::Animation>(selectedSceneNodeHandle);
+
+            ImGui::Spacing();
+
+            // For the time being just print each animation channel info
+            ImGui::Text("Animation Channels: %zu", compPtr->channels.size());
+            ImGui::Separator();
+
+            for (size_t i = 0; i < compPtr->channels.size(); ++i) {
+                const TinyAnimeRT::Channel& channel = compPtr->channels[i];
+                ImGui::Text("Channel %zu:", i);
+                
+                // ImGui::Text("  Target Node Handle: %s", channel.node.valid() ? std::to_string(channel.node.index).c_str() : "Invalid");
+                if (channel.node.valid()) {
+                    const TinyNode* targetNode = activeScene->node(channel.node);
+                    bool targetBone = channel.target == TinyAnimeRT::Channel::Target::Bone;
+
+                    if (targetNode) {
+                        if (targetBone) {
+                            // Retrieve target node's runtime skeleton component
+                            const TinySkeletonRT* rtSkeleComp = activeScene->rtResolve<TinyNode::Skeleton>(channel.node);
+                            const TinySkeleton* skeleton = rtSkeleComp ? rtSkeleComp->rSkeleton() : nullptr;
+                            if (skeleton) {
+                                const TinyBone& targetBone = skeleton->bones[channel.index];                               
+                                ImGui::Text("Target Node: %s:%s", targetNode->name.c_str(), targetBone.name.c_str());
+                            }
+                        } else {
+                            ImGui::Text("Target Node: %s (Handle: %zu)", targetNode->name.c_str(), channel.node.index);
+                        }
+                    } else {
+                        ImGui::Text("Target Node: Invalid");
+                    }
+                } else {
+                    ImGui::Text("Target Node: Invalid");
+                }
+
+                ImGui::Separator();
+            }
+            
+            ImGui::Spacing();
+        }, [&]() {
+            // Remove component using TinyScene method
+            activeScene->removeComp<TinyNode::Animation>(selectedSceneNodeHandle);
+        });
+    } else {
+        // Show grayed-out placeholder for missing Animation component
+        renderComponent("Animation", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
+            // Minimal placeholder - no content, just the header with add button
+        }, [&]() {
+            // Add component using TinyScene method
+            activeScene->writeComp<TinyNode::Animation>(selectedSceneNodeHandle);
+        });
+    }
     
     ImGui::EndChild();
     
