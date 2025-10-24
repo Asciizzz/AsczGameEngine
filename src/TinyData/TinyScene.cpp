@@ -284,28 +284,24 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     if (!node) return;
 
     // Update transform component
-
     TinyNode::Transform* transform = nodeComp<TinyNode::Transform>(realHandle);
-    glm::mat4 transformMat = glm::mat4(1.0f);
-    if (transform) {
-        transformMat = parentGlobalTransform * transform->local;
-        transform->global = transformMat;
-    }
+    glm::mat4 localMat = transform ? transform->local : glm::mat4(1.0f);
+    glm::mat4 transformMat = parentGlobalTransform * localMat;
 
-    // Update skeleton component if exists
+    // Update skeleton component
     TinySkeletonRT* rtSkele = nodeComp<TinyNode::Skeleton>(realHandle);
     if (rtSkele) rtSkele->update();
 
     // Update bone attachments transforms
     TinyNode::BoneAttach* boneAttach = nodeComp<TinyNode::BoneAttach>(realHandle);
     if (boneAttach) {
-        // TinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
-        // TinySkeletonRT* skeleRT = nodeComp<TinyNode::Skeleton>(skeleNodeHandle);
-        // if (skeleRT) {
-        //     // Update global transform of that skeleton's bone
-        //     skeleRT->update(boneAttach->boneIndex);
-        // }
+        TinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
+        TinySkeletonRT* skeleRT = nodeComp<TinyNode::Skeleton>(skeleNodeHandle);
+        if (skeleRT) transformMat = transformMat * skeleRT->localPose(boneAttach->boneIndex);
     }
+
+    // Set global transform
+    if (transform) transform->global = transformMat;
 
     // Recursively update all children
     for (const TinyHandle& childHandle : node->childrenHandles) {
