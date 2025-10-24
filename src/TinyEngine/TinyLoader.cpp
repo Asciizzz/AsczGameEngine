@@ -830,7 +830,7 @@ void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, cons
 
         if (nGltf.mesh >= 0) {
             TinyNode::MeshRender meshData;
-            meshData.meshHandle = TinyHandle(nGltf.mesh);
+            meshData.pMeshHandle = TinyHandle(nGltf.mesh);
 
             int skeletonIndex = nGltf.skin;
             auto it = skeletonToModelNodeIndex.find(skeletonIndex);
@@ -1170,7 +1170,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
 
         // Add MeshRender component
         TinyNode::MeshRender meshRender;
-        meshRender.meshHandle = TinyHandle(static_cast<uint32_t>(meshIndex));
+        meshRender.pMeshHandle = TinyHandle(static_cast<uint32_t>(meshIndex));
         meshRender.skeleNodeHandle = TinyHandle(); // No skeleton for OBJ
         meshNode.add<TinyNode::MeshRender>(std::move(meshRender));
 

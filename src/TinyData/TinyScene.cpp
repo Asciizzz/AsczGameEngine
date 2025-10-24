@@ -245,7 +245,7 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
             const auto* fromMeshRender = fromNode->get<TinyNode::MeshRender>();
             auto* toMeshRender = writeComp<TinyNode::MeshRender>(toHandle);
 
-            toMeshRender->meshHandle = fromMeshRender->meshHandle;
+            toMeshRender->pMeshHandle = fromMeshRender->pMeshHandle;
 
             if (validIndex(fromMeshRender->skeleNodeHandle, toHandles)) {
                 toMeshRender->skeleNodeHandle = toHandles[fromMeshRender->skeleNodeHandle.index];

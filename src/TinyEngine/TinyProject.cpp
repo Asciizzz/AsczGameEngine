@@ -193,8 +193,8 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             const auto* ogMeshRender = originalNode.get<TinyNode::MeshRender>();
             auto* newMeshRender = scene.writeComp<TinyNode::MeshRender>(nodeHandle);
 
-            if (validIndex(ogMeshRender->meshHandle, glbMeshRHandle)) {
-                newMeshRender->meshHandle = glbMeshRHandle[ogMeshRender->meshHandle.index];
+            if (validIndex(ogMeshRender->pMeshHandle, glbMeshRHandle)) {
+                newMeshRender->pMeshHandle = glbMeshRHandle[ogMeshRender->pMeshHandle.index];
             }
 
             if (validIndex(ogMeshRender->skeleNodeHandle, nodeHandles)) {
@@ -256,6 +256,7 @@ void TinyProject::vkCreateSceneResources() {
     // Create dummy skin descriptor set for rigged meshes without skeleton
     createDummySkinDescriptorSet();
 
+    sharedReq.fsRegistry = &fs().registry();
     sharedReq.deviceVK = deviceVK;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;

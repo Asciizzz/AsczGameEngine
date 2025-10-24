@@ -46,7 +46,7 @@ struct TinyNode {
     // Component definitions with runtime capabilities
     struct MeshRender {
         static constexpr Types kType = Types::MeshRender;
-        TinyHandle meshHandle;      // Handle to mesh in registry
+        TinyHandle pMeshHandle; // Polytype
         TinyHandle skeleNodeHandle; // Handle to skeleton "NODE" (NOT skeleton in registry)
     };
 
@@ -91,6 +91,7 @@ struct TinyNode {
     template<typename T>
     bool remove() {
         setType(T::kType, false);
+        getComponent<T>() = T();
         return true;
     }
 

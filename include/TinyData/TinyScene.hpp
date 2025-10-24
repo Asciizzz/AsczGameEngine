@@ -8,13 +8,15 @@
 
 // TinyScene requirements
 struct TinySceneReq {
+    const TinyRegistry*   fsRegistry = nullptr;
     const TinyVK::Device* deviceVK = nullptr; // For GPU resource creation
 
     VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
     VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
 
     bool valid() const {
-        return  deviceVK != nullptr &&
+        return  fsRegistry != nullptr &&
+                deviceVK != nullptr &&
                 skinDescPool   != VK_NULL_HANDLE &&
                 skinDescLayout != VK_NULL_HANDLE;
     }
@@ -203,7 +205,7 @@ private:
 
     TinySceneReq sceneReq;   // Scene requirements
 
-    TinyRegistry rtRegistry; // Local runtime registry for this scene
+    TinyRegistry rtRegistry; // Runtime registry for this scene
 
     // Non-const access only for internal use
     template<typename T>

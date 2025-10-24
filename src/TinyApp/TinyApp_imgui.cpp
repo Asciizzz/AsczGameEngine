@@ -567,14 +567,14 @@ void TinyApp::renderSceneNodeInspector() {
             ImGui::Text("Mesh Resource:");
 
             // Check if mesh resource is valid
-            bool meshModified = renderHandleField("##MeshHandle", compPtr->meshHandle, "Mesh",
+            bool meshModified = renderHandleField("##MeshHandle", compPtr->pMeshHandle, "Mesh",
                 "Drag a mesh file from the File Explorer", 
                 "Select mesh resource for rendering");
             if (meshModified) componentModified = true;
 
             // Show mesh information if valid
-            if (compPtr->meshHandle.valid()) {
-                const TinyMesh* mesh = fs.rGet<TinyMesh>(compPtr->meshHandle);
+            if (compPtr->pMeshHandle.valid()) {
+                const TinyMesh* mesh = fs.rGet<TinyMesh>(compPtr->pMeshHandle);
                 if (mesh) {
                     ImGui::SameLine();
                     ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", mesh->name.c_str());

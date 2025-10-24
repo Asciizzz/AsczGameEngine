@@ -277,7 +277,7 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
         const auto* meshRenderComp = rtNode.get<TinyNode::MeshRender>();
         if (!meshRenderComp) continue; // No mesh render component
 
-        TinyHandle meshHandle = meshRenderComp->meshHandle;
+        TinyHandle meshHandle = meshRenderComp->pMeshHandle;
         const auto& regMesh = fs.rGet<TinyMesh>(meshHandle);
         if (!regMesh) continue; // No mesh found
 
