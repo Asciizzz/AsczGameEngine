@@ -11,7 +11,7 @@
 
 class TinyProject {
 public:
-    static constexpr size_t maxSkeletons = 1024;
+    static constexpr size_t maxSkeletons = 4096; // This is frighteningly high
 
     TinyProject(const TinyVK::Device* deviceVK);
     ~TinyProject();

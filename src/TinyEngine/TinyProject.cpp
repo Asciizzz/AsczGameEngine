@@ -250,7 +250,7 @@ void TinyProject::vkCreateSceneResources() {
     });
 
     skinDescPool.create(*deviceVK, {
-        {DescType::StorageBuffer, 1}
+        {DescType::StorageBuffer, maxSkeletons}
     }, maxSkeletons);
 
     // Create dummy skin descriptor set for rigged meshes without skeleton
