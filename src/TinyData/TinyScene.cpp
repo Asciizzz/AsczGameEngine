@@ -297,7 +297,7 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     if (boneAttach) {
         TinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
         TinySkeletonRT* skeleRT = nodeComp<TinyNode::Skeleton>(skeleNodeHandle);
-        if (skeleRT) transformMat = transformMat * skeleRT->localPose(boneAttach->boneIndex);
+        if (skeleRT) transformMat = transformMat * skeleRT->finalPose(boneAttach->boneIndex);
     }
 
     // Set global transform

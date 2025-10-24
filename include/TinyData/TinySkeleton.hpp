@@ -83,6 +83,9 @@ struct TinySkeletonRT {
 
     glm::mat4 localPose(uint32_t index) const { return localPose_[index]; }
     glm::mat4& localPose(uint32_t index) { return localPose_[index]; }
+
+    const glm::mat4& finalPose(uint32_t index) const { return finalPose_[index]; }
+
     void setLocalPose(uint32_t index, const glm::mat4& pose = glm::mat4(1.0f)) {
         if (index >= localPose_.size()) return;
 
