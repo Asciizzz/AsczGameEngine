@@ -1510,11 +1510,10 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         bool isRootNode = (nodeHandle == activeScene->rootHandle());
         if (ImGui::MenuItem("Delete", nullptr, false, !isRootNode)) {
             TinyScene* scene = getActiveScene();
-            if (scene) {
-                const TinyNode* parentNode = scene->node(node->parentHandle);
-                if (parentNode) selectSceneNode(node->parentHandle);
-
-                scene->removeNode(nodeHandle);
+            TinyHandle parentHandle = node->parentHandle;
+            if (scene && scene->removeNode(nodeHandle)) {
+                const TinyNode* parentNode = scene->node(parentHandle);
+                selectSceneNode(parentNode ? parentHandle : scene->rootHandle()); // Select parent or root if no parent
             }
         }
 
@@ -1522,19 +1521,21 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             TinyScene* scene = getActiveScene();
             TinyHandle parentHandle = node->parentHandle;
             if (scene && scene->flattenNode(nodeHandle)) {
-                selectSceneNode(parentHandle); // Select the parent node after flattening
+                const TinyNode* parentNode = scene->node(parentHandle);
+                selectSceneNode(parentNode ? parentHandle : scene->rootHandle()); // Select parent or root if no parent
             }
         }
         
         ImGui::EndPopup();
 
-        // CRITICAL: Re-fetch node pointer after potential modifications
+        // CRITICAL: RESET Node handle AND node ptr
+        nodeHandle = selectedHandle.isScene() ? selectedHandle.handle : TinyHandle();
         node = activeScene->node(nodeHandle);
     }
     
 
     // Show node details in tooltip (slicker version like the old function)
-    if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+    if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left) && node != nullptr) {
         ImGui::BeginTooltip();
 
         // Create the node label with useful information
@@ -1563,10 +1564,9 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         
         ImGui::EndTooltip();
     }
-    
-    
+
     // If node is open and has children, recurse for children
-    if (nodeOpen && hasChildren) {
+    if (nodeOpen && hasChildren && node != nullptr) {
         // Sort children by have-children? -> name
         std::vector<TinyHandle> sortedChildren = node->childrenHandles;
         std::sort(sortedChildren.begin(), sortedChildren.end(), [&](const TinyHandle& a, const TinyHandle& b) {
@@ -1587,8 +1587,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
         }
         ImGui::TreePop();
     }
-    
-    
+
     // Pop the style colors we pushed earlier
     ImGui::PopStyleColor(2); // Pop HeaderHovered and Header
     

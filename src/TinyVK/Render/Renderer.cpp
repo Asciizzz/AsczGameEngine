@@ -468,8 +468,13 @@ void Renderer::processPendingRemovals(TinyProject* project, TinyScene* activeSce
     }
     
     // Safely flush pending removals now
-    fs.rFlushAllRms();
-    if (activeScene) activeScene->rtFlushAllRms();
+    if (fs.rHasPendingRms()) {
+        fs.rFlushAllRms();
+    }
+
+    if (activeScene && activeScene->rtHasPendingRms()) {
+        activeScene->rtFlushAllRms();
+    }
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {
