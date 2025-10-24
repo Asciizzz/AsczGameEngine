@@ -19,5 +19,8 @@ guide.md
 Guides/
 docs/
 
+backup_script.py
+AsczGame_Debug.exe
+
 # Custom binary files for my game
 *.ascz
