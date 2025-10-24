@@ -737,7 +737,7 @@ void TinyApp::renderSceneNodeInspector() {
                 "Select skeleton resource for bone data");
 
             // Show skeleton information if valid
-            const TinySkeleton* skeleton = rtSkeleComp->skeleton();
+            const TinySkeleton* skeleton = rtSkeleComp->rSkeleton();
             if (skeleton) {
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());

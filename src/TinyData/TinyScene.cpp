@@ -330,7 +330,8 @@ TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
     if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
 
     // Create new empty valid runtime skeleton
-    TinySkeletonRT rtSkele(sceneReq.deviceVK, sceneReq.skinDescPool, sceneReq.skinDescLayout);
+    TinySkeletonRT rtSkele;
+    rtSkele.init(sceneReq.deviceVK, sceneReq.fsRegistry, sceneReq.skinDescPool, sceneReq.skinDescLayout);
     // Repurpose pHandle into runtime skeleton handle
     compPtr->pSkeleHandle = rtAdd<TinySkeletonRT>(std::move(rtSkele));
 

@@ -219,8 +219,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
             if (validIndex(ogSkeleComp->pSkeleHandle, glbSkeleRHandle)) {
                 // Construct new skeleton runtime from the original skeleton
-                TinyHandle skeleHandle = glbSkeleRHandle[ogSkeleComp->pSkeleHandle.index];
-                newSkeleRT->set(skeleHandle, fs().rGet<TinySkeleton>(skeleHandle));
+                newSkeleRT->set(glbSkeleRHandle[ogSkeleComp->pSkeleHandle.index]);
             }
         }
     }
