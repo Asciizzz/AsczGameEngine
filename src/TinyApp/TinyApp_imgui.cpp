@@ -438,7 +438,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::Transform>()) {
         renderComponent("Transform", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), true, [&]() {
             {
-                TinyNode::Transform* compPtr = activeScene->rtResolve<TinyNode::Transform>(selectedSceneNodeHandle);
+                TinyNode::Transform* compPtr = activeScene->rtComp<TinyNode::Transform>(selectedSceneNodeHandle);
 
                 glm::mat4 local = compPtr->local;
 
@@ -558,7 +558,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::MeshRender>()) {
         renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
             // Get component copy using TinyScene method
-            TinyNode::MeshRender* compPtr = activeScene->rtResolve<TinyNode::MeshRender>(selectedSceneNodeHandle);
+            TinyNode::MeshRender* compPtr = activeScene->rtComp<TinyNode::MeshRender>(selectedSceneNodeHandle);
             bool componentModified = false;
             
             ImGui::Spacing();
@@ -624,7 +624,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::BoneAttach>()) {
         renderComponent("Bone Attachment", ImVec4(0.15f, 0.2f, 0.15f, 0.8f), ImVec4(0.3f, 0.4f, 0.3f, 0.6f), true, [&]() {
             // Get component copy using TinyScene method
-            TinyNode::BoneAttach* compPtr = activeScene->rtResolve<TinyNode::BoneAttach>(selectedSceneNodeHandle);
+            TinyNode::BoneAttach* compPtr = activeScene->rtComp<TinyNode::BoneAttach>(selectedSceneNodeHandle);
             bool componentModified = false;
             
             ImGui::Spacing();
@@ -726,7 +726,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::Skeleton>()) {
         renderComponent("Skeleton", ImVec4(0.2f, 0.15f, 0.15f, 0.8f), ImVec4(0.4f, 0.3f, 0.3f, 0.6f), true, [&]() {
             // Retrieve the component (using TinyScene special method which return appropriate runtime/static data)
-            TinySkeletonRT* rtSkeleComp = activeScene->rtResolve<TinyNode::Skeleton>(selectedSceneNodeHandle);
+            TinySkeletonRT* rtSkeleComp = activeScene->rtComp<TinyNode::Skeleton>(selectedSceneNodeHandle);
             bool hasSkeleton = rtSkeleComp->hasSkeleton();
 
             ImGui::Spacing();
@@ -962,7 +962,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNode::Animation>()) {
         renderComponent("Animation", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
             // Get component copy using TinyScene method
-            TinyAnimeRT* compPtr = activeScene->rtResolve<TinyNode::Animation>(selectedSceneNodeHandle);
+            TinyAnimeRT* compPtr = activeScene->rtComp<TinyNode::Animation>(selectedSceneNodeHandle);
 
             ImGui::Spacing();
 
@@ -982,7 +982,7 @@ void TinyApp::renderSceneNodeInspector() {
                     if (targetNode) {
                         if (targetBone) {
                             // Retrieve target node's runtime skeleton component
-                            const TinySkeletonRT* rtSkeleComp = activeScene->rtResolve<TinyNode::Skeleton>(channel.node);
+                            const TinySkeletonRT* rtSkeleComp = activeScene->rtComp<TinyNode::Skeleton>(channel.node);
                             const TinySkeleton* skeleton = rtSkeleComp ? rtSkeleComp->rSkeleton() : nullptr;
                             if (skeleton) {
                                 const TinyBone& targetBone = skeleton->bones[channel.index];                               

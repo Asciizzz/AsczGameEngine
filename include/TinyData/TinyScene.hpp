@@ -98,7 +98,7 @@ public:
 
     // Retrieve runtime-resolved component pointer (return runtime component instead of node identity component)
     template<typename T>
-    RTResolver_t<T>* rtResolve(TinyHandle nodeHandle) {
+    RTResolver_t<T>* rtComp(TinyHandle nodeHandle) {
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
@@ -114,8 +114,8 @@ public:
     }
 
     template<typename T>
-    const RTResolver_t<T>* rtResolve(TinyHandle nodeHandle) const {
-        return const_cast<TinyScene*>(this)->rtResolve<T>(nodeHandle);
+    const RTResolver_t<T>* rtComp(TinyHandle nodeHandle) const {
+        return const_cast<TinyScene*>(this)->rtComp<T>(nodeHandle);
     }
 
     template<typename T>
