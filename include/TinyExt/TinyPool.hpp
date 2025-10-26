@@ -8,15 +8,9 @@
 #include <stdexcept>
 #include <utility>
 
-enum class TinyPoolType {
-    Raw,  // Direct storage
-    UPtr, // Unique pointer storage
-};
-
 // Helper traits for pointer types
 template<typename T>
 struct TinyPoolTraits {
-    static constexpr TinyPoolType poolType = TinyPoolType::Raw;
     static constexpr bool is_pointer = std::is_pointer_v<T>;
     static constexpr bool is_unique_ptr = false;
     static constexpr bool is_shared_ptr = false;
@@ -24,7 +18,6 @@ struct TinyPoolTraits {
 
 template<typename T>
 struct TinyPoolTraits<std::unique_ptr<T>> {
-    static constexpr TinyPoolType poolType = TinyPoolType::UPtr;
     static constexpr bool is_pointer = false;
     static constexpr bool is_unique_ptr = true;
     static constexpr bool is_shared_ptr = false;
@@ -33,7 +26,6 @@ struct TinyPoolTraits<std::unique_ptr<T>> {
 
 template<typename T>
 struct TinyPoolTraits<std::shared_ptr<T>> {
-    static constexpr TinyPoolType poolType = TinyPoolType::UPtr; // Treat same as unique_ptr for now
     static constexpr bool is_pointer = false;
     static constexpr bool is_unique_ptr = false;
     static constexpr bool is_shared_ptr = true;
@@ -190,20 +182,18 @@ struct TinyPool {
         return !pendingRms.empty();
     }
 
-
-    // Soon to be private
+private:
     void remove(const TinyHandle& handle) {
         if (!valid(handle)) return;
 
         uint32_t index = handle.index;
 
-        if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
+        if constexpr (TinyPoolTraits<Type>::is_unique_ptr ||
                     TinyPoolTraits<Type>::is_shared_ptr) {
             items[index].reset();
-        } else if constexpr(std::is_copy_assignable_v<Type>) {
-            items[index] = {};
+        } else if constexpr (std::is_default_constructible_v<Type>) {
+            items[index] = Type{};
         } else {
-            // For non-copyable types, use placement new to reconstruct
             items[index].~Type();
             new(&items[index]) Type{};
         }
@@ -214,13 +204,10 @@ struct TinyPool {
         freeList.push_back(index);
     }
 
-private:
     struct State {
         bool occupied = false;
         uint32_t version = 0;
     };
-
-    TinyPoolType poolType = TinyPoolTraits<Type>::poolType;
 
     std::vector<Type> items;
     std::vector<State> states;

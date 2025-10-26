@@ -477,7 +477,7 @@ private:
         }
 
         // finally remove node from pool
-        fnodes_.remove(handle);
+        fnodes_.instaRm(handle);
         return true;
     }
 

@@ -64,7 +64,7 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
     removeComp<TinyNode::SK3D>(nodeHandle);
     removeComp<TinyNode::AN3D>(nodeHandle);
 
-    nodes.remove(nodeHandle);
+    nodes.instaRm(nodeHandle);
 
     return true;
 }
