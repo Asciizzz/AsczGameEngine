@@ -70,7 +70,6 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         }
         
         if (activeScene && activeScene->nodeCount() > 0) {
-            printf("Rendering Scene Node Tree...\n");
             renderNodeTreeImGui();
         } else {
             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
@@ -121,8 +120,7 @@ void TinyApp::setupImGuiWindows(const TinyChrono& fpsManager, const TinyCamera& 
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
         
         ImGui::BeginChild("FileExplorer", ImVec2(0, explorerHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-        
-        printf("Rendering File Explorer...\n");
+
         renderFileExplorerImGui();
         
         // Render the file dialog once per frame, outside the file explorer tree

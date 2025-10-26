@@ -96,113 +96,135 @@ TinyTexture TinyLoader::loadTexture(const std::string& filePath) {
 // =================================== 3D MODELS ===================================
 
 
-// Utility: read GLTF accessor as typed array with proper error checking
+// Helper for static_assert false
+template<class> struct always_false : std::false_type {};
 template<typename T>
-bool readAccessor(const tinygltf::Model& model, int accessorIndex, std::vector<T>& out) {
-    if (accessorIndex < 0 || accessorIndex >= static_cast<int>(model.accessors.size())) {
-        return false;
-    }
-    
-    const tinygltf::Accessor& accessor = model.accessors[accessorIndex];
-    
-    if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) {
-        return false;
-    }
-    
-    const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
-    
-    if (view.buffer < 0 || view.buffer >= static_cast<int>(model.buffers.size())) {
-        return false;
-    }
-    
-    const tinygltf::Buffer& buf = model.buffers[view.buffer];
+bool readAccessor(const tinygltf::Model& model, int accessorIndex, std::vector<T>& out)
+{
+    if (accessorIndex < 0) return false;
 
-    const unsigned char* dataPtr = buf.data.data() + view.byteOffset + accessor.byteOffset;
-    size_t stride = accessor.ByteStride(view);
+    const auto& accessor = model.accessors[accessorIndex];
+    const auto& bufferView = model.bufferViews[accessor.bufferView];
+    const auto& buffer = model.buffers[bufferView.buffer];
 
-    if (stride == 0) stride = sizeof(T);
-
-    out.resize(accessor.count);
-
-    for (size_t i = 0; i < accessor.count; i++) {
-        const void* ptr = dataPtr + stride * i;
-        memcpy(&out[i], ptr, sizeof(T));
-    }
-    
-    return true;
-}
-
-// Template specialization for joint indices - handles component type conversion
-template<>
-bool readAccessor<glm::uvec4>(const tinygltf::Model& model, int accessorIndex, std::vector<glm::uvec4>& out) {
-    if (accessorIndex < 0 || accessorIndex >= static_cast<int>(model.accessors.size())) {
-        return false;
-    }
-    
-    const tinygltf::Accessor& accessor = model.accessors[accessorIndex];
-    
-    if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) {
-        return false;
-    }
-    
-    const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
-    
-    if (view.buffer < 0 || view.buffer >= static_cast<int>(model.buffers.size())) {
-        return false;
-    }
-    
-    const tinygltf::Buffer& buf = model.buffers[view.buffer];
-    const unsigned char* dataPtr = buf.data.data() + view.byteOffset + accessor.byteOffset;
-    size_t stride = accessor.ByteStride(view);
-    
-    // Calculate stride based on component type if not specified
-    if (stride == 0) {
-        switch (accessor.componentType) {
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:  stride = 4; break;  // VEC4 of bytes
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: stride = 8; break;  // VEC4 of shorts
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:   stride = 16; break; // VEC4 of ints
-            default: return false;
+    const size_t compSize = [&]() {
+        switch(accessor.componentType) {
+            case TINYGLTF_COMPONENT_TYPE_FLOAT: return sizeof(float);
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: return sizeof(uint16_t);
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: return sizeof(uint32_t);
+            case TINYGLTF_COMPONENT_TYPE_BYTE: return sizeof(int8_t);
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: return sizeof(uint8_t);
+            case TINYGLTF_COMPONENT_TYPE_SHORT: return sizeof(int16_t);
+            default: return size_t(0);
         }
-    }
-    
-    out.resize(accessor.count);
-    
-    for (size_t i = 0; i < accessor.count; i++) {
-        const unsigned char* vertexDataPtr = dataPtr + stride * i;
-        glm::uvec4 jointIndices(0);
+    }();
+    if (compSize == 0) return false;
 
-        switch (accessor.componentType) {
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
-                const uint8_t* indices = reinterpret_cast<const uint8_t*>(vertexDataPtr);
-                jointIndices = glm::uvec4(indices[0], indices[1], indices[2], indices[3]);
-                break;
+    const size_t numComponents = [&]() {
+        switch(accessor.type) {
+            case TINYGLTF_TYPE_SCALAR: return 1;
+            case TINYGLTF_TYPE_VEC2:   return 2;
+            case TINYGLTF_TYPE_VEC3:   return 3;
+            case TINYGLTF_TYPE_VEC4:   return 4;
+            case TINYGLTF_TYPE_MAT2:   return 4;
+            case TINYGLTF_TYPE_MAT3:   return 9;
+            case TINYGLTF_TYPE_MAT4:   return 16;
+            default: return 1;
+        }
+    }();
+
+    const size_t stride = bufferView.byteStride ? bufferView.byteStride : compSize * numComponents;
+    const unsigned char* dataPtr = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
+
+    out.resize(accessor.count);
+
+    for (size_t i = 0; i < accessor.count; ++i)
+    {
+        const unsigned char* elemPtr = dataPtr + i * stride;
+
+        if constexpr (std::is_same_v<T, float>) {
+            // For scalar floats
+            if (numComponents != 1 || accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) return false;
+            out[i] = *reinterpret_cast<const float*>(elemPtr);
+        }
+        else if constexpr (std::is_same_v<T, glm::vec2> ||
+                           std::is_same_v<T, glm::vec3> ||
+                           std::is_same_v<T, glm::vec4>) {
+
+            if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) return false;
+
+            glm::vec4 v(0.f); // promote vec3→vec4 safely
+            for (size_t c = 0; c < numComponents && c < 4; ++c) {
+                v[c] = *reinterpret_cast<const float*>(elemPtr + c * compSize);
             }
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
-                const uint16_t* indices = reinterpret_cast<const uint16_t*>(vertexDataPtr);
-                jointIndices = glm::uvec4(indices[0], indices[1], indices[2], indices[3]);
-                break;
-            }
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT: {
-                const uint32_t* indices = reinterpret_cast<const uint32_t*>(vertexDataPtr);
-                jointIndices = glm::uvec4(indices[0], indices[1], indices[2], indices[3]);
-                break;
-            }
-            default:
+
+            if constexpr (std::is_same_v<T, glm::vec2>) out[i] = glm::vec2(v);
+            if constexpr (std::is_same_v<T, glm::vec3>) out[i] = glm::vec3(v);
+            if constexpr (std::is_same_v<T, glm::vec4>) out[i] = v;
+        }
+        else if constexpr (std::is_same_v<T, glm::mat4>) {
+            if (accessor.type != TINYGLTF_TYPE_MAT4 || accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
                 return false;
+
+            glm::mat4 m(1.f);
+            for (size_t col = 0; col < 4; ++col) {
+                for (size_t row = 0; row < 4; ++row) {
+                    m[col][row] = *reinterpret_cast<const float*>(elemPtr + (col*4 + row) * compSize);
+                }
+            }
+            out[i] = m;
         }
-        
-        out[i] = jointIndices;
+        else if constexpr (std::is_same_v<T, glm::uvec4>) {
+            // Only support SCALAR arrays packed as 4-component vectors
+            if (numComponents != 4) return false;
+            glm::uvec4 v(0); // declare temp variable
+
+            switch (accessor.componentType) {
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                    for (size_t c = 0; c < 4; ++c) {
+                        v[c] = static_cast<unsigned int>(*(elemPtr + c * compSize));
+                    }
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    for (size_t c = 0; c < 4; ++c) {
+                        v[c] = static_cast<unsigned int>(*(reinterpret_cast<const uint16_t*>(elemPtr) + c));
+                    }
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    for (size_t c = 0; c < 4; ++c) {
+                        v[c] = *(reinterpret_cast<const uint32_t*>(elemPtr) + c);
+                    }
+                    break;
+                default:
+                    return false;
+            }
+            out[i] = glm::uvec4(v);
+        }
+        else {
+            // Unsupported type
+            return false;
+        }
     }
-    
+
     return true;
 }
 
-template<typename T>
-bool readAccessorFromMap(const tinygltf::Model& model, const std::map<std::string, int>& attributes, const std::string& key, std::vector<T>& out) {
-    if (attributes.count(key) == 0) return false;
 
-    return readAccessor(model, attributes.at(key), out);
+
+// Reads from a map of attributes, falls back to readAccessor
+template<typename T>
+bool readAccessorFromMap(const tinygltf::Model& model,
+                         const std::map<std::string, int>& attributes,
+                         const std::string& key,
+                         std::vector<T>& out) {
+    auto it = attributes.find(key);
+    if (it == attributes.end()) return false;
+
+    return readAccessor<T>(model, it->second, out);
 }
+
+
+
 
 
 // ============================================================================
@@ -842,7 +864,6 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
                 sampler.interp = TinyAnimeRT::Sampler::Interp::Linear; // Default
             }
 
-            // tinyAnim.samplers.push_back(std::move(sampler));
             anime.samplers.push_back(std::move(sampler));
         }
 

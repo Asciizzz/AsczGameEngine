@@ -106,7 +106,6 @@ void TinyImGui::render(VkCommandBuffer commandBuffer) {
 
     // Render all registered windows
     for (auto& window : windows) {
-        printf("%s ", window.name.c_str());
         if (window.p_open) {
             // Window has open/close control
             if (*window.p_open) {
@@ -121,7 +120,6 @@ void TinyImGui::render(VkCommandBuffer commandBuffer) {
             ImGui::End();
         }
     }
-    printf("\n");
 
     // Render ImGui
     ImGui::Render();

@@ -204,8 +204,8 @@ void TinyAnimeRT::update(TinyScene* scene, float deltaTime) {
         time = std::min(time, duration);
     }
 
-    for (auto& channel : anime->channels) {
-        auto& sampler = anime->samplers[channel.sampler];
+    for (const auto& channel : anime->channels) {
+        const auto& sampler = anime->samplers[channel.sampler];
 
         glm::mat4 transform = getTransform(scene, channel);
 
