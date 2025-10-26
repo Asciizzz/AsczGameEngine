@@ -86,21 +86,43 @@ glm::vec4 TinyAnimeRT::Sampler::evaluate(float time) const {
     }
 }
 
-glm::mat4 TinyAnimeRT::getTransform(const TinyScene* scene, const TinyAnimeRT::Channel& channel) const {
-    if (scene == nullptr || channel.sampler >= samplers.size()) return glm::mat4(1.0f);
+
+
+void TinyAnimeRT::play(const std::string& name, bool restart) {
+    auto it = nameToHandle.find(name);
+    if (it != nameToHandle.end()) {
+        play(it->second, restart);
+    }
+}
+
+void TinyAnimeRT::play(const TinyHandle& handle, bool restart) {
+    const Anime* anim = animePool.get(handle);
+    if (!anim || !anim->valid()) return;
+    
+    playing = true;
+    currentHandle = handle;
+
+    if (restart) time = 0.0f;
+}
+
+
+glm::mat4 getTransform(const TinyScene* scene, const TinyAnimeRT::Channel& channel) {
+    if (scene == nullptr) return glm::mat4(1.0f);
+    using AnimeTarget = TinyAnimeRT::Channel::Target;
 
     // Return transform component of node
-    if (channel.target == Channel::Target::Node) {
+    if (channel.target == AnimeTarget::Node) {
         const TinyNode::T3D* nodeTransform = scene->rtComp<TinyNode::T3D>(channel.node);
         return nodeTransform ? nodeTransform->local : glm::mat4(1.0f);
     // Return transform component of bone
-    } else if (channel.target == Channel::Target::Bone) {
+    } else if (channel.target == AnimeTarget::Bone) {
         const TinySkeletonRT* skeletonRT = scene->rtComp<TinyNode::SK3D>(channel.node);
         return (skeletonRT && skeletonRT->boneValid(channel.index)) ? skeletonRT->localPose(channel.index) : glm::mat4(1.0f);
     }
 
     return glm::mat4(1.0f);
 }
+
 
 void TinyAnimeRT::writeTransform(TinyScene* scene, const Channel& channel, const glm::mat4& transform) const {
     if (scene == nullptr) return;
@@ -162,10 +184,16 @@ glm::mat4 recomposeTransform(
            glm::scale(glm::mat4(1.0f), scale);
 }
 
-void TinyAnimeRT::update(TinyScene* scene, float deltaTime) {
-    if (scene == nullptr || !valid()) return;
 
-    time += deltaTime;
+void TinyAnimeRT::update(TinyScene* scene, float deltaTime) {
+    if (scene == nullptr) return;
+
+    const Anime* anime = animePool.get(currentHandle);
+    if (!playing || !anime || !anime->valid()) return;
+
+    float duration = anime->duration;
+
+    time += deltaTime * speed;
     if (duration <= 0.0f) {
         // Zero-length animation: clamp to start
         time = 0.0f;
@@ -176,8 +204,8 @@ void TinyAnimeRT::update(TinyScene* scene, float deltaTime) {
         time = std::min(time, duration);
     }
 
-    for (auto& channel : channels) {
-        auto& sampler = samplers[channel.sampler];
+    for (auto& channel : anime->channels) {
+        auto& sampler = anime->samplers[channel.sampler];
 
         glm::mat4 transform = getTransform(scene, channel);
 

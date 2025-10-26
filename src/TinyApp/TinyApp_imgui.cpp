@@ -966,39 +966,13 @@ void TinyApp::renderSceneNodeInspector() {
 
             ImGui::Spacing();
 
-            // For the time being just print each animation channel info
-            ImGui::Text("Animation Channels: %zu", compPtr->channels.size());
-            ImGui::Separator();
-
-            for (size_t i = 0; i < compPtr->channels.size(); ++i) {
-                const TinyAnimeRT::Channel& channel = compPtr->channels[i];
-                ImGui::Text("Channel %zu:", i);
-                
-                // ImGui::Text("  Target Node Handle: %s", channel.node.valid() ? std::to_string(channel.node.index).c_str() : "Invalid");
-                if (channel.node.valid()) {
-                    const TinyNode* targetNode = activeScene->node(channel.node);
-                    bool targetBone = channel.target == TinyAnimeRT::Channel::Target::Bone;
-
-                    if (targetNode) {
-                        if (targetBone) {
-                            // Retrieve target node's runtime skeleton component
-                            const TinySkeletonRT* rtSkeleComp = activeScene->rtComp<TinyNode::SK3D>(channel.node);
-                            const TinySkeleton* skeleton = rtSkeleComp ? rtSkeleComp->rSkeleton() : nullptr;
-                            if (skeleton) {
-                                const TinyBone& targetBone = skeleton->bones[channel.index];                               
-                                ImGui::Text("Target Node: %s:%s", targetNode->name.c_str(), targetBone.name.c_str());
-                            }
-                        } else {
-                            ImGui::Text("Target Node: %s (Handle: %zu)", targetNode->name.c_str(), channel.node.index);
-                        }
-                    } else {
-                        ImGui::Text("Target Node: Invalid");
-                    }
-                } else {
-                    ImGui::Text("Target Node: Invalid");
+            for (const auto& [name, handle] : compPtr->MAL()) {
+                if (ImGui::Button(("Play##" + name).c_str())) {
+                    compPtr->play(handle);
                 }
 
-                ImGui::Separator();
+                ImGui::SameLine();
+                ImGui::Text("%s", name.c_str());
             }
 
             // IMPORTANT: REMOVE LATER

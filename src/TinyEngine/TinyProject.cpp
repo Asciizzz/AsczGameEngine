@@ -227,11 +227,14 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             const auto* ogAnimeComp = originalNode.get<TinyNode::AN3D>();
             auto* newAnimeComp = scene.writeComp<TinyNode::AN3D>(nodeHandle);
 
-            // Very complex: remapping of every animation channel's node
             *newAnimeComp = model.animations[ogAnimeComp->pAnimeHandle.index];
 
-            for (auto& channel : newAnimeComp->channels) {
-                if (validIndex(channel.node, nodeHandles)) {
+            for (auto& anime : newAnimeComp->MAL()) {
+                auto* toAnime = newAnimeComp->get(anime.second);
+                if (!toAnime) continue; // Should not happen
+
+                for (auto& channel : toAnime->channels) {
+                    if (!validIndex(channel.node, nodeHandles)) continue;
                     channel.node = nodeHandles[channel.node.index];
                 }
             }

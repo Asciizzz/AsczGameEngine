@@ -10,6 +10,8 @@
 
 struct TinyScene;
 struct TinyAnimeRT {
+    TinyAnimeRT() = default;
+
     struct Sampler {
         std::vector<float> times;
         std::vector<glm::vec4> values;
@@ -43,19 +45,81 @@ struct TinyAnimeRT {
         uint32_t index = 0;
     };
 
-    std::string name;
-    std::vector<Sampler> samplers;
-    std::vector<Channel> channels;
+    struct Anime {
+        std::string name;
+        std::vector<Sampler> samplers;
+        std::vector<Channel> channels;
+        float duration = 0.0f;
+        bool valid() const { return !channels.empty() && !samplers.empty(); }
+    };
 
-    float duration = 0.0f;
-    float time = 0.0f;
-    bool loop = true;
+    TinyHandle add(Anime&& anime) {
+        if (!anime.valid()) return TinyHandle();
 
-    void stop() { time = 0.0f; }
-    bool valid() const { return !channels.empty() && !samplers.empty(); }
+        std::string baseName = anime.name.empty() ? "Anime" : anime.name;
+        std::string uniqueName = baseName;
+        int suffix = 1;
 
-    glm::mat4 getTransform(const TinyScene* scene, const Channel& channel) const;
-    void writeTransform(TinyScene* scene, const Channel& channel, const glm::mat4& transform) const;
+        // Ensure unique name
+        while (nameToHandle.find(uniqueName) != nameToHandle.end()) {
+            uniqueName = baseName + "_" + std::to_string(suffix++);
+        }
+
+        anime.name = uniqueName;
+
+        // Cache duration
+        float maxDuration = 0.0f;
+        for (const auto& sampler : anime.samplers) {
+            if (!sampler.times.empty()) {
+                maxDuration = std::max(maxDuration, sampler.times.back());
+            }
+        }
+        anime.duration = maxDuration;
+
+        nameToHandle[uniqueName] = animePool.add(std::move(anime));
+
+        return nameToHandle[uniqueName];
+    }
+
+    void play(const std::string& name, bool restart = true);
+    void play(const TinyHandle& handle, bool restart = true);
+    void pause() { playing = false; }
+    void resume() { playing = true; }
+    void stop() { time = 0.0f; playing = false; }
 
     void update(TinyScene* scene, float deltaTime);
+
+    Anime* current() { return animePool.get(currentHandle); }
+    const Anime* current() const { return animePool.get(currentHandle); }
+
+    Anime* get(const TinyHandle& handle) { return animePool.get(handle); }
+    const Anime* get(const TinyHandle& handle) const { return animePool.get(handle); }
+
+    Anime* get(const std::string& name) {
+        auto it = nameToHandle.find(name);
+        if (it != nameToHandle.end()) {
+            return animePool.get(it->second);
+        }
+        return nullptr;
+    }
+    const Anime* get(const std::string& name) const {
+        return const_cast<TinyAnimeRT*>(this)->get(name);
+    }
+
+    // Retrieve the list
+    const UnorderedMap<std::string, TinyHandle>& MAL() const {
+        return nameToHandle;
+    }
+
+private:
+    TinyPool<Anime> animePool;
+    UnorderedMap<std::string, TinyHandle> nameToHandle;
+    TinyHandle currentHandle;
+
+    bool playing = false;
+    bool loop = true;
+    float time = 0.0f;
+    float speed = 1.0f;
+
+    void writeTransform(TinyScene* scene, const Channel& channel, const glm::mat4& transform) const;
 };

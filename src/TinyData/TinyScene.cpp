@@ -272,12 +272,17 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
         if (fromNode->has<TinyNode::AN3D>()) {
             auto* toAnimeRT = writeComp<TinyNode::AN3D>(toHandle);
             const auto* fromAnimeRT = from->rtComp<TinyNode::AN3D>(fromHandle);
-            
+
             *toAnimeRT = *fromAnimeRT;
 
-            for (auto& channel : toAnimeRT->channels) {
-                if (validIndex(channel.node, toHandles)) {
-                    channel.node = toHandles[channel.node.index];
+            for (auto& anime : toAnimeRT->MAL()) {
+                auto* toAnime = toAnimeRT->get(anime.second);
+
+                // Remap each channel
+                for (auto& channel : toAnime->channels) {
+                    if (validIndex(channel.node, toHandles)) {
+                        channel.node = toHandles[channel.node.index];
+                    }
                 }
             }
         }

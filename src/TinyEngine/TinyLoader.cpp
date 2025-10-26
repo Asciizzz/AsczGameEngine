@@ -805,20 +805,18 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
     // If model has no animations, return
     if (model.animations.empty()) return;
 
-    TinyNode animRootNode;
-    animRootNode.name = "AnimeRoot";
+    TinyNode animeNode;
+    animeNode.name = "Anime";
+    TinyNode::AN3D* animeComp = animeNode.add<TinyNode::AN3D>();
+    animeComp->pAnimeHandle = TinyHandle(0);
 
-    int animRootNodeIndex = static_cast<int>(tinyModel.nodes.size());
-    tinyModel.nodes.push_back(std::move(animRootNode));
-
-    tinyModel.nodes[0].addChild(TinyHandle(animRootNodeIndex));
-    tinyModel.nodes[animRootNodeIndex].setParent(TinyHandle(0));
+    TinyAnimeRT tinyAnim;
 
     for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
         const tinygltf::Animation& gltfAnim = model.animations[animIndex];
-        TinyAnimeRT tinyAnim; // (animation in this context simply cannot act as blueprint, must be scene-contextual)
+        TinyAnimeRT::Anime anime;
 
-        tinyAnim.name = TinyLoader::sanitizeAsciiz(gltfAnim.name, "animation", animIndex);
+        anime.name = TinyLoader::sanitizeAsciiz(gltfAnim.name, "animation", animIndex);
 
         // Process channels and samplers here...
 
@@ -844,19 +842,11 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
                 sampler.interp = TinyAnimeRT::Sampler::Interp::Linear; // Default
             }
 
-            tinyAnim.samplers.push_back(std::move(sampler));
+            // tinyAnim.samplers.push_back(std::move(sampler));
+            anime.samplers.push_back(std::move(sampler));
         }
 
-        // Get animation duration
-        for (const auto& sampler : tinyAnim.samplers) {
-            if (!sampler.times.empty()) {
-                float lastTime = sampler.times.back();
-                if (lastTime > tinyAnim.duration) {
-                    tinyAnim.duration = lastTime;
-                }
-            }
-        }
-        
+        // No need to calc animation duration here, it's done in TinyAnimeRT
 
         for (const auto& gltfChannel : gltfAnim.channels) {
             TinyAnimeRT::Channel channel;
@@ -864,9 +854,8 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
 
             // Retrieve the target node
             int gltfTargetNode = gltfChannel.target_node;
-
+    
             int modelNodeIndex = gltfNodeToModelNode[gltfTargetNode];
-            // TinyNode& modelNode = tinyModel.nodes[modelNodeIndex];
 
             // Check if it's a joint node
             auto jointIt = gltfNodeToSkeletonAndBoneIndex.find(gltfTargetNode);
@@ -898,23 +887,18 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
             else if (path == "weights")  channel.path = AnimePath::W;
             else continue; // Unsupported path
 
-            tinyAnim.channels.push_back(std::move(channel));
+            anime.channels.push_back(std::move(channel));
         }
 
-        // Construct an animation node for this animation
-        TinyNode animNode;
-        animNode.name = tinyAnim.name;
-
-        TinyNode::AN3D* animeComp = animNode.add<TinyNode::AN3D>();
-        animeComp->pAnimeHandle = TinyHandle(tinyModel.animations.size());
-        tinyModel.animations.push_back(std::move(tinyAnim));
-
-        // Push the animation node under the animation root
-        int animNodeIndex = static_cast<int>(tinyModel.nodes.size());
-        tinyModel.nodes.push_back(std::move(animNode));
-        tinyModel.nodes[animRootNodeIndex].addChild(TinyHandle(animNodeIndex));
-        tinyModel.nodes[animNodeIndex].setParent(TinyHandle(animRootNodeIndex));
+        tinyAnim.add(std::move(anime));
     }
+    tinyModel.animations.push_back(std::move(tinyAnim));
+
+    int animeNodeIndex = static_cast<int>(tinyModel.nodes.size());
+    tinyModel.nodes.push_back(std::move(animeNode));
+
+    tinyModel.nodes[0].addChild(TinyHandle(animeNodeIndex));
+    tinyModel.nodes[animeNodeIndex].setParent(TinyHandle(0));
 }
 
 
