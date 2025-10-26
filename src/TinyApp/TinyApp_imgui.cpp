@@ -1000,6 +1000,10 @@ void TinyApp::renderSceneNodeInspector() {
 
                 ImGui::Separator();
             }
+
+            // IMPORTANT: REMOVE LATER
+            // Just play the animation now
+            compPtr->update(activeScene, fpsManager->deltaTime);
             
             ImGui::Spacing();
         }, [&]() {

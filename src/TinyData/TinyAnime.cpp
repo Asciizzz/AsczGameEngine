@@ -119,7 +119,6 @@ void TinyAnimeRT::writeTransform(TinyScene* scene, const Channel& channel, const
 }
 
 
-
 glm::mat4 recomposeTransform(
     const glm::mat4& original,
     const glm::vec3* newTranslation = nullptr,
@@ -128,19 +127,36 @@ glm::mat4 recomposeTransform(
 ) {
     // Extract existing components
     glm::vec3 translation = glm::vec3(original[3]);
-    glm::quat rotation = glm::quat_cast(original);
 
+    // Extract scale from column lengths
     glm::vec3 scale;
     scale.x = glm::length(glm::vec3(original[0]));
     scale.y = glm::length(glm::vec3(original[1]));
     scale.z = glm::length(glm::vec3(original[2]));
 
-    // Replace with new components if provided
+    // To extract rotation correctly, build a rotation-only matrix by removing scale
+    glm::mat3 rotMat;
+    if (scale.x > 1e-6f && scale.y > 1e-6f && scale.z > 1e-6f) {
+        rotMat[0] = glm::vec3(original[0]) / scale.x;
+        rotMat[1] = glm::vec3(original[1]) / scale.y;
+        rotMat[2] = glm::vec3(original[2]) / scale.z;
+    } else {
+        // fallback: if scale nearly zero, just use the matrix's upper-left 3x3
+        rotMat[0] = glm::vec3(original[0]);
+        rotMat[1] = glm::vec3(original[1]);
+        rotMat[2] = glm::vec3(original[2]);
+    }
+
+    glm::quat rotation = glm::quat_cast(rotMat);
+    // Apply replacements if provided
     if (newTranslation) translation = *newTranslation;
     if (newRotation)    rotation = *newRotation;
     if (newScale)       scale = *newScale;
 
-    // Recompose transform
+    // Ensure quaternion normalized
+    rotation = glm::normalize(rotation);
+
+    // Recompose transform: T * R * S (R from quat to mat4)
     return glm::translate(glm::mat4(1.0f), translation) *
            glm::mat4_cast(rotation) *
            glm::scale(glm::mat4(1.0f), scale);
@@ -150,33 +166,106 @@ void TinyAnimeRT::update(TinyScene* scene, float deltaTime) {
     if (scene == nullptr || !valid()) return;
 
     time += deltaTime;
-    if (loop) time = fmod(time, duration);
-    else      time = std::min(time, duration);
+    if (duration <= 0.0f) {
+        // Zero-length animation: clamp to start
+        time = 0.0f;
+    } else if (loop) {
+        time = fmod(time, duration);
+        if (time < 0.0f) time += duration; // handle negative deltaTime safely
+    } else {
+        time = std::min(time, duration);
+    }
 
     for (auto& channel : channels) {
         auto& sampler = samplers[channel.sampler];
 
         glm::mat4 transform = getTransform(scene, channel);
-        glm::vec4 value = sampler.evaluate(time);
 
+        // Evaluate value (for T and S we can use sampler.evaluate).
+        // Rotation needs special handling (slerp).
         switch (channel.path) {
             case Channel::Path::T: { // Translation
-                glm::vec3 t(value.x, value.y, value.z);
+                glm::vec4 v = sampler.evaluate(time);
+                glm::vec3 t(v.x, v.y, v.z);
                 transform = recomposeTransform(transform, &t, nullptr, nullptr);
                 break;
             }
-            case Channel::Path::R: { // Rotation (quaternion stored in vec4)
-                glm::quat r(value.w, value.x, value.y, value.z); // Note the order (w, x, y, z)
-                transform = recomposeTransform(transform, nullptr, &r, nullptr);
-                break;
-            }
+
             case Channel::Path::S: { // Scale
-                glm::vec3 s(value.x, value.y, value.z);
+                glm::vec4 v = sampler.evaluate(time);
+                glm::vec3 s(v.x, v.y, v.z);
                 transform = recomposeTransform(transform, nullptr, nullptr, &s);
                 break;
             }
-        }
 
+            case Channel::Path::R: { // Rotation (special: slerp)
+                // Handle edge cases quickly
+                if (sampler.times.empty() || sampler.values.empty()) break;
+
+                // Clamp
+                float tMin = sampler.times.front();
+                float tMax = sampler.times.back();
+                if (time <= tMin) {
+                    glm::vec4 v = sampler.firstKeyframe();
+                    glm::quat q(v.w, v.x, v.y, v.z);
+                    q = glm::normalize(q);
+                    transform = recomposeTransform(transform, nullptr, &q, nullptr);
+                    break;
+                }
+                if (time >= tMax) {
+                    glm::vec4 v = sampler.lastKeyframe();
+                    glm::quat q(v.w, v.x, v.y, v.z);
+                    q = glm::normalize(q);
+                    transform = recomposeTransform(transform, nullptr, &q, nullptr);
+                    break;
+                }
+
+                // Binary search interval
+                size_t left = 0;
+                size_t right = sampler.times.size() - 1;
+                while (left < right - 1) {
+                    size_t mid = left + (right - left) / 2;
+                    if (time < sampler.times[mid]) right = mid;
+                    else left = mid;
+                }
+                size_t index = left;
+                float t0 = sampler.times[index];
+                float t1 = sampler.times[index + 1];
+                float dt = std::max(t1 - t0, 1e-6f);
+                float f = (time - t0) / dt;
+
+                // Read quaternions: assume values store (x,y,z,w) or (w,x,y,z) depending on your importer.
+                // Here we assume stored as (x,y,z,w). If your importer stores w first, invert below.
+                const glm::vec4& vv0 = sampler.values[index];
+                const glm::vec4& vv1 = sampler.values[index + 1];
+
+                // Two common conventions:
+                // - glTF rotation is (x, y, z, w) — typical. Many code paths also use (w, x, y, z).
+                // We'll assume glTF (x,y,z,w) by default. If you used w-first earlier, swap the order.
+                glm::quat q0 = glm::quat(vv0.w, vv0.x, vv0.y, vv0.z); // (w,x,y,z)
+                glm::quat q1 = glm::quat(vv1.w, vv1.x, vv1.y, vv1.z);
+
+                // If your stored order was (x,y,z,w), the above is correct because glm::quat ctor expects (w,x,y,z)
+                // if your stored order is (w,x,y,z) change to: glm::quat q0(vv0.x, vv0.y, vv0.z, vv0.w);
+
+                q0 = glm::normalize(q0);
+                q1 = glm::normalize(q1);
+
+                glm::quat out;
+                if (sampler.interp == Sampler::Interp::Step) {
+                    out = q0;
+                } else {
+                    // For Linear (and fallback for CubicSpline), slerp between q0 and q1
+                    out = glm::slerp(q0, q1, f);
+                    out = glm::normalize(out);
+                }
+
+                transform = recomposeTransform(transform, nullptr, &out, nullptr);
+                break;
+            }
+        } // switch
+
+        // finally write back
         writeTransform(scene, channel, transform);
-    }
+    } // channels
 }

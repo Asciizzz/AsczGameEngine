@@ -847,6 +847,17 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
             tinyAnim.samplers.push_back(std::move(sampler));
         }
 
+        // Get animation duration
+        for (const auto& sampler : tinyAnim.samplers) {
+            if (!sampler.times.empty()) {
+                float lastTime = sampler.times.back();
+                if (lastTime > tinyAnim.duration) {
+                    tinyAnim.duration = lastTime;
+                }
+            }
+        }
+        
+
         for (const auto& gltfChannel : gltfAnim.channels) {
             TinyAnimeRT::Channel channel;
             channel.sampler = gltfChannel.sampler;
