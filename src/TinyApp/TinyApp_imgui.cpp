@@ -1851,7 +1851,7 @@ void TinyApp::renderFileExplorerImGui(TinyHandle nodeHandle, int depth) {
                 newScene.addRoot("Root");
                 newScene.setSceneReq(project->sceneReq());
 
-                TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", std::move(&newScene));
+                TinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", std::move(newScene));
                 selectFileNode(fileHandle);
                 // Expand parent chain to show the new scene
                 expandFNodeParentChain(fileHandle);

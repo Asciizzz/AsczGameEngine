@@ -242,8 +242,8 @@ private:
     }
 
     template<typename T>
-    TinyHandle rtAdd(T& data) {
-        return rtRegistry.add<T>(data).handle;
+    TinyHandle rtAdd(T&& data) {
+        return rtRegistry.add<T>(std::forward<T>(data)).handle;
     }
 
     template<typename T>

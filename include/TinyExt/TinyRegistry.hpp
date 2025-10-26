@@ -65,8 +65,7 @@ class TinyRegistry { // For raw resource data
     // Remove execution
     template<typename T>
     void remove(const TinyHandle& handle) {
-        auto* wrapper = getWrapper<T>(); // check validity
-        if (wrapper) wrapper->pool.instaRm(handle);
+        if (auto* wrapper = getWrapper<T>()) wrapper->pool.instaRm(handle);
     }
 
     void remove(const TypeHandle& th) {
@@ -86,12 +85,9 @@ public:
     TinyRegistry& operator=(TinyRegistry&&) = default;
 
     template<typename T>
-    TypeHandle add(T& data) {
-        auto& pool = ensurePool<T>().pool;
-        TinyHandle handle = pool.add(std::move(data));
-
-        return TypeHandle::make<T>(handle);
-    } 
+    TypeHandle add(T&& data) {
+        return TypeHandle::make<T>(ensurePool<T>().pool.add(std::forward<T>(data)));
+    }
 
     template<typename T>
     TinyPool<T>& make() {

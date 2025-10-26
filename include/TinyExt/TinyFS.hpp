@@ -5,6 +5,8 @@
 #include <string>
 #include <sstream>
 
+#include <iostream>
+
 class TinyFS {
 public:
     struct Node {
@@ -145,7 +147,7 @@ public:
 
     // Folder creation (non-template overload)
     TinyHandle addFolder(TinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
-        return addFNodeImpl<void>(parentHandle, name, nullptr, cfg);
+        return addFNodeImpl(parentHandle, name, cfg);
     }
     TinyHandle addFolder(const std::string& name, Node::CFG cfg = {}) {
         return addFolder(rootHandle_, name, cfg);
@@ -153,12 +155,13 @@ public:
 
     // File creation (templated, pass pointer to data)
     template<typename T>
-    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T* data, Node::CFG cfg = {}) {
-        return addFNodeImpl<T>(parentHandle, name, data, cfg);
+    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg = {}) {
+        return addFNodeImpl<T>(parentHandle, name, std::forward<T>(data), cfg);
     }
+
     template<typename T>
-    TinyHandle addFile(const std::string& name, T* data, Node::CFG cfg = {}) {
-        return addFile(rootHandle_, name, data, cfg);
+    TinyHandle addFile(const std::string& name, T&& data, Node::CFG cfg = {}) {
+        return addFile<T>(rootHandle_, name, std::forward<T>(data), cfg);
     }
 
     // ---------- Move with cycle prevention ----------
@@ -250,6 +253,7 @@ public:
         typeExt.color[0] = r;
         typeExt.color[1] = g;
         typeExt.color[2] = b;
+
         typeHashToExt[typeid(T).hash_code()] = typeExt;
     }
 
@@ -318,8 +322,7 @@ public:
 
     template<typename T>
     TypeHandle rAdd(T&& val) {
-        using CleanT = std::remove_cv_t<std::remove_reference_t<T>>;
-        return registry_.add<CleanT>(std::forward<T>(val));
+        return registry_.add<T>(std::forward<T>(val));
     }
 
     template<typename T>
@@ -421,27 +424,41 @@ private:
 
     // Implementation function: templated but uses if constexpr to allow T=void
     template<typename T>
-    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T* data, Node::CFG cfg) {
-        if (!fnodes_.valid(parentHandle)) return TinyHandle(); // invalid parent
+    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
+        parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
 
         Node child;
         child.name = resolveRepeatName(parentHandle, name);
         child.parent = parentHandle;
         child.cfg = cfg;
 
-        if constexpr (!std::is_same_v<T, void>) {
-            if (data) {
-                child.tHandle = registry_.add(*data);
-                child.type = Node::Type::File;
-            }
-        }
+        // only add if we actually have data to store
+        child.tHandle = registry_.add(std::forward<T>(data));
+        child.type = Node::Type::File;
 
         TinyHandle h = fnodes_.add(std::move(child));
-        // parent might have been invalidated in a multithreaded scenario; guard
-        if (fnodes_.valid(parentHandle)) {
-            Node* parent = fnodes_.get(parentHandle);
-            if (parent) parent->addChild(h);
+        if (Node* parent = fnodes_.get(parentHandle)) {
+            parent->addChild(h);
         }
+
+        return h;
+    }
+
+    // Overload for folder creation
+    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, Node::CFG cfg) {
+        parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
+
+        Node folder;
+        folder.name = resolveRepeatName(parentHandle, name);
+        folder.parent = parentHandle;
+        folder.cfg = cfg;
+        folder.type = Node::Type::Folder;
+
+        TinyHandle h = fnodes_.add(std::move(folder));
+        if (auto* parent = fnodes_.get(parentHandle)) {
+            parent->addChild(h);
+        }
+
         return h;
     }
 

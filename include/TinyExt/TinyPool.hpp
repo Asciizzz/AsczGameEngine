@@ -111,34 +111,19 @@ struct TinyPool {
     // ---- Getters ----
 
     Type* get(const TinyHandle& handle) {
-        bool isValid = valid(handle);
+        if (!valid(handle)) return nullptr;
 
-        if constexpr (TinyPoolTraits<Type>::is_unique_ptr) {
-            return isValid ? items[handle.index].get() : nullptr;
+        if constexpr (TinyPoolTraits<Type>::is_unique_ptr ||
+                    TinyPoolTraits<Type>::is_shared_ptr) {
+            auto& ptr = items[handle.index];
+            return ptr ? ptr.get() : nullptr;
         } else {
-            return isValid ? &items[handle.index] : nullptr;
+            return &items[handle.index];
         }
     }
 
     const Type* get(const TinyHandle& handle) const {
         return const_cast<TinyPool<Type>*>(this)->get(handle);
-    }
-
-    // Reserved for special cases
-    Type* get(uint32_t index) {
-        if (isOccupied(index)) {
-            if constexpr(TinyPoolTraits<Type>::is_unique_ptr ||
-                        TinyPoolTraits<Type>::is_shared_ptr) {
-                return items[index].get();
-            } else {
-                return &items[index];
-            }
-        }
-        return nullptr;
-    }
-
-    const Type* get(uint32_t index) const {
-        return const_cast<TinyPool<Type>*>(this)->get(index);
     }
 
     // Get handle by index (useful for accessing items by their position)
