@@ -255,6 +255,7 @@ public:
         typeExt.color[2] = b;
 
         typeHashToExt[typeid(T).hash_code()] = typeExt;
+        printf("Type Hash: %zu Ext: %s\n", typeid(T).hash_code(), ext.c_str());
     }
 
     // Get the full TypeExt info for a type
@@ -435,6 +436,8 @@ private:
         // only add if we actually have data to store
         child.tHandle = registry_.add(std::forward<T>(data));
         child.type = Node::Type::File;
+
+        printf("Type Hash on addFile: %zu\n", child.tHandle.typeHash);
 
         TinyHandle h = fnodes_.add(std::move(child));
         if (Node* parent = fnodes_.get(parentHandle)) {

@@ -105,7 +105,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexRHandle.size());
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRHandle[localNrmlIndex].index : 0);
 
-        TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, correctMat.name, &correctMat);
+        TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, correctMat.name, std::move(correctMat));
         TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
 
         glmMatRHandle.push_back(tHandle.handle);
@@ -239,7 +239,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     }
 
     // Add scene to registry
-    TinyHandle fnHandle = tinyFS->addFile(fnModelFolder, scene.name, &scene);
+    TinyHandle fnHandle = tinyFS->addFile(fnModelFolder, scene.name, std::move(scene));
     TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
 
     // Return the model folder handle instead of the scene handle
