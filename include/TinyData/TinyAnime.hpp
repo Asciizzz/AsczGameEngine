@@ -64,17 +64,13 @@ struct TinyAnimeRT {
         while (nameToHandle.find(uniqueName) != nameToHandle.end()) {
             uniqueName = baseName + "_" + std::to_string(suffix++);
         }
-
         anime.name = uniqueName;
 
         // Cache duration
-        float maxDuration = 0.0f;
         for (const auto& sampler : anime.samplers) {
-            if (!sampler.times.empty()) {
-                maxDuration = std::max(maxDuration, sampler.times.back());
-            }
+            if (sampler.times.empty()) continue;
+            anime.duration = std::max(anime.duration, sampler.times.back());
         }
-        anime.duration = maxDuration;
 
         nameToHandle[uniqueName] = animePool.add(std::move(anime));
 

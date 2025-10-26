@@ -375,4 +375,3 @@ VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
     const TinySkeletonRT* rtSkele = rtComp<TinyNode::SK3D>(nodeHandle);
     return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
 }
-

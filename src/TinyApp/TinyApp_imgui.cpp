@@ -964,9 +964,25 @@ void TinyApp::renderSceneNodeInspector() {
             // Get component copy using TinyScene method
             TinyAnimeRT* compPtr = activeScene->rtComp<TinyNode::AN3D>(selectedSceneNodeHandle);
 
+            // Create a search field
+            static char searchBuffer[128] = "";
+            ImGui::Text("Search:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(-1); // Full width
+            ImGui::InputText("##AnimationSearch", searchBuffer, sizeof(searchBuffer));
+
             ImGui::Spacing();
 
             for (const auto& [name, handle] : compPtr->MAL()) {
+                // Convert search buffer to lowercase for case-insensitive search
+                std::string searchStr = std::string(searchBuffer);
+                std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
+                std::string nameLower = name;
+                std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
+                if (!searchStr.empty() && nameLower.find(searchStr) == std::string::npos) {
+                    continue; // Skip non-matching animation names
+                }
+
                 if (ImGui::Button(("Play##" + name).c_str())) {
                     compPtr->play(handle);
                 }
