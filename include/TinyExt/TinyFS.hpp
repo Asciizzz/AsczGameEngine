@@ -166,30 +166,28 @@ public:
 
     // ---------- Move with cycle prevention ----------
     
-    bool fMove(TinyHandle nodeHandle, TinyHandle newParent) {
-        if (nodeHandle == newParent) return false; // Move to self
-
-        // prevent moving under descendant (no cycles)
-        Node* parent = fnodes_.get(newParent);
-        if (parent && parent->hasChild(nodeHandle)) return false;
+    bool fMove(TinyHandle nodeHandle, TinyHandle parentHandle) {
+        parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
+        if (nodeHandle == parentHandle) return false; // Move to self
 
         Node* node = fnodes_.get(nodeHandle);
         if (!node) return false;
 
-        // resolve name conflicts
-        node->name = resolveRepeatName(newParent, node->name);
+        if (node->parent == parentHandle) return true; // already there
+
+        // Avoid parent being a descendant of node
+        if (isDescendant(nodeHandle, parentHandle)) return false;
+
+        Node* newParent = fnodes_.get(parentHandle);
+        if (newParent) newParent->addChild(nodeHandle);
+        else return false;
 
         // remove from old parent children vector
-        if (fnodes_.valid(node->parent)) {
-            Node* oldParent = fnodes_.get(node->parent);
-            if (oldParent) oldParent->removeChild(nodeHandle);
-        }
+        Node* oldParent = fnodes_.get(node->parent);
+        if (oldParent) oldParent->removeChild(nodeHandle);
 
-        Node* newP = fnodes_.get(newParent);
-        if (newP) newP->addChild(nodeHandle);
-
-        // attach to new parent
-        node->parent = newParent;
+        node->name = resolveRepeatName(parentHandle, node->name);
+        node->parent = parentHandle;
 
         return true;
     }
@@ -255,7 +253,6 @@ public:
         typeExt.color[2] = b;
 
         typeHashToExt[typeid(T).hash_code()] = typeExt;
-        printf("Type Hash: %zu Ext: %s\n", typeid(T).hash_code(), ext.c_str());
     }
 
     // Get the full TypeExt info for a type
@@ -423,7 +420,19 @@ private:
         return resolvedName;
     }
 
-    // Implementation function: templated but uses if constexpr to allow T=void
+    bool isDescendant(TinyHandle possibleAncestor, TinyHandle possibleDescendant) const {
+        if (!fnodes_.valid(possibleAncestor) || !fnodes_.valid(possibleDescendant))
+            return true; // For safety, treat invalid handles as descendants
+
+        const Node* current = fnodes_.get(possibleDescendant);
+        while (current && fnodes_.valid(current->parent)) {
+            if (current->parent == possibleAncestor)
+                return true; // Found ancestor
+            current = fnodes_.get(current->parent);
+        }
+        return false;
+    }
+
     template<typename T>
     TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
         parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
@@ -432,12 +441,8 @@ private:
         child.name = resolveRepeatName(parentHandle, name);
         child.parent = parentHandle;
         child.cfg = cfg;
-
-        // only add if we actually have data to store
-        child.tHandle = registry_.add(std::forward<T>(data));
         child.type = Node::Type::File;
-
-        printf("Type Hash on addFile: %zu\n", child.tHandle.typeHash);
+        child.tHandle = registry_.add(std::forward<T>(data));
 
         TinyHandle h = fnodes_.add(std::move(child));
         if (Node* parent = fnodes_.get(parentHandle)) {
@@ -455,7 +460,6 @@ private:
         folder.name = resolveRepeatName(parentHandle, name);
         folder.parent = parentHandle;
         folder.cfg = cfg;
-        folder.type = Node::Type::Folder;
 
         TinyHandle h = fnodes_.add(std::move(folder));
         if (auto* parent = fnodes_.get(parentHandle)) {
