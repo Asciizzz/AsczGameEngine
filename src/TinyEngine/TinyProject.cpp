@@ -148,6 +148,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     scene.setSceneReq(sceneReq());
 
     // First pass: Insert empty nodes and store their handles
+    // Note: Normally we would've used a unordered_map
+    //       but I trust the model to be imported from the
+    //       TinyLoader which guarantees index stability.
     std::vector<TinyHandle> nodeHandles;
 
     for (const auto& node : model.nodes) {
