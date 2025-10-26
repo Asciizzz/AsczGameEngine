@@ -194,13 +194,15 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
 
     // First pass: Add all nodes from 'from' scene as raw nodes
 
-    std::vector<TinyHandle> toHandles;
+    // std::vector<TinyHandle> toHandles;
+    UnorderedMap<uint32_t, TinyHandle> toHandleMap;
+
     const auto& from_items = from->nodeView();
     for (uint32_t i = 0; i < from_items.size(); ++i) {
         if (!from->nodeOccupied(i)) continue;
 
         const TinyNode* fromNode = from->fromIndex(i);
-        toHandles.push_back(addNodeRaw(fromNode->name));
+        toHandleMap[i] = addNodeRaw(fromNode->name);
     }
 
     // Second pass: Construct nodes with proper remapped components
@@ -210,14 +212,15 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
         const TinyNode* fromNode = from->node(fromHandle);
         if (!fromNode) continue;
 
-        TinyHandle toHandle = toHandles[i];
+        TinyHandle toHandle = toHandleMap[i];
 
         TinyNode* toNode = nodes.get(toHandle);
         if (!toNode) continue; // Should not happen
 
         // Resolve parent-self relationships
         if (fromNode->parentHandle.valid()) {
-            toNode->setParent(toHandles[fromNode->parentHandle.index]);
+            TinyHandle fromParentHandle = fromNode->parentHandle;
+            toNode->setParent(toHandleMap[fromParentHandle.index]);
         } else { // <-- Root node in 'from' scene
             // Add child to parent
             TinyNode* parentNode = nodes.get(parentHandle);
@@ -227,10 +230,9 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
         }
 
         // Resolve self-children relationships
-        std::vector<TinyHandle> toChildren;
         for (const TinyHandle& childHandle : fromNode->childrenHandles) {
-            if (childHandle.index >= toHandles.size()) continue;
-            toNode->addChild(toHandles[childHandle.index]);
+            if (childHandle.index >= toHandleMap.size()) continue;
+            toNode->addChild(toHandleMap[childHandle.index]);
         }
 
         // Resolve components
@@ -247,8 +249,12 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
 
             toMeshRender->pMeshHandle = fromMeshRender->pMeshHandle;
 
-            if (validIndex(fromMeshRender->skeleNodeHandle, toHandles)) {
-                toMeshRender->skeleNodeHandle = toHandles[fromMeshRender->skeleNodeHandle.index];
+            // if (validIndex(fromMeshRender->skeleNodeHandle, from_items)) {
+            //     toMeshRender->skeleNodeHandle = toHandleMap[fromMeshRender->skeleNodeHandle.index];
+            // }
+
+            if (toHandleMap.find(fromMeshRender->skeleNodeHandle.index) != toHandleMap.end()) {
+                toMeshRender->skeleNodeHandle = toHandleMap[fromMeshRender->skeleNodeHandle.index];
             }
         }
 
@@ -256,8 +262,8 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
             const auto* fromBoneAttach = fromNode->get<TinyNode::BA3D>();
             auto* toBoneAttach = writeComp<TinyNode::BA3D>(toHandle);
 
-            if (validIndex(fromBoneAttach->skeleNodeHandle, toHandles)) {
-                toBoneAttach->skeleNodeHandle = toHandles[fromBoneAttach->skeleNodeHandle.index];
+            if (toHandleMap.find(fromBoneAttach->skeleNodeHandle.index) != toHandleMap.end()) {
+                toBoneAttach->skeleNodeHandle = toHandleMap[fromBoneAttach->skeleNodeHandle.index];
             }
 
             toBoneAttach->boneIndex = fromBoneAttach->boneIndex;
@@ -280,8 +286,11 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
 
                 // Remap each channel
                 for (auto& channel : toAnime->channels) {
-                    if (validIndex(channel.node, toHandles)) {
-                        channel.node = toHandles[channel.node.index];
+                    // if (validIndex(channel.node, toHandles)) {
+                    //     channel.node = toHandles[channel.node.index];
+                    // }
+                    if (toHandleMap.find(channel.node.index) != toHandleMap.end()) {
+                        channel.node = toHandleMap[channel.node.index];
                     }
                 }
             }
