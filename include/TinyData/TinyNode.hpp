@@ -13,13 +13,12 @@ struct TinyNode {
     TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
 
     enum class Types : uint32_t {
-        Transform     = 1 << 0,
-        MeshRender    = 1 << 1,
-        Skeleton      = 1 << 2,
-        BoneAttach    = 1 << 3,
-        Animation     = 1 << 4
+        T3D  = 1 << 0,
+        MR3D = 1 << 1,
+        SK3D = 1 << 2,
+        BA3D = 1 << 3,
+        AN3D = 1 << 4
     };
-
 
     TinyHandle parentHandle;
     std::vector<TinyHandle> childrenHandles;
@@ -37,34 +36,39 @@ struct TinyNode {
     }
 
     // Transform data - both local and runtime
-    struct Transform {
-        static constexpr Types kType = Types::Transform;
+    struct Transform3D {
+        static constexpr Types kType = Types::T3D;
         glm::mat4 local = glm::mat4(1.0f);
         glm::mat4 global = glm::mat4(1.0f);
     };
+    using T3D = Transform3D;
 
     // Component definitions with runtime capabilities
-    struct MeshRender {
-        static constexpr Types kType = Types::MeshRender;
+    struct MeshRender3D {
+        static constexpr Types kType = Types::MR3D;
         TinyHandle pMeshHandle; // Polytype
         TinyHandle skeleNodeHandle; // Handle to skeleton "NODE" (NOT skeleton in registry)
     };
+    using MR3D = MeshRender3D;
 
-    struct BoneAttach {
-        static constexpr Types kType = Types::BoneAttach;
+    struct BoneAttach3D {
+        static constexpr Types kType = Types::BA3D;
         TinyHandle skeleNodeHandle;
         uint32_t boneIndex;
     };
+    using BA3D = BoneAttach3D;
 
-    struct Skeleton {
-        static constexpr Types kType = Types::Skeleton;
+    struct Skeleton3D {
+        static constexpr Types kType = Types::SK3D;
         TinyHandle pSkeleHandle; // Polytype
     };
+    using SK3D = Skeleton3D;
 
-    struct Animation {
-        static constexpr Types kType = Types::Animation;
+    struct Animation3D {
+        static constexpr Types kType = Types::AN3D;
         TinyHandle pAnimeHandle; // Polytype
     };
+    using AN3D = Animation3D;
 
     // Component management functions
 
@@ -103,11 +107,11 @@ struct TinyNode {
 
 private:
     std::tuple<
-        Transform,
-        MeshRender,
-        BoneAttach,
-        Skeleton,
-        Animation
+        Transform3D,
+        MeshRender3D,
+        BoneAttach3D,
+        Skeleton3D,
+        Animation3D
     > components;
 
     uint32_t types = 0;

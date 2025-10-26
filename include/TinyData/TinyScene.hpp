@@ -31,8 +31,8 @@ private:
     struct RTResolver { using type = T; }; // Most type return themselves
 
     // Special types
-    template<> struct RTResolver<TinyNode::Skeleton> { using type = TinySkeletonRT; };
-    template<> struct RTResolver<TinyNode::Animation> { using type = TinyAnimeRT; };
+    template<> struct RTResolver<TinyNode::SK3D> { using type = TinySkeletonRT; };
+    template<> struct RTResolver<TinyNode::AN3D> { using type = TinyAnimeRT; };
 
     template<typename T> using RTResolver_t = typename RTResolver<T>::type;
 
@@ -102,11 +102,11 @@ public:
         TinyNode* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
-        if constexpr (type_eq<T, TinyNode::Skeleton>) {
-            TinyNode::Skeleton* compPtr = node->get<TinyNode::Skeleton>();
+        if constexpr (type_eq<T, TinyNode::SK3D>) {
+            TinyNode::SK3D* compPtr = node->get<TinyNode::SK3D>();
             return compPtr ? rtGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
-        } else if constexpr (type_eq<T, TinyNode::Animation>) {
-            TinyNode::Animation* compPtr = node->get<TinyNode::Animation>();
+        } else if constexpr (type_eq<T, TinyNode::AN3D>) {
+            TinyNode::AN3D* compPtr = node->get<TinyNode::AN3D>();
             return compPtr ? rtGet<TinyAnimeRT>(compPtr->pAnimeHandle) : nullptr;
         } else { // Other types return themselves
             return node->get<T>();
@@ -126,9 +126,9 @@ public:
         removeComp<T>(nodeHandle);
         node->add<T>();
 
-        if constexpr (type_eq<T, TinyNode::Skeleton>) {
+        if constexpr (type_eq<T, TinyNode::SK3D>) {
             return addSkeletonRT(nodeHandle);
-        } else if constexpr (type_eq<T, TinyNode::Animation>) {
+        } else if constexpr (type_eq<T, TinyNode::AN3D>) {
             return addAnimationRT(nodeHandle);
         } else { // Other types return themselves
             return nodeCompRaw<T>(nodeHandle);
@@ -140,8 +140,8 @@ public:
         TinyNode* node = nodes.get(nodeHandle);
         if (!node || !node->has<T>()) return false;
 
-        if constexpr (type_eq<T, TinyNode::Skeleton>) {
-            TinyNode::Skeleton* compRawPtr = nodeCompRaw<TinyNode::Skeleton>(nodeHandle);
+        if constexpr (type_eq<T, TinyNode::SK3D>) {
+            TinyNode::SK3D* compRawPtr = nodeCompRaw<TinyNode::SK3D>(nodeHandle);
             if (compRawPtr) rtRemove<TinySkeletonRT>(compRawPtr->pSkeleHandle);
         }
 
