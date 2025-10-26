@@ -850,6 +850,17 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
             }
 
             if (gltfSampler.output >= 0) {
+                // Debug: check if it contain 4 components
+                const auto& accessor = model.accessors[gltfSampler.output];
+                printf("Sampler ouput: ");
+                switch (accessor.type) {
+                    case TINYGLTF_TYPE_VEC2: printf("VEC2\n"); break;
+                    case TINYGLTF_TYPE_VEC3: printf("VEC3\n"); break;
+                    case TINYGLTF_TYPE_VEC4: printf("VEC4\n"); break;
+                    case TINYGLTF_TYPE_SCALAR: printf("SCALAR\n"); break;
+                    default: printf("Other\n"); break;
+                }
+
                 readAccessor(model, gltfSampler.output, sampler.values);
             }
 
