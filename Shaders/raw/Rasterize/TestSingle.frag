@@ -21,13 +21,13 @@ vec4 rainbowColors[7] = vec4[7](
 );
 
 void main() {
-    float intensity = abs(dot(fragWorldNrml, normalize(vec3(1.0, 1.0, 1.0))));
-    intensity = 0.1 + intensity * 0.9;
+    vec3 n = normalize(fragWorldNrml);
 
-    // // For the time being, set the color based on the material index % 7
-    // outColor = rainbowColors[fragMaterialIndex % 7] * intensity;
+    // Remap from [-1, 1] to [0, 1]
+    vec3 color = n * 0.5 + 0.5;
 
-    // Highlight special fragments in red
-    vec3 color = (fragSpecial == 1u) ? vec3(1.0, 0.6, 0.6) : vec3(1.0, 1.0, 1.0);
-    outColor = vec4(color * intensity, 1.0);
+    // Optional: boost saturation or contrast for visibility
+    color = pow(color, vec3(0.6));
+
+    outColor = vec4(color, 1.0);
 }
