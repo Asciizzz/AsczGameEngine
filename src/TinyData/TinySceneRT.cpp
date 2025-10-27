@@ -297,7 +297,7 @@ void TinySceneRT::addScene(const TinySceneRT* from, TinyHandle parentHandle) {
         }
     }
 
-    update(parentHandle); // Update transforms after adding new nodes
+    updateTransform(parentHandle); // Update transforms after adding new nodes
 }
 
 
@@ -339,10 +339,10 @@ void TinySceneRT::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parent
     }
 }
 
-void TinySceneRT::update(TinyHandle nodeHandle) {
+void TinySceneRT::updateTransform(TinyHandle nodeHandle) {
     // Use root node if no valid handle provided
     TinyHandle realHandle = nodeHandle.valid() ? nodeHandle : rootHandle();
-    
+
     TinyNodeRT* node = nodes.get(realHandle);
     if (!node) return;
 

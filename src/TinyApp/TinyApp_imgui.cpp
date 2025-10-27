@@ -451,7 +451,7 @@ void TinyApp::renderSceneNodeInspector() {
                 // Check if decomposition is valid
                 if (ImGui::Button("Reset Transform")) {
                     compPtr->reset();
-                    activeScene->update(selectedSceneNodeHandle);
+                    activeScene->updateTransform(selectedSceneNodeHandle);
                 }
 
                 bool validDecomposition = glm::decompose(local, scale, rotationQuat, translation, skew, perspective);
@@ -469,7 +469,7 @@ void TinyApp::renderSceneNodeInspector() {
                     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
                     if (ImGui::Button("Reset Transform")) {
                         compPtr->reset();
-                        activeScene->update(selectedSceneNodeHandle);
+                        activeScene->updateTransform(selectedSceneNodeHandle);
                     }
                     return;
                 }
@@ -534,7 +534,7 @@ void TinyApp::renderSceneNodeInspector() {
                         glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
 
                         compPtr->set(translateMat * rotateMat * scaleMat);
-                        activeScene->update(selectedSceneNodeHandle); // Only update this node
+                        activeScene->updateTransform(selectedSceneNodeHandle); // Only update this node
                     }
                 }
                 
@@ -1473,7 +1473,7 @@ void TinyApp::renderNodeTreeImGui(TinyHandle nodeHandle, int depth) {
             // Attempt to reparent the dragged node to this node
             if (activeScene->reparentNode(draggedNode, nodeHandle)) {
                 // Update the newly reparented node
-                activeScene->update(nodeHandle);
+                activeScene->updateTransform(nodeHandle);
 
                 // Auto-expand the parent chain to show the newly dropped node
                 expandParentChain(nodeHandle);
@@ -2195,7 +2195,7 @@ bool TinyApp::setActiveScene(TinyHandle sceneHandle) {
 
     // Update transforms for the new active scene
     TinySceneRT* activeScene = getActiveScene();
-    if (activeScene) activeScene->update();
+    if (activeScene) activeScene->updateTransform();
     
     return true;
 }

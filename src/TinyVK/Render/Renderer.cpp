@@ -265,8 +265,6 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
 
     TinyHandle curSkeleNodeHandle;
 
-    activeScene->update(); // REMEMBER TO REMOVE THIS LATER!!!
-
     // Iterate through all nodes in the active scene to find mesh renderers
     // const auto& sceneNodes = activeScene->nodeView();
 

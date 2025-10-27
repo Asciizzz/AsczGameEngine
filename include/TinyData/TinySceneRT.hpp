@@ -87,7 +87,7 @@ public:
     // -------- General update ---------
     
     void updateRecursive(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
-    void update(TinyHandle nodeHandle = TinyHandle());
+    void updateTransform(TinyHandle nodeHandle = TinyHandle());
 
     // -------- Component management --------- 
 

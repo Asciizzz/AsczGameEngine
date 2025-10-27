@@ -129,7 +129,10 @@ void TinyAnimeRT::writeTransform(TinySceneRT* scene, const Channel& channel, con
     // Write transform component of node
     if (channel.target == Channel::Target::Node) {
         TinyNodeRT::T3D* nodeTransform = scene->rtComp<TinyNodeRT::T3D>(channel.node);
-        if (nodeTransform) nodeTransform->set(transform);
+        if (nodeTransform) {
+            nodeTransform->set(transform);
+            scene->updateTransform(channel.node);
+        }
     // Write transform component of bone
     } else if (channel.target == Channel::Target::Bone) {
         TinySkeletonRT* skeletonRT = scene->rtComp<TinyNodeRT::SK3D>(channel.node);

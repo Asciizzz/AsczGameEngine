@@ -95,6 +95,8 @@ private:
     std::vector<TinySubmesh> submeshes_;
 
     TinyVK::DataBuffer vrtxBuffer_;
+    std::vector<TinyVK::DataBuffer> morphVrtxBuffers_;
+
     TinyVK::DataBuffer idxBuffer_;
     VkIndexType idxType_ = VK_INDEX_TYPE_UINT16;
 };
