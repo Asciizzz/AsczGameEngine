@@ -27,11 +27,11 @@ endif()
 
 file(GLOB_RECURSE SRC_FILES
     src/TinyData/TinyCamera.cpp
+    src/TinyData/TinyMaterial.cpp
+    src/TinyData/TinyTexture.cpp
     src/TinyData/TinyVertex.cpp
     src/TinyData/TinyMesh.cpp
     src/TinyData/TinyMeshRT.cpp
-    src/TinyData/TinyMaterial.cpp
-    src/TinyData/TinyTexture.cpp
     src/TinyData/TinySkeleton.cpp
     src/TinyData/TinySkeletonRT.cpp
     src/TinyData/TinyAnimeRT.cpp
