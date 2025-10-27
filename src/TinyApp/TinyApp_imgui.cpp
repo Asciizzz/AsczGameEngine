@@ -449,14 +449,14 @@ void TinyApp::renderSceneNodeInspector() {
                 glm::vec4 perspective;
                 
                 // Check if decomposition is valid
+                if (ImGui::Button("Reset Transform")) {
+                    compPtr->reset();
+                    activeScene->update(selectedSceneNodeHandle);
+                }
+
                 bool validDecomposition = glm::decompose(local, scale, rotationQuat, translation, skew, perspective);
-                
                 if (!validDecomposition) {
                     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
-                    if (ImGui::Button("Reset Transform")) {
-                        compPtr->local = glm::mat4(1.0f);
-                        activeScene->update(selectedSceneNodeHandle);
-                    }
                     return;
                 }
                 
@@ -468,7 +468,7 @@ void TinyApp::renderSceneNodeInspector() {
                 if (!validVec3(translation) || !validVec3(scale)) {
                     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
                     if (ImGui::Button("Reset Transform")) {
-                        compPtr->local = glm::mat4(1.0f);
+                        compPtr->reset();
                         activeScene->update(selectedSceneNodeHandle);
                     }
                     return;
@@ -533,7 +533,7 @@ void TinyApp::renderSceneNodeInspector() {
                         glm::mat4 rotateMat = glm::mat4_cast(newRotQuat);
                         glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
 
-                        compPtr->local = translateMat * rotateMat * scaleMat;
+                        compPtr->set(translateMat * rotateMat * scaleMat);
                         activeScene->update(selectedSceneNodeHandle); // Only update this node
                     }
                 }

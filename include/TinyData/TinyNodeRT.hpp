@@ -38,8 +38,13 @@ struct TinyNodeRT {
     // Transform data - both local and runtime
     struct Transform3D {
         static constexpr Types kType = Types::T3D;
+        glm::mat4 base = glm::mat4(1.0f);
         glm::mat4 local = glm::mat4(1.0f);
         glm::mat4 global = glm::mat4(1.0f);
+
+        void init(const glm::mat4& mat) { base = mat; local = mat; }
+        void set(const glm::mat4& mat) { local = mat; }
+        void reset() { local = base; }
     };
     using T3D = Transform3D;
 

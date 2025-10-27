@@ -784,7 +784,7 @@ void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
                     glm::mat4_cast(rotation) *
                     glm::scale(glm::mat4(1.0f), scale);
         }
-        transformComp->local = matrix;
+        transformComp->init(matrix);
 
         if (nGltf.mesh >= 0) {
             TinyNodeRT::MR3D meshData;
