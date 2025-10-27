@@ -6,12 +6,8 @@
 #include "TinyVK/Resource/Descriptor.hpp"
 
 struct TinySkeletonRT {
-
-    // Default constructor means this skeleton is f*cked
     TinySkeletonRT() = default;
     void init(const TinyVK::Device* deviceVK, const TinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout);
-
-    ~TinySkeletonRT() = default;
 
     TinySkeletonRT(const TinySkeletonRT&) = delete;
     TinySkeletonRT& operator=(const TinySkeletonRT&) = delete;
@@ -72,14 +68,13 @@ private:
 
     TinyHandle skeleHandle_;
     const TinyRegistry* fsRegistry_ = nullptr; // The entire filesystem registry (guarantees to avoid dangling pointers)
+    const TinyVK::Device* deviceVK_ = nullptr;
+    TinyVK::DescSet    descSet_;
+    TinyVK::DataBuffer skinBuffer_;
 
     std::vector<glm::mat4> localPose_;
     std::vector<glm::mat4> finalPose_;
     std::vector<glm::mat4> skinData_;
-
-    const TinyVK::Device* deviceVK_ = nullptr;
-    TinyVK::DescSet    descSet_;
-    TinyVK::DataBuffer skinBuffer_;
 
     void vkCreate();
     

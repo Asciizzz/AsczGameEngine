@@ -22,10 +22,15 @@ struct TinyMesh {
     TinyMesh(TinyMesh&&) = default;
     TinyMesh& operator=(TinyMesh&&) = default;
 
+    struct MorphTarget {
+        std::string name;
+        std::vector<uint8_t> vDeltaData; // raw bytes
+    };
+
     std::string name; // Mesh name from glTF
 
-    TinyVertexLayout vertexLayout;
-    std::vector<uint8_t> vertexData; // raw bytes
+    TinyVertexLayout vLayout;
+    std::vector<uint8_t> vData; // raw bytes
     size_t vertexCount = 0;
 
     std::vector<uint8_t> indexData; // raw bytes
@@ -42,10 +47,10 @@ struct TinyMesh {
     template<typename VertexT>
     TinyMesh& setVertices(const std::vector<VertexT>& verts) {
         vertexCount = verts.size();
-        vertexLayout = VertexT::getLayout();
+        vLayout = VertexT::getLayout();
 
-        vertexData.resize(vertexCount * sizeof(VertexT));
-        std::memcpy(vertexData.data(), verts.data(), vertexData.size());
+        vData.resize(vertexCount * sizeof(VertexT));
+        std::memcpy(vData.data(), verts.data(), vData.size());
 
         return *this;
     }
@@ -62,6 +67,20 @@ struct TinyMesh {
         return *this;
     }
 
+    template<typename VertexT>
+    VertexT* vPtr() {
+        if (vData.empty()) return nullptr;
+        if (sizeof(VertexT) != vLayout.stride) return nullptr;
+        return reinterpret_cast<VertexT*>(vData.data());
+    }
+
+    template<typename IndexT>
+    IndexT* iPtr() {
+        if (indexData.empty()) return nullptr;
+        if (sizeof(IndexT) != indexStride) return nullptr;
+        return reinterpret_cast<IndexT*>(indexData.data());
+    }
+
     // Buffers for runtime use
     TinyVK::DataBuffer vertexBuffer;
     TinyVK::DataBuffer indexBuffer;
@@ -70,4 +89,3 @@ struct TinyMesh {
     bool vkCreate(const TinyVK::Device* deviceVK);
     static VkIndexType sizeToIndexType(size_t size);
 };
-

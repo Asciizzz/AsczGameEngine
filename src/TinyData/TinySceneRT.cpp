@@ -58,12 +58,12 @@ bool TinySceneRT::removeNode(TinyHandle nodeHandle, bool recursive) {
         if (parentNode) parentNode->removeChild(nodeHandle);
     }
 
+    // Remove individual components runtime data
     removeComp<TinyNodeRT::T3D>(nodeHandle);
     removeComp<TinyNodeRT::MR3D>(nodeHandle);
     removeComp<TinyNodeRT::BA3D>(nodeHandle);
     removeComp<TinyNodeRT::SK3D>(nodeHandle);
     removeComp<TinyNodeRT::AN3D>(nodeHandle);
-
     nodes.instaRm(nodeHandle);
 
     return true;

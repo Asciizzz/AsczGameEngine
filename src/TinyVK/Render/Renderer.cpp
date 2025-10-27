@@ -296,8 +296,8 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
         vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
 
-        TinyVertexLayout vertexLayout = regMesh->vertexLayout;
-        bool isRigged = vertexLayout.type == TinyVertexLayout::Type::Rigged;
+        TinyVertexLayout vLayout = regMesh->vLayout;
+        bool isRigged = vLayout.type == TinyVertexLayout::Type::Rigged;
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 
