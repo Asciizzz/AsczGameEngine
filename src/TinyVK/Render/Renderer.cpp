@@ -296,8 +296,8 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
         vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
 
-        TinyVertexLayout vLayout = regMesh->vLayout;
-        bool isRigged = vLayout.type == TinyVertexLayout::Type::Rigged;
+        TinyVertexLayout vrtxLayout = regMesh->vrtxLayout;
+        bool isRigged = vrtxLayout.type == TinyVertexLayout::Type::Rigged;
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 
@@ -321,8 +321,8 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
         bool isSelectedNode = selectedNodeHandle.valid() && (nodeHandle == selectedNodeHandle);
         
         for (size_t i = 0; i < submeshes.size(); ++i) {
-            uint32_t indexCount = submeshes[i].indexCount;
-            if (indexCount == 0) continue;
+            uint32_t idxCount = submeshes[i].idxCount;
+            if (idxCount == 0) continue;
 
             TinyHandle matHandle = submeshes[i].material;
             const TinyRMaterial* material = fs.rGet<TinyRMaterial>(matHandle);
@@ -338,7 +338,7 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
 
             uint32_t indexOffset = submeshes[i].indexOffset;
-            vkCmdDrawIndexed(currentCmd, indexCount, 1, indexOffset, 0, 0);
+            vkCmdDrawIndexed(currentCmd, idxCount, 1, indexOffset, 0, 0);
         }
     }
 }

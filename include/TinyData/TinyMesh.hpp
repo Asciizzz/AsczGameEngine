@@ -8,7 +8,7 @@
 
 struct TinySubmesh {
     uint32_t indexOffset = 0;
-    uint32_t indexCount = 0;
+    uint32_t idxCount = 0;
     TinyHandle material;
 };
 
@@ -29,13 +29,13 @@ struct TinyMesh {
 
     std::string name; // Mesh name from glTF
 
-    TinyVertexLayout vLayout;
-    std::vector<uint8_t> vData; // raw bytes
-    size_t vertexCount = 0;
+    TinyVertexLayout vrtxLayout;
+    std::vector<uint8_t> vrtxData; // raw bytes
+    size_t vrtxCount = 0;
 
-    std::vector<uint8_t> indexData; // raw bytes
-    size_t indexCount = 0;
-    size_t indexStride = 0;
+    std::vector<uint8_t> idxData; // raw bytes
+    size_t idxCount = 0;
+    size_t idxStride = 0;
 
     std::vector<TinySubmesh> submeshes;
 
@@ -46,39 +46,39 @@ struct TinyMesh {
 
     template<typename VertexT>
     TinyMesh& setVertices(const std::vector<VertexT>& verts) {
-        vertexCount = verts.size();
-        vLayout = VertexT::getLayout();
+        vrtxCount = verts.size();
+        vrtxLayout = VertexT::getLayout();
 
-        vData.resize(vertexCount * sizeof(VertexT));
-        std::memcpy(vData.data(), verts.data(), vData.size());
+        vrtxData.resize(vrtxCount * sizeof(VertexT));
+        std::memcpy(vrtxData.data(), verts.data(), vrtxData.size());
 
         return *this;
     }
 
     template<typename IndexT>
     TinyMesh& setIndices(const std::vector<IndexT>& idx) {
-        indexCount = idx.size();
-        indexStride = sizeof(IndexT);
-        indexType = sizeToIndexType(indexStride);
+        idxCount = idx.size();
+        idxStride = sizeof(IndexT);
+        indexType = sizeToIndexType(idxStride);
 
-        indexData.resize(indexCount * indexStride);
-        std::memcpy(indexData.data(), idx.data(), indexData.size());
+        idxData.resize(idxCount * idxStride);
+        std::memcpy(idxData.data(), idx.data(), idxData.size());
 
         return *this;
     }
 
     template<typename VertexT>
     VertexT* vPtr() {
-        if (vData.empty()) return nullptr;
-        if (sizeof(VertexT) != vLayout.stride) return nullptr;
-        return reinterpret_cast<VertexT*>(vData.data());
+        if (vrtxData.empty()) return nullptr;
+        if (sizeof(VertexT) != vrtxLayout.stride) return nullptr;
+        return reinterpret_cast<VertexT*>(vrtxData.data());
     }
 
     template<typename IndexT>
     IndexT* iPtr() {
-        if (indexData.empty()) return nullptr;
-        if (sizeof(IndexT) != indexStride) return nullptr;
-        return reinterpret_cast<IndexT*>(indexData.data());
+        if (idxData.empty()) return nullptr;
+        if (sizeof(IndexT) != idxStride) return nullptr;
+        return reinterpret_cast<IndexT*>(idxData.data());
     }
 
     // Buffers for runtime use

@@ -420,7 +420,7 @@ struct PrimitiveData {
     std::vector<glm::vec4> weights;
     std::vector<uint32_t> indices; // Initial conversion
     int materialIndex = -1;
-    size_t vertexCount = 0;
+    size_t vrtxCount = 0;
 };
 
 void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
@@ -445,7 +445,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
             readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", pData.weights);
         }
 
-        pData.vertexCount = pData.positions.size();
+        pData.vrtxCount = pData.positions.size();
 
         if (primitive.indices <= 0) continue;
 
@@ -509,7 +509,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
     uint32_t currentIndexOffset = 0;
 
     for (const auto& pData : allPrimitiveDatas) {
-        for (uint32_t i = 0 ; i < pData.vertexCount; ++i) {
+        for (uint32_t i = 0 ; i < pData.vrtxCount; ++i) {
             TinyVertexRig vertex = TinyVertexRig()
                 .setPosition( pData.positions.size() > i ? pData.positions[i] : glm::vec3(0.0f))
                 .setNormal(   pData.normals.size()   > i ? pData.normals[i]   : glm::vec3(0.0f))
@@ -531,11 +531,11 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         // Create submesh range
         TinySubmesh submesh;
         submesh.indexOffset = currentIndexOffset;
-        submesh.indexCount = static_cast<uint32_t>(pData.indices.size());
+        submesh.idxCount = static_cast<uint32_t>(pData.indices.size());
         submesh.material = pData.materialIndex >= 0 ? TinyHandle(pData.materialIndex) : TinyHandle();
         mesh.addSubmesh(submesh);
 
-        currentVertexOffset += static_cast<uint32_t>(pData.vertexCount);
+        currentVertexOffset += static_cast<uint32_t>(pData.vrtxCount);
         currentIndexOffset += static_cast<uint32_t>(pData.indices.size());
     }
 
@@ -1188,7 +1188,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
         // Create single submesh covering entire mesh
         TinySubmesh submesh;
         submesh.indexOffset = 0;
-        submesh.indexCount = static_cast<uint32_t>(indices.size());
+        submesh.idxCount = static_cast<uint32_t>(indices.size());
         submesh.material = (materialId >= 0) ? TinyHandle(materialId) : TinyHandle();
         mesh.addSubmesh(submesh);
 
