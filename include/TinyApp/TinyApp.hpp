@@ -182,13 +182,13 @@ private:
     void loadModelFromPath(const std::string& filePath, TinyHandle targetFolder);
     
     // Active scene management (moved from TinyProject for better separation)
-    TinyScene* getActiveScene() const {
-        return project->fs().rGet<TinyScene>(activeSceneHandle); 
+    TinySceneRT* getActiveScene() const {
+        return project->fs().rGet<TinySceneRT>(activeSceneHandle); 
     }
     TinyHandle getActiveSceneHandle() const { return activeSceneHandle; }
     bool setActiveScene(TinyHandle sceneHandle);
     TinyHandle activeSceneRootHandle() const { 
-        TinyScene* scene = getActiveScene();
+        TinySceneRT* scene = getActiveScene();
         return scene ? scene->rootHandle() : TinyHandle();
     }
 };

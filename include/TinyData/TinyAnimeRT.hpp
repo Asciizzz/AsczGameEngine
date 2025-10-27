@@ -7,7 +7,7 @@
 
 #include "TinyExt/TinyPool.hpp"
 
-struct TinyScene;
+struct TinySceneRT;
 struct TinyAnimeRT {
     TinyAnimeRT() = default;
 
@@ -82,7 +82,7 @@ struct TinyAnimeRT {
     void resume() { playing = true; }
     void stop() { time = 0.0f; playing = false; }
 
-    void update(TinyScene* scene, float deltaTime);
+    void update(TinySceneRT* scene, float deltaTime);
 
     Anime* current() { return animePool.get(currentHandle); }
     const Anime* current() const { return animePool.get(currentHandle); }
@@ -116,5 +116,5 @@ private:
     float time = 0.0f;
     float speed = 1.0f;
 
-    void writeTransform(TinyScene* scene, const Channel& channel, const glm::mat4& transform) const;
+    void writeTransform(TinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const;
 };

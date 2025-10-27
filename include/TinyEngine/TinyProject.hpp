@@ -4,7 +4,7 @@
 
 #include "TinyEngine/TinyRData.hpp" // Soon to be deprecated
 #include "TinyData/TinyModel.hpp"
-#include "TinyData/TinyScene.hpp"
+#include "TinyData/TinySceneRT.hpp"
 
 #include "TinyData/TinyCamera.hpp"
 #include "TinyEngine/TinyGlobal.hpp"
@@ -35,11 +35,11 @@ public:
     VkDescriptorSet getDummySkinDescSet() const { return dummySkinDescSet.get(); }
     
     // Get skin descriptor set with automatic fallback to dummy
-    VkDescriptorSet skinDescSet(TinyScene* scene, TinyHandle nodeHandle) const {
+    VkDescriptorSet skinDescSet(TinySceneRT* scene, TinyHandle nodeHandle) const {
         return scene->nSkeleDescSet(nodeHandle);
     }
 
-    uint32_t skeletonNodeBoneCount(TinyScene* scene, TinyHandle nodeHandle) const {
+    uint32_t skeletonNodeBoneCount(TinySceneRT* scene, TinyHandle nodeHandle) const {
         const TinySkeletonRT* skeleRT = scene->rtComp<TinyNodeRT::SK3D>(nodeHandle);
         return skeleRT ? skeleRT->boneCount() : 0;
     }

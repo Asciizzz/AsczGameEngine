@@ -15,7 +15,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     tinyFS = MakeUnique<TinyFS>();
 
     // ext - safeDelete - priority - r - g - b
-    tinyFS->setTypeExt<TinyScene>     ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
+    tinyFS->setTypeExt<TinySceneRT>     ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
     tinyFS->setTypeExt<TinyTexture>   ("atex", false, 0, 0.4f, 0.4f, 1.0f);
     tinyFS->setTypeExt<TinyRMaterial> ("amat", true,  0, 1.0f, 0.4f, 1.0f);
     tinyFS->setTypeExt<TinyMesh>      ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
@@ -24,7 +24,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     vkCreateSceneResources();
 
     // Create Main Scene (the active scene with a single root node)
-    TinyScene mainScene("Main Scene");
+    TinySceneRT mainScene("Main Scene");
     mainScene.addRoot("Root");
     mainScene.setSceneReq(sceneReq());
 
@@ -144,7 +144,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     if (model.nodes.empty()) return fnModelFolder;
 
     // Create scene with nodes - preserve hierarchy but remap resource references
-    TinyScene scene(model.name);
+    TinySceneRT scene(model.name);
     scene.setSceneReq(sceneReq());
 
     // First pass: Insert empty nodes and store their handles
@@ -255,8 +255,8 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
 
 void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle) {
-    const TinyScene* fromScene = fs().rGet<TinyScene>(fromHandle);
-    TinyScene* toScene = fs().rGet<TinyScene>(toHandle);
+    const TinySceneRT* fromScene = fs().rGet<TinySceneRT>(fromHandle);
+    TinySceneRT* toScene = fs().rGet<TinySceneRT>(toHandle);
     if (toHandle == fromHandle || !toScene || !fromScene) return;
 
     toScene->addScene(fromScene, parentHandle);

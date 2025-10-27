@@ -7,7 +7,7 @@
 #include "TinyData/TinyAnimeRT.hpp"
 #include "TinyData/TinySkeletonRT.hpp"
 
-// TinyScene requirements
+// TinySceneRT requirements
 struct TinySceneReq {
     const TinyRegistry*   fsRegistry = nullptr;
     const TinyVK::Device* deviceVK = nullptr; // For GPU resource creation
@@ -23,7 +23,7 @@ struct TinySceneReq {
     }
 };
 
-struct TinyScene {
+struct TinySceneRT {
 
 private:
 
@@ -40,16 +40,16 @@ private:
 public:
     std::string name;
 
-    TinyScene(const std::string& sceneName = "New Scene") : name(sceneName) {
+    TinySceneRT(const std::string& sceneName = "New Scene") : name(sceneName) {
         TinyPool<TinySkeletonRT>& skeleRTPool = rtRegistry.make<TinySkeletonRT>();
         skeleRTPool.alloc(1024); // Preallocate 1024 runtime skeletons
     }
 
-    TinyScene(const TinyScene&) = delete;
-    TinyScene& operator=(const TinyScene&) = delete;
+    TinySceneRT(const TinySceneRT&) = delete;
+    TinySceneRT& operator=(const TinySceneRT&) = delete;
 
-    TinyScene(TinyScene&&) = default;
-    TinyScene& operator=(TinyScene&&) = default;
+    TinySceneRT(TinySceneRT&&) = default;
+    TinySceneRT& operator=(TinySceneRT&&) = default;
 
     // --------- Core management ---------
 
@@ -58,7 +58,7 @@ public:
     TinyHandle rootHandle() const { return rootHandle_; }
 
     void setSceneReq(const TinySceneReq& req) {
-        if (!req.valid()) throw std::invalid_argument("Invalid TinySceneReq provided to TinyScene");
+        if (!req.valid()) throw std::invalid_argument("Invalid TinySceneReq provided to TinySceneRT");
         sceneReq = req;
     }
 
@@ -88,7 +88,7 @@ public:
     bool setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle);
     bool setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHandle>& newChildren);
 
-    void addScene(const TinyScene* from, TinyHandle parentHandle = TinyHandle());
+    void addScene(const TinySceneRT* from, TinyHandle parentHandle = TinyHandle());
     
     // -------- General update ---------
     
@@ -116,7 +116,7 @@ public:
 
     template<typename T>
     const RTResolver_t<T>* rtComp(TinyHandle nodeHandle) const {
-        return const_cast<TinyScene*>(this)->rtComp<T>(nodeHandle);
+        return const_cast<TinySceneRT*>(this)->rtComp<T>(nodeHandle);
     }
 
     template<typename T>

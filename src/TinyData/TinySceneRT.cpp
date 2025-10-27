@@ -1,4 +1,4 @@
-#include "TinyData/TinyScene.hpp"
+#include "TinyData/TinySceneRT.hpp"
 
 #include <stdexcept>
 #include <thread>
@@ -10,7 +10,7 @@ bool validIndex(TinyHandle handle, const std::vector<T>& vec) {
 
 
 
-TinyHandle TinyScene::addRoot(const std::string& nodeName) {
+TinyHandle TinySceneRT::addRoot(const std::string& nodeName) {
     // Create a new root node
     TinyNodeRT rootNode(nodeName);
     rootNode.add<TinyNodeRT::T3D>();
@@ -19,7 +19,7 @@ TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     return rootHandle();
 }
 
-TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
+TinyHandle TinySceneRT::addNode(const std::string& nodeName, TinyHandle parentHandle) {
     TinyNodeRT newNode(nodeName);
     newNode.add<TinyNodeRT::T3D>();
 
@@ -36,12 +36,12 @@ TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHand
     return newNodeHandle;
 }
 
-TinyHandle TinyScene::addNodeRaw(const std::string& nodeName) {
+TinyHandle TinySceneRT::addNodeRaw(const std::string& nodeName) {
     TinyNodeRT newNode(nodeName);
     return nodes.add(std::move(newNode));
 }
 
-bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
+bool TinySceneRT::removeNode(TinyHandle nodeHandle, bool recursive) {
     TinyNodeRT* nodeToDelete = nodes.get(nodeHandle);
     if (!nodeToDelete || nodeHandle == rootHandle()) return false;
 
@@ -69,11 +69,11 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
     return true;
 }
 
-bool TinyScene::flattenNode(TinyHandle nodeHandle) {
+bool TinySceneRT::flattenNode(TinyHandle nodeHandle) {
     return removeNode(nodeHandle, false);
 }
 
-bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {
+bool TinySceneRT::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) {
     // Can't reparent root node or self
     if (nodeHandle == rootHandle() || nodeHandle == newParentHandle) {
         return false;
@@ -117,7 +117,7 @@ bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) 
     return true;
 }
 
-bool TinyScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
+bool TinySceneRT::renameNode(TinyHandle nodeHandle, const std::string& newName) {
     TinyNodeRT* node = nodes.get(nodeHandle);
     if (!node) return false;
 
@@ -128,43 +128,43 @@ bool TinyScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
 
 
 
-const TinyNodeRT* TinyScene::node(TinyHandle nodeHandle) const {
+const TinyNodeRT* TinySceneRT::node(TinyHandle nodeHandle) const {
     return nodes.get(nodeHandle);
 }
 
-const std::vector<TinyNodeRT>& TinyScene::nodeView() const {
+const std::vector<TinyNodeRT>& TinySceneRT::nodeView() const {
     return nodes.view();
 }
 
-bool TinyScene::nodeValid(TinyHandle nodeHandle) const {
+bool TinySceneRT::nodeValid(TinyHandle nodeHandle) const {
     return nodes.valid(nodeHandle);
 }
 
-bool TinyScene::nodeOccupied(uint32_t index) const {
+bool TinySceneRT::nodeOccupied(uint32_t index) const {
     return nodes.isOccupied(index);
 }
 
-TinyHandle TinyScene::nodeHandle(uint32_t index) const {
+TinyHandle TinySceneRT::nodeHandle(uint32_t index) const {
     return nodes.getHandle(index);
 }
 
-uint32_t TinyScene::nodeCount() const {
+uint32_t TinySceneRT::nodeCount() const {
     return nodes.count();
 }
 
 
 
-TinyHandle TinyScene::nodeParent(TinyHandle nodeHandle) const {
+TinyHandle TinySceneRT::nodeParent(TinyHandle nodeHandle) const {
     const TinyNodeRT* node = nodes.get(nodeHandle);
     return node ? node->parentHandle : TinyHandle();
 }
 
-std::vector<TinyHandle> TinyScene::nodeChildren(TinyHandle nodeHandle) const {
+std::vector<TinyHandle> TinySceneRT::nodeChildren(TinyHandle nodeHandle) const {
     const TinyNodeRT* node = nodes.get(nodeHandle);
     return node ? node->childrenHandles : std::vector<TinyHandle>();
 }
 
-bool TinyScene::setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle) {
+bool TinySceneRT::setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle) {
     TinyNodeRT* node = nodes.get(nodeHandle);
     if (!node || !nodes.valid(newParentHandle)) return false;
 
@@ -172,7 +172,7 @@ bool TinyScene::setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle)
     return true;
 }
 
-bool TinyScene::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHandle>& newChildren) {
+bool TinySceneRT::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHandle>& newChildren) {
     TinyNodeRT* node = nodes.get(nodeHandle);
     if (!node) return false;
 
@@ -186,7 +186,7 @@ bool TinyScene::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHan
 
 
 
-void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
+void TinySceneRT::addScene(const TinySceneRT* from, TinyHandle parentHandle) {
     if (!from || from->nodes.count() == 0) return;
 
     // Default to root node if no parent specified
@@ -304,7 +304,7 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
 
 
 
-void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
+void TinySceneRT::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
     TinyHandle realHandle = nodeHandle.valid() ? nodeHandle : rootHandle();
 
     TinyNodeRT* node = nodes.get(realHandle);
@@ -339,7 +339,7 @@ void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGl
     }
 }
 
-void TinyScene::update(TinyHandle nodeHandle) {
+void TinySceneRT::update(TinyHandle nodeHandle) {
     // Use root node if no valid handle provided
     TinyHandle realHandle = nodeHandle.valid() ? nodeHandle : rootHandle();
     
@@ -352,7 +352,7 @@ void TinyScene::update(TinyHandle nodeHandle) {
 }
 
 
-TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
+TinySkeletonRT* TinySceneRT::addSkeletonRT(TinyHandle nodeHandle) {
     TinyNodeRT::SK3D* compPtr = nodeCompRaw<TinyNodeRT::SK3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
 
@@ -366,7 +366,7 @@ TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
     return rtGet<TinySkeletonRT>(compPtr->pSkeleHandle);
 }
 
-TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
+TinyAnimeRT* TinySceneRT::addAnimationRT(TinyHandle nodeHandle) {
     TinyNodeRT::AN3D* compPtr = nodeCompRaw<TinyNodeRT::AN3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add animation component (should not happen)
 
@@ -379,7 +379,7 @@ TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
 
 // --------- Specific component's data access ---------
 
-VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
+VkDescriptorSet TinySceneRT::nSkeleDescSet(TinyHandle nodeHandle) const {
     // Retrieve runtime skeleton data from TinyFS registry
     const TinySkeletonRT* rtSkele = rtComp<TinyNodeRT::SK3D>(nodeHandle);
     return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;

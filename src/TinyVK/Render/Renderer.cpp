@@ -255,7 +255,7 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 }
 
 
-void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, TinyHandle selectedNodeHandle) const {
+void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, TinyHandle selectedNodeHandle) const {
     if (!activeScene) return;
 
     const TinyFS& fs = project->fs();
@@ -436,7 +436,7 @@ void Renderer::endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper) {
     currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }
 
-void Renderer::processPendingRemovals(TinyProject* project, TinyScene* activeScene) {
+void Renderer::processPendingRemovals(TinyProject* project, TinySceneRT* activeScene) {
     TinyFS& fs = project->fs();
     // No pending removals anywhere
     if (!fs.rHasPendingRms() &&

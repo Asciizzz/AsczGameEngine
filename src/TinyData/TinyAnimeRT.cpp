@@ -1,4 +1,4 @@
-#include "TinyData/TinyScene.hpp"
+#include "TinyData/TinySceneRT.hpp"
 
 
 glm::vec4 TinyAnimeRT::Sampler::firstKeyframe() const {
@@ -106,7 +106,7 @@ void TinyAnimeRT::play(const TinyHandle& handle, bool restart) {
 }
 
 
-glm::mat4 getTransform(const TinyScene* scene, const TinyAnimeRT::Channel& channel) {
+glm::mat4 getTransform(const TinySceneRT* scene, const TinyAnimeRT::Channel& channel) {
     if (scene == nullptr) return glm::mat4(1.0f);
     using AnimeTarget = TinyAnimeRT::Channel::Target;
 
@@ -124,7 +124,7 @@ glm::mat4 getTransform(const TinyScene* scene, const TinyAnimeRT::Channel& chann
 }
 
 
-void TinyAnimeRT::writeTransform(TinyScene* scene, const Channel& channel, const glm::mat4& transform) const {
+void TinyAnimeRT::writeTransform(TinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const {
     if (scene == nullptr) return;
 
     // Write transform component of node
@@ -185,7 +185,7 @@ glm::mat4 recomposeTransform(
 }
 
 
-void TinyAnimeRT::update(TinyScene* scene, float deltaTime) {
+void TinyAnimeRT::update(TinySceneRT* scene, float deltaTime) {
     if (scene == nullptr) return;
 
     const Anime* anime = animePool.get(currentHandle);
