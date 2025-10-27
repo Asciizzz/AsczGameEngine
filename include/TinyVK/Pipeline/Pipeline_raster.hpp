@@ -129,8 +129,11 @@ public:
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, core.getPipeline());
     }
 
-    void bindSets(VkCommandBuffer cmd, VkDescriptorSet* sets, uint32_t count) const {
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, core.getLayout(), 0, count, sets, 0, nullptr);
+    void bindSets(VkCommandBuffer cmd, uint32_t firstSet, const VkDescriptorSet* sets, uint32_t count,
+                    const uint32_t* dynamicOffsets = nullptr, uint32_t dynamicOffsetCount = 0) const {
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                core.getLayout(), firstSet, count, sets,
+                                dynamicOffsetCount, dynamicOffsets);
     }
 
     // Push constants methods

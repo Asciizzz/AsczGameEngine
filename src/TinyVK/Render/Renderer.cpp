@@ -248,7 +248,7 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 
     // Bind only the global descriptor set (set 0) for sky
     VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
-    skyPipeline->bindSets(currentCmd, &glbSet, 1);
+    skyPipeline->bindSets(currentCmd, 0, &glbSet, 1);
 
     // Draw fullscreen triangle (3 vertices, no input)
     vkCmdDraw(currentCmd, 3, 1, 0, 0);
@@ -316,9 +316,9 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
 
             skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
             VkDescriptorSet sets[2] = { glbSet, skinSet };
-            rPipeline->bindSets(currentCmd, sets, 2);
+            rPipeline->bindSets(currentCmd, 0, sets, 2);
         } else {
-            rPipeline->bindSets(currentCmd, &glbSet, 1);
+            rPipeline->bindSets(currentCmd, 0, &glbSet, 1);
             isRigged = false;
         }
 
