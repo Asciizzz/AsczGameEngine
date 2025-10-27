@@ -172,13 +172,14 @@ public:
         removeComp<T>(nodeHandle);
         T* compPtr = node->add<T>();
 
+        addMap3D<T>(nodeHandle);
+
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
             return addSK3D_RT(compPtr);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
             return addAN3D_RT(compPtr);
         } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
-            // return addMeshRenderRT(nodeHandle); // Will be added very soon
-            return addMR3D(nodeHandle);
+            return compPtr;
         } else { // Other types return themselves
             return compPtr;
         }
@@ -195,11 +196,11 @@ public:
             rtRemove<TinyRT_SK3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
             rtRemove<TinyRT_AN3D>(compPtr->pHandle);
-        // else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
-        //     rtRemove<TinyRT::MR3D>(compPtr->pMeshRTHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
-            rmMR3D(nodeHandle);
+            // rtRemove<TinyRT::MR3D>(compPtr->pMeshRTHandle); // True implementation in future
         }
+
+        rmMap3D<T>(nodeHandle);
 
         return node->remove<T>();
     }
@@ -216,7 +217,14 @@ public:
         return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
     }
 
-    UnorderedMap<TinyHandle, TinyHandle>& mapMR3D() { return mapMR3D_; }
+    // UnorderedMap<TinyHandle, TinyHandle>& mapMR3D() { return mapMR3D_; }
+
+    template<typename T>
+    const UnorderedMap<TinyHandle, TinyHandle>& mapRT3D() const {
+        if constexpr (type_eq<T, TinyNodeRT::MR3D>)      return mapMR3D_;
+        else if constexpr (type_eq<T, TinyNodeRT::AN3D>) return mapAN3D_;
+        else return {}; // Empty map for unsupported types
+    }
 
 private:
     TinyPool<TinyNodeRT> nodes;
@@ -246,16 +254,34 @@ private:
 
     // ---------- Runtime component management ----------
 
-    TinyNodeRT::MR3D* addMR3D(TinyHandle nodeHandle) {
-        mapMR3D_[nodeHandle] = withMR3D_.add(nodeHandle);
-        return nodeRef(nodeHandle)->get<TinyNodeRT::MR3D>();
+    template<typename T>
+    void addMap3D(TinyHandle nodeHandle) {
+        auto& mapInsert = [this](auto& map, auto& pool, TinyHandle handle) {
+            map[handle] = pool.add(handle);
+        };
+
+        if constexpr (type_eq<T, TinyNodeRT::MR3D>)  {
+            mapInsert(mapMR3D_, withMR3D_, nodeHandle);
+        } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
+            mapInsert(mapAN3D_, withAN3D_, nodeHandle);
+        }
     }
 
-    void rmMR3D(TinyHandle nodeHandle) {
-        auto it = mapMR3D_.find(nodeHandle);
-        if (it != mapMR3D_.end()) {
-            withMR3D_.instaRm(it->second);
-            mapMR3D_.erase(it);
+    template<typename T>
+    void rmMap3D(TinyHandle nodeHandle) {
+        // Helpful helper function to remove from map and pool
+        auto rmFromMapAndPool = [this](auto& map, auto& pool, TinyHandle handle) {
+            auto it = map.find(handle);
+            if (it != map.end()) {
+                pool.instaRm(it->second);
+                map.erase(it);
+            }
+        };
+
+        if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
+            rmFromMapAndPool(mapMR3D_, withMR3D_, nodeHandle);
+        } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
+            rmFromMapAndPool(mapAN3D_, withAN3D_, nodeHandle);
         }
     }
 
