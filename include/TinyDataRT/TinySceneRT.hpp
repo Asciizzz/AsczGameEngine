@@ -26,6 +26,23 @@ struct TinySceneReq {
 struct TinySceneRT {
 private:
     // -------- writeComp's RTResolver ---------
+
+    /* The idea:
+
+    TinyNode's component themselves should not be modifiable at runtime, as 
+    they directly reference the runtime data in rtRegistry
+
+    So instead, manipulations and retrievals of components should be done through
+    the TinySceneRT's rtComp and writeComp functions, which will return the
+    appropriate runtime component pointers, not the identity component pointers.
+
+    For example:
+
+    TinyNodeRT::SK3D has a TinyHandle pSkeleHandle that references the actual
+    runtime TinySkeletonRT in the rtRegistry, changing it would cause undefined
+    behavior. So rtComp<TinyNodeRT::SK3D> will return the TinySkeletonRT* instead
+
+    */
     template<typename T>
     struct RTResolver { using type = T; }; // Most type return themselves
     template<typename T> using RTResolver_t = typename RTResolver<T>::type;
@@ -33,6 +50,7 @@ private:
     // Special types
     template<> struct RTResolver<TinyNodeRT::SK3D> { using type = TinySkeletonRT; };
     template<> struct RTResolver<TinyNodeRT::AN3D> { using type = TinyAnimeRT; };
+    // template<> struct RTResolver<TinyNodeRT::MR3D> { using type = TinyMeshRT; }; // Will be added very soon
 
 public:
     std::string name;
