@@ -210,17 +210,14 @@ public:
     // --------- Specific component's data access ---------
 
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
-    UnorderedMap<TinyHandle, TinyHandle>& nodeToMR3DMap() { return nodeToMR3D_; }
+
+    UnorderedMap<TinyHandle, TinyHandle>& mapMR3D() { return mapMR3D_; }
 
 private:
     TinyPool<TinyNodeRT> nodes;
     TinyHandle rootHandle_;
     TinySceneReq sceneReq;   // Scene requirements
     TinyRegistry rtRegistry; // Runtime registry for this scene
-
-    // Cache of MR3D nodes for easy access
-    TinyPool<TinyHandle> meshRenderList_;
-    UnorderedMap<TinyHandle, TinyHandle> nodeToMR3D_;
 
     // ---------- Internal helpers ---------
 
@@ -234,23 +231,27 @@ private:
         return node ? node->get<T>() : nullptr;
     }
 
+    // Cache of MR3D nodes for easy access
+    TinyPool<TinyHandle> withMR3D_;
+    UnorderedMap<TinyHandle, TinyHandle> mapMR3D_;
+
     // ---------- Runtime component management ----------
 
-    TinyRT_SK3D* addSK3D_RT(TinyHandle nodeHandle);
-    TinyRT_AN3D* addAN3D_RT(TinyHandle nodeHandle);
-
     TinyNodeRT::MR3D* addMR3D(TinyHandle nodeHandle) {
-        nodeToMR3D_[nodeHandle] = meshRenderList_.add(nodeHandle);
+        mapMR3D_[nodeHandle] = withMR3D_.add(nodeHandle);
         return nodeRef(nodeHandle)->get<TinyNodeRT::MR3D>();
     }
 
     void rmMR3D(TinyHandle nodeHandle) {
-        auto it = nodeToMR3D_.find(nodeHandle);
-        if (it != nodeToMR3D_.end()) {
-            meshRenderList_.instaRm(it->second);
-            nodeToMR3D_.erase(it);
+        auto it = mapMR3D_.find(nodeHandle);
+        if (it != mapMR3D_.end()) {
+            withMR3D_.instaRm(it->second);
+            mapMR3D_.erase(it);
         }
     }
+
+    TinyRT_SK3D* addSK3D_RT(TinyHandle nodeHandle);
+    TinyRT_AN3D* addAN3D_RT(TinyHandle nodeHandle);
 
     // ---------- Runtime registry access (private) ----------
 
