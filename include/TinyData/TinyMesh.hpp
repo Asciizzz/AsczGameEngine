@@ -32,7 +32,6 @@ struct TinyMesh {
     TinyMesh& setSubmeshes(const std::vector<TinySubmesh>& subs);
     TinyMesh& addSubmesh(const TinySubmesh& sub);
     TinyMesh& writeSubmesh(const TinySubmesh& sub, uint32_t index);
-    std::vector<TinySubmesh> submeshes;
 
     template<typename VertexT>
     TinyMesh& setVertices(const std::vector<VertexT>& verts) {
@@ -74,13 +73,15 @@ struct TinyMesh {
     bool vkCreate(const TinyVK::Device* deviceVK);
     static VkIndexType sizeToIndexType(size_t size);
 
+    const TinyVertex::Layout& vrtxLayout() const { return vrtxLayout_; }
     size_t vrtxCount() const { return vrtxCount_; }
     size_t idxCount() const { return idxCount_; }
-    const TinyVertex::Layout& vrtxLayout() const { return vrtxLayout_; }
 
     VkBuffer vrtxBuffer() const { return vrtxBuffer_; }
     VkBuffer idxBuffer() const { return idxBuffer_; }
     VkIndexType idxType() const { return idxType_; }
+
+    const std::vector<TinySubmesh>& submeshes() const { return submeshes_; }
 
 private:
     TinyVertex::Layout vrtxLayout_;
@@ -91,7 +92,8 @@ private:
     size_t idxCount_ = 0;
     size_t idxStride_ = 0;
 
-    // Buffers for runtime use
+    std::vector<TinySubmesh> submeshes_;
+
     TinyVK::DataBuffer vrtxBuffer_;
     TinyVK::DataBuffer idxBuffer_;
     VkIndexType idxType_ = VK_INDEX_TYPE_UINT16;

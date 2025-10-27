@@ -5,17 +5,17 @@
 using namespace TinyVK;
 
 TinyMesh& TinyMesh::setSubmeshes(const std::vector<TinySubmesh>& subs) {
-    submeshes = subs;
+    submeshes_ = subs;
     return *this;
 }
 
 TinyMesh& TinyMesh::addSubmesh(const TinySubmesh& sub) {
-    submeshes.push_back(sub);
+    submeshes_.push_back(sub);
     return *this;
 }
 
 TinyMesh& TinyMesh::writeSubmesh(const TinySubmesh& sub, uint32_t index) {
-    if (index < submeshes.size()) submeshes[index] = sub;
+    if (index < submeshes_.size()) submeshes_[index] = sub;
     return *this;
 }
 

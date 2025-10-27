@@ -115,7 +115,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     std::vector<TinyHandle> glbMeshRHandle;
     for (auto& mesh : model.meshes) {
         // Remap submeshes' material indices
-        std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes;
+        std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes();
         for (auto& submesh : remappedSubmeshes) {
             bool valid = validIndex(submesh.material, glmMatRHandle);
             submesh.material = valid ? glmMatRHandle[submesh.material.index] : TinyHandle();

@@ -289,7 +289,7 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
         VkBuffer vrtxBuffer = regMesh->vrtxBuffer();
         VkBuffer idxBuffer = regMesh->idxBuffer();
         VkIndexType idxType = regMesh->idxType();
-        const auto& submeshes = regMesh->submeshes; // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
+        const auto& submeshes = regMesh->submeshes(); // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
 
         VkBuffer buffers[] = { vrtxBuffer };
         VkDeviceSize offsets[] = { 0 };
