@@ -433,7 +433,7 @@ void Renderer::processPendingRemovals(TinyProject* project, TinySceneRT* activeS
     TinyFS& fs = project->fs();
     // No pending removals anywhere
     if (!fs.rHasPendingRms() &&
-        (activeScene && !activeScene->rtTHasPendingRms<TinySkeletonRT>())
+        (activeScene && !activeScene->rtTHasPendingRms<TinyRT_SK3D>())
     ) return;
 
     // Wait for ALL in-flight fences to ensure no resources are in use by GPU
@@ -466,7 +466,7 @@ void Renderer::processPendingRemovals(TinyProject* project, TinySceneRT* activeS
         fs.rFlushAllRms();
     }
 
-    activeScene->rtTFlushAllRms<TinySkeletonRT>();
+    activeScene->rtTFlushAllRms<TinyRT_SK3D>();
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {

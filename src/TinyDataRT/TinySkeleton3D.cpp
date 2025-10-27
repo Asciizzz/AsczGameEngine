@@ -1,10 +1,9 @@
-#include "TinyDataRT/TinySkeletonRT.hpp"
+#include "TinyDataRT/TinySkeleton3D.hpp"
 
 using namespace TinyVK;
+using namespace TinyRT;
 
-// ========================== TINY SKELETON RT ==========================
-
-void TinySkeletonRT::init(const TinyVK::Device* deviceVK, const TinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout) {
+void Skeleton3D::init(const TinyVK::Device* deviceVK, const TinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout) {
     vkValid = true;
 
     deviceVK_ = deviceVK;
@@ -13,7 +12,7 @@ void TinySkeletonRT::init(const TinyVK::Device* deviceVK, const TinyRegistry* fs
     descSet_.allocate(deviceVK->device, descPool, descLayout);
 }
 
-void TinySkeletonRT::set(TinyHandle skeletonHandle) {
+void Skeleton3D::set(TinyHandle skeletonHandle) {
     skeleHandle_ = skeletonHandle;
 
     const TinySkeleton* skeleton = rSkeleton();
@@ -32,7 +31,7 @@ void TinySkeletonRT::set(TinyHandle skeletonHandle) {
     update();
 }
 
-void TinySkeletonRT::copy(const TinySkeletonRT* other) {
+void Skeleton3D::copy(const Skeleton3D* other) {
     if (!other || !other->pValid()) return;
 
     skeleHandle_ = other->skeleHandle_; // Guaranteed to be valid since other is valid
@@ -45,7 +44,7 @@ void TinySkeletonRT::copy(const TinySkeletonRT* other) {
     update();
 }
 
-void TinySkeletonRT::vkCreate() {
+void Skeleton3D::vkCreate() {
     if (!hasSkeleton()) return;
 
     // Create skinning data buffer
@@ -71,7 +70,7 @@ void TinySkeletonRT::vkCreate() {
         .updateDescSets(deviceVK_->device);
 }
 
-void TinySkeletonRT::refresh(uint32_t boneIndex, bool reupdate) {
+void Skeleton3D::refresh(uint32_t boneIndex, bool reupdate) {
     // Reinitialize local pose of specific bone to bind pose
     if (boneIndex >= rSkeleton()->bones.size()) return;
 
@@ -79,14 +78,14 @@ void TinySkeletonRT::refresh(uint32_t boneIndex, bool reupdate) {
     if (reupdate) update(boneIndex);
 }
 
-void TinySkeletonRT::refreshAll() {
+void Skeleton3D::refreshAll() {
     for (size_t i = 0; i < rSkeleton()->bones.size(); ++i) {
         localPose_[i] = rSkeleton()->bones[i].bindPose;
     }
     updateFlat();
 }
 
-void TinySkeletonRT::updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform) {
+void Skeleton3D::updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform) {
     if (boneIndex >= rSkeleton()->bones.size()) return;
 
     const TinyBone& bone = rSkeleton()->bones[boneIndex];
@@ -99,7 +98,7 @@ void TinySkeletonRT::updateRecursive(uint32_t boneIndex, const glm::mat4& parent
     }
 }
 
-void TinySkeletonRT::updateFlat() {
+void Skeleton3D::updateFlat() {
     for (size_t i = 0; i < rSkeleton()->bones.size(); ++i) {
         const TinyBone& bone = rSkeleton()->bones[i];
 
@@ -113,7 +112,7 @@ void TinySkeletonRT::updateFlat() {
     }
 }
 
-void TinySkeletonRT::update(uint32_t index) {
+void Skeleton3D::update(uint32_t index) {
     if (!boneValid(index)) return;
 
     if (index == 0) {

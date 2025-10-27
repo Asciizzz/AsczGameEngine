@@ -5,7 +5,7 @@
 #include "TinyDataRT/TinyNodeRT.hpp"
 #include "TinyDataRT/TinyMeshRT.hpp"
 #include "TinyDataRT/TinyAnimeRT.hpp"
-#include "TinyDataRT/TinySkeletonRT.hpp"
+#include "TinyDataRT/TinySkeleton3D.hpp"
 
 // TinySceneRT requirements
 struct TinySceneReq {
@@ -25,6 +25,7 @@ struct TinySceneReq {
 
 struct TinySceneRT {
 private:
+
     // -------- writeComp's RTResolver ---------
 
     /* The idea:
@@ -39,8 +40,8 @@ private:
     For example:
 
     TinyNodeRT::SK3D has a TinyHandle pSkeleHandle that references the actual
-    runtime TinySkeletonRT in the rtRegistry, changing it would cause undefined
-    behavior. So rtComp<TinyNodeRT::SK3D> will return the TinySkeletonRT* instead
+    runtime Skeleton3D in the rtRegistry, changing it would cause undefined
+    behavior. So rtComp<TinyNodeRT::SK3D> will return the Skeleton3D* instead
 
     */
     template<typename T>
@@ -48,9 +49,9 @@ private:
     template<typename T> using RTResolver_t = typename RTResolver<T>::type;
 
     // Special types
-    template<> struct RTResolver<TinyNodeRT::SK3D> { using type = TinySkeletonRT; };
+    template<> struct RTResolver<TinyNodeRT::SK3D> { using type = TinyRT_SK3D; };
     template<> struct RTResolver<TinyNodeRT::AN3D> { using type = TinyAnimeRT; };
-    // template<> struct RTResolver<TinyNodeRT::MR3D> { using type = TinyMeshRT; }; // Will be added very soon
+    // template<> struct RTResolver<TinyNodeRT::MR3D> { using type = TinyRT::MeshRT; }; // Will be added very soon
 
 public:
     std::string name;
@@ -150,7 +151,7 @@ public:
         T* compPtr = node->get<T>();
 
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
-            return rtGet<TinySkeletonRT>(compPtr->pSkeleHandle);
+            return rtGet<TinyRT_SK3D>(compPtr->pSkeleHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
             return rtGet<TinyAnimeRT>(compPtr->pAnimeHandle);
         } else { // Other types return themselves
@@ -191,7 +192,7 @@ public:
         T* compPtr = node->get<T>();
 
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
-            rtRemove<TinySkeletonRT>(compPtr->pSkeleHandle);
+            rtRemove<TinyRT_SK3D>(compPtr->pSkeleHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
             rtRemove<TinyAnimeRT>(compPtr->pAnimeHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
@@ -235,7 +236,7 @@ private:
 
     // ---------- Runtime component management ----------
 
-    TinySkeletonRT* addSK3D_RT(TinyHandle nodeHandle);
+    TinyRT_SK3D* addSK3D_RT(TinyHandle nodeHandle);
     TinyAnimeRT* addAN3D_RT(TinyHandle nodeHandle);
 
     TinyNodeRT::MR3D* addMR3D(TinyHandle nodeHandle) {
@@ -269,7 +270,7 @@ private:
 
 
     template<typename T> struct DeferredRm : std::false_type {};
-    template<> struct DeferredRm<TinySkeletonRT> : std::true_type {};
+    template<> struct DeferredRm<TinyRT_SK3D> : std::true_type {};
 
     template<typename T>
     void rtRemove(const TinyHandle& handle) {

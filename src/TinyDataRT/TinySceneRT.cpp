@@ -318,12 +318,12 @@ void TinySceneRT::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parent
     glm::mat4 boneMat = glm::mat4(1.0f);
     if (boneAttach) {
         TinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
-        TinySkeletonRT* skeleRT = rtComp<TinyNodeRT::SK3D>(skeleNodeHandle);
+        TinyRT_SK3D* skeleRT = rtComp<TinyNodeRT::SK3D>(skeleNodeHandle);
         if (skeleRT) localMat = skeleRT->finalPose(boneAttach->boneIndex) * localMat;
     }
 
     // Update skeleton component
-    TinySkeletonRT* rtSkele = rtComp<TinyNodeRT::SK3D>(realHandle);
+    TinyRT_SK3D* rtSkele = rtComp<TinyNodeRT::SK3D>(realHandle);
     if (rtSkele) rtSkele->update();
 
     
@@ -351,18 +351,18 @@ void TinySceneRT::updateTransform(TinyHandle nodeHandle) {
 }
 
 
-TinySkeletonRT* TinySceneRT::addSK3D_RT(TinyHandle nodeHandle) {
+TinyRT_SK3D* TinySceneRT::addSK3D_RT(TinyHandle nodeHandle) {
     TinyNodeRT::SK3D* compPtr = nodeComp<TinyNodeRT::SK3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
 
     // Create new empty valid runtime skeleton
-    TinySkeletonRT rtSkele;
+    TinyRT_SK3D rtSkele;
     rtSkele.init(sceneReq.deviceVK, sceneReq.fsRegistry, sceneReq.skinDescPool, sceneReq.skinDescLayout);
     // Repurpose pHandle into runtime skeleton handle
-    compPtr->pSkeleHandle = rtAdd<TinySkeletonRT>(std::move(rtSkele));
+    compPtr->pSkeleHandle = rtAdd<TinyRT_SK3D>(std::move(rtSkele));
 
     // Return the runtime skeleton
-    return rtGet<TinySkeletonRT>(compPtr->pSkeleHandle);
+    return rtGet<TinyRT_SK3D>(compPtr->pSkeleHandle);
 }
 
 TinyAnimeRT* TinySceneRT::addAN3D_RT(TinyHandle nodeHandle) {
@@ -380,6 +380,6 @@ TinyAnimeRT* TinySceneRT::addAN3D_RT(TinyHandle nodeHandle) {
 
 VkDescriptorSet TinySceneRT::nSkeleDescSet(TinyHandle nodeHandle) const {
     // Retrieve runtime skeleton data from TinyFS registry
-    const TinySkeletonRT* rtSkele = rtComp<TinyNodeRT::SK3D>(nodeHandle);
+    const TinyRT_SK3D* rtSkele = rtComp<TinyNodeRT::SK3D>(nodeHandle);
     return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
 }

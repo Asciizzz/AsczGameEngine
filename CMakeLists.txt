@@ -34,7 +34,7 @@ file(GLOB_RECURSE SRC_FILES
     src/TinyData/TinySkeleton.cpp
 
     src/TinyDataRT/TinyMeshRT.cpp
-    src/TinyDataRT/TinySkeletonRT.cpp
+    src/TinyDataRT/TinySkeleton3D.cpp
     src/TinyDataRT/TinyAnimeRT.cpp
     src/TinyDataRT/TinySceneRT.cpp
 

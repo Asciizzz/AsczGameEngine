@@ -5,19 +5,21 @@
 #include "TinyVK/Resource/DataBuffer.hpp"
 #include "TinyVK/Resource/Descriptor.hpp"
 
-struct TinySkeletonRT {
-    TinySkeletonRT() = default;
+namespace TinyRT {
+
+struct Skeleton3D {
+    Skeleton3D() = default;
     void init(const TinyVK::Device* deviceVK, const TinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout);
 
-    TinySkeletonRT(const TinySkeletonRT&) = delete;
-    TinySkeletonRT& operator=(const TinySkeletonRT&) = delete;
+    Skeleton3D(const Skeleton3D&) = delete;
+    Skeleton3D& operator=(const Skeleton3D&) = delete;
 
-    TinySkeletonRT(TinySkeletonRT&&) = default;
-    TinySkeletonRT& operator=(TinySkeletonRT&&) = default;
+    Skeleton3D(Skeleton3D&&) = default;
+    Skeleton3D& operator=(Skeleton3D&&) = default;
 
     // Bone runtime data
     void set(TinyHandle skeleHandle);
-    void copy(const TinySkeletonRT* other);
+    void copy(const Skeleton3D* other);
 
     void refresh(uint32_t boneIndex, bool reupdate = true);
     void refreshAll();
@@ -81,3 +83,7 @@ private:
     void updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform);
     void updateFlat();
 };
+
+} // namespace TinyRT
+
+using TinyRT_SK3D = TinyRT::Skeleton3D;

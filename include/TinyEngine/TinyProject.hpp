@@ -40,7 +40,7 @@ public:
     }
 
     uint32_t skeletonNodeBoneCount(TinySceneRT* scene, TinyHandle nodeHandle) const {
-        const TinySkeletonRT* skeleRT = scene->rtComp<TinyNodeRT::SK3D>(nodeHandle);
+        const TinyRT_SK3D* skeleRT = scene->rtComp<TinyNodeRT::SK3D>(nodeHandle);
         return skeleRT ? skeleRT->boneCount() : 0;
     }
     

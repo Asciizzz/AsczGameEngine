@@ -662,7 +662,7 @@ void TinyApp::renderSceneNodeInspector() {
                     const TinyNodeRT::SK3D* skeleComp = skeleNode->get<TinyNodeRT::SK3D>();
                     if (skeleComp) {
                         // Retrieve runtime skeleton data
-                        const TinySkeletonRT* rtSkeleton = activeScene->rtGet<TinySkeletonRT>(skeleComp->pSkeleHandle);
+                        const TinyRT_SK3D* rtSkeleton = activeScene->rtGet<TinyRT_SK3D>(skeleComp->pSkeleHandle);
                         if (rtSkeleton) {
                             maxBoneIndex = static_cast<int>(rtSkeleton->boneCount() - 1); // Zero-based index
                         }
@@ -726,7 +726,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNodeRT::SK3D>()) {
         renderComponent("Skeleton", ImVec4(0.2f, 0.15f, 0.15f, 0.8f), ImVec4(0.4f, 0.3f, 0.3f, 0.6f), true, [&]() {
             // Retrieve the component (using TinySceneRT special method which return appropriate runtime/static data)
-            TinySkeletonRT* rtSkeleComp = activeScene->rtComp<TinyNodeRT::SK3D>(selectedSceneNodeHandle);
+            TinyRT_SK3D* rtSkeleComp = activeScene->rtComp<TinyNodeRT::SK3D>(selectedSceneNodeHandle);
             bool hasSkeleton = rtSkeleComp->hasSkeleton();
 
             ImGui::Spacing();
