@@ -127,7 +127,6 @@ bool TinySceneRT::renameNode(TinyHandle nodeHandle, const std::string& newName) 
 
 
 
-
 const TinyNodeRT* TinySceneRT::node(TinyHandle nodeHandle) const {
     return nodes.get(nodeHandle);
 }
@@ -353,7 +352,7 @@ void TinySceneRT::updateTransform(TinyHandle nodeHandle) {
 
 
 TinySkeletonRT* TinySceneRT::addSkeletonRT(TinyHandle nodeHandle) {
-    TinyNodeRT::SK3D* compPtr = nodeCompRaw<TinyNodeRT::SK3D>(nodeHandle);
+    TinyNodeRT::SK3D* compPtr = nodeComp<TinyNodeRT::SK3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
 
     // Create new empty valid runtime skeleton
@@ -367,7 +366,7 @@ TinySkeletonRT* TinySceneRT::addSkeletonRT(TinyHandle nodeHandle) {
 }
 
 TinyAnimeRT* TinySceneRT::addAnimationRT(TinyHandle nodeHandle) {
-    TinyNodeRT::AN3D* compPtr = nodeCompRaw<TinyNodeRT::AN3D>(nodeHandle);
+    TinyNodeRT::AN3D* compPtr = nodeComp<TinyNodeRT::AN3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add animation component (should not happen)
 
     TinyAnimeRT rtAnime;
