@@ -26,8 +26,9 @@ void main() {
     // Remap from [-1, 1] to [0, 1]
     vec3 color = n * 0.5 + 0.5;
 
-    // Optional: boost saturation or contrast for visibility
-    color = pow(color, vec3(0.6));
+    // color.x = color.x * 0.3 + 0.7;
+    // color.y = color.y * 0.3 + 0.7;
+    // color.z = color.z * 0.3 + 0.7;
 
     outColor = vec4(color, 1.0);
 }

@@ -40,13 +40,10 @@ struct TinySkeletonRT {
     glm::mat4 localPose(uint32_t index) const { return localPose_[index]; }
     glm::mat4& localPose(uint32_t index) { return localPose_[index]; }
     const glm::mat4& finalPose(uint32_t index) const { return finalPose_[index]; }
-    const glm::mat4& bindPose(uint32_t index) const {
+    glm::mat4 bindPose(uint32_t index) const {
         const TinySkeleton* skeleton = rSkeleton();
-        if (skeleton && index < skeleton->bones.size()) {
-            return skeleton->bones[index].inverseBindMatrix;
-        }
-        static glm::mat4 identity = glm::mat4(1.0f);
-        return identity;
+        if (!boneValid(index) || !skeleton) return glm::mat4(1.0f);
+        else return skeleton->bones[index].bindPose;
     }
 
     void setLocalPose(uint32_t index, const glm::mat4& pose = glm::mat4(1.0f)) {

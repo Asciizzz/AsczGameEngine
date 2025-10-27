@@ -1,6 +1,5 @@
 #include "TinyData/TinySceneRT.hpp"
 
-
 glm::vec4 TinyAnimeRT::Sampler::firstKeyframe() const {
     if (values.empty()) return glm::vec4(0.0f);
     return (interp == Interp::CubicSpline && values.size() >= 3) ? values[1] : values[0];
@@ -117,7 +116,7 @@ glm::mat4 getTransform(const TinySceneRT* scene, const TinyAnimeRT::Channel& cha
     // Return transform component of bone
     } else if (channel.target == AnimeTarget::Bone) {
         const TinySkeletonRT* skeletonRT = scene->rtComp<TinyNodeRT::SK3D>(channel.node);
-        return (skeletonRT && skeletonRT->boneValid(channel.index)) ? skeletonRT->localPose(channel.index) : glm::mat4(1.0f);
+        return skeletonRT->bindPose(channel.index);
     }
 
     return glm::mat4(1.0f);

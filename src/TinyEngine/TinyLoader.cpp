@@ -627,8 +627,8 @@ void loadSkeleton(TinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
         TinyBone bone;
         std::string originalName = node.name.empty() ? "" : node.name;
         bone.name = TinyLoader::sanitizeAsciiz(originalName, "Bone", i);
-        bone.inverseBindMatrix = skeletonInverseBindMatrices[i];
-        bone.localBindTransform = makeLocalFromNode(node);
+        bone.bindInverse = skeletonInverseBindMatrices[i];
+        bone.bindPose = makeLocalFromNode(node);
 
         auto parentIt = nodeToParent.find(nodeIndex);
         if (parentIt != nodeToParent.end()) {

@@ -125,6 +125,8 @@ public:
             return addSkeletonRT(nodeHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
             return addAnimationRT(nodeHandle);
+        } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
+            return addMR3D(nodeHandle);
         } else { // Other types return themselves
             return nodeCompRaw<T>(nodeHandle);
         }
@@ -138,6 +140,11 @@ public:
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
             TinyNodeRT::SK3D* compRawPtr = nodeCompRaw<TinyNodeRT::SK3D>(nodeHandle);
             if (compRawPtr) rtRemove<TinySkeletonRT>(compRawPtr->pSkeleHandle);
+        } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
+            TinyNodeRT::AN3D* compRawPtr = nodeCompRaw<TinyNodeRT::AN3D>(nodeHandle);
+            if (compRawPtr) rtRemove<TinyAnimeRT>(compRawPtr->pAnimeHandle);
+        } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
+            rmMR3D(nodeHandle);
         }
 
         return node->remove<T>();
@@ -183,13 +190,31 @@ public:
 
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
 
+    UnorderedMap<TinyHandle, TinyHandle>& nodeToMR3DMap() {
+        return nodeToMR3D_;
+    }
+
 private:
     TinyPool<TinyNodeRT> nodes;
-    TinyHandle rootHandle_{};
-
+    TinyHandle rootHandle_;
     TinySceneReq sceneReq;   // Scene requirements
-
     TinyRegistry rtRegistry; // Runtime registry for this scene
+
+    // Cache of MR3D nodes for easy access
+    TinyPool<TinyHandle> meshRenderList_;
+    UnorderedMap<TinyHandle, TinyHandle> nodeToMR3D_;
+
+    TinyNodeRT::MR3D* addMR3D(TinyHandle nodeHandle) {
+        nodeToMR3D_[nodeHandle] = meshRenderList_.add(nodeHandle);
+        return nodeCompRaw<TinyNodeRT::MR3D>(nodeHandle);
+    }
+    void rmMR3D(TinyHandle nodeHandle) {
+        auto it = nodeToMR3D_.find(nodeHandle);
+        if (it != nodeToMR3D_.end()) {
+            meshRenderList_.instaRm(it->second);
+            nodeToMR3D_.erase(it);
+        }
+    }
 
     // Non-const access only for internal use
     template<typename T>

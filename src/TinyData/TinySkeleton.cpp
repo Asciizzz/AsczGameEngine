@@ -25,7 +25,7 @@ void TinySkeletonRT::set(TinyHandle skeletonHandle) {
 
     // Initialize local pose to bind pose
     for (size_t i = 0; i < skeleton->bones.size(); ++i) {
-        localPose_[i] = skeleton->bones[i].localBindTransform;
+        localPose_[i] = skeleton->bones[i].bindPose;
     }
 
     vkCreate();
@@ -75,13 +75,13 @@ void TinySkeletonRT::refresh(uint32_t boneIndex, bool reupdate) {
     // Reinitialize local pose of specific bone to bind pose
     if (boneIndex >= rSkeleton()->bones.size()) return;
 
-    localPose_[boneIndex] = rSkeleton()->bones[boneIndex].localBindTransform;
+    localPose_[boneIndex] = rSkeleton()->bones[boneIndex].bindPose;
     if (reupdate) update(boneIndex);
 }
 
 void TinySkeletonRT::refreshAll() {
     for (size_t i = 0; i < rSkeleton()->bones.size(); ++i) {
-        localPose_[i] = rSkeleton()->bones[i].localBindTransform;
+        localPose_[i] = rSkeleton()->bones[i].bindPose;
     }
     updateFlat();
 }
@@ -92,7 +92,7 @@ void TinySkeletonRT::updateRecursive(uint32_t boneIndex, const glm::mat4& parent
     const TinyBone& bone = rSkeleton()->bones[boneIndex];
 
     finalPose_[boneIndex] = parentTransform * localPose_[boneIndex];
-    skinData_[boneIndex] = finalPose_[boneIndex] * bone.inverseBindMatrix;
+    skinData_[boneIndex] = finalPose_[boneIndex] * bone.bindInverse;
 
     for (int childIndex : bone.children) {
         updateRecursive(childIndex, finalPose_[boneIndex]);
@@ -109,7 +109,7 @@ void TinySkeletonRT::updateFlat() {
         }
 
         finalPose_[i] = parentTransform * localPose_[i];
-        skinData_[i] = finalPose_[i] * bone.inverseBindMatrix;
+        skinData_[i] = finalPose_[i] * bone.bindInverse;
     }
 }
 

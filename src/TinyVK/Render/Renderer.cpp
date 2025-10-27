@@ -268,27 +268,22 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
     activeScene->update(); // REMEMBER TO REMOVE THIS LATER!!!
 
     // Iterate through all nodes in the active scene to find mesh renderers
-    const auto& sceneNodes = activeScene->nodeView();
-    for (uint32_t i = 0; i < sceneNodes.size(); ++i) {
-        const TinyNodeRT& rtNode = sceneNodes[i];
-        TinyHandle nodeHandle = activeScene->nodeHandle(i);
+    // const auto& sceneNodes = activeScene->nodeView();
+
+    const auto& sceneNodes = activeScene->nodeToMR3DMap();
+    for (const auto& [nodeHandle, mr3dHandle] : sceneNodes) {
+        const TinyNodeRT* rtNode = activeScene->node(nodeHandle);
 
         // Get mesh render component directly from runtime node
-        const auto* meshRenderComp = rtNode.get<TinyNodeRT::MR3D>();
-        if (!meshRenderComp) continue; // No mesh render component
+        const auto* mr3DComp = rtNode->get<TinyNodeRT::MR3D>();
+        if (!mr3DComp) continue; // No mesh render component
 
-        TinyHandle meshHandle = meshRenderComp->pMeshHandle;
+        TinyHandle meshHandle = mr3DComp->pMeshHandle;
         const auto& regMesh = fs.rGet<TinyMesh>(meshHandle);
         if (!regMesh) continue; // No mesh found
 
-        const auto* transform = rtNode.get<TinyNodeRT::T3D>();
+        const auto* transform = rtNode->get<TinyNodeRT::T3D>();
         glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
-
-        // This shi is genuinely so buggy xd
-        // bool cameraCollide = project->getCamera()->collideAABB(
-        //     regMesh->abMin, regMesh->abMax, transformMat
-        // );
-        // if (!cameraCollide) continue;
 
         // Draw each individual submeshes
         VkBuffer vertexBuffer = regMesh->vertexBuffer;
@@ -307,7 +302,7 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
         rPipeline->bindCmd(currentCmd);
 
         // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
-        TinyHandle skeleNodeHandle = meshRenderComp->skeleNodeHandle;
+        TinyHandle skeleNodeHandle = mr3DComp->skeleNodeHandle;
         VkDescriptorSet skinSet = project->skinDescSet(activeScene, skeleNodeHandle);
         uint32_t boneCount = project->skeletonNodeBoneCount(activeScene, skeleNodeHandle);
 
