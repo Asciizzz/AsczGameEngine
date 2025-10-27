@@ -1,7 +1,7 @@
 #include "TinyEngine/TinyProject.hpp"
 #include "TinyEngine/TinyLoader.hpp"
 
-using NTypes = TinyNode::Types;
+using NTypes = TinyNodeRT::Types;
 
 using namespace TinyVK;
 
@@ -168,7 +168,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         TinyHandle parentHandle;
         std::vector<TinyHandle> childrenHandles;
 
-        const TinyNode& originalNode = model.nodes[i];
+        const TinyNodeRT& originalNode = model.nodes[i];
 
         // Remap parent handle
         if (validIndex(originalNode.parentHandle, nodeHandles)) {
@@ -186,15 +186,15 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
         // Add component with scene API to ensure proper handling
-        if (originalNode.has<TinyNode::T3D>()) {
-            const auto* ogTransform = originalNode.get<TinyNode::T3D>();
-            auto* newTransform = scene.writeComp<TinyNode::T3D>(nodeHandle);
+        if (originalNode.has<TinyNodeRT::T3D>()) {
+            const auto* ogTransform = originalNode.get<TinyNodeRT::T3D>();
+            auto* newTransform = scene.writeComp<TinyNodeRT::T3D>(nodeHandle);
             *newTransform = *ogTransform;
         }
 
-        if (originalNode.has<TinyNode::MR3D>()) {
-            const auto* ogMeshRender = originalNode.get<TinyNode::MR3D>();
-            auto* newMeshRender = scene.writeComp<TinyNode::MR3D>(nodeHandle);
+        if (originalNode.has<TinyNodeRT::MR3D>()) {
+            const auto* ogMeshRender = originalNode.get<TinyNodeRT::MR3D>();
+            auto* newMeshRender = scene.writeComp<TinyNodeRT::MR3D>(nodeHandle);
 
             if (validIndex(ogMeshRender->pMeshHandle, glbMeshRHandle)) {
                 newMeshRender->pMeshHandle = glbMeshRHandle[ogMeshRender->pMeshHandle.index];
@@ -205,9 +205,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             }
         }
 
-        if (originalNode.has<TinyNode::BA3D>()) {
-            const auto* ogBoneAttach = originalNode.get<TinyNode::BA3D>();
-            auto* newBoneAttach = scene.writeComp<TinyNode::BA3D>(nodeHandle);
+        if (originalNode.has<TinyNodeRT::BA3D>()) {
+            const auto* ogBoneAttach = originalNode.get<TinyNodeRT::BA3D>();
+            auto* newBoneAttach = scene.writeComp<TinyNodeRT::BA3D>(nodeHandle);
 
             if (validIndex(ogBoneAttach->skeleNodeHandle, nodeHandles)) {
                 newBoneAttach->skeleNodeHandle = nodeHandles[ogBoneAttach->skeleNodeHandle.index];
@@ -216,9 +216,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             newBoneAttach->boneIndex = ogBoneAttach->boneIndex;
         }
 
-        if (originalNode.has<TinyNode::SK3D>()) {
-            const auto* ogSkeleComp = originalNode.get<TinyNode::SK3D>();
-            auto* newSkeleRT = scene.writeComp<TinyNode::SK3D>(nodeHandle);
+        if (originalNode.has<TinyNodeRT::SK3D>()) {
+            const auto* ogSkeleComp = originalNode.get<TinyNodeRT::SK3D>();
+            auto* newSkeleRT = scene.writeComp<TinyNodeRT::SK3D>(nodeHandle);
 
             if (validIndex(ogSkeleComp->pSkeleHandle, glbSkeleRHandle)) {
                 // Construct new skeleton runtime from the original skeleton
@@ -226,9 +226,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             }
         }
 
-        if (originalNode.has<TinyNode::AN3D>()) {
-            const auto* ogAnimeComp = originalNode.get<TinyNode::AN3D>();
-            auto* newAnimeComp = scene.writeComp<TinyNode::AN3D>(nodeHandle);
+        if (originalNode.has<TinyNodeRT::AN3D>()) {
+            const auto* ogAnimeComp = originalNode.get<TinyNodeRT::AN3D>();
+            auto* newAnimeComp = scene.writeComp<TinyNodeRT::AN3D>(nodeHandle);
 
             *newAnimeComp = model.animations[ogAnimeComp->pAnimeHandle.index];
 

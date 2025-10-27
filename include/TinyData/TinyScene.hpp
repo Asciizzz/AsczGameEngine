@@ -2,7 +2,7 @@
 
 #include "TinyExt/TinyFS.hpp"
 
-#include "TinyData/TinyNode.hpp"
+#include "TinyData/TinyNodeRT.hpp"
 #include "TinyData/TinyMeshRT.hpp"
 #include "TinyData/TinyAnimeRT.hpp"
 #include "TinyData/TinySkeletonRT.hpp"
@@ -32,8 +32,8 @@ private:
     struct RTResolver { using type = T; }; // Most type return themselves
 
     // Special types
-    template<> struct RTResolver<TinyNode::SK3D> { using type = TinySkeletonRT; };
-    template<> struct RTResolver<TinyNode::AN3D> { using type = TinyAnimeRT; };
+    template<> struct RTResolver<TinyNodeRT::SK3D> { using type = TinySkeletonRT; };
+    template<> struct RTResolver<TinyNodeRT::AN3D> { using type = TinyAnimeRT; };
 
     template<typename T> using RTResolver_t = typename RTResolver<T>::type;
 
@@ -66,7 +66,7 @@ public:
 
     // --------- Node management ---------
 
-    // No add node by TinyNode because of component logic
+    // No add node by TinyNodeRT because of component logic
     TinyHandle addNode(const std::string& nodeName = "New Node", TinyHandle parentHandle = TinyHandle());
     TinyHandle addNodeRaw(const std::string& nodeName = "New Node");
 
@@ -75,9 +75,9 @@ public:
     bool reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle);
     bool renameNode(TinyHandle nodeHandle, const std::string& newName);
 
-    // TinyNode* node(TinyHandle nodeHandle);
-    const TinyNode* node(TinyHandle nodeHandle) const;
-    const std::vector<TinyNode>& nodeView() const;
+    // TinyNodeRT* node(TinyHandle nodeHandle);
+    const TinyNodeRT* node(TinyHandle nodeHandle) const;
+    const std::vector<TinyNodeRT>& nodeView() const;
     bool nodeValid(TinyHandle nodeHandle) const;
     bool nodeOccupied(uint32_t index) const;
     TinyHandle nodeHandle(uint32_t index) const;
@@ -100,14 +100,14 @@ public:
     // Retrieve runtime-resolved component pointer (return runtime component instead of node identity component)
     template<typename T>
     RTResolver_t<T>* rtComp(TinyHandle nodeHandle) {
-        TinyNode* node = nodes.get(nodeHandle);
+        TinyNodeRT* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
-        if constexpr (type_eq<T, TinyNode::SK3D>) {
-            TinyNode::SK3D* compPtr = node->get<TinyNode::SK3D>();
+        if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
+            TinyNodeRT::SK3D* compPtr = node->get<TinyNodeRT::SK3D>();
             return compPtr ? rtGet<TinySkeletonRT>(compPtr->pSkeleHandle) : nullptr;
-        } else if constexpr (type_eq<T, TinyNode::AN3D>) {
-            TinyNode::AN3D* compPtr = node->get<TinyNode::AN3D>();
+        } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
+            TinyNodeRT::AN3D* compPtr = node->get<TinyNodeRT::AN3D>();
             return compPtr ? rtGet<TinyAnimeRT>(compPtr->pAnimeHandle) : nullptr;
         } else { // Other types return themselves
             return node->get<T>();
@@ -121,15 +121,15 @@ public:
 
     template<typename T>
     RTResolver_t<T>* writeComp(TinyHandle nodeHandle) {
-        TinyNode* node = nodes.get(nodeHandle);
+        TinyNodeRT* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
         removeComp<T>(nodeHandle);
         node->add<T>();
 
-        if constexpr (type_eq<T, TinyNode::SK3D>) {
+        if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
             return addSkeletonRT(nodeHandle);
-        } else if constexpr (type_eq<T, TinyNode::AN3D>) {
+        } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
             return addAnimationRT(nodeHandle);
         } else { // Other types return themselves
             return nodeCompRaw<T>(nodeHandle);
@@ -138,11 +138,11 @@ public:
 
     template<typename T>
     bool removeComp(TinyHandle nodeHandle) {
-        TinyNode* node = nodes.get(nodeHandle);
+        TinyNodeRT* node = nodes.get(nodeHandle);
         if (!node || !node->has<T>()) return false;
 
-        if constexpr (type_eq<T, TinyNode::SK3D>) {
-            TinyNode::SK3D* compRawPtr = nodeCompRaw<TinyNode::SK3D>(nodeHandle);
+        if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
+            TinyNodeRT::SK3D* compRawPtr = nodeCompRaw<TinyNodeRT::SK3D>(nodeHandle);
             if (compRawPtr) rtRemove<TinySkeletonRT>(compRawPtr->pSkeleHandle);
         }
 
@@ -202,7 +202,7 @@ public:
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
 
 private:
-    TinyPool<TinyNode> nodes;
+    TinyPool<TinyNodeRT> nodes;
     TinyHandle rootHandle_{};
 
     TinySceneReq sceneReq;   // Scene requirements
@@ -212,7 +212,7 @@ private:
     // Non-const access only for internal use
     template<typename T>
     T* nodeCompRaw(TinyHandle nodeHandle) {
-        TinyNode* node = nodes.get(nodeHandle);
+        TinyNodeRT* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
         return node->get<T>();
@@ -220,7 +220,7 @@ private:
 
     template<typename T>
     const T* nodeCompRaw(TinyHandle nodeHandle) const {
-        const TinyNode* node = nodes.get(nodeHandle);
+        const TinyNodeRT* node = nodes.get(nodeHandle);
         if (!node) return nullptr;
 
         return node->get<T>();
@@ -234,11 +234,11 @@ private:
     // ---------- Runtime registry access (private) ----------
 
     // Access node by index, only for internal use
-    TinyNode* fromIndex(uint32_t index) {
+    TinyNodeRT* fromIndex(uint32_t index) {
         return nodes.get(nodeHandle(index));
     }
 
-    const TinyNode* fromIndex(uint32_t index) const {
+    const TinyNodeRT* fromIndex(uint32_t index) const {
         return nodes.get(nodeHandle(index));
     }
 

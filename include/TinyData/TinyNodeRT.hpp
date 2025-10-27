@@ -8,9 +8,9 @@
 #include <cstdint>
 #include <tuple>
 
-struct TinyNode {
+struct TinyNodeRT {
     std::string name = "Node";
-    TinyNode(const std::string& nodeName = "Node") : name(nodeName) {}
+    TinyNodeRT(const std::string& nodeName = "Node") : name(nodeName) {}
 
     enum class Types : uint32_t {
         T3D  = 1 << 0,

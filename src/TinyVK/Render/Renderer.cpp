@@ -270,18 +270,18 @@ void Renderer::drawScene(TinyProject* project, TinyScene* activeScene, const Pip
     // Iterate through all nodes in the active scene to find mesh renderers
     const auto& sceneNodes = activeScene->nodeView();
     for (uint32_t i = 0; i < sceneNodes.size(); ++i) {
-        const TinyNode& rtNode = sceneNodes[i];
+        const TinyNodeRT& rtNode = sceneNodes[i];
         TinyHandle nodeHandle = activeScene->nodeHandle(i);
 
         // Get mesh render component directly from runtime node
-        const auto* meshRenderComp = rtNode.get<TinyNode::MR3D>();
+        const auto* meshRenderComp = rtNode.get<TinyNodeRT::MR3D>();
         if (!meshRenderComp) continue; // No mesh render component
 
         TinyHandle meshHandle = meshRenderComp->pMeshHandle;
         const auto& regMesh = fs.rGet<TinyMesh>(meshHandle);
         if (!regMesh) continue; // No mesh found
 
-        const auto* transform = rtNode.get<TinyNode::T3D>();
+        const auto* transform = rtNode.get<TinyNodeRT::T3D>();
         glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
 
         // This shi is genuinely so buggy xd

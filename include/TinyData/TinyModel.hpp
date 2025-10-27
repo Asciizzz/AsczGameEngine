@@ -5,7 +5,7 @@
 #include "TinyData/TinyTexture.hpp"
 #include "TinyData/TinySkeleton.hpp"
 #include "TinyData/TinyAnimeRT.hpp"
-#include "TinyData/TinyNode.hpp"
+#include "TinyData/TinyNodeRT.hpp"
 
 struct TinyModel {
     std::string name;
@@ -17,5 +17,5 @@ struct TinyModel {
     std::vector<TinySkeleton> skeletons;
     std::vector<TinyAnimeRT> animations;
 
-    std::vector<TinyNode> nodes;
+    std::vector<TinyNodeRT> nodes;
 };

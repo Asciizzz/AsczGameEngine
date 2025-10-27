@@ -12,19 +12,19 @@ bool validIndex(TinyHandle handle, const std::vector<T>& vec) {
 
 TinyHandle TinyScene::addRoot(const std::string& nodeName) {
     // Create a new root node
-    TinyNode rootNode(nodeName);
-    rootNode.add<TinyNode::T3D>();
+    TinyNodeRT rootNode(nodeName);
+    rootNode.add<TinyNodeRT::T3D>();
     setRoot(nodes.add(std::move(rootNode)));
 
     return rootHandle();
 }
 
 TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHandle) {
-    TinyNode newNode(nodeName);
-    newNode.add<TinyNode::T3D>();
+    TinyNodeRT newNode(nodeName);
+    newNode.add<TinyNodeRT::T3D>();
 
     if (!parentHandle.valid()) parentHandle = rootHandle();
-    TinyNode* parentNode = nodes.get(parentHandle);
+    TinyNodeRT* parentNode = nodes.get(parentHandle);
     if (!parentNode) return TinyHandle();
 
     newNode.setParent(parentHandle);
@@ -37,12 +37,12 @@ TinyHandle TinyScene::addNode(const std::string& nodeName, TinyHandle parentHand
 }
 
 TinyHandle TinyScene::addNodeRaw(const std::string& nodeName) {
-    TinyNode newNode(nodeName);
+    TinyNodeRT newNode(nodeName);
     return nodes.add(std::move(newNode));
 }
 
 bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
-    TinyNode* nodeToDelete = nodes.get(nodeHandle);
+    TinyNodeRT* nodeToDelete = nodes.get(nodeHandle);
     if (!nodeToDelete || nodeHandle == rootHandle()) return false;
 
     std::vector<TinyHandle> childrenToDelete = nodeToDelete->childrenHandles;
@@ -54,15 +54,15 @@ bool TinyScene::removeNode(TinyHandle nodeHandle, bool recursive) {
 
     // Remove this node from its parent's children list
     if (nodeToDelete->parentHandle.valid()) {
-        TinyNode* parentNode = nodes.get(nodeToDelete->parentHandle);
+        TinyNodeRT* parentNode = nodes.get(nodeToDelete->parentHandle);
         if (parentNode) parentNode->removeChild(nodeHandle);
     }
 
-    removeComp<TinyNode::T3D>(nodeHandle);
-    removeComp<TinyNode::MR3D>(nodeHandle);
-    removeComp<TinyNode::BA3D>(nodeHandle);
-    removeComp<TinyNode::SK3D>(nodeHandle);
-    removeComp<TinyNode::AN3D>(nodeHandle);
+    removeComp<TinyNodeRT::T3D>(nodeHandle);
+    removeComp<TinyNodeRT::MR3D>(nodeHandle);
+    removeComp<TinyNodeRT::BA3D>(nodeHandle);
+    removeComp<TinyNodeRT::SK3D>(nodeHandle);
+    removeComp<TinyNodeRT::AN3D>(nodeHandle);
 
     nodes.instaRm(nodeHandle);
 
@@ -82,13 +82,13 @@ bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) 
     // Set parent to root if invalid
     if (!newParentHandle.valid()) newParentHandle = rootHandle();
 
-    TinyNode* nodeToMove = nodes.get(nodeHandle);
-    TinyNode* newParent = nodes.get(newParentHandle);
+    TinyNodeRT* nodeToMove = nodes.get(nodeHandle);
+    TinyNodeRT* newParent = nodes.get(newParentHandle);
     if (!nodeToMove || !newParent) return false;
 
     // Check for cycles: make sure new parent is not a descendant of the node we're moving
     std::function<bool(TinyHandle)> isDescendant = [this, newParentHandle, &isDescendant](TinyHandle ancestor) -> bool {
-        const TinyNode* node = nodes.get(ancestor);
+        const TinyNodeRT* node = nodes.get(ancestor);
         if (!node) return false;
         
         for (const TinyHandle& childHandle : node->childrenHandles) {
@@ -107,7 +107,7 @@ bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) 
     }
     
     // Remove from current parent's children list
-    TinyNode* currentParent = nodes.get(nodeToMove->parentHandle);
+    TinyNodeRT* currentParent = nodes.get(nodeToMove->parentHandle);
     if (currentParent) currentParent->removeChild(nodeHandle);
 
     // Add to new parent's children list
@@ -118,7 +118,7 @@ bool TinyScene::reparentNode(TinyHandle nodeHandle, TinyHandle newParentHandle) 
 }
 
 bool TinyScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
-    TinyNode* node = nodes.get(nodeHandle);
+    TinyNodeRT* node = nodes.get(nodeHandle);
     if (!node) return false;
 
     node->name = newName;
@@ -128,11 +128,11 @@ bool TinyScene::renameNode(TinyHandle nodeHandle, const std::string& newName) {
 
 
 
-const TinyNode* TinyScene::node(TinyHandle nodeHandle) const {
+const TinyNodeRT* TinyScene::node(TinyHandle nodeHandle) const {
     return nodes.get(nodeHandle);
 }
 
-const std::vector<TinyNode>& TinyScene::nodeView() const {
+const std::vector<TinyNodeRT>& TinyScene::nodeView() const {
     return nodes.view();
 }
 
@@ -155,17 +155,17 @@ uint32_t TinyScene::nodeCount() const {
 
 
 TinyHandle TinyScene::nodeParent(TinyHandle nodeHandle) const {
-    const TinyNode* node = nodes.get(nodeHandle);
+    const TinyNodeRT* node = nodes.get(nodeHandle);
     return node ? node->parentHandle : TinyHandle();
 }
 
 std::vector<TinyHandle> TinyScene::nodeChildren(TinyHandle nodeHandle) const {
-    const TinyNode* node = nodes.get(nodeHandle);
+    const TinyNodeRT* node = nodes.get(nodeHandle);
     return node ? node->childrenHandles : std::vector<TinyHandle>();
 }
 
 bool TinyScene::setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle) {
-    TinyNode* node = nodes.get(nodeHandle);
+    TinyNodeRT* node = nodes.get(nodeHandle);
     if (!node || !nodes.valid(newParentHandle)) return false;
 
     node->setParent(newParentHandle);
@@ -173,7 +173,7 @@ bool TinyScene::setNodeParent(TinyHandle nodeHandle, TinyHandle newParentHandle)
 }
 
 bool TinyScene::setNodeChildren(TinyHandle nodeHandle, const std::vector<TinyHandle>& newChildren) {
-    TinyNode* node = nodes.get(nodeHandle);
+    TinyNodeRT* node = nodes.get(nodeHandle);
     if (!node) return false;
 
     // node->childrenHandles = newChildren;
@@ -201,7 +201,7 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
     for (uint32_t i = 0; i < from_items.size(); ++i) {
         if (!from->nodeOccupied(i)) continue;
 
-        const TinyNode* fromNode = from->fromIndex(i);
+        const TinyNodeRT* fromNode = from->fromIndex(i);
         toHandleMap[i] = addNodeRaw(fromNode->name);
     }
 
@@ -209,12 +209,12 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
 
     for (uint32_t i = 0; i < from_items.size(); ++i) {
         TinyHandle fromHandle = from->nodeHandle(i);
-        const TinyNode* fromNode = from->node(fromHandle);
+        const TinyNodeRT* fromNode = from->node(fromHandle);
         if (!fromNode) continue;
 
         TinyHandle toHandle = toHandleMap[i];
 
-        TinyNode* toNode = nodes.get(toHandle);
+        TinyNodeRT* toNode = nodes.get(toHandle);
         if (!toNode) continue; // Should not happen
 
         // Resolve parent-self relationships
@@ -223,7 +223,7 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
             toNode->setParent(toHandleMap[fromParentHandle.index]);
         } else { // <-- Root node in 'from' scene
             // Add child to parent
-            TinyNode* parentNode = nodes.get(parentHandle);
+            TinyNodeRT* parentNode = nodes.get(parentHandle);
 
             if (parentNode) parentNode->addChild(toHandle);
             toNode->setParent(parentHandle);
@@ -237,15 +237,15 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
 
         // Resolve components
 
-        if (fromNode->has<TinyNode::T3D>()) {
-            const auto* fromTransform = fromNode->get<TinyNode::T3D>();
-            auto* toTransform = writeComp<TinyNode::T3D>(toHandle);
+        if (fromNode->has<TinyNodeRT::T3D>()) {
+            const auto* fromTransform = fromNode->get<TinyNodeRT::T3D>();
+            auto* toTransform = writeComp<TinyNodeRT::T3D>(toHandle);
             *toTransform = *fromTransform;
         }
 
-        if (fromNode->has<TinyNode::MR3D>()) {
-            const auto* fromMeshRender = fromNode->get<TinyNode::MR3D>();
-            auto* toMeshRender = writeComp<TinyNode::MR3D>(toHandle);
+        if (fromNode->has<TinyNodeRT::MR3D>()) {
+            const auto* fromMeshRender = fromNode->get<TinyNodeRT::MR3D>();
+            auto* toMeshRender = writeComp<TinyNodeRT::MR3D>(toHandle);
 
             toMeshRender->pMeshHandle = fromMeshRender->pMeshHandle;
 
@@ -258,9 +258,9 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
             }
         }
 
-        if (fromNode->has<TinyNode::BA3D>()) {
-            const auto* fromBoneAttach = fromNode->get<TinyNode::BA3D>();
-            auto* toBoneAttach = writeComp<TinyNode::BA3D>(toHandle);
+        if (fromNode->has<TinyNodeRT::BA3D>()) {
+            const auto* fromBoneAttach = fromNode->get<TinyNodeRT::BA3D>();
+            auto* toBoneAttach = writeComp<TinyNodeRT::BA3D>(toHandle);
 
             if (toHandleMap.find(fromBoneAttach->skeleNodeHandle.index) != toHandleMap.end()) {
                 toBoneAttach->skeleNodeHandle = toHandleMap[fromBoneAttach->skeleNodeHandle.index];
@@ -269,15 +269,15 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
             toBoneAttach->boneIndex = fromBoneAttach->boneIndex;
         }
 
-        if (fromNode->has<TinyNode::SK3D>()) {
-            auto* toSkeleRT = writeComp<TinyNode::SK3D>(toHandle);
-            const auto* fromSkeleRT = from->rtComp<TinyNode::SK3D>(fromHandle);
+        if (fromNode->has<TinyNodeRT::SK3D>()) {
+            auto* toSkeleRT = writeComp<TinyNodeRT::SK3D>(toHandle);
+            const auto* fromSkeleRT = from->rtComp<TinyNodeRT::SK3D>(fromHandle);
             toSkeleRT->copy(fromSkeleRT);
         }
 
-        if (fromNode->has<TinyNode::AN3D>()) {
-            auto* toAnimeRT = writeComp<TinyNode::AN3D>(toHandle);
-            const auto* fromAnimeRT = from->rtComp<TinyNode::AN3D>(fromHandle);
+        if (fromNode->has<TinyNodeRT::AN3D>()) {
+            auto* toAnimeRT = writeComp<TinyNodeRT::AN3D>(toHandle);
+            const auto* fromAnimeRT = from->rtComp<TinyNodeRT::AN3D>(fromHandle);
 
             *toAnimeRT = *fromAnimeRT;
 
@@ -307,24 +307,24 @@ void TinyScene::addScene(const TinyScene* from, TinyHandle parentHandle) {
 void TinyScene::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
     TinyHandle realHandle = nodeHandle.valid() ? nodeHandle : rootHandle();
 
-    TinyNode* node = nodes.get(realHandle);
+    TinyNodeRT* node = nodes.get(realHandle);
     if (!node) return;
 
     // Update transform component
-    TinyNode::T3D* transform = rtComp<TinyNode::T3D>(realHandle);
+    TinyNodeRT::T3D* transform = rtComp<TinyNodeRT::T3D>(realHandle);
     glm::mat4 localMat = transform ? transform->local : glm::mat4(1.0f);
 
     // Update update local transform with bone attachment if applicable
-    TinyNode::BA3D* boneAttach = rtComp<TinyNode::BA3D>(realHandle);
+    TinyNodeRT::BA3D* boneAttach = rtComp<TinyNodeRT::BA3D>(realHandle);
     glm::mat4 boneMat = glm::mat4(1.0f);
     if (boneAttach) {
         TinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
-        TinySkeletonRT* skeleRT = rtComp<TinyNode::SK3D>(skeleNodeHandle);
+        TinySkeletonRT* skeleRT = rtComp<TinyNodeRT::SK3D>(skeleNodeHandle);
         if (skeleRT) localMat = skeleRT->finalPose(boneAttach->boneIndex) * localMat;
     }
 
     // Update skeleton component
-    TinySkeletonRT* rtSkele = rtComp<TinyNode::SK3D>(realHandle);
+    TinySkeletonRT* rtSkele = rtComp<TinyNodeRT::SK3D>(realHandle);
     if (rtSkele) rtSkele->update();
 
     
@@ -343,17 +343,17 @@ void TinyScene::update(TinyHandle nodeHandle) {
     // Use root node if no valid handle provided
     TinyHandle realHandle = nodeHandle.valid() ? nodeHandle : rootHandle();
     
-    TinyNode* node = nodes.get(realHandle);
+    TinyNodeRT* node = nodes.get(realHandle);
     if (!node) return;
 
     // Update everything recursively
-    TinyNode::T3D* parentTransform = rtComp<TinyNode::T3D>(node->parentHandle);
+    TinyNodeRT::T3D* parentTransform = rtComp<TinyNodeRT::T3D>(node->parentHandle);
     updateRecursive(realHandle, parentTransform ? parentTransform->global : glm::mat4(1.0f));
 }
 
 
 TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
-    TinyNode::SK3D* compPtr = nodeCompRaw<TinyNode::SK3D>(nodeHandle);
+    TinyNodeRT::SK3D* compPtr = nodeCompRaw<TinyNodeRT::SK3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
 
     // Create new empty valid runtime skeleton
@@ -367,7 +367,7 @@ TinySkeletonRT* TinyScene::addSkeletonRT(TinyHandle nodeHandle) {
 }
 
 TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
-    TinyNode::AN3D* compPtr = nodeCompRaw<TinyNode::AN3D>(nodeHandle);
+    TinyNodeRT::AN3D* compPtr = nodeCompRaw<TinyNodeRT::AN3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add animation component (should not happen)
 
     TinyAnimeRT rtAnime;
@@ -381,6 +381,6 @@ TinyAnimeRT* TinyScene::addAnimationRT(TinyHandle nodeHandle) {
 
 VkDescriptorSet TinyScene::nSkeleDescSet(TinyHandle nodeHandle) const {
     // Retrieve runtime skeleton data from TinyFS registry
-    const TinySkeletonRT* rtSkele = rtComp<TinyNode::SK3D>(nodeHandle);
+    const TinySkeletonRT* rtSkele = rtComp<TinyNodeRT::SK3D>(nodeHandle);
     return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
 }
