@@ -962,7 +962,7 @@ void TinyApp::renderSceneNodeInspector() {
     if (selectedNode->has<TinyNodeRT::AN3D>()) {
         renderComponent("Animation", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
             // Get component copy using TinySceneRT method
-            TinyAnimeRT* compPtr = activeScene->rtComp<TinyNodeRT::AN3D>(selectedSceneNodeHandle);
+            TinyRT_AN3D* compPtr = activeScene->rtComp<TinyNodeRT::AN3D>(selectedSceneNodeHandle);
 
             // Create a search field
             static char searchBuffer[128] = "";

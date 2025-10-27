@@ -8,8 +8,10 @@
 #include "TinyExt/TinyPool.hpp"
 
 struct TinySceneRT;
-struct TinyAnimeRT {
-    TinyAnimeRT() = default;
+namespace TinyRT {
+
+struct Anime3D {
+    Anime3D() = default;
 
     struct Sampler {
         std::vector<float> times;
@@ -98,7 +100,7 @@ struct TinyAnimeRT {
         return nullptr;
     }
     const Anime* get(const std::string& name) const {
-        return const_cast<TinyAnimeRT*>(this)->get(name);
+        return const_cast<Anime3D*>(this)->get(name);
     }
 
     // Retrieve the list
@@ -118,3 +120,7 @@ private:
 
     void writeTransform(TinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const;
 };
+
+} // namespace TinyRT
+
+using TinyRT_AN3D = TinyRT::Anime3D;

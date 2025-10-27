@@ -1,15 +1,17 @@
 #include "TinyDataRT/TinySceneRT.hpp"
 
-glm::vec4 TinyAnimeRT::Sampler::firstKeyframe() const {
+using namespace TinyRT;
+
+glm::vec4 Anime3D::Sampler::firstKeyframe() const {
     if (values.empty()) return glm::vec4(0.0f);
     return (interp == Interp::CubicSpline && values.size() >= 3) ? values[1] : values[0];
 }
-glm::vec4 TinyAnimeRT::Sampler::lastKeyframe() const {
+glm::vec4 Anime3D::Sampler::lastKeyframe() const {
     if (values.empty()) return glm::vec4(0.0f);
     return (interp == Interp::CubicSpline && values.size() >= 3) ? values[values.size() - 2] : values.back();
 }
 
-glm::vec4 TinyAnimeRT::Sampler::evaluate(float time) const {
+glm::vec4 Anime3D::Sampler::evaluate(float time) const {
     if (times.empty() || values.empty()) return glm::vec4(0.0f);
 
     const float tMin = times.front();
@@ -87,14 +89,14 @@ glm::vec4 TinyAnimeRT::Sampler::evaluate(float time) const {
 
 
 
-void TinyAnimeRT::play(const std::string& name, bool restart) {
+void Anime3D::play(const std::string& name, bool restart) {
     auto it = nameToHandle.find(name);
     if (it != nameToHandle.end()) {
         play(it->second, restart);
     }
 }
 
-void TinyAnimeRT::play(const TinyHandle& handle, bool restart) {
+void Anime3D::play(const TinyHandle& handle, bool restart) {
     const Anime* anim = animePool.get(handle);
     if (!anim || !anim->valid()) return;
     
@@ -105,9 +107,9 @@ void TinyAnimeRT::play(const TinyHandle& handle, bool restart) {
 }
 
 
-glm::mat4 getTransform(const TinySceneRT* scene, const TinyAnimeRT::Channel& channel) {
+glm::mat4 getTransform(const TinySceneRT* scene, const Anime3D::Channel& channel) {
     if (scene == nullptr) return glm::mat4(1.0f);
-    using AnimeTarget = TinyAnimeRT::Channel::Target;
+    using AnimeTarget = Anime3D::Channel::Target;
 
     // Return transform component of node
     if (channel.target == AnimeTarget::Node) {
@@ -123,7 +125,7 @@ glm::mat4 getTransform(const TinySceneRT* scene, const TinyAnimeRT::Channel& cha
 }
 
 
-void TinyAnimeRT::writeTransform(TinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const {
+void Anime3D::writeTransform(TinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const {
     if (scene == nullptr) return;
 
     // Write transform component of node
@@ -187,7 +189,7 @@ glm::mat4 recomposeTransform(
 }
 
 
-void TinyAnimeRT::update(TinySceneRT* scene, float deltaTime) {
+void Anime3D::update(TinySceneRT* scene, float deltaTime) {
     if (scene == nullptr) return;
 
     const Anime* anime = animePool.get(currentHandle);

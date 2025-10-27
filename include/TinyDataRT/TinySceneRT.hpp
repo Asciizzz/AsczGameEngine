@@ -4,7 +4,7 @@
 
 #include "TinyDataRT/TinyNodeRT.hpp"
 #include "TinyDataRT/TinyMeshRT.hpp"
-#include "TinyDataRT/TinyAnimeRT.hpp"
+#include "TinyDataRT/TinyAnime3D.hpp"
 #include "TinyDataRT/TinySkeleton3D.hpp"
 
 // TinySceneRT requirements
@@ -50,7 +50,7 @@ private:
 
     // Special types
     template<> struct RTResolver<TinyNodeRT::SK3D> { using type = TinyRT_SK3D; };
-    template<> struct RTResolver<TinyNodeRT::AN3D> { using type = TinyAnimeRT; };
+    template<> struct RTResolver<TinyNodeRT::AN3D> { using type = TinyRT_AN3D; };
     // template<> struct RTResolver<TinyNodeRT::MR3D> { using type = TinyRT::MeshRT; }; // Will be added very soon
 
 public:
@@ -153,7 +153,7 @@ public:
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
             return rtGet<TinyRT_SK3D>(compPtr->pSkeleHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
-            return rtGet<TinyAnimeRT>(compPtr->pAnimeHandle);
+            return rtGet<TinyRT_AN3D>(compPtr->pAnimeHandle);
         } else { // Other types return themselves
             return compPtr;
         }
@@ -194,7 +194,7 @@ public:
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
             rtRemove<TinyRT_SK3D>(compPtr->pSkeleHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
-            rtRemove<TinyAnimeRT>(compPtr->pAnimeHandle);
+            rtRemove<TinyRT_AN3D>(compPtr->pAnimeHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
             rmMR3D(nodeHandle);
         }
@@ -237,7 +237,7 @@ private:
     // ---------- Runtime component management ----------
 
     TinyRT_SK3D* addSK3D_RT(TinyHandle nodeHandle);
-    TinyAnimeRT* addAN3D_RT(TinyHandle nodeHandle);
+    TinyRT_AN3D* addAN3D_RT(TinyHandle nodeHandle);
 
     TinyNodeRT::MR3D* addMR3D(TinyHandle nodeHandle) {
         nodeToMR3D_[nodeHandle] = meshRenderList_.add(nodeHandle);

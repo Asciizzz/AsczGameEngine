@@ -365,14 +365,14 @@ TinyRT_SK3D* TinySceneRT::addSK3D_RT(TinyHandle nodeHandle) {
     return rtGet<TinyRT_SK3D>(compPtr->pSkeleHandle);
 }
 
-TinyAnimeRT* TinySceneRT::addAN3D_RT(TinyHandle nodeHandle) {
+TinyRT_AN3D* TinySceneRT::addAN3D_RT(TinyHandle nodeHandle) {
     TinyNodeRT::AN3D* compPtr = nodeComp<TinyNodeRT::AN3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add animation component (should not happen)
 
-    TinyAnimeRT rtAnime;
-    compPtr->pAnimeHandle = rtAdd<TinyAnimeRT>(std::move(rtAnime));
+    TinyRT_AN3D rtAnime;
+    compPtr->pAnimeHandle = rtAdd<TinyRT_AN3D>(std::move(rtAnime));
 
-    return rtGet<TinyAnimeRT>(compPtr->pAnimeHandle);
+    return rtGet<TinyRT_AN3D>(compPtr->pAnimeHandle);
 }
 
 

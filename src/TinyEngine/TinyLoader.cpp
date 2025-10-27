@@ -829,18 +829,18 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
     TinyNodeRT::AN3D* animeComp = animeNode.add<TinyNodeRT::AN3D>();
     animeComp->pAnimeHandle = TinyHandle(0);
 
-    TinyAnimeRT tinyAnim;
+    TinyRT_AN3D tinyAnim;
 
     for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
         const tinygltf::Animation& gltfAnim = model.animations[animIndex];
-        TinyAnimeRT::Anime anime;
+        TinyRT_AN3D::Anime anime;
 
         anime.name = TinyLoader::sanitizeAsciiz(gltfAnim.name, "animation", animIndex);
 
         // Process channels and samplers here...
 
         for (const auto& gltfSampler : gltfAnim.samplers) {
-            TinyAnimeRT::Sampler sampler;
+            TinyRT_AN3D::Sampler sampler;
 
             if (gltfSampler.input >= 0) {
                 readAccessor(model, gltfSampler.input, sampler.times);
@@ -852,22 +852,22 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
 
             // sampler.interp = 
             if (gltfSampler.interpolation == "LINEAR") {
-                sampler.interp = TinyAnimeRT::Sampler::Interp::Linear;
+                sampler.interp = TinyRT_AN3D::Sampler::Interp::Linear;
             } else if (gltfSampler.interpolation == "STEP") {
-                sampler.interp = TinyAnimeRT::Sampler::Interp::Step;
+                sampler.interp = TinyRT_AN3D::Sampler::Interp::Step;
             } else if (gltfSampler.interpolation == "CUBICSPLINE") {
-                sampler.interp = TinyAnimeRT::Sampler::Interp::CubicSpline;
+                sampler.interp = TinyRT_AN3D::Sampler::Interp::CubicSpline;
             } else {
-                sampler.interp = TinyAnimeRT::Sampler::Interp::Linear; // Default
+                sampler.interp = TinyRT_AN3D::Sampler::Interp::Linear; // Default
             }
 
             anime.samplers.push_back(std::move(sampler));
         }
 
-        // No need to calc animation duration here, it's done in TinyAnimeRT
+        // No need to calc animation duration here, it's done in TinyRT_AN3D
 
         for (const auto& gltfChannel : gltfAnim.channels) {
-            TinyAnimeRT::Channel channel;
+            TinyRT_AN3D::Channel channel;
             channel.sampler = gltfChannel.sampler;
 
             // Retrieve the target node
@@ -887,7 +887,7 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
                 if (skeleNodeIt != skeletonToModelNodeIndex.end()) {
                     int skeleNodeModelIndex = skeleNodeIt->second;
 
-                    channel.target = TinyAnimeRT::Channel::Target::Bone;
+                    channel.target = TinyRT_AN3D::Channel::Target::Bone;
                     channel.node = TinyHandle(skeleNodeModelIndex);
                     channel.index = boneIndex;
                 }
@@ -897,7 +897,7 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
 
             // Determine the property being animated
 
-            using AnimePath = TinyAnimeRT::Channel::Path;
+            using AnimePath = TinyRT_AN3D::Channel::Path;
             const std::string& path = gltfChannel.target_path;
             if (path == "translation")   channel.path = AnimePath::T;
             else if (path == "rotation") channel.path = AnimePath::R;
