@@ -51,7 +51,7 @@ struct TinyNodeRT {
     // Component definitions with runtime capabilities
     struct MeshRender3D {
         static constexpr Types kType = Types::MR3D;
-        TinyHandle pMeshHandle; // Polytype
+        TinyHandle pMeshHandle;
         TinyHandle skeleNodeHandle; // Handle to skeleton "NODE" (NOT skeleton in registry)
     };
     using MR3D = MeshRender3D;
@@ -65,13 +65,13 @@ struct TinyNodeRT {
 
     struct Skeleton3D {
         static constexpr Types kType = Types::SK3D;
-        TinyHandle pSkeleHandle; // Polytype
+        TinyHandle pHandle;
     };
     using SK3D = Skeleton3D;
 
     struct Animation3D {
         static constexpr Types kType = Types::AN3D;
-        TinyHandle pAnimeHandle; // Polytype
+        TinyHandle pHandle;
     };
     using AN3D = Animation3D;
 

@@ -39,7 +39,7 @@ private:
 
     For example:
 
-    TinyNodeRT::SK3D has a TinyHandle pSkeleHandle that references the actual
+    TinyNodeRT::SK3D has a TinyHandle pHandle that references the actual
     runtime Skeleton3D in the rtRegistry, changing it would cause undefined
     behavior. So rtComp<TinyNodeRT::SK3D> will return the Skeleton3D* instead
 
@@ -151,9 +151,9 @@ public:
         T* compPtr = node->get<T>();
 
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
-            return rtGet<TinyRT_SK3D>(compPtr->pSkeleHandle);
+            return rtGet<TinyRT_SK3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
-            return rtGet<TinyRT_AN3D>(compPtr->pAnimeHandle);
+            return rtGet<TinyRT_AN3D>(compPtr->pHandle);
         } else { // Other types return themselves
             return compPtr;
         }
@@ -173,9 +173,9 @@ public:
         T* compPtr = node->add<T>();
 
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
-            return addSK3D_RT(nodeHandle);
+            return addSK3D_RT(compPtr);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
-            return addAN3D_RT(nodeHandle);
+            return addAN3D_RT(compPtr);
         } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
             // return addMeshRenderRT(nodeHandle); // Will be added very soon
             return addMR3D(nodeHandle);
@@ -192,9 +192,11 @@ public:
         T* compPtr = node->get<T>();
 
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
-            rtRemove<TinyRT_SK3D>(compPtr->pSkeleHandle);
+            rtRemove<TinyRT_SK3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
-            rtRemove<TinyRT_AN3D>(compPtr->pAnimeHandle);
+            rtRemove<TinyRT_AN3D>(compPtr->pHandle);
+        // else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
+        //     rtRemove<TinyRT::MR3D>(compPtr->pMeshRTHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
             rmMR3D(nodeHandle);
         }
@@ -209,7 +211,10 @@ public:
 
     // --------- Specific component's data access ---------
 
-    VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
+    VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const {
+        const TinyRT_SK3D* rtSkele = rtComp<TinyNodeRT::SK3D>(nodeHandle);
+        return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
+    }
 
     UnorderedMap<TinyHandle, TinyHandle>& mapMR3D() { return mapMR3D_; }
 
@@ -231,9 +236,13 @@ private:
         return node ? node->get<T>() : nullptr;
     }
 
-    // Cache of MR3D nodes for easy access
+    // Cache of specific nodes for easy access
+
     TinyPool<TinyHandle> withMR3D_;
     UnorderedMap<TinyHandle, TinyHandle> mapMR3D_;
+
+    TinyPool<TinyHandle> withAN3D_;
+    UnorderedMap<TinyHandle, TinyHandle> mapAN3D_;
 
     // ---------- Runtime component management ----------
 
@@ -250,8 +259,22 @@ private:
         }
     }
 
-    TinyRT_SK3D* addSK3D_RT(TinyHandle nodeHandle);
-    TinyRT_AN3D* addAN3D_RT(TinyHandle nodeHandle);
+    TinyRT_SK3D* addSK3D_RT(TinyNodeRT::SK3D* compPtr) {
+        TinyRT_SK3D rtSkele;
+        rtSkele.init(sceneReq.deviceVK, sceneReq.fsRegistry, sceneReq.skinDescPool, sceneReq.skinDescLayout);
+        // Repurpose pHandle to point to runtime skeleton
+        compPtr->pHandle = rtAdd<TinyRT_SK3D>(std::move(rtSkele));
+
+        // Return the runtime skeleton
+        return rtGet<TinyRT_SK3D>(compPtr->pHandle);
+    }
+
+    TinyRT_AN3D* addAN3D_RT(TinyNodeRT::AN3D* compPtr) {
+        TinyRT_AN3D rtAnime;
+        compPtr->pHandle = rtAdd<TinyRT_AN3D>(std::move(rtAnime));
+
+        return rtGet<TinyRT_AN3D>(compPtr->pHandle);
+    }
 
     // ---------- Runtime registry access (private) ----------
 

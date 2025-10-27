@@ -220,9 +220,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             const auto* ogSkeleComp = originalNode.get<TinyNodeRT::SK3D>();
             auto* newSkeleRT = scene.writeComp<TinyNodeRT::SK3D>(nodeHandle);
 
-            if (validIndex(ogSkeleComp->pSkeleHandle, glbSkeleRHandle)) {
+            if (validIndex(ogSkeleComp->pHandle, glbSkeleRHandle)) {
                 // Construct new skeleton runtime from the original skeleton
-                newSkeleRT->set(glbSkeleRHandle[ogSkeleComp->pSkeleHandle.index]);
+                newSkeleRT->set(glbSkeleRHandle[ogSkeleComp->pHandle.index]);
             }
         }
 
@@ -230,7 +230,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             const auto* ogAnimeComp = originalNode.get<TinyNodeRT::AN3D>();
             auto* newAnimeComp = scene.writeComp<TinyNodeRT::AN3D>(nodeHandle);
 
-            *newAnimeComp = model.animations[ogAnimeComp->pAnimeHandle.index];
+            *newAnimeComp = model.animations[ogAnimeComp->pHandle.index];
 
             for (auto& anime : newAnimeComp->MAL()) {
                 auto* toAnime = newAnimeComp->get(anime.second);

@@ -350,36 +350,3 @@ void TinySceneRT::updateTransform(TinyHandle nodeHandle) {
     updateRecursive(realHandle, parentTransform ? parentTransform->global : glm::mat4(1.0f));
 }
 
-
-TinyRT_SK3D* TinySceneRT::addSK3D_RT(TinyHandle nodeHandle) {
-    TinyNodeRT::SK3D* compPtr = nodeComp<TinyNodeRT::SK3D>(nodeHandle);
-    if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
-
-    // Create new empty valid runtime skeleton
-    TinyRT_SK3D rtSkele;
-    rtSkele.init(sceneReq.deviceVK, sceneReq.fsRegistry, sceneReq.skinDescPool, sceneReq.skinDescLayout);
-    // Repurpose pHandle into runtime skeleton handle
-    compPtr->pSkeleHandle = rtAdd<TinyRT_SK3D>(std::move(rtSkele));
-
-    // Return the runtime skeleton
-    return rtGet<TinyRT_SK3D>(compPtr->pSkeleHandle);
-}
-
-TinyRT_AN3D* TinySceneRT::addAN3D_RT(TinyHandle nodeHandle) {
-    TinyNodeRT::AN3D* compPtr = nodeComp<TinyNodeRT::AN3D>(nodeHandle);
-    if (!compPtr) return nullptr; // Unable to add animation component (should not happen)
-
-    TinyRT_AN3D rtAnime;
-    compPtr->pAnimeHandle = rtAdd<TinyRT_AN3D>(std::move(rtAnime));
-
-    return rtGet<TinyRT_AN3D>(compPtr->pAnimeHandle);
-}
-
-
-// --------- Specific component's data access ---------
-
-VkDescriptorSet TinySceneRT::nSkeleDescSet(TinyHandle nodeHandle) const {
-    // Retrieve runtime skeleton data from TinyFS registry
-    const TinyRT_SK3D* rtSkele = rtComp<TinyNodeRT::SK3D>(nodeHandle);
-    return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
-}

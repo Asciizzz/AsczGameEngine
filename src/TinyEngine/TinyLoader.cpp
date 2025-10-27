@@ -696,7 +696,7 @@ void loadNodes(TinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
         TinyNodeRT skeleNode(skeleton.name);
 
         TinyNodeRT::SK3D skeleComp;
-        skeleComp.pSkeleHandle = TinyHandle(skeleIdx);
+        skeleComp.pHandle = TinyHandle(skeleIdx);
 
         skeleNode.add<TinyNodeRT::SK3D>(std::move(skeleComp));
 
@@ -827,7 +827,7 @@ void loadAnimations(TinyModel& tinyModel, const tinygltf::Model& model, const st
     TinyNodeRT animeNode;
     animeNode.name = "Anime";
     TinyNodeRT::AN3D* animeComp = animeNode.add<TinyNodeRT::AN3D>();
-    animeComp->pAnimeHandle = TinyHandle(0);
+    animeComp->pHandle = TinyHandle(0);
 
     TinyRT_AN3D tinyAnim;
 
