@@ -24,9 +24,7 @@ struct TinySceneReq {
 };
 
 struct TinySceneRT {
-
 private:
-
     // -------- writeComp's RTResolver ---------
     template<typename T>
     struct RTResolver { using type = T; }; // Most type return themselves
@@ -39,10 +37,7 @@ private:
 public:
     std::string name;
 
-    TinySceneRT(const std::string& sceneName = "New Scene") : name(sceneName) {
-        TinyPool<TinySkeletonRT>& skeleRTPool = rtRegistry.make<TinySkeletonRT>();
-        skeleRTPool.alloc(1024); // Preallocate 1024 runtime skeletons
-    }
+    TinySceneRT(const std::string& sceneName = "New Scene") : name(sceneName) {}
 
     TinySceneRT(const TinySceneRT&) = delete;
     TinySceneRT& operator=(const TinySceneRT&) = delete;
