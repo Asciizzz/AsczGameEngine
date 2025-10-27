@@ -36,7 +36,6 @@ private:
     template<> struct RTResolver<TinyNodeRT::SK3D> { using type = TinySkeletonRT; };
     template<> struct RTResolver<TinyNodeRT::AN3D> { using type = TinyAnimeRT; };
 
-
 public:
     std::string name;
 
