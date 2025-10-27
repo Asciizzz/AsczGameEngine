@@ -111,13 +111,7 @@ struct TinyNodeRT {
     const T* get() const { return has<T>() ? &getComponent<T>() : nullptr; }
 
 private:
-    std::tuple<
-        Transform3D,
-        MeshRender3D,
-        BoneAttach3D,
-        Skeleton3D,
-        Animation3D
-    > components;
+    std::tuple<T3D, MR3D, BA3D, SK3D, AN3D> components;
 
     uint32_t types = 0;
 
