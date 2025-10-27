@@ -30,12 +30,12 @@ private:
     // -------- writeComp's RTResolver ---------
     template<typename T>
     struct RTResolver { using type = T; }; // Most type return themselves
+    template<typename T> using RTResolver_t = typename RTResolver<T>::type;
 
     // Special types
     template<> struct RTResolver<TinyNodeRT::SK3D> { using type = TinySkeletonRT; };
     template<> struct RTResolver<TinyNodeRT::AN3D> { using type = TinyAnimeRT; };
 
-    template<typename T> using RTResolver_t = typename RTResolver<T>::type;
 
 public:
     std::string name;
@@ -185,18 +185,6 @@ public:
         rtRegistry.tFlushAllRms<T>();
     }
 
-
-    bool rtHasPendingRms() const {
-        return // Add more in the future if needed
-            rtTHasPendingRms<TinySkeletonRT>(); // &&
-            // rtTHasPendingRms<TinyAnimeRT>();
-    }
-
-    void rtFlushAllRms() {
-        rtTFlushAllRms<TinySkeletonRT>();
-        // rtTFlushAllRms<TinyAnimeRT>();
-    }
-
     // --------- Specific component's data access ---------
 
     VkDescriptorSet nSkeleDescSet(TinyHandle nodeHandle) const;
@@ -247,14 +235,13 @@ private:
         return rtRegistry.add<T>(std::forward<T>(data)).handle;
     }
 
+
+    template<typename T> struct DeferredRm : std::false_type {};
+    template<> struct DeferredRm<TinySkeletonRT> : std::true_type {};
+
     template<typename T>
     void rtRemove(const TinyHandle& handle) {
-        // CRITICAL: Special handling for dangerous type (vulkan related)
-        if constexpr (type_eq<T, TinySkeletonRT>) {
-            rtRegistry.tQueueRm<T>(handle);
-        } else {
-            rtRegistry.tInstaRm<T>(handle);
-        }
+        if constexpr (DeferredRm<T>::value) rtRegistry.tQueueRm<T>(handle);
+        else                                rtRegistry.tInstaRm<T>(handle);
     }
-
 };
