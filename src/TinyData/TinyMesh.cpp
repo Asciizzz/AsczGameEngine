@@ -22,17 +22,17 @@ TinyMesh& TinyMesh::writeSubmesh(const TinySubmesh& sub, uint32_t index) {
 
 
 bool TinyMesh::vkCreate(const TinyVK::Device* deviceVK) {
-    if (vrtxData.empty() || idxData.empty()) return false;
+    if (vrtxData_.empty() || idxData_.empty()) return false;
 
-    vertexBuffer
-        .setDataSize(vrtxData.size())
+    vrtxBuffer_
+        .setDataSize(vrtxData_.size())
         .setUsageFlags(BufferUsage::Vertex)
-        .createDeviceLocalBuffer(deviceVK, vrtxData.data());
+        .createDeviceLocalBuffer(deviceVK, vrtxData_.data());
 
-    indexBuffer
-        .setDataSize(idxData.size())
+    idxBuffer_ 
+        .setDataSize(idxData_.size())
         .setUsageFlags(BufferUsage::Index)
-        .createDeviceLocalBuffer(deviceVK, idxData.data());
+        .createDeviceLocalBuffer(deviceVK, idxData_.data());
 
     return true;
 }

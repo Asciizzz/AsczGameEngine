@@ -84,13 +84,13 @@ void TinyApp::initComponents() {
     // None - no vertex input (for fullscreen quads, etc.)
     vertexInputVKs["None"] = VertexInputVK();
 
-    auto vstaticLayout = TinyVertexStatic::getLayout();
-    auto vstaticBind = vstaticLayout.getBindingDescription();
-    auto vstaticAttrs = vstaticLayout.getAttributeDescriptions();
+    auto vstaticLayout = TinyVertex::Static::layout();
+    auto vstaticBind = vstaticLayout.bindingDesc();
+    auto vstaticAttrs = vstaticLayout.attributeDescs();
 
-    auto vriggedLayout = TinyVertexRig::getLayout();
-    auto vriggedBind = vriggedLayout.getBindingDescription();
-    auto vriggedAttrs = vriggedLayout.getAttributeDescriptions();
+    auto vriggedLayout = TinyVertex::Rigged::layout();
+    auto vriggedBind = vriggedLayout.bindingDesc();
+    auto vriggedAttrs = vriggedLayout.attributeDescs();
 
     vertexInputVKs["TestRigged"] = VertexInputVK()
         .setBindings({ vriggedBind })

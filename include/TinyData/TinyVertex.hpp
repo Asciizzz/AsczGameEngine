@@ -10,7 +10,9 @@
 struct VkVertexInputBindingDescription;
 struct VkVertexInputAttributeDescription;
 
-struct TinyVertexLayout {
+namespace TinyVertex {
+
+struct Layout {
     uint32_t stride;
     struct Attribute {
         uint32_t location;
@@ -25,14 +27,14 @@ struct TinyVertexLayout {
     } type = Type::Static;
 
     // Utility to generate Vulkan descriptions once
-    VkVertexInputBindingDescription getBindingDescription() const;
-    std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() const;
+    VkVertexInputBindingDescription bindingDesc() const;
+    std::vector<VkVertexInputAttributeDescription> attributeDescs() const;
 };
 
 
 
-struct TinyVertexRig; // Forward declaration
-struct TinyVertexStatic {
+struct Rigged; // Forward declaration
+struct Static {
     // Compact 48 byte data layout
     // Note: 0 handedness for no normal map
 
@@ -40,33 +42,33 @@ struct TinyVertexStatic {
     glm::vec4 nrml_tv = glm::vec4(0.0f); // Normal XYZ - Texture V on W
     glm::vec4 tangent = glm::vec4(0.0f); // Tangent XYZ - Handedness on W
 
-    TinyVertexStatic() = default;
-    TinyVertexStatic(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
+    Static() = default;
+    Static(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
         pos_tu = glm::vec4(pos, uv.x);
         nrml_tv = glm::vec4(nrml, uv.y);
         tangent = tang;
     }
 
-    TinyVertexStatic& setPosition(const glm::vec3& position);
-    TinyVertexStatic& setNormal(const glm::vec3& normal);
-    TinyVertexStatic& setTextureUV(const glm::vec2& uv);
-    TinyVertexStatic& setTangent(const glm::vec4& tang);
+    Static& setPosition(const glm::vec3& position);
+    Static& setNormal(const glm::vec3& normal);
+    Static& setTextureUV(const glm::vec2& uv);
+    Static& setTangent(const glm::vec4& tang);
 
     glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
     glm::vec2 getTextureUV() const { return {pos_tu.w, nrml_tv.w}; }
 
     // Returns layout that can be used for pipeline creation
-    static TinyVertexLayout getLayout();
-    static VkVertexInputBindingDescription getBindingDescription();
-    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+    static Layout layout();
+    static VkVertexInputBindingDescription bindingDesc();
+    static std::vector<VkVertexInputAttributeDescription> attributeDescs();
 
     // Normally only for debugging
-    static TinyVertexRig makeRigged(const TinyVertexStatic& staticVertex);
-    static std::vector<TinyVertexRig> makeRigged(const std::vector<TinyVertexStatic>& staticVertices);
+    static Rigged makeRigged(const Static& staticVertex);
+    static std::vector<Rigged> makeRigged(const std::vector<Static>& staticVertices);
 };
 
-struct TinyVertexRig {
+struct Rigged {
     // Compact 80 bytes of data
 
     glm::vec4 pos_tu = glm::vec4(0.0f);
@@ -76,26 +78,28 @@ struct TinyVertexRig {
     glm::uvec4 boneIDs = glm::uvec4(0);
     glm::vec4 weights = glm::vec4(0.0f);
 
-    TinyVertexRig() = default;
+    Rigged() = default;
 
     // Standard vertex data
 
-    TinyVertexRig& setPosition(const glm::vec3& position);
-    TinyVertexRig& setNormal(const glm::vec3& normal);
-    TinyVertexRig& setTextureUV(const glm::vec2& uv);
-    TinyVertexRig& setTangent(const glm::vec4& tangent);
-    TinyVertexRig& setBoneIDs(const glm::uvec4& ids=glm::uvec4(0));
-    TinyVertexRig& setWeights(const glm::vec4& weights=glm::vec4(1.0f, 0.0f, 0.0f, 0.0f), bool normalize=true);
+    Rigged& setPosition(const glm::vec3& position);
+    Rigged& setNormal(const glm::vec3& normal);
+    Rigged& setTextureUV(const glm::vec2& uv);
+    Rigged& setTangent(const glm::vec4& tangent);
+    Rigged& setBoneIDs(const glm::uvec4& ids=glm::uvec4(0));
+    Rigged& setWeights(const glm::vec4& weights=glm::vec4(1.0f, 0.0f, 0.0f, 0.0f), bool normalize=true);
 
     glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
     glm::vec2 getTextureUV() const { return {pos_tu.w, nrml_tv.w}; };
 
     // Returns layout that can be used for pipeline creation
-    static TinyVertexLayout getLayout();
-    static VkVertexInputBindingDescription getBindingDescription();
-    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+    static Layout layout();
+    static VkVertexInputBindingDescription bindingDesc();
+    static std::vector<VkVertexInputAttributeDescription> attributeDescs();
 
-    static TinyVertexStatic makeStatic(const TinyVertexRig& rigVertex);
-    static std::vector<TinyVertexStatic> makeStatic(const std::vector<TinyVertexRig>& rigVertices);
+    static Static makeStatic(const Rigged& rigVertex);
+    static std::vector<Static> makeStatic(const std::vector<Rigged>& rigVertices);
 };
+
+} // namespace TinyVertex

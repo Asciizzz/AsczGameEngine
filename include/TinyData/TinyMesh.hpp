@@ -29,63 +29,70 @@ struct TinyMesh {
 
     std::string name; // Mesh name from glTF
 
-    TinyVertexLayout vrtxLayout;
-    std::vector<uint8_t> vrtxData; // raw bytes
-    size_t vrtxCount = 0;
-
-    std::vector<uint8_t> idxData; // raw bytes
-    size_t idxCount = 0;
-    size_t idxStride = 0;
-
-    std::vector<TinySubmesh> submeshes;
-
     TinyMesh& setSubmeshes(const std::vector<TinySubmesh>& subs);
-
     TinyMesh& addSubmesh(const TinySubmesh& sub);
     TinyMesh& writeSubmesh(const TinySubmesh& sub, uint32_t index);
+    std::vector<TinySubmesh> submeshes;
 
     template<typename VertexT>
     TinyMesh& setVertices(const std::vector<VertexT>& verts) {
-        vrtxCount = verts.size();
-        vrtxLayout = VertexT::getLayout();
+        vrtxCount_ = verts.size();
+        vrtxLayout_ = VertexT::layout();
 
-        vrtxData.resize(vrtxCount * sizeof(VertexT));
-        std::memcpy(vrtxData.data(), verts.data(), vrtxData.size());
+        vrtxData_.resize(vrtxCount_ * sizeof(VertexT));
+        std::memcpy(vrtxData_.data(), verts.data(), vrtxData_.size());
 
         return *this;
     }
 
     template<typename IndexT>
     TinyMesh& setIndices(const std::vector<IndexT>& idx) {
-        idxCount = idx.size();
-        idxStride = sizeof(IndexT);
-        indexType = sizeToIndexType(idxStride);
+        idxCount_ = idx.size();
+        idxStride_ = sizeof(IndexT);
+        idxType_ = sizeToIndexType(idxStride_);
 
-        idxData.resize(idxCount * idxStride);
-        std::memcpy(idxData.data(), idx.data(), idxData.size());
+        idxData_.resize(idxCount_ * idxStride_);
+        std::memcpy(idxData_.data(), idx.data(), idxData_.size());
 
         return *this;
     }
 
     template<typename VertexT>
-    VertexT* vPtr() {
-        if (vrtxData.empty()) return nullptr;
-        if (sizeof(VertexT) != vrtxLayout.stride) return nullptr;
-        return reinterpret_cast<VertexT*>(vrtxData.data());
+    VertexT* vrtxPtr() {
+        if (vrtxData_.empty()) return nullptr;
+        if (sizeof(VertexT) != vrtxLayout_.stride) return nullptr;
+        return reinterpret_cast<VertexT*>(vrtxData_.data());
     }
 
     template<typename IndexT>
-    IndexT* iPtr() {
-        if (idxData.empty()) return nullptr;
-        if (sizeof(IndexT) != idxStride) return nullptr;
-        return reinterpret_cast<IndexT*>(idxData.data());
+    IndexT* idxPtr() {
+        if (idxData_.empty()) return nullptr;
+        if (sizeof(IndexT) != idxStride_) return nullptr;
+        return reinterpret_cast<IndexT*>(idxData_.data());
     }
-
-    // Buffers for runtime use
-    TinyVK::DataBuffer vertexBuffer;
-    TinyVK::DataBuffer indexBuffer;
-    VkIndexType indexType = VK_INDEX_TYPE_UINT16;
 
     bool vkCreate(const TinyVK::Device* deviceVK);
     static VkIndexType sizeToIndexType(size_t size);
+
+    size_t vrtxCount() const { return vrtxCount_; }
+    size_t idxCount() const { return idxCount_; }
+    const TinyVertex::Layout& vrtxLayout() const { return vrtxLayout_; }
+
+    VkBuffer vrtxBuffer() const { return vrtxBuffer_; }
+    VkBuffer idxBuffer() const { return idxBuffer_; }
+    VkIndexType idxType() const { return idxType_; }
+
+private:
+    TinyVertex::Layout vrtxLayout_;
+    std::vector<uint8_t> vrtxData_; // raw bytes
+    size_t vrtxCount_ = 0;
+
+    std::vector<uint8_t> idxData_; // raw bytes
+    size_t idxCount_ = 0;
+    size_t idxStride_ = 0;
+
+    // Buffers for runtime use
+    TinyVK::DataBuffer vrtxBuffer_;
+    TinyVK::DataBuffer idxBuffer_;
+    VkIndexType idxType_ = VK_INDEX_TYPE_UINT16;
 };

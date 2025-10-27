@@ -286,18 +286,18 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
         glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
 
         // Draw each individual submeshes
-        VkBuffer vertexBuffer = regMesh->vertexBuffer;
-        VkBuffer indexBuffer = regMesh->indexBuffer;
-        VkIndexType indexType = regMesh->indexType;
+        VkBuffer vrtxBuffer = regMesh->vrtxBuffer();
+        VkBuffer idxBuffer = regMesh->idxBuffer();
+        VkIndexType idxType = regMesh->idxType();
         const auto& submeshes = regMesh->submeshes; // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
 
-        VkBuffer buffers[] = { vertexBuffer };
+        VkBuffer buffers[] = { vrtxBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, indexBuffer, 0, indexType);
+        vkCmdBindIndexBuffer(currentCmd, idxBuffer, 0, idxType);
 
-        TinyVertexLayout vrtxLayout = regMesh->vrtxLayout;
-        bool isRigged = vrtxLayout.type == TinyVertexLayout::Type::Rigged;
+        TinyVertex::Layout vrtxLayout = regMesh->vrtxLayout();
+        bool isRigged = vrtxLayout.type == TinyVertex::Layout::Type::Rigged;
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 

@@ -2,7 +2,9 @@
 
 #include <vulkan/vulkan.h>
 
-VkVertexInputBindingDescription TinyVertexLayout::getBindingDescription() const {
+using namespace TinyVertex;
+
+VkVertexInputBindingDescription Layout::bindingDesc() const {
     VkVertexInputBindingDescription binding{};
     binding.binding = 0;
     binding.stride = stride;
@@ -10,7 +12,7 @@ VkVertexInputBindingDescription TinyVertexLayout::getBindingDescription() const 
     return binding;
 }
 
-std::vector<VkVertexInputAttributeDescription> TinyVertexLayout::getAttributeDescriptions() const {
+std::vector<VkVertexInputAttributeDescription> Layout::attributeDescs() const {
     std::vector<VkVertexInputAttributeDescription> descs;
     for (const auto& attr : attributes) {
         VkVertexInputAttributeDescription d{};
@@ -25,58 +27,58 @@ std::vector<VkVertexInputAttributeDescription> TinyVertexLayout::getAttributeDes
 
 // Static Vertex implementation
 
-TinyVertexStatic& TinyVertexStatic::setPosition(const glm::vec3& position) {
+Static& Static::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
     return *this;
 }
-TinyVertexStatic& TinyVertexStatic::setNormal(const glm::vec3& normal) {
+Static& Static::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
     return *this;
 }
-TinyVertexStatic& TinyVertexStatic::setTextureUV(const glm::vec2& uv) {
+Static& Static::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
     return *this;
 }
-TinyVertexStatic& TinyVertexStatic::setTangent(const glm::vec4& tang) {
+Static& Static::setTangent(const glm::vec4& tang) {
     tangent = tang;
     return *this;
 }
 
-TinyVertexLayout TinyVertexStatic::getLayout() {
-    TinyVertexLayout layout;
-    layout.type = TinyVertexLayout::Type::Static;
-    layout.stride = sizeof(TinyVertexStatic);
+Layout Static::layout() {
+    Layout layout;
+    layout.type = Layout::Type::Static;
+    layout.stride = sizeof(Static);
     layout.attributes = {
-        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexStatic, pos_tu)},
-        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexStatic, nrml_tv)},
-        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexStatic, tangent)}
+        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Static, pos_tu)},
+        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Static, nrml_tv)},
+        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Static, tangent)}
     };
     return layout;
 }
 
-VkVertexInputBindingDescription TinyVertexStatic::getBindingDescription() {
-    return getLayout().getBindingDescription();
+VkVertexInputBindingDescription Static::bindingDesc() {
+    return layout().bindingDesc();
 }
-std::vector<VkVertexInputAttributeDescription> TinyVertexStatic::getAttributeDescriptions() {
-    return getLayout().getAttributeDescriptions();
+std::vector<VkVertexInputAttributeDescription> Static::attributeDescs() {
+    return layout().attributeDescs();
 }
 
 // Make rigged vertex from static vertex (for debugging)
-TinyVertexRig TinyVertexStatic::makeRigged(const TinyVertexStatic& staticVertex) {
-    TinyVertexRig rigVertex;
+Rigged Static::makeRigged(const Static& staticVertex) {
+    Rigged rigVertex;
     rigVertex.pos_tu = staticVertex.pos_tu;
     rigVertex.nrml_tv = staticVertex.nrml_tv;
     rigVertex.tangent = staticVertex.tangent;
     return rigVertex;
 }
 
-std::vector<TinyVertexRig> TinyVertexStatic::makeRigged(const std::vector<TinyVertexStatic>& staticVertices) {
-    std::vector<TinyVertexRig> rigVertices;
+std::vector<Rigged> Static::makeRigged(const std::vector<Static>& staticVertices) {
+    std::vector<Rigged> rigVertices;
     for (const auto& staticV : staticVertices) {
         rigVertices.push_back(makeRigged(staticV));
     }
@@ -85,32 +87,32 @@ std::vector<TinyVertexRig> TinyVertexStatic::makeRigged(const std::vector<TinyVe
 
 
 // Skinning vertex data
-TinyVertexRig& TinyVertexRig::setPosition(const glm::vec3& position) {
+Rigged& Rigged::setPosition(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
     return *this;
 }
-TinyVertexRig& TinyVertexRig::setNormal(const glm::vec3& normal) {
+Rigged& Rigged::setNormal(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
     return *this;
 }
-TinyVertexRig& TinyVertexRig::setTextureUV(const glm::vec2& uv) {
+Rigged& Rigged::setTextureUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
     return *this;
 }
-TinyVertexRig& TinyVertexRig::setTangent(const glm::vec4& tang) {
+Rigged& Rigged::setTangent(const glm::vec4& tang) {
     tangent = tang;
     return *this;
 }
-TinyVertexRig& TinyVertexRig::setBoneIDs(const glm::uvec4& ids) {
+Rigged& Rigged::setBoneIDs(const glm::uvec4& ids) {
     boneIDs = ids;
     return *this;
 }
-TinyVertexRig& TinyVertexRig::setWeights(const glm::vec4& weights, bool normalize) {
+Rigged& Rigged::setWeights(const glm::vec4& weights, bool normalize) {
     if (normalize) {
         float total = weights.x + weights.y + weights.z + weights.w;
         if (total > 0.0f) {
@@ -122,38 +124,38 @@ TinyVertexRig& TinyVertexRig::setWeights(const glm::vec4& weights, bool normaliz
     return *this;
 }
 
-TinyVertexLayout TinyVertexRig::getLayout() {
-    TinyVertexLayout layout;
-    layout.type = TinyVertexLayout::Type::Rigged;
-    layout.stride = sizeof(TinyVertexRig);
+Layout Rigged::layout() {
+    Layout layout;
+    layout.type = Layout::Type::Rigged;
+    layout.stride = sizeof(Rigged);
     layout.attributes = {
-        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, pos_tu)},
-        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, nrml_tv)},
-        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, tangent)},
-        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(TinyVertexRig, boneIDs)},
-        {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(TinyVertexRig, weights)}
+        {0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Rigged, pos_tu)},
+        {1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Rigged, nrml_tv)},
+        {2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Rigged, tangent)},
+        {3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(Rigged, boneIDs)},
+        {4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Rigged, weights)}
     };
     return layout;
 }
 
-VkVertexInputBindingDescription TinyVertexRig::getBindingDescription() {
-    return getLayout().getBindingDescription();
+VkVertexInputBindingDescription Rigged::bindingDesc() {
+    return layout().bindingDesc();
 }
-std::vector<VkVertexInputAttributeDescription> TinyVertexRig::getAttributeDescriptions() {
-    return getLayout().getAttributeDescriptions();
+std::vector<VkVertexInputAttributeDescription> Rigged::attributeDescs() {
+    return layout().attributeDescs();
 }
 
 
-TinyVertexStatic TinyVertexRig::makeStatic(const TinyVertexRig& rigVertex) {
-    TinyVertexStatic staticVertex;
+Static Rigged::makeStatic(const Rigged& rigVertex) {
+    Static staticVertex;
     staticVertex.pos_tu = rigVertex.pos_tu;
     staticVertex.nrml_tv = rigVertex.nrml_tv;
     staticVertex.tangent = rigVertex.tangent;
     return staticVertex;
 }
 
-std::vector<TinyVertexStatic> TinyVertexRig::makeStatic(const std::vector<TinyVertexRig>& rigVertices) {
-    std::vector<TinyVertexStatic> staticVertices;
+std::vector<Static> Rigged::makeStatic(const std::vector<Rigged>& rigVertices) {
+    std::vector<Static> staticVertices;
     for (const auto& rigV : rigVertices) {
         staticVertices.push_back(makeStatic(rigV));
     }

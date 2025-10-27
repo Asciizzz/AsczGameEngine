@@ -451,8 +451,8 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
 
         const auto& indexAccessor = gltfModel.accessors[primitive.indices];
         const auto& indexBufferView = gltfModel.bufferViews[indexAccessor.bufferView];
-        const auto& indexBuffer = gltfModel.buffers[indexBufferView.buffer];
-        const unsigned char* dataPtr = indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+        const auto& idxBuffer = gltfModel.buffers[indexBufferView.buffer];
+        const unsigned char* dataPtr = idxBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
         size_t stride = indexAccessor.ByteStride(indexBufferView);
 
         auto appendIndices = [&](auto dummyType) {
@@ -498,19 +498,17 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
     if (allPrimitiveDatas.empty())
         throw std::runtime_error("What kind of shitty mesh did you give me?");
 
-    mesh.indexType = largestIndexType;
-
     std::vector<uint32_t> allIndices;
-    std::vector<TinyVertexRig> allVertices;
+    std::vector<TinyVertex::Rigged> allVertices;
         // Use the shared version
-        // If the model happen to be static, create a new vector for TinyVertexStatic
+        // If the model happen to be static, create a new vector for TinyVertex::Static
 
     uint32_t currentVertexOffset = 0;
     uint32_t currentIndexOffset = 0;
 
     for (const auto& pData : allPrimitiveDatas) {
         for (uint32_t i = 0 ; i < pData.vrtxCount; ++i) {
-            TinyVertexRig vertex = TinyVertexRig()
+            TinyVertex::Rigged vertex = TinyVertex::Rigged()
                 .setPosition( pData.positions.size() > i ? pData.positions[i] : glm::vec3(0.0f))
                 .setNormal(   pData.normals.size()   > i ? pData.normals[i]   : glm::vec3(0.0f))
                 .setTextureUV(pData.uvs.size()       > i ? pData.uvs[i]       : glm::vec2(0.0f))
@@ -565,7 +563,7 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
     }
 
     if (hasRigging) mesh.setVertices(allVertices);
-    else mesh.setVertices(TinyVertexRig::makeStatic(allVertices));
+    else mesh.setVertices(TinyVertex::Rigged::makeStatic(allVertices));
 }
 
 void loadMeshes(std::vector<TinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
@@ -1083,7 +1081,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
             mesh.name = "Mesh_" + std::to_string(result.meshes.size());
         }
 
-        std::vector<TinyVertexStatic> vertices;
+        std::vector<TinyVertex::Static> vertices;
         std::vector<uint32_t> indices;
         
         // Custom hasher for vertex key tuple
@@ -1129,7 +1127,7 @@ TinyModel TinyLoader::loadModelFromOBJ(const std::string& filePath) {
                         vertexIndex = it->second;
                     } else {
                         // Create new vertex
-                        TinyVertexStatic vertex;
+                        TinyVertex::Static vertex;
                         
                         // Position
                         if (idx.vertex_index >= 0) {
