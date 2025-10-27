@@ -521,7 +521,6 @@ void loadMesh(TinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
                 .setWeights(pData.weights[i], true);
 
             allVertices.push_back(vertex);
-            mesh.updateAABB(vertex.getPosition());
         }
 
         // Add indices with vertex offset

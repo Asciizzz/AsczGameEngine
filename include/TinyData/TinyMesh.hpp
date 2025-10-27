@@ -62,14 +62,6 @@ struct TinyMesh {
         return *this;
     }
 
-    // BETA! AABB
-    glm::vec3 abMin = glm::vec3(0.0f);
-    glm::vec3 abMax = glm::vec3(0.0f);
-    void updateAABB(const glm::vec3& point) {
-        abMin = glm::min(abMin, point);
-        abMax = glm::max(abMax, point);
-    }
-
     // Buffers for runtime use
     TinyVK::DataBuffer vertexBuffer;
     TinyVK::DataBuffer indexBuffer;
@@ -78,3 +70,4 @@ struct TinyMesh {
     bool vkCreate(const TinyVK::Device* deviceVK);
     static VkIndexType sizeToIndexType(size_t size);
 };
+

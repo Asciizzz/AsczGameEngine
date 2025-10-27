@@ -3,10 +3,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <cstdint>
 #include <string>
 
-#include "TinyExt/TinyHandle.hpp"
+#include "TinyExt/TinyPool.hpp"
 
 struct TinyScene;
 struct TinyAnimeRT {

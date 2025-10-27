@@ -4,7 +4,7 @@
 #include "TinyData/TinyMaterial.hpp"
 #include "TinyData/TinyTexture.hpp"
 #include "TinyData/TinySkeleton.hpp"
-#include "TinyData/TinyAnime.hpp"
+#include "TinyData/TinyAnimeRT.hpp"
 #include "TinyData/TinyNode.hpp"
 
 struct TinyModel {

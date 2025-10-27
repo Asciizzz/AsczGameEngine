@@ -1,9 +1,8 @@
-#include "TinyData/TinySkeleton.hpp"
+#include "TinyData/TinySkeletonRT.hpp"
 
 using namespace TinyVK;
 
 // ========================== TINY SKELETON RT ==========================
-
 
 void TinySkeletonRT::init(const TinyVK::Device* deviceVK, const TinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout) {
     vkValid = true;
