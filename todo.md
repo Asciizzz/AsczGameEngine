@@ -15,14 +15,21 @@
 * **[In Progress]** Choosing which design pattern to use and weighing their pros and cons.
 * **[ ]** Actually implement the chosen design.
 
-##### [1/2] Animation System (priority: High):
+##### [ ] 4. Fixing the r*tarded TinyLoader's glTF loader (priority: High):
 
+* Idk man it genuinely hurts my brain reasoning with glTF's “lossy abstraction boundary”.
+
+##### [1/2] 5. Animation System (priority: High):
 
 * **[FINISHED]** Add animation for nodes and skeletons.
 * **[\*Halted]** Add animation for morph targets.
     ###### \* Require #3 to be finished first.
 
-##### [?] Ray Tracing (priority: LOW):
+##### [?] 6. Scripting (priority: High):
+
+* Yo chat, should I use Lua, or write my own language? Top comment wins.
+
+##### [?] 7. Ray Tracing (priority: low):
 
 * Adding ray tracing support via Vulkan RTX extensions? Who knows.
 
