@@ -18,8 +18,4 @@ private:
     TinyHandle meshHandle_;
     const TinyRegistry* fsRegistry_ = nullptr;
     const TinyVK::Device* deviceVK_ = nullptr;
-    TinyVK::DescSet    morphDescSet_;
-    TinyVK::DataBuffer morphBuffer_;
-
-    std::vector<float> morphWeights_;
 };
