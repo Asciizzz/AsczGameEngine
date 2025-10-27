@@ -4,7 +4,7 @@
 
 #include "TinyEngine/TinyRData.hpp" // Soon to be deprecated
 #include "TinyData/TinyModel.hpp"
-#include "TinyData/TinySceneRT.hpp"
+#include "TinyDataRT/TinySceneRT.hpp"
 
 #include "TinyData/TinyCamera.hpp"
 #include "TinyEngine/TinyGlobal.hpp"

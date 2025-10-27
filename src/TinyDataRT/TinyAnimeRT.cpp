@@ -1,4 +1,4 @@
-#include "TinyData/TinySceneRT.hpp"
+#include "TinyDataRT/TinySceneRT.hpp"
 
 glm::vec4 TinyAnimeRT::Sampler::firstKeyframe() const {
     if (values.empty()) return glm::vec4(0.0f);

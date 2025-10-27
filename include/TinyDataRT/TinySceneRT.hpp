@@ -2,10 +2,10 @@
 
 #include "TinyExt/TinyFS.hpp"
 
-#include "TinyData/TinyNodeRT.hpp"
-#include "TinyData/TinyMeshRT.hpp"
-#include "TinyData/TinyAnimeRT.hpp"
-#include "TinyData/TinySkeletonRT.hpp"
+#include "TinyDataRT/TinyNodeRT.hpp"
+#include "TinyDataRT/TinyMeshRT.hpp"
+#include "TinyDataRT/TinyAnimeRT.hpp"
+#include "TinyDataRT/TinySkeletonRT.hpp"
 
 // TinySceneRT requirements
 struct TinySceneReq {
@@ -154,10 +154,11 @@ public:
         T* compPtr = node->add<T>();
 
         if constexpr (type_eq<T, TinyNodeRT::SK3D>) {
-            return addSkeletonRT(nodeHandle);
+            return addSK3D_RT(nodeHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::AN3D>) {
-            return addAnimationRT(nodeHandle);
+            return addAN3D_RT(nodeHandle);
         } else if constexpr (type_eq<T, TinyNodeRT::MR3D>) {
+            // return addMeshRenderRT(nodeHandle); // Will be added very soon
             return addMR3D(nodeHandle);
         } else { // Other types return themselves
             return compPtr;
@@ -216,8 +217,8 @@ private:
 
     // ---------- Runtime component management ----------
 
-    TinySkeletonRT* addSkeletonRT(TinyHandle nodeHandle);
-    TinyAnimeRT* addAnimationRT(TinyHandle nodeHandle);
+    TinySkeletonRT* addSK3D_RT(TinyHandle nodeHandle);
+    TinyAnimeRT* addAN3D_RT(TinyHandle nodeHandle);
 
     TinyNodeRT::MR3D* addMR3D(TinyHandle nodeHandle) {
         nodeToMR3D_[nodeHandle] = meshRenderList_.add(nodeHandle);

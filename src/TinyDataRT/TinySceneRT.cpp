@@ -1,4 +1,4 @@
-#include "TinyData/TinySceneRT.hpp"
+#include "TinyDataRT/TinySceneRT.hpp"
 
 #include <stdexcept>
 #include <thread>
@@ -351,7 +351,7 @@ void TinySceneRT::updateTransform(TinyHandle nodeHandle) {
 }
 
 
-TinySkeletonRT* TinySceneRT::addSkeletonRT(TinyHandle nodeHandle) {
+TinySkeletonRT* TinySceneRT::addSK3D_RT(TinyHandle nodeHandle) {
     TinyNodeRT::SK3D* compPtr = nodeComp<TinyNodeRT::SK3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add skeleton component (should not happen)
 
@@ -365,7 +365,7 @@ TinySkeletonRT* TinySceneRT::addSkeletonRT(TinyHandle nodeHandle) {
     return rtGet<TinySkeletonRT>(compPtr->pSkeleHandle);
 }
 
-TinyAnimeRT* TinySceneRT::addAnimationRT(TinyHandle nodeHandle) {
+TinyAnimeRT* TinySceneRT::addAN3D_RT(TinyHandle nodeHandle) {
     TinyNodeRT::AN3D* compPtr = nodeComp<TinyNodeRT::AN3D>(nodeHandle);
     if (!compPtr) return nullptr; // Unable to add animation component (should not happen)
 
