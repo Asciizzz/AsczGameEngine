@@ -209,6 +209,7 @@ public:
 
     void updateRecursive(TinyHandle nodeHandle = TinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
     void updateTransform(TinyHandle nodeHandle = TinyHandle());
+    void updateAnimation(float dTime);
 
     // --------- Specific component's data access ---------
 
@@ -223,7 +224,20 @@ public:
     const UnorderedMap<TinyHandle, TinyHandle>& mapRT3D() const {
         if constexpr (type_eq<T, TinyNodeRT::MR3D>)      return mapMR3D_;
         else if constexpr (type_eq<T, TinyNodeRT::AN3D>) return mapAN3D_;
-        else return {}; // Empty map for unsupported types
+        else {
+            static UnorderedMap<TinyHandle, TinyHandle> emptyMap;
+            return emptyMap; // Empty map for unsupported types
+        }
+    }
+
+    template<typename T>
+    const TinyPool<TinyHandle>& poolRT3D() const {
+        if constexpr (type_eq<T, TinyNodeRT::MR3D>)      return withMR3D_;
+        else if constexpr (type_eq<T, TinyNodeRT::AN3D>) return withAN3D_;
+        else {
+            static TinyPool<TinyHandle> emptyPool;
+            return emptyPool; // Empty pool for unsupported types
+        }
     }
 
 private:

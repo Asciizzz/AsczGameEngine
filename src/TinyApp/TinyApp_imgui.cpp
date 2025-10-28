@@ -973,6 +973,10 @@ void TinyApp::renderSceneNodeInspector() {
 
             ImGui::Spacing();
 
+            if (ImGui::Button("Stop##StopButton")) {
+                compPtr->stop();
+            }
+
             for (const auto& [name, handle] : compPtr->MAL()) {
                 // Convert search buffer to lowercase for case-insensitive search
                 std::string searchStr = std::string(searchBuffer);
@@ -991,10 +995,6 @@ void TinyApp::renderSceneNodeInspector() {
                 ImGui::Text("%s", name.c_str());
             }
 
-            // IMPORTANT: REMOVE LATER
-            // Just play the animation now
-            compPtr->update(activeScene, fpsManager->deltaTime);
-            
             ImGui::Spacing();
         }, [&]() {
             // Remove component using TinySceneRT method

@@ -265,9 +265,6 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
 
     TinyHandle curSkeleNodeHandle;
 
-    // Iterate through all nodes in the active scene to find mesh renderers
-    // const auto& sceneNodes = activeScene->nodeView();
-
     const auto& mapMR3D = activeScene->mapRT3D<TinyNodeRT::MR3D>();
     for (const auto& [nodeHandle, mr3dHandle] : mapMR3D) {
         const TinyNodeRT* rtNode = activeScene->node(nodeHandle);

@@ -78,6 +78,7 @@ struct Anime3D {
         return nameToHandle[uniqueName];
     }
 
+    bool isPlaying() const { return playing; }
     void play(const std::string& name, bool restart = true);
     void play(const TinyHandle& handle, bool restart = true);
     void pause() { playing = false; }
@@ -101,6 +102,10 @@ struct Anime3D {
     }
     const Anime* get(const std::string& name) const {
         return const_cast<Anime3D*>(this)->get(name);
+    }
+
+    const std::vector<Anime>& all() const {
+        return animePool.view();
     }
 
     // Retrieve the list

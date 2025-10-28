@@ -285,9 +285,6 @@ void TinySceneRT::addScene(const TinySceneRT* from, TinyHandle parentHandle) {
 
                 // Remap each channel
                 for (auto& channel : toAnime->channels) {
-                    // if (validIndex(channel.node, toHandles)) {
-                    //     channel.node = toHandles[channel.node.index];
-                    // }
                     if (toHandleMap.find(channel.node.index) != toHandleMap.end()) {
                         channel.node = toHandleMap[channel.node.index];
                     }
@@ -323,8 +320,8 @@ void TinySceneRT::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parent
     }
 
     // Update skeleton component
-    TinyRT_SK3D* rtSkele = rtComp<TinyNodeRT::SK3D>(realHandle);
-    if (rtSkele) rtSkele->update();
+    // TinyRT_SK3D* rtSkele = rtComp<TinyNodeRT::SK3D>(realHandle);
+    // if (rtSkele) rtSkele->update();
 
     
     glm::mat4 transformMat = parentGlobalTransform * localMat;
@@ -348,5 +345,14 @@ void TinySceneRT::updateTransform(TinyHandle nodeHandle) {
     // Update everything recursively
     TinyNodeRT::T3D* parentTransform = rtComp<TinyNodeRT::T3D>(node->parentHandle);
     updateRecursive(realHandle, parentTransform ? parentTransform->global : glm::mat4(1.0f));
+}
+
+void TinySceneRT::updateAnimation(float dTime) {
+    // Iterate through all nodes with animation components
+    const auto& viewAN3D = withAN3D_.view();
+    for (const TinyHandle& nodeHandle : viewAN3D) {
+        TinyRT_AN3D* rtAnime = rtComp<TinyNodeRT::AN3D>(nodeHandle);
+        if (rtAnime) rtAnime->update(this, dTime);
+    }
 }
 
