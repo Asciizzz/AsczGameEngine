@@ -31,14 +31,14 @@ public:
     DataBuffer(DataBuffer&& other) noexcept;
     DataBuffer& operator=(DataBuffer&& other) noexcept;
 
-    VkBuffer get() const { return buffer; }
-    operator VkBuffer() const { return buffer; }
+    VkBuffer get() const { return buffer_; }
+    operator VkBuffer() const { return buffer_; }
 
 
-    VkDeviceMemory getMemory() const { return memory; }
-    VkDeviceSize getDataSize() const { return dataSize; }
-    VkBufferUsageFlags getUsageFlags() const { return usageFlags; }
-    VkMemoryPropertyFlags getMemPropFlags() const { return memPropFlags; }
+    VkDeviceMemory getMemory() const { return memory_; }
+    VkDeviceSize getDataSize() const { return dataSize_; }
+    VkBufferUsageFlags getUsageFlags() const { return usageFlags_; }
+    VkMemoryPropertyFlags getMemPropFlags() const { return memPropFlags_; }
 
 
     DataBuffer& setDataSize(VkDeviceSize size);
@@ -46,7 +46,6 @@ public:
     DataBuffer& setMemPropFlags(VkMemoryPropertyFlags flags);
 
     DataBuffer& createBuffer(const Device* deviceVK);
-    DataBuffer& createBuffer(VkDevice device, VkPhysicalDevice pDevice);
 
     DataBuffer& copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount);
 
@@ -62,25 +61,28 @@ public:
 
     template<typename T>
     void updateMapped(size_t index, const T& value) {
-        static_cast<T*>(mapped)[index] = value;
+        static_cast<T*>(mapped_)[index] = value;
     }
 
     template<typename T>
     void updateSingle(size_t index, const T& value) {
         mapMemory();
-        static_cast<T*>(mapped)[index] = value;
+        static_cast<T*>(mapped_)[index] = value;
         unmapMemory();
     }
 
 private:
-    VkDevice device = VK_NULL_HANDLE;
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    void* mapped = nullptr;
+    const Device* deviceVK_ = nullptr;
+    VkDevice device() const { return deviceVK_->device; }
+    VkPhysicalDevice pDevice() const { return deviceVK_->pDevice; }
 
-    VkDeviceSize dataSize = 0;
-    VkBufferUsageFlags usageFlags = 0;
-    VkMemoryPropertyFlags memPropFlags = 0;
+    VkBuffer buffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory memory_ = VK_NULL_HANDLE;
+    void* mapped_ = nullptr;
+
+    VkDeviceSize dataSize_ = 0;
+    VkBufferUsageFlags usageFlags_ = 0;
+    VkMemoryPropertyFlags memPropFlags_ = 0;
 };
 
 }
