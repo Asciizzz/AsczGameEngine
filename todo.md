@@ -10,9 +10,10 @@
 
 * Ensure each tinySceneRT instance uses its own local rtRegistry for runtime data, eliminating all shared/global registry usage. This prevents cross-scene pointer invalidation and data corruption. Confirm all component management (writeComp, rtComp, etc.) is scene-local and robust.
 
-##### [ ] Fix Skeleton race condition (CRITICAL):
+##### [FINISHED] Fix Skeleton race condition (CRITICAL):
 
 * Right now we are using 1 descriptor set per skeleton, which is not sufficient, and can cause race condition, we need 1 descriptor set per frame per skeleton.
+* Hi, me after post-nut-clarity here, even better idea: dynamic offsets, create 1 buffer with region for each frame, and use dynamic offset to select region when binding descriptor set. This can be applied to literally every other per-frame resource as well, reducing descriptor set count significantly.
 
 ##### [0/2] Implement working Materials/Textures architecture (priority: CRITICAL):
 
