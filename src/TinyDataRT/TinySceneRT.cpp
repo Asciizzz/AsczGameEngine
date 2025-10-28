@@ -320,10 +320,9 @@ void TinySceneRT::updateRecursive(TinyHandle nodeHandle, const glm::mat4& parent
     }
 
     // Update skeleton component
-    // TinyRT_SK3D* rtSkele = rtComp<TinyNodeRT::SK3D>(realHandle);
-    // if (rtSkele) rtSkele->update();
+    TinyRT_SK3D* rtSkele = rtComp<TinyNodeRT::SK3D>(realHandle);
+    if (rtSkele) rtSkele->update();
 
-    
     glm::mat4 transformMat = parentGlobalTransform * localMat;
 
     // Set global transform

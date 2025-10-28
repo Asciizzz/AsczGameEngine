@@ -189,6 +189,11 @@ private:
         freeList.push_back(index);
     }
 
+    Type& getEmpty() {
+        static Type empty{};
+        return empty;
+    }
+
     struct State {
         bool occupied = false;
         uint32_t version = 0;

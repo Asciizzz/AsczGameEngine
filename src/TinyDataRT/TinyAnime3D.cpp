@@ -133,14 +133,12 @@ void Anime3D::writeTransform(TinySceneRT* scene, const Channel& channel, const g
         TinyNodeRT::T3D* nodeTransform = scene->rtComp<TinyNodeRT::T3D>(channel.node);
         if (nodeTransform) {
             nodeTransform->set(transform);
-            scene->updateTransform(channel.node);
         }
     // Write transform component of bone
     } else if (channel.target == Channel::Target::Bone) {
         TinyRT_SK3D* skeletonRT = scene->rtComp<TinyNodeRT::SK3D>(channel.node);
         if (skeletonRT && skeletonRT->boneValid(channel.index)) {
             skeletonRT->setLocalPose(channel.index, transform);
-            skeletonRT->update(channel.index);
         }
     }
 }
