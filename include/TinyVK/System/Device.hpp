@@ -78,12 +78,28 @@ public:
     operator VkDevice() const { return device; }
 
     // Queues
+    
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     VkQueue presentQueue  = VK_NULL_HANDLE;
     VkQueue transferQueue = VK_NULL_HANDLE;
     VkQueue computeQueue  = VK_NULL_HANDLE;
-
     QueueFamilyIndices queueFamilyIndices;
+
+    // Cached values
+    VkPhysicalDeviceProperties pProps{};
+    VkPhysicalDeviceMemoryProperties pMemProps{};
+    VkPhysicalDeviceFeatures pFeatures{};
+
+    // Helper functions
+    size_t alignSize(size_t originalSize) const {
+        size_t minAlignment = pProps.limits.minUniformBufferOffsetAlignment;
+        size_t alignedSize = originalSize;
+        if (minAlignment > 0) {
+            alignedSize = (alignedSize + minAlignment - 1) & ~(minAlignment - 1);
+        }
+        return alignedSize;
+    }
+
 
     enum QueueFamilyType { GraphicsType, PresentType, TransferType, ComputeType };
 
@@ -105,7 +121,7 @@ public:
 
 private:
     void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
-    void createLogicadevice();
+    void createLogicalDevice();
     bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);

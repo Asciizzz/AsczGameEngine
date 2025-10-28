@@ -59,18 +59,6 @@ public:
 
     DataBuffer& createDeviceLocalBuffer(const Device* deviceVK, const void* initialData);
 
-    template<typename T>
-    void updateMapped(size_t index, const T& value) {
-        static_cast<T*>(mapped_)[index] = value;
-    }
-
-    template<typename T>
-    void updateSingle(size_t index, const T& value) {
-        mapMemory();
-        static_cast<T*>(mapped_)[index] = value;
-        unmapMemory();
-    }
-
 private:
     const Device* deviceVK_ = nullptr;
     VkDevice device() const { return deviceVK_->device; }

@@ -14,7 +14,7 @@ const std::vector<const char*> Device::deviceExtensions = {
 // ---------------- CONSTRUCTOR / DESTRUCTOR ----------------
 Device::Device(VkInstance instance, VkSurfaceKHR surface) {
     pickPhysicalDevice(instance, surface);
-    createLogicadevice();
+    createLogicalDevice();
     createDefaultCommandPools();
 }
 
@@ -29,6 +29,7 @@ Device::~Device() {
 }
 
 // ---------------- PHYSICAL DEVICE ----------------
+
 void Device::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
     uint32_t count = 0;
     vkEnumeratePhysicalDevices(instance, &count, nullptr);
@@ -45,11 +46,16 @@ void Device::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
         }
     }
 
+    // Setup cached properties
+    vkGetPhysicalDeviceProperties(pDevice, &pProps);
+    vkGetPhysicalDeviceMemoryProperties(pDevice, &pMemProps);
+    vkGetPhysicalDeviceFeatures(pDevice, &pFeatures);
+
     throw std::runtime_error("No suitable Vulkan GPU found.");
 }
 
 // ---------------- LOGICAL DEVICE ----------------
-void Device::createLogicadevice() {
+void Device::createLogicalDevice() {
     std::set<uint32_t> uniqueFamilies = {
         queueFamilyIndices.graphicsFamily.value(),
         queueFamilyIndices.presentFamily.value(),
@@ -182,6 +188,7 @@ void Device::createDefaultCommandPools() {
 }
 
 // ---------------- MEMORY ----------------
+
 uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags memPropFlags, VkPhysicalDevice pDevice) {
     VkPhysicalDeviceMemoryProperties memProps;
     vkGetPhysicalDeviceMemoryProperties(pDevice, &memProps);
