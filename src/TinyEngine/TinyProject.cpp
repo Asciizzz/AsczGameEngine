@@ -276,16 +276,15 @@ void tinyProject::vkCreateSceneResources() {
         {DescType::StorageBufferDynamic, maxSkeletons}
     }, maxSkeletons);
 
-    // Create dummy skin descriptor set for rigged meshes without skeleton
-    createDummySkinDescriptorSet();
-
-
     // Setup shared scene requirements
     sharedReq.maxFramesInFlight = 2;
     sharedReq.fsRegistry = &fs().registry();
     sharedReq.deviceVK = deviceVK;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;
+
+    // Create dummy skin descriptor set for rigged meshes without skeleton
+    createDummySkinDescriptorSet();
 }
 
 void tinyProject::createDummySkinDescriptorSet() {
@@ -297,7 +296,7 @@ void tinyProject::createDummySkinDescriptorSet() {
     VkDeviceSize bufferSize = sizeof(glm::mat4);
 
     dummySkinBuffer
-        .setDataSize(bufferSize)
+        .setDataSize(bufferSize * sharedReq.maxFramesInFlight)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK)

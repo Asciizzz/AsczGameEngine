@@ -312,16 +312,11 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         if (isRigged) {
             isRigged = skinSet != VK_NULL_HANDLE;
 
-            // skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
-            // rPipeline->bindSets(currentCmd, 1, &skinSet, 1);
+            skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
 
-            if (!isRigged) {
-                skinSet = project->getDummySkinDescSet();
-                rPipeline->bindSets(currentCmd, 1, &skinSet, 1);
-            } else {
-                uint32_t skinOffset = rtSkele->dynamicOffset(currentFrame);
-                rPipeline->bindSets(currentCmd, 1, &skinSet, 1, &skinOffset, 1);
-            }
+            uint32_t skinOffset = rtSkele ? rtSkele->dynamicOffset(currentFrame) :
+                                            project->getDummySkinDynamicOffset(currentFrame);
+            rPipeline->bindSets(currentCmd, 1, &skinSet, 1, &skinOffset, 1);
         }
 
         // Check if this node is the selected node for highlighting
