@@ -47,9 +47,9 @@ void Skeleton3D::copy(const Skeleton3D* other) {
 void Skeleton3D::vkCreate() {
     if (!hasSkeleton()) return;
 
-    VkDeviceSize preFrameSize = sizeof(glm::mat4) * skinData_.size();
+    VkDeviceSize perFrameSize = sizeof(glm::mat4) * skinData_.size();
     skinBuffer_
-        .setDataSize(preFrameSize * maxFramesInFlight_)
+        .setDataSize(perFrameSize * maxFramesInFlight_)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK_)
@@ -58,7 +58,7 @@ void Skeleton3D::vkCreate() {
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = skinBuffer_;
     bufferInfo.offset = 0;
-    bufferInfo.range = preFrameSize;
+    bufferInfo.range = perFrameSize;
 
     DescWrite()
         .setDstSet(descSet_)
