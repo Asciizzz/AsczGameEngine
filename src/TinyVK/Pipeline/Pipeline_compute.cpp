@@ -1,8 +1,8 @@
 // PipelineCompute.cpp
-#include "TinyVK/Pipeline/Pipeline_compute.hpp"
+#include "tinyVK/Pipeline/Pipeline_compute.hpp"
 #include <stdexcept>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 void PipelineCompute::create() {
     auto code = PipelineCore::readFile(cfg.compPath);

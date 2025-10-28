@@ -26,23 +26,23 @@ else()
 endif()
 
 file(GLOB_RECURSE SRC_FILES
-    src/TinyData/TinyCamera.cpp
-    src/TinyData/TinyMaterial.cpp
-    src/TinyData/TinyTexture.cpp
-    src/TinyData/TinyVertex.cpp
-    src/TinyData/TinyMesh.cpp
-    src/TinyData/TinySkeleton.cpp
+    src/tinyData/tinyCamera.cpp
+    src/tinyData/tinyMaterial.cpp
+    src/tinyData/tinyTexture.cpp
+    src/tinyData/tinyVertex.cpp
+    src/tinyData/tinyMesh.cpp
+    src/tinyData/tinySkeleton.cpp
 
-    src/TinyDataRT/TinyMeshRT.cpp
-    src/TinyDataRT/TinySkeleton3D.cpp
-    src/TinyDataRT/TinyAnime3D.cpp
-    src/TinyDataRT/TinySceneRT.cpp
+    src/tinyDataRT/tinyMeshRT.cpp
+    src/tinyDataRT/tinySkeleton3D.cpp
+    src/tinyDataRT/tinyAnime3D.cpp
+    src/tinyDataRT/tinySceneRT.cpp
 
-    src/TinyEngine/TinyRData.cpp
-    src/TinyEngine/TinyGlobal.cpp
-    src/TinyEngine/TinyProject.cpp
-    src/TinyEngine/TinyLoader.cpp
-    # src/TinyEngine/TinyPlayback.cpp deprecated
+    src/tinyEngine/tinyRData.cpp
+    src/tinyEngine/tinyGlobal.cpp
+    src/tinyEngine/tinyProject.cpp
+    src/tinyEngine/tinyLoader.cpp
+    # src/tinyEngine/tinyPlayback.cpp deprecated
 
     # ImGui source files
     include/.ext/imgui/imgui.cpp
@@ -87,33 +87,33 @@ file(GLOB_RECURSE SRC_FILES
     include/.ext/luacpp/lvm.c
     include/.ext/luacpp/lzio.c
 
-    src/TinySystem/TinyChrono.cpp
-    src/TinySystem/TinyWindow.cpp
-    src/TinySystem/TinyImGui.cpp
+    src/tinySystem/tinyChrono.cpp
+    src/tinySystem/tinyWindow.cpp
+    src/tinySystem/tinyImGui.cpp
 
-    src/TinyApp/TinyApp_basic.cpp
-    src/TinyApp/TinyApp_imgui.cpp
+    src/tinyApp/tinyApp_basic.cpp
+    src/tinyApp/tinyApp_imgui.cpp
 
-    src/TinyVK/System/Device.cpp
-    src/TinyVK/System/Instance.cpp
-    src/TinyVK/System/CmdBuffer.cpp
+    src/tinyVK/System/Device.cpp
+    src/tinyVK/System/Instance.cpp
+    src/tinyVK/System/CmdBuffer.cpp
 
-    src/TinyVK/Resource/DataBuffer.cpp
-    src/TinyVK/Resource/Descriptor.cpp
-    src/TinyVK/Resource/TextureVK.cpp
+    src/tinyVK/Resource/DataBuffer.cpp
+    src/tinyVK/Resource/Descriptor.cpp
+    src/tinyVK/Resource/TextureVK.cpp
 
-    src/TinyVK/Pipeline/Pipeline_core.cpp
-    src/TinyVK/Pipeline/Pipeline_raster.cpp
-    src/TinyVK/Pipeline/Pipeline_compute.cpp
-    src/TinyVK/Pipeline/Pipeline_manager.cpp
+    src/tinyVK/Pipeline/Pipeline_core.cpp
+    src/tinyVK/Pipeline/Pipeline_raster.cpp
+    src/tinyVK/Pipeline/Pipeline_compute.cpp
+    src/tinyVK/Pipeline/Pipeline_manager.cpp
 
-    src/TinyVK/Render/FrameBuffer.cpp
-    src/TinyVK/Render/DepthImage.cpp
-    src/TinyVK/Render/Swapchain.cpp
-    src/TinyVK/Render/RenderPass.cpp
-    src/TinyVK/Render/RenderTarget.cpp
-    src/TinyVK/Render/PostProcess.cpp
-    src/TinyVK/Render/Renderer.cpp
+    src/tinyVK/Render/FrameBuffer.cpp
+    src/tinyVK/Render/DepthImage.cpp
+    src/tinyVK/Render/Swapchain.cpp
+    src/tinyVK/Render/RenderPass.cpp
+    src/tinyVK/Render/RenderTarget.cpp
+    src/tinyVK/Render/PostProcess.cpp
+    src/tinyVK/Render/Renderer.cpp
 
     main.cpp
 )
@@ -139,13 +139,13 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/.ext/imgui
     ${CMAKE_SOURCE_DIR}/include/.ext/luacpp
 
-    ${CMAKE_SOURCE_DIR}/include/TinyVK
-    ${CMAKE_SOURCE_DIR}/include/TinyExt
-    ${CMAKE_SOURCE_DIR}/include/TinyData
-    ${CMAKE_SOURCE_DIR}/include/TinyDataRT
-    ${CMAKE_SOURCE_DIR}/include/TinyEngine
-    ${CMAKE_SOURCE_DIR}/include/TinySystem
-    ${CMAKE_SOURCE_DIR}/include/TinyApp        
+    ${CMAKE_SOURCE_DIR}/include/tinyVK
+    ${CMAKE_SOURCE_DIR}/include/tinyExt
+    ${CMAKE_SOURCE_DIR}/include/tinyData
+    ${CMAKE_SOURCE_DIR}/include/tinyDataRT
+    ${CMAKE_SOURCE_DIR}/include/tinyEngine
+    ${CMAKE_SOURCE_DIR}/include/tinySystem
+    ${CMAKE_SOURCE_DIR}/include/tinyApp        
 )
 
 

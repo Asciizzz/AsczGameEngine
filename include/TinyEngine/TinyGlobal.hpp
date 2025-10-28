@@ -5,13 +5,13 @@
 
 #include <glm/glm.hpp>
 
-#include "TinyVK/Resource/DataBuffer.hpp"
-#include "TinyVK/Resource/Descriptor.hpp"
+#include "tinyVK/Resource/DataBuffer.hpp"
+#include "tinyVK/Resource/Descriptor.hpp"
 
 
-class TinyCamera;
+class tinyCamera;
 
-class TinyGlobal {
+class tinyGlobal {
 public:
     struct UBO {
         // Camera matrices
@@ -26,27 +26,27 @@ public:
         glm::vec4 cameraUp;      // xyz = camera up, w = far
     } ubo;
 
-    TinyGlobal(uint32_t maxFramesInFlight=2)
+    tinyGlobal(uint32_t maxFramesInFlight=2)
     : maxFramesInFlight(maxFramesInFlight) {}
 
     // Delete copy constructor and assignment operator
-    TinyGlobal(const TinyGlobal&) = delete;
-    TinyGlobal& operator=(const TinyGlobal&) = delete;
+    tinyGlobal(const tinyGlobal&) = delete;
+    tinyGlobal& operator=(const tinyGlobal&) = delete;
 
     uint32_t maxFramesInFlight = 2;
 
-    void update(const TinyCamera& camera, uint32_t frameIndex);
+    void update(const tinyCamera& camera, uint32_t frameIndex);
 
     VkDescriptorSetLayout getDescLayout() const { return descLayout; }
     VkDescriptorSet getDescSet() const { return descSet; }
 
-    TinyVK::DescLayout descLayout;
-    TinyVK::DescPool descPool;
+    tinyVK::DescLayout descLayout;
+    tinyVK::DescPool descPool;
 
     // New design! Use only 1 buffer with dynamic offsets
     size_t alignedSize = 0;
-    TinyVK::DataBuffer dataBuffer;
-    TinyVK::DescSet descSet;
+    tinyVK::DataBuffer dataBuffer;
+    tinyVK::DescSet descSet;
 
-    void vkCreate(const TinyVK::Device* deviceVK);
+    void vkCreate(const tinyVK::Device* deviceVK);
 };

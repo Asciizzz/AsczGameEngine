@@ -5,13 +5,13 @@
 #include <vector>
 #include <cstdint>
 
-class TinyWindow {
+class tinyWindow {
 public:
-    TinyWindow(const char* title, uint32_t width, uint32_t height);
-    ~TinyWindow();
+    tinyWindow(const char* title, uint32_t width, uint32_t height);
+    ~tinyWindow();
 
-    TinyWindow(const TinyWindow&) = delete;
-    TinyWindow& operator=(const TinyWindow&) = delete;
+    tinyWindow(const tinyWindow&) = delete;
+    tinyWindow& operator=(const tinyWindow&) = delete;
 
     operator SDL_Window*() const { return window; }
 

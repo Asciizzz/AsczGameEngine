@@ -1,8 +1,8 @@
 #pragma once
 
-#include "TinyVK/Pipeline/Pipeline_core.hpp"
+#include "tinyVK/Pipeline/Pipeline_core.hpp"
 
-namespace TinyVK {
+namespace tinyVK {
 
 struct ComputePipelineConfig {
     std::vector<VkDescriptorSetLayout> setLayouts;
@@ -48,4 +48,4 @@ private:
     PipelineCore core;
 };
 
-} // namespace TinyVK
+} // namespace tinyVK

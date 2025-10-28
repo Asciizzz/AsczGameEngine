@@ -1,11 +1,11 @@
-#include "TinyVK/Render/Renderer.hpp"
-#include "TinySystem/TinyImGui.hpp"
+#include "tinyVK/Render/Renderer.hpp"
+#include "tinySystem/tinyImGui.hpp"
 
 #include <stdexcept>
 #include <cstring>
 #include <SDL2/SDL.h>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 
 Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
@@ -131,7 +131,7 @@ void Renderer::createRenderTargets() {
     }
 }
 
-void Renderer::setupImGuiRenderTargets(TinyImGui* imguiWrapper) {
+void Renderer::setupImGuiRenderTargets(tinyImGui* imguiWrapper) {
     if (!imguiWrapper) return;
     
     // Convert framebuffers to vector of VkFramebuffer handles
@@ -240,14 +240,14 @@ uint32_t Renderer::beginFrame() {
 }
 
 // Sky rendering using dedicated sky pipeline
-void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipeline) const {
+void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipeline) const {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
     // Bind sky pipeline
     skyPipeline->bindCmd(currentCmd);
 
     // Bind only the global descriptor set (set 0) for sky
-    const TinyGlobal* global = project->getGlobal();
+    const tinyGlobal* global = project->getGlobal();
     VkDescriptorSet glbSet = global->getDescSet();
     uint32_t offset = currentFrame * global->alignedSize;
     skyPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
@@ -257,32 +257,32 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
 }
 
 
-void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, TinyHandle selectedNodeHandle) const {
+void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, tinyHandle selectedNodeHandle) const {
     if (!activeScene) return;
 
-    const TinyFS& fs = project->fs();
+    const tinyFS& fs = project->fs();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
-    const TinyGlobal* global = project->getGlobal();
+    const tinyGlobal* global = project->getGlobal();
     VkDescriptorSet glbSet = global->getDescSet();
     uint32_t offset = currentFrame * global->alignedSize;
 
-    TinyHandle curSkeleNodeHandle;
+    tinyHandle curSkeleNodeHandle;
 
-    const auto& mapMR3D = activeScene->mapRT3D<TinyNodeRT::MR3D>();
+    const auto& mapMR3D = activeScene->mapRT3D<tinyNodeRT::MR3D>();
     for (const auto& [nodeHandle, mr3dHandle] : mapMR3D) {
-        const TinyNodeRT* rtNode = activeScene->node(nodeHandle);
+        const tinyNodeRT* rtNode = activeScene->node(nodeHandle);
 
         // Get mesh render component directly from runtime node
-        const auto* mr3DComp = rtNode->get<TinyNodeRT::MR3D>();
+        const auto* mr3DComp = rtNode->get<tinyNodeRT::MR3D>();
         if (!mr3DComp) continue; // No mesh render component
 
-        TinyHandle meshHandle = mr3DComp->pMeshHandle;
-        const auto& regMesh = fs.rGet<TinyMesh>(meshHandle);
+        tinyHandle meshHandle = mr3DComp->pMeshHandle;
+        const auto& regMesh = fs.rGet<tinyMesh>(meshHandle);
         if (!regMesh) continue; // No mesh found
 
-        const auto* transform = rtNode->get<TinyNodeRT::T3D>();
+        const auto* transform = rtNode->get<tinyNodeRT::T3D>();
         glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
 
         // Draw each individual submeshes
@@ -296,13 +296,13 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
         vkCmdBindIndexBuffer(currentCmd, idxBuffer, 0, idxType);
 
-        TinyVertex::Layout vrtxLayout = regMesh->vrtxLayout();
-        bool isRigged = vrtxLayout.type == TinyVertex::Layout::Type::Rigged;
+        tinyVertex::Layout vrtxLayout = regMesh->vrtxLayout();
+        bool isRigged = vrtxLayout.type == tinyVertex::Layout::Type::Rigged;
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 
         // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
-        TinyHandle skeleNodeHandle = mr3DComp->skeleNodeHandle;
+        tinyHandle skeleNodeHandle = mr3DComp->skeleNodeHandle;
         VkDescriptorSet skinSet = project->skinDescSet(activeScene, skeleNodeHandle);
         uint32_t boneCount = project->skeletonNodeBoneCount(activeScene, skeleNodeHandle);
 
@@ -322,8 +322,8 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
             uint32_t idxCount = submeshes[i].idxCount;
             if (idxCount == 0) continue;
 
-            TinyHandle matHandle = submeshes[i].material;
-            const TinyRMaterial* material = fs.rGet<TinyRMaterial>(matHandle);
+            tinyHandle matHandle = submeshes[i].material;
+            const tinyRMaterial* material = fs.rGet<tinyRMaterial>(matHandle);
             uint32_t matIndex = material ? matHandle.index : 0;
 
             // Set special value to 1 for selected nodes, 0 for others
@@ -343,7 +343,7 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
 
 
 // End frame: finalize command buffer, submit, and present
-void Renderer::endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper) {
+void Renderer::endFrame(uint32_t imageIndex, tinyImGui* imguiWrapper) {
     if (imageIndex == UINT32_MAX) return;
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
@@ -382,7 +382,7 @@ void Renderer::endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper) {
                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                             0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
 
-        // Use TinyImGui's own render target
+        // Use tinyImGui's own render target
         VkFramebuffer framebuffer = getFrameBuffer(imageIndex);
         imguiWrapper->renderToTarget(imageIndex, currentCmd, framebuffer);
     }
@@ -429,11 +429,11 @@ void Renderer::endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper) {
     currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }
 
-void Renderer::processPendingRemovals(TinyProject* project, TinySceneRT* activeScene) {
-    TinyFS& fs = project->fs();
+void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeScene) {
+    tinyFS& fs = project->fs();
     // No pending removals anywhere
     if (!fs.rHasPendingRms() &&
-        (activeScene && !activeScene->rtTHasPendingRms<TinyRT_SK3D>())
+        (activeScene && !activeScene->rtTHasPendingRms<tinyRT_SK3D>())
     ) return;
 
     // Wait for ALL in-flight fences to ensure no resources are in use by GPU
@@ -466,7 +466,7 @@ void Renderer::processPendingRemovals(TinyProject* project, TinySceneRT* activeS
         fs.rFlushAllRms();
     }
 
-    activeScene->rtTFlushAllRms<TinyRT_SK3D>();
+    activeScene->rtTFlushAllRms<tinyRT_SK3D>();
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {

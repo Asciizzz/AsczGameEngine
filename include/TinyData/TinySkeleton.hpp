@@ -8,7 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-struct TinyBone {
+struct tinyBone {
     std::string name;
 
     int parent = -1; // -1 if root
@@ -18,23 +18,23 @@ struct TinyBone {
     glm::mat4 bindPose = glm::mat4(1.0f); // Local transform in bind pose
 };
 
-struct TinySkeleton {
-    TinySkeleton() = default;
+struct tinySkeleton {
+    tinySkeleton() = default;
 
-    TinySkeleton(const TinySkeleton&) = delete;
-    TinySkeleton& operator=(const TinySkeleton&) = delete;
+    tinySkeleton(const tinySkeleton&) = delete;
+    tinySkeleton& operator=(const tinySkeleton&) = delete;
 
-    TinySkeleton(TinySkeleton&&) = default;
-    TinySkeleton& operator=(TinySkeleton&&) = default;
+    tinySkeleton(tinySkeleton&&) = default;
+    tinySkeleton& operator=(tinySkeleton&&) = default;
 
     std::string name;
-    std::vector<TinyBone> bones;
+    std::vector<tinyBone> bones;
 
     void clear() { 
         name.clear();
         bones.clear(); 
     }
-    uint32_t insert(const TinyBone& bone) {
+    uint32_t insert(const tinyBone& bone) {
         bones.push_back(bone);
         return static_cast<uint32_t>(bones.size() - 1);
     }

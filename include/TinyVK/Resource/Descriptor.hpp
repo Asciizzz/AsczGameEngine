@@ -1,8 +1,8 @@
 #pragma once
 
-#include "TinyVK/System/Device.hpp"
+#include "tinyVK/System/Device.hpp"
 
-namespace TinyVK {
+namespace tinyVK {
 
 struct DescType {
     static constexpr VkDescriptorType Sampler              = VK_DESCRIPTOR_TYPE_SAMPLER;

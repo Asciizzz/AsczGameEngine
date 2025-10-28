@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-namespace TinyVK {
+namespace tinyVK {
 
 struct AttachmentConfig {
     VkFormat format;
@@ -86,4 +86,4 @@ private:
     VkRenderPass renderPass = VK_NULL_HANDLE;
 };
 
-} // namespace TinyVK
+} // namespace tinyVK

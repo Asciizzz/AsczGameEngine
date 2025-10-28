@@ -1,10 +1,10 @@
 #pragma once
 
-#include "TinyVK/Pipeline/Pipeline_raster.hpp"
+#include "tinyVK/Pipeline/Pipeline_raster.hpp"
 #include ".ext/Templates.hpp"
 #include <string>
 
-namespace TinyVK {
+namespace tinyVK {
 
 
 // Structure for named vertex input configurations
@@ -131,4 +131,4 @@ private:
 #define PIPELINE_INIT(manager, device, renderPass, namedLayouts, namedVertexInputs) \
     (manager)->initializePipelines(device, renderPass, namedLayouts, namedVertexInputs)
 
-} // namespace TinyVK
+} // namespace tinyVK

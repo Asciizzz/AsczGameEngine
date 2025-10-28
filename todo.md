@@ -4,11 +4,11 @@
 
 ##### [FINISHED] Pending Deletion (CRITICAL):
 
-* TinyFS need a proper pending deletion system to avoid dangling references. Current implementation is straight up missing this feature.
+* tinyFS need a proper pending deletion system to avoid dangling references. Current implementation is straight up missing this feature.
 
-##### [FINISHED] Refactor TinySceneRT to use local runtime registry (CRITICAL):
+##### [FINISHED] Refactor tinySceneRT to use local runtime registry (CRITICAL):
 
-* Ensure each TinySceneRT instance uses its own local rtRegistry for runtime data, eliminating all shared/global registry usage. This prevents cross-scene pointer invalidation and data corruption. Confirm all component management (writeComp, rtComp, etc.) is scene-local and robust.
+* Ensure each tinySceneRT instance uses its own local rtRegistry for runtime data, eliminating all shared/global registry usage. This prevents cross-scene pointer invalidation and data corruption. Confirm all component management (writeComp, rtComp, etc.) is scene-local and robust.
 
 ##### [ ] Fix Skeleton race condition (CRITICAL):
 
@@ -25,7 +25,7 @@
 * **[\*Halted]** Add animation for morph targets.
     ###### \* Require the above architecture to be finished first.
 
-##### [ ] Fixing the r*tarded TinyLoader's glTF loader (priority: High):
+##### [ ] Fixing the r*tarded tinyLoader's glTF loader (priority: High):
 
 * Idk man it genuinely hurts my brain reasoning with glTF's “lossy abstraction boundary”.
 

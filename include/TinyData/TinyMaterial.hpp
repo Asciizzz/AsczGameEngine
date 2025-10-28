@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-struct TinyMaterial {
+struct tinyMaterial {
     std::string name; // Material name from glTF
     
     bool shading = true;
@@ -19,13 +19,13 @@ struct TinyMaterial {
     uint32_t albTexHash = 0;
     uint32_t nrmlTexHash = 0;
 
-    TinyMaterial& setShading(bool enable);
-    TinyMaterial& setToonLevel(int level);
+    tinyMaterial& setShading(bool enable);
+    tinyMaterial& setToonLevel(int level);
 
-    TinyMaterial& setNormalBlend(float blend);
-    TinyMaterial& setDiscardThreshold(float threshold);
+    tinyMaterial& setNormalBlend(float blend);
+    tinyMaterial& setDiscardThreshold(float threshold);
 
     // Hash data is required to match textures later
-    TinyMaterial& setAlbedoTexture(int texIndex, uint32_t texHash);
-    TinyMaterial& setNormalTexture(int texIndex, uint32_t texHash);
+    tinyMaterial& setAlbedoTexture(int texIndex, uint32_t texHash);
+    tinyMaterial& setNormalTexture(int texIndex, uint32_t texHash);
 };

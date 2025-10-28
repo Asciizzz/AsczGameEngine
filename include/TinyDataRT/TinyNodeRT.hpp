@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TinyExt/TinyHandle.hpp"
+#include "tinyExt/tinyHandle.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -8,9 +8,9 @@
 #include <cstdint>
 #include <tuple>
 
-struct TinyNodeRT {
+struct tinyNodeRT {
     std::string name = "Node";
-    TinyNodeRT(const std::string& nodeName = "Node") : name(nodeName) {}
+    tinyNodeRT(const std::string& nodeName = "Node") : name(nodeName) {}
 
     enum class Types : uint32_t {
         T3D  = 1 << 0,
@@ -20,18 +20,18 @@ struct TinyNodeRT {
         AN3D = 1 << 4
     };
 
-    TinyHandle parentHandle;
-    std::vector<TinyHandle> childrenHandles;
+    tinyHandle parentHandle;
+    std::vector<tinyHandle> childrenHandles;
 
-    void setParent(TinyHandle newParent) {
+    void setParent(tinyHandle newParent) {
         parentHandle = newParent;
     }
 
-    void addChild(TinyHandle childHandle) {
+    void addChild(tinyHandle childHandle) {
         childrenHandles.push_back(childHandle);
     }
 
-    void removeChild(TinyHandle childHandle) {
+    void removeChild(tinyHandle childHandle) {
         childrenHandles.erase(std::remove(childrenHandles.begin(), childrenHandles.end(), childHandle), childrenHandles.end());
     }
 
@@ -51,27 +51,27 @@ struct TinyNodeRT {
     // Component definitions with runtime capabilities
     struct MeshRender3D {
         static constexpr Types kType = Types::MR3D;
-        TinyHandle pMeshHandle;
-        TinyHandle skeleNodeHandle; // Handle to skeleton "NODE" (NOT skeleton in registry)
+        tinyHandle pMeshHandle;
+        tinyHandle skeleNodeHandle; // Handle to skeleton "NODE" (NOT skeleton in registry)
     };
     using MR3D = MeshRender3D;
 
     struct BoneAttach3D {
         static constexpr Types kType = Types::BA3D;
-        TinyHandle skeleNodeHandle;
+        tinyHandle skeleNodeHandle;
         uint32_t boneIndex;
     };
     using BA3D = BoneAttach3D;
 
     struct Skeleton3D {
         static constexpr Types kType = Types::SK3D;
-        TinyHandle pHandle;
+        tinyHandle pHandle;
     };
     using SK3D = Skeleton3D;
 
     struct Animation3D {
         static constexpr Types kType = Types::AN3D;
-        TinyHandle pHandle;
+        tinyHandle pHandle;
     };
     using AN3D = Animation3D;
 

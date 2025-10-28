@@ -1,89 +1,89 @@
 #pragma once
 
-#include "TinyExt/TinyFS.hpp"
+#include "tinyExt/tinyFS.hpp"
 
-#include "TinyEngine/TinyRData.hpp" // Soon to be deprecated
-#include "TinyData/TinyModel.hpp"
-#include "TinyDataRT/TinySceneRT.hpp"
+#include "tinyEngine/tinyRData.hpp" // Soon to be deprecated
+#include "tinyData/tinyModel.hpp"
+#include "tinyDataRT/tinySceneRT.hpp"
 
-#include "TinyData/TinyCamera.hpp"
-#include "TinyEngine/TinyGlobal.hpp"
+#include "tinyData/tinyCamera.hpp"
+#include "tinyEngine/tinyGlobal.hpp"
 
-class TinyProject {
+class tinyProject {
 public:
     static constexpr size_t maxSkeletons = 4096; // This is frighteningly high
 
-    TinyProject(const TinyVK::Device* deviceVK);
-    ~TinyProject();
+    tinyProject(const tinyVK::Device* deviceVK);
+    ~tinyProject();
 
-    TinyProject(const TinyProject&) = delete;
-    TinyProject& operator=(const TinyProject&) = delete;
+    tinyProject(const tinyProject&) = delete;
+    tinyProject& operator=(const tinyProject&) = delete;
     // No move semantics, where tf would you even want to move it to?
 
     // Return the scene handle in the registry
-    TinyHandle addModel(TinyModel& model, TinyHandle parentFolder = TinyHandle()); // Returns scene handle - much simpler now!
+    tinyHandle addModel(tinyModel& model, tinyHandle parentFolder = tinyHandle()); // Returns scene handle - much simpler now!
 
-    TinyCamera* getCamera() const { return tinyCamera.get(); }
-    TinyGlobal* getGlobal() const { return tinyGlobal.get(); }
+    tinyCamera* getCamera() const { return camera_.get(); }
+    tinyGlobal* getGlobal() const { return global_.get(); }
 
     // Descriptor accessors
 
-    VkDescriptorSetLayout getGlbDescSetLayout() const { return tinyGlobal->getDescLayout(); }
+    VkDescriptorSetLayout getGlbDescSetLayout() const { return global_->getDescLayout(); }
 
     VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
     VkDescriptorSet getDummySkinDescSet() const { return dummySkinDescSet.get(); }
     
     // Get skin descriptor set with automatic fallback to dummy
-    VkDescriptorSet skinDescSet(TinySceneRT* scene, TinyHandle nodeHandle) const {
+    VkDescriptorSet skinDescSet(tinySceneRT* scene, tinyHandle nodeHandle) const {
         return scene->nSkeleDescSet(nodeHandle);
     }
 
-    uint32_t skeletonNodeBoneCount(TinySceneRT* scene, TinyHandle nodeHandle) const {
-        const TinyRT_SK3D* skeleRT = scene->rtComp<TinyNodeRT::SK3D>(nodeHandle);
+    uint32_t skeletonNodeBoneCount(tinySceneRT* scene, tinyHandle nodeHandle) const {
+        const tinyRT_SK3D* skeleRT = scene->rtComp<tinyNodeRT::SK3D>(nodeHandle);
         return skeleRT ? skeleRT->boneCount() : 0;
     }
     
     // Global UBO update
 
     void updateGlobal(uint32_t frameIndex) {
-        tinyGlobal->update(*tinyCamera, frameIndex);
+        global_->update(*camera_, frameIndex);
     }
 
-    void addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle = TinyHandle());
+    void addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle = tinyHandle());
 
 
     // Filesystem and registry accessors
-    TinyFS& fs() { return *tinyFS; }
-    const TinyFS& fs() const { return *tinyFS; }
+    tinyFS& fs() { return *fs_; }
+    const tinyFS& fs() const { return *fs_; }
 
-    const TinySceneReq& sceneReq() const { return sharedReq; }
-    const TinyVK::Device* vkDevice() const { return deviceVK; }
+    const tinySceneReq& sceneReq() const { return sharedReq; }
+    const tinyVK::Device* vkDevice() const { return deviceVK; }
 
-    TinyHandle initialSceneHandle;
+    tinyHandle initialSceneHandle;
 
 private:
-    const TinyVK::Device* deviceVK;
+    const tinyVK::Device* deviceVK;
 
-    UniquePtr<TinyGlobal> tinyGlobal;
-    UniquePtr<TinyCamera> tinyCamera;
+    UniquePtr<tinyGlobal> global_;
+    UniquePtr<tinyCamera> camera_;
 
-    UniquePtr<TinyFS> tinyFS;
+    UniquePtr<tinyFS> fs_;
 
-    TinyHandle defaultMaterialHandle;
-    TinyHandle defaultTextureHandle;
+    tinyHandle defaultMaterialHandle;
+    tinyHandle defaultTextureHandle;
 
-    TinyVK::DescLayout matDescLayout;
-    TinyVK::DescPool matDescPool;
-    TinyVK::DescSet matDescSet;
+    tinyVK::DescLayout matDescLayout;
+    tinyVK::DescPool matDescPool;
+    tinyVK::DescSet matDescSet;
 
-    TinyVK::DescLayout skinDescLayout;
-    TinyVK::DescPool skinDescPool;
+    tinyVK::DescLayout skinDescLayout;
+    tinyVK::DescPool skinDescPool;
     
     // Dummy skin descriptor set for rigged meshes without skeleton
-    TinyVK::DescSet dummySkinDescSet;
-    TinyVK::DataBuffer dummySkinBuffer;
+    tinyVK::DescSet dummySkinDescSet;
+    tinyVK::DataBuffer dummySkinBuffer;
 
-    TinySceneReq sharedReq;
+    tinySceneReq sharedReq;
     void vkCreateSceneResources();
     void createDummySkinDescriptorSet();
 };

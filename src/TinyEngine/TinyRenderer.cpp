@@ -1,1 +1,1 @@
-#include "TinyEngine/TinyRenderer.hpp"
+#include "tinyEngine/tinyRenderer.hpp"

@@ -1,7 +1,7 @@
-#include "TinyVK/System/CmdBuffer.hpp"
+#include "tinyVK/System/CmdBuffer.hpp"
 #include <stdexcept>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 void CmdBuffer::cleanup() {
     // In the event that pool isn't destroyed first

@@ -1,99 +1,99 @@
-#include "TinyEngine/TinyProject.hpp"
-#include "TinyEngine/TinyLoader.hpp"
+#include "tinyEngine/tinyProject.hpp"
+#include "tinyEngine/tinyLoader.hpp"
 
-using NTypes = TinyNodeRT::Types;
+using NTypes = tinyNodeRT::Types;
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 // A quick function for range validation
 template<typename T>
-bool validIndex(TinyHandle handle, const std::vector<T>& vec) {
+bool validIndex(tinyHandle handle, const std::vector<T>& vec) {
     return handle.valid() && handle.index < vec.size();
 }
 
-TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
-    tinyFS = MakeUnique<TinyFS>();
+tinyProject::tinyProject(const tinyVK::Device* deviceVK) : deviceVK(deviceVK) {
+    fs_ = MakeUnique<tinyFS>();
 
     // ext - safeDelete - priority - r - g - b
-    tinyFS->setTypeExt<TinySceneRT>     ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
-    tinyFS->setTypeExt<TinyTexture>   ("atex", false, 0, 0.4f, 0.4f, 1.0f);
-    tinyFS->setTypeExt<TinyRMaterial> ("amat", true,  0, 1.0f, 0.4f, 1.0f);
-    tinyFS->setTypeExt<TinyMesh>      ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
-    tinyFS->setTypeExt<TinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f);
+    fs_->setTypeExt<tinySceneRT>     ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
+    fs_->setTypeExt<tinyTexture>   ("atex", false, 0, 0.4f, 0.4f, 1.0f);
+    fs_->setTypeExt<tinyRMaterial> ("amat", true,  0, 1.0f, 0.4f, 1.0f);
+    fs_->setTypeExt<tinyMesh>      ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
+    fs_->setTypeExt<tinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f);
 
     vkCreateSceneResources();
 
     // Create Main Scene (the active scene with a single root node)
-    TinySceneRT mainScene("Main Scene");
+    tinySceneRT mainScene("Main Scene");
     mainScene.addRoot("Root");
     mainScene.setSceneReq(sceneReq());
 
     // Create "Main Scene" as a non-deletable file in root directory
-    TinyFS::Node::CFG sceneConfig;
+    tinyFS::Node::CFG sceneConfig;
     sceneConfig.deletable = false; // Make it non-deletable
 
-    TinyHandle mainSceneFileHandle = tinyFS->addFile(tinyFS->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
-    TypeHandle mainSceneTypeHandle = tinyFS->fTypeHandle(mainSceneFileHandle);
-    initialSceneHandle = mainSceneTypeHandle.handle; // Store the initial scene handle
+    tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
+    typeHandle mainScenetypeHandle = fs_->ftypeHandle(mainSceneFileHandle);
+    initialSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
 
     // Create camera and global UBO manager
-    tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
-    tinyGlobal = MakeUnique<TinyGlobal>(2);
-    tinyGlobal->vkCreate(deviceVK);
+    camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
+    global_ = MakeUnique<tinyGlobal>(2);
+    global_->vkCreate(deviceVK);
 
     // Create default material and texture
-    TinyTexture defaultTexture = TinyTexture::createDefaultTexture();
+    tinyTexture defaultTexture = tinyTexture::createDefaultTexture();
     defaultTexture.vkCreate(deviceVK);
 
-    defaultTextureHandle = tinyFS->rAdd(std::move(defaultTexture)).handle;
+    defaultTextureHandle = fs_->rAdd(std::move(defaultTexture)).handle;
 
-    TinyRMaterial defaultMaterial;
+    tinyRMaterial defaultMaterial;
     defaultMaterial.setAlbTexIndex(0);
     defaultMaterial.setNrmlTexIndex(0);
 
-    defaultMaterialHandle = tinyFS->rAdd(std::move(defaultMaterial)).handle;
+    defaultMaterialHandle = fs_->rAdd(std::move(defaultMaterial)).handle;
 }
 
-TinyProject::~TinyProject() {
+tinyProject::~tinyProject() {
     // Cleanup everything first before destroying pools
-    tinyGlobal.reset();
-    tinyCamera.reset();
-    tinyFS.reset();
+    global_.reset();
+    camera_.reset();
+    fs_.reset();
 }
 
 
 
-TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
+tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Use root folder if no valid parent provided
     if (!parentFolder.valid()) {
-        parentFolder = tinyFS->rootHandle();
+        parentFolder = fs_->rootHandle();
     }
     
     // Create a folder for the model in the specified parent
-    TinyHandle fnModelFolder = tinyFS->addFolder(parentFolder, model.name);
-    TinyHandle fnTexFolder = tinyFS->addFolder(fnModelFolder, "Textures");
-    TinyHandle fnMatFolder = tinyFS->addFolder(fnModelFolder, "Materials");
-    TinyHandle fnMeshFolder = tinyFS->addFolder(fnModelFolder, "Meshes");
-    TinyHandle fnSkeleFolder = tinyFS->addFolder(fnModelFolder, "Skeletons");
+    tinyHandle fnModelFolder = fs_->addFolder(parentFolder, model.name);
+    tinyHandle fnTexFolder = fs_->addFolder(fnModelFolder, "Textures");
+    tinyHandle fnMatFolder = fs_->addFolder(fnModelFolder, "Materials");
+    tinyHandle fnMeshFolder = fs_->addFolder(fnModelFolder, "Meshes");
+    tinyHandle fnSkeleFolder = fs_->addFolder(fnModelFolder, "Skeletons");
 
-    // Note: fnHandle - handle to file node in TinyFS's fnodes
-    //       tHandle - handle to the actual data in the registry (infused with Type info for TinyFS usage)
+    // Note: fnHandle - handle to file node in tinyFS's fnodes
+    //       tHandle - handle to the actual data in the registry (infused with Type info for tinyFS usage)
 
     // Import textures to registry
-    std::vector<TinyHandle> glbTexRHandle;
+    std::vector<tinyHandle> glbTexRHandle;
     for (auto& texture : model.textures) {
         texture.vkCreate(deviceVK);
 
-        TinyHandle fnHandle = tinyFS->addFile(fnTexFolder, texture.name, std::move(texture));
-        TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
+        tinyHandle fnHandle = fs_->addFile(fnTexFolder, texture.name, std::move(texture));
+        typeHandle tHandle = fs_->ftypeHandle(fnHandle);
 
         glbTexRHandle.push_back(tHandle.handle);
     }
 
     // Import materials to registry with remapped texture references
-    std::vector<TinyHandle> glmMatRHandle;
+    std::vector<tinyHandle> glmMatRHandle;
     for (const auto& material : model.materials) {
-        TinyRMaterial correctMat;
+        tinyRMaterial correctMat;
         correctMat.name = material.name;
 
         // Remap the material's texture indices
@@ -105,37 +105,37 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexRHandle.size());
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRHandle[localNrmlIndex].index : 0);
 
-        TinyHandle fnHandle = tinyFS->addFile(fnMatFolder, correctMat.name, std::move(correctMat));
-        TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
+        tinyHandle fnHandle = fs_->addFile(fnMatFolder, correctMat.name, std::move(correctMat));
+        typeHandle tHandle = fs_->ftypeHandle(fnHandle);
 
         glmMatRHandle.push_back(tHandle.handle);
     }
 
     // Import meshes to registry with remapped material references
-    std::vector<TinyHandle> glbMeshRHandle;
+    std::vector<tinyHandle> glbMeshRHandle;
     for (auto& mesh : model.meshes) {
         // Remap submeshes' material indices
-        std::vector<TinySubmesh> remappedSubmeshes = mesh.submeshes();
+        std::vector<tinySubmesh> remappedSubmeshes = mesh.submeshes();
         for (auto& submesh : remappedSubmeshes) {
             bool valid = validIndex(submesh.material, glmMatRHandle);
-            submesh.material = valid ? glmMatRHandle[submesh.material.index] : TinyHandle();
+            submesh.material = valid ? glmMatRHandle[submesh.material.index] : tinyHandle();
         }
 
         mesh.vkCreate(deviceVK);
 
         mesh.setSubmeshes(remappedSubmeshes);
 
-        TinyHandle fnHandle = tinyFS->addFile(fnMeshFolder, mesh.name, std::move(mesh));
-        TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
+        tinyHandle fnHandle = fs_->addFile(fnMeshFolder, mesh.name, std::move(mesh));
+        typeHandle tHandle = fs_->ftypeHandle(fnHandle);
 
         glbMeshRHandle.push_back(tHandle.handle);
     }
 
     // Import skeletons to registry
-    std::vector<TinyHandle> glbSkeleRHandle;
+    std::vector<tinyHandle> glbSkeleRHandle;
     for (auto& skeleton : model.skeletons) {
-        TinyHandle fnHandle = tinyFS->addFile(fnSkeleFolder, skeleton.name, std::move(skeleton));
-        TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
+        tinyHandle fnHandle = fs_->addFile(fnSkeleFolder, skeleton.name, std::move(skeleton));
+        typeHandle tHandle = fs_->ftypeHandle(fnHandle);
 
         glbSkeleRHandle.push_back(tHandle.handle);
     }
@@ -144,14 +144,14 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     if (model.nodes.empty()) return fnModelFolder;
 
     // Create scene with nodes - preserve hierarchy but remap resource references
-    TinySceneRT scene(model.name);
+    tinySceneRT scene(model.name);
     scene.setSceneReq(sceneReq());
 
     // First pass: Insert empty nodes and store their handles
     // Note: Normally we would've used a unordered_map
     //       but I trust the model to be imported from the
-    //       TinyLoader which guarantees index stability.
-    std::vector<TinyHandle> nodeHandles;
+    //       tinyLoader which guarantees index stability.
+    std::vector<tinyHandle> nodeHandles;
 
     for (const auto& node : model.nodes) {
         nodeHandles.push_back(scene.addNodeRaw(node.name));
@@ -163,12 +163,12 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
     // Second pass: Remap parent/child relationships and add components
     for (size_t i = 0; i < model.nodes.size(); ++i) {
-        TinyHandle nodeHandle = nodeHandles[i];
+        tinyHandle nodeHandle = nodeHandles[i];
 
-        TinyHandle parentHandle;
-        std::vector<TinyHandle> childrenHandles;
+        tinyHandle parentHandle;
+        std::vector<tinyHandle> childrenHandles;
 
-        const TinyNodeRT& originalNode = model.nodes[i];
+        const tinyNodeRT& originalNode = model.nodes[i];
 
         // Remap parent handle
         if (validIndex(originalNode.parentHandle, nodeHandles)) {
@@ -176,7 +176,7 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         };
 
         // Remap children handles
-        for (const TinyHandle& childHandle : originalNode.childrenHandles) {
+        for (const tinyHandle& childHandle : originalNode.childrenHandles) {
             if (validIndex(childHandle, nodeHandles)) {
                 childrenHandles.push_back(nodeHandles[childHandle.index]);
             }
@@ -186,15 +186,15 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
         // Add component with scene API to ensure proper handling
-        if (originalNode.has<TinyNodeRT::T3D>()) {
-            const auto* ogTransform = originalNode.get<TinyNodeRT::T3D>();
-            auto* newTransform = scene.writeComp<TinyNodeRT::T3D>(nodeHandle);
+        if (originalNode.has<tinyNodeRT::T3D>()) {
+            const auto* ogTransform = originalNode.get<tinyNodeRT::T3D>();
+            auto* newTransform = scene.writeComp<tinyNodeRT::T3D>(nodeHandle);
             *newTransform = *ogTransform;
         }
 
-        if (originalNode.has<TinyNodeRT::MR3D>()) {
-            const auto* ogMeshRender = originalNode.get<TinyNodeRT::MR3D>();
-            auto* newMeshRender = scene.writeComp<TinyNodeRT::MR3D>(nodeHandle);
+        if (originalNode.has<tinyNodeRT::MR3D>()) {
+            const auto* ogMeshRender = originalNode.get<tinyNodeRT::MR3D>();
+            auto* newMeshRender = scene.writeComp<tinyNodeRT::MR3D>(nodeHandle);
 
             if (validIndex(ogMeshRender->pMeshHandle, glbMeshRHandle)) {
                 newMeshRender->pMeshHandle = glbMeshRHandle[ogMeshRender->pMeshHandle.index];
@@ -205,9 +205,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             }
         }
 
-        if (originalNode.has<TinyNodeRT::BA3D>()) {
-            const auto* ogBoneAttach = originalNode.get<TinyNodeRT::BA3D>();
-            auto* newBoneAttach = scene.writeComp<TinyNodeRT::BA3D>(nodeHandle);
+        if (originalNode.has<tinyNodeRT::BA3D>()) {
+            const auto* ogBoneAttach = originalNode.get<tinyNodeRT::BA3D>();
+            auto* newBoneAttach = scene.writeComp<tinyNodeRT::BA3D>(nodeHandle);
 
             if (validIndex(ogBoneAttach->skeleNodeHandle, nodeHandles)) {
                 newBoneAttach->skeleNodeHandle = nodeHandles[ogBoneAttach->skeleNodeHandle.index];
@@ -216,9 +216,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             newBoneAttach->boneIndex = ogBoneAttach->boneIndex;
         }
 
-        if (originalNode.has<TinyNodeRT::SK3D>()) {
-            const auto* ogSkeleComp = originalNode.get<TinyNodeRT::SK3D>();
-            auto* newSkeleRT = scene.writeComp<TinyNodeRT::SK3D>(nodeHandle);
+        if (originalNode.has<tinyNodeRT::SK3D>()) {
+            const auto* ogSkeleComp = originalNode.get<tinyNodeRT::SK3D>();
+            auto* newSkeleRT = scene.writeComp<tinyNodeRT::SK3D>(nodeHandle);
 
             if (validIndex(ogSkeleComp->pHandle, glbSkeleRHandle)) {
                 // Construct new skeleton runtime from the original skeleton
@@ -226,9 +226,9 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
             }
         }
 
-        if (originalNode.has<TinyNodeRT::AN3D>()) {
-            const auto* ogAnimeComp = originalNode.get<TinyNodeRT::AN3D>();
-            auto* newAnimeComp = scene.writeComp<TinyNodeRT::AN3D>(nodeHandle);
+        if (originalNode.has<tinyNodeRT::AN3D>()) {
+            const auto* ogAnimeComp = originalNode.get<tinyNodeRT::AN3D>();
+            auto* newAnimeComp = scene.writeComp<tinyNodeRT::AN3D>(nodeHandle);
 
             *newAnimeComp = model.animations[ogAnimeComp->pHandle.index];
 
@@ -245,8 +245,8 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
     }
 
     // Add scene to registry
-    TinyHandle fnHandle = tinyFS->addFile(fnModelFolder, scene.name, std::move(scene));
-    TypeHandle tHandle = tinyFS->fTypeHandle(fnHandle);
+    tinyHandle fnHandle = fs_->addFile(fnModelFolder, scene.name, std::move(scene));
+    typeHandle tHandle = fs_->ftypeHandle(fnHandle);
 
     // Return the model folder handle instead of the scene handle
     return fnModelFolder;
@@ -254,16 +254,16 @@ TinyHandle TinyProject::addModel(TinyModel& model, TinyHandle parentFolder) {
 
 
 
-void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, TinyHandle parentHandle) {
-    const TinySceneRT* fromScene = fs().rGet<TinySceneRT>(fromHandle);
-    TinySceneRT* toScene = fs().rGet<TinySceneRT>(toHandle);
+void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
+    const tinySceneRT* fromScene = fs().rGet<tinySceneRT>(fromHandle);
+    tinySceneRT* toScene = fs().rGet<tinySceneRT>(toHandle);
     if (toHandle == fromHandle || !toScene || !fromScene) return;
 
     toScene->addScene(fromScene, parentHandle);
 }
 
 
-void TinyProject::vkCreateSceneResources() {
+void tinyProject::vkCreateSceneResources() {
     VkDevice device = deviceVK->device;
 
     skinDescLayout.create(device, {
@@ -286,7 +286,7 @@ void TinyProject::vkCreateSceneResources() {
     sharedReq.skinDescLayout = skinDescLayout;
 }
 
-void TinyProject::createDummySkinDescriptorSet() {
+void tinyProject::createDummySkinDescriptorSet() {
     // Create dummy descriptor set (allocate from same pool as real skeletons)
     dummySkinDescSet.allocate(deviceVK->device, skinDescPool.get(), skinDescLayout.get());
 

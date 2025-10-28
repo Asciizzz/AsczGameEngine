@@ -1,9 +1,9 @@
-#include "TinyDataRT/TinySkeleton3D.hpp"
+#include "tinyDataRT/tinySkeleton3D.hpp"
 
-using namespace TinyVK;
-using namespace TinyRT;
+using namespace tinyVK;
+using namespace tinyRT;
 
-void Skeleton3D::init(const TinyVK::Device* deviceVK, const TinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout) {
+void Skeleton3D::init(const tinyVK::Device* deviceVK, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout) {
     vkValid = true;
 
     deviceVK_ = deviceVK;
@@ -12,10 +12,10 @@ void Skeleton3D::init(const TinyVK::Device* deviceVK, const TinyRegistry* fsRegi
     descSet_.allocate(deviceVK->device, descPool, descLayout);
 }
 
-void Skeleton3D::set(TinyHandle skeletonHandle) {
+void Skeleton3D::set(tinyHandle skeletonHandle) {
     skeleHandle_ = skeletonHandle;
 
-    const TinySkeleton* skeleton = rSkeleton();
+    const tinySkeleton* skeleton = rSkeleton();
     if (!vkValid || skeleton == nullptr) return;
 
     localPose_.resize(skeleton->bones.size(), glm::mat4(1.0f));
@@ -88,7 +88,7 @@ void Skeleton3D::refreshAll() {
 void Skeleton3D::updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform) {
     if (boneIndex >= rSkeleton()->bones.size()) return;
 
-    const TinyBone& bone = rSkeleton()->bones[boneIndex];
+    const tinyBone& bone = rSkeleton()->bones[boneIndex];
 
     finalPose_[boneIndex] = parentTransform * localPose_[boneIndex];
     skinData_[boneIndex] = finalPose_[boneIndex] * bone.bindInverse;
@@ -100,7 +100,7 @@ void Skeleton3D::updateRecursive(uint32_t boneIndex, const glm::mat4& parentTran
 
 void Skeleton3D::updateFlat() {
     for (size_t i = 0; i < rSkeleton()->bones.size(); ++i) {
-        const TinyBone& bone = rSkeleton()->bones[i];
+        const tinyBone& bone = rSkeleton()->bones[i];
 
         glm::mat4 parentTransform = glm::mat4(1.0f);
         if (bone.parent != -1) {

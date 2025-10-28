@@ -1,5 +1,5 @@
 #pragma once
 
-#include "TinyVK/Pipeline/Pipeline_raster.hpp"
-#include "TinyVK/Pipeline/Pipeline_compute.hpp"
-#include "TinyVK/Pipeline/Pipeline_manager.hpp"
+#include "tinyVK/Pipeline/Pipeline_raster.hpp"
+#include "tinyVK/Pipeline/Pipeline_compute.hpp"
+#include "tinyVK/Pipeline/Pipeline_manager.hpp"

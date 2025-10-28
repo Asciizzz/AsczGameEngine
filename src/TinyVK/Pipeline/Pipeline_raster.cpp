@@ -1,8 +1,8 @@
-#include "TinyVK/Pipeline/Pipeline_raster.hpp"
+#include "tinyVK/Pipeline/Pipeline_raster.hpp"
 
 #include <stdexcept>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 RasterCfg& RasterCfg::withBlending(BlendMode mode) {
     switch (mode) {

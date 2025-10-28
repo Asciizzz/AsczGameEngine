@@ -1,19 +1,19 @@
 #pragma once
 
-#include "TinyExt/TinyRegistry.hpp"
+#include "tinyExt/tinyRegistry.hpp"
 
 #include <string>
 #include <sstream>
 
 #include <iostream>
 
-class TinyFS {
+class tinyFS {
 public:
     struct Node {
         std::string name;                     // segment name (relative)
-        TinyHandle parent;                    // parent node handle
-        std::vector<TinyHandle> children;     // child node handles
-        TypeHandle tHandle;                   // metadata / registry handle if file
+        tinyHandle parent;                    // parent node handle
+        std::vector<tinyHandle> children;     // child node handles
+        typeHandle tHandle;                   // metadata / registry handle if file
 
         enum class Type { Folder, File, Other } type = Type::Folder;
 
@@ -32,24 +32,24 @@ public:
 
         bool hasData() const { return tHandle.valid(); }
 
-        bool hasChild(TinyHandle childHandle) const {
+        bool hasChild(tinyHandle childHandle) const {
             // Check if childHandle exists in children vector
             return std::find(children.begin(), children.end(), childHandle) != children.end();
         }
 
-        int childIndex(TinyHandle childHandle) const {
+        int childIndex(tinyHandle childHandle) const {
             // Return the index of the child if found, -1 otherwise
             auto it = std::find(children.begin(), children.end(), childHandle);
             return (it != children.end()) ? static_cast<int>(std::distance(children.begin(), it)) : -1;
         }
 
-        int addChild(TinyHandle childHandle) {
+        int addChild(tinyHandle childHandle) {
             if (hasChild(childHandle)) return -1;
             children.push_back(childHandle);
             return static_cast<int>(children.size()) - 1;
         }
 
-        bool removeChild(TinyHandle childHandle) {
+        bool removeChild(tinyHandle childHandle) {
             int index = childIndex(childHandle);
             if (index != -1) {
                 children.erase(children.begin() + index);
@@ -118,10 +118,10 @@ public:
     };
 
 
-    TinyFS() {
+    tinyFS() {
         Node rootNode;
         rootNode.name = ".root";
-        rootNode.parent = TinyHandle();
+        rootNode.parent = tinyHandle();
         rootNode.type = Node::Type::Folder;
         rootNode.cfg.deletable = false; // root is not deletable
 
@@ -131,7 +131,7 @@ public:
 
     // ---------- Basic access ----------
 
-    TinyHandle rootHandle() const { return rootHandle_; }
+    tinyHandle rootHandle() const { return rootHandle_; }
 
     // Case sensitivity control
     bool caseSensitive() const { return caseSensitive_; }
@@ -146,27 +146,27 @@ public:
     // ---------- Creation ----------
 
     // Folder creation (non-template overload)
-    TinyHandle addFolder(TinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
+    tinyHandle addFolder(tinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
         return addFNodeImpl(parentHandle, name, cfg);
     }
-    TinyHandle addFolder(const std::string& name, Node::CFG cfg = {}) {
+    tinyHandle addFolder(const std::string& name, Node::CFG cfg = {}) {
         return addFolder(rootHandle_, name, cfg);
     }
 
     // File creation (templated, pass pointer to data)
     template<typename T>
-    TinyHandle addFile(TinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg = {}) {
+    tinyHandle addFile(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg = {}) {
         return addFNodeImpl<T>(parentHandle, name, std::forward<T>(data), cfg);
     }
 
     template<typename T>
-    TinyHandle addFile(const std::string& name, T&& data, Node::CFG cfg = {}) {
+    tinyHandle addFile(const std::string& name, T&& data, Node::CFG cfg = {}) {
         return addFile<T>(rootHandle_, name, std::forward<T>(data), cfg);
     }
 
     // ---------- Move with cycle prevention ----------
     
-    bool fMove(TinyHandle nodeHandle, TinyHandle parentHandle) {
+    bool fMove(tinyHandle nodeHandle, tinyHandle parentHandle) {
         parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
         if (nodeHandle == parentHandle) return false; // Move to self
 
@@ -194,12 +194,12 @@ public:
 
     // ---------- "Safe" recursive remove ----------
 
-    bool fRemove(TinyHandle handle, bool recursive = true) {
+    bool fRemove(tinyHandle handle, bool recursive = true) {
         Node* node = fnodes_.get(handle);
         if (!node || !node->deletable()) return false;
 
         // Public interface - use the node's parent as the rescue parent
-        TinyHandle rescueParent = node->parent;
+        tinyHandle rescueParent = node->parent;
         if (!fnodes_.valid(rescueParent)) {
             rescueParent = rootHandle_;
         }
@@ -207,38 +207,38 @@ public:
         return fRemoveRecursive(handle, rescueParent, recursive);
     }
 
-    bool fFlatten(TinyHandle handle) {
+    bool fFlatten(tinyHandle handle) {
         return fRemove(handle, false);
     }
 
     // ---------- Data Inspection ----------
 
     template<typename T>
-    T* fData(TinyHandle fileHandle) {
+    T* fData(tinyHandle fileHandle) {
         Node* node = fnodes_.get(fileHandle);
         if (!node || !node->hasData()) return nullptr;
 
         return registry_.get<T>(node->tHandle);
     }
 
-    TypeHandle fTypeHandle(TinyHandle fileHandle) const {
+    typeHandle ftypeHandle(tinyHandle fileHandle) const {
         const Node* node = fnodes_.get(fileHandle);
-        return node ? node->tHandle : TypeHandle();
+        return node ? node->tHandle : typeHandle();
     }
 
     template<typename T>
-    bool fIs(TinyHandle fileHandle) const {
+    bool fIs(tinyHandle fileHandle) const {
         const Node* node = fnodes_.get(fileHandle);
         return node ? node->isType<T>() : false;
     }
 
     // ---------- Node access ----------
 
-    const Node* fNode(TinyHandle fileHandle) const {
+    const Node* fNode(tinyHandle fileHandle) const {
         return fnodes_.get(fileHandle);
     }
 
-    const TinyPool<Node>& fNodes() const { return fnodes_; }
+    const tinyPool<Node>& fNodes() const { return fnodes_; }
 
     // ---------- Type extension management ----------
 
@@ -267,7 +267,7 @@ public:
     }
 
     // Get the full TypeExt info for a file
-    TypeExt fTypeExt(TinyHandle fileHandle) const {
+    TypeExt fTypeExt(tinyHandle fileHandle) const {
         const Node* node = fnodes_.get(fileHandle);
 
         // Invalid, minimum priority
@@ -279,7 +279,7 @@ public:
         return typeExt(node->tHandle.typeHash);
     }
 
-    bool fSafeDelete(TinyHandle fileHandle) const {
+    bool fSafeDelete(tinyHandle fileHandle) const {
         return fTypeExt(fileHandle).safeDelete;
     }
 
@@ -295,40 +295,40 @@ public:
     // ---------- Registry data management ----------
     
     // No non-const access for safety
-    const TinyRegistry& registry() const { return registry_; }
+    const tinyRegistry& registry() const { return registry_; }
 
-    void* rGet(TypeHandle th) { return registry_.get(th); }
+    void* rGet(typeHandle th) { return registry_.get(th); }
 
-    const void* rGet(TypeHandle th) const { return registry_.get(th); }
-
-    template<typename T>
-    T* rGet(TypeHandle th) { return registry_.get<T>(th); }
+    const void* rGet(typeHandle th) const { return registry_.get(th); }
 
     template<typename T>
-    const T* rGet(TypeHandle th) const { return registry_.get<T>(th);}
+    T* rGet(typeHandle th) { return registry_.get<T>(th); }
 
     template<typename T>
-    T* rGet(TinyHandle h) { return registry_.get<T>(h); }
+    const T* rGet(typeHandle th) const { return registry_.get<T>(th);}
 
     template<typename T>
-    const T* rGet(TinyHandle h) const { return registry_.get<T>(h); }
+    T* rGet(tinyHandle h) { return registry_.get<T>(h); }
 
     template<typename T>
-    bool rHas(const TinyHandle& handle) const { return registry_.has<T>(handle); }
-
-    bool rHas(const TypeHandle& th) const { return registry_.has(th); }
+    const T* rGet(tinyHandle h) const { return registry_.get<T>(h); }
 
     template<typename T>
-    TypeHandle rAdd(T&& val) {
+    bool rHas(const tinyHandle& handle) const { return registry_.has<T>(handle); }
+
+    bool rHas(const typeHandle& th) const { return registry_.has(th); }
+
+    template<typename T>
+    typeHandle rAdd(T&& val) {
         return registry_.add<T>(std::forward<T>(val));
     }
 
     template<typename T>
-    void rRemove(const TinyHandle& handle) {
-        rRemove(TypeHandle::make<T>(handle));
+    void rRemove(const tinyHandle& handle) {
+        rRemove(typeHandle::make<T>(handle));
     }
 
-    void rRemove(const TypeHandle& th) {
+    void rRemove(const typeHandle& th) {
         if (!registry_.has(th)) return; // nothing to remove :/
 
         if (safeDelete(th.typeHash)) registry_.tInstaRm(th); // Safe to remove instantly
@@ -360,9 +360,9 @@ public:
     }
 
 private:
-    TinyPool<Node> fnodes_;
-    TinyRegistry registry_;
-    TinyHandle rootHandle_;
+    tinyPool<Node> fnodes_;
+    tinyRegistry registry_;
+    tinyHandle rootHandle_;
     bool caseSensitive_{false}; // Global case sensitivity setting
 
     // Type to extension info map (using new TypeExt structure)
@@ -380,13 +380,13 @@ private:
         }
     }
 
-    bool hasRepeatName(TinyHandle parentHandle, const std::string& name) const {
+    bool hasRepeatName(tinyHandle parentHandle, const std::string& name) const {
         if (!fnodes_.valid(parentHandle)) return false;
 
         const Node* parent = fnodes_.get(parentHandle);
         if (!parent) return false;
 
-        for (const TinyHandle& childHandle : parent->children) {
+        for (const tinyHandle& childHandle : parent->children) {
             const Node* child = fnodes_.get(childHandle);
             if (!child) continue;
 
@@ -396,7 +396,7 @@ private:
         return false;
     }
 
-    std::string resolveRepeatName(TinyHandle parentHandle, const std::string& baseName) const {
+    std::string resolveRepeatName(tinyHandle parentHandle, const std::string& baseName) const {
         if (!fnodes_.valid(parentHandle)) return baseName;
 
         // Check if parent has children with the same name
@@ -406,7 +406,7 @@ private:
         std::string resolvedName = baseName;
         size_t maxNumberedIndex = 0;
 
-        for (const TinyHandle& childHandle : parent->children) {
+        for (const tinyHandle& childHandle : parent->children) {
             const Node* child = fnodes_.get(childHandle);
             if (!child) continue;
 
@@ -420,7 +420,7 @@ private:
         return resolvedName;
     }
 
-    bool isDescendant(TinyHandle possibleAncestor, TinyHandle possibleDescendant) const {
+    bool isDescendant(tinyHandle possibleAncestor, tinyHandle possibleDescendant) const {
         if (!fnodes_.valid(possibleAncestor) || !fnodes_.valid(possibleDescendant))
             return true; // For safety, treat invalid handles as descendants
 
@@ -434,7 +434,7 @@ private:
     }
 
     template<typename T>
-    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
+    tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
         parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
 
         Node child;
@@ -444,7 +444,7 @@ private:
         child.type = Node::Type::File;
         child.tHandle = registry_.add(std::forward<T>(data));
 
-        TinyHandle h = fnodes_.add(std::move(child));
+        tinyHandle h = fnodes_.add(std::move(child));
         if (Node* parent = fnodes_.get(parentHandle)) {
             parent->addChild(h);
         }
@@ -453,7 +453,7 @@ private:
     }
 
     // Overload for folder creation
-    TinyHandle addFNodeImpl(TinyHandle parentHandle, const std::string& name, Node::CFG cfg) {
+    tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, Node::CFG cfg) {
         parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
 
         Node folder;
@@ -461,7 +461,7 @@ private:
         folder.parent = parentHandle;
         folder.cfg = cfg;
 
-        TinyHandle h = fnodes_.add(std::move(folder));
+        tinyHandle h = fnodes_.add(std::move(folder));
         if (auto* parent = fnodes_.get(parentHandle)) {
             parent->addChild(h);
         }
@@ -470,15 +470,15 @@ private:
     }
 
     // Internal recursive function that tracks the original parent for non-deletable rescues
-    bool fRemoveRecursive(TinyHandle handle, TinyHandle rescueParent, bool recursive) {
+    bool fRemoveRecursive(tinyHandle handle, tinyHandle rescueParent, bool recursive) {
         Node* node = fnodes_.get(handle);
         if (!node) return false;
 
         // Note: We can assume node is deletable since non-deletable nodes are moved, not recursed
 
         // copy children to avoid mutation during recursion
-        std::vector<TinyHandle> childCopy = node->children;
-        for (TinyHandle ch : childCopy) {
+        std::vector<tinyHandle> childCopy = node->children;
+        for (tinyHandle ch : childCopy) {
             Node* child = fnodes_.get(ch);
             if (!child) continue;
             

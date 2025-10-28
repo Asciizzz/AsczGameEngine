@@ -1,7 +1,7 @@
-#include "TinyVK/Render/FrameBuffer.hpp"
+#include "tinyVK/Render/FrameBuffer.hpp"
 #include <stdexcept>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 FrameBufferConfig& FrameBufferConfig::withRenderPass(VkRenderPass rp) {
     renderPass = rp;

@@ -1,8 +1,8 @@
-#include "TinyVK/Render/RenderPass.hpp"
+#include "tinyVK/Render/RenderPass.hpp"
 
 #include <stdexcept>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 RenderPass::RenderPass(VkDevice device, const RenderPassConfig& config)
 : device(device) {

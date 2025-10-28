@@ -2,9 +2,9 @@
 
 #include <SDL2/SDL.h>
 
-#include "TinyVK/Resource/TextureVK.hpp"
+#include "tinyVK/Resource/TextureVK.hpp"
 
-namespace TinyVK {
+namespace tinyVK {
 
 class Device; // Forward declaration
 

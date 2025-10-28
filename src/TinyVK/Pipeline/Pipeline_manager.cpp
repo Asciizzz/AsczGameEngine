@@ -1,4 +1,4 @@
-#include "TinyVK/Pipeline/Pipeline_manager.hpp"
+#include "tinyVK/Pipeline/Pipeline_manager.hpp"
 #include ".ext/Templates.hpp"
 
 #include <fstream>
@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cstdio>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 // Simple JSON parser for pipeline assets
 // This is a minimal parser - in production you'd use a proper JSON library

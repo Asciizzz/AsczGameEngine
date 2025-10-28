@@ -1,8 +1,8 @@
-#include "TinyData/TinyVertex.hpp"
+#include "tinyData/tinyVertex.hpp"
 
 #include <vulkan/vulkan.h>
 
-using namespace TinyVertex;
+using namespace tinyVertex;
 
 VkVertexInputBindingDescription Layout::bindingDesc() const {
     VkVertexInputBindingDescription binding{};

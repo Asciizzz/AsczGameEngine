@@ -1,8 +1,8 @@
 #pragma once
 
-#include "TinyVK/Resource/TextureVK.hpp"
+#include "tinyVK/Resource/TextureVK.hpp"
 
-namespace TinyVK {
+namespace tinyVK {
 
 class DepthImage : public ImageVK {
 public:

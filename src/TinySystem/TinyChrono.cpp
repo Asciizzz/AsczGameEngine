@@ -1,14 +1,14 @@
-#include "TinySystem/TinyChrono.hpp"
+#include "tinySystem/tinyChrono.hpp"
 #include <algorithm>
 #include <thread>
 
-TinyChrono::TinyChrono() 
+tinyChrono::tinyChrono() 
     : lastFrameTime(Clock::now()), startTime(Clock::now()),
         currentFPS(0.0f), frameTimeMs(0.0f), deltaTime(0.0f),
         targetFPS(0.0f), vsyncEnabled(false) {
 }
 
-void TinyChrono::update() {
+void tinyChrono::update() {
     auto currentTime = Clock::now();
     
     // Calculate delta time in seconds
@@ -34,7 +34,7 @@ void TinyChrono::update() {
     lastFrameTime = currentTime;
 }
 
-float TinyChrono::getAverageFPS() const {
+float tinyChrono::getAverageFPS() const {
     if (frameTimeHistory.empty()) {
         return 0.0f;
     }
@@ -48,21 +48,21 @@ float TinyChrono::getAverageFPS() const {
     return averageFrameTime > 0.0f ? 1000.0f / averageFrameTime : 0.0f;
 }
 
-float TinyChrono::getMinFrameTime() const {
+float tinyChrono::getMinFrameTime() const {
     if (frameTimeHistory.empty()) {
         return 0.0f;
     }
     return *std::min_element(frameTimeHistory.begin(), frameTimeHistory.end());
 }
 
-float TinyChrono::getMaxFrameTime() const {
+float tinyChrono::getMaxFrameTime() const {
     if (frameTimeHistory.empty()) {
         return 0.0f;
     }
     return *std::max_element(frameTimeHistory.begin(), frameTimeHistory.end());
 }
 
-void TinyChrono::reset() {
+void tinyChrono::reset() {
     lastFrameTime = Clock::now();
     startTime = Clock::now();
     currentFPS = 0.0f;
@@ -71,7 +71,7 @@ void TinyChrono::reset() {
     frameTimeHistory.clear();
 }
 
-void TinyChrono::updateFrameTimeHistory(float frameTime) {
+void tinyChrono::updateFrameTimeHistory(float frameTime) {
     frameTimeHistory.push_back(frameTime);
     
     // Keep only the last SAMPLE_COUNT frames
@@ -80,7 +80,7 @@ void TinyChrono::updateFrameTimeHistory(float frameTime) {
     }
 }
 
-void TinyChrono::limitFrameRate() {
+void tinyChrono::limitFrameRate() {
     if (targetFPS <= 0.0f) {
         return;
     }

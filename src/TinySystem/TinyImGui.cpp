@@ -1,15 +1,15 @@
-#include "TinySystem/TinyImGui.hpp"
-#include "TinyVK/System/CmdBuffer.hpp"
+#include "tinySystem/tinyImGui.hpp"
+#include "tinyVK/System/CmdBuffer.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
-bool TinyImGui::init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
-                     const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage) {
+bool tinyImGui::init(SDL_Window* window, VkInstance instance, const tinyVK::Device* deviceVK, 
+                     const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage) {
     if (m_initialized) {
-        std::cerr << "TinyImGui: Already initialized!" << std::endl;
+        std::cerr << "tinyImGui: Already initialized!" << std::endl;
         return false;
     }
 
@@ -62,7 +62,7 @@ bool TinyImGui::init(SDL_Window* window, VkInstance instance, const TinyVK::Devi
     return true;
 }
 
-void TinyImGui::cleanup() {
+void tinyImGui::cleanup() {
     if (!m_initialized) return;
 
     ImGui_ImplVulkan_Shutdown();
@@ -77,7 +77,7 @@ void TinyImGui::cleanup() {
     deviceVK = nullptr;
 }
 
-void TinyImGui::newFrame() {
+void tinyImGui::newFrame() {
     if (!m_initialized) return;
 
     ImGui_ImplVulkan_NewFrame();
@@ -85,11 +85,11 @@ void TinyImGui::newFrame() {
     ImGui::NewFrame();
 }
 
-void TinyImGui::addWindow(const std::string& name, std::function<void()> draw, bool* p_open) {
+void tinyImGui::addWindow(const std::string& name, std::function<void()> draw, bool* p_open) {
     windows.emplace_back(name, draw, p_open);
 }
 
-void TinyImGui::removeWindow(const std::string& name) {
+void tinyImGui::removeWindow(const std::string& name) {
     windows.erase(
         std::remove_if(windows.begin(), windows.end(),
             [&name](const Window& w) { return w.name == name; }),
@@ -97,11 +97,11 @@ void TinyImGui::removeWindow(const std::string& name) {
     );
 }
 
-void TinyImGui::clearWindows() {
+void tinyImGui::clearWindows() {
     windows.clear();
 }
 
-void TinyImGui::render(VkCommandBuffer commandBuffer) {
+void tinyImGui::render(VkCommandBuffer commandBuffer) {
     if (!m_initialized) return;
 
     // Render all registered windows
@@ -126,17 +126,17 @@ void TinyImGui::render(VkCommandBuffer commandBuffer) {
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 }
 
-void TinyImGui::processEvent(const SDL_Event* event) {
+void tinyImGui::processEvent(const SDL_Event* event) {
     if (!m_initialized) return;
     ImGui_ImplSDL2_ProcessEvent(event);
 }
 
-void TinyImGui::showDemoWindow(bool* p_open) {
+void tinyImGui::showDemoWindow(bool* p_open) {
     if (!m_initialized) return;
     ImGui::ShowDemoWindow(p_open);
 }
 
-void TinyImGui::createDescriptorPool() {
+void tinyImGui::createDescriptorPool() {
     descPool.create(deviceVK->device,
         {
             { DescType::Sampler, 16 },                    // Font atlas + custom textures
@@ -151,7 +151,7 @@ void TinyImGui::createDescriptorPool() {
     );
 }
 
-void TinyImGui::updateRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage) {
+void tinyImGui::updateRenderPass(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage) {
     if (!m_initialized) return;
 
     // Wait for device to be idle
@@ -191,15 +191,15 @@ void TinyImGui::updateRenderPass(const TinyVK::Swapchain* swapchain, const TinyV
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-VkRenderPass TinyImGui::getRenderPass() const {
+VkRenderPass tinyImGui::getRenderPass() const {
     return renderPass ? renderPass->get() : VK_NULL_HANDLE;
 }
 
-TinyVK::RenderTarget* TinyImGui::getRenderTarget(uint32_t imageIndex) {
+tinyVK::RenderTarget* tinyImGui::getRenderTarget(uint32_t imageIndex) {
     return (imageIndex < renderTargets.size()) ? &renderTargets[imageIndex] : nullptr;
 }
 
-void TinyImGui::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFramebuffer framebuffer) {
+void tinyImGui::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFramebuffer framebuffer) {
     if (imageIndex < renderTargets.size()) {
         // Update render target with the correct framebuffer
         renderTargets[imageIndex].withFrameBuffer(framebuffer);
@@ -210,15 +210,15 @@ void TinyImGui::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFrame
     }
 }
 
-void TinyImGui::createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage) {
-    auto renderPassConfig = TinyVK::RenderPassConfig::imguiOverlay(
+void tinyImGui::createRenderPass(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage) {
+    auto renderPassConfig = tinyVK::RenderPassConfig::imguiOverlay(
         swapchain->getImageFormat(),
         depthImage->getFormat()
     );
-    renderPass = MakeUnique<TinyVK::RenderPass>(deviceVK->device, renderPassConfig);
+    renderPass = MakeUnique<tinyVK::RenderPass>(deviceVK->device, renderPassConfig);
 }
 
-void TinyImGui::updateRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers) {
+void tinyImGui::updateRenderTargets(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers) {
     if (!renderPass) return;
     
     renderTargets.clear();
@@ -227,7 +227,7 @@ void TinyImGui::updateRenderTargets(const TinyVK::Swapchain* swapchain, const Ti
     // Create ImGui render targets for each swapchain image
     for (uint32_t i = 0; i < swapchain->getImageCount(); ++i) {
         VkFramebuffer framebuffer = (i < framebuffers.size()) ? framebuffers[i] : VK_NULL_HANDLE;
-        TinyVK::RenderTarget imguiTarget(renderPass->get(), framebuffer, extent);
+        tinyVK::RenderTarget imguiTarget(renderPass->get(), framebuffer, extent);
         
         // Add swapchain image attachment (no clear needed for overlay)
         VkClearValue colorClear{};
@@ -243,6 +243,6 @@ void TinyImGui::updateRenderTargets(const TinyVK::Swapchain* swapchain, const Ti
     }
 }
 
-void TinyImGui::createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers) {
+void tinyImGui::createRenderTargets(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers) {
     updateRenderTargets(swapchain, depthImage, framebuffers);
 }

@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace TinyVK {
+namespace tinyVK {
 
 // Core pipeline functionality as a component - replaces PipelineBase
 class PipelineCore {
@@ -64,4 +64,4 @@ private:
     VkPipelineLayout layout = VK_NULL_HANDLE;
 };
 
-} // namespace TinyVK
+} // namespace tinyVK

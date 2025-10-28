@@ -1,4 +1,4 @@
-#include "TinyApp/TinyApp.hpp"
+#include "tinyApp/tinyApp.hpp"
 
 #include <iostream>
 
@@ -8,35 +8,35 @@ const bool enableValidationLayers = true;
 const bool enableValidationLayers = true;
 #endif
 
-using namespace TinyVK;
+using namespace tinyVK;
 
-TinyApp::TinyApp(const char* title, uint32_t width, uint32_t height)
+tinyApp::tinyApp(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
 
     initComponents();
 }
 
-TinyApp::~TinyApp() {
+tinyApp::~tinyApp() {
     if (imguiWrapper) {
         imguiWrapper->cleanup();
     }
     cleanup();
 }
 
-void TinyApp::cleanup() {
+void tinyApp::cleanup() {
     // No clean up needed for now
 }
 
-void TinyApp::run() {
+void tinyApp::run() {
     mainLoop();
 
-    printf("TinyApp exited successfully. See you next time!\n");
+    printf("tinyApp exited successfully. See you next time!\n");
 }
 
-void TinyApp::initComponents() {
+void tinyApp::initComponents() {
 
-    windowManager = MakeUnique<TinyWindow>(appTitle, appWidth, appHeight);
-    fpsManager = MakeUnique<TinyChrono>();
+    windowManager = MakeUnique<tinyWindow>(appTitle, appWidth, appHeight);
+    fpsManager = MakeUnique<tinyChrono>();
 
     auto extensions = windowManager->getRequiredVulkanExtensions();
     instanceVK = MakeUnique<Instance>(extensions, enableValidationLayers);
@@ -53,15 +53,15 @@ void TinyApp::initComponents() {
         deviceVK.get(),
         instanceVK->surface,
         windowManager->window,
-        TinyApp::MAX_FRAMES_IN_FLIGHT
+        tinyApp::MAX_FRAMES_IN_FLIGHT
     );
 
-    project = MakeUnique<TinyProject>(deviceVK.get());
+    project = MakeUnique<tinyProject>(deviceVK.get());
     
-    // Initialize the active scene handle (moved from TinyProject for better separation)
+    // Initialize the active scene handle (moved from tinyProject for better separation)
     activeSceneHandle = project->initialSceneHandle;
 
-    // Initialize selected handle to root scene node (already done in TinyProject constructor)
+    // Initialize selected handle to root scene node (already done in tinyProject constructor)
     // project->selectSceneNode(project->getRootNodeHandle());
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
@@ -84,11 +84,11 @@ void TinyApp::initComponents() {
     // None - no vertex input (for fullscreen quads, etc.)
     vertexInputVKs["None"] = VertexInputVK();
 
-    auto vstaticLayout = TinyVertex::Static::layout();
+    auto vstaticLayout = tinyVertex::Static::layout();
     auto vstaticBind = vstaticLayout.bindingDesc();
     auto vstaticAttrs = vstaticLayout.attributeDescs();
 
-    auto vriggedLayout = TinyVertex::Rigged::layout();
+    auto vriggedLayout = tinyVertex::Rigged::layout();
     auto vriggedBind = vriggedLayout.bindingDesc();
     auto vriggedAttrs = vriggedLayout.attributeDescs();
 
@@ -108,7 +108,7 @@ void TinyApp::initComponents() {
     renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
 
     // Initialize ImGui - do this after renderer is fully set up
-    imguiWrapper = MakeUnique<TinyImGui>();
+    imguiWrapper = MakeUnique<tinyImGui>();
     
     // ImGui now creates its own render pass using swapchain and depth info
     bool imguiInitSuccess = imguiWrapper->init(
@@ -131,7 +131,7 @@ void TinyApp::initComponents() {
     checkWindowResize();
 }
 
-bool TinyApp::checkWindowResize() {
+bool tinyApp::checkWindowResize() {
     if (!windowManager->resizedFlag && !renderer->isResizeNeeded()) return false;
 
     windowManager->resizedFlag = false;
@@ -160,7 +160,7 @@ bool TinyApp::checkWindowResize() {
 }
 
 
-void TinyApp::mainLoop() {
+void tinyApp::mainLoop() {
     SDL_SetRelativeMouseMode(SDL_TRUE); // Start with mouse locked
 
     // Create references to avoid arrow spam

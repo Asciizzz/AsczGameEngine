@@ -1,8 +1,8 @@
-#include "TinyVK/Resource/Descriptor.hpp"
-#include "TinyVK/Resource/DataBuffer.hpp"
+#include "tinyVK/Resource/Descriptor.hpp"
+#include "tinyVK/Resource/DataBuffer.hpp"
 #include <stdexcept>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 DescLayout::DescLayout(DescLayout&& other) noexcept {
     device = other.device;

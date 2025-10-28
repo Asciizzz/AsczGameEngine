@@ -4,16 +4,16 @@
 #include "backends/imgui_impl_sdl2.h"
 #include "backends/imgui_impl_vulkan.h"
 
-#include "TinyVK/Render/RenderPass.hpp"
-#include "TinyVK/Render/RenderTarget.hpp"
-#include "TinyVK/Render/Swapchain.hpp"
-#include "TinyVK/Render/DepthImage.hpp"
-#include "TinyVK/Resource/Descriptor.hpp"
+#include "tinyVK/Render/RenderPass.hpp"
+#include "tinyVK/Render/RenderTarget.hpp"
+#include "tinyVK/Render/Swapchain.hpp"
+#include "tinyVK/Render/DepthImage.hpp"
+#include "tinyVK/Resource/Descriptor.hpp"
 
 #include <SDL2/SDL.h>
 #include <functional>
 
-class TinyImGui {
+class tinyImGui {
 public:
     struct Window {
         std::string name;
@@ -24,16 +24,16 @@ public:
             : name(windowName), draw(drawFunc), p_open(openPtr) {}
     };
 
-    TinyImGui() = default;
-    ~TinyImGui() = default;
+    tinyImGui() = default;
+    ~tinyImGui() = default;
 
     // Delete copy semantics
-    TinyImGui(const TinyImGui&) = delete;
-    TinyImGui& operator=(const TinyImGui&) = delete;
+    tinyImGui(const tinyImGui&) = delete;
+    tinyImGui& operator=(const tinyImGui&) = delete;
 
     // Initialize ImGui with SDL2 and Vulkan backends (now creates its own render pass)
-    bool init(SDL_Window* window, VkInstance instance, const TinyVK::Device* deviceVK, 
-              const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage);
+    bool init(SDL_Window* window, VkInstance instance, const tinyVK::Device* deviceVK, 
+              const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage);
 
     // Cleanup ImGui
     void cleanup();
@@ -57,19 +57,19 @@ public:
     void processEvent(const SDL_Event* event);
 
     // Update render pass after window resize (recreates internal render pass and render targets)
-    void updateRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage);
+    void updateRenderPass(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage);
     
     // Get the ImGui render pass for external use
     VkRenderPass getRenderPass() const;
     
     // Get render target for specific swapchain image
-    TinyVK::RenderTarget* getRenderTarget(uint32_t imageIndex);
+    tinyVK::RenderTarget* getRenderTarget(uint32_t imageIndex);
     
     // Render to specific swapchain image (requires framebuffers from Renderer)
     void renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFramebuffer framebuffer);
     
     // Update render targets with framebuffers (called by Renderer after it creates framebuffers)
-    void updateRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers);
+    void updateRenderTargets(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers);
 
     // Demo window for testing
     void showDemoWindow(bool* p_open = nullptr);
@@ -78,17 +78,17 @@ private:
     bool m_initialized = false;
 
     // Vulkan context
-    const TinyVK::Device* deviceVK = nullptr;
-    TinyVK::DescPool descPool;
+    const tinyVK::Device* deviceVK = nullptr;
+    tinyVK::DescPool descPool;
 
     // Owned render pass and render targets for ImGui overlay
-    UniquePtr<TinyVK::RenderPass> renderPass;
-    std::vector<TinyVK::RenderTarget> renderTargets;
+    UniquePtr<tinyVK::RenderPass> renderPass;
+    std::vector<tinyVK::RenderTarget> renderTargets;
     
     // Window management
     std::vector<Window> windows;
     
     void createDescriptorPool();
-    void createRenderPass(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage);
-    void createRenderTargets(const TinyVK::Swapchain* swapchain, const TinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers);
+    void createRenderPass(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage);
+    void createRenderTargets(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers);
 };

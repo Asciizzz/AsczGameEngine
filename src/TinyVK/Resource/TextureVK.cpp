@@ -1,11 +1,11 @@
-#include "TinyVK/Resource/TextureVK.hpp"
-#include "TinyVK/System/CmdBuffer.hpp"
+#include "tinyVK/Resource/TextureVK.hpp"
+#include "tinyVK/System/CmdBuffer.hpp"
 
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 // ImageConfig implementation
 ImageConfig& ImageConfig::withDimensions(uint32_t w, uint32_t h, uint32_t d) {

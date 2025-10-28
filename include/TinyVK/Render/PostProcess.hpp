@@ -5,16 +5,16 @@
 #include <array>
 #include <fstream>
 
-#include "TinyVK/Render/Swapchain.hpp"
-#include "TinyVK/Pipeline/Pipeline_compute.hpp"
-#include "TinyVK/Render/DepthImage.hpp"
-#include "TinyVK/Resource/Descriptor.hpp"
+#include "tinyVK/Render/Swapchain.hpp"
+#include "tinyVK/Pipeline/Pipeline_compute.hpp"
+#include "tinyVK/Render/DepthImage.hpp"
+#include "tinyVK/Resource/Descriptor.hpp"
 
-#include "TinyVK/Render/FrameBuffer.hpp"
-#include "TinyVK/Render/RenderTarget.hpp"
-#include "TinyVK/Render/RenderPass.hpp"
+#include "tinyVK/Render/FrameBuffer.hpp"
+#include "tinyVK/Render/RenderTarget.hpp"
+#include "tinyVK/Render/RenderPass.hpp"
 
-namespace TinyVK {
+namespace tinyVK {
 
 // Represents a single ping-pong image pair for one frame
 struct PingPongImages {
@@ -124,4 +124,4 @@ private:
     void cleanup();
 };
 
-} // namespace TinyVK
+} // namespace tinyVK

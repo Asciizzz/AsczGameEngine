@@ -3,9 +3,9 @@
 #include <chrono>
 #include <deque>
 
-class TinyChrono {
+class tinyChrono {
 public:
-    TinyChrono();
+    tinyChrono();
 
     // Call this once per frame
     void update();

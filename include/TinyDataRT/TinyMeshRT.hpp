@@ -1,21 +1,21 @@
 #pragma once
 
-#include "TinyData/TinyMesh.hpp"
-#include "TinyExt/TinyRegistry.hpp"
-#include "TinyVK/Resource/DataBuffer.hpp"
-#include "TinyVK/Resource/Descriptor.hpp"
+#include "tinyData/tinyMesh.hpp"
+#include "tinyExt/tinyRegistry.hpp"
+#include "tinyVK/Resource/DataBuffer.hpp"
+#include "tinyVK/Resource/Descriptor.hpp"
 
-struct TinyMeshRT {
-    TinyMeshRT() = default;
+struct tinyMeshRT {
+    tinyMeshRT() = default;
 
-    TinyMeshRT(const TinyMeshRT&) = delete;
-    TinyMeshRT& operator=(const TinyMeshRT&) = delete;
+    tinyMeshRT(const tinyMeshRT&) = delete;
+    tinyMeshRT& operator=(const tinyMeshRT&) = delete;
 
-    TinyMeshRT(TinyMeshRT&&) = default;
-    TinyMeshRT& operator=(TinyMeshRT&&) = default;
+    tinyMeshRT(tinyMeshRT&&) = default;
+    tinyMeshRT& operator=(tinyMeshRT&&) = default;
 
 private:
-    TinyHandle meshHandle_;
-    const TinyRegistry* fsRegistry_ = nullptr;
-    const TinyVK::Device* deviceVK_ = nullptr;
+    tinyHandle meshHandle_;
+    const tinyRegistry* fsRegistry_ = nullptr;
+    const tinyVK::Device* deviceVK_ = nullptr;
 };

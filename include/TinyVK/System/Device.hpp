@@ -6,7 +6,7 @@
 #include <optional>
 #include <set>
 
-namespace TinyVK {
+namespace tinyVK {
 
 struct MemProp {
     static constexpr VkMemoryPropertyFlags DeviceLocal  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -125,4 +125,4 @@ private:
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 };
 
-} // namespace TinyVK
+} // namespace tinyVK

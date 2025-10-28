@@ -1,8 +1,8 @@
-#include "TinySystem/TinyWindow.hpp"
+#include "tinySystem/tinyWindow.hpp"
 #include <iostream>
 #include <stdexcept>
 
-TinyWindow::TinyWindow(const char* title, uint32_t width, uint32_t height)
+tinyWindow::tinyWindow(const char* title, uint32_t width, uint32_t height)
     : window(nullptr), shouldCloseFlag(false), resizedFlag(false), 
         width(width), height(height) {
     
@@ -25,14 +25,14 @@ TinyWindow::TinyWindow(const char* title, uint32_t width, uint32_t height)
     }
 }
 
-TinyWindow::~TinyWindow() {
+tinyWindow::~tinyWindow() {
     if (window) {
         SDL_DestroyWindow(window);
     }
     SDL_Quit();
 }
 
-void TinyWindow::pollEvents() {
+void tinyWindow::pollEvents() {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
@@ -53,7 +53,7 @@ void TinyWindow::pollEvents() {
     }
 }
 
-std::vector<const char*> TinyWindow::getRequiredVulkanExtensions() const {
+std::vector<const char*> tinyWindow::getRequiredVulkanExtensions() const {
     unsigned int sdlExtensionCount = 0;
     if (!SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, nullptr)) {
         throw std::runtime_error("Failed to get Vulkan extension count from SDL.");
@@ -67,15 +67,15 @@ std::vector<const char*> TinyWindow::getRequiredVulkanExtensions() const {
     return extensions;
 }
 
-void TinyWindow::getFrameBufferSize(int& width, int& height) const {
+void tinyWindow::getFrameBufferSize(int& width, int& height) const {
     SDL_Vulkan_GetDrawableSize(window, &width, &height);
 }
 
-void TinyWindow::waitEvents() const {
+void tinyWindow::waitEvents() const {
     SDL_WaitEvent(nullptr);
 }
 
-Uint32 TinyWindow::toggleFullscreen() {
+Uint32 tinyWindow::toggleFullscreen() {
     Uint32 flags = SDL_GetWindowFlags(window);
     if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
         SDL_SetWindowFullscreen(window, 0);
@@ -86,6 +86,6 @@ Uint32 TinyWindow::toggleFullscreen() {
     return SDL_GetWindowFlags(window);
 }
 
-void TinyWindow::maximizeWindow() {
+void tinyWindow::maximizeWindow() {
     SDL_MaximizeWindow(window);
 }

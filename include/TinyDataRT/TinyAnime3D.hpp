@@ -5,10 +5,10 @@
 #include <glm/gtc/quaternion.hpp>
 #include <string>
 
-#include "TinyExt/TinyPool.hpp"
+#include "tinyExt/tinyPool.hpp"
 
-struct TinySceneRT;
-namespace TinyRT {
+struct tinySceneRT;
+namespace tinyRT {
 
 struct Anime3D {
     Anime3D() = default;
@@ -42,7 +42,7 @@ struct Anime3D {
         } target = Target::Node;
 
         // Will be remapped upon scene import
-        TinyHandle node;
+        tinyHandle node;
         uint32_t index = 0;
     };
 
@@ -54,8 +54,8 @@ struct Anime3D {
         bool valid() const { return !channels.empty() && !samplers.empty(); }
     };
 
-    TinyHandle add(Anime&& anime) {
-        if (!anime.valid()) return TinyHandle();
+    tinyHandle add(Anime&& anime) {
+        if (!anime.valid()) return tinyHandle();
 
         std::string baseName = anime.name.empty() ? "Anime" : anime.name;
         std::string uniqueName = baseName;
@@ -80,18 +80,18 @@ struct Anime3D {
 
     bool isPlaying() const { return playing; }
     void play(const std::string& name, bool restart = true);
-    void play(const TinyHandle& handle, bool restart = true);
+    void play(const tinyHandle& handle, bool restart = true);
     void pause() { playing = false; }
     void resume() { playing = true; }
     void stop() { time = 0.0f; playing = false; }
 
-    void update(TinySceneRT* scene, float deltaTime);
+    void update(tinySceneRT* scene, float deltaTime);
 
     Anime* current() { return animePool.get(currentHandle); }
     const Anime* current() const { return animePool.get(currentHandle); }
 
-    Anime* get(const TinyHandle& handle) { return animePool.get(handle); }
-    const Anime* get(const TinyHandle& handle) const { return animePool.get(handle); }
+    Anime* get(const tinyHandle& handle) { return animePool.get(handle); }
+    const Anime* get(const tinyHandle& handle) const { return animePool.get(handle); }
 
     Anime* get(const std::string& name) {
         auto it = nameToHandle.find(name);
@@ -109,23 +109,23 @@ struct Anime3D {
     }
 
     // Retrieve the list
-    const UnorderedMap<std::string, TinyHandle>& MAL() const {
+    const UnorderedMap<std::string, tinyHandle>& MAL() const {
         return nameToHandle;
     }
 
 private:
-    TinyPool<Anime> animePool;
-    UnorderedMap<std::string, TinyHandle> nameToHandle;
-    TinyHandle currentHandle;
+    tinyPool<Anime> animePool;
+    UnorderedMap<std::string, tinyHandle> nameToHandle;
+    tinyHandle currentHandle;
 
     bool playing = false;
     bool loop = true;
     float time = 0.0f;
     float speed = 1.0f;
 
-    void writeTransform(TinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const;
+    void writeTransform(tinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const;
 };
 
-} // namespace TinyRT
+} // namespace tinyRT
 
-using TinyRT_AN3D = TinyRT::Anime3D;
+using tinyRT_AN3D = tinyRT::Anime3D;

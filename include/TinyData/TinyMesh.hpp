@@ -1,26 +1,26 @@
 #pragma once
 
-#include "TinyData/TinyVertex.hpp"
-#include "TinyExt/TinyHandle.hpp"
-#include "TinyVK/Resource/DataBuffer.hpp"
+#include "tinyData/tinyVertex.hpp"
+#include "tinyExt/tinyHandle.hpp"
+#include "tinyVK/Resource/DataBuffer.hpp"
 
 #include <string>
 
-struct TinySubmesh {
+struct tinySubmesh {
     uint32_t indexOffset = 0;
     uint32_t idxCount = 0;
-    TinyHandle material;
+    tinyHandle material;
 };
 
 // Uniform mesh structure that holds raw data only
-struct TinyMesh {
-    TinyMesh() = default;
+struct tinyMesh {
+    tinyMesh() = default;
 
-    TinyMesh(const TinyMesh&) = delete;
-    TinyMesh& operator=(const TinyMesh&) = delete;
+    tinyMesh(const tinyMesh&) = delete;
+    tinyMesh& operator=(const tinyMesh&) = delete;
 
-    TinyMesh(TinyMesh&&) = default;
-    TinyMesh& operator=(TinyMesh&&) = default;
+    tinyMesh(tinyMesh&&) = default;
+    tinyMesh& operator=(tinyMesh&&) = default;
 
     struct MorphTarget {
         std::string name;
@@ -29,12 +29,12 @@ struct TinyMesh {
 
     std::string name; // Mesh name from glTF
 
-    TinyMesh& setSubmeshes(const std::vector<TinySubmesh>& subs);
-    TinyMesh& addSubmesh(const TinySubmesh& sub);
-    TinyMesh& writeSubmesh(const TinySubmesh& sub, uint32_t index);
+    tinyMesh& setSubmeshes(const std::vector<tinySubmesh>& subs);
+    tinyMesh& addSubmesh(const tinySubmesh& sub);
+    tinyMesh& writeSubmesh(const tinySubmesh& sub, uint32_t index);
 
     template<typename VertexT>
-    TinyMesh& setVertices(const std::vector<VertexT>& verts) {
+    tinyMesh& setVertices(const std::vector<VertexT>& verts) {
         vrtxCount_ = verts.size();
         vrtxLayout_ = VertexT::layout();
 
@@ -45,7 +45,7 @@ struct TinyMesh {
     }
 
     template<typename IndexT>
-    TinyMesh& setIndices(const std::vector<IndexT>& idx) {
+    tinyMesh& setIndices(const std::vector<IndexT>& idx) {
         idxCount_ = idx.size();
         idxStride_ = sizeof(IndexT);
         idxType_ = sizeToIndexType(idxStride_);
@@ -70,10 +70,10 @@ struct TinyMesh {
         return reinterpret_cast<IndexT*>(idxData_.data());
     }
 
-    bool vkCreate(const TinyVK::Device* deviceVK);
+    bool vkCreate(const tinyVK::Device* deviceVK);
     static VkIndexType sizeToIndexType(size_t size);
 
-    const TinyVertex::Layout& vrtxLayout() const { return vrtxLayout_; }
+    const tinyVertex::Layout& vrtxLayout() const { return vrtxLayout_; }
     size_t vrtxCount() const { return vrtxCount_; }
     size_t idxCount() const { return idxCount_; }
 
@@ -81,10 +81,10 @@ struct TinyMesh {
     VkBuffer idxBuffer() const { return idxBuffer_; }
     VkIndexType idxType() const { return idxType_; }
 
-    const std::vector<TinySubmesh>& submeshes() const { return submeshes_; }
+    const std::vector<tinySubmesh>& submeshes() const { return submeshes_; }
 
 private:
-    TinyVertex::Layout vrtxLayout_;
+    tinyVertex::Layout vrtxLayout_;
     std::vector<uint8_t> vrtxData_; // raw bytes
     size_t vrtxCount_ = 0;
 
@@ -92,11 +92,11 @@ private:
     size_t idxCount_ = 0;
     size_t idxStride_ = 0;
 
-    std::vector<TinySubmesh> submeshes_;
+    std::vector<tinySubmesh> submeshes_;
 
-    TinyVK::DataBuffer vrtxBuffer_;
-    std::vector<TinyVK::DataBuffer> morphVrtxBuffers_;
+    tinyVK::DataBuffer vrtxBuffer_;
+    std::vector<tinyVK::DataBuffer> morphVrtxBuffers_;
 
-    TinyVK::DataBuffer idxBuffer_;
+    tinyVK::DataBuffer idxBuffer_;
     VkIndexType idxType_ = VK_INDEX_TYPE_UINT16;
 };

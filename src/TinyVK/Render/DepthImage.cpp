@@ -1,9 +1,9 @@
 // DepthImage.cpp
-#include "TinyVK/Render/DepthImage.hpp"
+#include "tinyVK/Render/DepthImage.hpp"
 
 #include <stdexcept>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 void DepthImage::create(VkPhysicalDevice pDevice, uint32_t width, uint32_t height) {
     cleanup(); // Clean up existing resources if any

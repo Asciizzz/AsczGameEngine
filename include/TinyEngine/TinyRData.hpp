@@ -1,19 +1,19 @@
 #pragma once
 
-// Soon to be deprecated - use TinyMaterial instead
+// Soon to be deprecated - use tinyMaterial instead
 
 #include <string>
 
 #include <glm/glm.hpp>
-#include "TinyData/TinyMaterial.hpp"
+#include "tinyData/tinyMaterial.hpp"
 
-struct TinyRMaterial {
+struct tinyRMaterial {
     std::string name; // Material name from source data
     glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved (remapped registry indices)
 
-    // Constructor from TinyMaterial - converts local texture indices to registry indices
-    TinyRMaterial() = default;
-    TinyRMaterial(const TinyMaterial& material) : name(material.name) {
+    // Constructor from tinyMaterial - converts local texture indices to registry indices
+    tinyRMaterial() = default;
+    tinyRMaterial(const tinyMaterial& material) : name(material.name) {
         // Note: texture indices will be remapped during scene loading
         // material.localAlbTexture and material.localNrmlTexture are converted to registry indices
     }

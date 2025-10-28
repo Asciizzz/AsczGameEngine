@@ -1,12 +1,12 @@
-#include "TinyVK/Render/Swapchain.hpp"
-#include "TinyVK/System/Device.hpp"  // Need full Device definition
+#include "tinyVK/Render/Swapchain.hpp"
+#include "tinyVK/System/Device.hpp"  // Need full Device definition
 
 #include <SDL2/SDL_vulkan.h>
 #include <stdexcept>
 #include <algorithm>
 #include <limits>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 Swapchain::Swapchain(const Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window)
     : deviceVK(deviceVK), surface(surface) {

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "TinyVK/System/Device.hpp"
+#include "tinyVK/System/Device.hpp"
 
-namespace TinyVK {
+namespace tinyVK {
 
 struct BufferUsage {
     static constexpr VkBufferUsageFlags Vertex      = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;

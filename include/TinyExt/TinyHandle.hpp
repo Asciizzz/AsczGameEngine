@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <functional>
 
-union TinyHandle {
+union tinyHandle {
     struct {
         uint32_t index;
         uint32_t version;
@@ -12,8 +12,8 @@ union TinyHandle {
     // Full pack representation
     uint64_t value;
 
-    constexpr TinyHandle() : value(UINT64_MAX) {}
-    TinyHandle(uint32_t index, uint32_t version = 0) {
+    constexpr tinyHandle() : value(UINT64_MAX) {}
+    tinyHandle(uint32_t index, uint32_t version = 0) {
         *this = make(index, version);
     }
 
@@ -23,16 +23,16 @@ union TinyHandle {
     @param version The version for safety checks (default 0)
     */
     template<typename IndexType, typename VersionType>
-    static TinyHandle make(IndexType index, VersionType version) {
-        TinyHandle handle;
+    static tinyHandle make(IndexType index, VersionType version) {
+        tinyHandle handle;
         handle.index = static_cast<uint32_t>(index);
         handle.version = static_cast<uint32_t>(version);
         return handle;
     }
 
     // Value operators
-    constexpr bool operator==(const TinyHandle& other) const { return value == other.value; }
-    constexpr bool operator!=(const TinyHandle& other) const { return value != other.value; }
+    constexpr bool operator==(const tinyHandle& other) const { return value == other.value; }
+    constexpr bool operator!=(const tinyHandle& other) const { return value != other.value; }
 
     constexpr bool valid() const { return value != UINT64_MAX && index != UINT32_MAX; }
     constexpr bool invalid() const { return !valid(); }
@@ -40,23 +40,23 @@ union TinyHandle {
 };
 
 namespace std {
-    template<> struct hash<TinyHandle> {
-        size_t operator()(const TinyHandle& h) const noexcept {
+    template<> struct hash<tinyHandle> {
+        size_t operator()(const tinyHandle& h) const noexcept {
             return std::hash<uint64_t>()(h.value);
         }
     };
 }
 
 #include <typeindex>
-struct TypeHandle {
-    TinyHandle handle;
+struct typeHandle {
+    tinyHandle handle;
     size_t typeHash;
 
-    TypeHandle() : typeHash(0) {}
+    typeHandle() : typeHash(0) {}
 
     template<typename T>
-    static TypeHandle make(TinyHandle h) {
-        TypeHandle th;
+    static typeHandle make(tinyHandle h) {
+        typeHandle th;
         th.handle = h;
         th.typeHash = typeid(T).hash_code();
         return th;

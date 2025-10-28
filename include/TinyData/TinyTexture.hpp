@@ -1,20 +1,20 @@
 #pragma once
 
-#include "TinyVK/Resource/TextureVK.hpp"
+#include "tinyVK/Resource/TextureVK.hpp"
 
 #include <cstdint>
 #include <string>
 
 // Raw texture data (no Vulkan handles)
-struct TinyTexture {
-    TinyTexture(const TinyTexture&) = delete;
-    TinyTexture& operator=(const TinyTexture&) = delete;
+struct tinyTexture {
+    tinyTexture(const tinyTexture&) = delete;
+    tinyTexture& operator=(const tinyTexture&) = delete;
 
-    TinyTexture(TinyTexture&&) = default;
-    TinyTexture& operator=(TinyTexture&&) = default;
+    tinyTexture(tinyTexture&&) = default;
+    tinyTexture& operator=(tinyTexture&&) = default;
 
     // Vulkan texture representation
-    TinyVK::TextureVK textureVK;
+    tinyVK::TextureVK textureVK;
 
     // Image
     int width = 0;
@@ -23,12 +23,12 @@ struct TinyTexture {
     std::vector<uint8_t> data;
 
     std::string name;
-    TinyTexture(const std::string& n = "") : name(n) {}
+    tinyTexture(const std::string& n = "") : name(n) {}
 
-    TinyTexture& setName(const std::string& n);
-    TinyTexture& setDimensions(int w, int h);
-    TinyTexture& setChannels(int c);
-    TinyTexture& setData(const std::vector<uint8_t>& d);
+    tinyTexture& setName(const std::string& n);
+    tinyTexture& setDimensions(int w, int h);
+    tinyTexture& setChannels(int c);
+    tinyTexture& setData(const std::vector<uint8_t>& d);
 
     uint64_t hash = 0; // fnv1a hash of raw data
     uint64_t makeHash();
@@ -39,13 +39,13 @@ struct TinyTexture {
         ClampToEdge,
         ClampToBorder
     } addressMode = AddressMode::Repeat;
-    TinyTexture& setAddressMode(AddressMode mode) {
+    tinyTexture& setAddressMode(AddressMode mode) {
         addressMode = mode;
         return *this;
     }
 
 
-    bool vkCreate(const TinyVK::Device* deviceVK);
+    bool vkCreate(const tinyVK::Device* deviceVK);
 
-    static TinyTexture createDefaultTexture();
+    static tinyTexture createDefaultTexture();
 };

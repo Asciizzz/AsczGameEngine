@@ -6,20 +6,20 @@
 #include <SDL2/SDL.h>
 #include <vector>
 
-#include "TinyVK/System/CmdBuffer.hpp"
-#include "TinyVK/Render/Swapchain.hpp"
-#include "TinyVK/Pipeline/Pipeline_include.hpp"
-#include "TinyVK/Render/PostProcess.hpp"
-#include "TinyVK/Render/DepthImage.hpp"
-#include "TinyVK/Render/RenderPass.hpp"
-#include "TinyVK/Render/RenderTarget.hpp"
+#include "tinyVK/System/CmdBuffer.hpp"
+#include "tinyVK/Render/Swapchain.hpp"
+#include "tinyVK/Pipeline/Pipeline_include.hpp"
+#include "tinyVK/Render/PostProcess.hpp"
+#include "tinyVK/Render/DepthImage.hpp"
+#include "tinyVK/Render/RenderPass.hpp"
+#include "tinyVK/Render/RenderTarget.hpp"
 
-#include "TinyEngine/TinyProject.hpp"
+#include "tinyEngine/tinyProject.hpp"
 
 // Forward declarations
-class TinyImGui;
+class tinyImGui;
 
-namespace TinyVK {
+namespace tinyVK {
 
 class Renderer {
 public:
@@ -34,7 +34,7 @@ public:
     void handleWindowResize(SDL_Window* window);
 
     uint32_t beginFrame();
-    void endFrame(uint32_t imageIndex, TinyImGui* imguiWrapper = nullptr);
+    void endFrame(uint32_t imageIndex, tinyImGui* imguiWrapper = nullptr);
 
     uint32_t getCurrentFrame() const { return currentFrame; }
     VkCommandBuffer getCurrentCommandBuffer() const;
@@ -60,18 +60,18 @@ public:
     // PostProcess getter for external access
     PostProcess* getPostProcess() const { return postProcess.get(); }
 
-    void drawSky(const TinyProject* project, const PipelineRaster* skyPipeline) const;
+    void drawSky(const tinyProject* project, const PipelineRaster* skyPipeline) const;
 
-    void drawScene(TinyProject* project, TinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, TinyHandle selectedNodeHandle = TinyHandle()) const;
+    void drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, tinyHandle selectedNodeHandle = tinyHandle()) const;
 
     // Safe resource deletion with Vulkan synchronization
-    void processPendingRemovals(TinyProject* project, TinySceneRT* activeScene);
+    void processPendingRemovals(tinyProject* project, tinySceneRT* activeScene);
 
     // Get swapchain framebuffer for external ImGui rendering
     VkFramebuffer getFrameBuffer(uint32_t imageIndex) const;
     
     // Set up ImGui render targets after framebuffers are created
-    void setupImGuiRenderTargets(TinyImGui* imguiWrapper);
+    void setupImGuiRenderTargets(tinyImGui* imguiWrapper);
 
     // Post-processing methods
     void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);

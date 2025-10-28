@@ -1,8 +1,8 @@
 // PipelineRaster.hpp
 #pragma once
-#include "TinyVK/Pipeline/Pipeline_core.hpp"
+#include "tinyVK/Pipeline/Pipeline_core.hpp"
 
-namespace TinyVK {
+namespace tinyVK {
 
 enum class CullMode {
     None = VK_CULL_MODE_NONE,
@@ -157,4 +157,4 @@ private:
     PipelineCore core;
 };
 
-} // namespace TinyVK
+} // namespace tinyVK

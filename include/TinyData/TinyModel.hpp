@@ -1,21 +1,21 @@
 #pragma once
 
-#include "TinyData/TinyMesh.hpp"
-#include "TinyData/TinyMaterial.hpp"
-#include "TinyData/TinyTexture.hpp"
-#include "TinyData/TinySkeleton.hpp"
-#include "TinyDataRT/TinyAnime3D.hpp"
-#include "TinyDataRT/TinyNodeRT.hpp"
+#include "tinyData/tinyMesh.hpp"
+#include "tinyData/tinyMaterial.hpp"
+#include "tinyData/tinyTexture.hpp"
+#include "tinyData/tinySkeleton.hpp"
+#include "tinyDataRT/tinyAnime3D.hpp"
+#include "tinyDataRT/tinyNodeRT.hpp"
 
-struct TinyModel {
+struct tinyModel {
     std::string name;
 
     // All local space
-    std::vector<TinyMesh> meshes;
-    std::vector<TinyMaterial> materials;
-    std::vector<TinyTexture> textures;
-    std::vector<TinySkeleton> skeletons;
-    std::vector<TinyRT_AN3D> animations;
+    std::vector<tinyMesh> meshes;
+    std::vector<tinyMaterial> materials;
+    std::vector<tinyTexture> textures;
+    std::vector<tinySkeleton> skeletons;
+    std::vector<tinyRT_AN3D> animations;
 
-    std::vector<TinyNodeRT> nodes;
+    std::vector<tinyNodeRT> nodes;
 };

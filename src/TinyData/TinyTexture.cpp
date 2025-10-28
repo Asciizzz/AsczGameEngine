@@ -1,29 +1,29 @@
-#include "TinyData/TinyTexture.hpp"
+#include "tinyData/tinyTexture.hpp"
 
-#include "TinyVK/Resource/DataBuffer.hpp"
-#include "TinyVK/System/CmdBuffer.hpp"
+#include "tinyVK/Resource/DataBuffer.hpp"
+#include "tinyVK/System/CmdBuffer.hpp"
 
-using namespace TinyVK;
+using namespace tinyVK;
 
-TinyTexture& TinyTexture::setName(const std::string& n) {
+tinyTexture& tinyTexture::setName(const std::string& n) {
     name = n;
     return *this;
 }
-TinyTexture& TinyTexture::setDimensions(int w, int h) {
+tinyTexture& tinyTexture::setDimensions(int w, int h) {
     width = w;
     height = h;
     return *this;
 }
-TinyTexture& TinyTexture::setChannels(int c) {
+tinyTexture& tinyTexture::setChannels(int c) {
     channels = c;
     return *this;
 }
-TinyTexture& TinyTexture::setData(const std::vector<uint8_t>& d) {
+tinyTexture& tinyTexture::setData(const std::vector<uint8_t>& d) {
     data = d;
     return *this;
 }
 
-uint64_t TinyTexture::makeHash() {
+uint64_t tinyTexture::makeHash() {
     const uint64_t FNV_offset = 1469598103934665603ULL;
     const uint64_t FNV_prime  = 1099511628211ULL;
     hash = FNV_offset;
@@ -54,8 +54,8 @@ uint64_t TinyTexture::makeHash() {
     return hash;
 }
 
-TinyTexture TinyTexture::createDefaultTexture() {
-    TinyTexture texture;
+tinyTexture tinyTexture::createDefaultTexture() {
+    tinyTexture texture;
     texture.width = 1;
     texture.height = 1;
     texture.channels = 4;
@@ -67,7 +67,7 @@ TinyTexture TinyTexture::createDefaultTexture() {
 
 
 
-bool TinyTexture::vkCreate(const TinyVK::Device* deviceVK) {
+bool tinyTexture::vkCreate(const tinyVK::Device* deviceVK) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
@@ -101,12 +101,12 @@ bool TinyTexture::vkCreate(const TinyVK::Device* deviceVK) {
         .withAspectMask(ImageAspect::Color)
         .withAutoMipLevels(width, height);
 
-    // A quick function to convert TinyTexture::AddressMode to VkSamplerAddressMode
-    auto convertAddressMode = [](TinyTexture::AddressMode mode) {
+    // A quick function to convert tinyTexture::AddressMode to VkSamplerAddressMode
+    auto convertAddressMode = [](tinyTexture::AddressMode mode) {
         switch (mode) {
-            case TinyTexture::AddressMode::Repeat:        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            case TinyTexture::AddressMode::ClampToEdge:   return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            case TinyTexture::AddressMode::ClampToBorder: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            case tinyTexture::AddressMode::Repeat:        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            case tinyTexture::AddressMode::ClampToEdge:   return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case tinyTexture::AddressMode::ClampToBorder: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
             default:                                      return VK_SAMPLER_ADDRESS_MODE_REPEAT;
         }
     };

@@ -1,15 +1,15 @@
-#include "TinyEngine/TinyGlobal.hpp"
+#include "tinyEngine/tinyGlobal.hpp"
 
-#include "TinyData/TinyCamera.hpp"
+#include "tinyData/tinyCamera.hpp"
 
 #include <stdexcept>
 #include <chrono>
 
-using namespace TinyVK;
+using namespace tinyVK;
 
-void TinyGlobal::vkCreate(const TinyVK::Device* deviceVK) {
+void tinyGlobal::vkCreate(const tinyVK::Device* deviceVK) {
     // get the true aligned size (for dynamic UBO offsets)
-    alignedSize = deviceVK->alignSize(sizeof(TinyGlobal::UBO));
+    alignedSize = deviceVK->alignSize(sizeof(tinyGlobal::UBO));
 
     dataBuffer
         .setDataSize(alignedSize * maxFramesInFlight)
@@ -27,7 +27,7 @@ void TinyGlobal::vkCreate(const TinyVK::Device* deviceVK) {
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = dataBuffer;
     bufferInfo.offset = 0;
-    bufferInfo.range  = sizeof(TinyGlobal::UBO);
+    bufferInfo.range  = sizeof(tinyGlobal::UBO);
 
     DescWrite()
         .setDstSet(descSet)
@@ -38,7 +38,7 @@ void TinyGlobal::vkCreate(const TinyVK::Device* deviceVK) {
 }
 
 
-void TinyGlobal::update(const TinyCamera& camera, uint32_t frameIndex) {
+void tinyGlobal::update(const tinyCamera& camera, uint32_t frameIndex) {
     static constexpr float deltaDay = 1.0f / 86400.0f;
 
     ubo.proj = camera.projectionMatrix;

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "TinyExt/TinyPool.hpp"
+#include "tinyExt/tinyPool.hpp"
 
 #include <assert.h>
 
-class TinyRegistry { // For raw resource data
+class tinyRegistry { // For raw resource data
     struct IPool {
         virtual ~IPool() = default;
-        virtual void* get(const TinyHandle& handle) = 0;
-        virtual void instaRm(const TinyHandle& handle) = 0;
-        virtual void queueRm(const TinyHandle& handle) = 0;
+        virtual void* get(const tinyHandle& handle) = 0;
+        virtual void instaRm(const tinyHandle& handle) = 0;
+        virtual void queueRm(const tinyHandle& handle) = 0;
         virtual void flushRm(uint32_t index) = 0;
         virtual void flushAllRms() = 0;
         virtual bool hasPendingRms() const = 0;
@@ -17,11 +17,11 @@ class TinyRegistry { // For raw resource data
 
     template<typename T>
     struct PoolWrapper : public IPool {
-        TinyPool<T> pool;
+        tinyPool<T> pool;
 
-        void* get(const TinyHandle& handle) override { return pool.get(handle); }
-        void instaRm(const TinyHandle& handle) override { pool.instaRm(handle); }
-        void queueRm(const TinyHandle& handle) override { pool.queueRm(handle); }
+        void* get(const tinyHandle& handle) override { return pool.get(handle); }
+        void instaRm(const tinyHandle& handle) override { pool.instaRm(handle); }
+        void queueRm(const tinyHandle& handle) override { pool.queueRm(handle); }
         void flushRm(uint32_t index) override { pool.flushRm(index); }
         void flushAllRms() override { pool.flushAllRms(); }
         bool hasPendingRms() const override { return pool.hasPendingRms(); }
@@ -64,11 +64,11 @@ class TinyRegistry { // For raw resource data
 
     // Remove execution
     template<typename T>
-    void remove(const TinyHandle& handle) {
+    void remove(const tinyHandle& handle) {
         if (auto* wrapper = getWrapper<T>()) wrapper->pool.instaRm(handle);
     }
 
-    void remove(const TypeHandle& th) {
+    void remove(const typeHandle& th) {
         auto it = hashToPool.find(th.typeHash);
         if (it != hashToPool.end()) {
             it->second->instaRm(th.handle);
@@ -76,38 +76,38 @@ class TinyRegistry { // For raw resource data
     }
 
 public:
-    TinyRegistry() = default;
+    tinyRegistry() = default;
 
-    TinyRegistry(const TinyRegistry&) = delete;
-    TinyRegistry& operator=(const TinyRegistry&) = delete;
+    tinyRegistry(const tinyRegistry&) = delete;
+    tinyRegistry& operator=(const tinyRegistry&) = delete;
 
-    TinyRegistry(TinyRegistry&&) = default;
-    TinyRegistry& operator=(TinyRegistry&&) = default;
+    tinyRegistry(tinyRegistry&&) = default;
+    tinyRegistry& operator=(tinyRegistry&&) = default;
 
     template<typename T>
-    TypeHandle add(T&& data) {
-        return TypeHandle::make<T>(ensurePool<T>().pool.add(std::forward<T>(data)));
+    typeHandle add(T&& data) {
+        return typeHandle::make<T>(ensurePool<T>().pool.add(std::forward<T>(data)));
     }
 
     template<typename T>
-    TinyPool<T>& make() {
+    tinyPool<T>& make() {
         return ensurePool<T>().pool;
     }
 
     template<typename T>
-    void tInstaRm(const TinyHandle& handle) {
+    void tInstaRm(const tinyHandle& handle) {
         remove<T>(handle);
     }
-    void tInstaRm(const TypeHandle& th) {
+    void tInstaRm(const typeHandle& th) {
         remove(th);
     }
 
     template<typename T> // For unsafe removal (vulkan resources for example)
-    void tQueueRm(const TinyHandle& handle) {
+    void tQueueRm(const tinyHandle& handle) {
         auto* wrapper = getWrapper<T>(); // check validity
         if (wrapper) wrapper->pool.queueRm(handle);
     }
-    void tQueueRm(const TypeHandle& th) {
+    void tQueueRm(const typeHandle& th) {
         auto it = hashToPool.find(th.typeHash);
         if (it != hashToPool.end()) {
             it->second->queueRm(th.handle);
@@ -147,46 +147,46 @@ public:
 
 
     template<typename T>
-    T* get(const TinyHandle& handle) {
+    T* get(const tinyHandle& handle) {
         auto* wrapper = getWrapper<T>(); // check validity
         return wrapper ? wrapper->pool.get(handle) : nullptr;
     }
 
     template<typename T>
-    const T* get(const TinyHandle& handle) const {
+    const T* get(const tinyHandle& handle) const {
         auto* wrapper = getWrapper<T>(); // check validity
         return wrapper ? wrapper->pool.get(handle) : nullptr;
     }
 
-    void* get(const TypeHandle& th) {
+    void* get(const typeHandle& th) {
         if (!th.valid()) return nullptr;
 
         auto it = hashToPool.find(th.typeHash);
         return (it != hashToPool.end()) ? it->second->get(th.handle) : nullptr;
     }
 
-    const void* get(const TypeHandle& th) const {
-        return const_cast<TinyRegistry*>(this)->get(th);
+    const void* get(const typeHandle& th) const {
+        return const_cast<tinyRegistry*>(this)->get(th);
     }
 
     template<typename T>
-    T* get(const TypeHandle& th) {
-        assert(th.isType<T>() && "TypeHandle does not match requested type T");
+    T* get(const typeHandle& th) {
+        assert(th.isType<T>() && "typeHandle does not match requested type T");
         return static_cast<T*>(get(th));
     }
 
     template<typename T>
-    const T* get(const TypeHandle& th) const {
-        return const_cast<TinyRegistry*>(this)->get<T>(th);
+    const T* get(const typeHandle& th) const {
+        return const_cast<tinyRegistry*>(this)->get<T>(th);
     }
 
     template<typename T>
-    bool has(const TinyHandle& handle) const {
+    bool has(const tinyHandle& handle) const {
         auto* wrapper = getWrapper<T>(); // check validity
         return wrapper ? wrapper->pool.valid(handle) : false;
     }
 
-    bool has(const TypeHandle& th) const {
+    bool has(const typeHandle& th) const {
         if (!th.valid()) return false;
 
         auto it = hashToPool.find(th.typeHash);
@@ -209,21 +209,21 @@ public:
 
     void* data(size_t typeHash) {
         auto it = hashToPool.find(typeHash);
-        return (it != hashToPool.end()) ? it->second->get(TinyHandle()) : nullptr;
+        return (it != hashToPool.end()) ? it->second->get(tinyHandle()) : nullptr;
     }
 
     template<typename T>
-    TinyPool<T>& view() {
+    tinyPool<T>& view() {
         return ensurePool<T>().pool;
     }
 
     template<typename T>
-    const TinyPool<T>& view() const {
+    const tinyPool<T>& view() const {
         const auto* wrapper = getWrapper<T>();
 
         // Cannot retrieve non-existing pool in const context
         if (!wrapper) {
-            static TinyPool<T> empty; // or throw/assert
+            static tinyPool<T> empty; // or throw/assert
             return empty;
         }
 

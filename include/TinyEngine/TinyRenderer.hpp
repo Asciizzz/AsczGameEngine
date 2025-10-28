@@ -1,16 +1,16 @@
 #pragma once
 
-#include "TinyVK/Render/Swapchain.hpp"
-#include "TinyVK/Render/RenderPass.hpp"
-#include "TinyVK/Render/DepthImage.hpp"
+#include "tinyVK/Render/Swapchain.hpp"
+#include "tinyVK/Render/RenderPass.hpp"
+#include "tinyVK/Render/DepthImage.hpp"
 
-class TinyRenderer {
+class tinyRenderer {
 public:
-    TinyRenderer() = default;
-    ~TinyRenderer() = default;
+    tinyRenderer() = default;
+    ~tinyRenderer() = default;
 
     // Delete copy semantics
-    TinyRenderer(const TinyRenderer&) = delete;
-    TinyRenderer& operator=(const TinyRenderer&) = delete;
+    tinyRenderer(const tinyRenderer&) = delete;
+    tinyRenderer& operator=(const tinyRenderer&) = delete;
 
 };

@@ -1,32 +1,32 @@
-#include "TinyData/TinyMaterial.hpp"
+#include "tinyData/tinyMaterial.hpp"
 
-TinyMaterial& TinyMaterial::setShading(bool enable) {
+tinyMaterial& tinyMaterial::setShading(bool enable) {
     shading = enable;
     return *this;
 }
 
-TinyMaterial& TinyMaterial::setToonLevel(int level) {
+tinyMaterial& tinyMaterial::setToonLevel(int level) {
     toonLevel = level;
     return *this;
 }
 
-TinyMaterial& TinyMaterial::setNormalBlend(float blend) {
+tinyMaterial& tinyMaterial::setNormalBlend(float blend) {
     normalBlend = blend;
     return *this;
 }
 
-TinyMaterial& TinyMaterial::setDiscardThreshold(float threshold) {
+tinyMaterial& tinyMaterial::setDiscardThreshold(float threshold) {
     discardThreshold = threshold;
     return *this;
 }
 
-TinyMaterial& TinyMaterial::setAlbedoTexture(int texIndex, uint32_t texHash) {
+tinyMaterial& tinyMaterial::setAlbedoTexture(int texIndex, uint32_t texHash) {
     localAlbTexture = texIndex;
     albTexHash = texHash;
     return *this;
 }
 
-TinyMaterial& TinyMaterial::setNormalTexture(int texIndex, uint32_t texHash) {
+tinyMaterial& tinyMaterial::setNormalTexture(int texIndex, uint32_t texHash) {
     localNrmlTexture = texIndex;
     nrmlTexHash = texHash;
     return *this;

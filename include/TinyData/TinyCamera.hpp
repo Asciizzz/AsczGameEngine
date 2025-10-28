@@ -8,11 +8,11 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-class TinyCamera {
+class tinyCamera {
 public:
-    TinyCamera();
-    TinyCamera(const glm::vec3& position, float fov = 45.0f, float nearPlane = 0.1f, float farPlane = 100.0f);
-    ~TinyCamera() = default;
+    tinyCamera();
+    tinyCamera(const glm::vec3& position, float fov = 45.0f, float nearPlane = 0.1f, float farPlane = 100.0f);
+    ~tinyCamera() = default;
 
     void setPosition(const glm::vec3& position);
     void setRotation(float pitch, float yaw, float roll = 0.0f);

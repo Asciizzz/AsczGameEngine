@@ -10,7 +10,7 @@
 struct VkVertexInputBindingDescription;
 struct VkVertexInputAttributeDescription;
 
-namespace TinyVertex {
+namespace tinyVertex {
 
 struct Layout {
     uint32_t stride;
@@ -102,4 +102,4 @@ struct Rigged {
     static std::vector<Static> makeStatic(const std::vector<Rigged>& rigVertices);
 };
 
-} // namespace TinyVertex
+} // namespace tinyVertex

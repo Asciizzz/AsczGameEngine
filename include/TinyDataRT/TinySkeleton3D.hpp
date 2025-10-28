@@ -1,15 +1,15 @@
 #pragma once
 
-#include "TinyData/TinySkeleton.hpp"
-#include "TinyExt/TinyRegistry.hpp"
-#include "TinyVK/Resource/DataBuffer.hpp"
-#include "TinyVK/Resource/Descriptor.hpp"
+#include "tinyData/tinySkeleton.hpp"
+#include "tinyExt/tinyRegistry.hpp"
+#include "tinyVK/Resource/DataBuffer.hpp"
+#include "tinyVK/Resource/Descriptor.hpp"
 
-namespace TinyRT {
+namespace tinyRT {
 
 struct Skeleton3D {
     Skeleton3D() = default;
-    void init(const TinyVK::Device* deviceVK, const TinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout);
+    void init(const tinyVK::Device* deviceVK, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout);
 
     Skeleton3D(const Skeleton3D&) = delete;
     Skeleton3D& operator=(const Skeleton3D&) = delete;
@@ -18,7 +18,7 @@ struct Skeleton3D {
     Skeleton3D& operator=(Skeleton3D&&) = default;
 
     // Bone runtime data
-    void set(TinyHandle skeleHandle);
+    void set(tinyHandle skeleHandle);
     void copy(const Skeleton3D* other);
 
     void refresh(uint32_t boneIndex, bool reupdate = true);
@@ -39,7 +39,7 @@ struct Skeleton3D {
     glm::mat4& localPose(uint32_t index) { return localPose_[index]; }
     const glm::mat4& finalPose(uint32_t index) const { return finalPose_[index]; }
     glm::mat4 bindPose(uint32_t index) const {
-        const TinySkeleton* skeleton = rSkeleton();
+        const tinySkeleton* skeleton = rSkeleton();
         if (!boneValid(index) || !skeleton) return glm::mat4(1.0f);
         else return skeleton->bones[index].bindPose;
     }
@@ -51,10 +51,10 @@ struct Skeleton3D {
         update(index);
     }
 
-    TinyHandle skeleHandle() const { return skeleHandle_; }
+    tinyHandle skeleHandle() const { return skeleHandle_; }
 
-    const TinySkeleton* rSkeleton() const {
-        return fsRegistry_ ? fsRegistry_->get<TinySkeleton>(skeleHandle_) : nullptr;
+    const tinySkeleton* rSkeleton() const {
+        return fsRegistry_ ? fsRegistry_->get<tinySkeleton>(skeleHandle_) : nullptr;
     }
 
     bool hasSkeleton() const {
@@ -68,11 +68,11 @@ struct Skeleton3D {
 private:
     bool vkValid = false;
 
-    TinyHandle skeleHandle_;
-    const TinyRegistry* fsRegistry_ = nullptr; // The entire filesystem registry (guarantees to avoid dangling pointers)
-    const TinyVK::Device* deviceVK_ = nullptr;
-    TinyVK::DescSet    descSet_;
-    TinyVK::DataBuffer skinBuffer_;
+    tinyHandle skeleHandle_;
+    const tinyRegistry* fsRegistry_ = nullptr; // The entire filesystem registry (guarantees to avoid dangling pointers)
+    const tinyVK::Device* deviceVK_ = nullptr;
+    tinyVK::DescSet    descSet_;
+    tinyVK::DataBuffer skinBuffer_;
 
     std::vector<glm::mat4> localPose_;
     std::vector<glm::mat4> finalPose_;
@@ -84,6 +84,6 @@ private:
     void updateFlat();
 };
 
-} // namespace TinyRT
+} // namespace tinyRT
 
-using TinyRT_SK3D = TinyRT::Skeleton3D;
+using tinyRT_SK3D = tinyRT::Skeleton3D;

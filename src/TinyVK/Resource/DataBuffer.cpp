@@ -1,11 +1,11 @@
-#include "TinyVK/Resource/DataBuffer.hpp"
-#include "TinyVK/System/CmdBuffer.hpp"
+#include "tinyVK/Resource/DataBuffer.hpp"
+#include "tinyVK/System/CmdBuffer.hpp"
 
 #include <stdexcept>
 #include <cassert>
 
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 // Move constructor
 DataBuffer::DataBuffer(DataBuffer&& other) noexcept {

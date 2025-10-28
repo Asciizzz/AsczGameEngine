@@ -1,11 +1,11 @@
-#include "TinyVK/Render/PostProcess.hpp"
-#include "TinyVK/Resource/TextureVK.hpp"
+#include "tinyVK/Render/PostProcess.hpp"
+#include "tinyVK/Resource/TextureVK.hpp"
 #include <stdexcept>
 #include <iostream>
 
 #include ".ext/json/json.hpp"
 
-using namespace TinyVK;
+using namespace tinyVK;
 
 // Destroy helper
 
