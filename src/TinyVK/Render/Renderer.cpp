@@ -247,8 +247,10 @@ void Renderer::drawSky(const TinyProject* project, const PipelineRaster* skyPipe
     skyPipeline->bindCmd(currentCmd);
 
     // Bind only the global descriptor set (set 0) for sky
-    VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
-    skyPipeline->bindSets(currentCmd, 0, &glbSet, 1);
+    const TinyGlobal* global = project->getGlobal();
+    VkDescriptorSet glbSet = global->getDescSet();
+    uint32_t offset = currentFrame * global->alignedSize;
+    skyPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
 
     // Draw fullscreen triangle (3 vertices, no input)
     vkCmdDraw(currentCmd, 3, 1, 0, 0);
@@ -261,7 +263,10 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
     const TinyFS& fs = project->fs();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
-    VkDescriptorSet glbSet = project->getGlbDescSet(currentFrame);
+
+    const TinyGlobal* global = project->getGlobal();
+    VkDescriptorSet glbSet = global->getDescSet();
+    uint32_t offset = currentFrame * global->alignedSize;
 
     TinyHandle curSkeleNodeHandle;
 
@@ -301,15 +306,13 @@ void Renderer::drawScene(TinyProject* project, TinySceneRT* activeScene, const P
         VkDescriptorSet skinSet = project->skinDescSet(activeScene, skeleNodeHandle);
         uint32_t boneCount = project->skeletonNodeBoneCount(activeScene, skeleNodeHandle);
 
+        rPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
+
         if (isRigged) {
             isRigged = skinSet != VK_NULL_HANDLE;
 
             skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
-            VkDescriptorSet sets[2] = { glbSet, skinSet };
-            rPipeline->bindSets(currentCmd, 0, sets, 2);
-        } else {
-            rPipeline->bindSets(currentCmd, 0, &glbSet, 1);
-            isRigged = false;
+            rPipeline->bindSets(currentCmd, 1, &skinSet, 1);
         }
 
         // Check if this node is the selected node for highlighting

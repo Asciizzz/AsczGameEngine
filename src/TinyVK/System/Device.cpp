@@ -42,14 +42,14 @@ void Device::pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
         if (isDeviceSuitable(dev, surface)) {
             pDevice = dev;
             queueFamilyIndices = findQueueFamilies(dev, surface);
+
+            // Setup cached properties
+            vkGetPhysicalDeviceProperties(pDevice, &pProps);
+            vkGetPhysicalDeviceMemoryProperties(pDevice, &pMemProps);
+            vkGetPhysicalDeviceFeatures(pDevice, &pFeatures);
             return;
         }
     }
-
-    // Setup cached properties
-    vkGetPhysicalDeviceProperties(pDevice, &pProps);
-    vkGetPhysicalDeviceMemoryProperties(pDevice, &pMemProps);
-    vkGetPhysicalDeviceFeatures(pDevice, &pFeatures);
 
     throw std::runtime_error("No suitable Vulkan GPU found.");
 }

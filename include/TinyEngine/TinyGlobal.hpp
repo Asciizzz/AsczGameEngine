@@ -37,17 +37,16 @@ public:
 
     void update(const TinyCamera& camera, uint32_t frameIndex);
 
-    VkDescriptorSet getDescSet(uint32_t frameIndex) const { return descSets[frameIndex]; }
     VkDescriptorSetLayout getDescLayout() const { return descLayout; }
-
-    std::vector<TinyVK::DataBuffer> dataBuffer; // Per-frame buffers
-    void createDataBuffer(const TinyVK::Device* deviceVK);
+    VkDescriptorSet getDescSet() const { return descSet; }
 
     TinyVK::DescLayout descLayout;
     TinyVK::DescPool descPool;
-    std::vector<TinyVK::DescSet> descSets;
-    void createDescResources(const TinyVK::Device* deviceVK);
 
-    void createVkResources(const TinyVK::Device* deviceVK);
+    // New design! Use only 1 buffer with dynamic offsets
+    size_t alignedSize = 0;
+    TinyVK::DataBuffer dataBuffer;
+    TinyVK::DescSet descSet;
 
+    void vkCreate(const TinyVK::Device* deviceVK);
 };

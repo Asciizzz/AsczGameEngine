@@ -7,53 +7,34 @@
 
 using namespace TinyVK;
 
-void TinyGlobal::createDataBuffer(const TinyVK::Device* deviceVK) {
-    dataBuffer.resize(maxFramesInFlight);
-    
-    for (int i = 0; i < maxFramesInFlight; ++i) {
-        dataBuffer[i]
-            .setDataSize(sizeof(TinyGlobal::UBO))
-            .setUsageFlags(BufferUsage::Uniform)
-            .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-            .createBuffer(deviceVK)
-            .mapMemory();
-    }
-}
+void TinyGlobal::vkCreate(const TinyVK::Device* deviceVK) {
+    // get the true aligned size (for dynamic UBO offsets)
+    alignedSize = deviceVK->alignSize(sizeof(TinyGlobal::UBO));
 
-void TinyGlobal::createDescResources(const TinyVK::Device* deviceVK) {
+    dataBuffer
+        .setDataSize(alignedSize * maxFramesInFlight)
+        .setUsageFlags(BufferUsage::Uniform)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(deviceVK)
+        .mapMemory();
+
     VkDevice device = deviceVK->device;
 
-    descLayout.create(device,
-        {{0, DescType::UniformBuffer, 1, ShaderStage::VertexAndFragment, nullptr}
-    });
+    descLayout.create(device, { {0, DescType::UniformBufferDynamic, 1, ShaderStage::VertexAndFragment, nullptr} });
+    descPool.create(device, { {DescType::UniformBufferDynamic, 1} }, 1);
+    descSet.allocate(device, descPool, descLayout);
 
-    descPool.create(device, {
-        {DescType::UniformBuffer, maxFramesInFlight}
-    }, maxFramesInFlight);
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = dataBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range  = sizeof(TinyGlobal::UBO);
 
-    for (int i = 0; i < maxFramesInFlight; ++i) {
-        DescSet descSet;
-        descSet.allocate(device, descPool, descLayout);
-
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = dataBuffer[i];
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(TinyGlobal::UBO);
-
-        DescWrite()
-            .setDstSet(descSet)
-            .setType(DescType::UniformBuffer)
-            .setDescCount(1)
-            .setBufferInfo({bufferInfo})
-            .updateDescSets(device);
-
-        descSets.push_back(std::move(descSet));
-    }
-}
-
-void TinyGlobal::createVkResources(const TinyVK::Device* deviceVK) {
-    createDataBuffer(deviceVK);
-    createDescResources(deviceVK);
+    DescWrite()
+        .setDstSet(descSet)
+        .setType(DescType::UniformBufferDynamic)
+        .setDescCount(1)
+        .setBufferInfo({bufferInfo})
+        .updateDescSets(device);
 }
 
 
@@ -74,6 +55,7 @@ void TinyGlobal::update(const TinyCamera& camera, uint32_t frameIndex) {
     ubo.cameraRight   = glm::vec4(camera.right, camera.nearPlane);
     ubo.cameraUp      = glm::vec4(camera.up, camera.farPlane);
 
-    // memcpy(dataBuffer[frameIndex].mapped, &ubo, sizeof(ubo));
-    dataBuffer[frameIndex].copyData(&ubo);
+    // During copy, you need to use the correct size and offset
+    size_t offset = alignedSize * frameIndex;
+    dataBuffer.copyData(&ubo, sizeof(ubo), offset);
 }

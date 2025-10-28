@@ -9,14 +9,17 @@
 
 // TinySceneRT requirements
 struct TinySceneReq {
-    const TinyRegistry*   fsRegistry = nullptr;
-    const TinyVK::Device* deviceVK = nullptr; // For GPU resource creation
+    uint32_t maxFramesInFlight = 2; // If you messed this up the app just straight up jump off a cliff
+
+    const TinyRegistry*   fsRegistry = nullptr; // For stuffs and things
+    const TinyVK::Device* deviceVK = nullptr;   // For GPU resource creation
 
     VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
     VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
 
     bool valid() const {
-        return  fsRegistry != nullptr &&
+        return  maxFramesInFlight > 0 &&
+                fsRegistry != nullptr &&
                 deviceVK != nullptr &&
                 skinDescPool   != VK_NULL_HANDLE &&
                 skinDescLayout != VK_NULL_HANDLE;

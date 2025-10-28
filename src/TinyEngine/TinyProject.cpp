@@ -39,7 +39,7 @@ TinyProject::TinyProject(const TinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     // Create camera and global UBO manager
     tinyCamera = MakeUnique<TinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
     tinyGlobal = MakeUnique<TinyGlobal>(2);
-    tinyGlobal->createVkResources(deviceVK);
+    tinyGlobal->vkCreate(deviceVK);
 
     // Create default material and texture
     TinyTexture defaultTexture = TinyTexture::createDefaultTexture();
@@ -275,6 +275,9 @@ void TinyProject::vkCreateSceneResources() {
     // Create dummy skin descriptor set for rigged meshes without skeleton
     createDummySkinDescriptorSet();
 
+
+    // Setup shared scene requirements
+    sharedReq.maxFramesInFlight = 2;
     sharedReq.fsRegistry = &fs().registry();
     sharedReq.deviceVK = deviceVK;
     sharedReq.skinDescPool = skinDescPool;
