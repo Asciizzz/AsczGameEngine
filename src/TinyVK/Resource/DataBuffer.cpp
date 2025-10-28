@@ -2,9 +2,7 @@
 #include "TinyVK/System/CmdBuffer.hpp"
 
 #include <stdexcept>
-#include <cstring>
-#include <iostream>
-#include <execution>
+#include <cassert>
 
 
 using namespace TinyVK;
@@ -146,8 +144,11 @@ DataBuffer& DataBuffer::uploadData(const void* data) {
 }
 
 DataBuffer& DataBuffer::copyData(const void* data, size_t size, size_t offset) {
-    if (size == 0) size = dataSize;
-    memcpy(static_cast<char*>(mapped) + offset, data, size);
+    if (!mapped) throw std::runtime_error("Buffer not mapped");
+    if (size == 0) size = dataSize - offset; // prevent overflow
+    assert(offset + size <= dataSize && "copyData out of bounds");
+
+    std::memcpy(static_cast<char*>(mapped) + offset, data, size);
     return *this;
 }
 
