@@ -12,7 +12,7 @@
 
 ##### [ ] Fix Skeleton race condition (CRITICAL):
 
-* Right now we are using 1 descriptor set per skeleton, which is not sufficient, and can cause, we need 1 descriptor set per frame per skeleton.
+* Right now we are using 1 descriptor set per skeleton, which is not sufficient, and can cause race condition, we need 1 descriptor set per frame per skeleton.
 
 ##### [0/2] Implement working Materials/Textures architecture (priority: CRITICAL):
 
