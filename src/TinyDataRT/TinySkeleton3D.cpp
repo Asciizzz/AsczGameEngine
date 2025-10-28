@@ -47,16 +47,14 @@ void Skeleton3D::copy(const Skeleton3D* other) {
 void Skeleton3D::vkCreate() {
     if (!hasSkeleton()) return;
 
-    // Create skinning data buffer
     VkDeviceSize preFrameSize = sizeof(glm::mat4) * skinData_.size();
     skinBuffer_
         .setDataSize(preFrameSize * maxFramesInFlight_)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK_)
-        .mapAndCopy(skinData_.data());
+        .mapMemory();
 
-    // Update descriptor set with skin buffer info
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = skinBuffer_;
     bufferInfo.offset = 0;

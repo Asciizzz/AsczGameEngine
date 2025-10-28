@@ -302,8 +302,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         rPipeline->bindCmd(currentCmd);
 
         // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
-        tinyHandle skeleNodeHandle = mr3DComp->skeleNodeHandle;
-        tinyRT_SK3D* rtSkele = activeScene->rtComp<tinyNodeRT::SK3D>(skeleNodeHandle);
+        tinyRT_SK3D* rtSkele = activeScene->rtComp<tinyNodeRT::SK3D>(mr3DComp->skeleNodeHandle);
         VkDescriptorSet skinSet = rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
         uint32_t boneCount = rtSkele ? rtSkele->boneCount() : 0;
 
@@ -313,9 +312,9 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             isRigged = skinSet != VK_NULL_HANDLE;
 
             skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
-
-            uint32_t skinOffset = rtSkele ? rtSkele->dynamicOffset(currentFrame) :
-                                            project->getDummySkinDynamicOffset(currentFrame);
+            
+            // In the case of dummy, offset does't matter
+            uint32_t skinOffset = rtSkele ? rtSkele->dynamicOffset(currentFrame) : 0;
             rPipeline->bindSets(currentCmd, 1, &skinSet, 1, &skinOffset, 1);
         }
 

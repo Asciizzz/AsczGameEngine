@@ -81,7 +81,6 @@ private:
     std::vector<glm::mat4> finalPose_;
     std::vector<glm::mat4> skinData_;
 
-
     void vkCreate();
 
     void updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform);

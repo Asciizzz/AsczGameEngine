@@ -292,15 +292,13 @@ void tinyProject::createDummySkinDescriptorSet() {
     dummySkinDescSet.allocate(deviceVK->device, skinDescPool.get(), skinDescLayout.get());
 
     // Create dummy skin buffer with 1 identity matrix
-    glm::mat4 identityMatrix = glm::mat4(1.0f);
     VkDeviceSize bufferSize = sizeof(glm::mat4);
-
     dummySkinBuffer
         .setDataSize(bufferSize * sharedReq.maxFramesInFlight)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK)
-        .mapAndCopy(&identityMatrix);
+        .mapMemory();
 
     // Update descriptor set with dummy buffer info
     VkDescriptorBufferInfo bufferInfo{};

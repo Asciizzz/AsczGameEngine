@@ -32,9 +32,6 @@ public:
 
     VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
     VkDescriptorSet getDummySkinDescSet() const { return dummySkinDescSet.get(); }
-    uint32_t getDummySkinDynamicOffset(uint32_t frameIndex) const {
-        return static_cast<uint32_t>( (sizeof(glm::mat4) * frameIndex) );
-    }
     
     // Get skin descriptor set with automatic fallback to dummy
     VkDescriptorSet skinDescSet(tinySceneRT* scene, tinyHandle nodeHandle) const {

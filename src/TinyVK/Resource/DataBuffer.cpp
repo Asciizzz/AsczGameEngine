@@ -147,11 +147,6 @@ DataBuffer& DataBuffer::copyData(const void* data, size_t size, size_t offset) {
     return *this;
 }
 
-DataBuffer& DataBuffer::mapAndCopy(const void* data, size_t size, size_t offset) {
-    mapMemory().copyData(data, size, offset);
-    return *this;
-}
-
 DataBuffer& DataBuffer::createDeviceLocalBuffer(const Device* deviceVK, const void* initialData) {
     // --- staging buffer_ (CPU visible) ---
     DataBuffer stagingBuffer;

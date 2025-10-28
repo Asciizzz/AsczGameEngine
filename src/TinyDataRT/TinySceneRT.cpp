@@ -248,10 +248,6 @@ void tinySceneRT::addScene(const tinySceneRT* from, tinyHandle parentHandle) {
 
             toMeshRender->pMeshHandle = fromMeshRender->pMeshHandle;
 
-            // if (validIndex(fromMeshRender->skeleNodeHandle, from_items)) {
-            //     toMeshRender->skeleNodeHandle = toHandleMap[fromMeshRender->skeleNodeHandle.index];
-            // }
-
             if (toHandleMap.find(fromMeshRender->skeleNodeHandle.index) != toHandleMap.end()) {
                 toMeshRender->skeleNodeHandle = toHandleMap[fromMeshRender->skeleNodeHandle.index];
             }
@@ -269,9 +265,12 @@ void tinySceneRT::addScene(const tinySceneRT* from, tinyHandle parentHandle) {
         }
 
         if (fromNode->has<tinyNodeRT::SK3D>()) {
+            printf("\033[33mCopying tinyRT_SK3D runtime skeleton...\033[0m\n");
             auto* toSkeleRT = writeComp<tinyNodeRT::SK3D>(toHandle);
+            printf("tinyRT_SK3D wrote comp\n");
             const auto* fromSkeleRT = from->rtComp<tinyNodeRT::SK3D>(fromHandle);
             toSkeleRT->copy(fromSkeleRT);
+            printf("tinyRT_SK3D copied!\n");
         }
 
         if (fromNode->has<tinyNodeRT::AN3D>()) {

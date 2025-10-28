@@ -55,7 +55,6 @@ public:
     DataBuffer& uploadData(const void* data);
 
     DataBuffer& copyData(const void* data, size_t size=0, size_t offset=0);
-    DataBuffer& mapAndCopy(const void* data, size_t size=0, size_t offset=0);
 
     DataBuffer& createDeviceLocalBuffer(const Device* deviceVK, const void* initialData);
 

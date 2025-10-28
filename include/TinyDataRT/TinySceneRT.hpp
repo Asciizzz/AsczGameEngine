@@ -306,16 +306,17 @@ private:
     }
 
     tinyRT_SK3D* addSK3D_RT(tinyNodeRT::SK3D* compPtr) {
+        tinyRT_SK3D rtSK3D;
+        rtSK3D.init(
+            sceneReq.deviceVK,
+            sceneReq.fsRegistry,
+            sceneReq.skinDescPool,
+            sceneReq.skinDescLayout,
+            sceneReq.maxFramesInFlight
+        );
+
         // Repurpose pHandle to point to runtime skeleton
-        compPtr->pHandle = rtAdd<tinyRT_SK3D>(std::move(
-            *tinyRT_SK3D().init(
-                sceneReq.deviceVK,
-                sceneReq.fsRegistry,
-                sceneReq.skinDescPool,
-                sceneReq.skinDescLayout,
-                sceneReq.maxFramesInFlight
-            )
-        ));
+        compPtr->pHandle = rtAdd<tinyRT_SK3D>(std::move(rtSK3D  ));
 
         // Return the runtime skeleton
         return rtGet<tinyRT_SK3D>(compPtr->pHandle);
