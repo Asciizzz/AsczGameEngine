@@ -5,17 +5,23 @@
 #include "tinyVK/Resource/DataBuffer.hpp"
 #include "tinyVK/Resource/Descriptor.hpp"
 
-struct tinyMeshRT {
-    tinyMeshRT() = default;
+namespace tinyRT {
 
-    tinyMeshRT(const tinyMeshRT&) = delete;
-    tinyMeshRT& operator=(const tinyMeshRT&) = delete;
+struct MeshRender3D {
+    MeshRender3D() = default;
 
-    tinyMeshRT(tinyMeshRT&&) = default;
-    tinyMeshRT& operator=(tinyMeshRT&&) = default;
+    MeshRender3D(const MeshRender3D&) = delete;
+    MeshRender3D& operator=(const MeshRender3D&) = delete;
+
+    MeshRender3D(MeshRender3D&&) = default;
+    MeshRender3D& operator=(MeshRender3D&&) = default;
 
 private:
     tinyHandle meshHandle_;
     const tinyRegistry* fsRegistry_ = nullptr;
     const tinyVK::Device* deviceVK_ = nullptr;
 };
+
+} // namespace tinyRT
+
+using tinyRT_MR3D = tinyRT::MeshRender3D;

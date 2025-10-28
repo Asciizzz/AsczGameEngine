@@ -303,16 +303,25 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 
         // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
         tinyHandle skeleNodeHandle = mr3DComp->skeleNodeHandle;
-        VkDescriptorSet skinSet = project->skinDescSet(activeScene, skeleNodeHandle);
-        uint32_t boneCount = project->skeletonNodeBoneCount(activeScene, skeleNodeHandle);
+        tinyRT_SK3D* rtSkele = activeScene->rtComp<tinyNodeRT::SK3D>(skeleNodeHandle);
+        VkDescriptorSet skinSet = rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
+        uint32_t boneCount = rtSkele ? rtSkele->boneCount() : 0;
 
         rPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
 
         if (isRigged) {
             isRigged = skinSet != VK_NULL_HANDLE;
 
-            skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
-            rPipeline->bindSets(currentCmd, 1, &skinSet, 1);
+            // skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
+            // rPipeline->bindSets(currentCmd, 1, &skinSet, 1);
+
+            if (!isRigged) {
+                skinSet = project->getDummySkinDescSet();
+                rPipeline->bindSets(currentCmd, 1, &skinSet, 1);
+            } else {
+                uint32_t skinOffset = rtSkele->dynamicOffset(currentFrame);
+                rPipeline->bindSets(currentCmd, 1, &skinSet, 1, &skinOffset, 1);
+            }
         }
 
         // Check if this node is the selected node for highlighting

@@ -9,7 +9,7 @@
 
 // tinySceneRT requirements
 struct tinySceneReq {
-    uint32_t maxFramesInFlight = 2; // If you messed this up the app just straight up jump off a cliff
+    uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
 
     const tinyRegistry*   fsRegistry = nullptr; // For stuffs and things
     const tinyVK::Device* deviceVK = nullptr;   // For GPU resource creation
@@ -208,20 +208,12 @@ public:
         return node->remove<T>();
     }
 
-    // -------- General update ---------
-
-    void updateRecursive(tinyHandle nodeHandle = tinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
-    void updateTransform(tinyHandle nodeHandle = tinyHandle());
-    void updateAnimation(float dTime);
-
     // --------- Specific component's data access ---------
 
     VkDescriptorSet nSkeleDescSet(tinyHandle nodeHandle) const {
         const tinyRT_SK3D* rtSkele = rtComp<tinyNodeRT::SK3D>(nodeHandle);
         return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
     }
-
-    // UnorderedMap<tinyHandle, tinyHandle>& mapMR3D() { return mapMR3D_; }
 
     template<typename T>
     const UnorderedMap<tinyHandle, tinyHandle>& mapRT3D() const {
@@ -243,11 +235,18 @@ public:
         }
     }
 
+    void setFrame(uint32_t frame) { curFrame_ = frame; }
+    void setDTime(float dTime) { curDTime_ = dTime; }
+    void update();
+
 private:
     tinyPool<tinyNodeRT> nodes;
-    tinyHandle rootHandle_;
     tinySceneReq sceneReq;   // Scene requirements
     tinyRegistry rtRegistry; // Runtime registry for this scene
+
+    tinyHandle rootHandle_;
+    uint32_t curFrame_ = 0;
+    float curDTime_ = 0.0f;
 
     // ---------- Internal helpers ---------
 
@@ -268,6 +267,10 @@ private:
 
     tinyPool<tinyHandle> withAN3D_;
     UnorderedMap<tinyHandle, tinyHandle> mapAN3D_;
+
+    // -------- General update ---------
+
+    void updateRecursive(tinyHandle nodeHandle = tinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
     // ---------- Runtime component management ----------
 
@@ -303,10 +306,16 @@ private:
     }
 
     tinyRT_SK3D* addSK3D_RT(tinyNodeRT::SK3D* compPtr) {
-        tinyRT_SK3D rtSkele;
-        rtSkele.init(sceneReq.deviceVK, sceneReq.fsRegistry, sceneReq.skinDescPool, sceneReq.skinDescLayout);
         // Repurpose pHandle to point to runtime skeleton
-        compPtr->pHandle = rtAdd<tinyRT_SK3D>(std::move(rtSkele));
+        compPtr->pHandle = rtAdd<tinyRT_SK3D>(std::move(
+            *tinyRT_SK3D().init(
+                sceneReq.deviceVK,
+                sceneReq.fsRegistry,
+                sceneReq.skinDescPool,
+                sceneReq.skinDescLayout,
+                sceneReq.maxFramesInFlight
+            )
+        ));
 
         // Return the runtime skeleton
         return rtGet<tinyRT_SK3D>(compPtr->pHandle);

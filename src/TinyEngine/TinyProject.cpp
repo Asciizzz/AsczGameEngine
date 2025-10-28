@@ -266,12 +266,14 @@ void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, t
 void tinyProject::vkCreateSceneResources() {
     VkDevice device = deviceVK->device;
 
+    // It needs to be dynamic to allow per-frame offsets (avoid race conditions)
+
     skinDescLayout.create(device, {
-        {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr}
+        {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
     });
 
     skinDescPool.create(device, {
-        {DescType::StorageBuffer, maxSkeletons}
+        {DescType::StorageBufferDynamic, maxSkeletons}
     }, maxSkeletons);
 
     // Create dummy skin descriptor set for rigged meshes without skeleton
@@ -309,7 +311,7 @@ void tinyProject::createDummySkinDescriptorSet() {
 
     DescWrite()
         .setDstSet(dummySkinDescSet)
-        .setType(DescType::StorageBuffer)
+        .setType(DescType::StorageBufferDynamic)
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
         .updateDescSets(deviceVK->device);

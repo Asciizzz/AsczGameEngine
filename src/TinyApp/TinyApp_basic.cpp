@@ -275,12 +275,14 @@ void tinyApp::mainLoop() {
         imguiWrapper->newFrame();
         project->updateGlobal(rendererRef.getCurrentFrame());
 
-        getActiveScene()->updateAnimation(dTime);
+        uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
+        getActiveScene()->setFrame(currentFrameIndex);
+        getActiveScene()->setDTime(dTime);
+        getActiveScene()->update();
 
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
             // Update global UBO buffer from frame index
-            uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
 
             rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 

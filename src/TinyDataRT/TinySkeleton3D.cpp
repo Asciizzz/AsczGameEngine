@@ -3,13 +3,15 @@
 using namespace tinyVK;
 using namespace tinyRT;
 
-void Skeleton3D::init(const tinyVK::Device* deviceVK, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout) {
+Skeleton3D* Skeleton3D::init(const tinyVK::Device* deviceVK, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight) {
     vkValid = true;
 
     deviceVK_ = deviceVK;
     fsRegistry_ = fsRegistry;
+    maxFramesInFlight_ = maxFramesInFlight;
 
     descSet_.allocate(deviceVK->device, descPool, descLayout);
+    return this;
 }
 
 void Skeleton3D::set(tinyHandle skeletonHandle) {
@@ -28,7 +30,6 @@ void Skeleton3D::set(tinyHandle skeletonHandle) {
     }
 
     vkCreate();
-    update();
 }
 
 void Skeleton3D::copy(const Skeleton3D* other) {
@@ -41,16 +42,15 @@ void Skeleton3D::copy(const Skeleton3D* other) {
     skinData_ = other->skinData_;
 
     vkCreate();
-    update();
 }
 
 void Skeleton3D::vkCreate() {
     if (!hasSkeleton()) return;
 
     // Create skinning data buffer
-    VkDeviceSize bufferSize = sizeof(glm::mat4) * skinData_.size();
+    VkDeviceSize preFrameSize = sizeof(glm::mat4) * skinData_.size();
     skinBuffer_
-        .setDataSize(bufferSize)
+        .setDataSize(preFrameSize * maxFramesInFlight_)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVK_)
@@ -60,11 +60,11 @@ void Skeleton3D::vkCreate() {
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = skinBuffer_;
     bufferInfo.offset = 0;
-    bufferInfo.range = bufferSize;
+    bufferInfo.range = preFrameSize;
 
     DescWrite()
         .setDstSet(descSet_)
-        .setType(DescType::StorageBuffer)
+        .setType(DescType::StorageBufferDynamic)
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
         .updateDescSets(deviceVK_->device);
@@ -75,7 +75,6 @@ void Skeleton3D::refresh(uint32_t boneIndex, bool reupdate) {
     if (boneIndex >= rSkeleton()->bones.size()) return;
 
     localPose_[boneIndex] = rSkeleton()->bones[boneIndex].bindPose;
-    if (reupdate) update(boneIndex);
 }
 
 void Skeleton3D::refreshAll() {
@@ -112,17 +111,20 @@ void Skeleton3D::updateFlat() {
     }
 }
 
-void Skeleton3D::update(uint32_t index) {
-    if (!boneValid(index)) return;
+void Skeleton3D::update(uint32_t boneIdx, uint32_t curFrame) {
+    if (!boneValid(boneIdx)) return;
 
-    if (index == 0) {
+    if (boneIdx == 0) {
         updateFlat();
     } else {
         // Retrieve parent
-        glm::mat4 parentTransform = finalPose_[rSkeleton()->bones[index].parent];
-        updateRecursive(index, parentTransform);
+        glm::mat4 parentTransform = finalPose_[rSkeleton()->bones[boneIdx].parent];
+        updateRecursive(boneIdx, parentTransform);
     }
 
-    // Upload updated skin data to GPU
-    skinBuffer_.copyData(skinData_.data());
+    if (curFrame >= maxFramesInFlight_) return;
+
+    // Upload updated skin data to GPU for the current frame
+    size_t offset = sizeof(glm::mat4) * skinData_.size() * curFrame;
+    skinBuffer_.copyData(skinData_.data(), sizeof(glm::mat4) * skinData_.size(), offset);
 }

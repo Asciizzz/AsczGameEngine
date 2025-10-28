@@ -451,7 +451,6 @@ void tinyApp::renderSceneNodeInspector() {
                 // Check if decomposition is valid
                 if (ImGui::Button("Reset Transform")) {
                     compPtr->reset();
-                    activeScene->updateTransform(selectedSceneNodeHandle);
                 }
 
                 bool validDecomposition = glm::decompose(local, scale, rotationQuat, translation, skew, perspective);
@@ -469,7 +468,6 @@ void tinyApp::renderSceneNodeInspector() {
                     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
                     if (ImGui::Button("Reset Transform")) {
                         compPtr->reset();
-                        activeScene->updateTransform(selectedSceneNodeHandle);
                     }
                     return;
                 }
@@ -534,7 +532,6 @@ void tinyApp::renderSceneNodeInspector() {
                         glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
 
                         compPtr->set(translateMat * rotateMat * scaleMat);
-                        activeScene->updateTransform(selectedSceneNodeHandle); // Only update this node
                     }
                 }
                 
@@ -934,7 +931,6 @@ void tinyApp::renderSceneNodeInspector() {
                         
                         if (ImGui::Button("Reset to Identity")) {
                             rtSkeleComp->setLocalPose(selectedBoneIndex);
-                            rtSkeleComp->update();
                         }
                     }
                     
@@ -1472,9 +1468,6 @@ void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
             
             // Attempt to reparent the dragged node to this node
             if (activeScene->reparentNode(draggedNode, nodeHandle)) {
-                // Update the newly reparented node
-                activeScene->updateTransform(nodeHandle);
-
                 // Auto-expand the parent chain to show the newly dropped node
                 expandParentChain(nodeHandle);
                 
@@ -2186,16 +2179,10 @@ void tinyApp::loadModelFromPath(const std::string& filePath, tinyHandle targetFo
 bool tinyApp::setActiveScene(tinyHandle sceneHandle) {
     // Verify the handle points to a valid tinySceneRT in the registry
     const tinySceneRT* scene = project->fs().rGet<tinySceneRT>(sceneHandle);
-    if (!scene) {
-        return false; // Invalid handle or not a scene
-    }
-    
+    if (!scene) return false; // Invalid handle or not a scene
+
     // Switch the active scene
     activeSceneHandle = sceneHandle;
 
-    // Update transforms for the new active scene
-    tinySceneRT* activeScene = getActiveScene();
-    if (activeScene) activeScene->updateTransform();
-    
     return true;
 }
