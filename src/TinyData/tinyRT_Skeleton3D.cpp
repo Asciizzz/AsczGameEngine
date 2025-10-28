@@ -1,4 +1,4 @@
-#include "tinyDataRT/tinySkeleton3D.hpp"
+#include "tinyData/tinyRT_Skeleton3D.hpp"
 
 using namespace tinyVK;
 using namespace tinyRT;

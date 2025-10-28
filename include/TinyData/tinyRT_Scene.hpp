@@ -2,10 +2,10 @@
 
 #include "tinyExt/tinyFS.hpp"
 
-#include "tinyDataRT/tinyNodeRT.hpp"
-#include "tinyDataRT/tinyMeshRT.hpp"
-#include "tinyDataRT/tinyAnime3D.hpp"
-#include "tinyDataRT/tinySkeleton3D.hpp"
+#include "tinyData/tinyRT_MeshRender3D.hpp"
+#include "tinyData/tinyRT_Skeleton3D.hpp"
+#include "tinyData/tinyRT_Anime3D.hpp"
+#include "tinyData/tinyRT_Node.hpp"
 
 // tinySceneRT requirements
 struct tinySceneReq {

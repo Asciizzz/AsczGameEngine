@@ -1,4 +1,4 @@
-#include "tinyDataRT/tinySceneRT.hpp"
+#include "tinyData/tinyRT_Scene.hpp"
 
 #include <stdexcept>
 #include <thread>

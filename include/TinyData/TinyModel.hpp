@@ -4,8 +4,8 @@
 #include "tinyData/tinyMaterial.hpp"
 #include "tinyData/tinyTexture.hpp"
 #include "tinyData/tinySkeleton.hpp"
-#include "tinyDataRT/tinyAnime3D.hpp"
-#include "tinyDataRT/tinyNodeRT.hpp"
+#include "tinyData/tinyRT_Anime3D.hpp"
+#include "tinyData/tinyRT_Node.hpp"
 
 struct tinyModel {
     std::string name;
