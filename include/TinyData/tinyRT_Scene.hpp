@@ -182,8 +182,8 @@ public:
             return addSK3D_RT(compPtr);
         } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
             return addAN3D_RT(compPtr);
-        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
-            return compPtr;
+        // } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) { // In the future
+            // return addMR3D_RT(compPtr);
         } else { // Other types return themselves
             return compPtr;
         }
@@ -200,9 +200,10 @@ public:
             rtRemove<tinyRT_SK3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
             rtRemove<tinyRT_AN3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
-            // rtRemove<tinyRT::MR3D>(compPtr->pMeshRTHandle); // True implementation in future
         }
+        // else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
+        //     rtRemove<tinyRT::MR3D>(compPtr->pMeshRTHandle); // True implementation in future
+        // }
 
         rmMap3D<T>(nodeHandle);
 

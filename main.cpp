@@ -85,7 +85,7 @@
 
 int main() {
     // testLua(); // <- it works :D
-    
+
     try {
         // Peak 2009 window engineering
         tinyApp app("AszcEngine", 1600, 900);
@@ -98,4 +98,4 @@ int main() {
 
     // Miraculously, nothing exploded
     return EXIT_SUCCESS;
-}
+};
