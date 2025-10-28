@@ -56,7 +56,7 @@ public:
     tinyFS& fs() { return *fs_; }
     const tinyFS& fs() const { return *fs_; }
 
-    const tinySceneReq& sceneReq() const { return sharedReq; }
+    const tinySceneRT::Require& sceneReq() const { return sharedReq; }
     const tinyVK::Device* vkDevice() const { return deviceVK; }
 
     tinyHandle initialSceneHandle;
@@ -83,7 +83,7 @@ private:
     tinyVK::DescSet dummySkinDescSet;
     tinyVK::DataBuffer dummySkinBuffer;
 
-    tinySceneReq sharedReq;
+    tinySceneRT::Require sharedReq;
     void vkCreateSceneResources();
     void createDummySkinDescriptorSet();
 };

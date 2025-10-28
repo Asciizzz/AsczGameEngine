@@ -8,9 +8,11 @@
 #include <cstdint>
 #include <tuple>
 
-struct tinyNodeRT {
+namespace tinyRT {
+
+struct Node {
     std::string name = "Node";
-    tinyNodeRT(const std::string& nodeName = "Node") : name(nodeName) {}
+    Node(const std::string& nodeName = "Node") : name(nodeName) {}
 
     enum class Types : uint32_t {
         T3D  = 1 << 0,
@@ -134,3 +136,7 @@ private:
         return (types & toMask(componentType)) != 0;
     }
 };
+
+} // namespace tinyRT
+
+using tinyNodeRT = tinyRT::Node;

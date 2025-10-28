@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <thread>
 
+using namespace tinyRT;
+
 template<typename T>
 bool validIndex(tinyHandle handle, const std::vector<T>& vec) {
     return handle.valid() && handle.index < vec.size();
@@ -10,39 +12,39 @@ bool validIndex(tinyHandle handle, const std::vector<T>& vec) {
 
 
 
-tinyHandle tinySceneRT::addRoot(const std::string& nodeName) {
+tinyHandle Scene::addRoot(const std::string& nodeName) {
     // Create a new root node
     tinyNodeRT rootNode(nodeName);
     rootNode.add<tinyNodeRT::T3D>();
-    setRoot(nodes.add(std::move(rootNode)));
+    setRoot(nodes_.add(std::move(rootNode)));
 
     return rootHandle();
 }
 
-tinyHandle tinySceneRT::addNode(const std::string& nodeName, tinyHandle parentHandle) {
+tinyHandle Scene::addNode(const std::string& nodeName, tinyHandle parentHandle) {
     tinyNodeRT newNode(nodeName);
     newNode.add<tinyNodeRT::T3D>();
 
     if (!parentHandle.valid()) parentHandle = rootHandle();
-    tinyNodeRT* parentNode = nodes.get(parentHandle);
+    tinyNodeRT* parentNode = nodes_.get(parentHandle);
     if (!parentNode) return tinyHandle();
 
     newNode.setParent(parentHandle);
-    tinyHandle newNodeHandle = nodes.add(std::move(newNode));
+    tinyHandle newNodeHandle = nodes_.add(std::move(newNode));
 
-    parentNode = nodes.get(parentHandle); // Re-fetch in case of invalidation
+    parentNode = nodes_.get(parentHandle); // Re-fetch in case of invalidation
     parentNode->addChild(newNodeHandle);
 
     return newNodeHandle;
 }
 
-tinyHandle tinySceneRT::addNodeRaw(const std::string& nodeName) {
+tinyHandle Scene::addNodeRaw(const std::string& nodeName) {
     tinyNodeRT newNode(nodeName);
-    return nodes.add(std::move(newNode));
+    return nodes_.add(std::move(newNode));
 }
 
-bool tinySceneRT::removeNode(tinyHandle nodeHandle, bool recursive) {
-    tinyNodeRT* nodeToDelete = nodes.get(nodeHandle);
+bool Scene::removeNode(tinyHandle nodeHandle, bool recursive) {
+    tinyNodeRT* nodeToDelete = nodes_.get(nodeHandle);
     if (!nodeToDelete || nodeHandle == rootHandle()) return false;
 
     std::vector<tinyHandle> childrenToDelete = nodeToDelete->childrenHandles;
@@ -54,7 +56,7 @@ bool tinySceneRT::removeNode(tinyHandle nodeHandle, bool recursive) {
 
     // Remove this node from its parent's children list
     if (nodeToDelete->parentHandle.valid()) {
-        tinyNodeRT* parentNode = nodes.get(nodeToDelete->parentHandle);
+        tinyNodeRT* parentNode = nodes_.get(nodeToDelete->parentHandle);
         if (parentNode) parentNode->removeChild(nodeHandle);
     }
 
@@ -64,16 +66,16 @@ bool tinySceneRT::removeNode(tinyHandle nodeHandle, bool recursive) {
     removeComp<tinyNodeRT::BA3D>(nodeHandle);
     removeComp<tinyNodeRT::SK3D>(nodeHandle);
     removeComp<tinyNodeRT::AN3D>(nodeHandle);
-    nodes.instaRm(nodeHandle);
+    nodes_.instaRm(nodeHandle);
 
     return true;
 }
 
-bool tinySceneRT::flattenNode(tinyHandle nodeHandle) {
+bool Scene::flattenNode(tinyHandle nodeHandle) {
     return removeNode(nodeHandle, false);
 }
 
-bool tinySceneRT::reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle) {
+bool Scene::reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle) {
     // Can't reparent root node or self
     if (nodeHandle == rootHandle() || nodeHandle == newParentHandle) {
         return false;
@@ -82,13 +84,13 @@ bool tinySceneRT::reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle
     // Set parent to root if invalid
     if (!newParentHandle.valid()) newParentHandle = rootHandle();
 
-    tinyNodeRT* nodeToMove = nodes.get(nodeHandle);
-    tinyNodeRT* newParent = nodes.get(newParentHandle);
+    tinyNodeRT* nodeToMove = nodes_.get(nodeHandle);
+    tinyNodeRT* newParent = nodes_.get(newParentHandle);
     if (!nodeToMove || !newParent) return false;
 
     // Check for cycles: make sure new parent is not a descendant of the node we're moving
     std::function<bool(tinyHandle)> isDescendant = [this, newParentHandle, &isDescendant](tinyHandle ancestor) -> bool {
-        const tinyNodeRT* node = nodes.get(ancestor);
+        const tinyNodeRT* node = nodes_.get(ancestor);
         if (!node) return false;
         
         for (const tinyHandle& childHandle : node->childrenHandles) {
@@ -107,7 +109,7 @@ bool tinySceneRT::reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle
     }
     
     // Remove from current parent's children list
-    tinyNodeRT* currentParent = nodes.get(nodeToMove->parentHandle);
+    tinyNodeRT* currentParent = nodes_.get(nodeToMove->parentHandle);
     if (currentParent) currentParent->removeChild(nodeHandle);
 
     // Add to new parent's children list
@@ -117,8 +119,8 @@ bool tinySceneRT::reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle
     return true;
 }
 
-bool tinySceneRT::renameNode(tinyHandle nodeHandle, const std::string& newName) {
-    tinyNodeRT* node = nodes.get(nodeHandle);
+bool Scene::renameNode(tinyHandle nodeHandle, const std::string& newName) {
+    tinyNodeRT* node = nodes_.get(nodeHandle);
     if (!node) return false;
 
     node->name = newName;
@@ -127,57 +129,57 @@ bool tinySceneRT::renameNode(tinyHandle nodeHandle, const std::string& newName) 
 
 
 
-const tinyNodeRT* tinySceneRT::node(tinyHandle nodeHandle) const {
-    return nodes.get(nodeHandle);
+const tinyNodeRT* Scene::node(tinyHandle nodeHandle) const {
+    return nodes_.get(nodeHandle);
 }
 
-const std::vector<tinyNodeRT>& tinySceneRT::nodeView() const {
-    return nodes.view();
+const std::vector<tinyNodeRT>& Scene::nodeView() const {
+    return nodes_.view();
 }
 
-bool tinySceneRT::nodeValid(tinyHandle nodeHandle) const {
-    return nodes.valid(nodeHandle);
+bool Scene::nodeValid(tinyHandle nodeHandle) const {
+    return nodes_.valid(nodeHandle);
 }
 
-bool tinySceneRT::nodeOccupied(uint32_t index) const {
-    return nodes.isOccupied(index);
+bool Scene::nodeOccupied(uint32_t index) const {
+    return nodes_.isOccupied(index);
 }
 
-tinyHandle tinySceneRT::nodeHandle(uint32_t index) const {
-    return nodes.getHandle(index);
+tinyHandle Scene::nodeHandle(uint32_t index) const {
+    return nodes_.getHandle(index);
 }
 
-uint32_t tinySceneRT::nodeCount() const {
-    return nodes.count();
+uint32_t Scene::nodeCount() const {
+    return nodes_.count();
 }
 
 
 
-tinyHandle tinySceneRT::nodeParent(tinyHandle nodeHandle) const {
-    const tinyNodeRT* node = nodes.get(nodeHandle);
+tinyHandle Scene::nodeParent(tinyHandle nodeHandle) const {
+    const tinyNodeRT* node = nodes_.get(nodeHandle);
     return node ? node->parentHandle : tinyHandle();
 }
 
-std::vector<tinyHandle> tinySceneRT::nodeChildren(tinyHandle nodeHandle) const {
-    const tinyNodeRT* node = nodes.get(nodeHandle);
+std::vector<tinyHandle> Scene::nodeChildren(tinyHandle nodeHandle) const {
+    const tinyNodeRT* node = nodes_.get(nodeHandle);
     return node ? node->childrenHandles : std::vector<tinyHandle>();
 }
 
-bool tinySceneRT::setNodeParent(tinyHandle nodeHandle, tinyHandle newParentHandle) {
-    tinyNodeRT* node = nodes.get(nodeHandle);
-    if (!node || !nodes.valid(newParentHandle)) return false;
+bool Scene::setNodeParent(tinyHandle nodeHandle, tinyHandle newParentHandle) {
+    tinyNodeRT* node = nodes_.get(nodeHandle);
+    if (!node || !nodes_.valid(newParentHandle)) return false;
 
     node->setParent(newParentHandle);
     return true;
 }
 
-bool tinySceneRT::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>& newChildren) {
-    tinyNodeRT* node = nodes.get(nodeHandle);
+bool Scene::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>& newChildren) {
+    tinyNodeRT* node = nodes_.get(nodeHandle);
     if (!node) return false;
 
     // node->childrenHandles = newChildren;
     for (const tinyHandle& childHandle : newChildren) {
-        if (nodes.valid(childHandle)) node->addChild(childHandle);
+        if (nodes_.valid(childHandle)) node->addChild(childHandle);
     }
     return true;
 }
@@ -185,13 +187,13 @@ bool tinySceneRT::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyH
 
 
 
-void tinySceneRT::addScene(const tinySceneRT* from, tinyHandle parentHandle) {
-    if (!from || from->nodes.count() == 0) return;
+void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
+    if (!from || from->nodes_.count() == 0) return;
 
     // Default to root node if no parent specified
     if (!parentHandle.valid()) parentHandle = rootHandle();
 
-    // First pass: Add all nodes from 'from' scene as raw nodes
+    // First pass: Add all nodes_ from 'from' scene as raw nodes_
 
     // std::vector<tinyHandle> toHandles;
     UnorderedMap<uint32_t, tinyHandle> toHandleMap;
@@ -204,7 +206,7 @@ void tinySceneRT::addScene(const tinySceneRT* from, tinyHandle parentHandle) {
         toHandleMap[i] = addNodeRaw(fromNode->name);
     }
 
-    // Second pass: Construct nodes with proper remapped components
+    // Second pass: Construct nodes_ with proper remapped components
 
     for (uint32_t i = 0; i < from_items.size(); ++i) {
         tinyHandle fromHandle = from->nodeHandle(i);
@@ -213,7 +215,7 @@ void tinySceneRT::addScene(const tinySceneRT* from, tinyHandle parentHandle) {
 
         tinyHandle toHandle = toHandleMap[i];
 
-        tinyNodeRT* toNode = nodes.get(toHandle);
+        tinyNodeRT* toNode = nodes_.get(toHandle);
         if (!toNode) continue; // Should not happen
 
         // Resolve parent-self relationships
@@ -222,7 +224,7 @@ void tinySceneRT::addScene(const tinySceneRT* from, tinyHandle parentHandle) {
             toNode->setParent(toHandleMap[fromParentHandle.index]);
         } else { // <-- Root node in 'from' scene
             // Add child to parent
-            tinyNodeRT* parentNode = nodes.get(parentHandle);
+            tinyNodeRT* parentNode = nodes_.get(parentHandle);
 
             if (parentNode) parentNode->addChild(toHandle);
             toNode->setParent(parentHandle);
@@ -297,10 +299,10 @@ void tinySceneRT::addScene(const tinySceneRT* from, tinyHandle parentHandle) {
 
 
 
-void tinySceneRT::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
+void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobalTransform) {
     tinyHandle realHandle = nodeHandle.valid() ? nodeHandle : rootHandle();
 
-    tinyNodeRT* node = nodes.get(realHandle);
+    tinyNodeRT* node = nodes_.get(realHandle);
     if (!node) return;
 
     // Update transform component
@@ -335,7 +337,7 @@ void tinySceneRT::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parent
     }
 }
 
-void tinySceneRT::update() {
+void Scene::update() {
     // Update everything recursively
     updateRecursive(rootHandle());
 }

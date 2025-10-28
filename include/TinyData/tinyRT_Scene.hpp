@@ -7,26 +7,9 @@
 #include "tinyData/tinyRT_Anime3D.hpp"
 #include "tinyData/tinyRT_Node.hpp"
 
-// tinySceneRT requirements
-struct tinySceneReq {
-    uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
+namespace tinyRT {
 
-    const tinyRegistry*   fsRegistry = nullptr; // For stuffs and things
-    const tinyVK::Device* deviceVK = nullptr;   // For GPU resource creation
-
-    VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
-    VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
-
-    bool valid() const {
-        return  maxFramesInFlight > 0 &&
-                fsRegistry != nullptr &&
-                deviceVK != nullptr &&
-                skinDescPool   != VK_NULL_HANDLE &&
-                skinDescLayout != VK_NULL_HANDLE;
-    }
-};
-
-struct tinySceneRT {
+struct Scene {
 private:
 
     // -------- writeComp's RTResolver ---------
@@ -34,16 +17,16 @@ private:
     /* The idea:
 
     tinyNode's component themselves should not be modifiable at runtime, as 
-    they directly reference the runtime data in rtRegistry
+    they directly reference the runtime data in rtRegistry_
 
     So instead, manipulations and retrievals of components should be done through
-    the tinySceneRT's rtComp and writeComp functions, which will return the
+    the Scene's rtComp and writeComp functions, which will return the
     appropriate runtime component pointers, not the identity component pointers.
 
     For example:
 
     tinyNodeRT::SK3D has a tinyHandle pHandle that references the actual
-    runtime Skeleton3D in the rtRegistry, changing it would cause undefined
+    runtime Skeleton3D in the rtRegistry_, changing it would cause undefined
     behavior. So rtComp<tinyNodeRT::SK3D> will return the Skeleton3D* instead
 
     */
@@ -57,15 +40,33 @@ private:
     // template<> struct RTResolver<tinyNodeRT::MR3D> { using type = tinyRT::MeshRT; }; // Will be added very soon
 
 public:
+    struct Require {
+        uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
+
+        const tinyRegistry*   fsRegistry = nullptr; // For stuffs and things
+        const tinyVK::Device* deviceVK = nullptr;   // For GPU resource creation
+
+        VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
+        VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
+
+        bool valid() const {
+            return  maxFramesInFlight > 0 &&
+                    fsRegistry != nullptr &&
+                    deviceVK != nullptr &&
+                    skinDescPool   != VK_NULL_HANDLE &&
+                    skinDescLayout != VK_NULL_HANDLE;
+        }
+    };
+
     std::string name;
 
-    tinySceneRT(const std::string& sceneName = "New Scene") : name(sceneName) {}
+    Scene(const std::string& sceneName = "New Scene") : name(sceneName) {}
 
-    tinySceneRT(const tinySceneRT&) = delete;
-    tinySceneRT& operator=(const tinySceneRT&) = delete;
+    Scene(const Scene&) = delete;
+    Scene& operator=(const Scene&) = delete;
 
-    tinySceneRT(tinySceneRT&&) = default;
-    tinySceneRT& operator=(tinySceneRT&&) = default;
+    Scene(Scene&&) = default;
+    Scene& operator=(Scene&&) = default;
 
     // --------- Core management ---------
 
@@ -73,12 +74,12 @@ public:
     void setRoot(tinyHandle handle) { rootHandle_ = handle; }
     tinyHandle rootHandle() const { return rootHandle_; }
 
-    void setSceneReq(const tinySceneReq& req) {
-        if (!req.valid()) throw std::invalid_argument("Invalid tinySceneReq provided to tinySceneRT");
-        sceneReq = req;
+    void setSceneReq(const Require& req) {
+        if (!req.valid()) throw std::invalid_argument("Invalid Require provided to Scene");
+        req_ = req;
     }
 
-    bool valid() const { return sceneReq.valid(); }
+    bool valid() const { return req_.valid(); }
 
     // --------- Node management ---------
 
@@ -104,42 +105,42 @@ public:
     bool setNodeParent(tinyHandle nodeHandle, tinyHandle newParentHandle);
     bool setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>& newChildren);
 
-    void addScene(const tinySceneRT* from, tinyHandle parentHandle = tinyHandle());
+    void addScene(const Scene* from, tinyHandle parentHandle = tinyHandle());
 
     // --------- Runtime registry access (public) ---------
 
     template<typename T>
     T* rtGet(const tinyHandle& handle) {
-        return rtRegistry.get<T>(handle);
+        return rtRegistry_.get<T>(handle);
     }
 
     template<typename T>
     const T* rtGet(const tinyHandle& handle) const {
-        return rtRegistry.get<T>(handle);
+        return rtRegistry_.get<T>(handle);
     }
 
     void* rtGet(const typeHandle& th) {
-        return rtRegistry.get(th);
+        return rtRegistry_.get(th);
     }
 
     template<typename T>
     T* rtGet(const typeHandle& th) {
-        return rtRegistry.get<T>(th);
+        return rtRegistry_.get<T>(th);
     }
 
     template<typename T>
     const T* rtGet(const typeHandle& th) const {
-        return rtRegistry.get<T>(th);
+        return rtRegistry_.get<T>(th);
     }
 
     template<typename T>
     bool rtTHasPendingRms() const {
-        return rtRegistry.tHasPendingRms<T>();
+        return rtRegistry_.tHasPendingRms<T>();
     }
 
     template<typename T>
     void rtTFlushAllRms() {
-        rtRegistry.tFlushAllRms<T>();
+        rtRegistry_.tFlushAllRms<T>();
     }
 
 
@@ -148,7 +149,7 @@ public:
     // Retrieve runtime-resolved component pointer (return runtime component instead of node identity component)
     template<typename T>
     RTResolver_t<T>* rtComp(tinyHandle nodeHandle) {
-        tinyNodeRT* node = nodes.get(nodeHandle);
+        tinyNodeRT* node = nodes_.get(nodeHandle);
         if (!node || !node->has<T>()) return nullptr;
 
         T* compPtr = node->get<T>();
@@ -164,12 +165,12 @@ public:
 
     template<typename T>
     const RTResolver_t<T>* rtComp(tinyHandle nodeHandle) const {
-        return const_cast<tinySceneRT*>(this)->rtComp<T>(nodeHandle);
+        return const_cast<Scene*>(this)->rtComp<T>(nodeHandle);
     }
 
     template<typename T>
     RTResolver_t<T>* writeComp(tinyHandle nodeHandle) {
-        tinyNodeRT* node = nodes.get(nodeHandle);
+        tinyNodeRT* node = nodes_.get(nodeHandle);
         if (!node) return nullptr;
 
         removeComp<T>(nodeHandle);
@@ -190,7 +191,7 @@ public:
 
     template<typename T>
     bool removeComp(tinyHandle nodeHandle) {
-        tinyNodeRT* node = nodes.get(nodeHandle);
+        tinyNodeRT* node = nodes_.get(nodeHandle);
         if (!node || !node->has<T>()) return false;
 
         T* compPtr = node->get<T>();
@@ -240,9 +241,9 @@ public:
     void update();
 
 private:
-    tinyPool<tinyNodeRT> nodes;
-    tinySceneReq sceneReq;   // Scene requirements
-    tinyRegistry rtRegistry; // Runtime registry for this scene
+    Require req_;   // Scene requirements
+    tinyPool<tinyNodeRT> nodes_;
+    tinyRegistry rtRegistry_; // Runtime registry for this scene
 
     tinyHandle rootHandle_;
     uint32_t curFrame_ = 0;
@@ -251,16 +252,16 @@ private:
     // ---------- Internal helpers ---------
 
     tinyNodeRT* nodeRef(tinyHandle nodeHandle) {
-        return nodes.get(nodeHandle);
+        return nodes_.get(nodeHandle);
     }
 
     template<typename T>
     T* nodeComp(tinyHandle nodeHandle) {
-        tinyNodeRT* node = nodes.get(nodeHandle);
+        tinyNodeRT* node = nodes_.get(nodeHandle);
         return node ? node->get<T>() : nullptr;
     }
 
-    // Cache of specific nodes for easy access
+    // Cache of specific nodes_ for easy access
 
     tinyPool<tinyHandle> withMR3D_;
     UnorderedMap<tinyHandle, tinyHandle> mapMR3D_;
@@ -308,11 +309,11 @@ private:
     tinyRT_SK3D* addSK3D_RT(tinyNodeRT::SK3D* compPtr) {
         tinyRT_SK3D rtSK3D;
         rtSK3D.init(
-            sceneReq.deviceVK,
-            sceneReq.fsRegistry,
-            sceneReq.skinDescPool,
-            sceneReq.skinDescLayout,
-            sceneReq.maxFramesInFlight
+            req_.deviceVK,
+            req_.fsRegistry,
+            req_.skinDescPool,
+            req_.skinDescLayout,
+            req_.maxFramesInFlight
         );
 
         // Repurpose pHandle to point to runtime skeleton
@@ -333,16 +334,16 @@ private:
 
     // Access node by index, only for internal use
     tinyNodeRT* fromIndex(uint32_t index) {
-        return nodes.get(nodeHandle(index));
+        return nodes_.get(nodeHandle(index));
     }
 
     const tinyNodeRT* fromIndex(uint32_t index) const {
-        return nodes.get(nodeHandle(index));
+        return nodes_.get(nodeHandle(index));
     }
 
     template<typename T>
     tinyHandle rtAdd(T&& data) {
-        return rtRegistry.add<T>(std::forward<T>(data)).handle;
+        return rtRegistry_.add<T>(std::forward<T>(data)).handle;
     }
 
 
@@ -351,7 +352,11 @@ private:
 
     template<typename T>
     void rtRemove(const tinyHandle& handle) {
-        if constexpr (DeferredRm<T>::value) rtRegistry.tQueueRm<T>(handle);
-        else                                rtRegistry.tInstaRm<T>(handle);
+        if constexpr (DeferredRm<T>::value) rtRegistry_.tQueueRm<T>(handle);
+        else                                rtRegistry_.tInstaRm<T>(handle);
     }
 };
+
+} // namespace tinyRT
+
+using tinySceneRT = tinyRT::Scene;

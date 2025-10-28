@@ -7,8 +7,9 @@
 
 #include "tinyExt/tinyPool.hpp"
 
-struct tinySceneRT;
 namespace tinyRT {
+
+struct Scene; // Forward declaration
 
 struct Anime3D {
     Anime3D() = default;
@@ -85,7 +86,7 @@ struct Anime3D {
     void resume() { playing = true; }
     void stop() { time = 0.0f; playing = false; }
 
-    void update(tinySceneRT* scene, float deltaTime);
+    void update(Scene* scene, float deltaTime);
 
     Anime* current() { return animePool.get(currentHandle); }
     const Anime* current() const { return animePool.get(currentHandle); }
@@ -123,7 +124,7 @@ private:
     float time = 0.0f;
     float speed = 1.0f;
 
-    void writeTransform(tinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const;
+    void writeTransform(Scene* scene, const Channel& channel, const glm::mat4& transform) const;
 };
 
 } // namespace tinyRT

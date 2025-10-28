@@ -126,7 +126,7 @@ glm::mat4 getTransform(const tinySceneRT* scene, const Anime3D::Channel& channel
 }
 
 
-void Anime3D::writeTransform(tinySceneRT* scene, const Channel& channel, const glm::mat4& transform) const {
+void Anime3D::writeTransform(Scene* scene, const Channel& channel, const glm::mat4& transform) const {
     if (scene == nullptr) return;
 
     // Write transform component of node
