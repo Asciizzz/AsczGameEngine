@@ -30,6 +30,10 @@ Same guy that made "2D platformer supposed to run on grandma pc, struggling on 3
 * Can now handle **2.7M triangles** and **1000+ particles** while sitting at **400–1000 FPS**, depending on how cursed the scene is.
 * **Portable build works** - no Vulkan SDK needed. And no, it’s not a virus. Just open it, fill in your credits card's numbers, it's expiration date and the 3 quirky digits on the back.
 
+### the smallest change
+
+- renamed everything from `Tiny_` to `tiny_` because it's just appropriate.
+
 ---
 
 ## Features That Technically Exist
