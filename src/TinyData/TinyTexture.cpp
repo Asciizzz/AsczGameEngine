@@ -117,7 +117,7 @@ bool TinyTexture::vkCreate(const TinyVK::Device* deviceVK) {
 
     textureVK = TextureVK(); // Reset texture
     bool success = textureVK
-        .init(*deviceVK)
+        .init(deviceVK->device)
         .createImage(imageConfig)
         .createView(viewConfig)
         .createSampler(sampConfig)

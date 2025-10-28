@@ -154,7 +154,7 @@ void PostProcess::createSampler() {
         .withLodRange(0.0f, 0.0f);
 
     sampler = MakeUnique<SamplerVK>();
-    sampler->init(*deviceVK).create(config);
+    sampler->init(deviceVK->device).create(config);
 }
 
 void PostProcess::createSharedDescriptors() {

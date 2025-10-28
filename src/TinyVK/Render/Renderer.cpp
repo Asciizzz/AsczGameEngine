@@ -13,7 +13,7 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
 
     swapchain = MakeUnique<Swapchain>(deviceVK, surface, window);
 
-    depthImage = MakeUnique<DepthImage>(*deviceVK);
+    depthImage = MakeUnique<DepthImage>(deviceVK->device);
     depthImage->create(deviceVK->pDevice, swapchain->getExtent());
 
     postProcess = MakeUnique<PostProcess>(deviceVK, swapchain.get(), depthImage.get());

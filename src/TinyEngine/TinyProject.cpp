@@ -264,11 +264,13 @@ void TinyProject::addSceneInstance(TinyHandle fromHandle, TinyHandle toHandle, T
 
 
 void TinyProject::vkCreateSceneResources() {
-    skinDescLayout.create(*deviceVK, {
+    VkDevice device = deviceVK->device;
+
+    skinDescLayout.create(device, {
         {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr}
     });
 
-    skinDescPool.create(*deviceVK, {
+    skinDescPool.create(device, {
         {DescType::StorageBuffer, maxSkeletons}
     }, maxSkeletons);
 
