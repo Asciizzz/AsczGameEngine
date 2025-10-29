@@ -37,7 +37,7 @@ private:
     // Special types
     template<> struct RTResolver<tinyNodeRT::SK3D> { using type = tinyRT_SK3D; };
     template<> struct RTResolver<tinyNodeRT::AN3D> { using type = tinyRT_AN3D; };
-    // template<> struct RTResolver<tinyNodeRT::MR3D> { using type = tinyRT_MR3D; };
+    template<> struct RTResolver<tinyNodeRT::MR3D> { using type = tinyRT_MR3D; };
 
 public:
     struct Require {
@@ -158,6 +158,8 @@ public:
             return rtGet<tinyRT_SK3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
             return rtGet<tinyRT_AN3D>(compPtr->pHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
+            return rtGet<tinyRT_MR3D>(compPtr->pHandle);
         } else { // Other types return themselves
             return compPtr;
         }
@@ -182,9 +184,8 @@ public:
             return addSK3D_RT(compPtr);
         } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
             return addAN3D_RT(compPtr);
-        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) { // In the future
-            // return addMR3D_RT(compPtr);
-            return compPtr; // Temporary
+        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
+            return addMR3D_RT(compPtr);
         } else { // Other types return themselves
             return compPtr;
         }
@@ -333,9 +334,9 @@ private:
 
     tinyRT_MR3D* addMR3D_RT(tinyNodeRT::MR3D* compPtr) {
         tinyRT_MR3D rtMeshRT;
-        // compPtr->pMeshHandle = rtAdd<tinyRT_MR3D>(std::move(rtMeshRT));
+        compPtr->pHandle = rtAdd<tinyRT_MR3D>(std::move(rtMeshRT));
 
-        return rtGet<tinyRT_MR3D>(compPtr->pMeshHandle);
+        return rtGet<tinyRT_MR3D>(compPtr->pHandle);
     }
 
     // ---------- Runtime registry access (private) ----------

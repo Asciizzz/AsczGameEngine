@@ -53,8 +53,7 @@ struct Node {
     // Component definitions with runtime capabilities
     struct MeshRender3D {
         static constexpr Types kType = Types::MR3D;
-        tinyHandle pMeshHandle;
-        tinyHandle skeleNodeHandle; // Handle to skeleton "NODE" (NOT skeleton in registry)
+        tinyHandle pHandle;
     };
     using MR3D = MeshRender3D;
 

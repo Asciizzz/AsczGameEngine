@@ -17,6 +17,8 @@ struct Skeleton3D {
     Skeleton3D(Skeleton3D&&) = default;
     Skeleton3D& operator=(Skeleton3D&&) = default;
 
+// -----------------------------------------
+
     // Bone runtime data
     void set(tinyHandle skeleHandle);
     void copy(const Skeleton3D* other);
@@ -25,11 +27,14 @@ struct Skeleton3D {
     void refreshAll();
 
     void update(uint32_t boneIndx, uint32_t curFrame);
+
+// -----------------------------------------
+
+    VkDescriptorSet descSet() const { return pValid() ? descSet_.get() : VK_NULL_HANDLE; }
     uint32_t dynamicOffset(uint32_t curFrame) const {
         return sizeof(glm::mat4) * skinData_.size() * curFrame;
     }
 
-    VkDescriptorSet descSet() const { return pValid() ? descSet_.get() : VK_NULL_HANDLE; }
     uint32_t boneCount() const {
         return pValid() ? static_cast<uint32_t>(localPose_.size()) : 0;
     }

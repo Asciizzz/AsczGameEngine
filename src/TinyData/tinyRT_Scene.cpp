@@ -245,13 +245,15 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
         }
 
         if (fromNode->has<tinyNodeRT::MR3D>()) {
-            const auto* fromMeshRender = fromNode->get<tinyNodeRT::MR3D>();
+            // const auto* fromMeshRender = fromNode->get<tinyNodeRT::MR3D>();
+            const auto* fromMeshRender = from->rtComp<tinyNodeRT::MR3D>(fromHandle);
             auto* toMeshRender = writeComp<tinyNodeRT::MR3D>(toHandle);
 
-            toMeshRender->pMeshHandle = fromMeshRender->pMeshHandle;
+            toMeshRender->setMesh(fromMeshRender->meshHandle());
 
-            if (toHandleMap.find(fromMeshRender->skeleNodeHandle.index) != toHandleMap.end()) {
-                toMeshRender->skeleNodeHandle = toHandleMap[fromMeshRender->skeleNodeHandle.index];
+            tinyHandle skeleNodeHandle = fromMeshRender->skeleNodeHandle();
+            if (toHandleMap.find(skeleNodeHandle.index) != toHandleMap.end()) {
+                toMeshRender->setSkeleNode(toHandleMap[skeleNodeHandle.index]);
             }
         }
 

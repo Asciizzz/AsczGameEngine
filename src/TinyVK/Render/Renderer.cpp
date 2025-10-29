@@ -275,34 +275,33 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         const tinyNodeRT* rtNode = activeScene->node(nodeHandle);
 
         // Get mesh render component directly from runtime node
-        const auto* mr3DComp = rtNode->get<tinyNodeRT::MR3D>();
+        const auto* mr3DComp = activeScene->rtComp<tinyNodeRT::MR3D>(nodeHandle);
         if (!mr3DComp) continue; // No mesh render component
 
-        tinyHandle meshHandle = mr3DComp->pMeshHandle;
-        const auto& regMesh = fs.rGet<tinyMeshVk>(meshHandle);
-        if (!regMesh) continue; // Mesh not found in registry
+        const auto* rMesh = mr3DComp->rMesh();
+        if (!rMesh) continue; // Mesh not found in registry
 
         const auto* transform = rtNode->get<tinyNodeRT::T3D>();
         glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
 
         // Draw each individual submeshes
-        VkBuffer vrtxBuffer = regMesh->vrtxBuffer();
-        VkBuffer indxBuffer = regMesh->indxBuffer();
-        VkIndexType indxType = regMesh->indxType();
-        const auto& parts = regMesh->parts(); // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
+        VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
+        VkBuffer indxBuffer = rMesh->indxBuffer();
+        VkIndexType indxType = rMesh->indxType();
+        const auto& parts = rMesh->parts(); // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
 
         VkBuffer buffers[] = { vrtxBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
         vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
-        tinyVertex::Layout vrtxLayout = regMesh->vrtxLayout();
+        tinyVertex::Layout vrtxLayout = rMesh->vrtxLayout();
         bool isRigged = vrtxLayout.type == tinyVertex::Layout::Type::Rigged;
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 
         // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
-        tinyRT_SK3D* rtSkele = activeScene->rtComp<tinyNodeRT::SK3D>(mr3DComp->skeleNodeHandle);
+        tinyRT_SK3D* rtSkele = activeScene->rtComp<tinyNodeRT::SK3D>(mr3DComp->skeleNodeHandle());
         VkDescriptorSet skinSet = rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
         uint32_t boneCount = rtSkele ? rtSkele->boneCount() : 0;
 

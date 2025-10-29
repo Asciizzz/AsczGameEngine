@@ -201,11 +201,11 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             auto* newMeshRender = scene.writeComp<tinyNodeRT::MR3D>(nodeHandle);
 
             if (validIndex(ogNode.MR3D_meshIndx, glbMeshRHandle)) {
-                newMeshRender->pMeshHandle = glbMeshRHandle[ogNode.MR3D_meshIndx];
+                newMeshRender->setMesh(glbMeshRHandle[ogNode.MR3D_meshIndx]);
             }
 
             if (validIndex(ogNode.MR3D_skeleNodeIndx, nodeHandles)) {
-                newMeshRender->skeleNodeHandle = nodeHandles[ogNode.MR3D_skeleNodeIndx];
+                newMeshRender->setSkeleNode(nodeHandles[ogNode.MR3D_skeleNodeIndx]);
             }
         }
 
