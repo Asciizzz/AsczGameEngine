@@ -7,8 +7,13 @@ using namespace tinyVk;
 
 // A quick function for range validation
 template<typename T>
-bool validIndex(tinyHandle handle, const std::vector<T>& vec) {
+bool validHandle(tinyHandle handle, const std::vector<T>& vec) {
     return handle.valid() && handle.index < vec.size();
+}
+
+template<typename T>
+bool validIndex(size_t index, const std::vector<T>& vec) {
+    return index < vec.size();
 }
 
 tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
@@ -120,7 +125,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         // Remap material indices
         std::vector<tinyMesh::Part>& remapPart = mesh.parts();
         for (auto& part : remapPart) {
-            bool valid = validIndex(part.material, glmMatRHandle);
+            bool valid = validHandle(part.material, glmMatRHandle);
             part.material = valid ? glmMatRHandle[part.material.index] : tinyHandle();
         }
 
@@ -170,76 +175,70 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         tinyHandle parentHandle;
         std::vector<tinyHandle> childrenHandles;
 
-        const tinyNodeRT& originalNode = model.nodes[i];
+        // const tinyNodeRT& originalNode = model.nodes[i];
+        const tinyModel::Node& ogNode = model.nodes[i];
 
         // Remap parent handle
-        if (validIndex(originalNode.parentHandle, nodeHandles)) {
-            parentHandle = nodeHandles[originalNode.parentHandle.index];
+        if (validIndex(ogNode.parent, nodeHandles)) {
+            parentHandle = nodeHandles[ogNode.parent];
         };
 
         // Remap children handles
-        for (const tinyHandle& childHandle : originalNode.childrenHandles) {
-            if (validIndex(childHandle, nodeHandles)) {
-                childrenHandles.push_back(nodeHandles[childHandle.index]);
+        for (int child : ogNode.children) {
+            if (validIndex(child, nodeHandles)) {
+                childrenHandles.push_back(nodeHandles[child]);
             }
         }
 
         scene.setNodeParent(nodeHandle, parentHandle);
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
-        // Add component with scene API to ensure proper handling
-        if (originalNode.has<tinyNodeRT::T3D>()) {
-            const auto* ogTransform = originalNode.get<tinyNodeRT::T3D>();
-            auto* newTransform = scene.writeComp<tinyNodeRT::T3D>(nodeHandle);
-            *newTransform = *ogTransform;
-        }
+        // Node guarantees T3D component
+        auto* newTransform = scene.writeComp<tinyNodeRT::T3D>(nodeHandle);
+        newTransform->init(ogNode.T3D);
 
-        if (originalNode.has<tinyNodeRT::MR3D>()) {
-            const auto* ogMeshRender = originalNode.get<tinyNodeRT::MR3D>();
+        if (ogNode.hasMR3D()) {
             auto* newMeshRender = scene.writeComp<tinyNodeRT::MR3D>(nodeHandle);
 
-            if (validIndex(ogMeshRender->pMeshHandle, glbMeshRHandle)) {
-                newMeshRender->pMeshHandle = glbMeshRHandle[ogMeshRender->pMeshHandle.index];
+            if (validIndex(ogNode.MR3D_meshIndx, glbMeshRHandle)) {
+                newMeshRender->pMeshHandle = glbMeshRHandle[ogNode.MR3D_meshIndx];
             }
 
-            if (validIndex(ogMeshRender->skeleNodeHandle, nodeHandles)) {
-                newMeshRender->skeleNodeHandle = nodeHandles[ogMeshRender->skeleNodeHandle.index];
+            if (validIndex(ogNode.MR3D_skeleNodeIndx, nodeHandles)) {
+                newMeshRender->skeleNodeHandle = nodeHandles[ogNode.MR3D_skeleNodeIndx];
             }
         }
 
-        if (originalNode.has<tinyNodeRT::BA3D>()) {
-            const auto* ogBoneAttach = originalNode.get<tinyNodeRT::BA3D>();
+        if (ogNode.hasBA3D()) {
             auto* newBoneAttach = scene.writeComp<tinyNodeRT::BA3D>(nodeHandle);
 
-            if (validIndex(ogBoneAttach->skeleNodeHandle, nodeHandles)) {
-                newBoneAttach->skeleNodeHandle = nodeHandles[ogBoneAttach->skeleNodeHandle.index];
+            if (validIndex(ogNode.BA3D_skeleNodeIndx, nodeHandles)) {
+                newBoneAttach->skeleNodeHandle = nodeHandles[ogNode.BA3D_skeleNodeIndx];
             }
 
-            newBoneAttach->boneIndex = ogBoneAttach->boneIndex;
+            newBoneAttach->boneIndex = ogNode.BA3D_boneIndx;
         }
 
-        if (originalNode.has<tinyNodeRT::SK3D>()) {
-            const auto* ogSkeleComp = originalNode.get<tinyNodeRT::SK3D>();
+        if (ogNode.hasSK3D()) {
             auto* newSkeleRT = scene.writeComp<tinyNodeRT::SK3D>(nodeHandle);
 
-            if (validIndex(ogSkeleComp->pHandle, glbSkeleRHandle)) {
+            if (validIndex(ogNode.SK3D_skeleIndx, glbSkeleRHandle)) {
                 // Construct new skeleton runtime from the original skeleton
-                newSkeleRT->set(glbSkeleRHandle[ogSkeleComp->pHandle.index]);
+                newSkeleRT->set(glbSkeleRHandle[ogNode.SK3D_skeleIndx]);
             }
         }
 
-        if (originalNode.has<tinyNodeRT::AN3D>()) {
-            const auto* ogAnimeComp = originalNode.get<tinyNodeRT::AN3D>();
+        if (ogNode.hasAN3D()) {
             auto* newAnimeComp = scene.writeComp<tinyNodeRT::AN3D>(nodeHandle);
 
-            *newAnimeComp = model.animations[ogAnimeComp->pHandle.index];
+            *newAnimeComp = model.animations[ogNode.AN3D_animeIndx];
 
             for (auto& anime : newAnimeComp->MAL()) {
                 auto* toAnime = newAnimeComp->get(anime.second);
                 if (!toAnime) continue; // Should not happen
 
                 for (auto& channel : toAnime->channels) {
-                    if (!validIndex(channel.node, nodeHandles)) continue;
+                    if (!validHandle(channel.node, nodeHandles)) continue;
                     channel.node = nodeHandles[channel.node.index];
                 }
             }

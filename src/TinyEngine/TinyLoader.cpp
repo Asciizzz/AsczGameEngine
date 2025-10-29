@@ -652,46 +652,43 @@ void loadSkeletons(std::vector<tinySkeleton>& skeletons, UnorderedMap<int, std::
 
 
 void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, UnorderedMap<int, int>& skeletonToModelNodeIndex, const tinygltf::Model& model, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex) {
-    std::vector<tinyNodeRT> nodes;
+    using tNode = tinyModel::Node;
+    
+    std::vector<tNode> nodes;
 
-    auto pushNode = [&](tinyNodeRT&& node) -> int {
+    auto pushNode = [&](tNode&& node) -> int {
         int index = static_cast<int>(nodes.size());
         nodes.push_back(std::move(node));
         return index;
     };
 
-    tinyNodeRT trueRoot;
-    trueRoot.add<tinyNodeRT::T3D>();
-    trueRoot.name = tinyModel.name.empty() ? "Model_Root" : tinyModel.name;
+    tNode trueRoot(tinyModel.name.empty() ? "Model_Root" : tinyModel.name);
     pushNode(std::move(trueRoot));
 
     // Construct all root-level nodes first
 
     // Add a single node to store all skeletons
-    tinyNodeRT skeletonRootNode("LSkeletons");
+    tNode skeletonRootNode("LSkeletons");
     int skeletonRootModelIndex = pushNode(std::move(skeletonRootNode));
 
-    nodes[0].addChild(tinyHandle(skeletonRootModelIndex));
-    nodes[skeletonRootModelIndex].setParent(tinyHandle(0));
+    nodes[0].addChild(skeletonRootModelIndex);
+    nodes[skeletonRootModelIndex].setParent(0);
 
     // Skeleton parent nodes
     skeletonToModelNodeIndex.clear();
     for (size_t skeleIndx = 0; skeleIndx < tinyModel.skeletons.size(); ++skeleIndx) {
         // We only need this skeleton for the name
         const tinySkeleton& skeleton = tinyModel.skeletons[skeleIndx];
-        tinyNodeRT skeleNode(skeleton.name);
 
-        tinyNodeRT::SK3D skeleComp;
-        skeleComp.pHandle = tinyHandle(skeleIndx);
-
-        skeleNode.add<tinyNodeRT::SK3D>(std::move(skeleComp));
+        tNode skeleNode(skeleton.name);
+        skeleNode.SK3D_skeleIndx = skeleIndx;
 
         int skeleNodeIndex = pushNode(std::move(skeleNode));
         skeletonToModelNodeIndex[(int)skeleIndx] = skeleNodeIndex;
 
         // Child of skeleton root
-        nodes[skeletonRootModelIndex].addChild(tinyHandle(skeleNodeIndex)); 
-        nodes[skeleNodeIndex].setParent(tinyHandle(skeletonRootModelIndex));
+        nodes[skeletonRootModelIndex].addChild(skeleNodeIndex);
+        nodes[skeleNodeIndex].setParent(skeletonRootModelIndex);
 
         skeletonToModelNodeIndex[(int)skeleIndx] = skeleNodeIndex;
     }
@@ -711,8 +708,7 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
             continue; // It's a joint node -> skip
         }
 
-        tinyNodeRT emptyNode;
-        emptyNode.name = model.nodes[i].name.empty() ? "Node" : model.nodes[i].name;
+        tNode emptyNode(model.nodes[i].name.empty() ? "Node" : model.nodes[i].name);
 
         int modelIndx = pushNode(std::move(emptyNode));
         gltfNodeToModelNode[i] = modelIndx;
@@ -725,7 +721,7 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
         int nModelIndex = gltfNodeToModelNode[i];
         if (nModelIndex < 0) continue; // skip joint
 
-        tinyNodeRT& nModel = nodes[nModelIndex];
+        tNode& nModel = nodes[nModelIndex];
 
         // Establish parent-child relationship
         int parentGltfIndex = gltfNodeParent[i];
@@ -734,16 +730,14 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
             parentModelIndex = gltfNodeToModelNode[parentGltfIndex];
             parentModelIndex = parentModelIndex < 0 ? 0 : parentModelIndex; // Fallback to true root
 
-            nodes[parentModelIndex].addChild(tinyHandle(nModelIndex));
-            nModel.setParent(tinyHandle(parentModelIndex));
+            nodes[parentModelIndex].addChild(nModelIndex);
+            nModel.setParent(parentModelIndex);
         } else {
-            nodes[0].addChild(tinyHandle(nModelIndex));
-            nModel.setParent(tinyHandle(0));
+            nodes[0].addChild(nModelIndex);
+            nModel.setParent(0);
         }
 
         // Start adding components shall we?
-
-        tinyNodeRT::T3D* transformComp = nModel.add<tinyNodeRT::T3D>();
 
         glm::mat4 matrix(1.0f);
         if (!nGltf.matrix.empty()) {
@@ -768,19 +762,19 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
                     glm::mat4_cast(rotation) *
                     glm::scale(glm::mat4(1.0f), scale);
         }
-        transformComp->init(matrix);
+
+        nModel.T3D = matrix;
 
         if (nGltf.mesh >= 0) {
-            tinyNodeRT::MR3D meshData;
-            meshData.pMeshHandle = tinyHandle(nGltf.mesh);
+            // tNode meshData;
+            // meshData.pMeshHandle = tinyHandle(nGltf.mesh);
+            nModel.MR3D_meshIndx = nGltf.mesh;
 
             int skeletonIndex = nGltf.skin;
             auto it = skeletonToModelNodeIndex.find(skeletonIndex);
             if (it != skeletonToModelNodeIndex.end()) {
-                meshData.skeleNodeHandle = tinyHandle(it->second);
+                nModel.MR3D_skeleNodeIndx = it->second;
             }
-
-            nModel.add<tinyNodeRT::MR3D>(std::move(meshData));
 
             // Check if the parent of this node is a joint
             auto itBone = gltfNodeToSkeletonAndBoneIndex.find(parentGltfIndex);
@@ -791,10 +785,8 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
 
                 auto skeleIt = skeletonToModelNodeIndex.find(skeleIndx);
                 if (skeleIt != skeletonToModelNodeIndex.end()) {
-                    tinyNodeRT::BA3D boneAttach;
-                    boneAttach.skeleNodeHandle = tinyHandle(skeleIt->second);
-                    boneAttach.boneIndex = boneIndx;
-                    nModel.add<tinyNodeRT::BA3D>(std::move(boneAttach));
+                    nModel.BA3D_skeleNodeIndx = skeleIt->second;
+                    nModel.BA3D_boneIndx = boneIndx;
                 }
             }
         }
@@ -805,15 +797,20 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
 
 
 void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const std::vector<int>& gltfNodeToModelNode, const UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex, const UnorderedMap<int, int>& skeletonToModelNodeIndex) {
+    using tNode = tinyModel::Node;
+    
     tinyModel.animations.clear();
 
     // If model has no animations, return
     if (model.animations.empty()) return;
 
-    tinyNodeRT animeNode;
-    animeNode.name = "Anime";
-    tinyNodeRT::AN3D* animeComp = animeNode.add<tinyNodeRT::AN3D>();
-    animeComp->pHandle = tinyHandle(0);
+    // tinyNodeRT animeNode;
+    // animeNode.name = "Anime";
+    // tinyNodeRT::AN3D* animeComp = animeNode.add<tinyNodeRT::AN3D>();
+    // animeComp->pHandle = tinyHandle(0);
+
+    tNode animeNode("Anime");
+    animeNode.AN3D_animeIndx = 0; // First animation
 
     tinyRT_AN3D tinyAnim;
 
@@ -836,15 +833,15 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
                 readAccessor(model, gltfSampler.output, sampler.values);
             }
 
-            // sampler.interp = 
+            using SamplerInterp = tinyRT_AN3D::Sampler::Interp;
             if (gltfSampler.interpolation == "LINEAR") {
-                sampler.interp = tinyRT_AN3D::Sampler::Interp::Linear;
+                sampler.interp = SamplerInterp::Linear;
             } else if (gltfSampler.interpolation == "STEP") {
-                sampler.interp = tinyRT_AN3D::Sampler::Interp::Step;
+                sampler.interp = SamplerInterp::Step;
             } else if (gltfSampler.interpolation == "CUBICSPLINE") {
-                sampler.interp = tinyRT_AN3D::Sampler::Interp::CubicSpline;
+                sampler.interp = SamplerInterp::CubicSpline;
             } else {
-                sampler.interp = tinyRT_AN3D::Sampler::Interp::Linear; // Default
+                sampler.interp = SamplerInterp::Linear; // Default
             }
 
             anime.samplers.push_back(std::move(sampler));
@@ -901,8 +898,8 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
     int animeNodeIndex = static_cast<int>(tinyModel.nodes.size());
     tinyModel.nodes.push_back(std::move(animeNode));
 
-    tinyModel.nodes[0].addChild(tinyHandle(animeNodeIndex));
-    tinyModel.nodes[animeNodeIndex].setParent(tinyHandle(0));
+    tinyModel.nodes[0].addChild(animeNodeIndex);
+    tinyModel.nodes[animeNodeIndex].setParent(0);
 }
 
 
@@ -1179,29 +1176,36 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
     result.nodes.clear();
     result.nodes.reserve(1 + result.meshes.size());
 
-    // Root node (index 0)
-    tinyNodeRT rootNode;
-    rootNode.add<tinyNodeRT::T3D>();
-    rootNode.name = result.name.empty() ? "OBJ_Root" : result.name;
+
+    using tNode = tinyModel::Node;
+
+    tNode rootNode(result.name.empty() ? "OBJ_Root" : result.name);
     result.nodes.push_back(std::move(rootNode));
 
     // Child nodes for each mesh (representing each material group)
     for (size_t meshIndex = 0; meshIndex < result.meshes.size(); meshIndex++) {
-        tinyNodeRT meshNode;
-        meshNode.add<tinyNodeRT::T3D>();
-        meshNode.name = result.meshes[meshIndex].name + "_Node";
+        // tinyNodeRT meshNode;
+        // meshNode.add<tinyNodeRT::T3D>();
+        // meshNode.name = result.meshes[meshIndex].name + "_Node";
 
-        // Set parent-child relationship
-        meshNode.setParent(tinyHandle(0)); // Parent is root node
-        result.nodes[0].addChild(tinyHandle(static_cast<uint32_t>(meshIndex + 1)));
+        // // Set parent-child relationship
+        // meshNode.setParent(tinyHandle(0)); // Parent is root node
+        // result.nodes[0].addChild(tinyHandle(static_cast<uint32_t>(meshIndex + 1)));
 
-        // Add MeshRender component
-        tinyNodeRT::MR3D meshRender;
-        meshRender.pMeshHandle = tinyHandle(static_cast<uint32_t>(meshIndex));
-        meshRender.skeleNodeHandle = tinyHandle(); // No skeleton for OBJ
-        meshNode.add<tinyNodeRT::MR3D>(std::move(meshRender));
+        // // Add MeshRender component
+        // tinyNodeRT::MR3D meshRender;
+        // meshRender.pMeshHandle = tinyHandle(static_cast<uint32_t>(meshIndex));
+        // meshRender.skeleNodeHandle = tinyHandle(); // No skeleton for OBJ
+        // meshNode.add<tinyNodeRT::MR3D>(std::move(meshRender));
 
-        result.nodes.push_back(std::move(meshNode));
+        // result.nodes.push_back(std::move(meshNode));
+
+        tNode meshNode(result.meshes[meshIndex].name + "_Node");
+        meshNode.MR3D_meshIndx = static_cast<int>(meshIndex);
+
+        meshNode.setParent(0); // Parent is root node
+        result.nodes[0].addChild(static_cast<int>(meshIndex + 1));
+
     }
 
     return result;
