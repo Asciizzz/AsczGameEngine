@@ -110,7 +110,7 @@ public:
         External
     };
 
-    ImageVk() = default;
+    ImageVk() noexcept = default;
     ImageVk(VkDevice device) : device(device) {}
     ImageVk& init(VkDevice device) {
         this->device = device;
@@ -210,7 +210,7 @@ struct SamplerConfig {
 
 class SamplerVk {
 public:
-    SamplerVk() = default;
+    SamplerVk() noexcept = default;
     SamplerVk(VkDevice device) : device(device) {}
     SamplerVk& init(VkDevice device) {
         this->device = device;
@@ -246,7 +246,7 @@ private:
 
 class TextureVk {
 public:
-    TextureVk() = default;
+    TextureVk() noexcept = default;
     TextureVk(VkDevice device) : image(device), sampler(device) {}
     TextureVk& init(VkDevice device) {
         image.init(device);

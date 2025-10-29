@@ -6,8 +6,8 @@
 
 class tinyRenderer {
 public:
-    tinyRenderer() = default;
-    ~tinyRenderer() = default;
+    tinyRenderer() noexcept = default;
+    ~tinyRenderer() noexcept = default;
 
     // Delete copy semantics
     tinyRenderer(const tinyRenderer&) = delete;

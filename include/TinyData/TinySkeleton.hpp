@@ -19,13 +19,13 @@ struct tinyBone {
 };
 
 struct tinySkeleton {
-    tinySkeleton() = default;
+    tinySkeleton() noexcept = default;
 
     tinySkeleton(const tinySkeleton&) = delete;
     tinySkeleton& operator=(const tinySkeleton&) = delete;
 
-    tinySkeleton(tinySkeleton&&) = default;
-    tinySkeleton& operator=(tinySkeleton&&) = default;
+    tinySkeleton(tinySkeleton&&) noexcept = default;
+    tinySkeleton& operator=(tinySkeleton&&) noexcept = default;
 
     std::string name;
     std::vector<tinyBone> bones;

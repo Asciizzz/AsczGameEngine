@@ -8,14 +8,14 @@
 namespace tinyRT {
 
 struct MeshRender3D {
-    MeshRender3D() = default;
+    MeshRender3D() noexcept = default;
     MeshRender3D* init(const tinyVk::Device* deviceVk, const tinyRegistry* fsRegistry);
 
     MeshRender3D(const MeshRender3D&) = delete;
     MeshRender3D& operator=(const MeshRender3D&) = delete;
 
-    MeshRender3D(MeshRender3D&&) = default;
-    MeshRender3D& operator=(MeshRender3D&&) = default;
+    MeshRender3D(MeshRender3D&&) noexcept = default;
+    MeshRender3D& operator=(MeshRender3D&&) noexcept = default;
 
 // -----------------------------------------
 
@@ -33,10 +33,10 @@ struct MeshRender3D {
 
 // -----------------------------------------
 
-    tinyHandle meshHandle() const { return meshHandle_; }
-    tinyHandle skeleNodeHandle() const { return skeleNodeHandle_; }
+    tinyHandle meshHandle() const noexcept { return meshHandle_; }
+    tinyHandle skeleNodeHandle() const noexcept { return skeleNodeHandle_; }
 
-    const tinyMeshVk* rMesh() const {
+    const tinyMeshVk* rMesh() const noexcept {
         return fsRegistry_ ? fsRegistry_->get<tinyMeshVk>(meshHandle_) : nullptr;
     }
 

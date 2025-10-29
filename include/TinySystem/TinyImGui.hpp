@@ -24,8 +24,8 @@ public:
             : name(windowName), draw(drawFunc), p_open(openPtr) {}
     };
 
-    tinyImGui() = default;
-    ~tinyImGui() = default;
+    tinyImGui() noexcept = default;
+    ~tinyImGui() noexcept = default;
 
     // Delete copy semantics
     tinyImGui(const tinyImGui&) = delete;

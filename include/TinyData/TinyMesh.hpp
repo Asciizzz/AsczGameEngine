@@ -9,7 +9,7 @@
 // Uniform mesh structure that holds raw data only
 struct tinyMesh {
     std::string name; // Mesh name from glTF
-    tinyMesh() = default; // Allow copy and move semantics
+    tinyMesh() noexcept = default;
 
     struct Part {
         uint32_t indxOffset = 0;
@@ -46,17 +46,7 @@ struct tinyMesh {
         return *this;
     }
 
-    std::vector<Part>& parts() { return parts_; }
-    const std::vector<Part>& parts() const { return parts_; }
-
     tinyMesh& addPart(const Part& part) {
-        parts_.push_back(part);
-        return *this;
-    }
-    tinyMesh& fullPart() {
-        Part part;
-        part.indxOffset = 0;
-        part.indxCount = static_cast<uint32_t>(indxCount_);
         parts_.push_back(part);
         return *this;
     }
@@ -87,15 +77,17 @@ struct tinyMesh {
         return const_cast<tinyMesh*>(this)->indxPtr<IndexT>();
     }
 
-    const tinyVertex::Layout& vrtxLayout() const { return vrtxLayout_; }
-    const std::vector<uint8_t>& vrtxData() const { return vrtxData_; }
-    const std::vector<uint8_t>& indxData() const { return indxData_; }
-    size_t vrtxCount() const { return vrtxCount_; }
-    size_t indxCount() const { return indxCount_; }
-    size_t indxStride() const { return indxStride_; }
+    const tinyVertex::Layout& vrtxLayout() const noexcept { return vrtxLayout_; }
+    const std::vector<uint8_t>& vrtxData() const noexcept { return vrtxData_; }
+    const std::vector<uint8_t>& indxData() const noexcept { return indxData_; }
+    size_t vrtxCount() const noexcept { return vrtxCount_; }
+    size_t indxCount() const noexcept { return indxCount_; }
+    size_t indxStride() const noexcept { return indxStride_; }
 
+    std::vector<Part>& parts() noexcept { return parts_; }
+    const std::vector<Part>& parts() const noexcept { return parts_; }
 
-    bool valid() const {
+    bool valid() const noexcept {
         return !vrtxData_.empty() && !indxData_.empty();
     }
 
@@ -112,27 +104,27 @@ private:
 };
 
 struct tinyMeshVk {
-    tinyMeshVk() = default;
+    tinyMeshVk() noexcept = default;
 
     tinyMeshVk(const tinyMeshVk&) = delete;
     tinyMeshVk& operator=(const tinyMeshVk&) = delete;
 
-    tinyMeshVk(tinyMeshVk&&) = default;
-    tinyMeshVk& operator=(tinyMeshVk&&) = default;
+    tinyMeshVk(tinyMeshVk&&) noexcept = default;
+    tinyMeshVk& operator=(tinyMeshVk&&) noexcept = default;
 
 // -----------------------------------------
 
-    VkBuffer vrtxBuffer() const { return vrtxBuffer_; }
-    VkBuffer indxBuffer() const { return indxBuffer_; }
-    VkIndexType indxType() const { return indxType_; }
+    VkBuffer vrtxBuffer() const noexcept { return vrtxBuffer_; }
+    VkBuffer indxBuffer() const noexcept { return indxBuffer_; }
+    VkIndexType indxType() const noexcept { return indxType_; }
 
-    tinyMesh& cpu() { return mesh_; }
-    const tinyMesh& cpu() const { return mesh_; }
+    tinyMesh& cpu() noexcept { return mesh_; }
+    const tinyMesh& cpu() const noexcept { return mesh_; }
 
-    std::vector<tinyMesh::Part>& parts() { return mesh_.parts(); }
-    const std::vector<tinyMesh::Part>& parts() const { return mesh_.parts(); }
+    std::vector<tinyMesh::Part>& parts() noexcept { return mesh_.parts(); }
+    const std::vector<tinyMesh::Part>& parts() const noexcept { return mesh_.parts(); }
 
-    const tinyVertex::Layout& vrtxLayout() const { return mesh_.vrtxLayout(); }
+    const tinyVertex::Layout& vrtxLayout() const noexcept { return mesh_.vrtxLayout(); }
 
 // -----------------------------------------
 

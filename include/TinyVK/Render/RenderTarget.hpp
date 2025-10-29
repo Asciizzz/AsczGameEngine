@@ -17,7 +17,7 @@ struct RenderAttachment {
     VkClearValue clearValue{};
     
     // Constructors - moved to implementation for forward declaration support
-    RenderAttachment();
+    RenderAttachment() noexcept = default;
     RenderAttachment(VkImage img, VkImageView v);
     RenderAttachment(VkImage img, VkImageView v, VkClearValue clear);
     RenderAttachment(const ImageVk& imageVK, VkClearValue clear = {});
@@ -25,8 +25,8 @@ struct RenderAttachment {
     // Copy and move operations
     RenderAttachment(const RenderAttachment&) = default;
     RenderAttachment& operator=(const RenderAttachment&) = default;
-    RenderAttachment(RenderAttachment&&) = default;
-    RenderAttachment& operator=(RenderAttachment&&) = default;
+    RenderAttachment(RenderAttachment&&) noexcept = default;
+    RenderAttachment& operator=(RenderAttachment&&) noexcept = default;
 };
 
 /**
@@ -46,8 +46,8 @@ struct RenderAttachment {
  */
 class RenderTarget {
 public:
-    RenderTarget() = default;
-    ~RenderTarget() = default;
+    RenderTarget() noexcept = default;
+    ~RenderTarget() noexcept = default;
 
     RenderTarget(VkRenderPass rp, VkFramebuffer fb, VkExtent2D ext) 
         : renderPass(rp), framebuffer(fb), extent(ext) {}
@@ -55,8 +55,8 @@ public:
     // Copyable and movable since we're just storing handles
     RenderTarget(const RenderTarget&) = default;
     RenderTarget& operator=(const RenderTarget&) = default;
-    RenderTarget(RenderTarget&&) = default;
-    RenderTarget& operator=(RenderTarget&&) = default;
+    RenderTarget(RenderTarget&&) noexcept = default;
+    RenderTarget& operator=(RenderTarget&&) noexcept = default;
 
     // Setup/modification
     RenderTarget& withRenderPass(VkRenderPass rp);

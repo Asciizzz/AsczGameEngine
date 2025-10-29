@@ -42,7 +42,7 @@ struct Static {
     glm::vec4 nrml_tv = glm::vec4(0.0f); // Normal XYZ - Texture V on W
     glm::vec4 tangent = glm::vec4(0.0f); // Tangent XYZ - Handedness on W
 
-    Static() = default;
+    Static() noexcept = default;
     Static(const glm::vec3& pos, const glm::vec3& nrml, const glm::vec2& uv, const glm::vec4& tang = glm::vec4(0.0f)) {
         pos_tu = glm::vec4(pos, uv.x);
         nrml_tv = glm::vec4(nrml, uv.y);
@@ -78,7 +78,7 @@ struct Rigged {
     glm::uvec4 boneIDs = glm::uvec4(0);
     glm::vec4 weights = glm::vec4(0.0f);
 
-    Rigged() = default;
+    Rigged() noexcept = default;
 
     // Standard vertex data
 

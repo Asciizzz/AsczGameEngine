@@ -7,7 +7,7 @@
 #include <string>
 
 struct tinyTexture {
-    tinyTexture() = default; // Allow copy and move semantics
+    tinyTexture() noexcept = default; // Allow copy and move semantics
     std::string name;
 
     enum class WrapMode {
@@ -102,13 +102,13 @@ private:
 };
 
 struct tinyTextureVk {
-    tinyTextureVk() = default;
+    tinyTextureVk() noexcept = default;
 
     tinyTextureVk(const tinyTextureVk&) = delete;
     tinyTextureVk& operator=(const tinyTextureVk&) = delete;
 
-    tinyTextureVk(tinyTextureVk&&) = default;
-    tinyTextureVk& operator=(tinyTextureVk&&) = default;
+    tinyTextureVk(tinyTextureVk&&) noexcept = default;
+    tinyTextureVk& operator=(tinyTextureVk&&) noexcept = default;
 
 // -----------------------------------------
 

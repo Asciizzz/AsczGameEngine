@@ -3,9 +3,6 @@
 
 using namespace tinyVk;
 
-// RenderAttachment constructors
-RenderAttachment::RenderAttachment() = default;
-
 RenderAttachment::RenderAttachment(VkImage img, VkImageView v) 
     : image(img), view(v) {}
 

@@ -35,7 +35,7 @@ struct tinyPoolTraits<std::shared_ptr<T>> {
 // tinyPoolRaw with type-aware methods
 template<typename Type>
 struct tinyPool {
-    tinyPool() = default;
+    tinyPool() noexcept = default;
 
     void alloc(uint32_t size) {
         // Push in reverse so that lower indices are used first
@@ -49,22 +49,22 @@ struct tinyPool {
         }
     }
 
-    uint32_t count() const {
+    uint32_t count() const noexcept {
         return items.size() - freeList.size();
     }
 
-    void clear() {
+    void clear() noexcept {
         items.clear();
         states.clear();
         freeList.clear();
     }
 
-    bool valid(tinyHandle handle) const {
+    bool valid(tinyHandle handle) const noexcept {
         return  isOccupied(handle.index) &&
                 states[handle.index].version == handle.version;
     }
 
-    bool isOccupied(uint32_t index) const {
+    bool isOccupied(uint32_t index) const noexcept {
         return index < items.size() && states[index].occupied;
     }
 
@@ -90,9 +90,6 @@ struct tinyPool {
                 items[index] = std::forward<U>(item);
             } else {
                 // If U is the raw type, wrap it in a unique_ptr and move the data
-                static_assert(std::is_move_constructible_v<std::decay_t<U>>, 
-                    "Type must be move constructible to insert into unique_ptr pool");
-
                 items[index] = std::make_unique<typename tinyPoolTraits<Type>::element_type>(std::move(item));
             }
         } else if constexpr (std::is_copy_assignable_v<Type> || std::is_move_assignable_v<Type>) {
@@ -110,7 +107,7 @@ struct tinyPool {
 
     // ---- Getters ----
 
-    Type* get(const tinyHandle& handle) {
+    Type* get(const tinyHandle& handle) noexcept {
         if (!valid(handle)) return nullptr;
 
         if constexpr (tinyPoolTraits<Type>::is_unique_ptr ||
@@ -122,38 +119,37 @@ struct tinyPool {
         }
     }
 
-    const Type* get(const tinyHandle& handle) const {
+    const Type* get(const tinyHandle& handle) const noexcept {
         return const_cast<tinyPool<Type>*>(this)->get(handle);
     }
 
     // Get handle by index (useful for accessing items by their position)
-    tinyHandle getHandle(uint32_t index) const {
-        if (isOccupied(index)) return tinyHandle(index, states[index].version);
-        return tinyHandle(); // Invalid handle
+    tinyHandle getHandle(uint32_t index) const noexcept {
+        return isOccupied(index) ? tinyHandle(index, states[index].version) : tinyHandle();
     }
 
     // Reference is better since this is never null
-    std::vector<Type>& view() { return items; }
-    const std::vector<Type>& view() const { return items; }
+    std::vector<Type>& view() noexcept { return items; }
+    const std::vector<Type>& view() const noexcept { return items; }
 
-    Type* data() { return items.data(); }
-    const Type* data() const { return items.data(); }
+    Type* data() noexcept { return items.data(); }
+    const Type* data() const noexcept { return items.data(); }
 
     // ---- CRITICAL: Aware removal ----
 
-    void instaRm(const tinyHandle& handle) {
+    void instaRm(const tinyHandle& handle) noexcept {
         remove(handle);
     }
 
-    void queueRm(const tinyHandle& handle) {
+    void queueRm(const tinyHandle& handle) noexcept {
         if (valid(handle)) pendingRms.push_back(handle);
     }
 
-    const std::vector<tinyHandle>& listRms() const {
+    const std::vector<tinyHandle>& listRms() const noexcept {
         return pendingRms;
     }
 
-    void flushRm(uint32_t index) {
+    void flushRm(uint32_t index) noexcept {
         if (index >= pendingRms.size()) return;
         remove(pendingRms[index]);
     }
@@ -168,7 +164,7 @@ struct tinyPool {
     }
 
 private:
-    void remove(const tinyHandle& handle) {
+    void remove(const tinyHandle& handle) noexcept {
         if (!valid(handle)) return;
 
         uint32_t index = handle.index;
@@ -189,7 +185,7 @@ private:
         freeList.push_back(index);
     }
 
-    Type& getEmpty() {
+    Type& getEmpty() noexcept {
         static Type empty{};
         return empty;
     }

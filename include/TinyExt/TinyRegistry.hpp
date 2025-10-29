@@ -6,7 +6,7 @@
 
 class tinyRegistry { // For raw resource data
     struct IPool {
-        virtual ~IPool() = default;
+        virtual ~IPool() noexcept = default;
         virtual void* get(const tinyHandle& handle) = 0;
         virtual void instaRm(const tinyHandle& handle) = 0;
         virtual void queueRm(const tinyHandle& handle) = 0;
@@ -76,13 +76,13 @@ class tinyRegistry { // For raw resource data
     }
 
 public:
-    tinyRegistry() = default;
+    tinyRegistry() noexcept = default;
 
     tinyRegistry(const tinyRegistry&) = delete;
     tinyRegistry& operator=(const tinyRegistry&) = delete;
 
-    tinyRegistry(tinyRegistry&&) = default;
-    tinyRegistry& operator=(tinyRegistry&&) = default;
+    tinyRegistry(tinyRegistry&&) noexcept = default;
+    tinyRegistry& operator=(tinyRegistry&&) noexcept = default;
 
     template<typename T>
     typeHandle add(T&& data) {

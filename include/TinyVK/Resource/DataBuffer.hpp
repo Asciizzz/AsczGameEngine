@@ -18,7 +18,7 @@ struct BufferUsage {
 
 class DataBuffer {
 public:
-    DataBuffer() = default;
+    DataBuffer() noexcept = default;
 
     ~DataBuffer() { cleanup(); }
     DataBuffer& cleanup();

@@ -12,7 +12,7 @@ namespace tinyRT {
 struct Scene; // Forward declaration
 
 struct Anime3D {
-    Anime3D() = default;
+    Anime3D() noexcept = default;
 
     struct Sampler {
         std::vector<float> times;

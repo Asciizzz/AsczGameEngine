@@ -6,7 +6,7 @@ namespace tinyVk {
 
 class CmdBuffer {
 public:
-    CmdBuffer() = default;
+    CmdBuffer() noexcept = default;
     ~CmdBuffer() { cleanup(); } void cleanup();
 
     // Delete copy constructor and assignment operator

@@ -12,7 +12,7 @@ struct tinyRMaterial {
     glm::uvec4 texIndices = glm::uvec4(0); // Albedo, Normal, Reserved, Reserved (remapped registry indices)
 
     // Constructor from tinyMaterial - converts local texture indices to registry indices
-    tinyRMaterial() = default;
+    tinyRMaterial() noexcept = default;
     tinyRMaterial(const tinyMaterial& material) : name(material.name) {
         // Note: texture indices will be remapped during scene loading
         // material.localAlbTexture and material.localNrmlTexture are converted to registry indices

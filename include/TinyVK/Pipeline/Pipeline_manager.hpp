@@ -70,7 +70,7 @@ struct PipelineAsset {
 // Pipeline manager class for handling all pipeline configurations
 class PipelineManager {
 public:
-    PipelineManager() = default;
+    PipelineManager() noexcept = default;
 
     ~PipelineManager() { clear(); }
     void clear();

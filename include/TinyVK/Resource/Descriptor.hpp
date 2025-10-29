@@ -19,7 +19,7 @@ struct DescType {
 };
 
 struct DescPool {
-    DescPool() = default;
+    DescPool() noexcept = default;
     ~DescPool() { destroy(); }
 
     DescPool(const DescPool&) = delete;
@@ -47,7 +47,7 @@ private:
 };
 
 struct DescLayout {
-    DescLayout() = default;
+    DescLayout() noexcept = default;
     ~DescLayout() { destroy(); }
 
     DescLayout(const DescLayout&) = delete;
@@ -75,7 +75,7 @@ private:
 };
 
 struct DescSet {
-    DescSet() = default;
+    DescSet() noexcept = default;
     ~DescSet(); // CRITICAL: Custom destructor for automatic cleanup
 
     DescSet(const DescSet&) = delete;
@@ -123,7 +123,7 @@ struct DescWrite {
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfoStorage;
     std::vector<std::vector<VkBufferView>> texelBufferStorage;
 
-    DescWrite() = default;
+    DescWrite() noexcept = default;
     VkWriteDescriptorSet* operator&() { return writes.data(); }
 
     // Write operations
