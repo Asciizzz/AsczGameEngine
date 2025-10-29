@@ -553,60 +553,60 @@ void tinyApp::renderSceneNodeInspector() {
     
     // Mesh Renderer Component - Always show
     if (selectedNode->has<tinyNodeRT::MR3D>()) {
-        renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
-            // Get component copy using tinySceneRT method
-            tinyNodeRT::MR3D* compPtr = activeScene->rtComp<tinyNodeRT::MR3D>(selectedSceneNodeHandle);
-            bool componentModified = false;
+        // renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
+        //     // Get component copy using tinySceneRT method
+        //     tinyNodeRT::MR3D* compPtr = activeScene->rtComp<tinyNodeRT::MR3D>(selectedSceneNodeHandle);
+        //     bool componentModified = false;
             
-            ImGui::Spacing();
+        //     ImGui::Spacing();
             
-            // Mesh Handle field with enhanced drag-drop support
-            ImGui::Text("Mesh Resource:");
+        //     // Mesh Handle field with enhanced drag-drop support
+        //     ImGui::Text("Mesh Resource:");
 
-            // Check if mesh resource is valid
-            bool meshModified = renderHandleField("##MeshHandle", compPtr->pMeshHandle, "Mesh",
-                "Drag a mesh file from the File Explorer", 
-                "Select mesh resource for rendering");
-            if (meshModified) componentModified = true;
+        //     // Check if mesh resource is valid
+        //     bool meshModified = renderHandleField("##MeshHandle", compPtr->pMeshHandle, "Mesh",
+        //         "Drag a mesh file from the File Explorer", 
+        //         "Select mesh resource for rendering");
+        //     if (meshModified) componentModified = true;
 
-            // Show mesh information if valid
-            if (compPtr->pMeshHandle.valid()) {
-                const tinyMesh* mesh = fs.rGet<tinyMesh>(compPtr->pMeshHandle);
-                if (mesh) {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", mesh->name.c_str());
-                } else {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
-                }
-            }
+        //     // Show mesh information if valid
+        //     if (compPtr->pMeshHandle.valid()) {
+        //         const tinyMesh* mesh = fs.rGet<tinyMesh>(compPtr->pMeshHandle);
+        //         if (mesh) {
+        //             ImGui::SameLine();
+        //             ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", mesh->name.c_str());
+        //         } else {
+        //             ImGui::SameLine();
+        //             ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
+        //         }
+        //     }
             
-            ImGui::Spacing();
+        //     ImGui::Spacing();
             
-            // Skeleton Node Handle field with enhanced drag-drop support  
-            ImGui::Text("Skeleton Node:");
-            bool skeleModified = renderHandleField("##MeshRenderer_SkeletonNodeHandle", compPtr->skeleNodeHandle, "SkeletonNode",
-                "Drag a skeleton node from the Hierarchy",
-                "Select skeleton node for bone animation");
-            if (skeleModified) componentModified = true;
+        //     // Skeleton Node Handle field with enhanced drag-drop support  
+        //     ImGui::Text("Skeleton Node:");
+        //     bool skeleModified = renderHandleField("##MeshRenderer_SkeletonNodeHandle", compPtr->skeleNodeHandle, "SkeletonNode",
+        //         "Drag a skeleton node from the Hierarchy",
+        //         "Select skeleton node for bone animation");
+        //     if (skeleModified) componentModified = true;
 
-            // Show skeleton node information if valid
-            if (compPtr->skeleNodeHandle.valid()) {
-                const tinyNodeRT* skeleNode = activeScene->node(compPtr->skeleNodeHandle);
-                if (skeleNode && skeleNode->has<tinyNodeRT::SK3D>()) {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
-                } else {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid/No Skeleton");
-                }
-            }
+        //     // Show skeleton node information if valid
+        //     if (compPtr->skeleNodeHandle.valid()) {
+        //         const tinyNodeRT* skeleNode = activeScene->node(compPtr->skeleNodeHandle);
+        //         if (skeleNode && skeleNode->has<tinyNodeRT::SK3D>()) {
+        //             ImGui::SameLine();
+        //             ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
+        //         } else {
+        //             ImGui::SameLine();
+        //             ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid/No Skeleton");
+        //         }
+        //     }
             
-            ImGui::Spacing();
-        }, [&]() {
-            // Remove component using tinySceneRT method
-            activeScene->removeComp<tinyNodeRT::MR3D>(selectedSceneNodeHandle);
-        });
+        //     ImGui::Spacing();
+        // }, [&]() {
+        //     // Remove component using tinySceneRT method
+        //     activeScene->removeComp<tinyNodeRT::MR3D>(selectedSceneNodeHandle);
+        // });
     } else {
         // Show grayed-out placeholder for missing Mesh Renderer component
         renderComponent("Mesh Renderer", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {

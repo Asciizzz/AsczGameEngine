@@ -203,7 +203,7 @@ public:
         } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
             rtRemove<tinyRT_AN3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
-            rtRemove<tinyRT_MR3D>(compPtr->pMeshHandle);
+            rtRemove<tinyRT_MR3D>(compPtr->pHandle);
         }
 
         rmMap3D<T>(nodeHandle);
@@ -334,6 +334,8 @@ private:
 
     tinyRT_MR3D* addMR3D_RT(tinyNodeRT::MR3D* compPtr) {
         tinyRT_MR3D rtMeshRT;
+        rtMeshRT.init(req_.deviceVk, req_.fsRegistry);
+
         compPtr->pHandle = rtAdd<tinyRT_MR3D>(std::move(rtMeshRT));
 
         return rtGet<tinyRT_MR3D>(compPtr->pHandle);
