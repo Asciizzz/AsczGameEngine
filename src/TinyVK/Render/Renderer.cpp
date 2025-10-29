@@ -270,18 +270,18 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 
     tinyHandle curSkeleNodeHandle;
 
-    const auto& mapMR3D = activeScene->mapRT3D<tinyNodeRT::MR3D>();
-    for (const auto& [nodeHandle, mr3dHandle] : mapMR3D) {
+    const auto& mapMESHR = activeScene->mapRTRFM3D<tinyNodeRT::MESHRD>();
+    for (const auto& [nodeHandle, mr3dHandle] : mapMESHR) {
         const tinyNodeRT* rtNode = activeScene->node(nodeHandle);
 
         // Get mesh render component directly from runtime node
-        const auto* mr3DComp = activeScene->rtComp<tinyNodeRT::MR3D>(nodeHandle);
+        const auto* mr3DComp = activeScene->rtComp<tinyNodeRT::MESHRD>(nodeHandle);
         if (!mr3DComp) continue; // No mesh render component
 
         const auto* rMesh = mr3DComp->rMesh();
         if (!rMesh) continue; // Mesh not found in registry
 
-        const auto* transform = rtNode->get<tinyNodeRT::T3D>();
+        const auto* transform = rtNode->get<tinyNodeRT::TRFM3D>();
         glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
 
         // Draw each individual submeshes
@@ -301,7 +301,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         rPipeline->bindCmd(currentCmd);
 
         // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
-        tinyRT_SK3D* rtSkele = activeScene->rtComp<tinyNodeRT::SK3D>(mr3DComp->skeleNodeHandle());
+        tinyRT_SKEL3D* rtSkele = activeScene->rtComp<tinyNodeRT::SKEL3D>(mr3DComp->skeleNodeHandle());
         VkDescriptorSet skinSet = rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
         uint32_t boneCount = rtSkele ? rtSkele->boneCount() : 0;
 
@@ -436,7 +436,7 @@ void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeS
     tinyFS& fs = project->fs();
     // No pending removals anywhere
     if (!fs.rHasPendingRms() &&
-        (activeScene && !activeScene->rtTHasPendingRms<tinyRT_SK3D>())
+        (activeScene && !activeScene->rtTHasPendingRms<tinyRT_SKEL3D>())
     ) return;
 
     // Wait for ALL in-flight fences to ensure no resources are in use by GPU
@@ -469,7 +469,7 @@ void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeS
         fs.rFlushAllRms();
     }
 
-    activeScene->rtTFlushAllRms<tinyRT_SK3D>();
+    activeScene->rtTFlushAllRms<tinyRT_SKEL3D>();
 }
 
 void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {

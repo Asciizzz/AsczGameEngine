@@ -114,11 +114,11 @@ glm::mat4 getTransform(const tinySceneRT* scene, const Anime3D::Channel& channel
 
     // Return transform component of node
     if (channel.target == AnimeTarget::Node) {
-        const tinyNodeRT::T3D* nodeTransform = scene->rtComp<tinyNodeRT::T3D>(channel.node);
+        const tinyNodeRT::TRFM3D* nodeTransform = scene->rtComp<tinyNodeRT::TRFM3D>(channel.node);
         return nodeTransform ? nodeTransform->base : glm::mat4(1.0f);
     // Return transform component of bone
     } else if (channel.target == AnimeTarget::Bone) {
-        const tinyRT_SK3D* skeletonRT = scene->rtComp<tinyNodeRT::SK3D>(channel.node);
+        const tinyRT_SKEL3D* skeletonRT = scene->rtComp<tinyNodeRT::SKEL3D>(channel.node);
         return skeletonRT->bindPose(channel.index);
     }
 
@@ -131,13 +131,13 @@ void Anime3D::writeTransform(Scene* scene, const Channel& channel, const glm::ma
 
     // Write transform component of node
     if (channel.target == Channel::Target::Node) {
-        tinyNodeRT::T3D* nodeTransform = scene->rtComp<tinyNodeRT::T3D>(channel.node);
+        tinyNodeRT::TRFM3D* nodeTransform = scene->rtComp<tinyNodeRT::TRFM3D>(channel.node);
         if (nodeTransform) {
             nodeTransform->set(transform);
         }
     // Write transform component of bone
     } else if (channel.target == Channel::Target::Bone) {
-        tinyRT_SK3D* skeletonRT = scene->rtComp<tinyNodeRT::SK3D>(channel.node);
+        tinyRT_SKEL3D* skeletonRT = scene->rtComp<tinyNodeRT::SKEL3D>(channel.node);
         if (skeletonRT && skeletonRT->boneValid(channel.index)) {
             skeletonRT->setLocalPose(channel.index, transform);
         }

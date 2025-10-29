@@ -25,9 +25,9 @@ private:
 
     For example:
 
-    tinyNodeRT::SK3D has a tinyHandle pHandle that references the actual
+    tinyNodeRT::SKEL3D has a tinyHandle pHandle that references the actual
     runtime Skeleton3D in the rtRegistry_, changing it would cause undefined
-    behavior. So rtComp<tinyNodeRT::SK3D> will return the Skeleton3D* instead
+    behavior. So rtComp<tinyNodeRT::SKEL3D> will return the Skeleton3D* instead
 
     */
     template<typename T>
@@ -35,9 +35,9 @@ private:
     template<typename T> using RTResolver_t = typename RTResolver<T>::type;
 
     // Special types
-    template<> struct RTResolver<tinyNodeRT::SK3D> { using type = tinyRT_SK3D; };
-    template<> struct RTResolver<tinyNodeRT::AN3D> { using type = tinyRT_AN3D; };
-    template<> struct RTResolver<tinyNodeRT::MR3D> { using type = tinyRT_MR3D; };
+    template<> struct RTResolver<tinyNodeRT::SKEL3D> { using type = tinyRT_SKEL3D; };
+    template<> struct RTResolver<tinyNodeRT::ANIM3D> { using type = tinyRT_ANIM3D; };
+    template<> struct RTResolver<tinyNodeRT::MESHRD> { using type = tinyRT_MESHR; };
 
 public:
     struct Require {
@@ -154,12 +154,12 @@ public:
 
         T* compPtr = node->get<T>();
 
-        if constexpr (type_eq<T, tinyNodeRT::SK3D>) {
-            return rtGet<tinyRT_SK3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
-            return rtGet<tinyRT_AN3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
-            return rtGet<tinyRT_MR3D>(compPtr->pHandle);
+        if constexpr (type_eq<T, tinyNodeRT::SKEL3D>) {
+            return rtGet<tinyRT_SKEL3D>(compPtr->pHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
+            return rtGet<tinyRT_ANIM3D>(compPtr->pHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
+            return rtGet<tinyRT_MESHR>(compPtr->pHandle);
         } else { // Other types return themselves
             return compPtr;
         }
@@ -180,12 +180,12 @@ public:
 
         addMap3D<T>(nodeHandle);
 
-        if constexpr (type_eq<T, tinyNodeRT::SK3D>) {
-            return addSK3D_RT(compPtr);
-        } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
-            return addAN3D_RT(compPtr);
-        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
-            return addMR3D_RT(compPtr);
+        if constexpr (type_eq<T, tinyNodeRT::SKEL3D>) {
+            return addSKEL3D_RT(compPtr);
+        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
+            return addANIM3D_RT(compPtr);
+        } else if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
+            return addMESHR_RT(compPtr);
         } else { // Other types return themselves
             return compPtr;
         }
@@ -198,12 +198,12 @@ public:
 
         T* compPtr = node->get<T>();
 
-        if constexpr (type_eq<T, tinyNodeRT::SK3D>) {
-            rtRemove<tinyRT_SK3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
-            rtRemove<tinyRT_AN3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
-            rtRemove<tinyRT_MR3D>(compPtr->pHandle);
+        if constexpr (type_eq<T, tinyNodeRT::SKEL3D>) {
+            rtRemove<tinyRT_SKEL3D>(compPtr->pHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
+            rtRemove<tinyRT_ANIM3D>(compPtr->pHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
+            rtRemove<tinyRT_MESHR>(compPtr->pHandle);
         }
 
         rmMap3D<T>(nodeHandle);
@@ -214,14 +214,14 @@ public:
     // --------- Specific component's data access ---------
 
     VkDescriptorSet nSkeleDescSet(tinyHandle nodeHandle) const {
-        const tinyRT_SK3D* rtSkele = rtComp<tinyNodeRT::SK3D>(nodeHandle);
+        const tinyRT_SKEL3D* rtSkele = rtComp<tinyNodeRT::SKEL3D>(nodeHandle);
         return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
     }
 
     template<typename T>
-    const UnorderedMap<tinyHandle, tinyHandle>& mapRT3D() const {
-        if constexpr (type_eq<T, tinyNodeRT::MR3D>)      return mapMR3D_;
-        else if constexpr (type_eq<T, tinyNodeRT::AN3D>) return mapAN3D_;
+    const UnorderedMap<tinyHandle, tinyHandle>& mapRTRFM3D() const {
+        if constexpr (type_eq<T, tinyNodeRT::MESHRD>)      return mapMESHR_;
+        else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) return mapANIM3D_;
         else {
             static UnorderedMap<tinyHandle, tinyHandle> emptyMap;
             return emptyMap; // Empty map for unsupported types
@@ -229,9 +229,9 @@ public:
     }
 
     template<typename T>
-    const tinyPool<tinyHandle>& poolRT3D() const {
-        if constexpr (type_eq<T, tinyNodeRT::MR3D>)      return withMR3D_;
-        else if constexpr (type_eq<T, tinyNodeRT::AN3D>) return withAN3D_;
+    const tinyPool<tinyHandle>& poolRTRFM3D() const {
+        if constexpr (type_eq<T, tinyNodeRT::MESHRD>)      return withMESHR_;
+        else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) return withANIM3D_;
         else {
             static tinyPool<tinyHandle> emptyPool;
             return emptyPool; // Empty pool for unsupported types
@@ -265,11 +265,11 @@ private:
 
     // Cache of specific nodes_ for easy access
 
-    tinyPool<tinyHandle> withMR3D_;
-    UnorderedMap<tinyHandle, tinyHandle> mapMR3D_;
+    tinyPool<tinyHandle> withMESHR_;
+    UnorderedMap<tinyHandle, tinyHandle> mapMESHR_;
 
-    tinyPool<tinyHandle> withAN3D_;
-    UnorderedMap<tinyHandle, tinyHandle> mapAN3D_;
+    tinyPool<tinyHandle> withANIM3D_;
+    UnorderedMap<tinyHandle, tinyHandle> mapANIM3D_;
 
     // -------- General update ---------
 
@@ -283,10 +283,10 @@ private:
             map[handle] = pool.add(handle);
         };
 
-        if constexpr (type_eq<T, tinyNodeRT::MR3D>)  {
-            mapInsert(mapMR3D_, withMR3D_, nodeHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
-            mapInsert(mapAN3D_, withAN3D_, nodeHandle);
+        if constexpr (type_eq<T, tinyNodeRT::MESHRD>)  {
+            mapInsert(mapMESHR_, withMESHR_, nodeHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
+            mapInsert(mapANIM3D_, withANIM3D_, nodeHandle);
         }
     }
 
@@ -301,16 +301,16 @@ private:
             }
         };
 
-        if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
-            rmFromMapAndPool(mapMR3D_, withMR3D_, nodeHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
-            rmFromMapAndPool(mapAN3D_, withAN3D_, nodeHandle);
+        if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
+            rmFromMapAndPool(mapMESHR_, withMESHR_, nodeHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
+            rmFromMapAndPool(mapANIM3D_, withANIM3D_, nodeHandle);
         }
     }
 
-    tinyRT_SK3D* addSK3D_RT(tinyNodeRT::SK3D* compPtr) {
-        tinyRT_SK3D rtSK3D;
-        rtSK3D.init(
+    tinyRT_SKEL3D* addSKEL3D_RT(tinyNodeRT::SKEL3D* compPtr) {
+        tinyRT_SKEL3D rtSKEL3D;
+        rtSKEL3D.init(
             req_.deviceVk,
             req_.fsRegistry,
             req_.skinDescPool,
@@ -319,26 +319,26 @@ private:
         );
 
         // Repurpose pHandle to point to runtime skeleton
-        compPtr->pHandle = rtAdd<tinyRT_SK3D>(std::move(rtSK3D  ));
+        compPtr->pHandle = rtAdd<tinyRT_SKEL3D>(std::move(rtSKEL3D  ));
 
         // Return the runtime skeleton
-        return rtGet<tinyRT_SK3D>(compPtr->pHandle);
+        return rtGet<tinyRT_SKEL3D>(compPtr->pHandle);
     }
 
-    tinyRT_AN3D* addAN3D_RT(tinyNodeRT::AN3D* compPtr) {
-        tinyRT_AN3D rtAnime;
-        compPtr->pHandle = rtAdd<tinyRT_AN3D>(std::move(rtAnime));
+    tinyRT_ANIM3D* addANIM3D_RT(tinyNodeRT::ANIM3D* compPtr) {
+        tinyRT_ANIM3D rtAnime;
+        compPtr->pHandle = rtAdd<tinyRT_ANIM3D>(std::move(rtAnime));
 
-        return rtGet<tinyRT_AN3D>(compPtr->pHandle);
+        return rtGet<tinyRT_ANIM3D>(compPtr->pHandle);
     }
 
-    tinyRT_MR3D* addMR3D_RT(tinyNodeRT::MR3D* compPtr) {
-        tinyRT_MR3D rtMeshRT;
+    tinyRT_MESHR* addMESHR_RT(tinyNodeRT::MESHRD* compPtr) {
+        tinyRT_MESHR rtMeshRT;
         rtMeshRT.init(req_.deviceVk, req_.fsRegistry);
 
-        compPtr->pHandle = rtAdd<tinyRT_MR3D>(std::move(rtMeshRT));
+        compPtr->pHandle = rtAdd<tinyRT_MESHR>(std::move(rtMeshRT));
 
-        return rtGet<tinyRT_MR3D>(compPtr->pHandle);
+        return rtGet<tinyRT_MESHR>(compPtr->pHandle);
     }
 
     // ---------- Runtime registry access (private) ----------
@@ -359,7 +359,7 @@ private:
 
 
     template<typename T> struct DeferredRm : std::false_type {};
-    template<> struct DeferredRm<tinyRT_SK3D> : std::true_type {};
+    template<> struct DeferredRm<tinyRT_SKEL3D> : std::true_type {};
 
     template<typename T>
     void rtRemove(const tinyHandle& handle) {

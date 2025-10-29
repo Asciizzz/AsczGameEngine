@@ -94,4 +94,4 @@ private:
 
 } // namespace tinyRT
 
-using tinyRT_SK3D = tinyRT::Skeleton3D;
+using tinyRT_SKEL3D = tinyRT::Skeleton3D;

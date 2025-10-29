@@ -129,4 +129,4 @@ private:
 
 } // namespace tinyRT
 
-using tinyRT_AN3D = tinyRT::Anime3D;
+using tinyRT_ANIM3D = tinyRT::Anime3D;

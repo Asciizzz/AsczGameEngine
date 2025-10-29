@@ -435,10 +435,10 @@ void tinyApp::renderSceneNodeInspector() {
     };
     
     // Render Transform component (always present, no delete button)
-    if (selectedNode->has<tinyNodeRT::T3D>()) {
+    if (selectedNode->has<tinyNodeRT::TRFM3D>()) {
         renderComponent("Transform", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), true, [&]() {
             {
-                tinyNodeRT::T3D* compPtr = activeScene->rtComp<tinyNodeRT::T3D>(selectedSceneNodeHandle);
+                tinyNodeRT::TRFM3D* compPtr = activeScene->rtComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle);
 
                 glm::mat4 local = compPtr->local;
 
@@ -539,7 +539,7 @@ void tinyApp::renderSceneNodeInspector() {
             }
         }, [&]() {
             // Remove component using tinySceneRT method
-            activeScene->removeComp<tinyNodeRT::T3D>(selectedSceneNodeHandle);
+            activeScene->removeComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle);
         });
     } else {
         // Show grayed-out placeholder for missing Transform component
@@ -547,15 +547,15 @@ void tinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::T3D>(selectedSceneNodeHandle);
+            activeScene->writeComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle);
         });
     }
     
     // Mesh Renderer Component - Always show
-    if (selectedNode->has<tinyNodeRT::MR3D>()) {
+    if (selectedNode->has<tinyNodeRT::MESHRD>()) {
         // renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
         //     // Get component copy using tinySceneRT method
-        //     tinyNodeRT::MR3D* compPtr = activeScene->rtComp<tinyNodeRT::MR3D>(selectedSceneNodeHandle);
+        //     tinyNodeRT::MESHRD* compPtr = activeScene->rtComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
         //     bool componentModified = false;
             
         //     ImGui::Spacing();
@@ -593,7 +593,7 @@ void tinyApp::renderSceneNodeInspector() {
         //     // Show skeleton node information if valid
         //     if (compPtr->skeleNodeHandle.valid()) {
         //         const tinyNodeRT* skeleNode = activeScene->node(compPtr->skeleNodeHandle);
-        //         if (skeleNode && skeleNode->has<tinyNodeRT::SK3D>()) {
+        //         if (skeleNode && skeleNode->has<tinyNodeRT::SKEL3D>()) {
         //             ImGui::SameLine();
         //             ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
         //         } else {
@@ -605,7 +605,7 @@ void tinyApp::renderSceneNodeInspector() {
         //     ImGui::Spacing();
         // }, [&]() {
         //     // Remove component using tinySceneRT method
-        //     activeScene->removeComp<tinyNodeRT::MR3D>(selectedSceneNodeHandle);
+        //     activeScene->removeComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
         // });
     } else {
         // Show grayed-out placeholder for missing Mesh Renderer component
@@ -613,15 +613,15 @@ void tinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::MR3D>(selectedSceneNodeHandle);
+            activeScene->writeComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
         });
     }
     
     // Bone Attachment Component - Always show
-    if (selectedNode->has<tinyNodeRT::BA3D>()) {
+    if (selectedNode->has<tinyNodeRT::BONE3D>()) {
         renderComponent("Bone Attachment", ImVec4(0.15f, 0.2f, 0.15f, 0.8f), ImVec4(0.3f, 0.4f, 0.3f, 0.6f), true, [&]() {
             // Get component copy using tinySceneRT method
-            tinyNodeRT::BA3D* compPtr = activeScene->rtComp<tinyNodeRT::BA3D>(selectedSceneNodeHandle);
+            tinyNodeRT::BONE3D* compPtr = activeScene->rtComp<tinyNodeRT::BONE3D>(selectedSceneNodeHandle);
             bool componentModified = false;
             
             ImGui::Spacing();
@@ -636,7 +636,7 @@ void tinyApp::renderSceneNodeInspector() {
             // Show skeleton node information if valid
             if (compPtr->skeleNodeHandle.valid()) {
                 const tinyNodeRT* skeleNode = activeScene->node(compPtr->skeleNodeHandle);
-                if (skeleNode && skeleNode->has<tinyNodeRT::SK3D>()) {
+                if (skeleNode && skeleNode->has<tinyNodeRT::SKEL3D>()) {
                     ImGui::SameLine();
                     ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
                 } else {
@@ -655,11 +655,11 @@ void tinyApp::renderSceneNodeInspector() {
             int maxBoneIndex = 255; // Default max
             if (compPtr->skeleNodeHandle.valid()) {
                 const tinyNodeRT* skeleNode = activeScene->node(compPtr->skeleNodeHandle);
-                if (skeleNode && skeleNode->has<tinyNodeRT::SK3D>()) {
-                    const tinyNodeRT::SK3D* skeleComp = skeleNode->get<tinyNodeRT::SK3D>();
+                if (skeleNode && skeleNode->has<tinyNodeRT::SKEL3D>()) {
+                    const tinyNodeRT::SKEL3D* skeleComp = skeleNode->get<tinyNodeRT::SKEL3D>();
                     if (skeleComp) {
                         // Retrieve runtime skeleton data
-                        const tinyRT_SK3D* rtSkeleton = activeScene->rtGet<tinyRT_SK3D>(skeleComp->pHandle);
+                        const tinyRT_SKEL3D* rtSkeleton = activeScene->rtGet<tinyRT_SKEL3D>(skeleComp->pHandle);
                         if (rtSkeleton) {
                             maxBoneIndex = static_cast<int>(rtSkeleton->boneCount() - 1); // Zero-based index
                         }
@@ -707,7 +707,7 @@ void tinyApp::renderSceneNodeInspector() {
             ImGui::Spacing();
         }, [&]() {
             // Remove component using tinySceneRT method
-            activeScene->removeComp<tinyNodeRT::BA3D>(selectedSceneNodeHandle);
+            activeScene->removeComp<tinyNodeRT::BONE3D>(selectedSceneNodeHandle);
         });
     } else {
         // Show grayed-out placeholder for missing Bone Attachment component
@@ -715,15 +715,15 @@ void tinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::BA3D>(selectedSceneNodeHandle);
+            activeScene->writeComp<tinyNodeRT::BONE3D>(selectedSceneNodeHandle);
         });
     }
     
     // Skeleton Component - Always show
-    if (selectedNode->has<tinyNodeRT::SK3D>()) {
+    if (selectedNode->has<tinyNodeRT::SKEL3D>()) {
         renderComponent("Skeleton", ImVec4(0.2f, 0.15f, 0.15f, 0.8f), ImVec4(0.4f, 0.3f, 0.3f, 0.6f), true, [&]() {
             // Retrieve the component (using tinySceneRT special method which return appropriate runtime/static data)
-            tinyRT_SK3D* rtSkeleComp = activeScene->rtComp<tinyNodeRT::SK3D>(selectedSceneNodeHandle);
+            tinyRT_SKEL3D* rtSkeleComp = activeScene->rtComp<tinyNodeRT::SKEL3D>(selectedSceneNodeHandle);
             bool hasSkeleton = rtSkeleComp->hasSkeleton();
 
             ImGui::Spacing();
@@ -943,7 +943,7 @@ void tinyApp::renderSceneNodeInspector() {
             ImGui::Spacing();
         }, [&]() {
             // Remove component using tinySceneRT specialized method for skeleton
-            activeScene->removeComp<tinyNodeRT::SK3D>(selectedSceneNodeHandle);
+            activeScene->removeComp<tinyNodeRT::SKEL3D>(selectedSceneNodeHandle);
         });
     } else {
         // Show grayed-out placeholder for missing Skeleton component
@@ -951,14 +951,14 @@ void tinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add empty skeleton component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::SK3D>(selectedSceneNodeHandle);
+            activeScene->writeComp<tinyNodeRT::SKEL3D>(selectedSceneNodeHandle);
         });
     }
 
-    if (selectedNode->has<tinyNodeRT::AN3D>()) {
+    if (selectedNode->has<tinyNodeRT::ANIM3D>()) {
         renderComponent("Animation", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
             // Get component copy using tinySceneRT method
-            tinyRT_AN3D* compPtr = activeScene->rtComp<tinyNodeRT::AN3D>(selectedSceneNodeHandle);
+            tinyRT_ANIM3D* compPtr = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle);
 
             // Create a search field
             static char searchBuffer[128] = "";
@@ -994,7 +994,7 @@ void tinyApp::renderSceneNodeInspector() {
             ImGui::Spacing();
         }, [&]() {
             // Remove component using tinySceneRT method
-            activeScene->removeComp<tinyNodeRT::AN3D>(selectedSceneNodeHandle);
+            activeScene->removeComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle);
         });
     } else {
         // Show grayed-out placeholder for missing Animation component
@@ -1002,7 +1002,7 @@ void tinyApp::renderSceneNodeInspector() {
             // Minimal placeholder - no content, just the header with add button
         }, [&]() {
             // Add component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::AN3D>(selectedSceneNodeHandle);
+            activeScene->writeComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle);
         });
     }
     
@@ -1305,7 +1305,7 @@ bool tinyApp::renderHandleField(const char* fieldId, tinyHandle& handle, const c
                 tinySceneRT* activeScene = getActiveScene();
                 if (activeScene) {
                     const tinyNodeRT* node = activeScene->node(nodeHandle);
-                    if (node && node->has<tinyNodeRT::SK3D>()) {
+                    if (node && node->has<tinyNodeRT::SKEL3D>()) {
                         handle = nodeHandle; // Use node handle directly
                         modified = true;
                     }
@@ -1586,11 +1586,11 @@ void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
 
         // Create the node label with useful information
         std::string typeLabel = "";
-        if (node->has<tinyNodeRT::T3D>())  typeLabel += " [Transform]";
-        if (node->has<tinyNodeRT::MR3D>()) typeLabel += " [MeshRender]";
-        if (node->has<tinyNodeRT::BA3D>()) typeLabel += " [BoneAttach]";
-        if (node->has<tinyNodeRT::SK3D>())   typeLabel += " [Skeleton]";
-        if (node->has<tinyNodeRT::AN3D>())  typeLabel += " [Animation]";
+        if (node->has<tinyNodeRT::TRFM3D>())  typeLabel += " [Transform]";
+        if (node->has<tinyNodeRT::MESHRD>()) typeLabel += " [MeshRender]";
+        if (node->has<tinyNodeRT::BONE3D>()) typeLabel += " [BoneAttach]";
+        if (node->has<tinyNodeRT::SKEL3D>())   typeLabel += " [Skeleton]";
+        if (node->has<tinyNodeRT::ANIM3D>())  typeLabel += " [Animation]";
 
         typeLabel = typeLabel.empty() ? " [None]" : typeLabel;
 

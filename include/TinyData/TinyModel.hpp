@@ -26,26 +26,26 @@ struct tinyModel {
         // Lightweight component data
 
         // Transform3D
-        glm::mat4 T3D = glm::mat4(1.0f);
+        glm::mat4 TRFM3D = glm::mat4(1.0f);
 
         // Mesh render3D
-        int MR3D_meshIndx = -1;
-        int MR3D_skeleNodeIndx = -1;
+        int MESHR_meshIndx = -1;
+        int MESHR_skeleNodeIndx = -1;
 
         // Bone attach3D
-        int BA3D_skeleNodeIndx = -1;
-        int BA3D_boneIndx = -1;
+        int BONE3D_skeleNodeIndx = -1;
+        int BONE3D_boneIndx = -1;
 
         // Skeleton3D
-        int SK3D_skeleIndx = -1;
+        int SKEL3D_skeleIndx = -1;
 
         // Anime3D
-        int AN3D_animeIndx = -1;
+        int ANIM3D_animeIndx = -1;
 
-        bool hasMR3D() const { return MR3D_meshIndx >= 0; }
-        bool hasBA3D() const { return BA3D_skeleNodeIndx >= 0 && BA3D_boneIndx >= 0; }
-        bool hasSK3D() const { return SK3D_skeleIndx >= 0; }
-        bool hasAN3D() const { return AN3D_animeIndx >= 0; }
+        bool hasMESHR() const { return MESHR_meshIndx >= 0; }
+        bool hasBONE3D() const { return BONE3D_skeleNodeIndx >= 0 && BONE3D_boneIndx >= 0; }
+        bool hasSKEL3D() const { return SKEL3D_skeleIndx >= 0; }
+        bool hasANIM3D() const { return ANIM3D_animeIndx >= 0; }
     };
 
     std::string name;
@@ -55,7 +55,7 @@ struct tinyModel {
     std::vector<tinyMaterial> materials;
     std::vector<tinyTexture> textures;
     std::vector<tinySkeleton> skeletons;
-    std::vector<tinyRT_AN3D> animations;
+    std::vector<tinyRT_ANIM3D> animations;
 
     std::vector<tinyModel::Node> nodes;
 };

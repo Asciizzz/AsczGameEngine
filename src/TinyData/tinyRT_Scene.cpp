@@ -15,7 +15,7 @@ bool validIndex(tinyHandle handle, const std::vector<T>& vec) {
 tinyHandle Scene::addRoot(const std::string& nodeName) {
     // Create a new root node
     tinyNodeRT rootNode(nodeName);
-    rootNode.add<tinyNodeRT::T3D>();
+    rootNode.add<tinyNodeRT::TRFM3D>();
     setRoot(nodes_.add(std::move(rootNode)));
 
     return rootHandle();
@@ -23,7 +23,7 @@ tinyHandle Scene::addRoot(const std::string& nodeName) {
 
 tinyHandle Scene::addNode(const std::string& nodeName, tinyHandle parentHandle) {
     tinyNodeRT newNode(nodeName);
-    newNode.add<tinyNodeRT::T3D>();
+    newNode.add<tinyNodeRT::TRFM3D>();
 
     if (!parentHandle.valid()) parentHandle = rootHandle();
     tinyNodeRT* parentNode = nodes_.get(parentHandle);
@@ -61,11 +61,11 @@ bool Scene::removeNode(tinyHandle nodeHandle, bool recursive) {
     }
 
     // Remove individual components runtime data
-    removeComp<tinyNodeRT::T3D>(nodeHandle);
-    removeComp<tinyNodeRT::MR3D>(nodeHandle);
-    removeComp<tinyNodeRT::BA3D>(nodeHandle);
-    removeComp<tinyNodeRT::SK3D>(nodeHandle);
-    removeComp<tinyNodeRT::AN3D>(nodeHandle);
+    removeComp<tinyNodeRT::TRFM3D>(nodeHandle);
+    removeComp<tinyNodeRT::MESHRD>(nodeHandle);
+    removeComp<tinyNodeRT::BONE3D>(nodeHandle);
+    removeComp<tinyNodeRT::SKEL3D>(nodeHandle);
+    removeComp<tinyNodeRT::ANIM3D>(nodeHandle);
     nodes_.instaRm(nodeHandle);
 
     return true;
@@ -238,16 +238,16 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
 
         // Resolve components
 
-        if (fromNode->has<tinyNodeRT::T3D>()) {
-            const auto* fromTransform = fromNode->get<tinyNodeRT::T3D>();
-            auto* toTransform = writeComp<tinyNodeRT::T3D>(toHandle);
+        if (fromNode->has<tinyNodeRT::TRFM3D>()) {
+            const auto* fromTransform = fromNode->get<tinyNodeRT::TRFM3D>();
+            auto* toTransform = writeComp<tinyNodeRT::TRFM3D>(toHandle);
             *toTransform = *fromTransform;
         }
 
-        if (fromNode->has<tinyNodeRT::MR3D>()) {
-            // const auto* fromMeshRender = fromNode->get<tinyNodeRT::MR3D>();
-            const auto* fromMeshRender = from->rtComp<tinyNodeRT::MR3D>(fromHandle);
-            auto* toMeshRender = writeComp<tinyNodeRT::MR3D>(toHandle);
+        if (fromNode->has<tinyNodeRT::MESHRD>()) {
+            // const auto* fromMeshRender = fromNode->get<tinyNodeRT::MESHRD>();
+            const auto* fromMeshRender = from->rtComp<tinyNodeRT::MESHRD>(fromHandle);
+            auto* toMeshRender = writeComp<tinyNodeRT::MESHRD>(toHandle);
 
             toMeshRender->setMesh(fromMeshRender->meshHandle());
 
@@ -257,9 +257,9 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
             }
         }
 
-        if (fromNode->has<tinyNodeRT::BA3D>()) {
-            const auto* fromBoneAttach = fromNode->get<tinyNodeRT::BA3D>();
-            auto* toBoneAttach = writeComp<tinyNodeRT::BA3D>(toHandle);
+        if (fromNode->has<tinyNodeRT::BONE3D>()) {
+            const auto* fromBoneAttach = fromNode->get<tinyNodeRT::BONE3D>();
+            auto* toBoneAttach = writeComp<tinyNodeRT::BONE3D>(toHandle);
 
             if (toHandleMap.find(fromBoneAttach->skeleNodeHandle.index) != toHandleMap.end()) {
                 toBoneAttach->skeleNodeHandle = toHandleMap[fromBoneAttach->skeleNodeHandle.index];
@@ -268,15 +268,15 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
             toBoneAttach->boneIndex = fromBoneAttach->boneIndex;
         }
 
-        if (fromNode->has<tinyNodeRT::SK3D>()) {
-            auto* toSkeleRT = writeComp<tinyNodeRT::SK3D>(toHandle);
-            const auto* fromSkeleRT = from->rtComp<tinyNodeRT::SK3D>(fromHandle);
+        if (fromNode->has<tinyNodeRT::SKEL3D>()) {
+            auto* toSkeleRT = writeComp<tinyNodeRT::SKEL3D>(toHandle);
+            const auto* fromSkeleRT = from->rtComp<tinyNodeRT::SKEL3D>(fromHandle);
             toSkeleRT->copy(fromSkeleRT);
         }
 
-        if (fromNode->has<tinyNodeRT::AN3D>()) {
-            auto* toAnimeRT = writeComp<tinyNodeRT::AN3D>(toHandle);
-            const auto* fromAnimeRT = from->rtComp<tinyNodeRT::AN3D>(fromHandle);
+        if (fromNode->has<tinyNodeRT::ANIM3D>()) {
+            auto* toAnimeRT = writeComp<tinyNodeRT::ANIM3D>(toHandle);
+            const auto* fromAnimeRT = from->rtComp<tinyNodeRT::ANIM3D>(fromHandle);
 
             *toAnimeRT = *fromAnimeRT;
 
@@ -305,24 +305,24 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     if (!node) return;
 
     // Update transform component
-    tinyNodeRT::T3D* transform = rtComp<tinyNodeRT::T3D>(realHandle);
+    tinyNodeRT::TRFM3D* transform = rtComp<tinyNodeRT::TRFM3D>(realHandle);
     glm::mat4 localMat = transform ? transform->local : glm::mat4(1.0f);
 
     // Update update local transform with bone attachment if applicable
-    tinyNodeRT::BA3D* boneAttach = rtComp<tinyNodeRT::BA3D>(realHandle);
+    tinyNodeRT::BONE3D* boneAttach = rtComp<tinyNodeRT::BONE3D>(realHandle);
     glm::mat4 boneMat = glm::mat4(1.0f);
     if (boneAttach) {
         tinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
-        tinyRT_SK3D* skeleRT = rtComp<tinyNodeRT::SK3D>(skeleNodeHandle);
+        tinyRT_SKEL3D* skeleRT = rtComp<tinyNodeRT::SKEL3D>(skeleNodeHandle);
         if (skeleRT) localMat = skeleRT->finalPose(boneAttach->boneIndex) * localMat;
     }
 
     // Update skeleton component
-    tinyRT_SK3D* rtSkele = rtComp<tinyNodeRT::SK3D>(realHandle);
+    tinyRT_SKEL3D* rtSkele = rtComp<tinyNodeRT::SKEL3D>(realHandle);
     if (rtSkele) rtSkele->update(0, curFrame_);
 
     // Update animation component
-    tinyRT_AN3D* rtAnime = rtComp<tinyNodeRT::AN3D>(realHandle);
+    tinyRT_ANIM3D* rtAnime = rtComp<tinyNodeRT::ANIM3D>(realHandle);
     if (rtAnime) rtAnime->update(this, curDTime_);
 
     glm::mat4 transformMat = parentGlobalTransform * localMat;

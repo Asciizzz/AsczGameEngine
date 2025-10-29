@@ -193,45 +193,45 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         scene.setNodeParent(nodeHandle, parentHandle);
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
-        // Node guarantees T3D component
-        auto* newTransform = scene.writeComp<tinyNodeRT::T3D>(nodeHandle);
-        newTransform->init(ogNode.T3D);
+        // Node guarantees TRFM3D component
+        auto* newTransform = scene.writeComp<tinyNodeRT::TRFM3D>(nodeHandle);
+        newTransform->init(ogNode.TRFM3D);
 
-        if (ogNode.hasMR3D()) {
-            auto* newMeshRender = scene.writeComp<tinyNodeRT::MR3D>(nodeHandle);
+        if (ogNode.hasMESHR()) {
+            auto* newMeshRender = scene.writeComp<tinyNodeRT::MESHRD>(nodeHandle);
 
-            if (validIndex(ogNode.MR3D_meshIndx, glbMeshRHandle)) {
-                newMeshRender->setMesh(glbMeshRHandle[ogNode.MR3D_meshIndx]);
+            if (validIndex(ogNode.MESHR_meshIndx, glbMeshRHandle)) {
+                newMeshRender->setMesh(glbMeshRHandle[ogNode.MESHR_meshIndx]);
             }
 
-            if (validIndex(ogNode.MR3D_skeleNodeIndx, nodeHandles)) {
-                newMeshRender->setSkeleNode(nodeHandles[ogNode.MR3D_skeleNodeIndx]);
+            if (validIndex(ogNode.MESHR_skeleNodeIndx, nodeHandles)) {
+                newMeshRender->setSkeleNode(nodeHandles[ogNode.MESHR_skeleNodeIndx]);
             }
         }
 
-        if (ogNode.hasBA3D()) {
-            auto* newBoneAttach = scene.writeComp<tinyNodeRT::BA3D>(nodeHandle);
+        if (ogNode.hasBONE3D()) {
+            auto* newBoneAttach = scene.writeComp<tinyNodeRT::BONE3D>(nodeHandle);
 
-            if (validIndex(ogNode.BA3D_skeleNodeIndx, nodeHandles)) {
-                newBoneAttach->skeleNodeHandle = nodeHandles[ogNode.BA3D_skeleNodeIndx];
+            if (validIndex(ogNode.BONE3D_skeleNodeIndx, nodeHandles)) {
+                newBoneAttach->skeleNodeHandle = nodeHandles[ogNode.BONE3D_skeleNodeIndx];
             }
 
-            newBoneAttach->boneIndex = ogNode.BA3D_boneIndx;
+            newBoneAttach->boneIndex = ogNode.BONE3D_boneIndx;
         }
 
-        if (ogNode.hasSK3D()) {
-            auto* newSkeleRT = scene.writeComp<tinyNodeRT::SK3D>(nodeHandle);
+        if (ogNode.hasSKEL3D()) {
+            auto* newSkeleRT = scene.writeComp<tinyNodeRT::SKEL3D>(nodeHandle);
 
-            if (validIndex(ogNode.SK3D_skeleIndx, glbSkeleRHandle)) {
+            if (validIndex(ogNode.SKEL3D_skeleIndx, glbSkeleRHandle)) {
                 // Construct new skeleton runtime from the original skeleton
-                newSkeleRT->set(glbSkeleRHandle[ogNode.SK3D_skeleIndx]);
+                newSkeleRT->set(glbSkeleRHandle[ogNode.SKEL3D_skeleIndx]);
             }
         }
 
-        if (ogNode.hasAN3D()) {
-            auto* newAnimeComp = scene.writeComp<tinyNodeRT::AN3D>(nodeHandle);
+        if (ogNode.hasANIM3D()) {
+            auto* newAnimeComp = scene.writeComp<tinyNodeRT::ANIM3D>(nodeHandle);
 
-            *newAnimeComp = model.animations[ogNode.AN3D_animeIndx];
+            *newAnimeComp = model.animations[ogNode.ANIM3D_animeIndx];
 
             for (auto& anime : newAnimeComp->MAL()) {
                 auto* toAnime = newAnimeComp->get(anime.second);

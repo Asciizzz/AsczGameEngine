@@ -15,11 +15,12 @@ struct Node {
     Node(const std::string& nodeName = "Node") : name(nodeName) {}
 
     enum class Types : uint32_t {
-        T3D  = 1 << 0,
-        MR3D = 1 << 1,
-        SK3D = 1 << 2,
-        BA3D = 1 << 3,
-        AN3D = 1 << 4
+        TRFM3D = 1 << 0,
+        MESHRD = 1 << 1,
+        SKEL3D = 1 << 2,
+        BONE3D = 1 << 3,
+        ANIM3D = 1 << 4,
+        SCRIPT = 1 << 5
     };
 
     tinyHandle parentHandle;
@@ -37,9 +38,10 @@ struct Node {
         childrenHandles.erase(std::remove(childrenHandles.begin(), childrenHandles.end(), childHandle), childrenHandles.end());
     }
 
-    // Transform data - both local and runtime
+// -----------------------------------------
+
     struct Transform3D {
-        static constexpr Types kType = Types::T3D;
+        static constexpr Types kType = Types::TRFM3D;
         glm::mat4 base = glm::mat4(1.0f);
         glm::mat4 local = glm::mat4(1.0f);
         glm::mat4 global = glm::mat4(1.0f);
@@ -48,33 +50,32 @@ struct Node {
         void set(const glm::mat4& mat) { local = mat; }
         void reset() { local = base; }
     };
-    using T3D = Transform3D;
+    using TRFM3D = Transform3D;
 
-    // Component definitions with runtime capabilities
     struct MeshRender3D {
-        static constexpr Types kType = Types::MR3D;
+        static constexpr Types kType = Types::MESHRD;
         tinyHandle pHandle;
     };
-    using MR3D = MeshRender3D;
+    using MESHRD = MeshRender3D;
 
     struct BoneAttach3D {
-        static constexpr Types kType = Types::BA3D;
+        static constexpr Types kType = Types::BONE3D;
         tinyHandle skeleNodeHandle;
         uint32_t boneIndex;
     };
-    using BA3D = BoneAttach3D;
+    using BONE3D = BoneAttach3D;
 
     struct Skeleton3D {
-        static constexpr Types kType = Types::SK3D;
+        static constexpr Types kType = Types::SKEL3D;
         tinyHandle pHandle;
     };
-    using SK3D = Skeleton3D;
+    using SKEL3D = Skeleton3D;
 
     struct Animation3D {
-        static constexpr Types kType = Types::AN3D;
+        static constexpr Types kType = Types::ANIM3D;
         tinyHandle pHandle;
     };
-    using AN3D = Animation3D;
+    using ANIM3D = Animation3D;
 
     // Component management functions
 
@@ -112,7 +113,7 @@ struct Node {
     const T* get() const { return has<T>() ? &getComponent<T>() : nullptr; }
 
 private:
-    std::tuple<T3D, MR3D, BA3D, SK3D, AN3D> components;
+    std::tuple<TRFM3D, MESHRD, BONE3D, SKEL3D, ANIM3D> components;
 
     uint32_t types = 0;
 
