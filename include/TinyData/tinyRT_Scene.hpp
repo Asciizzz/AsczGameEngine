@@ -37,14 +37,14 @@ private:
     // Special types
     template<> struct RTResolver<tinyNodeRT::SK3D> { using type = tinyRT_SK3D; };
     template<> struct RTResolver<tinyNodeRT::AN3D> { using type = tinyRT_AN3D; };
-    // template<> struct RTResolver<tinyNodeRT::MR3D> { using type = tinyRT::MeshRT; }; // Will be added very soon
+    // template<> struct RTResolver<tinyNodeRT::MR3D> { using type = tinyRT_MR3D; };
 
 public:
     struct Require {
         uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
 
         const tinyRegistry*   fsRegistry = nullptr; // For stuffs and things
-        const tinyVK::Device* deviceVK = nullptr;   // For GPU resource creation
+        const tinyVk::Device* deviceVk = nullptr;   // For GPU resource creation
 
         VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
         VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
@@ -52,7 +52,7 @@ public:
         bool valid() const {
             return  maxFramesInFlight > 0 &&
                     fsRegistry != nullptr &&
-                    deviceVK != nullptr &&
+                    deviceVk != nullptr &&
                     skinDescPool   != VK_NULL_HANDLE &&
                     skinDescLayout != VK_NULL_HANDLE;
         }
@@ -182,8 +182,9 @@ public:
             return addSK3D_RT(compPtr);
         } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
             return addAN3D_RT(compPtr);
-        // } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) { // In the future
+        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) { // In the future
             // return addMR3D_RT(compPtr);
+            return compPtr; // Temporary
         } else { // Other types return themselves
             return compPtr;
         }
@@ -200,10 +201,9 @@ public:
             rtRemove<tinyRT_SK3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, tinyNodeRT::AN3D>) {
             rtRemove<tinyRT_AN3D>(compPtr->pHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
+            rtRemove<tinyRT_MR3D>(compPtr->pMeshHandle);
         }
-        // else if constexpr (type_eq<T, tinyNodeRT::MR3D>) {
-        //     rtRemove<tinyRT::MR3D>(compPtr->pMeshRTHandle); // True implementation in future
-        // }
 
         rmMap3D<T>(nodeHandle);
 
@@ -310,7 +310,7 @@ private:
     tinyRT_SK3D* addSK3D_RT(tinyNodeRT::SK3D* compPtr) {
         tinyRT_SK3D rtSK3D;
         rtSK3D.init(
-            req_.deviceVK,
+            req_.deviceVk,
             req_.fsRegistry,
             req_.skinDescPool,
             req_.skinDescLayout,
@@ -329,6 +329,13 @@ private:
         compPtr->pHandle = rtAdd<tinyRT_AN3D>(std::move(rtAnime));
 
         return rtGet<tinyRT_AN3D>(compPtr->pHandle);
+    }
+
+    tinyRT_MR3D* addMR3D_RT(tinyNodeRT::MR3D* compPtr) {
+        tinyRT_MR3D rtMeshRT;
+        // compPtr->pMeshHandle = rtAdd<tinyRT_MR3D>(std::move(rtMeshRT));
+
+        return rtGet<tinyRT_MR3D>(compPtr->pMeshHandle);
     }
 
     // ---------- Runtime registry access (private) ----------

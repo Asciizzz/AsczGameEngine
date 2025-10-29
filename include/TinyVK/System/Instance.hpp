@@ -5,7 +5,7 @@
 #include <vector>
 #include <optional>
 
-namespace tinyVK {
+namespace tinyVk {
 
 class Instance {
 public:

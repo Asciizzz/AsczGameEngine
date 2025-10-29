@@ -1,19 +1,19 @@
 #include "tinySystem/tinyImGui.hpp"
-#include "tinyVK/System/CmdBuffer.hpp"
+#include "tinyVk/System/CmdBuffer.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
-bool tinyImGui::init(SDL_Window* window, VkInstance instance, const tinyVK::Device* deviceVK, 
-                     const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage) {
+bool tinyImGui::init(SDL_Window* window, VkInstance instance, const tinyVk::Device* deviceVk, 
+                     const tinyVk::Swapchain* swapchain, const tinyVk::DepthImage* depthImage) {
     if (m_initialized) {
         std::cerr << "tinyImGui: Already initialized!" << std::endl;
         return false;
     }
 
-    this->deviceVK = deviceVK;
+    this->deviceVk = deviceVk;
     
     // Create our own render pass for ImGui overlay  
     createRenderPass(swapchain, depthImage);
@@ -38,10 +38,10 @@ bool tinyImGui::init(SDL_Window* window, VkInstance instance, const tinyVK::Devi
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.ApiVersion = VK_API_VERSION_1_0;
     init_info.Instance = instance;
-    init_info.PhysicalDevice = deviceVK->pDevice;
-    init_info.Device = deviceVK->device;
-    init_info.QueueFamily = deviceVK->queueFamilyIndices.graphicsFamily.value();
-    init_info.Queue = deviceVK->graphicsQueue;
+    init_info.PhysicalDevice = deviceVk->pDevice;
+    init_info.Device = deviceVk->device;
+    init_info.QueueFamily = deviceVk->queueFamilyIndices.graphicsFamily.value();
+    init_info.Queue = deviceVk->graphicsQueue;
     init_info.PipelineCache = VK_NULL_HANDLE;
     init_info.DescriptorPool = descPool;
     init_info.MinImageCount = swapchain->getImageCount();
@@ -74,7 +74,7 @@ void tinyImGui::cleanup() {
     descPool.destroy(); // You don't really need to destroy the pool explicitly
 
     m_initialized = false;
-    deviceVK = nullptr;
+    deviceVk = nullptr;
 }
 
 void tinyImGui::newFrame() {
@@ -137,7 +137,7 @@ void tinyImGui::showDemoWindow(bool* p_open) {
 }
 
 void tinyImGui::createDescriptorPool() {
-    descPool.create(deviceVK->device,
+    descPool.create(deviceVk->device,
         {
             { DescType::Sampler, 16 },                    // Font atlas + custom textures
             { DescType::CombinedImageSampler, 32 },     // Most commonly used by ImGui
@@ -151,11 +151,11 @@ void tinyImGui::createDescriptorPool() {
     );
 }
 
-void tinyImGui::updateRenderPass(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage) {
+void tinyImGui::updateRenderPass(const tinyVk::Swapchain* swapchain, const tinyVk::DepthImage* depthImage) {
     if (!m_initialized) return;
 
     // Wait for device to be idle
-    vkDeviceWaitIdle(deviceVK->device);
+    vkDeviceWaitIdle(deviceVk->device);
 
     // Shutdown current Vulkan backend (but keep SDL2 backend)
     ImGui_ImplVulkan_Shutdown();
@@ -172,10 +172,10 @@ void tinyImGui::updateRenderPass(const tinyVK::Swapchain* swapchain, const tinyV
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.ApiVersion = VK_API_VERSION_1_0;
     init_info.Instance = VK_NULL_HANDLE; // Not needed for reinit
-    init_info.PhysicalDevice = deviceVK->pDevice;
-    init_info.Device = deviceVK->device;
-    init_info.QueueFamily = deviceVK->queueFamilyIndices.graphicsFamily.value();
-    init_info.Queue = deviceVK->graphicsQueue;
+    init_info.PhysicalDevice = deviceVk->pDevice;
+    init_info.Device = deviceVk->device;
+    init_info.QueueFamily = deviceVk->queueFamilyIndices.graphicsFamily.value();
+    init_info.Queue = deviceVk->graphicsQueue;
     init_info.PipelineCache = VK_NULL_HANDLE;
     init_info.DescriptorPool = descPool; // implicit use
     init_info.MinImageCount = swapchain->getImageCount();
@@ -195,7 +195,7 @@ VkRenderPass tinyImGui::getRenderPass() const {
     return renderPass ? renderPass->get() : VK_NULL_HANDLE;
 }
 
-tinyVK::RenderTarget* tinyImGui::getRenderTarget(uint32_t imageIndex) {
+tinyVk::RenderTarget* tinyImGui::getRenderTarget(uint32_t imageIndex) {
     return (imageIndex < renderTargets.size()) ? &renderTargets[imageIndex] : nullptr;
 }
 
@@ -210,15 +210,15 @@ void tinyImGui::renderToTarget(uint32_t imageIndex, VkCommandBuffer cmd, VkFrame
     }
 }
 
-void tinyImGui::createRenderPass(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage) {
-    auto renderPassConfig = tinyVK::RenderPassConfig::imguiOverlay(
+void tinyImGui::createRenderPass(const tinyVk::Swapchain* swapchain, const tinyVk::DepthImage* depthImage) {
+    auto renderPassConfig = tinyVk::RenderPassConfig::imguiOverlay(
         swapchain->getImageFormat(),
         depthImage->getFormat()
     );
-    renderPass = MakeUnique<tinyVK::RenderPass>(deviceVK->device, renderPassConfig);
+    renderPass = MakeUnique<tinyVk::RenderPass>(deviceVk->device, renderPassConfig);
 }
 
-void tinyImGui::updateRenderTargets(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers) {
+void tinyImGui::updateRenderTargets(const tinyVk::Swapchain* swapchain, const tinyVk::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers) {
     if (!renderPass) return;
     
     renderTargets.clear();
@@ -227,7 +227,7 @@ void tinyImGui::updateRenderTargets(const tinyVK::Swapchain* swapchain, const ti
     // Create ImGui render targets for each swapchain image
     for (uint32_t i = 0; i < swapchain->getImageCount(); ++i) {
         VkFramebuffer framebuffer = (i < framebuffers.size()) ? framebuffers[i] : VK_NULL_HANDLE;
-        tinyVK::RenderTarget imguiTarget(renderPass->get(), framebuffer, extent);
+        tinyVk::RenderTarget imguiTarget(renderPass->get(), framebuffer, extent);
         
         // Add swapchain image attachment (no clear needed for overlay)
         VkClearValue colorClear{};
@@ -243,6 +243,6 @@ void tinyImGui::updateRenderTargets(const tinyVK::Swapchain* swapchain, const ti
     }
 }
 
-void tinyImGui::createRenderTargets(const tinyVK::Swapchain* swapchain, const tinyVK::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers) {
+void tinyImGui::createRenderTargets(const tinyVk::Swapchain* swapchain, const tinyVk::DepthImage* depthImage, const std::vector<VkFramebuffer>& framebuffers) {
     updateRenderTargets(swapchain, depthImage, framebuffers);
 }

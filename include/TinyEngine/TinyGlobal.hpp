@@ -5,8 +5,8 @@
 
 #include <glm/glm.hpp>
 
-#include "tinyVK/Resource/DataBuffer.hpp"
-#include "tinyVK/Resource/Descriptor.hpp"
+#include "tinyVk/Resource/DataBuffer.hpp"
+#include "tinyVk/Resource/Descriptor.hpp"
 
 
 class tinyCamera;
@@ -40,13 +40,13 @@ public:
     VkDescriptorSetLayout getDescLayout() const { return descLayout; }
     VkDescriptorSet getDescSet() const { return descSet; }
 
-    tinyVK::DescLayout descLayout;
-    tinyVK::DescPool descPool;
+    tinyVk::DescLayout descLayout;
+    tinyVk::DescPool descPool;
 
     // New design! Use only 1 buffer with dynamic offsets
     size_t alignedSize = 0;
-    tinyVK::DataBuffer dataBuffer;
-    tinyVK::DescSet descSet;
+    tinyVk::DataBuffer dataBuffer;
+    tinyVk::DescSet descSet;
 
-    void vkCreate(const tinyVK::Device* deviceVK);
+    void vkCreate(const tinyVk::Device* deviceVk);
 };

@@ -5,16 +5,16 @@
 #include <array>
 #include <fstream>
 
-#include "tinyVK/Render/Swapchain.hpp"
-#include "tinyVK/Pipeline/Pipeline_compute.hpp"
-#include "tinyVK/Render/DepthImage.hpp"
-#include "tinyVK/Resource/Descriptor.hpp"
+#include "tinyVk/Render/Swapchain.hpp"
+#include "tinyVk/Pipeline/Pipeline_compute.hpp"
+#include "tinyVk/Render/DepthImage.hpp"
+#include "tinyVk/Resource/Descriptor.hpp"
 
-#include "tinyVK/Render/FrameBuffer.hpp"
-#include "tinyVK/Render/RenderTarget.hpp"
-#include "tinyVK/Render/RenderPass.hpp"
+#include "tinyVk/Render/FrameBuffer.hpp"
+#include "tinyVk/Render/RenderTarget.hpp"
+#include "tinyVk/Render/RenderPass.hpp"
 
-namespace tinyVK {
+namespace tinyVk {
 
 // Represents a single ping-pong image pair for one frame
 struct PingPongImages {
@@ -43,7 +43,7 @@ struct PostProcessEffect {
 class PostProcess {
     friend class Renderer;
 public:
-    PostProcess(Device* deviceVK, Swapchain* swapchain, DepthImage* depthImage);
+    PostProcess(Device* deviceVk, Swapchain* swapchain, DepthImage* depthImage);
     ~PostProcess();
 
     PostProcess(const PostProcess&) = delete;
@@ -81,7 +81,7 @@ public:
 private:
     static const int MAX_FRAMES_IN_FLIGHT = 2;
     
-    Device* deviceVK;
+    Device* deviceVk;
     Swapchain* swapchain;
     DepthImage* depthImage; // For offscreen framebuffer only
     
@@ -124,4 +124,4 @@ private:
     void cleanup();
 };
 
-} // namespace tinyVK
+} // namespace tinyVk

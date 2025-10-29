@@ -13,7 +13,7 @@ class tinyProject {
 public:
     static constexpr size_t maxSkeletons = 4096; // This is frighteningly high
 
-    tinyProject(const tinyVK::Device* deviceVK);
+    tinyProject(const tinyVk::Device* deviceVk);
     ~tinyProject();
 
     tinyProject(const tinyProject&) = delete;
@@ -57,12 +57,12 @@ public:
     const tinyFS& fs() const { return *fs_; }
 
     const tinySceneRT::Require& sceneReq() const { return sharedReq; }
-    const tinyVK::Device* vkDevice() const { return deviceVK; }
+    const tinyVk::Device* vkDevice() const { return deviceVk; }
 
     tinyHandle initialSceneHandle;
 
 private:
-    const tinyVK::Device* deviceVK;
+    const tinyVk::Device* deviceVk;
 
     UniquePtr<tinyGlobal> global_;
     UniquePtr<tinyCamera> camera_;
@@ -72,16 +72,16 @@ private:
     tinyHandle defaultMaterialHandle;
     tinyHandle defaultTextureHandle;
 
-    tinyVK::DescLayout matDescLayout;
-    tinyVK::DescPool matDescPool;
-    tinyVK::DescSet matDescSet;
+    tinyVk::DescLayout matDescLayout;
+    tinyVk::DescPool matDescPool;
+    tinyVk::DescSet matDescSet;
 
-    tinyVK::DescLayout skinDescLayout;
-    tinyVK::DescPool skinDescPool;
+    tinyVk::DescLayout skinDescLayout;
+    tinyVk::DescPool skinDescPool;
     
     // Dummy skin descriptor set for rigged meshes without skeleton
-    tinyVK::DescSet dummySkinDescSet;
-    tinyVK::DataBuffer dummySkinBuffer;
+    tinyVk::DescSet dummySkinDescSet;
+    tinyVk::DataBuffer dummySkinBuffer;
 
     tinySceneRT::Require sharedReq;
     void vkCreateSceneResources();

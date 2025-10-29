@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-namespace tinyVK {
+namespace tinyVk {
 
 // Forward declarations
 class ImageVK;
@@ -102,4 +102,4 @@ private:
 
 
 
-} // namespace tinyVK
+} // namespace tinyVk

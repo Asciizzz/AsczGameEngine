@@ -1,8 +1,8 @@
 #pragma once
 
-#include "tinyVK/Render/Swapchain.hpp"
-#include "tinyVK/Render/RenderPass.hpp"
-#include "tinyVK/Render/DepthImage.hpp"
+#include "tinyVk/Render/Swapchain.hpp"
+#include "tinyVk/Render/RenderPass.hpp"
+#include "tinyVk/Render/DepthImage.hpp"
 
 class tinyRenderer {
 public:

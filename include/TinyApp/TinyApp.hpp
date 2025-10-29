@@ -4,18 +4,18 @@
 #include "tinySystem/tinyWindow.hpp"
 #include "tinySystem/tinyImGui.hpp"
 
-#include "tinyVK/System/Device.hpp"
-#include "tinyVK/System/Instance.hpp"
+#include "tinyVk/System/Device.hpp"
+#include "tinyVk/System/Instance.hpp"
 
-#include "tinyVK/Render/Swapchain.hpp"
-#include "tinyVK/Render/RenderPass.hpp"
-#include "tinyVK/Render/DepthImage.hpp"
+#include "tinyVk/Render/Swapchain.hpp"
+#include "tinyVk/Render/RenderPass.hpp"
+#include "tinyVk/Render/DepthImage.hpp"
 
-#include "tinyVK/Resource/DataBuffer.hpp"
-#include "tinyVK/Resource/Descriptor.hpp"
+#include "tinyVk/Resource/DataBuffer.hpp"
+#include "tinyVk/Resource/Descriptor.hpp"
 
-#include "tinyVK/Render/Renderer.hpp"
-#include "tinyVK/Pipeline/Pipeline_include.hpp"
+#include "tinyVk/Render/Renderer.hpp"
+#include "tinyVk/Pipeline/Pipeline_include.hpp"
 
 #include "tinyEngine/tinyProject.hpp"
 #include <unordered_set>
@@ -80,12 +80,12 @@ private:
     UniquePtr<tinyWindow> windowManager;
     UniquePtr<tinyChrono> fpsManager;
 
-    UniquePtr<tinyVK::Instance> instanceVK;
-    UniquePtr<tinyVK::Device> deviceVK;
+    UniquePtr<tinyVk::Instance> instanceVK;
+    UniquePtr<tinyVk::Device> deviceVk;
 
-    UniquePtr<tinyVK::Renderer> renderer;
+    UniquePtr<tinyVk::Renderer> renderer;
 
-    UniquePtr<tinyVK::PipelineManager> pipelineManager;
+    UniquePtr<tinyVk::PipelineManager> pipelineManager;
 
     UniquePtr<tinyProject> project; // New gigachad system
     UniquePtr<tinyImGui> imguiWrapper; // ImGui integration

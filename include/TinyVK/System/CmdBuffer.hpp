@@ -1,8 +1,8 @@
 #pragma once
 
-#include "tinyVK/System/Device.hpp"
+#include "tinyVk/System/Device.hpp"
 
-namespace tinyVK {
+namespace tinyVk {
 
 class CmdBuffer {
 public:
@@ -33,13 +33,13 @@ private:
 // RAII temporary command buffer wrapper
 class TempCmd {
 public:
-    TempCmd(const Device* deviceVK, const Device::PoolWrapper& poolWrapper);
+    TempCmd(const Device* deviceVk, const Device::PoolWrapper& poolWrapper);
     ~TempCmd();
     void endAndSubmit(VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
     VkCommandBuffer get() const { return cmdBuffer; }
 
-    const Device* deviceVK = nullptr;
+    const Device* deviceVk = nullptr;
     Device::PoolWrapper poolWrapper{};
     VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
     bool submitted = false;

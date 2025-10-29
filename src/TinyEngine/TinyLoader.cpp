@@ -29,10 +29,10 @@
 #include <iostream>
 
 // Custom image loading callback for tinygltf since we disabled STB_IMAGE
-bool LoadImageData(tinygltf::Image* image, const int image_idx, std::string* err,
+bool LoadImageData(tinygltf::Image* image, const int image_indx, std::string* err,
                    std::string* warn, int req_width, int req_height,
                    const unsigned char* bytes, int size, void* user_data) {
-    (void)image_idx;
+    (void)image_indx;
     (void)req_width;
     (void)req_height;
     (void)user_data;
@@ -451,8 +451,8 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
 
         const auto& indexAccessor = gltfModel.accessors[primitive.indices];
         const auto& indexBufferView = gltfModel.bufferViews[indexAccessor.bufferView];
-        const auto& idxBuffer = gltfModel.buffers[indexBufferView.buffer];
-        const unsigned char* dataPtr = idxBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+        const auto& indxBuffer = gltfModel.buffers[indexBufferView.buffer];
+        const unsigned char* dataPtr = indxBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
         size_t stride = indexAccessor.ByteStride(indexBufferView);
 
         auto appendIndices = [&](auto dummyType) {
@@ -526,12 +526,12 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
             allIndices.push_back(index + currentVertexOffset);
         }
 
-        // Create submesh range
-        tinySubmesh submesh;
-        submesh.indexOffset = currentIndexOffset;
-        submesh.idxCount = static_cast<uint32_t>(pData.indices.size());
-        submesh.material = pData.materialIndex >= 0 ? tinyHandle(pData.materialIndex) : tinyHandle();
-        mesh.addSubmesh(submesh);
+        // Create submesh parts
+        tinyMesh::Part mPart;
+        mPart.indxOffset = currentIndexOffset;
+        mPart.indxCount = static_cast<uint32_t>(pData.indices.size());
+        mPart.material = pData.materialIndex >= 0 ? tinyHandle(pData.materialIndex) : tinyHandle();
+        mesh.addPart(mPart);
 
         currentVertexOffset += static_cast<uint32_t>(pData.vrtxCount);
         currentIndexOffset += static_cast<uint32_t>(pData.indices.size());
@@ -541,8 +541,8 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         case VK_INDEX_TYPE_UINT8: {
             std::vector<uint8_t> indices8;
             indices8.reserve(allIndices.size());
-            for (uint32_t idx : allIndices) {
-                indices8.push_back(static_cast<uint8_t>(idx));
+            for (uint32_t indx : allIndices) {
+                indices8.push_back(static_cast<uint8_t>(indx));
             }
             mesh.setIndices(indices8);
             break;
@@ -550,8 +550,8 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
         case VK_INDEX_TYPE_UINT16: {
             std::vector<uint16_t> indices16;
             indices16.reserve(allIndices.size());
-            for (uint32_t idx : allIndices) {
-                indices16.push_back(static_cast<uint16_t>(idx));
+            for (uint32_t indx : allIndices) {
+                indices16.push_back(static_cast<uint16_t>(indx));
             }
             mesh.setIndices(indices16);
             break;
@@ -604,10 +604,10 @@ void loadSkeleton(tinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
 
     // Parent mapping
     UnorderedMap<int, int> nodeToParent; // Left: child node index, Right: parent node index
-    for (int nodeIdx = 0; nodeIdx < model.nodes.size(); ++nodeIdx) {
-        const auto& node = model.nodes[nodeIdx];
+    for (int nodeIndx = 0; nodeIndx < model.nodes.size(); ++nodeIndx) {
+        const auto& node = model.nodes[nodeIndx];
 
-        for (int childIdx : node.children) nodeToParent[childIdx] = nodeIdx;
+        for (int childIndx : node.children) nodeToParent[childIndx] = nodeIndx;
     }
 
     std::vector<glm::mat4> skeletonInverseBindMatrices;
@@ -690,24 +690,24 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
 
     // Skeleton parent nodes
     skeletonToModelNodeIndex.clear();
-    for (size_t skeleIdx = 0; skeleIdx < tinyModel.skeletons.size(); ++skeleIdx) {
+    for (size_t skeleIndx = 0; skeleIndx < tinyModel.skeletons.size(); ++skeleIndx) {
         // We only need this skeleton for the name
-        const tinySkeleton& skeleton = tinyModel.skeletons[skeleIdx];
+        const tinySkeleton& skeleton = tinyModel.skeletons[skeleIndx];
         tinyNodeRT skeleNode(skeleton.name);
 
         tinyNodeRT::SK3D skeleComp;
-        skeleComp.pHandle = tinyHandle(skeleIdx);
+        skeleComp.pHandle = tinyHandle(skeleIndx);
 
         skeleNode.add<tinyNodeRT::SK3D>(std::move(skeleComp));
 
         int skeleNodeIndex = pushNode(std::move(skeleNode));
-        skeletonToModelNodeIndex[(int)skeleIdx] = skeleNodeIndex;
+        skeletonToModelNodeIndex[(int)skeleIndx] = skeleNodeIndex;
 
         // Child of skeleton root
         nodes[skeletonRootModelIndex].addChild(tinyHandle(skeleNodeIndex)); 
         nodes[skeleNodeIndex].setParent(tinyHandle(skeletonRootModelIndex));
 
-        skeletonToModelNodeIndex[(int)skeleIdx] = skeleNodeIndex;
+        skeletonToModelNodeIndex[(int)skeleIndx] = skeleNodeIndex;
     }
 
     std::vector<int> gltfNodeParent(model.nodes.size(), -1);
@@ -715,8 +715,8 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
     gltfNodeToModelNode.resize(model.nodes.size(), -1);
 
     for (int i = 0; i < model.nodes.size(); ++i) {
-        for (int childIdx : model.nodes[i].children) {
-            gltfNodeParent[childIdx] = i;
+        for (int childIndx : model.nodes[i].children) {
+            gltfNodeParent[childIndx] = i;
         }
 
         if (gltfNodeToSkeletonAndBoneIndex.find(i) !=
@@ -728,8 +728,8 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
         tinyNodeRT emptyNode;
         emptyNode.name = model.nodes[i].name.empty() ? "Node" : model.nodes[i].name;
 
-        int modelIdx = pushNode(std::move(emptyNode));
-        gltfNodeToModelNode[i] = modelIdx;
+        int modelIndx = pushNode(std::move(emptyNode));
+        gltfNodeToModelNode[i] = modelIndx;
     }
 
     // Second pass: parent-child wiring + setting details
@@ -800,14 +800,14 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
             auto itBone = gltfNodeToSkeletonAndBoneIndex.find(parentGltfIndex);
             if (itBone != gltfNodeToSkeletonAndBoneIndex.end()) {
                 // This node is associated with a bone
-                int skeleIdx = itBone->second.first;
-                int boneIdx = itBone->second.second;
+                int skeleIndx = itBone->second.first;
+                int boneIndx = itBone->second.second;
 
-                auto skeleIt = skeletonToModelNodeIndex.find(skeleIdx);
+                auto skeleIt = skeletonToModelNodeIndex.find(skeleIndx);
                 if (skeleIt != skeletonToModelNodeIndex.end()) {
                     tinyNodeRT::BA3D boneAttach;
                     boneAttach.skeleNodeHandle = tinyHandle(skeleIt->second);
-                    boneAttach.boneIndex = boneIdx;
+                    boneAttach.boneIndex = boneIndx;
                     nModel.add<tinyNodeRT::BA3D>(std::move(boneAttach));
                 }
             }
@@ -1100,25 +1100,25 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
             const auto& objMesh = shape.mesh;
             
             size_t faceVertexIndex = 0;
-            for (size_t faceIdx = 0; faceIdx < objMesh.num_face_vertices.size(); faceIdx++) {
-                int faceMaterialId = objMesh.material_ids.empty() ? -1 : objMesh.material_ids[faceIdx];
+            for (size_t faceIndx = 0; faceIndx < objMesh.num_face_vertices.size(); faceIndx++) {
+                int faceMaterialId = objMesh.material_ids.empty() ? -1 : objMesh.material_ids[faceIndx];
                 
                 // Skip faces that don't belong to this material
                 if (faceMaterialId != materialId) {
-                    faceVertexIndex += objMesh.num_face_vertices[faceIdx];
+                    faceVertexIndex += objMesh.num_face_vertices[faceIndx];
                     continue;
                 }
 
-                unsigned int faceVertexCount = objMesh.num_face_vertices[faceIdx];
+                unsigned int faceVertexCount = objMesh.num_face_vertices[faceIndx];
                 
                 // Triangulate face if necessary (convert quads+ to triangles)
                 std::vector<uint32_t> faceIndices;
                 
                 for (unsigned int v = 0; v < faceVertexCount; v++) {
-                    tinyobj::index_t idx = objMesh.indices[faceVertexIndex + v];
+                    tinyobj::index_t indx = objMesh.indices[faceVertexIndex + v];
                     
                     // Create vertex key for deduplication
-                    std::tuple<int, int, int> vertexKey = std::make_tuple(idx.vertex_index, idx.normal_index, idx.texcoord_index);
+                    std::tuple<int, int, int> vertexKey = std::make_tuple(indx.vertex_index, indx.normal_index, indx.texcoord_index);
                     
                     uint32_t vertexIndex;
                     auto it = vertexMap.find(vertexKey);
@@ -1130,28 +1130,28 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
                         tinyVertex::Static vertex;
                         
                         // Position
-                        if (idx.vertex_index >= 0) {
+                        if (indx.vertex_index >= 0) {
                             vertex.setPosition(glm::vec3(
-                                attrib.vertices[3 * idx.vertex_index + 0],
-                                attrib.vertices[3 * idx.vertex_index + 1],
-                                attrib.vertices[3 * idx.vertex_index + 2]
+                                attrib.vertices[3 * indx.vertex_index + 0],
+                                attrib.vertices[3 * indx.vertex_index + 1],
+                                attrib.vertices[3 * indx.vertex_index + 2]
                             ));
                         }
                         
                         // Normal
-                        if (idx.normal_index >= 0) {
+                        if (indx.normal_index >= 0) {
                             vertex.setNormal(glm::vec3(
-                                attrib.normals[3 * idx.normal_index + 0],
-                                attrib.normals[3 * idx.normal_index + 1],
-                                attrib.normals[3 * idx.normal_index + 2]
+                                attrib.normals[3 * indx.normal_index + 0],
+                                attrib.normals[3 * indx.normal_index + 1],
+                                attrib.normals[3 * indx.normal_index + 2]
                             ));
                         }
                         
                         // Texture coordinates
-                        if (idx.texcoord_index >= 0) {
+                        if (indx.texcoord_index >= 0) {
                             vertex.setTextureUV(glm::vec2(
-                                attrib.texcoords[2 * idx.texcoord_index + 0],
-                                1.0f - attrib.texcoords[2 * idx.texcoord_index + 1] // Flip V coordinate
+                                attrib.texcoords[2 * indx.texcoord_index + 0],
+                                1.0f - attrib.texcoords[2 * indx.texcoord_index + 1] // Flip V coordinate
                             ));
                         }
                         
@@ -1183,12 +1183,11 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         mesh.setVertices(vertices);
         mesh.setIndices(indices);
 
-        // Create single submesh covering entire mesh
-        tinySubmesh submesh;
-        submesh.indexOffset = 0;
-        submesh.idxCount = static_cast<uint32_t>(indices.size());
-        submesh.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
-        mesh.addSubmesh(submesh);
+        tinyMesh::Part mPart;
+        mPart.indxOffset = 0;
+        mPart.indxCount = static_cast<uint32_t>(indices.size());
+        mPart.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
+        mesh.addPart(mPart);
 
         result.meshes.push_back(std::move(mesh));
     }

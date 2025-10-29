@@ -1,22 +1,22 @@
-#include "tinyVK/Render/Renderer.hpp"
+#include "tinyVk/Render/Renderer.hpp"
 #include "tinySystem/tinyImGui.hpp"
 
 #include <stdexcept>
 #include <cstring>
 #include <SDL2/SDL.h>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 
-Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
-: deviceVK(deviceVK), maxFramesInFlight(maxFramesInFlight) {
+Renderer::Renderer (Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
+: deviceVk(deviceVk), maxFramesInFlight(maxFramesInFlight) {
 
-    swapchain = MakeUnique<Swapchain>(deviceVK, surface, window);
+    swapchain = MakeUnique<Swapchain>(deviceVk, surface, window);
 
-    depthImage = MakeUnique<DepthImage>(deviceVK->device);
-    depthImage->create(deviceVK->pDevice, swapchain->getExtent());
+    depthImage = MakeUnique<DepthImage>(deviceVk->device);
+    depthImage->create(deviceVk->pDevice, swapchain->getExtent());
 
-    postProcess = MakeUnique<PostProcess>(deviceVK, swapchain.get(), depthImage.get());
+    postProcess = MakeUnique<PostProcess>(deviceVk, swapchain.get(), depthImage.get());
     postProcess->initialize();  // PostProcess now manages its own render pass
 
     createRenderTargets();
@@ -26,7 +26,7 @@ Renderer::Renderer (Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, 
 }
 
 Renderer::~Renderer() {
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
 
     for (size_t i = 0; i < maxFramesInFlight; ++i) {
         if (inFlightFences[i])           vkDestroyFence(    device, inFlightFences[i],           nullptr);
@@ -41,7 +41,7 @@ Renderer::~Renderer() {
 }
 
 void Renderer::createCommandBuffers() {
-    cmdBuffers.create(deviceVK->device, deviceVK->graphicsPoolWrapper.pool, maxFramesInFlight);
+    cmdBuffers.create(deviceVk->device, deviceVk->graphicsPoolWrapper.pool, maxFramesInFlight);
 }
 
 void Renderer::createSyncObjects() {
@@ -62,15 +62,15 @@ void Renderer::createSyncObjects() {
 
     // per-frame acquire + fence
     for (size_t i = 0; i < maxFramesInFlight; ++i) {
-        if (vkCreateSemaphore(deviceVK->device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(    deviceVK->device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
+        if (vkCreateSemaphore(deviceVk->device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(    deviceVk->device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-frame sync objects!");
         }
     }
 
     // per-image render-finished
     for (size_t i = 0; i < swapchainImageCount; ++i) {
-        if (vkCreateSemaphore(deviceVK->device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+        if (vkCreateSemaphore(deviceVk->device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-image renderFinished semaphore!");
         }
     }
@@ -81,7 +81,7 @@ void Renderer::recreateRenderPasses() {
 }
 
 void Renderer::createRenderTargets() {
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
     VkExtent2D extent = swapchain->getExtent();
     
     // Clear existing targets and resources
@@ -170,14 +170,14 @@ VkCommandBuffer Renderer::getCurrentCommandBuffer() const {
 
 void Renderer::handleWindowResize(SDL_Window* window) {
     // Wait for device to be idle
-    vkDeviceWaitIdle(deviceVK->device);
+    vkDeviceWaitIdle(deviceVk->device);
     
     // Get new window dimensions for depth resources
     int newWidth, newHeight;
     SDL_GetWindowSize(window, &newWidth, &newHeight);
     
     // Recreate depth resources before recreating other resources
-    depthImage->create(deviceVK->pDevice, newWidth, newHeight);
+    depthImage->create(deviceVk->pDevice, newWidth, newHeight);
     
     // Now safe to cleanup and recreate Swapchain
     swapchain->cleanup();
@@ -193,7 +193,7 @@ void Renderer::handleWindowResize(SDL_Window* window) {
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
 uint32_t Renderer::beginFrame() {
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
 
     // Wait for the current frame's fence
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
@@ -209,11 +209,11 @@ uint32_t Renderer::beginFrame() {
 
     // CRITICAL: If this image is still being used by another frame, wait for that frame's completion
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-        vkWaitForFences(deviceVK->device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(deviceVk->device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
     }
     
     // Reset the current frame's fence ONLY after we're sure the image is free
-    vkResetFences(deviceVK->device, 1, &inFlightFences[currentFrame]);
+    vkResetFences(deviceVk->device, 1, &inFlightFences[currentFrame]);
     
     // Now assign this image to the current frame
     imagesInFlight[imageIndex] = inFlightFences[currentFrame];
@@ -279,22 +279,22 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         if (!mr3DComp) continue; // No mesh render component
 
         tinyHandle meshHandle = mr3DComp->pMeshHandle;
-        const auto& regMesh = fs.rGet<tinyMesh>(meshHandle);
-        if (!regMesh) continue; // No mesh found
+        const auto& regMesh = fs.rGet<tinyMeshVk>(meshHandle);
+        if (!regMesh) continue; // Mesh not found in registry
 
         const auto* transform = rtNode->get<tinyNodeRT::T3D>();
         glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
 
         // Draw each individual submeshes
         VkBuffer vrtxBuffer = regMesh->vrtxBuffer();
-        VkBuffer idxBuffer = regMesh->idxBuffer();
-        VkIndexType idxType = regMesh->idxType();
-        const auto& submeshes = regMesh->submeshes(); // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
+        VkBuffer indxBuffer = regMesh->indxBuffer();
+        VkIndexType indxType = regMesh->indxType();
+        const auto& parts = regMesh->parts(); // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
 
         VkBuffer buffers[] = { vrtxBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, idxBuffer, 0, idxType);
+        vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
         tinyVertex::Layout vrtxLayout = regMesh->vrtxLayout();
         bool isRigged = vrtxLayout.type == tinyVertex::Layout::Type::Rigged;
@@ -321,11 +321,12 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         // Check if this node is the selected node for highlighting
         bool isSelectedNode = selectedNodeHandle.valid() && (nodeHandle == selectedNodeHandle);
         
-        for (size_t i = 0; i < submeshes.size(); ++i) {
-            uint32_t idxCount = submeshes[i].idxCount;
-            if (idxCount == 0) continue;
+        for (size_t i = 0; i < parts.size(); ++i) {
+            uint32_t indxCount = parts[i].indxCount;
+            if (indxCount == 0) continue;
 
-            tinyHandle matHandle = submeshes[i].material;
+
+            tinyHandle matHandle = parts[i].material;
             const tinyRMaterial* material = fs.rGet<tinyRMaterial>(matHandle);
             uint32_t matIndex = material ? matHandle.index : 0;
 
@@ -338,8 +339,8 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transformMat);
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
 
-            uint32_t indexOffset = submeshes[i].indexOffset;
-            vkCmdDrawIndexed(currentCmd, idxCount, 1, indexOffset, 0, 0);
+            uint32_t indxOffset = parts[i].indxOffset;
+            vkCmdDrawIndexed(currentCmd, indxCount, 1, indxOffset, 0, 0);
         }
     }
 }
@@ -409,7 +410,7 @@ void Renderer::endFrame(uint32_t imageIndex, tinyImGui* imguiWrapper) {
     submit.signalSemaphoreCount = 1;
     submit.pSignalSemaphores    = signalSemaphores;
 
-    if (vkQueueSubmit(deviceVK->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(deviceVk->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer");
     }
 
@@ -422,7 +423,7 @@ void Renderer::endFrame(uint32_t imageIndex, tinyImGui* imguiWrapper) {
     present.pSwapchains        = chains;
     present.pImageIndices      = &imageIndex;
 
-    VkResult res = vkQueuePresentKHR(deviceVK->presentQueue, &present);
+    VkResult res = vkQueuePresentKHR(deviceVk->presentQueue, &present);
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = true;
     } else if (res != VK_SUCCESS) {
@@ -450,7 +451,7 @@ void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeS
     
     if (!allFences.empty()) {
         // Wait for all frames to complete with a reasonable timeout (1 second)
-        VkResult result = vkWaitForFences(deviceVK->device, 
+        VkResult result = vkWaitForFences(deviceVk->device, 
                                         static_cast<uint32_t>(allFences.size()), 
                                         allFences.data(), 
                                         VK_TRUE, 

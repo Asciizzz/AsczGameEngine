@@ -8,7 +8,7 @@ const bool enableValidationLayers = true;
 const bool enableValidationLayers = true;
 #endif
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 tinyApp::tinyApp(const char* title, uint32_t width, uint32_t height)
     : appTitle(title), appWidth(width), appHeight(height) {
@@ -42,21 +42,21 @@ void tinyApp::initComponents() {
     instanceVK = MakeUnique<Instance>(extensions, enableValidationLayers);
     instanceVK->createSurface(windowManager->window);
 
-    deviceVK = MakeUnique<Device>(instanceVK->instance, instanceVK->surface);
+    deviceVk = MakeUnique<Device>(instanceVK->instance, instanceVK->surface);
 
     // So we dont have to write these things over and over again
-    VkDevice device = deviceVK->device;
-    VkPhysicalDevice pDevice = deviceVK->pDevice;
+    VkDevice device = deviceVk->device;
+    VkPhysicalDevice pDevice = deviceVk->pDevice;
 
     // Create renderer (which now manages depth manager, swap chain and render passes)
     renderer = MakeUnique<Renderer>(
-        deviceVK.get(),
+        deviceVk.get(),
         instanceVK->surface,
         windowManager->window,
         tinyApp::MAX_FRAMES_IN_FLIGHT
     );
 
-    project = MakeUnique<tinyProject>(deviceVK.get());
+    project = MakeUnique<tinyProject>(deviceVk.get());
     
     // Initialize the active scene handle (moved from tinyProject for better separation)
     activeSceneHandle = project->initialSceneHandle;
@@ -114,7 +114,7 @@ void tinyApp::initComponents() {
     bool imguiInitSuccess = imguiWrapper->init(
         windowManager->window,
         instanceVK->instance,
-        deviceVK.get(),
+        deviceVk.get(),
         renderer->getSwapChain(),
         renderer->getDepthManager()
     );
@@ -307,5 +307,5 @@ void tinyApp::mainLoop() {
         }
     }
 
-    vkDeviceWaitIdle(deviceVK->device);
+    vkDeviceWaitIdle(deviceVk->device);
 }

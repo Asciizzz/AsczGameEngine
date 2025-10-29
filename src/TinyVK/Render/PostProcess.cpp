@@ -1,11 +1,11 @@
-#include "tinyVK/Render/PostProcess.hpp"
-#include "tinyVK/Resource/TextureVK.hpp"
+#include "tinyVk/Render/PostProcess.hpp"
+#include "tinyVk/Resource/TextureVK.hpp"
 #include <stdexcept>
 #include <iostream>
 
 #include ".ext/json/json.hpp"
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 // Destroy helper
 
@@ -16,8 +16,8 @@ void PostProcessEffect::cleanup(VkDevice device) {
     }
 }
 
-PostProcess::PostProcess(Device* deviceVK, Swapchain* swapchain, DepthImage* depthImage)
-    : deviceVK(deviceVK), swapchain(swapchain), depthImage(depthImage) {
+PostProcess::PostProcess(Device* deviceVk, Swapchain* swapchain, DepthImage* depthImage)
+    : deviceVk(deviceVk), swapchain(swapchain), depthImage(depthImage) {
 }
 
 PostProcess::~PostProcess() {
@@ -26,10 +26,10 @@ PostProcess::~PostProcess() {
 
 void PostProcess::initialize() {
     // CRITICAL: Ensure device is idle before creating resources
-    vkDeviceWaitIdle(deviceVK->device);
+    vkDeviceWaitIdle(deviceVk->device);
     
     // Validate dependencies before proceeding
-    if (!swapchain || !depthImage || !deviceVK) {
+    if (!swapchain || !depthImage || !deviceVk) {
         throw std::runtime_error("PostProcess: Invalid dependencies during initialization");
     }
     
@@ -54,7 +54,7 @@ void PostProcess::createOffscreenRenderPass() {
     
     RenderPassConfig config = RenderPassConfig::offscreenRendering(colorFormat, depthFormat);
     
-    offscreenRenderPass = MakeUnique<RenderPass>(deviceVK->device, config);
+    offscreenRenderPass = MakeUnique<RenderPass>(deviceVk->device, config);
 }
 
 void PostProcess::createPingPongImages() {
@@ -62,8 +62,8 @@ void PostProcess::createPingPongImages() {
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
     VkExtent2D extent = swapchain->getExtent();
 
-    VkDevice device = deviceVK->device;
-    VkPhysicalDevice pDevice = deviceVK->pDevice;
+    VkDevice device = deviceVk->device;
+    VkPhysicalDevice pDevice = deviceVk->pDevice;
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         pingPongImages.push_back(MakeUnique<PingPongImages>());
@@ -105,7 +105,7 @@ void PostProcess::createOffscreenFrameBuffers() {
     offscreenFrameBuffers.clear();
     
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
-        UniquePtr<FrameBuffer> framebuffer = MakeUnique<FrameBuffer>(deviceVK->device);
+        UniquePtr<FrameBuffer> framebuffer = MakeUnique<FrameBuffer>(deviceVk->device);
 
         FrameBufferConfig fbConfig = FrameBufferConfig()
             .withRenderPass(offscreenRenderPass->get())
@@ -154,11 +154,11 @@ void PostProcess::createSampler() {
         .withLodRange(0.0f, 0.0f);
 
     sampler = MakeUnique<SamplerVK>();
-    sampler->init(deviceVK->device).create(config);
+    sampler->init(deviceVk->device).create(config);
 }
 
 void PostProcess::createSharedDescriptors() {
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
 
     // Create descriptor set layout with validation
     descLayout = MakeUnique<DescLayout>();
@@ -257,7 +257,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
         config.setLayouts = {*descLayout};
         config.compPath = computeShaderPath;
 
-        effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->device, std::move(config));
+        effect->pipeline = MakeUnique<PipelineCompute>(deviceVk->device, std::move(config));
         effect->pipeline->create();
 
         // Store in OrderedMap with name as key
@@ -575,7 +575,7 @@ void PostProcess::transitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFo
 }
 
 void PostProcess::cleanupRenderResources() {
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
 
     vkDeviceWaitIdle(device);
 
@@ -602,7 +602,7 @@ void PostProcess::recreateEffects() {
     }
     
     // Clean up current effects first
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
     for (auto& [name, effect] : effects) {
         effect->cleanup(device);
     }
@@ -619,7 +619,7 @@ void PostProcess::recreateEffects() {
         config.setLayouts = {*descLayout};
         config.compPath = shaderPath;
 
-        effect->pipeline = MakeUnique<PipelineCompute>(deviceVK->device, std::move(config));
+        effect->pipeline = MakeUnique<PipelineCompute>(deviceVk->device, std::move(config));
         effect->pipeline->create();
 
         effects[name] = std::move(effect);
@@ -627,7 +627,7 @@ void PostProcess::recreateEffects() {
 }
 
 void PostProcess::cleanup() {
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
 
     // Wait for device to be idle to ensure no resources are in use
     vkDeviceWaitIdle(device);

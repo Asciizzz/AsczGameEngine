@@ -2,14 +2,14 @@
 
 #include "tinyData/tinySkeleton.hpp"
 #include "tinyExt/tinyRegistry.hpp"
-#include "tinyVK/Resource/DataBuffer.hpp"
-#include "tinyVK/Resource/Descriptor.hpp"
+#include "tinyVk/Resource/DataBuffer.hpp"
+#include "tinyVk/Resource/Descriptor.hpp"
 
 namespace tinyRT {
 
 struct Skeleton3D {
     Skeleton3D() = default;
-    Skeleton3D* init(const tinyVK::Device* deviceVK, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight);
+    Skeleton3D* init(const tinyVk::Device* deviceVk, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight);
 
     Skeleton3D(const Skeleton3D&) = delete;
     Skeleton3D& operator=(const Skeleton3D&) = delete;
@@ -24,7 +24,7 @@ struct Skeleton3D {
     void refresh(uint32_t boneIndex, bool reupdate = true);
     void refreshAll();
 
-    void update(uint32_t boneIdx, uint32_t curFrame);
+    void update(uint32_t boneIndx, uint32_t curFrame);
     uint32_t dynamicOffset(uint32_t curFrame) const {
         return sizeof(glm::mat4) * skinData_.size() * curFrame;
     }
@@ -71,11 +71,11 @@ private:
 
     tinyHandle skeleHandle_;
     const tinyRegistry* fsRegistry_ = nullptr; // The entire filesystem registry (guarantees to avoid dangling pointers)
-    const tinyVK::Device* deviceVK_ = nullptr;
+    const tinyVk::Device* deviceVk_ = nullptr;
 
     uint32_t maxFramesInFlight_ = 0;
-    tinyVK::DescSet    descSet_;
-    tinyVK::DataBuffer skinBuffer_;
+    tinyVk::DescSet    descSet_;
+    tinyVk::DataBuffer skinBuffer_;
 
     std::vector<glm::mat4> localPose_;
     std::vector<glm::mat4> finalPose_;

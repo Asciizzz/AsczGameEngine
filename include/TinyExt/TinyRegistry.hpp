@@ -47,18 +47,18 @@ class tinyRegistry { // For raw resource data
     // Ensure pool exists for type T
     template<typename T>
     PoolWrapper<T>& ensurePool() {
-        auto idx = std::type_index(typeid(T));
-        auto it = pools.find(idx);
+        auto indx = std::type_index(typeid(T));
+        auto it = pools.find(indx);
         if (it == pools.end()) {
             auto wrapper = std::make_unique<PoolWrapper<T>>();
             auto* ptr = wrapper.get();
-            hashToPool[idx.hash_code()] = ptr; // hash for O(1) lookup
-            pools[idx] = std::move(wrapper);
+            hashToPool[indx.hash_code()] = ptr; // hash for O(1) lookup
+            pools[indx] = std::move(wrapper);
             return *ptr;
         }
 
-        auto* existing = static_cast<PoolWrapper<T>*>(pools[idx].get());
-        hashToPool[idx.hash_code()] = existing; // map stays valid
+        auto* existing = static_cast<PoolWrapper<T>*>(pools[indx].get());
+        hashToPool[indx.hash_code()] = existing; // map stays valid
         return *existing;
     }
 
@@ -133,13 +133,13 @@ public:
     }
 
     void flushAllRms() { // Every pool
-        for (auto& [typeIdx, poolPtr] : pools) {
+        for (auto& [typeIndx, poolPtr] : pools) {
             poolPtr->flushAllRms();
         }
     }
 
     bool hasPendingRms() const { // At least one pool has pending removals
-        for (const auto& [typeIdx, poolPtr] : pools) {
+        for (const auto& [typeIndx, poolPtr] : pools) {
             if (poolPtr->hasPendingRms()) return true;
         }
         return false;

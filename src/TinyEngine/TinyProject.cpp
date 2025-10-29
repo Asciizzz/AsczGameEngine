@@ -3,7 +3,7 @@
 
 using NTypes = tinyNodeRT::Types;
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 // A quick function for range validation
 template<typename T>
@@ -11,14 +11,14 @@ bool validIndex(tinyHandle handle, const std::vector<T>& vec) {
     return handle.valid() && handle.index < vec.size();
 }
 
-tinyProject::tinyProject(const tinyVK::Device* deviceVK) : deviceVK(deviceVK) {
+tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     fs_ = MakeUnique<tinyFS>();
 
     // ext - safeDelete - priority - r - g - b
-    fs_->setTypeExt<tinySceneRT>     ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
+    fs_->setTypeExt<tinySceneRT>   ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
     fs_->setTypeExt<tinyTexture>   ("atex", false, 0, 0.4f, 0.4f, 1.0f);
     fs_->setTypeExt<tinyRMaterial> ("amat", true,  0, 1.0f, 0.4f, 1.0f);
-    fs_->setTypeExt<tinyMesh>      ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
+    fs_->setTypeExt<tinyMeshVk>    ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
     fs_->setTypeExt<tinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f);
 
     vkCreateSceneResources();
@@ -39,11 +39,11 @@ tinyProject::tinyProject(const tinyVK::Device* deviceVK) : deviceVK(deviceVK) {
     // Create camera and global UBO manager
     camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
     global_ = MakeUnique<tinyGlobal>(2);
-    global_->vkCreate(deviceVK);
+    global_->vkCreate(deviceVk);
 
     // Create default material and texture
     tinyTexture defaultTexture = tinyTexture::createDefaultTexture();
-    defaultTexture.vkCreate(deviceVK);
+    defaultTexture.vkCreate(deviceVk);
 
     defaultTextureHandle = fs_->rAdd(std::move(defaultTexture)).handle;
 
@@ -82,7 +82,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Import textures to registry
     std::vector<tinyHandle> glbTexRHandle;
     for (auto& texture : model.textures) {
-        texture.vkCreate(deviceVK);
+        texture.vkCreate(deviceVk);
 
         tinyHandle fnHandle = fs_->addFile(fnTexFolder, texture.name, std::move(texture));
         typeHandle tHandle = fs_->ftypeHandle(fnHandle);
@@ -114,18 +114,19 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Import meshes to registry with remapped material references
     std::vector<tinyHandle> glbMeshRHandle;
     for (auto& mesh : model.meshes) {
-        // Remap submeshes' material indices
-        std::vector<tinySubmesh> remappedSubmeshes = mesh.submeshes();
-        for (auto& submesh : remappedSubmeshes) {
-            bool valid = validIndex(submesh.material, glmMatRHandle);
-            submesh.material = valid ? glmMatRHandle[submesh.material.index] : tinyHandle();
+        // Remap material indices
+        std::vector<tinyMesh::Part>& remapPart = mesh.parts();
+        for (auto& part : remapPart) {
+            bool valid = validIndex(part.material, glmMatRHandle);
+            part.material = valid ? glmMatRHandle[part.material.index] : tinyHandle();
         }
 
-        mesh.vkCreate(deviceVK);
+        tinyMeshVk meshVk;
+        meshVk.create(std::move(mesh), deviceVk);
 
-        mesh.setSubmeshes(remappedSubmeshes);
+        meshVk.printInfo();
 
-        tinyHandle fnHandle = fs_->addFile(fnMeshFolder, mesh.name, std::move(mesh));
+        tinyHandle fnHandle = fs_->addFile(fnMeshFolder, mesh.name, std::move(meshVk));
         typeHandle tHandle = fs_->ftypeHandle(fnHandle);
 
         glbMeshRHandle.push_back(tHandle.handle);
@@ -264,7 +265,7 @@ void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, t
 
 
 void tinyProject::vkCreateSceneResources() {
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
 
     // It needs to be dynamic to allow per-frame offsets (avoid race conditions)
 
@@ -279,7 +280,7 @@ void tinyProject::vkCreateSceneResources() {
     // Setup shared scene requirements
     sharedReq.maxFramesInFlight = 2;
     sharedReq.fsRegistry = &fs().registry();
-    sharedReq.deviceVK = deviceVK;
+    sharedReq.deviceVk = deviceVk;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;
 
@@ -289,7 +290,7 @@ void tinyProject::vkCreateSceneResources() {
 
 void tinyProject::createDummySkinDescriptorSet() {
     // Create dummy descriptor set (allocate from same pool as real skeletons)
-    dummySkinDescSet.allocate(deviceVK->device, skinDescPool.get(), skinDescLayout.get());
+    dummySkinDescSet.allocate(deviceVk->device, skinDescPool.get(), skinDescLayout.get());
 
     // Create dummy skin buffer with 1 identity matrix
     VkDeviceSize bufferSize = sizeof(glm::mat4);
@@ -297,7 +298,7 @@ void tinyProject::createDummySkinDescriptorSet() {
         .setDataSize(bufferSize * sharedReq.maxFramesInFlight)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVK)
+        .createBuffer(deviceVk)
         .mapMemory();
 
     // Update descriptor set with dummy buffer info
@@ -311,5 +312,5 @@ void tinyProject::createDummySkinDescriptorSet() {
         .setType(DescType::StorageBufferDynamic)
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
-        .updateDescSets(deviceVK->device);
+        .updateDescSets(deviceVk->device);
 }

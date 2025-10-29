@@ -30,7 +30,6 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyMaterial.cpp
     src/tinyData/tinyTexture.cpp
     src/tinyData/tinyVertex.cpp
-    src/tinyData/tinyMesh.cpp
     src/tinyData/tinySkeleton.cpp
 
     src/tinyData/tinyRT_MeshRender3D.cpp
@@ -95,26 +94,26 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyApp/tinyApp_basic.cpp
     src/tinyApp/tinyApp_imgui.cpp
 
-    src/tinyVK/System/Device.cpp
-    src/tinyVK/System/Instance.cpp
-    src/tinyVK/System/CmdBuffer.cpp
+    src/tinyVk/System/Device.cpp
+    src/tinyVk/System/Instance.cpp
+    src/tinyVk/System/CmdBuffer.cpp
 
-    src/tinyVK/Resource/DataBuffer.cpp
-    src/tinyVK/Resource/Descriptor.cpp
-    src/tinyVK/Resource/TextureVK.cpp
+    src/tinyVk/Resource/DataBuffer.cpp
+    src/tinyVk/Resource/Descriptor.cpp
+    src/tinyVk/Resource/TextureVK.cpp
 
-    src/tinyVK/Pipeline/Pipeline_core.cpp
-    src/tinyVK/Pipeline/Pipeline_raster.cpp
-    src/tinyVK/Pipeline/Pipeline_compute.cpp
-    src/tinyVK/Pipeline/Pipeline_manager.cpp
+    src/tinyVk/Pipeline/Pipeline_core.cpp
+    src/tinyVk/Pipeline/Pipeline_raster.cpp
+    src/tinyVk/Pipeline/Pipeline_compute.cpp
+    src/tinyVk/Pipeline/Pipeline_manager.cpp
 
-    src/tinyVK/Render/FrameBuffer.cpp
-    src/tinyVK/Render/DepthImage.cpp
-    src/tinyVK/Render/Swapchain.cpp
-    src/tinyVK/Render/RenderPass.cpp
-    src/tinyVK/Render/RenderTarget.cpp
-    src/tinyVK/Render/PostProcess.cpp
-    src/tinyVK/Render/Renderer.cpp
+    src/tinyVk/Render/FrameBuffer.cpp
+    src/tinyVk/Render/DepthImage.cpp
+    src/tinyVk/Render/Swapchain.cpp
+    src/tinyVk/Render/RenderPass.cpp
+    src/tinyVk/Render/RenderTarget.cpp
+    src/tinyVk/Render/PostProcess.cpp
+    src/tinyVk/Render/Renderer.cpp
 
     main.cpp
 )
@@ -140,7 +139,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/.ext/imgui
     ${CMAKE_SOURCE_DIR}/include/.ext/luacpp
 
-    ${CMAKE_SOURCE_DIR}/include/tinyVK
+    ${CMAKE_SOURCE_DIR}/include/tinyVk
     ${CMAKE_SOURCE_DIR}/include/tinyExt
     ${CMAKE_SOURCE_DIR}/include/tinyData
     ${CMAKE_SOURCE_DIR}/include/tinyEngine

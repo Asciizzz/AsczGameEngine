@@ -1,9 +1,9 @@
 #include "tinyData/tinyTexture.hpp"
 
-#include "tinyVK/Resource/DataBuffer.hpp"
-#include "tinyVK/System/CmdBuffer.hpp"
+#include "tinyVk/Resource/DataBuffer.hpp"
+#include "tinyVk/System/CmdBuffer.hpp"
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 tinyTexture& tinyTexture::setName(const std::string& n) {
     name = n;
@@ -67,7 +67,7 @@ tinyTexture tinyTexture::createDefaultTexture() {
 
 
 
-bool tinyTexture::vkCreate(const tinyVK::Device* deviceVK) {
+bool tinyTexture::vkCreate(const tinyVk::Device* deviceVk) {
     // Get appropriate Vulkan format and convert data if needed
     VkFormat textureFormat = ImageVK::getVulkanFormatFromChannels(channels);
     std::vector<uint8_t> vulkanData = ImageVK::convertToValidData(
@@ -85,11 +85,11 @@ bool tinyTexture::vkCreate(const tinyVK::Device* deviceVK) {
         .setDataSize(imageSize * sizeof(uint8_t))
         .setUsageFlags(ImageUsage::TransferSrc)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVK)
+        .createBuffer(deviceVk)
         .uploadData(vulkanData.data());
 
     ImageConfig imageConfig = ImageConfig()
-        .withPhysicalDevice(deviceVK->pDevice)
+        .withPhysicalDevice(deviceVk->pDevice)
         .withDimensions(width, height)
         .withAutoMipLevels()
         .withFormat(textureFormat)
@@ -117,7 +117,7 @@ bool tinyTexture::vkCreate(const tinyVK::Device* deviceVK) {
 
     textureVK = TextureVK(); // Reset texture
     bool success = textureVK
-        .init(deviceVK->device)
+        .init(deviceVk->device)
         .createImage(imageConfig)
         .createView(viewConfig)
         .createSampler(sampConfig)
@@ -125,12 +125,12 @@ bool tinyTexture::vkCreate(const tinyVK::Device* deviceVK) {
 
     if (!success) return false;
 
-    TempCmd tempCmd(deviceVK, deviceVK->graphicsPoolWrapper);
+    TempCmd tempCmd(deviceVk, deviceVk->graphicsPoolWrapper);
 
     textureVK
         .transitionLayoutImmediate(tempCmd.get(), ImageLayout::Undefined, ImageLayout::TransferDstOptimal)
         .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get())
-        .generateMipmapsImmediate(tempCmd.get(), deviceVK->pDevice);
+        .generateMipmapsImmediate(tempCmd.get(), deviceVk->pDevice);
 
     tempCmd.endAndSubmit(); // Kinda redundant with RAII but whatever
 

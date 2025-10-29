@@ -1,8 +1,8 @@
-#include "tinyVK/Render/RenderPass.hpp"
+#include "tinyVk/Render/RenderPass.hpp"
 
 #include <stdexcept>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 RenderPass::RenderPass(VkDevice device, const RenderPassConfig& config)
 : device(device) {
@@ -29,9 +29,9 @@ RenderPass::RenderPass(VkDevice device, const RenderPassConfig& config)
     for (size_t i = 0; i < config.subpasses.size(); i++) {
         const auto& sp = config.subpasses[i];
 
-        for (auto idx : sp.colorAttachments) {
+        for (auto indx : sp.colorAttachments) {
             VkAttachmentReference ref{};
-            ref.attachment = idx;
+            ref.attachment = indx;
             ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
             colorRefs[i].push_back(ref);

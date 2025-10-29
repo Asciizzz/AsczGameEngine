@@ -5,20 +5,20 @@
 #include <stdexcept>
 #include <chrono>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
-void tinyGlobal::vkCreate(const tinyVK::Device* deviceVK) {
+void tinyGlobal::vkCreate(const tinyVk::Device* deviceVk) {
     // get the true aligned size (for dynamic UBO offsets)
-    alignedSize = deviceVK->alignSize(sizeof(tinyGlobal::UBO));
+    alignedSize = deviceVk->alignSize(sizeof(tinyGlobal::UBO));
 
     dataBuffer
         .setDataSize(alignedSize * maxFramesInFlight)
         .setUsageFlags(BufferUsage::Uniform)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVK)
+        .createBuffer(deviceVk)
         .mapMemory();
 
-    VkDevice device = deviceVK->device;
+    VkDevice device = deviceVk->device;
 
     descLayout.create(device, { {0, DescType::UniformBufferDynamic, 1, ShaderStage::VertexAndFragment, nullptr} });
     descPool.create(device, { {DescType::UniformBufferDynamic, 1} }, 1);

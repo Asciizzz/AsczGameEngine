@@ -1,9 +1,9 @@
 // PipelineCore.cpp
-#include "tinyVK/Pipeline/Pipeline_core.hpp"
+#include "tinyVk/Pipeline/Pipeline_core.hpp"
 #include <fstream>
 #include <stdexcept>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 std::vector<char> PipelineCore::readFile(const std::string& path) {
     std::ifstream f(path, std::ios::ate | std::ios::binary);

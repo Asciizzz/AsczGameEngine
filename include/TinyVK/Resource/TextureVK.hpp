@@ -5,7 +5,7 @@
 #include <vulkan/vulkan.h>
 #include <string>
 
-namespace tinyVK {
+namespace tinyVk {
 class Device;
 
 struct ImageUsage {

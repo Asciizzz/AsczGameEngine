@@ -6,24 +6,24 @@
 #include <SDL2/SDL.h>
 #include <vector>
 
-#include "tinyVK/System/CmdBuffer.hpp"
-#include "tinyVK/Render/Swapchain.hpp"
-#include "tinyVK/Pipeline/Pipeline_include.hpp"
-#include "tinyVK/Render/PostProcess.hpp"
-#include "tinyVK/Render/DepthImage.hpp"
-#include "tinyVK/Render/RenderPass.hpp"
-#include "tinyVK/Render/RenderTarget.hpp"
+#include "tinyVk/System/CmdBuffer.hpp"
+#include "tinyVk/Render/Swapchain.hpp"
+#include "tinyVk/Pipeline/Pipeline_include.hpp"
+#include "tinyVk/Render/PostProcess.hpp"
+#include "tinyVk/Render/DepthImage.hpp"
+#include "tinyVk/Render/RenderPass.hpp"
+#include "tinyVk/Render/RenderTarget.hpp"
 
 #include "tinyEngine/tinyProject.hpp"
 
 // Forward declarations
 class tinyImGui;
 
-namespace tinyVK {
+namespace tinyVk {
 
 class Renderer {
 public:
-    Renderer(Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight = 2);
+    Renderer(Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight = 2);
     ~Renderer();
 
     Renderer(const Renderer&) = delete;
@@ -82,7 +82,7 @@ public:
 
 private:
     // Component references
-    Device* deviceVK;
+    Device* deviceVk;
     
     // Owned components
     UniquePtr<Swapchain> swapchain;

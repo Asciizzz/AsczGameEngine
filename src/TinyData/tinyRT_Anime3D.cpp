@@ -55,18 +55,18 @@ glm::vec4 Anime3D::Sampler::evaluate(float time) const {
         case Interp::CubicSpline: {
             // Each keyframe: [inTangent, value, outTangent]
 
-            const size_t idx0 = index * 3;
-            const size_t idx1 = (index + 1) * 3;
+            const size_t indx0 = index * 3;
+            const size_t indx1 = (index + 1) * 3;
 
-            if (idx1 + 1 >= values.size()) return values[idx0 + 1]; // Fallback
+            if (indx1 + 1 >= values.size()) return values[indx0 + 1]; // Fallback
 
-            const glm::vec4& in0  = values[idx0];
-            const glm::vec4& v0   = values[idx0 + 1];
-            const glm::vec4& out0 = values[idx0 + 2];
+            const glm::vec4& in0  = values[indx0];
+            const glm::vec4& v0   = values[indx0 + 1];
+            const glm::vec4& out0 = values[indx0 + 2];
 
-            const glm::vec4& in1  = values[idx1];
-            const glm::vec4& v1   = values[idx1 + 1];
-            const glm::vec4& out1 = values[idx1 + 2];
+            const glm::vec4& in1  = values[indx1];
+            const glm::vec4& v1   = values[indx1 + 1];
+            const glm::vec4& out1 = values[indx1 + 2];
 
             float f2 = f * f;
             float f3 = f2 * f;

@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-namespace tinyVK {
+namespace tinyVk {
 
 struct FrameBufferConfig {
     VkRenderPass renderPass = VK_NULL_HANDLE;

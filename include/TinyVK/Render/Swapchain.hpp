@@ -2,9 +2,9 @@
 
 #include <SDL2/SDL.h>
 
-#include "tinyVK/Resource/TextureVK.hpp"
+#include "tinyVk/Resource/TextureVK.hpp"
 
-namespace tinyVK {
+namespace tinyVk {
 
 class Device; // Forward declaration
 
@@ -16,7 +16,7 @@ struct SwapChainSupportDetails {
 
 class Swapchain {
 public:
-    Swapchain(const Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window);
+    Swapchain(const Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window);
     ~Swapchain();
     void cleanup();
 
@@ -50,7 +50,7 @@ public:
     void createImageViews();
 
 private:
-    const Device* deviceVK;
+    const Device* deviceVk;
     VkSurfaceKHR surface;
 
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;

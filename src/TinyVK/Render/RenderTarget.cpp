@@ -1,7 +1,7 @@
-#include "tinyVK/Render/RenderTarget.hpp"
-#include "tinyVK/Resource/TextureVK.hpp"
+#include "tinyVk/Render/RenderTarget.hpp"
+#include "tinyVk/Resource/TextureVK.hpp"
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 // RenderAttachment constructors
 RenderAttachment::RenderAttachment() = default;

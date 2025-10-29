@@ -1,9 +1,9 @@
-#include "tinyVK/System/Device.hpp"
+#include "tinyVk/System/Device.hpp"
 #include <stdexcept>
 #include <set>
 #include <vector>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 // ---------------- EXTENSIONS ----------------
 const std::vector<const char*> Device::deviceExtensions = {

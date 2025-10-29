@@ -1,16 +1,16 @@
 #include "tinyData/tinyRT_Skeleton3D.hpp"
 
-using namespace tinyVK;
+using namespace tinyVk;
 using namespace tinyRT;
 
-Skeleton3D* Skeleton3D::init(const tinyVK::Device* deviceVK, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight) {
+Skeleton3D* Skeleton3D::init(const tinyVk::Device* deviceVk, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight) {
     vkValid = true;
 
-    deviceVK_ = deviceVK;
+    deviceVk_ = deviceVk;
     fsRegistry_ = fsRegistry;
     maxFramesInFlight_ = maxFramesInFlight;
 
-    descSet_.allocate(deviceVK->device, descPool, descLayout);
+    descSet_.allocate(deviceVk->device, descPool, descLayout);
     return this;
 }
 
@@ -52,7 +52,7 @@ void Skeleton3D::vkCreate() {
         .setDataSize(perFrameSize * maxFramesInFlight_)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVK_)
+        .createBuffer(deviceVk_)
         .mapMemory();
 
     VkDescriptorBufferInfo bufferInfo{};
@@ -65,7 +65,7 @@ void Skeleton3D::vkCreate() {
         .setType(DescType::StorageBufferDynamic)
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
-        .updateDescSets(deviceVK_->device);
+        .updateDescSets(deviceVk_->device);
 }
 
 void Skeleton3D::refresh(uint32_t boneIndex, bool reupdate) {
@@ -109,15 +109,15 @@ void Skeleton3D::updateFlat() {
     }
 }
 
-void Skeleton3D::update(uint32_t boneIdx, uint32_t curFrame) {
-    if (!boneValid(boneIdx)) return;
+void Skeleton3D::update(uint32_t boneIndx, uint32_t curFrame) {
+    if (!boneValid(boneIndx)) return;
 
-    if (boneIdx == 0) {
+    if (boneIndx == 0) {
         updateFlat();
     } else {
         // Retrieve parent
-        glm::mat4 parentTransform = finalPose_[rSkeleton()->bones[boneIdx].parent];
-        updateRecursive(boneIdx, parentTransform);
+        glm::mat4 parentTransform = finalPose_[rSkeleton()->bones[boneIndx].parent];
+        updateRecursive(boneIndx, parentTransform);
     }
 
     if (curFrame >= maxFramesInFlight_) return;

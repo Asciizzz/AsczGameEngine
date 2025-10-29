@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <string>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& camera, bool mouseFocus, float deltaTime) {
     // Clear any existing windows first

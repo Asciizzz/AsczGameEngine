@@ -1,15 +1,15 @@
-#include "tinyVK/Render/Swapchain.hpp"
-#include "tinyVK/System/Device.hpp"  // Need full Device definition
+#include "tinyVk/Render/Swapchain.hpp"
+#include "tinyVk/System/Device.hpp"  // Need full Device definition
 
 #include <SDL2/SDL_vulkan.h>
 #include <stdexcept>
 #include <algorithm>
 #include <limits>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
-Swapchain::Swapchain(const Device* deviceVK, VkSurfaceKHR surface, SDL_Window* window)
-    : deviceVK(deviceVK), surface(surface) {
+Swapchain::Swapchain(const Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window)
+    : deviceVk(deviceVk), surface(surface) {
     createSwapChain(window);
     createImageViews();
 }
@@ -19,7 +19,7 @@ Swapchain::~Swapchain() {
 }
 
 void Swapchain::createSwapChain(SDL_Window* window) {
-    SwapChainSupportDetails swapchainSupport = querySwapChainSupport(deviceVK->pDevice);
+    SwapChainSupportDetails swapchainSupport = querySwapChainSupport(deviceVk->pDevice);
 
     VkSurfaceFormatKHR sc_surfaceFormat = chooseSwapSurfaceFormat(swapchainSupport.formats);
     VkPresentModeKHR sc_presentMode = chooseSwapPresentMode(swapchainSupport.presentModes);
@@ -40,7 +40,7 @@ void Swapchain::createSwapChain(SDL_Window* window) {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-    QueueFamilyIndices indices = deviceVK->queueFamilyIndices;
+    QueueFamilyIndices indices = deviceVk->queueFamilyIndices;
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
     if (indices.graphicsFamily != indices.presentFamily) {
@@ -56,18 +56,18 @@ void Swapchain::createSwapChain(SDL_Window* window) {
     createInfo.presentMode = sc_presentMode;
     createInfo.clipped = VK_TRUE;
 
-    if (vkCreateSwapchainKHR(deviceVK->device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(deviceVk->device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    vkGetSwapchainImagesKHR(deviceVK->device, swapchain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(deviceVk->device, swapchain, &imageCount, nullptr);
 
     std::vector<VkImage> rawImages(imageCount);
-    vkGetSwapchainImagesKHR(deviceVK->device, swapchain, &imageCount, rawImages.data());
+    vkGetSwapchainImagesKHR(deviceVk->device, swapchain, &imageCount, rawImages.data());
 
     for (const auto& image : rawImages) {
-        // images.emplace_back(deviceVK->device);
-        ImageVK img = ImageVK(deviceVK->device);
+        // images.emplace_back(deviceVk->device);
+        ImageVK img = ImageVK(deviceVk->device);
         img.wrapExternalImage(image, sc_surfaceFormat.format, sc_extent);
 
         images.push_back(std::move(img));
@@ -89,7 +89,7 @@ void Swapchain::createImageViews() {
 
 void Swapchain::cleanup() {
     if (swapchain != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(deviceVK->device, swapchain, nullptr);
+        vkDestroySwapchainKHR(deviceVk->device, swapchain, nullptr);
         swapchain = VK_NULL_HANDLE;
     }
 

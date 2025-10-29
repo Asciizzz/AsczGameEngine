@@ -1,8 +1,8 @@
-#include "tinyVK/System/Instance.hpp"
+#include "tinyVk/System/Instance.hpp"
 #include <iostream>
 #include <cstring>
 
-using namespace tinyVK;
+using namespace tinyVk;
 
 const std::vector<const char*> Instance::validationLayers = {
     "VK_LAYER_KHRONOS_validation"

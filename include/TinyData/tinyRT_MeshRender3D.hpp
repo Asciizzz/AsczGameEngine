@@ -2,8 +2,8 @@
 
 #include "tinyData/tinyMesh.hpp"
 #include "tinyExt/tinyRegistry.hpp"
-#include "tinyVK/Resource/DataBuffer.hpp"
-#include "tinyVK/Resource/Descriptor.hpp"
+#include "tinyVk/Resource/DataBuffer.hpp"
+#include "tinyVk/Resource/Descriptor.hpp"
 
 namespace tinyRT {
 
@@ -19,7 +19,7 @@ struct MeshRender3D {
 private:
     tinyHandle meshHandle_;
     const tinyRegistry* fsRegistry_ = nullptr;
-    const tinyVK::Device* deviceVK_ = nullptr;
+    const tinyVk::Device* deviceVk_ = nullptr;
 };
 
 } // namespace tinyRT

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyVK/Resource/TextureVK.hpp"
+#include "tinyVk/Resource/TextureVK.hpp"
 
 #include <cstdint>
 #include <string>
@@ -14,7 +14,7 @@ struct tinyTexture {
     tinyTexture& operator=(tinyTexture&&) = default;
 
     // Vulkan texture representation
-    tinyVK::TextureVK textureVK;
+    tinyVk::TextureVK textureVK;
 
     // Image
     int width = 0;
@@ -45,7 +45,7 @@ struct tinyTexture {
     }
 
 
-    bool vkCreate(const tinyVK::Device* deviceVK);
+    bool vkCreate(const tinyVk::Device* deviceVk);
 
     static tinyTexture createDefaultTexture();
 };
