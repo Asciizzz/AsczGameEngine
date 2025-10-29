@@ -115,11 +115,11 @@ glm::mat4 getTransform(const tinySceneRT* scene, const Anime3D::Channel& channel
     // Return transform component of node
     if (channel.target == AnimeTarget::Node) {
         const tinyNodeRT::TRFM3D* nodeTransform = scene->rtComp<tinyNodeRT::TRFM3D>(channel.node);
-        return nodeTransform ? nodeTransform->base : glm::mat4(1.0f);
+        return nodeTransform ? nodeTransform->local : glm::mat4(1.0f);
     // Return transform component of bone
     } else if (channel.target == AnimeTarget::Bone) {
         const tinyRT_SKEL3D* skeletonRT = scene->rtComp<tinyNodeRT::SKEL3D>(channel.node);
-        return skeletonRT->bindPose(channel.index);
+        return skeletonRT->localPose(channel.index);
     }
 
     return glm::mat4(1.0f);

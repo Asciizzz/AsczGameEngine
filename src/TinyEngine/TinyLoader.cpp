@@ -1184,22 +1184,6 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
 
     // Child nodes for each mesh (representing each material group)
     for (size_t meshIndex = 0; meshIndex < result.meshes.size(); meshIndex++) {
-        // tinyNodeRT meshNode;
-        // meshNode.add<tinyNodeRT::TRFM3D>();
-        // meshNode.name = result.meshes[meshIndex].name + "_Node";
-
-        // // Set parent-child relationship
-        // meshNode.setParent(tinyHandle(0)); // Parent is root node
-        // result.nodes[0].addChild(tinyHandle(static_cast<uint32_t>(meshIndex + 1)));
-
-        // // Add MeshRender component
-        // tinyNodeRT::MESHRD meshRender;
-        // meshRender.pMeshHandle = tinyHandle(static_cast<uint32_t>(meshIndex));
-        // meshRender.skeleNodeHandle = tinyHandle(); // No skeleton for OBJ
-        // meshNode.add<tinyNodeRT::MESHRD>(std::move(meshRender));
-
-        // result.nodes.push_back(std::move(meshNode));
-
         tNode meshNode(result.meshes[meshIndex].name);
         meshNode.MESHR_meshIndx = static_cast<int>(meshIndex);
 
@@ -1208,7 +1192,6 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
 
         result.nodes[nodeIndex].setParent(0); // Parent is root node
         result.nodes[0].addChild(nodeIndex);
-
     }
 
     return result;
