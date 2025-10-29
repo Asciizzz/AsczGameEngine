@@ -1,5 +1,5 @@
 #include "tinyVk/Render/PostProcess.hpp"
-#include "tinyVk/Resource/TextureVK.hpp"
+#include "tinyVk/Resource/TextureVk.hpp"
 #include <stdexcept>
 #include <iostream>
 
@@ -153,7 +153,7 @@ void PostProcess::createSampler() {
         .withBorderColor(VK_BORDER_COLOR_INT_OPAQUE_BLACK)
         .withLodRange(0.0f, 0.0f);
 
-    sampler = MakeUnique<SamplerVK>();
+    sampler = MakeUnique<SamplerVk>();
     sampler->init(deviceVk->device).create(config);
 }
 

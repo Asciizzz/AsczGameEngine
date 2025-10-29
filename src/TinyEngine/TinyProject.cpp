@@ -16,7 +16,7 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
 
     // ext - safeDelete - priority - r - g - b
     fs_->setTypeExt<tinySceneRT>   ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
-    fs_->setTypeExt<tinyTexture>   ("atex", false, 0, 0.4f, 0.4f, 1.0f);
+    fs_->setTypeExt<tinyTextureVk> ("atex", false, 0, 0.4f, 0.4f, 1.0f);
     fs_->setTypeExt<tinyRMaterial> ("amat", true,  0, 1.0f, 0.4f, 1.0f);
     fs_->setTypeExt<tinyMeshVk>    ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
     fs_->setTypeExt<tinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f);
@@ -42,16 +42,16 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     global_->vkCreate(deviceVk);
 
     // Create default material and texture
-    tinyTexture defaultTexture = tinyTexture::createDefaultTexture();
-    defaultTexture.vkCreate(deviceVk);
+    // tinyTexture defaultTexture = tinyTexture::createDefaultTexture();
+    // defaultTexture.vkCreate(deviceVk);
 
-    defaultTextureHandle = fs_->rAdd(std::move(defaultTexture)).handle;
+    // defaultTextureHandle = fs_->rAdd(std::move(defaultTexture)).handle;
 
-    tinyRMaterial defaultMaterial;
-    defaultMaterial.setAlbTexIndex(0);
-    defaultMaterial.setNrmlTexIndex(0);
+    // tinyRMaterial defaultMaterial;
+    // defaultMaterial.setAlbTexIndex(0);
+    // defaultMaterial.setNrmlTexIndex(0);
 
-    defaultMaterialHandle = fs_->rAdd(std::move(defaultMaterial)).handle;
+    // defaultMaterialHandle = fs_->rAdd(std::move(defaultMaterial)).handle;
 }
 
 tinyProject::~tinyProject() {
@@ -82,9 +82,12 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Import textures to registry
     std::vector<tinyHandle> glbTexRHandle;
     for (auto& texture : model.textures) {
-        texture.vkCreate(deviceVk);
+        // texture.vkCreate(deviceVk);
 
-        tinyHandle fnHandle = fs_->addFile(fnTexFolder, texture.name, std::move(texture));
+        tinyTextureVk textureVk;
+        textureVk.createFrom(std::move(texture), deviceVk);
+
+        tinyHandle fnHandle = fs_->addFile(fnTexFolder, texture.name, std::move(textureVk));
         typeHandle tHandle = fs_->ftypeHandle(fnHandle);
 
         glbTexRHandle.push_back(tHandle.handle);
@@ -123,8 +126,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
         tinyMeshVk meshVk;
         meshVk.create(std::move(mesh), deviceVk);
-
-        meshVk.printInfo();
 
         tinyHandle fnHandle = fs_->addFile(fnMeshFolder, mesh.name, std::move(meshVk));
         typeHandle tHandle = fs_->ftypeHandle(fnHandle);

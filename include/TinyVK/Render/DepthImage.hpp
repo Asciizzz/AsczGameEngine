@@ -1,12 +1,12 @@
 #pragma once
 
-#include "tinyVk/Resource/TextureVK.hpp"
+#include "tinyVk/Resource/TextureVk.hpp"
 
 namespace tinyVk {
 
-class DepthImage : public ImageVK {
+class DepthImage : public ImageVk {
 public:
-    using ImageVK::ImageVK; // Inherit constructors
+    using ImageVk::ImageVk; // Inherit constructors
 
     void create(VkPhysicalDevice pDevice, uint32_t width, uint32_t height);
     void create(VkPhysicalDevice pDevice, VkExtent2D extent) {

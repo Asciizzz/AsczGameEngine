@@ -62,35 +62,27 @@ bool LoadImageData(tinygltf::Image* image, const int image_indx, std::string* er
 tinyTexture tinyLoader::loadTexture(const std::string& filePath) {
     tinyTexture texture = {};
 
+    int width = 0, height = 0, channels = 0;
+
     // Load image using stbi with original channel count
     uint8_t* stbiData = stbi_load(
-        filePath.c_str(),
-        &texture.width,
-        &texture.height,
-        &texture.channels,
+        filePath.c_str(), &width, &height, &channels,
         0  // Don't force channel conversion, preserve original format
     );
     
     // Check if loading failed
-    if (!stbiData) {
-        // Reset dimensions if loading failed
-        texture.width = 0;
-        texture.height = 0;
-        texture.channels = 0;
-        texture.data.clear();
-        texture.name = filePath;
-        texture.makeHash();
-        return texture;
-    }
+    if (!stbiData) { return texture; }
 
-    size_t dataSize = texture.width * texture.height * texture.channels;
-    texture.data.resize(dataSize);
-    std::memcpy(texture.data.data(), stbiData, dataSize);
+    // size_t dataSize = texture.width * texture.height * texture.channels;
+    // texture.data.resize(dataSize);
+
+    std::vector<uint8_t> data;
+    data.resize(width * height * channels);
+    std::memcpy(data.data(), stbiData, data.size());
     // Free stbi allocated memory
     stbi_image_free(stbiData);
 
-    texture.makeHash();
-    return texture;
+    return texture.create(std::move(data), width, height, channels);
 }
 
 // =================================== 3D MODELS ===================================
@@ -350,16 +342,10 @@ void loadTextures(std::vector<tinyTexture>& textures, tinygltf::Model& model) {
         // Load image data
         if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
             const auto& image = model.images[gltfTexture.source];
-            texture.
-                setName(image.name).
-                setDimensions(image.width, image.height).
-                setChannels(image.component).
-                setData(image.image).
-                makeHash();
+            texture = tinyTexture().create(image.image, image.width, image.height, image.component);
         }
         
         // Load sampler settings (address mode)
-        texture.addressMode = tinyTexture::AddressMode::Repeat; // Default
         if (gltfTexture.sampler >= 0 && gltfTexture.sampler < static_cast<int>(model.samplers.size())) {
             const auto& sampler = model.samplers[gltfTexture.sampler];
             
@@ -367,13 +353,13 @@ void loadTextures(std::vector<tinyTexture>& textures, tinygltf::Model& model) {
             // GLTF uses the same values for both wrapS and wrapT, so we'll use wrapS
             switch (sampler.wrapS) {
                 case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-                    texture.setAddressMode(tinyTexture::AddressMode::ClampToEdge);
+                    texture.setWrapMode(tinyTexture::WrapMode::ClampToEdge);
                     break;
 
                 case TINYGLTF_TEXTURE_WRAP_REPEAT:
                 case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT: // Fall back
                 default:
-                    texture.setAddressMode(tinyTexture::AddressMode::Repeat);
+                    texture.setWrapMode(tinyTexture::WrapMode::Repeat);
                     break;
             }
         }
@@ -396,14 +382,14 @@ void loadMaterials(std::vector<tinyMaterial>& materials, tinygltf::Model& model,
 
         int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
         if (albedoTexIndex >= 0 && albedoTexIndex < static_cast<int>(textures.size())) {
-            uint32_t albedoTexHash = textures[albedoTexIndex].hash;
+            uint32_t albedoTexHash = textures[albedoTexIndex].hash();
             material.setAlbedoTexture(albedoTexIndex, albedoTexHash);
         }
     
         // Handle normal texture (only if textures are also being loaded)
         int normalTexIndex = gltfMaterial.normalTexture.index;
         if (normalTexIndex >= 0 && normalTexIndex < static_cast<int>(textures.size())) {
-            uint32_t normalTexHash = textures[normalTexIndex].hash;
+            uint32_t normalTexHash = textures[normalTexIndex].hash();
             material.setNormalTexture(normalTexIndex, normalTexHash);
         }
 
@@ -1033,21 +1019,18 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
             }
 
             tinyTexture texture = loadTexture(texturePath);
-            if (texture.width > 0 && texture.height > 0) {
+            if (texture.valid()) {
                 // Extract just the filename for the texture name
                 std::string textureName = objMat.diffuse_texname;
                 size_t lastSlash = textureName.find_last_of("/\\");
                 if (lastSlash != std::string::npos) {
                     textureName = textureName.substr(lastSlash + 1);
                 }
-                texture.setName(textureName);
-                
-                int width = texture.width;
-                int height = texture.height;
-                uint64_t textureHash = texture.hash;
+                texture.name = sanitizeAsciiz(textureName, "texture", result.textures.size());
+
                 result.textures.push_back(std::move(texture));
                 uint32_t textureIndex = static_cast<uint32_t>(result.textures.size() - 1);
-                material.setAlbedoTexture(textureIndex, textureHash);
+                material.setAlbedoTexture(textureIndex, texture.hash());
             }
         }
 

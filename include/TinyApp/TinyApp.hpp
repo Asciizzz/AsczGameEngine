@@ -80,7 +80,7 @@ private:
     UniquePtr<tinyWindow> windowManager;
     UniquePtr<tinyChrono> fpsManager;
 
-    UniquePtr<tinyVk::Instance> instanceVK;
+    UniquePtr<tinyVk::Instance> instanceVk;
     UniquePtr<tinyVk::Device> deviceVk;
 
     UniquePtr<tinyVk::Renderer> renderer;

@@ -1128,16 +1128,18 @@ void tinyApp::renderFileSystemInspector() {
                     ImGui::PopStyleColor(3);
                 }
             }
-        } else if (tHandle.isType<tinyTexture>()) {
+        } else if (tHandle.isType<tinyTextureVk>()) {
             fileType = "Texture";
             ImGui::Text("Type: %s", fileType.c_str());
 
             // Extended data
-            const tinyTexture* texture = fs.registry().get<tinyTexture>(tHandle);
-            if (texture) {
-                ImGui::Text("Dimensions: %dx%d", texture->width, texture->height);
-                ImGui::Text("Channels: %d", texture->channels);
-                ImGui::Text("Hash: %u", texture->hash);
+            const tinyTextureVk* textureVk = fs.registry().get<tinyTextureVk>(tHandle);
+            if (textureVk) {
+                const tinyTexture& textureCPU = textureVk->cpu();
+
+                ImGui::Text("Dimensions: %dx%d", textureCPU.width(), textureCPU.height());
+                ImGui::Text("Channels: %d", textureCPU.channels());
+                ImGui::Text("Hash: %u", textureCPU.hash());
             }
         } else if (tHandle.isType<tinyRMaterial>()) {
             fileType = "Material";

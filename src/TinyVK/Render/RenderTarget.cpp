@@ -1,5 +1,5 @@
 #include "tinyVk/Render/RenderTarget.hpp"
-#include "tinyVk/Resource/TextureVK.hpp"
+#include "tinyVk/Resource/TextureVk.hpp"
 
 using namespace tinyVk;
 
@@ -12,7 +12,7 @@ RenderAttachment::RenderAttachment(VkImage img, VkImageView v)
 RenderAttachment::RenderAttachment(VkImage img, VkImageView v, VkClearValue clear) 
     : image(img), view(v), clearValue(clear) {}
 
-RenderAttachment::RenderAttachment(const ImageVK& imageVK, VkClearValue clear) 
+RenderAttachment::RenderAttachment(const ImageVk& imageVK, VkClearValue clear) 
     : image(imageVK.getImage()), view(imageVK.getView()), clearValue(clear) {}
 
 

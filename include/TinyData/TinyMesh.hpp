@@ -8,7 +8,8 @@
 
 // Uniform mesh structure that holds raw data only
 struct tinyMesh {
-    tinyMesh() = default;
+    std::string name; // Mesh name from glTF
+    tinyMesh() = default; // Allow copy and move semantics
 
     struct Part {
         uint32_t indxOffset = 0;
@@ -16,16 +17,12 @@ struct tinyMesh {
         tinyHandle material;
     };
 
-    // Allow both copy and move semantics since it's only raw data
-
     struct MorphTarget {
         std::string name;
         std::vector<uint8_t> vDeltaData; // raw bytes
     };
 
 // -----------------------------------------
-
-    std::string name; // Mesh name from glTF
 
     template<typename VertexT>
     tinyMesh& setVertices(const std::vector<VertexT>& verts) {
@@ -129,8 +126,8 @@ struct tinyMeshVk {
     VkBuffer indxBuffer() const { return indxBuffer_; }
     VkIndexType indxType() const { return indxType_; }
 
-    tinyMesh& mesh() { return mesh_; }
-    const tinyMesh& mesh() const { return mesh_; }
+    tinyMesh& cpu() { return mesh_; }
+    const tinyMesh& cpu() const { return mesh_; }
 
     std::vector<tinyMesh::Part>& parts() { return mesh_.parts(); }
     const std::vector<tinyMesh::Part>& parts() const { return mesh_.parts(); }
@@ -140,7 +137,7 @@ struct tinyMeshVk {
 // -----------------------------------------
 
     bool create(tinyMesh&& mesh, const tinyVk::Device* deviceVk) {
-        using BufferUsage = tinyVk::BufferUsage;
+        using namespace tinyVk;
 
         mesh_ = std::move(mesh);
 

@@ -6,7 +6,7 @@
 namespace tinyVk {
 
 // Forward declarations
-class ImageVK;
+class ImageVk;
 
 /**
  * @brief Represents a single render attachment with Vulkan resources and clear value
@@ -20,7 +20,7 @@ struct RenderAttachment {
     RenderAttachment();
     RenderAttachment(VkImage img, VkImageView v);
     RenderAttachment(VkImage img, VkImageView v, VkClearValue clear);
-    RenderAttachment(const ImageVK& imageVK, VkClearValue clear = {});
+    RenderAttachment(const ImageVk& imageVK, VkClearValue clear = {});
     
     // Copy and move operations
     RenderAttachment(const RenderAttachment&) = default;

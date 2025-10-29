@@ -28,7 +28,6 @@ endif()
 file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyCamera.cpp
     src/tinyData/tinyMaterial.cpp
-    src/tinyData/tinyTexture.cpp
     src/tinyData/tinyVertex.cpp
     src/tinyData/tinySkeleton.cpp
 
@@ -100,7 +99,7 @@ file(GLOB_RECURSE SRC_FILES
 
     src/tinyVk/Resource/DataBuffer.cpp
     src/tinyVk/Resource/Descriptor.cpp
-    src/tinyVk/Resource/TextureVK.cpp
+    src/tinyVk/Resource/TextureVk.cpp
 
     src/tinyVk/Pipeline/Pipeline_core.cpp
     src/tinyVk/Pipeline/Pipeline_raster.cpp

@@ -1,7 +1,7 @@
 #ifndef LIGHTING_GLSL
 #define LIGHTING_GLSL
 
-// Light structure matching the C++ LightVK struct
+// Light structure matching the C++ LightVk struct
 struct Light {
     vec4 position;  // xyz = position, w = light type (0=directional, 1=point, 2=spot)
     vec4 color;     // rgb = color, a = intensity

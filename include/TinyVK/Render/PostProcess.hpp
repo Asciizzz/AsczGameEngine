@@ -18,8 +18,8 @@ namespace tinyVk {
 
 // Represents a single ping-pong image pair for one frame
 struct PingPongImages {
-    ImageVK imageA;
-    ImageVK imageB;
+    ImageVk imageA;
+    ImageVk imageB;
 
     VkImage getImageA() const { return imageA.getImage(); }
     VkImage getImageB() const { return imageB.getImage(); }
@@ -28,7 +28,7 @@ struct PingPongImages {
     VkDeviceMemory getMemoryA() const { return imageA.getMemory(); }
     VkDeviceMemory getMemoryB() const { return imageB.getMemory(); }
 
-    // No need for custom cleanup with ImageVK
+    // No need for custom cleanup with ImageVk
 };
 
 // Configuration for a post-process effect
@@ -89,7 +89,7 @@ private:
     UniquePtrVec<PingPongImages> pingPongImages;
 
     // Sampler
-    UniquePtr<SamplerVK> sampler;
+    UniquePtr<SamplerVk> sampler;
 
     // Owned offscreen render pass
     UniquePtr<RenderPass> offscreenRenderPass;

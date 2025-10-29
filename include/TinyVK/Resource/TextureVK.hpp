@@ -100,38 +100,38 @@ struct ImageViewConfig {
     ImageViewConfig& withAutoMipLevels(uint32_t width, uint32_t height);
 };
 
-// Main ImageVK class
+// Main ImageVk class
 
-class TextureVK;
-class ImageVK {
+class TextureVk;
+class ImageVk {
 public:
     enum class Ownership {
         Owned,
         External
     };
 
-    ImageVK() = default;
-    ImageVK(VkDevice device) : device(device) {}
-    ImageVK& init(VkDevice device) {
+    ImageVk() = default;
+    ImageVk(VkDevice device) : device(device) {}
+    ImageVk& init(VkDevice device) {
         this->device = device;
         return *this;
     }
 
-    ~ImageVK() { cleanup(); }
+    ~ImageVk() { cleanup(); }
     void cleanup();
 
-    ImageVK(const ImageVK&) = delete;
-    ImageVK& operator=(const ImageVK&) = delete;
+    ImageVk(const ImageVk&) = delete;
+    ImageVk& operator=(const ImageVk&) = delete;
 
-    ImageVK(ImageVK&& other) noexcept;
-    ImageVK& operator=(ImageVK&& other) noexcept;
+    ImageVk(ImageVk&& other) noexcept;
+    ImageVk& operator=(ImageVk&& other) noexcept;
 
     // =====================
 
-    ImageVK& createImage(const ImageConfig& config);
-    ImageVK& createView(const ImageViewConfig& viewConfig);
+    ImageVk& createImage(const ImageConfig& config);
+    ImageVk& createView(const ImageViewConfig& viewConfig);
 
-    ImageVK& wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D extent);
+    ImageVk& wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D extent);
 
     VkImage getImage() const { return image; }
     VkImageView getView() const { return view; }
@@ -155,7 +155,7 @@ public:
     static uint32_t autoMipLevels(uint32_t width, uint32_t height);
 
 private:
-    friend class TextureVK;
+    friend class TextureVk;
 
     VkDevice device = VK_NULL_HANDLE;
 
@@ -172,7 +172,7 @@ private:
     uint32_t arrayLayers = 1;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    void setLayout(VkImageLayout newLayout) { layout = newLayout; } // For TextureVK
+    void setLayout(VkImageLayout newLayout) { layout = newLayout; } // For TextureVk
 };
 
 
@@ -208,27 +208,27 @@ struct SamplerConfig {
     SamplerConfig& withPhysicalDevice(VkPhysicalDevice pDevice);
 };
 
-class SamplerVK {
+class SamplerVk {
 public:
-    SamplerVK() = default;
-    SamplerVK(VkDevice device) : device(device) {}
-    SamplerVK& init(VkDevice device) {
+    SamplerVk() = default;
+    SamplerVk(VkDevice device) : device(device) {}
+    SamplerVk& init(VkDevice device) {
         this->device = device;
         return *this;
     }
 
-    ~SamplerVK() { cleanup(); }
+    ~SamplerVk() { cleanup(); }
     void cleanup();
 
-    SamplerVK(const SamplerVK&) = delete;
-    SamplerVK& operator=(const SamplerVK&) = delete;
+    SamplerVk(const SamplerVk&) = delete;
+    SamplerVk& operator=(const SamplerVk&) = delete;
 
-    SamplerVK(SamplerVK&& other) noexcept;
-    SamplerVK& operator=(SamplerVK&& other) noexcept;
+    SamplerVk(SamplerVk&& other) noexcept;
+    SamplerVk& operator=(SamplerVk&& other) noexcept;
 
     // =====================
 
-    SamplerVK& create(const SamplerConfig& config);
+    SamplerVk& create(const SamplerConfig& config);
 
     VkSampler get() const { return sampler; }
     operator VkSampler() const { return sampler; } // Implicit conversion
@@ -244,27 +244,27 @@ private:
 };
 
 
-class TextureVK {
+class TextureVk {
 public:
-    TextureVK() = default;
-    TextureVK(VkDevice device) : image(device), sampler(device) {}
-    TextureVK& init(VkDevice device) {
+    TextureVk() = default;
+    TextureVk(VkDevice device) : image(device), sampler(device) {}
+    TextureVk& init(VkDevice device) {
         image.init(device);
         sampler.init(device);
         return *this;
     }
 
-    TextureVK(const TextureVK&) = delete;
-    TextureVK& operator=(const TextureVK&) = delete;
+    TextureVk(const TextureVk&) = delete;
+    TextureVk& operator=(const TextureVk&) = delete;
 
-    TextureVK(TextureVK&& other) noexcept;
-    TextureVK& operator=(TextureVK&& other) noexcept;
+    TextureVk(TextureVk&& other) noexcept;
+    TextureVk& operator=(TextureVk&& other) noexcept;
 
     // =====================
 
-    TextureVK& createImage(const ImageConfig& config);
-    TextureVK& createView(const ImageViewConfig& viewConfig);
-    TextureVK& createSampler(const SamplerConfig& config);
+    TextureVk& createImage(const ImageConfig& config);
+    TextureVk& createView(const ImageViewConfig& viewConfig);
+    TextureVk& createSampler(const SamplerConfig& config);
 
     VkImage getImage() const { return image.getImage(); }
     VkImageView getView() const { return image.getView(); }
@@ -276,15 +276,15 @@ public:
     void generateMipmaps(VkCommandBuffer cmd, VkPhysicalDevice pDevice);
 
     // Immediate operations using temporary command buffers
-    TextureVK& transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout);
-    TextureVK& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
-    TextureVK& generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice);
+    TextureVk& transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    TextureVk& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
+    TextureVk& generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice);
 
     bool valid() const { return image.valid() && sampler.valid(); }
 
 private:
-    ImageVK image;
-    SamplerVK sampler;
+    ImageVk image;
+    SamplerVk sampler;
     
     // Helper methods
     VkPipelineStageFlags getStageFlags(VkImageLayout layout);

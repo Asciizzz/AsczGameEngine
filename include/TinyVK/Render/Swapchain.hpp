@@ -2,7 +2,7 @@
 
 #include <SDL2/SDL.h>
 
-#include "tinyVk/Resource/TextureVK.hpp"
+#include "tinyVk/Resource/TextureVk.hpp"
 
 namespace tinyVk {
 
@@ -26,7 +26,7 @@ public:
     VkSwapchainKHR get() const { return swapchain; }
     operator VkSwapchainKHR() const { return swapchain; }
 
-    std::vector<ImageVK> images;
+    std::vector<ImageVk> images;
 
     VkImageView getImageView(uint32_t index) const {
         return (index < images.size()) ? images[index].getView() : VK_NULL_HANDLE;

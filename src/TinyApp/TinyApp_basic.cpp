@@ -39,10 +39,10 @@ void tinyApp::initComponents() {
     fpsManager = MakeUnique<tinyChrono>();
 
     auto extensions = windowManager->getRequiredVulkanExtensions();
-    instanceVK = MakeUnique<Instance>(extensions, enableValidationLayers);
-    instanceVK->createSurface(windowManager->window);
+    instanceVk = MakeUnique<Instance>(extensions, enableValidationLayers);
+    instanceVk->createSurface(windowManager->window);
 
-    deviceVk = MakeUnique<Device>(instanceVK->instance, instanceVK->surface);
+    deviceVk = MakeUnique<Device>(instanceVk->instance, instanceVk->surface);
 
     // So we dont have to write these things over and over again
     VkDevice device = deviceVk->device;
@@ -51,7 +51,7 @@ void tinyApp::initComponents() {
     // Create renderer (which now manages depth manager, swap chain and render passes)
     renderer = MakeUnique<Renderer>(
         deviceVk.get(),
-        instanceVK->surface,
+        instanceVk->surface,
         windowManager->window,
         tinyApp::MAX_FRAMES_IN_FLIGHT
     );
@@ -79,10 +79,10 @@ void tinyApp::initComponents() {
     };
     
     // Create named vertex inputs
-    UnorderedMap<std::string, VertexInputVK> vertexInputVKs;
+    UnorderedMap<std::string, VertexInputVk> VertexInputVks;
     
     // None - no vertex input (for fullscreen quads, etc.)
-    vertexInputVKs["None"] = VertexInputVK();
+    VertexInputVks["None"] = VertexInputVk();
 
     auto vstaticLayout = tinyVertex::Static::layout();
     auto vstaticBind = vstaticLayout.bindingDesc();
@@ -92,17 +92,17 @@ void tinyApp::initComponents() {
     auto vriggedBind = vriggedLayout.bindingDesc();
     auto vriggedAttrs = vriggedLayout.attributeDescs();
 
-    vertexInputVKs["TestRigged"] = VertexInputVK()
+    VertexInputVks["TestRigged"] = VertexInputVk()
         .setBindings({ vriggedBind })
         .setAttributes({ vriggedAttrs });
 
-    vertexInputVKs["TestStatic"] = VertexInputVK()
+    VertexInputVks["TestStatic"] = VertexInputVk()
         .setBindings({ vstaticBind })
         .setAttributes({ vstaticAttrs });
 
     // Use offscreen render pass for pipeline creation
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
-    PIPELINE_INIT(pipelineManager.get(), device, offscreenRenderPass, namedLayouts, vertexInputVKs);
+    PIPELINE_INIT(pipelineManager.get(), device, offscreenRenderPass, namedLayouts, VertexInputVks);
 
     // Load post-process effects from JSON configuration
     renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
@@ -113,7 +113,7 @@ void tinyApp::initComponents() {
     // ImGui now creates its own render pass using swapchain and depth info
     bool imguiInitSuccess = imguiWrapper->init(
         windowManager->window,
-        instanceVK->instance,
+        instanceVk->instance,
         deviceVk.get(),
         renderer->getSwapChain(),
         renderer->getDepthManager()

@@ -321,7 +321,7 @@ void PipelineManager::initializePipelines(
     VkDevice device,
     VkRenderPass renderPass,
     const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts,
-    const std::unordered_map<std::string, VertexInputVK>& namedVertexInputs
+    const std::unordered_map<std::string, VertexInputVk>& namedVertexInputs
 ) {
     // Create all pipeline instances
     for (const auto& [name, config] : pipelineConfigs) {

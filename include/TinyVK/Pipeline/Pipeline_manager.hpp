@@ -8,15 +8,15 @@ namespace tinyVk {
 
 
 // Structure for named vertex input configurations
-struct VertexInputVK {
+struct VertexInputVk {
     std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<std::vector<VkVertexInputAttributeDescription>> attributes;
 
-    VertexInputVK& setBindings(const std::vector<VkVertexInputBindingDescription>& binds) {
+    VertexInputVk& setBindings(const std::vector<VkVertexInputBindingDescription>& binds) {
         bindings = binds;
         return *this;
     }
-    VertexInputVK& setAttributes(const std::vector<std::vector<VkVertexInputAttributeDescription>>& attrs) {
+    VertexInputVk& setAttributes(const std::vector<std::vector<VkVertexInputAttributeDescription>>& attrs) {
         attributes = attrs;
         return *this;
     }
@@ -95,7 +95,7 @@ public:
     void initializePipelines(
         VkDevice device, VkRenderPass renderPass,
         const std::unordered_map<std::string, VkDescriptorSetLayout>& namedLayouts,
-        const std::unordered_map<std::string, VertexInputVK>& namedVertexInputs
+        const std::unordered_map<std::string, VertexInputVk>& namedVertexInputs
     );
     
     // Get a pipeline instance by name
