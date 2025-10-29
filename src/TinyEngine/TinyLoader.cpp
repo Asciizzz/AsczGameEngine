@@ -1200,11 +1200,14 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
 
         // result.nodes.push_back(std::move(meshNode));
 
-        tNode meshNode(result.meshes[meshIndex].name + "_Node");
+        tNode meshNode(result.meshes[meshIndex].name);
         meshNode.MESHR_meshIndx = static_cast<int>(meshIndex);
 
-        meshNode.setParent(0); // Parent is root node
-        result.nodes[0].addChild(static_cast<int>(meshIndex + 1));
+        result.nodes.push_back(std::move(meshNode));
+        int nodeIndex = static_cast<int>(result.nodes.size() - 1);
+
+        result.nodes[nodeIndex].setParent(0); // Parent is root node
+        result.nodes[0].addChild(nodeIndex);
 
     }
 

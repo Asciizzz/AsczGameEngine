@@ -38,7 +38,7 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     sceneConfig.deletable = false; // Make it non-deletable
 
     tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
-    typeHandle mainScenetypeHandle = fs_->ftypeHandle(mainSceneFileHandle);
+    typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
     initialSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
 
     // Create camera and global UBO manager
@@ -93,7 +93,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         textureVk.createFrom(std::move(texture), deviceVk);
 
         tinyHandle fnHandle = fs_->addFile(fnTexFolder, texture.name, std::move(textureVk));
-        typeHandle tHandle = fs_->ftypeHandle(fnHandle);
+        typeHandle tHandle = fs_->fTypeHandle(fnHandle);
 
         glbTexRHandle.push_back(tHandle.handle);
     }
@@ -114,7 +114,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRHandle[localNrmlIndex].index : 0);
 
         tinyHandle fnHandle = fs_->addFile(fnMatFolder, correctMat.name, std::move(correctMat));
-        typeHandle tHandle = fs_->ftypeHandle(fnHandle);
+        typeHandle tHandle = fs_->fTypeHandle(fnHandle);
 
         glmMatRHandle.push_back(tHandle.handle);
     }
@@ -133,7 +133,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         meshVk.create(std::move(mesh), deviceVk);
 
         tinyHandle fnHandle = fs_->addFile(fnMeshFolder, mesh.name, std::move(meshVk));
-        typeHandle tHandle = fs_->ftypeHandle(fnHandle);
+        typeHandle tHandle = fs_->fTypeHandle(fnHandle);
 
         glbMeshRHandle.push_back(tHandle.handle);
     }
@@ -142,7 +142,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     std::vector<tinyHandle> glbSkeleRHandle;
     for (auto& skeleton : model.skeletons) {
         tinyHandle fnHandle = fs_->addFile(fnSkeleFolder, skeleton.name, std::move(skeleton));
-        typeHandle tHandle = fs_->ftypeHandle(fnHandle);
+        typeHandle tHandle = fs_->fTypeHandle(fnHandle);
 
         glbSkeleRHandle.push_back(tHandle.handle);
     }
@@ -247,7 +247,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
     // Add scene to registry
     tinyHandle fnHandle = fs_->addFile(fnModelFolder, scene.name, std::move(scene));
-    typeHandle tHandle = fs_->ftypeHandle(fnHandle);
+    typeHandle tHandle = fs_->fTypeHandle(fnHandle);
 
     // Return the model folder handle instead of the scene handle
     return fnModelFolder;

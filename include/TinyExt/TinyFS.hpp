@@ -22,34 +22,32 @@ public:
             bool deletable = true;
         } cfg;
 
-        bool hidden() const { return cfg.hidden; }
-        bool deletable() const { return cfg.deletable; }
+        bool hidden() const noexcept { return cfg.hidden; }
+        bool deletable() const noexcept { return cfg.deletable; }
 
         template<typename T>
-        bool isType() const { return tHandle.isType<T>(); }
-        bool isFile() const { return type == Type::File; }
-        bool isFolder() const { return type == Type::Folder; }
+        bool isType() const noexcept { return tHandle.isType<T>(); }
+        bool isFile() const noexcept { return type == Type::File; }
+        bool isFolder() const noexcept { return type == Type::Folder; }
 
-        bool hasData() const { return tHandle.valid(); }
+        bool hasData() const noexcept { return tHandle.valid(); }
 
-        bool hasChild(tinyHandle childHandle) const {
-            // Check if childHandle exists in children vector
+        bool hasChild(tinyHandle childHandle) const noexcept {
             return std::find(children.begin(), children.end(), childHandle) != children.end();
         }
 
-        int childIndex(tinyHandle childHandle) const {
-            // Return the index of the child if found, -1 otherwise
+        int childIndex(tinyHandle childHandle) const noexcept {
             auto it = std::find(children.begin(), children.end(), childHandle);
             return (it != children.end()) ? static_cast<int>(std::distance(children.begin(), it)) : -1;
         }
 
-        int addChild(tinyHandle childHandle) {
+        int addChild(tinyHandle childHandle) { // Push back may throw
             if (hasChild(childHandle)) return -1;
             children.push_back(childHandle);
             return static_cast<int>(children.size()) - 1;
         }
 
-        bool removeChild(tinyHandle childHandle) {
+        bool removeChild(tinyHandle childHandle) noexcept {
             int index = childIndex(childHandle);
             if (index != -1) {
                 children.erase(children.begin() + index);
@@ -90,19 +88,19 @@ public:
 
         // Helpful comparison operator for sorting
         // Order: priority desc, then ext asc
-        bool operator<(const TypeExt& other) const {
+        bool operator<(const TypeExt& other) const noexcept {
             if (priority != other.priority) {
                 return priority > other.priority; // Higher priority first
             }
             return ext < other.ext; // Lexicographical order
         }
 
-        bool operator>(const TypeExt& other) const {
+        bool operator>(const TypeExt& other) const noexcept {
             return other < *this;
         }
 
         // Compare for equality
-        bool operator==(const TypeExt& other) const {
+        bool operator==(const TypeExt& other) const noexcept {
             return 
                 ext == other.ext &&
                 priority == other.priority &&
@@ -112,13 +110,13 @@ public:
         }
 
         // Implicit conversion to string for easy access
-        operator std::string() const { return ext; }
+        operator std::string() const noexcept { return ext; }
 
-        bool empty() const { return ext.empty(); }
+        bool empty() const noexcept { return ext.empty(); }
     };
 
 
-    tinyFS() {
+    tinyFS() noexcept {
         Node rootNode;
         rootNode.name = ".root";
         rootNode.parent = tinyHandle();
@@ -131,14 +129,14 @@ public:
 
     // ---------- Basic access ----------
 
-    tinyHandle rootHandle() const { return rootHandle_; }
+    tinyHandle rootHandle() const noexcept { return rootHandle_; }
 
     // Case sensitivity control
-    bool caseSensitive() const { return caseSensitive_; }
-    void setCaseSensitive(bool caseSensitive) { caseSensitive_ = caseSensitive; }
+    bool caseSensitive() const noexcept { return caseSensitive_; }
+    void setCaseSensitive(bool caseSensitive) noexcept { caseSensitive_ = caseSensitive; }
 
     // Set root display name (full on-disk path etc.)
-    void setRootPath(const std::string& rootPath) {
+    void setRootPath(const std::string& rootPath) noexcept {
         Node* root = fnodes_.get(rootHandle_);
         if (root) root->name = rootPath;
     }
@@ -194,7 +192,7 @@ public:
 
     // ---------- "Safe" recursive remove ----------
 
-    bool fRemove(tinyHandle handle, bool recursive = true) {
+    bool fRemove(tinyHandle handle, bool recursive = true) noexcept {
         Node* node = fnodes_.get(handle);
         if (!node || !node->deletable()) return false;
 
@@ -207,43 +205,48 @@ public:
         return fRemoveRecursive(handle, rescueParent, recursive);
     }
 
-    bool fFlatten(tinyHandle handle) {
+    bool fFlatten(tinyHandle handle) noexcept {
         return fRemove(handle, false);
     }
 
     // ---------- Data Inspection ----------
 
     template<typename T>
-    T* fData(tinyHandle fileHandle) {
+    T* fData(tinyHandle fileHandle) noexcept {
         Node* node = fnodes_.get(fileHandle);
         if (!node || !node->hasData()) return nullptr;
 
         return registry_.get<T>(node->tHandle);
     }
 
-    typeHandle ftypeHandle(tinyHandle fileHandle) const {
+    template<typename T>
+    const T* fData(tinyHandle fileHandle) const noexcept {
+        return const_cast<tinyFS*>(this)->fData<T>(fileHandle);
+    }
+
+    typeHandle fTypeHandle(tinyHandle fileHandle) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
         return node ? node->tHandle : typeHandle();
     }
 
     template<typename T>
-    bool fIs(tinyHandle fileHandle) const {
+    bool fIsType(tinyHandle fileHandle) const {
         const Node* node = fnodes_.get(fileHandle);
         return node ? node->isType<T>() : false;
     }
 
     // ---------- Node access ----------
 
-    const Node* fNode(tinyHandle fileHandle) const {
+    const Node* fNode(tinyHandle fileHandle) const noexcept {
         return fnodes_.get(fileHandle);
     }
 
-    const tinyPool<Node>& fNodes() const { return fnodes_; }
+    const tinyPool<Node>& fNodes() const noexcept { return fnodes_; }
 
     // ---------- Type extension management ----------
 
     template<typename T>
-    void setTypeExt(const std::string& ext, bool safeDelete = true, uint8_t priority = 0, float r = 1.0f, float g = 1.0f, float b = 1.0f) {
+    void setTypeExt(const std::string& ext, bool safeDelete = true, uint8_t priority = 0, float r = 1.0f, float g = 1.0f, float b = 1.0f) noexcept {
         TypeExt typeExt;
         typeExt.ext = ext;
         typeExt.safeDelete = safeDelete;
@@ -256,18 +259,18 @@ public:
     }
 
     // Get the full TypeExt info for a type
-    TypeExt typeExt(size_t typeHash) const {
+    TypeExt typeExt(size_t typeHash) const noexcept {
         auto it = typeHashToExt.find(typeHash);
         return (it != typeHashToExt.end()) ? it->second : TypeExt();
     }
 
     template<typename T>
-    TypeExt typeExt() const {
+    TypeExt typeExt() const noexcept {
         return typeExt(typeid(T).hash_code());
     }
 
     // Get the full TypeExt info for a file
-    TypeExt fTypeExt(tinyHandle fileHandle) const {
+    TypeExt fTypeExt(tinyHandle fileHandle) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
 
         // Invalid, minimum priority
@@ -279,44 +282,40 @@ public:
         return typeExt(node->tHandle.typeHash);
     }
 
-    bool fSafeDelete(tinyHandle fileHandle) const {
+    bool fSafeDelete(tinyHandle fileHandle) const noexcept {
         return fTypeExt(fileHandle).safeDelete;
     }
 
     template<typename T>
-    bool safeDelete() const {
+    bool safeDelete() const noexcept {
         return typeExt<T>().safeDelete;
     }
 
-    bool safeDelete(size_t typeHash) const {
+    bool safeDelete(size_t typeHash) const noexcept {
         return typeExt(typeHash).safeDelete;
     }
 
-    // ---------- Registry data management ----------
+    // ---------- Registry data management ---------
     
     // No non-const access for safety
-    const tinyRegistry& registry() const { return registry_; }
+    const tinyRegistry& registry() const noexcept { return registry_; }
 
-    void* rGet(typeHandle th) { return registry_.get(th); }
-
-    const void* rGet(typeHandle th) const { return registry_.get(th); }
-
-    template<typename T>
-    T* rGet(typeHandle th) { return registry_.get<T>(th); }
+    void* rGet(typeHandle th) noexcept { return registry_.get(th); }
+    const void* rGet(typeHandle th) const noexcept { return registry_.get(th); }
 
     template<typename T>
-    const T* rGet(typeHandle th) const { return registry_.get<T>(th);}
+    T* rGet(typeHandle th) noexcept { return registry_.get<T>(th); }
+    template<typename T>
+    const T* rGet(typeHandle th) const noexcept { return registry_.get<T>(th); }
 
     template<typename T>
-    T* rGet(tinyHandle h) { return registry_.get<T>(h); }
+    T* rGet(tinyHandle h) noexcept { return registry_.get<T>(h); }
+    template<typename T>
+    const T* rGet(tinyHandle h) const noexcept { return registry_.get<T>(h); }
 
     template<typename T>
-    const T* rGet(tinyHandle h) const { return registry_.get<T>(h); }
-
-    template<typename T>
-    bool rHas(const tinyHandle& handle) const { return registry_.has<T>(handle); }
-
-    bool rHas(const typeHandle& th) const { return registry_.has(th); }
+    bool rHas(const tinyHandle& handle) const noexcept { return registry_.has<T>(handle); }
+    bool rHas(const typeHandle& th) const noexcept { return registry_.has(th); }
 
     template<typename T>
     typeHandle rAdd(T&& val) {
@@ -324,11 +323,11 @@ public:
     }
 
     template<typename T>
-    void rRemove(const tinyHandle& handle) {
+    void rRemove(const tinyHandle& handle) noexcept {
         rRemove(typeHandle::make<T>(handle));
     }
 
-    void rRemove(const typeHandle& th) {
+    void rRemove(const typeHandle& th) noexcept {
         if (!registry_.has(th)) return; // nothing to remove :/
 
         if (safeDelete(th.typeHash)) registry_.tInstaRm(th); // Safe to remove instantly
@@ -336,26 +335,26 @@ public:
     }
 
     template<typename T>
-    bool rTHasPendingRms() const {
+    bool rTHasPendingRms() const noexcept {
         return registry_.tHasPendingRms<T>();
     }
 
     template<typename T>
-    void rTFlushRm(uint32_t index) {
+    void rTFlushRm(uint32_t index) noexcept {
         registry_.tFlushRm<T>(index);
     }
 
     template<typename T>
-    void rTFlushAllRms() {
+    void rTFlushAllRms() noexcept {
         registry_.tFlushAllRms<T>();
     }
 
 
-    bool rHasPendingRms() const {
+    bool rHasPendingRms() const noexcept {
         return registry_.hasPendingRms();
     }
 
-    void rFlushAllRms() {
+    void rFlushAllRms() noexcept {
         registry_.flushAllRms();
     }
 
@@ -368,7 +367,7 @@ private:
     // Type to extension info map (using new TypeExt structure)
     UnorderedMap<size_t, TypeExt> typeHashToExt;
 
-    bool namesEqual(const std::string& a, const std::string& b) const {
+    bool namesEqual(const std::string& a, const std::string& b) const noexcept {
         if (caseSensitive_) {
             return a == b;
         } else {
@@ -380,7 +379,7 @@ private:
         }
     }
 
-    bool hasRepeatName(tinyHandle parentHandle, const std::string& name) const {
+    bool hasRepeatName(tinyHandle parentHandle, const std::string& name) const noexcept {
         if (!fnodes_.valid(parentHandle)) return false;
 
         const Node* parent = fnodes_.get(parentHandle);
@@ -396,7 +395,7 @@ private:
         return false;
     }
 
-    std::string resolveRepeatName(tinyHandle parentHandle, const std::string& baseName) const {
+    std::string resolveRepeatName(tinyHandle parentHandle, const std::string& baseName) const noexcept {
         if (!fnodes_.valid(parentHandle)) return baseName;
 
         // Check if parent has children with the same name
@@ -420,7 +419,7 @@ private:
         return resolvedName;
     }
 
-    bool isDescendant(tinyHandle possibleAncestor, tinyHandle possibleDescendant) const {
+    bool isDescendant(tinyHandle possibleAncestor, tinyHandle possibleDescendant) const noexcept {
         if (!fnodes_.valid(possibleAncestor) || !fnodes_.valid(possibleDescendant))
             return true; // For safety, treat invalid handles as descendants
 
