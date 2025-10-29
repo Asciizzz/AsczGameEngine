@@ -15,12 +15,12 @@ struct Node {
     Node(const std::string& nodeName = "Node") : name(nodeName) {}
 
     enum class Types : uint32_t {
-        TRFM3D = 1 << 0,
-        MESHRD = 1 << 1,
-        SKEL3D = 1 << 2,
-        BONE3D = 1 << 3,
-        ANIM3D = 1 << 4,
-        SCRIPT = 1 << 5
+        TRFM3D = 1 << 0, // Transform3D
+        MESHRD = 1 << 1, // MeshRender3D
+        SKEL3D = 1 << 2, // Skeleton3D
+        BONE3D = 1 << 3, // BoneAttach3D
+        ANIM3D = 1 << 4, // Animation3D
+        SCRIPT = 1 << 5  // Script
     };
 
     tinyHandle parentHandle;
@@ -38,10 +38,12 @@ struct Node {
         childrenHandles.erase(std::remove(childrenHandles.begin(), childrenHandles.end(), childHandle), childrenHandles.end());
     }
 
-// -----------------------------------------
+// ------------- Component definitions --------------
 
     struct Transform3D {
         static constexpr Types kType = Types::TRFM3D;
+        static constexpr const char* kName = "Transform3D"; // Government name
+
         glm::mat4 base = glm::mat4(1.0f);
         glm::mat4 local = glm::mat4(1.0f);
         glm::mat4 global = glm::mat4(1.0f);
@@ -54,12 +56,16 @@ struct Node {
 
     struct MeshRender3D {
         static constexpr Types kType = Types::MESHRD;
+        static constexpr const char* kName = "MeshRender3D";
+
         tinyHandle pHandle;
     };
     using MESHRD = MeshRender3D;
 
     struct BoneAttach3D {
         static constexpr Types kType = Types::BONE3D;
+        static constexpr const char* kName = "BoneAttach3D";
+
         tinyHandle skeleNodeHandle;
         uint32_t boneIndex;
     };
@@ -67,19 +73,28 @@ struct Node {
 
     struct Skeleton3D {
         static constexpr Types kType = Types::SKEL3D;
+        static constexpr const char* kName = "Skeleton3D";
+
         tinyHandle pHandle;
     };
     using SKEL3D = Skeleton3D;
 
     struct Animation3D {
         static constexpr Types kType = Types::ANIM3D;
+        static constexpr const char* kName = "Animation3D";
+
         tinyHandle pHandle;
     };
     using ANIM3D = Animation3D;
 
-    // Component management functions
+    struct Script {
+        static constexpr Types kType = Types::SCRIPT;
+        tinyHandle pHandle;
+    };
+    using SCRIPT = Script; // Lol
 
-    // Completely generic template functions - no knowledge of specific components!
+// ----------- Component management functions -----------
+
     template<typename T>
     bool has() const {
         return hasType(T::kType);
@@ -113,7 +128,7 @@ struct Node {
     const T* get() const { return has<T>() ? &getComponent<T>() : nullptr; }
 
 private:
-    std::tuple<TRFM3D, MESHRD, BONE3D, SKEL3D, ANIM3D> components;
+    std::tuple<TRFM3D, MESHRD, BONE3D, SKEL3D, ANIM3D, SCRIPT> components;
 
     uint32_t types = 0;
 
