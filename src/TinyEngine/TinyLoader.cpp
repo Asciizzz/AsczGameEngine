@@ -390,7 +390,7 @@ void loadMaterials(std::vector<tinyMaterial>& materials, tinygltf::Model& model,
         int normalTexIndex = gltfMaterial.normalTexture.index;
         if (normalTexIndex >= 0 && normalTexIndex < static_cast<int>(textures.size())) {
             uint32_t normalTexHash = textures[normalTexIndex].hash();
-            material.setNormalTexture(normalTexIndex, normalTexHash);
+            material.setNrmlTexture(normalTexIndex, normalTexHash);
         }
 
         materials.push_back(material);
@@ -495,14 +495,14 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
     for (const auto& pData : allPrimitiveDatas) {
         for (uint32_t i = 0 ; i < pData.vrtxCount; ++i) {
             tinyVertex::Rigged vertex = tinyVertex::Rigged()
-                .setPosition( pData.positions.size() > i ? pData.positions[i] : glm::vec3(0.0f))
-                .setNormal(   pData.normals.size()   > i ? pData.normals[i]   : glm::vec3(0.0f))
-                .setTextureUV(pData.uvs.size()       > i ? pData.uvs[i]       : glm::vec2(0.0f))
-                .setTangent(  pData.tangents.size()  > i ? pData.tangents[i]  : glm::vec4(1,0,0,1));
+                .setPos( pData.positions.size() > i ? pData.positions[i] : glm::vec3(0.0f))
+                .setNrml(   pData.normals.size()   > i ? pData.normals[i]   : glm::vec3(0.0f))
+                .setUV(pData.uvs.size()       > i ? pData.uvs[i]       : glm::vec2(0.0f))
+                .setTang(  pData.tangents.size()  > i ? pData.tangents[i]  : glm::vec4(1,0,0,1));
 
             if (pData.boneIDs.size() > i && pData.weights.size() > i) vertex
                 .setBoneIDs(pData.boneIDs[i])
-                .setWeights(pData.weights[i], true);
+                .setBoneWs(pData.weights[i], true);
 
             allVertices.push_back(vertex);
         }
@@ -1111,7 +1111,7 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
                         
                         // Position
                         if (indx.vertex_index >= 0) {
-                            vertex.setPosition(glm::vec3(
+                            vertex.setPos(glm::vec3(
                                 attrib.vertices[3 * indx.vertex_index + 0],
                                 attrib.vertices[3 * indx.vertex_index + 1],
                                 attrib.vertices[3 * indx.vertex_index + 2]
@@ -1120,7 +1120,7 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
                         
                         // Normal
                         if (indx.normal_index >= 0) {
-                            vertex.setNormal(glm::vec3(
+                            vertex.setNrml(glm::vec3(
                                 attrib.normals[3 * indx.normal_index + 0],
                                 attrib.normals[3 * indx.normal_index + 1],
                                 attrib.normals[3 * indx.normal_index + 2]
@@ -1129,14 +1129,14 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
                         
                         // Texture coordinates
                         if (indx.texcoord_index >= 0) {
-                            vertex.setTextureUV(glm::vec2(
+                            vertex.setUV(glm::vec2(
                                 attrib.texcoords[2 * indx.texcoord_index + 0],
                                 1.0f - attrib.texcoords[2 * indx.texcoord_index + 1] // Flip V coordinate
                             ));
                         }
                         
                         // Set default tangent (will be computed later if needed)
-                        vertex.setTangent(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+                        vertex.setTang(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
                         
                         vertexIndex = currentVertexIndex++;
                         vertices.push_back(vertex);

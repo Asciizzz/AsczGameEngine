@@ -49,10 +49,10 @@ struct Static {
         tangent = tang;
     }
 
-    Static& setPosition(const glm::vec3& position);
-    Static& setNormal(const glm::vec3& normal);
-    Static& setTextureUV(const glm::vec2& uv);
-    Static& setTangent(const glm::vec4& tang);
+    Static& setPos(const glm::vec3& position);
+    Static& setNrml(const glm::vec3& normal);
+    Static& setUV(const glm::vec2& uv);
+    Static& setTang(const glm::vec4& tang);
 
     glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }
@@ -82,12 +82,12 @@ struct Rigged {
 
     // Standard vertex data
 
-    Rigged& setPosition(const glm::vec3& position);
-    Rigged& setNormal(const glm::vec3& normal);
-    Rigged& setTextureUV(const glm::vec2& uv);
-    Rigged& setTangent(const glm::vec4& tangent);
+    Rigged& setPos(const glm::vec3& position);
+    Rigged& setNrml(const glm::vec3& normal);
+    Rigged& setUV(const glm::vec2& uv);
+    Rigged& setTang(const glm::vec4& tangent);
     Rigged& setBoneIDs(const glm::uvec4& ids=glm::uvec4(0));
-    Rigged& setWeights(const glm::vec4& weights=glm::vec4(1.0f, 0.0f, 0.0f, 0.0f), bool normalize=true);
+    Rigged& setBoneWs(const glm::vec4& weights=glm::vec4(1.0f, 0.0f, 0.0f, 0.0f), bool normalize=true);
 
     glm::vec3 getPosition() const { return glm::vec3(pos_tu); }
     glm::vec3 getNormal() const { return glm::vec3(nrml_tv); }

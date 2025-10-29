@@ -10,7 +10,7 @@ tinyMaterial& tinyMaterial::setToonLevel(int level) {
     return *this;
 }
 
-tinyMaterial& tinyMaterial::setNormalBlend(float blend) {
+tinyMaterial& tinyMaterial::setNrmlBlend(float blend) {
     normalBlend = blend;
     return *this;
 }
@@ -26,7 +26,7 @@ tinyMaterial& tinyMaterial::setAlbedoTexture(int texIndex, uint32_t texHash) {
     return *this;
 }
 
-tinyMaterial& tinyMaterial::setNormalTexture(int texIndex, uint32_t texHash) {
+tinyMaterial& tinyMaterial::setNrmlTexture(int texIndex, uint32_t texHash) {
     localNrmlTexture = texIndex;
     nrmlTexHash = texHash;
     return *this;

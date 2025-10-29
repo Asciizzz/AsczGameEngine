@@ -22,10 +22,10 @@ struct tinyMaterial {
     tinyMaterial& setShading(bool enable);
     tinyMaterial& setToonLevel(int level);
 
-    tinyMaterial& setNormalBlend(float blend);
+    tinyMaterial& setNrmlBlend(float blend);
     tinyMaterial& setDiscardThreshold(float threshold);
 
     // Hash data is required to match textures later
     tinyMaterial& setAlbedoTexture(int texIndex, uint32_t texHash);
-    tinyMaterial& setNormalTexture(int texIndex, uint32_t texHash);
+    tinyMaterial& setNrmlTexture(int texIndex, uint32_t texHash);
 };

@@ -27,24 +27,24 @@ std::vector<VkVertexInputAttributeDescription> Layout::attributeDescs() const {
 
 // Static Vertex implementation
 
-Static& Static::setPosition(const glm::vec3& position) {
+Static& Static::setPos(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
     return *this;
 }
-Static& Static::setNormal(const glm::vec3& normal) {
+Static& Static::setNrml(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
     return *this;
 }
-Static& Static::setTextureUV(const glm::vec2& uv) {
+Static& Static::setUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
     return *this;
 }
-Static& Static::setTangent(const glm::vec4& tang) {
+Static& Static::setTang(const glm::vec4& tang) {
     tangent = tang;
     return *this;
 }
@@ -87,24 +87,24 @@ std::vector<Rigged> Static::makeRigged(const std::vector<Static>& staticVertices
 
 
 // Skinning vertex data
-Rigged& Rigged::setPosition(const glm::vec3& position) {
+Rigged& Rigged::setPos(const glm::vec3& position) {
     pos_tu.x = position.x;
     pos_tu.y = position.y;
     pos_tu.z = position.z;
     return *this;
 }
-Rigged& Rigged::setNormal(const glm::vec3& normal) {
+Rigged& Rigged::setNrml(const glm::vec3& normal) {
     nrml_tv.x = normal.x;
     nrml_tv.y = normal.y;
     nrml_tv.z = normal.z;
     return *this;
 }
-Rigged& Rigged::setTextureUV(const glm::vec2& uv) {
+Rigged& Rigged::setUV(const glm::vec2& uv) {
     pos_tu.w  = uv.x;
     nrml_tv.w = uv.y;
     return *this;
 }
-Rigged& Rigged::setTangent(const glm::vec4& tang) {
+Rigged& Rigged::setTang(const glm::vec4& tang) {
     tangent = tang;
     return *this;
 }
@@ -112,7 +112,7 @@ Rigged& Rigged::setBoneIDs(const glm::uvec4& ids) {
     boneIDs = ids;
     return *this;
 }
-Rigged& Rigged::setWeights(const glm::vec4& weights, bool normalize) {
+Rigged& Rigged::setBoneWs(const glm::vec4& weights, bool normalize) {
     if (normalize) {
         float total = weights.x + weights.y + weights.z + weights.w;
         if (total > 0.0f) {

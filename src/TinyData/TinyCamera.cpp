@@ -45,7 +45,7 @@ tinyCamera::tinyCamera(const glm::vec3& position, float fov, float nearPlane, fl
     updateMatrices();
 }
 
-void tinyCamera::setPosition(const glm::vec3& newPos) {
+void tinyCamera::setPos(const glm::vec3& newPos) {
     pos = newPos;
     updateViewMatrix();
 }

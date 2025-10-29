@@ -14,7 +14,7 @@ public:
     tinyCamera(const glm::vec3& position, float fov = 45.0f, float nearPlane = 0.1f, float farPlane = 100.0f);
     ~tinyCamera() = default;
 
-    void setPosition(const glm::vec3& position);
+    void setPos(const glm::vec3& position);
     void setRotation(float pitch, float yaw, float roll = 0.0f);
     void setRotation(const glm::quat& quaternion);
 
