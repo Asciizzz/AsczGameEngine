@@ -2,7 +2,7 @@
 
 layout(push_constant) uniform PushConstant {
     mat4 model;
-    uvec4 props1; // .x = material index, .y = static flag, .z = highlight, .w = bone count (for safety)
+    uvec4 props1; // .x = bone count (not used)
 } pConst;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
@@ -26,8 +26,6 @@ layout(location = 0) out vec2 fragTexUV;
 layout(location = 1) out vec3 fragWorldPos;
 layout(location = 2) out vec3 fragWorldNrml;
 layout(location = 3) out vec4 fragTangent;
-layout(location = 4) out uint fragMaterialIndex;
-layout(location = 5) out uint fragSpecial;
 
 void main() {
 
@@ -45,7 +43,9 @@ void main() {
     vec3 skinnedNormal = vec3(0.0);
     vec3 skinnedTangent = vec3(0.0);
 
-    if (pConst.props1.y == 0) { // No skinning
+    uint boneCount = pConst.props1.x;
+
+    if (boneCount == 0) { // No skinning
         skinnedPos = vec4(basePos, 1.0);
         skinnedNormal = baseNormal;
         skinnedTangent = inTangent.xyz;
@@ -54,7 +54,7 @@ void main() {
             uint id = inBoneIDs[i];
 
             float w = inBoneWs[i];
-            mat4 boneMat = id < pConst.props1.w ? skinData[id] : mat4(1.0);
+            mat4 boneMat = id < boneCount ? skinData[id] : mat4(1.0);
 
             skinnedPos     += w * (boneMat * vec4(basePos, 1.0));
             skinnedNormal  += w * mat3(boneMat) * baseNormal;
@@ -72,7 +72,4 @@ void main() {
 
     mat3 normalMat3 = transpose(inverse(mat3(glb.view * pConst.model)));
     fragTangent = vec4(normalize(mat3(pConst.model) * skinnedTangent), inTangent.w);
-
-    fragMaterialIndex = pConst.props1.x;
-    fragSpecial       = pConst.props1.z;
 }

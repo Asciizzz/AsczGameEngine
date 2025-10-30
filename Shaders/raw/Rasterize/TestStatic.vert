@@ -2,7 +2,7 @@
 
 layout(push_constant) uniform PushConstant {
     mat4 model;
-    uvec4 props1; // .x = material index, .y = static flag (not used), .z = special value
+    uvec4 props1; // .x = bone count (not used)
 } pConst;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
@@ -18,8 +18,6 @@ layout(location = 0) out vec2 fragTexUV;
 layout(location = 1) out vec3 fragWorldPos;
 layout(location = 2) out vec3 fragWorldNrml;
 layout(location = 3) out vec4 fragTangent;
-layout(location = 4) out uint fragMaterialIndex;
-layout(location = 5) out uint fragSpecial;
 
 void main() {
     // world-space position
@@ -32,9 +30,6 @@ void main() {
     fragTangent = vec4(normalize(normalMat * inTangent.xyz), inTangent.w);
     fragTexUV = vec2(inPos_Tu.w, inNrml_Tv.w);
 
-    fragMaterialIndex = pConst.props1.x;
-
     gl_Position = glb.proj * glb.view * worldPos4;
 
-    fragSpecial = pConst.props1.z;
 }
