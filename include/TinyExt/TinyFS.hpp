@@ -487,8 +487,6 @@ private:
 
     template<typename T>
     tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
-        parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
-
         Node* parent = fnodes_.get(parentHandle);
         if (!parent || parent->isFile()) return tinyHandle(); // Invalid or parent is a file
 
@@ -507,8 +505,6 @@ private:
 
     // Overload for folder creation
     tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, Node::CFG cfg) {
-        parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
-
         Node* parent = fnodes_.get(parentHandle);
         if (!parent || parent->isFile()) return tinyHandle(); // Invalid or parent is a file
 
