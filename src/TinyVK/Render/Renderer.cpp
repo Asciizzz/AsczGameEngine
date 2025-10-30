@@ -247,7 +247,7 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
     skyPipeline->bindCmd(currentCmd);
 
     // Bind only the global descriptor set (set 0) for sky
-    const tinyGlobal* global = project->getGlobal();
+    const tinyGlobal* global = project->global();
     VkDescriptorSet glbSet = global->getDescSet();
     uint32_t offset = currentFrame * global->alignedSize;
     skyPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
@@ -264,7 +264,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
-    const tinyGlobal* global = project->getGlobal();
+    const tinyGlobal* global = project->global();
     VkDescriptorSet glbSet = global->getDescSet();
     uint32_t offset = currentFrame * global->alignedSize;
 
@@ -300,13 +300,15 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
         rPipeline->bindCmd(currentCmd);
 
+    // Set 0 for global UBO
+        rPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
+
         // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
         tinyRT_SKEL3D* rtSkele = activeScene->rtComp<tinyNodeRT::SKEL3D>(mr3DComp->skeleNodeHandle());
         VkDescriptorSet skinSet = rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
         uint32_t boneCount = rtSkele ? rtSkele->boneCount() : 0;
 
-        rPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
-
+    // Set 2 for skeleton
         if (isRigged) {
             isRigged = skinSet != VK_NULL_HANDLE;
 
@@ -314,7 +316,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             
             // In the case of dummy, offset does't matter
             uint32_t skinOffset = rtSkele ? rtSkele->dynamicOffset(currentFrame) : 0;
-            rPipeline->bindSets(currentCmd, 1, &skinSet, 1, &skinOffset, 1);
+            rPipeline->bindSets(currentCmd, 2, &skinSet, 1, &skinOffset, 1);
         }
 
         // Check if this node is the selected node for highlighting
@@ -324,10 +326,17 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             uint32_t indxCount = parts[i].indxCount;
             if (indxCount == 0) continue;
 
+            tinyHandle matHandle = parts[i].material;
+            const tinyMaterialVk* material = fs.rGet<tinyMaterialVk>(matHandle);
 
-            // tinyHandle matHandle = parts[i].material;
-            // const tinyRMaterial* material = fs.rGet<tinyRMaterial>(matHandle);
-            // uint32_t matIndex = material ? matHandle.index : 0;
+            VkDescriptorSet matSet = material ? material->descSet() : VK_NULL_HANDLE;
+            if (matSet == VK_NULL_HANDLE) {
+                printf("Warning: Material descriptor set is null for material handle %llu. Skipping draw call.\n", matHandle.value);
+                continue;
+            }
+
+            // Set 1 for material (no need for offset for static materials)
+            rPipeline->bindSets(currentCmd, 1, &matSet, 1, nullptr, 0);
 
             // Set special value to 1 for selected nodes, 0 for others
             uint32_t specialValue = isSelectedNode ? 1 : 0;

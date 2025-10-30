@@ -46,15 +46,15 @@ private:
     uint32_t maxSets = 0;
 };
 
-struct DescLayout {
-    DescLayout() noexcept = default;
-    ~DescLayout() { destroy(); }
+struct DescSLayout {
+    DescSLayout() noexcept = default;
+    ~DescSLayout() { destroy(); }
 
-    DescLayout(const DescLayout&) = delete;
-    DescLayout& operator=(const DescLayout&) = delete;
+    DescSLayout(const DescSLayout&) = delete;
+    DescSLayout& operator=(const DescSLayout&) = delete;
     // Move semantics
-    DescLayout(DescLayout&& other) noexcept;
-    DescLayout& operator=(DescLayout&& other) noexcept;
+    DescSLayout(DescSLayout&& other) noexcept;
+    DescSLayout& operator=(DescSLayout&& other) noexcept;
 
     VkDescriptorSetLayout get() const { return layout; }
     operator VkDescriptorSetLayout() const { return layout; }

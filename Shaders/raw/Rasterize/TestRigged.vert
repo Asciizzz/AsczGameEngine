@@ -10,7 +10,9 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 view;
 } glb;
 
-layout(std430, set = 1, binding = 0) readonly buffer SkinBuffer {
+// set 1 is material 
+
+layout(std430, set = 2, binding = 0) readonly buffer SkinBuffer {
     mat4 skinData[];
 };
 

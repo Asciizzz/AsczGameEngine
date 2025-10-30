@@ -20,9 +20,9 @@ void tinyGlobal::vkCreate(const tinyVk::Device* deviceVk) {
 
     VkDevice device = deviceVk->device;
 
-    descLayout.create(device, { {0, DescType::UniformBufferDynamic, 1, ShaderStage::VertexAndFragment, nullptr} });
+    descSLayout.create(device, { {0, DescType::UniformBufferDynamic, 1, ShaderStage::VertexAndFragment, nullptr} });
     descPool.create(device, { {DescType::UniformBufferDynamic, 1} }, 1);
-    descSet.allocate(device, descPool, descLayout);
+    descSet.allocate(device, descPool, descSLayout);
 
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = dataBuffer;

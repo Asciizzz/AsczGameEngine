@@ -504,7 +504,7 @@ void tinyApp::renderSceneNodeInspector() {
                 ImGui::DragFloat3("##Position", &translation.x, 0.01f, -1000.0f, 1000.0f, "%.3f");
                 ImGui::SameLine();
                 if (ImGui::Button("To Cam")) {
-                    translation = project->getCamera()->pos;
+                    translation = project->camera()->pos;
                 }
                 
                 // Rotation controls

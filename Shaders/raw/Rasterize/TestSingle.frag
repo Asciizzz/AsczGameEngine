@@ -9,6 +9,9 @@ layout(location = 5) in flat uint fragSpecial;
 
 layout(location = 0) out vec4 outColor;
 
+layout(set = 1, binding = 0) uniform sampler2D uAlbedo;
+layout(set = 1, binding = 1) uniform sampler2D uNormal;
+
 // Create an array of rainbow colors
 vec4 rainbowColors[7] = vec4[7](
     vec4(1.0, 0.5, 0.5, 1.0), // Red
@@ -21,14 +24,16 @@ vec4 rainbowColors[7] = vec4[7](
 );
 
 void main() {
-    vec3 n = normalize(fragWorldNrml);
+    // vec3 n = normalize(fragWorldNrml);
 
-    // Remap from [-1, 1] to [0, 1]
-    vec3 color = n * 0.5 + 0.5;
+    // // Remap from [-1, 1] to [0, 1]
+    // vec3 color = n * 0.5 + 0.5;
 
-    // color.x = color.x * 0.3 + 0.7;
-    // color.y = color.y * 0.3 + 0.7;
-    // color.z = color.z * 0.3 + 0.7;
+    // // color.x = color.x * 0.3 + 0.7;
+    // // color.y = color.y * 0.3 + 0.7;
+    // // color.z = color.z * 0.3 + 0.7;
 
-    outColor = vec4(color, 1.0);
+    // Get texture color
+    vec4 color = texture(uAlbedo, fragTexUV);
+    outColor = color;
 }

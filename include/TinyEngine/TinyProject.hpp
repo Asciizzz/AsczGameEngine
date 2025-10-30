@@ -11,6 +11,7 @@
 class tinyProject {
 public:
     static constexpr size_t maxSkeletons = 4096; // This is frighteningly high
+    static constexpr size_t maxMaterials = 65536; // Lol
 
     tinyProject(const tinyVk::Device* deviceVk);
     ~tinyProject();
@@ -21,34 +22,22 @@ public:
 
     // Return the scene handle in the registry
     tinyHandle addModel(tinyModel& model, tinyHandle parentFolder = tinyHandle()); // Returns scene handle - much simpler now!
-
-    tinyCamera* getCamera() const { return camera_.get(); }
-    tinyGlobal* getGlobal() const { return global_.get(); }
+    
+    void addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle = tinyHandle());
 
     // Descriptor accessors
 
-    VkDescriptorSetLayout getGlbDescSetLayout() const { return global_->getDescLayout(); }
+    VkDescriptorSetLayout descSLayout_Global() const { return global_->getDescLayout(); }
+    VkDescriptorSetLayout descSLayout_Material() const { return matDescLayout; }
 
     VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
     VkDescriptorSet getDummySkinDescSet() const { return dummySkinDescSet.get(); }
-    
-    // Get skin descriptor set with automatic fallback to dummy
-    VkDescriptorSet skinDescSet(tinySceneRT* scene, tinyHandle nodeHandle) const {
-        return scene->nSkeleDescSet(nodeHandle);
-    }
 
-    uint32_t skeletonNodeBoneCount(tinySceneRT* scene, tinyHandle nodeHandle) const {
-        const tinyRT_SKEL3D* skeleRT = scene->rtComp<tinyNodeRT::SKEL3D>(nodeHandle);
-        return skeleRT ? skeleRT->boneCount() : 0;
-    }
-    
     // Global UBO update
 
     void updateGlobal(uint32_t frameIndex) {
         global_->update(*camera_, frameIndex);
     }
-
-    void addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle = tinyHandle());
 
 
     // Filesystem and registry accessors
@@ -57,6 +46,9 @@ public:
 
     const tinySceneRT::Require& sceneReq() const { return sharedReq; }
     const tinyVk::Device* vkDevice() const { return deviceVk; }
+
+    tinyCamera* camera() const { return camera_.get(); }
+    tinyGlobal* global() const { return global_.get(); }
 
     tinyHandle initialSceneHandle;
 
@@ -71,16 +63,18 @@ private:
 
 // -------------- Shared resources --------------
 
-    tinyVk::DescLayout matDescLayout;
+    tinyVk::DescSLayout matDescLayout;
     tinyVk::DescPool matDescPool;
 
-    tinyVk::DescLayout skinDescLayout;
+    tinyVk::DescSLayout skinDescLayout;
     tinyVk::DescPool skinDescPool;
 
     tinySceneRT::Require sharedReq;
     void vkCreateResources();
 
 // -------------- Default resources --------------
+
+    tinyTextureVk defaultTextureVk;
 
     tinyVk::DescSet dummySkinDescSet;
     tinyVk::DataBuffer dummySkinBuffer;

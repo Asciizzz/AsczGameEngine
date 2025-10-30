@@ -214,12 +214,24 @@ struct tinyTextureVk {
     uint32_t height() const noexcept { return texture_.height(); }
     uint32_t channels() const noexcept { return texture_.channels(); }
 
+    VkImageView view() const noexcept { return textureVk_.getView(); }
+    VkSampler sampler() const noexcept { return textureVk_.getSampler(); }
+
     const std::vector<uint8_t>& data() const noexcept { return texture_.data(); }
     const uint8_t* dataPtr() const noexcept { return texture_.dataPtr(); }
 
     uint32_t useCount() const noexcept { return useCount_; }
     uint32_t incrementUse() noexcept { return ++useCount_; }
     uint32_t decrementUse() noexcept { return useCount_ > 0 ? --useCount_ : 0; }
+
+    static tinyTextureVk defaultTexture(const tinyVk::Device* deviceVk) {
+        tinyTexture defaultTex = tinyTexture::aPixel();
+        defaultTex.name = "Default";
+
+        tinyTextureVk textureVk;
+        textureVk.createFrom(std::move(defaultTex), deviceVk);
+        return textureVk;
+    }
 
 private: // Composition
     tinyTexture texture_;

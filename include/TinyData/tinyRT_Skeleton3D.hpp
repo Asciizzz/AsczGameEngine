@@ -9,7 +9,7 @@ namespace tinyRT {
 
 struct Skeleton3D {
     Skeleton3D() noexcept = default;
-    Skeleton3D* init(const tinyVk::Device* deviceVk, const tinyPool<tinySkeleton>* skelePool, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight);
+    Skeleton3D* init(const tinyVk::Device* deviceVk, const tinyPool<tinySkeleton>* skelePool, VkDescriptorPool descPool, VkDescriptorSetLayout descSLayout, uint32_t maxFramesInFlight);
 
     Skeleton3D(const Skeleton3D&) = delete;
     Skeleton3D& operator=(const Skeleton3D&) = delete;

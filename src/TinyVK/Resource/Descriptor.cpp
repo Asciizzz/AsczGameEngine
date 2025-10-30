@@ -4,14 +4,14 @@
 
 using namespace tinyVk;
 
-DescLayout::DescLayout(DescLayout&& other) noexcept {
+DescSLayout::DescSLayout(DescSLayout&& other) noexcept {
     device = other.device;
     layout = other.layout;
 
     other.device = VK_NULL_HANDLE;
     other.layout = VK_NULL_HANDLE;
 }
-DescLayout& DescLayout::operator=(DescLayout&& other) noexcept {
+DescSLayout& DescSLayout::operator=(DescSLayout&& other) noexcept {
     if (this != &other) {
         device = other.device;
         layout = other.layout;
@@ -22,7 +22,7 @@ DescLayout& DescLayout::operator=(DescLayout&& other) noexcept {
     return *this;
 }
 
-void DescLayout::create(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings, 
+void DescSLayout::create(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings, 
                         VkDescriptorSetLayoutCreateFlags flags, const void* pNext) {
     this->device = device;
     this->bindingCount = static_cast<uint32_t>(bindings.size());
@@ -40,7 +40,7 @@ void DescLayout::create(VkDevice device, const std::vector<VkDescriptorSetLayout
     }
 }
 
-void DescLayout::destroy() {
+void DescSLayout::destroy() {
     if (layout == VK_NULL_HANDLE) return;
 
     vkDestroyDescriptorSetLayout(device, layout, nullptr);

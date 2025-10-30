@@ -101,7 +101,7 @@ private:
     OrderedMap<std::string, UniquePtr<PostProcessEffect>> effects;
 
     // Shared descriptor management for all effects
-    UniquePtr<DescLayout> descLayout;
+    UniquePtr<DescSLayout> descSLayout;
     UniquePtr<DescPool> descPool;
     UniquePtrVec<DescSet> descSets;
 

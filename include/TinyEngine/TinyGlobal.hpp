@@ -37,10 +37,10 @@ public:
 
     void update(const tinyCamera& camera, uint32_t frameIndex);
 
-    VkDescriptorSetLayout getDescLayout() const { return descLayout; }
+    VkDescriptorSetLayout getDescLayout() const { return descSLayout; }
     VkDescriptorSet getDescSet() const { return descSet; }
 
-    tinyVk::DescLayout descLayout;
+    tinyVk::DescSLayout descSLayout;
     tinyVk::DescPool descPool;
 
     // New design! Use only 1 buffer with dynamic offsets

@@ -68,6 +68,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     std::vector<tinyHandle> glmMatRHandle;
     for (const auto& material : model.materials) {
         tinyMaterialVk materialVk;
+        materialVk.init(deviceVk, &defaultTextureVk, matDescLayout, matDescPool);
+
         materialVk.name = material.name;
 
         // Remap the material's texture indices
@@ -266,7 +268,6 @@ void tinyProject::setupFS() {
 void tinyProject::vkCreateResources() {
     VkDevice device = deviceVk->device;
 
-    // It needs to be dynamic to allow per-frame offsets (avoid race conditions)
 
     skinDescLayout.create(device, {
         {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
@@ -275,6 +276,10 @@ void tinyProject::vkCreateResources() {
     skinDescPool.create(device, {
         {DescType::StorageBufferDynamic, maxSkeletons}
     }, maxSkeletons);
+
+
+    matDescLayout = tinyMaterialVk::createDescSetLayout(device);
+    matDescPool = tinyMaterialVk::createDescPool(device, maxMaterials);
 
     // Setup shared scene requirements
     sharedReq.maxFramesInFlight = 2;
@@ -299,6 +304,10 @@ void tinyProject::vkCreateDefault() {
     tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
     typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
     initialSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
+
+//  ---------- Create default material and texture ----------
+
+    defaultTextureVk = tinyTextureVk::defaultTexture(deviceVk);
 
 //  -------------- Create dummy descriptor set --------------
 

@@ -65,7 +65,7 @@ void tinyApp::initComponents() {
     // project->selectSceneNode(project->getRootNodeHandle());
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
-    project->getCamera()->setAspectRatio(aspectRatio);
+    project->camera()->setAspectRatio(aspectRatio);
 
 // PLAYGROUND FROM HERE
 
@@ -74,7 +74,8 @@ void tinyApp::initComponents() {
 
     // Initialize all pipelines with the manager using named layouts
     UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
-        {"global", project->getGlbDescSetLayout()},
+        {"global", project->descSLayout_Global()},
+        {"material", project->descSLayout_Material()},
         {"skin", project->getSkinDescSetLayout()},
     };
     
@@ -122,7 +123,7 @@ void tinyApp::initComponents() {
     if (imguiInitSuccess) {
         renderer->setupImGuiRenderTargets(imguiWrapper.get());
 
-        setupImGuiWindows(*fpsManager, *project->getCamera(), true, 0.0f);
+        setupImGuiWindows(*fpsManager, *project->camera(), true, 0.0f);
     } else {
         std::cerr << "Failed to initialize ImGui!" << std::endl;
     }
@@ -140,7 +141,7 @@ bool tinyApp::checkWindowResize() {
     int newWidth, newHeight;
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
 
-    project->getCamera()->updateAspectRatio(newWidth, newHeight);
+    project->camera()->updateAspectRatio(newWidth, newHeight);
 
     // Handle window resize in renderer (now handles depth resources internally)
     renderer->handleWindowResize(windowManager->window);
@@ -167,7 +168,7 @@ void tinyApp::mainLoop() {
     auto& winManager = *windowManager;
     auto& fpsRef = *fpsManager;
 
-    auto& camRef = *project->getCamera();
+    auto& camRef = *project->camera();
 
     auto& rendererRef = *renderer;
 

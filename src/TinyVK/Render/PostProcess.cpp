@@ -161,8 +161,8 @@ void PostProcess::createSharedDescriptors() {
     VkDevice device = deviceVk->device;
 
     // Create descriptor set layout with validation
-    descLayout = MakeUnique<DescLayout>();
-    descLayout->create(device, {
+    descSLayout = MakeUnique<DescSLayout>();
+    descSLayout->create(device, {
         {0, DescType::CombinedImageSampler, 1, ShaderStage::Compute, nullptr},
         {1, DescType::StorageImage,         1, ShaderStage::Compute, nullptr},
         {2, DescType::CombinedImageSampler, 1, ShaderStage::Compute, nullptr}
@@ -181,10 +181,10 @@ void PostProcess::createSharedDescriptors() {
     // Update descriptor sets to point to ping-pong images
     for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame) {
         UniquePtr<DescSet> descSet0 = MakeUnique<DescSet>();
-        descSet0->allocate(device, *descPool, *descLayout);
+        descSet0->allocate(device, *descPool, *descSLayout);
 
         UniquePtr<DescSet> descSet1 = MakeUnique<DescSet>();
-        descSet1->allocate(device, *descPool, *descLayout);
+        descSet1->allocate(device, *descPool, *descSLayout);
 
         const auto& images = pingPongImages[frame];
 
@@ -254,7 +254,7 @@ void PostProcess::addEffect(const std::string& name, const std::string& computeS
     try {
         // Create compute pipeline using the shared descriptor set layout
         ComputePipelineConfig config{};
-        config.setLayouts = {*descLayout};
+        config.setLayouts = {*descSLayout};
         config.compPath = computeShaderPath;
 
         effect->pipeline = MakeUnique<PipelineCompute>(deviceVk->device, std::move(config));
@@ -616,7 +616,7 @@ void PostProcess::recreateEffects() {
 
         // Create compute pipeline using the shared descriptor set layout
         ComputePipelineConfig config{};
-        config.setLayouts = {*descLayout};
+        config.setLayouts = {*descSLayout};
         config.compPath = shaderPath;
 
         effect->pipeline = MakeUnique<PipelineCompute>(deviceVk->device, std::move(config));
