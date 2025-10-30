@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <typeindex>
+#include <unordered_map>
 
 struct typeHandle {
     tinyHandle handle = tinyHandle();
@@ -48,7 +49,7 @@ class tinyRegistry { // For raw resource data
         bool hasPendingRms() const noexcept override { return pool.hasPendingRms(); }
     };
 
-    UnorderedMap<std::type_index, UniquePtr<IPool>> pools;
+    std::unordered_map<std::type_index, std::unique_ptr<IPool>> pools;
 
     template<typename T>
     PoolWrapper<T>* getWrapper() noexcept {

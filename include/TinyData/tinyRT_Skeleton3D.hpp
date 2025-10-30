@@ -32,7 +32,7 @@ struct Skeleton3D {
 
     VkDescriptorSet descSet() const { return pValid() ? descSet_.get() : VK_NULL_HANDLE; }
     uint32_t dynamicOffset(uint32_t curFrame) const {
-        return sizeof(glm::mat4) * skinData_.size() * curFrame;
+        return pValid() ? sizeof(glm::mat4) * boneCount() * curFrame : 0;
     }
 
     uint32_t boneCount() const {

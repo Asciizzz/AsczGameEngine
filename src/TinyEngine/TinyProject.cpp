@@ -315,7 +315,7 @@ void tinyProject::vkCreateDefault() {
 
     // Update descriptor set with dummy buffer info
     VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = dummySkinBuffer.get();
+    bufferInfo.buffer = dummySkinBuffer;
     bufferInfo.offset = 0;
     bufferInfo.range = bufferSize;
 

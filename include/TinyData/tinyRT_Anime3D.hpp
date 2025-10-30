@@ -5,6 +5,8 @@
 #include <glm/gtc/quaternion.hpp>
 #include <string>
 
+#include ".ext/Templates.hpp"
+
 #include "tinyExt/tinyPool.hpp"
 
 namespace tinyRT {

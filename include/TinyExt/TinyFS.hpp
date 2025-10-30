@@ -314,11 +314,11 @@ public:
 
         uint8_t priority = 0; // Higher priority = delete last
         bool safeDelete = false;
-        UniquePtr<IRmRule> rmRule;
+        std::unique_ptr<IRmRule> rmRule;
 
         template<typename T>
         void setRmRule(std::function<bool(const T&)> ruleFn) {
-            rmRule = MakeUnique<RmRule<T>>(std::move(ruleFn));
+            rmRule = std::make_unique<RmRule<T>>(std::move(ruleFn));
         }
 
         void clearRmRule() noexcept { rmRule.reset(); }
@@ -376,7 +376,7 @@ private:
         return &typeInfos_[typeIndx];
     }
 
-    UnorderedMap<std::type_index, TypeInfo> typeInfos_;
+    std::unordered_map<std::type_index, TypeInfo> typeInfos_;
 
 // -------------------- Internal helpers --------------------
 

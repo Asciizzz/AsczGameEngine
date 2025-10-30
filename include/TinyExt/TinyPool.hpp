@@ -1,11 +1,10 @@
 #pragma once
 
-#include ".ext/Templates.hpp"
-
 #include "tinyHandle.hpp"
 
 #include <type_traits>
 #include <utility>
+#include <memory>
 #include <deque>
 
 // Helper traits for pointer types
