@@ -13,7 +13,14 @@ struct Scene; // Forward declaration
 
 struct Anime3D {
     Anime3D() noexcept = default;
-    void init(Scene* scene) { scene_ = scene; }
+    void setScene(Scene* scene) { scene_ = scene; }
+
+    // Allows copy since its just data
+    Anime3D(const Anime3D&) = default;
+    Anime3D& operator=(const Anime3D&) = default;
+
+    Anime3D(Anime3D&&) noexcept = default;
+    Anime3D& operator=(Anime3D&&) noexcept = default;
 
     struct Sampler {
         std::vector<float> times;

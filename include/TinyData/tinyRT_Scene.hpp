@@ -323,7 +323,7 @@ private:
 
     tinyRT_ANIM3D* addANIM3D_RT(tinyNodeRT::ANIM3D* compPtr) {
         tinyRT_ANIM3D rtAnime;
-        rtAnime.init(this);
+        rtAnime.setScene(this);
 
         compPtr->pHandle = rtAdd<tinyRT_ANIM3D>(std::move(rtAnime));
 
