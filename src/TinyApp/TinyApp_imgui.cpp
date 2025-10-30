@@ -1137,6 +1137,10 @@ void tinyApp::renderFileSystemInspector() {
             if (textureVk) {
                 const tinyTexture& textureCPU = textureVk->cpu();
 
+                ImGui::Text("Usage Count: %d", textureVk->useCount());
+
+                ImGui::Separator();
+
                 ImGui::Text("Dimensions: %dx%d", textureCPU.width(), textureCPU.height());
                 ImGui::Text("Channels: %d", textureCPU.channels());
                 ImGui::Text("Hash: %u", textureCPU.hash());
@@ -1886,9 +1890,14 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
                 const tinyFS::Node* nodeA = fs.fNode(a);
                 const tinyFS::Node* nodeB = fs.fNode(b);
                 if (!nodeA || !nodeB) return false;
+
+                // Helpful function to retrieve type extensions
+                auto getTypeExt = [&fs](const tinyFS::Node* node) -> tinyFS::TypeExt {
+                    return fs.typeInfo(node->tHandle.typeIndex)->typeExt.ext;
+                };
                 
-                tinyFS::TypeExt extA = fs.fTypeExt(a);
-                tinyFS::TypeExt extB = fs.fTypeExt(b);
+                tinyFS::TypeExt extA = fs.typeInfo(nodeA->tHandle.typeIndex)->typeExt.ext;
+                tinyFS::TypeExt extB = fs.typeInfo(nodeB->tHandle.typeIndex)->typeExt.ext;
 
                 // No need for folder check, automatically set max priority
 
@@ -1907,7 +1916,7 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
     } else if (node->isFile()) {
         // General file handling - completely generic
         std::string fileName = node->name;
-        tinyFS::TypeExt fileExt = fs.fTypeExt(nodeHandle);
+        tinyFS::TypeExt fileExt = fs.typeExt(node->tHandle.typeIndex);
 
         // Set consistent colors for all files
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background

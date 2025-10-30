@@ -5,9 +5,8 @@
 #include <string>
 #include <sstream>
 
-#include <iostream>
-
 #include <functional>
+#include <algorithm>
 
 class tinyFS {
 public:
@@ -23,6 +22,8 @@ public:
             bool hidden = false;
             bool deletable = true;
         } cfg;
+
+        std::type_index typeIndex() const noexcept { return tHandle.typeIndex; }
 
         bool hidden() const noexcept { return cfg.hidden; }
         bool deletable() const noexcept { return cfg.deletable; }
@@ -59,64 +60,7 @@ public:
         }
     };
 
-    struct TypeExt {
-        // Identification
-        std::string ext;
-        bool safeDelete; // CRITICAL
-        uint8_t priority;
-
-        // Safe Delete explanation:
-        // =
-        // Some files' data contains Vulkan resources which
-        // could potentially be in use (command buffers etc.)
-        // thus cannot be safely deleted at arbitrary times.
-        // -
-        // This flag indicates whether the file can be instantly
-        // delete or add to a pending deletion queue for further
-        // deletion processing.
-        // -
-        // For safety, all types default safeDelete = false;
-
-        // Style
-        float color[3];
-
-        // Assume folder, max priority
-        TypeExt(const std::string& ext = "", bool safeDelete = false, uint8_t priority = UINT8_MAX, float r = 1.0f, float g = 1.0f, float b = 1.0f)
-        : ext(ext), priority(priority), safeDelete(safeDelete) {
-            color[0] = r;
-            color[1] = g;
-            color[2] = b;
-        }
-
-        // Helpful comparison operator for sorting
-        // Order: priority desc, then ext asc
-        bool operator<(const TypeExt& other) const noexcept {
-            if (priority != other.priority) {
-                return priority > other.priority; // Higher priority first
-            }
-            return ext < other.ext; // Lexicographical order
-        }
-
-        bool operator>(const TypeExt& other) const noexcept {
-            return other < *this;
-        }
-
-        // Compare for equality
-        bool operator==(const TypeExt& other) const noexcept {
-            return 
-                ext == other.ext &&
-                priority == other.priority &&
-                color[0] == other.color[0] &&
-                color[1] == other.color[1] &&
-                color[2] == other.color[2];
-        }
-
-        // Implicit conversion to string for easy access
-        operator std::string() const noexcept { return ext; }
-
-        bool empty() const noexcept { return ext.empty(); }
-    };
-
+// -------------------- Public Interface --------------------
 
     tinyFS() noexcept {
         Node rootNode;
@@ -245,59 +189,6 @@ public:
 
     const tinyPool<Node>& fNodes() const noexcept { return fnodes_; }
 
-// -------------------- Type extension management --------------------
-
-    template<typename T>
-    void setTypeExt(const std::string& ext, bool safeDelete = true, uint8_t priority = 0, float r = 1.0f, float g = 1.0f, float b = 1.0f) noexcept {
-        TypeExt typeExt;
-        typeExt.ext = ext;
-        typeExt.safeDelete = safeDelete;
-        typeExt.priority = priority;
-        typeExt.color[0] = r;
-        typeExt.color[1] = g;
-        typeExt.color[2] = b;
-
-        // typeHashToExt[typeid(T).hash_code()] = typeExt;
-        typeExts_[std::type_index(typeid(T))] = typeExt;
-    }
-
-    // Get the full TypeExt info for a type
-    TypeExt typeExt(std::type_index typeHash) const noexcept {
-        auto it = typeExts_.find(typeHash);
-        return (it != typeExts_.end()) ? it->second : TypeExt();
-    }
-
-    template<typename T>
-    TypeExt typeExt() const noexcept {
-        return typeExt(std::type_index(typeid(T)));
-    }
-
-    // Get the full TypeExt info for a file
-    TypeExt fTypeExt(tinyHandle fileHandle) const noexcept {
-        const Node* node = fnodes_.get(fileHandle);
-
-        // Invalid, minimum priority
-        if (!node) return TypeExt();
-
-        // Folder type, max priority
-        if (node->isFolder()) return TypeExt("", true, UINT8_MAX);
-
-        return typeExt(node->tHandle.typeIndex);
-    }
-
-    bool fSafeDelete(tinyHandle fileHandle) const noexcept {
-        return fTypeExt(fileHandle).safeDelete;
-    }
-
-    template<typename T>
-    bool safeDelete() const noexcept {
-        return typeExt<T>().safeDelete;
-    }
-
-    bool safeDelete(std::type_index typeHash) const noexcept {
-        return typeExt(typeHash).safeDelete;
-    }
-
 // -------------------- Registry data management -------------------
     
     // No non-const access for safety
@@ -361,34 +252,123 @@ public:
         registry_.flushAllRms();
     }
 
-// -------------------- Delete rules management --------------------
+// -------------------- Special Type Handlers --------------------
+
+    struct TypeExt {
+        // Identification
+        std::string ext;
+        float color[3];
+
+        // Assume folder, max priority
+        TypeExt(const std::string& ext = "", float r = 1.0f, float g = 1.0f, float b = 1.0f)
+        : ext(ext) { color[0] = r; color[1] = g; color[2] = b; }
+
+        bool operator<(const TypeExt& other) const noexcept { return ext < other.ext; }
+        bool operator>(const TypeExt& other) const noexcept { return other < *this; }
+
+        // Compare for equality
+        bool operator==(const TypeExt& other) const noexcept {
+            return 
+                ext == other.ext &&
+                color[0] == other.color[0] &&
+                color[1] == other.color[1] &&
+                color[2] == other.color[2];
+        }
+
+        bool empty() const noexcept { return ext.empty(); }
+    };
+
+    using RmRuleFn = std::function<bool(const void*)>;
+
+    struct IRmRule {
+        virtual ~IRmRule() = default;
+
+        // Check function remains
+        virtual bool check(const void* dataPtr) const noexcept = 0;
+
+        // Set function: type-erased version
+        virtual void set(std::function<bool(const void*)> rule) = 0;
+    };
 
     template<typename T>
-    void setRmRule(std::function<bool(const T&)> ruleFn) {
-        typeRmRules_[std::type_index(typeid(T))] =
-            MakeUnique<DeleteRule<T>>(std::move(ruleFn));
+    struct RmRule : IRmRule {
+        std::function<bool(const T&)> rule;
+
+        RmRule() = default;
+
+        explicit RmRule(std::function<bool(const T&)> r) : rule(std::move(r)) {}
+
+        // Set function for T
+        void set(std::function<bool(const T&)> r) {
+            rule = std::move(r);
+        }
+
+        // Override type-erased set for IRmRule
+        void set(std::function<bool(const void*)> r) override {
+            // Wrap the void* function into T&
+            rule = [r = std::move(r)](const T& t) -> bool {
+                return r(static_cast<const void*>(&t));
+            };
+        }
+
+        // Default behavior: allow removal if no rule set
+        bool check(const void* dataPtr) const noexcept override {
+            try {
+                if (!rule) return true;
+                return rule(*static_cast<const T*>(dataPtr));
+            } catch (...) {
+                return true;
+            }
+        }
+    };
+
+    struct TypeInfo {
+        TypeExt typeExt;
+
+        uint8_t priority = 0; // Higher priority = delete last
+        bool safeDelete = false;
+        UniquePtr<IRmRule> rmRule;
+
+        template<typename T>
+        void setRmRule(std::function<bool(const T&)> ruleFn) {
+            rmRule = MakeUnique<RmRule<T>>(std::move(ruleFn));
+        }
+
+        void clearRmRule() noexcept { rmRule.reset(); }
+
+        bool checkRmRule(const void* dataPtr) const noexcept {
+            return rmRule ? rmRule->check(dataPtr) : true;
+        }
+    };
+
+    TypeInfo* typeInfo(std::type_index typeIndx) {
+        return ensureTypeInfo(typeIndx);
     }
 
     template<typename T>
-    void clearRmRule() noexcept {
-        typeRmRules_.erase(std::type_index(typeid(T)));
+    TypeInfo* typeInfo() {
+        return ensureTypeInfo(std::type_index(typeid(T)));
     }
 
-    bool checkRmRule(const typeHandle& th, const void* dataPtr) const noexcept {
-        auto it = typeRmRules_.find(th.typeIndex);
-        if (it == typeRmRules_.end()) return true; // No rule, allow deletion
-
-        return it->second->check(dataPtr);
+    TypeExt typeExt(std::type_index typeIndx) const noexcept {
+        auto it = typeInfos_.find(typeIndx);
+        return (it != typeInfos_.end()) ? it->second.typeExt : TypeExt();
     }
 
-    bool checkFRmRule(tinyHandle fileHandle) noexcept {
-        const Node* node = fnodes_.get(fileHandle);
-        if (!node || !node->deletable()) return false;
+    template<typename T>
+    TypeExt typeExt() const noexcept {
+        return typeExt(std::type_index(typeid(T)));
+    }
 
-        void* dataPtr = registry_.get(node->tHandle);
-        if (!dataPtr) return true; // No data, allow deletion
 
-        return checkRmRule(node->tHandle, dataPtr);
+    template<typename T>
+    bool safeDelete() const noexcept {
+        return safeDelete(std::type_index(typeid(T)));
+    }
+
+    bool safeDelete(std::type_index typeIndex) const noexcept {
+        auto it = typeInfos_.find(typeIndex);
+        return (it != typeInfos_.end()) ? it->second.safeDelete : false;
     }
 
 private:
@@ -397,35 +377,19 @@ private:
     tinyHandle rootHandle_;
     bool caseSensitive_{false}; // Global case sensitivity setting
     
-    UnorderedMap<std::type_index, TypeExt> typeExts_;
 
-// -------------------- Delete rules management --------------------
+// -------------------- TypeInfo management --------------------
 
-    using DeleteRuleFn = std::function<bool(const void*)>;
+    TypeInfo* ensureTypeInfo(std::type_index typeIndx) {
+        auto it = typeInfos_.find(typeIndx);
+        if (it != typeInfos_.end()) return &it->second;
 
-    struct IDeleteRule {
-        virtual ~IDeleteRule() = default;
-        virtual bool check(const void* dataPtr) const noexcept = 0;
-    };
+        TypeInfo typeInfo;
+        typeInfos_[typeIndx] = std::move(typeInfo);
+        return &typeInfos_[typeIndx];
+    }
 
-    template<typename T>
-    struct DeleteRule : IDeleteRule {
-        std::function<bool(const T&)> rule;
-
-        explicit DeleteRule(std::function<bool(const T&)> r)
-            : rule(std::move(r)) {}
-
-        bool check(const void* dataPtr) const noexcept override {
-            try {
-                return rule(*static_cast<const T*>(dataPtr));
-            } catch (...) {
-                // swallow exceptions to honor noexcept
-                return false;
-            }
-        }
-    };
-
-    UnorderedMap<std::type_index, UniquePtr<IDeleteRule>> typeRmRules_;
+    UnorderedMap<std::type_index, TypeInfo> typeInfos_;
 
 // -------------------- Internal helpers --------------------
 
@@ -531,12 +495,21 @@ private:
 
     // Internal recursive function that tracks the original parent for non-deletable rescues
     bool fRemoveRecursive(tinyHandle handle, tinyHandle rescueParent, bool recursive) {
-        if (!checkFRmRule(handle)) return false;
-
         Node* node = fnodes_.get(handle);
         if (!node) return false;
 
-        rRemove(node->tHandle); // remove data from registry
+        // Remove with regards to registry data
+        if (void* dataPtr = registry_.get(node->tHandle)) {
+            TypeInfo* tInfo = typeInfo(node->tHandle.typeIndex);
+
+            if (tInfo && !tInfo->checkRmRule(dataPtr)) {
+                // Rescue to parent instead
+                fMove(handle, rescueParent);
+                return false;
+            }
+
+            rRemove(node->tHandle); // remove data from registry
+        }
 
         // remove from parent children list
         if (fnodes_.valid(node->parent)) {
@@ -546,12 +519,31 @@ private:
 
         // copy children to avoid mutation during recursion
         std::vector<tinyHandle> childCopy = node->children;
+        // Sort children by priority (low to high - low delete first)
+        std::sort(childCopy.begin(), childCopy.end(), [this](tinyHandle a, tinyHandle b) {
+            Node* nodeA = fnodes_.get(a);
+            Node* nodeB = fnodes_.get(b);
+            if (!nodeA || !nodeB) return false;
+
+            TypeInfo* tInfoA = typeInfo(nodeA->tHandle.typeIndex);
+            TypeInfo* tInfoB = typeInfo(nodeB->tHandle.typeIndex);
+
+            uint8_t prioA = tInfoA ? tInfoA->priority : 0;
+            uint8_t prioB = tInfoB ? tInfoB->priority : 0;
+
+            return prioA < prioB; // lower priority first
+        });
+
         for (tinyHandle ch : childCopy) {
             Node* child = fnodes_.get(ch);
             if (!child) continue;
 
             bool canRemove = child->deletable() && recursive;
-            canRemove = canRemove && checkFRmRule(ch);
+            
+            TypeInfo* tInfo = typeInfo(child->tHandle.typeIndex);
+
+            // Can remove if satisfies type info rule
+            canRemove = canRemove && (!tInfo || tInfo->checkRmRule(registry_.get(child->tHandle)));
 
             if (canRemove) fRemoveRecursive(ch, rescueParent, recursive);
             else           fMove(ch, rescueParent);
