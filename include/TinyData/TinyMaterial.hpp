@@ -92,14 +92,14 @@ struct tinyMaterialVk {
 
 // -----------------------------------------
 
-    bool setAlbedoTexture(tinyTextureVk* texture) noexcept {
+    bool setAlbTex(tinyTextureVk* texture) noexcept {
         if (!setTexture(albTex_, texture)) return false;
 
         updateBinding(0, albTex_);
         return true;
     }
 
-    bool setNormalTexture(tinyTextureVk* texture) noexcept {
+    bool setNrmlTex(tinyTextureVk* texture) noexcept {
         if (!setTexture(nrmlTex_, texture)) return false;
 
         updateBinding(1, nrmlTex_);
@@ -108,6 +108,9 @@ struct tinyMaterialVk {
 
     // implicit conversion
     VkDescriptorSet descSet() const noexcept { return descSet_; }
+
+    const tinyTextureVk* albTex() const noexcept { return albTex_; }
+    const tinyTextureVk* nrmlTex() const noexcept { return nrmlTex_; }
 
 private:
     bool setTexture(tinyTextureVk*& curTex, tinyTextureVk*& newTex) noexcept {

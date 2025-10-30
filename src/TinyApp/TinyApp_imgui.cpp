@@ -1148,6 +1148,24 @@ void tinyApp::renderFileSystemInspector() {
         } else if (tHandle.isType<tinyMaterialVk>()) {
             fileType = "Material";
             ImGui::Text("Type: %s", fileType.c_str());
+
+            // Extended data
+            if (const tinyMaterialVk* materialVk = fs.registry().get<tinyMaterialVk>(tHandle)) {
+                ImGui::Separator();
+                
+                if (const tinyTextureVk* albedoTex = materialVk->albTex()) {
+                    const tinyTexture& textureCPU = albedoTex->cpu();
+
+                    ImGui::Text("Albedo Texture: %s (%dx%d, %d channels)", textureCPU.name.c_str(), textureCPU.width(), textureCPU.height(), textureCPU.channels());
+                }
+
+                if (const tinyTextureVk* normalTex = materialVk->nrmlTex()) {
+                    const tinyTexture& textureCPU = normalTex->cpu();
+
+                    ImGui::Text("Normal Texture: %s (%dx%d, %d channels)", textureCPU.name.c_str(), textureCPU.width(), textureCPU.height(), textureCPU.channels());
+                }
+            }
+
         } else if (tHandle.isType<tinyMeshVk>()) {
             fileType = "Mesh";
             ImGui::Text("Type: %s", fileType.c_str());
