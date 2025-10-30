@@ -282,12 +282,7 @@ public:
 
     struct IRmRule {
         virtual ~IRmRule() = default;
-
-        // Check function remains
         virtual bool check(const void* dataPtr) const noexcept = 0;
-
-        // Set function: type-erased version
-        virtual void set(std::function<bool(const void*)> rule) = 0;
     };
 
     template<typename T>
@@ -299,16 +294,8 @@ public:
         explicit RmRule(std::function<bool(const T&)> r) : rule(std::move(r)) {}
 
         // Set function for T
-        void set(std::function<bool(const T&)> r) {
+        void set(std::function<bool(const T&)> r) noexcept {
             rule = std::move(r);
-        }
-
-        // Override type-erased set for IRmRule
-        void set(std::function<bool(const void*)> r) override {
-            // Wrap the void* function into T&
-            rule = [r = std::move(r)](const T& t) -> bool {
-                return r(static_cast<const void*>(&t));
-            };
         }
 
         // Default behavior: allow removal if no rule set
@@ -341,12 +328,12 @@ public:
         }
     };
 
-    TypeInfo* typeInfo(std::type_index typeIndx) {
+    TypeInfo* typeInfo(std::type_index typeIndx) noexcept {
         return ensureTypeInfo(typeIndx);
     }
 
     template<typename T>
-    TypeInfo* typeInfo() {
+    TypeInfo* typeInfo() noexcept {
         return ensureTypeInfo(std::type_index(typeid(T)));
     }
 
