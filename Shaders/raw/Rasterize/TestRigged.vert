@@ -17,8 +17,8 @@ layout(std430, set = 1, binding = 0) readonly buffer SkinBuffer {
 layout(location = 0) in vec4  inPos_Tu;   // .xyz = pos, .w = u (if you use packed UVs)
 layout(location = 1) in vec4  inNrml_Tv;  // .xyz = normal, .w = v (if packed)
 layout(location = 2) in vec4  inTangent;  // .xyz = tangent, .w = handedness
-layout(location = 3) in uvec4 inBoneIDs;  // .xyzw = bone indices
-layout(location = 4) in vec4  inWeights;  // .xyzw = bone weights
+layout(location = 3) in uvec4 inBoneIDs;
+layout(location = 4) in vec4  inBoneWs;
 
 layout(location = 0) out vec2 fragTexUV;
 layout(location = 1) out vec3 fragWorldPos;
@@ -51,7 +51,7 @@ void main() {
         for (uint i = 0; i < 4; ++i) {
             uint id = inBoneIDs[i];
 
-            float w = inWeights[i];
+            float w = inBoneWs[i];
             mat4 boneMat = id < pConst.props1.w ? skinData[id] : mat4(1.0);
 
             skinnedPos     += w * (boneMat * vec4(basePos, 1.0));

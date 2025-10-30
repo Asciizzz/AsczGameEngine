@@ -28,8 +28,6 @@ endif()
 file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyCamera.cpp
     src/tinyData/tinyMaterial.cpp
-    src/tinyData/tinyVertex.cpp
-    src/tinyData/tinySkeleton.cpp
 
     src/tinyData/tinyRT_MeshRender3D.cpp
     src/tinyData/tinyRT_Skeleton3D.cpp
