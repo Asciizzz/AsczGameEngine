@@ -18,7 +18,7 @@ const vec3 nightHorizon  = vec3(0.06, 0.07, 0.12);   // Faint bluish horizon
 const vec3 groundColor   = vec3(0.02, 0.02, 0.025);  // Very dark ground
 
 const vec3 moonColor     = vec3(0.9, 0.9, 1.0);
-const vec3 moonDir       = normalize(vec3(-0.2, 0.1, -0.1));
+const vec3 moonDir       = normalize(vec3(-1.0, 0.2, -1.0));
 const float moonSize     = 0.005;
 const float moonGlow     = 0.03;
 

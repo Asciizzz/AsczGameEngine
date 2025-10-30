@@ -28,6 +28,15 @@ bool tinyImGui::init(SDL_Window* window, VkInstance instance, const tinyVk::Devi
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
+    ImGuiStyle& style = ImGui::GetStyle();
+    
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.10f, 0.12f, 0.25f);
+    style.Colors[ImGuiCol_FrameBg]  = ImVec4(0.16f, 0.16f, 0.18f, 1.00f);
+    style.Colors[ImGuiCol_Header]   = ImVec4(0.25f, 0.25f, 0.30f, 1.00f);
+    style.Colors[ImGuiCol_Button]   = ImVec4(0.30f, 0.50f, 0.80f, 1.00f);
+
+    // default font scale
+    style.FontScaleMain = 1.2f;
 
     // Create descriptor pool for ImGui
     createDescriptorPool();
