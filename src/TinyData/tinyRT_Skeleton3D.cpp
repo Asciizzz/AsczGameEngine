@@ -3,11 +3,11 @@
 using namespace tinyVk;
 using namespace tinyRT;
 
-Skeleton3D* Skeleton3D::init(const tinyVk::Device* deviceVk, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight) {
+Skeleton3D* Skeleton3D::init(const tinyVk::Device* deviceVk, const tinyPool<tinySkeleton>* skelePool, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight) {
     vkValid = true;
 
     deviceVk_ = deviceVk;
-    fsRegistry_ = fsRegistry;
+    skelePool_ = skelePool;
     maxFramesInFlight_ = maxFramesInFlight;
 
     descSet_.allocate(deviceVk->device, descPool, descLayout);

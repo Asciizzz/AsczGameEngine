@@ -311,11 +311,8 @@ private:
     tinyRT_SKEL3D* addSKEL3D_RT(tinyNodeRT::SKEL3D* compPtr) {
         tinyRT_SKEL3D rtSKEL3D;
         rtSKEL3D.init(
-            req_.deviceVk,
-            req_.fsRegistry,
-            req_.skinDescPool,
-            req_.skinDescLayout,
-            req_.maxFramesInFlight
+            req_.deviceVk, &req_.fsRegistry->view<tinySkeleton>(),
+            req_.skinDescPool, req_.skinDescLayout, req_.maxFramesInFlight
         );
 
         // Repurpose pHandle to point to runtime skeleton

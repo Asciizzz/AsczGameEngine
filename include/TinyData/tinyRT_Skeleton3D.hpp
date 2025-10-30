@@ -9,7 +9,7 @@ namespace tinyRT {
 
 struct Skeleton3D {
     Skeleton3D() noexcept = default;
-    Skeleton3D* init(const tinyVk::Device* deviceVk, const tinyRegistry* fsRegistry, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight);
+    Skeleton3D* init(const tinyVk::Device* deviceVk, const tinyPool<tinySkeleton>* skelePool, VkDescriptorPool descPool, VkDescriptorSetLayout descLayout, uint32_t maxFramesInFlight);
 
     Skeleton3D(const Skeleton3D&) = delete;
     Skeleton3D& operator=(const Skeleton3D&) = delete;
@@ -60,7 +60,7 @@ struct Skeleton3D {
     tinyHandle skeleHandle() const { return skeleHandle_; }
 
     const tinySkeleton* rSkeleton() const {
-        return fsRegistry_ ? fsRegistry_->get<tinySkeleton>(skeleHandle_) : nullptr;
+        return skelePool_ ? skelePool_->get(skeleHandle_) : nullptr;
     }
 
     bool hasSkeleton() const {
@@ -75,7 +75,8 @@ private:
     bool vkValid = false;
 
     tinyHandle skeleHandle_;
-    const tinyRegistry* fsRegistry_ = nullptr; // The entire filesystem registry (guarantees to avoid dangling pointers)
+    // const tinyRegistry* fsRegistry_ = nullptr; // The entire filesystem registry (guarantees to avoid dangling pointers)
+    const tinyPool<tinySkeleton>* skelePool_ = nullptr; // Skeleton pool only to avoid dangling pointers
     const tinyVk::Device* deviceVk_ = nullptr;
 
     uint32_t maxFramesInFlight_ = 0;
