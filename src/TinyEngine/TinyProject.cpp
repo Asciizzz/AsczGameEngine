@@ -18,15 +18,20 @@ bool validIndex(size_t index, const std::vector<T>& vec) {
 
 tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     fs_ = MakeUnique<tinyFS>();
-
     // ext - safeDelete - priority - r - g - b
     fs_->setTypeExt<tinySceneRT>   ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
-    fs_->setTypeExt<tinyTextureVk> ("atex", false, 0, 0.4f, 0.4f, 1.0f);
-    fs_->setTypeExt<tinyMaterialVk>("amat", true,  0, 1.0f, 0.4f, 1.0f);
+    fs_->setTypeExt<tinyTextureVk> ("atex", false, 1, 0.4f, 0.4f, 1.0f); // texture higher order than material
+    fs_->setTypeExt<tinyMaterialVk>("amat", false, 0, 1.0f, 0.4f, 1.0f);
     fs_->setTypeExt<tinyMeshVk>    ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
-    fs_->setTypeExt<tinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f);
+    fs_->setTypeExt<tinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f); // safe, only contains data
+
+    // Create camera and global UBO manager
+    camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
+    global_ = MakeUnique<tinyGlobal>(2);
+    global_->vkCreate(deviceVk);
 
     vkCreateSceneResources();
+    createDummySkinDescriptorSet();
 
     // Create Main Scene (the active scene with a single root node)
     tinySceneRT mainScene("Main Scene");
@@ -40,11 +45,6 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
     typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
     initialSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
-
-    // Create camera and global UBO manager
-    camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
-    global_ = MakeUnique<tinyGlobal>(2);
-    global_->vkCreate(deviceVk);
 
     // Create default material and texture
     // tinyTexture defaultTexture = tinyTexture::createDefaultTexture();
@@ -105,14 +105,13 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         materialVk.name = material.name;
 
         // Remap the material's texture indices
-        uint32_t localAlbIndex = material.albIndx;
-        // bool localAlbValid = localAlbIndex >= 0 && localAlbIndex < static_cast<int>(glbTexRHandle.size());
-        bool localAlbValid = validIndex(localAlbIndex, glbTexRHandle);
-        materialVk.albHandle = localAlbValid ? glbTexRHandle[localAlbIndex] : tinyHandle();
+        // uint32_t localAlbIndex = material.albIndx;
+        // bool localAlbValid = validIndex(localAlbIndex, glbTexRHandle);
+        // materialVk.albHandle = localAlbValid ? glbTexRHandle[localAlbIndex] : tinyHandle();
 
-        uint32_t localNrmlIndex = material.nrmlIndx;
-        bool localNrmlValid = validIndex(localNrmlIndex, glbTexRHandle);
-        materialVk.nrmlHandle = localNrmlValid ? glbTexRHandle[localNrmlIndex] : tinyHandle();
+        // uint32_t localNrmlIndex = material.nrmlIndx;
+        // bool localNrmlValid = validIndex(localNrmlIndex, glbTexRHandle);
+        // materialVk.nrmlHandle = localNrmlValid ? glbTexRHandle[localNrmlIndex] : tinyHandle();
 
         tinyHandle fnHandle = fs_->addFile(fnMatFolder, materialVk.name, std::move(materialVk));
         typeHandle tHandle = fs_->fTypeHandle(fnHandle);
@@ -284,9 +283,6 @@ void tinyProject::vkCreateSceneResources() {
     sharedReq.deviceVk = deviceVk;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;
-
-    // Create dummy skin descriptor set for rigged meshes without skeleton
-    createDummySkinDescriptorSet();
 }
 
 void tinyProject::createDummySkinDescriptorSet() {

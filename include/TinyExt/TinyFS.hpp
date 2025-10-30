@@ -7,6 +7,8 @@
 
 #include <iostream>
 
+#include <functional>
+
 class tinyFS {
 public:
     struct Node {
@@ -235,7 +237,7 @@ public:
         return node ? node->isType<T>() : false;
     }
 
-    // ---------- Node access ----------
+// -------------------- Node access (highly limited) --------------------
 
     const Node* fNode(tinyHandle fileHandle) const noexcept {
         return fnodes_.get(fileHandle);
@@ -243,7 +245,7 @@ public:
 
     const tinyPool<Node>& fNodes() const noexcept { return fnodes_; }
 
-    // ---------- Type extension management ----------
+// -------------------- Type extension management --------------------
 
     template<typename T>
     void setTypeExt(const std::string& ext, bool safeDelete = true, uint8_t priority = 0, float r = 1.0f, float g = 1.0f, float b = 1.0f) noexcept {
@@ -255,18 +257,19 @@ public:
         typeExt.color[1] = g;
         typeExt.color[2] = b;
 
-        typeHashToExt[typeid(T).hash_code()] = typeExt;
+        // typeHashToExt[typeid(T).hash_code()] = typeExt;
+        typeExts_[std::type_index(typeid(T))] = typeExt;
     }
 
     // Get the full TypeExt info for a type
-    TypeExt typeExt(size_t typeHash) const noexcept {
-        auto it = typeHashToExt.find(typeHash);
-        return (it != typeHashToExt.end()) ? it->second : TypeExt();
+    TypeExt typeExt(std::type_index typeHash) const noexcept {
+        auto it = typeExts_.find(typeHash);
+        return (it != typeExts_.end()) ? it->second : TypeExt();
     }
 
     template<typename T>
     TypeExt typeExt() const noexcept {
-        return typeExt(typeid(T).hash_code());
+        return typeExt(std::type_index(typeid(T)));
     }
 
     // Get the full TypeExt info for a file
@@ -279,7 +282,7 @@ public:
         // Folder type, max priority
         if (node->isFolder()) return TypeExt("", true, UINT8_MAX);
 
-        return typeExt(node->tHandle.typeHash);
+        return typeExt(node->tHandle.typeIndex);
     }
 
     bool fSafeDelete(tinyHandle fileHandle) const noexcept {
@@ -291,11 +294,11 @@ public:
         return typeExt<T>().safeDelete;
     }
 
-    bool safeDelete(size_t typeHash) const noexcept {
+    bool safeDelete(std::type_index typeHash) const noexcept {
         return typeExt(typeHash).safeDelete;
     }
 
-    // ---------- Registry data management ---------
+// -------------------- Registry data management -------------------
     
     // No non-const access for safety
     const tinyRegistry& registry() const noexcept { return registry_; }
@@ -330,8 +333,8 @@ public:
     void rRemove(const typeHandle& th) noexcept {
         if (!registry_.has(th)) return; // nothing to remove :/
 
-        if (safeDelete(th.typeHash)) registry_.tInstaRm(th); // Safe to remove instantly
-        else                         registry_.tQueueRm(th); // Queue for pending removal
+        if (safeDelete(th.typeIndex)) registry_.tInstaRm(th); // Safe to remove instantly
+        else                          registry_.tQueueRm(th); // Queue for pending removal
     }
 
     template<typename T>
@@ -358,14 +361,39 @@ public:
         registry_.flushAllRms();
     }
 
+// -------------------- Delete rules management --------------------
+
+    template<typename T>
+    void setDeleteRule(std::function<bool(const T&)> ruleFn) noexcept {
+        typeDeleteRules_[typeid(T).hash_code()] = [ruleFn](const void* dataPtr) -> bool {
+            return ruleFn(*reinterpret_cast<const T*>(dataPtr));
+        };
+    }
+
+    template<typename T>
+    void clearDeleteRule() noexcept {
+        typeDeleteRules_.erase(typeid(T).hash_code());
+    }
+
+    template<typename T>
+    bool applyDeleteRule(const void* dataPtr) const noexcept {
+        auto it = typeDeleteRules_.find(typeid(T).hash_code());
+        if (it == typeDeleteRules_.end()) return true; // No rule, allow deletion
+
+        return it->second(dataPtr);
+    }
+
 private:
     tinyPool<Node> fnodes_;
     tinyRegistry registry_;
     tinyHandle rootHandle_;
     bool caseSensitive_{false}; // Global case sensitivity setting
 
-    // Type to extension info map (using new TypeExt structure)
-    UnorderedMap<size_t, TypeExt> typeHashToExt;
+    using DeleteRuleFn = std::function<bool(const void*)>;
+
+    // Type hash maps
+    UnorderedMap<std::type_index, TypeExt> typeExts_;
+    UnorderedMap<std::type_index, DeleteRuleFn> typeDeleteRules_;
 
     bool namesEqual(const std::string& a, const std::string& b) const noexcept {
         if (caseSensitive_) {
@@ -436,6 +464,9 @@ private:
     tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
         parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
 
+        Node* parent = fnodes_.get(parentHandle);
+        if (!parent || parent->isFile()) return tinyHandle(); // Invalid or parent is a file
+
         Node child;
         child.name = resolveRepeatName(parentHandle, name);
         child.parent = parentHandle;
@@ -444,9 +475,9 @@ private:
         child.tHandle = registry_.add(std::forward<T>(data));
 
         tinyHandle h = fnodes_.add(std::move(child));
-        if (Node* parent = fnodes_.get(parentHandle)) {
-            parent->addChild(h);
-        }
+
+        parent = fnodes_.get(parentHandle); // pool reallocation safety
+        parent->addChild(h);
 
         return h;
     }
@@ -455,15 +486,18 @@ private:
     tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, Node::CFG cfg) {
         parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
 
+        Node* parent = fnodes_.get(parentHandle);
+        if (!parent || parent->isFile()) return tinyHandle(); // Invalid or parent is a file
+
         Node folder;
         folder.name = resolveRepeatName(parentHandle, name);
         folder.parent = parentHandle;
         folder.cfg = cfg;
 
         tinyHandle h = fnodes_.add(std::move(folder));
-        if (auto* parent = fnodes_.get(parentHandle)) {
-            parent->addChild(h);
-        }
+
+        parent = fnodes_.get(parentHandle); // pool reallocation safety
+        parent->addChild(h);
 
         return h;
     }

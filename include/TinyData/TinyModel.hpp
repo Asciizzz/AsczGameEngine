@@ -58,7 +58,7 @@ struct tinyModel {
     std::string name;
 
     // All local space
-    std::vector<tinyMesh> meshes;   
+    std::vector<tinyMesh> meshes;
     std::vector<Material> materials;
     std::vector<tinyTexture> textures;
     std::vector<tinySkeleton> skeletons;

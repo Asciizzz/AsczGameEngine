@@ -7,22 +7,22 @@
 
 struct typeHandle {
     tinyHandle handle;
-    size_t typeHash;
+    std::type_index typeIndex;
 
-    typeHandle() noexcept : typeHash(0) {}
+    typeHandle() noexcept : typeIndex(typeid(void)) {}
 
     template<typename T>
     static typeHandle make(tinyHandle h) noexcept {
         typeHandle th;
         th.handle = h;
-        th.typeHash = typeid(T).hash_code();
+        th.typeIndex = std::type_index(typeid(T));
         return th;
     }
 
-    bool valid() const noexcept { return handle.valid() && typeHash != 0; }
+    bool valid() const noexcept { return handle.valid() && typeIndex != std::type_index(typeid(void)); }
 
     template<typename T>
-    bool isType() const noexcept { return valid() && typeHash == typeid(T).hash_code(); }
+    bool isType() const noexcept { return valid() && typeIndex == std::type_index(typeid(T)); }
 };
 
 class tinyRegistry { // For raw resource data
@@ -49,7 +49,6 @@ class tinyRegistry { // For raw resource data
     };
 
     UnorderedMap<std::type_index, UniquePtr<IPool>> pools;
-    UnorderedMap<size_t, IPool*> hashToPool;
 
     template<typename T>
     PoolWrapper<T>* getWrapper() noexcept {
@@ -68,19 +67,18 @@ class tinyRegistry { // For raw resource data
     // Ensure pool exists for type T
     template<typename T>
     PoolWrapper<T>& ensurePool() {
-        auto indx = std::type_index(typeid(T));
-        auto it = pools.find(indx);
-        if (it == pools.end()) {
+        auto tIndx = std::type_index(typeid(T));
+        auto it = pools.find(tIndx);
+
+        if (it == pools.end()) { // Create new pool if not found
             auto wrapper = std::make_unique<PoolWrapper<T>>();
             auto* ptr = wrapper.get();
-            hashToPool[indx.hash_code()] = ptr; // hash for O(1) lookup
-            pools[indx] = std::move(wrapper);
+            pools[tIndx] = std::move(wrapper);
+
             return *ptr;
         }
 
-        auto* existing = static_cast<PoolWrapper<T>*>(pools[indx].get());
-        hashToPool[indx.hash_code()] = existing; // map stays valid
-        return *existing;
+        return *static_cast<PoolWrapper<T>*>(it->second.get());
     }
 
     // Remove execution
@@ -90,10 +88,8 @@ class tinyRegistry { // For raw resource data
     }
 
     void remove(const typeHandle& th) noexcept {
-        auto it = hashToPool.find(th.typeHash);
-        if (it != hashToPool.end()) {
-            it->second->instaRm(th.handle);
-        }
+        auto it = pools.find(th.typeIndex);
+        if (it != pools.end()) it->second->instaRm(th.handle);
     }
 
 public:
@@ -125,8 +121,8 @@ public:
         if (wrapper) wrapper->pool.queueRm(handle);
     }
     void tQueueRm(const typeHandle& th) noexcept {
-        auto it = hashToPool.find(th.typeHash);
-        if (it != hashToPool.end()) {
+        auto it = pools.find(th.typeIndex);
+        if (it != pools.end()) {
             it->second->queueRm(th.handle);
         }
     }
@@ -179,8 +175,8 @@ public:
     void* get(const typeHandle& th) noexcept {
         if (!th.valid()) return nullptr;
 
-        auto it = hashToPool.find(th.typeHash);
-        return (it != hashToPool.end()) ? it->second->get(th.handle) : nullptr;
+        auto it = pools.find(th.typeIndex);
+        return (it != pools.end()) ? it->second->get(th.handle) : nullptr;
     }
 
     const void* get(const typeHandle& th) const noexcept {
@@ -206,8 +202,8 @@ public:
     bool has(const typeHandle& th) const noexcept {
         if (!th.valid()) return false;
 
-        auto it = hashToPool.find(th.typeHash);
-        if (it == hashToPool.end()) return false;
+        auto it = pools.find(th.typeIndex);
+        if (it == pools.end()) return false;
 
         return it->second->get(th.handle) != nullptr;
     }
@@ -224,9 +220,9 @@ public:
         return wrapper ? wrapper->pool.data() : nullptr;
     }
 
-    void* data(size_t typeHash) noexcept {
-        auto it = hashToPool.find(typeHash);
-        return (it != hashToPool.end()) ? it->second->get(tinyHandle()) : nullptr;
+    void* data(std::type_index typeIndx) noexcept {
+        auto it = pools.find(typeIndx);
+        return (it != pools.end()) ? it->second->get(tinyHandle()) : nullptr;
     }
 
     template<typename T>
@@ -260,7 +256,12 @@ public:
     }
 
     template<typename T>
-    static size_t typeHash() {
+    static std::type_index typeIndex() {
+        return std::type_index(typeid(T));
+    }
+
+    template<typename T>
+    static size_t typeHash() { // Legacy compatibility
         return std::type_index(typeid(T)).hash_code();
     }
 };

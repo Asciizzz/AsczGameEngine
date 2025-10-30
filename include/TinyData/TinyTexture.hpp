@@ -20,7 +20,7 @@ struct tinyTexture {
 
     tinyTexture& create(const std::vector<uint8_t>& data,
                         uint32_t width, uint32_t height, uint32_t channels,
-                        WrapMode wrapMode = WrapMode::Repeat) {
+                        WrapMode wrapMode = WrapMode::Repeat) noexcept {
         data_ = data;
         width_ = width;
         height_ = height;
@@ -30,7 +30,7 @@ struct tinyTexture {
         return *this;
     }
 
-    tinyTexture& setWrapMode(WrapMode mode) {
+    tinyTexture& setWrapMode(WrapMode mode) noexcept {
         wrapMode_ = mode;
         makeHash();
         return *this;
@@ -38,15 +38,15 @@ struct tinyTexture {
 
 // -----------------------------------------
 
-    uint32_t width() const { return width_; }
-    uint32_t height() const { return height_; }
-    uint32_t channels() const { return channels_; }
+    uint32_t width() const noexcept { return width_; }
+    uint32_t height() const noexcept { return height_; }
+    uint32_t channels() const noexcept { return channels_; }
 
-    const std::vector<uint8_t>& data() const { return data_; }
-    const uint8_t* dataPtr() const { return data_.data(); }
+    const std::vector<uint8_t>& data() const noexcept { return data_; }
+    const uint8_t* dataPtr() const noexcept { return data_.data(); }
 
-    WrapMode wrapMode() const { return wrapMode_; }
-    VkSamplerAddressMode vkWrapMode() const {
+    WrapMode wrapMode() const noexcept { return wrapMode_; }
+    VkSamplerAddressMode vkWrapMode() const noexcept {
         switch (wrapMode_) {
             case WrapMode::Repeat:        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
             case WrapMode::ClampToEdge:   return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -55,9 +55,9 @@ struct tinyTexture {
         }
     }
 
-    uint64_t hash() const { return hash_; }
+    uint64_t hash() const noexcept { return hash_; }
 
-    bool valid() const {
+    bool valid() const noexcept {
         return !data_.empty() && width_ > 0 && height_ > 0 && channels_ > 0;
     }
 
@@ -75,7 +75,7 @@ private:
     WrapMode wrapMode_ = WrapMode::Repeat;
 
     uint64_t hash_ = 0;
-    uint64_t makeHash() {
+    uint64_t makeHash() noexcept {
         const uint64_t FNV_offset = 1469598103934665603ULL;
         const uint64_t FNV_prime  = 1099511628211ULL;
         hash_ = FNV_offset;
@@ -204,20 +204,24 @@ struct tinyTextureVk {
 
 // -----------------------------------------
 
-    tinyTexture& cpu() { return texture_; }
-    const tinyTexture& cpu() const { return texture_; }
-    const tinyVk::TextureVk& gpu() const { return textureVk_; }
+    tinyTexture& cpu() noexcept { return texture_; }
+    const tinyTexture& cpu() const noexcept { return texture_; }
+    const tinyVk::TextureVk& gpu() const noexcept { return textureVk_; }
 
-    uint32_t width() const { return texture_.width(); }
-    uint32_t height() const { return texture_.height(); }
-    uint32_t channels() const { return texture_.channels(); }
+    uint32_t width() const noexcept { return texture_.width(); }
+    uint32_t height() const noexcept { return texture_.height(); }
+    uint32_t channels() const noexcept { return texture_.channels(); }
 
-    const std::vector<uint8_t>& data() const { return texture_.data(); }
-    const uint8_t* dataPtr() const { return texture_.dataPtr(); }
+    const std::vector<uint8_t>& data() const noexcept { return texture_.data(); }
+    const uint8_t* dataPtr() const noexcept { return texture_.dataPtr(); }
 
+    uint32_t useCount() const noexcept { return useCount_; }
+    void incrementUse() noexcept { ++useCount_; }
+    void decrementUse() noexcept { if (useCount_ > 0) --useCount_; }
 
 private: // Composition
     tinyTexture texture_;
-
     tinyVk::TextureVk textureVk_;
+
+    uint32_t useCount_ = 0;
 };

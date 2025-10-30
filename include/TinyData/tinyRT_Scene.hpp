@@ -75,7 +75,7 @@ public:
     tinyHandle rootHandle() const { return rootHandle_; }
 
     void setSceneReq(const Require& req) {
-        if (!req.valid()) throw std::invalid_argument("Invalid Require provided to Scene");
+        if (!req.valid()) throw std::invalid_argument("Invalid Requirement provided to Scene");
         req_ = req;
     }
 
