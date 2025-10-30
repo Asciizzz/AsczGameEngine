@@ -500,8 +500,6 @@ private:
         child.tHandle = registry_.add(std::forward<T>(data));
 
         tinyHandle h = fnodes_.add(std::move(child));
-
-        parent = fnodes_.get(parentHandle); // pool reallocation safety
         parent->addChild(h);
 
         return h;
@@ -520,8 +518,6 @@ private:
         folder.cfg = cfg;
 
         tinyHandle h = fnodes_.add(std::move(folder));
-
-        parent = fnodes_.get(parentHandle); // pool reallocation safety
         parent->addChild(h);
 
         return h;

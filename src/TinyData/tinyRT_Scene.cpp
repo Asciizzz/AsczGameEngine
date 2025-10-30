@@ -133,10 +133,6 @@ const tinyNodeRT* Scene::node(tinyHandle nodeHandle) const {
     return nodes_.get(nodeHandle);
 }
 
-const std::vector<tinyNodeRT>& Scene::nodeView() const {
-    return nodes_.view();
-}
-
 bool Scene::nodeValid(tinyHandle nodeHandle) const {
     return nodes_.valid(nodeHandle);
 }
@@ -198,7 +194,7 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
     // std::vector<tinyHandle> toHandles;
     UnorderedMap<uint32_t, tinyHandle> toHandleMap;
 
-    const auto& from_items = from->nodeView();
+    const auto& from_items = from->nodes_.view();
     for (uint32_t i = 0; i < from_items.size(); ++i) {
         if (!from->nodeOccupied(i)) continue;
 

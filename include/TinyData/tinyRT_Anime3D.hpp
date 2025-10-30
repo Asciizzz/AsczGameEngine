@@ -105,7 +105,7 @@ struct Anime3D {
         return const_cast<Anime3D*>(this)->get(name);
     }
 
-    const std::vector<Anime>& all() const {
+    const std::deque<Anime>& all() const {
         return animePool.view();
     }
 

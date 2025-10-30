@@ -94,7 +94,6 @@ public:
 
     // tinyNodeRT* node(tinyHandle nodeHandle);
     const tinyNodeRT* node(tinyHandle nodeHandle) const;
-    const std::vector<tinyNodeRT>& nodeView() const;
     bool nodeValid(tinyHandle nodeHandle) const;
     bool nodeOccupied(uint32_t index) const;
     tinyHandle nodeHandle(uint32_t index) const;

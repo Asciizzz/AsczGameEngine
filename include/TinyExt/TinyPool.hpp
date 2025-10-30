@@ -5,8 +5,8 @@
 #include "tinyHandle.hpp"
 
 #include <type_traits>
-#include <stdexcept>
 #include <utility>
+#include <deque>
 
 // Helper traits for pointer types
 template<typename T>
@@ -112,8 +112,8 @@ struct tinyPool {
     }
 
     // Reference is better since this is never null
-    std::vector<Type>& view() noexcept { return items; }
-    const std::vector<Type>& view() const noexcept { return items; }
+    std::deque<Type>& view() noexcept { return items; }
+    const std::deque<Type>& view() const noexcept { return items; }
 
     Type* data() noexcept { return items.data(); }
     const Type* data() const noexcept { return items.data(); }
@@ -175,7 +175,7 @@ private:
         uint32_t version = 0;
     };
 
-    std::vector<Type> items;
+    std::deque<Type> items;
     std::vector<State> states;
     std::vector<uint32_t> freeList;
 
