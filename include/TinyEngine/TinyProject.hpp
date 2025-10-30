@@ -2,7 +2,6 @@
 
 #include "tinyExt/tinyFS.hpp"
 
-#include "tinyEngine/tinyRData.hpp" // Soon to be deprecated
 #include "tinyData/tinyModel.hpp"
 #include "tinyData/tinyRT_Scene.hpp"
 

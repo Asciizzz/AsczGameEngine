@@ -128,10 +128,13 @@ struct tinyMeshVk {
 
 // -----------------------------------------
 
-    bool create(tinyMesh&& mesh, const tinyVk::Device* deviceVk) {
-        using namespace tinyVk;
-
+    tinyMeshVk& set(tinyMesh&& mesh) {
         mesh_ = std::move(mesh);
+        return *this;
+    }
+
+    bool create(const tinyVk::Device* deviceVk) {
+        using namespace tinyVk;
 
         vrtxBuffer_
             .setDataSize(mesh_.vrtxData().size())
@@ -151,6 +154,10 @@ struct tinyMeshVk {
         }
 
         return true;
+    }
+
+    tinyMeshVk& createFrom(tinyMesh&& mesh, const tinyVk::Device* deviceVk) {
+        return set(std::forward<tinyMesh>(mesh)).create(deviceVk), *this;
     }
 
     void printInfo() {

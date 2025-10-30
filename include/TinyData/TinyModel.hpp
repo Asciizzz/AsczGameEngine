@@ -48,14 +48,21 @@ struct tinyModel {
         bool hasANIM3D() const { return ANIM3D_animeIndx >= 0; }
     };
 
+    struct Material {
+        std::string name;
+
+        int albIndx = -1;
+        int nrmlIndx = -1;
+    };
+
     std::string name;
 
     // All local space
-    std::vector<tinyMesh> meshes;
-    std::vector<tinyMaterial> materials;
+    std::vector<tinyMesh> meshes;   
+    std::vector<Material> materials;
     std::vector<tinyTexture> textures;
     std::vector<tinySkeleton> skeletons;
     std::vector<tinyRT_ANIM3D> animations;
 
-    std::vector<tinyModel::Node> nodes;
+    std::vector<Node> nodes;
 };

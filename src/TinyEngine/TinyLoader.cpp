@@ -87,6 +87,10 @@ tinyTexture tinyLoader::loadTexture(const std::string& filePath) {
 
 // =================================== 3D MODELS ===================================
 
+template<typename T>
+bool validIndex(int index, const std::vector<T>& vec) {
+    return index >= 0 && static_cast<size_t>(index) < vec.size();
+}
 
 // Helper for static_assert false
 template<class> struct always_false : std::false_type {};
@@ -368,12 +372,14 @@ void loadTextures(std::vector<tinyTexture>& textures, tinygltf::Model& model) {
     }
 }
 
-void loadMaterials(std::vector<tinyMaterial>& materials, tinygltf::Model& model, const std::vector<tinyTexture>& textures) {
+void loadMaterials(std::vector<tinyModel::Material>& materials, tinygltf::Model& model, const std::vector<tinyTexture>& textures) {
+    using Material = tinyModel::Material;
+
     materials.clear();
     materials.reserve(model.materials.size());
     for (size_t matIndex = 0; matIndex < model.materials.size(); matIndex++) {
         const auto& gltfMaterial = model.materials[matIndex];
-        tinyMaterial material;
+        Material material;
 
         // Set material name from glTF
         material.name = gltfMaterial.name.empty() ? 
@@ -381,16 +387,14 @@ void loadMaterials(std::vector<tinyMaterial>& materials, tinygltf::Model& model,
             tinyLoader::sanitizeAsciiz(gltfMaterial.name, "material", matIndex);
 
         int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-        if (albedoTexIndex >= 0 && albedoTexIndex < static_cast<int>(textures.size())) {
-            uint32_t albedoTexHash = textures[albedoTexIndex].hash();
-            material.setAlbedoTexture(albedoTexIndex, albedoTexHash);
+        if (validIndex(albedoTexIndex, textures)) {
+            material.albIndx = albedoTexIndex;
         }
     
         // Handle normal texture (only if textures are also being loaded)
         int normalTexIndex = gltfMaterial.normalTexture.index;
-        if (normalTexIndex >= 0 && normalTexIndex < static_cast<int>(textures.size())) {
-            uint32_t normalTexHash = textures[normalTexIndex].hash();
-            material.setNrmlTexture(normalTexIndex, normalTexHash);
+        if (validIndex(normalTexIndex, textures)) {
+            material.nrmlIndx = normalTexIndex;
         }
 
         materials.push_back(material);
@@ -994,14 +998,14 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         return result; // Return empty model on failure
     }
 
+    using Material = tinyModel::Material;
+
     // Convert OBJ materials to tinyMaterials
     result.materials.reserve(objMaterials.size());
     for (size_t matIndex = 0; matIndex < objMaterials.size(); matIndex++) {
         const auto& objMat = objMaterials[matIndex];
-        tinyMaterial material;
-        material.name = objMat.name.empty() ? 
-            sanitizeAsciiz("Material", "material", matIndex) : 
-            sanitizeAsciiz(objMat.name, "material", matIndex);
+        Material material;
+        material.name = sanitizeAsciiz(objMat.name, "material", matIndex);
 
         // Load diffuse texture if present
         if (!objMat.diffuse_texname.empty()) {
@@ -1026,8 +1030,7 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
                 texture.name = sanitizeAsciiz(textureName, "texture", result.textures.size());
 
                 result.textures.push_back(std::move(texture));
-                uint32_t textureIndex = static_cast<uint32_t>(result.textures.size() - 1);
-                material.setAlbedoTexture(textureIndex, texture.hash());
+                material.albIndx = static_cast<int>(result.textures.size() - 1);
             }
         }
 

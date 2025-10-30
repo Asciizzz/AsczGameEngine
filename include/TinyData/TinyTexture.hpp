@@ -61,6 +61,12 @@ struct tinyTexture {
         return !data_.empty() && width_ > 0 && height_ > 0 && channels_ > 0;
     }
 
+    static tinyTexture aPixel(uint8_t r = 255, uint8_t g = 255, uint8_t b = 255, uint8_t a = 255) {
+        tinyTexture texture;
+        texture.create({ r, g, b, a }, 1, 1, 4);
+        return texture;
+    }
+
 private:
     uint32_t width_ = 0;
     uint32_t height_ = 0;

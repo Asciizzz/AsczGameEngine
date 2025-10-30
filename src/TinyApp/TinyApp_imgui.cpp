@@ -1141,10 +1141,10 @@ void tinyApp::renderFileSystemInspector() {
                 ImGui::Text("Channels: %d", textureCPU.channels());
                 ImGui::Text("Hash: %u", textureCPU.hash());
             }
-        } else if (tHandle.isType<tinyRMaterial>()) {
+        } else if (tHandle.isType<tinyMaterialVk>()) {
             fileType = "Material";
             ImGui::Text("Type: %s", fileType.c_str());
-        } else if (tHandle.isType<tinyMesh>()) {
+        } else if (tHandle.isType<tinyMeshVk>()) {
             fileType = "Mesh";
             ImGui::Text("Type: %s", fileType.c_str());
         } else if (tHandle.isType<tinySkeleton>()) {
@@ -1986,17 +1986,17 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
                         }
                     }
                 }
-            } else if (node->tHandle.isType<tinyMesh>()) {
+            } else if (node->tHandle.isType<tinyMeshVk>()) {
                 // Mesh file options
                 if (ImGui::MenuItem("Preview Mesh")) {
                     // TODO: Add mesh preview functionality
                 }
-            } else if (node->tHandle.isType<tinyTexture>()) {
+            } else if (node->tHandle.isType<tinyTextureVk>()) {
                 // Texture file options
                 if (ImGui::MenuItem("Preview Texture")) {
                     // TODO: Add texture preview functionality
                 }
-            } else if (node->tHandle.isType<tinyRMaterial>()) {
+            } else if (node->tHandle.isType<tinyMaterialVk>()) {
                 // Material file options
                 if (ImGui::MenuItem("Edit Material")) {
                     // TODO: Add material editor functionality
@@ -2004,12 +2004,8 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
             }
             // Add more file types as needed...
             
-            // Common separator before delete (only if there were type-specific options)
-            if (node->tHandle.isType<tinySceneRT>() || node->tHandle.isType<tinyMesh>() || 
-                node->tHandle.isType<tinyTexture>() || node->tHandle.isType<tinyRMaterial>()) {
-                ImGui::Separator();
-            }
-            
+            ImGui::Separator();
+
             // Common delete option for all files
             if (ImGui::MenuItem("Delete", nullptr, false, node->deletable())) {
                 tinyHandle parentHandle = node->parent;

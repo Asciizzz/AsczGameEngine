@@ -27,7 +27,6 @@ endif()
 
 file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyCamera.cpp
-    src/tinyData/tinyMaterial.cpp
 
     src/tinyData/tinyRT_MeshRender3D.cpp
     src/tinyData/tinyRT_Skeleton3D.cpp
@@ -35,11 +34,9 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyRT_Scene.cpp
     src/tinyData/tinyRT_Node.cpp
 
-    src/tinyEngine/tinyRData.cpp
     src/tinyEngine/tinyGlobal.cpp
     src/tinyEngine/tinyProject.cpp
     src/tinyEngine/tinyLoader.cpp
-    # src/tinyEngine/tinyPlayback.cpp deprecated
 
     # ImGui source files
     include/.ext/imgui/imgui.cpp

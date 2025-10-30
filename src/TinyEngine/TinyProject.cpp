@@ -22,7 +22,7 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     // ext - safeDelete - priority - r - g - b
     fs_->setTypeExt<tinySceneRT>   ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
     fs_->setTypeExt<tinyTextureVk> ("atex", false, 0, 0.4f, 0.4f, 1.0f);
-    fs_->setTypeExt<tinyRMaterial> ("amat", true,  0, 1.0f, 0.4f, 1.0f);
+    fs_->setTypeExt<tinyMaterialVk>("amat", true,  0, 1.0f, 0.4f, 1.0f);
     fs_->setTypeExt<tinyMeshVk>    ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
     fs_->setTypeExt<tinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f);
 
@@ -101,19 +101,20 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Import materials to registry with remapped texture references
     std::vector<tinyHandle> glmMatRHandle;
     for (const auto& material : model.materials) {
-        tinyRMaterial correctMat;
-        correctMat.name = material.name;
+        tinyMaterialVk materialVk;
+        materialVk.name = material.name;
 
         // Remap the material's texture indices
-        uint32_t localAlbIndex = material.localAlbTexture;
-        bool localAlbValid = localAlbIndex >= 0 && localAlbIndex < static_cast<int>(glbTexRHandle.size());
-        correctMat.setAlbTexIndex(localAlbValid ? glbTexRHandle[localAlbIndex].index : 0);
+        uint32_t localAlbIndex = material.albIndx;
+        // bool localAlbValid = localAlbIndex >= 0 && localAlbIndex < static_cast<int>(glbTexRHandle.size());
+        bool localAlbValid = validIndex(localAlbIndex, glbTexRHandle);
+        materialVk.albHandle = localAlbValid ? glbTexRHandle[localAlbIndex] : tinyHandle();
 
-        uint32_t localNrmlIndex = material.localNrmlTexture;
-        bool localNrmlValid = localNrmlIndex >= 0 && localNrmlIndex < static_cast<int>(glbTexRHandle.size());
-        correctMat.setNrmlTexIndex(localNrmlValid ? glbTexRHandle[localNrmlIndex].index : 0);
+        uint32_t localNrmlIndex = material.nrmlIndx;
+        bool localNrmlValid = validIndex(localNrmlIndex, glbTexRHandle);
+        materialVk.nrmlHandle = localNrmlValid ? glbTexRHandle[localNrmlIndex] : tinyHandle();
 
-        tinyHandle fnHandle = fs_->addFile(fnMatFolder, correctMat.name, std::move(correctMat));
+        tinyHandle fnHandle = fs_->addFile(fnMatFolder, materialVk.name, std::move(materialVk));
         typeHandle tHandle = fs_->fTypeHandle(fnHandle);
 
         glmMatRHandle.push_back(tHandle.handle);
@@ -130,7 +131,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
 
         tinyMeshVk meshVk;
-        meshVk.create(std::move(mesh), deviceVk);
+        meshVk.createFrom(std::move(mesh), deviceVk);
 
         tinyHandle fnHandle = fs_->addFile(fnMeshFolder, mesh.name, std::move(meshVk));
         typeHandle tHandle = fs_->fTypeHandle(fnHandle);

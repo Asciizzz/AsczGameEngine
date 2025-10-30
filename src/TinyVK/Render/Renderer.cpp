@@ -325,13 +325,13 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             if (indxCount == 0) continue;
 
 
-            tinyHandle matHandle = parts[i].material;
-            const tinyRMaterial* material = fs.rGet<tinyRMaterial>(matHandle);
-            uint32_t matIndex = material ? matHandle.index : 0;
+            // tinyHandle matHandle = parts[i].material;
+            // const tinyRMaterial* material = fs.rGet<tinyRMaterial>(matHandle);
+            // uint32_t matIndex = material ? matHandle.index : 0;
 
             // Set special value to 1 for selected nodes, 0 for others
             uint32_t specialValue = isSelectedNode ? 1 : 0;
-            glm::uvec4 props1 = glm::uvec4(matIndex, isRigged, specialValue, boneCount);
+            glm::uvec4 props1 = glm::uvec4(0, isRigged, specialValue, boneCount);
 
             // Offset 0: global transform
             // Offset 64: other properties (1)
