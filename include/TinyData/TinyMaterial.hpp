@@ -7,8 +7,15 @@
 #include "tinyVk/Resource/Descriptor.hpp"
 
 struct tinyMaterialVk {
+    std::string name;
     tinyMaterialVk() noexcept = default;
-    
+
+    ~tinyMaterialVk() {
+        // Decrease texture use counts
+        if (albTex_) albTex_->decrementUse();
+        if (nrmlTex_) nrmlTex_->decrementUse();
+    }
+
     tinyMaterialVk(const tinyMaterialVk&) = delete;
     tinyMaterialVk& operator=(const tinyMaterialVk&) = delete;
 
@@ -17,13 +24,21 @@ struct tinyMaterialVk {
 
 // -----------------------------------------
 
-    std::string name; // Material name from glTF
+    bool setAlbedoTexture(tinyTextureVk* texture) {
+        if (!texture) return false;
+
+        // if another texture exist, decrease its use count
+        if (albTex_) albTex_->decrementUse();
+
+        albTex_ = texture;
+        albTex_->incrementUse();
+    }
 
 private:
     const tinyVk::Device* deviceVk_ = nullptr;
-    const tinyPool<tinyTextureVk>* texturePool_ = nullptr; // to validate texture during runtime
-    const tinyTextureVk* defaultTexture_ = nullptr; // Fallback texture
+    const tinyTextureVk* defTex_ = nullptr; // Fallback texture
 
-    tinyHandle albHandle_; // Albedo texture
-    tinyHandle nrmlHandle_; // Normal texture
+    // need to be modifiable for usage write
+    tinyTextureVk* albTex_ = nullptr; // Albedo texture
+    tinyTextureVk* nrmlTex_ = nullptr; // Normal texture
 };
