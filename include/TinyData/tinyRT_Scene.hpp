@@ -316,7 +316,7 @@ private:
         );
 
         // Repurpose pHandle to point to runtime skeleton
-        compPtr->pHandle = rtAdd<tinyRT_SKEL3D>(std::move(rtSKEL3D  ));
+        compPtr->pHandle = rtAdd<tinyRT_SKEL3D>(std::move(rtSKEL3D));
 
         // Return the runtime skeleton
         return rtGet<tinyRT_SKEL3D>(compPtr->pHandle);

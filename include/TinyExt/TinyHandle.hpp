@@ -34,24 +34,3 @@ namespace std {
         }
     };
 };
-
-#include <typeindex>
-struct typeHandle {
-    tinyHandle handle;
-    size_t typeHash;
-
-    typeHandle() noexcept : typeHash(0) {}
-
-    template<typename T>
-    static typeHandle make(tinyHandle h) noexcept {
-        typeHandle th;
-        th.handle = h;
-        th.typeHash = typeid(T).hash_code();
-        return th;
-    }
-
-    bool valid() const noexcept { return handle.valid() && typeHash != 0; }
-
-    template<typename T>
-    bool isType() const noexcept { return valid() && typeHash == typeid(T).hash_code(); }
-};
