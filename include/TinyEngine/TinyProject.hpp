@@ -33,6 +33,8 @@ public:
     VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
     VkDescriptorSet getDummySkinDescSet() const { return dummySkinDescSet.get(); }
 
+    VkDescriptorSet getDefaultMatDescSet() const { return defaultMaterialVk.descSet(); }
+
     // Global UBO update
 
     void updateGlobal(uint32_t frameIndex) {
@@ -75,6 +77,7 @@ private:
 // -------------- Default resources --------------
 
     tinyTextureVk defaultTextureVk;
+    tinyMaterialVk defaultMaterialVk;
 
     tinyVk::DescSet dummySkinDescSet;
     tinyVk::DataBuffer dummySkinBuffer;

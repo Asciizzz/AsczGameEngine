@@ -329,11 +329,9 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             tinyHandle matHandle = parts[i].material;
             const tinyMaterialVk* material = fs.rGet<tinyMaterialVk>(matHandle);
 
-            VkDescriptorSet matSet = material ? material->descSet() : VK_NULL_HANDLE;
-            if (matSet == VK_NULL_HANDLE) {
-                printf("Warning: Material descriptor set is null for material handle %llu. Skipping draw call.\n", matHandle.value);
-                continue;
-            }
+            VkDescriptorSet matSet = material ? 
+                material->descSet() :
+                project->getDefaultMatDescSet();
 
             // Set 1 for material (no need for offset for static materials)
             rPipeline->bindSets(currentCmd, 1, &matSet, 1, nullptr, 0);

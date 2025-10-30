@@ -306,6 +306,8 @@ void tinyProject::vkCreateDefault() {
 //  ---------- Create default material and texture ----------
 
     defaultTextureVk = tinyTextureVk::defaultTexture(deviceVk);
+    defaultMaterialVk.init(deviceVk, &defaultTextureVk, matDescLayout, matDescPool);
+    defaultMaterialVk.name = "Default Material";
 
 //  -------------- Create dummy descriptor set --------------
 
