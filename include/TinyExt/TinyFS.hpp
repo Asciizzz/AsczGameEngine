@@ -381,6 +381,16 @@ public:
         return it->second->check(dataPtr);
     }
 
+    bool checkFRmRule(tinyHandle fileHandle) noexcept {
+        const Node* node = fnodes_.get(fileHandle);
+        if (!node || !node->deletable()) return false;
+
+        void* dataPtr = registry_.get(node->tHandle);
+        if (!dataPtr) return true; // No data, allow deletion
+
+        return checkRmRule(node->tHandle, dataPtr);
+    }
+
 private:
     tinyPool<Node> fnodes_;
     tinyRegistry registry_;
@@ -521,16 +531,12 @@ private:
 
     // Internal recursive function that tracks the original parent for non-deletable rescues
     bool fRemoveRecursive(tinyHandle handle, tinyHandle rescueParent, bool recursive) {
+        if (!checkFRmRule(handle)) return false;
+
         Node* node = fnodes_.get(handle);
         if (!node) return false;
 
-        // Special removal of data
-        if (void* dataPtr = registry_.get(node->tHandle)) {
-            if (!checkRmRule(node->tHandle, dataPtr)) return false;
-
-            // remove resolver
-            rRemove(node->tHandle);
-        }
+        rRemove(node->tHandle); // remove data from registry
 
         // remove from parent children list
         if (fnodes_.valid(node->parent)) {
@@ -543,14 +549,12 @@ private:
         for (tinyHandle ch : childCopy) {
             Node* child = fnodes_.get(ch);
             if (!child) continue;
-            
-            if (child->deletable() && recursive) {
-                // Child is deletable and we're in normal delete mode - remove it recursively
-                fRemoveRecursive(ch, rescueParent, recursive);
-            } else {
-                // Child is non-deletable OR we're in flatten mode - move it to the rescue parent
-                fMove(ch, rescueParent);
-            }
+
+            bool canRemove = child->deletable() && recursive;
+            canRemove = canRemove && checkFRmRule(ch);
+
+            if (canRemove) fRemoveRecursive(ch, rescueParent, recursive);
+            else           fMove(ch, rescueParent);
         }
 
         // finally remove node from pool

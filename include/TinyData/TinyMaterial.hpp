@@ -10,7 +10,7 @@ struct tinyMaterialVk {
     std::string name;
     tinyMaterialVk() noexcept = default;
 
-    ~tinyMaterialVk() {
+    ~tinyMaterialVk() noexcept {
         // Decrease texture use counts
         if (albTex_) albTex_->decrementUse();
         if (nrmlTex_) nrmlTex_->decrementUse();
@@ -24,21 +24,29 @@ struct tinyMaterialVk {
 
 // -----------------------------------------
 
-    bool setAlbedoTexture(tinyTextureVk* texture) {
-        if (!texture) return false;
+    bool setAlbedoTexture(tinyTextureVk* texture) noexcept {
+        return setTexture(albTex_, texture);
+    }
 
-        // if another texture exist, decrease its use count
-        if (albTex_) albTex_->decrementUse();
-
-        albTex_ = texture;
-        albTex_->incrementUse();
+    bool setNormalTexture(tinyTextureVk* texture) noexcept {
+        return setTexture(nrmlTex_, texture); 
     }
 
 private:
+    bool setTexture(tinyTextureVk*& oldTex, tinyTextureVk* newTex) noexcept {
+        if (!newTex) return false;
+
+        if (oldTex) oldTex->decrementUse();
+
+        oldTex = newTex;
+        oldTex->incrementUse();
+        return true;
+    }
+
     const tinyVk::Device* deviceVk_ = nullptr;
     const tinyTextureVk* defTex_ = nullptr; // Fallback texture
 
-    // need to be modifiable for usage write
+    // Ay guys, I used deque so this won't be dangling, nice
     tinyTextureVk* albTex_ = nullptr; // Albedo texture
     tinyTextureVk* nrmlTex_ = nullptr; // Normal texture
 };

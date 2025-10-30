@@ -204,6 +204,8 @@ struct tinyTextureVk {
 
 // -----------------------------------------
 
+    const std::string& name() const noexcept { return texture_.name; }
+
     tinyTexture& cpu() noexcept { return texture_; }
     const tinyTexture& cpu() const noexcept { return texture_; }
     const tinyVk::TextureVk& gpu() const noexcept { return textureVk_; }
