@@ -35,21 +35,8 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     global_ = MakeUnique<tinyGlobal>(2);
     global_->vkCreate(deviceVk);
 
-    vkCreateSceneResources();
-    createDummySkinDescriptorSet();
-
-    // Create Main Scene (the active scene with a single root node)
-    tinySceneRT mainScene("Main Scene");
-    mainScene.addRoot("Root");
-    mainScene.setSceneReq(sceneReq());
-
-    // Create "Main Scene" as a non-deletable file in root directory
-    tinyFS::Node::CFG sceneConfig;
-    sceneConfig.deletable = false; // Make it non-deletable
-
-    tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
-    typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
-    initialSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
+    vkCreateResources();
+    vkCreateDefault();
 
     // Create default material and texture
     // tinyTexture defaultTexture = tinyTexture::createDefaultTexture();
@@ -269,7 +256,7 @@ void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, t
 }
 
 
-void tinyProject::vkCreateSceneResources() {
+void tinyProject::vkCreateResources() {
     VkDevice device = deviceVk->device;
 
     // It needs to be dynamic to allow per-frame offsets (avoid race conditions)
@@ -290,8 +277,24 @@ void tinyProject::vkCreateSceneResources() {
     sharedReq.skinDescLayout = skinDescLayout;
 }
 
-void tinyProject::createDummySkinDescriptorSet() {
-    // Create dummy descriptor set (allocate from same pool as real skeletons)
+void tinyProject::vkCreateDefault() {
+
+// ------------------ Create Main Scene ------------------
+
+    tinySceneRT mainScene("Main Scene");
+    mainScene.addRoot("Root");
+    mainScene.setSceneReq(sceneReq());
+
+    // Create "Main Scene" as a non-deletable file in root directory
+    tinyFS::Node::CFG sceneConfig;
+    sceneConfig.deletable = false;
+
+    tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
+    typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
+    initialSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
+
+//  -------------- Create dummy descriptor set --------------
+
     dummySkinDescSet.allocate(deviceVk->device, skinDescPool.get(), skinDescLayout.get());
 
     // Create dummy skin buffer with 1 identity matrix

@@ -68,21 +68,21 @@ private:
 
     UniquePtr<tinyFS> fs_;
 
-    tinyHandle defaultMaterialHandle;
-    tinyHandle defaultTextureHandle;
+// -------------- Shared resources --------------
 
     tinyVk::DescLayout matDescLayout;
     tinyVk::DescPool matDescPool;
-    tinyVk::DescSet matDescSet;
 
     tinyVk::DescLayout skinDescLayout;
     tinyVk::DescPool skinDescPool;
-    
-    // Dummy skin descriptor set for rigged meshes without skeleton
+
+    tinySceneRT::Require sharedReq;
+    void vkCreateResources();
+
+// -------------- Default resources --------------
+
     tinyVk::DescSet dummySkinDescSet;
     tinyVk::DataBuffer dummySkinBuffer;
 
-    tinySceneRT::Require sharedReq;
-    void vkCreateSceneResources();
-    void createDummySkinDescriptorSet();
+    void vkCreateDefault();
 };

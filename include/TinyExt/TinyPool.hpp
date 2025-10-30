@@ -68,55 +68,38 @@ struct tinyPool {
         return index < items.size() && states[index].occupied;
     }
 
-    // ---- Type-aware add ----
+
     template<typename U>
     tinyHandle add(U&& item) {
         uint32_t index;
 
-        // Check if we can reuse a slot from the free list
+        // Reuse a slot from freeList if available
         if (!freeList.empty()) {
             index = freeList.back();
             freeList.pop_back();
         } else {
-            // No free slots, add new item to the end
             index = static_cast<uint32_t>(items.size());
-            items.emplace_back();
+            items.emplace_back();   // default construct
             states.emplace_back();
         }
 
-        if constexpr (tinyPoolTraits<Type>::is_unique_ptr) {
-            if constexpr (std::is_same_v<std::decay_t<U>, Type>) {
-                // If U is already a unique_ptr of the correct type, just move it
-                items[index] = std::forward<U>(item);
-            } else {
-                // If U is the raw type, wrap it in a unique_ptr and move the data
-                items[index] = std::make_unique<typename tinyPoolTraits<Type>::element_type>(std::move(item));
-            }
-        } else if constexpr (std::is_copy_assignable_v<Type> || std::is_move_assignable_v<Type>) {
+        // Construct or assign the value
+        if constexpr (std::is_assignable_v<Type&, U&&>) {
             items[index] = std::forward<U>(item);
         } else {
-            // For non-assignable types, use placement new
+            // Non-assignable: use placement new
             items[index].~Type();
-            new(&items[index]) Type(std::forward<U>(item));
+            new (&items[index]) Type(std::forward<U>(item));
         }
 
         states[index].occupied = true;
-
         return tinyHandle(index, states[index].version);
     }
 
-    // ---- Getters ----
+    // ---- Getters (return true type, no raw ptr deduction) ----
 
     Type* get(const tinyHandle& handle) noexcept {
-        if (!valid(handle)) return nullptr;
-
-        if constexpr (tinyPoolTraits<Type>::is_unique_ptr ||
-                    tinyPoolTraits<Type>::is_shared_ptr) {
-            auto& ptr = items[handle.index];
-            return ptr ? ptr.get() : nullptr;
-        } else {
-            return &items[handle.index];
-        }
+        return valid(handle) ? &items[handle.index] : nullptr;
     }
 
     const Type* get(const tinyHandle& handle) const noexcept {
@@ -169,14 +152,11 @@ private:
 
         uint32_t index = handle.index;
 
-        if constexpr (tinyPoolTraits<Type>::is_unique_ptr ||
-                    tinyPoolTraits<Type>::is_shared_ptr) {
+        if constexpr (tinyPoolTraits<Type>::is_unique_ptr || tinyPoolTraits<Type>::is_shared_ptr) {
             items[index].reset();
-        } else if constexpr (std::is_default_constructible_v<Type>) {
-            items[index] = Type{};
         } else {
             items[index].~Type();
-            new(&items[index]) Type{};
+            new (&items[index]) Type();
         }
 
         states[index].occupied = false;
