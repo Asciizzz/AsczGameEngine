@@ -490,7 +490,6 @@ private:
             TypeInfo* tInfo = typeInfo(node->tHandle.typeIndex);
 
             if (tInfo && !tInfo->checkRmRule(dataPtr)) {
-                // Rescue to parent instead
                 fMove(handle, rescueParent);
                 return false;
             }
@@ -512,11 +511,9 @@ private:
             Node* nodeB = fnodes_.get(b);
             if (!nodeA || !nodeB) return false;
 
-            TypeInfo* tInfoA = typeInfo(nodeA->tHandle.typeIndex);
-            TypeInfo* tInfoB = typeInfo(nodeB->tHandle.typeIndex);
-
-            uint8_t prioA = tInfoA ? tInfoA->priority : 0;
-            uint8_t prioB = tInfoB ? tInfoB->priority : 0;
+            // Guaranteed TypeInfo presence
+            uint8_t prioA = typeInfo(nodeA->tHandle.typeIndex)->priority;
+            uint8_t prioB = typeInfo(nodeB->tHandle.typeIndex)->priority;
 
             return prioA < prioB; // lower priority first
         });

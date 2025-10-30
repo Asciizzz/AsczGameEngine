@@ -19,8 +19,35 @@ struct tinyMaterialVk {
     tinyMaterialVk(const tinyMaterialVk&) = delete;
     tinyMaterialVk& operator=(const tinyMaterialVk&) = delete;
 
-    tinyMaterialVk(tinyMaterialVk&&) noexcept = default;
-    tinyMaterialVk& operator=(tinyMaterialVk&&) noexcept = default;
+    // Require move semantics to invalidate to avoid instant decrement
+    tinyMaterialVk(tinyMaterialVk&& other) noexcept
+    : name(std::move(other.name)),
+        albTex_(other.albTex_),
+        nrmlTex_(other.nrmlTex_),
+        deviceVk_(other.deviceVk_),
+        defTex_(other.defTex_)
+    {
+        // null out the old object so its destructor doesn't decrement
+        other.albTex_ = nullptr;
+        other.nrmlTex_ = nullptr;
+    }
+    tinyMaterialVk& operator=(tinyMaterialVk&& other) noexcept {
+        if (this != &other) {
+            // Decrement current textures
+            if (albTex_) albTex_->decrementUse();
+            if (nrmlTex_) nrmlTex_->decrementUse();
+
+            name = std::move(other.name);
+            albTex_ = other.albTex_;
+            nrmlTex_ = other.nrmlTex_;
+            deviceVk_ = other.deviceVk_;
+            defTex_ = other.defTex_;
+
+            other.albTex_ = nullptr;
+            other.nrmlTex_ = nullptr;
+        }
+        return *this;
+    }
 
 // -----------------------------------------
 
@@ -33,13 +60,13 @@ struct tinyMaterialVk {
     }
 
 private:
-    bool setTexture(tinyTextureVk*& oldTex, tinyTextureVk* newTex) noexcept {
+    bool setTexture(tinyTextureVk*& curTex, tinyTextureVk*& newTex) noexcept {
         if (!newTex) return false;
 
-        if (oldTex) oldTex->decrementUse();
+        if (curTex) curTex->decrementUse();
 
-        oldTex = newTex;
-        oldTex->incrementUse();
+        curTex = newTex;
+        curTex->incrementUse();
         return true;
     }
 
