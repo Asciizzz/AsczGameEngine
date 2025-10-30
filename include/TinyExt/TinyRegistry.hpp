@@ -6,10 +6,15 @@
 #include <typeindex>
 
 struct typeHandle {
-    tinyHandle handle;
-    std::type_index typeIndex;
+    tinyHandle handle = tinyHandle();
+    std::type_index typeIndex = std::type_index(typeid(void));
 
-    typeHandle() noexcept : typeIndex(typeid(void)) {}
+    typeHandle() noexcept = default;
+
+    bool valid() const noexcept { return handle.valid() && typeIndex != std::type_index(typeid(void)); }
+
+    template<typename T>
+    bool isType() const noexcept { return valid() && typeIndex == std::type_index(typeid(T)); }
 
     template<typename T>
     static typeHandle make(tinyHandle h) noexcept {
@@ -18,11 +23,6 @@ struct typeHandle {
         th.typeIndex = std::type_index(typeid(T));
         return th;
     }
-
-    bool valid() const noexcept { return handle.valid() && typeIndex != std::type_index(typeid(void)); }
-
-    template<typename T>
-    bool isType() const noexcept { return valid() && typeIndex == std::type_index(typeid(T)); }
 };
 
 class tinyRegistry { // For raw resource data

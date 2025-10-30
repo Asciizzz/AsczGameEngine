@@ -25,6 +25,11 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     fs_->setTypeExt<tinyMeshVk>    ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
     fs_->setTypeExt<tinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f); // safe, only contains data
 
+    // Create special delete rules for texture files
+    fs_->setRmRule<tinyTextureVk>([](const tinyTextureVk& tex) -> bool {
+        return tex.useCount() == 0;
+    });
+
     // Create camera and global UBO manager
     camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
     global_ = MakeUnique<tinyGlobal>(2);

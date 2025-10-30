@@ -1908,7 +1908,6 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
         // General file handling - completely generic
         std::string fileName = node->name;
         tinyFS::TypeExt fileExt = fs.fTypeExt(nodeHandle);
-        printf("Rendering file: %s.%s\n", fileName.c_str(), fileExt.ext.c_str());
 
         // Set consistent colors for all files
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Hover background

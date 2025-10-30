@@ -327,7 +327,7 @@ public:
 
     template<typename T>
     void rRemove(const tinyHandle& handle) noexcept {
-        rRemove(typeHandle::make<T>(handle));
+        rRemove(typeHandle<T>(handle));
     }
 
     void rRemove(const typeHandle& th) noexcept {
@@ -364,23 +364,21 @@ public:
 // -------------------- Delete rules management --------------------
 
     template<typename T>
-    void setDeleteRule(std::function<bool(const T&)> ruleFn) noexcept {
-        typeDeleteRules_[typeid(T).hash_code()] = [ruleFn](const void* dataPtr) -> bool {
-            return ruleFn(*reinterpret_cast<const T*>(dataPtr));
-        };
+    void setRmRule(std::function<bool(const T&)> ruleFn) {
+        typeRmRules_[std::type_index(typeid(T))] =
+            MakeUnique<DeleteRule<T>>(std::move(ruleFn));
     }
 
     template<typename T>
-    void clearDeleteRule() noexcept {
-        typeDeleteRules_.erase(typeid(T).hash_code());
+    void clearRmRule() noexcept {
+        typeRmRules_.erase(std::type_index(typeid(T)));
     }
 
-    template<typename T>
-    bool applyDeleteRule(const void* dataPtr) const noexcept {
-        auto it = typeDeleteRules_.find(typeid(T).hash_code());
-        if (it == typeDeleteRules_.end()) return true; // No rule, allow deletion
+    bool checkRmRule(const typeHandle& th, const void* dataPtr) const noexcept {
+        auto it = typeRmRules_.find(th.typeIndex);
+        if (it == typeRmRules_.end()) return true; // No rule, allow deletion
 
-        return it->second(dataPtr);
+        return it->second->check(dataPtr);
     }
 
 private:
@@ -388,12 +386,38 @@ private:
     tinyRegistry registry_;
     tinyHandle rootHandle_;
     bool caseSensitive_{false}; // Global case sensitivity setting
+    
+    UnorderedMap<std::type_index, TypeExt> typeExts_;
+
+// -------------------- Delete rules management --------------------
 
     using DeleteRuleFn = std::function<bool(const void*)>;
 
-    // Type hash maps
-    UnorderedMap<std::type_index, TypeExt> typeExts_;
-    UnorderedMap<std::type_index, DeleteRuleFn> typeDeleteRules_;
+    struct IDeleteRule {
+        virtual ~IDeleteRule() = default;
+        virtual bool check(const void* dataPtr) const noexcept = 0;
+    };
+
+    template<typename T>
+    struct DeleteRule : IDeleteRule {
+        std::function<bool(const T&)> rule;
+
+        explicit DeleteRule(std::function<bool(const T&)> r)
+            : rule(std::move(r)) {}
+
+        bool check(const void* dataPtr) const noexcept override {
+            try {
+                return rule(*static_cast<const T*>(dataPtr));
+            } catch (...) {
+                // swallow exceptions to honor noexcept
+                return false;
+            }
+        }
+    };
+
+    UnorderedMap<std::type_index, UniquePtr<IDeleteRule>> typeRmRules_;
+
+// -------------------- Internal helpers --------------------
 
     bool namesEqual(const std::string& a, const std::string& b) const noexcept {
         if (caseSensitive_) {
@@ -453,12 +477,13 @@ private:
 
         const Node* current = fnodes_.get(possibleDescendant);
         while (current && fnodes_.valid(current->parent)) {
-            if (current->parent == possibleAncestor)
-                return true; // Found ancestor
+            if (current->parent == possibleAncestor) return true; // Found ancestor
             current = fnodes_.get(current->parent);
         }
         return false;
     }
+
+// -------------------- Internal implementations --------------------
 
     template<typename T>
     tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
@@ -507,7 +532,19 @@ private:
         Node* node = fnodes_.get(handle);
         if (!node) return false;
 
-        // Note: We can assume node is deletable since non-deletable nodes are moved, not recursed
+        // Special removal of data
+        if (void* dataPtr = registry_.get(node->tHandle)) {
+            if (!checkRmRule(node->tHandle, dataPtr)) return false;
+
+            // remove resolver
+            rRemove(node->tHandle);
+        }
+
+        // remove from parent children list
+        if (fnodes_.valid(node->parent)) {
+            Node* parent = fnodes_.get(node->parent);
+            parent->removeChild(handle);
+        }
 
         // copy children to avoid mutation during recursion
         std::vector<tinyHandle> childCopy = node->children;
@@ -524,17 +561,9 @@ private:
             }
         }
 
-        // Special removal of data (queue vs instant depending on safeDelete)
-        if (node->hasData()) rRemove(node->tHandle);
-
-        // remove from parent children list
-        if (fnodes_.valid(node->parent)) {
-            Node* parent = fnodes_.get(node->parent);
-            parent->removeChild(handle);
-        }
-
         // finally remove node from pool
         fnodes_.instaRm(handle);
+
         return true;
     }
 
