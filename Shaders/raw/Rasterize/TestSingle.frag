@@ -11,9 +11,20 @@ layout(set = 1, binding = 0) uniform sampler2D uAlbedo;
 layout(set = 1, binding = 1) uniform sampler2D uNormal;
 
 void main() {
+    // Simple shader
+    vec3 lightDir = normalize(vec3(-0.2, 0.1, -0.1));
+
+    float nDot = dot(fragWorldNrml, lightDir);
+    float intensity = 0.6 + clamp(nDot, 0.0, 1.0) * 0.4;
+
     // Get texture color
     vec4 color = texture(uAlbedo, fragTexUV);
     if (color.a < 0.1) { discard; }
+
+    color.rgb *= intensity;
+
+    vec3 customColor = vec3(0.5, 0.5, 0.8);
+    color.rgb *= customColor;
 
     outColor = color;
 }

@@ -50,11 +50,6 @@ void tinyGlobal::update(const tinyCamera& camera, uint32_t frameIndex) {
     float timeOfDay = fmod(elapsedSeconds * deltaDay, 1.0f);
     ubo.prop1 = glm::vec4(timeOfDay, 0.0f, 0.0f, 0.0f);
 
-    ubo.cameraPos     = glm::vec4(camera.pos, glm::radians(camera.fov));
-    ubo.cameraForward = glm::vec4(camera.forward, camera.aspectRatio);
-    ubo.cameraRight   = glm::vec4(camera.right, camera.nearPlane);
-    ubo.cameraUp      = glm::vec4(camera.up, camera.farPlane);
-
     // During copy, you need to use the correct size and offset
     size_t offset = alignedSize * frameIndex;
     dataBuffer.copyData(&ubo, sizeof(ubo), offset);

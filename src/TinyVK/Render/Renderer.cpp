@@ -333,15 +333,12 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
                 material->descSet() :
                 project->getDefaultMatDescSet();
 
-            // Set 1 for material (no need for offset for static materials)
             rPipeline->bindSets(currentCmd, 1, &matSet, 1, nullptr, 0);
 
-            // Set special value to 1 for selected nodes, 0 for others
-            uint32_t specialValue = isSelectedNode ? 1 : 0;
-            glm::uvec4 props1 = glm::uvec4(0, isRigged, specialValue, boneCount);
 
             // Offset 0: global transform
             // Offset 64: other properties (1)
+            glm::uvec4 props1 = glm::uvec4(boneCount, 0, 0, 0);
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transformMat);
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
 
