@@ -17,40 +17,12 @@ bool validIndex(size_t index, const std::vector<T>& vec) {
 }
 
 tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
-    fs_ = MakeUnique<tinyFS>();
-    // // ext - safeDelete - priority - r - g - b
-    // fs_->setTypeExt<tinySceneRT>   ("ascn", false, 0, 0.4f, 1.0f, 0.4f);
-    // fs_->setTypeExt<tinyTextureVk> ("atex", false, 1, 0.4f, 0.4f, 1.0f); // texture higher order than material
-    // fs_->setTypeExt<tinyMaterialVk>("amat", false, 0, 1.0f, 0.4f, 1.0f);
-    // fs_->setTypeExt<tinyMeshVk>    ("amsh", false, 0, 1.0f, 1.0f, 0.4f);
-    // fs_->setTypeExt<tinySkeleton>  ("askl", true,  0, 0.4f, 1.0f, 1.0f); // safe, only contains data
-
-    tinyFS::TypeInfo* ascn = fs_->typeInfo<tinySceneRT>();
-    ascn->typeExt = tinyFS::TypeExt("ascn", 0.4f, 1.0f, 0.4f);
-
-    tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterialVk>();
-    amat->typeExt = tinyFS::TypeExt("amat", 1.0f, 0.4f, 1.0f);
-
-    tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTextureVk>();
-    atex->typeExt = tinyFS::TypeExt("atex", 0.4f, 0.4f, 1.0f);
-    atex->priority = 1; // Material delete before texture
-
-    atex->setRmRule<tinyTextureVk>([](const tinyTextureVk& tex) -> bool {
-        return tex.useCount() == 0;
-    });
-
-    tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMeshVk>();
-    amsh->typeExt = tinyFS::TypeExt("amsh", 1.0f, 1.0f, 0.4f);
-
-    tinyFS::TypeInfo* askl = fs_->typeInfo<tinySkeleton>();
-    askl->typeExt = tinyFS::TypeExt("askl", 0.4f, 1.0f, 1.0f);
-    askl->safeDelete = true; // Skeletons are just data, safe to delete
-
     // Create camera and global UBO manager
     camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
     global_ = MakeUnique<tinyGlobal>(2);
     global_->vkCreate(deviceVk);
 
+    setupFS();
     vkCreateResources();
     vkCreateDefault();
 }
@@ -253,8 +225,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     return fnModelFolder;
 }
 
-
-
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
     const tinySceneRT* fromScene = fs().rGet<tinySceneRT>(fromHandle);
     tinySceneRT* toScene = fs().rGet<tinySceneRT>(toHandle);
@@ -263,6 +233,35 @@ void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, t
     toScene->addScene(fromScene, parentHandle);
 }
 
+// ------------------- Filesystem Setup -------------------
+
+void tinyProject::setupFS() {
+    fs_ = MakeUnique<tinyFS>();
+
+    tinyFS::TypeInfo* ascn = fs_->typeInfo<tinySceneRT>();
+    ascn->typeExt = tinyFS::TypeExt("ascn", 0.4f, 1.0f, 0.4f);
+
+    tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterialVk>();
+    amat->typeExt = tinyFS::TypeExt("amat", 1.0f, 0.4f, 1.0f);
+
+    tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTextureVk>();
+    atex->typeExt = tinyFS::TypeExt("atex", 0.4f, 0.4f, 1.0f);
+    atex->priority = 1; // Material delete before texture
+
+    atex->setRmRule<tinyTextureVk>([](const tinyTextureVk& tex) -> bool {
+        return tex.useCount() == 0;
+    });
+
+    tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMeshVk>();
+    amsh->typeExt = tinyFS::TypeExt("amsh", 1.0f, 1.0f, 0.4f);
+
+    tinyFS::TypeInfo* askl = fs_->typeInfo<tinySkeleton>();
+    askl->typeExt = tinyFS::TypeExt("askl", 0.4f, 1.0f, 1.0f);
+    askl->safeDelete = true; // Skeletons are just data, safe to delete
+}
+
+
+// ------------------ Vulkan Resource Creation ------------------
 
 void tinyProject::vkCreateResources() {
     VkDevice device = deviceVk->device;

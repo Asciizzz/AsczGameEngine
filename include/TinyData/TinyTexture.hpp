@@ -218,8 +218,8 @@ struct tinyTextureVk {
     const uint8_t* dataPtr() const noexcept { return texture_.dataPtr(); }
 
     uint32_t useCount() const noexcept { return useCount_; }
-    void incrementUse() noexcept { ++useCount_; }
-    void decrementUse() noexcept { if (useCount_ > 0) --useCount_; }
+    uint32_t incrementUse() noexcept { return ++useCount_; }
+    uint32_t decrementUse() noexcept { return useCount_ > 0 ? --useCount_ : 0; }
 
 private: // Composition
     tinyTexture texture_;

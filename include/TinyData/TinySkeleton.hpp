@@ -38,4 +38,11 @@ struct tinySkeleton {
         bones.push_back(bone);
         return static_cast<uint32_t>(bones.size() - 1);
     }
+
+    uint32_t useCount() const noexcept { return useCount_; }
+    uint32_t incrementUse() noexcept { return ++useCount_; }
+    uint32_t decrementUse() noexcept { return useCount_ > 0 ? --useCount_ : 0; }
+
+private:
+    uint32_t useCount_ = 0;
 };

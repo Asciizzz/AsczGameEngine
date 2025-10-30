@@ -67,6 +67,7 @@ private:
     UniquePtr<tinyCamera> camera_;
 
     UniquePtr<tinyFS> fs_;
+    void setupFS();
 
 // -------------- Shared resources --------------
 
