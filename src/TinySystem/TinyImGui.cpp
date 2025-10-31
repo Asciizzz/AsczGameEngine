@@ -35,6 +35,15 @@ bool tinyImGui::init(SDL_Window* window, VkInstance instance, const tinyVk::Devi
     style.Colors[ImGuiCol_Header]   = ImVec4(0.25f, 0.25f, 0.30f, 1.00f);
     style.Colors[ImGuiCol_Button]   = ImVec4(0.30f, 0.50f, 0.80f, 1.00f);
 
+    // KILL THE BLUE GLOW
+    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.15f, 0.15f, 0.15f, 1.0f);  // DARK GRAY
+    style.Colors[ImGuiCol_TitleBg]       = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);  // DARKER GRAY (inactive)
+    style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.08f, 0.08f, 0.08f, 1.0f);
+
+    // Optional: Soften borders
+    style.Colors[ImGuiCol_Border] = ImVec4(0.3f, 0.3f, 0.3f, 0.5f);
+    style.WindowBorderSize = 1.0f;
+
     // default font scale
     style.FontScaleMain = 1.2f;
 

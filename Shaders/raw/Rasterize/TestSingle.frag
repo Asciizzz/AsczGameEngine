@@ -19,11 +19,12 @@ void main() {
 
     // Get texture color
     vec4 color = texture(uAlbedo, fragTexUV);
-    if (color.a < 0.1) { discard; }
+    if (color.a < 0.5) { discard; }
 
-    color.rgb *= intensity;
+    // color.rgb *= intensity;
 
-    vec3 customColor = vec3(0.2, 0.2, 0.5);
+    // vec3 customColor = vec3(0.2, 0.2, 0.5);
+    vec3 customColor = vec3(1.2);
     color.rgb *= customColor;
 
     outColor = color;

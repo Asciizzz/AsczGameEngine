@@ -167,10 +167,9 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
         ImGui::Text("Forward: (%.2f, %.2f, %.2f)", camera.forward.x, camera.forward.y, camera.forward.z);
         ImGui::Text("Right: (%.2f, %.2f, %.2f)", camera.right.x, camera.right.y, camera.right.z);
         ImGui::Text("Up: (%.2f, %.2f, %.2f)", camera.up.x, camera.up.y, camera.up.z);
-        ImGui::Text("Yaw: %.2f° | Pitch: %.2f° | Roll: %.2f°", 
+        ImGui::Text("Yaw: %.2f° | Pitch: %.2f°", 
                    camera.getYaw(true) * 57.2958f, // Convert radians to degrees
-                   camera.getPitch(true) * 57.2958f,
-                   camera.getRoll() * 57.2958f);
+                   camera.getPitch(true) * 57.2958f);
 
         ImGui::Spacing();
         
@@ -179,12 +178,12 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
         ImGui::Separator();
         ImGui::Checkbox("Show Inspector", &showInspectorWindow);
         ImGui::Checkbox("Show Editor Settings", &showEditorSettingsWindow);
-    }, &showDebugWindow);
+    });
     
     // Inspector Window
     imguiWrapper->addWindow("Inspector", [this]() {
         renderInspectorWindow();
-    }, &showInspectorWindow);
+    });
     
     // Editor Settings Window
     imguiWrapper->addWindow("Editor Settings", [this]() {
