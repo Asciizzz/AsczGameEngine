@@ -35,6 +35,7 @@ class tinyRegistry { // For raw resource data
         virtual void flushRm(uint32_t index) noexcept = 0;
         virtual void flushAllRms() noexcept = 0;
         virtual bool hasPendingRms() const noexcept = 0;
+        virtual std::vector<tinyHandle> pendingRms() const noexcept = 0;
     };
 
     template<typename T>
@@ -47,6 +48,7 @@ class tinyRegistry { // For raw resource data
         void flushRm(uint32_t index) noexcept override { pool.flushRm(index); }
         void flushAllRms() noexcept override { pool.flushAllRms(); }
         bool hasPendingRms() const noexcept override { return pool.hasPendingRms(); }
+        std::vector<tinyHandle> pendingRms() const noexcept override { return pool.pendingRms(); }
     };
 
     std::unordered_map<std::type_index, std::unique_ptr<IPool>> pools;
@@ -118,7 +120,7 @@ public:
 
     template<typename T> // For unsafe removal (vulkan resources for example)
     void tQueueRm(const tinyHandle& handle) noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         if (wrapper) wrapper->pool.queueRm(handle);
     }
     void tQueueRm(const typeHandle& th) noexcept {
@@ -130,29 +132,62 @@ public:
 
     template<typename T>
     void tFlushRm(uint32_t index) noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         if (wrapper) wrapper->pool.flushRm(index);
+    }
+    void tFlushRm(std::type_index typeIndx, uint32_t index) noexcept {
+        auto it = pools.find(typeIndx);
+        if (it != pools.end()) {
+            it->second->flushRm(index);
+        }
     }
 
     template<typename T>
     void tFlushAllRms() noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         if (wrapper) wrapper->pool.flushAllRms();
+    }
+    void tFlushAllRms(std::type_index typeIndx) noexcept {
+        auto it = pools.find(typeIndx);
+        if (it != pools.end()) {
+            it->second->flushAllRms();
+        }
     }
 
     template<typename T>
     bool tHasPendingRms() const noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         return wrapper ? wrapper->pool.hasPendingRms() : false;
     }
+    bool tHasPendingRms(std::type_index typeIndx) const noexcept {
+        auto it = pools.find(typeIndx);
+        if (it != pools.end()) {
+            return it->second->hasPendingRms();
+        }
+        return false;
+    }
 
-    void flushAllRms() { // Every pool
+    template<typename T>
+    std::vector<tinyHandle> tPendingRms() const noexcept {
+        auto* wrapper = getWrapper<T>();
+        return wrapper ? wrapper->pool.pendingRms() : std::vector<tinyHandle>();
+    }
+    std::vector<tinyHandle> tPendingRms(std::type_index typeIndx) const noexcept {
+        auto it = pools.find(typeIndx);
+        if (it != pools.end()) {
+            return it->second->pendingRms();
+        }
+        return std::vector<tinyHandle>();
+    }
+
+    // Every pool's pending removals check
+
+    void flushAllRms() {
         for (auto& [typeIndx, poolPtr] : pools) {
             poolPtr->flushAllRms();
         }
     }
 
-    // At least one pool has pending removals
     bool hasPendingRms() const noexcept { 
         for (const auto& [typeIndx, poolPtr] : pools) {
             if (poolPtr->hasPendingRms()) return true;
@@ -160,16 +195,16 @@ public:
         return false;
     }
 
+// ------------------- Data Access ------------------
 
     template<typename T>
     T* get(const tinyHandle& handle) noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         return wrapper ? wrapper->pool.get(handle) : nullptr;
     }
-
     template<typename T>
     const T* get(const tinyHandle& handle) const noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         return wrapper ? wrapper->pool.get(handle) : nullptr;
     }
 
@@ -179,7 +214,6 @@ public:
         auto it = pools.find(th.typeIndex);
         return (it != pools.end()) ? it->second->get(th.handle) : nullptr;
     }
-
     const void* get(const typeHandle& th) const noexcept {
         return const_cast<tinyRegistry*>(this)->get(th);
     }
@@ -188,7 +222,6 @@ public:
     T* get(const typeHandle& th) noexcept {
         return th.isType<T>() ? static_cast<T*>(get(th)) : nullptr;
     }
-
     template<typename T>
     const T* get(const typeHandle& th) const noexcept {
         return const_cast<tinyRegistry*>(this)->get<T>(th);
@@ -196,7 +229,7 @@ public:
 
     template<typename T>
     bool has(const tinyHandle& handle) const noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         return wrapper ? wrapper->pool.valid(handle) : false;
     }
 
@@ -210,27 +243,9 @@ public:
     }
 
     template<typename T>
-    T* data() noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
-        return wrapper ? wrapper->pool.data() : nullptr;
-    }
-
-    template<typename T>
-    const T* data() const noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
-        return wrapper ? wrapper->pool.data() : nullptr;
-    }
-
-    void* data(std::type_index typeIndx) noexcept {
-        auto it = pools.find(typeIndx);
-        return (it != pools.end()) ? it->second->get(tinyHandle()) : nullptr;
-    }
-
-    template<typename T>
     tinyPool<T>& view() {
         return ensurePool<T>().pool;
     }
-
     template<typename T>
     const tinyPool<T>& view() const {
         const auto* wrapper = getWrapper<T>();
@@ -246,13 +261,13 @@ public:
 
     template<typename T>
     uint32_t capacity() const noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         return wrapper ? wrapper->pool.capacity : 0;
     }
 
     template<typename T>
     uint32_t count() const noexcept {
-        auto* wrapper = getWrapper<T>(); // check validity
+        auto* wrapper = getWrapper<T>();
         return wrapper ? wrapper->pool.count() : 0;
     }
 

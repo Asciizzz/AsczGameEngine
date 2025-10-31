@@ -39,32 +39,32 @@ struct tinyPool {
     void alloc(uint32_t size) {
         // Push in reverse so that lower indices are used first
         for (uint32_t i = 0; i < size; ++i) {
-            uint32_t index = static_cast<uint32_t>(items.size());
-            items.emplace_back();
-            states.emplace_back();
-            states[index].occupied = false;
-            states[index].version = 0;
-            freeList.insert(freeList.begin(), index);
+            uint32_t index = static_cast<uint32_t>(items_.size());
+            items_.emplace_back();
+            states_.emplace_back();
+            states_[index].occupied = false;
+            states_[index].version = 0;
+            freeList_.insert(freeList_.begin(), index);
         }
     }
 
     uint32_t count() const noexcept {
-        return items.size() - freeList.size();
+        return items_.size() - freeList_.size();
     }
 
     void clear() noexcept {
-        items.clear();
-        states.clear();
-        freeList.clear();
+        items_.clear();
+        states_.clear();
+        freeList_.clear();
     }
 
     bool valid(tinyHandle handle) const noexcept {
         return  isOccupied(handle.index) &&
-                states[handle.index].version == handle.version;
+                states_[handle.index].version == handle.version;
     }
 
     bool isOccupied(uint32_t index) const noexcept {
-        return index < items.size() && states[index].occupied;
+        return index < items_.size() && states_[index].occupied;
     }
 
 
@@ -72,50 +72,47 @@ struct tinyPool {
     tinyHandle add(U&& item) {
         uint32_t index;
 
-        // Reuse a slot from freeList if available
-        if (!freeList.empty()) {
-            index = freeList.back();
-            freeList.pop_back();
+        // Reuse a slot from freeList_ if available
+        if (!freeList_.empty()) {
+            index = freeList_.back();
+            freeList_.pop_back();
         } else {
-            index = static_cast<uint32_t>(items.size());
-            items.emplace_back();   // default construct
-            states.emplace_back();
+            index = static_cast<uint32_t>(items_.size());
+            items_.emplace_back();   // default construct
+            states_.emplace_back();
         }
 
         // Construct or assign the value
         if constexpr (std::is_assignable_v<Type&, U&&>) {
-            items[index] = std::forward<U>(item);
+            items_[index] = std::forward<U>(item);
         } else {
             // Non-assignable: use placement new
-            items[index].~Type();
-            new (&items[index]) Type(std::forward<U>(item));
+            items_[index].~Type();
+            new (&items_[index]) Type(std::forward<U>(item));
         }
 
-        states[index].occupied = true;
-        return tinyHandle(index, states[index].version);
+        states_[index].occupied = true;
+        return tinyHandle(index, states_[index].version);
     }
 
     // ---- Getters (return true type, no raw ptr deduction) ----
 
     Type* get(const tinyHandle& handle) noexcept {
-        return valid(handle) ? &items[handle.index] : nullptr;
+        return valid(handle) ? &items_[handle.index] : nullptr;
     }
 
     const Type* get(const tinyHandle& handle) const noexcept {
         return const_cast<tinyPool<Type>*>(this)->get(handle);
     }
 
-    // Get handle by index (useful for accessing items by their position)
+    // Get handle by index (useful for accessing items_ by their position)
     tinyHandle getHandle(uint32_t index) const noexcept {
-        return isOccupied(index) ? tinyHandle(index, states[index].version) : tinyHandle();
+        return isOccupied(index) ? tinyHandle(index, states_[index].version) : tinyHandle();
     }
 
     // Reference is better since this is never null
-    std::deque<Type>& view() noexcept { return items; }
-    const std::deque<Type>& view() const noexcept { return items; }
-
-    Type* data() noexcept { return items.data(); }
-    const Type* data() const noexcept { return items.data(); }
+    std::deque<Type>& view() noexcept { return items_; }
+    const std::deque<Type>& view() const noexcept { return items_; }
 
     // ---- CRITICAL: Aware removal ----
 
@@ -124,25 +121,25 @@ struct tinyPool {
     }
 
     void queueRm(const tinyHandle& handle) noexcept {
-        if (valid(handle)) pendingRms.push_back(handle);
+        if (valid(handle)) pendingRms_.push_back(handle);
     }
 
-    const std::vector<tinyHandle>& listRms() const noexcept {
-        return pendingRms;
+    const std::vector<tinyHandle>& pendingRms() const noexcept {
+        return pendingRms_;
     }
 
     void flushRm(uint32_t index) noexcept {
-        if (index >= pendingRms.size()) return;
-        remove(pendingRms[index]);
+        if (index >= pendingRms_.size()) return;
+        remove(pendingRms_[index]);
     }
 
     void flushAllRms() {
-        for (const auto& handle : pendingRms) remove(handle);
-        pendingRms.clear();
+        for (const auto& handle : pendingRms_) remove(handle);
+        pendingRms_.clear();
     }
 
     bool hasPendingRms() const {
-        return !pendingRms.empty();
+        return !pendingRms_.empty();
     }
 
 private:
@@ -152,16 +149,16 @@ private:
         uint32_t index = handle.index;
 
         if constexpr (tinyPoolTraits<Type>::is_unique_ptr || tinyPoolTraits<Type>::is_shared_ptr) {
-            items[index].reset();
+            items_[index].reset();
         } else {
-            items[index].~Type();
-            new (&items[index]) Type();
+            items_[index].~Type();
+            new (&items_[index]) Type();
         }
 
-        states[index].occupied = false;
-        states[index].version++;
+        states_[index].occupied = false;
+        states_[index].version++;
 
-        freeList.push_back(index);
+        freeList_.push_back(index);
     }
 
     Type& getEmpty() noexcept {
@@ -174,10 +171,10 @@ private:
         uint32_t version = 0;
     };
 
-    std::deque<Type> items;
-    std::vector<State> states;
-    std::vector<uint32_t> freeList;
+    std::deque<Type> items_;
+    std::vector<State> states_;
+    std::vector<uint32_t> freeList_;
 
     // Pending removals for deferred deletion (some types require this)
-    std::vector<tinyHandle> pendingRms;
+    std::vector<tinyHandle> pendingRms_;
 };

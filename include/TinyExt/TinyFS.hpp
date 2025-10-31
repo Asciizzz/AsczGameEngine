@@ -232,15 +232,24 @@ public:
     bool rTHasPendingRms() const noexcept {
         return registry_.tHasPendingRms<T>();
     }
+    bool rTHasPendingRms(std::type_index typeIndx) const noexcept {
+        return registry_.tHasPendingRms(typeIndx);
+    }
 
     template<typename T>
     void rTFlushRm(uint32_t index) noexcept {
         registry_.tFlushRm<T>(index);
     }
+    void rTFlushRm(std::type_index typeIndx, uint32_t index) noexcept {
+        registry_.tFlushRm(typeIndx, index);
+    }
 
     template<typename T>
     void rTFlushAllRms() noexcept {
         registry_.tFlushAllRms<T>();
+    }
+    void rTFlushAllRms(std::type_index typeIndx) noexcept {
+        registry_.tFlushAllRms(typeIndx);
     }
 
 
@@ -249,6 +258,16 @@ public:
     }
 
     void rFlushAllRms() noexcept {
+        // Perform specific type flush in order of priority
+        // using registry_.tFlushAllRms(std::type_index)
+
+        for (const auto& typeIndx : typeOrder_) {
+            const TypeInfo& info = typeInfos_.at(typeIndx);
+
+            registry_.tFlushAllRms(typeIndx);
+        }
+
+        // Flush everything at the end to be sure
         registry_.flushAllRms();
     }
 
@@ -276,6 +295,7 @@ public:
         }
 
         bool empty() const noexcept { return ext.empty(); }
+        const char* c_str() const noexcept { return ext.c_str(); }
     };
 
     using RmRuleFn = std::function<bool(const void*)>;
@@ -315,6 +335,8 @@ public:
         uint8_t priority = 0; // Higher priority = delete last
         bool safeDelete = false;
         std::unique_ptr<IRmRule> rmRule;
+
+        const char* c_str() const noexcept { return typeExt.c_str(); }
 
         template<typename T>
         void setRmRule(std::function<bool(const T&)> ruleFn) {
@@ -362,8 +384,7 @@ private:
     tinyPool<Node> fnodes_;
     tinyRegistry registry_;
     tinyHandle rootHandle_;
-    bool caseSensitive_{false}; // Global case sensitivity setting
-    
+    bool caseSensitive_{false};
 
 // -------------------- TypeInfo management --------------------
 
@@ -373,10 +394,22 @@ private:
 
         TypeInfo typeInfo;
         typeInfos_[typeIndx] = std::move(typeInfo);
+
+        typeOrder_.push_back(typeIndx);
+        // Sort typeOrder_ by priority (higher priority last)
+        std::sort(typeOrder_.begin(), typeOrder_.end(),
+            [this](std::type_index a, std::type_index b) {
+                const TypeInfo& infoA = typeInfos_.at(a);
+                const TypeInfo& infoB = typeInfos_.at(b);
+                return infoA.priority < infoB.priority;
+            }
+        );
+
         return &typeInfos_[typeIndx];
     }
 
     std::unordered_map<std::type_index, TypeInfo> typeInfos_;
+    std::vector<std::type_index> typeOrder_; // For priority-based operations
 
 // -------------------- Internal helpers --------------------
 

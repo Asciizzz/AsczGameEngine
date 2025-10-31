@@ -183,7 +183,9 @@ private:
     
     // Active scene management (moved from tinyProject for better separation)
     tinySceneRT* getActiveScene() const {
-        return project->fs().rGet<tinySceneRT>(activeSceneHandle);
+        tinySceneRT* scene = project->fs().rGet<tinySceneRT>(activeSceneHandle);
+        scene = scene ? scene : project->fs().rGet<tinySceneRT>(project->initialSceneHandle);
+        return scene;
     }
     tinyHandle getActiveSceneHandle() const { return activeSceneHandle; }
     bool setActiveScene(tinyHandle sceneHandle);
