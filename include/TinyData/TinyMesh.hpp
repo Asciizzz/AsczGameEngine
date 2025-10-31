@@ -2,9 +2,22 @@
 
 #include "tinyData/tinyVertex.hpp"
 #include "tinyExt/tinyHandle.hpp"
+
 #include "tinyVk/Resource/DataBuffer.hpp"
+#include "tinyVk/Resource/Descriptor.hpp"
 
 #include <string>
+
+struct tinyMorph {
+    glm::vec3 dPos;
+    glm::vec3 dNrml;
+    glm::vec3 dTang;
+};
+
+struct tinyMorphTarget {
+    std::string name;
+    std::vector<tinyMorph> deltas;
+};
 
 // Uniform mesh structure that holds raw data only
 struct tinyMesh {
@@ -15,11 +28,6 @@ struct tinyMesh {
         uint32_t indxOffset = 0;
         uint32_t indxCount = 0;
         tinyHandle material;
-    };
-
-    struct MorphTarget {
-        std::string name;
-        std::vector<uint8_t> vDeltaData; // raw bytes
     };
 
 // -----------------------------------------
@@ -46,6 +54,24 @@ struct tinyMesh {
         return *this;
     }
 
+    tinyMesh& addMrphTarget(const tinyMorphTarget& target) {
+        // Mismatched vertex count, ignore
+        if (target.deltas.size() != vrtxCount_) return *this;
+
+        // Append name
+        mrphNames_.push_back(target.name.empty() ? ("target_" + std::to_string(mrphCount_)) : target.name);
+
+        // Append raw data
+        size_t offset = mrphData_.size();
+        size_t targetSize = vrtxCount_ * sizeof(tinyMorph);
+        mrphData_.resize(offset + targetSize);
+
+        std::memcpy(mrphData_.data() + offset, target.deltas.data(), targetSize);
+        ++mrphCount_;
+
+        return *this;
+    }
+
     tinyMesh& addPart(const Part& part) {
         parts_.push_back(part);
         return *this;
@@ -67,9 +93,14 @@ struct tinyMesh {
 
     template<typename IndexT>
     IndexT* indxPtr() {
-        if (indxData_.empty()) return nullptr;
-        if (sizeof(IndexT) != indxStride_) return nullptr;
+        if (indxData_.empty() || sizeof(IndexT) != indxStride_) return nullptr;
         return reinterpret_cast<IndexT*>(indxData_.data());
+    }
+
+    tinyMorph* mrphPtr(size_t targetIndex) {
+        if (mrphData_.empty() || targetIndex >= mrphCount_) return nullptr;
+        size_t offset = targetIndex * vrtxCount_ * sizeof(tinyMorph);
+        return reinterpret_cast<tinyMorph*>(mrphData_.data() + offset);
     }
 
     template<typename IndexT>
@@ -80,8 +111,11 @@ struct tinyMesh {
     const tinyVertex::Layout& vrtxLayout() const noexcept { return vrtxLayout_; }
     const std::vector<uint8_t>& vrtxData() const noexcept { return vrtxData_; }
     const std::vector<uint8_t>& indxData() const noexcept { return indxData_; }
+    const std::vector<uint8_t>& mrphData() const noexcept { return mrphData_; }
+
     size_t vrtxCount() const noexcept { return vrtxCount_; }
     size_t indxCount() const noexcept { return indxCount_; }
+    size_t mrphCount() const noexcept { return mrphCount_; }
     size_t indxStride() const noexcept { return indxStride_; }
 
     std::vector<Part>& parts() noexcept { return parts_; }
@@ -100,11 +134,20 @@ private:
     size_t indxCount_ = 0;
     size_t indxStride_ = 0;
 
+    // Optional
+    std::vector<std::string> mrphNames_;
+    std::vector<uint8_t> mrphData_; // raw bytes
+    size_t mrphCount_ = 0;
+
     std::vector<Part> parts_;
 };
 
 struct tinyMeshVk {
     tinyMeshVk() noexcept = default;
+    void init(const tinyVk::Device* deviceVk, VkDescriptorSetLayout mrphDescSetLayout, VkDescriptorPool mrphDescPool) {
+        deviceVk_ = deviceVk;
+        mrphDescSet_.allocate(deviceVk->device, mrphDescPool, mrphDescSetLayout);
+    }
 
     tinyMeshVk(const tinyMeshVk&) = delete;
     tinyMeshVk& operator=(const tinyMeshVk&) = delete;
@@ -117,6 +160,7 @@ struct tinyMeshVk {
     VkBuffer vrtxBuffer() const noexcept { return vrtxBuffer_; }
     VkBuffer indxBuffer() const noexcept { return indxBuffer_; }
     VkIndexType indxType() const noexcept { return indxType_; }
+    VkDescriptorSet mrphDescSet() const noexcept { return mrphDescSet_; }
 
     tinyMesh& cpu() noexcept { return mesh_; }
     const tinyMesh& cpu() const noexcept { return mesh_; }
@@ -133,18 +177,18 @@ struct tinyMeshVk {
         return *this;
     }
 
-    bool create(const tinyVk::Device* deviceVk) {
+    bool create() {
         using namespace tinyVk;
 
         vrtxBuffer_
             .setDataSize(mesh_.vrtxData().size())
             .setUsageFlags(BufferUsage::Vertex)
-            .createDeviceLocalBuffer(deviceVk, mesh_.vrtxData().data());
+            .createDeviceLocalBuffer(deviceVk_, mesh_.vrtxData().data());
 
         indxBuffer_ 
             .setDataSize(mesh_.indxData().size())
             .setUsageFlags(BufferUsage::Index)
-            .createDeviceLocalBuffer(deviceVk, mesh_.indxData().data());
+            .createDeviceLocalBuffer(deviceVk_, mesh_.indxData().data());
 
         switch (mesh_.indxStride()) {
             case sizeof(uint8_t):  indxType_ = VK_INDEX_TYPE_UINT8;  break;
@@ -153,11 +197,18 @@ struct tinyMeshVk {
             default:               indxType_ = VK_INDEX_TYPE_MAX_ENUM; break; // (your problem lol)
         }
 
+        if (mesh_.mrphCount() == 0) return true; // No morph targets
+
+        mrphBuffer_
+            .setDataSize(mesh_.mrphData().size())
+            .setUsageFlags(BufferUsage::Storage)
+            .createDeviceLocalBuffer(deviceVk_, mesh_.mrphData().data());
+
         return true;
     }
 
-    tinyMeshVk& createFrom(tinyMesh&& mesh, const tinyVk::Device* deviceVk) {
-        return set(std::forward<tinyMesh>(mesh)).create(deviceVk), *this;
+    tinyMeshVk& createFrom(tinyMesh&& mesh) {
+        return set(std::forward<tinyMesh>(mesh)).create(), *this;
     }
 
     void printInfo() {
@@ -172,6 +223,7 @@ struct tinyMeshVk {
             case VK_INDEX_TYPE_UINT32: printf("UINT32\n"); break;
             default:                   printf("UNKNOWN\n"); break;
         }
+        printf("  Morph Target Count: %zu\n", mesh_.mrphCount());
         printf("  Parts:\n");
         for (size_t i = 0; i < mesh_.parts().size(); ++i) {
             const auto& part = mesh_.parts()[i];
@@ -181,10 +233,31 @@ struct tinyMeshVk {
         }
     }
 
+    static tinyVk::DescSLayout createMrphDescSetLayout(VkDevice device) {
+        tinyVk::DescSLayout layout;
+        layout.create(device, {
+            {0, tinyVk::DescType::StorageBufferDynamic, 1, tinyVk::ShaderStage::Vertex, nullptr}
+        });
+        return layout;
+    }
+
+    static tinyVk::DescPool createMrphDescPool(VkDevice device, uint32_t maxMaterials) {
+        tinyVk::DescPool pool;
+        pool.create(device, {
+            {tinyVk::DescType::StorageBufferDynamic, maxMaterials}
+        }, maxMaterials);
+        return pool;
+    }
+
 private:
+    const tinyVk::Device* deviceVk_;
     tinyMesh mesh_;
 
     tinyVk::DataBuffer vrtxBuffer_;
     tinyVk::DataBuffer indxBuffer_;
+
+    tinyVk::DataBuffer mrphBuffer_;
+    tinyVk::DescSet mrphDescSet_;
+
     VkIndexType indxType_ = VK_INDEX_TYPE_UINT16;
 };

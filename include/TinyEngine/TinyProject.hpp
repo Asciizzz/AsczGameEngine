@@ -12,6 +12,7 @@ class tinyProject {
 public:
     static constexpr size_t maxSkeletons = 4096; // This is frighteningly high
     static constexpr size_t maxMaterials = 65536; // Lol
+    static constexpr size_t maxMeshes    = 65536; 
 
     tinyProject(const tinyVk::Device* deviceVk);
     ~tinyProject();
@@ -70,6 +71,9 @@ private:
 
     tinyVk::DescSLayout skinDescLayout;
     tinyVk::DescPool skinDescPool;
+
+    tinyVk::DescSLayout meshMrphDescLayout;
+    tinyVk::DescPool meshMrphDescPool;
 
     tinySceneRT::Require sharedReq;
     void vkCreateResources();

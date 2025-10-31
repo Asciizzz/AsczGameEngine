@@ -102,7 +102,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
 
         tinyMeshVk meshVk;
-        meshVk.createFrom(std::move(mesh), deviceVk);
+        meshVk.init(deviceVk, meshMrphDescLayout, meshMrphDescPool);
+
+        meshVk.createFrom(std::move(mesh));
 
         tinyHandle fnHandle = fs_->addFile(fnMeshFolder, mesh.name, std::move(meshVk));
         typeHandle tHandle = fs_->fTypeHandle(fnHandle);
@@ -278,6 +280,10 @@ void tinyProject::vkCreateResources() {
 
     matDescLayout = tinyMaterialVk::createDescSetLayout(device);
     matDescPool = tinyMaterialVk::createDescPool(device, maxMaterials);
+
+    // Pretty much the same buffer as skin
+    meshMrphDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
+    meshMrphDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
 
     // Setup shared scene requirements
     sharedReq.maxFramesInFlight = 2;

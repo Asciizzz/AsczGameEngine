@@ -413,147 +413,241 @@ struct PrimitiveData {
     size_t vrtxCount = 0;
 };
 
-void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vector<tinygltf::Primitive>& primitives, bool hasRigging) {
-    std::vector<PrimitiveData> allPrimitiveDatas;
+template <typename T>
+static bool readDeltaAccessor(const tinygltf::Model& model,
+                              int accessorIdx,
+                              std::vector<T>& out,
+                              size_t requiredCount)
+{
+    // ---- 1. Invalid accessor index ----
+    if (accessorIdx < 0 || static_cast<size_t>(accessorIdx) >= model.accessors.size()) {
+        out.assign(requiredCount, T(0));  // fill with zero
+        return false;
+    }
 
-    // Shared data
+    const auto& acc = model.accessors[accessorIdx];
+
+    // ---- 2. Must be vec3 + float ----
+    if (acc.type != TINYGLTF_TYPE_VEC3 ||
+        acc.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
+        out.assign(requiredCount, T(0));
+        return false;
+    }
+
+    // ---- 3. Buffer view must exist ----
+    if (acc.bufferView < 0 || static_cast<size_t>(acc.bufferView) >= model.bufferViews.size()) {
+        out.assign(requiredCount, T(0));
+        return false;
+    }
+
+    const auto& bv  = model.bufferViews[acc.bufferView];
+    const auto& buf = model.buffers[bv.buffer];
+
+    // ---- 4. Bounds check on buffer data ----
+    size_t byteOffset = bv.byteOffset + acc.byteOffset;
+    size_t totalBytesNeeded = acc.count * sizeof(T);
+    if (byteOffset + totalBytesNeeded > buf.data.size()) {
+        out.assign(requiredCount, T(0));
+        return false;
+    }
+
+    // ---- 5. Stride (safe) ----
+    size_t stride = acc.ByteStride(bv);
+    if (stride == 0) stride = sizeof(T);
+
+    const uint8_t* src = buf.data.data() + byteOffset;
+
+    // ---- 6. Read only requiredCount (in case accessor is larger) ----
+    out.resize(requiredCount);
+    for (size_t i = 0; i < requiredCount; ++i) {
+        if (i >= acc.count) {
+            out[i] = T(0);
+        } else {
+            std::memcpy(&out[i], src + i * stride, sizeof(T));
+        }
+    }
+
+    return true;
+}
+
+void loadMesh(tinyMesh& mesh,
+              const tinygltf::Model& gltfModel,
+              const std::vector<tinygltf::Primitive>& primitives,
+              bool hasRigging)
+{
+    // ------------------------------------------------------------------
+    // 1. First pass – gather per‑primitive data + detect biggest index type
+    // ------------------------------------------------------------------
+
+    std::vector<PrimitiveData> allPrimitiveDatas;
     VkIndexType largestIndexType = VK_INDEX_TYPE_UINT8;
 
-    // First pass: gather all primitive data and determine largest index type
     for (const auto& primitive : primitives) {
         PrimitiveData pData;
 
-        bool hasPosition = readAccessorFromMap(gltfModel, primitive.attributes, "POSITION", pData.positions);
-        if (!hasPosition) throw std::runtime_error("Primitive failed to read POSITION attribute");
+        // ---- required POSITION ------------------------------------------------
+        if (!readAccessorFromMap(gltfModel, primitive.attributes, "POSITION", pData.positions))
+            throw std::runtime_error("Primitive missing POSITION");
+        pData.vrtxCount = pData.positions.size();
 
-        readAccessorFromMap(gltfModel, primitive.attributes, "NORMAL", pData.normals);
-        readAccessorFromMap(gltfModel, primitive.attributes, "TANGENT", pData.tangents);
-        readAccessorFromMap(gltfModel, primitive.attributes, "TEXCOORD_0", pData.uvs);
+        // ---- optional attributes ------------------------------------------------
+        readAccessorFromMap(gltfModel, primitive.attributes, "NORMAL",    pData.normals);
+        readAccessorFromMap(gltfModel, primitive.attributes, "TANGENT",   pData.tangents);
+        readAccessorFromMap(gltfModel, primitive.attributes, "TEXCOORD_0",pData.uvs);
 
         if (hasRigging) {
             readAccessorFromMap(gltfModel, primitive.attributes, "JOINTS_0", pData.boneIDs);
             readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", pData.weights);
         }
 
-        pData.vrtxCount = pData.positions.size();
+        // ---- indices ------------------------------------------------------------
+        if (primitive.indices >= 0) {
+            const auto& acc = gltfModel.accessors[primitive.indices];
+            const auto& bv  = gltfModel.bufferViews[acc.bufferView];
+            const auto& buf = gltfModel.buffers[bv.buffer];
+            const uint8_t* src = buf.data.data() + bv.byteOffset + acc.byteOffset;
+            size_t stride = acc.ByteStride(bv);
 
-        if (primitive.indices <= 0) continue;
+            auto append = [&](auto dummy) {
+                using T = decltype(dummy);
+                for (size_t i = 0; i < acc.count; ++i) {
+                    T v; std::memcpy(&v, src + i*stride, sizeof(T));
+                    pData.indices.push_back(static_cast<uint32_t>(v));
+                }
+            };
 
-        const auto& indexAccessor = gltfModel.accessors[primitive.indices];
-        const auto& indexBufferView = gltfModel.bufferViews[indexAccessor.bufferView];
-        const auto& indxBuffer = gltfModel.buffers[indexBufferView.buffer];
-        const unsigned char* dataPtr = indxBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
-        size_t stride = indexAccessor.ByteStride(indexBufferView);
-
-        auto appendIndices = [&](auto dummyType) {
-            using T = decltype(dummyType);
-            for (size_t i = 0; i < indexAccessor.count; i++) {
-                T index;
-                std::memcpy(&index, dataPtr + stride * i, sizeof(T));
-                pData.indices.push_back(static_cast<uint32_t>(index));
+            VkIndexType curType;
+            switch (acc.componentType) {
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:  append(uint8_t{});  curType = VK_INDEX_TYPE_UINT8;  break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: append(uint16_t{}); curType = VK_INDEX_TYPE_UINT16; break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:   append(uint32_t{}); curType = VK_INDEX_TYPE_UINT32; break;
+                default: throw std::runtime_error("Unsupported index type");
             }
-        };
 
-        // Do 2 things: find the current index type, and append indices to pd.indices
-        VkIndexType currentType;
-        switch (indexAccessor.componentType) {
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: 
-                appendIndices(uint8_t{});
-                currentType = VK_INDEX_TYPE_UINT8;
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                appendIndices(uint16_t{});
-                currentType = VK_INDEX_TYPE_UINT16;
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                appendIndices(uint32_t{});
-                currentType = VK_INDEX_TYPE_UINT32;
-                break;
-            default:
-                throw std::runtime_error("Unsupported index component type");
-        }
-
-        // Update largest index type
-        if (currentType == VK_INDEX_TYPE_UINT32) {
-            largestIndexType = VK_INDEX_TYPE_UINT32;
-        } else if (currentType == VK_INDEX_TYPE_UINT16 && largestIndexType != VK_INDEX_TYPE_UINT32) {
-            largestIndexType = VK_INDEX_TYPE_UINT16;
+            // keep the *largest* type for the whole mesh
+            if (curType == VK_INDEX_TYPE_UINT32) largestIndexType = VK_INDEX_TYPE_UINT32;
+            else if (curType == VK_INDEX_TYPE_UINT16 && largestIndexType != VK_INDEX_TYPE_UINT32)
+                largestIndexType = VK_INDEX_TYPE_UINT16;
         }
 
         pData.materialIndex = primitive.material;
         allPrimitiveDatas.push_back(std::move(pData));
     }
 
-    // Second pass: construct the tinyMesh
-    if (allPrimitiveDatas.empty())
-        throw std::runtime_error("What kind of shitty mesh did you give me?");
+    if (allPrimitiveDatas.empty()) return; // no primitives
 
-    std::vector<uint32_t> allIndices;
-    std::vector<tinyVertex::Rigged> allVertices;
-        // Use the shared version
-        // If the model happen to be static, create a new vector for tinyVertex::Static
+    // ------------------------------------------------------------------
+    // 2. Build one big vertex + index buffer
+    // ------------------------------------------------------------------
+    std::vector<uint32_t>           allIndices;
+    std::vector<tinyVertex::Rigged> allVertices;   // will be converted later
 
-    uint32_t currentVertexOffset = 0;
-    uint32_t currentIndexOffset = 0;
+    uint32_t vtxOffset = 0, idxOffset = 0;
 
-    for (const auto& pData : allPrimitiveDatas) {
-        for (uint32_t i = 0 ; i < pData.vrtxCount; ++i) {
-            tinyVertex::Rigged vertex = tinyVertex::Rigged()
-                .setPos( pData.positions.size() > i ? pData.positions[i] : glm::vec3(0.0f))
-                .setNrml(   pData.normals.size()   > i ? pData.normals[i]   : glm::vec3(0.0f))
-                .setUV(pData.uvs.size()       > i ? pData.uvs[i]       : glm::vec2(0.0f))
-                .setTang(  pData.tangents.size()  > i ? pData.tangents[i]  : glm::vec4(1,0,0,1));
+    for (const auto& p : allPrimitiveDatas) {
+        // ---- vertices -------------------------------------------------------
+        for (size_t i = 0; i < p.vrtxCount; ++i) {
+            tinyVertex::Rigged v;
+            v.setPos   (i < p.positions.size() ? p.positions[i] : glm::vec3(0.f));
+            v.setNrml  (i < p.normals.size()   ? p.normals[i]   : glm::vec3(0.f));
+            v.setUV    (i < p.uvs.size()       ? p.uvs[i]       : glm::vec2(0.f));
+            v.setTang  (i < p.tangents.size()  ? p.tangents[i]  : glm::vec4(1,0,0,1));
 
-            if (pData.boneIDs.size() > i && pData.weights.size() > i) vertex
-                .setBoneIDs(pData.boneIDs[i])
-                .setBoneWs(pData.weights[i], true);
-
-            allVertices.push_back(vertex);
+            if (hasRigging && i < p.boneIDs.size() && i < p.weights.size()) {
+                v.setBoneIDs(p.boneIDs[i]);
+                v.setBoneWs (p.weights[i], true);
+            }
+            allVertices.push_back(v);
         }
 
-        // Add indices with vertex offset
-        for (uint32_t index : pData.indices) {
-            allIndices.push_back(index + currentVertexOffset);
-        }
+        // ---- indices --------------------------------------------------------
+        for (uint32_t idx : p.indices)
+            allIndices.push_back(idx + vtxOffset);
 
-        // Create submesh parts
-        tinyMesh::Part mPart;
-        mPart.indxOffset = currentIndexOffset;
-        mPart.indxCount = static_cast<uint32_t>(pData.indices.size());
-        mPart.material = pData.materialIndex >= 0 ? tinyHandle(pData.materialIndex) : tinyHandle();
-        mesh.addPart(mPart);
+        // ---- part -----------------------------------------------------------
+        tinyMesh::Part part;
+        part.indxOffset = idxOffset;
+        part.indxCount  = static_cast<uint32_t>(p.indices.size());
+        part.material   = (p.materialIndex >= 0) ? tinyHandle(p.materialIndex) : tinyHandle();
+        mesh.addPart(part);
 
-        currentVertexOffset += static_cast<uint32_t>(pData.vrtxCount);
-        currentIndexOffset += static_cast<uint32_t>(pData.indices.size());
+        vtxOffset += static_cast<uint32_t>(p.vrtxCount);
+        idxOffset += static_cast<uint32_t>(p.indices.size());
     }
 
+    // ------------------------------------------------------------------
+    // 3. Write index buffer (using the *largest* type)
+    // ------------------------------------------------------------------
     switch (largestIndexType) {
         case VK_INDEX_TYPE_UINT8: {
-            std::vector<uint8_t> indices8;
-            indices8.reserve(allIndices.size());
-            for (uint32_t indx : allIndices) {
-                indices8.push_back(static_cast<uint8_t>(indx));
-            }
-            mesh.setIndxs(indices8);
-            break;
-        }
+            std::vector<uint8_t> tmp; tmp.reserve(allIndices.size());
+            for (uint32_t i : allIndices) tmp.push_back(static_cast<uint8_t>(i));
+            mesh.setIndxs(tmp);
+        } break;
         case VK_INDEX_TYPE_UINT16: {
-            std::vector<uint16_t> indices16;
-            indices16.reserve(allIndices.size());
-            for (uint32_t indx : allIndices) {
-                indices16.push_back(static_cast<uint16_t>(indx));
-            }
-            mesh.setIndxs(indices16);
-            break;
-        }
-        case VK_INDEX_TYPE_UINT32: {
-            mesh.setIndxs(allIndices);
-            break;
-        }
+            std::vector<uint16_t> tmp; tmp.reserve(allIndices.size());
+            for (uint32_t i : allIndices) tmp.push_back(static_cast<uint16_t>(i));
+            mesh.setIndxs(tmp);
+        } break;
+        case VK_INDEX_TYPE_UINT32:
+            mesh.setIndxs(allIndices); break;
+        default: break;
     }
 
+    // ------------------------------------------------------------------
+    // 4. Write vertex buffer (static or rigged)
+    // ------------------------------------------------------------------
     if (hasRigging) mesh.setVrtxs(allVertices);
     else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
+
+    // ------------------------------------------------------------------
+    // 5. **MORPH TARGETS** – new block
+    // ------------------------------------------------------------------
+    // glTF stores a *vector of targets* **per primitive**.  All primitives of a
+    // mesh must have the *same* number of targets, otherwise the spec says the
+    // mesh is invalid.  We simply concatenate them in primitive order.
+    for (size_t primIdx = 0; primIdx < primitives.size(); ++primIdx) {
+        const auto& primitive = primitives[primIdx];
+        const auto& pData     = allPrimitiveDatas[primIdx];
+
+        // each entry in primitive.targets is one morph target
+        for (size_t tgtIdx = 0; tgtIdx < primitive.targets.size(); ++tgtIdx) {
+            const auto& target = primitive.targets[tgtIdx];
+
+            // ---- read delta accessors ------------------------------------------------
+            std::vector<glm::vec3> dPos, dNrm, dTan;
+            if (!readDeltaAccessor(gltfModel, target.find("POSITION")->second, dPos, pData.vrtxCount) ||
+                !readDeltaAccessor(gltfModel, target.find("NORMAL")->second,   dNrm, pData.vrtxCount) ||
+                !readDeltaAccessor(gltfModel, target.find("TANGENT")->second,  dTan, pData.vrtxCount))
+            {
+                // If any accessor is missing or malformed we skip this target
+                continue;
+            }
+
+            // ---- build tinyMorph array ------------------------------------------------
+            std::vector<tinyMorph> deltas(pData.vrtxCount);
+            for (size_t v = 0; v < pData.vrtxCount; ++v) {
+                deltas[v].dPos  = dPos[v];
+                deltas[v].dNrml = dNrm[v];
+                // glTF tangent delta is vec3 (xyz), w is unchanged → we keep 0
+                deltas[v].dTang = glm::vec3(dTan[v]);
+            }
+
+            // ---- name (optional) ----------------------------------------------------
+            std::string name = "";
+            // auto nameIt = primitive.targetNames.find(static_cast<int>(tgtIdx));
+            // if (nameIt != primitive.targetNames.end())
+            //     name = nameIt->second;
+            // else
+            //     name = "target_" + std::to_string(tgtIdx);
+
+            // ---- add to mesh ---------------------------------------------------------
+            tinyMorphTarget mt;
+            mt.name   = std::move(name);
+            mt.deltas = std::move(deltas);
+            mesh.addMrphTarget(mt);
+        }
+    }
 }
 
 void loadMeshes(std::vector<tinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
