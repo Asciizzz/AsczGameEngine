@@ -25,7 +25,7 @@ struct tinyMesh {
 // -----------------------------------------
 
     template<typename VertexT>
-    tinyMesh& setVertices(const std::vector<VertexT>& verts) {
+    tinyMesh& setVrtxs(const std::vector<VertexT>& verts) {
         vrtxCount_ = verts.size();
         vrtxLayout_ = VertexT::layout();
 
@@ -36,12 +36,12 @@ struct tinyMesh {
     }
 
     template<typename IndexT>
-    tinyMesh& setIndices(const std::vector<IndexT>& indx) {
-        indxCount_ = indx.size();
+    tinyMesh& setIndxs(const std::vector<IndexT>& indxs) {
+        indxCount_ = indxs.size();
         indxStride_ = sizeof(IndexT);
 
         indxData_.resize(indxCount_ * indxStride_);
-        std::memcpy(indxData_.data(), indx.data(), indxData_.size());
+        std::memcpy(indxData_.data(), indxs.data(), indxData_.size());
 
         return *this;
     }

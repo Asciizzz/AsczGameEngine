@@ -534,7 +534,7 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
             for (uint32_t indx : allIndices) {
                 indices8.push_back(static_cast<uint8_t>(indx));
             }
-            mesh.setIndices(indices8);
+            mesh.setIndxs(indices8);
             break;
         }
         case VK_INDEX_TYPE_UINT16: {
@@ -543,17 +543,17 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const std::vecto
             for (uint32_t indx : allIndices) {
                 indices16.push_back(static_cast<uint16_t>(indx));
             }
-            mesh.setIndices(indices16);
+            mesh.setIndxs(indices16);
             break;
         }
         case VK_INDEX_TYPE_UINT32: {
-            mesh.setIndices(allIndices);
+            mesh.setIndxs(allIndices);
             break;
         }
     }
 
-    if (hasRigging) mesh.setVertices(allVertices);
-    else mesh.setVertices(tinyVertex::Rigged::makeStatic(allVertices));
+    if (hasRigging) mesh.setVrtxs(allVertices);
+    else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
 }
 
 void loadMeshes(std::vector<tinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
@@ -1163,8 +1163,8 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         }
 
         // Set mesh data
-        mesh.setVertices(vertices);
-        mesh.setIndices(indices);
+        mesh.setVrtxs(vertices);
+        mesh.setIndxs(indices);
 
         tinyMesh::Part mPart;
         mPart.indxOffset = 0;

@@ -15,16 +15,15 @@
 * Right now we are using 1 descriptor set per skeleton, which is not sufficient, and can cause race condition, we need 1 descriptor set per frame per skeleton.
 * Hi, me after post-nut-clarity here, even better idea: dynamic offsets, create 1 buffer with region for each frame, and use dynamic offset to select region when binding descriptor set. This can be applied to literally every other per-frame resource as well, reducing descriptor set count significantly.
 
-##### [0/2] Implement working Materials/Textures architecture (priority: CRITICAL):
+##### [2/2] Implement working Materials/Textures architecture (priority: CRITICAL):
 
-* **[In Progress]** Choosing which design pattern to use and weighing their pros and cons.
-* **[ ]** Actually implement the chosen design.
+* **[FINISHED]** Choosing which design pattern to use and weighing their pros and cons.
+* **[FINISHED]** Actually implement the chosen design.
 
 ##### [1/2] Animation System (priority: High):
 
 * **[FINISHED]** Add animation for nodes and skeletons.
-* **[\*Halted]** Add animation for morph targets.
-    ###### \* Require the above architecture to be finished first.
+* **[ ]** Add animation for morph targets.
 
 ##### [ ] Fixing the r*tarded tinyLoader's glTF loader (priority: High):
 
