@@ -34,13 +34,16 @@ struct tinyMaterialVk {
 
         DescSLayout layout;
 
-        layout.create(deviceVk, {
-            // Textures first (indices 0 to texCount-1)
-            { 0, DescType::CombinedImageSampler, 1, ShaderStage::Fragment, nullptr }, // Albedo
-            { 1, DescType::CombinedImageSampler, 1, ShaderStage::Fragment, nullptr }, // Normal
-            // Material properties uniform buffer (always at binding = texCount)
-            { texCount, DescType::UniformBuffer, 1, ShaderStage::Fragment, nullptr }
-        });
+        std::vector<VkDescriptorSetLayoutBinding> bindings = {
+            { 0, DescType::UniformBuffer, 1, ShaderStage::Fragment, nullptr } // Material properties
+        };
+
+        // Other texture bindings
+        for (uint32_t i = 0; i < texCount; i++) {
+            bindings.push_back({ i + 1, DescType::CombinedImageSampler, 1, ShaderStage::Fragment, nullptr });
+        }
+
+        layout.create(deviceVk, bindings);
 
         return layout;
     }
@@ -50,8 +53,8 @@ struct tinyMaterialVk {
 
         DescPool pool;
         pool.create(deviceVk, {
-            { DescType::CombinedImageSampler, maxSets * texCount },
-            { DescType::UniformBuffer, maxSets }
+            { DescType::UniformBuffer, maxSets },
+            { DescType::CombinedImageSampler, maxSets * texCount }
         }, maxSets);
 
         return pool;
@@ -75,11 +78,7 @@ struct tinyMaterialVk {
         // Initialize with default properties
         propsBuffer_.uploadData(&props_);
 
-        updateBinding(0, nullptr); // Albedo
-        updateBinding(1, nullptr); // Normal
-        updatePropertiesBinding(); // Material properties uniform
-
-        // More in the future, stay tuned
+        updateAllBindings();
     }
 
 
@@ -125,17 +124,15 @@ struct tinyMaterialVk {
 // -----------------------------------------
 
     bool setAlbTex(tinyTextureVk* texture) noexcept {
-        if (!setTexture(albTex_, texture)) return false;
-
-        updateBinding(0, albTex_);
-        return true;
+        return setTexture(albTex_, texture, 1);
     }
 
     bool setNrmlTex(tinyTextureVk* texture) noexcept {
-        if (!setTexture(nrmlTex_, texture)) return false;
+        return setTexture(nrmlTex_, texture, 2);
+    }
 
-        updateBinding(1, nrmlTex_);
-        return true;
+    bool setMetalTex(tinyTextureVk* texture) noexcept {
+        return setTexture(metalTex_, texture, 3);
     }
 
     void setBaseColor(const glm::vec4& color) noexcept {
@@ -157,22 +154,25 @@ struct tinyMaterialVk {
     const glm::vec4& baseColor() const noexcept { return props_.baseColor; }
 
 private:
-    bool setTexture(tinyTextureVk*& curTex, tinyTextureVk*& newTex) noexcept {
+    bool setTexture(tinyTextureVk*& curTex, tinyTextureVk*& newTex, uint32_t binding) noexcept {
         if (!newTex) return false;
 
         if (curTex) curTex->decrementUse();
 
         curTex = newTex;
         curTex->incrementUse();
+
+        updateTexBinding(binding, curTex);
         return true;
     }
 
-    void updateBinding(uint32_t binding, const tinyTextureVk* texture) {
+    void updateTexBinding(uint32_t binding, const tinyTextureVk* texture) {
         using namespace tinyVk;
 
         const tinyTextureVk* tex = texture ? texture : defTex_;
 
-        DescWrite().addWrite()
+        DescWrite()
+            .addWrite()
             .setDstSet(descSet_) // implicit conversion
             .setDstBinding(binding)
             .setType(DescType::CombinedImageSampler)
@@ -189,7 +189,7 @@ private:
 
         DescWrite().addWrite()
             .setDstSet(descSet_)
-            .setDstBinding(texCount) // Properties always at binding = texCount
+            .setDstBinding(0) // Properties always at binding = 0
             .setType(DescType::UniformBuffer)
             .setBufferInfo({ VkDescriptorBufferInfo{
                 propsBuffer_.get(),
@@ -200,9 +200,10 @@ private:
     }
 
     void updateAllBindings() {
-        updateBinding(0, albTex_);
-        updateBinding(1, nrmlTex_);
         updatePropertiesBinding();
+        updateTexBinding(1, albTex_);
+        updateTexBinding(2, nrmlTex_);
+        updateTexBinding(3, metalTex_);
     }
 
     const tinyVk::Device* deviceVk_ = nullptr;
@@ -210,9 +211,10 @@ private:
 
     // Ay guys, I used deque so this won't be dangling, nice
 
-    constexpr static uint32_t texCount = 2; // Change as needed
+    constexpr static uint32_t texCount = 3; // Change as needed
     tinyTextureVk* albTex_ = nullptr; // Albedo texture
     tinyTextureVk* nrmlTex_ = nullptr; // Normal texture
+    tinyTextureVk* metalTex_ = nullptr; // Metallic texture
 
     Props props_;
     tinyVk::DataBuffer propsBuffer_; // Modifiable

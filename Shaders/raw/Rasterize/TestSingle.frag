@@ -7,14 +7,13 @@ layout(location = 3) in vec4 fragTangent;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 1, binding = 0) uniform sampler2D uAlbedo;
-layout(set = 1, binding = 1) uniform sampler2D uNormal;
-
-// Material properties uniform buffer
-layout(set = 1, binding = 2) uniform MaterialProperties {
-    vec4 baseColor; // Base color multiplier
-    // Future properties go here without affecting texture bindings
+layout(set = 1, binding = 0) uniform MatProps {
+    vec4 baseColor;
 } uMaterial;
+
+layout(set = 1, binding = 1) uniform sampler2D uAlbedo;
+layout(set = 1, binding = 2) uniform sampler2D uNormal;
+layout(set = 1, binding = 3) uniform sampler2D uMetallic;
 
 void main() {
     // Simple shader
