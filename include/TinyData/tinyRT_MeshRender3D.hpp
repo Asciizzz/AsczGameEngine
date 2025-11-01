@@ -79,6 +79,8 @@ struct MeshRender3D {
 private:
     tinyHandle meshHandle_;
     tinyHandle skeleNodeHandle_; // For skinning
+    
+    std::vector<tinyHandle> matSlots_; // Material slots per mesh part
 
     bool vkValid = false;
     const tinyPool<tinyMeshVk>* meshPool_ = nullptr;

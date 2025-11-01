@@ -13,10 +13,16 @@ void MeshRender3D::init(const Device* deviceVk, const tinyPool<tinyMeshVk>* mesh
 }
 
 MeshRender3D& MeshRender3D::setMesh(tinyHandle meshHandle) {
-    if (!vkValid) return *this;
+    if (!vkValid || !meshHandle.valid()) return *this;
 
-    meshHandle_ = meshHandle.valid() ? meshHandle : meshHandle_;
-    if (!hasMrph()) return *this;
+    meshHandle_ = meshHandle;
+    if (!rMesh()) return *this;
+
+    // Copy the material slots
+    matSlots_.clear();
+    for (const auto& part : rMesh()->parts()) {
+        matSlots_.push_back(part.material);
+    }
 
     vkWrite(deviceVk_, &mrphWsBuffer_, &mrphWsDescSet_, maxFramesInFlight_, mrphCount(), &unalignedSize_, &alignedSize_);
     mrphWeights_.resize(mrphCount(), 0.0f);
