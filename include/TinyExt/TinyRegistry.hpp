@@ -85,14 +85,14 @@ class tinyRegistry { // For raw resource data
     }
 
     // Remove execution
-    template<typename T>
-    void remove(const tinyHandle& handle) noexcept {
-        if (auto* wrapper = getWrapper<T>()) wrapper->pool.instaRm(handle);
-    }
-
     void remove(const typeHandle& th) noexcept {
         auto it = pools.find(th.typeIndex);
         if (it != pools.end()) it->second->instaRm(th.handle);
+    }
+
+    template<typename T>
+    void remove(const tinyHandle& handle) noexcept {
+        remove(typeHandle::make<T>(handle));
     }
 
 public:
@@ -118,66 +118,62 @@ public:
     void tInstaRm(const tinyHandle& handle) noexcept { remove<T>(handle); }
     void tInstaRm(const typeHandle& th) noexcept { remove(th); }
 
-    template<typename T> // For unsafe removal (vulkan resources for example)
-    void tQueueRm(const tinyHandle& handle) noexcept {
-        auto* wrapper = getWrapper<T>();
-        if (wrapper) wrapper->pool.queueRm(handle);
-    }
+// For unsafe removal (vulkan resources for example)
     void tQueueRm(const typeHandle& th) noexcept {
         auto it = pools.find(th.typeIndex);
         if (it != pools.end()) {
             it->second->queueRm(th.handle);
         }
     }
-
     template<typename T>
-    void tFlushRm(uint32_t index) noexcept {
-        auto* wrapper = getWrapper<T>();
-        if (wrapper) wrapper->pool.flushRm(index);
+    void tQueueRm(const tinyHandle& handle) noexcept {
+        tQueueRm(typeHandle::make<T>(handle));
     }
+
     void tFlushRm(std::type_index typeIndx, uint32_t index) noexcept {
         auto it = pools.find(typeIndx);
         if (it != pools.end()) {
             it->second->flushRm(index);
         }
     }
-
     template<typename T>
-    void tFlushAllRms() noexcept {
-        auto* wrapper = getWrapper<T>();
-        if (wrapper) wrapper->pool.flushAllRms();
+    void tFlushRm(uint32_t index) noexcept {
+        tFlushRm(std::type_index(typeid(T)), index);
     }
+
     void tFlushAllRms(std::type_index typeIndx) noexcept {
         auto it = pools.find(typeIndx);
         if (it != pools.end()) {
             it->second->flushAllRms();
         }
     }
-
     template<typename T>
-    bool tHasPendingRms() const noexcept {
-        auto* wrapper = getWrapper<T>();
-        return wrapper ? wrapper->pool.hasPendingRms() : false;
+    void tFlushAllRms() noexcept {
+        tFlushAllRms(std::type_index(typeid(T)));
     }
+
+
     bool tHasPendingRms(std::type_index typeIndx) const noexcept {
         auto it = pools.find(typeIndx);
-        if (it != pools.end()) {
-            return it->second->hasPendingRms();
-        }
-        return false;
+        if (it == pools.end()) return false;
+
+        return it->second->hasPendingRms();
+    }
+    template<typename T>
+    bool tHasPendingRms() const noexcept {
+        return tHasPendingRms(std::type_index(typeid(T)));
     }
 
-    template<typename T>
-    std::vector<tinyHandle> tPendingRms() const noexcept {
-        auto* wrapper = getWrapper<T>();
-        return wrapper ? wrapper->pool.pendingRms() : std::vector<tinyHandle>();
-    }
     std::vector<tinyHandle> tPendingRms(std::type_index typeIndx) const noexcept {
         auto it = pools.find(typeIndx);
         if (it != pools.end()) {
             return it->second->pendingRms();
         }
         return std::vector<tinyHandle>();
+    }
+    template<typename T>
+    std::vector<tinyHandle> tPendingRms() const noexcept {
+        return tPendingRms(std::type_index(typeid(T)));
     }
 
     // Every pool's pending removals check
@@ -204,8 +200,7 @@ public:
     }
     template<typename T>
     const T* get(const tinyHandle& handle) const noexcept {
-        auto* wrapper = getWrapper<T>();
-        return wrapper ? wrapper->pool.get(handle) : nullptr;
+        return const_cast<tinyRegistry*>(this)->get<T>(handle);
     }
 
     void* get(const typeHandle& th) noexcept {
@@ -227,12 +222,6 @@ public:
         return const_cast<tinyRegistry*>(this)->get<T>(th);
     }
 
-    template<typename T>
-    bool has(const tinyHandle& handle) const noexcept {
-        auto* wrapper = getWrapper<T>();
-        return wrapper ? wrapper->pool.valid(handle) : false;
-    }
-
     bool has(const typeHandle& th) const noexcept {
         if (!th.valid()) return false;
 
@@ -240,6 +229,10 @@ public:
         if (it == pools.end()) return false;
 
         return it->second->get(th.handle) != nullptr;
+    }
+    template<typename T>
+    bool has(const tinyHandle& handle) const noexcept {
+        return has(typeHandle::make<T>(handle));
     }
 
     template<typename T>

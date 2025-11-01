@@ -396,6 +396,7 @@ private:
         typeInfos_[typeIndx] = std::move(typeInfo);
 
         typeOrder_.push_back(typeIndx);
+
         // Sort typeOrder_ by priority (higher priority last)
         std::sort(typeOrder_.begin(), typeOrder_.end(),
             [this](std::type_index a, std::type_index b) {
