@@ -321,30 +321,14 @@ void tinyProject::vkCreateDefault() {
 
     dummySkinDescSet.allocate(deviceVk->device, skinDescPool.get(), skinDescLayout.get());
 
-    // Create dummy skin buffer with 1 identity matrix
-    VkDeviceSize bufferSize = sizeof(glm::mat4);
-    dummySkinBuffer
-        .setDataSize(bufferSize * sharedReq.maxFramesInFlight)
-        .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVk)
-        .mapMemory();
-
-    // Update descriptor set with dummy buffer info
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = dummySkinBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = bufferSize;
-
-    DescWrite()
-        .setDstSet(dummySkinDescSet)
-        .setType(DescType::StorageBufferDynamic)
-        .setDescCount(1)
-        .setBufferInfo({ bufferInfo })
-        .updateDescSets(deviceVk->device);
+    tinyRT_SKEL3D::vkWrite(deviceVk, &dummySkinBuffer, &dummySkinDescSet, sharedReq.maxFramesInFlight, 1);
 
 // -------------- Create dummy morph target resources --------------
 
-    
+    dummyMrphDsDescSet.allocate(deviceVk->device, meshMrphDsDescPool.get(), meshMrphDsDescLayout.get());
+    tinyRT_MESHR::vkWrite(deviceVk, &dummyMrphDsBuffer, &dummyMrphDsDescSet, sharedReq.maxFramesInFlight, 1);
+
+    dummyMrphWsDescSet.allocate(deviceVk->device, meshMrphWsDescPool.get(), meshMrphWsDescLayout.get());
+    tinyRT_MESHR::vkWrite(deviceVk, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedReq.maxFramesInFlight, 1);
 
 }

@@ -20,6 +20,10 @@
 * **[FINISHED]** Choosing which design pattern to use and weighing their pros and cons.
 * **[FINISHED]** Actually implement the chosen design.
 
+##### [ ] Fix the Materials-Textures dangling pointer issue (priority: CRITICAL - but not urgent):
+
+* Godfcking dammit slot code lol, the design was implemented too quickly.
+
 ##### [1/2] Animation System (priority: High):
 
 * **[FINISHED]** Add animation for nodes and skeletons.
