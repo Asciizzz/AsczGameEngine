@@ -125,8 +125,15 @@ struct tinyMesh {
     std::vector<Part>& parts() noexcept { return parts_; }
     const std::vector<Part>& parts() const noexcept { return parts_; }
 
-    bool valid() const noexcept {
-        return !vrtxData_.empty() && !indxData_.empty();
+    bool valid() const noexcept { return !vrtxData_.empty() && !indxData_.empty(); }
+
+    std::string& mrphName(size_t targetIndex) noexcept {
+        static std::string emptyStr;
+        if (targetIndex >= mrphNames_.size()) return emptyStr;
+        return mrphNames_[targetIndex];
+    }
+    const std::string& mrphName(size_t targetIndex) const noexcept {
+        return const_cast<tinyMesh*>(this)->mrphName(targetIndex);
     }
 
 private:

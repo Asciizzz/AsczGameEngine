@@ -68,6 +68,14 @@ struct MeshRender3D {
         return vkValid && mrphCount() > 0;
     }
 
+    const std::string& mrphName(size_t targetIndex) const noexcept {
+        const tinyMeshVk* mesh = rMesh();
+        if (!mesh) return "";
+
+        const tinyMesh& cpuMesh = mesh->cpu();
+        return cpuMesh.mrphName(targetIndex);
+    }
+
 private:
     tinyHandle meshHandle_;
     tinyHandle skeleNodeHandle_; // For skinning
@@ -77,9 +85,9 @@ private:
     const tinyVk::Device* deviceVk_ = nullptr;
     uint32_t maxFramesInFlight_ = 2;
 
-    // In the future there will be dedicated buffers and descriptors for morph targets
-    std::vector<float> mrphWeights_; // 1 weight per morph target
-    tinyVk::DataBuffer mrphWsBuffer_; // float
+    // Morph target weights
+    std::vector<float> mrphWeights_;
+    tinyVk::DataBuffer mrphWsBuffer_;
     tinyVk::DescSet mrphWsDescSet_;
     uint32_t unalignedSize_ = 0;
     uint32_t alignedSize_ = 0;
