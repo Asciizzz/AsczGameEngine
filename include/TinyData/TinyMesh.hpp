@@ -205,15 +205,16 @@ struct tinyMeshVk {
 
         if (mesh_.mrphCount() == 0) return true; // No morph targets
 
+        size_t mrphSize = mesh_.mrphData().size();
         mrphDsBuffer_
-            .setDataSize(mesh_.mrphData().size())
+            .setDataSize(mrphSize)
             .setUsageFlags(BufferUsage::Storage)
             .createDeviceLocalBuffer(deviceVk_, mesh_.mrphData().data());
 
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = mrphDsBuffer_;
         bufferInfo.offset = 0;
-        bufferInfo.range = mesh_.mrphData().size();
+        bufferInfo.range = mrphSize;
 
         DescWrite()
             .setDstSet(mrphDsDescSet_)

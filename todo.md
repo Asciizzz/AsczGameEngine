@@ -20,14 +20,14 @@
 * **[FINISHED]** Choosing which design pattern to use and weighing their pros and cons.
 * **[FINISHED]** Actually implement the chosen design.
 
-##### [ ] Fix the Materials-Textures dangling pointer issue (priority: CRITICAL - but not urgent):
+##### [ ] Fix the Materials-Textures dangling pointer issue (priority: CRITICAL - but not urgent (what?)):
 
-* Godfcking dammit slot code lol, the design was implemented too quickly.
+* Godfcking dammit slop code lol, the design was implemented too quickly.
 
 ##### [1/2] Animation System (priority: High):
 
 * **[FINISHED]** Add animation for nodes and skeletons.
-* **[ ]** Add animation for morph targets.
+* **[40%]** Add animation for morph targets.
 
 ##### [ ] Fixing the r*tarded tinyLoader's glTF loader (priority: High):
 
