@@ -23,12 +23,10 @@ struct tinyMaterialVk {
 
     std::string name;
     tinyMaterialVk() noexcept {
-        // Initialize all texture pointers to nullptr
         textures_.fill(nullptr);
     }
 
     ~tinyMaterialVk() noexcept {
-        // Decrease texture use counts for all slots
         for (auto* tex : textures_) {
             if (tex) tex->decrementUse();
         }
@@ -43,7 +41,6 @@ struct tinyMaterialVk {
             { 0, DescType::UniformBuffer, 1, ShaderStage::Fragment, nullptr } // Material properties
         };
 
-        // Other texture bindings
         for (uint32_t i = 0; i < static_cast<uint32_t>(TexSlot::Count); i++) {
             bindings.push_back({ i + 1, DescType::CombinedImageSampler, 1, ShaderStage::Fragment, nullptr });
         }
@@ -73,14 +70,12 @@ struct tinyMaterialVk {
 
         descSet_.allocate(deviceVk->device, descPool, descSLayout);
 
-        // Create uniform buffer for material properties
         propsBuffer_
             .setDataSize(sizeof(Props))
             .setUsageFlags(BufferUsage::Uniform)
             .setMemPropFlags(MemProp::HostVisibleAndCoherent)
             .createBuffer(deviceVk);
 
-        // Initialize with default properties
         propsBuffer_.uploadData(&props_);
 
         updateAllBindings();
