@@ -117,8 +117,22 @@ struct tinyPool {
 
     // ---- CRITICAL: Aware removal ----
 
-    void instaRm(const tinyHandle& handle) noexcept {
-        remove(handle);
+    void remove(const tinyHandle& handle) noexcept {
+        if (!valid(handle)) return;
+
+        uint32_t index = handle.index;
+
+        if constexpr (tinyPoolTraits<Type>::is_unique_ptr || tinyPoolTraits<Type>::is_shared_ptr) {
+            items_[index].reset();
+        } else {
+            items_[index].~Type();
+            new (&items_[index]) Type();
+        }
+
+        states_[index].occupied = false;
+        states_[index].version++;
+
+        freeList_.push_back(index);
     }
 
     void queueRm(const tinyHandle& handle) noexcept {
@@ -144,23 +158,6 @@ struct tinyPool {
     }
 
 private:
-    void remove(const tinyHandle& handle) noexcept {
-        if (!valid(handle)) return;
-
-        uint32_t index = handle.index;
-
-        if constexpr (tinyPoolTraits<Type>::is_unique_ptr || tinyPoolTraits<Type>::is_shared_ptr) {
-            items_[index].reset();
-        } else {
-            items_[index].~Type();
-            new (&items_[index]) Type();
-        }
-
-        states_[index].occupied = false;
-        states_[index].version++;
-
-        freeList_.push_back(index);
-    }
 
     Type& getEmpty() noexcept {
         static Type empty{};

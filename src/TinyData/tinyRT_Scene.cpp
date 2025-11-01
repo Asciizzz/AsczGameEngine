@@ -66,7 +66,7 @@ bool Scene::removeNode(tinyHandle nodeHandle, bool recursive) {
     removeComp<tinyNodeRT::BONE3D>(nodeHandle);
     removeComp<tinyNodeRT::SKEL3D>(nodeHandle);
     removeComp<tinyNodeRT::ANIM3D>(nodeHandle);
-    nodes_.instaRm(nodeHandle);
+    nodes_.remove(nodeHandle);
 
     return true;
 }

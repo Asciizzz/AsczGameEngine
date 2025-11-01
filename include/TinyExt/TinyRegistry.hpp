@@ -30,7 +30,7 @@ class tinyRegistry { // For raw resource data
     struct IPool {
         virtual ~IPool() noexcept = default;
         virtual void* get(const tinyHandle& handle) noexcept = 0;
-        virtual void instaRm(const tinyHandle& handle) noexcept = 0;
+        virtual void remove(const tinyHandle& handle) noexcept = 0;
         virtual void queueRm(const tinyHandle& handle) noexcept = 0;
         virtual void flushRm(uint32_t index) noexcept = 0;
         virtual void flushAllRms() noexcept = 0;
@@ -44,7 +44,7 @@ class tinyRegistry { // For raw resource data
         tinyPool<T> pool;
 
         void* get(const tinyHandle& handle) noexcept override { return pool.get(handle); }
-        void instaRm(const tinyHandle& handle) noexcept override { pool.instaRm(handle); }
+        void remove(const tinyHandle& handle) noexcept override { pool.remove(handle); }
         void queueRm(const tinyHandle& handle) noexcept override { pool.queueRm(handle); }
         void flushRm(uint32_t index) noexcept override { pool.flushRm(index); }
         void flushAllRms() noexcept override { pool.flushAllRms(); }
@@ -86,17 +86,6 @@ class tinyRegistry { // For raw resource data
         return *static_cast<PoolWrapper<T>*>(it->second.get());
     }
 
-    // Remove execution
-    void remove(const typeHandle& th) noexcept {
-        auto it = pools.find(th.typeIndex);
-        if (it != pools.end()) it->second->instaRm(th.handle);
-    }
-
-    template<typename T>
-    void remove(const tinyHandle& handle) noexcept {
-        remove(typeHandle::make<T>(handle));
-    }
-
 public:
     tinyRegistry() noexcept = default;
 
@@ -116,9 +105,18 @@ public:
         return ensurePool<T>().pool;
     }
 
+    void tRemove(const typeHandle& th) noexcept {
+        auto it = pools.find(th.typeIndex);
+        if (it != pools.end()) {
+            IPool* pool = it->second.get();
+            pool->remove(th.handle);
+        }
+    }
+
     template<typename T>
-    void tInstaRm(const tinyHandle& handle) noexcept { remove<T>(handle); }
-    void tInstaRm(const typeHandle& th) noexcept { remove(th); }
+    void tRemove(const tinyHandle& handle) noexcept {
+        tRemove(typeHandle::make<T>(handle));
+    }
 
 // For unsafe removal (vulkan resources for example)
     void tQueueRm(const typeHandle& th) noexcept {

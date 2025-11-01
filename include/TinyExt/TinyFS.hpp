@@ -231,50 +231,72 @@ public:
     }
 
     void rRemove(const typeHandle& th) noexcept {
-        if (!registry_.has(th)) return; // nothing to remove :/
-
-        if (safeDelete(th.typeIndex)) registry_.tInstaRm(th); // Safe to remove instantly
-        else                          registry_.tQueueRm(th); // Queue for pending removal
+        if (registry_.has(th)) registry_.tRemove(th);
     }
 
+// -------------------- FS-level Removal Queue (for deletion order control) --------------------
+
+    struct RmQueueEntry {
+        tinyHandle fnodeHandle;     // File node to remove
+        tinyHandle rescueParent;    // Where to rescue if removal fails (RESCUE parent)
+        typeHandle dataHandle;      // Registry data handle
+    };
+
+    // Execute removal for a specific type - processes all queued removals for that type
     template<typename T>
-    bool rTHasPendingRms() const noexcept {
-        return registry_.tHasPendingRms<T>();
-    }
-    bool rTHasPendingRms(std::type_index typeIndx) const noexcept {
-        return registry_.tHasPendingRms(typeIndx);
+    void execRemove() noexcept {
+        execRemove(std::type_index(typeid(T)));
     }
 
-    template<typename T>
-    void rTFlushRm(uint32_t index) noexcept {
-        registry_.tFlushRm<T>(index);
-    }
-    void rTFlushRm(std::type_index typeIndx, uint32_t index) noexcept {
-        registry_.tFlushRm(typeIndx, index);
-    }
+    void execRemove(std::type_index typeIndx) noexcept {
+        auto it = rmQueues_.find(typeIndx);
+        if (it == rmQueues_.end()) return;
 
-    template<typename T>
-    void rTFlushAllRms() noexcept {
-        registry_.tFlushAllRms<T>();
-    }
-    void rTFlushAllRms(std::type_index typeIndx) noexcept {
-        registry_.tFlushAllRms(typeIndx);
-    }
+        std::vector<RmQueueEntry>& queue = it->second;
+        TypeInfo* tInfo = typeInfo(typeIndx);
 
-
-    bool rHasPendingRms() const noexcept {
-        return registry_.hasPendingRms();
-    }
-
-    void rFlushAllRms() noexcept {
-        for (const auto& typeIndx : typeOrder_) {
-            const TypeInfo& info = typeInfos_.at(typeIndx);
-
-            registry_.tFlushAllRms(typeIndx);
+        for (const auto& entry : queue) {
+            void* dataPtr = registry_.get(entry.dataHandle);
+            
+            // Check if data satisfies removal rule (deleteRule)
+            if (dataPtr && tInfo && !tInfo->checkRmRule(dataPtr)) {
+                // Failed rule check - rescue the node to its RESCUE parent
+                fMove(entry.fnodeHandle, entry.rescueParent);
+            } else {
+                // Passed rule check or no rule - perform true removal
+                fRemoveTrue(entry.fnodeHandle, entry.dataHandle);
+            }
         }
 
-        // Flush everything at the end to be sure
-        registry_.flushAllRms();
+        queue.clear();
+    }
+
+    // Execute removal for all queued types (in priority order)
+    void execRemoveAll() noexcept {
+        // Process in priority order (lower priority first)
+        for (const auto& typeIndx : typeOrder_) {
+            execRemove(typeIndx);
+        }
+        rmQueues_.clear();
+    }
+
+    // Check if there are pending removals for a type
+    template<typename T>
+    bool hasPendingRemovals() const noexcept {
+        return hasPendingRemovals(std::type_index(typeid(T)));
+    }
+
+    bool hasPendingRemovals(std::type_index typeIndx) const noexcept {
+        auto it = rmQueues_.find(typeIndx);
+        return it != rmQueues_.end() && !it->second.empty();
+    }
+
+    // Check if there are any pending removals at all
+    bool hasPendingRemovals() const noexcept {
+        for (const auto& [typeIndx, queue] : rmQueues_) {
+            if (!queue.empty()) return true;
+        }
+        return false;
     }
 
 // -------------------- Special Type Handlers --------------------
@@ -392,6 +414,9 @@ private:
     tinyHandle rootHandle_;
     bool caseSensitive_{false};
 
+    // Removal queue: maps type_index -> vector of RmQueueEntry
+    std::unordered_map<std::type_index, std::vector<RmQueueEntry>> rmQueues_;
+
 // -------------------- TypeInfo management --------------------
 
     TypeInfo* ensureTypeInfo(std::type_index typeIndx) {
@@ -486,6 +511,27 @@ private:
 
 // -------------------- Internal implementations --------------------
 
+    // fRemoveTrue: INSTANT removal of both fnode AND registry data
+    // Also cuts parent-child ties
+    void fRemoveTrue(tinyHandle nodeHandle, typeHandle dataHandle) noexcept {
+        Node* node = fnodes_.get(nodeHandle);
+        if (!node) return;
+
+        // Remove registry data INSTANTLY (no queuing in tinyRegistry)
+        if (dataHandle.valid()) {
+            registry_.tRemove(dataHandle);
+        }
+
+        // Remove from parent's children list
+        if (fnodes_.valid(node->parent)) {
+            Node* parent = fnodes_.get(node->parent);
+            if (parent) parent->removeChild(nodeHandle);
+        }
+
+        // Remove the file node itself
+        fnodes_.remove(nodeHandle);
+    }
+
     template<typename T>
     tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
         Node* parent = fnodes_.get(parentHandle);
@@ -520,63 +566,75 @@ private:
         return h;
     }
 
-    // Internal recursive function that tracks the original parent for non-deletable rescues
+    // Internal recursive function implementing the new removal logic
     bool fRemoveRecursive(tinyHandle handle, tinyHandle rescueParent, bool recursive) {
         Node* node = fnodes_.get(handle);
         if (!node) return false;
 
-        // Remove with regards to registry data
-        if (void* dataPtr = registry_.get(node->tHandle)) {
-            TypeInfo* tInfo = typeInfo(node->tHandle.typeIndex);
+        // Handle children first (if recursive)
+        if (recursive && !node->children.empty()) {
+            // Copy children to avoid mutation during recursion
+            std::vector<tinyHandle> childCopy = node->children;
+            
+            // Sort children by priority (low to high - low delete first)
+            std::sort(childCopy.begin(), childCopy.end(), [this](tinyHandle a, tinyHandle b) {
+                Node* nodeA = fnodes_.get(a);
+                Node* nodeB = fnodes_.get(b);
+                if (!nodeA || !nodeB) return false;
 
-            if (tInfo && !tInfo->checkRmRule(dataPtr)) {
-                fMove(handle, rescueParent);
+                // Get priority from TypeInfo
+                uint8_t prioA = 0, prioB = 0;
+                if (nodeA->hasData()) {
+                    TypeInfo* tInfo = typeInfo(nodeA->typeIndex());
+                    if (tInfo) prioA = tInfo->priority;
+                }
+                if (nodeB->hasData()) {
+                    TypeInfo* tInfo = typeInfo(nodeB->typeIndex());
+                    if (tInfo) prioB = tInfo->priority;
+                }
+
+                return prioA < prioB; // lower priority first
+            });
+
+            for (tinyHandle ch : childCopy) {
+                Node* child = fnodes_.get(ch);
+                if (!child) continue;
+
+                if (child->deletable()) {
+                    fRemoveRecursive(ch, rescueParent, recursive);
+                } else {
+                    fMove(ch, rescueParent);
+                }
+            }
+        }
+
+        // Now handle the current node
+        if (node->isFolder()) {
+            // Folders are INSTANTLY removed
+            fRemoveTrue(handle, typeHandle());
+            return true;
+        } else {
+            // Files: check if safe delete
+            TypeInfo* tInfo = node->hasData() ? typeInfo(node->typeIndex()) : nullptr;
+            bool isSafeDelete = tInfo ? tInfo->safeDelete : true;
+
+            if (isSafeDelete) {
+                // Safe delete: INSTANT removal
+                fRemoveTrue(handle, node->tHandle);
+                return true;
+            } else {
+                // NOT safe delete: append to RmQueue
+                std::type_index typeIndx = node->typeIndex();
+                
+                RmQueueEntry entry;
+                entry.fnodeHandle = handle;
+                entry.rescueParent = rescueParent;
+                entry.dataHandle = node->tHandle;
+
+                rmQueues_[typeIndx].push_back(entry);
                 return false;
             }
-
-            rRemove(node->tHandle); // remove data from registry
         }
-
-        // remove from parent children list
-        if (fnodes_.valid(node->parent)) {
-            Node* parent = fnodes_.get(node->parent);
-            parent->removeChild(handle);
-        }
-
-        // copy children to avoid mutation during recursion
-        std::vector<tinyHandle> childCopy = node->children;
-        // Sort children by priority (low to high - low delete first)
-        std::sort(childCopy.begin(), childCopy.end(), [this](tinyHandle a, tinyHandle b) {
-            Node* nodeA = fnodes_.get(a);
-            Node* nodeB = fnodes_.get(b);
-            if (!nodeA || !nodeB) return false;
-
-            // Guaranteed TypeInfo presence
-            uint8_t prioA = typeInfo(nodeA->tHandle.typeIndex)->priority;
-            uint8_t prioB = typeInfo(nodeB->tHandle.typeIndex)->priority;
-
-            return prioA < prioB; // lower priority first
-        });
-
-        for (tinyHandle ch : childCopy) {
-            Node* child = fnodes_.get(ch);
-            if (!child) continue;
-
-            bool canRemove = child->deletable() && recursive;
-            
-            TypeInfo* tInfo = typeInfo(child->tHandle.typeIndex);
-
-            // Can remove if satisfies type info rule
-            canRemove = canRemove && (!tInfo || tInfo->checkRmRule(registry_.get(child->tHandle)));
-
-            if (canRemove) fRemoveRecursive(ch, rescueParent, recursive);
-            else           fMove(ch, rescueParent);
-        }
-
-        // finally remove node from pool
-        fnodes_.instaRm(handle);
-
-        return true;
     }
 
 };

@@ -306,7 +306,7 @@ private:
         auto rmFromMapAndPool = [this](auto& map, auto& pool, tinyHandle handle) {
             auto it = map.find(handle);
             if (it != map.end()) {
-                pool.instaRm(it->second);
+                pool.remove(it->second);
                 map.erase(it);
             }
         };
@@ -369,7 +369,7 @@ private:
     template<typename T>
     void rtRemove(const tinyHandle& handle) {
         if constexpr (DeferredRm<T>::value) rtRegistry_.tQueueRm<T>(handle);
-        else                                rtRegistry_.tInstaRm<T>(handle);
+        else                                rtRegistry_.tRemove<T>(handle);
     }
 };
 
