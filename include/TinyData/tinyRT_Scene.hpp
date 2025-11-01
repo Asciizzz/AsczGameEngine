@@ -144,6 +144,10 @@ public:
         rtRegistry_.tFlushAllRms<T>();
     }
 
+    void rtFlushAllRms() {
+        rtRegistry_.flushAllRms();
+    }
+
 
     // -------- Component management --------- 
 
@@ -359,7 +363,8 @@ private:
     // ---------- Scary removal function ---------- (spooky)
 
     template<typename T> struct DeferredRm : std::false_type {};
-    template<> struct DeferredRm<tinyRT_SKEL3D> : std::true_type {};
+    template<> struct DeferredRm<tinyRT_SKEL3D> : std::true_type {}; // Skeleton descriptor set
+    template<> struct DeferredRm<tinyRT_MESHRD> : std::true_type {}; // Morph weights descriptor set
 
     template<typename T>
     void rtRemove(const tinyHandle& handle) {

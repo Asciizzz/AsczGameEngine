@@ -24,7 +24,7 @@ void main() {
     // color.rgb *= intensity;
 
     // vec3 customColor = vec3(0.2, 0.2, 0.5);
-    vec3 customColor = vec3(1.2);
+    vec3 customColor = vec3(1.0);
     color.rgb *= customColor;
 
     outColor = color;

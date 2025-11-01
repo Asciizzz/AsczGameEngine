@@ -315,7 +315,10 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
 
     // Update skeleton component
     tinyRT_SKEL3D* rtSkele = rtComp<tinyNodeRT::SKEL3D>(realHandle);
-    if (rtSkele) rtSkele->update(0, curFrame_);
+    if (rtSkele) {
+        rtSkele->update(0);
+        rtSkele->vkUpdate(curFrame_);
+    }
 
     // Update animation component
     tinyRT_ANIM3D* rtAnime = rtComp<tinyNodeRT::ANIM3D>(realHandle);

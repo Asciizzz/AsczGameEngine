@@ -26,8 +26,6 @@ struct Skeleton3D {
     void refresh(uint32_t boneIndex, bool reupdate = true);
     void refreshAll();
 
-    void update(uint32_t boneIndx, uint32_t curFrame) noexcept;
-
 // -----------------------------------------
 
     static void vkWrite(const tinyVk::Device* device, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, uint32_t boneCount);
@@ -71,6 +69,11 @@ struct Skeleton3D {
     bool pValid() const {
         return vkValid && hasSkeleton();
     }
+
+// -----------------------------------------
+
+    void update(uint32_t boneIndx) noexcept;
+    void vkUpdate(uint32_t curFrame) noexcept;
 
 private:
     bool vkValid = false;

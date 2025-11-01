@@ -110,7 +110,7 @@ void Skeleton3D::updateFlat() {
     }
 }
 
-void Skeleton3D::update(uint32_t boneIndx, uint32_t curFrame) noexcept {
+void Skeleton3D::update(uint32_t boneIndx) noexcept {
     if (!boneValid(boneIndx)) return;
 
     if (boneIndx == 0) {
@@ -120,8 +120,10 @@ void Skeleton3D::update(uint32_t boneIndx, uint32_t curFrame) noexcept {
         glm::mat4 parentTransform = finalPose_[rSkeleton()->bones[boneIndx].parent];
         updateRecursive(boneIndx, parentTransform);
     }
+}
 
-    if (curFrame >= maxFramesInFlight_) return;
+void Skeleton3D::vkUpdate(uint32_t curFrame) noexcept {
+    if (!pValid() || curFrame >= maxFramesInFlight_) return;
 
     // Upload updated skin data to GPU for the current frame
     VkDeviceSize offset = dynamicOffset(curFrame);
