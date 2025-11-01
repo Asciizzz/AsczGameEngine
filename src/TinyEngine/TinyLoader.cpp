@@ -869,30 +869,32 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
 
     // Construct all root-level nodes first
 
-    // Add a single node to store all skeletons
-    tNode skeletonRootNode("LSkeletons");
-    int skeletonRootModelIndex = pushNode(std::move(skeletonRootNode));
+    if (!tinyModel.skeletons.empty()) {
+        // Add a single node to store all skeletons
+        tNode skeletonRootNode("LSkeletons");
+        int skeletonRootModelIndex = pushNode(std::move(skeletonRootNode));
 
-    nodes[0].addChild(skeletonRootModelIndex);
-    nodes[skeletonRootModelIndex].setParent(0);
+        nodes[0].addChild(skeletonRootModelIndex);
+        nodes[skeletonRootModelIndex].setParent(0);
 
-    // Skeleton parent nodes
-    skeletonToModelNodeIndex.clear();
-    for (size_t skeleIndx = 0; skeleIndx < tinyModel.skeletons.size(); ++skeleIndx) {
-        // We only need this skeleton for the name
-        const tinySkeleton& skeleton = tinyModel.skeletons[skeleIndx];
+        // Skeleton parent nodes
+        skeletonToModelNodeIndex.clear();
+        for (size_t skeleIndx = 0; skeleIndx < tinyModel.skeletons.size(); ++skeleIndx) {
+            // We only need this skeleton for the name
+            const tinySkeleton& skeleton = tinyModel.skeletons[skeleIndx];
 
-        tNode skeleNode(skeleton.name);
-        skeleNode.SKEL3D_skeleIndx = skeleIndx;
+            tNode skeleNode(skeleton.name);
+            skeleNode.SKEL3D_skeleIndx = skeleIndx;
 
-        int skeleNodeIndex = pushNode(std::move(skeleNode));
-        skeletonToModelNodeIndex[(int)skeleIndx] = skeleNodeIndex;
+            int skeleNodeIndex = pushNode(std::move(skeleNode));
+            skeletonToModelNodeIndex[(int)skeleIndx] = skeleNodeIndex;
 
-        // Child of skeleton root
-        nodes[skeletonRootModelIndex].addChild(skeleNodeIndex);
-        nodes[skeleNodeIndex].setParent(skeletonRootModelIndex);
+            // Child of skeleton root
+            nodes[skeletonRootModelIndex].addChild(skeleNodeIndex);
+            nodes[skeleNodeIndex].setParent(skeletonRootModelIndex);
 
-        skeletonToModelNodeIndex[(int)skeleIndx] = skeleNodeIndex;
+            skeletonToModelNodeIndex[(int)skeleIndx] = skeleNodeIndex;
+        }
     }
 
     std::vector<int> gltfNodeParent(model.nodes.size(), -1);

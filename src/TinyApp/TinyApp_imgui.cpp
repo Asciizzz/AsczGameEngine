@@ -1151,14 +1151,14 @@ void tinyApp::renderFileSystemInspector() {
             // Extended data
             if (const tinyMaterialVk* materialVk = fs.registry().get<tinyMaterialVk>(tHandle)) {
                 ImGui::Separator();
-                
-                if (const tinyTextureVk* albedoTex = materialVk->albTex()) {
+
+                if (const tinyTextureVk* albedoTex = materialVk->texture(MTexSlot::Albedo)) {
                     const tinyTexture& textureCPU = albedoTex->cpu();
 
                     ImGui::Text("Albedo Texture: %s (%dx%d, %d channels)", textureCPU.name.c_str(), textureCPU.width(), textureCPU.height(), textureCPU.channels());
                 }
 
-                if (const tinyTextureVk* normalTex = materialVk->nrmlTex()) {
+                if (const tinyTextureVk* normalTex = materialVk->texture(MTexSlot::Normal)) {
                     const tinyTexture& textureCPU = normalTex->cpu();
 
                     ImGui::Text("Normal Texture: %s (%dx%d, %d channels)", textureCPU.name.c_str(), textureCPU.width(), textureCPU.height(), textureCPU.channels());

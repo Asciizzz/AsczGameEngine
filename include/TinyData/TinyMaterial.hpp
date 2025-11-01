@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "tinyExt/tinyPool.hpp"
 #include "tinyData/tinyTexture.hpp"
 
@@ -11,15 +13,25 @@ struct tinyMaterialVk {
         glm::vec4 baseColor = glm::vec4(1.0f); // RGBA base color multiplier
     };
 
+    enum class TexSlot : uint32_t {
+        Albedo = 0,
+        Normal = 1,
+        MetallicRoughness = 2,
+        Emissive = 3,
+        Count = 4
+    };
+
     std::string name;
-    tinyMaterialVk() noexcept = default;
+    tinyMaterialVk() noexcept {
+        // Initialize all texture pointers to nullptr
+        textures_.fill(nullptr);
+    }
 
     ~tinyMaterialVk() noexcept {
-        // Decrease texture use counts
-        if (albTex_) albTex_->decrementUse();
-        if (nrmlTex_) nrmlTex_->decrementUse();
-        if (metalTex_) metalTex_->decrementUse();
-        if (emisTex_) emisTex_->decrementUse();
+        // Decrease texture use counts for all slots
+        for (auto* tex : textures_) {
+            if (tex) tex->decrementUse();
+        }
     }
 
     static tinyVk::DescSLayout createDescSetLayout(VkDevice deviceVk) {
@@ -32,7 +44,7 @@ struct tinyMaterialVk {
         };
 
         // Other texture bindings
-        for (uint32_t i = 0; i < texCount; i++) {
+        for (uint32_t i = 0; i < static_cast<uint32_t>(TexSlot::Count); i++) {
             bindings.push_back({ i + 1, DescType::CombinedImageSampler, 1, ShaderStage::Fragment, nullptr });
         }
 
@@ -47,7 +59,7 @@ struct tinyMaterialVk {
         DescPool pool;
         pool.create(deviceVk, {
             { DescType::UniformBuffer, maxSets },
-            { DescType::CombinedImageSampler, maxSets * texCount }
+            { DescType::CombinedImageSampler, maxSets * static_cast<uint32_t>(TexSlot::Count) }
         }, maxSets);
 
         return pool;
@@ -82,69 +94,73 @@ struct tinyMaterialVk {
     tinyMaterialVk(tinyMaterialVk&& other) noexcept
     :   name(std::move(other.name)),
         descSet_(std::move(other.descSet_)),
-
         defTex_(other.defTex_),
-        albTex_(other.albTex_),
-        nrmlTex_(other.nrmlTex_),
-        metalTex_(other.metalTex_),
-        emisTex_(other.emisTex_),
-
+        textures_(other.textures_),
         props_(other.props_),
         propsBuffer_(std::move(other.propsBuffer_)),
         deviceVk_(other.deviceVk_)
     {
-        // null out the old object so its destructor doesn't decrement
-        other.albTex_ = nullptr;
-        other.nrmlTex_ = nullptr;
-        other.metalTex_ = nullptr;
-        other.emisTex_ = nullptr;
+        // Null out the old object so its destructor doesn't decrement
+        other.textures_.fill(nullptr);
     }
+
     tinyMaterialVk& operator=(tinyMaterialVk&& other) noexcept {
         if (this != &other) {
-            // Decrement current textures (type shi)
-            if (albTex_) albTex_->decrementUse();
-            if (nrmlTex_) nrmlTex_->decrementUse();
-            if (metalTex_) metalTex_->decrementUse();
-            if (emisTex_) emisTex_->decrementUse();
+            // Decrement current textures
+            for (auto* tex : textures_) {
+                if (tex) tex->decrementUse();
+            }
 
             name = std::move(other.name);
             descSet_ = std::move(other.descSet_);
             deviceVk_ = other.deviceVk_;
-
             defTex_ = other.defTex_;
-            albTex_ = other.albTex_;
-            nrmlTex_ = other.nrmlTex_;
-            metalTex_ = other.metalTex_;
-            emisTex_ = other.emisTex_;
-
+            textures_ = other.textures_;
             props_ = other.props_;
             propsBuffer_ = std::move(other.propsBuffer_);
-            updateAllBindings();
 
-            other.albTex_ = nullptr;
-            other.nrmlTex_ = nullptr;
-            other.metalTex_ = nullptr;
-            other.emisTex_ = nullptr;
+            // Null out the old object
+            other.textures_.fill(nullptr);
+
+            updateAllBindings();
         }
         return *this;
     }
 
 // ---------------- Texture Setters ---------------
 
+    bool setTexture(TexSlot slot, tinyTextureVk* texture) noexcept {
+        if (!texture) return false;
+
+        uint32_t index = static_cast<uint32_t>(slot);
+        if (index >= static_cast<uint32_t>(TexSlot::Count)) return false;
+
+        // Decrement old texture if it exists
+        if (textures_[index]) {
+            textures_[index]->decrementUse();
+        }
+
+        textures_[index] = texture;
+        texture->incrementUse();
+
+        updateTexBinding(slot);
+        return true;
+    }
+
     bool setAlbTex(tinyTextureVk* texture) noexcept {
-        return setTexture(albTex_, texture, 1);
+        return setTexture(TexSlot::Albedo, texture);
     }
 
     bool setNrmlTex(tinyTextureVk* texture) noexcept {
-        return setTexture(nrmlTex_, texture, 2);
+        return setTexture(TexSlot::Normal, texture);
     }
 
     bool setMetalTex(tinyTextureVk* texture) noexcept {
-        return setTexture(metalTex_, texture, 3);
+        return setTexture(TexSlot::MetallicRoughness, texture);
     }
 
     bool setEmisTex(tinyTextureVk* texture) noexcept {
-        return setTexture(emisTex_, texture, 4);
+        return setTexture(TexSlot::Emissive, texture);
     }
 
 // ---------------- Properties Setters ---------------
@@ -164,32 +180,27 @@ struct tinyMaterialVk {
     // implicit conversion
     VkDescriptorSet descSet() const noexcept { return descSet_; }
 
-    const tinyTextureVk* albTex() const noexcept { return albTex_; }
-    const tinyTextureVk* nrmlTex() const noexcept { return nrmlTex_; }
     const Props& properties() const noexcept { return props_; }
     const glm::vec4& baseColor() const noexcept { return props_.baseColor; }
 
-private:
-    bool setTexture(tinyTextureVk*& curTex, tinyTextureVk*& newTex, uint32_t binding) noexcept {
-        if (!newTex) return false;
-
-        if (curTex) curTex->decrementUse();
-
-        curTex = newTex;
-        curTex->incrementUse();
-
-        updateTexBinding(binding, curTex);
-        return true;
+    const tinyTextureVk* texture(TexSlot slot) const noexcept {
+        uint32_t index = static_cast<uint32_t>(slot);
+        if (index >= static_cast<uint32_t>(TexSlot::Count)) return nullptr;
+        return textures_[index];
     }
 
-    void updateTexBinding(uint32_t binding, const tinyTextureVk* texture) {
+private:
+    void updateTexBinding(TexSlot slot) {
         using namespace tinyVk;
 
-        const tinyTextureVk* tex = texture ? texture : defTex_;
+        uint32_t index = static_cast<uint32_t>(slot);
+        uint32_t binding = index + 1; // Properties at 0, textures start at 1
+
+        const tinyTextureVk* tex = textures_[index] ? textures_[index] : defTex_;
 
         DescWrite()
             .addWrite()
-            .setDstSet(descSet_) // implicit conversion
+            .setDstSet(descSet_)
             .setDstBinding(binding)
             .setType(DescType::CombinedImageSampler)
             .setImageInfo({ VkDescriptorImageInfo{
@@ -217,25 +228,22 @@ private:
 
     void updateAllBindings() {
         updatePropsBinding();
-        updateTexBinding(1, albTex_);
-        updateTexBinding(2, nrmlTex_);
-        updateTexBinding(3, metalTex_);
-        updateTexBinding(4, emisTex_);
+        
+        // Update all texture bindings dynamically
+        for (uint32_t i = 0; i < static_cast<uint32_t>(TexSlot::Count); ++i) {
+            updateTexBinding(static_cast<TexSlot>(i));
+        }
     }
 
     const tinyVk::Device* deviceVk_ = nullptr;
     const tinyTextureVk* defTex_ = nullptr; // Fallback texture
 
-    // Ay guys, I used deque so this won't be dangling, nice
-
-    constexpr static uint32_t texCount = 4; // Change as needed
-    tinyTextureVk* albTex_ = nullptr;
-    tinyTextureVk* nrmlTex_ = nullptr;
-    tinyTextureVk* metalTex_ = nullptr;
-    tinyTextureVk* emisTex_ = nullptr;
+    std::array<tinyTextureVk*, static_cast<uint32_t>(TexSlot::Count)> textures_;
 
     Props props_;
     tinyVk::DataBuffer propsBuffer_; // Modifiable
 
     tinyVk::DescSet descSet_;
 };
+
+using MTexSlot = tinyMaterialVk::TexSlot;
