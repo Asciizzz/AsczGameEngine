@@ -472,6 +472,7 @@ static bool readDeltaAccessor(const tinygltf::Model& model,
 
 void loadMesh(tinyMesh& mesh,
               const tinygltf::Model& gltfModel,
+              const tinygltf::Mesh& gltfMesh,
               const std::vector<tinygltf::Primitive>& primitives,
               bool hasRigging)
 {
@@ -660,12 +661,18 @@ void loadMesh(tinyMesh& mesh,
             }
 
             // ---- name (optional) ----------------------------------------------------
+            // glTF stores target names at the mesh level in mesh.extras["targetNames"]
             std::string name = "";
-            // auto nameIt = primitive.targetNames.find(static_cast<int>(tgtIdx));
-            // if (nameIt != primitive.targetNames.end())
-            //     name = nameIt->second;
-            // else
-            //     name = "target_" + std::to_string(tgtIdx);
+            if (tgtIdx < gltfMesh.extras.Get("targetNames").ArrayLen()) {
+                name = gltfMesh.extras.Get("targetNames").Get(static_cast<int>(tgtIdx)).Get<std::string>();
+            }
+            
+            // Fallback to default naming if no name provided
+            if (name.empty()) {
+                name = "MorphTarget_" + std::to_string(tgtIdx);
+            }
+            
+            name = tinyLoader::sanitizeAsciiz(name, "morph", tgtIdx);
 
             // ---- add to mesh ---------------------------------------------------------
             tinyMorphTarget mt;
@@ -688,7 +695,7 @@ void loadMeshes(std::vector<tinyMesh>& meshes, tinygltf::Model& gltfModel, bool 
             tinyLoader::sanitizeAsciiz("Mesh", "mesh", meshIndex) : 
             tinyLoader::sanitizeAsciiz(gltfMesh.name, "mesh", meshIndex);
 
-        loadMesh(tinyMesh, gltfModel, gltfMesh.primitives, !forceStatic);
+        loadMesh(tinyMesh, gltfModel, gltfMesh, gltfMesh.primitives, !forceStatic);
 
         meshes.push_back(std::move(tinyMesh));
     }
