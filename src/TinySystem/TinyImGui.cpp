@@ -44,6 +44,9 @@ bool tinyImGui::init(SDL_Window* window, VkInstance instance, const tinyVk::Devi
     style.Colors[ImGuiCol_Border] = ImVec4(0.3f, 0.3f, 0.3f, 0.5f);
     style.WindowBorderSize = 1.0f;
 
+    // Make windows only movable from title bar
+    io.ConfigWindowsMoveFromTitleBarOnly = true;
+
     // default font scale
     style.FontScaleMain = 1.2f;
 
@@ -103,8 +106,8 @@ void tinyImGui::newFrame() {
     ImGui::NewFrame();
 }
 
-void tinyImGui::addWindow(const std::string& name, std::function<void()> draw, bool* p_open) {
-    windows.emplace_back(name, draw, p_open);
+void tinyImGui::addWindow(const std::string& name, std::function<void()> draw, bool* p_open, int flags) {
+    windows.emplace_back(name, draw, p_open, flags);
 }
 
 void tinyImGui::removeWindow(const std::string& name) {
@@ -127,13 +130,13 @@ void tinyImGui::render(VkCommandBuffer commandBuffer) {
         if (window.p_open) {
             // Window has open/close control
             if (*window.p_open) {
-                ImGui::Begin(window.name.c_str(), window.p_open);
+                ImGui::Begin(window.name.c_str(), window.p_open, window.flags);
                 if (window.draw) window.draw();
                 ImGui::End();
             }
         } else {
             // Window is always open
-            ImGui::Begin(window.name.c_str());
+            ImGui::Begin(window.name.c_str(), nullptr, window.flags);
             if (window.draw) window.draw();
             ImGui::End();
         }

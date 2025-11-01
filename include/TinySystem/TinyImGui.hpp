@@ -19,9 +19,10 @@ public:
         std::string name;
         std::function<void()> draw;
         bool* p_open = nullptr; // Optional pointer to control window open/close state
+        int flags = 0; // ImGui window flags
         
-        Window(const std::string& windowName, std::function<void()> drawFunc, bool* openPtr = nullptr)
-            : name(windowName), draw(drawFunc), p_open(openPtr) {}
+        Window(const std::string& windowName, std::function<void()> drawFunc, bool* openPtr = nullptr, int windowFlags = 0)
+            : name(windowName), draw(drawFunc), p_open(openPtr), flags(windowFlags) {}
     };
 
     tinyImGui() noexcept = default;
@@ -42,7 +43,7 @@ public:
     void newFrame();
 
     // Add a window to the UI system
-    void addWindow(const std::string& name, std::function<void()> draw, bool* p_open = nullptr);
+    void addWindow(const std::string& name, std::function<void()> draw, bool* p_open = nullptr, int flags = 0);
     
     // Remove a window by name
     void removeWindow(const std::string& name);
