@@ -67,22 +67,17 @@ public:
         rootNode.name = ".root";
         rootNode.parent = tinyHandle();
         rootNode.type = Node::Type::Folder;
-        rootNode.cfg.deletable = false; // root is not deletable
-
-        // Insert root and store explicitly the returned handle
+        rootNode.cfg.deletable = false;
         rootHandle_ = fnodes_.add(std::move(rootNode));
     }
 
     ~tinyFS() noexcept {
-        // Clear pool BASED on priority order
-        // (higher priority clear last)
-
         for (const auto& tIndex : typeOrder_) {
             registry_.clear(tIndex);
         }
     }
 
-    // ---------- Basic access ----------
+// ---------- Basic access ----------
 
     tinyHandle rootHandle() const noexcept { return rootHandle_; }
 
@@ -96,9 +91,9 @@ public:
         if (root) root->name = rootPath;
     }
 
-    // ---------- Creation ----------
+// ---------- Creation ----------
 
-    // Folder creation (non-template overload)
+// Folder creation (non-template overload)
     tinyHandle addFolder(tinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
         return addFNodeImpl(parentHandle, name, cfg);
     }
@@ -117,8 +112,111 @@ public:
         return addFile<T>(rootHandle_, name, std::forward<T>(data), cfg);
     }
 
-    // ---------- Move with cycle prevention ----------
-    
+// -------------------- Special Type Handlers --------------------
+
+    struct TypeExt {
+        // Identification
+        std::string ext;
+        float color[3];
+
+        // Assume folder, max priority
+        TypeExt(const std::string& ext = "", float r = 1.0f, float g = 1.0f, float b = 1.0f)
+        : ext(ext) { color[0] = r; color[1] = g; color[2] = b; }
+
+        bool operator<(const TypeExt& other) const noexcept { return ext < other.ext; }
+        bool operator>(const TypeExt& other) const noexcept { return other < *this; }
+
+        // Compare for equality
+        bool operator==(const TypeExt& other) const noexcept {
+            return 
+                ext == other.ext &&
+                color[0] == other.color[0] &&
+                color[1] == other.color[1] &&
+                color[2] == other.color[2];
+        }
+
+        bool empty() const noexcept { return ext.empty(); }
+        const char* c_str() const noexcept { return ext.c_str(); }
+    };
+
+    using RmRuleFn = std::function<bool(const void*)>;
+
+    struct IRmRule {
+        virtual ~IRmRule() = default;
+        virtual bool check(const void* dataPtr) const noexcept = 0;
+    };
+
+    template<typename T>
+    struct RmRule : IRmRule {
+        std::function<bool(const T&)> rule;
+
+        RmRule() = default;
+
+        explicit RmRule(std::function<bool(const T&)> r) : rule(std::move(r)) {}
+
+        // Default behavior: allow removal if no rule set
+        bool check(const void* dataPtr) const noexcept override {
+            try {
+                if (!rule) return true;
+                return rule(*static_cast<const T*>(dataPtr));
+            } catch (...) {
+                return true;
+            }
+        }
+    };
+
+    struct TypeInfo {
+        TypeExt typeExt;
+
+        uint8_t priority = 0; // Higher priority = delete last
+        bool safeDelete = false;
+        std::unique_ptr<IRmRule> rmRule;
+
+        const char* c_str() const noexcept { return typeExt.c_str(); }
+
+        template<typename T>
+        void setRmRule(std::function<bool(const T&)> ruleFn) {
+            rmRule = std::make_unique<RmRule<T>>(std::move(ruleFn));
+        }
+
+        void clearRmRule() noexcept { rmRule.reset(); }
+
+        bool checkRmRule(const void* dataPtr) const noexcept {
+            return rmRule ? rmRule->check(dataPtr) : true;
+        }
+    };
+
+    TypeInfo* typeInfo(std::type_index typeIndx) noexcept {
+        return ensureTypeInfo(typeIndx);
+    }
+
+    template<typename T>
+    TypeInfo* typeInfo() noexcept {
+        return ensureTypeInfo(std::type_index(typeid(T)));
+    }
+
+    TypeExt typeExt(std::type_index typeIndx) const noexcept {
+        auto it = typeInfos_.find(typeIndx);
+        return (it != typeInfos_.end()) ? it->second.typeExt : TypeExt();
+    }
+
+    template<typename T>
+    TypeExt typeExt() const noexcept {
+        return typeExt(std::type_index(typeid(T)));
+    }
+
+    bool safeDelete(std::type_index typeIndex) const noexcept {
+        auto it = typeInfos_.find(typeIndex);
+        return (it != typeInfos_.end()) ? it->second.safeDelete : false;
+    }
+
+    template<typename T>
+    bool safeDelete() const noexcept {
+        return safeDelete(std::type_index(typeid(T)));
+    }
+
+// -------------------- Move with cycle prevention --------------------
+
     bool fMove(tinyHandle nodeHandle, tinyHandle parentHandle) {
         parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
         if (nodeHandle == parentHandle) return false; // Move to self
@@ -145,7 +243,7 @@ public:
         return true;
     }
 
-    // ---------- "Safe" recursive remove ----------
+// -------------------- "Safe" recursive remove --------------------
 
     bool fRemove(tinyHandle handle, bool recursive = true) noexcept {
         Node* node = fnodes_.get(handle);
@@ -164,7 +262,7 @@ public:
         return fRemove(handle, false);
     }
 
-    // ---------- Data Inspection ----------
+// ------------------- Node Inspection -------------------
 
     template<typename T>
     T* fData(tinyHandle fileHandle) noexcept {
@@ -286,115 +384,6 @@ public:
             if (!queue.empty()) return true;
         }
         return false;
-    }
-
-// -------------------- Special Type Handlers --------------------
-
-    struct TypeExt {
-        // Identification
-        std::string ext;
-        float color[3];
-
-        // Assume folder, max priority
-        TypeExt(const std::string& ext = "", float r = 1.0f, float g = 1.0f, float b = 1.0f)
-        : ext(ext) { color[0] = r; color[1] = g; color[2] = b; }
-
-        bool operator<(const TypeExt& other) const noexcept { return ext < other.ext; }
-        bool operator>(const TypeExt& other) const noexcept { return other < *this; }
-
-        // Compare for equality
-        bool operator==(const TypeExt& other) const noexcept {
-            return 
-                ext == other.ext &&
-                color[0] == other.color[0] &&
-                color[1] == other.color[1] &&
-                color[2] == other.color[2];
-        }
-
-        bool empty() const noexcept { return ext.empty(); }
-        const char* c_str() const noexcept { return ext.c_str(); }
-    };
-
-    using RmRuleFn = std::function<bool(const void*)>;
-
-    struct IRmRule {
-        virtual ~IRmRule() = default;
-        virtual bool check(const void* dataPtr) const noexcept = 0;
-    };
-
-    template<typename T>
-    struct RmRule : IRmRule {
-        std::function<bool(const T&)> rule;
-
-        RmRule() = default;
-
-        explicit RmRule(std::function<bool(const T&)> r) : rule(std::move(r)) {}
-
-        // Set function for T
-        void set(std::function<bool(const T&)> r) noexcept {
-            rule = std::move(r);
-        }
-
-        // Default behavior: allow removal if no rule set
-        bool check(const void* dataPtr) const noexcept override {
-            try {
-                if (!rule) return true;
-                return rule(*static_cast<const T*>(dataPtr));
-            } catch (...) {
-                return true;
-            }
-        }
-    };
-
-    struct TypeInfo {
-        TypeExt typeExt;
-
-        uint8_t priority = 0; // Higher priority = delete last
-        bool safeDelete = false;
-        std::unique_ptr<IRmRule> rmRule;
-
-        const char* c_str() const noexcept { return typeExt.c_str(); }
-
-        template<typename T>
-        void setRmRule(std::function<bool(const T&)> ruleFn) {
-            rmRule = std::make_unique<RmRule<T>>(std::move(ruleFn));
-        }
-
-        void clearRmRule() noexcept { rmRule.reset(); }
-
-        bool checkRmRule(const void* dataPtr) const noexcept {
-            return rmRule ? rmRule->check(dataPtr) : true;
-        }
-    };
-
-    TypeInfo* typeInfo(std::type_index typeIndx) noexcept {
-        return ensureTypeInfo(typeIndx);
-    }
-
-    template<typename T>
-    TypeInfo* typeInfo() noexcept {
-        return ensureTypeInfo(std::type_index(typeid(T)));
-    }
-
-    TypeExt typeExt(std::type_index typeIndx) const noexcept {
-        auto it = typeInfos_.find(typeIndx);
-        return (it != typeInfos_.end()) ? it->second.typeExt : TypeExt();
-    }
-
-    template<typename T>
-    TypeExt typeExt() const noexcept {
-        return typeExt(std::type_index(typeid(T)));
-    }
-
-
-    template<typename T>
-    bool safeDelete() const noexcept {
-        return safeDelete(std::type_index(typeid(T)));
-    }
-
-    bool safeDelete(std::type_index typeIndex) const noexcept {
-        auto it = typeInfos_.find(typeIndex);
-        return (it != typeInfos_.end()) ? it->second.safeDelete : false;
     }
 
 private:
