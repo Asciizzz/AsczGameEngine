@@ -189,25 +189,13 @@ glm::mat4 recomposeTransform(
 }
 
 
-void Anime3D::update(Scene* scene, float deltaTime) {
+void Anime3D::apply(Scene* scene, const tinyHandle& animeHandle) {
     if (scene == nullptr) return;
 
-    const Anime* anime = animePool.get(currentHandle);
-    if (!playing || !anime || !anime->valid()) return;
+    const Anime* anime = animePool.get(animeHandle);
+    if (!anime || !anime->valid()) return;
 
-    float duration = anime->duration;
-
-    time += deltaTime * speed;
-    if (duration <= 0.0f) {
-        // Zero-length animation: clamp to start
-        time = 0.0f;
-    } else if (loop) {
-        time = fmod(time, duration);
-        if (time < 0.0f) time += duration; // handle negative deltaTime safely
-    } else {
-        time = std::min(time, duration);
-    }
-
+    // Apply animation at the current time without updating time
     for (const auto& channel : anime->channels) {
         const auto& sampler = anime->samplers[channel.sampler];
 
@@ -266,19 +254,11 @@ void Anime3D::update(Scene* scene, float deltaTime) {
                 float dt = std::max(t1 - t0, 1e-6f);
                 float f = (time - t0) / dt;
 
-                // Read quaternions: assume values store (x,y,z,w) or (w,x,y,z) depending on your importer.
-                // Here we assume stored as (x,y,z,w). If your importer stores w first, invert below.
                 const glm::vec4& vv0 = sampler.values[index];
                 const glm::vec4& vv1 = sampler.values[index + 1];
 
-                // Two common conventions:
-                // - glTF rotation is (x, y, z, w) — typical. Many code paths also use (w, x, y, z).
-                // We'll assume glTF (x,y,z,w) by default. If you used w-first earlier, swap the order.
-                glm::quat q0 = glm::quat(vv0.w, vv0.x, vv0.y, vv0.z); // (w,x,y,z)
+                glm::quat q0 = glm::quat(vv0.w, vv0.x, vv0.y, vv0.z);
                 glm::quat q1 = glm::quat(vv1.w, vv1.x, vv1.y, vv1.z);
-
-                // If your stored order was (x,y,z,w), the above is correct because glm::quat ctor expects (w,x,y,z)
-                // if your stored order is (w,x,y,z) change to: glm::quat q0(vv0.x, vv0.y, vv0.z, vv0.w);
 
                 q0 = glm::normalize(q0);
                 q1 = glm::normalize(q1);
@@ -287,7 +267,6 @@ void Anime3D::update(Scene* scene, float deltaTime) {
                 if (sampler.interp == Sampler::Interp::Step) {
                     out = q0;
                 } else {
-                    // For Linear (and fallback for CubicSpline), slerp between q0 and q1
                     out = glm::slerp(q0, q1, f);
                     out = glm::normalize(out);
                 }
@@ -297,27 +276,45 @@ void Anime3D::update(Scene* scene, float deltaTime) {
             }
 
             case Channel::Path::W: { // Morph weights
-                // Morph weights don't use transform matrix - handle separately
                 if (channel.target != Channel::Target::Morph) break;
                 
-                // Evaluate the weight at the current time
                 glm::vec4 v = sampler.evaluate(time);
-                float weight = v.x; // Weight stored in x component
-                
-                // Clamp weight to valid range [0, 1]
+                float weight = v.x;
                 weight = glm::clamp(weight, 0.0f, 1.0f);
                 
-                // Write directly to mesh render component
                 tinyRT_MESHRD* meshRT = scene->rtComp<tinyNodeRT::MESHRD>(channel.node);
                 if (meshRT) {
                     meshRT->setMrphWeight(channel.index, weight);
                 }
                 
-                continue; // Skip writeTransform below
+                continue;
             }
-        } // switch
+        }
 
-        // finally write back
         writeTransform(scene, channel, transform);
-    } // channels
+    }
+}
+
+void Anime3D::update(Scene* scene, float deltaTime) {
+    if (scene == nullptr) return;
+
+    const Anime* anime = animePool.get(currentHandle);
+    if (!playing || !anime || !anime->valid()) return;
+
+    float duration = anime->duration;
+
+    // Update time
+    time += deltaTime * speed;
+    if (duration <= 0.0f) {
+        // Zero-length animation: clamp to start
+        time = 0.0f;
+    } else if (loop) {
+        time = fmod(time, duration);
+        if (time < 0.0f) time += duration; // handle negative deltaTime safely
+    } else {
+        time = std::min(time, duration);
+    }
+
+    // Apply the animation at the updated time
+    apply(scene, currentHandle);
 }

@@ -95,6 +95,17 @@ struct Anime3D {
     void resume() { playing = true; }
     void stop() { time = 0.0f; playing = false; }
 
+    // Direct time manipulation for editor scrubbing
+    void setTime(float newTime) { time = newTime; }
+    float getTime() const { return time; }
+    
+    // Speed control (can be negative for backward playback)
+    void setSpeed(float newSpeed) { speed = newSpeed; }
+    float getSpeed() const { return speed; }
+    
+    // Apply animation at current time to the scene (for manual scrubbing)
+    void apply(Scene* scene, const tinyHandle& animeHandle);
+    
     void update(Scene* scene, float deltaTime);
 
     Anime* current() { return animePool.get(currentHandle); }

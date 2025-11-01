@@ -95,11 +95,21 @@ private:
     bool showDemoWindow = false;
     bool showEditorSettingsWindow = false;
     bool showInspectorWindow = true;
+    bool showAnimationEditor = true;
     
     // UI Selection State - unified selection system
     SelectHandle selectedHandle;        // What is currently selected for inspection
     SelectHandle heldHandle;           // What is being dragged (supports drag from file to component fields)
     SelectHandle autoExpandHandle;     // What should be auto-expanded in UI
+    
+    // Animation Editor State
+    tinyHandle selectedAnimationNode;   // Persistent selection for animation editor (stays highlighted)
+    tinyHandle selectedAnimationHandle; // Currently selected animation in the component list
+    int selectedChannelIndex = -1;      // Currently selected channel in the timeline
+    float animationTime = 0.0f;         // Current time scrubber position
+    bool animationPlaying = false;      // Playback state
+    bool animationLooping = true;       // Loop state
+    float lastFrameTime = 0.0f;         // For delta time calculation
     
     // UI state: track expanded nodes in the hierarchy and file explorer
     std::unordered_set<tinyHandle> expandedNodes;
@@ -129,6 +139,7 @@ private:
     void renderInspectorWindow();
     void renderFileSystemInspector();
     void renderSceneNodeInspector();  // Renamed from renderNodeInspector
+    void renderAnimationEditorWindow(); // Animation timeline editor
     void renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove);
 
     bool renderHandleField(const char* fieldId, tinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description = nullptr);

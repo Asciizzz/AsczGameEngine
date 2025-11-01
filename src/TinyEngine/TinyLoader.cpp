@@ -435,13 +435,14 @@ void loadMaterials(std::vector<tinyModel::Material>& materials, tinygltf::Model&
 
         // Extract base color factor (default is white if not specified)
         const auto& baseColorFactor = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
-        if (baseColorFactor.size() == 4) {
-            material.baseColor = glm::vec4(
-                static_cast<float>(baseColorFactor[0]),
-                static_cast<float>(baseColorFactor[1]),
-                static_cast<float>(baseColorFactor[2]),
-                static_cast<float>(baseColorFactor[3])
-            );
+        if (size_t colorSize = baseColorFactor.size(); colorSize >= 1) {
+            // Handle 1, 2, 3, or 4 channel base colors
+            float r = colorSize > 0 ? static_cast<float>(baseColorFactor[0]) : 1.0f;
+            float g = colorSize > 1 ? static_cast<float>(baseColorFactor[1]) : r;
+            float b = colorSize > 2 ? static_cast<float>(baseColorFactor[2]) : r;
+            float a = colorSize > 3 ? static_cast<float>(baseColorFactor[3]) : 1.0f;
+
+            material.baseColor = glm::vec4(r, g, b, a);
         }
 
         // Albedo/Base color texture

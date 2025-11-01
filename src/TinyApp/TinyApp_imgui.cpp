@@ -231,6 +231,11 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
         ImGui::TextDisabled("• Performance options");
         ImGui::TextDisabled("• Keybind customization");
     }, &showEditorSettingsWindow);
+    
+    // Animation Editor Window
+    imguiWrapper->addWindow("Animation Editor", [this]() {
+        renderAnimationEditorWindow();
+    }, &showAnimationEditor);
 }
 
 void tinyApp::renderInspectorWindow() {
@@ -690,17 +695,6 @@ void tinyApp::renderSceneNodeInspector() {
                         rtMeshRender->setMrphWeight(i, weight);
                     }
                     
-                    // Show tooltip with more info on hover
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("Morph Target: %s", label.c_str());
-                        ImGui::Text("Index: %u", i);
-                        ImGui::Text("Weight: %.3f", weight);
-                        ImGui::Text("Drag slowly for precise control");
-                        ImGui::EndTooltip();
-                    }
-                    
-                    // Reset button for this morph target
                     ImGui::SameLine();
                     if (ImGui::Button(("Reset##" + std::to_string(i)).c_str())) {
                         rtMeshRender->setMrphWeight(i, 0.0f);
@@ -802,18 +796,11 @@ void tinyApp::renderSceneNodeInspector() {
                 componentModified = true;
             }
             
-            // Show validation status
             ImGui::SameLine();
             if (boneIndex <= maxBoneIndex && compPtr->skeleNodeHandle.valid()) {
                 ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "✓");
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("Valid bone index (%d/%d)", boneIndex, maxBoneIndex);
-                }
             } else {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "✗");
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("Invalid bone index (max: %d)", maxBoneIndex);
-                }
             }
             
             ImGui::Spacing();
@@ -950,17 +937,6 @@ void tinyApp::renderSceneNodeInspector() {
                         selectedBoneIndex = boneIndex;
                     }
                     
-                    // Show bone tooltip with details
-                    if (ImGui::IsItemHovered()) {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("Bone Index: %d", boneIndex);
-                        ImGui::Text("Name: %s", bone.name.c_str());
-                        ImGui::Text("Parent: %d", bone.parent);
-                        ImGui::Text("Children: %zu", bone.children.size());
-                        ImGui::EndTooltip();
-                    }
-                    
-                    // If node is open and has children, render children
                     if (nodeOpen && hasChildren) {
                         for (int childIndex : bone.children) {
                             renderBoneTree(childIndex, depth + 1);
@@ -1090,6 +1066,22 @@ void tinyApp::renderSceneNodeInspector() {
             // Get component copy using tinySceneRT method
             tinyRT_ANIM3D* compPtr = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle);
 
+            // Button to open animation editor for this node
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.9f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.7f, 1.0f));
+            
+            if (ImGui::Button("Open Animation Editor", ImVec2(-1, 0))) {
+                selectedAnimationNode = selectedSceneNodeHandle;
+                showAnimationEditor = true;
+            }
+            
+            ImGui::PopStyleColor(3);
+            
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
             // Create a search field
             static char searchBuffer[128] = "";
             ImGui::Text("Search:");
@@ -1098,10 +1090,12 @@ void tinyApp::renderSceneNodeInspector() {
             ImGui::InputText("##AnimationSearch", searchBuffer, sizeof(searchBuffer));
 
             ImGui::Spacing();
+            ImGui::Text("Animations:");
+            ImGui::Separator();
 
-            if (ImGui::Button("Stop##StopButton")) {
-                compPtr->stop();
-            }
+            // Scrollable animation list
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f);
+            ImGui::BeginChild("AnimationList", ImVec2(0, 200), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
             for (const auto& [name, handle] : compPtr->MAL()) {
                 // Convert search buffer to lowercase for case-insensitive search
@@ -1113,13 +1107,35 @@ void tinyApp::renderSceneNodeInspector() {
                     continue; // Skip non-matching animation names
                 }
 
-                if (ImGui::Button(("Play##" + name).c_str())) {
-                    compPtr->play(handle);
+                // Check if this animation is selected
+                bool isSelected = (selectedAnimationHandle == handle);
+                
+                // Highlight selected animation
+                if (isSelected) {
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.6f, 0.8f, 0.8f));
                 }
 
-                ImGui::SameLine();
-                ImGui::Text("%s", name.c_str());
+                // Selectable animation
+                if (ImGui::Selectable(name.c_str(), isSelected)) {
+                    selectedAnimationHandle = handle;
+                    selectedAnimationNode = selectedSceneNodeHandle;
+                    showAnimationEditor = true;
+                    
+                    // Get the anime to set duration
+                    const tinyRT_ANIM3D::Anime* anime = compPtr->get(handle);
+                    if (anime) {
+                        animationTime = 0.0f; // Reset time when selecting new animation
+                    }
+                }
+
+                if (isSelected) {
+                    ImGui::PopStyleColor();
+                }
+
             }
+
+            ImGui::EndChild();
+            ImGui::PopStyleVar();
 
             ImGui::Spacing();
         }, [&]() {
@@ -1412,20 +1428,6 @@ bool tinyApp::renderHandleField(const char* fieldId, tinyHandle& handle, const c
     
     ImGui::PopStyleColor(3);
     
-    // Show appropriate tooltip based on state
-    if (ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip();
-        if (handle.valid()) {
-            ImGui::Text("Click to clear");
-            if (description) ImGui::Text("%s", description);
-        } else {
-            if (dragTooltip) ImGui::Text("%s", dragTooltip);
-            if (description) ImGui::Text("%s", description);
-        }
-        ImGui::EndTooltip();
-    }
-    
-    // Enhanced drag-drop handling with visual feedback
     if (ImGui::BeginDragDropTarget()) {
         ImGui::PushStyleColor(ImGuiCol_DragDropTarget, ImVec4(0.3f, 0.6f, 1.0f, 0.7f));
         
@@ -1546,6 +1548,7 @@ void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
     bool hasChildren = !node->childrenHandles.empty();
     bool isSelected = (selectedHandle.isScene() && selectedHandle.handle.index == nodeHandle.index && selectedHandle.handle.version == nodeHandle.version);
     bool isHeld = (heldHandle.isScene() && heldHandle.handle.index == nodeHandle.index && heldHandle.handle.version == nodeHandle.version);
+    bool isAnimationNode = (selectedAnimationNode.valid() && selectedAnimationNode.index == nodeHandle.index && selectedAnimationNode.version == nodeHandle.version);
     
     // Create tree node flags
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
@@ -1556,9 +1559,16 @@ void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
         flags |= ImGuiTreeNodeFlags_Selected;
     }
 
-    // Add consistent styling to match File explorer theme
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f)); // Gray hover background (same as File explorer)
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f)); // Gray selection background (same as File explorer)
+    // Add consistent styling to match File explorer theme, with special highlight for animation node
+    if (isAnimationNode) {
+        // Highlight animation node in cyan/blue
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.2f, 0.4f, 0.6f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.5f, 0.8f, 0.8f));
+    } else {
+        // Normal styling
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.4f));
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
+    }
 
     // Force open if this node is in the expanded set
     bool forceOpen = isNodeExpanded(nodeHandle);
@@ -1730,33 +1740,7 @@ void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
         nodeHandle = selectedHandle.isScene() ? selectedHandle.handle : tinyHandle();
         node = activeScene->node(nodeHandle);
     }
-    
 
-    // Show node details in tooltip (slicker version like the old function)
-    if (ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left) && node != nullptr) {
-        ImGui::BeginTooltip();
-
-        // Create the node label with useful information
-        std::string typeLabel = "";
-        if (node->has<tinyNodeRT::TRFM3D>())  typeLabel += " [Transform]";
-        if (node->has<tinyNodeRT::MESHRD>()) typeLabel += " [MeshRender]";
-        if (node->has<tinyNodeRT::BONE3D>()) typeLabel += " [BoneAttach]";
-        if (node->has<tinyNodeRT::SKEL3D>())   typeLabel += " [Skeleton]";
-        if (node->has<tinyNodeRT::ANIM3D>())  typeLabel += " [Animation]";
-
-        typeLabel = typeLabel.empty() ? " [None]" : typeLabel;
-
-        ImGui::Text("%s", node->name.c_str());
-        ImGui::Text("Types:%s", typeLabel.c_str());
-
-        if (!node->childrenHandles.empty()) {
-            ImGui::Text("Children: %zu", node->childrenHandles.size());
-        }
-        
-        ImGui::EndTooltip();
-    }
-
-    // If node is open and has children, recurse for children
     if (nodeOpen && hasChildren && node != nullptr) {
         // Sort children by have-children? -> name
         std::vector<tinyHandle> sortedChildren = node->childrenHandles;
@@ -2340,4 +2324,355 @@ bool tinyApp::setActiveScene(tinyHandle sceneHandle) {
     activeSceneHandle = sceneHandle;
 
     return true;
+}
+
+void tinyApp::renderAnimationEditorWindow() {
+    tinySceneRT* activeScene = getActiveScene();
+    if (!activeScene) {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No active scene");
+        return;
+    }
+
+    // Check if we have a valid animation node selected
+    if (!selectedAnimationNode.valid()) {
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No animation node selected");
+        ImGui::Text("Select a node with an Animation component and choose an animation");
+        return;
+    }
+
+    const tinyNodeRT* animNode = activeScene->node(selectedAnimationNode);
+    if (!animNode || !animNode->has<tinyNodeRT::ANIM3D>()) {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid animation node");
+        selectedAnimationNode = tinyHandle();
+        return;
+    }
+
+    tinyRT_ANIM3D* animComp = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedAnimationNode);
+    if (!animComp) {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Failed to get animation component");
+        return;
+    }
+
+    // Get the selected animation
+    if (!selectedAnimationHandle.valid()) {
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No animation selected");
+        ImGui::Text("Select an animation from the Animation component");
+        return;
+    }
+
+    const tinyRT_ANIM3D::Anime* currentAnime = animComp->get(selectedAnimationHandle);
+    if (!currentAnime) {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid animation selection");
+        selectedAnimationHandle = tinyHandle();
+        return;
+    }
+
+    // ===== HEADER =====
+    ImGui::Text("Editing: %s", animNode->name.c_str());
+    ImGui::SameLine();
+    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "> %s", currentAnime->name.c_str());
+    
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ===== SINGLE LINE: PLAY/STOP, LOOP, SPEED, TIME =====
+    // Play/Stop button (compact)
+    if (animationPlaying) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+        
+        if (ImGui::Button("Stop", ImVec2(50, 0))) {
+            animationPlaying = false;
+            animationTime = 0.0f;
+        }
+        
+        ImGui::PopStyleColor(3);
+    } else {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));
+        
+        if (ImGui::Button("Play", ImVec2(50, 0))) {
+            animationPlaying = true;
+        }
+        
+        ImGui::PopStyleColor(3);
+    }
+
+    // Loop toggle button
+    ImGui::SameLine();
+    if (animationLooping) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.6f, 0.9f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.7f, 1.0f));
+    } else {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.2f, 0.2f, 0.7f));
+    }
+    
+    if (ImGui::Button("Loop", ImVec2(50, 0))) {
+        animationLooping = !animationLooping;
+    }
+    
+    ImGui::PopStyleColor(3);
+
+    // Speed control
+    ImGui::SameLine();
+    ImGui::Text("Speed:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(80);
+    float currentSpeed = animComp->getSpeed();
+    if (ImGui::DragFloat("##AnimSpeed", &currentSpeed, 0.01f, 0.0f, 0.0f, "%.2fx")) {
+        animComp->setSpeed(currentSpeed);
+    }
+
+    // Time display and control
+    ImGui::SameLine();
+    ImGui::Text("Time:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(80);
+    if (ImGui::DragFloat("##AnimTime", &animationTime, 0.01f, 0.0f, currentAnime->duration, "%.2f")) {
+        animationTime = std::max(0.0f, std::min(animationTime, currentAnime->duration));
+    }
+    
+    ImGui::SameLine();
+    ImGui::Text("/ %.2f s", currentAnime->duration);
+
+    ImGui::Spacing();
+
+    // ===== FULL WIDTH TIMELINE (DEDICATED LINE) =====
+    float progress = currentAnime->duration > 0.0f ? (animationTime / currentAnime->duration) : 0.0f;
+    
+    ImVec2 progressBarPos = ImGui::GetCursorScreenPos();
+    ImVec2 progressBarSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetFrameHeight());
+    
+    ImGui::ProgressBar(progress, progressBarSize, "");
+    
+    if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            ImVec2 mousePos = ImGui::GetMousePos();
+            float relativeX = mousePos.x - progressBarPos.x;
+            float normalizedPos = std::max(0.0f, std::min(1.0f, relativeX / progressBarSize.x));
+            animationTime = normalizedPos * currentAnime->duration;
+        }
+    }
+
+    // ===== REAL-TIME UPDATE =====
+    if (animationPlaying) {
+        float currentTime = static_cast<float>(ImGui::GetTime());
+        float deltaTime = currentTime - lastFrameTime;
+        lastFrameTime = currentTime;
+
+        // Update animation time with speed multiplier
+        animationTime += deltaTime * animComp->getSpeed();
+
+        // Handle looping/clamping
+        if (animComp->getSpeed() >= 0.0f) {
+            // Forward playback
+            if (animationTime >= currentAnime->duration) {
+                if (animationLooping) {
+                    animationTime = std::fmod(animationTime, currentAnime->duration);
+                } else {
+                    animationTime = currentAnime->duration;
+                    animationPlaying = false;
+                }
+            }
+        } else {
+            // Backward playback
+            if (animationTime <= 0.0f) {
+                if (animationLooping) {
+                    animationTime = currentAnime->duration + std::fmod(animationTime, currentAnime->duration);
+                } else {
+                    animationTime = 0.0f;
+                    animationPlaying = false;
+                }
+            }
+        }
+    } else {
+        lastFrameTime = static_cast<float>(ImGui::GetTime());
+    }
+
+    // Apply animation at current time to scene
+    animComp->setTime(animationTime);
+    animComp->apply(activeScene, selectedAnimationHandle);
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+
+    // ===== VERTICAL SPLITTER =====
+    static float splitterPos = 0.6f; // 60% for channels, 40% for sampler details
+    
+    float totalWidth = ImGui::GetContentRegionAvail().x;
+    float channelsWidth = totalWidth * splitterPos;
+    float samplerWidth = totalWidth * (1.0f - splitterPos);
+    
+    // ===== LEFT SIDE: CHANNELS & TIMELINE =====
+    ImGui::BeginChild("ChannelsTimeline", ImVec2(channelsWidth, 0), true);
+    
+    ImGui::Text("Channels (%zu)", currentAnime->channels.size());
+    ImGui::Separator();
+    
+    // Scrollable channel list
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
+    ImGui::BeginChild("ChannelList", ImVec2(0, 0), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+    
+    for (size_t i = 0; i < currentAnime->channels.size(); ++i) {
+        const auto& channel = currentAnime->channels[i];
+        
+        ImGui::PushID(static_cast<int>(i));
+        
+        bool isSelected = (selectedChannelIndex == static_cast<int>(i));
+        
+        // Channel header with selection highlight
+        if (isSelected) {
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.6f, 0.8f, 0.8f));
+        }
+        
+        // Determine channel name
+        std::string channelName;
+        std::string targetName = "Unknown";
+        
+        if (channel.node.valid()) {
+            const tinyNodeRT* targetNode = activeScene->node(channel.node);
+            if (targetNode) targetName = targetNode->name;
+        }
+        
+        // Path type
+        const char* pathStr = "?";
+        switch (channel.path) {
+            case tinyRT_ANIM3D::Channel::Path::T: pathStr = "Translation"; break;
+            case tinyRT_ANIM3D::Channel::Path::R: pathStr = "Rotation"; break;
+            case tinyRT_ANIM3D::Channel::Path::S: pathStr = "Scale"; break;
+            case tinyRT_ANIM3D::Channel::Path::W: pathStr = "Weight"; break;
+        }
+        
+        // Target type
+        const char* targetStr = "";
+        switch (channel.target) {
+            case tinyRT_ANIM3D::Channel::Target::Node: targetStr = "Node"; break;
+            case tinyRT_ANIM3D::Channel::Target::Bone: targetStr = "Bone"; break;
+            case tinyRT_ANIM3D::Channel::Target::Morph: targetStr = "Morph"; break;
+        }
+        
+        channelName = std::string(targetStr) + " [" + targetName + "] - " + pathStr;
+        if (channel.target == tinyRT_ANIM3D::Channel::Target::Morph || 
+            channel.target == tinyRT_ANIM3D::Channel::Target::Bone) {
+            channelName += " #" + std::to_string(channel.index);
+        }
+        
+        // Selectable channel
+        if (ImGui::Selectable(channelName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
+            selectedChannelIndex = static_cast<int>(i);
+        }
+        
+        if (isSelected) {
+            ImGui::PopStyleColor();
+        }
+        
+        ImGui::PopID();
+    }
+    
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+    
+    ImGui::EndChild();
+    
+    // ===== VERTICAL SPLITTER =====
+    ImGui::SameLine();
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 0.8f));
+    
+    ImGui::Button("##VerticalSplitter", ImVec2(4, -1));
+    
+    if (ImGui::IsItemActive()) {
+        float mouseDelta = ImGui::GetIO().MouseDelta.x;
+        splitterPos += mouseDelta / totalWidth;
+        splitterPos = std::max(0.3f, std::min(0.8f, splitterPos));
+    }
+    
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+    }
+    
+    ImGui::PopStyleColor(3);
+    
+    ImGui::SameLine();
+    
+    // ===== RIGHT SIDE: SAMPLER DETAILS =====
+    ImGui::BeginChild("SamplerDetails", ImVec2(samplerWidth, 0), true);
+    
+    if (selectedChannelIndex >= 0 && selectedChannelIndex < static_cast<int>(currentAnime->channels.size())) {
+        const auto& channel = currentAnime->channels[selectedChannelIndex];
+        
+        ImGui::Text("Sampler Details");
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Get the sampler
+        if (channel.sampler < currentAnime->samplers.size()) {
+            auto& sampler = const_cast<tinyRT_ANIM3D::Sampler&>(currentAnime->samplers[channel.sampler]);
+            
+            // Sampler info
+            ImGui::Text("Sampler Index: %u", channel.sampler);
+            
+            // Interpolation mode
+            const char* interpStr = "Linear";
+            switch (sampler.interp) {
+                case tinyRT_ANIM3D::Sampler::Interp::Linear: interpStr = "Linear"; break;
+                case tinyRT_ANIM3D::Sampler::Interp::Step: interpStr = "Step"; break;
+                case tinyRT_ANIM3D::Sampler::Interp::CubicSpline: interpStr = "Cubic Spline"; break;
+            }
+            ImGui::Text("Interpolation: %s", interpStr);
+            
+            ImGui::Text("Keyframes: %zu", sampler.times.size());
+            
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Text("Keyframe Editor");
+            ImGui::Separator();
+            
+            // Scrollable keyframe list
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f);
+            ImGui::BeginChild("KeyframeList", ImVec2(0, 0), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+            
+            for (size_t k = 0; k < sampler.times.size(); ++k) {
+                ImGui::PushID(static_cast<int>(k));
+                
+                ImGui::Text("Keyframe %zu", k);
+                
+                // Time
+                ImGui::Text("Time:");
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat("##KeyTime", &sampler.times[k], 0.01f, 0.0f, currentAnime->duration, "%.3f s");
+                
+                // Value (vec4)
+                ImGui::Text("Value:");
+                ImGui::SetNextItemWidth(-1);
+                ImGui::DragFloat4("##KeyValue", &sampler.values[k].x, 0.01f, -100.0f, 100.0f, "%.3f");
+                
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+                
+                ImGui::PopID();
+            }
+            
+            ImGui::EndChild();
+            ImGui::PopStyleVar();
+            
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid sampler index");
+        }
+        
+    } else {
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No channel selected");
+        ImGui::Text("Select a channel from the list to edit its sampler");
+    }
+    
+    ImGui::EndChild();
 }
