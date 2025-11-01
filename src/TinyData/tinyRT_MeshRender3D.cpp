@@ -16,19 +16,28 @@ MeshRender3D& MeshRender3D::setMesh(tinyHandle meshHandle) {
     if (!vkValid) return *this;
 
     meshHandle_ = meshHandle.valid() ? meshHandle : meshHandle_;
+    if (!hasMrph()) return *this;
 
-    vkWrite(deviceVk_, &mrphWsBuffer_, &mrphWsDescSet_, maxFramesInFlight_, mrphCount());
+    vkWrite(deviceVk_, &mrphWsBuffer_, &mrphWsDescSet_, maxFramesInFlight_, mrphCount(), &unalignedSize_, &alignedSize_);
     mrphWeights_.resize(mrphCount(), 0.0f);
 
     return *this;
 }
 
-void MeshRender3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, size_t mrphCount) {
+void MeshRender3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, size_t mrphCount, uint32_t* unalignedSize, uint32_t* alignedSize) {
     if (mrphCount == 0) return; // No morph targets
-    
+
     VkDeviceSize perFrameSize = sizeof(float) * mrphCount;
+    VkDeviceSize perFrameAligned = deviceVk->alignSizeSSBO(perFrameSize);
+
+    bool isDynamic = maxFramesInFlight > 1;
+    VkDeviceSize finalSize = isDynamic ? perFrameAligned * maxFramesInFlight : perFrameSize; // Non-dynamic can keep original size
+
+    if (unalignedSize) *unalignedSize = static_cast<uint32_t>(perFrameSize);
+    if (alignedSize)   *alignedSize   = static_cast<uint32_t>(perFrameAligned);
+
     buffer
-        ->setDataSize(perFrameSize * maxFramesInFlight)
+        ->setDataSize(finalSize)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(deviceVk)
@@ -37,11 +46,11 @@ void MeshRender3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* b
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = *buffer;
     bufferInfo.offset = 0;
-    bufferInfo.range = perFrameSize;
+    bufferInfo.range = isDynamic ? perFrameAligned : perFrameSize;
 
     DescWrite()
         .setDstSet(*descSet)
-        .setType(DescType::StorageBufferDynamic)
+        .setType(isDynamic ? DescType::StorageBufferDynamic : DescType::StorageBuffer)
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
         .updateDescSets(deviceVk->device);
@@ -67,13 +76,12 @@ VkDescriptorSet MeshRender3D::mrphWsDescSet() const noexcept {
 }
 
 uint32_t MeshRender3D::mrphWsDynamicOffset(uint32_t curFrame) const noexcept {
-    return sizeof(float) * mrphCount() * curFrame;
+    return curFrame * alignedSize_;
 }
 
 void MeshRender3D::vkUpdate(uint32_t curFrame) noexcept {
     if (!hasMrph()) return;
 
     VkDeviceSize offset = mrphWsDynamicOffset(curFrame);
-    VkDeviceSize dataSize = sizeof(float) * mrphCount();
-    mrphWsBuffer_.copyData(mrphWeights_.data(), dataSize, offset);
+    mrphWsBuffer_.copyData(mrphWeights_.data(), unalignedSize_, offset);
 }

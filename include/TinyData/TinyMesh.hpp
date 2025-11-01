@@ -144,9 +144,9 @@ private:
 
 struct tinyMeshVk {
     tinyMeshVk() noexcept = default;
-    void init(const tinyVk::Device* deviceVk, VkDescriptorSetLayout mrphDescSetLayout, VkDescriptorPool mrphDescPool) {
+    void init(const tinyVk::Device* deviceVk, VkDescriptorSetLayout mrphDsDescSetLayout, VkDescriptorPool mrphDsDescPool) {
         deviceVk_ = deviceVk;
-        mrphDescSet_.allocate(deviceVk->device, mrphDescPool, mrphDescSetLayout);
+        mrphDsDescSet_.allocate(deviceVk->device, mrphDsDescPool, mrphDsDescSetLayout);
     }
 
     tinyMeshVk(const tinyMeshVk&) = delete;
@@ -160,7 +160,6 @@ struct tinyMeshVk {
     VkBuffer vrtxBuffer() const noexcept { return vrtxBuffer_; }
     VkBuffer indxBuffer() const noexcept { return indxBuffer_; }
     VkIndexType indxType() const noexcept { return indxType_; }
-    VkDescriptorSet mrphDescSet() const noexcept { return mrphDescSet_; }
 
     tinyMesh& cpu() noexcept { return mesh_; }
     const tinyMesh& cpu() const noexcept { return mesh_; }
@@ -173,6 +172,7 @@ struct tinyMeshVk {
     size_t vrtxCount() const noexcept { return mesh_.vrtxCount(); }
     size_t indxCount() const noexcept { return mesh_.indxCount(); }
     size_t mrphCount() const noexcept { return mesh_.mrphCount(); }
+    VkDescriptorSet mrphDsDescSet() const noexcept { return mrphDsDescSet_; }
 
 // -----------------------------------------
 
@@ -203,10 +203,22 @@ struct tinyMeshVk {
 
         if (mesh_.mrphCount() == 0) return true; // No morph targets
 
-        mrphBuffer_
+        mrphDsBuffer_
             .setDataSize(mesh_.mrphData().size())
             .setUsageFlags(BufferUsage::Storage)
             .createDeviceLocalBuffer(deviceVk_, mesh_.mrphData().data());
+
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = mrphDsBuffer_;
+        bufferInfo.offset = 0;
+        bufferInfo.range = mesh_.mrphData().size();
+
+        DescWrite()
+            .setDstSet(mrphDsDescSet_)
+            .setType(DescType::StorageBuffer) // NOT DYNAMIC
+            .setDescCount(1)
+            .setBufferInfo({ bufferInfo })
+            .updateDescSets(deviceVk_->device);
 
         return true;
     }
@@ -215,41 +227,19 @@ struct tinyMeshVk {
         return set(std::forward<tinyMesh>(mesh)).create(), *this;
     }
 
-    void printInfo() {
-        printf("tinyMeshVk Info:\n");
-        printf("  Name: %s\n", mesh_.name.c_str());
-        printf("  Vertex Count: %zu\n", mesh_.vrtxCount());
-        printf("  Index Count: %zu\n", mesh_.indxCount());
-        printf("  Index Type: ");
-        switch (indxType_) {
-            case VK_INDEX_TYPE_UINT8:  printf("UINT8\n");  break;
-            case VK_INDEX_TYPE_UINT16: printf("UINT16\n"); break;
-            case VK_INDEX_TYPE_UINT32: printf("UINT32\n"); break;
-            default:                   printf("UNKNOWN\n"); break;
-        }
-        printf("  Morph Target Count: %zu\n", mesh_.mrphCount());
-        printf("  Parts:\n");
-        for (size_t i = 0; i < mesh_.parts().size(); ++i) {
-            const auto& part = mesh_.parts()[i];
-            printf("    Offset=%u, Count=%u, Material Handle Index=%u\n",
-                part.indxOffset, part.indxCount,
-                part.material.valid() ? part.material.index : 0);
-        }
-    }
-
     // Both weights and deltas uses SSBO, so no need for 2 separate desc sets creation functions
-    static tinyVk::DescSLayout createMrphDescSetLayout(VkDevice device) {
-        tinyVk::DescSLayout layout;
-        layout.create(device, {
-            {0, tinyVk::DescType::StorageBufferDynamic, 1, tinyVk::ShaderStage::Vertex, nullptr}
+    static tinyVk::DescSLayout createMrphDescSetLayout(VkDevice device, bool dynamic = true) {
+        using namespace tinyVk;
+        DescSLayout layout; layout.create(device, {
+            {0, dynamic ? DescType::StorageBufferDynamic : DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr}
         });
         return layout;
     }
 
-    static tinyVk::DescPool createMrphDescPool(VkDevice device, uint32_t maxMeshes) {
-        tinyVk::DescPool pool;
-        pool.create(device, {
-            {tinyVk::DescType::StorageBufferDynamic, maxMeshes}
+    static tinyVk::DescPool createMrphDescPool(VkDevice device, uint32_t maxMeshes, bool dynamic = true) {
+        using namespace tinyVk;
+        DescPool pool; pool.create(device, {
+            {dynamic ? DescType::StorageBufferDynamic : DescType::StorageBuffer, maxMeshes}
         }, maxMeshes);
         return pool;
     }
@@ -261,8 +251,8 @@ private:
     tinyVk::DataBuffer vrtxBuffer_;
     tinyVk::DataBuffer indxBuffer_;
 
-    tinyVk::DataBuffer mrphBuffer_;
-    tinyVk::DescSet mrphDescSet_;
+    tinyVk::DataBuffer mrphDsBuffer_;
+    tinyVk::DescSet mrphDsDescSet_;
 
     VkIndexType indxType_ = VK_INDEX_TYPE_UINT16;
 };

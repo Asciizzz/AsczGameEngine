@@ -102,7 +102,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
 
         tinyMeshVk meshVk;
-        meshVk.init(deviceVk, meshMrphWsDescLayout, meshMrphWsDescPool);
+        meshVk.init(deviceVk, meshMrphDsDescLayout, meshMrphDsDescPool);
 
         meshVk.createFrom(std::move(mesh));
 
@@ -279,8 +279,8 @@ void tinyProject::vkCreateResources() {
     matDescLayout = tinyMaterialVk::createDescSetLayout(device);
     matDescPool = tinyMaterialVk::createDescPool(device, maxMaterials);
 
-    meshMrphDsDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
-    meshMrphDsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
+    meshMrphDsDescLayout = tinyMeshVk::createMrphDescSetLayout(device, false);
+    meshMrphDsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes, false);
 
     meshMrphWsDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
     meshMrphWsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
@@ -326,7 +326,7 @@ void tinyProject::vkCreateDefault() {
 // -------------- Create dummy morph target resources --------------
 
     dummyMrphDsDescSet.allocate(deviceVk->device, meshMrphDsDescPool.get(), meshMrphDsDescLayout.get());
-    tinyRT_MESHR::vkWrite(deviceVk, &dummyMrphDsBuffer, &dummyMrphDsDescSet, sharedReq.maxFramesInFlight, 1);
+    tinyRT_MESHR::vkWrite(deviceVk, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
 
     dummyMrphWsDescSet.allocate(deviceVk->device, meshMrphWsDescPool.get(), meshMrphWsDescLayout.get());
     tinyRT_MESHR::vkWrite(deviceVk, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedReq.maxFramesInFlight, 1);

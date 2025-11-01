@@ -76,7 +76,7 @@ void tinyApp::initComponents() {
     UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
         {"global", project->descSLayout_Global()},
         {"material", project->descSLayout_Material()},
-        {"skin", project->getSkinDescSetLayout()},
+        {"skin", project->descSLayout_Skin()},
     };
     
     // Create named vertex inputs

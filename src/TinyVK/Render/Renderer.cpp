@@ -312,7 +312,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         if (isRigged) {
             isRigged = skinSet != VK_NULL_HANDLE;
 
-            skinSet = isRigged ? skinSet : project->getDummySkinDescSet();
+            skinSet = isRigged ? skinSet : project->descSet_DummySkin();
             
             // In the case of dummy, offset does't matter
             uint32_t skinOffset = rtSkele ? rtSkele->dynamicOffset(currentFrame) : 0;
@@ -331,7 +331,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 
             VkDescriptorSet matSet = material ? 
                 material->descSet() :
-                project->getDefaultMatDescSet();
+                project->descSet_DefaultMat();
 
             rPipeline->bindSets(currentCmd, 1, &matSet, 1, nullptr, 0);
 

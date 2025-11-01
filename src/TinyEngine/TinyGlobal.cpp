@@ -9,7 +9,7 @@ using namespace tinyVk;
 
 void tinyGlobal::vkCreate(const tinyVk::Device* deviceVk) {
     // get the true aligned size (for dynamic UBO offsets)
-    alignedSize = deviceVk->alignSize(sizeof(tinyGlobal::UBO));
+    alignedSize = deviceVk->alignSizeUBO(sizeof(tinyGlobal::UBO));
 
     dataBuffer
         .setDataSize(alignedSize * maxFramesInFlight)
@@ -27,7 +27,7 @@ void tinyGlobal::vkCreate(const tinyVk::Device* deviceVk) {
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = dataBuffer;
     bufferInfo.offset = 0;
-    bufferInfo.range  = sizeof(tinyGlobal::UBO);
+    bufferInfo.range  = alignedSize;
 
     DescWrite()
         .setDstSet(descSet)

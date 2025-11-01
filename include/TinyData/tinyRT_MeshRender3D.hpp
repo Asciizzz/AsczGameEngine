@@ -44,7 +44,7 @@ struct MeshRender3D {
 
 // -----------------------------------------
 
-    static void vkWrite(const tinyVk::Device* device, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, size_t mrphCount);
+    static void vkWrite(const tinyVk::Device* device, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, size_t mrphCount, uint32_t* unalignedSize = nullptr, uint32_t* alignedSize = nullptr);
     VkDescriptorSet mrphWsDescSet() const noexcept;
     uint32_t mrphWsDynamicOffset(uint32_t curFrame) const noexcept;
     void vkUpdate(uint32_t curFrame) noexcept;
@@ -80,6 +80,8 @@ private:
     std::vector<float> mrphWeights_; // 1 weight per morph target
     tinyVk::DataBuffer mrphWsBuffer_; // float
     tinyVk::DescSet mrphWsDescSet_;
+    uint32_t unalignedSize_ = 0;
+    uint32_t alignedSize_ = 0;
 };
 
 } // namespace tinyRT

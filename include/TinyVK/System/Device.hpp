@@ -89,13 +89,21 @@ public:
     VkPhysicalDeviceFeatures pFeatures{};
 
     // Helper functions
-    size_t alignSize(size_t originalSize) const {
-        size_t minAlignment = pProps.limits.minUniformBufferOffsetAlignment;
-        size_t alignedSize = originalSize;
+    size_t alignSize(size_t original, size_t minAlignment) const {
+        size_t alignedSize = original;
         if (minAlignment > 0) {
             alignedSize = (alignedSize + minAlignment - 1) & ~(minAlignment - 1);
         }
         return alignedSize;
+    }
+
+
+    size_t alignSizeUBO(size_t originalSize) const {
+        return alignSize(originalSize, pProps.limits.minUniformBufferOffsetAlignment);
+    }
+
+    size_t alignSizeSSBO(size_t originalSize) const {
+        return alignSize(originalSize, pProps.limits.minStorageBufferOffsetAlignment);
     }
 
 

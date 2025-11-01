@@ -30,11 +30,10 @@ public:
 
     VkDescriptorSetLayout descSLayout_Global() const { return global_->getDescLayout(); }
     VkDescriptorSetLayout descSLayout_Material() const { return matDescLayout; }
+    VkDescriptorSetLayout descSLayout_Skin() const { return skinDescLayout.get(); }
 
-    VkDescriptorSetLayout getSkinDescSetLayout() const { return skinDescLayout.get(); }
-    VkDescriptorSet getDummySkinDescSet() const { return dummySkinDescSet.get(); }
-
-    VkDescriptorSet getDefaultMatDescSet() const { return defaultMaterialVk.descSet(); }
+    VkDescriptorSet descSet_DummySkin() const { return dummySkinDescSet.get(); }
+    VkDescriptorSet descSet_DefaultMat() const { return defaultMaterialVk.descSet(); }
 
     // Global UBO update
 
