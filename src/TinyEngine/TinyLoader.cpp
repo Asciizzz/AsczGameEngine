@@ -614,13 +614,39 @@ void loadMesh(tinyMesh& mesh,
         for (size_t tgtIdx = 0; tgtIdx < primitive.targets.size(); ++tgtIdx) {
             const auto& target = primitive.targets[tgtIdx];
 
-            // ---- read delta accessors ------------------------------------------------
-            std::vector<glm::vec3> dPos, dNrm, dTan;
-            if (!readDeltaAccessor(gltfModel, target.find("POSITION")->second, dPos, pData.vrtxCount) ||
-                !readDeltaAccessor(gltfModel, target.find("NORMAL")->second,   dNrm, pData.vrtxCount) ||
-                !readDeltaAccessor(gltfModel, target.find("TANGENT")->second,  dTan, pData.vrtxCount))
-            {
-                // If any accessor is missing or malformed we skip this target
+            // ---- read delta accessors (all are optional in glTF spec) ----------------
+            std::vector<glm::vec3> dPos(pData.vrtxCount, glm::vec3(0.0f));
+            std::vector<glm::vec3> dNrm(pData.vrtxCount, glm::vec3(0.0f));
+            std::vector<glm::vec3> dTan(pData.vrtxCount, glm::vec3(0.0f));
+            
+            bool hasAnyData = false;
+            
+            // Try to read POSITION deltas (most common)
+            auto posIt = target.find("POSITION");
+            if (posIt != target.end()) {
+                if (readDeltaAccessor(gltfModel, posIt->second, dPos, pData.vrtxCount)) {
+                    hasAnyData = true;
+                }
+            }
+            
+            // Try to read NORMAL deltas (optional)
+            auto nrmIt = target.find("NORMAL");
+            if (nrmIt != target.end()) {
+                if (readDeltaAccessor(gltfModel, nrmIt->second, dNrm, pData.vrtxCount)) {
+                    hasAnyData = true;
+                }
+            }
+            
+            // Try to read TANGENT deltas (optional)
+            auto tanIt = target.find("TANGENT");
+            if (tanIt != target.end()) {
+                if (readDeltaAccessor(gltfModel, tanIt->second, dTan, pData.vrtxCount)) {
+                    hasAnyData = true;
+                }
+            }
+            
+            // Skip only if we couldn't read ANY data at all
+            if (!hasAnyData) {
                 continue;
             }
 
@@ -630,7 +656,7 @@ void loadMesh(tinyMesh& mesh,
                 deltas[v].dPos  = dPos[v];
                 deltas[v].dNrml = dNrm[v];
                 // glTF tangent delta is vec3 (xyz), w is unchanged → we keep 0
-                deltas[v].dTang = glm::vec3(dTan[v]);
+                deltas[v].dTang = dTan[v];
             }
 
             // ---- name (optional) ----------------------------------------------------
