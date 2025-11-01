@@ -541,11 +541,9 @@ private:
 
         registry_.tRemove(dataHandle);
 
-        // Remove from parent's children list
         Node* parent = fnodes_.get(node->parent);
         if (parent) parent->removeChild(nodeHandle);
 
-        // Remove the file node itself
         fnodes_.remove(nodeHandle);
     }
 
