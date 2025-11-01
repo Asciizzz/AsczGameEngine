@@ -121,7 +121,7 @@ struct tinyMaterialVk {
         return *this;
     }
 
-// -----------------------------------------
+// ---------------- Texture Setters ---------------
 
     bool setAlbTex(tinyTextureVk* texture) noexcept {
         return setTexture(albTex_, texture, 1);
@@ -135,6 +135,12 @@ struct tinyMaterialVk {
         return setTexture(metalTex_, texture, 3);
     }
 
+    bool setEmisTex(tinyTextureVk* texture) noexcept {
+        return setTexture(emisTex_, texture, 4);
+    }
+
+// ---------------- Properties Setters ---------------
+
     void setBaseColor(const glm::vec4& color) noexcept {
         props_.baseColor = color;
         propsBuffer_.uploadData(&props_);
@@ -144,6 +150,8 @@ struct tinyMaterialVk {
         props_ = props;
         propsBuffer_.uploadData(&props_);
     }
+
+// ---------------- Getters ---------------
 
     // implicit conversion
     VkDescriptorSet descSet() const noexcept { return descSet_; }
@@ -184,7 +192,7 @@ private:
             .updateDescSets(deviceVk_->device);
     }
 
-    void updatePropertiesBinding() {
+    void updatePropsBinding() {
         using namespace tinyVk;
 
         DescWrite().addWrite()
@@ -200,10 +208,11 @@ private:
     }
 
     void updateAllBindings() {
-        updatePropertiesBinding();
+        updatePropsBinding();
         updateTexBinding(1, albTex_);
         updateTexBinding(2, nrmlTex_);
         updateTexBinding(3, metalTex_);
+        updateTexBinding(4, emisTex_);
     }
 
     const tinyVk::Device* deviceVk_ = nullptr;
@@ -211,10 +220,11 @@ private:
 
     // Ay guys, I used deque so this won't be dangling, nice
 
-    constexpr static uint32_t texCount = 3; // Change as needed
-    tinyTextureVk* albTex_ = nullptr; // Albedo texture
-    tinyTextureVk* nrmlTex_ = nullptr; // Normal texture
-    tinyTextureVk* metalTex_ = nullptr; // Metallic texture
+    constexpr static uint32_t texCount = 4; // Change as needed
+    tinyTextureVk* albTex_ = nullptr;
+    tinyTextureVk* nrmlTex_ = nullptr;
+    tinyTextureVk* metalTex_ = nullptr;
+    tinyTextureVk* emisTex_ = nullptr;
 
     Props props_;
     tinyVk::DataBuffer propsBuffer_; // Modifiable

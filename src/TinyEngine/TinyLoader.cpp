@@ -444,15 +444,28 @@ void loadMaterials(std::vector<tinyModel::Material>& materials, tinygltf::Model&
             );
         }
 
+        // Albedo/Base color texture
         int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
         if (validIndex(albedoTexIndex, textures)) {
             material.albIndx = albedoTexIndex;
         }
     
-        // Handle normal texture (only if textures are also being loaded)
+        // Normal texture
         int normalTexIndex = gltfMaterial.normalTexture.index;
         if (validIndex(normalTexIndex, textures)) {
             material.nrmlIndx = normalTexIndex;
+        }
+
+        // Metallic-Roughness texture (combined in glTF)
+        // Note: In glTF, metallic is in B channel, roughness is in G channel
+        int metallicRoughnessTexIndex = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+        if (validIndex(metallicRoughnessTexIndex, textures)) {
+            material.metalIndx = metallicRoughnessTexIndex;
+        }
+
+        int emissiveTexIndex = gltfMaterial.emissiveTexture.index;
+        if (validIndex(emissiveTexIndex, textures)) {
+            material.emisIndx = emissiveTexIndex;
         }
 
         materials.push_back(material);

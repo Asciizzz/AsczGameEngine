@@ -52,6 +52,8 @@ struct tinyModel {
 
         int albIndx = -1;
         int nrmlIndx = -1;
+        int metalIndx = -1;
+        int emisIndx = -1;
         glm::vec4 baseColor = glm::vec4(1.0f); // Default white
     };
 

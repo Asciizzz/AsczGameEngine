@@ -16,6 +16,14 @@ bool validIndex(int index, const std::vector<T>& vec) {
     return index >= 0 && static_cast<size_t>(index) < vec.size();
 }
 
+template<typename T>
+tinyHandle makeHandle(int index, const std::vector<T>& vec) {
+    if (index < 0 || static_cast<size_t>(index) >= vec.size()) {
+        return tinyHandle();
+    }
+    return tinyHandle(static_cast<uint32_t>(index), 0);
+}
+
 tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
     // Create camera and global UBO manager
     camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
@@ -65,6 +73,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     }
 
     // Import materials to registry with remapped texture references
+
     std::vector<tinyHandle> glmMatRHandle;
     for (const auto& material : model.materials) {
         tinyMaterialVk materialVk;
@@ -76,18 +85,24 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         materialVk.setBaseColor(material.baseColor);
 
         // Remap the material's texture indices
-        int localAlbIndex = material.albIndx;
-        bool localAlbValid = validIndex(localAlbIndex, glbTexRHandle);
-        tinyHandle albHandle = localAlbValid ? glbTexRHandle[localAlbIndex] : tinyHandle();
 
+        // Albedo texture
+        tinyHandle albHandle = makeHandle(material.albIndx, glbTexRHandle);
         materialVk.setAlbTex(fs_->rGet<tinyTextureVk>(albHandle));
 
-        int localNrmlIndex = material.nrmlIndx;
-        bool localNrmlValid = validIndex(localNrmlIndex, glbTexRHandle);
-        tinyHandle nrmlHandle = localNrmlValid ? glbTexRHandle[localNrmlIndex] : tinyHandle();
-
+        // Normal texture
+        tinyHandle nrmlHandle = makeHandle(material.nrmlIndx, glbTexRHandle);
         materialVk.setNrmlTex(fs_->rGet<tinyTextureVk>(nrmlHandle));
 
+        // Metallic texture
+        tinyHandle metalHandle = makeHandle(material.metalIndx, glbTexRHandle);
+        materialVk.setMetalTex(fs_->rGet<tinyTextureVk>(metalHandle));
+
+        // Emissive texture
+        tinyHandle emisHandle = makeHandle(material.emisIndx, glbTexRHandle);
+        materialVk.setEmisTex(fs_->rGet<tinyTextureVk>(emisHandle));
+
+        // Add material to fsRegistry
         tinyHandle fnHandle = fs_->addFile(fnMatFolder, materialVk.name, std::move(materialVk));
         typeHandle tHandle = fs_->fTypeHandle(fnHandle);
 
