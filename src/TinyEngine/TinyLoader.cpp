@@ -381,6 +381,8 @@ void loadTextures(std::vector<tinyTexture>& textures, tinygltf::Model& model) {
     for (const auto& gltfTexture : model.textures) {
         tinyTexture texture;
 
+        texture.name = gltfTexture.name;
+
         // Load image data
         if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
             const auto& image = model.images[gltfTexture.source];
