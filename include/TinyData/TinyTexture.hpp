@@ -126,17 +126,18 @@ struct tinyTextureVk {
     bool create(const tinyVk::Device* deviceVk) {
         using namespace tinyVk;
 
-        // Get appropriate Vulkan format and convert data if needed
-        VkFormat textureFormat = ImageVk::getVulkanFormatFromChannels(texture_.channels());
-        std::vector<uint8_t> vulkanData = ImageVk::convertToValidData(
-            texture_.channels(), texture_.width(), texture_.height(), texture_.dataPtr()
-        );
+        if (!texture_.valid()) return false;
 
-        // Calculate image size based on Vulkan format requirements
-        int vulkanChannels = (texture_.channels() == 3) ? 4 : texture_.channels(); // RGB becomes RGBA
-        VkDeviceSize imageSize = texture_.width() * texture_.height() * vulkanChannels;
+        VkFormat textureFormat;
+        switch (texture_.channels()) {
+            case 1: textureFormat = VK_FORMAT_R8_UNORM; break;
+            case 2: textureFormat = VK_FORMAT_R8G8_UNORM; break;
+            case 3: textureFormat = VK_FORMAT_R8G8B8_UNORM; break;
+            case 4: textureFormat = VK_FORMAT_R8G8B8A8_UNORM; break;
+            default: return false; // Unsupported channel count
+        }
 
-        if (vulkanData.empty()) return false;
+        VkDeviceSize imageSize = static_cast<VkDeviceSize>(width() * height() * channels());
 
         // Create staging buffer for texture data upload
         DataBuffer stagingBuffer;
@@ -145,7 +146,7 @@ struct tinyTextureVk {
             .setUsageFlags(ImageUsage::TransferSrc)
             .setMemPropFlags(MemProp::HostVisibleAndCoherent)
             .createBuffer(deviceVk)
-            .uploadData(vulkanData.data());
+            .uploadData(texture_.dataPtr());
 
         uint32_t mipLevel = ImageVk::autoMipLevels(texture_.width(), texture_.height());
 

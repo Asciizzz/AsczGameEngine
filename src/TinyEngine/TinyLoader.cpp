@@ -59,6 +59,46 @@ bool LoadImageData(tinygltf::Image* image, const int image_indx, std::string* er
     return true;
 }
 
+// Helper function to convert any channel count to RGBA
+static std::vector<uint8_t> convertToRGBA(const uint8_t* srcData, int width, int height, int channels) {
+    size_t pixelCount = width * height;
+    std::vector<uint8_t> rgbaData(pixelCount * 4);
+    
+    if (channels == 1) {
+        // Grayscale -> RGBA
+        for (size_t i = 0; i < pixelCount; ++i) {
+            uint8_t gray = srcData[i];
+            rgbaData[i * 4 + 0] = gray;
+            rgbaData[i * 4 + 1] = gray;
+            rgbaData[i * 4 + 2] = gray;
+            rgbaData[i * 4 + 3] = 255;
+        }
+    } else if (channels == 2) {
+        // Grayscale + Alpha -> RGBA
+        for (size_t i = 0; i < pixelCount; ++i) {
+            uint8_t gray = srcData[i * 2 + 0];
+            uint8_t alpha = srcData[i * 2 + 1];
+            rgbaData[i * 4 + 0] = gray;
+            rgbaData[i * 4 + 1] = gray;
+            rgbaData[i * 4 + 2] = gray;
+            rgbaData[i * 4 + 3] = alpha;
+        }
+    } else if (channels == 3) {
+        // RGB -> RGBA
+        for (size_t i = 0; i < pixelCount; ++i) {
+            rgbaData[i * 4 + 0] = srcData[i * 3 + 0];
+            rgbaData[i * 4 + 1] = srcData[i * 3 + 1];
+            rgbaData[i * 4 + 2] = srcData[i * 3 + 2];
+            rgbaData[i * 4 + 3] = 255;
+        }
+    } else if (channels == 4) {
+        // RGBA -> RGBA (copy as-is)
+        std::memcpy(rgbaData.data(), srcData, pixelCount * 4);
+    }
+    
+    return rgbaData;
+}
+
 tinyTexture tinyLoader::loadTexture(const std::string& filePath) {
     tinyTexture texture = {};
 
@@ -73,16 +113,14 @@ tinyTexture tinyLoader::loadTexture(const std::string& filePath) {
     // Check if loading failed
     if (!stbiData) { return texture; }
 
-    // size_t dataSize = texture.width * texture.height * texture.channels;
-    // texture.data.resize(dataSize);
-
-    std::vector<uint8_t> data;
-    data.resize(width * height * channels);
-    std::memcpy(data.data(), stbiData, data.size());
+    // Convert to RGBA for consistency
+    std::vector<uint8_t> rgbaData = convertToRGBA(stbiData, width, height, channels);
+    
     // Free stbi allocated memory
     stbi_image_free(stbiData);
 
-    return texture.create(std::move(data), width, height, channels);
+    // Always create texture with 4 channels (RGBA)
+    return texture.create(std::move(rgbaData), width, height, 4);
 }
 
 // =================================== 3D MODELS ===================================
@@ -346,7 +384,14 @@ void loadTextures(std::vector<tinyTexture>& textures, tinygltf::Model& model) {
         // Load image data
         if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
             const auto& image = model.images[gltfTexture.source];
-            texture = tinyTexture().create(image.image, image.width, image.height, image.component);
+            
+            // Convert to RGBA for consistency
+            std::vector<uint8_t> rgbaData = convertToRGBA(
+                image.image.data(), image.width, image.height, image.component
+            );
+            
+            // Always create texture with 4 channels (RGBA)
+            texture = tinyTexture().create(std::move(rgbaData), image.width, image.height, 4);
         }
         
         // Load sampler settings (address mode)

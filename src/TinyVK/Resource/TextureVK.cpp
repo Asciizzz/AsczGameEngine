@@ -300,34 +300,30 @@ ImageVk& ImageVk::wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D e
 
 // Static helper functions
 VkFormat ImageVk::getVulkanFormatFromChannels(int channels) {
-    switch (channels) {
-        case 1:  return VK_FORMAT_R8_UNORM;          // Grayscale
-        case 2:  return VK_FORMAT_R8G8_UNORM;        // Grayscale + Alpha
-        case 3:  return VK_FORMAT_R8G8B8A8_SRGB;     // Convert RGB to RGBA
-        case 4:  return VK_FORMAT_R8G8B8A8_SRGB;     // RGBA
-        default: return VK_FORMAT_R8G8B8A8_SRGB;
+    // All textures should already be RGBA at this point (converted by TinyLoader)
+    // This function is kept for compatibility but should always receive 4 channels
+    if (channels != 4) {
+        // Log warning if we somehow receive non-RGBA data
+        std::cerr << "Warning: Expected RGBA (4 channels) but got " << channels << " channels\n";
     }
+    return VK_FORMAT_R8G8B8A8_SRGB;
 }
 
 std::vector<uint8_t> ImageVk::convertToValidData(int channels, int width, int height, const uint8_t* srcData) {
-    if (channels == 3) {
-        // Convert RGB to RGBA by adding alpha channel
-        size_t pixelCount = width * height;
-        std::vector<uint8_t> convertedData(pixelCount * 4);
-        
-        for (size_t i = 0; i < pixelCount; ++i) {
-            convertedData[i * 4 + 0] = srcData[i * 3 + 0]; // R
-            convertedData[i * 4 + 1] = srcData[i * 3 + 1]; // G
-            convertedData[i * 4 + 2] = srcData[i * 3 + 2]; // B
-            convertedData[i * 4 + 3] = 255;                // A (fully opaque)
-        }
-        
-        return convertedData;
-    } else {
-        // For 1, 2, or 4 channels, use data as-is
-        size_t dataSize = width * height * channels;
-        return std::vector<uint8_t>(srcData, srcData + dataSize);
+    // All textures should already be RGBA at this point (converted by TinyLoader)
+    // This is now just a pass-through copy for safety
+    size_t pixelCount = width * height;
+    
+    if (channels != 4) {
+        // Log warning if we somehow receive non-RGBA data
+        std::cerr << "Warning: Expected RGBA (4 channels) but got " << channels << " channels. Data may be corrupted.\n";
+        return std::vector<uint8_t>();
     }
+    
+    // Simply copy the RGBA data
+    std::vector<uint8_t> result(pixelCount * 4);
+    std::memcpy(result.data(), srcData, pixelCount * 4);
+    return result;
 }
 
 uint32_t ImageVk::autoMipLevels(uint32_t width, uint32_t height) {
