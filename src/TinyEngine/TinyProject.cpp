@@ -87,19 +87,19 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
         // Albedo texture
         tinyHandle albHandle = linkHandle(material.albIndx, glbTexRHandle);
-        materialVk.setAlbTex(fs_->rGet<tinyTextureVk>(albHandle));
+        materialVk.setTexture(MTexSlot::Albedo, fs_->rGet<tinyTextureVk>(albHandle));
 
         // Normal texture
         tinyHandle nrmlHandle = linkHandle(material.nrmlIndx, glbTexRHandle);
-        materialVk.setNrmlTex(fs_->rGet<tinyTextureVk>(nrmlHandle));
+        materialVk.setTexture(MTexSlot::Normal, fs_->rGet<tinyTextureVk>(nrmlHandle));
 
         // Metallic texture
         tinyHandle metalHandle = linkHandle(material.metalIndx, glbTexRHandle);
-        materialVk.setMetalTex(fs_->rGet<tinyTextureVk>(metalHandle));
+        materialVk.setTexture(MTexSlot::MetalRough, fs_->rGet<tinyTextureVk>(metalHandle));
 
         // Emissive texture
         tinyHandle emisHandle = linkHandle(material.emisIndx, glbTexRHandle);
-        materialVk.setEmisTex(fs_->rGet<tinyTextureVk>(emisHandle));
+        materialVk.setTexture(MTexSlot::Emissive, fs_->rGet<tinyTextureVk>(emisHandle));
 
         // Add material to fsRegistry
         tinyHandle fnHandle = fs_->addFile(fnMatFolder, materialVk.name, std::move(materialVk));

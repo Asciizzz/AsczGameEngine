@@ -16,7 +16,7 @@ struct tinyMaterialVk {
     enum class TexSlot : uint32_t {
         Albedo = 0,
         Normal = 1,
-        MetallicRoughness = 2,
+        MetalRough = 2,
         Emissive = 3,
         Count = 4
     };
@@ -136,31 +136,13 @@ struct tinyMaterialVk {
         if (index >= static_cast<uint32_t>(TexSlot::Count)) return false;
 
         // Decrement old texture if it exists
-        if (textures_[index]) {
-            textures_[index]->decrementUse();
-        }
+        if (textures_[index]) textures_[index]->decrementUse();
 
-        textures_[index] = texture;
-        texture->incrementUse();
+        // Set new texture and increment use count
+        textures_[index] = texture; texture->incrementUse();
 
         updateTexBinding(slot);
         return true;
-    }
-
-    bool setAlbTex(tinyTextureVk* texture) noexcept {
-        return setTexture(TexSlot::Albedo, texture);
-    }
-
-    bool setNrmlTex(tinyTextureVk* texture) noexcept {
-        return setTexture(TexSlot::Normal, texture);
-    }
-
-    bool setMetalTex(tinyTextureVk* texture) noexcept {
-        return setTexture(TexSlot::MetallicRoughness, texture);
-    }
-
-    bool setEmisTex(tinyTextureVk* texture) noexcept {
-        return setTexture(TexSlot::Emissive, texture);
     }
 
 // ---------------- Properties Setters ---------------
