@@ -552,60 +552,191 @@ void tinyApp::renderSceneNodeInspector() {
     
     // Mesh Renderer Component - Always show
     if (selectedNode->has<tinyNodeRT::MESHRD>()) {
-        // renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
-        //     // Get component copy using tinySceneRT method
-        //     tinyNodeRT::MESHRD* compPtr = activeScene->rtComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
-        //     bool componentModified = false;
+        renderComponent("Mesh Renderer", ImVec4(0.15f, 0.15f, 0.2f, 0.8f), ImVec4(0.3f, 0.3f, 0.4f, 0.6f), true, [&]() {
+            // Get runtime component using tinySceneRT auto type resolver
+            tinyRT_MESHRD* rtMeshRender = activeScene->rtComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
+            if (!rtMeshRender) {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Runtime component not initialized");
+                return;
+            }
             
-        //     ImGui::Spacing();
+            ImGui::Spacing();
             
-        //     // Mesh Handle field with enhanced drag-drop support
-        //     ImGui::Text("Mesh Resource:");
+            // ===== MESH RESOURCE FIELD =====
+            ImGui::Text("Mesh Resource:");
+            
+            tinyHandle meshHandle = rtMeshRender->meshHandle();
+            const tinyMeshVk* meshVk = rtMeshRender->rMesh();
+            
+            // Create enhanced drag-drop target area for mesh
+            std::string meshDisplayText;
+            ImVec4 meshButtonColor, meshHoveredColor, meshActiveColor;
+            
+            if (meshHandle.valid() && meshVk) {
+                const tinyMesh& cpuMesh = meshVk->cpu();
+                meshDisplayText = cpuMesh.name;
+                meshButtonColor = ImVec4(0.2f, 0.4f, 0.2f, 1.0f);   // Green for valid
+                meshHoveredColor = ImVec4(0.3f, 0.5f, 0.3f, 1.0f);
+                meshActiveColor = ImVec4(0.1f, 0.3f, 0.1f, 1.0f);
+            } else {
+                meshDisplayText = "None";
+                meshButtonColor = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);   // Gray for empty
+                meshHoveredColor = ImVec4(0.4f, 0.4f, 0.6f, 1.0f);
+                meshActiveColor = ImVec4(0.2f, 0.2f, 0.4f, 1.0f);
+            }
+            
+            ImGui::PushStyleColor(ImGuiCol_Button, meshButtonColor);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, meshHoveredColor);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, meshActiveColor);
+            
+            if (ImGui::Button((meshDisplayText + "##MeshHandle").c_str(), ImVec2(-1, 30))) {
+                // Clear mesh on click
+                if (meshHandle.valid()) {
+                    rtMeshRender->setMesh(tinyHandle());
+                }
+            }
+            
+            ImGui::PopStyleColor(3);
+            
+            // Tooltip
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                if (meshHandle.valid()) {
+                    ImGui::Text("Click to clear mesh");
+                    ImGui::Text("Current: %s", meshDisplayText.c_str());
+                    if (meshVk) {
+                        const tinyMesh& cpuMesh = meshVk->cpu();
+                        ImGui::Text("Vertices: %zu", cpuMesh.vrtxCount());
+                        ImGui::Text("Morph Targets: %u", meshVk->mrphCount());
+                    }
+                } else {
+                    ImGui::Text("Drag a mesh file from the File Explorer");
+                }
+                ImGui::EndTooltip();
+            }
+            
+            // Drag-drop handling for mesh files
+            if (ImGui::BeginDragDropTarget()) {
+                ImGui::PushStyleColor(ImGuiCol_DragDropTarget, ImVec4(0.3f, 0.6f, 1.0f, 0.7f));
+                
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_FILESYSTEM_MESH")) {
+                    tinyHandle droppedHandle = *(tinyHandle*)payload->Data;
+                    // CRITICAL: Call setMesh function for proper initialization
+                    rtMeshRender->setMesh(droppedHandle);
+                }
+                
+                ImGui::PopStyleColor();
+                ImGui::EndDragDropTarget();
+            }
+            
+            ImGui::Spacing();
+            
+            // ===== SKELETON NODE HANDLE FIELD =====
+            ImGui::Text("Skeleton Node:");
 
-        //     // Check if mesh resource is valid
-        //     bool meshModified = renderHandleField("##MeshHandle", compPtr->pMeshHandle, "Mesh",
-        //         "Drag a mesh file from the File Explorer", 
-        //         "Select mesh resource for rendering");
-        //     if (meshModified) componentModified = true;
+            tinyHandle prevSkeleHandle = rtMeshRender->skeleNodeHandle();
+            bool skeleModified = renderHandleField("##MeshRenderer_SkeletonNodeHandle", 
+                prevSkeleHandle, "SkeletonNode",
+                "Drag a skeleton node from the Hierarchy",
+                "Select skeleton node for bone animation");
+            
+            if (skeleModified) {
+                // Update skeleton node in runtime component
+                rtMeshRender->setSkeleNode(prevSkeleHandle);
+            }
 
-        //     // Show mesh information if valid
-        //     if (compPtr->pMeshHandle.valid()) {
-        //         const tinyMesh* mesh = fs.rGet<tinyMesh>(compPtr->pMeshHandle);
-        //         if (mesh) {
-        //             ImGui::SameLine();
-        //             ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", mesh->name.c_str());
-        //         } else {
-        //             ImGui::SameLine();
-        //             ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
-        //         }
-        //     }
+            // Show skeleton node information if valid
+            if (rtMeshRender->skeleNodeHandle().valid()) {
+                const tinyNodeRT* skeleNode = activeScene->node(rtMeshRender->skeleNodeHandle());
+                if (skeleNode && skeleNode->has<tinyNodeRT::SKEL3D>()) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
+                } else {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid/No Skeleton");
+                }
+            }
             
-        //     ImGui::Spacing();
+            ImGui::Spacing();
             
-        //     // Skeleton Node Handle field with enhanced drag-drop support  
-        //     ImGui::Text("Skeleton Node:");
-        //     bool skeleModified = renderHandleField("##MeshRenderer_SkeletonNodeHandle", compPtr->skeleNodeHandle, "SkeletonNode",
-        //         "Drag a skeleton node from the Hierarchy",
-        //         "Select skeleton node for bone animation");
-        //     if (skeleModified) componentModified = true;
-
-        //     // Show skeleton node information if valid
-        //     if (compPtr->skeleNodeHandle.valid()) {
-        //         const tinyNodeRT* skeleNode = activeScene->node(compPtr->skeleNodeHandle);
-        //         if (skeleNode && skeleNode->has<tinyNodeRT::SKEL3D>()) {
-        //             ImGui::SameLine();
-        //             ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", skeleNode->name.c_str());
-        //         } else {
-        //             ImGui::SameLine();
-        //             ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid/No Skeleton");
-        //         }
-        //     }
+            // ===== MORPH TARGETS SECTION =====
+            if (rtMeshRender->hasMrph()) {
+                ImGui::Separator();
+                ImGui::Text("Morph Targets (%u)", rtMeshRender->mrphCount());
+                
+                ImGui::Spacing();
+                
+                // Scrollable area for morph targets
+                ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f);
+                ImGui::BeginChild("MorphTargets", ImVec2(0, 150), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+                
+                for (uint32_t i = 0; i < rtMeshRender->mrphCount(); ++i) {
+                    ImGui::PushID(i);
+                    
+                    // Get current weight
+                    float weight = rtMeshRender->mrphWeight(i);
+                    
+                    // Get morph target name
+                    const std::string& mrphName = rtMeshRender->mrphName(i);
+                    std::string label = mrphName.empty() ? ("Target " + std::to_string(i)) : mrphName;
+                    
+                    ImGui::Text("%s", label.c_str());
+                    ImGui::SameLine(150); // Align sliders
+                    
+                    ImGui::SetNextItemWidth(-1);
+                    // SLOW drag speed for precise morph target control (0.005 instead of default 0.01)
+                    if (ImGui::DragFloat(("##MorphWeight" + std::to_string(i)).c_str(), 
+                                        &weight, 0.005f, 0.0f, 1.0f, "%.3f")) {
+                        rtMeshRender->setMrphWeight(i, weight);
+                    }
+                    
+                    // Show tooltip with more info on hover
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Morph Target: %s", label.c_str());
+                        ImGui::Text("Index: %u", i);
+                        ImGui::Text("Weight: %.3f", weight);
+                        ImGui::Text("Drag slowly for precise control");
+                        ImGui::EndTooltip();
+                    }
+                    
+                    // Reset button for this morph target
+                    ImGui::SameLine();
+                    if (ImGui::Button(("Reset##" + std::to_string(i)).c_str())) {
+                        rtMeshRender->setMrphWeight(i, 0.0f);
+                    }
+                    
+                    ImGui::PopID();
+                    ImGui::Spacing();
+                }
+                
+                ImGui::EndChild();
+                ImGui::PopStyleVar();
+                
+                ImGui::Spacing();
+                
+                // Global controls
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.7f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.5f, 0.1f, 1.0f));
+                
+                if (ImGui::Button("Reset All Morph Targets", ImVec2(-1, 0))) {
+                    for (uint32_t i = 0; i < rtMeshRender->mrphCount(); ++i) {
+                        rtMeshRender->setMrphWeight(i, 0.0f);
+                    }
+                }
+                
+                ImGui::PopStyleColor(3);
+            } else if (meshHandle.valid()) {
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "This mesh has no morph targets");
+            }
             
-        //     ImGui::Spacing();
-        // }, [&]() {
-        //     // Remove component using tinySceneRT method
-        //     activeScene->removeComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
-        // });
+            ImGui::Spacing();
+        }, [&]() {
+            // Remove component using tinySceneRT method
+            activeScene->removeComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
+        });
     } else {
         // Show grayed-out placeholder for missing Mesh Renderer component
         renderComponent("Mesh Renderer", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {

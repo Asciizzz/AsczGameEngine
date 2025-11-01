@@ -69,8 +69,10 @@ struct MeshRender3D {
     }
 
     const std::string& mrphName(size_t targetIndex) const noexcept {
+        static const std::string emptyStr = "";
+        
         const tinyMeshVk* mesh = rMesh();
-        if (!mesh) return "";
+        if (!mesh) return emptyStr;
 
         const tinyMesh& cpuMesh = mesh->cpu();
         return cpuMesh.mrphName(targetIndex);
