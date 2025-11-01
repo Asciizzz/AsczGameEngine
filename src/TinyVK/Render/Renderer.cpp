@@ -451,7 +451,7 @@ void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeS
     tinyFS& fs = project->fs();
 
     // Check if there are pending removals in tinyFS or scene
-    if (!fs.hasPendingRemovals() && !activeScene->rtTHasPendingRms<tinyRT_SKEL3D>()) return;
+    if (!fs.hasAnyRmQueue() && !activeScene->rtTHasPendingRms<tinyRT_SKEL3D>()) return;
 
     // Wait for ALL in-flight fences to ensure no resources are in use by GPU
     // This is the safest approach - wait for all frames to complete
@@ -478,11 +478,11 @@ void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeS
         }
     }
     
-    // Execute tinyFS removal queue in order: materials first, then textures
-    // (Normally you would execute these selectively based on logic,
-    //  but for now we just execute all pending removals)
+    // Remove materials first, then textures
+    fs.execRemove<tinyMaterialVk>();
+    fs.execRemove<tinyTextureVk>();
     fs.execRemoveAll();
-    
+
     // Scene still uses its own flushing mechanism (not tinyFS)
     activeScene->rtFlushAllRms();
 }
