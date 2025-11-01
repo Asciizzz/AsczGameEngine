@@ -215,21 +215,13 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
         tinyNodeRT* toNode = nodes_.get(toHandle);
         if (!toNode) continue; // Should not happen
 
-        // Resolve parent-self relationships
-        if (fromNode->parentHandle.valid()) {
-            tinyHandle fromParentHandle = fromNode->parentHandle;
-            tinyHandle toParentHandle = toHandleMap[fromParentHandle.index];
+        // Establish parent-child relationships
+        tinyHandle fromParentHandle = fromNode->parentHandle;
+        tinyHandle toParentHandle = fromParentHandle.valid() ? toHandleMap[fromParentHandle.index] : parentHandle;
 
-            tinyNodeRT* parentNode = nodes_.get(toParentHandle);
-            toNode->setParent(toParentHandle);
-            if (parentNode) parentNode->addChild(toHandle);
-        } else { // <-- Root node in 'from' scene
-            // Add child to parent
-            tinyNodeRT* parentNode = nodes_.get(parentHandle);
-
-            if (parentNode) parentNode->addChild(toHandle);
-            toNode->setParent(parentHandle);
-        }
+        toNode->setParent(toParentHandle);
+        tinyNodeRT* parentNode = nodes_.get(toParentHandle);
+        if (parentNode) parentNode->addChild(toHandle);
 
         // Resolve components
 
