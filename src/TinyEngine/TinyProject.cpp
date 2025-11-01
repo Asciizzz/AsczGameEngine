@@ -321,7 +321,6 @@ void tinyProject::vkCreateDefault() {
 //  -------------- Create dummy skin resources --------------
 
     dummySkinDescSet.allocate(deviceVk->device, skinDescPool.get(), skinDescLayout.get());
-
     tinyRT_SKEL3D::vkWrite(deviceVk, &dummySkinBuffer, &dummySkinDescSet, sharedReq.maxFramesInFlight, 1);
 
 // -------------- Create dummy morph target resources --------------
