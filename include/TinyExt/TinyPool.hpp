@@ -56,6 +56,7 @@ struct tinyPool {
         items_.clear();
         states_.clear();
         freeList_.clear();
+        pendingRms_.clear();
     }
 
     bool valid(tinyHandle handle) const noexcept {

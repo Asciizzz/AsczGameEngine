@@ -73,6 +73,15 @@ public:
         rootHandle_ = fnodes_.add(std::move(rootNode));
     }
 
+    ~tinyFS() noexcept {
+        // Clear pool BASED on priority order
+        // (higher priority clear last)
+
+        for (const auto& tIndex : typeOrder_) {
+            registry_.clear(tIndex);
+        }
+    }
+
     // ---------- Basic access ----------
 
     tinyHandle rootHandle() const noexcept { return rootHandle_; }
@@ -258,9 +267,6 @@ public:
     }
 
     void rFlushAllRms() noexcept {
-        // Perform specific type flush in order of priority
-        // using registry_.tFlushAllRms(std::type_index)
-
         for (const auto& typeIndx : typeOrder_) {
             const TypeInfo& info = typeInfos_.at(typeIndx);
 

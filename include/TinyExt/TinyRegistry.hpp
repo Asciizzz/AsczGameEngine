@@ -36,6 +36,7 @@ class tinyRegistry { // For raw resource data
         virtual void flushAllRms() noexcept = 0;
         virtual bool hasPendingRms() const noexcept = 0;
         virtual std::vector<tinyHandle> pendingRms() const noexcept = 0;
+        virtual void clear() noexcept = 0;
     };
 
     template<typename T>
@@ -49,6 +50,7 @@ class tinyRegistry { // For raw resource data
         void flushAllRms() noexcept override { pool.flushAllRms(); }
         bool hasPendingRms() const noexcept override { return pool.hasPendingRms(); }
         std::vector<tinyHandle> pendingRms() const noexcept override { return pool.pendingRms(); }
+        void clear() noexcept override { pool.clear(); }
     };
 
     std::unordered_map<std::type_index, std::unique_ptr<IPool>> pools;
@@ -189,6 +191,16 @@ public:
             if (poolPtr->hasPendingRms()) return true;
         }
         return false;
+    }
+
+    // Literal nukes
+    void clear(std::type_index typeIndx) noexcept {
+        auto it = pools.find(typeIndx);
+        if (it != pools.end()) it->second->clear();
+    }
+    template<typename T>
+    void clear() noexcept {
+        clear(std::type_index(typeid(T)));
     }
 
 // ------------------- Data Access ------------------
