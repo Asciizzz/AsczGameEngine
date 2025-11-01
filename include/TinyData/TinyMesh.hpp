@@ -170,6 +170,10 @@ struct tinyMeshVk {
 
     const tinyVertex::Layout& vrtxLayout() const noexcept { return mesh_.vrtxLayout(); }
 
+    size_t vrtxCount() const noexcept { return mesh_.vrtxCount(); }
+    size_t indxCount() const noexcept { return mesh_.indxCount(); }
+    size_t mrphCount() const noexcept { return mesh_.mrphCount(); }
+
 // -----------------------------------------
 
     tinyMeshVk& set(tinyMesh&& mesh) {
@@ -233,6 +237,7 @@ struct tinyMeshVk {
         }
     }
 
+    // Both weights and deltas uses SSBO, so no need for 2 separate desc sets creation functions
     static tinyVk::DescSLayout createMrphDescSetLayout(VkDevice device) {
         tinyVk::DescSLayout layout;
         layout.create(device, {
@@ -241,11 +246,11 @@ struct tinyMeshVk {
         return layout;
     }
 
-    static tinyVk::DescPool createMrphDescPool(VkDevice device, uint32_t maxMaterials) {
+    static tinyVk::DescPool createMrphDescPool(VkDevice device, uint32_t maxMeshes) {
         tinyVk::DescPool pool;
         pool.create(device, {
-            {tinyVk::DescType::StorageBufferDynamic, maxMaterials}
-        }, maxMaterials);
+            {tinyVk::DescType::StorageBufferDynamic, maxMeshes}
+        }, maxMeshes);
         return pool;
     }
 

@@ -102,7 +102,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
 
         tinyMeshVk meshVk;
-        meshVk.init(deviceVk, meshMrphDescLayout, meshMrphDescPool);
+        meshVk.init(deviceVk, meshMrphWsDescLayout, meshMrphWsDescPool);
 
         meshVk.createFrom(std::move(mesh));
 
@@ -268,7 +268,6 @@ void tinyProject::setupFS() {
 void tinyProject::vkCreateResources() {
     VkDevice device = deviceVk->device;
 
-
     skinDescLayout.create(device, {
         {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
     });
@@ -277,13 +276,14 @@ void tinyProject::vkCreateResources() {
         {DescType::StorageBufferDynamic, maxSkeletons}
     }, maxSkeletons);
 
-
     matDescLayout = tinyMaterialVk::createDescSetLayout(device);
     matDescPool = tinyMaterialVk::createDescPool(device, maxMaterials);
 
-    // Pretty much the same buffer as skin
-    meshMrphDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
-    meshMrphDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
+    meshMrphDsDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
+    meshMrphDsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
+
+    meshMrphWsDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
+    meshMrphWsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
 
     // Setup shared scene requirements
     sharedReq.maxFramesInFlight = 2;
@@ -291,6 +291,8 @@ void tinyProject::vkCreateResources() {
     sharedReq.deviceVk = deviceVk;
     sharedReq.skinDescPool = skinDescPool;
     sharedReq.skinDescLayout = skinDescLayout;
+    sharedReq.mrphWsDescPool = meshMrphWsDescPool;
+    sharedReq.mrphWsDescLayout = meshMrphWsDescLayout;
 }
 
 void tinyProject::vkCreateDefault() {
@@ -315,7 +317,7 @@ void tinyProject::vkCreateDefault() {
     defaultMaterialVk.init(deviceVk, &defaultTextureVk, matDescLayout, matDescPool);
     defaultMaterialVk.name = "Default Material";
 
-//  -------------- Create dummy descriptor set --------------
+//  -------------- Create dummy skin resources --------------
 
     dummySkinDescSet.allocate(deviceVk->device, skinDescPool.get(), skinDescLayout.get());
 
@@ -340,4 +342,9 @@ void tinyProject::vkCreateDefault() {
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
         .updateDescSets(deviceVk->device);
+
+// -------------- Create dummy morph target resources --------------
+
+    
+
 }

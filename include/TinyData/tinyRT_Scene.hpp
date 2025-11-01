@@ -49,12 +49,14 @@ public:
         VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
         VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
 
+        // Weights layout, not deltas
+        VkDescriptorPool      mrphWsDescPool   = VK_NULL_HANDLE;
+        VkDescriptorSetLayout mrphWsDescLayout = VK_NULL_HANDLE;
+
         bool valid() const {
-            return  maxFramesInFlight > 0 &&
-                    fsRegistry != nullptr &&
-                    deviceVk != nullptr &&
-                    skinDescPool   != VK_NULL_HANDLE &&
-                    skinDescLayout != VK_NULL_HANDLE;
+            return  maxFramesInFlight > 0 && fsRegistry != nullptr && deviceVk != nullptr &&
+                    skinDescPool   != VK_NULL_HANDLE && skinDescLayout != VK_NULL_HANDLE &&
+                    mrphWsDescPool   != VK_NULL_HANDLE && mrphWsDescLayout != VK_NULL_HANDLE;
         }
     };
 
@@ -262,6 +264,11 @@ private:
         return node ? node->get<T>() : nullptr;
     }
 
+    template<typename T>
+    const tinyPool<T>& fsView() const {
+        return req_.fsRegistry->view<T>();
+    }
+
     // Cache of specific nodes_ for easy access
 
     tinyPool<tinyHandle> withMESHR_;
@@ -309,15 +316,10 @@ private:
 
     tinyRT_SKEL3D* addSKEL3D_RT(tinyNodeRT::SKEL3D* compPtr) {
         tinyRT_SKEL3D rtSKEL3D;
-        rtSKEL3D.init(
-            req_.deviceVk, &req_.fsRegistry->view<tinySkeleton>(),
-            req_.skinDescPool, req_.skinDescLayout, req_.maxFramesInFlight
-        );
+        rtSKEL3D.init(req_.deviceVk, &fsView<tinySkeleton>(), req_.skinDescPool, req_.skinDescLayout, req_.maxFramesInFlight);
 
-        // Repurpose pHandle to point to runtime skeleton
         compPtr->pHandle = rtAdd<tinyRT_SKEL3D>(std::move(rtSKEL3D));
 
-        // Return the runtime skeleton
         return rtGet<tinyRT_SKEL3D>(compPtr->pHandle);
     }
 
@@ -332,7 +334,7 @@ private:
 
     tinyRT_MESHR* addMESHR_RT(tinyNodeRT::MESHRD* compPtr) {
         tinyRT_MESHR rtMeshRT;
-        rtMeshRT.init(req_.deviceVk, req_.fsRegistry);
+        rtMeshRT.init(req_.deviceVk, &fsView<tinyMeshVk>(), req_.mrphWsDescLayout, req_.mrphWsDescPool, req_.maxFramesInFlight);
 
         compPtr->pHandle = rtAdd<tinyRT_MESHR>(std::move(rtMeshRT));
 
@@ -355,6 +357,7 @@ private:
         return rtRegistry_.add<T>(std::forward<T>(data)).handle;
     }
 
+    // ---------- Scary removal function ---------- (spooky)
 
     template<typename T> struct DeferredRm : std::false_type {};
     template<> struct DeferredRm<tinyRT_SKEL3D> : std::true_type {};

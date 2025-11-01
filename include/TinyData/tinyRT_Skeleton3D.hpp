@@ -26,13 +26,14 @@ struct Skeleton3D {
     void refresh(uint32_t boneIndex, bool reupdate = true);
     void refreshAll();
 
-    void update(uint32_t boneIndx, uint32_t curFrame);
+    void update(uint32_t boneIndx, uint32_t curFrame) noexcept;
 
 // -----------------------------------------
 
-    VkDescriptorSet descSet() const { return pValid() ? descSet_.get() : VK_NULL_HANDLE; }
-    uint32_t dynamicOffset(uint32_t curFrame) const {
-        return pValid() ? sizeof(glm::mat4) * boneCount() * curFrame : 0;
+    static void vkWrite(const tinyVk::Device* device, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, uint32_t boneCount);
+    VkDescriptorSet descSet() const noexcept { return descSet_; }
+    uint32_t dynamicOffset(uint32_t curFrame) const noexcept {
+        return sizeof(glm::mat4) * boneCount() * curFrame;
     }
 
     uint32_t boneCount() const {
@@ -75,19 +76,16 @@ private:
     bool vkValid = false;
 
     tinyHandle skeleHandle_;
-    // const tinyRegistry* fsRegistry_ = nullptr; // The entire filesystem registry (guarantees to avoid dangling pointers)
-    const tinyPool<tinySkeleton>* skelePool_ = nullptr; // Skeleton pool only to avoid dangling pointers
+    const tinyPool<tinySkeleton>* skelePool_ = nullptr;
     const tinyVk::Device* deviceVk_ = nullptr;
-
     uint32_t maxFramesInFlight_ = 0;
+
     tinyVk::DescSet    descSet_;
     tinyVk::DataBuffer skinBuffer_;
 
     std::vector<glm::mat4> localPose_;
     std::vector<glm::mat4> finalPose_;
     std::vector<glm::mat4> skinData_;
-
-    void vkCreate();
 
     void updateRecursive(uint32_t boneIndex, const glm::mat4& parentTransform);
     void updateFlat();

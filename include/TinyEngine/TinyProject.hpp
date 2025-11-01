@@ -66,14 +66,21 @@ private:
 
 // -------------- Shared resources --------------
 
+// Material
     tinyVk::DescSLayout matDescLayout;
     tinyVk::DescPool matDescPool;
 
+// Skinning
     tinyVk::DescSLayout skinDescLayout;
     tinyVk::DescPool skinDescPool;
 
-    tinyVk::DescSLayout meshMrphDescLayout;
-    tinyVk::DescPool meshMrphDescPool;
+// Delta
+    tinyVk::DescSLayout meshMrphDsDescLayout;
+    tinyVk::DescPool meshMrphDsDescPool;
+
+// Morph weights
+    tinyVk::DescSLayout meshMrphWsDescLayout;
+    tinyVk::DescPool meshMrphWsDescPool;
 
     tinySceneRT::Require sharedReq;
     void vkCreateResources();
@@ -85,6 +92,11 @@ private:
 
     tinyVk::DescSet dummySkinDescSet;
     tinyVk::DataBuffer dummySkinBuffer;
+
+    tinyVk::DescSet dummyMrphDsDescSet;
+    tinyVk::DataBuffer dummyMrphDsBuffer;
+    tinyVk::DescSet dummyMrphWsDescSet;
+    tinyVk::DataBuffer dummyMrphWsBuffer;
 
     void vkCreateDefault();
 };

@@ -29,7 +29,7 @@ void Skeleton3D::set(tinyHandle skeletonHandle) {
         localPose_[i] = skeleton->bones[i].bindPose;
     }
 
-    vkCreate();
+    vkWrite(deviceVk_, &skinBuffer_, &descSet_, maxFramesInFlight_, skinData_.size());
 }
 
 void Skeleton3D::copy(const Skeleton3D* other) {
@@ -41,31 +41,32 @@ void Skeleton3D::copy(const Skeleton3D* other) {
     finalPose_ = other->finalPose_;
     skinData_ = other->skinData_;
 
-    vkCreate();
+    vkWrite(deviceVk_, &skinBuffer_, &descSet_, maxFramesInFlight_, skinData_.size());
 }
 
-void Skeleton3D::vkCreate() {
-    if (!hasSkeleton()) return;
 
-    VkDeviceSize perFrameSize = sizeof(glm::mat4) * skinData_.size();
-    skinBuffer_
-        .setDataSize(perFrameSize * maxFramesInFlight_)
+void Skeleton3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, uint32_t boneCount) {
+    if (boneCount == 0) return;
+
+    VkDeviceSize perFrameSize = sizeof(glm::mat4) * boneCount;
+    buffer
+        ->setDataSize(perFrameSize * maxFramesInFlight)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVk_)
+        .createBuffer(deviceVk)
         .mapMemory();
 
     VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = skinBuffer_;
+    bufferInfo.buffer = *buffer;
     bufferInfo.offset = 0;
     bufferInfo.range = perFrameSize;
 
     DescWrite()
-        .setDstSet(descSet_)
+        .setDstSet(*descSet)
         .setType(DescType::StorageBufferDynamic)
         .setDescCount(1)
         .setBufferInfo({ bufferInfo })
-        .updateDescSets(deviceVk_->device);
+        .updateDescSets(deviceVk->device);
 }
 
 void Skeleton3D::refresh(uint32_t boneIndex, bool reupdate) {
@@ -109,7 +110,7 @@ void Skeleton3D::updateFlat() {
     }
 }
 
-void Skeleton3D::update(uint32_t boneIndx, uint32_t curFrame) {
+void Skeleton3D::update(uint32_t boneIndx, uint32_t curFrame) noexcept {
     if (!boneValid(boneIndx)) return;
 
     if (boneIndx == 0) {
@@ -123,6 +124,7 @@ void Skeleton3D::update(uint32_t boneIndx, uint32_t curFrame) {
     if (curFrame >= maxFramesInFlight_) return;
 
     // Upload updated skin data to GPU for the current frame
-    size_t offset = sizeof(glm::mat4) * skinData_.size() * curFrame;
-    skinBuffer_.copyData(skinData_.data(), sizeof(glm::mat4) * skinData_.size(), offset);
+    VkDeviceSize offset = dynamicOffset(curFrame);
+    VkDeviceSize dataSize = sizeof(glm::mat4) * skinData_.size();
+    skinBuffer_.copyData(skinData_.data(), dataSize, offset);
 }
