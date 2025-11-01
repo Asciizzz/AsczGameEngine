@@ -8,7 +8,7 @@
 
 #include <string>
 
-struct tinyMorph {
+struct alignas(16) tinyMorph {
     glm::vec3 dPos;
     glm::vec3 dNrml;
     glm::vec3 dTang;

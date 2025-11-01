@@ -27,7 +27,9 @@
 ##### [1/2] Animation System (priority: High):
 
 * **[FINISHED]** Add animation for nodes and skeletons.
-* **[40%]** Add animation for morph targets.
+* **[70%!!!]** Add animation for morph targets.
+  * **[x]** Adding successful morph shader and vulkan support.
+  * **[ ]** Fix the GODDAMN TINYLOADER TO SUPPORT THIS.
 
 ##### [ ] Fixing the r*tarded tinyLoader's glTF loader (priority: High):
 
