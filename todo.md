@@ -24,12 +24,12 @@
 
 * Godfcking dammit slop code lol, the design was implemented too quickly.
 
-##### [1/2] Animation System (priority: High):
+##### [FINISHED] Animation System (priority: High):
 
 * **[FINISHED]** Add animation for nodes and skeletons.
-* **[70%!!!]** Add animation for morph targets.
+* **[FINISHED]** Add animation for morph targets.
   * **[x]** Adding successful morph shader and vulkan support.
-  * **[ ]** Fix the GODDAMN TINYLOADER TO SUPPORT THIS.
+  * **[x]** Fix the GODDAMN TINYLOADER TO SUPPORT THIS.
 
 ##### [ ] Fixing the r*tarded tinyLoader's glTF loader (priority: High):
 

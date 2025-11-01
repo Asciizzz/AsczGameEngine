@@ -295,6 +295,26 @@ void Anime3D::update(Scene* scene, float deltaTime) {
                 transform = recomposeTransform(transform, nullptr, &out, nullptr);
                 break;
             }
+
+            case Channel::Path::W: { // Morph weights
+                // Morph weights don't use transform matrix - handle separately
+                if (channel.target != Channel::Target::Morph) break;
+                
+                // Evaluate the weight at the current time
+                glm::vec4 v = sampler.evaluate(time);
+                float weight = v.x; // Weight stored in x component
+                
+                // Clamp weight to valid range [0, 1]
+                weight = glm::clamp(weight, 0.0f, 1.0f);
+                
+                // Write directly to mesh render component
+                tinyRT_MESHRD* meshRT = scene->rtComp<tinyNodeRT::MESHRD>(channel.node);
+                if (meshRT) {
+                    meshRT->setMrphWeight(channel.index, weight);
+                }
+                
+                continue; // Skip writeTransform below
+            }
         } // switch
 
         // finally write back

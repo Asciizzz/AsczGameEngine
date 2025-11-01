@@ -946,13 +946,103 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
         // No need to calc animation duration here, it's done in tinyRT_ANIM3D
 
         for (const auto& gltfChannel : gltfAnim.channels) {
-            tinyRT_ANIM3D::Channel channel;
-            channel.sampler = gltfChannel.sampler;
-
             // Retrieve the target node
             int gltfTargetNode = gltfChannel.target_node;
     
             int modelNodeIndex = gltfNodeToModelNode[gltfTargetNode];
+
+            // Determine the property being animated
+            using AnimePath = tinyRT_ANIM3D::Channel::Path;
+            const std::string& path = gltfChannel.target_path;
+            
+            // Special handling for morph target weights
+            if (path == "weights") {
+                // In glTF, weights animation outputs an array of N scalars per keyframe,
+                // where N is the number of morph targets on the mesh.
+                // We need to split this into separate channels - one per morph target.
+                
+                const auto& gltfSampler = gltfAnim.samplers[gltfChannel.sampler];
+                
+                // Validate sampler
+                if (gltfSampler.input < 0 || gltfSampler.output < 0) continue;
+                if (gltfSampler.input >= static_cast<int>(model.accessors.size())) continue;
+                if (gltfSampler.output >= static_cast<int>(model.accessors.size())) continue;
+                
+                const auto& inputAccessor = model.accessors[gltfSampler.input];
+                const auto& outputAccessor = model.accessors[gltfSampler.output];
+                
+                size_t numKeyframes = inputAccessor.count;
+                size_t totalOutputValues = outputAccessor.count;
+                
+                // Calculate number of morph targets: totalValues / numKeyframes
+                if (numKeyframes == 0) continue;
+                size_t numMorphTargets = totalOutputValues / numKeyframes;
+                if (numMorphTargets == 0) continue;
+                
+                // Read all the weight values
+                std::vector<float> allWeights;
+                if (!readAccessor(model, gltfSampler.output, allWeights)) continue;
+                
+                // Read time values
+                std::vector<float> times;
+                if (!readAccessor(model, gltfSampler.input, times)) continue;
+                
+                // Create one channel per morph target
+                for (size_t morphIdx = 0; morphIdx < numMorphTargets; ++morphIdx) {
+                    tinyRT_ANIM3D::Channel morphChannel;
+                    morphChannel.path = AnimePath::W;
+                    morphChannel.target = tinyRT_ANIM3D::Channel::Target::Morph;
+                    morphChannel.node = tinyHandle(modelNodeIndex);
+                    morphChannel.index = static_cast<uint32_t>(morphIdx);
+                    
+                    // Create a dedicated sampler for this morph target
+                    tinyRT_ANIM3D::Sampler morphSampler;
+                    morphSampler.times = times;
+                    
+                    // Extract values for this specific morph target
+                    morphSampler.values.resize(numKeyframes);
+                    for (size_t keyIdx = 0; keyIdx < numKeyframes; ++keyIdx) {
+                        size_t weightIdx = keyIdx * numMorphTargets + morphIdx;
+                        float weight = (weightIdx < allWeights.size()) ? allWeights[weightIdx] : 0.0f;
+                        // Store weight in x component of vec4
+                        morphSampler.values[keyIdx] = glm::vec4(weight, 0.0f, 0.0f, 0.0f);
+                    }
+                    
+                    // Set interpolation mode
+                    using SamplerInterp = tinyRT_ANIM3D::Sampler::Interp;
+                    if (gltfSampler.interpolation == "LINEAR") {
+                        morphSampler.interp = SamplerInterp::Linear;
+                    } else if (gltfSampler.interpolation == "STEP") {
+                        morphSampler.interp = SamplerInterp::Step;
+                    } else if (gltfSampler.interpolation == "CUBICSPLINE") {
+                        morphSampler.interp = SamplerInterp::CubicSpline;
+                        // For cubic spline, we need to handle triplets [inTangent, value, outTangent]
+                        // Recalculate values
+                        size_t numTriplets = numKeyframes;
+                        morphSampler.values.resize(numTriplets * 3);
+                        for (size_t tripletIdx = 0; tripletIdx < numTriplets; ++tripletIdx) {
+                            for (size_t componentIdx = 0; componentIdx < 3; ++componentIdx) { // inTangent, value, outTangent
+                                size_t weightIdx = (tripletIdx * 3 + componentIdx) * numMorphTargets + morphIdx;
+                                float weight = (weightIdx < allWeights.size()) ? allWeights[weightIdx] : 0.0f;
+                                morphSampler.values[tripletIdx * 3 + componentIdx] = glm::vec4(weight, 0.0f, 0.0f, 0.0f);
+                            }
+                        }
+                    } else {
+                        morphSampler.interp = SamplerInterp::Linear;
+                    }
+                    
+                    // Add the sampler and set the channel to reference it
+                    morphChannel.sampler = static_cast<uint32_t>(anime.samplers.size());
+                    anime.samplers.push_back(std::move(morphSampler));
+                    anime.channels.push_back(std::move(morphChannel));
+                }
+                
+                continue; // Done with this weights channel
+            }
+            
+            // Handle non-morph channels
+            tinyRT_ANIM3D::Channel channel;
+            channel.sampler = gltfChannel.sampler;
 
             // Check if it's a joint node
             auto jointIt = gltfNodeToSkeletonAndBoneIndex.find(gltfTargetNode);
@@ -974,14 +1064,10 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
                 channel.node = tinyHandle(modelNodeIndex);
             }
 
-            // Determine the property being animated
-
-            using AnimePath = tinyRT_ANIM3D::Channel::Path;
-            const std::string& path = gltfChannel.target_path;
+            // Set path for non-morph animations
             if (path == "translation")   channel.path = AnimePath::T;
             else if (path == "rotation") channel.path = AnimePath::R;
             else if (path == "scale")    channel.path = AnimePath::S;
-            else if (path == "weights")  channel.path = AnimePath::W;
             else continue; // Unsupported path
 
             anime.channels.push_back(std::move(channel));
