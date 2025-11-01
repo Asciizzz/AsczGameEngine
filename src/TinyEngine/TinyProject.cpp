@@ -326,9 +326,9 @@ void tinyProject::vkCreateDefault() {
 // -------------- Create dummy morph target resources --------------
 
     dummyMrphDsDescSet.allocate(deviceVk->device, meshMrphDsDescPool.get(), meshMrphDsDescLayout.get());
-    tinyRT_MESHR::vkWrite(deviceVk, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
+    tinyRT_MESHRD::vkWrite(deviceVk, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
 
     dummyMrphWsDescSet.allocate(deviceVk->device, meshMrphWsDescPool.get(), meshMrphWsDescLayout.get());
-    tinyRT_MESHR::vkWrite(deviceVk, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedReq.maxFramesInFlight, 1);
+    tinyRT_MESHRD::vkWrite(deviceVk, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedReq.maxFramesInFlight, 1);
 
 }

@@ -15,7 +15,6 @@ struct Scene; // Forward declaration
 
 struct Anime3D {
     Anime3D() noexcept = default;
-    void setScene(Scene* scene) { scene_ = scene; }
 
     // Allows copy since its just data
     Anime3D(const Anime3D&) = default;
@@ -96,7 +95,7 @@ struct Anime3D {
     void resume() { playing = true; }
     void stop() { time = 0.0f; playing = false; }
 
-    void update(float deltaTime);
+    void update(Scene* scene, float deltaTime);
 
     Anime* current() { return animePool.get(currentHandle); }
     const Anime* current() const { return animePool.get(currentHandle); }
@@ -125,8 +124,6 @@ struct Anime3D {
     }
 
 private:
-    Scene* scene_ = nullptr;
-
     tinyPool<Anime> animePool;
     UnorderedMap<std::string, tinyHandle> nameToHandle;
     tinyHandle currentHandle;
@@ -136,7 +133,7 @@ private:
     float time = 0.0f;
     float speed = 1.0f;
 
-    void writeTransform(const Channel& channel, const glm::mat4& transform) const;
+    void writeTransform(Scene* scene, const Channel& channel, const glm::mat4& transform);
 };
 
 } // namespace tinyRT

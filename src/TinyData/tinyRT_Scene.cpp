@@ -275,7 +275,6 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
             const auto* fromAnimeRT = from->rtComp<tinyNodeRT::ANIM3D>(fromHandle);
 
             *toAnimeRT = *fromAnimeRT;
-            toAnimeRT->setScene(this);
 
             for (auto& anime : toAnimeRT->MAL()) {
                 auto* toAnime = toAnimeRT->get(anime.second);
@@ -320,7 +319,11 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
 
     // Update animation component
     tinyRT_ANIM3D* rtAnime = rtComp<tinyNodeRT::ANIM3D>(realHandle);
-    if (rtAnime) rtAnime->update(curDTime_);
+    if (rtAnime) rtAnime->update(this, curDTime_);
+
+    // Update mesh render component
+    tinyRT_MESHRD* rtMeshRender = rtComp<tinyNodeRT::MESHRD>(realHandle);
+    if (rtMeshRender) rtMeshRender->vkUpdate(curFrame_);
 
     glm::mat4 transformMat = parentGlobalTransform * localMat;
 

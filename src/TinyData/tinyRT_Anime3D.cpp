@@ -126,18 +126,18 @@ glm::mat4 getTransform(const tinySceneRT* scene, const Anime3D::Channel& channel
 }
 
 
-void Anime3D::writeTransform(const Channel& channel, const glm::mat4& transform) const {
-    if (scene_ == nullptr) return;
+void Anime3D::writeTransform(Scene* scene, const Channel& channel, const glm::mat4& transform) {
+    if (scene == nullptr) return;
 
     // Write transform component of node
     if (channel.target == Channel::Target::Node) {
-        tinyNodeRT::TRFM3D* nodeTransform = scene_->rtComp<tinyNodeRT::TRFM3D>(channel.node);
+        tinyNodeRT::TRFM3D* nodeTransform = scene->rtComp<tinyNodeRT::TRFM3D>(channel.node);
         if (nodeTransform) {
             nodeTransform->set(transform);
         }
     // Write transform component of bone
     } else if (channel.target == Channel::Target::Bone) {
-        tinyRT_SKEL3D* skeletonRT = scene_->rtComp<tinyNodeRT::SKEL3D>(channel.node);
+        tinyRT_SKEL3D* skeletonRT = scene->rtComp<tinyNodeRT::SKEL3D>(channel.node);
         if (skeletonRT && skeletonRT->boneValid(channel.index)) {
             skeletonRT->setLocalPose(channel.index, transform);
         }
@@ -189,8 +189,8 @@ glm::mat4 recomposeTransform(
 }
 
 
-void Anime3D::update(float deltaTime) {
-    if (scene_ == nullptr) return;
+void Anime3D::update(Scene* scene, float deltaTime) {
+    if (scene == nullptr) return;
 
     const Anime* anime = animePool.get(currentHandle);
     if (!playing || !anime || !anime->valid()) return;
@@ -211,7 +211,7 @@ void Anime3D::update(float deltaTime) {
     for (const auto& channel : anime->channels) {
         const auto& sampler = anime->samplers[channel.sampler];
 
-        glm::mat4 transform = getTransform(scene_, channel);
+        glm::mat4 transform = getTransform(scene, channel);
 
         // Evaluate value (for T and S we can use sampler.evaluate).
         // Rotation needs special handling (slerp).
@@ -298,6 +298,6 @@ void Anime3D::update(float deltaTime) {
         } // switch
 
         // finally write back
-        writeTransform(channel, transform);
+        writeTransform(scene, channel, transform);
     } // channels
 }

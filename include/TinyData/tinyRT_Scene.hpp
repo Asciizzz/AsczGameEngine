@@ -37,7 +37,7 @@ private:
     // Special types
     template<> struct RTResolver<tinyNodeRT::SKEL3D> { using type = tinyRT_SKEL3D; };
     template<> struct RTResolver<tinyNodeRT::ANIM3D> { using type = tinyRT_ANIM3D; };
-    template<> struct RTResolver<tinyNodeRT::MESHRD> { using type = tinyRT_MESHR; };
+    template<> struct RTResolver<tinyNodeRT::MESHRD> { using type = tinyRT_MESHRD; };
 
 public:
     struct Require {
@@ -160,7 +160,7 @@ public:
         } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
             return rtGet<tinyRT_ANIM3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
-            return rtGet<tinyRT_MESHR>(compPtr->pHandle);
+            return rtGet<tinyRT_MESHRD>(compPtr->pHandle);
         } else { // Other types return themselves
             return compPtr;
         }
@@ -204,7 +204,7 @@ public:
         } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
             rtRemove<tinyRT_ANIM3D>(compPtr->pHandle);
         } else if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
-            rtRemove<tinyRT_MESHR>(compPtr->pHandle);
+            rtRemove<tinyRT_MESHRD>(compPtr->pHandle);
         }
 
         rmMap3D<T>(nodeHandle);
@@ -325,20 +325,19 @@ private:
 
     tinyRT_ANIM3D* addANIM3D_RT(tinyNodeRT::ANIM3D* compPtr) {
         tinyRT_ANIM3D rtAnime;
-        rtAnime.setScene(this);
 
         compPtr->pHandle = rtAdd<tinyRT_ANIM3D>(std::move(rtAnime));
 
         return rtGet<tinyRT_ANIM3D>(compPtr->pHandle);
     }
 
-    tinyRT_MESHR* addMESHR_RT(tinyNodeRT::MESHRD* compPtr) {
-        tinyRT_MESHR rtMeshRT;
+    tinyRT_MESHRD* addMESHR_RT(tinyNodeRT::MESHRD* compPtr) {
+        tinyRT_MESHRD rtMeshRT;
         rtMeshRT.init(req_.deviceVk, &fsView<tinyMeshVk>(), req_.mrphWsDescLayout, req_.mrphWsDescPool, req_.maxFramesInFlight);
 
-        compPtr->pHandle = rtAdd<tinyRT_MESHR>(std::move(rtMeshRT));
+        compPtr->pHandle = rtAdd<tinyRT_MESHRD>(std::move(rtMeshRT));
 
-        return rtGet<tinyRT_MESHR>(compPtr->pHandle);
+        return rtGet<tinyRT_MESHRD>(compPtr->pHandle);
     }
 
     // ---------- Runtime registry access (private) ----------

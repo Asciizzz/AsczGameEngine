@@ -87,4 +87,4 @@ private:
 
 } // namespace tinyRT
 
-using tinyRT_MESHR = tinyRT::MeshRender3D;
+using tinyRT_MESHRD = tinyRT::MeshRender3D;
