@@ -1289,6 +1289,15 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         Material material;
         material.name = sanitizeAsciiz(objMat.name, "material", matIndex);
 
+        // Extract Kd (diffuse color) and set as base color
+        // OBJ stores diffuse color in the 'diffuse' array [R, G, B]
+        material.baseColor = glm::vec4(
+            static_cast<float>(objMat.diffuse[0]),
+            static_cast<float>(objMat.diffuse[1]),
+            static_cast<float>(objMat.diffuse[2]),
+            1.0f  // Alpha is always 1.0 for OBJ materials
+        );
+
         // Load diffuse texture if present
         if (!objMat.diffuse_texname.empty()) {
             // Construct full texture path
