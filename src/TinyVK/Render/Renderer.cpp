@@ -317,6 +317,18 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             // In the case of dummy, offset does't matter
             uint32_t skinOffset = rtSkele ? rtSkele->dynamicOffset(currentFrame) : 0;
             rPipeline->bindSets(currentCmd, 2, &skinSet, 1, &skinOffset, 1);
+
+            VkDescriptorSet mrphDsSet = mr3DComp->mrphDsDescSet();
+            bool hasMrph = mrphDsSet != VK_NULL_HANDLE;
+
+            mrphDsSet = hasMrph ? mrphDsSet : project->descSet_DummyMrphDs();
+            rPipeline->bindSets(currentCmd, 3, &mrphDsSet, 1, nullptr, 0);
+
+            VkDescriptorSet mrphWsSet = mr3DComp->mrphWsDescSet();
+            mrphWsSet = hasMrph ? mrphWsSet : project->descSet_DummyMrphWs();
+
+            uint32_t mrphWsOffset = mr3DComp->mrphWsDynamicOffset(currentFrame) * (hasMrph ? 1 : 0);
+            rPipeline->bindSets(currentCmd, 4, &mrphWsSet, 1, &mrphWsOffset, 1);
         }
 
         // Check if this node is the selected node for highlighting
@@ -338,7 +350,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 
             // Offset 0: global transform
             // Offset 64: other properties (1)
-            glm::uvec4 props1 = glm::uvec4(boneCount, 0, 0, 0);
+            glm::uvec4 props1 = glm::uvec4(boneCount, mr3DComp->mrphCount(), rMesh->vrtxCount(), isSelectedNode ? 1 : 0);
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transformMat);
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
 

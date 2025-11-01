@@ -31,9 +31,13 @@ public:
     VkDescriptorSetLayout descSLayout_Global() const { return global_->getDescLayout(); }
     VkDescriptorSetLayout descSLayout_Material() const { return matDescLayout; }
     VkDescriptorSetLayout descSLayout_Skin() const { return skinDescLayout.get(); }
+    VkDescriptorSetLayout descSLayout_MeshMrphDs() const { return meshMrphDsDescLayout.get(); }
+    VkDescriptorSetLayout descSLayout_MeshMrphWs() const { return meshMrphWsDescLayout.get(); }
 
     VkDescriptorSet descSet_DummySkin() const { return dummySkinDescSet.get(); }
     VkDescriptorSet descSet_DefaultMat() const { return defaultMaterialVk.descSet(); }
+    VkDescriptorSet descSet_DummyMrphDs() const { return dummyMrphDsDescSet.get(); }
+    VkDescriptorSet descSet_DummyMrphWs() const { return dummyMrphWsDescSet.get(); }
 
     // Global UBO update
 

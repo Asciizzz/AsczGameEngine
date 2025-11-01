@@ -2,7 +2,7 @@
 
 layout(push_constant) uniform PushConstant {
     mat4 model;
-    uvec4 props1; // .x = bone count (not used)
+    uvec4 props1; // .x = bone count, .y = morph target count, .z = vertex count (for morphs)
 } pConst;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
@@ -14,6 +14,20 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
 
 layout(std430, set = 2, binding = 0) readonly buffer SkinBuffer {
     mat4 skinData[];
+};
+
+
+struct Mrph {
+    vec3 dPos;
+    vec3 dNrml;
+    vec3 dTan;
+};
+layout(std430, set = 3, binding = 0) readonly buffer MrphDeltaBuffer {
+    Mrph morphs[];
+};
+
+layout(std430, set = 4, binding = 0) readonly buffer MrphWeightsBuffer {
+    float morphWeights[];
 };
 
 layout(location = 0) in vec4  inPos_Tu;   // .xyz = pos, .w = u (if you use packed UVs)
@@ -30,13 +44,29 @@ layout(location = 3) out vec4 fragTangent;
 void main() {
 
     // --- Apply morph targets ---
-    vec3 basePos   = inPos_Tu.xyz;
+    vec3 basePos    = inPos_Tu.xyz;
     vec3 baseNormal = inNrml_Tv.xyz;
+    vec3 baseTangent = inTangent.xyz;
 
-    // basePos   += morphWeights[0] * morphPosDelta0;
-    // baseNormal += morphWeights[0] * morphNrmlDelta0;
-    // basePos   += morphWeights[1] * morphPosDelta1;
-    // baseNormal += morphWeights[1] * morphNrmlDelta1;
+    uint morphCount = pConst.props1.y;
+    uint vertexCount = pConst.props1.z;
+    uint vertexId = gl_VertexIndex;
+
+    // Apply all morph targets
+    if (morphCount > 0 && vertexCount > 0) {
+        for (uint m = 0; m < morphCount; ++m) {
+            float weight = morphWeights[m];
+
+            if (abs(weight) < 0.0001) continue; // negligible
+
+            uint morphIndex = m * vertexCount + vertexId;
+            Mrph delta = morphs[morphIndex];
+            
+            basePos    += weight * delta.dPos;
+            baseNormal += weight * delta.dNrml;
+            baseTangent += weight * delta.dTan;
+        }
+    }
 
     // --- Skinning ---
     vec4 skinnedPos = vec4(0.0);
@@ -48,7 +78,7 @@ void main() {
     if (boneCount == 0) { // No skinning
         skinnedPos = vec4(basePos, 1.0);
         skinnedNormal = baseNormal;
-        skinnedTangent = inTangent.xyz;
+        skinnedTangent = baseTangent;
     } else {
         for (uint i = 0; i < 4; ++i) {
             uint id = inBoneIDs[i];
@@ -58,7 +88,7 @@ void main() {
 
             skinnedPos     += w * (boneMat * vec4(basePos, 1.0));
             skinnedNormal  += w * mat3(boneMat) * baseNormal;
-            skinnedTangent += w * mat3(boneMat) * inTangent.xyz;
+            skinnedTangent += w * mat3(boneMat) * baseTangent;
         }
     }
 

@@ -35,7 +35,7 @@
             "vertexShader": "Shaders/bin/Rasterize/TestRigged.vert.spv",
             "fragmentShader": "Shaders/bin/Rasterize/TestSingle.frag.spv",
             "vertexInput": "TestRigged",
-            "descriptorLayouts": [ "global", "material", "skin" ],
+            "descriptorLayouts": [ "global", "material", "skin", "morph_ds", "morph_ws" ],
             "pushConstants": [ {
                 "stages": [ "Vertex", "Fragment" ],
                 "offset": 0,

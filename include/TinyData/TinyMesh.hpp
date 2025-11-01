@@ -172,7 +172,9 @@ struct tinyMeshVk {
     size_t vrtxCount() const noexcept { return mesh_.vrtxCount(); }
     size_t indxCount() const noexcept { return mesh_.indxCount(); }
     size_t mrphCount() const noexcept { return mesh_.mrphCount(); }
-    VkDescriptorSet mrphDsDescSet() const noexcept { return mrphDsDescSet_; }
+    VkDescriptorSet mrphDsDescSet() const noexcept {
+        return mesh_.mrphCount() ? mrphDsDescSet_.get() : VK_NULL_HANDLE;
+    }
 
 // -----------------------------------------
 

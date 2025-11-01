@@ -46,6 +46,7 @@ struct MeshRender3D {
 
     static void vkWrite(const tinyVk::Device* device, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, size_t mrphCount, uint32_t* unalignedSize = nullptr, uint32_t* alignedSize = nullptr);
     VkDescriptorSet mrphWsDescSet() const noexcept;
+    VkDescriptorSet mrphDsDescSet() const noexcept;
     uint32_t mrphWsDynamicOffset(uint32_t curFrame) const noexcept;
     void vkUpdate(uint32_t curFrame) noexcept;
 

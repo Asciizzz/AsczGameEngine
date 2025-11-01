@@ -74,6 +74,10 @@ void MeshRender3D::copy(const MeshRender3D* other) {
 VkDescriptorSet MeshRender3D::mrphWsDescSet() const noexcept {
     return mrphWsDescSet_;
 }
+VkDescriptorSet MeshRender3D::mrphDsDescSet() const noexcept {
+    const tinyMeshVk* mesh = rMesh();
+    return mesh ? mesh->mrphDsDescSet() : VK_NULL_HANDLE;
+}
 
 uint32_t MeshRender3D::mrphWsDynamicOffset(uint32_t curFrame) const noexcept {
     return curFrame * alignedSize_;

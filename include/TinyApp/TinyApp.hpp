@@ -121,6 +121,9 @@ private:
     void mainLoop();
     void cleanup();
 
+// Everything below is hell reincarnate
+
+
     void setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& camera, bool mouseLocked, float deltaTime);
 
     void renderInspectorWindow();

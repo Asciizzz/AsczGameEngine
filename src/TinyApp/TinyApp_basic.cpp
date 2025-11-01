@@ -77,6 +77,8 @@ void tinyApp::initComponents() {
         {"global", project->descSLayout_Global()},
         {"material", project->descSLayout_Material()},
         {"skin", project->descSLayout_Skin()},
+        {"morph_ds", project->descSLayout_MeshMrphDs()},
+        {"morph_ws", project->descSLayout_MeshMrphWs()}
     };
     
     // Create named vertex inputs
