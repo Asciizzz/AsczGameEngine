@@ -864,8 +864,6 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
         nModel.TRFM3D = matrix;
 
         if (nGltf.mesh >= 0) {
-            // tNode meshData;
-            // meshData.pMeshHandle = tinyHandle(nGltf.mesh);
             nModel.MESHR_meshIndx = nGltf.mesh;
 
             int skeletonIndex = nGltf.skin;

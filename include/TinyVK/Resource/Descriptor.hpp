@@ -28,8 +28,8 @@ struct DescPool {
     DescPool(DescPool&& other) noexcept;
     DescPool& operator=(DescPool&& other) noexcept;
 
-    VkDescriptorPool get() const { return pool; }
-    operator VkDescriptorPool() const { return pool; }
+    VkDescriptorPool get() const noexcept { return pool; }
+    operator VkDescriptorPool() const noexcept { return pool; }
 
     void create(VkDevice device, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets, 
                 VkDescriptorPoolCreateFlags flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
@@ -38,7 +38,7 @@ struct DescPool {
     
     // Additional utility methods
     void reset(VkDescriptorPoolResetFlags flags = 0);
-    uint32_t getMaxSets() const { return maxSets; }
+    uint32_t getMaxSets() const noexcept { return maxSets; }
 
 private:
     VkDevice device = VK_NULL_HANDLE;
@@ -56,9 +56,9 @@ struct DescSLayout {
     DescSLayout(DescSLayout&& other) noexcept;
     DescSLayout& operator=(DescSLayout&& other) noexcept;
 
-    VkDescriptorSetLayout get() const { return layout; }
-    operator VkDescriptorSetLayout() const { return layout; }
-    operator VkDescriptorSetLayout&() { return layout; }
+    VkDescriptorSetLayout get() const noexcept { return layout; }
+    operator VkDescriptorSetLayout() const noexcept { return layout; }
+    operator VkDescriptorSetLayout&() noexcept { return layout; }
 
     void create(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& bindings, 
                 VkDescriptorSetLayoutCreateFlags flags = 0, const void* pNext = nullptr);
@@ -66,7 +66,7 @@ struct DescSLayout {
     void destroy();
     
     // Utility methods
-    uint32_t getBindingCount() const { return bindingCount; }
+    uint32_t getBindingCount() const noexcept { return bindingCount; }
 
 private:
     VkDevice device = VK_NULL_HANDLE;
@@ -84,11 +84,11 @@ struct DescSet {
     DescSet(DescSet&& other) noexcept;
     DescSet& operator=(DescSet&& other) noexcept;
 
-    VkDescriptorSet get() const { return set; }
-    operator VkDescriptorSet() const { return get(); }
+    VkDescriptorSet get() const noexcept { return set; }
+    operator VkDescriptorSet() const noexcept { return get(); }
 
-    VkDescriptorSetLayout getLayout() const { return layout; }
-    VkDescriptorPool getPool() const { return pool; }
+    VkDescriptorSetLayout getLayout() const noexcept { return layout; }
+    VkDescriptorPool getPool() const noexcept { return pool; }
 
     void allocate(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout layout, 
                   const uint32_t* variableDescriptorCounts = nullptr, const void* pNext = nullptr);

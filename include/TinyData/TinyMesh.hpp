@@ -97,15 +97,19 @@ struct tinyMesh {
         return reinterpret_cast<IndexT*>(indxData_.data());
     }
 
+    template<typename IndexT>
+    const IndexT* indxPtr() const {
+        return const_cast<tinyMesh*>(this)->indxPtr<IndexT>();
+    }
+
     tinyMorph* mrphPtr(size_t targetIndex) {
         if (mrphData_.empty() || targetIndex >= mrphCount_) return nullptr;
         size_t offset = targetIndex * vrtxCount_ * sizeof(tinyMorph);
         return reinterpret_cast<tinyMorph*>(mrphData_.data() + offset);
     }
 
-    template<typename IndexT>
-    const IndexT* indxPtr() const {
-        return const_cast<tinyMesh*>(this)->indxPtr<IndexT>();
+    const tinyMorph* mrphPtr(size_t targetIndex) const {
+        return const_cast<tinyMesh*>(this)->mrphPtr(targetIndex);
     }
 
     const tinyVertex::Layout& vrtxLayout() const noexcept { return vrtxLayout_; }

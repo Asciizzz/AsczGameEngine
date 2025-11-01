@@ -341,9 +341,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             tinyHandle matHandle = parts[i].material;
             const tinyMaterialVk* material = fs.rGet<tinyMaterialVk>(matHandle);
 
-            VkDescriptorSet matSet = material ? 
-                material->descSet() :
-                project->descSet_DefaultMat();
+            VkDescriptorSet matSet = material ? material->descSet() : project->descSet_DefaultMat();
 
             rPipeline->bindSets(currentCmd, 1, &matSet, 1, nullptr, 0);
 
@@ -351,6 +349,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             // Offset 0: global transform
             // Offset 64: other properties (1)
             glm::uvec4 props1 = glm::uvec4(boneCount, mr3DComp->mrphCount(), rMesh->vrtxCount(), isSelectedNode ? 1 : 0);
+
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transformMat);
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
 
