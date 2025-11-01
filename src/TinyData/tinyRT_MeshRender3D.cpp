@@ -43,16 +43,15 @@ void MeshRender3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* b
         .createBuffer(deviceVk)
         .mapMemory();
 
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = *buffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = isDynamic ? perFrameAligned : perFrameSize;
-
     DescWrite()
         .setDstSet(*descSet)
         .setType(isDynamic ? DescType::StorageBufferDynamic : DescType::StorageBuffer)
         .setDescCount(1)
-        .setBufferInfo({ bufferInfo })
+        .setBufferInfo({ VkDescriptorBufferInfo{
+            *buffer,
+            0,
+            isDynamic ? perFrameAligned : perFrameSize
+        } })
         .updateDescSets(deviceVk->device);
 }
 

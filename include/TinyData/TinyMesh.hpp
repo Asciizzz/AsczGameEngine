@@ -222,16 +222,15 @@ struct tinyMeshVk {
             .setUsageFlags(BufferUsage::Storage)
             .createDeviceLocalBuffer(deviceVk_, mesh_.mrphData().data());
 
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = mrphDsBuffer_;
-        bufferInfo.offset = 0;
-        bufferInfo.range = mrphSize;
-
         DescWrite()
             .setDstSet(mrphDsDescSet_)
             .setType(DescType::StorageBuffer) // NOT DYNAMIC
             .setDescCount(1)
-            .setBufferInfo({ bufferInfo })
+            .setBufferInfo({ VkDescriptorBufferInfo{
+                mrphDsBuffer_,
+                0,
+                mrphSize
+            } })
             .updateDescSets(deviceVk_->device);
 
         return true;

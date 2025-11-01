@@ -431,6 +431,17 @@ void loadMaterials(std::vector<tinyModel::Material>& materials, tinygltf::Model&
             tinyLoader::sanitizeAsciiz("Material", "material", matIndex) : 
             tinyLoader::sanitizeAsciiz(gltfMaterial.name, "material", matIndex);
 
+        // Extract base color factor (default is white if not specified)
+        const auto& baseColorFactor = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
+        if (baseColorFactor.size() == 4) {
+            material.baseColor = glm::vec4(
+                static_cast<float>(baseColorFactor[0]),
+                static_cast<float>(baseColorFactor[1]),
+                static_cast<float>(baseColorFactor[2]),
+                static_cast<float>(baseColorFactor[3])
+            );
+        }
+
         int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
         if (validIndex(albedoTexIndex, textures)) {
             material.albIndx = albedoTexIndex;

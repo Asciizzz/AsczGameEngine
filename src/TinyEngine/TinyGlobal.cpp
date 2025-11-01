@@ -24,16 +24,15 @@ void tinyGlobal::vkCreate(const tinyVk::Device* deviceVk) {
     descPool.create(device, { {DescType::UniformBufferDynamic, 1} }, 1);
     descSet.allocate(device, descPool, descSLayout);
 
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = dataBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range  = alignedSize;
-
     DescWrite()
         .setDstSet(descSet)
         .setType(DescType::UniformBufferDynamic)
         .setDescCount(1)
-        .setBufferInfo({bufferInfo})
+        .setBufferInfo({ VkDescriptorBufferInfo{
+            dataBuffer,
+            0,
+            alignedSize
+        } })
         .updateDescSets(device);
 }
 

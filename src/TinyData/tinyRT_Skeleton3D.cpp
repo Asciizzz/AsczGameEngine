@@ -56,16 +56,15 @@ void Skeleton3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* buf
         .createBuffer(deviceVk)
         .mapMemory();
 
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = *buffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = perFrameSize;
-
     DescWrite()
         .setDstSet(*descSet)
         .setType(DescType::StorageBufferDynamic)
         .setDescCount(1)
-        .setBufferInfo({ bufferInfo })
+        .setBufferInfo({ VkDescriptorBufferInfo{
+            *buffer,
+            0,
+            perFrameSize
+        } })
         .updateDescSets(deviceVk->device);
 }
 

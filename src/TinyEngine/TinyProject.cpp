@@ -72,6 +72,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
         materialVk.name = material.name;
 
+        // Set material base color from model
+        materialVk.setBaseColor(material.baseColor);
+
         // Remap the material's texture indices
         int localAlbIndex = material.albIndx;
         bool localAlbValid = validIndex(localAlbIndex, glbTexRHandle);

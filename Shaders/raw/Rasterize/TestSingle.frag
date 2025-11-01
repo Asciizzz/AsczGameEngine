@@ -10,6 +10,12 @@ layout(location = 0) out vec4 outColor;
 layout(set = 1, binding = 0) uniform sampler2D uAlbedo;
 layout(set = 1, binding = 1) uniform sampler2D uNormal;
 
+// Material properties uniform buffer
+layout(set = 1, binding = 2) uniform MaterialProperties {
+    vec4 baseColor; // Base color multiplier
+    // Future properties go here without affecting texture bindings
+} uMaterial;
+
 void main() {
     // Simple shader
     vec3 lightDir = normalize(vec3(-0.2, 0.1, -0.1));
@@ -17,15 +23,11 @@ void main() {
     float nDot = dot(fragWorldNrml, lightDir);
     float intensity = 0.6 + clamp(nDot, 0.0, 1.0) * 0.4;
 
-    // Get texture color
-    vec4 color = texture(uAlbedo, fragTexUV);
+    // Get texture color and multiply by material base color
+    vec4 color = texture(uAlbedo, fragTexUV) * uMaterial.baseColor;
     if (color.a < 0.5) { discard; }
 
     // color.rgb *= intensity;
-
-    // vec3 customColor = vec3(0.2, 0.2, 0.5);
-    vec3 customColor = vec3(1.0);
-    color.rgb *= customColor;
 
     outColor = color;
 }
