@@ -196,9 +196,9 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
 
     const auto& from_items = from->nodes_.view();
     for (uint32_t i = 0; i < from_items.size(); ++i) {
-        if (!from->nodeOccupied(i)) continue;
-
         const tinyNodeRT* fromNode = from->fromIndex(i);
+        if (!fromNode) continue;
+
         toHandleMap[i] = addNodeRaw(fromNode->name);
     }
 
@@ -206,6 +206,7 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
 
     for (uint32_t i = 0; i < from_items.size(); ++i) {
         tinyHandle fromHandle = from->nodeHandle(i);
+
         const tinyNodeRT* fromNode = from->node(fromHandle);
         if (!fromNode) continue;
 
@@ -217,19 +218,17 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
         // Resolve parent-self relationships
         if (fromNode->parentHandle.valid()) {
             tinyHandle fromParentHandle = fromNode->parentHandle;
-            toNode->setParent(toHandleMap[fromParentHandle.index]);
+            tinyHandle toParentHandle = toHandleMap[fromParentHandle.index];
+
+            tinyNodeRT* parentNode = nodes_.get(toParentHandle);
+            toNode->setParent(toParentHandle);
+            if (parentNode) parentNode->addChild(toHandle);
         } else { // <-- Root node in 'from' scene
             // Add child to parent
             tinyNodeRT* parentNode = nodes_.get(parentHandle);
 
             if (parentNode) parentNode->addChild(toHandle);
             toNode->setParent(parentHandle);
-        }
-
-        // Resolve self-children relationships
-        for (const tinyHandle& childHandle : fromNode->childrenHandles) {
-            if (childHandle.index >= toHandleMap.size()) continue;
-            toNode->addChild(toHandleMap[childHandle.index]);
         }
 
         // Resolve components

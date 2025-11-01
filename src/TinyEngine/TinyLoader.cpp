@@ -447,7 +447,6 @@ void loadMaterials(std::vector<tinyModel::Material>& materials, tinygltf::Model&
         // Albedo/Base color texture
         int albedoTexIndex = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
         if (validIndex(albedoTexIndex, textures)) {
-            material.baseColor = glm::vec4(1.0f); // Reset base color to white when texture is used
             material.albIndx = albedoTexIndex;
         }
     
