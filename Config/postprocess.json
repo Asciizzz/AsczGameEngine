@@ -1,5 +1,9 @@
 {
   "effects": [
-    
+    {
+      "name": "fxaa",
+      "shader": "Shaders/bin/PostProcess/fxaa.comp.spv",
+      "active": true
+    }
   ]
 }

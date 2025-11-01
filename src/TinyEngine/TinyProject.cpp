@@ -16,12 +16,11 @@ bool validIndex(int index, const std::vector<T>& vec) {
     return index >= 0 && static_cast<size_t>(index) < vec.size();
 }
 
-template<typename T>
-tinyHandle makeHandle(int index, const std::vector<T>& vec) {
+tinyHandle linkHandle(int index, const std::vector<tinyHandle>& vec) {
     if (index < 0 || static_cast<size_t>(index) >= vec.size()) {
         return tinyHandle();
     }
-    return tinyHandle(static_cast<uint32_t>(index), 0);
+    return vec[index];
 }
 
 tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk(deviceVk) {
@@ -87,19 +86,19 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         // Remap the material's texture indices
 
         // Albedo texture
-        tinyHandle albHandle = makeHandle(material.albIndx, glbTexRHandle);
+        tinyHandle albHandle = linkHandle(material.albIndx, glbTexRHandle);
         materialVk.setAlbTex(fs_->rGet<tinyTextureVk>(albHandle));
 
         // Normal texture
-        tinyHandle nrmlHandle = makeHandle(material.nrmlIndx, glbTexRHandle);
+        tinyHandle nrmlHandle = linkHandle(material.nrmlIndx, glbTexRHandle);
         materialVk.setNrmlTex(fs_->rGet<tinyTextureVk>(nrmlHandle));
 
         // Metallic texture
-        tinyHandle metalHandle = makeHandle(material.metalIndx, glbTexRHandle);
+        tinyHandle metalHandle = linkHandle(material.metalIndx, glbTexRHandle);
         materialVk.setMetalTex(fs_->rGet<tinyTextureVk>(metalHandle));
 
         // Emissive texture
-        tinyHandle emisHandle = makeHandle(material.emisIndx, glbTexRHandle);
+        tinyHandle emisHandle = linkHandle(material.emisIndx, glbTexRHandle);
         materialVk.setEmisTex(fs_->rGet<tinyTextureVk>(emisHandle));
 
         // Add material to fsRegistry
@@ -115,8 +114,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         // Remap material indices
         std::vector<tinyMesh::Part>& remapPart = mesh.parts();
         for (auto& part : remapPart) {
-            bool valid = validHandle(part.material, glmMatRHandle);
-            part.material = valid ? glmMatRHandle[part.material.index] : tinyHandle();
+            part.material = linkHandle(part.material.index, glmMatRHandle);
         }
 
         tinyMeshVk meshVk;

@@ -32,6 +32,7 @@ void main() {
 
     // Dont ask questions
     vec4 color = albColor * baseColor;
+    // vec4 color = emisColor;
 
     if (color.a < 0.5) { discard; }
 

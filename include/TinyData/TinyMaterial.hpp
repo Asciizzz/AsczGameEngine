@@ -7,16 +7,9 @@
 #include "tinyVk/Resource/Descriptor.hpp"
 
 struct tinyMaterialVk {
-    struct Props {
+    struct alignas(16) Props {
         glm::vec4 baseColor = glm::vec4(1.0f); // RGBA base color multiplier
-        
-        // Future properties can be added here without affecting texture bindings:
-        // float metallic = 0.0f;
-        // float roughness = 1.0f;
-        // float emissive = 0.0f;
-        // etc.
     };
-
 
     std::string name;
     tinyMaterialVk() noexcept = default;
@@ -25,8 +18,8 @@ struct tinyMaterialVk {
         // Decrease texture use counts
         if (albTex_) albTex_->decrementUse();
         if (nrmlTex_) nrmlTex_->decrementUse();
-
-        // DescSet should auto-cleanup (should) (I think we're good)
+        if (metalTex_) metalTex_->decrementUse();
+        if (emisTex_) emisTex_->decrementUse();
     }
 
     static tinyVk::DescSLayout createDescSetLayout(VkDevice deviceVk) {
@@ -89,34 +82,49 @@ struct tinyMaterialVk {
     tinyMaterialVk(tinyMaterialVk&& other) noexcept
     :   name(std::move(other.name)),
         descSet_(std::move(other.descSet_)),
+
+        defTex_(other.defTex_),
         albTex_(other.albTex_),
         nrmlTex_(other.nrmlTex_),
+        metalTex_(other.metalTex_),
+        emisTex_(other.emisTex_),
+
         props_(other.props_),
         propsBuffer_(std::move(other.propsBuffer_)),
-        deviceVk_(other.deviceVk_),
-        defTex_(other.defTex_)
+        deviceVk_(other.deviceVk_)
     {
         // null out the old object so its destructor doesn't decrement
         other.albTex_ = nullptr;
         other.nrmlTex_ = nullptr;
+        other.metalTex_ = nullptr;
+        other.emisTex_ = nullptr;
     }
     tinyMaterialVk& operator=(tinyMaterialVk&& other) noexcept {
         if (this != &other) {
             // Decrement current textures (type shi)
             if (albTex_) albTex_->decrementUse();
             if (nrmlTex_) nrmlTex_->decrementUse();
+            if (metalTex_) metalTex_->decrementUse();
+            if (emisTex_) emisTex_->decrementUse();
 
             name = std::move(other.name);
             descSet_ = std::move(other.descSet_);
+            deviceVk_ = other.deviceVk_;
+
+            defTex_ = other.defTex_;
             albTex_ = other.albTex_;
             nrmlTex_ = other.nrmlTex_;
+            metalTex_ = other.metalTex_;
+            emisTex_ = other.emisTex_;
+
             props_ = other.props_;
             propsBuffer_ = std::move(other.propsBuffer_);
-            deviceVk_ = other.deviceVk_;
-            defTex_ = other.defTex_;
+            updateAllBindings();
 
             other.albTex_ = nullptr;
             other.nrmlTex_ = nullptr;
+            other.metalTex_ = nullptr;
+            other.emisTex_ = nullptr;
         }
         return *this;
     }
@@ -143,7 +151,7 @@ struct tinyMaterialVk {
 
     void setBaseColor(const glm::vec4& color) noexcept {
         props_.baseColor = color;
-        propsBuffer_.uploadData(&props_);
+        setProps(props_);
     }
 
     void setProps(const Props& props) noexcept {
@@ -200,7 +208,7 @@ private:
             .setDstBinding(0) // Properties always at binding = 0
             .setType(DescType::UniformBuffer)
             .setBufferInfo({ VkDescriptorBufferInfo{
-                propsBuffer_.get(),
+                propsBuffer_,
                 0,
                 sizeof(Props)
             }})
