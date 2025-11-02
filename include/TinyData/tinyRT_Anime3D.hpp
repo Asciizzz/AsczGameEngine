@@ -94,6 +94,14 @@ struct Anime3D {
     void pause() { playing = false; }
     void resume() { playing = true; }
     void stop() { time = 0.0f; playing = false; }
+    
+    // Set current animation without starting playback
+    void setCurrent(const tinyHandle& handle, bool resetTime = true) {
+        const Anime* anim = animePool.get(handle);
+        if (!anim || !anim->valid()) return;
+        currentHandle = handle;
+        if (resetTime) time = 0.0f;
+    }
 
     // Direct time manipulation for editor scrubbing
     void setTime(float newTime) { time = newTime; }

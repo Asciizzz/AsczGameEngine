@@ -1121,10 +1121,8 @@ void tinyApp::renderSceneNodeInspector() {
                     selectedAnimationNode = selectedSceneNodeHandle;
                     showAnimationEditor = true;
                     
-                    // Only play if this isn't already the current playing animation
-                    if (compPtr->currentAnimHandle() != handle) {
-                        compPtr->play(handle, true);
-                    }
+                    // Set as current animation without auto-playing (user can press Play button)
+                    compPtr->setCurrent(handle, false);
                 }
 
                 if (isSelected) {
