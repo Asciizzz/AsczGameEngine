@@ -255,6 +255,8 @@ void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, t
 void tinyProject::setupFS() {
     fs_ = MakeUnique<tinyFS>();
 
+    // ------------------ Standard files ------------------
+
     tinyFS::TypeInfo* ascn = fs_->typeInfo<tinySceneRT>();
     ascn->typeExt = tinyFS::TypeExt("ascn", 0.4f, 1.0f, 0.4f);
 
@@ -275,6 +277,25 @@ void tinyProject::setupFS() {
     tinyFS::TypeInfo* askl = fs_->typeInfo<tinySkeleton>();
     askl->typeExt = tinyFS::TypeExt("askl", 0.4f, 1.0f, 1.0f);
     askl->safeDelete = true; // Skeletons are just data, safe to delete
+
+    // ------------------- Special "files" -------------------
+
+    // Resources that lives in the registry but not registered (pun intended)
+    // as files in the filesystem
+
+    tinyFS::TypeInfo* descPool = fs_->typeInfo<tinyVk::DescPool>();
+    descPool->priority = UINT8_MAX; // Delete last
+    descPool->safeDelete = true;
+
+    tinyFS::TypeInfo* descLayout = fs_->typeInfo<tinyVk::DescSLayout>();
+    descLayout->priority = UINT8_MAX; // Delete last
+    descLayout->safeDelete = true;
+
+    tinyFS::TypeInfo* descSet = fs_->typeInfo<tinyVk::DescSet>();
+    descSet->priority = UINT8_MAX - 1; // Delete before pool/layout
+
+    tinyFS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
+    dataBuffer->priority = UINT8_MAX - 2; // Delete before desc sets
 }
 
 
