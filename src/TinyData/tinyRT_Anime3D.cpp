@@ -298,23 +298,33 @@ void Anime3D::apply(Scene* scene, const tinyHandle& animeHandle) {
 void Anime3D::update(Scene* scene, float deltaTime) {
     if (scene == nullptr) return;
 
+    // Update the current animation if playing
     const Anime* anime = animePool.get(currentHandle);
-    if (!playing || !anime || !anime->valid()) return;
+    if (playing && anime && anime->valid()) {
+        float duration = anime->duration;
 
-    float duration = anime->duration;
-
-    // Update time
-    time += deltaTime * speed;
-    if (duration <= 0.0f) {
-        // Zero-length animation: clamp to start
-        time = 0.0f;
-    } else if (loop) {
-        time = fmod(time, duration);
-        if (time < 0.0f) time += duration; // handle negative deltaTime safely
-    } else {
-        time = std::min(time, duration);
+        // Update time
+        time += deltaTime * speed;
+        if (duration <= 0.0f) {
+            // Zero-length animation: clamp to start
+            time = 0.0f;
+        } else if (loop) {
+            time = fmod(time, duration);
+            if (time < 0.0f) time += duration; // handle negative deltaTime safely
+        } else {
+            // Clamp and stop if not looping
+            if (speed >= 0.0f && time >= duration) {
+                time = duration;
+                playing = false;
+            } else if (speed < 0.0f && time <= 0.0f) {
+                time = 0.0f;
+                playing = false;
+            }
+        }
     }
 
-    // Apply the animation at the updated time
-    apply(scene, currentHandle);
+    // Always apply the current animation at the current time (even if paused)
+    if (anime && anime->valid()) {
+        apply(scene, currentHandle);
+    }
 }

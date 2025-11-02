@@ -1121,10 +1121,9 @@ void tinyApp::renderSceneNodeInspector() {
                     selectedAnimationNode = selectedSceneNodeHandle;
                     showAnimationEditor = true;
                     
-                    // Get the anime to set duration
-                    const tinyRT_ANIM3D::Anime* anime = compPtr->get(handle);
-                    if (anime) {
-                        animationTime = 0.0f; // Reset time when selecting new animation
+                    // Only play if this isn't already the current playing animation
+                    if (compPtr->currentAnimHandle() != handle) {
+                        compPtr->play(handle, true);
                     }
                 }
 
@@ -2376,14 +2375,20 @@ void tinyApp::renderAnimationEditorWindow() {
     ImGui::Spacing();
 
     // ===== SINGLE LINE: PLAY/PAUSE, LOOP, SPEED, TIME =====
+    // Get component state
+    bool isPlaying = animComp->isPlaying();
+    bool isLooping = animComp->getLoop();
+    float currentTime = animComp->getTime();
+    float currentSpeed = animComp->getSpeed();
+    
     // Play/Pause button with fixed width to prevent size jumping
-    if (animationPlaying) {
+    if (isPlaying) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.7f, 0.3f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.5f, 0.1f, 1.0f));
         
         if (ImGui::Button("Pause", ImVec2(55, 0))) {
-            animationPlaying = false;
+            animComp->pause();
         }
         
         ImGui::PopStyleColor(3);
@@ -2393,7 +2398,7 @@ void tinyApp::renderAnimationEditorWindow() {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));
         
         if (ImGui::Button("Play ", ImVec2(55, 0))) {
-            animationPlaying = true;
+            animComp->resume();
         }
         
         ImGui::PopStyleColor(3);
@@ -2401,7 +2406,7 @@ void tinyApp::renderAnimationEditorWindow() {
 
     // Loop toggle button
     ImGui::SameLine();
-    if (animationLooping) {
+    if (isLooping) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.6f, 0.9f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.7f, 1.0f));
@@ -2412,7 +2417,7 @@ void tinyApp::renderAnimationEditorWindow() {
     }
     
     if (ImGui::Button("Loop", ImVec2(50, 0))) {
-        animationLooping = !animationLooping;
+        animComp->setLoop(!isLooping);
     }
     
     ImGui::PopStyleColor(3);
@@ -2422,7 +2427,6 @@ void tinyApp::renderAnimationEditorWindow() {
     ImGui::Text("Speed:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(80);
-    float currentSpeed = animComp->getSpeed();
     if (ImGui::DragFloat("##AnimSpeed", &currentSpeed, 0.01f, 0.0f, 0.0f, "%.2fx")) {
         animComp->setSpeed(currentSpeed);
     }
@@ -2432,8 +2436,9 @@ void tinyApp::renderAnimationEditorWindow() {
     ImGui::Text("Time:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(80);
-    if (ImGui::DragFloat("##AnimTime", &animationTime, 0.01f, 0.0f, currentAnime->duration, "%.2f")) {
-        animationTime = std::max(0.0f, std::min(animationTime, currentAnime->duration));
+    if (ImGui::DragFloat("##AnimTime", &currentTime, 0.01f, 0.0f, currentAnime->duration, "%.2f")) {
+        currentTime = std::max(0.0f, std::min(currentTime, currentAnime->duration));
+        animComp->setTime(currentTime);
     }
     
     ImGui::SameLine();
@@ -2442,7 +2447,7 @@ void tinyApp::renderAnimationEditorWindow() {
     ImGui::Spacing();
 
     // ===== FULL WIDTH TIMELINE (DEDICATED LINE) =====
-    float progress = currentAnime->duration > 0.0f ? (animationTime / currentAnime->duration) : 0.0f;
+    float progress = currentAnime->duration > 0.0f ? (currentTime / currentAnime->duration) : 0.0f;
     
     ImVec2 progressBarPos = ImGui::GetCursorScreenPos();
     float timelineHeight = 12.0f; // Thinner timeline
@@ -2471,47 +2476,8 @@ void tinyApp::renderAnimationEditorWindow() {
         ImVec2 mousePos = ImGui::GetMousePos();
         float relativeX = mousePos.x - progressBarPos.x;
         float normalizedPos = std::max(0.0f, std::min(1.0f, relativeX / progressBarSize.x));
-        animationTime = normalizedPos * currentAnime->duration;
+        animComp->setTime(normalizedPos * currentAnime->duration);
     }
-
-    // ===== REAL-TIME UPDATE =====
-    if (animationPlaying) {
-        float currentTime = static_cast<float>(ImGui::GetTime());
-        float deltaTime = currentTime - lastFrameTime;
-        lastFrameTime = currentTime;
-
-        // Update animation time with speed multiplier
-        animationTime += deltaTime * animComp->getSpeed();
-
-        // Handle looping/clamping
-        if (animComp->getSpeed() >= 0.0f) {
-            // Forward playback
-            if (animationTime >= currentAnime->duration) {
-                if (animationLooping) {
-                    animationTime = std::fmod(animationTime, currentAnime->duration);
-                } else {
-                    animationTime = currentAnime->duration;
-                    animationPlaying = false;
-                }
-            }
-        } else {
-            // Backward playback
-            if (animationTime <= 0.0f) {
-                if (animationLooping) {
-                    animationTime = currentAnime->duration + std::fmod(animationTime, currentAnime->duration);
-                } else {
-                    animationTime = 0.0f;
-                    animationPlaying = false;
-                }
-            }
-        }
-    } else {
-        lastFrameTime = static_cast<float>(ImGui::GetTime());
-    }
-
-    // Apply animation at current time to scene
-    animComp->setTime(animationTime);
-    animComp->apply(activeScene, selectedAnimationHandle);
     
     ImGui::Spacing();
     ImGui::Separator();

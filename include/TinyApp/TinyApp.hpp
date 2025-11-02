@@ -106,10 +106,6 @@ private:
     tinyHandle selectedAnimationNode;   // Persistent selection for animation editor (stays highlighted)
     tinyHandle selectedAnimationHandle; // Currently selected animation in the component list
     int selectedChannelIndex = -1;      // Currently selected channel in the timeline
-    float animationTime = 0.0f;         // Current time scrubber position
-    bool animationPlaying = false;      // Playback state
-    bool animationLooping = true;       // Loop state
-    float lastFrameTime = 0.0f;         // For delta time calculation
     
     // UI state: track expanded nodes in the hierarchy and file explorer
     std::unordered_set<tinyHandle> expandedNodes;

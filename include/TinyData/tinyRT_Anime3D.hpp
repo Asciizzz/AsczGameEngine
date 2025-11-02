@@ -103,6 +103,10 @@ struct Anime3D {
     void setSpeed(float newSpeed) { speed = newSpeed; }
     float getSpeed() const { return speed; }
     
+    // Loop control
+    void setLoop(bool shouldLoop) { loop = shouldLoop; }
+    bool getLoop() const { return loop; }
+    
     // Apply animation at current time to the scene (for manual scrubbing)
     void apply(Scene* scene, const tinyHandle& animeHandle);
     
@@ -110,6 +114,8 @@ struct Anime3D {
 
     Anime* current() { return animePool.get(currentHandle); }
     const Anime* current() const { return animePool.get(currentHandle); }
+    
+    tinyHandle currentAnimHandle() const { return currentHandle; }
 
     Anime* get(const tinyHandle& handle) { return animePool.get(handle); }
     const Anime* get(const tinyHandle& handle) const { return animePool.get(handle); }
