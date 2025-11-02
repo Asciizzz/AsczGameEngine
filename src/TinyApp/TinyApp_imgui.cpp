@@ -163,10 +163,10 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
         // Camera Information
         ImGui::Text("Camera");
         ImGui::Separator();
-        ImGui::Text("Position: (%.2f, %.2f, %.2f)", camera.pos.x, camera.pos.y, camera.pos.z);
-        ImGui::Text("Forward: (%.2f, %.2f, %.2f)", camera.forward.x, camera.forward.y, camera.forward.z);
-        ImGui::Text("Right: (%.2f, %.2f, %.2f)", camera.right.x, camera.right.y, camera.right.z);
-        ImGui::Text("Up: (%.2f, %.2f, %.2f)", camera.up.x, camera.up.y, camera.up.z);
+        ImGui::Text("Pos (%.2f, %.2f, %.2f)", camera.pos.x, camera.pos.y, camera.pos.z);
+        ImGui::Text("Fw (%.2f, %.2f, %.2f)", camera.forward.x, camera.forward.y, camera.forward.z);
+        ImGui::Text("Rg (%.2f, %.2f, %.2f)", camera.right.x, camera.right.y, camera.right.z);
+        ImGui::Text("Up (%.2f, %.2f, %.2f)", camera.up.x, camera.up.y, camera.up.z);
         ImGui::Text("Yaw: %.2f° | Pitch: %.2f°", 
                    camera.getYaw(true) * 57.2958f, // Convert radians to degrees
                    camera.getPitch(true) * 57.2958f);
@@ -2375,16 +2375,15 @@ void tinyApp::renderAnimationEditorWindow() {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // ===== SINGLE LINE: PLAY/STOP, LOOP, SPEED, TIME =====
-    // Play/Stop button (compact)
+    // ===== SINGLE LINE: PLAY/PAUSE, LOOP, SPEED, TIME =====
+    // Play/Pause button with fixed width to prevent size jumping
     if (animationPlaying) {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.7f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.5f, 0.1f, 1.0f));
         
-        if (ImGui::Button("Stop", ImVec2(50, 0))) {
+        if (ImGui::Button("Pause", ImVec2(55, 0))) {
             animationPlaying = false;
-            animationTime = 0.0f;
         }
         
         ImGui::PopStyleColor(3);
@@ -2393,7 +2392,7 @@ void tinyApp::renderAnimationEditorWindow() {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));
         
-        if (ImGui::Button("Play", ImVec2(50, 0))) {
+        if (ImGui::Button("Play ", ImVec2(55, 0))) {
             animationPlaying = true;
         }
         
@@ -2446,17 +2445,33 @@ void tinyApp::renderAnimationEditorWindow() {
     float progress = currentAnime->duration > 0.0f ? (animationTime / currentAnime->duration) : 0.0f;
     
     ImVec2 progressBarPos = ImGui::GetCursorScreenPos();
-    ImVec2 progressBarSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetFrameHeight());
+    float timelineHeight = 12.0f; // Thinner timeline
+    ImVec2 progressBarSize = ImVec2(ImGui::GetContentRegionAvail().x, timelineHeight);
+    
+    // Style the progress bar with blue colors to match the UI theme
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.5f, 0.8f, 1.0f)); // Blue progress
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 0.8f)); // Dark background
     
     ImGui::ProgressBar(progress, progressBarSize, "");
     
-    if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            ImVec2 mousePos = ImGui::GetMousePos();
-            float relativeX = mousePos.x - progressBarPos.x;
-            float normalizedPos = std::max(0.0f, std::min(1.0f, relativeX / progressBarSize.x));
-            animationTime = normalizedPos * currentAnime->duration;
-        }
+    ImGui::PopStyleColor(2);
+    
+    // Track drag state independently so dragging continues even when mouse leaves the bar
+    static bool isDraggingTimeline = false;
+    
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        isDraggingTimeline = true;
+    }
+    
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        isDraggingTimeline = false;
+    }
+    
+    if (isDraggingTimeline) {
+        ImVec2 mousePos = ImGui::GetMousePos();
+        float relativeX = mousePos.x - progressBarPos.x;
+        float normalizedPos = std::max(0.0f, std::min(1.0f, relativeX / progressBarSize.x));
+        animationTime = normalizedPos * currentAnime->duration;
     }
 
     // ===== REAL-TIME UPDATE =====
