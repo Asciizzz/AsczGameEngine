@@ -478,6 +478,7 @@ struct PrimitiveData {
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> uvs;
     std::vector<glm::vec4> tangents;
+    std::vector<glm::vec4> colors;     // Vertex colors (COLOR_0)
     std::vector<glm::uvec4> boneIDs;
     std::vector<glm::vec4> weights;
     std::vector<uint32_t> indices; // Initial conversion
@@ -546,6 +547,8 @@ void loadMesh(tinyMesh& mesh,
               const tinygltf::Model& gltfModel,
               const tinygltf::Mesh& gltfMesh,
               const std::vector<tinygltf::Primitive>& primitives,
+              std::vector<tinyModel::Material>& materials,
+              std::vector<tinyTexture>& textures,
               bool hasRigging)
 {
     // ------------------------------------------------------------------
@@ -567,6 +570,9 @@ void loadMesh(tinyMesh& mesh,
         readAccessorFromMap(gltfModel, primitive.attributes, "NORMAL",    pData.normals);
         readAccessorFromMap(gltfModel, primitive.attributes, "TANGENT",   pData.tangents);
         readAccessorFromMap(gltfModel, primitive.attributes, "TEXCOORD_0",pData.uvs);
+
+        // Read vertex colors (COLOR_0) - store for later texture atlas generation
+        readAccessorFromMap(gltfModel, primitive.attributes, "COLOR_0", pData.colors);
 
         if (hasRigging) {
             readAccessorFromMap(gltfModel, primitive.attributes, "JOINTS_0", pData.boneIDs);
@@ -674,6 +680,117 @@ void loadMesh(tinyMesh& mesh,
     else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
 
     // ------------------------------------------------------------------
+    // 4.5. **VERTEX COLOR TEXTURE ATLAS** – create if any primitive has COLOR_0
+    // ------------------------------------------------------------------
+    bool hasVertexColors = false;
+    for (const auto& pData : allPrimitiveDatas) {
+        if (!pData.colors.empty()) {
+            hasVertexColors = true;
+            break;
+        }
+    }
+    
+    int customMatIndex = -1;
+    if (hasVertexColors) {
+        // Collect all unique vertex colors from all primitives (first pass)
+        std::vector<glm::vec4> allColors;
+        std::unordered_map<uint32_t, uint32_t> colorToIndex; // Color hash -> atlas index
+        
+        auto hashColor = [](const glm::vec4& color) -> uint32_t {
+            // Simple hash for color lookup
+            uint32_t r = static_cast<uint32_t>(color.r * 255.0f);
+            uint32_t g = static_cast<uint32_t>(color.g * 255.0f);
+            uint32_t b = static_cast<uint32_t>(color.b * 255.0f);
+            uint32_t a = static_cast<uint32_t>(color.a * 255.0f);
+            return (r << 24) | (g << 16) | (b << 8) | a;
+        };
+        
+        // First pass: collect all unique colors
+        for (const auto& pData : allPrimitiveDatas) {
+            for (const glm::vec4& color : pData.colors) {
+                uint32_t colorHash = hashColor(color);
+                if (colorToIndex.find(colorHash) == colorToIndex.end()) {
+                    colorToIndex[colorHash] = static_cast<uint32_t>(allColors.size());
+                    allColors.push_back(color);
+                }
+            }
+        }
+        
+        // Second pass: remap UVs using the complete color palette
+        if (!allColors.empty()) {
+            uint32_t currentVtxOffset = 0;
+            for (const auto& pData : allPrimitiveDatas) {
+                if (pData.colors.empty()) {
+                    currentVtxOffset += static_cast<uint32_t>(pData.vrtxCount);
+                    continue;
+                }
+                
+                // Remap UVs for this primitive's vertices to point to color atlas
+                for (size_t i = 0; i < pData.colors.size(); ++i) {
+                    const glm::vec4& color = pData.colors[i];
+                    uint32_t colorHash = hashColor(color);
+                    uint32_t atlasIndex = colorToIndex[colorHash];
+                    
+                    // Remap UV to sample from 1D color atlas
+                    // UV.x = (atlasIndex + 0.5) / atlasSize
+                    // UV.y = 0.5 (center of 1D texture)
+                    float u = (static_cast<float>(atlasIndex) + 0.5f) / static_cast<float>(allColors.size());
+                    float v = 0.5f;
+                    
+                    // Update the vertex UV in allVertices
+                    uint32_t vertexIndex = currentVtxOffset + static_cast<uint32_t>(i);
+                    if (vertexIndex < allVertices.size()) {
+                        allVertices[vertexIndex].setUV(glm::vec2(u, v));
+                    }
+                }
+                
+                currentVtxOffset += static_cast<uint32_t>(pData.vrtxCount);
+            }
+        }
+        
+        // Create 1D texture atlas from unique colors
+        if (!allColors.empty()) {
+            int atlasWidth = static_cast<int>(allColors.size());
+            int atlasHeight = 1;
+            std::vector<uint8_t> atlasData(atlasWidth * 4); // RGBA
+            
+            for (size_t i = 0; i < allColors.size(); ++i) {
+                atlasData[i * 4 + 0] = static_cast<uint8_t>(glm::clamp(allColors[i].r, 0.0f, 1.0f) * 255.0f);
+                atlasData[i * 4 + 1] = static_cast<uint8_t>(glm::clamp(allColors[i].g, 0.0f, 1.0f) * 255.0f);
+                atlasData[i * 4 + 2] = static_cast<uint8_t>(glm::clamp(allColors[i].b, 0.0f, 1.0f) * 255.0f);
+                atlasData[i * 4 + 3] = static_cast<uint8_t>(glm::clamp(allColors[i].a, 0.0f, 1.0f) * 255.0f);
+            }
+            
+            // Create texture and add to textures array
+            tinyTexture colorAtlas;
+            colorAtlas = colorAtlas.create(std::move(atlasData), atlasWidth, atlasHeight, 4);
+            colorAtlas.name = gltfMesh.name + "_ColorAtlas";
+            colorAtlas.setWrapMode(tinyTexture::WrapMode::ClampToEdge);
+            
+            int colorAtlasIndex = static_cast<int>(textures.size());
+            textures.push_back(std::move(colorAtlas));
+            
+            // Create custom material for this mesh that uses the color atlas
+            tinyModel::Material customMat;
+            customMat.name = gltfMesh.name + "_VertexColorMaterial";
+            customMat.baseColor = glm::vec4(1.0f); // White base, texture contains the colors
+            customMat.albIndx = colorAtlasIndex;
+            
+            customMatIndex = static_cast<int>(materials.size());
+            materials.push_back(std::move(customMat));
+            
+            // Update all mesh parts to use this new material
+            for (auto& part : mesh.parts()) {
+                part.material = tinyHandle(customMatIndex);
+            }
+        }
+        
+        // Re-write vertex buffer with updated UVs
+        if (hasRigging) mesh.setVrtxs(allVertices);
+        else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
+    }
+
+    // ------------------------------------------------------------------
     // 5. **MORPH TARGETS** – new block
     // ------------------------------------------------------------------
     // glTF stores a *vector of targets* **per primitive**.  All primitives of a
@@ -755,7 +872,8 @@ void loadMesh(tinyMesh& mesh,
     }
 }
 
-void loadMeshes(std::vector<tinyMesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
+void loadMeshes(std::vector<tinyMesh>& meshes, std::vector<tinyModel::Material>& materials, 
+                std::vector<tinyTexture>& textures, tinygltf::Model& gltfModel, bool forceStatic) {
     meshes.clear();
 
     for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
@@ -767,7 +885,7 @@ void loadMeshes(std::vector<tinyMesh>& meshes, tinygltf::Model& gltfModel, bool 
             tinyLoader::sanitizeAsciiz("Mesh", "mesh", meshIndex) : 
             tinyLoader::sanitizeAsciiz(gltfMesh.name, "mesh", meshIndex);
 
-        loadMesh(tinyMesh, gltfModel, gltfMesh, gltfMesh.primitives, !forceStatic);
+        loadMesh(tinyMesh, gltfModel, gltfMesh, gltfMesh.primitives, materials, textures, !forceStatic);
 
         meshes.push_back(std::move(tinyMesh));
     }
@@ -1226,7 +1344,7 @@ tinyModel tinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     if (!forceStatic) loadSkeletons(result.skeletons, gltfNodeToSkeletonAndBoneIndex, model);
 
     bool hasRigging = !forceStatic && !result.skeletons.empty();
-    loadMeshes(result.meshes, model, !hasRigging);
+    loadMeshes(result.meshes, result.materials, result.textures, model, !hasRigging);
 
     std::vector<int> gltfNodeToModelNode;
     UnorderedMap<int, int> skeletonToModelNodeIndex;

@@ -14,7 +14,7 @@ private:
 
     // -------- writeComp's RTResolver ---------
 
-    /* The idea:
+    /* The concept:
 
     tinyNode's component themselves should not be modifiable at runtime, as 
     they directly reference the runtime data in rtRegistry_
@@ -46,6 +46,11 @@ public:
         const tinyRegistry*   fsRegistry = nullptr; // For stuffs and things
         const tinyVk::Device* deviceVk = nullptr;   // For GPU resource creation
 
+        // Soon to be obsolete (not really)
+        // Descriptor will soon be included in the fsRegistry
+        // Meaning we do not need these scattered requirement pieces anymore
+        // We just need the fsRegistry and handles to the descriptors we need
+        // since they now live in the registry as well
         VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
         VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
 
@@ -53,10 +58,51 @@ public:
         VkDescriptorPool      mrphWsDescPool   = VK_NULL_HANDLE;
         VkDescriptorSetLayout mrphWsDescLayout = VK_NULL_HANDLE;
 
+        // New design
+        tinyHandle hSkinDescPool;
+        tinyHandle hSkinDescLayout;
+
+        tinyHandle hMrphWsDescPool;
+        tinyHandle hMrphWsDescLayout;
+
         bool valid() const {
             return  maxFramesInFlight > 0 && fsRegistry != nullptr && deviceVk != nullptr &&
                     skinDescPool   != VK_NULL_HANDLE && skinDescLayout != VK_NULL_HANDLE &&
                     mrphWsDescPool   != VK_NULL_HANDLE && mrphWsDescLayout != VK_NULL_HANDLE;
+
+            /* Soon the be true implementation:
+            return
+                maxFramesInFlight > 0 &&
+                fsRegistry != nullptr &&
+                deviceVk != nullptr &&
+                getSkinDescPool() != VK_NULL_HANDLE &&
+                getSkinDescLayout() != VK_NULL_HANDLE &&
+                getMrphWsDescPool() != VK_NULL_HANDLE &&
+                getMrphWsDescLayout() != VK_NULL_HANDLE;
+            */
+        }
+
+        // Soon rename these method to remove the "get" prefix
+        // The old ones are kept for the time being
+
+        VkDescriptorPool getSkinDescPool() const {
+            if (auto* ptr = fsRegistry->get<tinyVk::DescPool>(hSkinDescPool)) return *ptr;
+            return VK_NULL_HANDLE;
+        }
+
+        VkDescriptorSetLayout getSkinDescLayout() const {
+            if (auto* ptr = fsRegistry->get<tinyVk::DescSLayout>(hSkinDescLayout)) return *ptr;
+            return VK_NULL_HANDLE;
+        }
+
+        VkDescriptorPool getMrphWsDescPool() const {
+            if (auto* ptr = fsRegistry->get<tinyVk::DescPool>(hMrphWsDescPool)) return *ptr;
+            return VK_NULL_HANDLE;
+        }
+
+        VkDescriptorSetLayout getMrphWsDescLayout() const {
+            if (auto* ptr = fsRegistry->get<tinyVk::DescSLayout>(hMrphWsDescLayout)) return *ptr;
+            return VK_NULL_HANDLE;
         }
     };
 
@@ -109,6 +155,9 @@ public:
     void addScene(const Scene* from, tinyHandle parentHandle = tinyHandle());
 
     // --------- Runtime registry access (public) ---------
+
+    // Buddy, how did you get in here???
+    const Require& sceneReq() const { return req_; }
 
     template<typename T>
     T* rtGet(const tinyHandle& handle) {
