@@ -21,7 +21,7 @@ void main() {
     vec3 lightDir = normalize(vec3(-0.2, 0.1, -0.1));
 
     float nDot = dot(fragWorldNrml, lightDir);
-    float intensity = 0.4 + clamp(nDot, 0.0, 1.0) * 0.6;
+    float intensity = 0.7 + clamp(nDot, 0.0, 1.0) * 0.3;
 
     vec4 baseColor = uMaterial.baseColor;
 
@@ -31,8 +31,8 @@ void main() {
     vec4 emisColor = texture(uEmissive, fragTexUV);
 
     // Dont ask questions
-    vec4 color = albColor * baseColor + emisColor;
-    color.rgb *= intensity;
+    vec4 color = albColor * baseColor;
+    // color.rgb *= intensity;
 
     if (color.a < 0.5) { discard; }
 

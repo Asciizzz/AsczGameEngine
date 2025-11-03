@@ -3,150 +3,60 @@
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
-    vec4 prop1; // x = timeOfDay, rest unused
+    vec4 prop1; // prop1.x = time
 } glb;
 
 layout(location = 0) in vec2 fragScreenCoord;
 layout(location = 0) out vec4 outColor;
 
-const float PI = 3.14159265359;
-const float timeSpeed = 10000.0; // actual timeOfDay passed already scaled in app
+// --------------------------------------------------
+// Sky Color Palette
+// --------------------------------------------------
+const vec3 nightZenith   = vec3(0.015, 0.02, 0.05);  // Deep indigo
+const vec3 nightMid      = vec3(0.03, 0.04, 0.08);   // Slightly lighter
+const vec3 nightHorizon  = vec3(0.06, 0.07, 0.12);   // Faint bluish horizon
+const vec3 groundColor   = vec3(0.02, 0.02, 0.025);  // Very dark ground
 
-// Gradients for day/night
-// const vec3 skyDayZenith   = vec3(0.20, 0.45, 0.70);
-const vec3 skyDayZenith = vec3(0.02, 0.03, 0.08);
-const vec3 skyNightZenith = vec3(0.02, 0.03, 0.08);
-
-// const vec3 skyDayHorizon  = vec3(0.95, 0.85, 0.55);
-const vec3 skyDayHorizon  = vec3(0.08, 0.08, 0.12);
-const vec3 skyNightHorizon= vec3(0.08, 0.08, 0.12);
-
-// const vec3 seaDay   = vec3(0.05, 0.20, 0.30);
-const vec3 seaDay   = vec3(0.02, 0.03, 0.08);
-const vec3 seaNight = vec3(0.02, 0.03, 0.08);
-
-
-// vec3 sunColorDay   = vec3(1.0, 0.95, 0.8);
-// vec3 sunColorNight = vec3(0.3, 0.4, 0.6); // bluish moon-like glow
-vec3 sunColorDay = vec3(0.0);
-vec3 sunColorNight = vec3(0.0);
+const vec3 moonColor     = vec3(0.9, 0.9, 1.0);
+const vec3 moonDir       = normalize(vec3(-1.0, 0.2, -1.0));
+const float moonSize     = 0.005;
+const float moonGlow     = 0.03;
 
 // --------------------------------------------------
-// Sun direction calculation
+// Utility hash for randomness
 // --------------------------------------------------
-vec3 calculateSunDirection(float timeOfDay, float latitude) {
-    float theta = 2.0 * PI * timeOfDay;
-    float tilt = radians(latitude);
-
-    float y = sin(theta);
-    float r = cos(theta);
-    float x = r * cos(tilt);
-    float z = r * sin(tilt);
-
-    return normalize(vec3(x, y, z));
+float hash(vec3 p) {
+    p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
+    p += dot(p, p.yzx + 19.19);
+    return fract(p.x * p.y * p.z * 95.733);
 }
 
 // --------------------------------------------------
-// Hash & Starfield generation
+// Procedural scattered star field
 // --------------------------------------------------
-float hash(vec2 p) {
-    p = fract(p * vec2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return fract(p.x * p.y);
-}
+float starField(vec3 rayDir, float time) {
+    // Spherical coordinate mapping
+    vec2 uv = vec2(atan(rayDir.z, rayDir.x) / (2.0 * 3.14159) + 0.5,
+                   asin(rayDir.y) / 3.14159 + 0.5);
+    uv *= 400.0; // Star density control
 
-float starField(vec2 uv, float time) {
-    // Make stars drift slowly across the sky (same direction as sun)
-    // Assume sun moves along +X in UV space — tweak speed as needed
-    uv.x += time * 0.002; // drift rate
-    uv.y += time * 0.0005; // optional slight vertical drift
+    // Random seed per region
+    vec2 grid = floor(uv);
+    float star = 0.0;
 
-    // Wrap UV to avoid visible jumps when it goes out of range
-    uv = fract(uv);
-
-    // Scale grid for finer resolution
-    vec2 gridUV = uv * 800.0;
-
-    // Find cell + local position in cell
-    vec2 cell = floor(gridUV);
-    vec2 local = fract(gridUV);
-
-    // Randomness per cell
-    float h = hash(cell);
-    float star = step(0.897, h); // rarity threshold
-
-    // If star exists in this cell, fade by distance from center
-    if (star > 0.0) {
-        vec2 center = vec2(0.5);
-        float dist = length(local - center);
-        float falloff = smoothstep(0.05, 0.0, dist); // soft edge
-        return falloff * (0.8 + 0.2 * hash(cell + 1.23));
-    }
-    return 0.0;
-}
-
-
-// --------------------------------------------------
-// Sky calculation
-// --------------------------------------------------
-
-vec3 calculateSkyColor(vec3 rayDir) {
-    float time = glb.prop1.x * timeSpeed;
-
-    vec3 sunDir = calculateSunDirection(time, 45.0);
-    float sunElev = dot(sunDir, vec3(0.0, 1.0, 0.0));
-    float elev01 = clamp((sunElev + 0.1) / 1.1, 0.0, 1.0); // smooth factor for time-of-day
-
-    // Blend sky colors based on elevation
-    vec3 horizonCol = mix(skyNightHorizon, skyDayHorizon, elev01);
-    vec3 zenithCol  = mix(skyNightZenith,  skyDayZenith,  elev01);
-
-    // Gradient between horizon and zenith
-    float sky_t = clamp(rayDir.y * 2.2, 0.0, 1.0);
-    float skyGradT = pow(sky_t, 0.35);
-    vec3 skyGrad = mix(horizonCol, zenithCol, skyGradT);
-
-    // Sun highlight
-    float SdotR = max(0.0, dot(sunDir, rayDir));
-    vec3 sunColor      = mix(sunColorNight, sunColorDay, elev01);
-    float sunFocus = 1240.0;
-    float sunIntensity = 100.0;
-    float sun_t = pow(SdotR, sunFocus) * sunIntensity;
-    vec3 sunIllumination = sunColor * sun_t;
-
-    vec3 skyCol;
-    if (rayDir.y > 0.0) {
-        // Above horizon
-        skyCol = skyGrad + sunIllumination;
-    } else {
-        // Below horizon → sea
-        float seaBlend = clamp(rayDir.y * -1.0, 0.0, 1.0);
-        vec3 sea = mix(seaNight, seaDay, elev01);
-        skyCol = sea;
+    for (int x = -1; x <= 1; ++x) {
+        for (int y = -1; y <= 1; ++y) {
+            vec2 cell = grid + vec2(x, y);
+            vec3 seed = vec3(cell, 12.0);
+            vec2 pos = fract(vec2(hash(seed), hash(seed + 1.0)));
+            float size = hash(seed + 2.0) * 0.02 + 0.002;
+            float brightness = smoothstep(size * 1.5, size, distance(fract(uv), pos));
+            float twinkle = 0.5 + 0.5 * sin(time * 2.5 + hash(seed) * 12.0);
+            star += brightness * twinkle;
+        }
     }
 
-    // --------------------------------------------------
-    // Stars — only above horizon
-    // --------------------------------------------------
-    if (rayDir.y > 0.0) {
-        // Darkness factor — stars fade at dusk/dawn
-        // float darkness = clamp(1.0 - elev01 * 4.0, 0.0, 1.0);
-        
-        float darkness = 1.0;
-
-        // Convert rayDir to sky UV
-        float az = atan(rayDir.z, rayDir.x) / (2.0 * PI);
-        az = fract(az); // wrap around
-        float alt = rayDir.y * 0.5 + 0.5;
-        vec2 uv = vec2(az, alt);
-
-        float stars = starField(uv, time);
-        stars *= pow(darkness, 4.0); // softer fade
-
-        skyCol += vec3(stars);
-    }
-
-    return skyCol;
+    return star * 0.4; // Intensity control
 }
 
 // --------------------------------------------------
@@ -154,13 +64,10 @@ vec3 calculateSkyColor(vec3 rayDir) {
 // --------------------------------------------------
 vec3 reconstructRayDirection() {
     vec4 clipCoord = vec4(fragScreenCoord, 1.0, 1.0);
-
     mat4 invView = inverse(glb.view);
     mat4 invProj = inverse(glb.proj);
-
     vec4 eyeCoord = invProj * clipCoord;
     eyeCoord = vec4(eyeCoord.xy, -1.0, 0.0);
-
     vec4 worldCoord = invView * eyeCoord;
     return normalize(worldCoord.xyz);
 }
@@ -169,8 +76,27 @@ vec3 reconstructRayDirection() {
 // Main
 // --------------------------------------------------
 void main() {
+    float time = glb.prop1.x * 500.0; // Time scaling
     vec3 rayDir = reconstructRayDirection();
-    vec3 skyColor = calculateSkyColor(rayDir);
 
-    outColor = vec4(skyColor, 1.0);
+    // Sky gradient: blend 3 layers
+    float y = clamp(rayDir.y * 0.5 + 0.5, 0.0, 1.0);
+    vec3 baseSky = mix(nightHorizon, nightMid, pow(y, 0.7));
+    baseSky = mix(baseSky, nightZenith, pow(y, 1.6));
+
+    // Moon glow
+    float moonDot = dot(rayDir, moonDir);
+    float moonDisk = smoothstep(1.0 - moonSize, 1.0 - moonSize * 0.5, moonDot);
+    float moonHalo = pow(max(0.0, moonDot), 32.0);
+    baseSky += moonColor * (moonDisk * 1.5 + moonHalo * 0.2);
+
+    // Stars
+    float stars = starField(rayDir, time);
+    baseSky += vec3(stars);
+
+    // Below horizon
+    if (rayDir.y < 0.0)
+        baseSky = groundColor;
+
+    outColor = vec4(baseSky, 1.0);
 }
