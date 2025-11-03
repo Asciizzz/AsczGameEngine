@@ -1813,6 +1813,16 @@ void tinyApp::expandFNodeParentChain(tinyHandle fNodeHandle) {
     }
 }
 
+void tinyApp::selectSceneNode(tinyHandle nodeHandle) {
+    // Store previous scene node before changing selection
+    if (selectedHandle.isScene() && selectedHandle.handle.valid()) {
+        prevSceneNode = selectedHandle.handle;
+    }
+    
+    // Update selection to new scene node
+    selectedHandle = SelectHandle(nodeHandle, SelectHandle::Type::Scene);
+}
+
 void tinyApp::selectFileNode(tinyHandle fileHandle) {
     // Check if the file handle is valid
     if (!fileHandle.valid()) {
@@ -1831,6 +1841,11 @@ void tinyApp::selectFileNode(tinyHandle fileHandle) {
     
     // Only select if it's an actual file, not a folder
     if (node->isFile()) {
+        // Store previous file node before changing selection
+        if (selectedHandle.isFile() && selectedHandle.handle.valid()) {
+            prevFileNode = selectedHandle.handle;
+        }
+        
         selectedHandle = SelectHandle(fileHandle, SelectHandle::Type::File);
     }
     // If it's a folder, ignore the selection (don't set selectedHandle)
@@ -2102,6 +2117,46 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
             ImGui::SetDragDropPayload("FILE_HANDLE", &nodeHandle, sizeof(tinyHandle));
             ImGui::Text("%s", fileName.c_str());
             ImGui::EndDragDropSource();
+        }
+        
+        // Spacebar keybind - instantiate selected scene into active hierarchy node
+        if (isSelected && ImGui::IsKeyPressed(ImGuiKey_Space)) {
+            // Check if this is a scene file
+            if (node->tHandle.isType<tinySceneRT>()) {
+                tinyHandle sceneRegistryHandle = node->tHandle.handle;
+                
+                // Determine target node: use previous scene node if we're on a file, otherwise current selection
+                tinyHandle targetNodeHandle;
+                if (selectedHandle.isFile()) {
+                    // We're selecting a file, use the previous scene node from hierarchy
+                    targetNodeHandle = prevSceneNode;
+                    
+                    // Fallback: if no previous scene node, use the active scene's root
+                    if (!targetNodeHandle.valid()) {
+                        tinySceneRT* activeScene = getActiveScene();
+                        if (activeScene) {
+                            targetNodeHandle = activeScene->rootHandle();
+                        }
+                    }
+                } else if (selectedHandle.isScene()) {
+                    // We're selecting a scene node directly
+                    targetNodeHandle = selectedHandle.handle;
+                }
+                
+                // Only instantiate if we have a valid target node
+                if (targetNodeHandle.valid()) {
+                    // Safety check: prevent instantiating a scene into itself
+                    if (sceneRegistryHandle != getActiveSceneHandle()) {
+                        // Verify the scene exists and instantiate it
+                        const tinySceneRT* scene = fs.rGet<tinySceneRT>(sceneRegistryHandle);
+                        if (scene) {
+                            project->addSceneInstance(sceneRegistryHandle, getActiveSceneHandle(), targetNodeHandle);
+                            // Auto-expand the parent chain to show the newly instantiated scene
+                            expandParentChain(targetNodeHandle);
+                        }
+                    }
+                }
+            }
         }
         
         // Generic context menu with type-specific options

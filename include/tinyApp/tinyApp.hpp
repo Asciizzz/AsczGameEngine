@@ -102,6 +102,10 @@ private:
     SelectHandle heldHandle;           // What is being dragged (supports drag from file to component fields)
     SelectHandle autoExpandHandle;     // What should be auto-expanded in UI
     
+    // Previous selection tracking (for restoring context when switching between file/scene selections)
+    tinyHandle prevSceneNode;          // Last selected scene node (hierarchy)
+    tinyHandle prevFileNode;           // Last selected file node (file explorer)
+    
     // Animation Editor State
     tinyHandle selectedAnimationNode;   // Persistent selection for animation editor (stays highlighted)
     tinyHandle selectedAnimationHandle; // Currently selected animation in the component list
@@ -157,9 +161,13 @@ private:
     void expandFNodeParentChain(tinyHandle fNodeHandle); // Expand all parents up to root
 
     // Unified selection system methods
-    void selectSceneNode(tinyHandle nodeHandle) { selectedHandle = SelectHandle(nodeHandle, SelectHandle::Type::Scene); }
+    void selectSceneNode(tinyHandle nodeHandle);
     void selectFileNode(tinyHandle fileHandle);
     void clearSelection() { selectedHandle.clear(); }
+    
+    // Previous handle accessors
+    tinyHandle getPrevSceneNode() const { return prevSceneNode; }
+    tinyHandle getPrevFileNode() const { return prevFileNode; }
     
     // Held handle methods (for drag operations)
     void holdSceneNode(tinyHandle nodeHandle) { heldHandle = SelectHandle(nodeHandle, SelectHandle::Type::Scene); }
