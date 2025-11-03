@@ -8,6 +8,8 @@
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"
 
+#include <glm/glm.hpp>
+
 struct tinyMaterialVk {
     struct alignas(16) Props {
         glm::vec4 baseColor = glm::vec4(1.0f); // RGBA base color multiplier

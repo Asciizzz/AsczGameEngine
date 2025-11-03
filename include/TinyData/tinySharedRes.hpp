@@ -8,19 +8,22 @@ namespace tinyVk {
     class Device;
 }
 
+struct tinyMaterialVk;
+struct tinyTextureVk;
+
 struct tinySharedRes {
     uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
 
-    const tinyRegistry* fsRegistry = nullptr; // For stuffs and things
+    tinyRegistry* fsRegistry = nullptr; // For stuffs and things
     const tinyVk::Device* deviceVk = nullptr;   // For GPU resource creation
 
 // File system helper
 
-    template<typename T>
-    const tinyPool<T>& fsView() const { return fsRegistry->view<T>(); }
+    template<typename T> tinyPool<T>& fsView() { return fsRegistry->view<T>(); }
+    template<typename T> const tinyPool<T>& fsView() const { return fsRegistry->view<T>(); }
 
-    template<typename T>
-    const T* fsGet(tinyHandle handle) const { return fsRegistry->get<T>(handle); }
+    template<typename T> T* fsGet(tinyHandle handle) { return fsRegistry->get<T>(handle); }
+    template<typename T> const T* fsGet(tinyHandle handle) const { return fsRegistry->get<T>(handle); }
 
 // Static descriptor resources
 
@@ -53,6 +56,9 @@ struct tinySharedRes {
 
 // Default resources accessors (soon)
 
+    // Material and texture
     tinyHandle hDefaultMaterialVk;
     tinyHandle hDefaultTextureVk;
+    const tinyMaterialVk* defaultMaterialVk() const;
+    const tinyTextureVk* defaultTextureVk() const;
 };

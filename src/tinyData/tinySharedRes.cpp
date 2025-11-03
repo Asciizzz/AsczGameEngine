@@ -1,4 +1,5 @@
 #include "tinyData/tinySharedRes.hpp"
+
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"
 
@@ -25,3 +26,16 @@ VkDescriptorSetLayout tinySharedRes::mrphDsDescLayout() const { return descLayou
 
 VkDescriptorPool tinySharedRes::mrphWsDescPool() const { return descPool(hMrphWsDescPool); }
 VkDescriptorSetLayout tinySharedRes::mrphWsDescLayout() const { return descLayout(hMrphWsDescLayout); }
+
+// Default resources accessors
+
+#include "tinyData/tinyMaterial.hpp"
+#include "tinyData/tinyTexture.hpp"
+
+const tinyMaterialVk* tinySharedRes::defaultMaterialVk() const {
+    return fsRegistry->get<tinyMaterialVk>(hDefaultMaterialVk);
+}
+
+const tinyTextureVk* tinySharedRes::defaultTextureVk() const {
+    return fsRegistry->get<tinyTextureVk>(hDefaultTextureVk);
+}

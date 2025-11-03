@@ -32,7 +32,6 @@ public:
     VkDescriptorSetLayout descSLayout_Global() const { return global_->getDescLayout(); }
 
     VkDescriptorSet descSet_DummySkin() const { return dummySkinDescSet.get(); }
-    VkDescriptorSet descSet_DefaultMat() const { return defaultMaterialVk.descSet(); }
     VkDescriptorSet descSet_DummyMrphDs() const { return dummyMrphDsDescSet.get(); }
     VkDescriptorSet descSet_DummyMrphWs() const { return dummyMrphWsDescSet.get(); }
 
@@ -74,10 +73,6 @@ private:
     tinySharedRes sharedRes_;
     void vkCreateResources();
 
-// -------------- Default resources --------------
-
-    tinyTextureVk defaultTextureVk;
-    tinyMaterialVk defaultMaterialVk;
 
     tinyVk::DescSet dummySkinDescSet;
     tinyVk::DataBuffer dummySkinBuffer;

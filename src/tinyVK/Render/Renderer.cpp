@@ -260,7 +260,7 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
 void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, tinyHandle selectedNodeHandle) const {
     if (!activeScene) return;
 
-    const tinyFS& fs = project->fs();
+    const tinySharedRes& sharedRes = activeScene->sharedRes();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
@@ -339,9 +339,9 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             if (indxCount == 0) continue;
 
             tinyHandle matHandle = parts[i].material;
-            const tinyMaterialVk* material = fs.rGet<tinyMaterialVk>(matHandle);
+            const tinyMaterialVk* material = sharedRes.fsGet<tinyMaterialVk>(matHandle);
 
-            VkDescriptorSet matSet = material ? material->descSet() : project->descSet_DefaultMat();
+            VkDescriptorSet matSet = material ? material->descSet() : sharedRes.defaultMaterialVk()->descSet();
 
             rPipeline->bindSets(currentCmd, 1, &matSet, 1, nullptr, 0);
 

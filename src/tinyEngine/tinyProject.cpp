@@ -76,7 +76,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     std::vector<tinyHandle> glmMatRHandle;
     for (const auto& material : model.materials) {
         tinyMaterialVk materialVk;
-        materialVk.init(deviceVk_, &defaultTextureVk, sharedRes_.matDescLayout(), sharedRes_.matDescPool());
+        materialVk.init(deviceVk_, sharedRes_.defaultTextureVk(), sharedRes_.matDescLayout(), sharedRes_.matDescPool());
 
         materialVk.name = material.name;
 
@@ -351,13 +351,18 @@ void tinyProject::vkCreateDefault() {
 
     tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
     typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
+
     initialSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
 
 //  ---------- Create default material and texture ----------
 
-    defaultTextureVk = tinyTextureVk::defaultTexture(deviceVk_);
-    defaultMaterialVk.init(deviceVk_, &defaultTextureVk, sharedRes_.matDescLayout(), sharedRes_.matDescPool());
-    defaultMaterialVk.name = "Default Material";
+    tinyTextureVk defaultTextureVk = tinyTextureVk::defaultTexture(deviceVk_);
+    sharedRes_.hDefaultTextureVk = fsAdd<tinyTextureVk>(std::move(defaultTextureVk));
+
+    tinyMaterialVk defaultMaterialVk;
+    defaultMaterialVk.init(deviceVk_, sharedRes_.defaultTextureVk(), sharedRes_.matDescLayout(), sharedRes_.matDescPool());
+
+    sharedRes_.hDefaultMaterialVk = fsAdd<tinyMaterialVk>(std::move(defaultMaterialVk));
 
 //  -------------- Create dummy skin resources --------------
 
