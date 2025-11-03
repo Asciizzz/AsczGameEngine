@@ -1,8 +1,12 @@
 #pragma once
 
 #include "tinyExt/tinyRegistry.hpp"
-#include "tinyVk/Resource/DataBuffer.hpp"
-#include "tinyVk/Resource/Descriptor.hpp"
+#include "vulkan/vulkan.h"
+
+// Forward declarations
+namespace tinyVk {
+    class Device;
+}
 
 struct tinySharedRes {
     uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
@@ -20,32 +24,26 @@ struct tinySharedRes {
 
 // Descriptor accessors
 
-    VkDescriptorPool descPool(tinyHandle handle) const {
-        if (auto* ptr = fsRegistry->get<tinyVk::DescPool>(handle)) return *ptr;
-        return VK_NULL_HANDLE;
-    }
-    VkDescriptorSetLayout descLayout(tinyHandle handle) const {
-        if (auto* ptr = fsRegistry->get<tinyVk::DescSLayout>(handle)) return *ptr;
-        return VK_NULL_HANDLE;
-    }
+    VkDescriptorPool descPool(tinyHandle handle) const;
+    VkDescriptorSetLayout descLayout(tinyHandle handle) const;
 
     tinyHandle hMatDescPool;
     tinyHandle hMatDescLayout;
-    VkDescriptorPool matDescPool() const { return descPool(hMatDescPool); }
-    VkDescriptorSetLayout matDescLayout() const { return descLayout(hMatDescLayout); }
+    VkDescriptorPool matDescPool() const;
+    VkDescriptorSetLayout matDescLayout() const;
 
     tinyHandle hSkinDescPool;
     tinyHandle hSkinDescLayout;
-    VkDescriptorPool skinDescPool() const { return descPool(hSkinDescPool); }
-    VkDescriptorSetLayout skinDescLayout() const { return descLayout(hSkinDescLayout); }
+    VkDescriptorPool skinDescPool() const;
+    VkDescriptorSetLayout skinDescLayout() const;
 
     tinyHandle hMrphDsDescPool;
     tinyHandle hMrphDsDescLayout;
-    VkDescriptorPool mrphDsDescPool() const { return descPool(hMrphDsDescPool); }
-    VkDescriptorSetLayout mrphDsDescLayout() const { return descLayout(hMrphDsDescLayout); }
+    VkDescriptorPool mrphDsDescPool() const;
+    VkDescriptorSetLayout mrphDsDescLayout() const;
 
     tinyHandle hMrphWsDescPool;
     tinyHandle hMrphWsDescLayout;
-    VkDescriptorPool mrphWsDescPool() const { return descPool(hMrphWsDescPool); }
-    VkDescriptorSetLayout mrphWsDescLayout() const { return descLayout(hMrphWsDescLayout); }
+    VkDescriptorPool mrphWsDescPool() const;
+    VkDescriptorSetLayout mrphWsDescLayout() const;
 };
