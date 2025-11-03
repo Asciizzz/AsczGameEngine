@@ -22,6 +22,7 @@ public:
 
     Uint32 toggleFullscreen();
     void maximizeWindow();
+    void setWindowIcon(const char* iconPath);
 
     SDL_Window* window;
     bool shouldCloseFlag;

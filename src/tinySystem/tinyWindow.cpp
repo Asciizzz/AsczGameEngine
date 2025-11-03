@@ -2,6 +2,11 @@
 #include <iostream>
 #include <stdexcept>
 
+#ifdef _WIN32
+#include <SDL2/SDL_syswm.h>
+#include <windows.h>
+#endif
+
 tinyWindow::tinyWindow(const char* title, uint32_t width, uint32_t height)
     : window(nullptr), shouldCloseFlag(false), resizedFlag(false), 
         width(width), height(height) {
@@ -23,6 +28,9 @@ tinyWindow::tinyWindow(const char* title, uint32_t width, uint32_t height)
         SDL_Quit();
         throw std::runtime_error("Failed to create SDL window");
     }
+
+    // Set window icon
+    setWindowIcon("Ascz.ico");
 }
 
 tinyWindow::~tinyWindow() {
@@ -88,4 +96,35 @@ Uint32 tinyWindow::toggleFullscreen() {
 
 void tinyWindow::maximizeWindow() {
     SDL_MaximizeWindow(window);
+}
+
+void tinyWindow::setWindowIcon(const char* iconPath) {
+#ifdef _WIN32
+    // Use Windows API to load .ico file directly
+    HICON hIcon = (HICON)LoadImageA(NULL, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+    
+    if (!hIcon) {
+        std::cerr << "Warning: Failed to load window icon from " << iconPath << std::endl;
+        return;
+    }
+
+    // Get native Windows handle from SDL window
+    SDL_SysWMinfo wmInfo;
+    SDL_VERSION(&wmInfo.version);
+    
+    if (SDL_GetWindowWMInfo(window, &wmInfo)) {
+        HWND hwnd = wmInfo.info.win.window;
+        
+        // Set both small and large icons
+        SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+    } else {
+        std::cerr << "Warning: Failed to get Windows window info" << std::endl;
+        DestroyIcon(hIcon);
+    }
+    
+    // Note: Don't destroy icon here as Windows keeps a reference to it
+#else
+    std::cerr << "Warning: setWindowIcon is only supported on Windows" << std::endl;
+#endif
 }
