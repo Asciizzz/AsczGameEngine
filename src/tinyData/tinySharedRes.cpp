@@ -1,0 +1,27 @@
+#include "tinyData/tinySharedRes.hpp"
+#include "tinyVk/Resource/DataBuffer.hpp"
+#include "tinyVk/Resource/Descriptor.hpp"
+
+// Descriptor accessors
+
+VkDescriptorPool tinySharedRes::descPool(tinyHandle handle) const {
+    if (auto* ptr = fsRegistry->get<tinyVk::DescPool>(handle)) return *ptr;
+    return VK_NULL_HANDLE;
+}
+
+VkDescriptorSetLayout tinySharedRes::descLayout(tinyHandle handle) const {
+    if (auto* ptr = fsRegistry->get<tinyVk::DescSLayout>(handle)) return *ptr;
+    return VK_NULL_HANDLE;
+}
+
+VkDescriptorPool tinySharedRes::matDescPool() const { return descPool(hMatDescPool); }
+VkDescriptorSetLayout tinySharedRes::matDescLayout() const { return descLayout(hMatDescLayout); }
+
+VkDescriptorPool tinySharedRes::skinDescPool() const { return descPool(hSkinDescPool); }
+VkDescriptorSetLayout tinySharedRes::skinDescLayout() const { return descLayout(hSkinDescLayout); }
+
+VkDescriptorPool tinySharedRes::mrphDsDescPool() const { return descPool(hMrphDsDescPool); }
+VkDescriptorSetLayout tinySharedRes::mrphDsDescLayout() const { return descLayout(hMrphDsDescLayout); }
+
+VkDescriptorPool tinySharedRes::mrphWsDescPool() const { return descPool(hMrphWsDescPool); }
+VkDescriptorSetLayout tinySharedRes::mrphWsDescLayout() const { return descLayout(hMrphWsDescLayout); }
