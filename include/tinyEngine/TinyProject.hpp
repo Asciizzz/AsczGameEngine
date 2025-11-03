@@ -31,10 +31,6 @@ public:
     // Only need the active 3
     VkDescriptorSetLayout descSLayout_Global() const { return global_->getDescLayout(); }
 
-    VkDescriptorSet descSet_DummySkin() const { return dummySkinDescSet.get(); }
-    VkDescriptorSet descSet_DummyMrphDs() const { return dummyMrphDsDescSet.get(); }
-    VkDescriptorSet descSet_DummyMrphWs() const { return dummyMrphWsDescSet.get(); }
-
     // Global UBO update
 
     void updateGlobal(uint32_t frameIndex) {
@@ -72,15 +68,6 @@ private:
 
     tinySharedRes sharedRes_;
     void vkCreateResources();
-
-
-    tinyVk::DescSet dummySkinDescSet;
-    tinyVk::DataBuffer dummySkinBuffer;
-
-    tinyVk::DescSet dummyMrphDsDescSet;
-    tinyVk::DataBuffer dummyMrphDsBuffer;
-    tinyVk::DescSet dummyMrphWsDescSet;
-    tinyVk::DataBuffer dummyMrphWsBuffer;
 
     void vkCreateDefault();
 };

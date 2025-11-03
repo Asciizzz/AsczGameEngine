@@ -312,7 +312,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         if (isRigged) {
             isRigged = skinSet != VK_NULL_HANDLE;
 
-            skinSet = isRigged ? skinSet : project->descSet_DummySkin();
+            skinSet = isRigged ? skinSet : sharedRes.dummySkinDescSet();
             
             // In the case of dummy, offset does't matter
             uint32_t skinOffset = rtSkele ? rtSkele->dynamicOffset(currentFrame) : 0;
@@ -321,11 +321,11 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             VkDescriptorSet mrphDsSet = mr3DComp->mrphDsDescSet();
             bool hasMrph = mrphDsSet != VK_NULL_HANDLE;
 
-            mrphDsSet = hasMrph ? mrphDsSet : project->descSet_DummyMrphDs();
+            mrphDsSet = hasMrph ? mrphDsSet : sharedRes.dummyMeshMrphDsDescSet();
             rPipeline->bindSets(currentCmd, 3, &mrphDsSet, 1, nullptr, 0);
 
             VkDescriptorSet mrphWsSet = mr3DComp->mrphWsDescSet();
-            mrphWsSet = hasMrph ? mrphWsSet : project->descSet_DummyMrphWs();
+            mrphWsSet = hasMrph ? mrphWsSet : sharedRes.dummyMeshMrphWsDescSet();
 
             uint32_t mrphWsOffset = mr3DComp->mrphWsDynamicOffset(currentFrame) * (hasMrph ? 1 : 0);
             rPipeline->bindSets(currentCmd, 4, &mrphWsSet, 1, &mrphWsOffset, 1);

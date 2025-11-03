@@ -25,10 +25,12 @@ struct tinySharedRes {
     template<typename T> T* fsGet(tinyHandle handle) { return fsRegistry->get<T>(handle); }
     template<typename T> const T* fsGet(tinyHandle handle) const { return fsRegistry->get<T>(handle); }
 
-// Static descriptor resources
+// Static vulkan resources
 
+    // Helpful generic accessors
     VkDescriptorPool descPool(tinyHandle handle) const;
     VkDescriptorSetLayout descLayout(tinyHandle handle) const;
+    VkDescriptorSet descSet(tinyHandle handle) const;
 
     // Material (props + textures)
     tinyHandle hMatDescPool;
@@ -54,11 +56,22 @@ struct tinySharedRes {
     VkDescriptorPool mrphWsDescPool() const;
     VkDescriptorSetLayout mrphWsDescLayout() const;
 
-// Default resources accessors (soon)
+// Default resources accessors
+
+    // Default implies that something is usable by "default"
+    // Dummy just straight up represents a lack of something lol
 
     // Material and texture
     tinyHandle hDefaultMaterialVk;
     tinyHandle hDefaultTextureVk;
     const tinyMaterialVk* defaultMaterialVk() const;
     const tinyTextureVk* defaultTextureVk() const;
+
+    tinyHandle hDummySkinDescSet;
+    VkDescriptorSet dummySkinDescSet() const;
+
+    tinyHandle hDummyMeshMrphDsDescSet;
+    tinyHandle hDummyMeshMrphWsDescSet;
+    VkDescriptorSet dummyMeshMrphDsDescSet() const;
+    VkDescriptorSet dummyMeshMrphWsDescSet() const;
 };

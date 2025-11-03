@@ -339,7 +339,47 @@ void tinyProject::vkCreateResources() {
 
 void tinyProject::vkCreateDefault() {
 
+//  ---------- Create default material and texture ----------
+
+    tinyTextureVk defaultTextureVk = tinyTextureVk::defaultTexture(deviceVk_);
+    sharedRes_.hDefaultTextureVk = fsAdd<tinyTextureVk>(std::move(defaultTextureVk));
+
+    tinyMaterialVk defaultMaterialVk;
+    defaultMaterialVk.init(deviceVk_, sharedRes_.defaultTextureVk(), sharedRes_.matDescLayout(), sharedRes_.matDescPool());
+
+    sharedRes_.hDefaultMaterialVk = fsAdd<tinyMaterialVk>(std::move(defaultMaterialVk));
+
+//  -------------- Create dummy skin resources --------------
+
+    DataBuffer dummySkinBuffer;
+    DescSet dummySkinDescSet;
+
+    dummySkinDescSet.allocate(deviceVk_->device, sharedRes_.skinDescPool(), sharedRes_.skinDescLayout());
+    tinyRT_SKEL3D::vkWrite(deviceVk_, &dummySkinBuffer, &dummySkinDescSet, sharedRes_.maxFramesInFlight, 1);
+
+    fsAdd<DataBuffer>(std::move(dummySkinBuffer)); // No need to store handle
+    sharedRes_.hDummySkinDescSet = fsAdd<DescSet>(std::move(dummySkinDescSet));
+
+// -------------- Create dummy morph target resources --------------
+
+    DataBuffer dummyMrphDsBuffer, dummyMrphWsBuffer;
+    DescSet dummyMrphDsDescSet, dummyMrphWsDescSet;
+
+    dummyMrphDsDescSet.allocate(deviceVk_->device, sharedRes_.mrphDsDescPool(), sharedRes_.mrphDsDescLayout());
+    tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
+
+    dummyMrphWsDescSet.allocate(deviceVk_->device, sharedRes_.mrphWsDescPool(), sharedRes_.mrphWsDescLayout());
+    tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedRes_.maxFramesInFlight, 1);
+
+    fsAdd<DataBuffer>(std::move(dummyMrphDsBuffer));
+    sharedRes_.hDummyMeshMrphDsDescSet = fsAdd<DescSet>(std::move(dummyMrphDsDescSet));
+
+    fsAdd<DataBuffer>(std::move(dummyMrphWsBuffer));
+    sharedRes_.hDummyMeshMrphWsDescSet = fsAdd<DescSet>(std::move(dummyMrphWsDescSet));
+
 // ------------------ Create Main Scene ------------------
+
+// CRITICAL: Main Scene must be created last after all resources are ready
 
     tinySceneRT mainScene("Main Scene");
     mainScene.addRoot("Root");
@@ -353,28 +393,4 @@ void tinyProject::vkCreateDefault() {
     typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
 
     initialSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
-
-//  ---------- Create default material and texture ----------
-
-    tinyTextureVk defaultTextureVk = tinyTextureVk::defaultTexture(deviceVk_);
-    sharedRes_.hDefaultTextureVk = fsAdd<tinyTextureVk>(std::move(defaultTextureVk));
-
-    tinyMaterialVk defaultMaterialVk;
-    defaultMaterialVk.init(deviceVk_, sharedRes_.defaultTextureVk(), sharedRes_.matDescLayout(), sharedRes_.matDescPool());
-
-    sharedRes_.hDefaultMaterialVk = fsAdd<tinyMaterialVk>(std::move(defaultMaterialVk));
-
-//  -------------- Create dummy skin resources --------------
-
-    dummySkinDescSet.allocate(deviceVk_->device, sharedRes_.skinDescPool(), sharedRes_.skinDescLayout());
-    tinyRT_SKEL3D::vkWrite(deviceVk_, &dummySkinBuffer, &dummySkinDescSet, sharedRes_.maxFramesInFlight, 1);
-
-// -------------- Create dummy morph target resources --------------
-
-    dummyMrphDsDescSet.allocate(deviceVk_->device, sharedRes_.mrphDsDescPool(), sharedRes_.mrphDsDescLayout());
-    tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
-
-    dummyMrphWsDescSet.allocate(deviceVk_->device, sharedRes_.mrphWsDescPool(), sharedRes_.mrphWsDescLayout());
-    tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedRes_.maxFramesInFlight, 1);
-
 }

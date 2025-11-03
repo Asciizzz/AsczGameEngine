@@ -15,6 +15,11 @@ VkDescriptorSetLayout tinySharedRes::descLayout(tinyHandle handle) const {
     return VK_NULL_HANDLE;
 }
 
+VkDescriptorSet tinySharedRes::descSet(tinyHandle handle) const {
+    if (auto* ptr = fsRegistry->get<tinyVk::DescSet>(handle)) return *ptr;
+    return VK_NULL_HANDLE;
+}
+
 VkDescriptorPool tinySharedRes::matDescPool() const { return descPool(hMatDescPool); }
 VkDescriptorSetLayout tinySharedRes::matDescLayout() const { return descLayout(hMatDescLayout); }
 
@@ -39,3 +44,9 @@ const tinyMaterialVk* tinySharedRes::defaultMaterialVk() const {
 const tinyTextureVk* tinySharedRes::defaultTextureVk() const {
     return fsRegistry->get<tinyTextureVk>(hDefaultTextureVk);
 }
+
+VkDescriptorSet tinySharedRes::dummySkinDescSet() const { return descSet(hDummySkinDescSet); }
+
+VkDescriptorSet tinySharedRes::dummyMeshMrphDsDescSet() const { return descSet(hDummyMeshMrphDsDescSet); }
+
+VkDescriptorSet tinySharedRes::dummyMeshMrphWsDescSet() const { return descSet(hDummyMeshMrphWsDescSet); }
