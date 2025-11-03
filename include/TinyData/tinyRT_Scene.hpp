@@ -5,6 +5,7 @@
 #include "tinyData/tinyRT_MeshRender3D.hpp"
 #include "tinyData/tinyRT_Skeleton3D.hpp"
 #include "tinyData/tinyRT_Anime3D.hpp"
+#include "tinyData/tinyRT_Script.hpp"
 #include "tinyData/tinyRT_Node.hpp"
 
 #include "tinyData/tinySharedRes.hpp"
@@ -42,10 +43,11 @@ private:
     template<> struct RTResolver<tinyNodeRT::SKEL3D> { using type = tinyRT_SKEL3D; };
     template<> struct RTResolver<tinyNodeRT::ANIM3D> { using type = tinyRT_ANIM3D; };
     template<> struct RTResolver<tinyNodeRT::MESHRD> { using type = tinyRT_MESHRD; };
+    template<> struct RTResolver<tinyNodeRT::SCRIPT> { using type = tinyRT_SCRIPT; };
 
     // Helper to check if a type has a runtime equivalent (has pHandle)
     template<typename T>
-    static constexpr bool has_rt_equivalent = !std::is_same_v<T, RTResolver_t<T>>;
+    static constexpr bool no_resolver = std::is_same_v<T, RTResolver_t<T>>;
 
 public:
     std::string name;
@@ -168,14 +170,8 @@ public:
 
         T* compPtr = node->get<T>();
 
-        // If this component has a separate runtime type, resolve it via pHandle
-        if constexpr (has_rt_equivalent<T>) {
-            using RT = RTResolver_t<T>;
-            return rtGet<RT>(compPtr->pHandle);
-        } else {
-            // Component is its own runtime representation
-            return compPtr;
-        }
+        if constexpr (no_resolver<T>) return compPtr;
+        else return rtGet<RTResolver_t<T>>(compPtr->pHandle);
     }
 
     template<typename T>
@@ -193,12 +189,8 @@ public:
 
         addMap3D<T>(nodeHandle);
 
-        // Initialize runtime component if this type has one
-        if constexpr (has_rt_equivalent<T>) {
-            return addRT<T, RTResolver_t<T>>(compPtr);
-        } else {
-            return compPtr;
-        }
+        if constexpr (no_resolver<T>) return compPtr;
+        else return addRT<T, RTResolver_t<T>>(compPtr);
     }
 
     template<typename T>
@@ -208,7 +200,7 @@ public:
 
         T* compPtr = node->get<T>();
 
-        if constexpr (has_rt_equivalent<T>) {
+        if constexpr (!no_resolver<T>) {
             rtRemove<RTResolver_t<T>>(compPtr->pHandle);
         }
 
@@ -391,6 +383,8 @@ private:
     template<typename T> struct DeferredRm : std::false_type {};
     template<> struct DeferredRm<tinyRT_SKEL3D> : std::true_type {}; // Skeleton descriptor set
     template<> struct DeferredRm<tinyRT_MESHRD> : std::true_type {}; // Morph weights descriptor set
+
+    // Script and Anime3D are fair game
 
     template<typename T>
     void rtRemove(const tinyHandle& handle) {
