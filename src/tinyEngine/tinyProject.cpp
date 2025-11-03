@@ -25,7 +25,7 @@ tinyHandle linkHandle(int index, const std::vector<tinyHandle>& vec) {
 
 tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk_(deviceVk) {
     // Create camera and global UBO manager
-    camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.1f, 1000.0f);
+    camera_ = MakeUnique<tinyCamera>(glm::vec3(0.0f, 0.0f, 0.0f), 45.0f, 0.5f, 1000.0f);
     global_ = MakeUnique<tinyGlobal>(2);
     global_->vkCreate(deviceVk_);
 

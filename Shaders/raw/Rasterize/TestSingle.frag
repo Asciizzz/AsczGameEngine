@@ -20,8 +20,8 @@ void main() {
     // Simple shader
     vec3 lightDir = normalize(vec3(-0.2, 0.1, -0.1));
 
-    // float nDot = dot(fragWorldNrml, lightDir);
-    // float intensity = 0.6 + clamp(nDot, 0.0, 1.0) * 0.4; // Ignore
+    float nDot = dot(fragWorldNrml, lightDir);
+    float intensity = 0.4 + clamp(nDot, 0.0, 1.0) * 0.6;
 
     vec4 baseColor = uMaterial.baseColor;
 
@@ -32,6 +32,7 @@ void main() {
 
     // Dont ask questions
     vec4 color = albColor * baseColor + emisColor;
+    color.rgb *= intensity;
 
     if (color.a < 0.5) { discard; }
 

@@ -4,6 +4,11 @@
       "name": "fxaa",
       "shader": "Shaders/bin/PostProcess/fxaa.comp.spv",
       "active": true
+    },
+    {
+      "name": "tonemap",
+      "shader": "Shaders/bin/PostProcess/tonemap.comp.spv",
+      "active": true
     }
   ]
 }
