@@ -385,9 +385,8 @@ void tinyProject::vkCreateDefault() {
     mainScene.addRoot("Root");
     mainScene.setSharedRes(sharedRes_);
 
-    // Create "Main Scene" as a non-deletable file in root directory
     tinyFS::Node::CFG sceneConfig;
-    sceneConfig.deletable = false;
+    sceneConfig.deletable = false; // Don't you fucking delete the main scene
 
     tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
     typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
