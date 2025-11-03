@@ -74,14 +74,14 @@ void tinyApp::initComponents() {
 
     // Initialize all pipelines with the manager using named layouts
 
-    const tinySceneRT::Require& sharedReq = project->sceneReq();
+    const tinySharedRes& sharedRes = project->sharedRes();
 
     UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
         {"global", project->descSLayout_Global()},
-        {"material", sharedReq.matDescLayout()},
-        {"skin", sharedReq.skinDescLayout()},
-        {"morph_ds", sharedReq.mrphDsDescLayout()},
-        {"morph_ws", sharedReq.mrphWsDescLayout()}
+        {"material", sharedRes.matDescLayout()},
+        {"skin", sharedRes.skinDescLayout()},
+        {"morph_ds", sharedRes.mrphDsDescLayout()},
+        {"morph_ws", sharedRes.mrphWsDescLayout()}
     };
     
     // Create named vertex inputs

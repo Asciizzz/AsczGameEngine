@@ -7,6 +7,8 @@
 #include "tinyData/tinyRT_Anime3D.hpp"
 #include "tinyData/tinyRT_Node.hpp"
 
+#include "tinyData/tinySharedRes.hpp"
+
 namespace tinyRT {
 
 struct Scene {
@@ -40,36 +42,6 @@ private:
     template<> struct RTResolver<tinyNodeRT::MESHRD> { using type = tinyRT_MESHRD; };
 
 public:
-    struct Require {
-        uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
-
-        const tinyRegistry*   fsRegistry = nullptr; // For stuffs and things
-        const tinyVk::Device* deviceVk = nullptr;   // For GPU resource creation
-
-        VkDescriptorPool descPool(tinyHandle handle) const;
-        VkDescriptorSetLayout descLayout(tinyHandle handle) const;
-
-        tinyHandle hMatDescPool;
-        tinyHandle hMatDescLayout;
-        VkDescriptorPool matDescPool() const { return descPool(hMatDescPool); }
-        VkDescriptorSetLayout matDescLayout() const { return descLayout(hMatDescLayout); }
-
-        tinyHandle hSkinDescPool;
-        tinyHandle hSkinDescLayout;
-        VkDescriptorPool skinDescPool() const { return descPool(hSkinDescPool); }
-        VkDescriptorSetLayout skinDescLayout() const { return descLayout(hSkinDescLayout); }
-
-        tinyHandle hMrphDsDescPool;
-        tinyHandle hMrphDsDescLayout;
-        VkDescriptorPool mrphDsDescPool() const { return descPool(hMrphDsDescPool); }
-        VkDescriptorSetLayout mrphDsDescLayout() const { return descLayout(hMrphDsDescLayout); }
-
-        tinyHandle hMrphWsDescPool;
-        tinyHandle hMrphWsDescLayout;
-        VkDescriptorPool mrphWsDescPool() const { return descPool(hMrphWsDescPool); }
-        VkDescriptorSetLayout mrphWsDescLayout() const { return descLayout(hMrphWsDescLayout); }
-    };
-
     std::string name;
 
     Scene(const std::string& sceneName = "New Scene") : name(sceneName) {}
@@ -86,7 +58,8 @@ public:
     void setRoot(tinyHandle handle) { rootHandle_ = handle; }
     tinyHandle rootHandle() const { return rootHandle_; }
 
-    void setSceneReq(const Require& req) { req_ = req; }
+    void setSharedRes(const tinySharedRes& sharedRes) { sharedRes_ = sharedRes; }
+    const tinySharedRes& sharedRes() const { return sharedRes_; }
 
     // --------- Node management ---------
 
@@ -114,9 +87,6 @@ public:
     void addScene(const Scene* from, tinyHandle parentHandle = tinyHandle());
 
     // --------- Runtime registry access (public) ---------
-
-    // Buddy, how did you get in here???
-    const Require& sceneReq() const { return req_; }
 
     template<typename T>
     T* rtGet(const tinyHandle& handle) {
@@ -256,7 +226,7 @@ public:
     void update();
 
 private:
-    Require req_;   // Scene requirements
+    tinySharedRes sharedRes_; // Shared resources and requirements
     tinyPool<tinyNodeRT> nodes_;
     tinyRegistry rtRegistry_; // Runtime registry for this scene
 
@@ -278,7 +248,7 @@ private:
 
     template<typename T>
     const tinyPool<T>& fsView() const {
-        return req_.fsRegistry->view<T>();
+        return sharedRes_.fsRegistry->view<T>();
     }
 
     // Cache of specific nodes_ for easy access
@@ -328,7 +298,13 @@ private:
 
     tinyRT_SKEL3D* addSKEL3D_RT(tinyNodeRT::SKEL3D* compPtr) {
         tinyRT_SKEL3D rtSKEL3D;
-        rtSKEL3D.init(req_.deviceVk, &fsView<tinySkeleton>(), req_.skinDescPool(), req_.skinDescLayout(), req_.maxFramesInFlight);
+        rtSKEL3D.init(
+            sharedRes_.deviceVk,
+            &sharedRes_.fsView<tinySkeleton>(),
+            sharedRes_.skinDescPool(),
+            sharedRes_.skinDescLayout(),
+            sharedRes_.maxFramesInFlight
+        );
 
         compPtr->pHandle = rtAdd<tinyRT_SKEL3D>(std::move(rtSKEL3D));
 
@@ -345,7 +321,13 @@ private:
 
     tinyRT_MESHRD* addMESHR_RT(tinyNodeRT::MESHRD* compPtr) {
         tinyRT_MESHRD rtMeshRT;
-        rtMeshRT.init(req_.deviceVk, &fsView<tinyMeshVk>(), req_.mrphWsDescLayout(), req_.mrphWsDescPool(), req_.maxFramesInFlight);
+        rtMeshRT.init(
+            sharedRes_.deviceVk,
+            &sharedRes_.fsView<tinyMeshVk>(),
+            sharedRes_.mrphWsDescLayout(),
+            sharedRes_.mrphWsDescPool(),
+            sharedRes_.maxFramesInFlight
+        );
 
         compPtr->pHandle = rtAdd<tinyRT_MESHRD>(std::move(rtMeshRT));
 

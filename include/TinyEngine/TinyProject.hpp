@@ -14,7 +14,7 @@ public:
     static constexpr size_t maxMaterials = 65536; // Lol
     static constexpr size_t maxMeshes    = 65536; 
 
-    tinyProject(const tinyVk::Device* deviceVk);
+    tinyProject(const tinyVk::Device* deviceVk_);
     ~tinyProject();
 
     tinyProject(const tinyProject&) = delete;
@@ -47,8 +47,8 @@ public:
     tinyFS& fs() { return *fs_; }
     const tinyFS& fs() const { return *fs_; }
 
-    const tinySceneRT::Require& sceneReq() const { return sharedReq; }
-    const tinyVk::Device* vkDevice() const { return deviceVk; }
+    const tinySharedRes& sharedRes() const { return sharedRes_; }
+    const tinyVk::Device* vkDevice() const { return deviceVk_; }
 
     tinyCamera* camera() const { return camera_.get(); }
     tinyGlobal* global() const { return global_.get(); }
@@ -56,7 +56,7 @@ public:
     tinyHandle initialSceneHandle;
 
 private:
-    const tinyVk::Device* deviceVk;
+    const tinyVk::Device* deviceVk_;
 
     UniquePtr<tinyGlobal> global_;
     UniquePtr<tinyCamera> camera_;
@@ -71,7 +71,7 @@ private:
 
 // -------------- Shared resources --------------
 
-    tinySceneRT::Require sharedReq;
+    tinySharedRes sharedRes_;
     void vkCreateResources();
 
 // -------------- Default resources --------------

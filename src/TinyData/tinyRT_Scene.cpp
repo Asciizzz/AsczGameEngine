@@ -10,18 +10,6 @@ bool validIndex(tinyHandle handle, const std::vector<T>& vec) {
     return handle.valid() && handle.index < vec.size();
 }
 
-// ----------------- Scene Require -----------------
-
-VkDescriptorPool Scene::Require::descPool(tinyHandle handle) const {
-    if (auto* ptr = fsRegistry->get<tinyVk::DescPool>(handle)) return *ptr;
-    return VK_NULL_HANDLE;
-}
-
-VkDescriptorSetLayout Scene::Require::descLayout(tinyHandle handle) const {
-    if (auto* ptr = fsRegistry->get<tinyVk::DescSLayout>(handle)) return *ptr;
-    return VK_NULL_HANDLE;
-}
-
 // ----------------- Scene Management -----------------
 
 

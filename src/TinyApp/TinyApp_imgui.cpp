@@ -1971,7 +1971,7 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
             if (ImGui::MenuItem("Add Scene")) {
                 tinySceneRT newScene("New Scene");
                 newScene.addRoot("Root");
-                newScene.setSceneReq(project->sceneReq());
+                newScene.setSharedRes(project->sharedRes());
 
                 tinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", std::move(newScene));
                 selectFileNode(fileHandle);
