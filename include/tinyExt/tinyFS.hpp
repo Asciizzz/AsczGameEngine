@@ -298,7 +298,7 @@ public:
 
 // -------------------- Registry data management -------------------
     
-    // No non-const access for safety
+    tinyRegistry& registry() noexcept { return registry_; }
     const tinyRegistry& registry() const noexcept { return registry_; }
 
     void* rGet(typeHandle th) noexcept { return registry_.get(th); }
