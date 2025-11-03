@@ -80,7 +80,6 @@ public:
     bool reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle);
     bool renameNode(tinyHandle nodeHandle, const std::string& newName);
 
-    // tinyNodeRT* node(tinyHandle nodeHandle);
     const tinyNodeRT* node(tinyHandle nodeHandle) const;
     bool nodeValid(tinyHandle nodeHandle) const;
     bool nodeOccupied(uint32_t index) const;
@@ -139,9 +138,11 @@ public:
 
     struct NComp {
         tinyNodeRT::TRFM3D* trfm3D = nullptr;
+        tinyNodeRT::BONE3D* bone3D = nullptr;
         tinyRT_MESHRD* meshRD = nullptr;
         tinyRT_SKEL3D* skel3D = nullptr;
         tinyRT_ANIM3D* anim3D = nullptr;
+        tinyRT_SCRIPT* script = nullptr;
     };
 
     NComp nComp(tinyHandle nodeHandle) {
@@ -320,6 +321,8 @@ private:
             return addANIM3D_RT(compPtr);
         } else if constexpr (type_eq<CompT, tinyNodeRT::MESHRD>) {
             return addMESHR_RT(compPtr);
+        } else if constexpr (type_eq<CompT, tinyNodeRT::SCRIPT>) {
+            return addSCRIPT_RT(compPtr);
         }
         return nullptr;
     }
@@ -360,6 +363,16 @@ private:
         compPtr->pHandle = rtAdd<tinyRT_MESHRD>(std::move(rtMeshRT));
 
         return rtGet<tinyRT_MESHRD>(compPtr->pHandle);
+    }
+
+    tinyRT_SCRIPT* addSCRIPT_RT(tinyNodeRT::SCRIPT* compPtr) {
+        tinyRT_SCRIPT rtScript;
+
+        // For now nothing to do
+
+        compPtr->pHandle = rtAdd<tinyRT_SCRIPT>(std::move(rtScript));
+
+        return rtGet<tinyRT_SCRIPT>(compPtr->pHandle);
     }
 
     // ---------- Runtime registry access (private) ----------

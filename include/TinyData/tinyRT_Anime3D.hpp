@@ -122,8 +122,8 @@ struct Anime3D {
 
     Anime* current() { return animePool.get(currentHandle); }
     const Anime* current() const { return animePool.get(currentHandle); }
-    
-    tinyHandle currentAnimHandle() const { return currentHandle; }
+
+    tinyHandle curHandle() const { return currentHandle; }
 
     Anime* get(const tinyHandle& handle) { return animePool.get(handle); }
     const Anime* get(const tinyHandle& handle) const { return animePool.get(handle); }
@@ -137,6 +137,12 @@ struct Anime3D {
     }
     const Anime* get(const std::string& name) const {
         return const_cast<Anime3D*>(this)->get(name);
+    }
+
+    tinyHandle getHandle(const std::string& name) const {
+        auto it = nameToHandle.find(name);
+        if (it == nameToHandle.end()) return tinyHandle();
+        return it->second;
     }
 
     const std::deque<Anime>& all() const {

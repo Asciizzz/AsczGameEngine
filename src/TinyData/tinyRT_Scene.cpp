@@ -297,32 +297,31 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     glm::mat4 localMat = transform ? transform->local : glm::mat4(1.0f);
 
     // Update update local transform with bone attachment if applicable
-    tinyNodeRT::BONE3D* boneAttach = rtComp<tinyNodeRT::BONE3D>(realHandle);
+    tinyNodeRT::BONE3D* rtBONE3D = rtComp<tinyNodeRT::BONE3D>(realHandle);
     glm::mat4 boneMat = glm::mat4(1.0f);
-    if (boneAttach) {
-        tinyHandle skeleNodeHandle = boneAttach->skeleNodeHandle;
+    if (rtBONE3D) {
+        tinyHandle skeleNodeHandle = rtBONE3D->skeleNodeHandle;
         tinyRT_SKEL3D* skeleRT = rtComp<tinyNodeRT::SKEL3D>(skeleNodeHandle);
-        if (skeleRT) localMat = skeleRT->finalPose(boneAttach->boneIndex) * localMat;
+        if (skeleRT) localMat = skeleRT->finalPose(rtBONE3D->boneIndex) * localMat;
     }
 
     // Update skeleton component
-    tinyRT_SKEL3D* rtSkele = rtComp<tinyNodeRT::SKEL3D>(realHandle);
-    if (rtSkele) {
-        rtSkele->update(0);
-        rtSkele->vkUpdate(curFrame_);
+    tinyRT_SKEL3D* rtSKELE3D = rtComp<tinyNodeRT::SKEL3D>(realHandle);
+    if (rtSKELE3D) {
+        rtSKELE3D->update(0);
+        rtSKELE3D->vkUpdate(curFrame_);
     }
 
-    // Update animation component
-    tinyRT_ANIM3D* rtAnime = rtComp<tinyNodeRT::ANIM3D>(realHandle);
-    if (rtAnime) rtAnime->update(this, curDTime_);
+    tinyRT_ANIM3D* rtANIM3D = rtComp<tinyNodeRT::ANIM3D>(realHandle);
+    if (rtANIM3D) rtANIM3D->update(this, curDTime_);
 
-    // Update mesh render component
-    tinyRT_MESHRD* rtMeshRender = rtComp<tinyNodeRT::MESHRD>(realHandle);
-    if (rtMeshRender) rtMeshRender->vkUpdate(curFrame_);
+    tinyRT_MESHRD* rtMESHRD = rtComp<tinyNodeRT::MESHRD>(realHandle);
+    if (rtMESHRD) rtMESHRD->vkUpdate(curFrame_);
+
+    tinyRT_SCRIPT* rtSCRIPT = rtComp<tinyNodeRT::SCRIPT>(realHandle);
+    if (rtSCRIPT) rtSCRIPT->haveFun(this, realHandle, curDTime_);
 
     glm::mat4 transformMat = parentGlobalTransform * localMat;
-
-    // Set global transform
     if (transform) transform->global = transformMat;
 
     // Recursively update all children

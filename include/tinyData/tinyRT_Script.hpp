@@ -11,7 +11,7 @@ struct Node;
 struct Script {
     Script() noexcept = default;
 
-
+    void haveFun(Scene* scene, tinyHandle nodeHandle, float dTime);
 };
 
 } // namespace tinyRT

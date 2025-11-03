@@ -541,18 +541,11 @@ void tinyApp::renderSceneNodeInspector() {
                 
                 ImGui::Spacing();
             }
-        }, [&]() {
-            // Remove component using tinySceneRT method
-            activeScene->removeComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle);
-        });
+        },
+        [&]() { activeScene->removeComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle); });
     } else {
-        // Show grayed-out placeholder for missing Transform component
-        renderComponent("Transform", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
-            // Minimal placeholder - no content, just the header with add button
-        }, [&]() {
-            // Add component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle);
-        });
+        renderComponent("Transform", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {},
+        [&]() { activeScene->writeComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle); });
     }
     
     // Mesh Renderer Component - Always show
@@ -727,18 +720,11 @@ void tinyApp::renderSceneNodeInspector() {
             }
             
             ImGui::Spacing();
-        }, [&]() {
-            // Remove component using tinySceneRT method
-            activeScene->removeComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
-        });
+        },
+        [&]() { activeScene->removeComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle); });
     } else {
-        // Show grayed-out placeholder for missing Mesh Renderer component
-        renderComponent("Mesh Renderer", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
-            // Minimal placeholder - no content, just the header with add button
-        }, [&]() {
-            // Add component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle);
-        });
+        renderComponent("Mesh Renderer", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {},
+        [&]() { activeScene->writeComp<tinyNodeRT::MESHRD>(selectedSceneNodeHandle); });
     }
     
     // Bone Attachment Component - Always show
@@ -822,18 +808,11 @@ void tinyApp::renderSceneNodeInspector() {
             }
 
             ImGui::Spacing();
-        }, [&]() {
-            // Remove component using tinySceneRT method
-            activeScene->removeComp<tinyNodeRT::BONE3D>(selectedSceneNodeHandle);
-        });
+        },
+        [&]() { activeScene->removeComp<tinyNodeRT::BONE3D>(selectedSceneNodeHandle); });
     } else {
-        // Show grayed-out placeholder for missing Bone Attachment component
-        renderComponent("Bone Attachment", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
-            // Minimal placeholder - no content, just the header with add button
-        }, [&]() {
-            // Add component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::BONE3D>(selectedSceneNodeHandle);
-        });
+        renderComponent("Bone Attachment", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {},
+        [&]() { activeScene->writeComp<tinyNodeRT::BONE3D>(selectedSceneNodeHandle); });
     }
     
     // Skeleton Component - Always show
@@ -1047,18 +1026,11 @@ void tinyApp::renderSceneNodeInspector() {
             }
             
             ImGui::Spacing();
-        }, [&]() {
-            // Remove component using tinySceneRT specialized method for skeleton
-            activeScene->removeComp<tinyNodeRT::SKEL3D>(selectedSceneNodeHandle);
-        });
+        }, 
+        [&]() { activeScene->removeComp<tinyNodeRT::SKEL3D>(selectedSceneNodeHandle); });
     } else {
-        // Show grayed-out placeholder for missing Skeleton component
-        renderComponent("Skeleton", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
-            // Minimal placeholder - no content, just the header with add button
-        }, [&]() {
-            // Add empty skeleton component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::SKEL3D>(selectedSceneNodeHandle);
-        });
+        renderComponent("Skeleton", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {},
+        [&]() { activeScene->writeComp<tinyNodeRT::SKEL3D>(selectedSceneNodeHandle); });
     }
 
     if (selectedNode->has<tinyNodeRT::ANIM3D>()) {
@@ -1128,25 +1100,28 @@ void tinyApp::renderSceneNodeInspector() {
                 if (isSelected) {
                     ImGui::PopStyleColor();
                 }
-
             }
 
             ImGui::EndChild();
             ImGui::PopStyleVar();
 
             ImGui::Spacing();
-        }, [&]() {
-            // Remove component using tinySceneRT method
-            activeScene->removeComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle);
-        });
+        },
+        [&]() { activeScene->removeComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle); });
     } else {
-        // Show grayed-out placeholder for missing Animation component
-        renderComponent("Animation", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {
-            // Minimal placeholder - no content, just the header with add button
-        }, [&]() {
-            // Add component using tinySceneRT method
-            activeScene->writeComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle);
-        });
+        renderComponent("Animation", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {},
+        [&]() { activeScene->writeComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle); });
+    }
+
+    if (selectedNode->has<tinyNodeRT::SCRIPT>()) {
+        renderComponent("Script", ImVec4(0.4f, 0.4f, 0.4f, 0.8f), ImVec4(0.8f, 0.8f, 0.8f, 0.6f), true, [&]() {
+            ImGui::Text("Real implementation soon, for now we executing random b*llsh*t lmao");
+            ImGui::Spacing();
+        },
+        [&]() { activeScene->removeComp<tinyNodeRT::SCRIPT>(selectedSceneNodeHandle); });
+    } else {
+        renderComponent("Script", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {},
+        [&]() { activeScene->writeComp<tinyNodeRT::SCRIPT>(selectedSceneNodeHandle); });
     }
     
     ImGui::EndChild();

@@ -29,10 +29,10 @@ void main() {
     float time = glb.prop1.x * 500.0; // Time scaling
     vec3 rayDir = reconstructRayDirection();
 
-    vec3 baseSky = vec3(1.0);
+    vec3 baseSky = vec3(0.0);
 
     // Below horizon
-    if (rayDir.y < 0.0) baseSky = vec3(0.02, 0.02, 0.025);
+    if (rayDir.y < 0.0) baseSky = vec3(0.02, 0.02, 0.02);
 
     outColor = vec4(baseSky, 1.0);
 }
