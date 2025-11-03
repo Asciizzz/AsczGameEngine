@@ -551,10 +551,6 @@ void loadMesh(tinyMesh& mesh,
               std::vector<tinyTexture>& textures,
               bool hasRigging)
 {
-    // ------------------------------------------------------------------
-    // 1. First pass – gather per‑primitive data + detect biggest index type
-    // ------------------------------------------------------------------
-
     std::vector<PrimitiveData> allPrimitiveDatas;
     VkIndexType largestIndexType = VK_INDEX_TYPE_UINT8;
 
@@ -615,9 +611,6 @@ void loadMesh(tinyMesh& mesh,
 
     if (allPrimitiveDatas.empty()) return; // no primitives
 
-    // ------------------------------------------------------------------
-    // 2. Build one big vertex + index buffer
-    // ------------------------------------------------------------------
     std::vector<uint32_t>           allIndices;
     std::vector<tinyVertex::Rigged> allVertices;   // will be converted later
 
@@ -654,9 +647,6 @@ void loadMesh(tinyMesh& mesh,
         idxOffset += static_cast<uint32_t>(p.indices.size());
     }
 
-    // ------------------------------------------------------------------
-    // 3. Write index buffer (using the *largest* type)
-    // ------------------------------------------------------------------
     switch (largestIndexType) {
         case VK_INDEX_TYPE_UINT8: {
             std::vector<uint8_t> tmp; tmp.reserve(allIndices.size());
@@ -673,18 +663,9 @@ void loadMesh(tinyMesh& mesh,
         default: break;
     }
 
-    // ------------------------------------------------------------------
-    // 4. Write vertex buffer (static or rigged)
-    // ------------------------------------------------------------------
     if (hasRigging) mesh.setVrtxs(allVertices);
     else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
 
-    // ------------------------------------------------------------------
-    // 5. **MORPH TARGETS** – new block
-    // ------------------------------------------------------------------
-    // glTF stores a *vector of targets* **per primitive**.  All primitives of a
-    // mesh must have the *same* number of targets, otherwise the spec says the
-    // mesh is invalid.  We simply concatenate them in primitive order.
     for (size_t primIdx = 0; primIdx < primitives.size(); ++primIdx) {
         const auto& primitive = primitives[primIdx];
         const auto& pData     = allPrimitiveDatas[primIdx];
