@@ -8,6 +8,10 @@
 #include <functional>
 #include <algorithm>
 
+// tinyFS is like an extension of tinyRegistry
+// that adds a virtual file system structure
+// for easier organization of resources.
+
 class tinyFS {
 public:
     struct Node {
