@@ -76,7 +76,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     std::vector<tinyHandle> glmMatRHandle;
     for (const auto& material : model.materials) {
         tinyMaterialVk materialVk;
-        materialVk.init(deviceVk, &defaultTextureVk, matDescLayout, matDescPool);
+        materialVk.init(deviceVk, &defaultTextureVk, sharedReq.matDescLayout(), sharedReq.matDescPool());
 
         materialVk.name = material.name;
 
@@ -118,7 +118,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
 
         tinyMeshVk meshVk;
-        meshVk.init(deviceVk, meshMrphDsDescLayout, meshMrphDsDescPool);
+        meshVk.init(deviceVk, sharedReq.mrphDsDescLayout(), sharedReq.mrphDsDescPool());
 
         meshVk.createFrom(std::move(mesh));
 
@@ -304,6 +304,12 @@ void tinyProject::setupFS() {
 void tinyProject::vkCreateResources() {
     VkDevice device = deviceVk->device;
 
+    // Setup shared scene requirements
+    sharedReq.maxFramesInFlight = 2;
+    sharedReq.fsRegistry = &fs().registry();
+    sharedReq.deviceVk = deviceVk;
+
+    // Skin descriptors
     DescSLayout skinDescLayout;
     skinDescLayout.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr} });
     sharedReq.hSkinDescLayout = fsAdd<DescSLayout>(std::move(skinDescLayout));
@@ -312,22 +318,23 @@ void tinyProject::vkCreateResources() {
     skinDescPool.create(device, { {DescType::StorageBufferDynamic, maxSkeletons} }, maxSkeletons);
     sharedReq.hSkinDescPool = fsAdd<DescPool>(std::move(skinDescPool));
 
-    matDescLayout = tinyMaterialVk::createDescSetLayout(device);
-    matDescPool = tinyMaterialVk::createDescPool(device, maxMaterials);
+    // Material descriptors
+    DescSLayout matDescLayout = tinyMaterialVk::createDescSetLayout(device);
+    DescPool matDescPool = tinyMaterialVk::createDescPool(device, maxMaterials);
+    sharedReq.hMatDescLayout = fsAdd<DescSLayout>(std::move(matDescLayout));
+    sharedReq.hMatDescPool = fsAdd<DescPool>(std::move(matDescPool));
 
-    meshMrphDsDescLayout = tinyMeshVk::createMrphDescSetLayout(device, false);
-    meshMrphDsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes, false);
+    // Mesh morph delta descriptors
+    DescSLayout meshMrphDsDescLayout = tinyMeshVk::createMrphDescSetLayout(device, false);
+    DescPool meshMrphDsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes, false);
+    sharedReq.hMrphDsDescLayout = fsAdd<DescSLayout>(std::move(meshMrphDsDescLayout));
+    sharedReq.hMrphDsDescPool = fsAdd<DescPool>(std::move(meshMrphDsDescPool));
 
+    // Mesh morph weight descriptors
     DescSLayout meshMrphWsDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
     DescPool meshMrphWsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
-
     sharedReq.hMrphWsDescLayout = fsAdd<DescSLayout>(std::move(meshMrphWsDescLayout));
     sharedReq.hMrphWsDescPool = fsAdd<DescPool>(std::move(meshMrphWsDescPool));
-
-    // Setup shared scene requirements
-    sharedReq.maxFramesInFlight = 2;
-    sharedReq.fsRegistry = &fs().registry();
-    sharedReq.deviceVk = deviceVk;
 }
 
 void tinyProject::vkCreateDefault() {
@@ -349,26 +356,20 @@ void tinyProject::vkCreateDefault() {
 //  ---------- Create default material and texture ----------
 
     defaultTextureVk = tinyTextureVk::defaultTexture(deviceVk);
-    defaultMaterialVk.init(deviceVk, &defaultTextureVk, matDescLayout, matDescPool);
+    defaultMaterialVk.init(deviceVk, &defaultTextureVk, sharedReq.matDescLayout(), sharedReq.matDescPool());
     defaultMaterialVk.name = "Default Material";
 
 //  -------------- Create dummy skin resources --------------
 
-    VkDescriptorSetLayout skinDescLayout = sharedReq.skinDescLayout();
-    VkDescriptorPool skinDescPool = sharedReq.skinDescPool();
-
-    dummySkinDescSet.allocate(deviceVk->device, skinDescPool, skinDescLayout);
+    dummySkinDescSet.allocate(deviceVk->device, sharedReq.skinDescPool(), sharedReq.skinDescLayout());
     tinyRT_SKEL3D::vkWrite(deviceVk, &dummySkinBuffer, &dummySkinDescSet, sharedReq.maxFramesInFlight, 1);
 
 // -------------- Create dummy morph target resources --------------
 
-    dummyMrphDsDescSet.allocate(deviceVk->device, meshMrphDsDescPool, meshMrphDsDescLayout);
+    dummyMrphDsDescSet.allocate(deviceVk->device, sharedReq.mrphDsDescPool(), sharedReq.mrphDsDescLayout());
     tinyRT_MESHRD::vkWrite(deviceVk, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
 
-    VkDescriptorSetLayout meshMrphWsDescLayout = sharedReq.mrphWsDescLayout();
-    VkDescriptorPool meshMrphWsDescPool = sharedReq.mrphWsDescPool();
-
-    dummyMrphWsDescSet.allocate(deviceVk->device, meshMrphWsDescPool, meshMrphWsDescLayout);
+    dummyMrphWsDescSet.allocate(deviceVk->device, sharedReq.mrphWsDescPool(), sharedReq.mrphWsDescLayout());
     tinyRT_MESHRD::vkWrite(deviceVk, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedReq.maxFramesInFlight, 1);
 
 }

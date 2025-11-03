@@ -30,8 +30,6 @@ public:
 
     // Only need the active 3
     VkDescriptorSetLayout descSLayout_Global() const { return global_->getDescLayout(); }
-    VkDescriptorSetLayout descSLayout_Material() const { return matDescLayout.get(); }
-    VkDescriptorSetLayout descSLayout_MeshMrphDs() const { return meshMrphDsDescLayout.get(); }
 
     VkDescriptorSet descSet_DummySkin() const { return dummySkinDescSet.get(); }
     VkDescriptorSet descSet_DefaultMat() const { return defaultMaterialVk.descSet(); }
@@ -72,26 +70,6 @@ private:
     }
 
 // -------------- Shared resources --------------
-
-// These soon to be moved to fsRegistry
-
-// Material
-    tinyVk::DescSLayout matDescLayout;
-    tinyVk::DescPool matDescPool;
-
-// Delta
-    tinyVk::DescSLayout meshMrphDsDescLayout;
-    tinyVk::DescPool meshMrphDsDescPool;
-
-// These now lives in the fsRegistry
-
-// // Skinning
-//     tinyVk::DescSLayout skinDescLayout;
-//     tinyVk::DescPool skinDescPool;
-
-// // Morph weights
-//     tinyVk::DescSLayout meshMrphWsDescLayout;
-//     tinyVk::DescPool meshMrphWsDescPool;
 
     tinySceneRT::Require sharedReq;
     void vkCreateResources();

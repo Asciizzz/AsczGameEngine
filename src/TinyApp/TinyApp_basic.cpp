@@ -78,9 +78,9 @@ void tinyApp::initComponents() {
 
     UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
         {"global", project->descSLayout_Global()},
-        {"material", project->descSLayout_Material()},
+        {"material", sharedReq.matDescLayout()},
         {"skin", sharedReq.skinDescLayout()},
-        {"morph_ds", project->descSLayout_MeshMrphDs()},
+        {"morph_ds", sharedReq.mrphDsDescLayout()},
         {"morph_ws", sharedReq.mrphWsDescLayout()}
     };
     
