@@ -56,7 +56,6 @@ struct Node {
     struct MeshRender3D {
         static constexpr Types kType = Types::MESHRD;
         static constexpr const char* kName = "MeshRender3D";
-
         tinyHandle pHandle;
     };
     using MESHRD = MeshRender3D;
@@ -64,7 +63,6 @@ struct Node {
     struct BoneAttach3D {
         static constexpr Types kType = Types::BONE3D;
         static constexpr const char* kName = "BoneAttach3D";
-
         tinyHandle skeleNodeHandle;
         uint32_t boneIndex;
     };
@@ -73,7 +71,6 @@ struct Node {
     struct Skeleton3D {
         static constexpr Types kType = Types::SKEL3D;
         static constexpr const char* kName = "Skeleton3D";
-
         tinyHandle pHandle;
     };
     using SKEL3D = Skeleton3D;
@@ -81,13 +78,13 @@ struct Node {
     struct Animation3D {
         static constexpr Types kType = Types::ANIM3D;
         static constexpr const char* kName = "Animation3D";
-
         tinyHandle pHandle;
     };
     using ANIM3D = Animation3D;
 
     struct Script {
         static constexpr Types kType = Types::SCRIPT;
+        static constexpr const char* kName = "Script";
         tinyHandle pHandle;
     };
     using SCRIPT = Script; // Lol

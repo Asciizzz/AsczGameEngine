@@ -14,7 +14,7 @@ namespace tinyRT {
 struct Scene {
 private:
 
-    // -------- writeComp's RTResolver ---------
+    // -------- Component to Runtime Type Mapping ---------
 
     /* The concept:
 
@@ -32,14 +32,20 @@ private:
     behavior. So rtComp<tinyNodeRT::SKEL3D> will return the Skeleton3D* instead
 
     */
+    
+    // Type trait to map component types to their runtime equivalents
     template<typename T>
-    struct RTResolver { using type = T; }; // Most type return themselves
+    struct RTResolver { using type = T; }; // Most types return themselves
     template<typename T> using RTResolver_t = typename RTResolver<T>::type;
 
-    // Special types
+    // Specializations for components that have separate runtime types
     template<> struct RTResolver<tinyNodeRT::SKEL3D> { using type = tinyRT_SKEL3D; };
     template<> struct RTResolver<tinyNodeRT::ANIM3D> { using type = tinyRT_ANIM3D; };
     template<> struct RTResolver<tinyNodeRT::MESHRD> { using type = tinyRT_MESHRD; };
+
+    // Helper to check if a type has a runtime equivalent (has pHandle)
+    template<typename T>
+    static constexpr bool has_rt_equivalent = !std::is_same_v<T, RTResolver_t<T>>;
 
 public:
     std::string name;
@@ -129,6 +135,31 @@ public:
 
     // -------- Component management --------- 
 
+    struct NComp {
+        tinyNodeRT::TRFM3D* trfm3D = nullptr;
+        tinyRT_MESHRD* meshRD = nullptr;
+        tinyRT_SKEL3D* skel3D = nullptr;
+        tinyRT_ANIM3D* anim3D = nullptr;
+    };
+
+    NComp nComp(tinyHandle nodeHandle) {
+        tinyNodeRT* node = nodes_.get(nodeHandle);
+        if (!node) return NComp();
+
+        NComp comps;
+
+        comps.trfm3D = rtComp<tinyNodeRT::TRFM3D>(nodeHandle);
+        comps.meshRD = rtComp<tinyNodeRT::MESHRD>(nodeHandle);
+        comps.skel3D = rtComp<tinyNodeRT::SKEL3D>(nodeHandle);
+        comps.anim3D = rtComp<tinyNodeRT::ANIM3D>(nodeHandle);
+
+        return comps;
+    }
+
+    const NComp nComp(tinyHandle nodeHandle) const {
+        return const_cast<Scene*>(this)->nComp(nodeHandle);
+    }
+
     // Retrieve runtime-resolved component pointer (return runtime component instead of node identity component)
     template<typename T>
     RTResolver_t<T>* rtComp(tinyHandle nodeHandle) {
@@ -137,13 +168,12 @@ public:
 
         T* compPtr = node->get<T>();
 
-        if constexpr (type_eq<T, tinyNodeRT::SKEL3D>) {
-            return rtGet<tinyRT_SKEL3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
-            return rtGet<tinyRT_ANIM3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
-            return rtGet<tinyRT_MESHRD>(compPtr->pHandle);
-        } else { // Other types return themselves
+        // If this component has a separate runtime type, resolve it via pHandle
+        if constexpr (has_rt_equivalent<T>) {
+            using RT = RTResolver_t<T>;
+            return rtGet<RT>(compPtr->pHandle);
+        } else {
+            // Component is its own runtime representation
             return compPtr;
         }
     }
@@ -163,13 +193,10 @@ public:
 
         addMap3D<T>(nodeHandle);
 
-        if constexpr (type_eq<T, tinyNodeRT::SKEL3D>) {
-            return addSKEL3D_RT(compPtr);
-        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
-            return addANIM3D_RT(compPtr);
-        } else if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
-            return addMESHR_RT(compPtr);
-        } else { // Other types return themselves
+        // Initialize runtime component if this type has one
+        if constexpr (has_rt_equivalent<T>) {
+            return addRT<T, RTResolver_t<T>>(compPtr);
+        } else {
             return compPtr;
         }
     }
@@ -181,12 +208,8 @@ public:
 
         T* compPtr = node->get<T>();
 
-        if constexpr (type_eq<T, tinyNodeRT::SKEL3D>) {
-            rtRemove<tinyRT_SKEL3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
-            rtRemove<tinyRT_ANIM3D>(compPtr->pHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
-            rtRemove<tinyRT_MESHRD>(compPtr->pHandle);
+        if constexpr (has_rt_equivalent<T>) {
+            rtRemove<RTResolver_t<T>>(compPtr->pHandle);
         }
 
         rmMap3D<T>(nodeHandle);
@@ -294,6 +317,19 @@ private:
         } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
             rmFromMapAndPool(mapANIM3D_, withANIM3D_, nodeHandle);
         }
+    }
+
+    // Generic runtime component creation dispatcher
+    template<typename CompT, typename RT>
+    RT* addRT(CompT* compPtr) {
+        if constexpr (type_eq<CompT, tinyNodeRT::SKEL3D>) {
+            return addSKEL3D_RT(compPtr);
+        } else if constexpr (type_eq<CompT, tinyNodeRT::ANIM3D>) {
+            return addANIM3D_RT(compPtr);
+        } else if constexpr (type_eq<CompT, tinyNodeRT::MESHRD>) {
+            return addMESHR_RT(compPtr);
+        }
+        return nullptr;
     }
 
     tinyRT_SKEL3D* addSKEL3D_RT(tinyNodeRT::SKEL3D* compPtr) {
