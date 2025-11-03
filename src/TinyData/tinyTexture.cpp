@@ -1,1 +1,1 @@
-#include "tinyData/TinyTexture.hpp"
+#include "tinyData/tinyTexture.hpp"

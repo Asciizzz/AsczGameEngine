@@ -298,34 +298,6 @@ ImageVk& ImageVk::wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D e
     return *this;
 }
 
-// Static helper functions
-VkFormat ImageVk::getVulkanFormatFromChannels(int channels) {
-    // All textures should already be RGBA at this point (converted by TinyLoader)
-    // This function is kept for compatibility but should always receive 4 channels
-    if (channels != 4) {
-        // Log warning if we somehow receive non-RGBA data
-        std::cerr << "Warning: Expected RGBA (4 channels) but got " << channels << " channels\n";
-    }
-    return VK_FORMAT_R8G8B8A8_SRGB;
-}
-
-std::vector<uint8_t> ImageVk::convertToValidData(int channels, int width, int height, const uint8_t* srcData) {
-    // All textures should already be RGBA at this point (converted by TinyLoader)
-    // This is now just a pass-through copy for safety
-    size_t pixelCount = width * height;
-    
-    if (channels != 4) {
-        // Log warning if we somehow receive non-RGBA data
-        std::cerr << "Warning: Expected RGBA (4 channels) but got " << channels << " channels. Data may be corrupted.\n";
-        return std::vector<uint8_t>();
-    }
-    
-    // Simply copy the RGBA data
-    std::vector<uint8_t> result(pixelCount * 4);
-    std::memcpy(result.data(), srcData, pixelCount * 4);
-    return result;
-}
-
 uint32_t ImageVk::autoMipLevels(uint32_t width, uint32_t height) {
     return static_cast<uint32_t>(floor(log2(std::max(width, height)))) + 1;
 }

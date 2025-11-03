@@ -150,8 +150,6 @@ public:
     bool hasView() const { return view != VK_NULL_HANDLE; }
 
     // Static helper functions
-    static VkFormat getVulkanFormatFromChannels(int channels);
-    static std::vector<uint8_t> convertToValidData(int channels, int width, int height, const uint8_t* srcData);
     static uint32_t autoMipLevels(uint32_t width, uint32_t height);
 
 private:
