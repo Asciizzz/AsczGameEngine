@@ -28,11 +28,10 @@ public:
 
     // Descriptor accessors
 
+    // Only need the active 3
     VkDescriptorSetLayout descSLayout_Global() const { return global_->getDescLayout(); }
-    VkDescriptorSetLayout descSLayout_Material() const { return matDescLayout; }
-    VkDescriptorSetLayout descSLayout_Skin() const { return skinDescLayout.get(); }
+    VkDescriptorSetLayout descSLayout_Material() const { return matDescLayout.get(); }
     VkDescriptorSetLayout descSLayout_MeshMrphDs() const { return meshMrphDsDescLayout.get(); }
-    VkDescriptorSetLayout descSLayout_MeshMrphWs() const { return meshMrphWsDescLayout.get(); }
 
     VkDescriptorSet descSet_DummySkin() const { return dummySkinDescSet.get(); }
     VkDescriptorSet descSet_DefaultMat() const { return defaultMaterialVk.descSet(); }
@@ -67,23 +66,32 @@ private:
     UniquePtr<tinyFS> fs_;
     void setupFS();
 
+    template<typename T>
+    tinyHandle fsAdd(T&& obj) {
+        return fs_->rAdd<T>(std::forward<T>(obj)).handle;
+    }
+
 // -------------- Shared resources --------------
+
+// These soon to be moved to fsRegistry
 
 // Material
     tinyVk::DescSLayout matDescLayout;
     tinyVk::DescPool matDescPool;
 
-// Skinning
-    tinyVk::DescSLayout skinDescLayout;
-    tinyVk::DescPool skinDescPool;
-
 // Delta
     tinyVk::DescSLayout meshMrphDsDescLayout;
     tinyVk::DescPool meshMrphDsDescPool;
 
-// Morph weights
-    tinyVk::DescSLayout meshMrphWsDescLayout;
-    tinyVk::DescPool meshMrphWsDescPool;
+// These now lives in the fsRegistry
+
+// // Skinning
+//     tinyVk::DescSLayout skinDescLayout;
+//     tinyVk::DescPool skinDescPool;
+
+// // Morph weights
+//     tinyVk::DescSLayout meshMrphWsDescLayout;
+//     tinyVk::DescPool meshMrphWsDescPool;
 
     tinySceneRT::Require sharedReq;
     void vkCreateResources();

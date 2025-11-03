@@ -46,64 +46,28 @@ public:
         const tinyRegistry*   fsRegistry = nullptr; // For stuffs and things
         const tinyVk::Device* deviceVk = nullptr;   // For GPU resource creation
 
-        // Soon to be obsolete (not really)
-        // Descriptor will soon be included in the fsRegistry
-        // Meaning we do not need these scattered requirement pieces anymore
-        // We just need the fsRegistry and handles to the descriptors we need
-        // since they now live in the registry as well
-        VkDescriptorPool      skinDescPool   = VK_NULL_HANDLE;
-        VkDescriptorSetLayout skinDescLayout = VK_NULL_HANDLE;
+        VkDescriptorPool descPool(tinyHandle handle) const;
+        VkDescriptorSetLayout descLayout(tinyHandle handle) const;
 
-        // Weights layout, not deltas
-        VkDescriptorPool      mrphWsDescPool   = VK_NULL_HANDLE;
-        VkDescriptorSetLayout mrphWsDescLayout = VK_NULL_HANDLE;
+        tinyHandle hMatDescPool;
+        tinyHandle hMatDescLayout;
+        VkDescriptorPool matDescPool() const { return descPool(hMatDescPool); }
+        VkDescriptorSetLayout matDescLayout() const { return descLayout(hMatDescLayout); }
 
-        // New design
         tinyHandle hSkinDescPool;
         tinyHandle hSkinDescLayout;
+        VkDescriptorPool skinDescPool() const { return descPool(hSkinDescPool); }
+        VkDescriptorSetLayout skinDescLayout() const { return descLayout(hSkinDescLayout); }
+
+        tinyHandle hMrphDsDescPool;
+        tinyHandle hMrphDsDescLayout;
+        VkDescriptorPool mrphDsDescPool() const { return descPool(hMrphDsDescPool); }
+        VkDescriptorSetLayout mrphDsDescLayout() const { return descLayout(hMrphDsDescLayout); }
 
         tinyHandle hMrphWsDescPool;
         tinyHandle hMrphWsDescLayout;
-
-        bool valid() const {
-            return  maxFramesInFlight > 0 && fsRegistry != nullptr && deviceVk != nullptr &&
-                    skinDescPool   != VK_NULL_HANDLE && skinDescLayout != VK_NULL_HANDLE &&
-                    mrphWsDescPool   != VK_NULL_HANDLE && mrphWsDescLayout != VK_NULL_HANDLE;
-
-            /* Soon the be true implementation:
-            return
-                maxFramesInFlight > 0 &&
-                fsRegistry != nullptr &&
-                deviceVk != nullptr &&
-                getSkinDescPool() != VK_NULL_HANDLE &&
-                getSkinDescLayout() != VK_NULL_HANDLE &&
-                getMrphWsDescPool() != VK_NULL_HANDLE &&
-                getMrphWsDescLayout() != VK_NULL_HANDLE;
-            */
-        }
-
-        // Soon rename these method to remove the "get" prefix
-        // The old ones are kept for the time being
-
-        VkDescriptorPool getSkinDescPool() const {
-            if (auto* ptr = fsRegistry->get<tinyVk::DescPool>(hSkinDescPool)) return *ptr;
-            return VK_NULL_HANDLE;
-        }
-
-        VkDescriptorSetLayout getSkinDescLayout() const {
-            if (auto* ptr = fsRegistry->get<tinyVk::DescSLayout>(hSkinDescLayout)) return *ptr;
-            return VK_NULL_HANDLE;
-        }
-
-        VkDescriptorPool getMrphWsDescPool() const {
-            if (auto* ptr = fsRegistry->get<tinyVk::DescPool>(hMrphWsDescPool)) return *ptr;
-            return VK_NULL_HANDLE;
-        }
-
-        VkDescriptorSetLayout getMrphWsDescLayout() const {
-            if (auto* ptr = fsRegistry->get<tinyVk::DescSLayout>(hMrphWsDescLayout)) return *ptr;
-            return VK_NULL_HANDLE;
-        }
+        VkDescriptorPool mrphWsDescPool() const { return descPool(hMrphWsDescPool); }
+        VkDescriptorSetLayout mrphWsDescLayout() const { return descLayout(hMrphWsDescLayout); }
     };
 
     std::string name;
@@ -122,12 +86,7 @@ public:
     void setRoot(tinyHandle handle) { rootHandle_ = handle; }
     tinyHandle rootHandle() const { return rootHandle_; }
 
-    void setSceneReq(const Require& req) {
-        if (!req.valid()) throw std::invalid_argument("Invalid Requirement provided to Scene");
-        req_ = req;
-    }
-
-    bool valid() const { return req_.valid(); }
+    void setSceneReq(const Require& req) { req_ = req; }
 
     // --------- Node management ---------
 
@@ -369,7 +328,7 @@ private:
 
     tinyRT_SKEL3D* addSKEL3D_RT(tinyNodeRT::SKEL3D* compPtr) {
         tinyRT_SKEL3D rtSKEL3D;
-        rtSKEL3D.init(req_.deviceVk, &fsView<tinySkeleton>(), req_.skinDescPool, req_.skinDescLayout, req_.maxFramesInFlight);
+        rtSKEL3D.init(req_.deviceVk, &fsView<tinySkeleton>(), req_.skinDescPool(), req_.skinDescLayout(), req_.maxFramesInFlight);
 
         compPtr->pHandle = rtAdd<tinyRT_SKEL3D>(std::move(rtSKEL3D));
 
@@ -386,7 +345,7 @@ private:
 
     tinyRT_MESHRD* addMESHR_RT(tinyNodeRT::MESHRD* compPtr) {
         tinyRT_MESHRD rtMeshRT;
-        rtMeshRT.init(req_.deviceVk, &fsView<tinyMeshVk>(), req_.mrphWsDescLayout, req_.mrphWsDescPool, req_.maxFramesInFlight);
+        rtMeshRT.init(req_.deviceVk, &fsView<tinyMeshVk>(), req_.mrphWsDescLayout(), req_.mrphWsDescPool(), req_.maxFramesInFlight);
 
         compPtr->pHandle = rtAdd<tinyRT_MESHRD>(std::move(rtMeshRT));
 
