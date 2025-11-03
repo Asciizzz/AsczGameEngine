@@ -225,8 +225,8 @@ struct tinyTextureVk {
     uint32_t incrementUse() noexcept { return ++useCount_; }
     uint32_t decrementUse() noexcept { return useCount_ > 0 ? --useCount_ : 0; }
 
-    static tinyTextureVk defaultTexture(const tinyVk::Device* deviceVk) {
-        tinyTexture defaultTex = tinyTexture::aPixel(); // Default white
+    static tinyTextureVk aPixel(const tinyVk::Device* deviceVk, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255, uint8_t a = 255) {
+        tinyTexture defaultTex = tinyTexture::aPixel(r, g, b, a);
         defaultTex.name = "Default";
 
         tinyTextureVk textureVk;

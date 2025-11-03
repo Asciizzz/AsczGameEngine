@@ -64,11 +64,18 @@ struct tinyMaterialVk {
         return pool;
     }
 
-    void init(const tinyVk::Device* deviceVk, const tinyTextureVk* defTex, VkDescriptorSetLayout descSLayout, VkDescriptorPool descPool) {
+    void init(
+        const tinyVk::Device* deviceVk,
+        const tinyTextureVk* defTex0,
+        const tinyTextureVk* defTex1,
+        VkDescriptorSetLayout descSLayout,
+        VkDescriptorPool descPool
+    ) {
         using namespace tinyVk;
 
         deviceVk_ = deviceVk;
-        defTex_ = defTex;
+        defTex0_ = defTex0;
+        defTex1_ = defTex1;
 
         descSet_.allocate(deviceVk->device, descPool, descSLayout);
 
@@ -91,7 +98,8 @@ struct tinyMaterialVk {
     tinyMaterialVk(tinyMaterialVk&& other) noexcept
     :   name(std::move(other.name)),
         descSet_(std::move(other.descSet_)),
-        defTex_(other.defTex_),
+        defTex0_(other.defTex0_),
+        defTex1_(other.defTex1_),
         textures_(other.textures_),
         props_(other.props_),
         propsBuffer_(std::move(other.propsBuffer_)),
@@ -111,7 +119,8 @@ struct tinyMaterialVk {
             name = std::move(other.name);
             descSet_ = std::move(other.descSet_);
             deviceVk_ = other.deviceVk_;
-            defTex_ = other.defTex_;
+            defTex0_ = other.defTex0_;
+            defTex1_ = other.defTex1_;
             textures_ = other.textures_;
             props_ = other.props_;
             propsBuffer_ = std::move(other.propsBuffer_);
@@ -169,13 +178,20 @@ struct tinyMaterialVk {
     }
 
 private:
+    const tinyTextureVk* defaultTex(TexSlot slot) const {
+        return (
+            slot == TexSlot::Normal ||
+            slot == TexSlot::Emissive
+        ) ? defTex1_ : defTex0_;
+    }
+
     void updateTexBinding(TexSlot slot) {
         using namespace tinyVk;
 
         uint32_t index = static_cast<uint32_t>(slot);
         uint32_t binding = index + 1; // Properties at 0, textures start at 1
 
-        const tinyTextureVk* tex = textures_[index] ? textures_[index] : defTex_;
+        const tinyTextureVk* tex = textures_[index] ? textures_[index] : defaultTex(slot);
 
         DescWrite()
             .addWrite()
@@ -215,7 +231,9 @@ private:
     }
 
     const tinyVk::Device* deviceVk_ = nullptr;
-    const tinyTextureVk* defTex_ = nullptr; // Fallback texture
+     // Fallback textures
+    const tinyTextureVk* defTex0_ = nullptr; // Full white
+    const tinyTextureVk* defTex1_ = nullptr; // Full black
 
     std::array<tinyTextureVk*, static_cast<uint32_t>(TexSlot::Count)> textures_;
 

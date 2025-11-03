@@ -76,7 +76,13 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     std::vector<tinyHandle> glmMatRHandle;
     for (const auto& material : model.materials) {
         tinyMaterialVk materialVk;
-        materialVk.init(deviceVk_, sharedRes_.defaultTextureVk(), sharedRes_.matDescLayout(), sharedRes_.matDescPool());
+        materialVk.init(
+            deviceVk_,
+            sharedRes_.defaultTextureVk0(),
+            sharedRes_.defaultTextureVk1(),
+            sharedRes_.matDescLayout(),
+            sharedRes_.matDescPool()
+        );
 
         materialVk.name = material.name;
 
@@ -341,11 +347,20 @@ void tinyProject::vkCreateDefault() {
 
 //  ---------- Create default material and texture ----------
 
-    tinyTextureVk defaultTextureVk = tinyTextureVk::defaultTexture(deviceVk_);
-    sharedRes_.hDefaultTextureVk = fsAdd<tinyTextureVk>(std::move(defaultTextureVk));
+    tinyTextureVk defaultTextureVk0 = tinyTextureVk::aPixel(deviceVk_, 255, 255, 255, 255);
+    sharedRes_.hDefaultTextureVk0 = fsAdd<tinyTextureVk>(std::move(defaultTextureVk0));
+
+    tinyTextureVk defaultTextureVk1 = tinyTextureVk::aPixel(deviceVk_, 0, 0, 0, 0);
+    sharedRes_.hDefaultTextureVk1 = fsAdd<tinyTextureVk>(std::move(defaultTextureVk1));
 
     tinyMaterialVk defaultMaterialVk;
-    defaultMaterialVk.init(deviceVk_, sharedRes_.defaultTextureVk(), sharedRes_.matDescLayout(), sharedRes_.matDescPool());
+    defaultMaterialVk.init(
+        deviceVk_,
+        sharedRes_.defaultTextureVk0(),
+        sharedRes_.defaultTextureVk1(),
+        sharedRes_.matDescLayout(),
+        sharedRes_.matDescPool()
+    );
 
     sharedRes_.hDefaultMaterialVk = fsAdd<tinyMaterialVk>(std::move(defaultMaterialVk));
 

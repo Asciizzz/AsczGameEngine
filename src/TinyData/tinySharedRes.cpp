@@ -41,8 +41,12 @@ const tinyMaterialVk* tinySharedRes::defaultMaterialVk() const {
     return fsRegistry->get<tinyMaterialVk>(hDefaultMaterialVk);
 }
 
-const tinyTextureVk* tinySharedRes::defaultTextureVk() const {
-    return fsRegistry->get<tinyTextureVk>(hDefaultTextureVk);
+const tinyTextureVk* tinySharedRes::defaultTextureVk0() const {
+    return fsRegistry->get<tinyTextureVk>(hDefaultTextureVk0);
+}
+
+const tinyTextureVk* tinySharedRes::defaultTextureVk1() const {
+    return fsRegistry->get<tinyTextureVk>(hDefaultTextureVk1);
 }
 
 VkDescriptorSet tinySharedRes::dummySkinDescSet() const { return descSet(hDummySkinDescSet); }

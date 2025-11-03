@@ -63,9 +63,12 @@ struct tinySharedRes {
 
     // Material and texture
     tinyHandle hDefaultMaterialVk;
-    tinyHandle hDefaultTextureVk;
     const tinyMaterialVk* defaultMaterialVk() const;
-    const tinyTextureVk* defaultTextureVk() const;
+
+    tinyHandle hDefaultTextureVk0;
+    tinyHandle hDefaultTextureVk1;
+    const tinyTextureVk* defaultTextureVk0() const;
+    const tinyTextureVk* defaultTextureVk1() const;
 
     tinyHandle hDummySkinDescSet;
     VkDescriptorSet dummySkinDescSet() const;
