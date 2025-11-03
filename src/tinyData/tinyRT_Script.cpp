@@ -22,8 +22,9 @@ void Script::haveFun(Scene* scene, tinyHandle nodeHandle, float dTime) {
     bool k_left = state[SDL_SCANCODE_LEFT];
     bool k_right = state[SDL_SCANCODE_RIGHT];
 
-    bool k_shift = state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT];
-    float moveSpeed = k_shift ? 3.0f : 1.0f; // units per second
+    // bool k_shift = state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT];
+    bool running = state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT];
+    float moveSpeed = running ? 4.0f : 1.0f;
 
     int vz = k_up - k_down;
     int vx = k_left - k_right;
@@ -67,24 +68,25 @@ void Script::haveFun(Scene* scene, tinyHandle nodeHandle, float dTime) {
     if (comps.anim3D) {
         auto* anim3D = comps.anim3D;
 
-        // comps.anim3D->update(dTime);
+        std::string idleLoop = "Idle";
+        std::string walkLoop = "Walking_A";
+        std::string runLoop = "Running_A";
 
-        std::string walkLoop = "Walk_Loop";
-        std::string idleLoop = "Idle_Loop";
-
-        tinyHandle walkHandle = anim3D->getHandle(walkLoop);
         tinyHandle idleHandle = anim3D->getHandle(idleLoop);
+        tinyHandle walkHandle = anim3D->getHandle(walkLoop);
+        tinyHandle runHandle = anim3D->getHandle(runLoop);
         tinyHandle curHandle = anim3D->curHandle();
 
         bool isMoving = (vx != 0) || (vz != 0);
 
         anim3D->setSpeed(isMoving ? moveSpeed : 1.0f);
 
-        // Only reset in the case of a change
         if (isMoving) {
-            anim3D->play(walkHandle, (curHandle != walkHandle));
+            // Only reset when idling (in the case of switching between walk and run, no reset)
+            tinyHandle playHandle = running ? runHandle : walkHandle;
+            anim3D->play(playHandle, (curHandle != runHandle && curHandle != walkHandle));
         } else {
-            anim3D->play(idleHandle, (curHandle != idleHandle));
+            anim3D->play(idleHandle, curHandle != idleHandle);
         }
     }
 }
