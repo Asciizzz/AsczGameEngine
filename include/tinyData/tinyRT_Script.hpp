@@ -1,7 +1,6 @@
 #pragma once
 
 #include "tinyScript/tinyScript.hpp"
-#include "tinyExt/tinyHandle.hpp"
 #include "tinyExt/tinyPool.hpp"
 
 #include <unordered_map>
