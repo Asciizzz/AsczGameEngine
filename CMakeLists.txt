@@ -28,7 +28,9 @@ endif()
 file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyCamera.cpp
 
-    src/tinyData/tinyScript.cpp
+    src/tinyScript/tinyScript_core.cpp
+    src/tinyScript/tinyScript_update.cpp
+    src/tinyScript/tinyScript_bind.cpp
 
     src/tinyData/tinySharedRes.cpp
     src/tinyData/tinyRT_MeshRender3D.cpp
@@ -140,6 +142,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/tinyVk
     ${CMAKE_SOURCE_DIR}/include/tinyExt
     ${CMAKE_SOURCE_DIR}/include/tinyData
+    ${CMAKE_SOURCE_DIR}/include/tinyScript
     ${CMAKE_SOURCE_DIR}/include/tinyEngine
     ${CMAKE_SOURCE_DIR}/include/tinySystem
     ${CMAKE_SOURCE_DIR}/include/tinyApp        

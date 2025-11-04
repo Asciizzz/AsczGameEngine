@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyData/tinyScript.hpp"
+#include "tinyScript/tinyScript.hpp"
 #include "tinyExt/tinyHandle.hpp"
 #include "tinyExt/tinyPool.hpp"
 
