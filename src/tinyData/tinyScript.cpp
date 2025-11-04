@@ -141,14 +141,12 @@ void tinyScript::initRtVars(std::unordered_map<std::string, tinyVar>& vars) cons
             std::string key = lua_tostring(L_, -2);
             
             // Determine type and default value
-            if (lua_isnumber(L_, -1)) {
-                double value = lua_tonumber(L_, -1);
-                // Check if it's an integer or float
-                if (value == static_cast<int>(value)) {
-                    vars[key] = static_cast<int>(value);
-                } else {
-                    vars[key] = static_cast<float>(value);
-                }
+            if (lua_isinteger(L_, -1)) {
+                // Lua 5.3+ has explicit integer type
+                vars[key] = static_cast<int>(lua_tointeger(L_, -1));
+            } else if (lua_isnumber(L_, -1)) {
+                // All other numbers are treated as floats
+                vars[key] = static_cast<float>(lua_tonumber(L_, -1));
             } else if (lua_isboolean(L_, -1)) {
                 vars[key] = static_cast<bool>(lua_toboolean(L_, -1));
             } else if (lua_isstring(L_, -1)) {
