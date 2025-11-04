@@ -32,6 +32,11 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk_(deviceVk) {
     setupFS();
     vkCreateResources();
     vkCreateDefault();
+
+    // Random test BS
+
+    // Test if the script is r*tarded or not
+    tinyScript newScript;
 }
 
 tinyProject::~tinyProject() {

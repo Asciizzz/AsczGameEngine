@@ -290,10 +290,7 @@ void tinyScript::update(std::unordered_map<std::string, tinyVar>& vars, void* sc
 }
 
 void tinyScript::test() {
-    // Set default name if empty
-    if (name.empty()) {
-        name = "TestSpinScript";
-    }
+    if (name.empty()) name = "TestSpinScript";
 
     // Create a simple spinning script that rotates a node around the Y axis
     code = R"(
