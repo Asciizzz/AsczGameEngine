@@ -9,5 +9,5 @@ extern "C" {
 }
 
 struct tinyScript {
-    std::string code;
+    // ...
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tinyData/tinyScript.hpp"
 #include "tinyExt/tinyHandle.hpp"
 
 
