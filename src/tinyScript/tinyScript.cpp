@@ -313,7 +313,10 @@ code = R"(-- Character Controller Script (haveFun style)
 
 function vars()
     return {
-        moveSpeed = 1.0  -- Walk speed = 1.0, Run speed = 4.0
+        moveSpeed = 1.0,  -- Walk speed = 1.0, Run speed = 4.0
+        idleAnim = "Idle",
+        walkAnim = "Walking_A",
+        runAnim = "Running_A"
     }
 end
 
@@ -361,10 +364,10 @@ function update()
     end
     
     -- ========== ANIMATION (for animation node) ==========
-    -- Get animation handles by name
-    local idleHandle = getAnimHandle(__nodeHandle, "Idle")
-    local walkHandle = getAnimHandle(__nodeHandle, "Walking_A")
-    local runHandle = getAnimHandle(__nodeHandle, "Running_A")
+    -- Get animation handles by name (using configurable vars)
+    local idleHandle = getAnimHandle(__nodeHandle, vars.idleAnim)
+    local walkHandle = getAnimHandle(__nodeHandle, vars.walkAnim)
+    local runHandle = getAnimHandle(__nodeHandle, vars.runAnim)
     local curHandle = getCurAnimHandle(__nodeHandle)
     
     -- Set animation speed
