@@ -299,67 +299,70 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
 }
 
 void tinyScript::test() {
-    if (name.empty()) name = "TestSpinScript";
+    if (name.empty()) name = "Demo Script";
 
-    // Create a simple spinning script that rotates a node around the Y axis
     code = R"(
--- Test Script: Spin Around Y Axis + Key Press Display
--- This script demonstrates basic node rotation and keyboard input
+-- Demo Script: 
 
--- Initialize variables with default values
+-- Initialize variables with values
 function vars()
     return {
-        rotationSpeed = 0.0,  -- Radians per second (about 115 degrees/sec)
-        currentAngle = 0.0,   -- Current rotation angle
-        keyPressed = ""       -- String to display which key is pressed
+        a = 0.0,
+        b = 0.0,
+        str = ""
     }
 end
 
+-- Your own function
+function foo(a, b, d)
+    -- Simple arithmetic operation 
+    b = b + (a * d)
+
+    -- DANGER! Without <local> result becomes a global variable, polluting the script 
+    -- result = b + (a * d)
+
+    -- Return (Gotta be honest if you have no idea how return works please just gtfo my engine)
+    return b
+end
+
 function update()
-    -- Update the rotation angle based on delta time
-    vars.currentAngle = vars.currentAngle + (vars.rotationSpeed * dTime)
-    
-    -- Keep angle in [0, 2π] range to prevent overflow
+
+    -- Function call
+    vars.b = foo(vars.a, vars.b, dTime)
+
+    -- Local variables ([!] Do not forget "local" keyword)
     local TWO_PI = 6.28318530718
-    if vars.currentAngle > TWO_PI then
-        vars.currentAngle = vars.currentAngle - TWO_PI
+
+    -- If else condition
+    if vars.b > TWO_PI then
+        vars.b = vars.b - TWO_PI
+    else
+        -- Do nothing
     end
-    
-    -- Apply rotation using general-purpose transform API
-    -- Set rotation around Y axis (pitch = 0, yaw = currentAngle, roll = 0)
-    setRotation(__nodeHandle, {x = 0, y = vars.currentAngle, z = 0})
-    
-    -- Check for key presses and update the keyPressed variable
-    vars.keyPressed = ""
-    
-    if kState("w") then
-        vars.keyPressed = vars.keyPressed .. "W "
-    end
-    
-    if kState("a") then
-        vars.keyPressed = vars.keyPressed .. "A "
-    end
-    
-    if kState("s") then
-        vars.keyPressed = vars.keyPressed .. "S "
-    end
-    
-    if kState("d") then
-        vars.keyPressed = vars.keyPressed .. "D "
-    end
-    
-    -- Check for other keys
-    if kState("shift") then
-        vars.keyPressed = vars.keyPressed .. "SHIFT "
-    end
-    
-    if kState("space") then
-        vars.keyPressed = vars.keyPressed .. "SPACE "
-    end
-    
-    -- Remove trailing space and set to "None" if empty
-    if vars.keyPressed == "" then
-        vars.keyPressed = "None"
+
+    -- Call functions
+
+    setRotation(__nodeHandle, {x = 0, y = vars.b, z = 0})
+
+    -- String concatenation
+    vars.str = ""
+
+    -- Inline or indentation both work
+
+    if kState("w") then vars.str = vars.str .. "W " end
+
+    if kState("a") then vars.str = vars.str .. "A " end
+
+    if kState("s") then vars.str = vars.str .. "S " end
+
+    if kState("d") then vars.str = vars.str .. "D " end
+
+    if kState("shift") then vars.str = vars.str .. "SHIFT " end
+
+    if kState("space") then vars.str = vars.str .. "SPACE " end
+
+    if vars.str == "" then
+        vars.str = "None"
     end
 end
 )";

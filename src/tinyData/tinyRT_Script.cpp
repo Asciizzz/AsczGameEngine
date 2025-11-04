@@ -30,8 +30,6 @@ bool Script::valid() const {
 }
 
 void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
-    if (!hasScript()) return;
-
     const tinyScript* script = rScript();
     if (!script) return;
 

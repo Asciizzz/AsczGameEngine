@@ -1119,7 +1119,7 @@ void tinyApp::renderSceneNodeInspector() {
     }
 
     if (selectedNode->has<tinyNodeRT::SCRIPT>()) {
-        renderComponent("Script", ImVec4(0.4f, 0.4f, 0.4f, 0.8f), ImVec4(0.8f, 0.8f, 0.8f, 0.6f), true, [&]() {
+        renderComponent("Script", ImVec4(0.0f, 0.0f, 0.0f, 0.8f), ImVec4(1.0f, 1.0f, 1.0f, 0.6f), true, [&]() {
             tinyRT::Script* scriptRT = activeScene->rtComp<tinyNodeRT::SCRIPT>(selectedSceneNodeHandle);
             if (scriptRT) {
                 // Display script file handle
@@ -1220,7 +1220,7 @@ void tinyApp::renderSceneNodeInspector() {
                     }
                 } else {
                     ImGui::Spacing();
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.2f, 1.0f), "Script not assigned or invalid");
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.2f, 1.0f), "Invalid Script");
                 }
             }
         },
@@ -2877,11 +2877,12 @@ void tinyApp::renderScriptEditorWindow() {
     float debugHeight = totalHeight * (1.0f - splitterPos);
     
     // ===== LUA CODE EDITOR (TOP) =====
-    ImGui::Text("Lua Code:");
+    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.9f, 1.0f), "Lua Code:");
     
-    // Multi-line text editor with scrolling
+    // Multi-line text editor with scrolling - transparent background
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f)); // Transparent background
     ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
@@ -2896,7 +2897,7 @@ void tinyApp::renderScriptEditorWindow() {
         script->code = std::string(codeBuffer);
     }
     
-    ImGui::PopStyleColor(4);
+    ImGui::PopStyleColor(5);
     ImGui::PopStyleVar(2);
     
     // ===== HORIZONTAL SPLITTER =====
@@ -2921,9 +2922,10 @@ void tinyApp::renderScriptEditorWindow() {
     // ===== DEBUG PANEL (BOTTOM) =====
     ImGui::Text("Debug Output:");
     
-    // Debug panel with scrolling
+    // Debug panel with scrolling - transparent background
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f)); // Transparent background
     ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
@@ -2946,7 +2948,7 @@ void tinyApp::renderScriptEditorWindow() {
 
     ImGui::EndChild();
     
-    ImGui::PopStyleColor(4);
+    ImGui::PopStyleColor(5);
     ImGui::PopStyleVar(2);
     
     ImGui::Spacing();
