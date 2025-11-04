@@ -2084,17 +2084,14 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
 
                 tinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", std::move(newScene));
                 selectFileNode(fileHandle);
-                // Expand parent chain to show the new scene
                 expandFNodeParentChain(fileHandle);
             }
 
             if (ImGui::MenuItem("Add Script")) {
                 tinyScript newScript;
-                newScript.test(); // Generate demo spinning script
 
                 tinyHandle fileHandle = fs.addFile(nodeHandle, "New Script", std::move(newScript));
                 selectFileNode(fileHandle);
-                // Expand parent chain to show the new script
                 expandFNodeParentChain(fileHandle);
             }
 

@@ -303,10 +303,10 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
     lua_pop(L_, 1);  // Pop vars table
 }
 
-void tinyScript::test() {
-    if (name.empty()) name = "Demo Script";
+void tinyScript::init() {
+    if (name.empty()) name = "Script";
 
-    code = R"(-- Demo Script: 
+code = R"(-- Demo Script: 
 
 -- Initialize variables with values
 function vars()

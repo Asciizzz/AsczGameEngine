@@ -21,8 +21,8 @@ struct tinyScript {
     std::string name;
     std::string code;
 
-    tinyScript() = default;
-    tinyScript(const std::string& scriptName) : name(scriptName) {}
+    tinyScript() { init(); }
+    tinyScript(const std::string& scriptName) : name(scriptName) { init(); }
     ~tinyScript();
     
     tinyScript(const tinyScript&) = delete;
@@ -44,17 +44,17 @@ struct tinyScript {
     // For making copies
     const tinyVarsMap& defaultVars() const { return defaultVars_; }
 
-    void test(); // Generate a demo spinning script
-
 private:
+    void init();
+
     std::string error_; // Cached error messages
 
     uint32_t version_ = 0;
     lua_State* L_ = nullptr;
     bool compiled_ = false;
 
-    tinyVarsMap defaultVars_; // Cached default variables from vars() function
+    tinyVarsMap defaultVars_;
+    void cacheDefaultVars();
 
     void closeLua();
-    void cacheDefaultVars(); // Extract and cache default variables after compilation
 };
