@@ -2,9 +2,6 @@
 #include "tinyData/tinyRT_Scene.hpp"
 #include <iostream>
 
-
-#include <SDL2/SDL.h>
-
 using namespace tinyRT;
 
 // ==================== tinyRT_SCRIPT Implementation ====================

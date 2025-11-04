@@ -1,6 +1,209 @@
 #include "tinyData/tinyScript.hpp"
 #include <iostream>
 
+#include "tinyData/tinyRT_Scene.hpp"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
+
+// ========== Lua C Functions ==========
+
+// Get node's local position - returns {x, y, z}
+static int lua_getPosition(lua_State* L) {
+    if (!lua_istable(L, 1)) {
+        return luaL_error(L, "getPosition expects (nodeHandle)");
+    }
+
+    lua_getglobal(L, "__scene");
+    tinyRT::Scene* scene = static_cast<tinyRT::Scene*>(lua_touserdata(L, -1));
+    lua_pop(L, 1);
+
+    lua_getfield(L, 1, "index");
+    lua_getfield(L, 1, "version");
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>(lua_tointeger(L, -2));
+    handle.version = static_cast<uint32_t>(lua_tointeger(L, -1));
+    lua_pop(L, 2);
+    
+    auto comps = scene->nComp(handle);
+    if (comps.trfm3D) {
+        glm::vec3 pos, scale, skew;
+        glm::quat rot;
+        glm::vec4 persp;
+        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        
+        lua_newtable(L);
+        lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
+        lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
+        lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+        return 1;
+    }
+    return 0;
+}
+
+// Set node's local position
+static int lua_setPosition(lua_State* L) {
+    if (!lua_istable(L, 1) || !lua_istable(L, 2)) {
+        return luaL_error(L, "setPosition expects (nodeHandle, {x, y, z})");
+    }
+    
+    lua_getglobal(L, "__scene");
+    tinyRT::Scene* scene = static_cast<tinyRT::Scene*>(lua_touserdata(L, -1));
+    lua_pop(L, 1);
+    
+    lua_getfield(L, 1, "index");
+    lua_getfield(L, 1, "version");
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>(lua_tointeger(L, -2));
+    handle.version = static_cast<uint32_t>(lua_tointeger(L, -1));
+    lua_pop(L, 2);
+    
+    lua_getfield(L, 2, "x");
+    lua_getfield(L, 2, "y");
+    lua_getfield(L, 2, "z");
+    glm::vec3 newPos;
+    newPos.x = static_cast<float>(lua_tonumber(L, -3));
+    newPos.y = static_cast<float>(lua_tonumber(L, -2));
+    newPos.z = static_cast<float>(lua_tonumber(L, -1));
+    lua_pop(L, 3);
+    
+    auto comps = scene->nComp(handle);
+    if (comps.trfm3D) {
+        glm::vec3 pos, scale, skew;
+        glm::quat rot;
+        glm::vec4 persp;
+        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        
+        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), newPos) 
+                            * glm::mat4_cast(rot) 
+                            * glm::scale(glm::mat4(1.0f), scale);
+    }
+    return 0;
+}
+
+// Get node's rotation as Euler angles (radians) - returns {x, y, z}
+static int lua_getRotation(lua_State* L) {
+    if (!lua_istable(L, 1)) {
+        return luaL_error(L, "getRotation expects (nodeHandle)");
+    }
+    
+    lua_getglobal(L, "__scene");
+    tinyRT::Scene* scene = static_cast<tinyRT::Scene*>(lua_touserdata(L, -1));
+    lua_pop(L, 1);
+    
+    lua_getfield(L, 1, "index");
+    lua_getfield(L, 1, "version");
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>(lua_tointeger(L, -2));
+    handle.version = static_cast<uint32_t>(lua_tointeger(L, -1));
+    lua_pop(L, 2);
+    
+    auto comps = scene->nComp(handle);
+    if (comps.trfm3D) {
+        glm::vec3 pos, scale, skew;
+        glm::quat rot;
+        glm::vec4 persp;
+        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        
+        glm::vec3 euler = glm::eulerAngles(rot);
+        lua_newtable(L);
+        lua_pushnumber(L, euler.x); lua_setfield(L, -2, "x");
+        lua_pushnumber(L, euler.y); lua_setfield(L, -2, "y");
+        lua_pushnumber(L, euler.z); lua_setfield(L, -2, "z");
+        return 1;
+    }
+    return 0;
+}
+
+// Set node's rotation from Euler angles (radians)
+static int lua_setRotation(lua_State* L) {
+    if (!lua_istable(L, 1) || !lua_istable(L, 2)) {
+        return luaL_error(L, "setRotation expects (nodeHandle, {x, y, z})");
+    }
+    
+    lua_getglobal(L, "__scene");
+    tinyRT::Scene* scene = static_cast<tinyRT::Scene*>(lua_touserdata(L, -1));
+    lua_pop(L, 1);
+    
+    lua_getfield(L, 1, "index");
+    lua_getfield(L, 1, "version");
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>(lua_tointeger(L, -2));
+    handle.version = static_cast<uint32_t>(lua_tointeger(L, -1));
+    lua_pop(L, 2);
+    
+    lua_getfield(L, 2, "x");
+    lua_getfield(L, 2, "y");
+    lua_getfield(L, 2, "z");
+    glm::vec3 euler;
+    euler.x = static_cast<float>(lua_tonumber(L, -3));
+    euler.y = static_cast<float>(lua_tonumber(L, -2));
+    euler.z = static_cast<float>(lua_tonumber(L, -1));
+    lua_pop(L, 3);
+    
+    auto comps = scene->nComp(handle);
+    if (comps.trfm3D) {
+        glm::vec3 pos, scale, skew;
+        glm::quat rot;
+        glm::vec4 persp;
+        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        
+        glm::quat newRot = glm::quat(euler);
+        
+        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), pos) 
+                            * glm::mat4_cast(newRot) 
+                            * glm::scale(glm::mat4(1.0f), scale);
+    }
+    return 0;
+}
+
+// Rotate node around an axis by angle (radians)
+static int lua_rotate(lua_State* L) {
+    if (!lua_istable(L, 1) || !lua_istable(L, 2) || !lua_isnumber(L, 3)) {
+        return luaL_error(L, "rotate expects (nodeHandle, {x, y, z} axis, angle)");
+    }
+    
+    lua_getglobal(L, "__scene");
+    tinyRT::Scene* scene = static_cast<tinyRT::Scene*>(lua_touserdata(L, -1));
+    lua_pop(L, 1);
+    
+    lua_getfield(L, 1, "index");
+    lua_getfield(L, 1, "version");
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>(lua_tointeger(L, -2));
+    handle.version = static_cast<uint32_t>(lua_tointeger(L, -1));
+    lua_pop(L, 2);
+    
+    lua_getfield(L, 2, "x");
+    lua_getfield(L, 2, "y");
+    lua_getfield(L, 2, "z");
+    glm::vec3 axis;
+    axis.x = static_cast<float>(lua_tonumber(L, -3));
+    axis.y = static_cast<float>(lua_tonumber(L, -2));
+    axis.z = static_cast<float>(lua_tonumber(L, -1));
+    lua_pop(L, 3);
+    
+    float angle = static_cast<float>(lua_tonumber(L, 3));
+    
+    auto comps = scene->nComp(handle);
+    if (comps.trfm3D) {
+        glm::vec3 pos, scale, skew;
+        glm::quat rot;
+        glm::vec4 persp;
+        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        
+        glm::quat deltaRot = glm::angleAxis(angle, glm::normalize(axis));
+        glm::quat newRot = deltaRot * rot;
+        
+        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), pos) 
+                            * glm::mat4_cast(newRot) 
+                            * glm::scale(glm::mat4(1.0f), scale);
+    }
+    return 0;
+}
+
+// ========== tinyScript Implementation ==========
+
 tinyScript::~tinyScript() {
     closeLua();
 }
@@ -233,6 +436,22 @@ void tinyScript::update(std::unordered_map<std::string, tinyVar>& vars, void* sc
     lua_setfield(L_, -2, "version");
     lua_setglobal(L_, "__nodeHandle");
 
+    // ========== Expose native functions to Lua ==========
+    lua_pushcfunction(L_, lua_getPosition);
+    lua_setglobal(L_, "getPosition");
+    
+    lua_pushcfunction(L_, lua_setPosition);
+    lua_setglobal(L_, "setPosition");
+    
+    lua_pushcfunction(L_, lua_getRotation);
+    lua_setglobal(L_, "getRotation");
+    
+    lua_pushcfunction(L_, lua_setRotation);
+    lua_setglobal(L_, "setRotation");
+    
+    lua_pushcfunction(L_, lua_rotate);
+    lua_setglobal(L_, "rotate");
+
     // ========== Call the update function ==========
     call("update");
 
@@ -299,7 +518,7 @@ void tinyScript::test() {
 -- Initialize variables with default values
 function initVars()
     return {
-        rotationSpeed = 1.0,  -- Radians per second
+        rotationSpeed = 2.0,  -- Radians per second (about 115 degrees/sec)
         currentAngle = 0.0    -- Current rotation angle
     }
 end
@@ -309,13 +528,14 @@ function update()
     vars.currentAngle = vars.currentAngle + (vars.rotationSpeed * dTime)
     
     -- Keep angle in [0, 2π] range to prevent overflow
-    if vars.currentAngle > 6.28318530718 then
-        vars.currentAngle = vars.currentAngle - 6.28318530718
+    local TWO_PI = 6.28318530718
+    if vars.currentAngle > TWO_PI then
+        vars.currentAngle = vars.currentAngle - TWO_PI
     end
     
-    -- TODO: Actually apply rotation to the node transform
-    -- This will require exposing node transform manipulation to Lua
-    -- For now, the angle is just tracked in vars.currentAngle
+    -- Apply rotation using general-purpose transform API
+    -- Set rotation around Y axis (pitch = 0, yaw = currentAngle, roll = 0)
+    setRotation(__nodeHandle, {x = 0, y = vars.currentAngle, z = 0})
 end
 )";
 
