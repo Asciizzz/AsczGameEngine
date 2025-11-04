@@ -96,6 +96,7 @@ private:
     bool showEditorSettingsWindow = false;
     bool showInspectorWindow = true;
     bool showAnimationEditor = true;
+    bool showScriptEditor = false;
     
     // UI Selection State - unified selection system
     SelectHandle selectedHandle;        // What is currently selected for inspection
@@ -110,6 +111,9 @@ private:
     tinyHandle selectedAnimationNode;   // Persistent selection for animation editor (stays highlighted)
     tinyHandle selectedAnimationHandle; // Currently selected animation in the component list
     int selectedChannelIndex = -1;      // Currently selected channel in the timeline
+    
+    // Script Editor State
+    tinyHandle selectedScriptHandle;    // Currently selected script file for editing
     
     // UI state: track expanded nodes in the hierarchy and file explorer
     std::unordered_set<tinyHandle> expandedNodes;
@@ -140,6 +144,7 @@ private:
     void renderFileSystemInspector();
     void renderSceneNodeInspector();  // Renamed from renderNodeInspector
     void renderAnimationEditorWindow(); // Animation timeline editor
+    void renderScriptEditorWindow(); // Lua script editor
     void renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove);
 
     bool renderHandleField(const char* fieldId, tinyHandle& handle, const char* targetType, const char* dragTooltip, const char* description = nullptr);

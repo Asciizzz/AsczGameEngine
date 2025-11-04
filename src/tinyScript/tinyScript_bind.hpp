@@ -1,7 +1,6 @@
 #pragma once
 
 #include "tinyData/tinyRT_Scene.hpp"
-#include "tinyExt/tinyHandle.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>

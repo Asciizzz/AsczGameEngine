@@ -236,6 +236,11 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
     imguiWrapper->addWindow("Animation Editor", [this]() {
         renderAnimationEditorWindow();
     }, &showAnimationEditor);
+    
+    // Script Editor Window
+    imguiWrapper->addWindow("Script Editor", [this]() {
+        renderScriptEditorWindow();
+    }, &showScriptEditor);
 }
 
 void tinyApp::renderInspectorWindow() {
@@ -1313,7 +1318,31 @@ void tinyApp::renderFileSystemInspector() {
         std::string fileType = "Unknown";
         typeHandle tHandle = selectedFNode->tHandle;
 
-        if (tHandle.isType<tinySceneRT>()) {
+        if (tHandle.isType<tinyScript>()) {
+            fileType = "Script";
+            ImGui::Text("Type: %s", fileType.c_str());
+
+            // Extended data
+            const tinyScript* script = fs.registry().get<tinyScript>(tHandle);
+            if (script) {
+                ImGui::Text("Valid: %s", script->valid() ? "Yes" : "No");
+                ImGui::Text("Version: %u", script->version());
+                
+                ImGui::Spacing();
+                
+                // Open Script Editor button
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.6f, 0.8f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.7f, 0.9f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.5f, 0.7f, 1.0f));
+                
+                if (ImGui::Button("Open Script Editor", ImVec2(-1, 30))) {
+                    selectedScriptHandle = tHandle.handle;
+                    showScriptEditor = true;
+                }
+                
+                ImGui::PopStyleColor(3);
+            }
+        } else if (tHandle.isType<tinySceneRT>()) {
             fileType = "Scene";
             ImGui::Text("Type: %s", fileType.c_str());
 
@@ -2795,4 +2824,127 @@ void tinyApp::renderAnimationEditorWindow() {
     }
     
     ImGui::EndChild();
+}
+
+void tinyApp::renderScriptEditorWindow() {
+    tinyFS& fs = project->fs();
+    
+    // Check if we have a valid script selected
+    if (!selectedScriptHandle.valid()) {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No script selected");
+        ImGui::Text("Select a script file from the file explorer to edit it.");
+        return;
+    }
+    
+    // Get the script from registry
+    tinyScript* script = fs.rGet<tinyScript>(selectedScriptHandle);
+    if (!script) {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid script handle");
+        ImGui::Text("The selected script no longer exists.");
+        selectedScriptHandle = tinyHandle();
+        return;
+    }
+    
+    // ===== HEADER =====
+    ImGui::Text("Editing Script: %s", script->name.c_str());
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Script status
+    ImGui::Text("Status:");
+    ImGui::SameLine();
+    if (script->valid()) {
+        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Compiled");
+        ImGui::SameLine();
+        ImGui::Text("(Version: %u)", script->version());
+    } else {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Not Compiled");
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // ===== LUA CODE EDITOR =====
+    ImGui::Text("Lua Code:");
+    
+    // Static buffer to hold the code during editing
+    // Using a large buffer for script code
+    static char codeBuffer[8192];
+    static tinyHandle lastSelectedScript;
+    
+    // Initialize buffer if we switched to a different script
+    if (lastSelectedScript != selectedScriptHandle) {
+        strncpy_s(codeBuffer, script->code.c_str(), sizeof(codeBuffer) - 1);
+        codeBuffer[sizeof(codeBuffer) - 1] = '\0';
+        lastSelectedScript = selectedScriptHandle;
+    }
+    
+    // Multi-line text editor with scrolling
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f);
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+    
+    // Code editor takes most of the space, leaving room for the compile button
+    float editorHeight = ImGui::GetContentRegionAvail().y - 50;
+    
+    ImGui::InputTextMultiline("##ScriptCode", codeBuffer, sizeof(codeBuffer), 
+        ImVec2(-1, editorHeight), 
+        ImGuiInputTextFlags_AllowTabInput);
+    
+    // Update the script code if modified
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        script->code = std::string(codeBuffer);
+    }
+    
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(2);
+    
+    ImGui::Spacing();
+    
+    // ===== COMPILE BUTTON =====
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.8f, 0.4f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.6f, 0.2f, 1.0f));
+    
+    if (ImGui::Button("Compile Script", ImVec2(-1, 35))) {
+        // Update script code from buffer before compiling
+        script->code = std::string(codeBuffer);
+        
+        // Compile the script
+        bool success = script->compile();
+        
+        if (success) {
+            ImGui::OpenPopup("CompileSuccess");
+        } else {
+            ImGui::OpenPopup("CompileFailed");
+        }
+    }
+    
+    ImGui::PopStyleColor(3);
+    
+    // Success popup
+    if (ImGui::BeginPopupModal("CompileSuccess", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Script compiled successfully!");
+        ImGui::Text("Version: %u", script->version());
+        ImGui::Spacing();
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    
+    // Failure popup
+    if (ImGui::BeginPopupModal("CompileFailed", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Script compilation failed!");
+        ImGui::Text("Check the console for error details.");
+        ImGui::Spacing();
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
 }
