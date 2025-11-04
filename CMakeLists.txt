@@ -28,8 +28,7 @@ endif()
 file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyCamera.cpp
 
-    src/tinyScript/tinyScript_core.cpp
-    src/tinyScript/tinyScript_update.cpp
+    src/tinyScript/tinyScript.cpp
     src/tinyScript/tinyScript_bind.cpp
 
     src/tinyData/tinySharedRes.cpp
