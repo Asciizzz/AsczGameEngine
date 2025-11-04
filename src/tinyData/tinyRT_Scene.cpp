@@ -319,7 +319,7 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     if (rtMESHRD) rtMESHRD->vkUpdate(curFrame_);
 
     tinyRT_SCRIPT* rtSCRIPT = rtComp<tinyNodeRT::SCRIPT>(realHandle);
-    if (rtSCRIPT) rtSCRIPT->haveFun(this, realHandle, curDTime_);
+    if (rtSCRIPT) rtSCRIPT->update(this, realHandle, curDTime_);
 
     glm::mat4 transformMat = parentGlobalTransform * localMat;
     if (transform) transform->global = transformMat;

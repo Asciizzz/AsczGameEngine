@@ -152,9 +152,11 @@ public:
         NComp comps;
 
         comps.trfm3D = rtComp<tinyNodeRT::TRFM3D>(nodeHandle);
+        comps.bone3D = rtComp<tinyNodeRT::BONE3D>(nodeHandle);
         comps.meshRD = rtComp<tinyNodeRT::MESHRD>(nodeHandle);
         comps.skel3D = rtComp<tinyNodeRT::SKEL3D>(nodeHandle);
         comps.anim3D = rtComp<tinyNodeRT::ANIM3D>(nodeHandle);
+        comps.script = rtComp<tinyNodeRT::SCRIPT>(nodeHandle);
 
         return comps;
     }
@@ -367,8 +369,7 @@ private:
 
     tinyRT_SCRIPT* addSCRIPT_RT(tinyNodeRT::SCRIPT* compPtr) {
         tinyRT_SCRIPT rtScript;
-
-        // For now nothing to do
+        rtScript.init(&sharedRes_.fsView<tinyScript>());
 
         compPtr->pHandle = rtAdd<tinyRT_SCRIPT>(std::move(rtScript));
 

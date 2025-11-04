@@ -284,6 +284,10 @@ void tinyProject::setupFS() {
     askl->typeExt = tinyFS::TypeExt("askl", 0.4f, 1.0f, 1.0f);
     askl->safeDelete = true; // Skeletons are just data, safe to delete
 
+    tinyFS::TypeInfo* ascr = fs_->typeInfo<tinyScript>();
+    ascr->typeExt = tinyFS::TypeExt("ascr", 0.8f, 0.8f, 0.2f);
+    ascr->safeDelete = true; // Scripts are just data, safe to delete
+
     // ------------------- Special "files" -------------------
 
     // Resources that lives in the registry but not registered (pun intended)

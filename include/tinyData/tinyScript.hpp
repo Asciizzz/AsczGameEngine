@@ -1,6 +1,10 @@
 #pragma once
 
 #include <string>
+#include <cstdint>
+#include <unordered_map>
+#include <variant>
+#include <glm/glm.hpp>
 
 extern "C" {
     #include "lua.h"
@@ -8,6 +12,34 @@ extern "C" {
     #include "lauxlib.h"
 }
 
+using tinyVar = std::variant<float, int, bool, glm::vec3, std::string>;
+
+// Static script definition - shared across all instances
 struct tinyScript {
-    // ...
+    std::string name;
+    std::string code;
+
+    tinyScript() = default;
+    tinyScript(const std::string& scriptName) : name(scriptName) {}
+    ~tinyScript();
+    
+    tinyScript(const tinyScript&) = delete;
+    tinyScript& operator=(const tinyScript&) = delete;
+
+    tinyScript(tinyScript&& other) noexcept;
+    tinyScript& operator=(tinyScript&& other) noexcept;
+
+    bool compile();
+
+    void initRtVars(std::unordered_map<std::string, tinyVar>& vars) const;
+
+    bool call(const char* functionName, lua_State* runtimeL = nullptr);
+
+    bool valid() const { return compiled_ && L_ != nullptr; }
+    uint32_t version() const { return version_; }
+
+private:
+    uint32_t version_ = 0;
+    lua_State* L_ = nullptr;
+    bool compiled_ = false;
 };
