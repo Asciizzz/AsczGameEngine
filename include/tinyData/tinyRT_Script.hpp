@@ -23,20 +23,14 @@ struct Script {
     
     Script(Script&&) noexcept = default;
     Script& operator=(Script&&) noexcept = default;
-    
-    // Initialize with script pool (mimics tinyRT_SKEL3D pattern)
+
     void init(const tinyPool<tinyScript>* scriptPool);
-    
-    // Assign a script and initialize runtime variables
-    void assign(tinyHandle scriptHandle);
-    
-    // Check validity (script assigned and version matches)
     bool valid() const;
-    
-    // Update/execute script
+
+    void assign(tinyHandle scriptHandle);
+
     void update(Scene* scene, tinyHandle nodeHandle, float dTime);
-    
-    // Getters (mimics tinyRT_SKEL3D pattern)
+
     tinyHandle scriptHandle() const { return scriptHandle_; }
     const tinyScript* rScript() const {
         return scriptPool_ ? scriptPool_->get(scriptHandle_) : nullptr;
@@ -45,9 +39,9 @@ struct Script {
     
     // ========== Runtime Variable Access ==========
     // Type-safe variable access - returns nullptr if not found or type mismatch
-    
+
     template<typename T>
-    T* var(const std::string& key) {
+    T* vGet(const std::string& key) {
         auto it = vars_.find(key);
         if (it != vars_.end() && std::holds_alternative<T>(it->second)) {
             return &std::get<T>(it->second);
@@ -56,20 +50,24 @@ struct Script {
     }
     
     template<typename T>
-    const T* var(const std::string& key) const {
+    const T* vGet(const std::string& key) const {
         return const_cast<Script*>(this)->var<T>(key);
     }
 
-    template<typename T>
-    T* set(const std::string& key, const T& value) {
+    template<typename T> // Builder pattern
+    Script& vSet(const std::string& key, const T& value) {
         vars_[key] = value;
-        return &std::get<T>(vars_[key]);
+        return *this;
+    }
+
+    bool vHas(const std::string& key) const {
+        return vars_.find(key) != vars_.end();
     }
 
 private:
     tinyHandle scriptHandle_;
     const tinyPool<tinyScript>* scriptPool_ = nullptr;
-    uint32_t cachedVersion_ = 0;  // Cache script version for validity check
+    uint32_t cachedVersion_ = 0;
 
     std::unordered_map<std::string, tinyVar> vars_;
 

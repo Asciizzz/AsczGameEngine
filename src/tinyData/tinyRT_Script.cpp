@@ -29,29 +29,23 @@ void Script::assign(tinyHandle scriptHandle) {
 bool Script::valid() const {
     const tinyScript* script = rScript();
     if (!script || !script->valid()) return false;
-    
-    // Check if script version matches cached version
+
     return script->version() == cachedVersion_;
 }
 
 void Script::checkAndReload() {
     const tinyScript* script = rScript();
-    if (!script) return;
-    
-    // Check if script version has changed
-    if (script->version() != cachedVersion_) {
-        // Update cached version
-        cachedVersion_ = script->version();
-        // Reinitialize runtime variables
-        script->initRtVars(vars_);
-    }
+    if (!script || script->version() == cachedVersion_) return;
+
+    cachedVersion_ = script->version();
+    script->initRtVars(vars_);
 }
 
 void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
     if (!hasScript()) return;
-    
+
     checkAndReload();
-    
+
     if (!valid()) {
         std::cerr << "[tinyRT_SCRIPT] Cannot update: Script is invalid" << std::endl;
         return;
