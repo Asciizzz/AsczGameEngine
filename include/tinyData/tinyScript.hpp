@@ -32,9 +32,9 @@ struct tinyScript {
 
     bool compile();
 
-    void initRtVars(std::unordered_map<std::string, tinyVar>& vars) const;
+    void initRtVars(tinyVarsMap& vars) const;
 
-    void update(std::unordered_map<std::string, tinyVar>& vars, void* scene, tinyHandle nodeHandle, float dTime) const;
+    void update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, float dTime) const;
     bool call(const char* functionName, lua_State* runtimeL = nullptr) const;
 
     bool valid() const noexcept { return compiled_ && L_ != nullptr; }

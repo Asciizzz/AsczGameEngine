@@ -14,6 +14,7 @@ extern "C" {
 }
 
 using tinyVar = std::variant<float, int, bool, glm::vec3, std::string>;
+using tinyVarsMap = std::unordered_map<std::string, tinyVar>;
 
 // Static script definition - shared across all instances
 struct tinyScript {
@@ -32,9 +33,9 @@ struct tinyScript {
 
     bool compile();
 
-    void initRtVars(std::unordered_map<std::string, tinyVar>& vars) const;
+    void initRtVars(tinyVarsMap& vars) const;
 
-    void update(std::unordered_map<std::string, tinyVar>& vars, void* scene, tinyHandle nodeHandle, float dTime) const;
+    void update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, float dTime) const;
 
     bool call(const char* functionName, lua_State* runtimeL = nullptr) const;
 

@@ -1151,34 +1151,67 @@ void tinyApp::renderSceneNodeInspector() {
                 
                 ImGui::PopStyleColor(3);
                 
-                // Display script variables
+                // Display script variables dynamically from the var map
                 if (scriptRT->valid()) {
                     ImGui::Spacing();
                     ImGui::Separator();
-                    ImGui::Text("Variables:");
-                    ImGui::Spacing();
                     
-                    // Display float variables
-                    if (float* rotSpeed = scriptRT->vGet<float>("rotationSpeed")) {
-                        ImGui::DragFloat("Rotation Speed", rotSpeed, 0.1f);
-                    }
-                    if (float* angle = scriptRT->vGet<float>("currentAngle")) {
-                        ImGui::DragFloat("Current Angle", angle, 0.01f);
-                    }
+                    auto& varMap = scriptRT->vMap();
                     
-                    // Display vec3 variables
-                    if (glm::vec3* pos = scriptRT->vGet<glm::vec3>("position")) {
-                        ImGui::DragFloat3("Position", &pos->x, 0.1f);
-                    }
-                    
-                    // Display int variables
-                    if (int* count = scriptRT->vGet<int>("count")) {
-                        ImGui::DragInt("Count", count);
-                    }
-                    
-                    // Display bool variables
-                    if (bool* enabled = scriptRT->vGet<bool>("enabled")) {
-                        ImGui::Checkbox("Enabled", enabled);
+                    if (varMap.empty()) {
+                        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No variables defined");
+                    } else {
+                        ImGui::Text("Variables (%zu):", varMap.size());
+                        ImGui::Spacing();
+                        
+                        // Calculate the width for labels (left column) - find the longest key name
+                        float maxLabelWidth = 0.0f;
+                        for (const auto& [key, value] : varMap) {
+                            float labelWidth = ImGui::CalcTextSize(key.c_str()).x;
+                            if (labelWidth > maxLabelWidth) maxLabelWidth = labelWidth;
+                        }
+                        maxLabelWidth += 10.0f; // Add some padding
+                        
+                        // Iterate through all variables and display them with appropriate widgets
+                        for (auto& [key, value] : varMap) {
+                            ImGui::PushID(key.c_str());
+                            
+                            // Display key (label) on the left
+                            ImGui::Text("%s:", key.c_str());
+                            ImGui::SameLine(maxLabelWidth);
+                            
+                            // Set the width for the input widget to fill remaining space
+                            float availableWidth = ImGui::GetContentRegionAvail().x;
+                            ImGui::SetNextItemWidth(availableWidth);
+                            
+                            std::visit([&](auto&& val) {
+                                using T = std::decay_t<decltype(val)>;
+                                
+                                if constexpr (std::is_same_v<T, float>) {
+                                    ImGui::DragFloat("##value", &val, 0.01f);
+                                }
+                                else if constexpr (std::is_same_v<T, int>) {
+                                    ImGui::DragInt("##value", &val);
+                                }
+                                else if constexpr (std::is_same_v<T, bool>) {
+                                    ImGui::Checkbox("##value", &val);
+                                }
+                                else if constexpr (std::is_same_v<T, glm::vec3>) {
+                                    ImGui::DragFloat3("##value", &val.x, 0.01f);
+                                }
+                                else if constexpr (std::is_same_v<T, std::string>) {
+                                    // For strings, use a text input
+                                    char buffer[256];
+                                    strncpy(buffer, val.c_str(), sizeof(buffer) - 1);
+                                    buffer[sizeof(buffer) - 1] = '\0';
+                                    if (ImGui::InputText("##value", buffer, sizeof(buffer))) {
+                                        val = std::string(buffer);
+                                    }
+                                }
+                            }, value);
+                            
+                            ImGui::PopID();
+                        }
                     }
                 } else {
                     ImGui::Spacing();

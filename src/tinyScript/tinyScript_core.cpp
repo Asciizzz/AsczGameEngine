@@ -104,7 +104,7 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
     return true;
 }
 
-void tinyScript::initRtVars(std::unordered_map<std::string, tinyVar>& vars) const {
+void tinyScript::initRtVars(tinyVarsMap& vars) const {
     if (!valid()) return;
     
     // Check if script has an "initVars" function

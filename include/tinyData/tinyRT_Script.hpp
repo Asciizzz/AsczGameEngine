@@ -53,6 +53,9 @@ struct Script {
         return const_cast<Script*>(this)->var<T>(key);
     }
 
+    tinyVarsMap& vMap() { return vars_; }
+    const tinyVarsMap& vMap() const { return vars_; }
+
     template<typename T> // Builder pattern
     Script& vSet(const std::string& key, const T& value) {
         vars_[key] = value;
@@ -68,7 +71,7 @@ private:
     const tinyPool<tinyScript>* scriptPool_ = nullptr;
     uint32_t cachedVersion_ = 0;
 
-    std::unordered_map<std::string, tinyVar> vars_;
+    tinyVarsMap vars_;
 
     void checkAndReload();
 };

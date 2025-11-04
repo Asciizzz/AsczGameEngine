@@ -2,7 +2,7 @@
 #include "tinyScript_bind.hpp"
 #include <iostream>
 
-void tinyScript::update(std::unordered_map<std::string, tinyVar>& vars, void* scene, tinyHandle nodeHandle, float dTime) const {
+void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, float dTime) const {
     if (!valid()) return;
 
     // ========== Push runtime variables into Lua global table "vars" ==========
