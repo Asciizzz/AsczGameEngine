@@ -63,6 +63,9 @@ bool tinyScript::compile() {
     // Load standard libraries
     luaL_openlibs(L_);
     
+    // Register metatables and API bindings (only once during compilation)
+    registerNodeBindings(L_);
+    
     // Compile the code
     if (luaL_loadstring(L_, code.c_str()) != LUA_OK) {
         error_ = std::string("Compilation error: ") + lua_tostring(L_, -1);
@@ -178,6 +181,13 @@ void tinyScript::cacheDefaultVars() {
                 }
                 
                 lua_pop(L_, 3);  // Pop x, y, z
+            } else if (lua_islightuserdata(L_, -1)) {
+                // Handle as lightuserdata (packed uint64_t)
+                uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L_, -1));
+                tinyHandle handle;
+                handle.index = static_cast<uint32_t>(packed >> 32);
+                handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+                defaultVars_[key] = handle;
             }
         }
         
@@ -223,6 +233,12 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
                 lua_pushstring(L_, val.c_str());
                 lua_setfield(L_, -2, key.c_str());
             }
+            else if constexpr (std::is_same_v<T, tinyHandle>) {
+                // Push handle as lightuserdata (packed uint64_t)
+                uint64_t packed = (static_cast<uint64_t>(val.index) << 32) | val.version;
+                lua_pushlightuserdata(L_, reinterpret_cast<void*>(packed));
+                lua_setfield(L_, -2, key.c_str());
+            }
         }, value);
     }
     
@@ -233,16 +249,17 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
     lua_pushnumber(L_, dTime);
     lua_setglobal(L_, "dTime");
     
-    // Push scene pointer (as light userdata)
+    // Push scene as a Scene userdata object
+    pushScene(L_, static_cast<tinyRT::Scene*>(scene));
+    lua_setglobal(L_, "scene");
+    
+    // Keep legacy __scene for compatibility
     lua_pushlightuserdata(L_, scene);
     lua_setglobal(L_, "__scene");
     
     // Push node as a Node userdata object
     pushNode(L_, nodeHandle);
     lua_setglobal(L_, "node");
-
-    // ========== Expose native functions to Lua ==========
-    registerNodeBindings(L_);
 
     // ========== Call the update function ==========
     call("update");
@@ -302,86 +319,36 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
 void tinyScript::init() {
     if (name.empty()) name = "Script";
 
-code = R"(-- Character Controller Script (haveFun style)
--- This script handles both movement AND animation
--- Apply to BOTH root node (for movement) and animation node (for animation)
--- Each node will have its own 'moveSpeed' variable
+code = R"(-- External Node Spinner Test
+-- Demonstrates OOP API and external node manipulation
+-- Drag a node handle into the "targetNode" field in the inspector
 
 function vars()
     return {
-        moveSpeed = 1.0,  -- Walk speed = 1.0, Run speed = 4.0
-        idleAnim = "Idle",
-        walkAnim = "Walking_A",
-        runAnim = "Running_A"
+        targetNode = Handle(0xFFFFFFFF, 0xFFFFFFFF),  -- Invalid handle by default
+        spinSpeed = 1.0                                -- Rotations per second
     }
 end
 
 function update()
-    -- ========== INPUT DETECTION ==========
-    local k_up = kState("up")
-    local k_down = kState("down")
-    local k_left = kState("left")
-    local k_right = kState("right")
-    local running = kState("shift")
+    -- Get the target node using scene:getNode()
+    local target = scene:getNode(vars.targetNode)
     
-    -- Calculate movement direction (arrow keys)
-    local vz = (k_up and 1 or 0) - (k_down and 1 or 0)
-    local vx = (k_left and -1 or 0) - (k_right and -1 or 0)  -- Inverted for proper direction
-    
-    local isMoving = (vx ~= 0) or (vz ~= 0)
-    vars.moveSpeed = (running and isMoving) and 4.0 or 1.0
-    
-    -- ========== MOVEMENT (for root node) ==========
-    if isMoving then
-        -- Get current position using OOP syntax
-        local pos = node:getPos()
-        if pos then
-            -- Calculate movement direction
-            local moveDir = {x = vx, y = 0, z = vz}
-            
-            -- Normalize diagonal movement (Pythagoras)
-            local length = math.sqrt(moveDir.x * moveDir.x + moveDir.z * moveDir.z)
-            if length > 0 then
-                moveDir.x = moveDir.x / length
-                moveDir.z = moveDir.z / length
-            end
-            
-            -- Calculate target yaw (rotation around Y axis)
-            local targetYaw = math.atan(moveDir.x, moveDir.z)  -- atan2 equivalent
-            
-            -- Apply movement
-            pos.x = pos.x + moveDir.x * vars.moveSpeed * dTime
-            pos.z = pos.z + moveDir.z * vars.moveSpeed * dTime
-            node:setPos(pos)
-            
-            -- Apply rotation
-            node:setRot({x = 0, y = targetYaw, z = 0})
-        end
-    end
-    
-    -- ========== ANIMATION (for animation node) ==========
-    -- Get animation handles by name using OOP syntax (configurable vars)
-    local idleHandle = node:getAnimHandle(vars.idleAnim)
-    local walkHandle = node:getAnimHandle(vars.walkAnim)
-    local runHandle = node:getAnimHandle(vars.runAnim)
-    local curHandle = node:getCurAnimHandle()
-    
-    -- Set animation speed
-    node:setAnimSpeed(isMoving and vars.moveSpeed or 1.0)
-    
-    if isMoving then
-        -- Choose run or walk animation
-        local playHandle = running and runHandle or walkHandle
+    if target then
+        -- Get current rotation (returns Euler angles in radians)
+        local rot = target:getRot()
         
-        -- Only restart when switching FROM idle TO walk/run
-        -- Don't restart when switching between walk and run
-        local shouldRestart = not (handleEqual(curHandle, runHandle) or 
-                                   handleEqual(curHandle, walkHandle))
-        node:playAnim(playHandle, shouldRestart)
-    else
-        -- Switch to idle, only restart if not already playing idle
-        local shouldRestart = not handleEqual(curHandle, idleHandle)
-        node:playAnim(idleHandle, shouldRestart)
+        -- Spin around Y axis (radians per second)
+        -- 1 rotation per second = 2*pi radians/sec = ~6.28 rad/s
+        rot.y = rot.y + (vars.spinSpeed * 6.28318 * dTime)
+        
+        -- Wrap to 0-2π range (optional)
+        if rot.y > 6.28318 then
+            rot.y = rot.y - 6.28318
+        end
+        
+        -- Apply rotation
+        target:setRot(rot)
     end
 end
 )";

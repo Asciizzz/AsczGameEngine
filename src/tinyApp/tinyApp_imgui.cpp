@@ -1213,6 +1213,45 @@ void tinyApp::renderSceneNodeInspector() {
                                         val = std::string(buffer);
                                     }
                                 }
+                                else if constexpr (std::is_same_v<T, tinyHandle>) {
+                                    // Handle as a draggable node reference
+                                    // Display current handle or node name
+                                    std::string displayText;
+                                    if (val.valid()) {
+                                        // Try to get node name from scene
+                                        auto node = activeScene->node(val);
+                                        if (node) {
+                                            displayText = node->name + " (" + std::to_string(val.index) + ", " + std::to_string(val.version) + ")";
+                                        } else {
+                                            displayText = "Invalid Handle";
+                                        }
+                                    } else {
+                                        displayText = "(Drop Node Here)";
+                                    }
+                                    
+                                    // Make it look like a drop target
+                                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
+                                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.4f, 1.0f));
+                                    ImGui::Button(displayText.c_str(), ImVec2(availableWidth, 0));
+                                    ImGui::PopStyleColor(2);
+                                    
+                                    // Accept drag-drop from scene hierarchy
+                                    if (ImGui::BeginDragDropTarget()) {
+                                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
+                                            tinyHandle draggedNode = *(const tinyHandle*)payload->Data;
+                                            val = draggedNode;
+                                        }
+                                        ImGui::EndDragDropTarget();
+                                    }
+                                    
+                                    // Right-click to clear
+                                    if (ImGui::BeginPopupContextItem()) {
+                                        if (ImGui::MenuItem("Clear")) {
+                                            val = tinyHandle();  // Invalid handle
+                                        }
+                                        ImGui::EndPopup();
+                                    }
+                                }
                             }, value);
                             
                             ImGui::PopID();

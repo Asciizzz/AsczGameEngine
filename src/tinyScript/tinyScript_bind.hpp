@@ -53,6 +53,76 @@ static inline void pushNode(lua_State* L, tinyHandle handle) {
     lua_setmetatable(L, -2);
 }
 
+// Helper to get Scene pointer from Scene userdata
+static inline tinyRT::Scene** getSceneFromUserdata(lua_State* L, int index) {
+    return static_cast<tinyRT::Scene**>(luaL_checkudata(L, index, "Scene"));
+}
+
+// Helper to push Scene userdata
+static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
+    tinyRT::Scene** ud = static_cast<tinyRT::Scene**>(lua_newuserdata(L, sizeof(tinyRT::Scene*)));
+    *ud = scene;
+    
+    luaL_getmetatable(L, "Scene");
+    lua_setmetatable(L, -2);
+}
+
+// ========== Scene Methods ==========
+
+// Scene:getNode(handle) - Get a Node object from a handle
+// The handle can be a table {index, version} or a lightuserdata (packed uint64)
+// Returns nil if handle is invalid
+static inline int scene_getNode(lua_State* L) {
+    tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
+    if (!scenePtr || !*scenePtr) {
+        return luaL_error(L, "Scene:getNode - invalid scene");
+    }
+    
+    tinyHandle handle;
+    
+    // Handle can be a table {index, version} or lightuserdata
+    if (lua_istable(L, 2)) {
+        lua_getfield(L, 2, "index");
+        lua_getfield(L, 2, "version");
+        handle.index = lua_tointeger(L, -2);
+        handle.version = lua_tointeger(L, -1);
+        lua_pop(L, 2);
+    } else if (lua_islightuserdata(L, 2)) {
+        uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
+        handle.index = static_cast<uint32_t>(packed >> 32);
+        handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+    } else {
+        return luaL_error(L, "Scene:getNode expects a handle (table or lightuserdata)");
+    }
+    
+    // Validate handle - return nil if invalid
+    if (!handle.valid() || !(*scenePtr)->node(handle)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    pushNode(L, handle);
+    return 1;
+}
+
+// ========== Handle Constructor ==========
+
+// Global function: Handle(index, version) - Create a handle for use in vars()
+// Usage in Lua: targetNode = Handle(42, 1)
+// Returns lightuserdata that can be stored in vars and later used with scene:getNode()
+static inline int lua_Handle(lua_State* L) {
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2)) {
+        return luaL_error(L, "Handle(index, version) expects two integers");
+    }
+    
+    uint32_t index = static_cast<uint32_t>(lua_tointeger(L, 1));
+    uint32_t version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    
+    uint64_t packed = (static_cast<uint64_t>(index) << 32) | version;
+    lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+    return 1;
+}
+
 // Key name to SDL_Scancode mapping
 static inline SDL_Scancode getScancodeFromName(const std::string& keyName) {
     // Create a static map for case-insensitive key name lookup
@@ -463,6 +533,123 @@ static inline int node_isAnimPlaying(lua_State* L) {
     return 1;
 }
 
+// ========== Node Variable Access Methods ==========
+
+// Node:getVar(name) - Get a script variable from this node's script component
+// Returns the variable value or nil if not found
+static inline int node_getVar(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_isstring(L, 2)) {
+        return luaL_error(L, "Node:getVar expects (varName: string)");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    const char* varName = lua_tostring(L, 2);
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.script && comps.script->vHas(varName)) {
+        const tinyVar& var = comps.script->vMap().at(varName);
+        
+        // Convert tinyVar to Lua value
+        std::visit([L](auto&& val) {
+            using T = std::decay_t<decltype(val)>;
+            
+            if constexpr (std::is_same_v<T, float>) {
+                lua_pushnumber(L, val);
+            }
+            else if constexpr (std::is_same_v<T, int>) {
+                lua_pushinteger(L, val);
+            }
+            else if constexpr (std::is_same_v<T, bool>) {
+                lua_pushboolean(L, val);
+            }
+            else if constexpr (std::is_same_v<T, glm::vec3>) {
+                lua_newtable(L);
+                lua_pushnumber(L, val.x);
+                lua_setfield(L, -2, "x");
+                lua_pushnumber(L, val.y);
+                lua_setfield(L, -2, "y");
+                lua_pushnumber(L, val.z);
+                lua_setfield(L, -2, "z");
+            }
+            else if constexpr (std::is_same_v<T, std::string>) {
+                lua_pushstring(L, val.c_str());
+            }
+            else if constexpr (std::is_same_v<T, tinyHandle>) {
+                uint64_t packed = (static_cast<uint64_t>(val.index) << 32) | val.version;
+                lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+            }
+        }, var);
+        
+        return 1;
+    }
+    
+    lua_pushnil(L);
+    return 1;
+}
+
+// Node:setVar(name, value) - Set a script variable on this node's script component
+static inline int node_setVar(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_isstring(L, 2)) {
+        return luaL_error(L, "Node:setVar expects (varName: string, value)");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    const char* varName = lua_tostring(L, 2);
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.script && comps.script->vHas(varName)) {
+        tinyVar& var = comps.script->vMap().at(varName);
+        
+        // Convert Lua value to tinyVar based on existing type
+        std::visit([L](auto&& val) {
+            using T = std::decay_t<decltype(val)>;
+            
+            if constexpr (std::is_same_v<T, float>) {
+                val = static_cast<float>(lua_tonumber(L, 3));
+            }
+            else if constexpr (std::is_same_v<T, int>) {
+                val = static_cast<int>(lua_tointeger(L, 3));
+            }
+            else if constexpr (std::is_same_v<T, bool>) {
+                val = static_cast<bool>(lua_toboolean(L, 3));
+            }
+            else if constexpr (std::is_same_v<T, glm::vec3>) {
+                if (lua_istable(L, 3)) {
+                    lua_getfield(L, 3, "x");
+                    lua_getfield(L, 3, "y");
+                    lua_getfield(L, 3, "z");
+                    val.x = static_cast<float>(lua_tonumber(L, -3));
+                    val.y = static_cast<float>(lua_tonumber(L, -2));
+                    val.z = static_cast<float>(lua_tonumber(L, -1));
+                    lua_pop(L, 3);
+                }
+            }
+            else if constexpr (std::is_same_v<T, std::string>) {
+                val = std::string(lua_tostring(L, 3));
+            }
+            else if constexpr (std::is_same_v<T, tinyHandle>) {
+                if (lua_islightuserdata(L, 3)) {
+                    uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 3));
+                    val.index = static_cast<uint32_t>(packed >> 32);
+                    val.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+                }
+            }
+        }, var);
+    }
+    
+    return 0;
+}
+
 // ========== Generic Handle Comparison ==========
 
 // Global function: handleEqual(h1, h2) - Compare any handles (lightuserdata)
@@ -533,6 +720,13 @@ static inline void registerNodeBindings(lua_State* L) {
     lua_pushcfunction(L, node_isAnimPlaying);
     lua_setfield(L, -2, "isAnimPlaying");
     
+    // Variable access methods
+    lua_pushcfunction(L, node_getVar);
+    lua_setfield(L, -2, "getVar");
+    
+    lua_pushcfunction(L, node_setVar);
+    lua_setfield(L, -2, "setVar");
+    
     // Set methods table as __index
     lua_setfield(L, -2, "__index");
     
@@ -565,11 +759,36 @@ static inline void registerNodeBindings(lua_State* L) {
     // Pop metatable
     lua_pop(L, 1);
     
+    // Create Scene metatable
+    luaL_newmetatable(L, "Scene");
+    
+    // Create methods table for __index
+    lua_newtable(L);
+    
+    lua_pushcfunction(L, scene_getNode);
+    lua_setfield(L, -2, "getNode");
+    
+    // Set methods table as __index
+    lua_setfield(L, -2, "__index");
+    
+    // Add __tostring for debugging
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        lua_pushstring(L, "Scene");
+        return 1;
+    });
+    lua_setfield(L, -2, "__tostring");
+    
+    // Pop metatable
+    lua_pop(L, 1);
+    
     // Input API (global)
     lua_pushcfunction(L, lua_kState);
     lua_setglobal(L, "kState");
     
     // Handle utilities (global)
+    lua_pushcfunction(L, lua_Handle);
+    lua_setglobal(L, "Handle");
+    
     lua_pushcfunction(L, lua_handleEqual);
     lua_setglobal(L, "handleEqual");
     

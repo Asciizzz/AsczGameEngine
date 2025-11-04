@@ -13,7 +13,7 @@ extern "C" {
     #include "lauxlib.h"
 }
 
-using tinyVar = std::variant<float, int, bool, glm::vec3, std::string>;
+using tinyVar = std::variant<float, int, bool, glm::vec3, std::string, tinyHandle>;
 using tinyVarsMap = std::map<std::string, tinyVar>; // Using ordered map for consistent display order
 
 // Static script definition - shared across all instances
