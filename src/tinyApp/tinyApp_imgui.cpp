@@ -1115,8 +1115,76 @@ void tinyApp::renderSceneNodeInspector() {
 
     if (selectedNode->has<tinyNodeRT::SCRIPT>()) {
         renderComponent("Script", ImVec4(0.4f, 0.4f, 0.4f, 0.8f), ImVec4(0.8f, 0.8f, 0.8f, 0.6f), true, [&]() {
-            ImGui::Text("Real implementation soon, for now we executing random b*llsh*t lmao");
-            ImGui::Spacing();
+            tinyRT::Script* scriptRT = activeScene->rtComp<tinyNodeRT::SCRIPT>(selectedSceneNodeHandle);
+            if (scriptRT) {
+                // Display script file handle
+                ImGui::Text("Script File:");
+                ImGui::SameLine();
+                
+                // Custom drag-drop target for script assignment
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.25f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.35f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.15f, 0.2f, 1.0f));
+                
+                std::string scriptName = "None";
+                tinyHandle scriptFileHandle = scriptRT->scriptHandle();
+                if (scriptFileHandle.valid()) {
+                    auto* fileNode = fs.fNode(scriptFileHandle);
+                    if (fileNode) {
+                        scriptName = fileNode->name;
+                    }
+                }
+                
+                ImGui::Button(scriptName.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0));
+                
+                // Accept drag-drop of script files
+                if (ImGui::BeginDragDropTarget()) {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+                        tinyHandle droppedHandle = *(tinyHandle*)payload->Data;
+
+                        // Retrieve the actual data handle (not the file node handle)
+                        typeHandle scripthandle = fs.fTypeHandle(droppedHandle);
+                        scriptRT->assign(scripthandle.handle);
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+                
+                ImGui::PopStyleColor(3);
+                
+                // Display script variables
+                if (scriptRT->valid()) {
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::Text("Variables:");
+                    ImGui::Spacing();
+                    
+                    // Display float variables
+                    if (float* rotSpeed = scriptRT->vGet<float>("rotationSpeed")) {
+                        ImGui::DragFloat("Rotation Speed", rotSpeed, 0.1f);
+                    }
+                    if (float* angle = scriptRT->vGet<float>("currentAngle")) {
+                        ImGui::DragFloat("Current Angle", angle, 0.01f);
+                    }
+                    
+                    // Display vec3 variables
+                    if (glm::vec3* pos = scriptRT->vGet<glm::vec3>("position")) {
+                        ImGui::DragFloat3("Position", &pos->x, 0.1f);
+                    }
+                    
+                    // Display int variables
+                    if (int* count = scriptRT->vGet<int>("count")) {
+                        ImGui::DragInt("Count", count);
+                    }
+                    
+                    // Display bool variables
+                    if (bool* enabled = scriptRT->vGet<bool>("enabled")) {
+                        ImGui::Checkbox("Enabled", enabled);
+                    }
+                } else {
+                    ImGui::Spacing();
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.2f, 1.0f), "Script not assigned or invalid");
+                }
+            }
         },
         [&]() { activeScene->removeComp<tinyNodeRT::SCRIPT>(selectedSceneNodeHandle); });
     } else {
@@ -1966,6 +2034,16 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
                 tinyHandle fileHandle = fs.addFile(nodeHandle, "New Scene", std::move(newScene));
                 selectFileNode(fileHandle);
                 // Expand parent chain to show the new scene
+                expandFNodeParentChain(fileHandle);
+            }
+
+            if (ImGui::MenuItem("Add Script")) {
+                tinyScript newScript;
+                newScript.test(); // Generate demo spinning script
+
+                tinyHandle fileHandle = fs.addFile(nodeHandle, "New Script", std::move(newScript));
+                selectFileNode(fileHandle);
+                // Expand parent chain to show the new script
                 expandFNodeParentChain(fileHandle);
             }
 

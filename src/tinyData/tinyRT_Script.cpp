@@ -18,7 +18,7 @@ void Script::assign(tinyHandle scriptHandle) {
     cachedVersion_ = 0;
     scriptHandle_ = scriptHandle;
 
-    tinyScript* script = const_cast<tinyScript*>(rScript());
+    const tinyScript* script = rScript();
     if (!script) return;
 
     cachedVersion_ = script->version();
@@ -51,7 +51,7 @@ void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
         return;
     }
     
-    tinyScript* script = const_cast<tinyScript*>(rScript());
+    const tinyScript* script = rScript();
     if (!script) return;
 
     // Just pass everything to the script and let it handle Lua

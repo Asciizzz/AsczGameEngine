@@ -16,15 +16,14 @@ struct Scene;
 // Per-instance runtime script data container
 struct Script {
     Script() noexcept = default;
-    ~Script() = default;
-    
+    void init(const tinyPool<tinyScript>* scriptPool);
+
     Script(const Script&) = delete;
     Script& operator=(const Script&) = delete;
     
     Script(Script&&) noexcept = default;
     Script& operator=(Script&&) noexcept = default;
 
-    void init(const tinyPool<tinyScript>* scriptPool);
     bool valid() const;
 
     void assign(tinyHandle scriptHandle);

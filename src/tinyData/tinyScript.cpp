@@ -30,6 +30,7 @@ tinyScript& tinyScript::operator=(tinyScript&& other) noexcept {
         version_ = other.version_;
         L_ = other.L_;
         compiled_ = other.compiled_;
+
         other.L_ = nullptr;
         other.compiled_ = false;
     }
@@ -82,7 +83,7 @@ bool tinyScript::compile() {
     return true;
 }
 
-bool tinyScript::call(const char* functionName, lua_State* runtimeL) {
+bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
     if (!valid()) return false;
     
     lua_State* targetL = runtimeL ? runtimeL : L_;
@@ -176,7 +177,7 @@ void tinyScript::initRtVars(std::unordered_map<std::string, tinyVar>& vars) cons
     lua_pop(L_, 1);  // Pop the table
 }
 
-void tinyScript::update(std::unordered_map<std::string, tinyVar>& vars, void* scene, tinyHandle nodeHandle, float dTime) {
+void tinyScript::update(std::unordered_map<std::string, tinyVar>& vars, void* scene, tinyHandle nodeHandle, float dTime) const {
     if (!valid()) return;
 
     // ========== Push runtime variables into Lua global table "vars" ==========
@@ -297,10 +298,13 @@ void tinyScript::test() {
 -- Test Script: Spin Around Y Axis
 -- This script demonstrates basic node rotation
 
--- Initialize variables (these will be synced with C++)
-vars = vars or {}
-vars.rotationSpeed = vars.rotationSpeed or 1.0  -- Radians per second
-vars.currentAngle = vars.currentAngle or 0.0
+-- Initialize variables with default values
+function initVars()
+    return {
+        rotationSpeed = 1.0,  -- Radians per second
+        currentAngle = 0.0    -- Current rotation angle
+    }
+end
 
 function update()
     -- Update the rotation angle based on delta time
