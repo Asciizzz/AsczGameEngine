@@ -282,8 +282,8 @@ void tinyApp::mainLoop() {
         project->updateGlobal(rendererRef.getCurrentFrame());
 
         uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
-        getActiveScene()->setFrame(currentFrameIndex);
-        getActiveScene()->setDTime(dTime);
+
+        getActiveScene()->setFStart({ currentFrameIndex, dTime });
         getActiveScene()->update();
 
         uint32_t imageIndex = rendererRef.beginFrame();

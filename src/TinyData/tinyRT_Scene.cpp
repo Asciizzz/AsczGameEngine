@@ -296,6 +296,9 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     tinyNodeRT::TRFM3D* transform = rtComp<tinyNodeRT::TRFM3D>(realHandle);
     glm::mat4 localMat = transform ? transform->local : glm::mat4(1.0f);
 
+    uint32_t curFrame_ = fStart_.frame;
+    float curDTime_ = fStart_.dTime;
+
     // Update update local transform with bone attachment if applicable
     tinyNodeRT::BONE3D* rtBONE3D = rtComp<tinyNodeRT::BONE3D>(realHandle);
     glm::mat4 boneMat = glm::mat4(1.0f);

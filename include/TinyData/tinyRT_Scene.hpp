@@ -214,11 +214,6 @@ public:
 
     // --------- Specific component's data access ---------
 
-    VkDescriptorSet nSkeleDescSet(tinyHandle nodeHandle) const {
-        const tinyRT_SKEL3D* rtSkele = rtComp<tinyNodeRT::SKEL3D>(nodeHandle);
-        return rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
-    }
-
     template<typename T>
     const UnorderedMap<tinyHandle, tinyHandle>& mapRTRFM3D() const {
         if constexpr (type_eq<T, tinyNodeRT::MESHRD>)      return mapMESHR_;
@@ -239,18 +234,24 @@ public:
         }
     }
 
-    void setFrame(uint32_t frame) { curFrame_ = frame; }
-    void setDTime(float dTime) { curDTime_ = dTime; }
+    // -------------- Frame management --------------
+
+    struct FStart {
+        uint32_t frame;
+        float dTime;
+    };
+
+    void setFStart(const FStart& fs) { fStart_ = fs; }
     void update();
 
 private:
+    FStart fStart_;
+
     tinySharedRes sharedRes_; // Shared resources and requirements
     tinyPool<tinyNodeRT> nodes_;
     tinyRegistry rtRegistry_; // Runtime registry for this scene
 
     tinyHandle rootHandle_;
-    uint32_t curFrame_ = 0;
-    float curDTime_ = 0.0f;
 
     // ---------- Internal helpers ---------
 

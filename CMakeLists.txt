@@ -29,8 +29,6 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyCamera.cpp
 
     src/tinyScript/tinyScript.cpp
-    src/tinyScript/tinyScript_bind.cpp
-
     src/tinyData/tinySharedRes.cpp
     src/tinyData/tinyRT_MeshRender3D.cpp
     src/tinyData/tinyRT_Skeleton3D.cpp
