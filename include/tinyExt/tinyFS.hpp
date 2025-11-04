@@ -557,6 +557,7 @@ private:
         // Folder or safe type or instant delete
         if (node->isFolder() || safeDelete(node->typeIndex())) {
             fRemoveTrue(handle, typeHandle());
+            printf("Remove: %s\n", node->typeIndex().name());
             return true;
         // Unsafe type queue for removal
         } else {

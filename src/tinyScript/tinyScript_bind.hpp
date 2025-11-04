@@ -6,6 +6,8 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
+#include <SDL2/SDL.h>
+
 extern "C" {
     #include "lua.h"
 }
@@ -29,6 +31,110 @@ static inline tinyHandle getNodeHandleFromTable(lua_State* L, int tableIndex) {
     lua_pop(L, 2);
     
     return handle;
+}
+
+// Key name to SDL_Scancode mapping
+static inline SDL_Scancode getScancodeFromName(const std::string& keyName) {
+    // Create a static map for case-insensitive key name lookup
+    static std::unordered_map<std::string, SDL_Scancode> keyMap;
+    
+    // Initialize the map on first call
+    if (keyMap.empty()) {
+        // Letters
+        keyMap["a"] = SDL_SCANCODE_A; keyMap["b"] = SDL_SCANCODE_B; keyMap["c"] = SDL_SCANCODE_C;
+        keyMap["d"] = SDL_SCANCODE_D; keyMap["e"] = SDL_SCANCODE_E; keyMap["f"] = SDL_SCANCODE_F;
+        keyMap["g"] = SDL_SCANCODE_G; keyMap["h"] = SDL_SCANCODE_H; keyMap["i"] = SDL_SCANCODE_I;
+        keyMap["j"] = SDL_SCANCODE_J; keyMap["k"] = SDL_SCANCODE_K; keyMap["l"] = SDL_SCANCODE_L;
+        keyMap["m"] = SDL_SCANCODE_M; keyMap["n"] = SDL_SCANCODE_N; keyMap["o"] = SDL_SCANCODE_O;
+        keyMap["p"] = SDL_SCANCODE_P; keyMap["q"] = SDL_SCANCODE_Q; keyMap["r"] = SDL_SCANCODE_R;
+        keyMap["s"] = SDL_SCANCODE_S; keyMap["t"] = SDL_SCANCODE_T; keyMap["u"] = SDL_SCANCODE_U;
+        keyMap["v"] = SDL_SCANCODE_V; keyMap["w"] = SDL_SCANCODE_W; keyMap["x"] = SDL_SCANCODE_X;
+        keyMap["y"] = SDL_SCANCODE_Y; keyMap["z"] = SDL_SCANCODE_Z;
+        
+        // Numbers
+        keyMap["0"] = SDL_SCANCODE_0; keyMap["1"] = SDL_SCANCODE_1; keyMap["2"] = SDL_SCANCODE_2;
+        keyMap["3"] = SDL_SCANCODE_3; keyMap["4"] = SDL_SCANCODE_4; keyMap["5"] = SDL_SCANCODE_5;
+        keyMap["6"] = SDL_SCANCODE_6; keyMap["7"] = SDL_SCANCODE_7; keyMap["8"] = SDL_SCANCODE_8;
+        keyMap["9"] = SDL_SCANCODE_9;
+        
+        // Arrow keys
+        keyMap["up"] = SDL_SCANCODE_UP;
+        keyMap["down"] = SDL_SCANCODE_DOWN;
+        keyMap["left"] = SDL_SCANCODE_LEFT;
+        keyMap["right"] = SDL_SCANCODE_RIGHT;
+        
+        // Modifiers
+        keyMap["shift"] = SDL_SCANCODE_LSHIFT;
+        keyMap["lshift"] = SDL_SCANCODE_LSHIFT;
+        keyMap["rshift"] = SDL_SCANCODE_RSHIFT;
+        keyMap["ctrl"] = SDL_SCANCODE_LCTRL;
+        keyMap["lctrl"] = SDL_SCANCODE_LCTRL;
+        keyMap["rctrl"] = SDL_SCANCODE_RCTRL;
+        keyMap["alt"] = SDL_SCANCODE_LALT;
+        keyMap["lalt"] = SDL_SCANCODE_LALT;
+        keyMap["ralt"] = SDL_SCANCODE_RALT;
+        
+        // Function keys
+        keyMap["f1"] = SDL_SCANCODE_F1; keyMap["f2"] = SDL_SCANCODE_F2;
+        keyMap["f3"] = SDL_SCANCODE_F3; keyMap["f4"] = SDL_SCANCODE_F4;
+        keyMap["f5"] = SDL_SCANCODE_F5; keyMap["f6"] = SDL_SCANCODE_F6;
+        keyMap["f7"] = SDL_SCANCODE_F7; keyMap["f8"] = SDL_SCANCODE_F8;
+        keyMap["f9"] = SDL_SCANCODE_F9; keyMap["f10"] = SDL_SCANCODE_F10;
+        keyMap["f11"] = SDL_SCANCODE_F11; keyMap["f12"] = SDL_SCANCODE_F12;
+        
+        // Special keys
+        keyMap["space"] = SDL_SCANCODE_SPACE;
+        keyMap["enter"] = SDL_SCANCODE_RETURN;
+        keyMap["return"] = SDL_SCANCODE_RETURN;
+        keyMap["escape"] = SDL_SCANCODE_ESCAPE;
+        keyMap["esc"] = SDL_SCANCODE_ESCAPE;
+        keyMap["tab"] = SDL_SCANCODE_TAB;
+        keyMap["backspace"] = SDL_SCANCODE_BACKSPACE;
+        keyMap["delete"] = SDL_SCANCODE_DELETE;
+        keyMap["insert"] = SDL_SCANCODE_INSERT;
+        keyMap["home"] = SDL_SCANCODE_HOME;
+        keyMap["end"] = SDL_SCANCODE_END;
+        keyMap["pageup"] = SDL_SCANCODE_PAGEUP;
+        keyMap["pagedown"] = SDL_SCANCODE_PAGEDOWN;
+    }
+    
+    auto it = keyMap.find(keyName);
+    if (it != keyMap.end()) {
+        return it->second;
+    }
+    
+    return SDL_SCANCODE_UNKNOWN;
+}
+
+// ========== Input API Functions ==========
+
+// Check if a key is currently pressed
+// Usage: kState("w") or kState("W") - automatically converts to lowercase
+static inline int lua_kState(lua_State* L) {
+    if (!lua_isstring(L, 1)) {
+        return luaL_error(L, "kState expects (keyName: string)");
+    }
+    
+    std::string keyName = lua_tostring(L, 1);
+    
+    // Always convert to lowercase for consistency
+    std::transform(keyName.begin(), keyName.end(), keyName.begin(), ::tolower);
+    
+    // Get the scancode for this key
+    SDL_Scancode scancode = getScancodeFromName(keyName);
+    
+    if (scancode == SDL_SCANCODE_UNKNOWN) {
+        // Key not found, return false
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    
+    // Get keyboard state from SDL
+    const Uint8* keyboardState = SDL_GetKeyboardState(nullptr);
+    bool isPressed = keyboardState[scancode] != 0;
+    
+    lua_pushboolean(L, isPressed);
+    return 1;
 }
 
 // ========== Transform API Functions ==========
@@ -200,6 +306,11 @@ static inline int lua_rotate(lua_State* L) {
 // ========== Registration Function ==========
 
 static inline void registerNodeBindings(lua_State* L) {
+    // Input API
+    lua_pushcfunction(L, lua_kState);
+    lua_setglobal(L, "kState");
+    
+    // Transform API
     lua_pushcfunction(L, lua_getPosition);
     lua_setglobal(L, "getPosition");
     

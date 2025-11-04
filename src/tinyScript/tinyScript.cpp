@@ -113,18 +113,16 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
 void tinyScript::initRtVars(tinyVarsMap& vars) const {
     if (!valid()) return;
     
-    // Check if script has an "initVars" function
-    lua_getglobal(L_, "initVars");
+    // Check if script has an "vars" function
+    lua_getglobal(L_, "vars");
     
     if (!lua_isfunction(L_, -1)) {
         lua_pop(L_, 1);
-        // No initVars function - script doesn't define initial vars
         return;
     }
-    
-    // Call initVars() which should return a table of variable definitions
+
     if (lua_pcall(L_, 0, 1, 0) != LUA_OK) {
-        std::cerr   << "[tinyScript] Error calling initVars in " << name << ": " 
+        std::cerr   << "[tinyScript] Error calling vars in " << name << ": " 
                     << lua_tostring(L_, -1) << std::endl;
         lua_pop(L_, 1);
         return;
@@ -303,14 +301,15 @@ void tinyScript::test() {
 
     // Create a simple spinning script that rotates a node around the Y axis
     code = R"(
--- Test Script: Spin Around Y Axis
--- This script demonstrates basic node rotation
+-- Test Script: Spin Around Y Axis + Key Press Display
+-- This script demonstrates basic node rotation and keyboard input
 
 -- Initialize variables with default values
-function initVars()
+function vars()
     return {
         rotationSpeed = 0.0,  -- Radians per second (about 115 degrees/sec)
-        currentAngle = 0.0    -- Current rotation angle
+        currentAngle = 0.0,   -- Current rotation angle
+        keyPressed = ""       -- String to display which key is pressed
     }
 end
 
@@ -327,6 +326,39 @@ function update()
     -- Apply rotation using general-purpose transform API
     -- Set rotation around Y axis (pitch = 0, yaw = currentAngle, roll = 0)
     setRotation(__nodeHandle, {x = 0, y = vars.currentAngle, z = 0})
+    
+    -- Check for key presses and update the keyPressed variable
+    vars.keyPressed = ""
+    
+    if kState("w") then
+        vars.keyPressed = vars.keyPressed .. "W "
+    end
+    
+    if kState("a") then
+        vars.keyPressed = vars.keyPressed .. "A "
+    end
+    
+    if kState("s") then
+        vars.keyPressed = vars.keyPressed .. "S "
+    end
+    
+    if kState("d") then
+        vars.keyPressed = vars.keyPressed .. "D "
+    end
+    
+    -- Check for other keys
+    if kState("shift") then
+        vars.keyPressed = vars.keyPressed .. "SHIFT "
+    end
+    
+    if kState("space") then
+        vars.keyPressed = vars.keyPressed .. "SPACE "
+    end
+    
+    -- Remove trailing space and set to "None" if empty
+    if vars.keyPressed == "" then
+        vars.keyPressed = "None"
+    end
 end
 )";
 

@@ -88,6 +88,19 @@ private:
     UniquePtr<tinyVk::PipelineManager> pipelineManager;
 
     UniquePtr<tinyProject> project; // New gigachad system
+
+    // Window metadata
+    const char* appTitle;
+    uint32_t appWidth;
+    uint32_t appHeight;
+
+    // Functions that actually do things
+    void initComponents();
+    void mainLoop();
+    void cleanup();
+
+// Everything below is hell reincarnate
+
     UniquePtr<tinyImGui> imguiWrapper; // ImGui integration
 
     // ImGui UI state
@@ -96,7 +109,7 @@ private:
     bool showEditorSettingsWindow = false;
     bool showInspectorWindow = true;
     bool showAnimationEditor = true;
-    bool showScriptEditor = false;
+    bool showScriptEditor = true;
     
     // UI Selection State - unified selection system
     SelectHandle selectedHandle;        // What is currently selected for inspection
@@ -124,19 +137,6 @@ private:
     
     // Active scene state (moved from tinyProject for better separation)
     tinyHandle activeSceneHandle; // Handle to the active scene in registry
-
-    // Window metadata
-    const char* appTitle;
-    uint32_t appWidth;
-    uint32_t appHeight;
-
-    // Functions that actually do things
-    void initComponents();
-    void mainLoop();
-    void cleanup();
-
-// Everything below is hell reincarnate
-
 
     void setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& camera, bool mouseLocked, float deltaTime);
 

@@ -231,16 +231,16 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
         ImGui::TextDisabled("• Performance options");
         ImGui::TextDisabled("• Keybind customization");
     }, &showEditorSettingsWindow);
-    
+
     // Animation Editor Window
     imguiWrapper->addWindow("Animation Editor", [this]() {
         renderAnimationEditorWindow();
-    }, &showAnimationEditor);
-    
+    });
+
     // Script Editor Window
     imguiWrapper->addWindow("Script Editor", [this]() {
         renderScriptEditorWindow();
-    }, &showScriptEditor);
+    });
 }
 
 void tinyApp::renderInspectorWindow() {
@@ -1328,19 +1328,8 @@ void tinyApp::renderFileSystemInspector() {
                 ImGui::Text("Valid: %s", script->valid() ? "Yes" : "No");
                 ImGui::Text("Version: %u", script->version());
                 
-                ImGui::Spacing();
-                
-                // Open Script Editor button
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.6f, 0.8f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.7f, 0.9f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.5f, 0.7f, 1.0f));
-                
-                if (ImGui::Button("Open Script Editor", ImVec2(-1, 30))) {
-                    selectedScriptHandle = tHandle.handle;
-                    showScriptEditor = true;
-                }
-                
-                ImGui::PopStyleColor(3);
+                // Automatically select this script for the script editor (persistent selection)
+                selectedScriptHandle = tHandle.handle;
             }
         } else if (tHandle.isType<tinySceneRT>()) {
             fileType = "Scene";
