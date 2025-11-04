@@ -16,10 +16,19 @@ void Script::assign(tinyHandle scriptHandle) {
     scriptHandle_ = scriptHandle;
 
     const tinyScript* script = rScript();
-    if (!script) return;
+    if (!script) {
+        printf("[tinyRT_SCRIPT] Assigned invalid script handle\n");
+        return;
+    }
 
     cachedVersion_ = script->version();
     script->initRtVars(vars_);
+    printf("[tinyRT_SCRIPT] Assigned script '%s' (version %u)\n", script->name.c_str(), cachedVersion_);
+
+    // print the variables initialized
+    for (const auto& [key, value] : vars_) {
+        printf("[tinyRT_SCRIPT] Initialized var '%s'\n", key.c_str());
+    }
 }
 
 bool Script::valid() const {

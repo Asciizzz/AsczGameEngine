@@ -3,11 +3,6 @@
 #include "tinyScript/tinyScript.hpp"
 #include "tinyExt/tinyPool.hpp"
 
-#include <unordered_map>
-#include <string>
-#include <variant>
-#include <glm/glm.hpp>
-
 namespace tinyRT {
 
 struct Scene;
@@ -71,8 +66,6 @@ private:
     uint32_t cachedVersion_ = 0;
 
     tinyVarsMap vars_;
-
-    void checkAndReload();
 };
 
 } // namespace tinyRT

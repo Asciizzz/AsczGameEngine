@@ -95,11 +95,8 @@ bool Scene::reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle) {
         if (!node) return false;
         
         for (const tinyHandle& childHandle : node->childrenHandles) {
-            if (childHandle == newParentHandle) {
-                return true; // Found cycle
-            }
-            if (isDescendant(childHandle)) {
-                return true; // Found cycle in descendant
+            if (childHandle == newParentHandle || isDescendant(childHandle)) {
+                return true; // Found cycle or is descendant
             }
         }
         return false;
@@ -232,9 +229,7 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
             *toTransform = *fromTransform;
         }
 
-        if (fromNode->has<tinyNodeRT::MESHRD>()) {
-            // const auto* fromMeshRender = fromNode->get<tinyNodeRT::MESHRD>();
-            const auto* fromMeshRender = from->rtComp<tinyNodeRT::MESHRD>(fromHandle);
+        if (const auto* fromMeshRender = from->rtComp<tinyNodeRT::MESHRD>(fromHandle)) {
             auto* toMeshRender = writeComp<tinyNodeRT::MESHRD>(toHandle);
 
             toMeshRender->setMesh(fromMeshRender->meshHandle());
@@ -245,8 +240,7 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
             }
         }
 
-        if (fromNode->has<tinyNodeRT::BONE3D>()) {
-            const auto* fromBoneAttach = fromNode->get<tinyNodeRT::BONE3D>();
+        if (const auto* fromBoneAttach = fromNode->get<tinyNodeRT::BONE3D>()) {
             auto* toBoneAttach = writeComp<tinyNodeRT::BONE3D>(toHandle);
 
             if (toHandleMap.find(fromBoneAttach->skeleNodeHandle.index) != toHandleMap.end()) {
@@ -256,15 +250,14 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
             toBoneAttach->boneIndex = fromBoneAttach->boneIndex;
         }
 
-        if (fromNode->has<tinyNodeRT::SKEL3D>()) {
+        if (const auto* fromSkeleRT = from->rtComp<tinyNodeRT::SKEL3D>(fromHandle)) {
             auto* toSkeleRT = writeComp<tinyNodeRT::SKEL3D>(toHandle);
-            const auto* fromSkeleRT = from->rtComp<tinyNodeRT::SKEL3D>(fromHandle);
             toSkeleRT->copy(fromSkeleRT);
         }
 
-        if (fromNode->has<tinyNodeRT::ANIM3D>()) {
+        if (const auto* fromAnimeRT = from->rtComp<tinyNodeRT::ANIM3D>(fromHandle)) {
             auto* toAnimeRT = writeComp<tinyNodeRT::ANIM3D>(toHandle);
-            const auto* fromAnimeRT = from->rtComp<tinyNodeRT::ANIM3D>(fromHandle);
+            
 
             *toAnimeRT = *fromAnimeRT;
 
@@ -278,6 +271,12 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
                     }
                 }
             }
+        }
+
+        if (const auto* fromScriptRT = from->rtComp<tinyNodeRT::SCRIPT>(fromHandle)) {
+            auto* toScriptRT = writeComp<tinyNodeRT::SCRIPT>(toHandle);
+
+            toScriptRT->assign(fromScriptRT->scriptHandle());
         }
     }
 }

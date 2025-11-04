@@ -111,8 +111,8 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
 }
 
 void tinyScript::initRtVars(tinyVarsMap& vars) const {
-    vars.clear();
-
+    vars.clear(); // Clear existing variables first
+    
     if (!valid()) return;
 
     // Check if script has an "vars" function
@@ -185,8 +185,12 @@ void tinyScript::initRtVars(tinyVarsMap& vars) const {
 void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, float dTime) const {
     if (!valid()) return;
 
-    // ========== Push runtime variables into Lua global table "vars" ==========
-    lua_newtable(L_);  // Create vars table
+    // ========== Save the original 'vars' function before overwriting ==========
+    lua_getglobal(L_, "vars");  // Get the vars function
+    int varsRef = luaL_ref(L_, LUA_REGISTRYINDEX);  // Save it in the registry
+
+    // ========== Push runtime variables into Lua global table "vars" (runtime data, not the function) ==========
+    lua_newtable(L_);  // Create vars runtime data table
     
     for (const auto& [key, value] : vars) {
         std::visit([&](auto&& val) {
@@ -296,13 +300,17 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
         }
     }
     lua_pop(L_, 1);  // Pop vars table
+    
+    // ========== Restore the original 'vars' function ==========
+    lua_rawgeti(L_, LUA_REGISTRYINDEX, varsRef);  // Retrieve the saved function
+    lua_setglobal(L_, "vars");  // Restore it as global
+    luaL_unref(L_, LUA_REGISTRYINDEX, varsRef);  // Free the reference
 }
 
 void tinyScript::test() {
     if (name.empty()) name = "Demo Script";
 
-    code = R"(
--- Demo Script: 
+    code = R"(-- Demo Script: 
 
 -- Initialize variables with values
 function vars()
