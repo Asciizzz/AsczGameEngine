@@ -276,7 +276,7 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
         if (const auto* fromScriptRT = from->rtComp<tinyNodeRT::SCRIPT>(fromHandle)) {
             auto* toScriptRT = writeComp<tinyNodeRT::SCRIPT>(toHandle);
 
-            toScriptRT->assign(fromScriptRT->scriptHandle());
+            *toScriptRT = *fromScriptRT; // Allow copy
         }
     }
 }

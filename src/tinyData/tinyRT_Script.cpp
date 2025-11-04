@@ -16,19 +16,10 @@ void Script::assign(tinyHandle scriptHandle) {
     scriptHandle_ = scriptHandle;
 
     const tinyScript* script = rScript();
-    if (!script) {
-        printf("[tinyRT_SCRIPT] Assigned invalid script handle\n");
-        return;
-    }
+    if (!script) return;
 
     cachedVersion_ = script->version();
-    script->initRtVars(vars_);
-    printf("[tinyRT_SCRIPT] Assigned script '%s' (version %u)\n", script->name.c_str(), cachedVersion_);
-
-    // print the variables initialized
-    for (const auto& [key, value] : vars_) {
-        printf("[tinyRT_SCRIPT] Initialized var '%s'\n", key.c_str());
-    }
+    vars_ = script->defaultVars();
 }
 
 bool Script::valid() const {
@@ -45,7 +36,7 @@ void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
     // Check for version change
     if (script->version() != cachedVersion_) {
         cachedVersion_ = script->version();
-        script->initRtVars(vars_);
+        vars_ = script->defaultVars();
     } else {
         script->update(vars_, scene, nodeHandle, dTime);
     }

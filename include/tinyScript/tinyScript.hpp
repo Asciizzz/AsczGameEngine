@@ -33,8 +33,6 @@ struct tinyScript {
 
     bool compile();
 
-    void initRtVars(tinyVarsMap& vars) const;
-
     void update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, float dTime) const;
 
     bool call(const char* functionName, lua_State* runtimeL = nullptr) const;
@@ -43,13 +41,20 @@ struct tinyScript {
     uint32_t version() const { return version_; }
     const std::string& error() const { return error_; }
 
+    // For making copies
+    const tinyVarsMap& defaultVars() const { return defaultVars_; }
+
     void test(); // Generate a demo spinning script
 
 private:
+    std::string error_; // Cached error messages
+
     uint32_t version_ = 0;
     lua_State* L_ = nullptr;
     bool compiled_ = false;
-    std::string error_;
+
+    tinyVarsMap defaultVars_; // Cached default variables from vars() function
 
     void closeLua();
+    void cacheDefaultVars(); // Extract and cache default variables after compilation
 };

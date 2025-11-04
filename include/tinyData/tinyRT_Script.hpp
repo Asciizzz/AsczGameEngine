@@ -12,8 +12,9 @@ struct Script {
     Script() noexcept = default;
     void init(const tinyPool<tinyScript>* scriptPool);
 
-    Script(const Script&) = delete;
-    Script& operator=(const Script&) = delete;
+    // Script are allowed to be copyable
+    Script(const Script&) = default;
+    Script& operator=(const Script&) = default;
     
     Script(Script&&) noexcept = default;
     Script& operator=(Script&&) noexcept = default;

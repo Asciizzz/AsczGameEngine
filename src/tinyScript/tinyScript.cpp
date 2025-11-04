@@ -11,6 +11,8 @@ void tinyScript::closeLua() {
     if (L_) {
         lua_close(L_);
         L_ = nullptr;
+        compiled_ = false;
+        defaultVars_.clear();
     }
 }
 
@@ -19,7 +21,9 @@ tinyScript::tinyScript(tinyScript&& other) noexcept
     , code(std::move(other.code))
     , version_(other.version_)
     , L_(other.L_)
-    , compiled_(other.compiled_) {
+    , compiled_(other.compiled_)
+    , error_(std::move(other.error_))
+    , defaultVars_(std::move(other.defaultVars_)) {
     other.L_ = nullptr;
     other.compiled_ = false;
 }
@@ -32,6 +36,8 @@ tinyScript& tinyScript::operator=(tinyScript&& other) noexcept {
         version_ = other.version_;
         L_ = other.L_;
         compiled_ = other.compiled_;
+        error_ = std::move(other.error_);
+        defaultVars_ = std::move(other.defaultVars_);
 
         other.L_ = nullptr;
         other.compiled_ = false;
@@ -83,6 +89,9 @@ bool tinyScript::compile() {
     version_++;
     compiled_ = true;
 
+    // Cache default variables from vars() function
+    cacheDefaultVars();
+
     return true;
 }
 
@@ -110,12 +119,12 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
     return true;
 }
 
-void tinyScript::initRtVars(tinyVarsMap& vars) const {
-    vars.clear(); // Clear existing variables first
+void tinyScript::cacheDefaultVars() {
+    defaultVars_.clear(); // Clear previous cache
     
     if (!valid()) return;
 
-    // Check if script has an "vars" function
+    // Check if script has a "vars" function
     lua_getglobal(L_, "vars");
     
     if (!lua_isfunction(L_, -1)) {
@@ -124,8 +133,8 @@ void tinyScript::initRtVars(tinyVarsMap& vars) const {
     }
 
     if (lua_pcall(L_, 0, 1, 0) != LUA_OK) {
-        std::cerr   << "[tinyScript] Error calling vars in " << name << ": " 
-                    << lua_tostring(L_, -1) << std::endl;
+        std::cerr << "[tinyScript] Error calling vars in " << name << ": " 
+                  << lua_tostring(L_, -1) << std::endl;
         lua_pop(L_, 1);
         return;
     }
@@ -146,14 +155,14 @@ void tinyScript::initRtVars(tinyVarsMap& vars) const {
             // Determine type and default value
             if (lua_isinteger(L_, -1)) {
                 // Lua 5.3+ has explicit integer type
-                vars[key] = static_cast<int>(lua_tointeger(L_, -1));
+                defaultVars_[key] = static_cast<int>(lua_tointeger(L_, -1));
             } else if (lua_isnumber(L_, -1)) {
                 // All other numbers are treated as floats
-                vars[key] = static_cast<float>(lua_tonumber(L_, -1));
+                defaultVars_[key] = static_cast<float>(lua_tonumber(L_, -1));
             } else if (lua_isboolean(L_, -1)) {
-                vars[key] = static_cast<bool>(lua_toboolean(L_, -1));
+                defaultVars_[key] = static_cast<bool>(lua_toboolean(L_, -1));
             } else if (lua_isstring(L_, -1)) {
-                vars[key] = std::string(lua_tostring(L_, -1));
+                defaultVars_[key] = std::string(lua_tostring(L_, -1));
             } else if (lua_istable(L_, -1)) {
                 // Check if it's a vec3 (table with x, y, z)
                 lua_getfield(L_, -1, "x");
@@ -165,7 +174,7 @@ void tinyScript::initRtVars(tinyVarsMap& vars) const {
                     vec.z = static_cast<float>(lua_tonumber(L_, -1));
                     vec.y = static_cast<float>(lua_tonumber(L_, -2));
                     vec.x = static_cast<float>(lua_tonumber(L_, -3));
-                    vars[key] = vec;
+                    defaultVars_[key] = vec;
                 }
                 
                 lua_pop(L_, 3);  // Pop x, y, z
@@ -174,23 +183,15 @@ void tinyScript::initRtVars(tinyVarsMap& vars) const {
         
         lua_pop(L_, 1);  // Pop value, keep key for next iteration
     }
-    
+
     lua_pop(L_, 1);  // Pop the table
 }
-
-
-
-
 
 void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, float dTime) const {
     if (!valid()) return;
 
-    // ========== Save the original 'vars' function before overwriting ==========
-    lua_getglobal(L_, "vars");  // Get the vars function
-    int varsRef = luaL_ref(L_, LUA_REGISTRYINDEX);  // Save it in the registry
-
-    // ========== Push runtime variables into Lua global table "vars" (runtime data, not the function) ==========
-    lua_newtable(L_);  // Create vars runtime data table
+    // ========== Push runtime variables into Lua global table "vars" ==========
+    lua_newtable(L_);  // Create vars table
     
     for (const auto& [key, value] : vars) {
         std::visit([&](auto&& val) {
@@ -300,11 +301,6 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
         }
     }
     lua_pop(L_, 1);  // Pop vars table
-    
-    // ========== Restore the original 'vars' function ==========
-    lua_rawgeti(L_, LUA_REGISTRYINDEX, varsRef);  // Retrieve the saved function
-    lua_setglobal(L_, "vars");  // Restore it as global
-    luaL_unref(L_, LUA_REGISTRYINDEX, varsRef);  // Free the reference
 }
 
 void tinyScript::test() {
