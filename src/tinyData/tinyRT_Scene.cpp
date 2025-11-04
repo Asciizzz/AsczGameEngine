@@ -299,21 +299,16 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     uint32_t curFrame_ = fStart_.frame;
     float curDTime_ = fStart_.dTime;
 
-    // Update update local transform with bone attachment if applicable
+    // Update update local transform with bone attachment if available
     tinyNodeRT::BONE3D* rtBONE3D = rtComp<tinyNodeRT::BONE3D>(realHandle);
-    glm::mat4 boneMat = glm::mat4(1.0f);
     if (rtBONE3D) {
         tinyHandle skeleNodeHandle = rtBONE3D->skeleNodeHandle;
         tinyRT_SKEL3D* skeleRT = rtComp<tinyNodeRT::SKEL3D>(skeleNodeHandle);
         if (skeleRT) localMat = skeleRT->finalPose(rtBONE3D->boneIndex) * localMat;
     }
 
-    // Update skeleton component
     tinyRT_SKEL3D* rtSKELE3D = rtComp<tinyNodeRT::SKEL3D>(realHandle);
-    if (rtSKELE3D) {
-        rtSKELE3D->update(0);
-        rtSKELE3D->vkUpdate(curFrame_);
-    }
+    if (rtSKELE3D) { rtSKELE3D->update(0); rtSKELE3D->vkUpdate(curFrame_); }
 
     tinyRT_ANIM3D* rtANIM3D = rtComp<tinyNodeRT::ANIM3D>(realHandle);
     if (rtANIM3D) rtANIM3D->update(this, curDTime_);
