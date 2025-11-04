@@ -306,67 +306,83 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
 void tinyScript::init() {
     if (name.empty()) name = "Script";
 
-code = R"(-- Demo Script: 
+code = R"(-- Character Controller Script (haveFun style)
+-- This script handles both movement AND animation
+-- Apply to BOTH root node (for movement) and animation node (for animation)
+-- Each node will have its own 'moveSpeed' variable
 
--- Initialize variables with values
 function vars()
     return {
-        a = 0.0,
-        b = 0.0,
-        str = ""
+        moveSpeed = 1.0  -- Walk speed = 1.0, Run speed = 4.0
     }
 end
 
--- Your own function
-function foo(a, b, d)
-    -- Simple arithmetic operation 
-    b = b + (a * d)
-
-    -- DANGER! Without <local> result becomes a global variable, polluting the script 
-    -- result = b + (a * d)
-
-    -- Return (Gotta be honest if you have no idea how return works please just gtfo my engine)
-    return b
-end
-
 function update()
-
-    -- Function call
-    vars.b = foo(vars.a, vars.b, dTime)
-
-    -- Local variables ([!] Do not forget "local" keyword)
-    local TWO_PI = 6.28318530718
-
-    -- If else condition
-    if vars.b > TWO_PI then
-        vars.b = vars.b - TWO_PI
-    else
-        -- Do nothing
+    -- ========== INPUT DETECTION ==========
+    local k_up = kState("up")
+    local k_down = kState("down")
+    local k_left = kState("left")
+    local k_right = kState("right")
+    local running = kState("shift")
+    
+    -- Calculate movement direction (arrow keys)
+    local vz = (k_up and 1 or 0) - (k_down and 1 or 0)
+    local vx = (k_left and -1 or 0) - (k_right and -1 or 0)  -- Inverted for proper direction
+    
+    local isMoving = (vx ~= 0) or (vz ~= 0)
+    vars.moveSpeed = (running and isMoving) and 4.0 or 1.0
+    
+    -- ========== MOVEMENT (for root node) ==========
+    if isMoving then
+        -- Get current position
+        local pos = getPosition(__nodeHandle)
+        if pos then
+            -- Calculate movement direction
+            local moveDir = {x = vx, y = 0, z = vz}
+            
+            -- Normalize diagonal movement (Pythagoras)
+            local length = math.sqrt(moveDir.x * moveDir.x + moveDir.z * moveDir.z)
+            if length > 0 then
+                moveDir.x = moveDir.x / length
+                moveDir.z = moveDir.z / length
+            end
+            
+            -- Calculate target yaw (rotation around Y axis)
+            local targetYaw = math.atan(moveDir.x, moveDir.z)  -- atan2 equivalent
+            
+            -- Apply movement
+            pos.x = pos.x + moveDir.x * vars.moveSpeed * dTime
+            pos.z = pos.z + moveDir.z * vars.moveSpeed * dTime
+            setPosition(__nodeHandle, pos)
+            
+            -- Apply rotation
+            setRotation(__nodeHandle, {x = 0, y = targetYaw, z = 0})
+        end
     end
-
-    -- Call functions
-
-    setRotation(__nodeHandle, {x = 0, y = vars.b, z = 0})
-
-    -- String concatenation
-    vars.str = ""
-
-    -- Inline or indentation both work
-
-    if kState("w") then vars.str = vars.str .. "W " end
-
-    if kState("a") then vars.str = vars.str .. "A " end
-
-    if kState("s") then vars.str = vars.str .. "S " end
-
-    if kState("d") then vars.str = vars.str .. "D " end
-
-    if kState("shift") then vars.str = vars.str .. "SHIFT " end
-
-    if kState("space") then vars.str = vars.str .. "SPACE " end
-
-    if vars.str == "" then
-        vars.str = "None"
+    
+    -- ========== ANIMATION (for animation node) ==========
+    -- Get animation handles by name
+    local idleHandle = getAnimHandle(__nodeHandle, "Idle")
+    local walkHandle = getAnimHandle(__nodeHandle, "Walking_A")
+    local runHandle = getAnimHandle(__nodeHandle, "Running_A")
+    local curHandle = getCurAnimHandle(__nodeHandle)
+    
+    -- Set animation speed
+    setAnimSpeed(__nodeHandle, isMoving and vars.moveSpeed or 1.0)
+    
+    if isMoving then
+        -- Choose run or walk animation
+        local playHandle = running and runHandle or walkHandle
+        
+        -- Only restart when switching FROM idle TO walk/run
+        -- Don't restart when switching between walk and run
+        local shouldRestart = not (animHandlesEqual(curHandle, runHandle) or 
+                                   animHandlesEqual(curHandle, walkHandle))
+        playAnim(__nodeHandle, playHandle, shouldRestart)
+    else
+        -- Switch to idle, only restart if not already playing idle
+        local shouldRestart = not animHandlesEqual(curHandle, idleHandle)
+        playAnim(__nodeHandle, idleHandle, shouldRestart)
     end
 end
 )";

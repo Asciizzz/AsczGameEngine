@@ -303,6 +303,160 @@ static inline int lua_rotate(lua_State* L) {
     return 0;
 }
 
+// ========== Animation API Functions ==========
+
+// Get animation handle by name - returns {index, version} or nil if not found
+// Usage: local walkHandle = getAnimHandle(__nodeHandle, "Walking_A")
+static inline int lua_getAnimHandle(lua_State* L) {
+    if (!lua_istable(L, 1) || !lua_isstring(L, 2)) {
+        return luaL_error(L, "getAnimHandle expects (nodeHandle, animName: string)");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    tinyHandle handle = getNodeHandleFromTable(L, 1);
+    const char* animName = lua_tostring(L, 2);
+    
+    auto comps = scene->nComp(handle);
+    if (comps.anim3D) {
+        tinyHandle animHandle = comps.anim3D->getHandle(animName);
+        if (animHandle.valid()) {
+            lua_newtable(L);
+            lua_pushinteger(L, animHandle.index);
+            lua_setfield(L, -2, "index");
+            lua_pushinteger(L, animHandle.version);
+            lua_setfield(L, -2, "version");
+            return 1;
+        }
+    }
+    lua_pushnil(L);
+    return 1;
+}
+
+// Get current animation handle - returns {index, version} or nil
+// Usage: local curHandle = getCurAnimHandle(__nodeHandle)
+static inline int lua_getCurAnimHandle(lua_State* L) {
+    if (!lua_istable(L, 1)) {
+        return luaL_error(L, "getCurAnimHandle expects (nodeHandle)");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    tinyHandle handle = getNodeHandleFromTable(L, 1);
+    
+    auto comps = scene->nComp(handle);
+    if (comps.anim3D) {
+        tinyHandle animHandle = comps.anim3D->curHandle();
+        if (animHandle.valid()) {
+            lua_newtable(L);
+            lua_pushinteger(L, animHandle.index);
+            lua_setfield(L, -2, "index");
+            lua_pushinteger(L, animHandle.version);
+            lua_setfield(L, -2, "version");
+            return 1;
+        }
+    }
+    lua_pushnil(L);
+    return 1;
+}
+
+// Play animation by handle with optional restart
+// Usage: playAnim(__nodeHandle, walkHandle, true)
+static inline int lua_playAnim(lua_State* L) {
+    if (!lua_istable(L, 1)) {
+        return luaL_error(L, "playAnim expects (nodeHandle, animHandle, restart: bool = true)");
+    }
+    
+    // If animHandle is nil, just return (animation not found)
+    if (lua_isnil(L, 2)) {
+        return 0;
+    }
+    
+    if (!lua_istable(L, 2)) {
+        return luaL_error(L, "playAnim expects animHandle to be a table or nil");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    tinyHandle handle = getNodeHandleFromTable(L, 1);
+    tinyHandle animHandle = getNodeHandleFromTable(L, 2);
+    
+    bool restart = true;
+    if (lua_isboolean(L, 3)) {
+        restart = lua_toboolean(L, 3);
+    }
+    
+    auto comps = scene->nComp(handle);
+    if (comps.anim3D) {
+        comps.anim3D->play(animHandle, restart);
+    }
+    return 0;
+}
+
+// Set animation playback speed
+// Usage: setAnimSpeed(__nodeHandle, 2.0)
+static inline int lua_setAnimSpeed(lua_State* L) {
+    if (!lua_istable(L, 1) || !lua_isnumber(L, 2)) {
+        return luaL_error(L, "setAnimSpeed expects (nodeHandle, speed: number)");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    tinyHandle handle = getNodeHandleFromTable(L, 1);
+    float speed = static_cast<float>(lua_tonumber(L, 2));
+    
+    auto comps = scene->nComp(handle);
+    if (comps.anim3D) {
+        comps.anim3D->setSpeed(speed);
+    }
+    return 0;
+}
+
+// Check if animation is currently playing
+// Usage: if isAnimPlaying(__nodeHandle) then ... end
+static inline int lua_isAnimPlaying(lua_State* L) {
+    if (!lua_istable(L, 1)) {
+        return luaL_error(L, "isAnimPlaying expects (nodeHandle)");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    tinyHandle handle = getNodeHandleFromTable(L, 1);
+    
+    auto comps = scene->nComp(handle);
+    if (comps.anim3D) {
+        lua_pushboolean(L, comps.anim3D->isPlaying());
+        return 1;
+    }
+    lua_pushboolean(L, false);
+    return 1;
+}
+
+// Compare two handles for equality (handles nil values gracefully)
+// Usage: if animHandlesEqual(curHandle, walkHandle) then ... end
+static inline int lua_animHandlesEqual(lua_State* L) {
+    // If either parameter is nil, return false
+    if (lua_isnil(L, 1) || lua_isnil(L, 2)) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    
+    if (!lua_istable(L, 1) || !lua_istable(L, 2)) {
+        return luaL_error(L, "animHandlesEqual expects (handle1, handle2) or accepts nil");
+    }
+    
+    tinyHandle h1 = getNodeHandleFromTable(L, 1);
+    tinyHandle h2 = getNodeHandleFromTable(L, 2);
+    
+    lua_pushboolean(L, h1.index == h2.index && h1.version == h2.version);
+    return 1;
+}
+
 // ========== Registration Function ==========
 
 static inline void registerNodeBindings(lua_State* L) {
@@ -325,4 +479,23 @@ static inline void registerNodeBindings(lua_State* L) {
     
     lua_pushcfunction(L, lua_rotate);
     lua_setglobal(L, "rotate");
+    
+    // Animation API
+    lua_pushcfunction(L, lua_getAnimHandle);
+    lua_setglobal(L, "getAnimHandle");
+    
+    lua_pushcfunction(L, lua_getCurAnimHandle);
+    lua_setglobal(L, "getCurAnimHandle");
+    
+    lua_pushcfunction(L, lua_playAnim);
+    lua_setglobal(L, "playAnim");
+    
+    lua_pushcfunction(L, lua_setAnimSpeed);
+    lua_setglobal(L, "setAnimSpeed");
+    
+    lua_pushcfunction(L, lua_isAnimPlaying);
+    lua_setglobal(L, "isAnimPlaying");
+    
+    lua_pushcfunction(L, lua_animHandlesEqual);
+    lua_setglobal(L, "animHandlesEqual");
 }
