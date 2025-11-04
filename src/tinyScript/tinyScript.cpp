@@ -44,10 +44,12 @@ bool tinyScript::compile() {
     closeLua();
 
     compiled_ = false;
+    error_.clear(); // Clear previous errors
 
     // Create new Lua state
     L_ = luaL_newstate();
     if (!L_) {
+        error_ = "Failed to create Lua state";
         std::cerr << "[tinyScript] Failed to create Lua state for: " << name << std::endl;
         return false;
     }
@@ -57,6 +59,7 @@ bool tinyScript::compile() {
     
     // Compile the code
     if (luaL_loadstring(L_, code.c_str()) != LUA_OK) {
+        error_ = std::string("Compilation error: ") + lua_tostring(L_, -1);
         std::cerr << "[tinyScript] Compilation error in " << name << ": " 
                   << lua_tostring(L_, -1) << std::endl;
         lua_pop(L_, 1);
@@ -67,6 +70,7 @@ bool tinyScript::compile() {
     
     // Execute the chunk to define functions
     if (lua_pcall(L_, 0, 0, 0) != LUA_OK) {
+        error_ = std::string("Execution error: ") + lua_tostring(L_, -1);
         std::cerr << "[tinyScript] Execution error in " << name << ": " 
                   << lua_tostring(L_, -1) << std::endl;
         lua_pop(L_, 1);

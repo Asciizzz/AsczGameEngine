@@ -41,17 +41,15 @@ void Script::checkAndReload() {
 void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
     if (!hasScript()) return;
 
-    checkAndReload();
-
-    if (!valid()) {
-        std::cerr << "[tinyRT_SCRIPT] Cannot update: Script is invalid" << std::endl;
-        return;
-    }
-    
     const tinyScript* script = rScript();
     if (!script) return;
 
-    // Just pass everything to the script and let it handle Lua
+    // Check for version change
+    if (script->version() != cachedVersion_) {
+        cachedVersion_ = script->version();
+        script->initRtVars(vars_);
+    }
+
     script->update(vars_, scene, nodeHandle, dTime);
 }
 

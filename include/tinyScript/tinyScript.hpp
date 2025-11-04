@@ -41,6 +41,7 @@ struct tinyScript {
 
     bool valid() const { return compiled_ && L_ != nullptr; }
     uint32_t version() const { return version_; }
+    const std::string& error() const { return error_; }
 
     void test(); // Generate a demo spinning script
 
@@ -48,6 +49,7 @@ private:
     uint32_t version_ = 0;
     lua_State* L_ = nullptr;
     bool compiled_ = false;
+    std::string error_; // Cached error message from last compile attempt
 
     void closeLua();
 };

@@ -2865,9 +2865,6 @@ void tinyApp::renderScriptEditorWindow() {
     ImGui::Separator();
     ImGui::Spacing();
     
-    // ===== LUA CODE EDITOR =====
-    ImGui::Text("Lua Code:");
-    
     // Static buffer to hold the code during editing
     // Using a large buffer for script code
     static char codeBuffer[8192];
@@ -2880,6 +2877,19 @@ void tinyApp::renderScriptEditorWindow() {
         lastSelectedScript = selectedScriptHandle;
     }
     
+    // Static variable to store splitter position (persists between frames)
+    static float splitterPos = 0.7f; // Start with 70% for code, 30% for debug
+    
+    // Get full available space (minus the compile button)
+    float totalHeight = ImGui::GetContentRegionAvail().y - 50;
+    
+    // Calculate section heights based on splitter position
+    float codeHeight = totalHeight * splitterPos;
+    float debugHeight = totalHeight * (1.0f - splitterPos);
+    
+    // ===== LUA CODE EDITOR (TOP) =====
+    ImGui::Text("Lua Code:");
+    
     // Multi-line text editor with scrolling
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f);
@@ -2888,17 +2898,68 @@ void tinyApp::renderScriptEditorWindow() {
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
     
-    // Code editor takes most of the space, leaving room for the compile button
-    float editorHeight = ImGui::GetContentRegionAvail().y - 50;
-    
     ImGui::InputTextMultiline("##ScriptCode", codeBuffer, sizeof(codeBuffer), 
-        ImVec2(-1, editorHeight), 
+        ImVec2(-1, codeHeight - 25), // Leave space for "Lua Code:" label
         ImGuiInputTextFlags_AllowTabInput);
     
     // Update the script code if modified
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         script->code = std::string(codeBuffer);
     }
+    
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(2);
+    
+    // ===== HORIZONTAL SPLITTER =====
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 0.8f));
+    
+    ImGui::Button("##HorizontalSplitter", ImVec2(-1, 4));
+    
+    if (ImGui::IsItemActive()) {
+        float delta = ImGui::GetIO().MouseDelta.y / totalHeight;
+        splitterPos += delta;
+        splitterPos = std::clamp(splitterPos, 0.2f, 0.9f); // Limit between 20% and 90%
+    }
+    
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+    }
+    
+    ImGui::PopStyleColor(3);
+    
+    // ===== DEBUG PANEL (BOTTOM) =====
+    ImGui::Text("Debug Output:");
+    
+    // Debug panel with scrolling
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f);
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+    
+    ImGui::BeginChild("DebugOutput", ImVec2(-1, debugHeight - 25), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+    
+    const std::string& errorMsg = script->error();
+    if (!errorMsg.empty()) {
+        // Display error message in red
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+        ImGui::TextWrapped("%s", errorMsg.c_str());
+        ImGui::PopStyleColor();
+    } else if (script->valid()) {
+        // Display success message in green
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 1.0f, 0.3f, 1.0f));
+        ImGui::Text("Script compiled successfully!");
+        ImGui::PopStyleColor();
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No errors detected.");
+    } else {
+        // No compilation attempt yet
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Press 'Compile Script' to check for errors.");
+    }
+    
+    ImGui::EndChild();
     
     ImGui::PopStyleColor(4);
     ImGui::PopStyleVar(2);
@@ -2914,37 +2975,9 @@ void tinyApp::renderScriptEditorWindow() {
         // Update script code from buffer before compiling
         script->code = std::string(codeBuffer);
         
-        // Compile the script
-        bool success = script->compile();
-        
-        if (success) {
-            ImGui::OpenPopup("CompileSuccess");
-        } else {
-            ImGui::OpenPopup("CompileFailed");
-        }
+        // Compile the script - errors will be displayed in the debug panel
+        script->compile();
     }
     
     ImGui::PopStyleColor(3);
-    
-    // Success popup
-    if (ImGui::BeginPopupModal("CompileSuccess", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Script compiled successfully!");
-        ImGui::Text("Version: %u", script->version());
-        ImGui::Spacing();
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-    }
-    
-    // Failure popup
-    if (ImGui::BeginPopupModal("CompileFailed", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Script compilation failed!");
-        ImGui::Text("Check the console for error details.");
-        ImGui::Spacing();
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-    }
 }
