@@ -19,7 +19,6 @@ void Script::assign(tinyHandle scriptHandle) {
     if (!script) return;
 
     cachedVersion_ = script->version();
-
     script->initRtVars(vars_);
 }
 
@@ -28,14 +27,6 @@ bool Script::valid() const {
     if (!script || !script->valid()) return false;
 
     return script->version() == cachedVersion_;
-}
-
-void Script::checkAndReload() {
-    const tinyScript* script = rScript();
-    if (!script || script->version() == cachedVersion_) return;
-
-    cachedVersion_ = script->version();
-    script->initRtVars(vars_);
 }
 
 void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
@@ -48,9 +39,9 @@ void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
     if (script->version() != cachedVersion_) {
         cachedVersion_ = script->version();
         script->initRtVars(vars_);
+    } else {
+        script->update(vars_, scene, nodeHandle, dTime);
     }
-
-    script->update(vars_, scene, nodeHandle, dTime);
 }
 
 // ==================== Legacy haveFun (keep for compatibility) ====================

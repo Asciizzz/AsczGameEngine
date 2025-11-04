@@ -111,8 +111,10 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
 }
 
 void tinyScript::initRtVars(tinyVarsMap& vars) const {
+    vars.clear();
+
     if (!valid()) return;
-    
+
     // Check if script has an "vars" function
     lua_getglobal(L_, "vars");
     

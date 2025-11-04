@@ -2,7 +2,7 @@
 
 #include <string>
 #include <cstdint>
-#include <unordered_map>
+#include <map>
 #include <variant>
 #include <glm/glm.hpp>
 #include "tinyExt/tinyHandle.hpp"
@@ -14,7 +14,7 @@ extern "C" {
 }
 
 using tinyVar = std::variant<float, int, bool, glm::vec3, std::string>;
-using tinyVarsMap = std::unordered_map<std::string, tinyVar>;
+using tinyVarsMap = std::map<std::string, tinyVar>; // Using ordered map for consistent display order
 
 // Static script definition - shared across all instances
 struct tinyScript {
@@ -49,7 +49,7 @@ private:
     uint32_t version_ = 0;
     lua_State* L_ = nullptr;
     bool compiled_ = false;
-    std::string error_; // Cached error message from last compile attempt
+    std::string error_;
 
     void closeLua();
 };

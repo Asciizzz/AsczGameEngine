@@ -2942,12 +2942,8 @@ void tinyApp::renderScriptEditorWindow() {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 1.0f, 0.3f, 1.0f));
         ImGui::Text("Script compiled successfully!");
         ImGui::PopStyleColor();
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No errors detected.");
-    } else {
-        // No compilation attempt yet
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Press 'Compile Script' to check for errors.");
     }
-    
+
     ImGui::EndChild();
     
     ImGui::PopStyleColor(4);
