@@ -237,13 +237,9 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
     lua_pushlightuserdata(L_, scene);
     lua_setglobal(L_, "__scene");
     
-    // Push node handle
-    lua_newtable(L_);
-    lua_pushinteger(L_, nodeHandle.index);
-    lua_setfield(L_, -2, "index");
-    lua_pushinteger(L_, nodeHandle.version);
-    lua_setfield(L_, -2, "version");
-    lua_setglobal(L_, "__nodeHandle");
+    // Push node as a Node userdata object
+    pushNode(L_, nodeHandle);
+    lua_setglobal(L_, "node");
 
     // ========== Expose native functions to Lua ==========
     registerNodeBindings(L_);
@@ -337,8 +333,8 @@ function update()
     
     -- ========== MOVEMENT (for root node) ==========
     if isMoving then
-        -- Get current position
-        local pos = getPosition(__nodeHandle)
+        -- Get current position using OOP syntax
+        local pos = node:getPos()
         if pos then
             -- Calculate movement direction
             local moveDir = {x = vx, y = 0, z = vz}
@@ -356,22 +352,22 @@ function update()
             -- Apply movement
             pos.x = pos.x + moveDir.x * vars.moveSpeed * dTime
             pos.z = pos.z + moveDir.z * vars.moveSpeed * dTime
-            setPosition(__nodeHandle, pos)
+            node:setPos(pos)
             
             -- Apply rotation
-            setRotation(__nodeHandle, {x = 0, y = targetYaw, z = 0})
+            node:setRot({x = 0, y = targetYaw, z = 0})
         end
     end
     
     -- ========== ANIMATION (for animation node) ==========
-    -- Get animation handles by name (using configurable vars)
-    local idleHandle = getAnimHandle(__nodeHandle, vars.idleAnim)
-    local walkHandle = getAnimHandle(__nodeHandle, vars.walkAnim)
-    local runHandle = getAnimHandle(__nodeHandle, vars.runAnim)
-    local curHandle = getCurAnimHandle(__nodeHandle)
+    -- Get animation handles by name using OOP syntax (configurable vars)
+    local idleHandle = node:getAnimHandle(vars.idleAnim)
+    local walkHandle = node:getAnimHandle(vars.walkAnim)
+    local runHandle = node:getAnimHandle(vars.runAnim)
+    local curHandle = node:getCurAnimHandle()
     
     -- Set animation speed
-    setAnimSpeed(__nodeHandle, isMoving and vars.moveSpeed or 1.0)
+    node:setAnimSpeed(isMoving and vars.moveSpeed or 1.0)
     
     if isMoving then
         -- Choose run or walk animation
@@ -379,13 +375,13 @@ function update()
         
         -- Only restart when switching FROM idle TO walk/run
         -- Don't restart when switching between walk and run
-        local shouldRestart = not (animHandlesEqual(curHandle, runHandle) or 
-                                   animHandlesEqual(curHandle, walkHandle))
-        playAnim(__nodeHandle, playHandle, shouldRestart)
+        local shouldRestart = not (handleEqual(curHandle, runHandle) or 
+                                   handleEqual(curHandle, walkHandle))
+        node:playAnim(playHandle, shouldRestart)
     else
         -- Switch to idle, only restart if not already playing idle
-        local shouldRestart = not animHandlesEqual(curHandle, idleHandle)
-        playAnim(__nodeHandle, idleHandle, shouldRestart)
+        local shouldRestart = not handleEqual(curHandle, idleHandle)
+        node:playAnim(idleHandle, shouldRestart)
     end
 end
 )";

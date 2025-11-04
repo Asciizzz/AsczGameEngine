@@ -21,6 +21,17 @@ static inline tinyRT::Scene* getSceneFromLua(lua_State* L) {
     return static_cast<tinyRT::Scene*>(scenePtr);
 }
 
+// Helper to get tinyHandle from userdata (Node object)
+static inline tinyHandle* getNodeHandleFromUserdata(lua_State* L, int index) {
+    void* ud = luaL_checkudata(L, index, "Node");
+    if (!ud) {
+        luaL_error(L, "Expected Node object");
+        return nullptr;
+    }
+    return static_cast<tinyHandle*>(ud);
+}
+
+// Legacy helper for backward compatibility
 static inline tinyHandle getNodeHandleFromTable(lua_State* L, int tableIndex) {
     lua_getfield(L, tableIndex, "index");
     lua_getfield(L, tableIndex, "version");
@@ -31,6 +42,15 @@ static inline tinyHandle getNodeHandleFromTable(lua_State* L, int tableIndex) {
     lua_pop(L, 2);
     
     return handle;
+}
+
+// Create a new Node userdata with metatable
+static inline void pushNode(lua_State* L, tinyHandle handle) {
+    tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
+    *ud = handle;
+    
+    luaL_getmetatable(L, "Node");
+    lua_setmetatable(L, -2);
 }
 
 // Key name to SDL_Scancode mapping
@@ -137,20 +157,17 @@ static inline int lua_kState(lua_State* L) {
     return 1;
 }
 
-// ========== Transform API Functions ==========
+// ========== Node Class Methods ==========
 
-// Get node's local position - returns {x, y, z}
-static inline int lua_getPosition(lua_State* L) {
-    if (!lua_istable(L, 1)) {
-        return luaL_error(L, "getPosition expects (nodeHandle)");
-    }
-
+// Node:getPos() - Get node's local position
+static inline int node_getPos(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
     
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
-    
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale, skew;
         glm::quat rot;
@@ -166,16 +183,17 @@ static inline int lua_getPosition(lua_State* L) {
     return 0;
 }
 
-// Set node's local position
-static inline int lua_setPosition(lua_State* L) {
-    if (!lua_istable(L, 1) || !lua_istable(L, 2)) {
-        return luaL_error(L, "setPosition expects (nodeHandle, {x, y, z})");
+// Node:setPos(vec3) - Set node's local position
+static inline int node_setPos(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_istable(L, 2)) {
+        return luaL_error(L, "Node:setPos expects ({x, y, z})");
     }
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
-    
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
     
     lua_getfield(L, 2, "x");
     lua_getfield(L, 2, "y");
@@ -186,7 +204,7 @@ static inline int lua_setPosition(lua_State* L) {
     newPos.z = static_cast<float>(lua_tonumber(L, -1));
     lua_pop(L, 3);
     
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale, skew;
         glm::quat rot;
@@ -200,18 +218,15 @@ static inline int lua_setPosition(lua_State* L) {
     return 0;
 }
 
-// Get node's rotation as Euler angles (radians) - returns {x, y, z}
-static inline int lua_getRotation(lua_State* L) {
-    if (!lua_istable(L, 1)) {
-        return luaL_error(L, "getRotation expects (nodeHandle)");
-    }
+// Node:getRot() - Get node's rotation as Euler angles (radians)
+static inline int node_getRot(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
     
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
-    
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale, skew;
         glm::quat rot;
@@ -228,16 +243,17 @@ static inline int lua_getRotation(lua_State* L) {
     return 0;
 }
 
-// Set node's rotation from Euler angles (radians)
-static inline int lua_setRotation(lua_State* L) {
-    if (!lua_istable(L, 1) || !lua_istable(L, 2)) {
-        return luaL_error(L, "setRotation expects (nodeHandle, {x, y, z})");
+// Node:setRot(vec3) - Set node's rotation from Euler angles (radians)
+static inline int node_setRot(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_istable(L, 2)) {
+        return luaL_error(L, "Node:setRot expects ({x, y, z})");
     }
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
-    
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
     
     lua_getfield(L, 2, "x");
     lua_getfield(L, 2, "y");
@@ -248,7 +264,7 @@ static inline int lua_setRotation(lua_State* L) {
     euler.z = static_cast<float>(lua_tonumber(L, -1));
     lua_pop(L, 3);
     
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale, skew;
         glm::quat rot;
@@ -264,69 +280,88 @@ static inline int lua_setRotation(lua_State* L) {
     return 0;
 }
 
-// Rotate node around an axis by angle (radians)
-static inline int lua_rotate(lua_State* L) {
-    if (!lua_istable(L, 1) || !lua_istable(L, 2) || !lua_isnumber(L, 3)) {
-        return luaL_error(L, "rotate expects (nodeHandle, {x, y, z} axis, angle)");
-    }
+// Node:getScl() - Get node's local scale
+static inline int node_getScl(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
     
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
-    
-    lua_getfield(L, 2, "x");
-    lua_getfield(L, 2, "y");
-    lua_getfield(L, 2, "z");
-    glm::vec3 axis;
-    axis.x = static_cast<float>(lua_tonumber(L, -3));
-    axis.y = static_cast<float>(lua_tonumber(L, -2));
-    axis.z = static_cast<float>(lua_tonumber(L, -1));
-    lua_pop(L, 3);
-    
-    float angle = static_cast<float>(lua_tonumber(L, 3));
-    
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale, skew;
         glm::quat rot;
         glm::vec4 persp;
         glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
         
-        glm::quat deltaRot = glm::angleAxis(angle, glm::normalize(axis));
-        glm::quat newRot = deltaRot * rot;
-        
-        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), pos) 
-                            * glm::mat4_cast(newRot) 
-                            * glm::scale(glm::mat4(1.0f), scale);
+        lua_newtable(L);
+        lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
+        lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
+        lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+        return 1;
     }
     return 0;
 }
 
-// ========== Animation API Functions ==========
-
-// Get animation handle by name - returns {index, version} or nil if not found
-// Usage: local walkHandle = getAnimHandle(__nodeHandle, "Walking_A")
-static inline int lua_getAnimHandle(lua_State* L) {
-    if (!lua_istable(L, 1) || !lua_isstring(L, 2)) {
-        return luaL_error(L, "getAnimHandle expects (nodeHandle, animName: string)");
+// Node:setScl(vec3) - Set node's local scale
+static inline int node_setScl(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_istable(L, 2)) {
+        return luaL_error(L, "Node:setScl expects ({x, y, z})");
     }
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
     
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
+    lua_getfield(L, 2, "x");
+    lua_getfield(L, 2, "y");
+    lua_getfield(L, 2, "z");
+    glm::vec3 newScale;
+    newScale.x = static_cast<float>(lua_tonumber(L, -3));
+    newScale.y = static_cast<float>(lua_tonumber(L, -2));
+    newScale.z = static_cast<float>(lua_tonumber(L, -1));
+    lua_pop(L, 3);
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.trfm3D) {
+        glm::vec3 pos, scale, skew;
+        glm::quat rot;
+        glm::vec4 persp;
+        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        
+        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), pos) 
+                            * glm::mat4_cast(rot) 
+                            * glm::scale(glm::mat4(1.0f), newScale);
+    }
+    return 0;
+}
+
+// ========== Node Animation Methods ==========
+
+// Node:getAnimHandle(name) - Get animation handle by name
+static inline int node_getAnimHandle(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_isstring(L, 2)) {
+        return luaL_error(L, "Node:getAnimHandle expects (animName: string)");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
     const char* animName = lua_tostring(L, 2);
     
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->getHandle(animName);
         if (animHandle.valid()) {
-            lua_newtable(L);
-            lua_pushinteger(L, animHandle.index);
-            lua_setfield(L, -2, "index");
-            lua_pushinteger(L, animHandle.version);
-            lua_setfield(L, -2, "version");
+            // Push as a light userdata (just the uint64_t value)
+            lua_pushlightuserdata(L, reinterpret_cast<void*>(
+                (static_cast<uint64_t>(animHandle.index) << 32) | animHandle.version));
             return 1;
         }
     }
@@ -334,27 +369,20 @@ static inline int lua_getAnimHandle(lua_State* L) {
     return 1;
 }
 
-// Get current animation handle - returns {index, version} or nil
-// Usage: local curHandle = getCurAnimHandle(__nodeHandle)
-static inline int lua_getCurAnimHandle(lua_State* L) {
-    if (!lua_istable(L, 1)) {
-        return luaL_error(L, "getCurAnimHandle expects (nodeHandle)");
-    }
+// Node:getCurAnimHandle() - Get current animation handle
+static inline int node_getCurAnimHandle(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
     
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
-    
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->curHandle();
         if (animHandle.valid()) {
-            lua_newtable(L);
-            lua_pushinteger(L, animHandle.index);
-            lua_setfield(L, -2, "index");
-            lua_pushinteger(L, animHandle.version);
-            lua_setfield(L, -2, "version");
+            lua_pushlightuserdata(L, reinterpret_cast<void*>(
+                (static_cast<uint64_t>(animHandle.index) << 32) | animHandle.version));
             return 1;
         }
     }
@@ -362,73 +390,71 @@ static inline int lua_getCurAnimHandle(lua_State* L) {
     return 1;
 }
 
-// Play animation by handle with optional restart
-// Usage: playAnim(__nodeHandle, walkHandle, true)
-static inline int lua_playAnim(lua_State* L) {
-    if (!lua_istable(L, 1)) {
-        return luaL_error(L, "playAnim expects (nodeHandle, animHandle, restart: bool = true)");
-    }
+// Node:playAnim(animHandle, restart) - Play animation
+static inline int node_playAnim(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
     
-    // If animHandle is nil, just return (animation not found)
+    // If animHandle is nil, just return
     if (lua_isnil(L, 2)) {
         return 0;
     }
     
-    if (!lua_istable(L, 2)) {
-        return luaL_error(L, "playAnim expects animHandle to be a table or nil");
+    if (!lua_islightuserdata(L, 2)) {
+        return luaL_error(L, "Node:playAnim expects (animHandle, restart: bool = true)");
     }
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
     
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
-    tinyHandle animHandle = getNodeHandleFromTable(L, 2);
+    // Decode animHandle from lightuserdata
+    uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
+    tinyHandle animHandle;
+    animHandle.index = static_cast<uint32_t>(packed >> 32);
+    animHandle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
     
     bool restart = true;
     if (lua_isboolean(L, 3)) {
         restart = lua_toboolean(L, 3);
     }
     
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.anim3D) {
         comps.anim3D->play(animHandle, restart);
     }
     return 0;
 }
 
-// Set animation playback speed
-// Usage: setAnimSpeed(__nodeHandle, 2.0)
-static inline int lua_setAnimSpeed(lua_State* L) {
-    if (!lua_istable(L, 1) || !lua_isnumber(L, 2)) {
-        return luaL_error(L, "setAnimSpeed expects (nodeHandle, speed: number)");
+// Node:setAnimSpeed(speed) - Set animation playback speed
+static inline int node_setAnimSpeed(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_isnumber(L, 2)) {
+        return luaL_error(L, "Node:setAnimSpeed expects (speed: number)");
     }
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
     
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
     float speed = static_cast<float>(lua_tonumber(L, 2));
     
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.anim3D) {
         comps.anim3D->setSpeed(speed);
     }
     return 0;
 }
 
-// Check if animation is currently playing
-// Usage: if isAnimPlaying(__nodeHandle) then ... end
-static inline int lua_isAnimPlaying(lua_State* L) {
-    if (!lua_istable(L, 1)) {
-        return luaL_error(L, "isAnimPlaying expects (nodeHandle)");
-    }
+// Node:isAnimPlaying() - Check if animation is playing
+static inline int node_isAnimPlaying(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
     
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) return luaL_error(L, "Scene pointer is null");
     
-    tinyHandle handle = getNodeHandleFromTable(L, 1);
-    
-    auto comps = scene->nComp(handle);
+    auto comps = scene->nComp(*handle);
     if (comps.anim3D) {
         lua_pushboolean(L, comps.anim3D->isPlaying());
         return 1;
@@ -437,65 +463,117 @@ static inline int lua_isAnimPlaying(lua_State* L) {
     return 1;
 }
 
-// Compare two handles for equality (handles nil values gracefully)
-// Usage: if animHandlesEqual(curHandle, walkHandle) then ... end
-static inline int lua_animHandlesEqual(lua_State* L) {
-    // If either parameter is nil, return false
+// ========== Generic Handle Comparison ==========
+
+// Global function: handleEqual(h1, h2) - Compare any handles (lightuserdata)
+// Works for animation handles, node handles (if converted to lightuserdata), etc.
+static inline int lua_handleEqual(lua_State* L) {
     if (lua_isnil(L, 1) || lua_isnil(L, 2)) {
         lua_pushboolean(L, false);
         return 1;
     }
     
-    if (!lua_istable(L, 1) || !lua_istable(L, 2)) {
-        return luaL_error(L, "animHandlesEqual expects (handle1, handle2) or accepts nil");
+    if (!lua_islightuserdata(L, 1) || !lua_islightuserdata(L, 2)) {
+        return luaL_error(L, "handleEqual expects (handle1, handle2) or nil");
     }
     
-    tinyHandle h1 = getNodeHandleFromTable(L, 1);
-    tinyHandle h2 = getNodeHandleFromTable(L, 2);
+    uint64_t h1 = reinterpret_cast<uint64_t>(lua_touserdata(L, 1));
+    uint64_t h2 = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
     
-    lua_pushboolean(L, h1.index == h2.index && h1.version == h2.version);
+    lua_pushboolean(L, h1 == h2);
     return 1;
+}
+
+// Legacy alias for animation handles (backward compatibility)
+static inline int lua_animHandlesEqual(lua_State* L) {
+    return lua_handleEqual(L);
 }
 
 // ========== Registration Function ==========
 
 static inline void registerNodeBindings(lua_State* L) {
-    // Input API
+    // Create Node metatable
+    luaL_newmetatable(L, "Node");
+    
+    // Create methods table for __index
+    lua_newtable(L);
+    
+    // Transform methods
+    lua_pushcfunction(L, node_getPos);
+    lua_setfield(L, -2, "getPos");
+    
+    lua_pushcfunction(L, node_setPos);
+    lua_setfield(L, -2, "setPos");
+    
+    lua_pushcfunction(L, node_getRot);
+    lua_setfield(L, -2, "getRot");
+    
+    lua_pushcfunction(L, node_setRot);
+    lua_setfield(L, -2, "setRot");
+    
+    lua_pushcfunction(L, node_getScl);
+    lua_setfield(L, -2, "getScl");
+    
+    lua_pushcfunction(L, node_setScl);
+    lua_setfield(L, -2, "setScl");
+    
+    // Animation methods
+    lua_pushcfunction(L, node_getAnimHandle);
+    lua_setfield(L, -2, "getAnimHandle");
+    
+    lua_pushcfunction(L, node_getCurAnimHandle);
+    lua_setfield(L, -2, "getCurAnimHandle");
+    
+    lua_pushcfunction(L, node_playAnim);
+    lua_setfield(L, -2, "playAnim");
+    
+    lua_pushcfunction(L, node_setAnimSpeed);
+    lua_setfield(L, -2, "setAnimSpeed");
+    
+    lua_pushcfunction(L, node_isAnimPlaying);
+    lua_setfield(L, -2, "isAnimPlaying");
+    
+    // Set methods table as __index
+    lua_setfield(L, -2, "__index");
+    
+    // Add __tostring for debugging
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+        if (handle) {
+            lua_pushfstring(L, "Node(%d, %d)", handle->index, handle->version);
+        } else {
+            lua_pushstring(L, "Node(invalid)");
+        }
+        return 1;
+    });
+    lua_setfield(L, -2, "__tostring");
+    
+    // Add __eq for equality comparison (node1 == node2)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        tinyHandle* h1 = getNodeHandleFromUserdata(L, 1);
+        tinyHandle* h2 = getNodeHandleFromUserdata(L, 2);
+        
+        if (h1 && h2) {
+            lua_pushboolean(L, h1->index == h2->index && h1->version == h2->version);
+        } else {
+            lua_pushboolean(L, false);
+        }
+        return 1;
+    });
+    lua_setfield(L, -2, "__eq");
+    
+    // Pop metatable
+    lua_pop(L, 1);
+    
+    // Input API (global)
     lua_pushcfunction(L, lua_kState);
     lua_setglobal(L, "kState");
     
-    // Transform API
-    lua_pushcfunction(L, lua_getPosition);
-    lua_setglobal(L, "getPosition");
+    // Handle utilities (global)
+    lua_pushcfunction(L, lua_handleEqual);
+    lua_setglobal(L, "handleEqual");
     
-    lua_pushcfunction(L, lua_setPosition);
-    lua_setglobal(L, "setPosition");
-    
-    lua_pushcfunction(L, lua_getRotation);
-    lua_setglobal(L, "getRotation");
-    
-    lua_pushcfunction(L, lua_setRotation);
-    lua_setglobal(L, "setRotation");
-    
-    lua_pushcfunction(L, lua_rotate);
-    lua_setglobal(L, "rotate");
-    
-    // Animation API
-    lua_pushcfunction(L, lua_getAnimHandle);
-    lua_setglobal(L, "getAnimHandle");
-    
-    lua_pushcfunction(L, lua_getCurAnimHandle);
-    lua_setglobal(L, "getCurAnimHandle");
-    
-    lua_pushcfunction(L, lua_playAnim);
-    lua_setglobal(L, "playAnim");
-    
-    lua_pushcfunction(L, lua_setAnimSpeed);
-    lua_setglobal(L, "setAnimSpeed");
-    
-    lua_pushcfunction(L, lua_isAnimPlaying);
-    lua_setglobal(L, "isAnimPlaying");
-    
+    // Legacy animation handle comparison (calls handleEqual)
     lua_pushcfunction(L, lua_animHandlesEqual);
     lua_setglobal(L, "animHandlesEqual");
 }
