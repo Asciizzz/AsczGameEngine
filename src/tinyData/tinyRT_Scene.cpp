@@ -334,7 +334,6 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
 }
 
 void Scene::update() {
-    // Update everything recursively
     updateRecursive(rootHandle());
 }
 
