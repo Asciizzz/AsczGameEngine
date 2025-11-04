@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <variant>
 #include <glm/glm.hpp>
+#include "tinyExt/tinyHandle.hpp"
 
 extern "C" {
     #include "lua.h"
@@ -19,8 +20,8 @@ struct tinyScript {
     std::string name;
     std::string code;
 
-    tinyScript() = default;
-    tinyScript(const std::string& scriptName) : name(scriptName) {}
+    tinyScript() { test(); }
+    tinyScript(const std::string& scriptName) : name(scriptName) { test(); }
     ~tinyScript();
     
     tinyScript(const tinyScript&) = delete;
@@ -33,13 +34,18 @@ struct tinyScript {
 
     void initRtVars(std::unordered_map<std::string, tinyVar>& vars) const;
 
+    void update(std::unordered_map<std::string, tinyVar>& vars, void* scene, tinyHandle nodeHandle, float dTime);
+
     bool call(const char* functionName, lua_State* runtimeL = nullptr);
 
     bool valid() const { return compiled_ && L_ != nullptr; }
     uint32_t version() const { return version_; }
 
 private:
+    void test();
     uint32_t version_ = 0;
     lua_State* L_ = nullptr;
     bool compiled_ = false;
+
+    void closeLua();
 };

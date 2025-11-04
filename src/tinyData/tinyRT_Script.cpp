@@ -51,13 +51,11 @@ void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
         return;
     }
     
-    const tinyScript* script = rScript();
-    
-    // TODO: Set up Lua environment with scene, node, dTime, and variables
-    // TODO: Call script->call("update") or similar
-    
-    // For now, just a placeholder
-    // script->call("update");
+    tinyScript* script = const_cast<tinyScript*>(rScript());
+    if (!script) return;
+
+    // Just pass everything to the script and let it handle Lua
+    script->update(vars_, scene, nodeHandle, dTime);
 }
 
 // ==================== Legacy haveFun (keep for compatibility) ====================
