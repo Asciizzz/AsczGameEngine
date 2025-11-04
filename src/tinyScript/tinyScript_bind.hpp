@@ -69,31 +69,32 @@ static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
 
 // ========== Scene Methods ==========
 
-// Scene:getNode(handle) - Get a Node object from a handle
-// The handle can be a table {index, version} or a lightuserdata (packed uint64)
-// Returns nil if handle is invalid
+// Scene:getNode(handle) - Get a Node object from a scriptHandle
+// The handle is lightuserdata with isNode flag in high bit
+// Returns nil if handle is invalid or is not a node handle
 static inline int scene_getNode(lua_State* L) {
     tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
     if (!scenePtr || !*scenePtr) {
         return luaL_error(L, "Scene:getNode - invalid scene");
     }
     
-    tinyHandle handle;
-    
-    // Handle can be a table {index, version} or lightuserdata
-    if (lua_istable(L, 2)) {
-        lua_getfield(L, 2, "index");
-        lua_getfield(L, 2, "version");
-        handle.index = lua_tointeger(L, -2);
-        handle.version = lua_tointeger(L, -1);
-        lua_pop(L, 2);
-    } else if (lua_islightuserdata(L, 2)) {
-        uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
-        handle.index = static_cast<uint32_t>(packed >> 32);
-        handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
-    } else {
-        return luaL_error(L, "Scene:getNode expects a handle (table or lightuserdata)");
+    if (!lua_islightuserdata(L, 2)) {
+        return luaL_error(L, "Scene:getNode expects a handle (lightuserdata from nHandle())");
     }
+    
+    // Decode scriptHandle from lightuserdata
+    uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
+    bool isNodeHandle = (packed & (1ULL << 63)) != 0;
+    
+    // Only accept node handles
+    if (!isNodeHandle) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
+    handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
     
     // Validate handle - return nil if invalid
     if (!handle.valid() || !(*scenePtr)->node(handle)) {
@@ -105,19 +106,38 @@ static inline int scene_getNode(lua_State* L) {
     return 1;
 }
 
-// ========== Handle Constructor ==========
+// ========== Handle Constructors ==========
 
-// Global function: Handle(index, version) - Create a handle for use in vars()
-// Usage in Lua: targetNode = Handle(42, 1)
-// Returns lightuserdata that can be stored in vars and later used with scene:getNode()
-static inline int lua_Handle(lua_State* L) {
+// Global function: nHandle(index, version) - Create a NODE handle for use in vars()
+// Node handles are remapped when scenes are loaded
+// Usage in Lua: targetNode = nHandle(42, 1)
+static inline int lua_nHandle(lua_State* L) {
     if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2)) {
-        return luaL_error(L, "Handle(index, version) expects two integers");
+        return luaL_error(L, "nHandle(index, version) expects two integers");
     }
     
     uint32_t index = static_cast<uint32_t>(lua_tointeger(L, 1));
     uint32_t version = static_cast<uint32_t>(lua_tointeger(L, 2));
     
+    // Pack: high 1 bit = isNode flag, remaining 63 bits = packed handle
+    // Format: [1 bit: isNode][32 bits: index][31 bits: version]
+    uint64_t packed = (1ULL << 63) | (static_cast<uint64_t>(index) << 32) | version;
+    lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+    return 1;
+}
+
+// Global function: fHandle(index, version) - Create a FILE/RESOURCE handle for use in vars()
+// File handles are NOT remapped (global references)
+// Usage in Lua: meshHandle = fHandle(10, 1)
+static inline int lua_fHandle(lua_State* L) {
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2)) {
+        return luaL_error(L, "fHandle(index, version) expects two integers");
+    }
+    
+    uint32_t index = static_cast<uint32_t>(lua_tointeger(L, 1));
+    uint32_t version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    
+    // Pack: high 1 bit = 0 (not a node), remaining 63 bits = packed handle
     uint64_t packed = (static_cast<uint64_t>(index) << 32) | version;
     lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
     return 1;
@@ -579,8 +599,10 @@ static inline int node_getVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, std::string>) {
                 lua_pushstring(L, val.c_str());
             }
-            else if constexpr (std::is_same_v<T, tinyHandle>) {
-                uint64_t packed = (static_cast<uint64_t>(val.index) << 32) | val.version;
+            else if constexpr (std::is_same_v<T, scriptHandle>) {
+                uint64_t packed = (val.isNodeHandle ? (1ULL << 63) : 0ULL) |
+                                 (static_cast<uint64_t>(val.handle.index) << 32) | 
+                                 val.handle.version;
                 lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
             }
         }, var);
@@ -637,11 +659,12 @@ static inline int node_setVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, std::string>) {
                 val = std::string(lua_tostring(L, 3));
             }
-            else if constexpr (std::is_same_v<T, tinyHandle>) {
+            else if constexpr (std::is_same_v<T, scriptHandle>) {
                 if (lua_islightuserdata(L, 3)) {
                     uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 3));
-                    val.index = static_cast<uint32_t>(packed >> 32);
-                    val.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+                    val.isNodeHandle = (packed & (1ULL << 63)) != 0;
+                    val.handle.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
+                    val.handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
                 }
             }
         }, var);
@@ -785,9 +808,12 @@ static inline void registerNodeBindings(lua_State* L) {
     lua_pushcfunction(L, lua_kState);
     lua_setglobal(L, "kState");
     
-    // Handle utilities (global)
-    lua_pushcfunction(L, lua_Handle);
-    lua_setglobal(L, "Handle");
+    // Handle constructors (global)
+    lua_pushcfunction(L, lua_nHandle);
+    lua_setglobal(L, "nHandle");
+    
+    lua_pushcfunction(L, lua_fHandle);
+    lua_setglobal(L, "fHandle");
     
     lua_pushcfunction(L, lua_handleEqual);
     lua_setglobal(L, "handleEqual");

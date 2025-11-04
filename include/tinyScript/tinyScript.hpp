@@ -13,7 +13,20 @@ extern "C" {
     #include "lauxlib.h"
 }
 
-using tinyVar = std::variant<float, int, bool, glm::vec3, std::string, tinyHandle>;
+// Script handle - wraps tinyHandle with a type tag
+// - isNodeHandle = true: Handle to scene node (needs remapping on scene load)
+// - isNodeHandle = false: Handle to file/resource (global, never remapped)
+struct scriptHandle {
+    tinyHandle handle;
+    bool isNodeHandle = false;
+    
+    scriptHandle() = default;
+    scriptHandle(tinyHandle h, bool isNode) : handle(h), isNodeHandle(isNode) {}
+    
+    bool valid() const { return handle.valid(); }
+};
+
+using tinyVar = std::variant<float, int, bool, glm::vec3, std::string, scriptHandle>;
 using tinyVarsMap = std::map<std::string, tinyVar>; // Using ordered map for consistent display order
 
 // Static script definition - shared across all instances

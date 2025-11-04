@@ -182,12 +182,13 @@ void tinyScript::cacheDefaultVars() {
                 
                 lua_pop(L_, 3);  // Pop x, y, z
             } else if (lua_islightuserdata(L_, -1)) {
-                // Handle as lightuserdata (packed uint64_t)
+                // Handle as lightuserdata with isNode flag in high bit
                 uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L_, -1));
-                tinyHandle handle;
-                handle.index = static_cast<uint32_t>(packed >> 32);
-                handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
-                defaultVars_[key] = handle;
+                scriptHandle sh;
+                sh.isNodeHandle = (packed & (1ULL << 63)) != 0;
+                sh.handle.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
+                sh.handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+                defaultVars_[key] = sh;
             }
         }
         
@@ -233,9 +234,11 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
                 lua_pushstring(L_, val.c_str());
                 lua_setfield(L_, -2, key.c_str());
             }
-            else if constexpr (std::is_same_v<T, tinyHandle>) {
-                // Push handle as lightuserdata (packed uint64_t)
-                uint64_t packed = (static_cast<uint64_t>(val.index) << 32) | val.version;
+            else if constexpr (std::is_same_v<T, scriptHandle>) {
+                // Push handle as lightuserdata with isNode flag in high bit
+                uint64_t packed = (val.isNodeHandle ? (1ULL << 63) : 0ULL) |
+                                 (static_cast<uint64_t>(val.handle.index) << 32) | 
+                                 val.handle.version;
                 lua_pushlightuserdata(L_, reinterpret_cast<void*>(packed));
                 lua_setfield(L_, -2, key.c_str());
             }
@@ -325,8 +328,8 @@ code = R"(-- External Node Spinner Test
 
 function vars()
     return {
-        targetNode = Handle(0xFFFFFFFF, 0xFFFFFFFF),  -- Invalid handle by default
-        spinSpeed = 1.0                                -- Rotations per second
+        targetNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Invalid node handle by default
+        spinSpeed = 1.0                                 -- Rotations per second
     }
 end
 
