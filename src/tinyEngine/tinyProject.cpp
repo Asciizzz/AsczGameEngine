@@ -249,11 +249,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 }
 
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
-    const tinySceneRT* fromScene = fs().rGet<tinySceneRT>(fromHandle);
-    tinySceneRT* toScene = fs().rGet<tinySceneRT>(toHandle);
-    if (toHandle == fromHandle || !toScene || !fromScene) return;
-
-    toScene->addScene(fromScene, parentHandle);
+    if (tinySceneRT* toScene = fs().rGet<tinySceneRT>(toHandle)) {
+        toScene->addScene(fromHandle);
+    }
 }
 
 // ------------------- Filesystem Setup -------------------

@@ -91,7 +91,7 @@ public:
     bool setNodeParent(tinyHandle nodeHandle, tinyHandle newParentHandle);
     bool setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>& newChildren);
 
-    void addScene(const Scene* from, tinyHandle parentHandle = tinyHandle());
+    void addScene(tinyHandle parentHandle = tinyHandle());
 
     // --------- Runtime registry access (public) ---------
 
