@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <functional>
-
 union tinyHandle {
     struct {
         uint32_t index;
@@ -33,4 +32,25 @@ namespace std {
             return std::hash<uint64_t>()(h.value);
         }
     };
+};
+
+#include <typeindex>
+struct typeHandle {
+    tinyHandle handle = tinyHandle();
+    std::type_index typeIndex = std::type_index(typeid(void));
+
+    typeHandle() noexcept = default;
+
+    bool valid() const noexcept { return handle.valid() && typeIndex != std::type_index(typeid(void)); }
+
+    template<typename T>
+    bool isType() const noexcept { return valid() && typeIndex == std::type_index(typeid(T)); }
+
+    template<typename T>
+    static typeHandle make(tinyHandle h) noexcept {
+        typeHandle th;
+        th.handle = h;
+        th.typeIndex = std::type_index(typeid(T));
+        return th;
+    }
 };
