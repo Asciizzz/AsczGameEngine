@@ -397,61 +397,65 @@ code = R"(
 --   - nodeHandle global - Current node's handle
 --
 -- Nodes:
---   rootNode: Movement and rotation
---   animeNode: Animation playback
---   enemiesNode: Parent of all enemy nodes (loop through children!)
+--   n_rootNode: Movement and rotation
+--   n_animeNode: Animation playback
+--   n_enemiesNode: Parent of all enemy nodes (loop through children!)
 -- 
 -- Drag node handles from scene hierarchy into the fields below
+--
+-- NAMING TIP: Use type prefixes for better organization in the editor!
+--   b_ for bool, f_ for float, i_ for int, n_ for nHandle, 
+--   fh_ for fHandle, s_ for string, v_ for vec3
 
 function vars()
     return {
         -- Node references (drag nodes from scene hierarchy)
-        rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
-        animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
-        enemiesNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
+        n_animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
+        n_enemiesNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
+        n_rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
 
-        -- Stats
-        isPlayer = true,
-        vel = 2.0,
-        hp = 100.0,
-        maxHp = 100.0,
-        isDead = false,
+        -- Stats (booleans)
+        b_isDead = false,
+        b_isPlayer = true,
         
-        -- Combat
-        attackRange = 1.0,  -- Distance at which player can hit enemies
-        attackDamage = 10.0,
+        -- Stats (floats)
+        f_attackDamage = 10.0,
+        f_attackRange = 1.0,  -- Distance at which player can hit enemies
+        f_hp = 100.0,
+        f_maxHp = 100.0,
+        f_vel = 2.0,
 
-        -- Animation names (configure for your model)
-        idleAnim = "Idle_Loop",
-        walkAnim = "Walk_Loop",
-        runAnim = "Sprint_Loop",
-        deathAnim = "Death01"  -- Death animation (non-looping)
+        -- Animation names (strings)
+        s_deathAnim = "Death01",  -- Death animation (non-looping)
+        s_idleAnim = "Idle_Loop",
+        s_runAnim = "Sprint_Loop",
+        s_walkAnim = "Walk_Loop"
     }
 end
 
 function update()
     -- Get node references
-    local root = scene:getNode(vars.rootNode)
-    local anime = scene:getNode(vars.animeNode)
+    local root = scene:getNode(vars.n_rootNode)
+    local anime = scene:getNode(vars.n_animeNode)
 
     -- ========== HEALTH MANAGEMENT ==========
     -- Clamp HP
-    if vars.hp < 0 then
-        vars.hp = 0
+    if vars.f_hp < 0 then
+        vars.f_hp = 0
     end
-    if vars.hp > vars.maxHp then
-        vars.hp = vars.maxHp
+    if vars.f_hp > vars.f_maxHp then
+        vars.f_hp = vars.f_maxHp
     end
 
     -- Check for death
-    if vars.hp <= 0 and not vars.isDead then
-        vars.isDead = true
+    if vars.f_hp <= 0 and not vars.b_isDead then
+        vars.b_isDead = true
         print("Player died!")
     end
 
     -- If dead, play death animation (non-looping) and return early
-    if vars.isDead and anime then
-        local deathHandle = anime:getAnimHandle(vars.deathAnim)
+    if vars.b_isDead and anime then
+        local deathHandle = anime:getAnimHandle(vars.s_deathAnim)
         local curHandle = anime:getCurAnimHandle()
         
         -- Only play death animation once
@@ -473,9 +477,9 @@ function update()
     end
 
     -- ========== ENEMY COLLISION & COMBAT ==========
-    if root and vars.isPlayer and not vars.isDead then
+    if root and vars.b_isPlayer and not vars.b_isDead then
         local playerPos = root:getPos()
-        local enemiesParent = scene:getNode(vars.enemiesNode)
+        local enemiesParent = scene:getNode(vars.n_enemiesNode)
         
         if enemiesParent then
             -- Get all enemy children using the new children() method!
@@ -495,9 +499,9 @@ function update()
                     local distance = math.sqrt(distSq)
                     
                     -- If within attack range, deal damage
-                    if distance <= vars.attackRange then
+                    if distance <= vars.f_attackRange then
                         -- Deal damage over time to player (enemies hurt the player)
-                        vars.hp = vars.hp - vars.attackDamage * dTime
+                        vars.f_hp = vars.f_hp - vars.f_attackDamage * dTime
                     end
                 end
             end
@@ -515,7 +519,7 @@ function update()
     local vz = (k_up and 1 or 0) - (k_down and 1 or 0)
     local vx = (k_right and -1 or 0) - (k_left and -1 or 0) -- I really need to fix the coord system lol
     local isMoving = (vx ~= 0) or (vz ~= 0)
-    local moveSpeed = ((running and isMoving) and 4.0 or 1.0) * vars.vel
+    local moveSpeed = ((running and isMoving) and 4.0 or 1.0) * vars.f_vel
     
     -- ========== MOVEMENT (Root Node) ==========
     if root and isMoving then
@@ -542,9 +546,9 @@ function update()
     -- ========== ANIMATION (Anime Node) ==========
     if anime then
         -- Get animation handles
-        local idleHandle = anime:getAnimHandle(vars.idleAnim)
-        local walkHandle = anime:getAnimHandle(vars.walkAnim)
-        local runHandle = anime:getAnimHandle(vars.runAnim)
+        local idleHandle = anime:getAnimHandle(vars.s_idleAnim)
+        local walkHandle = anime:getAnimHandle(vars.s_walkAnim)
+        local runHandle = anime:getAnimHandle(vars.s_runAnim)
         local curHandle = anime:getCurAnimHandle()
         
         -- Ensure looping is enabled for normal animations
