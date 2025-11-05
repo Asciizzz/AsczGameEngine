@@ -322,36 +322,92 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
 void tinyScript::init() {
     if (name.empty()) name = "Script";
 
-code = R"(-- External Node Spinner Test
--- Demonstrates OOP API and external node manipulation
--- Drag a node handle into the "targetNode" field in the inspector
+code = R"(-- Character Controller (Multi-Node Edition)
+-- This script controls TWO separate nodes:
+--   rootNode: Movement and rotation
+--   animeNode: Animation playback
+-- Drag node handles from scene hierarchy into the fields below
 
 function vars()
     return {
-        targetNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Invalid node handle by default
-        spinSpeed = 1.0                                 -- Rotations per second
+        -- Node references (drag nodes from scene hierarchy)
+        rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
+        animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
+        
+        -- Movement settings
+        moveSpeed = 2.0,
+        
+        -- Animation names (configure for your model)
+        idleAnim = "Idle",
+        walkAnim = "Walking_A",
+        runAnim = "Running_A"
     }
 end
 
 function update()
-    -- Get the target node using scene:getNode()
-    local target = scene:getNode(vars.targetNode)
+    -- Get node references
+    local root = scene:getNode(vars.rootNode)
+    local anime = scene:getNode(vars.animeNode)
     
-    if target then
-        -- Get current rotation (returns Euler angles in radians)
-        local rot = target:getRot()
+    -- ========== INPUT DETECTION ==========
+    local k_up = kState("up")
+    local k_down = kState("down")
+    local k_left = kState("left")
+    local k_right = kState("right")
+    local running = kState("shift")
+    
+    -- Calculate movement direction
+    local vz = (k_up and 1 or 0) - (k_down and 1 or 0)
+    local vx = (k_left and -1 or 0) - (k_right and -1 or 0)
+    local isMoving = (vx ~= 0) or (vz ~= 0)
+    local moveSpeed = (running and isMoving) and 4.0 or 1.0
+    
+    -- ========== MOVEMENT (Root Node) ==========
+    if root and isMoving then
+        local pos = root:getPos()
         
-        -- Spin around Y axis (radians per second)
-        -- 1 rotation per second = 2*pi radians/sec = ~6.28 rad/s
-        rot.y = rot.y + (vars.spinSpeed * 6.28318 * dTime)
-        
-        -- Wrap to 0-2π range (optional)
-        if rot.y > 6.28318 then
-            rot.y = rot.y - 6.28318
+        -- Calculate normalized movement direction
+        local moveDir = {x = vx, y = 0, z = vz}
+        local length = math.sqrt(moveDir.x * moveDir.x + moveDir.z * moveDir.z)
+        if length > 0 then
+            moveDir.x = moveDir.x / length
+            moveDir.z = moveDir.z / length
         end
         
-        -- Apply rotation
-        target:setRot(rot)
+        -- Apply movement
+        pos.x = pos.x + moveDir.x * moveSpeed * dTime
+        pos.z = pos.z + moveDir.z * moveSpeed * dTime
+        root:setPos(pos)
+        
+        -- Apply rotation (face movement direction)
+        local targetYaw = math.atan(moveDir.x, moveDir.z)
+        root:setRot({x = 0, y = targetYaw, z = 0})
+    end
+    
+    -- ========== ANIMATION (Anime Node) ==========
+    if anime then
+        -- Get animation handles
+        local idleHandle = anime:getAnimHandle(vars.idleAnim)
+        local walkHandle = anime:getAnimHandle(vars.walkAnim)
+        local runHandle = anime:getAnimHandle(vars.runAnim)
+        local curHandle = anime:getCurAnimHandle()
+        
+        -- Set animation speed
+        anime:setAnimSpeed(isMoving and moveSpeed or 1.0)
+        
+        if isMoving then
+            -- Choose run or walk
+            local playHandle = running and runHandle or walkHandle
+            
+            -- Only restart when switching from idle to walk/run
+            local shouldRestart = not (handleEqual(curHandle, runHandle) or 
+                                       handleEqual(curHandle, walkHandle))
+            anime:playAnim(playHandle, shouldRestart)
+        else
+            -- Play idle
+            local shouldRestart = not handleEqual(curHandle, idleHandle)
+            anime:playAnim(idleHandle, shouldRestart)
+        end
     end
 end
 )";

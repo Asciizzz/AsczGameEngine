@@ -1242,20 +1242,34 @@ void tinyApp::renderSceneNodeInspector() {
                                     ImGui::Button(displayText.c_str(), ImVec2(availableWidth, 0));
                                     ImGui::PopStyleColor(2);
                                     
-                                    // Accept drag-drop from scene hierarchy (only for node handles)
+                                    // Accept drag-drop from scene hierarchy or file browser
                                     if (ImGui::BeginDragDropTarget()) {
+                                        // Accept node handles (from scene hierarchy)
                                         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
                                             tinyHandle draggedNode = *(const tinyHandle*)payload->Data;
                                             val.handle = draggedNode;
                                             val.isNodeHandle = true;
                                         }
+                                        // Accept file handles (from file browser)
+                                        else if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
+                                            tinyHandle draggedFileNode = *(const tinyHandle*)payload->Data;
+                                            // Extract the typeHandle (actual resource handle) from the file node
+                                            typeHandle resourceHandle = fs.fTypeHandle(draggedFileNode);
+                                            val.handle = resourceHandle.handle;
+                                            val.isNodeHandle = false;
+                                        }
                                         ImGui::EndDragDropTarget();
                                     }
                                     
-                                    // Right-click to clear
+                                    // Right-click context menu
                                     if (ImGui::BeginPopupContextItem()) {
                                         if (ImGui::MenuItem("Clear")) {
                                             val.handle = tinyHandle();  // Invalid handle
+                                        }
+                                        if (val.valid() && val.isNodeHandle) {
+                                            if (ImGui::MenuItem("Select in Scene")) {
+                                                selectedSceneNodeHandle = val.handle;
+                                            }
                                         }
                                         ImGui::EndPopup();
                                     }
@@ -1723,9 +1737,9 @@ void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
         else if (!nodeOpen && isNodeExpanded(nodeHandle)) expandedNodes.erase(nodeHandle);
     }
     
-    // Drag and drop source (only if not root node)
+    // Drag and drop source (including root node - tinyScene has safeguards)
     bool isDragging = false;
-    if (nodeHandle != activeScene->rootHandle() && ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
         isDragging = true;
         holdSceneNode(nodeHandle);  // Set the held node during drag
 
