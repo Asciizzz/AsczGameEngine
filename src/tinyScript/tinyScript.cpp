@@ -410,7 +410,7 @@ function vars()
         idleAnim = "Idle_Loop",
         walkAnim = "Walk_Loop",
         runAnim = "Sprint_Loop",
-        deathAnim = "Death"  -- Death animation (non-looping)
+        deathAnim = "Death01"  -- Death animation (non-looping)
     }
 end
 
@@ -444,7 +444,6 @@ function update()
         if not handleEqual(curHandle, deathHandle) then
             anime:setAnimLoop(false)  -- Death animation doesn't loop
             anime:playAnim(deathHandle, true)
-            print("Playing death animation...")
         else
             -- Check if death animation has finished
             local animTime = anime:getAnimTime()
@@ -453,7 +452,6 @@ function update()
             if animTime >= animDuration - 0.01 then
                 -- Death animation finished, pause at last frame
                 anime:pauseAnim()
-                print("Death animation complete. Player remains dead.")
             end
         end
         
@@ -471,9 +469,6 @@ function update()
 
         if distSq <= 1.0 then -- Tick damage
             vars.hp = vars.hp - 10.0 * dTime
-            if vars.hp <= 0 then
-                print("HP reached 0! HP: " .. vars.hp)
-            end
         end
     end
 
