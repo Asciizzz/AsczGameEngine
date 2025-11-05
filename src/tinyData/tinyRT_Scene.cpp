@@ -181,8 +181,8 @@ bool Scene::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>
 
 
 
-void Scene::addScene(tinyHandle parentHandle) {
-    const Scene* from = sharedRes_.fsGet<Scene>(parentHandle);
+void Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
+    const Scene* from = sharedRes_.fsGet<Scene>(fromHandle);
 
     if (!from || from->nodes_.count() == 0) return;
 

@@ -3051,9 +3051,9 @@ void tinyApp::renderScriptEditorWindow() {
         // Compile the script - errors will be displayed in the debug panel
         script->compile();
     }
-    
     ImGui::PopStyleColor(3);
-    
+    ImGui::Separator();
+
     // Multi-line text editor with scrolling - transparent background
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f);

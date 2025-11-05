@@ -249,8 +249,10 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 }
 
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
+    if (fromHandle == toHandle) return; // Prevent self-copy
+
     if (tinySceneRT* toScene = fs().rGet<tinySceneRT>(toHandle)) {
-        toScene->addScene(fromHandle);
+        toScene->addScene(fromHandle, parentHandle);
     }
 }
 

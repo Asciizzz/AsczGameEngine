@@ -515,9 +515,12 @@ function update()
             -- Loop through each enemy and check distance
             for i = 1, #enemies do
                 local enemy = enemies[i]
-                local enemyPos = enemy:getPos()
+                
+                -- Skip collision check with self!
+                if enemy ~= node then
+                    local enemyPos = enemy:getPos()
 
-                if enemyPos then
+                    if enemyPos then
                     -- Calculate distance to enemy
                     local dx = playerPos.x - enemyPos.x
                     local dy = playerPos.y - enemyPos.y
@@ -537,6 +540,7 @@ function update()
                             local pulse = 1.0 + 0.1 * math.sin(dTime * 10.0)
                             enemy:setScl({x = pulse, y = pulse, z = pulse})
                         end
+                    end
                     end
                 end
             end

@@ -457,7 +457,7 @@ static inline int node_parent(lua_State* L) {
     return 1;
 }
 
-// Node:children() - Get array of children node handles
+// Node:children() - Get array of children as Node objects
 static inline int node_children(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) return 0;
@@ -467,11 +467,59 @@ static inline int node_children(lua_State* L) {
     
     std::vector<tinyHandle> children = scene->nodeChildren(*handle);
     
-    // Create a Lua table (array) with all children
+    // Create a Lua table (array) with all children as Node objects
     lua_newtable(L);
     int index = 1;
     for (const tinyHandle& childHandle : children) {
         pushNode(L, childHandle);
+        lua_rawseti(L, -2, index++);
+    }
+    
+    return 1;
+}
+
+// Node:parentHandle() - Get parent raw handle (lightuserdata) or nil
+static inline int node_parentHandle(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    tinyHandle parentHandle = scene->nodeParent(*handle);
+    
+    if (parentHandle.valid()) {
+        // Pack as node handle (type int) with high bit set
+        uint64_t packed = (1ULL << 63) |
+                         (static_cast<uint64_t>(parentHandle.index) << 32) | 
+                         parentHandle.version;
+        lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+        return 1;
+    }
+    
+    lua_pushnil(L);
+    return 1;
+}
+
+// Node:childrenHandles() - Get array of children as raw handles (lightuserdata)
+static inline int node_childrenHandles(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    std::vector<tinyHandle> children = scene->nodeChildren(*handle);
+    
+    // Create a Lua table (array) with all children as raw handles (lightuserdata)
+    lua_newtable(L);
+    int index = 1;
+    for (const tinyHandle& childHandle : children) {
+        // Pack as node handle (type int) with high bit set
+        uint64_t packed = (1ULL << 63) |
+                         (static_cast<uint64_t>(childHandle.index) << 32) | 
+                         childHandle.version;
+        lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
         lua_rawseti(L, -2, index++);
     }
     
@@ -980,12 +1028,19 @@ static inline void registerNodeBindings(lua_State* L) {
     lua_pushcfunction(L, node_setScl);
     lua_setfield(L, -2, "setScl");
     
-    // Hierarchy methods
+    // Hierarchy methods (Node objects)
     lua_pushcfunction(L, node_parent);
     lua_setfield(L, -2, "parent");
     
     lua_pushcfunction(L, node_children);
     lua_setfield(L, -2, "children");
+    
+    // Hierarchy methods (raw handles - lightuserdata)
+    lua_pushcfunction(L, node_parentHandle);
+    lua_setfield(L, -2, "parentHandle");
+    
+    lua_pushcfunction(L, node_childrenHandles);
+    lua_setfield(L, -2, "childrenHandles");
     
     // Animation methods
     lua_pushcfunction(L, node_getAnimHandle);
