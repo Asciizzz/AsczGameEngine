@@ -203,11 +203,14 @@ void tinyScript::cacheDefaultVars() {
             } else if (lua_islightuserdata(L_, -1)) {
                 // Handle as lightuserdata with isNode flag in high bit
                 uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L_, -1));
-                scriptHandle sh;
-                sh.isNodeHandle = (packed & (1ULL << 63)) != 0;
-                sh.handle.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
-                sh.handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
-                defaultVars_[key] = sh;
+                bool isNodeHandle = (packed & (1ULL << 63)) != 0;
+                tinyHandle h;
+                h.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
+                h.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+                
+                // Create typeHandle: type int for nodes, type void for files
+                typeHandle th = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
+                defaultVars_[key] = th;
             }
         }
         
@@ -292,9 +295,11 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                 lua_pushstring(L_, val.c_str());
                 lua_setfield(L_, -2, key.c_str());
             }
-            else if constexpr (std::is_same_v<T, scriptHandle>) {
+            else if constexpr (std::is_same_v<T, typeHandle>) {
                 // Push handle as lightuserdata with isNode flag in high bit
-                uint64_t packed = (val.isNodeHandle ? (1ULL << 63) : 0ULL) |
+                // type int = node handle, type void = file handle
+                bool isNodeHandle = val.isType<int>();
+                uint64_t packed = (isNodeHandle ? (1ULL << 63) : 0ULL) |
                                  (static_cast<uint64_t>(val.handle.index) << 32) | 
                                  val.handle.version;
                 lua_pushlightuserdata(L_, reinterpret_cast<void*>(packed));

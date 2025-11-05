@@ -1214,14 +1214,15 @@ void tinyApp::renderSceneNodeInspector() {
                                         val = std::string(buffer);
                                     }
                                 }
-                                else if constexpr (std::is_same_v<T, scriptHandle>) {
+                                else if constexpr (std::is_same_v<T, typeHandle>) {
                                     // Handle as a draggable node reference
                                     // Display current handle or node name with type prefix
                                     std::string displayText;
-                                    std::string prefix = val.isNodeHandle ? "[Node] " : "[File] ";
+                                    bool isNodeHandle = val.isType<int>();
+                                    std::string prefix = isNodeHandle ? "[Node] " : "[File] ";
                                     
                                     if (val.valid()) {
-                                        if (val.isNodeHandle) {
+                                        if (isNodeHandle) {
                                             // Try to get node name from scene
                                             auto node = activeScene->node(val.handle);
                                             if (node) {
@@ -1230,7 +1231,7 @@ void tinyApp::renderSceneNodeInspector() {
                                                 displayText = prefix + "Invalid Handle";
                                             }
                                         } else {
-                                            // File handle
+                                            // File handle (type void)
                                             displayText = prefix + "Handle(" + std::to_string(val.handle.index) + ", " + std::to_string(val.handle.version) + ")";
                                         }
                                     } else {
@@ -1238,8 +1239,8 @@ void tinyApp::renderSceneNodeInspector() {
                                     }
                                     
                                     // Make it look like a drop target
-                                    ImGui::PushStyleColor(ImGuiCol_Button, val.isNodeHandle ? ImVec4(0.2f, 0.3f, 0.2f, 1.0f) : ImVec4(0.3f, 0.2f, 0.2f, 1.0f));
-                                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, val.isNodeHandle ? ImVec4(0.3f, 0.4f, 0.3f, 1.0f) : ImVec4(0.4f, 0.3f, 0.3f, 1.0f));
+                                    ImGui::PushStyleColor(ImGuiCol_Button, isNodeHandle ? ImVec4(0.2f, 0.3f, 0.2f, 1.0f) : ImVec4(0.3f, 0.2f, 0.2f, 1.0f));
+                                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, isNodeHandle ? ImVec4(0.3f, 0.4f, 0.3f, 1.0f) : ImVec4(0.4f, 0.3f, 0.3f, 1.0f));
                                     ImGui::Button(displayText.c_str(), ImVec2(availableWidth, 0));
                                     ImGui::PopStyleColor(2);
                                     
@@ -1248,16 +1249,14 @@ void tinyApp::renderSceneNodeInspector() {
                                         // Accept node handles (from scene hierarchy)
                                         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
                                             tinyHandle draggedNode = *(const tinyHandle*)payload->Data;
-                                            val.handle = draggedNode;
-                                            val.isNodeHandle = true;
+                                            val = typeHandle::make<int>(draggedNode);  // Node handle (type int)
                                         }
                                         // Accept file handles (from file browser)
                                         else if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                                             tinyHandle draggedFileNode = *(const tinyHandle*)payload->Data;
                                             // Extract the typeHandle (actual resource handle) from the file node
                                             typeHandle resourceHandle = fs.fTypeHandle(draggedFileNode);
-                                            val.handle = resourceHandle.handle;
-                                            val.isNodeHandle = false;
+                                            val = typeHandle::make<void>(resourceHandle.handle);  // File handle (type void)
                                         }
                                         ImGui::EndDragDropTarget();
                                     }
@@ -1267,7 +1266,7 @@ void tinyApp::renderSceneNodeInspector() {
                                         if (ImGui::MenuItem("Clear")) {
                                             val.handle = tinyHandle();  // Invalid handle
                                         }
-                                        if (val.valid() && val.isNodeHandle) {
+                                        if (val.valid() && isNodeHandle) {
                                             if (ImGui::MenuItem("Select in Scene")) {
                                                 selectedSceneNodeHandle = val.handle;
                                             }

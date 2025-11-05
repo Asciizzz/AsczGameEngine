@@ -69,9 +69,9 @@ static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
 
 // ========== Scene Methods ==========
 
-// Scene:getNode(handle) - Get a Node object from a scriptHandle
+// Scene:getNode(handle) - Get a Node object from a typeHandle
 // The handle is lightuserdata with isNode flag in high bit
-// Returns nil if handle is invalid or is not a node handle
+// Returns nil if handle is invalid or is not a node handle (type int)
 static inline int scene_getNode(lua_State* L) {
     tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
     if (!scenePtr || !*scenePtr) {
@@ -82,11 +82,11 @@ static inline int scene_getNode(lua_State* L) {
         return luaL_error(L, "Scene:getNode expects a handle (lightuserdata from nHandle())");
     }
     
-    // Decode scriptHandle from lightuserdata
+    // Decode typeHandle from lightuserdata
     uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
     bool isNodeHandle = (packed & (1ULL << 63)) != 0;
     
-    // Only accept node handles
+    // Only accept node handles (type int)
     if (!isNodeHandle) {
         lua_pushnil(L);
         return 1;
@@ -757,8 +757,10 @@ static inline int node_getVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, std::string>) {
                 lua_pushstring(L, val.c_str());
             }
-            else if constexpr (std::is_same_v<T, scriptHandle>) {
-                uint64_t packed = (val.isNodeHandle ? (1ULL << 63) : 0ULL) |
+            else if constexpr (std::is_same_v<T, typeHandle>) {
+                // type int = node handle, type void = file handle
+                bool isNodeHandle = val.isType<int>();
+                uint64_t packed = (isNodeHandle ? (1ULL << 63) : 0ULL) |
                                  (static_cast<uint64_t>(val.handle.index) << 32) | 
                                  val.handle.version;
                 lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
@@ -817,12 +819,16 @@ static inline int node_setVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, std::string>) {
                 val = std::string(lua_tostring(L, 3));
             }
-            else if constexpr (std::is_same_v<T, scriptHandle>) {
+            else if constexpr (std::is_same_v<T, typeHandle>) {
                 if (lua_islightuserdata(L, 3)) {
                     uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 3));
-                    val.isNodeHandle = (packed & (1ULL << 63)) != 0;
-                    val.handle.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
-                    val.handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+                    bool isNodeHandle = (packed & (1ULL << 63)) != 0;
+                    tinyHandle h;
+                    h.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
+                    h.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+                    
+                    // Create typeHandle: type int for nodes, type void for files
+                    val = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
                 }
             }
         }, var);

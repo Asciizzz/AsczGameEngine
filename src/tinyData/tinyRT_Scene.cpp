@@ -280,13 +280,13 @@ void Scene::addScene(const Scene* from, tinyHandle parentHandle) {
 
             // Remap node handles in script variables
             for (auto& [key, value] : toScriptRT->vMap()) {
-                if (std::holds_alternative<scriptHandle>(value)) {
-                    scriptHandle& sh = std::get<scriptHandle>(value);
+                if (std::holds_alternative<typeHandle>(value)) {
+                    typeHandle& th = std::get<typeHandle>(value);
                     
-                    // Only remap if it's a node handle
-                    if (sh.isNodeHandle && sh.handle.valid()) {
-                        if (toHandleMap.find(sh.handle.index) != toHandleMap.end()) {
-                            sh.handle = toHandleMap[sh.handle.index];
+                    // Only remap if it's a node handle (type int)
+                    if (th.isType<int>() && th.handle.valid()) {
+                        if (toHandleMap.find(th.handle.index) != toHandleMap.end()) {
+                            th.handle = toHandleMap[th.handle.index];
                         }
                     }
                 }
