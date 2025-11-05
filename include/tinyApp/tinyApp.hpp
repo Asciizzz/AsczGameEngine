@@ -63,6 +63,22 @@ struct FileDialog {
     bool isModelFile(const std::filesystem::path& path);
 };
 
+struct LoadScriptDialog {
+    bool isOpen = false;
+    bool justOpened = false;
+    bool shouldClose = false;
+    std::filesystem::path currentPath;
+    std::vector<std::filesystem::directory_entry> currentFiles;
+    std::string selectedFile;
+    tinyHandle targetFolder;
+    
+    void open(const std::filesystem::path& startPath, tinyHandle folder);
+    void close();
+    void update();
+    void refreshFileList();
+    bool isLuaFile(const std::filesystem::path& path);
+};
+
 class tinyApp {
 public:
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
@@ -135,6 +151,7 @@ private:
     
     // File dialog state
     FileDialog fileDialog;
+    LoadScriptDialog loadScriptDialog;
     
     // Active scene state (moved from tinyProject for better separation)
     tinyHandle activeSceneHandle; // Handle to the active scene in registry
@@ -206,6 +223,8 @@ private:
     void renderFileExplorerImGui(tinyHandle nodeHandle = tinyHandle(), int depth = 0);
     void renderFileDialog();
     void loadModelFromPath(const std::string& filePath, tinyHandle targetFolder);
+    void renderLoadScriptDialog();
+    void loadScriptFromPath(const std::string& filePath, tinyHandle targetFolder);
     
     // Active scene management (moved from tinyProject for better separation)
     tinySceneRT* getActiveScene() const {

@@ -9,6 +9,8 @@
 #include <imgui.h>
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
 
 using namespace tinyVk;
@@ -123,8 +125,9 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
 
         renderFileExplorerImGui();
         
-        // Render the file dialog once per frame, outside the file explorer tree
+        // Render the dialogs once per frame, outside the file explorer tree
         renderFileDialog();
+        renderLoadScriptDialog();
 
         ImGui::EndChild();
         
@@ -1683,6 +1686,63 @@ bool FileDialog::isModelFile(const std::filesystem::path& path) {
     return ext == ".glb" || ext == ".gltf" || ext == ".obj";
 }
 
+// LoadScriptDialog method implementations
+void LoadScriptDialog::open(const std::filesystem::path& startPath, tinyHandle folder) {
+    // Don't open if we're in the process of closing
+    if (shouldClose) return;
+    
+    isOpen = true;
+    justOpened = true;
+    currentPath = startPath;
+    targetFolder = folder;
+    selectedFile.clear();
+    refreshFileList();
+}
+
+void LoadScriptDialog::close() {
+    shouldClose = true;
+    selectedFile.clear();
+    targetFolder = tinyHandle();
+}
+
+void LoadScriptDialog::update() {
+    // Handle delayed closing after ImGui has processed the popup
+    if (shouldClose && !ImGui::IsPopupOpen("Load Lua Script")) {
+        isOpen = false;
+        justOpened = false;
+        shouldClose = false;
+    }
+}
+
+void LoadScriptDialog::refreshFileList() {
+    currentFiles.clear();
+    try {
+        if (std::filesystem::exists(currentPath) && std::filesystem::is_directory(currentPath)) {
+            for (const auto& entry : std::filesystem::directory_iterator(currentPath)) {
+                currentFiles.push_back(entry);
+            }
+            
+            // Sort: directories first, then files, both alphabetically
+            std::sort(currentFiles.begin(), currentFiles.end(), [](const auto& a, const auto& b) {
+                if (a.is_directory() != b.is_directory()) {
+                    return a.is_directory(); // Directories first
+                }
+                return a.path().filename() < b.path().filename();
+            });
+        }
+    } catch (const std::exception&) {
+        // Handle permission errors or other filesystem issues
+    }
+}
+
+bool LoadScriptDialog::isLuaFile(const std::filesystem::path& path) {
+    auto ext = path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    return ext == ".lua";
+}
+
+
+
 void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
     const tinyFS& fs = project->fs();
 
@@ -2196,6 +2256,12 @@ void tinyApp::renderFileExplorerImGui(tinyHandle nodeHandle, int depth) {
                 std::filesystem::path startPath = std::filesystem::current_path();
                 fileDialog.open(startPath, nodeHandle);
             }
+            
+            if (ImGui::MenuItem("Load Lua Script...")) {
+                // Start from current working directory for full file system access
+                std::filesystem::path startPath = std::filesystem::current_path();
+                loadScriptDialog.open(startPath, nodeHandle);
+            }
 
             ImGui::EndPopup();
         }
@@ -2518,6 +2584,161 @@ void tinyApp::renderFileDialog() {
         }
 
         ImGui::EndPopup();
+    }
+}
+
+void tinyApp::renderLoadScriptDialog() {
+    loadScriptDialog.update();
+    
+    // Only open the popup once when first requested
+    if (loadScriptDialog.justOpened && !ImGui::IsPopupOpen("Load Lua Script")) {
+        ImGui::OpenPopup("Load Lua Script");
+        loadScriptDialog.justOpened = false;
+    }
+    
+    bool modalOpen = loadScriptDialog.isOpen && !loadScriptDialog.shouldClose;
+    if (ImGui::BeginPopupModal("Load Lua Script", &modalOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Path: %s", loadScriptDialog.currentPath.string().c_str());
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        
+        // File list
+        ImGui::BeginChild("ScriptFileList", ImVec2(600, 400), true);
+        
+        // Parent directory navigation
+        if (loadScriptDialog.currentPath.has_parent_path()) {
+            if (ImGui::Selectable("[..]", false)) {
+                loadScriptDialog.currentPath = loadScriptDialog.currentPath.parent_path();
+                loadScriptDialog.refreshFileList();
+                loadScriptDialog.selectedFile.clear();
+            }
+        }
+        
+        for (const auto& entry : loadScriptDialog.currentFiles) {
+            bool isDirectory = entry.is_directory();
+            bool isLuaFile = !isDirectory && loadScriptDialog.isLuaFile(entry.path());
+            
+            std::string fileName = entry.path().filename().string();
+            
+            if (isDirectory) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.5f, 1.0f)); // Yellow
+                fileName = "[DIR] " + fileName;
+            } else if (isLuaFile) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.8f, 1.0f, 1.0f)); // Light blue
+                fileName = "[LUA] " + fileName;
+            } else {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Gray
+                fileName = "[FILE] " + fileName;
+            }
+            
+            bool isSelected = (loadScriptDialog.selectedFile == entry.path().string());
+            
+            if (ImGui::Selectable(fileName.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                if (isDirectory) {
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        // Navigate into directory
+                        loadScriptDialog.currentPath = entry.path();
+                        loadScriptDialog.refreshFileList();
+                        loadScriptDialog.selectedFile.clear();
+                    }
+                } else if (isLuaFile) {
+                    loadScriptDialog.selectedFile = entry.path().string();
+                    
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        // Double-click to load script
+                        loadScriptFromPath(entry.path().string(), loadScriptDialog.targetFolder);
+                        loadScriptDialog.close();
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+            }
+            
+            ImGui::PopStyleColor();
+        }
+        
+        ImGui::EndChild();
+        
+        ImGui::Separator();
+        
+        // Selected file display
+        if (!loadScriptDialog.selectedFile.empty()) {
+            std::filesystem::path selectedPath(loadScriptDialog.selectedFile);
+            ImGui::Text("Selected: %s", selectedPath.filename().string().c_str());
+        } else {
+            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No file selected");
+        }
+        
+        ImGui::Separator();
+        
+        // Action buttons
+        bool canLoad = !loadScriptDialog.selectedFile.empty() && 
+                        loadScriptDialog.isLuaFile(std::filesystem::path(loadScriptDialog.selectedFile));
+        
+        if (ImGui::Button("Load", ImVec2(120, 0))) {
+            if (canLoad) {
+                loadScriptFromPath(loadScriptDialog.selectedFile, loadScriptDialog.targetFolder);
+                loadScriptDialog.close();
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        
+        if (!canLoad) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.6f, 1.0f), "Please select a .lua file");
+        }
+        
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            loadScriptDialog.close();
+            ImGui::CloseCurrentPopup();
+        }
+        
+        // Handle close button (X) or ESC key
+        if (!modalOpen) {
+            loadScriptDialog.close();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+void tinyApp::loadScriptFromPath(const std::string& filePath, tinyHandle targetFolder) {
+    try {
+        // Read the Lua script file content
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            throw std::runtime_error("Could not open file");
+        }
+        
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string scriptCode = buffer.str();
+        file.close();
+        
+        // Extract script name from file path (without .lua extension)
+        std::filesystem::path path(filePath);
+        std::string scriptName = path.stem().string();
+        
+        // Create tinyScript with the loaded code
+        tinyScript script;
+        script.name = scriptName;
+        script.code = scriptCode;
+        
+        // Add to file system - addFile(parentFolder, name, data)
+        tinyHandle scriptHandle = project->fs().addFile(targetFolder, scriptName, std::move(script));
+        
+        if (scriptHandle.valid()) {
+            // Select the newly loaded script
+            selectFileNode(scriptHandle);
+            
+            // Expand the target folder to show the new script
+            expandFNode(targetFolder);
+            expandFNodeParentChain(targetFolder);
+        }
+        
+    } catch (const std::exception& e) {
+        throw std::runtime_error(std::string("Failed to load script from path '") + filePath + "': " + e.what());
     }
 }
 

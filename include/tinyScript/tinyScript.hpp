@@ -48,8 +48,8 @@ struct tinyScript {
     std::string name;
     std::string code;
 
-    tinyScript() { init(); }
-    tinyScript(const std::string& scriptName) : name(scriptName) { init(); }
+    tinyScript() = default;
+    tinyScript(const std::string& scriptName) : name(scriptName) {}
     ~tinyScript();
     
     tinyScript(const tinyScript&) = delete;
@@ -77,8 +77,6 @@ struct tinyScript {
     void initVars(tinyVarsMap& outVars) const;
 
 private:
-    void init();
-
     uint32_t version_ = 0;
     lua_State* L_ = nullptr;
     bool compiled_ = false;

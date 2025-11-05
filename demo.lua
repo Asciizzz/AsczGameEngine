@@ -1,127 +1,192 @@
--- Complete Node/Scene OOP API Demo
--- This demonstrates all the features of the new API
+-- Character Controller with Enemy Detection
+-- This script demonstrates the new hierarchy features:
+--   - node:children() - Get all child nodes
+--   - node:parent() - Get parent node
+--   - nodeHandle global - Current node's handle
+--
+-- Nodes:
+--   rootNode: Movement and rotation
+--   animeNode: Animation playback
+--   enemiesNode: Parent of all enemy nodes (loop through children!)
+-- 
+-- Drag node handles from scene hierarchy into the fields below
 
--- ========== Character Controller Example ==========
 function vars()
     return {
-        -- Movement settings
-        moveSpeed = 2.0,
+        -- Node references (drag nodes from scene hierarchy)
+        rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
+        animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
+        enemiesNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
+
+        -- Stats
+        isPlayer = true,
+        vel = 2.0,
+        hp = 100.0,
+        maxHp = 100.0,
+        isDead = false,
         
-        -- Animation names (configurable for different models)
-        idleAnim = "Idle_A",
-        walkAnim = "Walking_A",
-        runAnim = "Running_A",
-        
-        -- Example: External node reference (drag a node handle from scene)
-        targetNode = Handle(0, 0)  -- Invalid handle by default
+        -- Combat
+        attackRange = 1.0,  -- Distance at which player can hit enemies
+        attackDamage = 10.0,
+
+        -- Animation names (configure for your model)
+        idleAnim = "Idle_Loop",
+        walkAnim = "Walk_Loop",
+        runAnim = "Sprint_Loop",
+        deathAnim = "Death01"  -- Death animation (non-looping)
     }
 end
 
 function update()
-    -- ========== INPUT ==========
+    -- Get node references
+    local root = scene:getNode(vars.rootNode)
+    local anime = scene:getNode(vars.animeNode)
+
+    -- ========== HEALTH MANAGEMENT ==========
+    -- Clamp HP
+    if vars.hp < 0 then
+        vars.hp = 0
+    end
+    if vars.hp > vars.maxHp then
+        vars.hp = vars.maxHp
+    end
+
+    -- Check for death
+    if vars.hp <= 0 and not vars.isDead then
+        vars.isDead = true
+        print("Player died!")
+    end
+
+    -- If dead, play death animation (non-looping) and return early
+    if vars.isDead and anime then
+        local deathHandle = anime:getAnimHandle(vars.deathAnim)
+        local curHandle = anime:getCurAnimHandle()
+        
+        -- Only play death animation once
+        if not handleEqual(curHandle, deathHandle) then
+            anime:setAnimLoop(false)  -- Death animation doesn't loop
+            anime:playAnim(deathHandle, true)
+        else
+            -- Check if death animation has finished
+            local animTime = anime:getAnimTime()
+            local animDuration = anime:getAnimDuration()
+            
+            if animTime >= animDuration - 0.01 then
+                -- Death animation finished, pause at last frame
+                anime:pauseAnim()
+            end
+        end
+        
+        return  -- Don't process movement or other logic while dead
+    end
+
+    -- ========== ENEMY COLLISION & COMBAT ==========
+    if root and vars.isPlayer and not vars.isDead then
+        local playerPos = root:getPos()
+        local enemiesContainer = scene:getNode(vars.enemiesNode)
+        
+        if enemiesContainer then
+            -- Get all enemy children using the new children() method!
+            local enemies = enemiesContainer:children()
+            
+            -- Loop through each enemy and check distance
+            for i = 1, #enemies do
+                local enemy = enemies[i]
+                
+                -- Skip collision check with self!
+                if enemy ~= node then
+                    local enemyPos = enemy:getPos()
+
+                    if enemyPos then
+                    -- Calculate distance to enemy
+                    local dx = playerPos.x - enemyPos.x
+                    local dy = playerPos.y - enemyPos.y
+                    local dz = playerPos.z - enemyPos.z
+                    local distSq = dx * dx + dy * dy + dz * dz
+                    local distance = math.sqrt(distSq)
+                    
+                    -- If within attack range, deal damage
+                    if distance <= vars.attackRange then
+                        -- Deal damage over time to player (enemies hurt the player)
+                        vars.hp = vars.hp - vars.attackDamage * dTime
+                        
+                        -- Optional: Visual feedback - make enemy flash or scale
+                        local scale = enemy:getScl()
+                        if scale then
+                            -- Pulse effect: slightly scale up when near player
+                            local pulse = 1.0 + 0.1 * math.sin(dTime * 10.0)
+                            enemy:setScl({x = pulse, y = pulse, z = pulse})
+                        end
+                    end
+                    end
+                end
+            end
+        end
+    end
+
+    -- ========== INPUT DETECTION ==========
     local k_up = kState("up")
     local k_down = kState("down")
     local k_left = kState("left")
     local k_right = kState("right")
     local running = kState("shift")
     
-    -- Calculate movement direction (arrow keys)
+    -- Calculate movement direction
     local vz = (k_up and 1 or 0) - (k_down and 1 or 0)
-    local vx = (k_left and -1 or 0) - (k_right and -1 or 0)
-    
+    local vx = (k_right and -1 or 0) - (k_left and -1 or 0) -- I really need to fix the coord system lol
     local isMoving = (vx ~= 0) or (vz ~= 0)
-    vars.moveSpeed = (running and isMoving) and 4.0 or 1.0
+    local moveSpeed = ((running and isMoving) and 4.0 or 1.0) * vars.vel
     
-    -- ========== MOVEMENT (for current node) ==========
-    if isMoving then
-        -- Get current position using OOP syntax
-        local pos = node:getPos()
-        if pos then
-            -- Calculate movement direction
-            local moveDir = {x = vx, y = 0, z = vz}
-            
-            -- Normalize diagonal movement
-            local length = math.sqrt(moveDir.x * moveDir.x + moveDir.z * moveDir.z)
-            if length > 0 then
-                moveDir.x = moveDir.x / length
-                moveDir.z = moveDir.z / length
-            end
-            
-            -- Calculate target yaw (rotation around Y axis)
-            local targetYaw = math.atan(moveDir.x, moveDir.z)
-            
-            -- Apply movement
-            pos.x = pos.x + moveDir.x * vars.moveSpeed * dTime
-            pos.z = pos.z + moveDir.z * vars.moveSpeed * dTime
-            node:setPos(pos)
-            
-            -- Apply rotation
-            node:setRot({x = 0, y = targetYaw, z = 0})
-        end
-    end
-    
-    -- ========== ANIMATION (for current node) ==========
-    -- Get animation handles by name (configurable)
-    local idleHandle = node:getAnimHandle(vars.idleAnim)
-    local walkHandle = node:getAnimHandle(vars.walkAnim)
-    local runHandle = node:getAnimHandle(vars.runAnim)
-    local curHandle = node:getCurAnimHandle()
-    
-    -- Set animation speed
-    node:setAnimSpeed(isMoving and vars.moveSpeed or 1.0)
-    
-    if isMoving then
-        -- Choose run or walk animation
-        local playHandle = running and runHandle or walkHandle
+    -- ========== MOVEMENT (Root Node) ==========
+    if root and isMoving then
+        local pos = root:getPos()
         
-        -- Only restart when switching FROM idle TO walk/run
-        local shouldRestart = not (handleEqual(curHandle, runHandle) or 
-                                   handleEqual(curHandle, walkHandle))
-        node:playAnim(playHandle, shouldRestart)
-    else
-        -- Switch to idle
-        local shouldRestart = not handleEqual(curHandle, idleHandle)
-        node:playAnim(idleHandle, shouldRestart)
+        -- Calculate normalized movement direction
+        local moveDir = {x = vx, y = 0, z = vz}
+        local length = math.sqrt(moveDir.x * moveDir.x + moveDir.z * moveDir.z)
+        if length > 0 then
+            moveDir.x = moveDir.x / length
+            moveDir.z = moveDir.z / length
+        end
+        
+        -- Apply movement
+        pos.x = pos.x + moveDir.x * moveSpeed * dTime
+        pos.z = pos.z + moveDir.z * moveSpeed * dTime
+        root:setPos(pos)
+        
+        -- Apply rotation (face movement direction)
+        local targetYaw = math.atan(moveDir.x, moveDir.z)
+        root:setRot({x = 0, y = targetYaw, z = 0})
     end
     
-    -- ========== EXTERNAL NODE MANIPULATION ==========
-    -- Example: Get an external node and manipulate it
-    if vars.targetNode then
-        local target = scene:getNode(vars.targetNode)
-        if target then
-            -- Do something with the target node
-            -- (This is just an example - the actual logic is in the spinner test)
+    -- ========== ANIMATION (Anime Node) ==========
+    if anime then
+        -- Get animation handles
+        local idleHandle = anime:getAnimHandle(vars.idleAnim)
+        local walkHandle = anime:getAnimHandle(vars.walkAnim)
+        local runHandle = anime:getAnimHandle(vars.runAnim)
+        local curHandle = anime:getCurAnimHandle()
+        
+        -- Ensure looping is enabled for normal animations
+        if not anime:getAnimLoop() then
+            anime:setAnimLoop(true)
+        end
+        
+        -- Set animation speed
+        anime:setAnimSpeed(isMoving and moveSpeed or 1.0)
+        
+        if isMoving then
+            -- Choose run or walk
+            local playHandle = running and runHandle or walkHandle
+            
+            -- Only restart when switching from idle to walk/run
+            local shouldRestart = not (handleEqual(curHandle, runHandle) or 
+                                       handleEqual(curHandle, walkHandle))
+            anime:playAnim(playHandle, shouldRestart)
+        else
+            -- Play idle
+            local shouldRestart = not handleEqual(curHandle, idleHandle)
+            anime:playAnim(idleHandle, shouldRestart)
         end
     end
 end
-
--- ========== API Reference ==========
---[[
-    Node Methods:
-        node:getPos() -> {x, y, z}
-        node:setPos({x, y, z})
-        node:getRot() -> {x, y, z} (Euler angles)
-        node:setRot({x, y, z})
-        node:getScl() -> {x, y, z}
-        node:setScl({x, y, z})
-        node:getAnimHandle(name) -> animHandle or nil
-        node:getCurAnimHandle() -> animHandle or nil
-        node:playAnim(animHandle, restart)
-        node:setAnimSpeed(speed)
-        node:isAnimPlaying() -> boolean
-    
-    Scene Methods:
-        scene:getNode(handle) -> Node object
-    
-    Global Functions:
-        kState(keyName) -> boolean
-        Handle(index, version) -> handle (for vars())
-        handleEqual(h1, h2) -> boolean
-        animHandlesEqual(h1, h2) -> boolean (legacy alias)
-    
-    Global Variables:
-        node - The current node (Node object)
-        scene - The current scene (Scene object)
-        vars - Runtime variables table
-        dTime - Delta time (seconds)
-]]
