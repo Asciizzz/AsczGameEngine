@@ -3,6 +3,29 @@
 #include "tinyScript_bind.hpp"
 #include <iostream>
 
+// ==================== tinyDebug Implementation ====================
+
+void tinyDebug::log(const std::string& message, float r, float g, float b) {
+    Entry entry;
+    entry.str = message;
+    entry.color[0] = r;
+    entry.color[1] = g;
+    entry.color[2] = b;
+
+    // FIFO: if we're at max capacity, remove oldest entry
+    if (logs_.size() >= maxLogs_) {
+        logs_.erase(logs_.begin());
+    }
+    
+    logs_.push_back(entry);
+}
+
+void tinyDebug::clear() {
+    logs_.clear();
+}
+
+// ==================== tinyScript Implementation ====================
+
 tinyScript::~tinyScript() {
     closeLua();
 }
@@ -22,8 +45,8 @@ tinyScript::tinyScript(tinyScript&& other) noexcept
     , version_(other.version_)
     , L_(other.L_)
     , compiled_(other.compiled_)
-    , error_(std::move(other.error_))
-    , defaultVars_(std::move(other.defaultVars_)) {
+    , defaultVars_(std::move(other.defaultVars_))
+    , debug_(std::move(other.debug_)) {
     other.L_ = nullptr;
     other.compiled_ = false;
 }
@@ -36,8 +59,8 @@ tinyScript& tinyScript::operator=(tinyScript&& other) noexcept {
         version_ = other.version_;
         L_ = other.L_;
         compiled_ = other.compiled_;
-        error_ = std::move(other.error_);
         defaultVars_ = std::move(other.defaultVars_);
+        debug_ = std::move(other.debug_);
 
         other.L_ = nullptr;
         other.compiled_ = false;
@@ -50,13 +73,12 @@ bool tinyScript::compile() {
     closeLua();
 
     compiled_ = false;
-    error_.clear(); // Clear previous errors
+    // Don't clear debug logs - keep history across compilations
 
     // Create new Lua state
     L_ = luaL_newstate();
     if (!L_) {
-        error_ = "Failed to create Lua state";
-        std::cerr << "[tinyScript] Failed to create Lua state for: " << name << std::endl;
+        debug_.log("Failed to create Lua state", 1.0f, 0.0f, 0.0f);
         return false;
     }
     
@@ -68,9 +90,8 @@ bool tinyScript::compile() {
     
     // Compile the code
     if (luaL_loadstring(L_, code.c_str()) != LUA_OK) {
-        error_ = std::string("Compilation error: ") + lua_tostring(L_, -1);
-        std::cerr << "[tinyScript] Compilation error in " << name << ": " 
-                  << lua_tostring(L_, -1) << std::endl;
+        std::string error = std::string("Compilation error: ") + lua_tostring(L_, -1);
+        debug_.log(error, 1.0f, 0.0f, 0.0f);
         lua_pop(L_, 1);
         lua_close(L_);
         L_ = nullptr;
@@ -79,9 +100,8 @@ bool tinyScript::compile() {
     
     // Execute the chunk to define functions
     if (lua_pcall(L_, 0, 0, 0) != LUA_OK) {
-        error_ = std::string("Execution error: ") + lua_tostring(L_, -1);
-        std::cerr << "[tinyScript] Execution error in " << name << ": " 
-                  << lua_tostring(L_, -1) << std::endl;
+        std::string error = std::string("Execution error: ") + lua_tostring(L_, -1);
+        debug_.log(error, 1.0f, 0.0f, 0.0f);
         lua_pop(L_, 1);
         lua_close(L_);
         L_ = nullptr;
@@ -91,6 +111,9 @@ bool tinyScript::compile() {
     // Increment version and mark as compiled
     version_++;
     compiled_ = true;
+
+    // Log success
+    debug_.log("Compilation successful", 0.0f, 1.0f, 0.0f);
 
     // Cache default variables from vars() function
     cacheDefaultVars();
@@ -113,8 +136,6 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
     
     // Call the function (0 args, 0 returns for now)
     if (lua_pcall(targetL, 0, 0, 0) != LUA_OK) {
-        std::cerr << "[tinyScript] Error calling " << functionName << " in " << name << ": " 
-                  << lua_tostring(targetL, -1) << std::endl;
         lua_pop(targetL, 1);
         return false;
     }
@@ -136,8 +157,6 @@ void tinyScript::cacheDefaultVars() {
     }
 
     if (lua_pcall(L_, 0, 1, 0) != LUA_OK) {
-        std::cerr << "[tinyScript] Error calling vars in " << name << ": " 
-                  << lua_tostring(L_, -1) << std::endl;
         lua_pop(L_, 1);
         return;
     }

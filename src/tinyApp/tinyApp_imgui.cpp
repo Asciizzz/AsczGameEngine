@@ -20,7 +20,7 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
     // Main Editor Window - full size, no scroll bars
     const tinyFS& fs = project->fs();
 
-    imguiWrapper->addWindow("Editor", [this, &camera, &fs]() {
+    imguiWrapper->addWindow("Hierarchy Editor", [this, &camera, &fs]() {
         // Static variable to store splitter position (persists between frames)
         static float splitterPos = 0.5f; // Start with 50% for hierarchy, 50% for file explorer
         
@@ -104,7 +104,7 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
         ImGui::PopStyleColor(3);
         
         // =============================================================================
-        // FILE EXPLORER SECTION (BOTTOM)
+        // FILE EXPLORER SECTION
         // =============================================================================
         
         ImGui::Text("File Explorer");
@@ -233,7 +233,7 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
     }, &showEditorSettingsWindow);
 
     // Animation Editor Window
-    imguiWrapper->addWindow("Animation Editor", [this]() {
+    imguiWrapper->addWindow("Editor", [this]() {
         renderAnimationEditorWindow();
     });
 
@@ -1043,22 +1043,6 @@ void tinyApp::renderSceneNodeInspector() {
             // Get component copy using tinySceneRT method
             tinyRT_ANIM3D* compPtr = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedSceneNodeHandle);
 
-            // Button to open animation editor for this node
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.9f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.7f, 1.0f));
-            
-            if (ImGui::Button("Open Animation Editor", ImVec2(-1, 0))) {
-                selectedAnimationNode = selectedSceneNodeHandle;
-                showAnimationEditor = true;
-            }
-            
-            ImGui::PopStyleColor(3);
-            
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-
             // Create a search field
             static char searchBuffer[128] = "";
             ImGui::Text("Search:");
@@ -1095,7 +1079,8 @@ void tinyApp::renderSceneNodeInspector() {
                 // Selectable animation
                 if (ImGui::Selectable(name.c_str(), isSelected)) {
                     selectedAnimationHandle = handle;
-                    selectedAnimationNode = selectedSceneNodeHandle;
+                    selectedCompNode = selectedSceneNodeHandle;
+                    compMode = CompMode::Animation;
                     showAnimationEditor = true;
                     
                     // Set as current animation without auto-playing (user can press Play button)
@@ -1152,6 +1137,22 @@ void tinyApp::renderSceneNodeInspector() {
                         scriptRT->assign(scripthandle.handle);
                     }
                     ImGui::EndDragDropTarget();
+                }
+                
+                ImGui::PopStyleColor(3);
+                
+                // Button to open debug window for this script
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.9f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.7f, 1.0f));
+                
+                if (ImGui::Button("Open Debug Window", ImVec2(-1, 0))) {
+                    selectedCompNode = selectedSceneNodeHandle;
+                    compMode = CompMode::Script;
+                    // Clear animation handles when switching to script mode
+                    selectedAnimationHandle = tinyHandle();
+                    selectedChannelIndex = -1;
+                    showAnimationEditor = true;  // Reusing animation window for debug
                 }
                 
                 ImGui::PopStyleColor(3);
@@ -1700,7 +1701,7 @@ void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
     bool hasChildren = !node->childrenHandles.empty();
     bool isSelected = (selectedHandle.isScene() && selectedHandle.handle.index == nodeHandle.index && selectedHandle.handle.version == nodeHandle.version);
     bool isHeld = (heldHandle.isScene() && heldHandle.handle.index == nodeHandle.index && heldHandle.handle.version == nodeHandle.version);
-    bool isAnimationNode = (selectedAnimationNode.valid() && selectedAnimationNode.index == nodeHandle.index && selectedAnimationNode.version == nodeHandle.version);
+    bool isCompNode = (selectedCompNode.valid() && selectedCompNode.index == nodeHandle.index && selectedCompNode.version == nodeHandle.version);
     
     // Create tree node flags
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
@@ -1711,9 +1712,9 @@ void tinyApp::renderNodeTreeImGui(tinyHandle nodeHandle, int depth) {
         flags |= ImGuiTreeNodeFlags_Selected;
     }
 
-    // Add consistent styling to match File explorer theme, with special highlight for animation node
-    if (isAnimationNode) {
-        // Highlight animation node in cyan/blue
+    // Add consistent styling to match File explorer theme, with special highlight for component node
+    if (isCompNode) {
+        // Highlight component node (animation/script) in cyan/blue
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.2f, 0.4f, 0.6f, 0.6f));
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.5f, 0.8f, 0.8f));
     } else {
@@ -1976,6 +1977,22 @@ void tinyApp::selectSceneNode(tinyHandle nodeHandle) {
     
     // Update selection to new scene node
     selectedHandle = SelectHandle(nodeHandle, SelectHandle::Type::Scene);
+    
+    // Update selectedCompNode if the new node has animation or script component
+    if (nodeHandle.valid()) {
+        tinySceneRT* activeScene = getActiveScene();
+        if (activeScene) {
+            const tinyNodeRT* node = activeScene->node(nodeHandle);
+            if (node && (node->has<tinyNodeRT::ANIM3D>() || node->has<tinyNodeRT::SCRIPT>())) {
+                // Only update if it's a different node (not the same node being re-selected)
+                if (!selectedCompNode.valid() || 
+                    selectedCompNode.index != nodeHandle.index || 
+                    selectedCompNode.version != nodeHandle.version) {
+                    selectedCompNode = nodeHandle;
+                }
+            }
+        }
+    }
 }
 
 void tinyApp::selectFileNode(tinyHandle fileHandle) {
@@ -2547,21 +2564,48 @@ void tinyApp::renderAnimationEditorWindow() {
         return;
     }
 
-    // Check if we have a valid animation node selected
-    if (!selectedAnimationNode.valid()) {
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No animation node selected");
-        ImGui::Text("Select a node with an Animation component and choose an animation");
+    // Check if we have a valid component node selected
+    if (!selectedCompNode.valid()) {
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No component node selected");
+        ImGui::Text("Select a node with Animation or Script component");
         return;
     }
 
-    const tinyNodeRT* animNode = activeScene->node(selectedAnimationNode);
-    if (!animNode || !animNode->has<tinyNodeRT::ANIM3D>()) {
-        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid animation node");
-        selectedAnimationNode = tinyHandle();
+    const tinyNodeRT* compNode = activeScene->node(selectedCompNode);
+    if (!compNode) {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid component node");
+        selectedCompNode = tinyHandle();
         return;
     }
 
-    tinyRT_ANIM3D* animComp = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedAnimationNode);
+    bool hasAnimation = compNode->has<tinyNodeRT::ANIM3D>();
+    bool hasScript = compNode->has<tinyNodeRT::SCRIPT>();
+
+    if (!hasAnimation && !hasScript) {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Node has no Animation or Script component");
+        selectedCompNode = tinyHandle();
+        return;
+    }
+
+    // Use the mode flag to determine which component to show
+    if (compMode == CompMode::Animation && hasAnimation) {
+        // Render animation editor
+        renderAnimationEditor(activeScene, compNode);
+    } else if (compMode == CompMode::Script && hasScript) {
+        // Render script debug window
+        renderScriptDebug(activeScene, compNode);
+    } else {
+        // Fallback: show animation if available, otherwise script
+        if (hasAnimation) {
+            renderAnimationEditor(activeScene, compNode);
+        } else {
+            renderScriptDebug(activeScene, compNode);
+        }
+    }
+}
+
+void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* animNode) {
+    tinyRT_ANIM3D* animComp = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedCompNode);
     if (!animComp) {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Failed to get animation component");
         return;
@@ -2873,6 +2917,59 @@ void tinyApp::renderAnimationEditorWindow() {
     ImGui::EndChild();
 }
 
+void tinyApp::renderScriptDebug(tinySceneRT* activeScene, const tinyNodeRT* scriptNode) {
+    tinyRT::Script* scriptRT = activeScene->rtComp<tinyNodeRT::SCRIPT>(selectedCompNode);
+    if (!scriptRT) {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Failed to get script component");
+        return;
+    }
+
+    // ===== HEADER =====
+    ImGui::Text("Script Debug: %s", scriptNode->name.c_str());
+    
+    const tinyScript* script = scriptRT->rScript();
+    if (script) {
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "> %s", script->name.c_str());
+    }
+    
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ===== DEBUG OUTPUT =====
+    ImGui::Text("Runtime Debug Logs:");
+    ImGui::SameLine();
+    
+    // Clear button
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+    
+    if (ImGui::Button("Clear##RuntimeDebug")) {
+        scriptRT->debug().clear();
+    }
+    
+    ImGui::PopStyleColor(3);
+    ImGui::Separator();
+    
+    ImGui::BeginChild("ScriptDebugOutput", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+    
+    const auto& logs = scriptRT->debug().logs();
+    if (logs.empty()) {
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No debug logs");
+    } else {
+        for (const auto& log : logs) {
+            ImGui::TextColored(ImVec4(log.color[0], log.color[1], log.color[2], 1.0f), "%s", log.str.c_str());
+        }
+        
+        // Auto-scroll to bottom
+        if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+            ImGui::SetScrollHereY(1.0f);
+    }
+    
+    ImGui::EndChild();
+}
+
 void tinyApp::renderScriptEditorWindow() {
     tinyFS& fs = project->fs();
     
@@ -2995,8 +3092,20 @@ void tinyApp::renderScriptEditorWindow() {
     
     ImGui::PopStyleColor(3);
     
-    // ===== DEBUG PANEL (BOTTOM) =====
+    // ===== DEBUG PANEL =====
     ImGui::Text("Debug Output:");
+    ImGui::SameLine();
+    
+    // Clear button for compilation logs
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+    
+    if (ImGui::Button("Clear##CompilationDebug")) {
+        script->debug().clear();
+    }
+    
+    ImGui::PopStyleColor(3);
     
     // Debug panel with scrolling - transparent background
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
@@ -3009,17 +3118,16 @@ void tinyApp::renderScriptEditorWindow() {
     
     ImGui::BeginChild("DebugOutput", ImVec2(-1, debugHeight), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     
-    const std::string& errorMsg = script->error();
-    if (!errorMsg.empty()) {
-        // Display error message in red
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
-        ImGui::TextWrapped("%s", errorMsg.c_str());
-        ImGui::PopStyleColor();
-    } else if (script->valid()) {
-        // Display success message in green
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 1.0f, 0.3f, 1.0f));
-        ImGui::Text("Script compiled successfully!");
-        ImGui::PopStyleColor();
+    // Display compilation debug logs
+    const auto& logs = script->debug().logs();
+    if (logs.empty()) {
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No compilation logs");
+    } else {
+        for (const auto& log : logs) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(log.color[0], log.color[1], log.color[2], 1.0f));
+            ImGui::TextWrapped("%s", log.str.c_str());
+            ImGui::PopStyleColor();
+        }
     }
 
     ImGui::EndChild();

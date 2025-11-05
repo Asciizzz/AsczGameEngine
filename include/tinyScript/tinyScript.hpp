@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <variant>
+#include <vector>
 #include <glm/glm.hpp>
 #include "tinyExt/tinyHandle.hpp"
 
@@ -12,6 +13,29 @@ extern "C" {
     #include "lualib.h"
     #include "lauxlib.h"
 }
+
+// Debug logging system with FIFO circular buffer
+class tinyDebug {
+public:
+    struct Entry {
+        std::string str;
+        float color[3] = {1.0f, 1.0f, 1.0f};
+    };
+
+    explicit tinyDebug(size_t maxLogs = 16) : maxLogs_(maxLogs) {}
+
+    void log(const std::string& message, float r = 1.0f, float g = 1.0f, float b = 1.0f);
+    void clear();
+    
+    const std::vector<Entry>& logs() const { return logs_; }
+    size_t maxLogs() const { return maxLogs_; }
+    bool empty() const { return logs_.empty(); }
+    size_t size() const { return logs_.size(); }
+
+private:
+    size_t maxLogs_;
+    std::vector<Entry> logs_;
+};
 
 // Script handle - wraps tinyHandle with a type tag
 // - isNodeHandle = true: Handle to scene node (needs remapping on scene load)
@@ -52,7 +76,10 @@ struct tinyScript {
 
     bool valid() const { return compiled_ && L_ != nullptr; }
     uint32_t version() const { return version_; }
-    const std::string& error() const { return error_; }
+
+    // Compilation debug logs (8-16 lines max, FIFO)
+    tinyDebug& debug() { return debug_; }
+    const tinyDebug& debug() const { return debug_; }
 
     // For making copies
     const tinyVarsMap& defaultVars() const { return defaultVars_; }
@@ -60,14 +87,13 @@ struct tinyScript {
 private:
     void init();
 
-    std::string error_; // Cached error messages
-
     uint32_t version_ = 0;
     lua_State* L_ = nullptr;
     bool compiled_ = false;
 
     tinyVarsMap defaultVars_;
+    tinyDebug debug_{16};  // Compilation/static debug logs (16 lines max)
+    
     void cacheDefaultVars();
-
     void closeLua();
 };

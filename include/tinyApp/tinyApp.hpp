@@ -120,8 +120,9 @@ private:
     tinyHandle prevSceneNode;          // Last selected scene node (hierarchy)
     tinyHandle prevFileNode;           // Last selected file node (file explorer)
     
-    // Animation Editor State
-    tinyHandle selectedAnimationNode;   // Persistent selection for animation editor (stays highlighted)
+    // Component Window State (shared between Animation/Script debug)
+    enum class CompMode { Animation, Script } compMode = CompMode::Animation;
+    tinyHandle selectedCompNode;        // Persistent node with Animation/Script component (stays highlighted)
     tinyHandle selectedAnimationHandle; // Currently selected animation in the component list
     int selectedChannelIndex = -1;      // Currently selected channel in the timeline
     
@@ -143,7 +144,9 @@ private:
     void renderInspectorWindow();
     void renderFileSystemInspector();
     void renderSceneNodeInspector();  // Renamed from renderNodeInspector
-    void renderAnimationEditorWindow(); // Animation timeline editor
+    void renderAnimationEditorWindow(); // Animation/Script component window (dual purpose)
+    void renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* animNode); // Animation timeline editor
+    void renderScriptDebug(tinySceneRT* activeScene, const tinyNodeRT* scriptNode); // Script runtime debug
     void renderScriptEditorWindow(); // Lua script editor
     void renderComponent(const char* componentName, ImVec4 backgroundColor, ImVec4 borderColor, bool showRemoveButton, std::function<void()> renderContent, std::function<void()> onRemove);
 

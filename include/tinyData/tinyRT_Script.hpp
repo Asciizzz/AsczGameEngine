@@ -61,12 +61,20 @@ struct Script {
         return vars_.find(key) != vars_.end();
     }
 
+    // Runtime debug logs (FIFO, for real-time broken values)
+    tinyDebug& debug() { return debug_; }
+    const tinyDebug& debug() const { return debug_; }
+
+    // UI state for debug window toggle
+    bool showDebugWindow = false;
+
 private:
     tinyHandle scriptHandle_;
     const tinyPool<tinyScript>* scriptPool_ = nullptr;
     uint32_t cachedVersion_ = 0;
 
     tinyVarsMap vars_;
+    tinyDebug debug_{128};  // Runtime debug logs (128 lines max for real-time values)
 };
 
 } // namespace tinyRT
