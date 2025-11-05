@@ -59,21 +59,24 @@ function update()
 
     -- If dead, play death animation (non-looping) and return early
     if vars.isDead and anime then
-        local deathHandle = anime:getAnimHandle(vars.deathAnim)
-        local curHandle = anime:getCurAnimHandle()
-        
-        -- Only play death animation once
-        if not handleEqual(curHandle, deathHandle) then
-            anime:setAnimLoop(false)  -- Death animation doesn't loop
-            anime:playAnim(deathHandle, true)
-        else
-            -- Check if death animation has finished
-            local animTime = anime:getAnimTime()
-            local animDuration = anime:getAnimDuration()
+        local anim3d = anime:anim3D()
+        if anim3d then
+            local deathHandle = anim3d:get(vars.deathAnim)
+            local curHandle = anim3d:current()
             
-            if animTime >= animDuration - 0.01 then
-                -- Death animation finished, pause at last frame
-                anime:pauseAnim()
+            -- Only play death animation once
+            if not handleEqual(curHandle, deathHandle) then
+                anim3d:setLoop(false)  -- Death animation doesn't loop
+                anim3d:play(deathHandle, true)
+            else
+                -- Check if death animation has finished
+                local animTime = anim3d:getTime()
+                local animDuration = anim3d:getDuration()
+                
+                if animTime >= animDuration - 0.01 then
+                    -- Death animation finished, pause at last frame
+                    anim3d:pause()
+                end
             end
         end
         
@@ -82,42 +85,44 @@ function update()
 
     -- ========== ENEMY COLLISION & COMBAT ==========
     if root and vars.isPlayer and not vars.isDead then
-        local playerPos = root:getPos()
-        local enemiesContainer = scene:getNode(vars.enemiesNode)
-        
-        if enemiesContainer then
-            -- Get all enemy children using the new children() method!
-            local enemies = enemiesContainer:children()
+        local rootT3D = root:transform3D()
+        if rootT3D then
+            local playerPos = rootT3D:getPos()
+            local enemiesContainer = scene:getNode(vars.enemiesNode)
             
-            -- Loop through each enemy and check distance
-            for i = 1, #enemies do
-                local enemy = enemies[i]
+            if enemiesContainer then
+                -- Get all enemy children using the new children() method!
+                local enemies = enemiesContainer:children()
                 
-                -- Skip collision check with self!
-                if enemy ~= node then
-                    local enemyPos = enemy:getPos()
-
-                    if enemyPos then
-                    -- Calculate distance to enemy
-                    local dx = playerPos.x - enemyPos.x
-                    local dy = playerPos.y - enemyPos.y
-                    local dz = playerPos.z - enemyPos.z
-                    local distSq = dx * dx + dy * dy + dz * dz
-                    local distance = math.sqrt(distSq)
+                -- Loop through each enemy and check distance
+                for i = 1, #enemies do
+                    local enemy = enemies[i]
                     
-                    -- If within attack range, deal damage
-                    if distance <= vars.attackRange then
-                        -- Deal damage over time to player (enemies hurt the player)
-                        vars.hp = vars.hp - vars.attackDamage * dTime
-                        
-                        -- Optional: Visual feedback - make enemy flash or scale
-                        local scale = enemy:getScl()
-                        if scale then
-                            -- Pulse effect: slightly scale up when near player
-                            local pulse = 1.0 + 0.1 * math.sin(dTime * 10.0)
-                            enemy:setScl({x = pulse, y = pulse, z = pulse})
+                    -- Skip collision check with self!
+                    if enemy ~= node then
+                        local enemyT3D = enemy:transform3D()
+                        if enemyT3D then
+                            local enemyPos = enemyT3D:getPos()
+                            
+                            -- Calculate distance to enemy
+                            local dx = playerPos.x - enemyPos.x
+                            local dy = playerPos.y - enemyPos.y
+                            local dz = playerPos.z - enemyPos.z
+                            local distSq = dx * dx + dy * dy + dz * dz
+                            local distance = math.sqrt(distSq)
+                            
+                            -- If within attack range, deal damage
+                            if distance <= vars.attackRange then
+                                -- Deal damage over time to player (enemies hurt the player)
+                                vars.hp = vars.hp - vars.attackDamage * dTime
+                                
+                                -- Optional: Visual feedback - make enemy flash or scale
+                                local scale = enemyT3D:getScl()
+                                -- Pulse effect: slightly scale up when near player
+                                local pulse = 1.0 + 0.1 * math.sin(dTime * 10.0)
+                                enemyT3D:setScl({x = pulse, y = pulse, z = pulse})
+                            end
                         end
-                    end
                     end
                 end
             end
@@ -139,54 +144,60 @@ function update()
     
     -- ========== MOVEMENT (Root Node) ==========
     if root and isMoving then
-        local pos = root:getPos()
-        
-        -- Calculate normalized movement direction
-        local moveDir = {x = vx, y = 0, z = vz}
-        local length = math.sqrt(moveDir.x * moveDir.x + moveDir.z * moveDir.z)
-        if length > 0 then
-            moveDir.x = moveDir.x / length
-            moveDir.z = moveDir.z / length
+        local rootT3D = root:transform3D()
+        if rootT3D then
+            local pos = rootT3D:getPos()
+            
+            -- Calculate normalized movement direction
+            local moveDir = {x = vx, y = 0, z = vz}
+            local length = math.sqrt(moveDir.x * moveDir.x + moveDir.z * moveDir.z)
+            if length > 0 then
+                moveDir.x = moveDir.x / length
+                moveDir.z = moveDir.z / length
+            end
+            
+            -- Apply movement
+            pos.x = pos.x + moveDir.x * moveSpeed * dTime
+            pos.z = pos.z + moveDir.z * moveSpeed * dTime
+            rootT3D:setPos(pos)
+            
+            -- Apply rotation (face movement direction)
+            local targetYaw = math.atan(moveDir.x, moveDir.z)
+            rootT3D:setRot({x = 0, y = targetYaw, z = 0})
         end
-        
-        -- Apply movement
-        pos.x = pos.x + moveDir.x * moveSpeed * dTime
-        pos.z = pos.z + moveDir.z * moveSpeed * dTime
-        root:setPos(pos)
-        
-        -- Apply rotation (face movement direction)
-        local targetYaw = math.atan(moveDir.x, moveDir.z)
-        root:setRot({x = 0, y = targetYaw, z = 0})
     end
     
     -- ========== ANIMATION (Anime Node) ==========
     if anime then
-        -- Get animation handles
-        local idleHandle = anime:getAnimHandle(vars.idleAnim)
-        local walkHandle = anime:getAnimHandle(vars.walkAnim)
-        local runHandle = anime:getAnimHandle(vars.runAnim)
-        local curHandle = anime:getCurAnimHandle()
-        
-        -- Ensure looping is enabled for normal animations
-        if not anime:getAnimLoop() then
-            anime:setAnimLoop(true)
-        end
-        
-        -- Set animation speed
-        anime:setAnimSpeed(isMoving and moveSpeed or 1.0)
-        
-        if isMoving then
-            -- Choose run or walk
-            local playHandle = running and runHandle or walkHandle
+        local anim3d = anime:anim3D()
+        if anim3d then
+            -- Get animation handles
+            local idleHandle = anim3d:get(vars.idleAnim)
+            local walkHandle = anim3d:get(vars.walkAnim)
+            local runHandle = anim3d:get(vars.runAnim)
+            local curHandle = anim3d:current()
             
-            -- Only restart when switching from idle to walk/run
-            local shouldRestart = not (handleEqual(curHandle, runHandle) or 
-                                       handleEqual(curHandle, walkHandle))
-            anime:playAnim(playHandle, shouldRestart)
-        else
-            -- Play idle
-            local shouldRestart = not handleEqual(curHandle, idleHandle)
-            anime:playAnim(idleHandle, shouldRestart)
+            -- Ensure looping is enabled for normal animations
+            if not anim3d:isLoop() then
+                anim3d:setLoop(true)
+            end
+            
+            -- Set animation speed
+            anim3d:setSpeed(isMoving and moveSpeed or 1.0)
+            
+            if isMoving then
+                -- Choose run or walk
+                local playHandle = running and runHandle or walkHandle
+                
+                -- Only restart when switching from idle to walk/run
+                local shouldRestart = not (handleEqual(curHandle, runHandle) or 
+                                           handleEqual(curHandle, walkHandle))
+                anim3d:play(playHandle, shouldRestart)
+            else
+                -- Play idle
+                local shouldRestart = not handleEqual(curHandle, idleHandle)
+                anim3d:play(idleHandle, shouldRestart)
+            end
         end
     end
 end

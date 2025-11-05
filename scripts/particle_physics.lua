@@ -65,7 +65,10 @@ function update()
         -- ========== PHASE 2: Update Positions ==========
         for i = 1, #particles do
             local particle = particles[i]
-            local pos = particle:getPos()
+            local t3d = particle:transform3D()
+            if not t3d then goto continue_phase2 end
+            
+            local pos = t3d:getPos()
             
             local velX = particle:getVar("velX") or 0.0
             local velY = particle:getVar("velY") or 0.0
@@ -76,13 +79,18 @@ function update()
             pos.y = pos.y + velY * substepDt
             pos.z = pos.z + velZ * substepDt
             
-            particle:setPos(pos)
+            t3d:setPos(pos)
+            
+            ::continue_phase2::
         end
         
         -- ========== PHASE 3: Boundary Constraints ==========
         for i = 1, #particles do
             local particle = particles[i]
-            local pos = particle:getPos()
+            local t3d = particle:transform3D()
+            if not t3d then goto continue_phase3 end
+            
+            local pos = t3d:getPos()
             
             local velX = particle:getVar("velX") or 0.0
             local velY = particle:getVar("velY") or 0.0
@@ -133,11 +141,13 @@ function update()
             end
             
             if posChanged then
-                particle:setPos(pos)
+                t3d:setPos(pos)
                 particle:setVar("velX", velX)
                 particle:setVar("velY", velY)
                 particle:setVar("velZ", velZ)
             end
+            
+            ::continue_phase3::
         end
         
         -- ========== PHASE 4: Particle-Particle Collisions ==========
@@ -146,8 +156,12 @@ function update()
                 local p1 = particles[i]
                 local p2 = particles[j]
                 
-                local pos1 = p1:getPos()
-                local pos2 = p2:getPos()
+                local t3d1 = p1:transform3D()
+                local t3d2 = p2:transform3D()
+                if not t3d1 or not t3d2 then goto continue_collision end
+                
+                local pos1 = t3d1:getPos()
+                local pos2 = t3d2:getPos()
                 
                 -- Calculate distance vector
                 local dx = pos2.x - pos1.x
@@ -185,8 +199,8 @@ function update()
                     pos2.y = pos2.y + ny * separation * separationForce
                     pos2.z = pos2.z + nz * separation * separationForce
                     
-                    p1:setPos(pos1)
-                    p2:setPos(pos2)
+                    t3d1:setPos(pos1)
+                    t3d2:setPos(pos2)
                     
                     -- Get velocities
                     local v1x = p1:getVar("velX") or 0.0
@@ -269,6 +283,8 @@ function update()
                         end
                     end -- end if dvn < 0
                 end -- end if distSq < minDistSq
+                
+                ::continue_collision::
             end -- end for j
         end -- end for i  
     end -- end for step

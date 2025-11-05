@@ -40,18 +40,21 @@ function update()
     
     -- Optional: Apply angular velocity to rotation (visual spinning)
     if vars.angVelX ~= 0.0 or vars.angVelY ~= 0.0 or vars.angVelZ ~= 0.0 then
-        local rot = node:getRot()
-        
-        rot.x = rot.x + vars.angVelX * dTime
-        rot.y = rot.y + vars.angVelY * dTime
-        rot.z = rot.z + vars.angVelZ * dTime
-        
-        node:setRot(rot)
-        
-        -- Apply damping to angular velocity
-        local angDamping = 0.98
-        vars.angVelX = vars.angVelX * angDamping
-        vars.angVelY = vars.angVelY * angDamping
-        vars.angVelZ = vars.angVelZ * angDamping
+        local t3d = node:transform3D()
+        if t3d then
+            local rot = t3d:getRot()
+            
+            rot.x = rot.x + vars.angVelX * dTime
+            rot.y = rot.y + vars.angVelY * dTime
+            rot.z = rot.z + vars.angVelZ * dTime
+            
+            t3d:setRot(rot)
+            
+            -- Apply damping to angular velocity
+            local angDamping = 0.98
+            vars.angVelX = vars.angVelX * angDamping
+            vars.angVelY = vars.angVelY * angDamping
+            vars.angVelZ = vars.angVelZ * angDamping
+        end
     end
 end
