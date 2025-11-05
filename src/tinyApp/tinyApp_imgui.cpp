@@ -8,10 +8,12 @@
 
 #include <imgui.h>
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 using namespace tinyVk;
 
@@ -3198,7 +3200,6 @@ void tinyApp::renderScriptEditorWindow() {
     // Check if we have a valid script selected
     if (!selectedScriptHandle.valid()) {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No script selected");
-        ImGui::Text("Select a script file from the file explorer to edit it.");
         return;
     }
     
@@ -3229,16 +3230,22 @@ void tinyApp::renderScriptEditorWindow() {
     ImGui::Spacing();
     
     // Static buffer to hold the code during editing
-    // Using a large buffer for script code
-    static char codeBuffer[8192];
-    static tinyHandle lastSelectedScript;
+    // Use a map to store separate char buffers for each script (16KB per script)
+    static std::unordered_map<uint64_t, std::array<char, 16384>> scriptCodeBuffers;
     
-    // Initialize buffer if we switched to a different script
-    if (lastSelectedScript != selectedScriptHandle) {
-        strncpy_s(codeBuffer, script->code.c_str(), sizeof(codeBuffer) - 1);
-        codeBuffer[sizeof(codeBuffer) - 1] = '\0';
-        lastSelectedScript = selectedScriptHandle;
+    // Get unique key for this script handle
+    uint64_t scriptKey = (static_cast<uint64_t>(selectedScriptHandle.index) << 32) | selectedScriptHandle.version;
+    
+    // Initialize buffer if we don't have one for this script yet
+    if (scriptCodeBuffers.find(scriptKey) == scriptCodeBuffers.end()) {
+        std::array<char, 16384> newBuffer = {};
+        strncpy_s(newBuffer.data(), newBuffer.size(), script->code.c_str(), newBuffer.size() - 1);
+        newBuffer[newBuffer.size() - 1] = '\0';
+        scriptCodeBuffers[scriptKey] = newBuffer;
     }
+    
+    // Get reference to this script's buffer
+    auto& codeBuffer = scriptCodeBuffers[scriptKey];
     
     // Static variable to store splitter position (persists between frames)
     static float splitterPos = 0.7f; // Start with 70% for code, 30% for debug
@@ -3267,7 +3274,7 @@ void tinyApp::renderScriptEditorWindow() {
 
     if (ImGui::Button("Compile", ImVec2(80, 0))) {
         // Update script code from buffer before compiling
-        script->code = std::string(codeBuffer);
+        script->code = std::string(codeBuffer.data());
         
         // Compile the script - errors will be displayed in the debug panel
         script->compile();
@@ -3284,14 +3291,10 @@ void tinyApp::renderScriptEditorWindow() {
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
     
-    ImGui::InputTextMultiline("##ScriptCode", codeBuffer, sizeof(codeBuffer), 
+    // Multi-line text editor - now properly editable!
+    ImGui::InputTextMultiline("##ScriptCode", codeBuffer.data(), codeBuffer.size(), 
         ImVec2(-1, codeHeight),
         ImGuiInputTextFlags_AllowTabInput);
-    
-    // Update the script code if modified
-    if (ImGui::IsItemDeactivatedAfterEdit()) {
-        script->code = std::string(codeBuffer);
-    }
     
     ImGui::PopStyleColor(5);
     ImGui::PopStyleVar(2);
