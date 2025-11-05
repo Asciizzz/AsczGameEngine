@@ -394,10 +394,11 @@ function vars()
         animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
         otherNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Other node for interaction
 
-        -- Movement settings
-        vel = 2.0,
+        -- Stats
         isPlayer = true,
-        
+        vel = 2.0,
+        hp = 100.0,
+
         -- Animation names (configure for your model)
         idleAnim = "Idle_Loop",
         walkAnim = "Walk_Loop",
@@ -412,15 +413,16 @@ function update()
     local other = scene:getNode(vars.otherNode)
 
     -- If root and other is 1 unit apart, print a message
-    if root and other then
+    if root and other and vars.isPlayer then
         local rootPos = root:getPos()
         local otherPos = other:getPos()
         local dx = rootPos.x - otherPos.x
         local dy = rootPos.y - otherPos.y
         local dz = rootPos.z - otherPos.z
         local distSq = dx * dx + dy * dy + dz * dz
-        if distSq <= 1.0 then
-            print("Root node is within 1 unit of other node!")
+
+        if distSq <= 1.0 then -- Tick damage
+            vars.hp = vars.hp - 10.0 * dTime
         end
     end
 

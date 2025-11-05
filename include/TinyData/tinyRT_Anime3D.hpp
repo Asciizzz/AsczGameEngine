@@ -103,17 +103,24 @@ struct Anime3D {
         if (resetTime) time = 0.0f;
     }
 
-    // Direct time manipulation for editor scrubbing
     void setTime(float newTime) { time = newTime; }
     float getTime() const { return time; }
-    
-    // Speed control (can be negative for backward playback)
+
     void setSpeed(float newSpeed) { speed = newSpeed; }
     float getSpeed() const { return speed; }
-    
-    // Loop control
+
     void setLoop(bool shouldLoop) { loop = shouldLoop; }
     bool getLoop() const { return loop; }
+
+    float duration(tinyHandle handle) const {
+        const Anime* anim = animePool.get(handle);
+        return anim ? anim->duration : 0.0f;
+    }
+    float duration(const std::string& name) const {
+        auto it = nameToHandle.find(name);
+        if (it == nameToHandle.end()) return 0.0f;
+        return duration(it->second);
+    }
     
     // Apply animation at current time to the scene (for manual scrubbing)
     void apply(Scene* scene, const tinyHandle& animeHandle);
