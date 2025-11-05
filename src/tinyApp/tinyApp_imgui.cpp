@@ -1105,8 +1105,8 @@ void tinyApp::renderSceneNodeInspector() {
 
     if (selectedNode->has<tinyNodeRT::SCRIPT>()) {
         renderComponent("Script", ImVec4(0.0f, 0.0f, 0.0f, 0.8f), ImVec4(1.0f, 1.0f, 1.0f, 0.6f), true, [&]() {
-            tinyRT::Script* scriptRT = activeScene->rtComp<tinyNodeRT::SCRIPT>(selectedSceneNodeHandle);
-            if (scriptRT) {
+            tinyRT::Script* rtScript = activeScene->rtComp<tinyNodeRT::SCRIPT>(selectedSceneNodeHandle);
+            if (rtScript) {
                 // Display script file handle
                 ImGui::Text("Script File:");
                 ImGui::SameLine();
@@ -1117,7 +1117,7 @@ void tinyApp::renderSceneNodeInspector() {
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.15f, 0.2f, 1.0f));
                 
                 std::string scriptName = "None";
-                tinyHandle scriptFileHandle = scriptRT->scriptHandle();
+                tinyHandle scriptFileHandle = rtScript->scriptHandle();
                 if (scriptFileHandle.valid()) {
                     auto* fileNode = fs.fNode(scriptFileHandle);
                     if (fileNode) {
@@ -1134,7 +1134,7 @@ void tinyApp::renderSceneNodeInspector() {
 
                         // Retrieve the actual data handle (not the file node handle)
                         typeHandle scripthandle = fs.fTypeHandle(droppedHandle);
-                        scriptRT->assign(scripthandle.handle);
+                        rtScript->assign(scripthandle.handle);
                     }
                     ImGui::EndDragDropTarget();
                 }
@@ -1158,11 +1158,11 @@ void tinyApp::renderSceneNodeInspector() {
                 ImGui::PopStyleColor(3);
                 
                 // Display script variables dynamically from the var map
-                if (scriptRT->valid()) {
+                if (rtScript->valid()) {
                     ImGui::Spacing();
                     ImGui::Separator();
                     
-                    auto& varMap = scriptRT->vMap();
+                    auto& varMap = rtScript->vMap();
                     
                     if (varMap.empty()) {
                         ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No variables defined");
@@ -2918,8 +2918,8 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
 }
 
 void tinyApp::renderScriptDebug(tinySceneRT* activeScene, const tinyNodeRT* scriptNode) {
-    tinyRT::Script* scriptRT = activeScene->rtComp<tinyNodeRT::SCRIPT>(selectedCompNode);
-    if (!scriptRT) {
+    tinyRT::Script* rtScript = activeScene->rtComp<tinyNodeRT::SCRIPT>(selectedCompNode);
+    if (!rtScript) {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Failed to get script component");
         return;
     }
@@ -2927,7 +2927,7 @@ void tinyApp::renderScriptDebug(tinySceneRT* activeScene, const tinyNodeRT* scri
     // ===== HEADER =====
     ImGui::Text("Script Debug: %s", scriptNode->name.c_str());
     
-    const tinyScript* script = scriptRT->rScript();
+    const tinyScript* script = rtScript->rScript();
     if (script) {
         ImGui::SameLine();
         ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "> %s", script->name.c_str());
@@ -2946,7 +2946,7 @@ void tinyApp::renderScriptDebug(tinySceneRT* activeScene, const tinyNodeRT* scri
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
     
     if (ImGui::Button("Clear##RuntimeDebug")) {
-        scriptRT->debug().clear();
+        rtScript->debug().clear();
     }
     
     ImGui::PopStyleColor(3);
@@ -2954,7 +2954,7 @@ void tinyApp::renderScriptDebug(tinySceneRT* activeScene, const tinyNodeRT* scri
     
     ImGui::BeginChild("ScriptDebugOutput", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
     
-    const auto& logs = scriptRT->debug().logs();
+    const auto& logs = rtScript->debug().logs();
     if (logs.empty()) {
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No debug logs");
     } else {
@@ -3028,14 +3028,15 @@ void tinyApp::renderScriptEditorWindow() {
     float buttonHeight = ImGui::GetFrameHeight(); // Height of the compile button
     float textHeight = ImGui::GetTextLineHeightWithSpacing(); // Height of "Debug Output:" text
     float splitterHeight = 4.0f; // Height of the splitter
-    float reservedSpace = buttonHeight + splitterHeight + textHeight;
+    float spacing = ImGui::GetStyle().ItemSpacing.y * 4; // Account for spacing between elements
+    float reservedSpace = buttonHeight + splitterHeight + textHeight + spacing;
     
     // Calculate section heights based on splitter position
     float availableHeight = totalHeight - reservedSpace;
     float codeHeight = availableHeight * splitterPos;
     float debugHeight = availableHeight * (1.0f - splitterPos);
     
-    // ===== LUA CODE EDITOR (TOP) =====
+    // ===== LUA CODE EDITOR =====
     
     // Compile button on the same line
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.7f, 1.0f));

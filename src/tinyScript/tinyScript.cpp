@@ -217,8 +217,16 @@ void tinyScript::cacheDefaultVars() {
     lua_pop(L_, 1);  // Pop the table
 }
 
-void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, float dTime) const {
+void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime) const {
     if (!valid()) return;
+    
+    // Store rtScript pointer in Lua globals for print() function
+    lua_pushlightuserdata(L_, rtScript);
+    lua_setglobal(L_, "__rtScript");
+    
+    // Get vars from rtScript
+    tinyRT::Script* rt = static_cast<tinyRT::Script*>(rtScript);
+    tinyVarsMap& vars = rt->vMap();
 
     // ========== Push runtime variables into Lua global table "vars" ==========
     lua_newtable(L_);  // Create vars table
@@ -341,7 +349,8 @@ void tinyScript::update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, f
 void tinyScript::init() {
     if (name.empty()) name = "Script";
 
-code = R"(-- Character Controller (Multi-Node Edition)
+code = R"(
+-- Character Controller (Multi-Node Edition)
 -- This script controls TWO separate nodes:
 --   rootNode: Movement and rotation
 --   animeNode: Animation playback
@@ -354,12 +363,12 @@ function vars()
         animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
         
         -- Movement settings
-        moveSpeed = 2.0,
+        vel = 2.0,
         
         -- Animation names (configure for your model)
-        idleAnim = "Idle",
-        walkAnim = "Walking_A",
-        runAnim = "Running_A"
+        idleAnim = "Idle_Loop",
+        walkAnim = "Walk_Loop",
+        runAnim = "Sprint_Loop"
     }
 end
 
@@ -377,9 +386,9 @@ function update()
     
     -- Calculate movement direction
     local vz = (k_up and 1 or 0) - (k_down and 1 or 0)
-    local vx = (k_left and -1 or 0) - (k_right and -1 or 0)
+    local vx = (k_right and -1 or 0) - (k_left and -1 or 0) -- I really need to fix the coord system lol
     local isMoving = (vx ~= 0) or (vz ~= 0)
-    local moveSpeed = (running and isMoving) and 4.0 or 1.0
+    local moveSpeed = ((running and isMoving) and 4.0 or 1.0) * vars.vel
     
     -- ========== MOVEMENT (Root Node) ==========
     if root and isMoving then

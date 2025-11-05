@@ -699,6 +699,46 @@ static inline int lua_animHandlesEqual(lua_State* L) {
     return lua_handleEqual(L);
 }
 
+// ========== Debug Print Function ==========
+static inline int lua_print(lua_State* L) {
+    // Get rtScript pointer from Lua registry
+    lua_getglobal(L, "__rtScript");
+    void* rtScriptPtr = lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    
+    if (!rtScriptPtr) {
+        return luaL_error(L, "print(): __rtScript not found");
+    }
+    
+    tinyRT::Script* rtScript = static_cast<tinyRT::Script*>(rtScriptPtr);
+    
+    // Get number of arguments
+    int n = lua_gettop(L);
+    
+    // Build message string
+    std::string message;
+    for (int i = 1; i <= n; i++) {
+        if (i > 1) message += "\t";  // Tab separator between arguments
+        
+        if (lua_isstring(L, i)) {
+            message += lua_tostring(L, i);
+        } else if (lua_isnumber(L, i)) {
+            message += std::to_string(lua_tonumber(L, i));
+        } else if (lua_isboolean(L, i)) {
+            message += lua_toboolean(L, i) ? "true" : "false";
+        } else if (lua_isnil(L, i)) {
+            message += "nil";
+        } else {
+            message += lua_typename(L, lua_type(L, i));
+        }
+    }
+    
+    // Log to runtime debug (white color)
+    rtScript->debug().log(message, 1.0f, 1.0f, 1.0f);
+    
+    return 0;
+}
+
 // ========== Registration Function ==========
 
 static inline void registerNodeBindings(lua_State* L) {
@@ -821,4 +861,8 @@ static inline void registerNodeBindings(lua_State* L) {
     // Legacy animation handle comparison (calls handleEqual)
     lua_pushcfunction(L, lua_animHandlesEqual);
     lua_setglobal(L, "animHandlesEqual");
+    
+    // Debug print function (global)
+    lua_pushcfunction(L, lua_print);
+    lua_setglobal(L, "print");
 }

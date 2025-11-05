@@ -70,8 +70,7 @@ struct tinyScript {
 
     bool compile();
 
-    void update(tinyVarsMap& vars, void* scene, tinyHandle nodeHandle, float dTime) const;
-
+    void update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime) const;
     bool call(const char* functionName, lua_State* runtimeL = nullptr) const;
 
     bool valid() const { return compiled_ && L_ != nullptr; }
