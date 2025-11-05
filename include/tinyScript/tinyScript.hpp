@@ -83,6 +83,8 @@ struct tinyScript {
     // For making copies
     const tinyVarsMap& defaultVars() const { return defaultVars_; }
 
+    void initVars(tinyVarsMap& outVars) const;
+
 private:
     void init();
 

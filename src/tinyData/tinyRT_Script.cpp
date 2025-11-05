@@ -19,7 +19,7 @@ void Script::assign(tinyHandle scriptHandle) {
     if (!script) return;
 
     cachedVersion_ = script->version();
-    vars_ = script->defaultVars();
+    script->initVars(vars_);
 }
 
 bool Script::valid() const {
@@ -33,10 +33,10 @@ void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
     const tinyScript* script = rScript();
     if (!script) return;
 
-    // Check for version change
+    // Check for version change (hot reload detected)
     if (script->version() != cachedVersion_) {
         cachedVersion_ = script->version();
-        vars_ = script->defaultVars();
+        script->initVars(vars_); // Smart init
     } else {
         script->update(this, scene, nodeHandle, dTime);
     }

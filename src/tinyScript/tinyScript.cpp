@@ -217,6 +217,37 @@ void tinyScript::cacheDefaultVars() {
     lua_pop(L_, 1);  // Pop the table
 }
 
+
+void tinyScript::initVars(tinyVarsMap& outVars) const {
+    if (defaultVars_.empty()) {
+        outVars.clear();
+        return;
+    }
+
+    tinyVarsMap newVars;
+
+    for (const auto& [key, defaultValue] : defaultVars_) {
+        auto it = outVars.find(key);
+        
+        if (it != outVars.end()) {
+            bool typesMatch = std::visit([&](auto&& existingVal, auto&& defaultVal) -> bool {
+                using ExistingT = std::decay_t<decltype(existingVal)>;
+                using DefaultT = std::decay_t<decltype(defaultVal)>;
+                return std::is_same_v<ExistingT, DefaultT>;
+            }, it->second, defaultValue);
+
+            // Check for matchking key-type, if exists, keep it, else, make default
+            newVars[key] = typesMatch ? it->second : defaultValue;
+        } else {
+            // Variable doesn't exist yet - add it with default value
+            newVars[key] = defaultValue;
+        }
+    }
+
+    outVars = std::move(newVars);
+}
+
+
 void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime) const {
     if (!valid()) return;
     
@@ -361,9 +392,11 @@ function vars()
         -- Node references (drag nodes from scene hierarchy)
         rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
         animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
-        
+        otherNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Other node for interaction
+
         -- Movement settings
         vel = 2.0,
+        isPlayer = true,
         
         -- Animation names (configure for your model)
         idleAnim = "Idle_Loop",
@@ -376,7 +409,21 @@ function update()
     -- Get node references
     local root = scene:getNode(vars.rootNode)
     local anime = scene:getNode(vars.animeNode)
-    
+    local other = scene:getNode(vars.otherNode)
+
+    -- If root and other is 1 unit apart, print a message
+    if root and other then
+        local rootPos = root:getPos()
+        local otherPos = other:getPos()
+        local dx = rootPos.x - otherPos.x
+        local dy = rootPos.y - otherPos.y
+        local dz = rootPos.z - otherPos.z
+        local distSq = dx * dx + dy * dy + dz * dz
+        if distSq <= 1.0 then
+            print("Root node is within 1 unit of other node!")
+        end
+    end
+
     -- ========== INPUT DETECTION ==========
     local k_up = kState("up")
     local k_down = kState("down")
