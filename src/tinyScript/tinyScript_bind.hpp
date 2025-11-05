@@ -553,6 +553,164 @@ static inline int node_isAnimPlaying(lua_State* L) {
     return 1;
 }
 
+// Node:getAnimTime() - Get current animation time
+static inline int node_getAnimTime(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.anim3D) {
+        lua_pushnumber(L, comps.anim3D->getTime());
+        return 1;
+    }
+    lua_pushnumber(L, 0.0f);
+    return 1;
+}
+
+// Node:setAnimTime(time) - Set current animation time
+static inline int node_setAnimTime(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_isnumber(L, 2)) {
+        return luaL_error(L, "setAnimTime expects a number");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    float time = static_cast<float>(lua_tonumber(L, 2));
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.anim3D) {
+        comps.anim3D->setTime(time);
+    }
+    return 0;
+}
+
+// Node:getAnimDuration() - Get duration of current animation
+static inline int node_getAnimDuration(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.anim3D) {
+        tinyHandle curHandle = comps.anim3D->curHandle();
+        float duration = comps.anim3D->duration(curHandle);
+        lua_pushnumber(L, duration);
+        return 1;
+    }
+    lua_pushnumber(L, 0.0f);
+    return 1;
+}
+
+// Node:getAnimDurationByHandle(animHandle) - Get duration of specific animation
+static inline int node_getAnimDurationByHandle(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (lua_isnil(L, 2)) {
+        lua_pushnumber(L, 0.0f);
+        return 1;
+    }
+    
+    if (!lua_islightuserdata(L, 2)) {
+        return luaL_error(L, "getAnimDurationByHandle expects a handle (lightuserdata)");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    // Decode animHandle from lightuserdata
+    uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
+    tinyHandle animHandle;
+    animHandle.index = static_cast<uint32_t>(packed >> 32);
+    animHandle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.anim3D) {
+        float duration = comps.anim3D->duration(animHandle);
+        lua_pushnumber(L, duration);
+        return 1;
+    }
+    lua_pushnumber(L, 0.0f);
+    return 1;
+}
+
+// Node:setAnimLoop(loop) - Set animation loop state
+static inline int node_setAnimLoop(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    if (!lua_isboolean(L, 2)) {
+        return luaL_error(L, "setAnimLoop expects a boolean");
+    }
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    bool loop = lua_toboolean(L, 2);
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.anim3D) {
+        comps.anim3D->setLoop(loop);
+    }
+    return 0;
+}
+
+// Node:getAnimLoop() - Get animation loop state
+static inline int node_getAnimLoop(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.anim3D) {
+        lua_pushboolean(L, comps.anim3D->getLoop());
+        return 1;
+    }
+    lua_pushboolean(L, true); // Default to true
+    return 1;
+}
+
+// Node:pauseAnim() - Pause animation
+static inline int node_pauseAnim(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.anim3D) {
+        comps.anim3D->pause();
+    }
+    return 0;
+}
+
+// Node:resumeAnim() - Resume animation
+static inline int node_resumeAnim(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    auto comps = scene->nComp(*handle);
+    if (comps.anim3D) {
+        comps.anim3D->resume();
+    }
+    return 0;
+}
+
 // ========== Node Variable Access Methods ==========
 
 // Node:getVar(name) - Get a script variable from this node's script component
@@ -782,6 +940,30 @@ static inline void registerNodeBindings(lua_State* L) {
     
     lua_pushcfunction(L, node_isAnimPlaying);
     lua_setfield(L, -2, "isAnimPlaying");
+    
+    lua_pushcfunction(L, node_getAnimTime);
+    lua_setfield(L, -2, "getAnimTime");
+    
+    lua_pushcfunction(L, node_setAnimTime);
+    lua_setfield(L, -2, "setAnimTime");
+    
+    lua_pushcfunction(L, node_getAnimDuration);
+    lua_setfield(L, -2, "getAnimDuration");
+    
+    lua_pushcfunction(L, node_getAnimDurationByHandle);
+    lua_setfield(L, -2, "getAnimDurationByHandle");
+    
+    lua_pushcfunction(L, node_setAnimLoop);
+    lua_setfield(L, -2, "setAnimLoop");
+    
+    lua_pushcfunction(L, node_getAnimLoop);
+    lua_setfield(L, -2, "getAnimLoop");
+    
+    lua_pushcfunction(L, node_pauseAnim);
+    lua_setfield(L, -2, "pauseAnim");
+    
+    lua_pushcfunction(L, node_resumeAnim);
+    lua_setfield(L, -2, "resumeAnim");
     
     // Variable access methods
     lua_pushcfunction(L, node_getVar);

@@ -398,11 +398,14 @@ function vars()
         isPlayer = true,
         vel = 2.0,
         hp = 100.0,
+        maxHp = 100.0,
+        isDead = false,
 
         -- Animation names (configure for your model)
         idleAnim = "Idle_Loop",
         walkAnim = "Walk_Loop",
-        runAnim = "Sprint_Loop"
+        runAnim = "Sprint_Loop",
+        deathAnim = "Death"  -- Death animation (non-looping)
     }
 end
 
@@ -412,8 +415,48 @@ function update()
     local anime = scene:getNode(vars.animeNode)
     local other = scene:getNode(vars.otherNode)
 
-    -- If root and other is 1 unit apart, print a message
-    if root and other and vars.isPlayer then
+    -- ========== HEALTH MANAGEMENT ==========
+    -- Clamp HP
+    if vars.hp < 0 then
+        vars.hp = 0
+    end
+    if vars.hp > vars.maxHp then
+        vars.hp = vars.maxHp
+    end
+
+    -- Check for death
+    if vars.hp <= 0 and not vars.isDead then
+        vars.isDead = true
+        print("Player died!")
+    end
+
+    -- If dead, play death animation (non-looping) and return early
+    if vars.isDead and anime then
+        local deathHandle = anime:getAnimHandle(vars.deathAnim)
+        local curHandle = anime:getCurAnimHandle()
+        
+        -- Only play death animation once
+        if not handleEqual(curHandle, deathHandle) then
+            anime:setAnimLoop(false)  -- Death animation doesn't loop
+            anime:playAnim(deathHandle, true)
+            print("Playing death animation...")
+        else
+            -- Check if death animation has finished
+            local animTime = anime:getAnimTime()
+            local animDuration = anime:getAnimDuration()
+            
+            if animTime >= animDuration - 0.01 then
+                -- Death animation finished, pause at last frame
+                anime:pauseAnim()
+                print("Death animation complete. Player remains dead.")
+            end
+        end
+        
+        return  -- Don't process movement or other logic while dead
+    end
+
+    -- ========== DAMAGE FROM PROXIMITY ==========
+    if root and other and vars.isPlayer and not vars.isDead then
         local rootPos = root:getPos()
         local otherPos = other:getPos()
         local dx = rootPos.x - otherPos.x
@@ -423,6 +466,9 @@ function update()
 
         if distSq <= 1.0 then -- Tick damage
             vars.hp = vars.hp - 10.0 * dTime
+            if vars.hp <= 0 then
+                print("HP reached 0! HP: " .. vars.hp)
+            end
         end
     end
 
@@ -468,6 +514,11 @@ function update()
         local walkHandle = anime:getAnimHandle(vars.walkAnim)
         local runHandle = anime:getAnimHandle(vars.runAnim)
         local curHandle = anime:getCurAnimHandle()
+        
+        -- Ensure looping is enabled for normal animations
+        if not anime:getAnimLoop() then
+            anime:setAnimLoop(true)
+        end
         
         -- Set animation speed
         anime:setAnimSpeed(isMoving and moveSpeed or 1.0)
