@@ -2,6 +2,8 @@
 
 #include "tinyScript_bind.hpp"
 #include <iostream>
+#include <algorithm>
+#include <typeinfo>
 
 // ==================== tinyDebug Implementation ====================
 
@@ -31,12 +33,13 @@ tinyScript::~tinyScript() {
 }
 
 void tinyScript::closeLua() {
-    if (L_) {
-        lua_close(L_);
-        L_ = nullptr;
-        compiled_ = false;
-        defaultVars_.clear();
-    }
+    if (!L_) return;
+
+    lua_close(L_);
+    L_ = nullptr;
+    compiled_ = false;
+    defaultVars_.clear();
+    varsOrder_.clear();
 }
 
 tinyScript::tinyScript(tinyScript&& other) noexcept
@@ -46,6 +49,7 @@ tinyScript::tinyScript(tinyScript&& other) noexcept
     , L_(other.L_)
     , compiled_(other.compiled_)
     , defaultVars_(std::move(other.defaultVars_))
+    , varsOrder_(std::move(other.varsOrder_))
     , debug_(std::move(other.debug_)) {
     other.L_ = nullptr;
     other.compiled_ = false;
@@ -60,6 +64,7 @@ tinyScript& tinyScript::operator=(tinyScript&& other) noexcept {
         L_ = other.L_;
         compiled_ = other.compiled_;
         defaultVars_ = std::move(other.defaultVars_);
+        varsOrder_ = std::move(other.varsOrder_);
         debug_ = std::move(other.debug_);
 
         other.L_ = nullptr;
@@ -218,6 +223,32 @@ void tinyScript::cacheDefaultVars() {
     }
 
     lua_pop(L_, 1);  // Pop the table
+    
+    // Build varsOrder_ - sort by type hash, then alphabetically within each type
+    varsOrder_.clear();
+    std::vector<std::pair<std::string, size_t>> orderedVars;
+    
+    for (const auto& [key, value] : defaultVars_) {
+        // Get type hash for sorting
+        size_t typeHash = std::visit([](auto&& val) -> size_t {
+            using T = std::decay_t<decltype(val)>;
+            return typeid(T).hash_code();
+        }, value);
+        
+        orderedVars.push_back({key, typeHash});
+    }
+    
+    // Sort by type hash, then by name
+    std::sort(orderedVars.begin(), orderedVars.end(), 
+        [](const auto& a, const auto& b) {
+            if (a.second != b.second) return a.second < b.second;
+            return a.first < b.first;  // Alphabetically within same type
+        });
+    
+    // Extract just the names
+    for (const auto& [key, _] : orderedVars) {
+        varsOrder_.push_back(key);
+    }
 }
 
 
@@ -397,65 +428,61 @@ code = R"(
 --   - nodeHandle global - Current node's handle
 --
 -- Nodes:
---   n_rootNode: Movement and rotation
---   n_animeNode: Animation playback
---   n_enemiesNode: Parent of all enemy nodes (loop through children!)
+--   rootNode: Movement and rotation
+--   animeNode: Animation playback
+--   enemiesNode: Parent of all enemy nodes (loop through children!)
 -- 
 -- Drag node handles from scene hierarchy into the fields below
---
--- NAMING TIP: Use type prefixes for better organization in the editor!
---   b_ for bool, f_ for float, i_ for int, n_ for nHandle, 
---   fh_ for fHandle, s_ for string, v_ for vec3
 
 function vars()
     return {
         -- Node references (drag nodes from scene hierarchy)
-        n_animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
-        n_enemiesNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
-        n_rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
+        rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
+        animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
+        enemiesNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
 
-        -- Stats (booleans)
-        b_isDead = false,
-        b_isPlayer = true,
+        -- Stats
+        isPlayer = true,
+        vel = 2.0,
+        hp = 100.0,
+        maxHp = 100.0,
+        isDead = false,
         
-        -- Stats (floats)
-        f_attackDamage = 10.0,
-        f_attackRange = 1.0,  -- Distance at which player can hit enemies
-        f_hp = 100.0,
-        f_maxHp = 100.0,
-        f_vel = 2.0,
+        -- Combat
+        attackRange = 1.0,  -- Distance at which player can hit enemies
+        attackDamage = 10.0,
 
-        -- Animation names (strings)
-        s_deathAnim = "Death01",  -- Death animation (non-looping)
-        s_idleAnim = "Idle_Loop",
-        s_runAnim = "Sprint_Loop",
-        s_walkAnim = "Walk_Loop"
+        -- Animation names (configure for your model)
+        idleAnim = "Idle_Loop",
+        walkAnim = "Walk_Loop",
+        runAnim = "Sprint_Loop",
+        deathAnim = "Death01"  -- Death animation (non-looping)
     }
 end
 
 function update()
     -- Get node references
-    local root = scene:getNode(vars.n_rootNode)
-    local anime = scene:getNode(vars.n_animeNode)
+    local root = scene:getNode(vars.rootNode)
+    local anime = scene:getNode(vars.animeNode)
 
     -- ========== HEALTH MANAGEMENT ==========
     -- Clamp HP
-    if vars.f_hp < 0 then
-        vars.f_hp = 0
+    if vars.hp < 0 then
+        vars.hp = 0
     end
-    if vars.f_hp > vars.f_maxHp then
-        vars.f_hp = vars.f_maxHp
+    if vars.hp > vars.maxHp then
+        vars.hp = vars.maxHp
     end
 
     -- Check for death
-    if vars.f_hp <= 0 and not vars.b_isDead then
-        vars.b_isDead = true
+    if vars.hp <= 0 and not vars.isDead then
+        vars.isDead = true
         print("Player died!")
     end
 
     -- If dead, play death animation (non-looping) and return early
-    if vars.b_isDead and anime then
-        local deathHandle = anime:getAnimHandle(vars.s_deathAnim)
+    if vars.isDead and anime then
+        local deathHandle = anime:getAnimHandle(vars.deathAnim)
         local curHandle = anime:getCurAnimHandle()
         
         -- Only play death animation once
@@ -477,19 +504,19 @@ function update()
     end
 
     -- ========== ENEMY COLLISION & COMBAT ==========
-    if root and vars.b_isPlayer and not vars.b_isDead then
+    if root and vars.isPlayer and not vars.isDead then
         local playerPos = root:getPos()
-        local enemiesParent = scene:getNode(vars.n_enemiesNode)
+        local enemiesContainer = scene:getNode(vars.enemiesNode)
         
-        if enemiesParent then
+        if enemiesContainer then
             -- Get all enemy children using the new children() method!
-            local enemies = enemiesParent:children()
+            local enemies = enemiesContainer:children()
             
             -- Loop through each enemy and check distance
             for i = 1, #enemies do
                 local enemy = enemies[i]
                 local enemyPos = enemy:getPos()
-                
+
                 if enemyPos then
                     -- Calculate distance to enemy
                     local dx = playerPos.x - enemyPos.x
@@ -499,9 +526,17 @@ function update()
                     local distance = math.sqrt(distSq)
                     
                     -- If within attack range, deal damage
-                    if distance <= vars.f_attackRange then
+                    if distance <= vars.attackRange then
                         -- Deal damage over time to player (enemies hurt the player)
-                        vars.f_hp = vars.f_hp - vars.f_attackDamage * dTime
+                        vars.hp = vars.hp - vars.attackDamage * dTime
+                        
+                        -- Optional: Visual feedback - make enemy flash or scale
+                        local scale = enemy:getScl()
+                        if scale then
+                            -- Pulse effect: slightly scale up when near player
+                            local pulse = 1.0 + 0.1 * math.sin(dTime * 10.0)
+                            enemy:setScl({x = pulse, y = pulse, z = pulse})
+                        end
                     end
                 end
             end
@@ -519,7 +554,7 @@ function update()
     local vz = (k_up and 1 or 0) - (k_down and 1 or 0)
     local vx = (k_right and -1 or 0) - (k_left and -1 or 0) -- I really need to fix the coord system lol
     local isMoving = (vx ~= 0) or (vz ~= 0)
-    local moveSpeed = ((running and isMoving) and 4.0 or 1.0) * vars.f_vel
+    local moveSpeed = ((running and isMoving) and 4.0 or 1.0) * vars.vel
     
     -- ========== MOVEMENT (Root Node) ==========
     if root and isMoving then
@@ -546,9 +581,9 @@ function update()
     -- ========== ANIMATION (Anime Node) ==========
     if anime then
         -- Get animation handles
-        local idleHandle = anime:getAnimHandle(vars.s_idleAnim)
-        local walkHandle = anime:getAnimHandle(vars.s_walkAnim)
-        local runHandle = anime:getAnimHandle(vars.s_runAnim)
+        local idleHandle = anime:getAnimHandle(vars.idleAnim)
+        local walkHandle = anime:getAnimHandle(vars.walkAnim)
+        local runHandle = anime:getAnimHandle(vars.runAnim)
         local curHandle = anime:getCurAnimHandle()
         
         -- Ensure looping is enabled for normal animations

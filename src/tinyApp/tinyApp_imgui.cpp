@@ -1163,6 +1163,7 @@ void tinyApp::renderSceneNodeInspector() {
                     ImGui::Separator();
                     
                     auto& varMap = rtScript->vMap();
+                    const auto& varOrder = rtScript->vOrder();
                     
                     if (varMap.empty()) {
                         ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No variables defined");
@@ -1172,14 +1173,15 @@ void tinyApp::renderSceneNodeInspector() {
                         
                         // Calculate the width for labels (left column) - find the longest key name
                         float maxLabelWidth = 0.0f;
-                        for (const auto& [key, value] : varMap) {
+                        for (const auto& key : varOrder) {
                             float labelWidth = ImGui::CalcTextSize(key.c_str()).x;
                             if (labelWidth > maxLabelWidth) maxLabelWidth = labelWidth;
                         }
                         maxLabelWidth += 10.0f; // Add some padding
                         
-                        // Iterate through all variables and display them with appropriate widgets
-                        for (auto& [key, value] : varMap) {
+                        // Iterate through variables in sorted order (by type, then alphabetically)
+                        for (const auto& key : varOrder) {
+                            auto& value = varMap.at(key);
                             ImGui::PushID(key.c_str());
                             
                             // Display key (label) on the left

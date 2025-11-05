@@ -72,6 +72,7 @@ struct tinyScript {
 
     // For making copies
     const tinyVarsMap& defaultVars() const { return defaultVars_; }
+    const std::vector<std::string>& varsOrder() const { return varsOrder_; }
 
     void initVars(tinyVarsMap& outVars) const;
 
@@ -83,6 +84,7 @@ private:
     bool compiled_ = false;
 
     tinyVarsMap defaultVars_;
+    std::vector<std::string> varsOrder_;  // Ordered list of var names (sorted by type)
     tinyDebug debug_{16};  // Compilation/static debug logs (16 lines max)
     
     void cacheDefaultVars();

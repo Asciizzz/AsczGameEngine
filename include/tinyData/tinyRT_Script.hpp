@@ -50,6 +50,13 @@ struct Script {
 
     tinyVarsMap& vMap() { return vars_; }
     const tinyVarsMap& vMap() const { return vars_; }
+    
+    // Get the sorted order of variable names (sorted by type, then alphabetically)
+    const std::vector<std::string>& vOrder() const {
+        const tinyScript* script = rScript();
+        static const std::vector<std::string> empty;
+        return script ? script->varsOrder() : empty;
+    }
 
     template<typename T> // Builder pattern
     Script& vSet(const std::string& key, const T& value) {
