@@ -326,6 +326,10 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     // Push node as a Node userdata object
     pushNode(L_, nodeHandle);
     lua_setglobal(L_, "node");
+    
+    // Push nodeHandle as a raw handle (for comparisons, passing to other functions)
+    pushNode(L_, nodeHandle);
+    lua_setglobal(L_, "nodeHandle");
 
     // ========== Call the update function ==========
     call("update");
@@ -386,10 +390,17 @@ void tinyScript::init() {
     if (name.empty()) name = "Script";
 
 code = R"(
--- Character Controller (Multi-Node Edition)
--- This script controls TWO separate nodes:
+-- Character Controller with Enemy Detection
+-- This script demonstrates the new hierarchy features:
+--   - node:children() - Get all child nodes
+--   - node:parent() - Get parent node
+--   - nodeHandle global - Current node's handle
+--
+-- Nodes:
 --   rootNode: Movement and rotation
 --   animeNode: Animation playback
+--   enemiesNode: Parent of all enemy nodes (loop through children!)
+-- 
 -- Drag node handles from scene hierarchy into the fields below
 
 function vars()
@@ -397,7 +408,7 @@ function vars()
         -- Node references (drag nodes from scene hierarchy)
         rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
         animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
-        otherNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Other node for interaction
+        enemiesNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
 
         -- Stats
         isPlayer = true,
@@ -405,6 +416,10 @@ function vars()
         hp = 100.0,
         maxHp = 100.0,
         isDead = false,
+        
+        -- Combat
+        attackRange = 1.0,  -- Distance at which player can hit enemies
+        attackDamage = 10.0,
 
         -- Animation names (configure for your model)
         idleAnim = "Idle_Loop",
@@ -418,7 +433,6 @@ function update()
     -- Get node references
     local root = scene:getNode(vars.rootNode)
     local anime = scene:getNode(vars.animeNode)
-    local other = scene:getNode(vars.otherNode)
 
     -- ========== HEALTH MANAGEMENT ==========
     -- Clamp HP
@@ -458,17 +472,35 @@ function update()
         return  -- Don't process movement or other logic while dead
     end
 
-    -- ========== DAMAGE FROM PROXIMITY ==========
-    if root and other and vars.isPlayer and not vars.isDead then
-        local rootPos = root:getPos()
-        local otherPos = other:getPos()
-        local dx = rootPos.x - otherPos.x
-        local dy = rootPos.y - otherPos.y
-        local dz = rootPos.z - otherPos.z
-        local distSq = dx * dx + dy * dy + dz * dz
-
-        if distSq <= 1.0 then -- Tick damage
-            vars.hp = vars.hp - 10.0 * dTime
+    -- ========== ENEMY COLLISION & COMBAT ==========
+    if root and vars.isPlayer and not vars.isDead then
+        local playerPos = root:getPos()
+        local enemiesParent = scene:getNode(vars.enemiesNode)
+        
+        if enemiesParent then
+            -- Get all enemy children using the new children() method!
+            local enemies = enemiesParent:children()
+            
+            -- Loop through each enemy and check distance
+            for i = 1, #enemies do
+                local enemy = enemies[i]
+                local enemyPos = enemy:getPos()
+                
+                if enemyPos then
+                    -- Calculate distance to enemy
+                    local dx = playerPos.x - enemyPos.x
+                    local dy = playerPos.y - enemyPos.y
+                    local dz = playerPos.z - enemyPos.z
+                    local distSq = dx * dx + dy * dy + dz * dz
+                    local distance = math.sqrt(distSq)
+                    
+                    -- If within attack range, deal damage
+                    if distance <= vars.attackRange then
+                        -- Deal damage over time to player (enemies hurt the player)
+                        vars.hp = vars.hp - vars.attackDamage * dTime
+                    end
+                end
+            end
         end
     end
 

@@ -71,15 +71,21 @@ static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
 
 // Scene:getNode(handle) - Get a Node object from a typeHandle
 // The handle is lightuserdata with isNode flag in high bit
-// Returns nil if handle is invalid or is not a node handle (type int)
+// Returns nil if handle is invalid, nil is passed, or is not a node handle (type int)
 static inline int scene_getNode(lua_State* L) {
     tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
     if (!scenePtr || !*scenePtr) {
         return luaL_error(L, "Scene:getNode - invalid scene");
     }
     
+    // Handle nil parameter gracefully - just return nil
+    if (lua_isnil(L, 2)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
     if (!lua_islightuserdata(L, 2)) {
-        return luaL_error(L, "Scene:getNode expects a handle (lightuserdata from nHandle())");
+        return luaL_error(L, "Scene:getNode expects a handle (lightuserdata from nHandle()) or nil");
     }
     
     // Decode typeHandle from lightuserdata
@@ -427,6 +433,49 @@ static inline int node_setScl(lua_State* L) {
                             * glm::scale(glm::mat4(1.0f), newScale);
     }
     return 0;
+}
+
+// ========== Node Hierarchy Methods ==========
+
+// Node:parent() - Get parent node handle (or nil if no parent)
+static inline int node_parent(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    tinyHandle parentHandle = scene->nodeParent(*handle);
+    
+    if (parentHandle.valid()) {
+        // Return parent as Node userdata
+        pushNode(L, parentHandle);
+        return 1;
+    }
+    
+    lua_pushnil(L);
+    return 1;
+}
+
+// Node:children() - Get array of children node handles
+static inline int node_children(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) return 0;
+    
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return luaL_error(L, "Scene pointer is null");
+    
+    std::vector<tinyHandle> children = scene->nodeChildren(*handle);
+    
+    // Create a Lua table (array) with all children
+    lua_newtable(L);
+    int index = 1;
+    for (const tinyHandle& childHandle : children) {
+        pushNode(L, childHandle);
+        lua_rawseti(L, -2, index++);
+    }
+    
+    return 1;
 }
 
 // ========== Node Animation Methods ==========
@@ -930,6 +979,13 @@ static inline void registerNodeBindings(lua_State* L) {
     
     lua_pushcfunction(L, node_setScl);
     lua_setfield(L, -2, "setScl");
+    
+    // Hierarchy methods
+    lua_pushcfunction(L, node_parent);
+    lua_setfield(L, -2, "parent");
+    
+    lua_pushcfunction(L, node_children);
+    lua_setfield(L, -2, "children");
     
     // Animation methods
     lua_pushcfunction(L, node_getAnimHandle);
