@@ -85,14 +85,28 @@ static inline bool isRHandle(uint64_t packed) {
     return (packed & (1ULL << 63)) == 0;
 }
 
-// Push nHandle as lightuserdata
+// Push nHandle as full userdata with metatable
 static inline void pushNHandle(lua_State* L, const tinyHandle& handle) {
-    lua_pushlightuserdata(L, reinterpret_cast<void*>(packNHandle(handle)));
+    uint64_t* ud = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
+    *ud = packNHandle(handle);
+    luaL_getmetatable(L, "Handle");
+    lua_setmetatable(L, -2);
 }
 
-// Push rHandle as lightuserdata
+// Push rHandle as full userdata with metatable
 static inline void pushRHandle(lua_State* L, const tinyHandle& handle) {
-    lua_pushlightuserdata(L, reinterpret_cast<void*>(packRHandle(handle)));
+    uint64_t* ud = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
+    *ud = packRHandle(handle);
+    luaL_getmetatable(L, "Handle");
+    lua_setmetatable(L, -2);
+}
+
+// Push animation handle as full userdata with metatable (plain packed handle)
+static inline void pushAnimHandle(lua_State* L, const tinyHandle& handle) {
+    uint64_t* ud = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
+    *ud = (static_cast<uint64_t>(handle.index) << 32) | handle.version;
+    luaL_getmetatable(L, "Handle");
+    lua_setmetatable(L, -2);
 }
 
 // ========================================
@@ -100,25 +114,45 @@ static inline void pushRHandle(lua_State* L, const tinyHandle& handle) {
 // ========================================
 
 static inline int lua_nHandle(lua_State* L) {
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
-        return luaL_error(L, "nHandle(index, version) expects two integers");
-    
     tinyHandle handle;
-    handle.index = static_cast<uint32_t>(lua_tointeger(L, 1));
-    handle.version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    
+    // If no arguments, return invalid handle
+    if (lua_gettop(L) == 0) {
+        handle.index = 0xFFFFFFFF;
+        handle.version = 0xFFFFFFFF;
+    } else {
+        if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
+            return luaL_error(L, "nHandle(index, version) expects two integers");
+        
+        handle.index = static_cast<uint32_t>(lua_tointeger(L, 1));
+        handle.version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    }
+    
     pushNHandle(L, handle);
     return 1;
 }
 
 static inline int lua_rHandle(lua_State* L) {
-    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
-        return luaL_error(L, "rHandle(index, version) expects two integers");
-    
     tinyHandle handle;
-    handle.index = static_cast<uint32_t>(lua_tointeger(L, 1));
-    handle.version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    
+    // If no arguments, return invalid handle
+    if (lua_gettop(L) == 0) {
+        handle.index = 0xFFFFFFFF;
+        handle.version = 0xFFFFFFFF;
+    } else {
+        if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
+            return luaL_error(L, "rHandle(index, version) expects two integers");
+        
+        handle.index = static_cast<uint32_t>(lua_tointeger(L, 1));
+        handle.version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    }
+    
     pushRHandle(L, handle);
     return 1;
+}
+
+static inline uint64_t* getHandleUserdata(lua_State* L, int index) {
+    return static_cast<uint64_t*>(luaL_checkudata(L, index, "Handle"));
 }
 
 static inline int lua_handleEqual(lua_State* L) {
@@ -126,12 +160,16 @@ static inline int lua_handleEqual(lua_State* L) {
         lua_pushboolean(L, false);
         return 1;
     }
-    if (!lua_islightuserdata(L, 1) || !lua_islightuserdata(L, 2))
-        return luaL_error(L, "handleEqual expects two handles or nil");
     
-    uint64_t h1 = reinterpret_cast<uint64_t>(lua_touserdata(L, 1));
-    uint64_t h2 = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
-    lua_pushboolean(L, h1 == h2);
+    uint64_t* h1 = getHandleUserdata(L, 1);
+    uint64_t* h2 = getHandleUserdata(L, 2);
+    
+    if (!h1 || !h2) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    
+    lua_pushboolean(L, *h1 == *h2);
     return 1;
 }
 
@@ -149,16 +187,18 @@ static inline int scene_node(lua_State* L) {
         return 1;
     }
     
-    if (!lua_islightuserdata(L, 2))
-        return luaL_error(L, "Expected handle from nHandle()");
-    
-    uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
-    if (!isNHandle(packed)) {
+    uint64_t* packedPtr = getHandleUserdata(L, 2);
+    if (!packedPtr) {
         lua_pushnil(L);
         return 1;
     }
     
-    tinyHandle handle = unpackNHandle(packed);
+    if (!isNHandle(*packedPtr)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    tinyHandle handle = unpackNHandle(*packedPtr);
     
     if (!handle.valid() || !(*scenePtr)->node(handle)) {
         lua_pushnil(L);
@@ -175,32 +215,30 @@ static inline int scene_addScene(lua_State* L) {
         return luaL_error(L, "Invalid scene");
     
     // Argument 2: rHandle (registry handle to Scene resource)
-    if (!lua_islightuserdata(L, 2))
+    uint64_t* packedRHandlePtr = getHandleUserdata(L, 2);
+    if (!packedRHandlePtr)
         return luaL_error(L, "addScene(sceneRHandle, parentNHandle) expects rHandle as first argument");
     
-    uint64_t packedRHandle = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
-    
     // Check if it's an rHandle (bit 63 should be 0 for rHandle)
-    if (!isRHandle(packedRHandle)) {
+    if (!isRHandle(*packedRHandlePtr)) {
         return luaL_error(L, "addScene expects rHandle (registry handle), not nHandle (node handle) as first argument");
     }
     
-    tinyHandle sceneRHandle = unpackRHandle(packedRHandle);
+    tinyHandle sceneRHandle = unpackRHandle(*packedRHandlePtr);
     
     // Argument 3: nHandle (node handle for parent) - optional
     tinyHandle parentNHandle;
     if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
-        if (!lua_islightuserdata(L, 3))
+        uint64_t* packedNHandlePtr = getHandleUserdata(L, 3);
+        if (!packedNHandlePtr)
             return luaL_error(L, "addScene expects nHandle as second argument (optional)");
         
-        uint64_t packedNHandle = reinterpret_cast<uint64_t>(lua_touserdata(L, 3));
-        
         // Check if it's an nHandle (bit 63 should be 1 for nHandle)
-        if (!isNHandle(packedNHandle)) {
+        if (!isNHandle(*packedNHandlePtr)) {
             return luaL_error(L, "addScene expects nHandle (node handle) as second argument, not rHandle");
         }
         
-        parentNHandle = unpackNHandle(packedNHandle);
+        parentNHandle = unpackNHandle(*packedNHandlePtr);
     }
     // If no parent provided, it will default to root in the C++ function
     
@@ -432,8 +470,7 @@ static inline int anim3d_get(lua_State* L) {
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
         if (animHandle.valid()) {
-            uint64_t packed = (static_cast<uint64_t>(animHandle.index) << 32) | animHandle.version;
-            lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+            pushAnimHandle(L, animHandle);
             return 1;
         }
     }
@@ -449,8 +486,7 @@ static inline int anim3d_current(lua_State* L) {
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->curHandle();
         if (animHandle.valid()) {
-            uint64_t packed = (static_cast<uint64_t>(animHandle.index) << 32) | animHandle.version;
-            lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+            pushAnimHandle(L, animHandle);
             return 1;
         }
     }
@@ -467,11 +503,10 @@ static inline int anim3d_play(lua_State* L) {
         auto comps = getSceneFromLua(L)->nComp(*handle);
         if (!comps.anim3D) return 0;
         animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
-    } else if (lua_islightuserdata(L, 2)) {
-        uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
-        animHandle = {static_cast<uint32_t>(packed >> 32), static_cast<uint32_t>(packed & 0xFFFFFFFF)};
     } else {
-        return 0;
+        uint64_t* packedPtr = getHandleUserdata(L, 2);
+        if (!packedPtr) return 0;
+        animHandle = {static_cast<uint32_t>(*packedPtr >> 32), static_cast<uint32_t>(*packedPtr & 0xFFFFFFFF)};
     }
     
     bool restart = lua_isboolean(L, 3) ? lua_toboolean(L, 3) : true;
@@ -520,9 +555,9 @@ static inline int anim3d_getDuration(lua_State* L) {
     if (!comps.anim3D) { lua_pushnumber(L, 0.0f); return 1; }
     
     tinyHandle animHandle;
-    if (lua_islightuserdata(L, 2)) {
-        uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
-        animHandle = {static_cast<uint32_t>(packed >> 32), static_cast<uint32_t>(packed & 0xFFFFFFFF)};
+    uint64_t* packedPtr = getHandleUserdata(L, 2);
+    if (packedPtr) {
+        animHandle = {static_cast<uint32_t>(*packedPtr >> 32), static_cast<uint32_t>(*packedPtr & 0xFFFFFFFF)};
     } else {
         animHandle = comps.anim3D->curHandle();
     }
@@ -608,9 +643,11 @@ static inline int script_getVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, std::string>) lua_pushstring(L, val.c_str());
             else if constexpr (std::is_same_v<T, typeHandle>) {
                 bool isNodeHandle = val.isType<int>();
-                uint64_t packed = (isNodeHandle ? (1ULL << 63) : 0ULL) |
-                                 (static_cast<uint64_t>(val.handle.index) << 32) | val.handle.version;
-                lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+                if (isNodeHandle) {
+                    pushNHandle(L, val.handle);
+                } else {
+                    pushRHandle(L, val.handle);
+                }
             }
         }, var);
         return 1;
@@ -644,11 +681,10 @@ static inline int script_setVar(lua_State* L) {
             }
             else if constexpr (std::is_same_v<T, std::string>) val = std::string(lua_tostring(L, 3));
             else if constexpr (std::is_same_v<T, typeHandle>) {
-                if (lua_islightuserdata(L, 3)) {
-                    uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 3));
-                    bool isNodeHandle = (packed & (1ULL << 63)) != 0;
-                    tinyHandle h{static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32), 
-                                 static_cast<uint32_t>(packed & 0xFFFFFFFF)};
+                uint64_t* packedPtr = getHandleUserdata(L, 3);
+                if (packedPtr) {
+                    bool isNodeHandle = isNHandle(*packedPtr);
+                    tinyHandle h = isNodeHandle ? unpackNHandle(*packedPtr) : unpackRHandle(*packedPtr);
                     val = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
                 }
             }
@@ -707,8 +743,7 @@ static inline int node_parentHandle(lua_State* L) {
     
     tinyHandle parentHandle = getSceneFromLua(L)->nodeParent(*handle);
     if (parentHandle.valid()) {
-        uint64_t packed = (1ULL << 63) | (static_cast<uint64_t>(parentHandle.index) << 32) | parentHandle.version;
-        lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+        pushNHandle(L, parentHandle);
         return 1;
     }
     lua_pushnil(L);
@@ -722,8 +757,7 @@ static inline int node_childrenHandles(lua_State* L) {
     std::vector<tinyHandle> children = getSceneFromLua(L)->nodeChildren(*handle);
     lua_newtable(L);
     for (int i = 0; i < children.size(); i++) {
-        uint64_t packed = (1ULL << 63) | (static_cast<uint64_t>(children[i].index) << 32) | children[i].version;
-        lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+        pushNHandle(L, children[i]);
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -840,6 +874,52 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(scene_node, "node");
     LUA_REG_METHOD(scene_addScene, "addScene");
     LUA_END_METATABLE("Scene");
+    
+    // Handle metatable (for nHandle, rHandle, and animation handles)
+    luaL_newmetatable(L, "Handle");
+    // __eq operator for handle comparison
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        // Check if both are userdata with Handle metatable
+        if (!lua_isuserdata(L, 1) || !lua_isuserdata(L, 2)) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+        
+        uint64_t* h1 = static_cast<uint64_t*>(lua_touserdata(L, 1));
+        uint64_t* h2 = static_cast<uint64_t*>(lua_touserdata(L, 2));
+        
+        if (!h1 || !h2) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+        
+        // Compare the packed uint64_t values
+        lua_pushboolean(L, *h1 == *h2);
+        return 1;
+    });
+    lua_setfield(L, -2, "__eq");
+    // __tostring for debugging
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        uint64_t* packed = getHandleUserdata(L, 1);
+        if (!packed) {
+            lua_pushstring(L, "Handle(invalid)");
+            return 1;
+        }
+        if (isNHandle(*packed)) {
+            tinyHandle h = unpackNHandle(*packed);
+            lua_pushfstring(L, "nHandle(%d, %d)", h.index, h.version);
+        } else if (isRHandle(*packed)) {
+            tinyHandle h = unpackRHandle(*packed);
+            lua_pushfstring(L, "rHandle(%d, %d)", h.index, h.version);
+        } else {
+            uint32_t index = static_cast<uint32_t>(*packed >> 32);
+            uint32_t version = static_cast<uint32_t>(*packed & 0xFFFFFFFF);
+            lua_pushfstring(L, "AnimHandle(%d, %d)", index, version);
+        }
+        return 1;
+    });
+    lua_setfield(L, -2, "__tostring");
+    lua_pop(L, 1);
 
     // Global Functions
     LUA_REG_GLOBAL(lua_kState, "kState");

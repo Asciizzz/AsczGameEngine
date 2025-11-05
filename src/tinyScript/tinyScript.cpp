@@ -197,17 +197,27 @@ void tinyScript::cacheDefaultVars() {
                 }
                 
                 lua_pop(L_, 3);  // Pop x, y, z
-            } else if (lua_islightuserdata(L_, -1)) {
-                // Handle as lightuserdata with isNode flag in high bit
-                uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L_, -1));
-                bool isNodeHandle = (packed & (1ULL << 63)) != 0;
-                tinyHandle h;
-                h.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
-                h.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
-                
-                // Create typeHandle: type int for nodes, type void for files
-                typeHandle th = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
-                defaultVars_[key] = th;
+            } else if (lua_isuserdata(L_, -1)) {
+                // Check if it has the Handle metatable
+                if (lua_getmetatable(L_, -1)) {
+                    luaL_getmetatable(L_, "Handle");
+                    if (lua_rawequal(L_, -1, -2)) {
+                        // It's a valid Handle userdata
+                        lua_pop(L_, 2); // Pop both metatables
+                        
+                        uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L_, -1));
+                        if (packedPtr) {
+                            bool isNodeHandle = isNHandle(*packedPtr);
+                            tinyHandle h = isNodeHandle ? unpackNHandle(*packedPtr) : unpackRHandle(*packedPtr);
+                            
+                            // Create typeHandle: type int for nodes, type void for files
+                            typeHandle th = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
+                            defaultVars_[key] = th;
+                        }
+                    } else {
+                        lua_pop(L_, 2); // Pop both metatables
+                    }
+                }
             }
         }
         
@@ -319,13 +329,14 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                 lua_setfield(L_, -2, key.c_str());
             }
             else if constexpr (std::is_same_v<T, typeHandle>) {
-                // Push handle as lightuserdata with isNode flag in high bit
-                // type int = node handle, type void = file handle
+                // Push handle as full userdata with metatable
+                // type int = node handle (nHandle), type void = file handle (rHandle)
                 bool isNodeHandle = val.isType<int>();
-                uint64_t packed = (isNodeHandle ? (1ULL << 63) : 0ULL) |
-                                 (static_cast<uint64_t>(val.handle.index) << 32) | 
-                                 val.handle.version;
-                lua_pushlightuserdata(L_, reinterpret_cast<void*>(packed));
+                if (isNodeHandle) {
+                    pushNHandle(L_, val.handle);
+                } else {
+                    pushRHandle(L_, val.handle);
+                }
                 lua_setfield(L_, -2, key.c_str());
             }
         }, value);
@@ -399,6 +410,28 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                 else if constexpr (std::is_same_v<T, std::string>) {
                     if (lua_isstring(L_, -1)) {
                         val = lua_tostring(L_, -1);
+                    }
+                }
+                else if constexpr (std::is_same_v<T, typeHandle>) {
+                    // Pull back handle from full userdata
+                    if (lua_isuserdata(L_, -1)) {
+                        // Check if it has the Handle metatable
+                        if (lua_getmetatable(L_, -1)) {
+                            luaL_getmetatable(L_, "Handle");
+                            if (lua_rawequal(L_, -1, -2)) {
+                                // It's a valid Handle userdata
+                                lua_pop(L_, 2); // Pop both metatables
+                                
+                                uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L_, -1));
+                                if (packedPtr) {
+                                    bool isNodeHandle = isNHandle(*packedPtr);
+                                    tinyHandle h = isNodeHandle ? unpackNHandle(*packedPtr) : unpackRHandle(*packedPtr);
+                                    val = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
+                                }
+                            } else {
+                                lua_pop(L_, 2); // Pop both metatables
+                            }
+                        }
                     }
                 }
             }, value);
