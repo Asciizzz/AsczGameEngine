@@ -39,8 +39,8 @@ end
 
 function update()
     -- Get node references
-    local root = scene:getNode(vars.rootNode)
-    local anime = scene:getNode(vars.animeNode)
+    local root = scene:node(vars.rootNode)
+    local anime = scene:node(vars.animeNode)
 
     -- ========== HEALTH MANAGEMENT ==========
     -- Clamp HP
@@ -88,7 +88,7 @@ function update()
         local rootT3D = root:transform3D()
         if rootT3D then
             local playerPos = rootT3D:getPos()
-            local enemiesContainer = scene:getNode(vars.enemiesNode)
+            local enemiesContainer = scene:node(vars.enemiesNode)
             
             if enemiesContainer then
                 -- Get all enemy children using the new children() method!

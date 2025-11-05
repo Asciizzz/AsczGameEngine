@@ -1239,7 +1239,7 @@ void tinyApp::renderSceneNodeInspector() {
                                             }
                                         } else {
                                             // File handle (type void)
-                                            displayText = prefix + "Handle(" + std::to_string(val.handle.index) + ", " + std::to_string(val.handle.version) + ")";
+                                            displayText = prefix + "RHandle(" + std::to_string(val.handle.index) + ", " + std::to_string(val.handle.version) + ")";
                                         }
                                     } else {
                                         displayText = "(Drop Node Here)";

@@ -41,7 +41,7 @@ struct typeHandle {
 
     typeHandle() noexcept = default;
 
-    bool valid() const noexcept { return handle.valid() && typeIndex != std::type_index(typeid(void)); }
+    bool valid() const noexcept { return handle.valid(); }
 
     template<typename T>
     bool isType() const noexcept { return valid() && typeIndex == std::type_index(typeid(T)); }

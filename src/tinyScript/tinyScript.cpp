@@ -98,8 +98,7 @@ bool tinyScript::compile() {
         std::string error = std::string("Compilation error: ") + lua_tostring(L_, -1);
         debug_.log(error, 1.0f, 0.0f, 0.0f);
         lua_pop(L_, 1);
-        lua_close(L_);
-        L_ = nullptr;
+        closeLua();
         return false;
     }
     
@@ -108,19 +107,14 @@ bool tinyScript::compile() {
         std::string error = std::string("Execution error: ") + lua_tostring(L_, -1);
         debug_.log(error, 1.0f, 0.0f, 0.0f);
         lua_pop(L_, 1);
-        lua_close(L_);
-        L_ = nullptr;
+        closeLua();
         return false;
     }
-    
-    // Increment version and mark as compiled
+
     version_++;
     compiled_ = true;
-
-    // Log success
     debug_.log("Compilation successful", 0.0f, 1.0f, 0.0f);
 
-    // Cache default variables from vars() function
     cacheDefaultVars();
 
     return true;
@@ -130,15 +124,14 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
     if (!valid()) return false;
     
     lua_State* targetL = runtimeL ? runtimeL : L_;
-    
-    // Get the function from the compiled state
+
     lua_getglobal(targetL, functionName);
     
     if (!lua_isfunction(targetL, -1)) {
         lua_pop(targetL, 1);
         return false;
     }
-    
+
     // Call the function (0 args, 0 returns for now)
     if (lua_pcall(targetL, 0, 0, 0) != LUA_OK) {
         lua_pop(targetL, 1);
@@ -149,13 +142,12 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
 }
 
 void tinyScript::cacheDefaultVars() {
-    defaultVars_.clear(); // Clear previous cache
+    defaultVars_.clear();
     
     if (!valid()) return;
 
-    // Check if script has a "vars" function
     lua_getglobal(L_, "vars");
-    
+
     if (!lua_isfunction(L_, -1)) {
         lua_pop(L_, 1);
         return;
@@ -354,12 +346,12 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     lua_pushlightuserdata(L_, scene);
     lua_setglobal(L_, "__scene");
     
-    // Push node as a Node userdata object
+    // Push node as a Node userdata object (for calling methods like node:transform3D())
     pushNode(L_, nodeHandle);
     lua_setglobal(L_, "node");
     
-    // Push nodeHandle as a raw handle (for comparisons, passing to other functions)
-    pushNode(L_, nodeHandle);
+    // Push nodeHandle as a raw nHandle lightuserdata (for passing to functions like scene:addScene())
+    pushNHandle(L_, nodeHandle);
     lua_setglobal(L_, "nodeHandle");
 
     // ========== Call the update function ==========

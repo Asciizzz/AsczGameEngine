@@ -46,6 +46,56 @@ static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
 }
 
 // ========================================
+// HANDLE PACKING/UNPACKING UTILITIES
+// ========================================
+
+// Pack nHandle (node handle) with bit 63 set to 1
+static inline uint64_t packNHandle(const tinyHandle& handle) {
+    return (1ULL << 63) | (static_cast<uint64_t>(handle.index) << 32) | handle.version;
+}
+
+// Pack rHandle (registry/resource handle) with bit 63 set to 0
+static inline uint64_t packRHandle(const tinyHandle& handle) {
+    return (static_cast<uint64_t>(handle.index) << 32) | handle.version;
+}
+
+// Unpack nHandle (expects bit 63 to be 1)
+static inline tinyHandle unpackNHandle(uint64_t packed) {
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
+    handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+    return handle;
+}
+
+// Unpack rHandle (expects bit 63 to be 0)
+static inline tinyHandle unpackRHandle(uint64_t packed) {
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>(packed >> 32);
+    handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+    return handle;
+}
+
+// Check if packed handle is an nHandle (bit 63 == 1)
+static inline bool isNHandle(uint64_t packed) {
+    return (packed & (1ULL << 63)) != 0;
+}
+
+// Check if packed handle is an rHandle (bit 63 == 0)
+static inline bool isRHandle(uint64_t packed) {
+    return (packed & (1ULL << 63)) == 0;
+}
+
+// Push nHandle as lightuserdata
+static inline void pushNHandle(lua_State* L, const tinyHandle& handle) {
+    lua_pushlightuserdata(L, reinterpret_cast<void*>(packNHandle(handle)));
+}
+
+// Push rHandle as lightuserdata
+static inline void pushRHandle(lua_State* L, const tinyHandle& handle) {
+    lua_pushlightuserdata(L, reinterpret_cast<void*>(packRHandle(handle)));
+}
+
+// ========================================
 // HANDLE CONSTRUCTORS & UTILITIES
 // ========================================
 
@@ -53,21 +103,21 @@ static inline int lua_nHandle(lua_State* L) {
     if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
         return luaL_error(L, "nHandle(index, version) expects two integers");
     
-    uint32_t index = static_cast<uint32_t>(lua_tointeger(L, 1));
-    uint32_t version = static_cast<uint32_t>(lua_tointeger(L, 2));
-    uint64_t packed = (1ULL << 63) | (static_cast<uint64_t>(index) << 32) | version;
-    lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>(lua_tointeger(L, 1));
+    handle.version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    pushNHandle(L, handle);
     return 1;
 }
 
-static inline int lua_fHandle(lua_State* L) {
+static inline int lua_rHandle(lua_State* L) {
     if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
-        return luaL_error(L, "fHandle(index, version) expects two integers");
+        return luaL_error(L, "rHandle(index, version) expects two integers");
     
-    uint32_t index = static_cast<uint32_t>(lua_tointeger(L, 1));
-    uint32_t version = static_cast<uint32_t>(lua_tointeger(L, 2));
-    uint64_t packed = (static_cast<uint64_t>(index) << 32) | version;
-    lua_pushlightuserdata(L, reinterpret_cast<void*>(packed));
+    tinyHandle handle;
+    handle.index = static_cast<uint32_t>(lua_tointeger(L, 1));
+    handle.version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    pushRHandle(L, handle);
     return 1;
 }
 
@@ -89,7 +139,7 @@ static inline int lua_handleEqual(lua_State* L) {
 // SCENE METHODS
 // ========================================
 
-static inline int scene_getNode(lua_State* L) {
+static inline int scene_node(lua_State* L) {
     tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
     if (!scenePtr || !*scenePtr)
         return luaL_error(L, "Invalid scene");
@@ -103,14 +153,12 @@ static inline int scene_getNode(lua_State* L) {
         return luaL_error(L, "Expected handle from nHandle()");
     
     uint64_t packed = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
-    if (!(packed & (1ULL << 63))) {
+    if (!isNHandle(packed)) {
         lua_pushnil(L);
         return 1;
     }
     
-    tinyHandle handle;
-    handle.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
-    handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
+    tinyHandle handle = unpackNHandle(packed);
     
     if (!handle.valid() || !(*scenePtr)->node(handle)) {
         lua_pushnil(L);
@@ -119,6 +167,48 @@ static inline int scene_getNode(lua_State* L) {
     
     pushNode(L, handle);
     return 1;
+}
+
+static inline int scene_addScene(lua_State* L) {
+    tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
+    if (!scenePtr || !*scenePtr)
+        return luaL_error(L, "Invalid scene");
+    
+    // Argument 2: rHandle (registry handle to Scene resource)
+    if (!lua_islightuserdata(L, 2))
+        return luaL_error(L, "addScene(sceneRHandle, parentNHandle) expects rHandle as first argument");
+    
+    uint64_t packedRHandle = reinterpret_cast<uint64_t>(lua_touserdata(L, 2));
+    
+    // Check if it's an rHandle (bit 63 should be 0 for rHandle)
+    if (!isRHandle(packedRHandle)) {
+        return luaL_error(L, "addScene expects rHandle (registry handle), not nHandle (node handle) as first argument");
+    }
+    
+    tinyHandle sceneRHandle = unpackRHandle(packedRHandle);
+    
+    // Argument 3: nHandle (node handle for parent) - optional
+    tinyHandle parentNHandle;
+    if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
+        if (!lua_islightuserdata(L, 3))
+            return luaL_error(L, "addScene expects nHandle as second argument (optional)");
+        
+        uint64_t packedNHandle = reinterpret_cast<uint64_t>(lua_touserdata(L, 3));
+        
+        // Check if it's an nHandle (bit 63 should be 1 for nHandle)
+        if (!isNHandle(packedNHandle)) {
+            return luaL_error(L, "addScene expects nHandle (node handle) as second argument, not rHandle");
+        }
+        
+        parentNHandle = unpackNHandle(packedNHandle);
+    }
+    // If no parent provided, it will default to root in the C++ function
+    
+    // Call the existing C++ addScene function
+    // The existing function uses sharedRes_.fsGet<Scene>(sceneRHandle) internally
+    (*scenePtr)->addScene(sceneRHandle, parentNHandle);
+    
+    return 0; // Returns void, no return value
 }
 
 // ========================================
@@ -747,13 +837,14 @@ static inline void registerNodeBindings(lua_State* L) {
     
     // Scene metatable
     LUA_BEGIN_METATABLE("Scene");
-    LUA_REG_METHOD(scene_getNode, "getNode");
+    LUA_REG_METHOD(scene_node, "node");
+    LUA_REG_METHOD(scene_addScene, "addScene");
     LUA_END_METATABLE("Scene");
-    
+
     // Global Functions
     LUA_REG_GLOBAL(lua_kState, "kState");
     LUA_REG_GLOBAL(lua_nHandle, "nHandle");
-    LUA_REG_GLOBAL(lua_fHandle, "fHandle");
+    LUA_REG_GLOBAL(lua_rHandle, "rHandle");
     LUA_REG_GLOBAL(lua_handleEqual, "handleEqual");
     LUA_REG_GLOBAL(lua_print, "print");
 }
