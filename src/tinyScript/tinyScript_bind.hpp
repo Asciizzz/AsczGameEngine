@@ -643,8 +643,6 @@ static inline int node_childrenHandles(lua_State* L) {
 // UTILITY FUNCTIONS
 // ========================================
 
-static inline int lua_animHandlesEqual(lua_State* L) { return lua_handleEqual(L); }
-
 static inline int lua_print(lua_State* L) {
     lua_getglobal(L, "__rtScript");
     void* rtScriptPtr = lua_touserdata(L, -1);
@@ -672,61 +670,65 @@ static inline int lua_print(lua_State* L) {
 // REGISTRATION FUNCTION
 // ========================================
 
+// Registration helper macros (only used in this implementation file)
+#define LUA_REG_METHOD(func, name) \
+    lua_pushcfunction(L, func); lua_setfield(L, -2, name)
+
+#define LUA_REG_GLOBAL(func, name) \
+    lua_pushcfunction(L, func); lua_setglobal(L, name)
+
+#define LUA_BEGIN_METATABLE(type_name) \
+    luaL_newmetatable(L, type_name); \
+    lua_newtable(L)
+
+#define LUA_END_METATABLE(type_name) \
+    lua_setfield(L, -2, "__index"); \
+    lua_pushcfunction(L, [](lua_State* L) -> int { lua_pushstring(L, type_name); return 1; }); \
+    lua_setfield(L, -2, "__tostring"); \
+    lua_pop(L, 1)
+
 static inline void registerNodeBindings(lua_State* L) {
     // Transform3D metatable
-    luaL_newmetatable(L, "Transform3D");
-    lua_newtable(L);
-    lua_pushcfunction(L, transform3d_getPos); lua_setfield(L, -2, "getPos");
-    lua_pushcfunction(L, transform3d_setPos); lua_setfield(L, -2, "setPos");
-    lua_pushcfunction(L, transform3d_getRot); lua_setfield(L, -2, "getRot");
-    lua_pushcfunction(L, transform3d_setRot); lua_setfield(L, -2, "setRot");
-    lua_pushcfunction(L, transform3d_getScl); lua_setfield(L, -2, "getScl");
-    lua_pushcfunction(L, transform3d_setScl); lua_setfield(L, -2, "setScl");
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, [](lua_State* L) -> int { lua_pushstring(L, "Transform3D"); return 1; });
-    lua_setfield(L, -2, "__tostring");
-    lua_pop(L, 1);
+    LUA_BEGIN_METATABLE("Transform3D");
+    LUA_REG_METHOD(transform3d_getPos, "getPos");
+    LUA_REG_METHOD(transform3d_setPos, "setPos");
+    LUA_REG_METHOD(transform3d_getRot, "getRot");
+    LUA_REG_METHOD(transform3d_setRot, "setRot");
+    LUA_REG_METHOD(transform3d_getScl, "getScl");
+    LUA_REG_METHOD(transform3d_setScl, "setScl");
+    LUA_END_METATABLE("Transform3D");
     
     // Anim3D metatable
-    luaL_newmetatable(L, "Anim3D");
-    lua_newtable(L);
-    lua_pushcfunction(L, anim3d_get); lua_setfield(L, -2, "get");
-    lua_pushcfunction(L, anim3d_current); lua_setfield(L, -2, "current");
-    lua_pushcfunction(L, anim3d_play); lua_setfield(L, -2, "play");
-    lua_pushcfunction(L, anim3d_setSpeed); lua_setfield(L, -2, "setSpeed");
-    lua_pushcfunction(L, anim3d_isPlaying); lua_setfield(L, -2, "isPlaying");
-    lua_pushcfunction(L, anim3d_getTime); lua_setfield(L, -2, "getTime");
-    lua_pushcfunction(L, anim3d_setTime); lua_setfield(L, -2, "setTime");
-    lua_pushcfunction(L, anim3d_getDuration); lua_setfield(L, -2, "getDuration");
-    lua_pushcfunction(L, anim3d_setLoop); lua_setfield(L, -2, "setLoop");
-    lua_pushcfunction(L, anim3d_isLoop); lua_setfield(L, -2, "isLoop");
-    lua_pushcfunction(L, anim3d_pause); lua_setfield(L, -2, "pause");
-    lua_pushcfunction(L, anim3d_resume); lua_setfield(L, -2, "resume");
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, [](lua_State* L) -> int { lua_pushstring(L, "Anim3D"); return 1; });
-    lua_setfield(L, -2, "__tostring");
-    lua_pop(L, 1);
+    LUA_BEGIN_METATABLE("Anim3D");
+    LUA_REG_METHOD(anim3d_get, "get");
+    LUA_REG_METHOD(anim3d_current, "current");
+    LUA_REG_METHOD(anim3d_play, "play");
+    LUA_REG_METHOD(anim3d_setSpeed, "setSpeed");
+    LUA_REG_METHOD(anim3d_isPlaying, "isPlaying");
+    LUA_REG_METHOD(anim3d_getTime, "getTime");
+    LUA_REG_METHOD(anim3d_setTime, "setTime");
+    LUA_REG_METHOD(anim3d_getDuration, "getDuration");
+    LUA_REG_METHOD(anim3d_setLoop, "setLoop");
+    LUA_REG_METHOD(anim3d_isLoop, "isLoop");
+    LUA_REG_METHOD(anim3d_pause, "pause");
+    LUA_REG_METHOD(anim3d_resume, "resume");
+    LUA_END_METATABLE("Anim3D");
     
     // Script metatable
-    luaL_newmetatable(L, "Script");
-    lua_newtable(L);
-    lua_pushcfunction(L, script_getVar); lua_setfield(L, -2, "getVar");
-    lua_pushcfunction(L, script_setVar); lua_setfield(L, -2, "setVar");
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, [](lua_State* L) -> int { lua_pushstring(L, "Script"); return 1; });
-    lua_setfield(L, -2, "__tostring");
-    lua_pop(L, 1);
+    LUA_BEGIN_METATABLE("Script");
+    LUA_REG_METHOD(script_getVar, "getVar");
+    LUA_REG_METHOD(script_setVar, "setVar");
+    LUA_END_METATABLE("Script");
     
     // Node metatable
-    luaL_newmetatable(L, "Node");
-    lua_newtable(L);
-    lua_pushcfunction(L, node_transform3D); lua_setfield(L, -2, "transform3D");
-    lua_pushcfunction(L, node_anim3D); lua_setfield(L, -2, "anim3D");
-    lua_pushcfunction(L, node_script); lua_setfield(L, -2, "script");
-    lua_pushcfunction(L, node_parent); lua_setfield(L, -2, "parent");
-    lua_pushcfunction(L, node_children); lua_setfield(L, -2, "children");
-    lua_pushcfunction(L, node_parentHandle); lua_setfield(L, -2, "parentHandle");
-    lua_pushcfunction(L, node_childrenHandles); lua_setfield(L, -2, "childrenHandles");
+    LUA_BEGIN_METATABLE("Node");
+    LUA_REG_METHOD(node_transform3D, "transform3D");
+    LUA_REG_METHOD(node_anim3D, "anim3D");
+    LUA_REG_METHOD(node_script, "script");
+    LUA_REG_METHOD(node_parent, "parent");
+    LUA_REG_METHOD(node_children, "children");
+    LUA_REG_METHOD(node_parentHandle, "parentHandle");
+    LUA_REG_METHOD(node_childrenHandles, "childrenHandles");
     lua_setfield(L, -2, "__index");
     lua_pushcfunction(L, [](lua_State* L) -> int {
         tinyHandle* h = getNodeHandleFromUserdata(L, 1);
@@ -737,26 +739,27 @@ static inline void registerNodeBindings(lua_State* L) {
     lua_pushcfunction(L, [](lua_State* L) -> int {
         tinyHandle* h1 = getNodeHandleFromUserdata(L, 1);
         tinyHandle* h2 = getNodeHandleFromUserdata(L, 2);
-        lua_pushboolean(L, h1 && h2 && h1->index == h2->index && h1->version == h2->version);
+        lua_pushboolean(L, h1 && h2 && (*h1 == *h2));
         return 1;
     });
     lua_setfield(L, -2, "__eq");
     lua_pop(L, 1);
     
     // Scene metatable
-    luaL_newmetatable(L, "Scene");
-    lua_newtable(L);
-    lua_pushcfunction(L, scene_getNode); lua_setfield(L, -2, "getNode");
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, [](lua_State* L) -> int { lua_pushstring(L, "Scene"); return 1; });
-    lua_setfield(L, -2, "__tostring");
-    lua_pop(L, 1);
+    LUA_BEGIN_METATABLE("Scene");
+    LUA_REG_METHOD(scene_getNode, "getNode");
+    LUA_END_METATABLE("Scene");
     
     // Global Functions
-    lua_pushcfunction(L, lua_kState); lua_setglobal(L, "kState");
-    lua_pushcfunction(L, lua_nHandle); lua_setglobal(L, "nHandle");
-    lua_pushcfunction(L, lua_fHandle); lua_setglobal(L, "fHandle");
-    lua_pushcfunction(L, lua_handleEqual); lua_setglobal(L, "handleEqual");
-    lua_pushcfunction(L, lua_animHandlesEqual); lua_setglobal(L, "animHandlesEqual");
-    lua_pushcfunction(L, lua_print); lua_setglobal(L, "print");
+    LUA_REG_GLOBAL(lua_kState, "kState");
+    LUA_REG_GLOBAL(lua_nHandle, "nHandle");
+    LUA_REG_GLOBAL(lua_fHandle, "fHandle");
+    LUA_REG_GLOBAL(lua_handleEqual, "handleEqual");
+    LUA_REG_GLOBAL(lua_print, "print");
 }
+
+// Clean up macros (prevent pollution)
+#undef LUA_REG_METHOD
+#undef LUA_REG_GLOBAL
+#undef LUA_BEGIN_METATABLE
+#undef LUA_END_METATABLE
