@@ -1225,7 +1225,7 @@ void tinyApp::renderSceneNodeInspector() {
                                     // Handle as a draggable node reference
                                     // Display current handle or node name with type prefix
                                     std::string displayText;
-                                    bool isNodeHandle = val.isType<int>();
+                                    bool isNodeHandle = val.isType<tinyNodeRT>();
                                     std::string prefix = isNodeHandle ? "[Node] " : "[File] ";
                                     
                                     if (val.valid()) {
@@ -1256,7 +1256,7 @@ void tinyApp::renderSceneNodeInspector() {
                                         // Accept node handles (from scene hierarchy)
                                         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NODE_HANDLE")) {
                                             tinyHandle draggedNode = *(const tinyHandle*)payload->Data;
-                                            val = typeHandle::make<int>(draggedNode);  // Node handle (type int)
+                                            val = typeHandle::make<tinyNodeRT>(draggedNode);  // Node handle (type tinyNodeRT)
                                         }
                                         // Accept file handles (from file browser)
                                         else if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {

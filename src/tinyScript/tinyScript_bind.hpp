@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tinyData/tinyRT_Scene.hpp"
+#include "tinyData/tinyRT_Node.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -46,113 +47,97 @@ static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
 }
 
 // ========================================
-// HANDLE PACKING/UNPACKING UTILITIES
+// UNIFIED HANDLE SYSTEM
 // ========================================
 
-// Pack nHandle (node handle) with bit 63 set to 1
-static inline uint64_t packNHandle(const tinyHandle& handle) {
-    return (1ULL << 63) | (static_cast<uint64_t>(handle.index) << 32) | handle.version;
-}
-
-// Pack rHandle (registry/resource handle) with bit 63 set to 0
-static inline uint64_t packRHandle(const tinyHandle& handle) {
-    return (static_cast<uint64_t>(handle.index) << 32) | handle.version;
-}
-
-// Unpack nHandle (expects bit 63 to be 1)
-static inline tinyHandle unpackNHandle(uint64_t packed) {
+// LuaHandle - Unified handle structure with type information
+struct LuaHandle {
+    std::string type;
     tinyHandle handle;
-    handle.index = static_cast<uint32_t>((packed & 0x7FFFFFFFFFFFF000ULL) >> 32);
-    handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
-    return handle;
-}
 
-// Unpack rHandle (expects bit 63 to be 0)
-static inline tinyHandle unpackRHandle(uint64_t packed) {
-    tinyHandle handle;
-    handle.index = static_cast<uint32_t>(packed >> 32);
-    handle.version = static_cast<uint32_t>(packed & 0xFFFFFFFF);
-    return handle;
-}
+    LuaHandle() = default;
+    LuaHandle(const std::string& t, tinyHandle h = tinyHandle()) : type(t), handle(h) {}
+    LuaHandle(const std::string& t, uint32_t index, uint32_t version) 
+        : type(t), handle(index, version) {}
 
-// Check if packed handle is an nHandle (bit 63 == 1)
-static inline bool isNHandle(uint64_t packed) {
-    return (packed & (1ULL << 63)) != 0;
-}
+    bool valid() const { return !type.empty() && handle.valid(); }
 
-// Check if packed handle is an rHandle (bit 63 == 0)
-static inline bool isRHandle(uint64_t packed) {
-    return (packed & (1ULL << 63)) == 0;
-}
+    // Convert LuaHandle to typeHandle based on type string
+    typeHandle toTypeHandle() const {
+        // Don't check valid() - we want to preserve invalid handles too
+        // so they can be set later in the editor
+        
+        // Node handle - maps to tinyNodeRT (scene-specific, needs remapping on load)
+        if (type == "node") {
+            return typeHandle::make<tinyNodeRT>(handle);
+        }
+        // Registry handles - point directly to filesystem registry (global, never remapped)
+        else if (type == "script" || type == "scene" || type == "mesh" || 
+                 type == "texture" || type == "material" || type == "skeleton") {
+            return typeHandle::make<void>(handle);
+        }
+        // Unknown or empty type - default to void (registry handle)
+        return typeHandle::make<void>(handle);
+    }
 
-// Push nHandle as full userdata with metatable
-static inline void pushNHandle(lua_State* L, const tinyHandle& handle) {
-    uint64_t* ud = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
-    *ud = packNHandle(handle);
+    // Create LuaHandle from typeHandle
+    static LuaHandle fromTypeHandle(const typeHandle& th) {
+        if (!th.valid()) return LuaHandle();
+
+        // Check if it's a node handle (type is tinyNodeRT)
+        if (th.isType<tinyNodeRT>()) {
+            return LuaHandle("node", th.handle);
+        }
+        // Otherwise it's a registry handle (type is void)
+        // We can't determine the exact resource type from typeHandle alone
+        // Default to a generic "resource" type that will work with FS:get()
+        // The resource type will be validated when FS:get() is called
+        return LuaHandle("resource", th.handle);
+    }
+};
+
+// Push LuaHandle as full userdata with metatable
+static inline void pushLuaHandle(lua_State* L, const LuaHandle& luaHandle) {
+    LuaHandle* ud = static_cast<LuaHandle*>(lua_newuserdata(L, sizeof(LuaHandle)));
+    new (ud) LuaHandle(luaHandle);  // Placement new to copy construct
     luaL_getmetatable(L, "Handle");
     lua_setmetatable(L, -2);
 }
 
-// Push rHandle as full userdata with metatable
-static inline void pushRHandle(lua_State* L, const tinyHandle& handle) {
-    uint64_t* ud = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
-    *ud = packRHandle(handle);
-    luaL_getmetatable(L, "Handle");
-    lua_setmetatable(L, -2);
-}
-
-// Push animation handle as full userdata with metatable (plain packed handle)
-static inline void pushAnimHandle(lua_State* L, const tinyHandle& handle) {
-    uint64_t* ud = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
-    *ud = (static_cast<uint64_t>(handle.index) << 32) | handle.version;
-    luaL_getmetatable(L, "Handle");
-    lua_setmetatable(L, -2);
+// Get LuaHandle from userdata
+static inline LuaHandle* getLuaHandleFromUserdata(lua_State* L, int index) {
+    return static_cast<LuaHandle*>(luaL_checkudata(L, index, "Handle"));
 }
 
 // ========================================
 // HANDLE CONSTRUCTORS & UTILITIES
 // ========================================
 
-static inline int lua_nHandle(lua_State* L) {
-    tinyHandle handle;
+// Handle("type") or Handle("type", index, version)
+static inline int lua_Handle(lua_State* L) {
+    int numArgs = lua_gettop(L);
     
-    // If no arguments, return invalid handle
-    if (lua_gettop(L) == 0) {
-        handle.index = 0xFFFFFFFF;
-        handle.version = 0xFFFFFFFF;
-    } else {
-        if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
-            return luaL_error(L, "nHandle(index, version) expects two integers");
-        
-        handle.index = static_cast<uint32_t>(lua_tointeger(L, 1));
-        handle.version = static_cast<uint32_t>(lua_tointeger(L, 2));
+    if (numArgs < 1) {
+        LuaHandle handle;
+        handle.type = "node";
+        pushLuaHandle(L, handle);
+        return 1;
+    }
+
+    const char* typeStr = luaL_checkstring(L, 1);
+    
+    LuaHandle luaHandle;
+    luaHandle.type = typeStr;
+    
+    if (numArgs >= 2) {
+        luaHandle.handle.index = luaL_checkinteger(L, 2);
+        if (numArgs >= 3) {
+            luaHandle.handle.version = luaL_checkinteger(L, 3);
+        }
     }
     
-    pushNHandle(L, handle);
+    pushLuaHandle(L, luaHandle);
     return 1;
-}
-
-static inline int lua_rHandle(lua_State* L) {
-    tinyHandle handle;
-    
-    // If no arguments, return invalid handle
-    if (lua_gettop(L) == 0) {
-        handle.index = 0xFFFFFFFF;
-        handle.version = 0xFFFFFFFF;
-    } else {
-        if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
-            return luaL_error(L, "rHandle(index, version) expects two integers");
-        
-        handle.index = static_cast<uint32_t>(lua_tointeger(L, 1));
-        handle.version = static_cast<uint32_t>(lua_tointeger(L, 2));
-    }
-    
-    pushRHandle(L, handle);
-    return 1;
-}
-
-static inline uint64_t* getHandleUserdata(lua_State* L, int index) {
-    return static_cast<uint64_t*>(luaL_checkudata(L, index, "Handle"));
 }
 
 static inline int lua_handleEqual(lua_State* L) {
@@ -161,15 +146,60 @@ static inline int lua_handleEqual(lua_State* L) {
         return 1;
     }
     
-    uint64_t* h1 = getHandleUserdata(L, 1);
-    uint64_t* h2 = getHandleUserdata(L, 2);
+    LuaHandle* h1 = getLuaHandleFromUserdata(L, 1);
+    LuaHandle* h2 = getLuaHandleFromUserdata(L, 2);
     
     if (!h1 || !h2) {
         lua_pushboolean(L, false);
         return 1;
     }
     
-    lua_pushboolean(L, *h1 == *h2);
+    // Handles are equal if both type and handle match
+    lua_pushboolean(L, h1->type == h2->type && h1->handle == h2->handle);
+    return 1;
+}
+
+// Handle:type() - Get the type string of a handle
+static inline int lua_handleGetType(lua_State* L) {
+    LuaHandle* h = getLuaHandleFromUserdata(L, 1);
+    if (!h) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushstring(L, h->type.c_str());
+    return 1;
+}
+
+// Handle:index() - Get the index of a handle
+static inline int lua_handleGetIndex(lua_State* L) {
+    LuaHandle* h = getLuaHandleFromUserdata(L, 1);
+    if (!h) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushinteger(L, h->handle.index);
+    return 1;
+}
+
+// Handle:version() - Get the version of a handle
+static inline int lua_handleGetVersion(lua_State* L) {
+    LuaHandle* h = getLuaHandleFromUserdata(L, 1);
+    if (!h) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushinteger(L, h->handle.version);
+    return 1;
+}
+
+// Handle:valid() - Check if handle is valid
+static inline int lua_handleValid(lua_State* L) {
+    LuaHandle* h = getLuaHandleFromUserdata(L, 1);
+    if (!h) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    lua_pushboolean(L, h->valid());
     return 1;
 }
 
@@ -187,25 +217,24 @@ static inline int scene_node(lua_State* L) {
         return 1;
     }
     
-    uint64_t* packedPtr = getHandleUserdata(L, 2);
-    if (!packedPtr) {
+    LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
+    if (!luaHandle) {
         lua_pushnil(L);
         return 1;
     }
     
-    if (!isNHandle(*packedPtr)) {
+    // Verify it's a node handle - return nil if wrong type instead of erroring
+    if (luaHandle->type != "node") {
         lua_pushnil(L);
         return 1;
     }
     
-    tinyHandle handle = unpackNHandle(*packedPtr);
-    
-    if (!handle.valid() || !(*scenePtr)->node(handle)) {
+    if (!luaHandle->handle.valid() || !(*scenePtr)->node(luaHandle->handle)) {
         lua_pushnil(L);
         return 1;
     }
     
-    pushNode(L, handle);
+    pushNode(L, luaHandle->handle);
     return 1;
 }
 
@@ -214,37 +243,29 @@ static inline int scene_addScene(lua_State* L) {
     if (!scenePtr || !*scenePtr)
         return luaL_error(L, "Invalid scene");
     
-    // Argument 2: rHandle (registry handle to Scene resource)
-    uint64_t* packedRHandlePtr = getHandleUserdata(L, 2);
-    if (!packedRHandlePtr)
-        return luaL_error(L, "addScene(sceneRHandle, parentNHandle) expects rHandle as first argument");
-    
-    // Check if it's an rHandle (bit 63 should be 0 for rHandle)
-    if (!isRHandle(*packedRHandlePtr)) {
-        return luaL_error(L, "addScene expects rHandle (registry handle), not nHandle (node handle) as first argument");
+    // Argument 2: scene handle (registry handle to Scene resource)
+    LuaHandle* sceneHandle = getLuaHandleFromUserdata(L, 2);
+    if (!sceneHandle || sceneHandle->type != "scene") {
+        // Silently fail - don't halt the script
+        return 0;
     }
     
-    tinyHandle sceneRHandle = unpackRHandle(*packedRHandlePtr);
-    
-    // Argument 3: nHandle (node handle for parent) - optional
+    // Argument 3: node handle for parent - optional
     tinyHandle parentNHandle;
     if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
-        uint64_t* packedNHandlePtr = getHandleUserdata(L, 3);
-        if (!packedNHandlePtr)
-            return luaL_error(L, "addScene expects nHandle as second argument (optional)");
-        
-        // Check if it's an nHandle (bit 63 should be 1 for nHandle)
-        if (!isNHandle(*packedNHandlePtr)) {
-            return luaL_error(L, "addScene expects nHandle (node handle) as second argument, not rHandle");
+        LuaHandle* parentHandle = getLuaHandleFromUserdata(L, 3);
+        if (!parentHandle || parentHandle->type != "node") {
+            // Silently fail - don't halt the script
+            return 0;
         }
         
-        parentNHandle = unpackNHandle(*packedNHandlePtr);
+        parentNHandle = parentHandle->handle;
     }
     // If no parent provided, it will default to root in the C++ function
     
     // Call the existing C++ addScene function
-    // The existing function uses sharedRes_.fsGet<Scene>(sceneRHandle) internally
-    (*scenePtr)->addScene(sceneRHandle, parentNHandle);
+    // The existing function uses sharedRes_.fsGet<Scene>(sceneHandle) internally
+    (*scenePtr)->addScene(sceneHandle->handle, parentNHandle);
     
     return 0; // Returns void, no return value
 }
@@ -470,7 +491,7 @@ static inline int anim3d_get(lua_State* L) {
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
         if (animHandle.valid()) {
-            pushAnimHandle(L, animHandle);
+            pushLuaHandle(L, LuaHandle("animation", animHandle));
             return 1;
         }
     }
@@ -486,7 +507,7 @@ static inline int anim3d_current(lua_State* L) {
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->curHandle();
         if (animHandle.valid()) {
-            pushAnimHandle(L, animHandle);
+            pushLuaHandle(L, LuaHandle("animation", animHandle));
             return 1;
         }
     }
@@ -504,9 +525,13 @@ static inline int anim3d_play(lua_State* L) {
         if (!comps.anim3D) return 0;
         animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
     } else {
-        uint64_t* packedPtr = getHandleUserdata(L, 2);
-        if (!packedPtr) return 0;
-        animHandle = {static_cast<uint32_t>(*packedPtr >> 32), static_cast<uint32_t>(*packedPtr & 0xFFFFFFFF)};
+        LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
+        if (!luaHandle) return 0;
+        // Accept animation handles
+        if (luaHandle->type != "animation") {
+            return luaL_error(L, "anim3d:play() expects animation handle, got '%s'", luaHandle->type.c_str());
+        }
+        animHandle = luaHandle->handle;
     }
     
     bool restart = lua_isboolean(L, 3) ? lua_toboolean(L, 3) : true;
@@ -555,9 +580,15 @@ static inline int anim3d_getDuration(lua_State* L) {
     if (!comps.anim3D) { lua_pushnumber(L, 0.0f); return 1; }
     
     tinyHandle animHandle;
-    uint64_t* packedPtr = getHandleUserdata(L, 2);
-    if (packedPtr) {
-        animHandle = {static_cast<uint32_t>(*packedPtr >> 32), static_cast<uint32_t>(*packedPtr & 0xFFFFFFFF)};
+    
+    // Check if second argument is provided
+    if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
+        LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
+        if (luaHandle && luaHandle->type == "animation") {
+            animHandle = luaHandle->handle;
+        } else {
+            animHandle = comps.anim3D->curHandle();
+        }
     } else {
         animHandle = comps.anim3D->curHandle();
     }
@@ -642,12 +673,8 @@ static inline int script_getVar(lua_State* L) {
             }
             else if constexpr (std::is_same_v<T, std::string>) lua_pushstring(L, val.c_str());
             else if constexpr (std::is_same_v<T, typeHandle>) {
-                bool isNodeHandle = val.isType<int>();
-                if (isNodeHandle) {
-                    pushNHandle(L, val.handle);
-                } else {
-                    pushRHandle(L, val.handle);
-                }
+                // Convert typeHandle back to LuaHandle
+                pushLuaHandle(L, LuaHandle::fromTypeHandle(val));
             }
         }, var);
         return 1;
@@ -681,11 +708,9 @@ static inline int script_setVar(lua_State* L) {
             }
             else if constexpr (std::is_same_v<T, std::string>) val = std::string(lua_tostring(L, 3));
             else if constexpr (std::is_same_v<T, typeHandle>) {
-                uint64_t* packedPtr = getHandleUserdata(L, 3);
-                if (packedPtr) {
-                    bool isNodeHandle = isNHandle(*packedPtr);
-                    tinyHandle h = isNodeHandle ? unpackNHandle(*packedPtr) : unpackRHandle(*packedPtr);
-                    val = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
+                LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 3);
+                if (luaHandle) {
+                    val = luaHandle->toTypeHandle();
                 }
             }
         }, var);
@@ -743,7 +768,7 @@ static inline int node_parentHandle(lua_State* L) {
     
     tinyHandle parentHandle = getSceneFromLua(L)->nodeParent(*handle);
     if (parentHandle.valid()) {
-        pushNHandle(L, parentHandle);
+        pushLuaHandle(L, LuaHandle("node", parentHandle));
         return 1;
     }
     lua_pushnil(L);
@@ -757,7 +782,7 @@ static inline int node_childrenHandles(lua_State* L) {
     std::vector<tinyHandle> children = getSceneFromLua(L)->nodeChildren(*handle);
     lua_newtable(L);
     for (int i = 0; i < children.size(); i++) {
-        pushNHandle(L, children[i]);
+        pushLuaHandle(L, LuaHandle("node", children[i]));
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -787,49 +812,50 @@ static inline void pushFS(lua_State* L) {
     lua_setmetatable(L, -2);
 }
 
-// fs:script(rHandle) - Get script from filesystem registry
-static inline int fs_script(lua_State* L) {
+// fs:get(handle) - Get resource from filesystem registry
+static inline int fs_get(lua_State* L) {
     // Argument 1: self (FS object)
-    // Argument 2: rHandle to script resource
+    // Argument 2: handle to resource
     
-    if (lua_gettop(L) < 2 || !lua_isuserdata(L, 2)) {
+    if (lua_gettop(L) < 2) {
         lua_pushnil(L);
         return 1;
     }
     
-    uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L, 2));
-    if (!packedPtr) {
+    LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
+    if (!luaHandle || !luaHandle->valid()) {
         lua_pushnil(L);
         return 1;
     }
     
-    if (!isRHandle(*packedPtr)) {
-        lua_pushnil(L);
-        return 1;
-    }
-    
-    tinyHandle scriptHandle = unpackRHandle(*packedPtr);
     tinyRegistry* registry = getFSRegistryFromLua(L);
-    
     if (!registry) {
         lua_pushnil(L);
         return 1;
     }
     
-    // Get the script from registry
-    const tinyScript* script = registry->get<tinyScript>(scriptHandle);
-    
-    if (!script || !script->valid()) {
-        lua_pushnil(L);
+    // Handle different resource types based on handle type
+    // "resource" is a generic type used when we can't determine the exact type
+    if (luaHandle->type == "script" || luaHandle->type == "resource") {
+        // Try to get as script first (most common for generic "resource" type)
+        const tinyScript* script = registry->get<tinyScript>(luaHandle->handle);
+        
+        if (!script || !script->valid()) {
+            lua_pushnil(L);
+            return 1;
+        }
+        
+        // Push the script handle as a StaticScript userdata
+        tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
+        *ud = luaHandle->handle;
+        luaL_getmetatable(L, "StaticScript");
+        lua_setmetatable(L, -2);
         return 1;
     }
-    
-    // Push the script handle as a StaticScript userdata
-    tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
-    *ud = scriptHandle;
-    luaL_getmetatable(L, "StaticScript");
-    lua_setmetatable(L, -2);
-    return 1;
+    // Add more resource types here as needed (scene, mesh, texture, etc.)
+    else {
+        return luaL_error(L, "FS:get() does not support resource type '%s' yet", luaHandle->type.c_str());
+    }
 }
 
 // ========================================
@@ -1176,7 +1202,7 @@ static inline void registerNodeBindings(lua_State* L) {
     
     // FS metatable (filesystem registry accessor)
     LUA_BEGIN_METATABLE("FS");
-    LUA_REG_METHOD(fs_script, "script");
+    LUA_REG_METHOD(fs_get, "get");
     LUA_END_METATABLE("FS");
     
     // StaticScript metatable (script resource from registry)
@@ -1215,57 +1241,42 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(scene_addScene, "addScene");
     LUA_END_METATABLE("Scene");
     
-    // Handle metatable (for nHandle, rHandle, and animation handles)
+    // Handle metatable (unified handle system)
     luaL_newmetatable(L, "Handle");
+    lua_newtable(L); // __index table for methods
+    LUA_REG_METHOD(lua_handleGetType, "type");
+    LUA_REG_METHOD(lua_handleGetIndex, "index");
+    LUA_REG_METHOD(lua_handleGetVersion, "version");
+    LUA_REG_METHOD(lua_handleValid, "valid");
+    lua_setfield(L, -2, "__index");
     // __eq operator for handle comparison
-    lua_pushcfunction(L, [](lua_State* L) -> int {
-        // Check if both are userdata with Handle metatable
-        if (!lua_isuserdata(L, 1) || !lua_isuserdata(L, 2)) {
-            lua_pushboolean(L, 0);
-            return 1;
-        }
-        
-        uint64_t* h1 = static_cast<uint64_t*>(lua_touserdata(L, 1));
-        uint64_t* h2 = static_cast<uint64_t*>(lua_touserdata(L, 2));
-        
-        if (!h1 || !h2) {
-            lua_pushboolean(L, 0);
-            return 1;
-        }
-        
-        // Compare the packed uint64_t values
-        lua_pushboolean(L, *h1 == *h2);
-        return 1;
-    });
+    lua_pushcfunction(L, lua_handleEqual);
     lua_setfield(L, -2, "__eq");
     // __tostring for debugging
     lua_pushcfunction(L, [](lua_State* L) -> int {
-        uint64_t* packed = getHandleUserdata(L, 1);
-        if (!packed) {
+        LuaHandle* h = getLuaHandleFromUserdata(L, 1);
+        if (!h || !h->valid()) {
             lua_pushstring(L, "Handle(invalid)");
             return 1;
         }
-        if (isNHandle(*packed)) {
-            tinyHandle h = unpackNHandle(*packed);
-            lua_pushfstring(L, "nHandle(%d, %d)", h.index, h.version);
-        } else if (isRHandle(*packed)) {
-            tinyHandle h = unpackRHandle(*packed);
-            lua_pushfstring(L, "rHandle(%d, %d)", h.index, h.version);
-        } else {
-            uint32_t index = static_cast<uint32_t>(*packed >> 32);
-            uint32_t version = static_cast<uint32_t>(*packed & 0xFFFFFFFF);
-            lua_pushfstring(L, "AnimHandle(%d, %d)", index, version);
-        }
+        lua_pushfstring(L, "Handle(\"%s\", %d, %d)", h->type.c_str(), h->handle.index, h->handle.version);
         return 1;
     });
     lua_setfield(L, -2, "__tostring");
+    // __gc for cleanup (string destructor)
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        LuaHandle* h = getLuaHandleFromUserdata(L, 1);
+        if (h) {
+            h->~LuaHandle(); // Call destructor explicitly
+        }
+        return 0;
+    });
+    lua_setfield(L, -2, "__gc");
     lua_pop(L, 1);
 
     // Global Functions
     LUA_REG_GLOBAL(lua_kState, "kState");
-    LUA_REG_GLOBAL(lua_nHandle, "nHandle");
-    LUA_REG_GLOBAL(lua_rHandle, "rHandle");
-    LUA_REG_GLOBAL(lua_handleEqual, "handleEqual");
+    LUA_REG_GLOBAL(lua_Handle, "Handle");
     LUA_REG_GLOBAL(lua_print, "print");
 }
 

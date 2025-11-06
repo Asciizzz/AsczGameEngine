@@ -205,14 +205,11 @@ void tinyScript::cacheDefaultVars() {
                         // It's a valid Handle userdata
                         lua_pop(L_, 2); // Pop both metatables
                         
-                        uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L_, -1));
-                        if (packedPtr) {
-                            bool isNodeHandle = isNHandle(*packedPtr);
-                            tinyHandle h = isNodeHandle ? unpackNHandle(*packedPtr) : unpackRHandle(*packedPtr);
-                            
-                            // Create typeHandle: type int for nodes, type void for files
-                            typeHandle th = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
-                            defaultVars_[key] = th;
+                        LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L_, -1));
+                        if (luaHandle) {
+                            // Convert LuaHandle to typeHandle (even if invalid)
+                            // This allows handles to be stored and set later
+                            defaultVars_[key] = luaHandle->toTypeHandle();
                         }
                     } else {
                         lua_pop(L_, 2); // Pop both metatables
@@ -329,14 +326,8 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                 lua_setfield(L_, -2, key.c_str());
             }
             else if constexpr (std::is_same_v<T, typeHandle>) {
-                // Push handle as full userdata with metatable
-                // type int = node handle (nHandle), type void = file handle (rHandle)
-                bool isNodeHandle = val.isType<int>();
-                if (isNodeHandle) {
-                    pushNHandle(L_, val.handle);
-                } else {
-                    pushRHandle(L_, val.handle);
-                }
+                // Convert typeHandle to LuaHandle and push
+                pushLuaHandle(L_, LuaHandle::fromTypeHandle(val));
                 lua_setfield(L_, -2, key.c_str());
             }
         }, value);
@@ -361,8 +352,8 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     pushNode(L_, nodeHandle);
     lua_setglobal(L_, "NODE");
     
-    // Push NODEHANDLE as a raw nHandle lightuserdata (for passing to functions like SCENE:addScene())
-    pushNHandle(L_, nodeHandle);
+    // Push NODEHANDLE as a LuaHandle (for passing to functions like SCENE:addScene())
+    pushLuaHandle(L_, LuaHandle("node", nodeHandle));
     lua_setglobal(L_, "NODEHANDLE");
     
     // Push FS (filesystem registry accessor) as a FS userdata object
@@ -426,11 +417,9 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                                 // It's a valid Handle userdata
                                 lua_pop(L_, 2); // Pop both metatables
                                 
-                                uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L_, -1));
-                                if (packedPtr) {
-                                    bool isNodeHandle = isNHandle(*packedPtr);
-                                    tinyHandle h = isNodeHandle ? unpackNHandle(*packedPtr) : unpackRHandle(*packedPtr);
-                                    val = isNodeHandle ? typeHandle::make<int>(h) : typeHandle::make<void>(h);
+                                LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L_, -1));
+                                if (luaHandle && luaHandle->valid()) {
+                                    val = luaHandle->toTypeHandle();
                                 }
                             } else {
                                 lua_pop(L_, 2); // Pop both metatables

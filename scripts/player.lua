@@ -1,4 +1,4 @@
--- Character Controller with Enemy Detection
+-- Character Controller with Enemy Detection (Updated for Unified Handle System)
 -- This script demonstrates the new hierarchy features:
 --   - NODE:children() - Get all child nodes
 --   - NODE:parent() - Get parent node
@@ -13,10 +13,11 @@
 
 function vars()
     return {
-        -- Node references (drag nodes from scene hierarchy)
-        rootNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
-        animeNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
-        enemiesNode = nHandle(0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
+        -- Node references using unified Handle system
+        -- Use Handle("node", index, version) to create node handles
+        rootNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
+        animeNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
+        enemiesNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
 
         -- Stats
         isPlayer = true,
@@ -64,8 +65,8 @@ function update()
             local deathHandle = anim3d:get(VARS.deathAnim)
             local curHandle = anim3d:current()
             
-            -- Only play death animation once
-            if not handleEqual(curHandle, deathHandle) then
+            -- Only play death animation once (using == operator via __eq metamethod)
+            if curHandle ~= deathHandle then
                 anim3d:setLoop(false)  -- Death animation doesn't loop
                 anim3d:play(deathHandle, true)
             else
@@ -189,13 +190,12 @@ function update()
                 -- Choose run or walk
                 local playHandle = running and runHandle or walkHandle
                 
-                -- Only restart when switching from idle to walk/run
-                local shouldRestart = not (handleEqual(curHandle, runHandle) or 
-                                           handleEqual(curHandle, walkHandle))
+                -- Only restart when switching from idle to walk/run (using == via __eq)
+                local shouldRestart = not (curHandle == runHandle or curHandle == walkHandle)
                 anim3d:play(playHandle, shouldRestart)
             else
                 -- Play idle
-                local shouldRestart = not handleEqual(curHandle, idleHandle)
+                local shouldRestart = curHandle ~= idleHandle
                 anim3d:play(idleHandle, shouldRestart)
             end
         end

@@ -286,7 +286,7 @@ void Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
                     typeHandle& th = std::get<typeHandle>(value);
                     
                     // Only remap if it's a node handle (type int)
-                    if (th.isType<int>() && th.handle.valid()) {
+                    if (th.isType<tinyNodeRT>() && th.handle.valid()) {
                         if (toHandleMap.find(th.handle.index) != toHandleMap.end()) {
                             th.handle = toHandleMap[th.handle.index];
                         }
