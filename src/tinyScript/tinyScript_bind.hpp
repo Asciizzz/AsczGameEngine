@@ -764,6 +764,205 @@ static inline int node_childrenHandles(lua_State* L) {
 }
 
 // ========================================
+// FS (FILESYSTEM REGISTRY) OBJECT
+// ========================================
+
+// Helper to get tinyRegistry pointer from __scene
+static inline tinyRegistry* getFSRegistryFromLua(lua_State* L) {
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) return nullptr;
+    return scene->sharedRes().fsRegistry;
+}
+
+// Helper to get FS userdata (just a marker, we access registry through __scene)
+static inline void** getFSUserdata(lua_State* L, int index) {
+    return static_cast<void**>(luaL_checkudata(L, index, "FS"));
+}
+
+// Push FS object (just a marker userdata)
+static inline void pushFS(lua_State* L) {
+    void** ud = static_cast<void**>(lua_newuserdata(L, sizeof(void*)));
+    *ud = nullptr; // FS is just a marker, we access registry through scene
+    luaL_getmetatable(L, "FS");
+    lua_setmetatable(L, -2);
+}
+
+// fs:script(rHandle) - Get script from filesystem registry
+static inline int fs_script(lua_State* L) {
+    // Argument 1: self (FS object)
+    // Argument 2: rHandle to script resource
+    
+    uint64_t* packedPtr = getHandleUserdata(L, 2);
+    if (!packedPtr) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    if (!isRHandle(*packedPtr)) {
+        return luaL_error(L, "fs:script() expects rHandle (registry handle)");
+    }
+    
+    tinyHandle scriptHandle = unpackRHandle(*packedPtr);
+    tinyRegistry* registry = getFSRegistryFromLua(L);
+    
+    if (!registry) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Get the script from registry
+    const tinyScript* script = registry->get<tinyScript>(scriptHandle);
+    
+    if (!script || !script->valid()) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Push the script handle as a StaticScript userdata
+    tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
+    *ud = scriptHandle;
+    luaL_getmetatable(L, "StaticScript");
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+// ========================================
+// STATICSCRIPT (SCRIPT RESOURCE) OBJECT
+// ========================================
+
+// Helper to get script handle from StaticScript userdata
+static inline tinyHandle* getStaticScriptHandle(lua_State* L, int index) {
+    return static_cast<tinyHandle*>(luaL_checkudata(L, index, "StaticScript"));
+}
+
+// staticScript:call(funcName, ...) - Call a function on the static script
+static inline int staticscript_call(lua_State* L) {
+    tinyHandle* scriptHandle = getStaticScriptHandle(L, 1);
+    if (!scriptHandle || !lua_isstring(L, 2)) {
+        return luaL_error(L, "call(funcName, ...) expects function name as first argument");
+    }
+    
+    const char* funcName = lua_tostring(L, 2);
+    tinyRegistry* registry = getFSRegistryFromLua(L);
+    
+    if (!registry) {
+        return luaL_error(L, "Cannot access filesystem registry");
+    }
+    
+    const tinyScript* script = registry->get<tinyScript>(*scriptHandle);
+    
+    if (!script || !script->valid()) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Get the script's Lua state
+    lua_State* scriptL = script->luaState();
+    if (!scriptL) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Get the function from the script's Lua state
+    lua_getglobal(scriptL, funcName);
+    if (!lua_isfunction(scriptL, -1)) {
+        lua_pop(scriptL, 1);
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Transfer arguments from calling state to script state
+    int numArgs = lua_gettop(L) - 2;  // Subtract self and funcName
+    for (int i = 3; i <= lua_gettop(L); i++) {
+        if (lua_isnumber(L, i)) {
+            lua_pushnumber(scriptL, lua_tonumber(L, i));
+        } else if (lua_isboolean(L, i)) {
+            lua_pushboolean(scriptL, lua_toboolean(L, i));
+        } else if (lua_isstring(L, i)) {
+            lua_pushstring(scriptL, lua_tostring(L, i));
+        } else if (lua_istable(L, i)) {
+            // Try to transfer as vec3
+            lua_getfield(L, i, "x");
+            lua_getfield(L, i, "y");
+            lua_getfield(L, i, "z");
+            if (lua_isnumber(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
+                lua_newtable(scriptL);
+                lua_pushnumber(scriptL, lua_tonumber(L, -3)); lua_setfield(scriptL, -2, "x");
+                lua_pushnumber(scriptL, lua_tonumber(L, -2)); lua_setfield(scriptL, -2, "y");
+                lua_pushnumber(scriptL, lua_tonumber(L, -1)); lua_setfield(scriptL, -2, "z");
+            } else {
+                lua_pushnil(scriptL);
+            }
+            lua_pop(L, 3);
+        } else if (lua_isuserdata(L, i)) {
+            // Transfer handles
+            uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L, i));
+            if (packedPtr) {
+                uint64_t* newPacked = static_cast<uint64_t*>(lua_newuserdata(scriptL, sizeof(uint64_t)));
+                *newPacked = *packedPtr;
+                luaL_getmetatable(scriptL, "Handle");
+                lua_setmetatable(scriptL, -2);
+            } else {
+                lua_pushnil(scriptL);
+            }
+        } else {
+            lua_pushnil(scriptL);
+        }
+    }
+    
+    // Call the function
+    if (lua_pcall(scriptL, numArgs, LUA_MULTRET, 0) != LUA_OK) {
+        const char* error = lua_tostring(scriptL, -1);
+        lua_pop(scriptL, 1);
+        return luaL_error(L, "Error calling '%s': %s", funcName, error);
+    }
+    
+    // Transfer return values back to calling state
+    int numReturns = lua_gettop(scriptL);
+    for (int i = 1; i <= numReturns; i++) {
+        if (lua_isnumber(scriptL, i)) {
+            lua_pushnumber(L, lua_tonumber(scriptL, i));
+        } else if (lua_isboolean(scriptL, i)) {
+            lua_pushboolean(L, lua_toboolean(scriptL, i));
+        } else if (lua_isstring(scriptL, i)) {
+            lua_pushstring(L, lua_tostring(scriptL, i));
+        } else if (lua_istable(scriptL, i)) {
+            // Try to transfer as vec3
+            lua_getfield(scriptL, i, "x");
+            lua_getfield(scriptL, i, "y");
+            lua_getfield(scriptL, i, "z");
+            if (lua_isnumber(scriptL, -3) && lua_isnumber(scriptL, -2) && lua_isnumber(scriptL, -1)) {
+                lua_newtable(L);
+                lua_pushnumber(L, lua_tonumber(scriptL, -3)); lua_setfield(L, -2, "x");
+                lua_pushnumber(L, lua_tonumber(scriptL, -2)); lua_setfield(L, -2, "y");
+                lua_pushnumber(L, lua_tonumber(scriptL, -1)); lua_setfield(L, -2, "z");
+            } else {
+                lua_pushnil(L);
+            }
+            lua_pop(scriptL, 3);
+        } else if (lua_isuserdata(scriptL, i)) {
+            // Transfer handles back
+            uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(scriptL, i));
+            if (packedPtr) {
+                uint64_t* newPacked = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
+                *newPacked = *packedPtr;
+                luaL_getmetatable(L, "Handle");
+                lua_setmetatable(L, -2);
+            } else {
+                lua_pushnil(L);
+            }
+        } else {
+            lua_pushnil(L);
+        }
+    }
+    
+    // Clean up script's stack
+    lua_settop(scriptL, 0);
+    
+    return numReturns;
+}
+
+// ========================================
 // UTILITY FUNCTIONS
 // ========================================
 
@@ -843,6 +1042,16 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(script_getVar, "getVar");
     LUA_REG_METHOD(script_setVar, "setVar");
     LUA_END_METATABLE("Script");
+    
+    // FS metatable (filesystem registry accessor)
+    LUA_BEGIN_METATABLE("FS");
+    LUA_REG_METHOD(fs_script, "script");
+    LUA_END_METATABLE("FS");
+    
+    // StaticScript metatable (script resource from registry)
+    LUA_BEGIN_METATABLE("StaticScript");
+    LUA_REG_METHOD(staticscript_call, "call");
+    LUA_END_METATABLE("StaticScript");
     
     // Node metatable
     LUA_BEGIN_METATABLE("Node");

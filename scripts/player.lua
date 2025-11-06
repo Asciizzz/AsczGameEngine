@@ -1,8 +1,8 @@
 -- Character Controller with Enemy Detection
 -- This script demonstrates the new hierarchy features:
---   - node:children() - Get all child nodes
---   - node:parent() - Get parent node
---   - nodeHandle global - Current node's handle
+--   - NODE:children() - Get all child nodes
+--   - NODE:parent() - Get parent node
+--   - NODEHANDLE global - Current node's handle
 --
 -- Nodes:
 --   rootNode: Movement and rotation
@@ -39,29 +39,29 @@ end
 
 function update()
     -- Get node references
-    local root = scene:node(vars.rootNode)
-    local anime = scene:node(vars.animeNode)
+    local root = SCENE:node(VARS.rootNode)
+    local anime = SCENE:node(VARS.animeNode)
 
     -- ========== HEALTH MANAGEMENT ==========
     -- Clamp HP
-    if vars.hp < 0 then
-        vars.hp = 0
+    if VARS.hp < 0 then
+        VARS.hp = 0
     end
-    if vars.hp > vars.maxHp then
-        vars.hp = vars.maxHp
+    if VARS.hp > VARS.maxHp then
+        VARS.hp = VARS.maxHp
     end
 
     -- Check for death
-    if vars.hp <= 0 and not vars.isDead then
-        vars.isDead = true
+    if VARS.hp <= 0 and not VARS.isDead then
+        VARS.isDead = true
         print("Player died!")
     end
 
     -- If dead, play death animation (non-looping) and return early
-    if vars.isDead and anime then
+    if VARS.isDead and anime then
         local anim3d = anime:anim3D()
         if anim3d then
-            local deathHandle = anim3d:get(vars.deathAnim)
+            local deathHandle = anim3d:get(VARS.deathAnim)
             local curHandle = anim3d:current()
             
             -- Only play death animation once
@@ -84,11 +84,11 @@ function update()
     end
 
     -- ========== ENEMY COLLISION & COMBAT ==========
-    if root and vars.isPlayer and not vars.isDead then
+    if root and VARS.isPlayer and not VARS.isDead then
         local rootT3D = root:transform3D()
         if rootT3D then
             local playerPos = rootT3D:getPos()
-            local enemiesContainer = scene:node(vars.enemiesNode)
+            local enemiesContainer = SCENE:node(VARS.enemiesNode)
             
             if enemiesContainer then
                 -- Get all enemy children using the new children() method!
@@ -99,7 +99,7 @@ function update()
                     local enemy = enemies[i]
                     
                     -- Skip collision check with self!
-                    if enemy ~= node then
+                    if enemy ~= NODE then
                         local enemyT3D = enemy:transform3D()
                         if enemyT3D then
                             local enemyPos = enemyT3D:getPos()
@@ -112,14 +112,14 @@ function update()
                             local distance = math.sqrt(distSq)
                             
                             -- If within attack range, deal damage
-                            if distance <= vars.attackRange then
+                            if distance <= VARS.attackRange then
                                 -- Deal damage over time to player (enemies hurt the player)
-                                vars.hp = vars.hp - vars.attackDamage * dTime
+                                VARS.hp = VARS.hp - VARS.attackDamage * DTIME
                                 
                                 -- Optional: Visual feedback - make enemy flash or scale
                                 local scale = enemyT3D:getScl()
                                 -- Pulse effect: slightly scale up when near player
-                                local pulse = 1.0 + 0.1 * math.sin(dTime * 10.0)
+                                local pulse = 1.0 + 0.1 * math.sin(DTIME * 10.0)
                                 enemyT3D:setScl({x = pulse, y = pulse, z = pulse})
                             end
                         end
@@ -140,7 +140,7 @@ function update()
     local vz = (k_up and 1 or 0) - (k_down and 1 or 0)
     local vx = (k_right and -1 or 0) - (k_left and -1 or 0) -- I really need to fix the coord system lol
     local isMoving = (vx ~= 0) or (vz ~= 0)
-    local moveSpeed = ((running and isMoving) and 4.0 or 1.0) * vars.vel
+    local moveSpeed = ((running and isMoving) and 4.0 or 1.0) * VARS.vel
     
     -- ========== MOVEMENT (Root Node) ==========
     if root and isMoving then
@@ -157,8 +157,8 @@ function update()
             end
             
             -- Apply movement
-            pos.x = pos.x + moveDir.x * moveSpeed * dTime
-            pos.z = pos.z + moveDir.z * moveSpeed * dTime
+            pos.x = pos.x + moveDir.x * moveSpeed * DTIME
+            pos.z = pos.z + moveDir.z * moveSpeed * DTIME
             rootT3D:setPos(pos)
             
             -- Apply rotation (face movement direction)
@@ -172,9 +172,9 @@ function update()
         local anim3d = anime:anim3D()
         if anim3d then
             -- Get animation handles
-            local idleHandle = anim3d:get(vars.idleAnim)
-            local walkHandle = anim3d:get(vars.walkAnim)
-            local runHandle = anim3d:get(vars.runAnim)
+            local idleHandle = anim3d:get(VARS.idleAnim)
+            local walkHandle = anim3d:get(VARS.walkAnim)
+            local runHandle = anim3d:get(VARS.runAnim)
             local curHandle = anim3d:current()
             
             -- Ensure looping is enabled for normal animations

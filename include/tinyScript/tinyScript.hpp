@@ -62,6 +62,9 @@ struct tinyScript {
 
     void update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime) const;
     bool call(const char* functionName, lua_State* runtimeL = nullptr) const;
+    
+    // Get internal Lua state for advanced operations (use with caution!)
+    lua_State* luaState() const { return L_; }
 
     bool valid() const { return compiled_ && L_ != nullptr; }
     uint32_t version() const { return version_; }

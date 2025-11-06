@@ -23,38 +23,38 @@ end
 
 function update()
     -- One-time initialization: randomize velocity if requested
-    if vars.randomizeVelocity then
+    if VARS.randomizeVelocity then
         -- Generate random velocities
-        vars.velX = (math.random() * 2.0 - 1.0) * vars.randomVelRange
-        vars.velY = (math.random() * 2.0 - 1.0) * vars.randomVelRange
-        vars.velZ = (math.random() * 2.0 - 1.0) * vars.randomVelRange
+        VARS.velX = (math.random() * 2.0 - 1.0) * VARS.randomVelRange
+        VARS.velY = (math.random() * 2.0 - 1.0) * VARS.randomVelRange
+        VARS.velZ = (math.random() * 2.0 - 1.0) * VARS.randomVelRange
         
         -- Optional: Add some angular velocity for visual effect
-        vars.angVelX = (math.random() * 2.0 - 1.0) * 3.14
-        vars.angVelY = (math.random() * 2.0 - 1.0) * 3.14
-        vars.angVelZ = (math.random() * 2.0 - 1.0) * 3.14
+        VARS.angVelX = (math.random() * 2.0 - 1.0) * 3.14
+        VARS.angVelY = (math.random() * 2.0 - 1.0) * 3.14
+        VARS.angVelZ = (math.random() * 2.0 - 1.0) * 3.14
         
         -- Disable randomization after first run
-        vars.randomizeVelocity = false
+        VARS.randomizeVelocity = false
     end
     
     -- Optional: Apply angular velocity to rotation (visual spinning)
-    if vars.angVelX ~= 0.0 or vars.angVelY ~= 0.0 or vars.angVelZ ~= 0.0 then
-        local t3d = node:transform3D()
+    if VARS.angVelX ~= 0.0 or VARS.angVelY ~= 0.0 or VARS.angVelZ ~= 0.0 then
+        local t3d = NODE:transform3D()
         if t3d then
             local rot = t3d:getRot()
             
-            rot.x = rot.x + vars.angVelX * dTime
-            rot.y = rot.y + vars.angVelY * dTime
-            rot.z = rot.z + vars.angVelZ * dTime
+            rot.x = rot.x + VARS.angVelX * DTIME
+            rot.y = rot.y + VARS.angVelY * DTIME
+            rot.z = rot.z + VARS.angVelZ * DTIME
             
             t3d:setRot(rot)
             
             -- Apply damping to angular velocity
             local angDamping = 0.98
-            vars.angVelX = vars.angVelX * angDamping
-            vars.angVelY = vars.angVelY * angDamping
-            vars.angVelZ = vars.angVelZ * angDamping
+            VARS.angVelX = VARS.angVelX * angDamping
+            VARS.angVelY = VARS.angVelY * angDamping
+            VARS.angVelZ = VARS.angVelZ * angDamping
         end
     end
 end

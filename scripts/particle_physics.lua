@@ -1,5 +1,5 @@
 -- Particle Physics Manager Script
--- Attach this to the container node (parent of all particles)
+-- Attach this to the container NODE (parent of all particles)
 -- Simulates physically accurate sphere collisions and boundary constraints
 
 function vars()
@@ -29,21 +29,21 @@ function vars()
 end
 
 function update()
-    if not vars.enabled then
+    if not VARS.enabled then
         return
     end
     
     -- Get all particle children
-    local particles = node:children()
+    local particles = NODE:children()
     if #particles == 0 then
         return
     end
     
     -- Calculate substep time
-    local substepDt = dTime / vars.substeps
+    local substepDt = DTIME / VARS.substeps
     
     -- Run multiple substeps for stability
-    for step = 1, vars.substeps do
+    for step = 1, VARS.substeps do
         -- ========== PHASE 1: Apply Forces & Update Velocities ==========
         for i = 1, #particles do
             local particle = particles[i]
@@ -54,7 +54,7 @@ function update()
             local velZ = particle:getVar("velZ") or 0.0
             
             -- Apply gravity
-            velY = velY + vars.gravity.y * substepDt
+            velY = velY + VARS.gravity.y * substepDt
             
             -- Store updated velocity (damping applied later, per frame not per substep)
             particle:setVar("velX", velX)
@@ -96,47 +96,47 @@ function update()
             local velY = particle:getVar("velY") or 0.0
             local velZ = particle:getVar("velZ") or 0.0
             
-            local radius = vars.particleRadius
+            local radius = VARS.particleRadius
             local posChanged = false
             
             -- X boundaries
-            if pos.x - radius < vars.boxMin.x then
-                pos.x = vars.boxMin.x + radius
-                velX = math.abs(velX) * vars.restitution
-                velZ = velZ * vars.friction
+            if pos.x - radius < VARS.boxMin.x then
+                pos.x = VARS.boxMin.x + radius
+                velX = math.abs(velX) * VARS.restitution
+                velZ = velZ * VARS.friction
                 posChanged = true
-            elseif pos.x + radius > vars.boxMax.x then
-                pos.x = vars.boxMax.x - radius
-                velX = -math.abs(velX) * vars.restitution
-                velZ = velZ * vars.friction
+            elseif pos.x + radius > VARS.boxMax.x then
+                pos.x = VARS.boxMax.x - radius
+                velX = -math.abs(velX) * VARS.restitution
+                velZ = velZ * VARS.friction
                 posChanged = true
             end
             
             -- Y boundaries
-            if pos.y - radius < vars.boxMin.y then
-                pos.y = vars.boxMin.y + radius
-                velY = math.abs(velY) * vars.restitution
-                velX = velX * vars.friction
-                velZ = velZ * vars.friction
+            if pos.y - radius < VARS.boxMin.y then
+                pos.y = VARS.boxMin.y + radius
+                velY = math.abs(velY) * VARS.restitution
+                velX = velX * VARS.friction
+                velZ = velZ * VARS.friction
                 posChanged = true
-            elseif pos.y + radius > vars.boxMax.y then
-                pos.y = vars.boxMax.y - radius
-                velY = -math.abs(velY) * vars.restitution
-                velX = velX * vars.friction
-                velZ = velZ * vars.friction
+            elseif pos.y + radius > VARS.boxMax.y then
+                pos.y = VARS.boxMax.y - radius
+                velY = -math.abs(velY) * VARS.restitution
+                velX = velX * VARS.friction
+                velZ = velZ * VARS.friction
                 posChanged = true
             end
             
             -- Z boundaries
-            if pos.z - radius < vars.boxMin.z then
-                pos.z = vars.boxMin.z + radius
-                velZ = math.abs(velZ) * vars.restitution
-                velX = velX * vars.friction
+            if pos.z - radius < VARS.boxMin.z then
+                pos.z = VARS.boxMin.z + radius
+                velZ = math.abs(velZ) * VARS.restitution
+                velX = velX * VARS.friction
                 posChanged = true
-            elseif pos.z + radius > vars.boxMax.z then
-                pos.z = vars.boxMax.z - radius
-                velZ = -math.abs(velZ) * vars.restitution
-                velX = velX * vars.friction
+            elseif pos.z + radius > VARS.boxMax.z then
+                pos.z = VARS.boxMax.z - radius
+                velZ = -math.abs(velZ) * VARS.restitution
+                velX = velX * VARS.friction
                 posChanged = true
             end
             
@@ -168,7 +168,7 @@ function update()
                 local dy = pos2.y - pos1.y
                 local dz = pos2.z - pos1.z
                 local distSq = dx * dx + dy * dy + dz * dz
-                local minDist = vars.particleRadius * 2.0
+                local minDist = VARS.particleRadius * 2.0
                 local minDistSq = minDist * minDist
                 
                 -- Check for collision
@@ -186,7 +186,7 @@ function update()
                     
                     -- Add extra separation force for deeply overlapping particles
                     local separationForce = 1.0
-                    if overlap > vars.particleRadius * 0.5 then
+                    if overlap > VARS.particleRadius * 0.5 then
                         -- Deep overlap - push apart more forcefully
                         separationForce = 1.5
                     end
@@ -222,13 +222,13 @@ function update()
                     -- Don't resolve if velocities are separating
                     if dvn < 0 then
                         -- Calculate impulse (assuming equal mass)
-                        local restitution = vars.particleRestitution
+                        local restitution = VARS.particleRestitution
                         local impulse = -(1.0 + restitution) * dvn * 0.5
                         
                         -- Apply impulse
-                        local impX = nx * impulse * vars.collisionDamping
-                        local impY = ny * impulse * vars.collisionDamping
-                        local impZ = nz * impulse * vars.collisionDamping
+                        local impX = nx * impulse * VARS.collisionDamping
+                        local impY = ny * impulse * VARS.collisionDamping
+                        local impZ = nz * impulse * VARS.collisionDamping
                         
                         v1x = v1x - impX
                         v1y = v1y - impY
@@ -262,7 +262,7 @@ function update()
                         
                         if tangentialSpeed > 0.01 then
                             -- Create spin axis perpendicular to collision normal and tangential direction
-                            local spinScale = tangentialSpeed / vars.particleRadius * 0.5
+                            local spinScale = tangentialSpeed / VARS.particleRadius * 0.5
                             
                             -- Apply angular velocity to both particles (opposite spins)
                             local ang1x = (p1:getVar("angVelX") or 0.0) + ny * tangentialZ - nz * tangentialY * spinScale
@@ -291,8 +291,8 @@ function update()
     
     -- Apply frame-rate independent damping once per frame
     -- Convert per-frame damping to per-second damping for frame-rate independence
-    local dampingFactor = math.pow(vars.damping, dTime * 60.0)
-    local angularDampingFactor = math.pow(0.98, dTime * 60.0) -- Slightly more damping for angular
+    local dampingFactor = math.pow(VARS.damping, DTIME * 60.0)
+    local angularDampingFactor = math.pow(0.98, DTIME * 60.0) -- Slightly more damping for angular
     
     for i = 1, #particles do
         local particle = particles[i]

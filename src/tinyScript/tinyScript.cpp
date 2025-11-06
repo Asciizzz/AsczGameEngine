@@ -342,28 +342,32 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
         }, value);
     }
     
-    lua_setglobal(L_, "vars");  // Set as global "vars" table
+    lua_setglobal(L_, "VARS");  // Set as global "VARS" table
 
     // ========== Push context information ==========
-    // Push dTime
+    // Push DTIME
     lua_pushnumber(L_, dTime);
-    lua_setglobal(L_, "dTime");
+    lua_setglobal(L_, "DTIME");
     
-    // Push scene as a Scene userdata object
+    // Push SCENE as a Scene userdata object
     pushScene(L_, static_cast<tinyRT::Scene*>(scene));
-    lua_setglobal(L_, "scene");
+    lua_setglobal(L_, "SCENE");
     
     // Keep legacy __scene for compatibility
     lua_pushlightuserdata(L_, scene);
     lua_setglobal(L_, "__scene");
     
-    // Push node as a Node userdata object (for calling methods like node:transform3D())
+    // Push NODE as a Node userdata object (for calling methods like NODE:transform3D())
     pushNode(L_, nodeHandle);
-    lua_setglobal(L_, "node");
+    lua_setglobal(L_, "NODE");
     
-    // Push nodeHandle as a raw nHandle lightuserdata (for passing to functions like scene:addScene())
+    // Push NODEHANDLE as a raw nHandle lightuserdata (for passing to functions like SCENE:addScene())
     pushNHandle(L_, nodeHandle);
-    lua_setglobal(L_, "nodeHandle");
+    lua_setglobal(L_, "NODEHANDLE");
+    
+    // Push FS (filesystem registry accessor) as a FS userdata object
+    pushFS(L_);
+    lua_setglobal(L_, "FS");
 
     // ========== Call the update function ==========
     call("update");

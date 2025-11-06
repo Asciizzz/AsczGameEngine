@@ -13,21 +13,21 @@ end
 
 function update()
     -- Press K to load the scene
-    if kState("k") and not vars.kHold then
-        vars.kHold = true  -- Mark key as held
+    if kState("k") and not VARS.kHold then
+        VARS.kHold = true  -- Mark key as held
 
-        if not vars.sceneHandle then
+        if not VARS.sceneHandle then
             print("addScene.lua: Error - sceneHandle is nil, cannot load scene")
             return
         end
 
         -- Add the scene with this node as parent
-        scene:addScene(vars.sceneHandle, nodeHandle)
+        SCENE:addScene(VARS.sceneHandle, NODEHANDLE)
         
         print("addScene.lua: Scene instantiated (press K was triggered)")
     end
 
     if not kState("k") then
-        vars.kHold = false  -- Reset key hold state when K is released
+        VARS.kHold = false  -- Reset key hold state when K is released
     end
 end
