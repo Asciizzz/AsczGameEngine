@@ -22,11 +22,12 @@ This guide documents all available functions and objects in the Lua scripting en
 Available in every script during execution:
 
 ```
-vars         -- Table containing all script variables (defined in vars() function)
-dTime        -- Delta time since last frame (float, in seconds)
-scene        -- Scene object (Scene userdata)
-node         -- Current node object (Node userdata)
-nodeHandle   -- Raw handle to current node (lightuserdata, nHandle format)
+VARS         -- Table containing all script variables (defined in vars() function)
+DTIME        -- Delta time since last frame (float, in seconds)
+SCENE        -- Scene object (Scene userdata)
+NODE         -- Current node object (Node userdata)
+NODEHANDLE   -- Handle to current node (Handle userdata with type "node")
+FS           -- Filesystem registry accessor (FS userdata)
 ```
 
 ---
@@ -78,126 +79,166 @@ end
 
 ---
 
-## Handle Functions
+## Handle System
 
-Handles are used to reference nodes and resources. Two types:
-- **nHandle** (node handle) - References nodes in the scene hierarchy (bit 63 = 1)
-- **rHandle** (registry handle) - References resources in the shared registry (bit 63 = 0)
+Handles are unified objects that reference both nodes and resources. All handles are created with the `Handle(type, index?, version?)` constructor.
 
-### `nHandle(index?, version?)`
-Create a node handle.
+### `Handle(type, index?, version?)`
+Create a handle of the specified type.
 
 **Parameters:**
-- `index` (integer, optional) - Node index (defaults to 0xFFFFFFFF for invalid handle)
-- `version` (integer, optional) - Node version (defaults to 0xFFFFFFFF for invalid handle)
+- `type` (string) - Handle type: `"node"`, `"scene"`, `"script"`, `"animation"`, `"mesh"`, `"texture"`, `"material"`, `"skeleton"`, or `"resource"`
+- `index` (integer, optional) - Handle index (defaults to 0xFFFFFFFF for invalid handle)
+- `version` (integer, optional) - Handle version (defaults to 0xFFFFFFFF for invalid handle)
 
 **Returns:**
-- `lightuserdata` - Packed node handle
+- `Handle` - Handle userdata object
 
 **Example:**
 ```lua
--- Create specific handle
-local handle = nHandle(0, 0)
-local targetNode = scene:node(handle)
+-- Create specific handles
+local nodeHandle = Handle("node", 0, 0)
+local sceneHandle = Handle("scene", 5, 0)
+local scriptHandle = Handle("script", 10, 1)
 
--- Create invalid handle (no arguments)
-local invalidHandle = nHandle()
+-- Create invalid handles (will be set later by editor or other scripts)
+local targetNode = Handle("node")
+local weaponMesh = Handle("mesh")
+
+-- Invalid handles preserve their type
+local invalid = Handle("script")
+print(invalid:type())  -- Still prints "script" even though invalid
 ```
 
 ---
 
-### `rHandle(index?, version?)`
-Create a registry/resource handle.
+### Handle Methods
 
-**Parameters:**
-- `index` (integer, optional) - Resource index (defaults to 0xFFFFFFFF for invalid handle)
-- `version` (integer, optional) - Resource version (defaults to 0xFFFFFFFF for invalid handle)
+Handles have methods to inspect their properties:
+
+#### `handle:type()`
+Get the type string of a handle.
 
 **Returns:**
-- `lightuserdata` - Packed registry handle
+- `string` - Type name ("node", "scene", "script", etc.)
 
 **Example:**
 ```lua
--- Create specific handle
-local sceneHandle = rHandle(5, 0)
-scene:addScene(sceneHandle, nodeHandle)
-
--- Create invalid handle (no arguments)
-local invalidHandle = rHandle()
+local h = Handle("node", 0, 0)
+print(h:type())  -- "node"
 ```
 
 ---
 
-- **Tips:** It is almost never worth it knowing the `index, version` values of handles; use them as opaque references only.
-
----
-
-### `handleEqual(handle1, handle2)` *(Deprecated - use `==` operator instead)*
-Compare two handles for equality.
-
-**Parameters:**
-- `handle1` (handle) - First handle
-- `handle2` (handle) - Second handle
+#### `handle:index()`
+Get the index of a handle.
 
 **Returns:**
-- `boolean` - True if handles are equal
+- `integer` - Handle index
 
 **Example:**
 ```lua
--- Old way (still works, but deprecated)
-if handleEqual(nodeHandle, targetHandle) then
-    print("Same node!")
+local h = Handle("scene", 5, 0)
+print(h:index())  -- 5
+```
+
+---
+
+#### `handle:version()`
+Get the version of a handle.
+
+**Returns:**
+- `integer` - Handle version
+
+**Example:**
+```lua
+local h = Handle("script", 10, 3)
+print(h:version())  -- 3
+```
+
+---
+
+#### `handle:valid()`
+Check if a handle is valid (not 0xFFFFFFFF).
+
+**Returns:**
+- `boolean` - True if valid
+
+**Example:**
+```lua
+local h = Handle("node")
+if not h:valid() then
+    print("Handle not yet assigned")
+end
+```
+
+---
+
+### Handle Comparison
+
+Handles support the `==` and `~=` operators for comparison:
+
+**Example:**
+```lua
+local h1 = Handle("node", 0, 0)
+local h2 = Handle("node", 0, 0)
+local h3 = Handle("node", 1, 0)
+
+if h1 == h2 then
+    print("Same handle!")
 end
 
--- New way (preferred)
-if nodeHandle == targetHandle then
-    print("Same node!")
+if h1 ~= h3 then
+    print("Different handles!")
 end
 ```
 
-**Note:** Handles now support the `==` operator directly, so `handleEqual()` is no longer necessary. You can compare any handles (nHandle, rHandle, or animation handles) using `==`.
+**Note:** Handles are equal if both their type and underlying handle values match.
 
 ---
 
 ## Scene Object
 
-The scene object manages the scene hierarchy and provides access to nodes.
+The scene object manages the scene hierarchy and provides access to nodes. Access via the global `SCENE` variable.
 
 ```
-scene
-├── :node(nHandle)
-└── :addScene(rHandle, nHandle?)
+SCENE
+├── :node(handle)
+└── :addScene(sceneHandle, parentHandle?)
 ```
 
-### `scene:node(handle)`
+### `SCENE:node(handle)`
 Get a node object from its handle.
 
 **Parameters:**
-- `handle` (lightuserdata) - nHandle of the node
+- `handle` (Handle) - Handle with type "node"
 
 **Returns:**
-- `Node` - Node userdata object, or `nil` if not found
+- `Node` - Node userdata object, or `nil` if not found or wrong type
 
 **Example:**
 ```lua
-local targetHandle = nHandle(10, 0)
-local targetNode = scene:node(targetHandle)
+local targetHandle = Handle("node", 10, 0)
+local targetNode = SCENE:node(targetHandle)
 if targetNode then
     local t3d = targetNode:transform3D()
     if t3d then
         local pos = t3d:getPos()
     end
 end
+
+-- Can also use NODEHANDLE for current node
+local currentNode = SCENE:node(NODEHANDLE)
 ```
 
 ---
 
-### `scene:addScene(sceneRHandle, parentNHandle?)`
+### `SCENE:addScene(sceneHandle, parentHandle?)`
 Instantiate a scene from the resource registry into the current scene.
 
 **Parameters:**
-- `sceneRHandle` (lightuserdata) - rHandle pointing to Scene resource in registry
-- `parentNHandle` (lightuserdata, optional) - nHandle of parent node (defaults to root if omitted)
+- `sceneHandle` (Handle) - Handle with type "scene" pointing to Scene resource
+- `parentHandle` (Handle, optional) - Handle with type "node" for parent (defaults to root if omitted)
 
 **Returns:**
 - None (void)
@@ -205,25 +246,25 @@ Instantiate a scene from the resource registry into the current scene.
 **Example:**
 ```lua
 -- Load scene and attach to root
-local sceneRes = rHandle(5, 0)
-scene:addScene(sceneRes)
+local sceneRes = Handle("scene", 5, 0)
+SCENE:addScene(sceneRes)
 
 -- Load scene and attach to current node
-scene:addScene(sceneRes, nodeHandle)
+SCENE:addScene(sceneRes, NODEHANDLE)
 
 -- Load scene and attach to specific node
-local parentHandle = nHandle(10, 0)
-scene:addScene(sceneRes, parentHandle)
+local parentHandle = Handle("node", 10, 0)
+SCENE:addScene(sceneRes, parentHandle)
 ```
 
 ---
 
 ## Node Object
 
-Node objects represent scene nodes with components attached.
+Node objects represent scene nodes with components attached. Access the current node via the global `NODE` variable.
 
 ```
-node
+NODE
 ├── :transform3D()
 ├── :anim3D()
 ├── :script()
@@ -241,7 +282,7 @@ Get the Transform3D component of this node.
 
 **Example:**
 ```lua
-local t3d = node:transform3D()
+local t3d = NODE:transform3D()
 if t3d then
     local pos = t3d:getPos()
     print("Position:", pos.x, pos.y, pos.z)
@@ -258,9 +299,9 @@ Get the Anim3D (animation) component of this node.
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
-    anim:play()
+    anim:play("walk")
     anim:setSpeed(1.5)
 end
 ```
@@ -275,7 +316,7 @@ Get the Script component of this node.
 
 **Example:**
 ```lua
-local script = node:script()
+local script = NODE:script()
 if script then
     local value = script:getVar("myVar")
     script:setVar("myVar", value + 1)
@@ -292,7 +333,7 @@ Get the parent node.
 
 **Example:**
 ```lua
-local parentNode = node:parent()
+local parentNode = NODE:parent()
 if parentNode then
     local parentT3d = parentNode:transform3D()
 end
@@ -308,7 +349,7 @@ Get all child nodes.
 
 **Example:**
 ```lua
-local children = node:children()
+local children = NODE:children()
 for i, child in ipairs(children) do
     print("Child", i, "found")
     local childT3d = child:transform3D()
@@ -321,13 +362,13 @@ end
 Get the parent node's handle.
 
 **Returns:**
-- `lightuserdata` - nHandle of parent, or `nil` if this is root
+- `Handle` - Handle with type "node", or `nil` if this is root
 
 **Example:**
 ```lua
-local parentHandle = node:parentHandle()
+local parentHandle = NODE:parentHandle()
 if parentHandle then
-    local parentNode = scene:node(parentHandle)
+    local parentNode = SCENE:node(parentHandle)
 end
 ```
 
@@ -337,13 +378,13 @@ end
 Get handles of all child nodes.
 
 **Returns:**
-- `table` - Array of nHandle lightuserdata
+- `table` - Array of Handle objects with type "node"
 
 **Example:**
 ```lua
-local childHandles = node:childrenHandles()
+local childHandles = NODE:childrenHandles()
 for i, handle in ipairs(childHandles) do
-    local child = scene:node(handle)
+    local child = SCENE:node(handle)
 end
 ```
 
@@ -388,7 +429,7 @@ Set the local position.
 
 **Example:**
 ```lua
-local t3d = node:transform3D()
+local t3d = NODE:transform3D()
 if t3d then
     t3d:setPos({ x = 0, y = 5, z = 10 })
     
@@ -409,7 +450,7 @@ Get the local rotation as Euler angles.
 
 **Example:**
 ```lua
-local t3d = node:transform3D()
+local t3d = NODE:transform3D()
 if t3d then
     local rot = t3d:getRot()
     print("Euler angles:", rot.x, rot.y, rot.z)
@@ -426,7 +467,7 @@ Set the local rotation from Euler angles.
 
 **Example:**
 ```lua
-local t3d = node:transform3D()
+local t3d = NODE:transform3D()
 if t3d then
     -- Set rotation to 45 degrees on Y axis
     t3d:setRot({ x = 0, y = math.pi / 4, z = 0 })
@@ -448,7 +489,7 @@ Get the local scale.
 
 **Example:**
 ```lua
-local t3d = node:transform3D()
+local t3d = NODE:transform3D()
 if t3d then
     local scale = t3d:getScl()
     print("Scale:", scale.x, scale.y, scale.z)
@@ -465,7 +506,7 @@ Set the local scale.
 
 **Example:**
 ```lua
-local t3d = node:transform3D()
+local t3d = NODE:transform3D()
 if t3d then
     -- Uniform scale
     t3d:setScl({ x = 2, y = 2, z = 2 })
@@ -504,11 +545,11 @@ Get animation handle by name.
 - `name` (string) - Animation name
 
 **Returns:**
-- `lightuserdata` - Animation handle, or `nil` if not found
+- `Handle` - Handle with type "animation", or `nil` if not found
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     local walkHandle = anim:get("walk")
     if walkHandle then
@@ -523,11 +564,11 @@ end
 Get the currently playing animation handle.
 
 **Returns:**
-- `lightuserdata` - Current animation handle, or `nil` if none
+- `Handle` - Current animation Handle with type "animation", or `nil` if none
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     local current = anim:current()
     if current then
@@ -542,12 +583,12 @@ end
 Play an animation.
 
 **Parameters:**
-- `animation` (lightuserdata or string) - Animation handle or name
+- `animation` (Handle or string) - Animation handle or name
 - `restart` (boolean, optional) - Whether to restart if already playing (default: true)
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     -- Play by name
     anim:play("walk")
@@ -571,7 +612,7 @@ Set animation playback speed.
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     anim:setSpeed(1.5)  -- Play 50% faster
 end
@@ -587,7 +628,7 @@ Check if animation is currently playing.
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim and not anim:isPlaying() then
     anim:play("idle")
 end
@@ -603,7 +644,7 @@ Get current playback time.
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     local time = anim:getTime()
     print("Animation time:", time)
@@ -620,7 +661,7 @@ Set playback time (seek to specific time).
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     anim:setTime(2.5)  -- Jump to 2.5 seconds
 end
@@ -632,14 +673,14 @@ end
 Get animation duration.
 
 **Parameters:**
-- `handle` (lightuserdata, optional) - Animation handle (defaults to current animation)
+- `handle` (Handle, optional) - Animation handle (defaults to current animation)
 
 **Returns:**
 - `number` - Duration in seconds
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     local duration = anim:getDuration()
     print("Current animation length:", duration)
@@ -659,7 +700,7 @@ Enable or disable animation looping.
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     anim:setLoop(true)   -- Loop forever
     anim:setLoop(false)  -- Play once
@@ -676,7 +717,7 @@ Check if animation is set to loop.
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     if not anim:isLoop() then
         print("Animation will play once and stop")
@@ -691,7 +732,7 @@ Pause animation playback.
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     anim:pause()
 end
@@ -704,7 +745,7 @@ Resume paused animation.
 
 **Example:**
 ```lua
-local anim = node:anim3D()
+local anim = NODE:anim3D()
 if anim then
     anim:resume()
 end
@@ -733,7 +774,7 @@ Get a script variable value.
 
 **Example:**
 ```lua
-local otherNode = scene:node(otherHandle)
+local otherNode = SCENE:node(otherHandle)
 if otherNode then
     local script = otherNode:script()
     if script then
@@ -754,7 +795,7 @@ Set a script variable value.
 
 **Example:**
 ```lua
-local otherNode = scene:node(otherHandle)
+local otherNode = SCENE:node(otherHandle)
 if otherNode then
     local script = otherNode:script()
     if script then
@@ -764,10 +805,10 @@ if otherNode then
 end
 ```
 
-**Note:** For the current node's variables, use the `vars` table directly:
+**Note:** For the current node's variables, use the `VARS` table directly:
 ```lua
 -- Current node
-vars.health = vars.health - 10
+VARS.health = VARS.health - 10
 
 -- Other node
 local script = otherNode:script()
@@ -787,33 +828,46 @@ Every Lua script should define these functions:
 -- Define script variables and their default values
 function vars()
     return {
-        -- Variables are defined here
+        -- Basic types
         myFloat = 0.0,
         myInt = 42,
         myBool = true,
         myString = "Hello",
         myVec3 = { x = 0, y = 0, z = 0 },
-        myNodeHandle = nHandle(),      -- Invalid handle (default)
-        myResourceHandle = rHandle()   -- Invalid handle (default)
+        
+        -- Handles (will be set in editor or by other scripts)
+        targetNode = Handle("node"),
+        weaponMesh = Handle("mesh"),
+        hitSound = Handle("resource"),
+        scenePrefab = Handle("scene"),
+        myScript = Handle("script")
     }
 end
 
 -- Called every frame
 function update()
-    -- Access variables through vars table
-    vars.myFloat = vars.myFloat + dTime
+    -- Access variables through VARS table
+    VARS.myFloat = VARS.myFloat + DTIME
     
     -- Use global objects
-    local t3d = node:transform3D()
+    local t3d = NODE:transform3D()
     if t3d then
         local pos = t3d:getPos()
-        pos.y = pos.y + math.sin(vars.myFloat)
+        pos.y = pos.y + math.sin(VARS.myFloat)
         t3d:setPos(pos)
     end
     
     -- Check input
     if kState("space") then
         print("Space pressed!")
+    end
+    
+    -- Use handles
+    if VARS.targetNode:valid() then
+        local target = SCENE:node(VARS.targetNode)
+        if target then
+            -- Do something with target
+        end
     end
 end
 ```
@@ -826,7 +880,7 @@ Supported types in `vars()`:
 - `boolean` - True/false
 - `string` - Text strings
 - `table` - Vector3 with `x`, `y`, `z` fields
-- `lightuserdata` - Handles (nHandle or rHandle)
+- `Handle` - Handle objects (created with `Handle(type, index?, version?)`)
 
 ---
 
@@ -853,8 +907,8 @@ function vars()
 end
 
 function update()
-    local t3d = node:transform3D()
-    local anim = node:anim3D()
+    local t3d = NODE:transform3D()
+    local anim = NODE:anim3D()
     
     if not t3d then return end
     
@@ -882,26 +936,26 @@ function update()
         local targetYaw = rot.y + angle
         
         -- Rotate towards movement direction
-        rot.y = rot.y + (targetYaw - rot.y) * vars.rotSpeed * dTime
+        rot.y = rot.y + (targetYaw - rot.y) * VARS.rotSpeed * DTIME
         t3d:setRot(rot)
         
         -- Move forward
-        local speed = isRunning and vars.moveSpeed * 2.0 or vars.moveSpeed
-        pos.x = pos.x + math.sin(rot.y) * speed * dTime
-        pos.z = pos.z + math.cos(rot.y) * speed * dTime
+        local speed = isRunning and VARS.moveSpeed * 2.0 or VARS.moveSpeed
+        pos.x = pos.x + math.sin(rot.y) * speed * DTIME
+        pos.z = pos.z + math.cos(rot.y) * speed * DTIME
         t3d:setPos(pos)
         
         -- Play appropriate animation
         if anim then
             if isRunning then
                 local current = anim:current()
-                if current ~= vars.runAnim then
-                    anim:play(vars.runAnim or "run")
+                if current ~= VARS.runAnim then
+                    anim:play(VARS.runAnim or "run")
                 end
             else
                 local current = anim:current()
-                if current ~= vars.walkAnim then
-                    anim:play(vars.walkAnim or "walk")
+                if current ~= VARS.walkAnim then
+                    anim:play(VARS.walkAnim or "walk")
                 end
             end
         end
@@ -909,14 +963,14 @@ function update()
         -- Play idle animation
         if anim then
             local current = anim:current()
-            if current ~= vars.idleAnim then
-                anim:play(vars.idleAnim or "idle")
+            if current ~= VARS.idleAnim then
+                anim:play(VARS.idleAnim or "idle")
             end
         end
     end
     
-    vars.isMoving = moving
-    vars.isRunning = isRunning
+    VARS.isMoving = moving
+    VARS.isRunning = isRunning
 end
 ```
 
@@ -926,7 +980,7 @@ end
 
 1. **Always check for nil:**
    ```lua
-   local t3d = node:transform3D()
+   local t3d = NODE:transform3D()
    if t3d then
        -- Safe to use t3d
    end
@@ -934,8 +988,8 @@ end
 
 2. **Cache component references when possible:**
    ```lua
-   local t3d = node:transform3D()
-   local anim = node:anim3D()
+   local t3d = NODE:transform3D()
+   local anim = NODE:anim3D()
    
    if t3d and anim then
        -- Use both components multiple times
@@ -944,34 +998,42 @@ end
 
 3. **Use delta time for frame-rate independent movement:**
    ```lua
-   pos.x = pos.x + velocity * dTime
+   pos.x = pos.x + velocity * DTIME
    ```
 
 4. **Store animation handles in vars() for efficiency:**
    ```lua
    function vars()
        return {
-           walkAnim = nil  -- Will be set in first update
+           walkAnim = Handle("animation")  -- Invalid, will be set later
        }
    end
    
    function update()
-       local anim = node:anim3D()
-       if anim and not vars.walkAnim then
-           vars.walkAnim = anim:get("walk")
+       local anim = NODE:anim3D()
+       if anim and not VARS.walkAnim:valid() then
+           VARS.walkAnim = anim:get("walk")
        end
    end
    ```
 
 5. **Compare handles with == operator:**
    ```lua
-   if currentAnim == vars.idleAnim then
+   if currentAnim == VARS.idleAnim then
        -- Same animation
    end
    
    -- Also works with ~= (not equal)
-   if targetHandle ~= nodeHandle then
+   if targetHandle ~= NODEHANDLE then
        -- Different nodes
+   end
+   ```
+
+6. **Check handle validity before use:**
+   ```lua
+   if VARS.targetNode:valid() then
+       local target = SCENE:node(VARS.targetNode)
+       -- Use target
    end
    ```
 

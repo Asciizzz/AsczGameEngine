@@ -286,7 +286,7 @@ void tinyProject::setupFS() {
 
     tinyFS::TypeInfo* ascr = fs_->typeInfo<tinyScript>();
     ascr->typeExt = tinyFS::TypeExt("ascr", 0.8f, 0.8f, 0.2f);
-    ascr->safeDelete = true; // Scripts are just data, safe to delete
+    ascr->priority = UINT8_MAX; // Late delete
 
     // ------------------- Special "files" -------------------
 
