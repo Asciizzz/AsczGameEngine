@@ -2,9 +2,9 @@
 VARS = {
     -- Node references using unified Handle system
     -- Use Handle("node", index, version) to create node handles
-    rootNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
-    animeNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
-    enemiesNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
+    rootNode = Handle("node"),   -- Root node for movement
+    animeNode = Handle("node"),  -- Animation node
+    enemiesNode = Handle("node"), -- Parent node containing all enemies
 
     -- Stats
     isPlayer = true,
