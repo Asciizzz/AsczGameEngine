@@ -120,7 +120,7 @@ bool tinyScript::compile() {
     return true;
 }
 
-bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
+bool tinyScript::call(const char* functionName, lua_State* runtimeL, tinyDebug* runtimeDebug) const {
     if (!valid()) return false;
     
     lua_State* targetL = runtimeL ? runtimeL : L_;
@@ -129,11 +129,19 @@ bool tinyScript::call(const char* functionName, lua_State* runtimeL) const {
     
     if (!lua_isfunction(targetL, -1)) {
         lua_pop(targetL, 1);
+        if (runtimeDebug) {
+            std::string error = std::string("Function '") + functionName + "' not found";
+            runtimeDebug->log(error, 1.0f, 0.5f, 0.0f); // Orange for warning
+        }
         return false;
     }
 
     // Call the function (0 args, 0 returns for now)
     if (lua_pcall(targetL, 0, 0, 0) != LUA_OK) {
+        if (runtimeDebug) {
+            std::string error = std::string("Runtime error in '") + functionName + "': " + lua_tostring(targetL, -1);
+            runtimeDebug->log(error, 1.0f, 0.0f, 0.0f); // Red for error
+        }
         lua_pop(targetL, 1);
         return false;
     }
@@ -281,7 +289,7 @@ void tinyScript::initVars(tinyVarsMap& outVars) const {
 }
 
 
-void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime) const {
+void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime, tinyDebug* runtimeDebug) const {
     if (!valid()) return;
     
     // Store rtScript pointer in Lua globals for print() function
@@ -361,7 +369,7 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     lua_setglobal(L_, "FS");
 
     // ========== Call the update function ==========
-    call("update");
+    call("update", nullptr, runtimeDebug);
 
     // ========== Pull variables back from Lua ==========
     lua_getglobal(L_, "VARS");

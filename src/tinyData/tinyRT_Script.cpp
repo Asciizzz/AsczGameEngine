@@ -38,6 +38,6 @@ void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
         cachedVersion_ = script->version();
         script->initVars(vars_); // Smart init
     } else {
-        script->update(this, scene, nodeHandle, dTime);
+        script->update(this, scene, nodeHandle, dTime, &debug_);
     }
 }
