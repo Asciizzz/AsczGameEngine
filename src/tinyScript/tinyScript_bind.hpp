@@ -928,17 +928,23 @@ static inline int staticscript_call(lua_State* L) {
             lua_pushnil(L);  // First key for iteration
             while (lua_next(L, i) != 0) {
                 // Key is at -2, value is at -1
-                // Copy key
+                bool validKeyValue = false;
+                
+                // Copy key to scriptL
                 if (lua_isstring(L, -2)) {
                     lua_pushstring(scriptL, lua_tostring(L, -2));
+                    validKeyValue = true;
                 } else if (lua_isnumber(L, -2)) {
                     lua_pushnumber(scriptL, lua_tonumber(L, -2));
-                } else {
+                    validKeyValue = true;
+                }
+                
+                if (!validKeyValue) {
                     lua_pop(L, 1); // Pop value, keep key for next iteration
                     continue;
                 }
                 
-                // Copy value
+                // Copy value to scriptL
                 if (lua_isnumber(L, -1)) {
                     lua_pushnumber(scriptL, lua_tonumber(L, -1));
                 } else if (lua_isboolean(L, -1)) {
@@ -946,13 +952,15 @@ static inline int staticscript_call(lua_State* L) {
                 } else if (lua_isstring(L, -1)) {
                     lua_pushstring(scriptL, lua_tostring(L, -1));
                 } else {
-                    lua_pop(scriptL, 1); // Pop key
-                    lua_pop(L, 1); // Pop value, keep key for next iteration
+                    // Invalid value type - pop the key we already pushed to scriptL
+                    lua_pop(scriptL, 1); // Pop key from scriptL
+                    lua_pop(L, 1); // Pop value from L, keep key for next iteration
                     continue;
                 }
                 
+                // Both key and value are valid, set in table
                 lua_settable(scriptL, -3);
-                lua_pop(L, 1);  // Pop value, keep key for next iteration
+                lua_pop(L, 1);  // Pop value from L, keep key for next iteration
             }
         } else if (lua_isuserdata(L, i)) {
             // Check if it's a Handle userdata by checking metatable
@@ -962,19 +970,11 @@ static inline int staticscript_call(lua_State* L) {
                 lua_pop(L, 2); // Pop both metatables
                 
                 if (isHandle) {
-                    // Transfer handles - copy the packed uint64_t value
-                    uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L, i));
-                    if (packedPtr) {
-                        uint64_t* newPacked = static_cast<uint64_t*>(lua_newuserdata(scriptL, sizeof(uint64_t)));
-                        *newPacked = *packedPtr;
-                        luaL_getmetatable(scriptL, "Handle");
-                        if (lua_isnil(scriptL, -1)) {
-                            // Metatable doesn't exist in target state - this shouldn't happen if bindings are registered
-                            lua_pop(scriptL, 2); // Pop nil metatable and userdata
-                            lua_pushnil(scriptL);
-                        } else {
-                            lua_setmetatable(scriptL, -2);
-                        }
+                    // Transfer handles - CORRECTLY copy the full LuaHandle struct
+                    LuaHandle* sourceHandle = static_cast<LuaHandle*>(lua_touserdata(L, i));
+                    if (sourceHandle) {
+                        // Create new LuaHandle userdata in target state with correct size
+                        pushLuaHandle(scriptL, *sourceHandle);
                     } else {
                         lua_pushnil(scriptL);
                     }
@@ -1041,12 +1041,18 @@ static inline int staticscript_call(lua_State* L) {
             
             while (lua_next(scriptL, tableIndex) != 0) {
                 // Key is at -2, value is at -1 (in scriptL)
+                bool validKeyValue = false;
+                
                 // Copy key to calling state
                 if (lua_isstring(scriptL, -2)) {
                     lua_pushstring(L, lua_tostring(scriptL, -2));
+                    validKeyValue = true;
                 } else if (lua_isnumber(scriptL, -2)) {
                     lua_pushnumber(L, lua_tonumber(scriptL, -2));
-                } else {
+                    validKeyValue = true;
+                }
+                
+                if (!validKeyValue) {
                     lua_pop(scriptL, 1); // Pop value, keep key for next iteration
                     continue;
                 }
@@ -1059,11 +1065,13 @@ static inline int staticscript_call(lua_State* L) {
                 } else if (lua_isstring(scriptL, -1)) {
                     lua_pushstring(L, lua_tostring(scriptL, -1));
                 } else {
+                    // Invalid value type - pop the key we already pushed to L
                     lua_pop(L, 1); // Pop key from calling state
-                    lua_pop(scriptL, 1); // Pop value, keep key for next iteration
+                    lua_pop(scriptL, 1); // Pop value from scriptL, keep key for next iteration
                     continue;
                 }
                 
+                // Both key and value are valid, set in table
                 lua_settable(L, -3);
                 lua_pop(scriptL, 1);  // Pop value from scriptL, keep key for next iteration
             }
@@ -1075,13 +1083,11 @@ static inline int staticscript_call(lua_State* L) {
                 lua_pop(scriptL, 2); // Pop both metatables
                 
                 if (isHandle) {
-                    // Transfer handles back - copy the packed uint64_t value
-                    uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(scriptL, absIndex));
-                    if (packedPtr) {
-                        uint64_t* newPacked = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
-                        *newPacked = *packedPtr;
-                        luaL_getmetatable(L, "Handle");
-                        lua_setmetatable(L, -2);
+                    // Transfer handles back - CORRECTLY copy the full LuaHandle struct
+                    LuaHandle* sourceHandle = static_cast<LuaHandle*>(lua_touserdata(scriptL, absIndex));
+                    if (sourceHandle) {
+                        // Create new LuaHandle userdata in calling state with correct size
+                        pushLuaHandle(L, *sourceHandle);
                     } else {
                         lua_pushnil(L);
                     }
