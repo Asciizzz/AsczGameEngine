@@ -11,5 +11,8 @@ end
 
 -- Add two numbers
 function add(a, b)
-    return a + b
+    print("mathLib.add called with a=" .. tostring(a) .. ", b=" .. tostring(b))
+    local result = a + b
+    print("mathLib.add returning " .. tostring(result))
+    return result
 end

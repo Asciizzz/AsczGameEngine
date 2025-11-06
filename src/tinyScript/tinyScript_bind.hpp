@@ -792,14 +792,20 @@ static inline int fs_script(lua_State* L) {
     // Argument 1: self (FS object)
     // Argument 2: rHandle to script resource
     
-    uint64_t* packedPtr = getHandleUserdata(L, 2);
+    if (lua_gettop(L) < 2 || !lua_isuserdata(L, 2)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L, 2));
     if (!packedPtr) {
         lua_pushnil(L);
         return 1;
     }
     
     if (!isRHandle(*packedPtr)) {
-        return luaL_error(L, "fs:script() expects rHandle (registry handle)");
+        lua_pushnil(L);
+        return 1;
     }
     
     tinyHandle scriptHandle = unpackRHandle(*packedPtr);
@@ -837,16 +843,24 @@ static inline tinyHandle* getStaticScriptHandle(lua_State* L, int index) {
 
 // staticScript:call(funcName, ...) - Call a function on the static script
 static inline int staticscript_call(lua_State* L) {
-    tinyHandle* scriptHandle = getStaticScriptHandle(L, 1);
+    // Safely get script handle without throwing
+    if (!lua_isuserdata(L, 1)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    tinyHandle* scriptHandle = static_cast<tinyHandle*>(lua_touserdata(L, 1));
     if (!scriptHandle || !lua_isstring(L, 2)) {
-        return luaL_error(L, "call(funcName, ...) expects function name as first argument");
+        lua_pushnil(L);
+        return 1;
     }
     
     const char* funcName = lua_tostring(L, 2);
     tinyRegistry* registry = getFSRegistryFromLua(L);
     
     if (!registry) {
-        return luaL_error(L, "Cannot access filesystem registry");
+        lua_pushnil(L);
+        return 1;
     }
     
     const tinyScript* script = registry->get<tinyScript>(*scriptHandle);
@@ -862,6 +876,25 @@ static inline int staticscript_call(lua_State* L) {
         lua_pushnil(L);
         return 1;
     }
+    
+    // Ensure the target script has access to the same scene context
+    // Transfer the __scene global from calling state to target state
+    lua_getglobal(L, "__scene");
+    if (lua_isuserdata(L, -1)) {
+        void* scenePtr = lua_touserdata(L, -1);
+        lua_pushlightuserdata(scriptL, scenePtr);
+        lua_setglobal(scriptL, "__scene");
+    }
+    lua_pop(L, 1);
+    
+    // Also transfer __rtScript if it exists (needed for print function)
+    lua_getglobal(L, "__rtScript");
+    if (lua_isuserdata(L, -1)) {
+        void* rtScriptPtr = lua_touserdata(L, -1);
+        lua_pushlightuserdata(scriptL, rtScriptPtr);
+        lua_setglobal(scriptL, "__rtScript");
+    }
+    lua_pop(L, 1);
     
     // Get the function from the script's Lua state
     lua_getglobal(scriptL, funcName);
@@ -881,27 +914,64 @@ static inline int staticscript_call(lua_State* L) {
         } else if (lua_isstring(L, i)) {
             lua_pushstring(scriptL, lua_tostring(L, i));
         } else if (lua_istable(L, i)) {
-            // Try to transfer as vec3
-            lua_getfield(L, i, "x");
-            lua_getfield(L, i, "y");
-            lua_getfield(L, i, "z");
-            if (lua_isnumber(L, -3) && lua_isnumber(L, -2) && lua_isnumber(L, -1)) {
-                lua_newtable(scriptL);
-                lua_pushnumber(scriptL, lua_tonumber(L, -3)); lua_setfield(scriptL, -2, "x");
-                lua_pushnumber(scriptL, lua_tonumber(L, -2)); lua_setfield(scriptL, -2, "y");
-                lua_pushnumber(scriptL, lua_tonumber(L, -1)); lua_setfield(scriptL, -2, "z");
-            } else {
-                lua_pushnil(scriptL);
+            // Transfer table generically (supports vec3 and other tables)
+            lua_newtable(scriptL);
+            lua_pushnil(L);  // First key for iteration
+            while (lua_next(L, i) != 0) {
+                // Key is at -2, value is at -1
+                // Copy key
+                if (lua_isstring(L, -2)) {
+                    lua_pushstring(scriptL, lua_tostring(L, -2));
+                } else if (lua_isnumber(L, -2)) {
+                    lua_pushnumber(scriptL, lua_tonumber(L, -2));
+                } else {
+                    lua_pop(L, 1); // Pop value, keep key for next iteration
+                    continue;
+                }
+                
+                // Copy value
+                if (lua_isnumber(L, -1)) {
+                    lua_pushnumber(scriptL, lua_tonumber(L, -1));
+                } else if (lua_isboolean(L, -1)) {
+                    lua_pushboolean(scriptL, lua_toboolean(L, -1));
+                } else if (lua_isstring(L, -1)) {
+                    lua_pushstring(scriptL, lua_tostring(L, -1));
+                } else {
+                    lua_pop(scriptL, 1); // Pop key
+                    lua_pop(L, 1); // Pop value, keep key for next iteration
+                    continue;
+                }
+                
+                lua_settable(scriptL, -3);
+                lua_pop(L, 1);  // Pop value, keep key for next iteration
             }
-            lua_pop(L, 3);
         } else if (lua_isuserdata(L, i)) {
-            // Transfer handles
-            uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L, i));
-            if (packedPtr) {
-                uint64_t* newPacked = static_cast<uint64_t*>(lua_newuserdata(scriptL, sizeof(uint64_t)));
-                *newPacked = *packedPtr;
-                luaL_getmetatable(scriptL, "Handle");
-                lua_setmetatable(scriptL, -2);
+            // Check if it's a Handle userdata by checking metatable
+            if (lua_getmetatable(L, i)) {
+                luaL_getmetatable(L, "Handle");
+                bool isHandle = lua_rawequal(L, -1, -2);
+                lua_pop(L, 2); // Pop both metatables
+                
+                if (isHandle) {
+                    // Transfer handles - copy the packed uint64_t value
+                    uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(L, i));
+                    if (packedPtr) {
+                        uint64_t* newPacked = static_cast<uint64_t*>(lua_newuserdata(scriptL, sizeof(uint64_t)));
+                        *newPacked = *packedPtr;
+                        luaL_getmetatable(scriptL, "Handle");
+                        if (lua_isnil(scriptL, -1)) {
+                            // Metatable doesn't exist in target state - this shouldn't happen if bindings are registered
+                            lua_pop(scriptL, 2); // Pop nil metatable and userdata
+                            lua_pushnil(scriptL);
+                        } else {
+                            lua_setmetatable(scriptL, -2);
+                        }
+                    } else {
+                        lua_pushnil(scriptL);
+                    }
+                } else {
+                    lua_pushnil(scriptL);
+                }
             } else {
                 lua_pushnil(scriptL);
             }
@@ -913,41 +983,102 @@ static inline int staticscript_call(lua_State* L) {
     // Call the function
     if (lua_pcall(scriptL, numArgs, LUA_MULTRET, 0) != LUA_OK) {
         const char* error = lua_tostring(scriptL, -1);
+        
+        // Try to log the error if print is available
+        lua_getglobal(L, "print");
+        if (lua_isfunction(L, -1)) {
+            std::string errorMsg = std::string("StaticScript:call() error: ") + (error ? error : "unknown error");
+            lua_pushstring(L, errorMsg.c_str());
+            lua_pcall(L, 1, 0, 0);
+        } else {
+            lua_pop(L, 1);
+        }
+        
         lua_pop(scriptL, 1);
-        return luaL_error(L, "Error calling '%s': %s", funcName, error);
+        lua_settop(scriptL, 0);
+        lua_pushnil(L);
+        return 1;
     }
     
     // Transfer return values back to calling state
     int numReturns = lua_gettop(scriptL);
+    
+    // We need to be careful with stack indices during table iteration
+    // Store the initial stack top to calculate correct indices
+    int scriptLBase = lua_gettop(scriptL);
+    
     for (int i = 1; i <= numReturns; i++) {
-        if (lua_isnumber(scriptL, i)) {
-            lua_pushnumber(L, lua_tonumber(scriptL, i));
-        } else if (lua_isboolean(scriptL, i)) {
-            lua_pushboolean(L, lua_toboolean(scriptL, i));
-        } else if (lua_isstring(scriptL, i)) {
-            lua_pushstring(L, lua_tostring(scriptL, i));
-        } else if (lua_istable(scriptL, i)) {
-            // Try to transfer as vec3
-            lua_getfield(scriptL, i, "x");
-            lua_getfield(scriptL, i, "y");
-            lua_getfield(scriptL, i, "z");
-            if (lua_isnumber(scriptL, -3) && lua_isnumber(scriptL, -2) && lua_isnumber(scriptL, -1)) {
-                lua_newtable(L);
-                lua_pushnumber(L, lua_tonumber(scriptL, -3)); lua_setfield(L, -2, "x");
-                lua_pushnumber(L, lua_tonumber(scriptL, -2)); lua_setfield(L, -2, "y");
-                lua_pushnumber(L, lua_tonumber(scriptL, -1)); lua_setfield(L, -2, "z");
-            } else {
-                lua_pushnil(L);
+        // Use absolute index from the base
+        int absIndex = i;
+        
+        if (lua_isnumber(scriptL, absIndex)) {
+            lua_pushnumber(L, lua_tonumber(scriptL, absIndex));
+        } else if (lua_isboolean(scriptL, absIndex)) {
+            lua_pushboolean(L, lua_toboolean(scriptL, absIndex));
+        } else if (lua_isstring(scriptL, absIndex)) {
+            lua_pushstring(L, lua_tostring(scriptL, absIndex));
+        } else if (lua_istable(scriptL, absIndex)) {
+            // Transfer table generically back to calling state
+            lua_newtable(L);
+            lua_pushnil(scriptL);  // First key for iteration
+            
+            // Adjust the table index because we pushed nil, making the stack deeper
+            int tableIndex = absIndex;
+            if (absIndex > 0 && absIndex <= scriptLBase) {
+                // Use absolute index adjustment for positive indices
+                // The table is still at the same absolute position
+                tableIndex = absIndex;
             }
-            lua_pop(scriptL, 3);
-        } else if (lua_isuserdata(scriptL, i)) {
-            // Transfer handles back
-            uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(scriptL, i));
-            if (packedPtr) {
-                uint64_t* newPacked = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
-                *newPacked = *packedPtr;
-                luaL_getmetatable(L, "Handle");
-                lua_setmetatable(L, -2);
+            
+            while (lua_next(scriptL, tableIndex) != 0) {
+                // Key is at -2, value is at -1 (in scriptL)
+                // Copy key to calling state
+                if (lua_isstring(scriptL, -2)) {
+                    lua_pushstring(L, lua_tostring(scriptL, -2));
+                } else if (lua_isnumber(scriptL, -2)) {
+                    lua_pushnumber(L, lua_tonumber(scriptL, -2));
+                } else {
+                    lua_pop(scriptL, 1); // Pop value, keep key for next iteration
+                    continue;
+                }
+                
+                // Copy value to calling state
+                if (lua_isnumber(scriptL, -1)) {
+                    lua_pushnumber(L, lua_tonumber(scriptL, -1));
+                } else if (lua_isboolean(scriptL, -1)) {
+                    lua_pushboolean(L, lua_toboolean(scriptL, -1));
+                } else if (lua_isstring(scriptL, -1)) {
+                    lua_pushstring(L, lua_tostring(scriptL, -1));
+                } else {
+                    lua_pop(L, 1); // Pop key from calling state
+                    lua_pop(scriptL, 1); // Pop value, keep key for next iteration
+                    continue;
+                }
+                
+                lua_settable(L, -3);
+                lua_pop(scriptL, 1);  // Pop value from scriptL, keep key for next iteration
+            }
+        } else if (lua_isuserdata(scriptL, absIndex)) {
+            // Check if it's a Handle userdata by checking metatable
+            if (lua_getmetatable(scriptL, absIndex)) {
+                luaL_getmetatable(scriptL, "Handle");
+                bool isHandle = lua_rawequal(scriptL, -1, -2);
+                lua_pop(scriptL, 2); // Pop both metatables
+                
+                if (isHandle) {
+                    // Transfer handles back - copy the packed uint64_t value
+                    uint64_t* packedPtr = static_cast<uint64_t*>(lua_touserdata(scriptL, absIndex));
+                    if (packedPtr) {
+                        uint64_t* newPacked = static_cast<uint64_t*>(lua_newuserdata(L, sizeof(uint64_t)));
+                        *newPacked = *packedPtr;
+                        luaL_getmetatable(L, "Handle");
+                        lua_setmetatable(L, -2);
+                    } else {
+                        lua_pushnil(L);
+                    }
+                } else {
+                    lua_pushnil(L);
+                }
             } else {
                 lua_pushnil(L);
             }

@@ -373,7 +373,7 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     call("update");
 
     // ========== Pull variables back from Lua ==========
-    lua_getglobal(L_, "vars");
+    lua_getglobal(L_, "VARS");
     if (lua_istable(L_, -1)) {
         for (auto& [key, value] : vars) {
             lua_getfield(L_, -1, key.c_str());
