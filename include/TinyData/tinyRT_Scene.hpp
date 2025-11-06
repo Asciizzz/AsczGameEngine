@@ -228,6 +228,7 @@ public:
     const tinyPool<tinyHandle>& poolRTRFM3D() const {
         if constexpr (type_eq<T, tinyNodeRT::MESHRD>)      return withMESHR_;
         else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) return withANIM3D_;
+        else if constexpr (type_eq<T, tinyNodeRT::SCRIPT>)  return withSCRIPT_;
         else {
             static tinyPool<tinyHandle> emptyPool;
             return emptyPool; // Empty pool for unsupported types
@@ -278,6 +279,9 @@ private:
     tinyPool<tinyHandle> withANIM3D_;
     UnorderedMap<tinyHandle, tinyHandle> mapANIM3D_;
 
+    tinyPool<tinyHandle> withSCRIPT_;
+    UnorderedMap<tinyHandle, tinyHandle> mapSCRIPT_;
+
     // -------- General update ---------
 
     void updateRecursive(tinyHandle nodeHandle = tinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
@@ -294,6 +298,8 @@ private:
             mapInsert(mapMESHR_, withMESHR_, nodeHandle);
         } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
             mapInsert(mapANIM3D_, withANIM3D_, nodeHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::SCRIPT>) {
+            mapInsert(mapSCRIPT_, withSCRIPT_, nodeHandle);
         }
     }
 
@@ -312,6 +318,8 @@ private:
             rmFromMapAndPool(mapMESHR_, withMESHR_, nodeHandle);
         } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
             rmFromMapAndPool(mapANIM3D_, withANIM3D_, nodeHandle);
+        } else if constexpr (type_eq<T, tinyNodeRT::SCRIPT>) {
+            rmFromMapAndPool(mapSCRIPT_, withSCRIPT_, nodeHandle);
         }
     }
 
@@ -398,8 +406,6 @@ private:
     template<typename T> struct DeferredRm : std::false_type {};
     template<> struct DeferredRm<tinyRT_SKEL3D> : std::true_type {}; // Skeleton descriptor set
     template<> struct DeferredRm<tinyRT_MESHRD> : std::true_type {}; // Morph weights descriptor set
-
-    // Script and Anime3D are fair game
 
     template<typename T>
     void rtRemove(const tinyHandle& handle) {
