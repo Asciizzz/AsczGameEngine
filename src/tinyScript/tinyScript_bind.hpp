@@ -52,7 +52,7 @@ static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
 
 // LuaHandle - Unified handle structure with type information
 struct LuaHandle {
-    std::string type;
+    std::string type = "void";
     tinyHandle handle;
 
     LuaHandle() = default;
@@ -64,28 +64,17 @@ struct LuaHandle {
 
     // Convert LuaHandle to typeHandle based on type string
     typeHandle toTypeHandle() const {
-        // Don't check valid() - we want to preserve invalid handles too
-        // so they can be set later in the editor
-        
-        // Node handle - maps to tinyNodeRT (scene-specific, needs remapping on load)
-        if (type == "node") {
-            return typeHandle::make<tinyNodeRT>(handle);
-        }
-        // Registry handles - point directly to filesystem registry (global, never remapped)
-        else if (type == "script" || type == "scene" || type == "mesh" || 
-                 type == "texture" || type == "material" || type == "skeleton") {
-            return typeHandle::make<void>(handle);
-        }
-        // Unknown or empty type - default to void (registry handle)
+        if (type == "node") return typeHandle::make<tinyNodeRT>(handle); else
+        if (type == "script") return typeHandle::make<tinyScript>(handle); else
+        if (type == "scene") return typeHandle::make<tinySceneRT>(handle); else
         return typeHandle::make<void>(handle);
     }
 
     // Create LuaHandle from typeHandle
     static LuaHandle fromTypeHandle(const typeHandle& th) {
-        if (th.isType<tinyNodeRT>()) return LuaHandle("node", th.handle);
-        else if (th.isType<tinyScript>()) return LuaHandle("script", th.handle);
-        else if (th.isType<tinySceneRT>()) return LuaHandle("scene", th.handle);
-
+        if (th.isType<tinyNodeRT>()) return LuaHandle("node", th.handle); else
+        if (th.isType<tinyScript>()) return LuaHandle("script", th.handle); else
+        if (th.isType<tinySceneRT>()) return LuaHandle("scene", th.handle); else
         return LuaHandle("resource", th.handle);
     }
 };
@@ -1249,7 +1238,7 @@ static inline void registerNodeBindings(lua_State* L) {
     // __tostring for debugging
     lua_pushcfunction(L, [](lua_State* L) -> int {
         LuaHandle* h = getLuaHandleFromUserdata(L, 1);
-        if (!h || !h->valid()) {
+        if (!h) {
             lua_pushstring(L, "Handle(invalid)");
             return 1;
         }
@@ -1260,9 +1249,7 @@ static inline void registerNodeBindings(lua_State* L) {
     // __gc for cleanup (string destructor)
     lua_pushcfunction(L, [](lua_State* L) -> int {
         LuaHandle* h = getLuaHandleFromUserdata(L, 1);
-        if (h) {
-            h->~LuaHandle(); // Call destructor explicitly
-        }
+        if (h) h->~LuaHandle(); // Call destructor explicitly
         return 0;
     });
     lua_setfield(L, -2, "__gc");
