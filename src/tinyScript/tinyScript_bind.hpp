@@ -82,16 +82,10 @@ struct LuaHandle {
 
     // Create LuaHandle from typeHandle
     static LuaHandle fromTypeHandle(const typeHandle& th) {
-        if (!th.valid()) return LuaHandle();
+        if (th.isType<tinyNodeRT>()) return LuaHandle("node", th.handle);
+        else if (th.isType<tinyScript>()) return LuaHandle("script", th.handle);
+        else if (th.isType<tinySceneRT>()) return LuaHandle("scene", th.handle);
 
-        // Check if it's a node handle (type is tinyNodeRT)
-        if (th.isType<tinyNodeRT>()) {
-            return LuaHandle("node", th.handle);
-        }
-        // Otherwise it's a registry handle (type is void)
-        // We can't determine the exact resource type from typeHandle alone
-        // Default to a generic "resource" type that will work with FS:get()
-        // The resource type will be validated when FS:get() is called
         return LuaHandle("resource", th.handle);
     }
 };
