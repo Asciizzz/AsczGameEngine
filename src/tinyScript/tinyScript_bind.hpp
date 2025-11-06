@@ -648,11 +648,23 @@ static inline int script_getVar(lua_State* L) {
             if constexpr (std::is_same_v<T, float>) lua_pushnumber(L, val);
             else if constexpr (std::is_same_v<T, int>) lua_pushinteger(L, val);
             else if constexpr (std::is_same_v<T, bool>) lua_pushboolean(L, val);
+            else if constexpr (std::is_same_v<T, glm::vec2>) {
+                lua_newtable(L);
+                lua_pushnumber(L, val.x); lua_setfield(L, -2, "x");
+                lua_pushnumber(L, val.y); lua_setfield(L, -2, "y");
+            }
             else if constexpr (std::is_same_v<T, glm::vec3>) {
                 lua_newtable(L);
                 lua_pushnumber(L, val.x); lua_setfield(L, -2, "x");
                 lua_pushnumber(L, val.y); lua_setfield(L, -2, "y");
                 lua_pushnumber(L, val.z); lua_setfield(L, -2, "z");
+            }
+            else if constexpr (std::is_same_v<T, glm::vec4>) {
+                lua_newtable(L);
+                lua_pushnumber(L, val.x); lua_setfield(L, -2, "x");
+                lua_pushnumber(L, val.y); lua_setfield(L, -2, "y");
+                lua_pushnumber(L, val.z); lua_setfield(L, -2, "z");
+                lua_pushnumber(L, val.w); lua_setfield(L, -2, "w");
             }
             else if constexpr (std::is_same_v<T, std::string>) lua_pushstring(L, val.c_str());
             else if constexpr (std::is_same_v<T, typeHandle>) {
@@ -680,6 +692,14 @@ static inline int script_setVar(lua_State* L) {
             if constexpr (std::is_same_v<T, float>) val = static_cast<float>(lua_tonumber(L, 3));
             else if constexpr (std::is_same_v<T, int>) val = static_cast<int>(lua_tointeger(L, 3));
             else if constexpr (std::is_same_v<T, bool>) val = static_cast<bool>(lua_toboolean(L, 3));
+            else if constexpr (std::is_same_v<T, glm::vec2>) {
+                if (lua_istable(L, 3)) {
+                    lua_getfield(L, 3, "x"); lua_getfield(L, 3, "y");
+                    val.x = static_cast<float>(lua_tonumber(L, -2));
+                    val.y = static_cast<float>(lua_tonumber(L, -1));
+                    lua_pop(L, 2);
+                }
+            }
             else if constexpr (std::is_same_v<T, glm::vec3>) {
                 if (lua_istable(L, 3)) {
                     lua_getfield(L, 3, "x"); lua_getfield(L, 3, "y"); lua_getfield(L, 3, "z");
@@ -687,6 +707,16 @@ static inline int script_setVar(lua_State* L) {
                     val.y = static_cast<float>(lua_tonumber(L, -2));
                     val.z = static_cast<float>(lua_tonumber(L, -1));
                     lua_pop(L, 3);
+                }
+            }
+            else if constexpr (std::is_same_v<T, glm::vec4>) {
+                if (lua_istable(L, 3)) {
+                    lua_getfield(L, 3, "x"); lua_getfield(L, 3, "y"); lua_getfield(L, 3, "z"); lua_getfield(L, 3, "w");
+                    val.x = static_cast<float>(lua_tonumber(L, -4));
+                    val.y = static_cast<float>(lua_tonumber(L, -3));
+                    val.z = static_cast<float>(lua_tonumber(L, -2));
+                    val.w = static_cast<float>(lua_tonumber(L, -1));
+                    lua_pop(L, 4);
                 }
             }
             else if constexpr (std::is_same_v<T, std::string>) val = std::string(lua_tostring(L, 3));

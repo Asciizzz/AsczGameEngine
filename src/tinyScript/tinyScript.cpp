@@ -191,20 +191,41 @@ void tinyScript::cacheDefaultVars() {
             } else if (lua_isstring(L_, -1)) {
                 defaultVars_[key] = std::string(lua_tostring(L_, -1));
             } else if (lua_istable(L_, -1)) {
-                // Check if it's a vec3 (table with x, y, z)
+                // Check if it's a vector (table with x, y, z, w components)
                 lua_getfield(L_, -1, "x");
                 lua_getfield(L_, -2, "y");
                 lua_getfield(L_, -3, "z");
+                lua_getfield(L_, -4, "w");
                 
-                if (lua_isnumber(L_, -3) && lua_isnumber(L_, -2) && lua_isnumber(L_, -1)) {
+                bool hasX = lua_isnumber(L_, -4);
+                bool hasY = lua_isnumber(L_, -3);
+                bool hasZ = lua_isnumber(L_, -2);
+                bool hasW = lua_isnumber(L_, -1);
+                
+                if (hasX && hasY && hasZ && hasW) {
+                    // vec4
+                    glm::vec4 vec;
+                    vec.w = static_cast<float>(lua_tonumber(L_, -1));
+                    vec.z = static_cast<float>(lua_tonumber(L_, -2));
+                    vec.y = static_cast<float>(lua_tonumber(L_, -3));
+                    vec.x = static_cast<float>(lua_tonumber(L_, -4));
+                    defaultVars_[key] = vec;
+                } else if (hasX && hasY && hasZ) {
+                    // vec3
                     glm::vec3 vec;
-                    vec.z = static_cast<float>(lua_tonumber(L_, -1));
-                    vec.y = static_cast<float>(lua_tonumber(L_, -2));
-                    vec.x = static_cast<float>(lua_tonumber(L_, -3));
+                    vec.z = static_cast<float>(lua_tonumber(L_, -2));
+                    vec.y = static_cast<float>(lua_tonumber(L_, -3));
+                    vec.x = static_cast<float>(lua_tonumber(L_, -4));
+                    defaultVars_[key] = vec;
+                } else if (hasX && hasY) {
+                    // vec2
+                    glm::vec2 vec;
+                    vec.y = static_cast<float>(lua_tonumber(L_, -3));
+                    vec.x = static_cast<float>(lua_tonumber(L_, -4));
                     defaultVars_[key] = vec;
                 }
                 
-                lua_pop(L_, 3);  // Pop x, y, z
+                lua_pop(L_, 4);  // Pop x, y, z, w
             } else if (lua_isuserdata(L_, -1)) {
                 // Check if it has the Handle metatable
                 if (lua_getmetatable(L_, -1)) {
@@ -319,6 +340,14 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                 lua_pushboolean(L_, val);
                 lua_setfield(L_, -2, key.c_str());
             }
+            else if constexpr (std::is_same_v<T, glm::vec2>) {
+                lua_newtable(L_);
+                lua_pushnumber(L_, val.x);
+                lua_setfield(L_, -2, "x");
+                lua_pushnumber(L_, val.y);
+                lua_setfield(L_, -2, "y");
+                lua_setfield(L_, -2, key.c_str());
+            }
             else if constexpr (std::is_same_v<T, glm::vec3>) {
                 lua_newtable(L_);
                 lua_pushnumber(L_, val.x);
@@ -327,6 +356,18 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                 lua_setfield(L_, -2, "y");
                 lua_pushnumber(L_, val.z);
                 lua_setfield(L_, -2, "z");
+                lua_setfield(L_, -2, key.c_str());
+            }
+            else if constexpr (std::is_same_v<T, glm::vec4>) {
+                lua_newtable(L_);
+                lua_pushnumber(L_, val.x);
+                lua_setfield(L_, -2, "x");
+                lua_pushnumber(L_, val.y);
+                lua_setfield(L_, -2, "y");
+                lua_pushnumber(L_, val.z);
+                lua_setfield(L_, -2, "z");
+                lua_pushnumber(L_, val.w);
+                lua_setfield(L_, -2, "w");
                 lua_setfield(L_, -2, key.c_str());
             }
             else if constexpr (std::is_same_v<T, std::string>) {
@@ -395,6 +436,17 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                         val = lua_toboolean(L_, -1);
                     }
                 }
+                else if constexpr (std::is_same_v<T, glm::vec2>) {
+                    if (lua_istable(L_, -1)) {
+                        lua_getfield(L_, -1, "x");
+                        if (lua_isnumber(L_, -1)) val.x = static_cast<float>(lua_tonumber(L_, -1));
+                        lua_pop(L_, 1);
+                        
+                        lua_getfield(L_, -1, "y");
+                        if (lua_isnumber(L_, -1)) val.y = static_cast<float>(lua_tonumber(L_, -1));
+                        lua_pop(L_, 1);
+                    }
+                }
                 else if constexpr (std::is_same_v<T, glm::vec3>) {
                     if (lua_istable(L_, -1)) {
                         lua_getfield(L_, -1, "x");
@@ -407,6 +459,25 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                         
                         lua_getfield(L_, -1, "z");
                         if (lua_isnumber(L_, -1)) val.z = static_cast<float>(lua_tonumber(L_, -1));
+                        lua_pop(L_, 1);
+                    }
+                }
+                else if constexpr (std::is_same_v<T, glm::vec4>) {
+                    if (lua_istable(L_, -1)) {
+                        lua_getfield(L_, -1, "x");
+                        if (lua_isnumber(L_, -1)) val.x = static_cast<float>(lua_tonumber(L_, -1));
+                        lua_pop(L_, 1);
+                        
+                        lua_getfield(L_, -1, "y");
+                        if (lua_isnumber(L_, -1)) val.y = static_cast<float>(lua_tonumber(L_, -1));
+                        lua_pop(L_, 1);
+                        
+                        lua_getfield(L_, -1, "z");
+                        if (lua_isnumber(L_, -1)) val.z = static_cast<float>(lua_tonumber(L_, -1));
+                        lua_pop(L_, 1);
+                        
+                        lua_getfield(L_, -1, "w");
+                        if (lua_isnumber(L_, -1)) val.w = static_cast<float>(lua_tonumber(L_, -1));
                         lua_pop(L_, 1);
                     }
                 }
