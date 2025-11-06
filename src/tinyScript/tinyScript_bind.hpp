@@ -223,8 +223,8 @@ static inline int scene_addScene(lua_State* L) {
     // Argument 2: scene handle (registry handle to Scene resource)
     LuaHandle* sceneHandle = getLuaHandleFromUserdata(L, 2);
     if (!sceneHandle || sceneHandle->type != "scene") {
-        // Silently fail - don't halt the script
-        return 0;
+        lua_pushnil(L);
+        return 1;
     }
     
     // Argument 3: node handle for parent - optional
@@ -232,19 +232,26 @@ static inline int scene_addScene(lua_State* L) {
     if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
         LuaHandle* parentHandle = getLuaHandleFromUserdata(L, 3);
         if (!parentHandle || parentHandle->type != "node") {
-            // Silently fail - don't halt the script
-            return 0;
+            lua_pushnil(L);
+            return 1;
         }
         
         parentNHandle = parentHandle->handle;
     }
     // If no parent provided, it will default to root in the C++ function
     
-    // Call the existing C++ addScene function
-    // The existing function uses sharedRes_.fsGet<Scene>(sceneHandle) internally
-    (*scenePtr)->addScene(sceneHandle->handle, parentNHandle);
+    // Call the existing C++ addScene function and get the returned node handle
+    tinyHandle newNodeHandle = (*scenePtr)->addScene(sceneHandle->handle, parentNHandle);
     
-    return 0; // Returns void, no return value
+    // Check if the returned node is valid
+    if (!newNodeHandle.valid() || !(*scenePtr)->node(newNodeHandle)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Return the node
+    pushNode(L, newNodeHandle);
+    return 1;
 }
 
 static inline int scene_delete(lua_State* L) {

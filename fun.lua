@@ -1,17 +1,16 @@
+VARS = {
+    sceneHandle = Handle("scene")
+}
 
 
 function update()
 
-    local t3D = NODE:transform3D()
-
-    if t3D then
-        local pos = t3D:getPos()
-
-        pos.x = math.random(-5.0, 5.0)
-        pos.y = math.random(0.0, 5.0)
-        pos.z = math.random(-5.0, 5.0)
-
-        t3D:setPos(pos)
+    local node = SCENE:addScene(VARS.sceneHandle, NODEHANDLE)
+    if node then
+        local t3D = node:transform3D()
+        if t3D then
+            t3D:setPos({x=0, y=5, z=0})
+        end
     end
 
 end

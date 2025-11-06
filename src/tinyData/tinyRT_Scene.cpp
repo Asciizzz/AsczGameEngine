@@ -181,10 +181,10 @@ bool Scene::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>
 
 
 
-void Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
+tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
     const Scene* from = sharedRes_.fsGet<Scene>(fromHandle);
 
-    if (!from || from->nodes_.count() == 0) return;
+    if (!from || from->nodes_.count() == 0) return tinyHandle();
 
     // Default to root node if no parent specified
     if (!parentHandle.valid()) parentHandle = rootHandle();
@@ -204,6 +204,8 @@ void Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
     // Second pass: Construct nodes_ with proper remapped components
 
+    tinyHandle thisHandle = tinyHandle();
+
     for (uint32_t i = 0; i < from_items.size(); ++i) {
         tinyHandle fromHandle = from->nodeHandle(i);
 
@@ -217,7 +219,14 @@ void Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
         // Establish parent-child relationships
         tinyHandle fromParentHandle = fromNode->parentHandle;
-        tinyHandle toParentHandle = fromParentHandle.valid() ? toHandleMap[fromParentHandle.index] : parentHandle;
+
+        tinyHandle toParentHandle;
+        if (fromParentHandle.valid()) {
+            toParentHandle = toHandleMap[fromParentHandle.index];
+        } else {
+            toParentHandle = parentHandle;
+            thisHandle = toHandle; // This is the root node (which is also the added scene's root)
+        }
 
         toNode->setParent(toParentHandle);
         tinyNodeRT* parentNode = nodes_.get(toParentHandle);
@@ -295,6 +304,8 @@ void Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
             }
         }
     }
+
+    return thisHandle;
 }
 
 
