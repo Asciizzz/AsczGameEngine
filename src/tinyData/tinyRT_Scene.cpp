@@ -67,6 +67,7 @@ bool Scene::removeNode(tinyHandle nodeHandle, bool recursive) {
     removeComp<tinyNodeRT::BONE3D>(nodeHandle);
     removeComp<tinyNodeRT::SKEL3D>(nodeHandle);
     removeComp<tinyNodeRT::ANIM3D>(nodeHandle);
+    removeComp<tinyNodeRT::SCRIPT>(nodeHandle);
     nodes_.remove(nodeHandle);
 
     return true;
@@ -318,12 +319,15 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     tinyNodeRT* node = nodes_.get(realHandle);
     if (!node) return;
 
-    // Update transform component
-    tinyNodeRT::TRFM3D* transform = rtComp<tinyNodeRT::TRFM3D>(realHandle);
-    glm::mat4 localMat = transform ? transform->local : glm::mat4(1.0f);
-
     uint32_t curFrame_ = fStart_.frame;
     float curDTime_ = fStart_.dTime;
+
+    // Script must be updated first before everything else
+    tinyRT_SCRIPT* rtSCRIPT = rtComp<tinyNodeRT::SCRIPT>(realHandle);
+    if (rtSCRIPT) rtSCRIPT->update(this, realHandle, curDTime_);
+
+    tinyNodeRT::TRFM3D* transform = rtComp<tinyNodeRT::TRFM3D>(realHandle);
+    glm::mat4 localMat = transform ? transform->local : glm::mat4(1.0f);
 
     // Update update local transform with bone attachment if available
     tinyNodeRT::BONE3D* rtBONE3D = rtComp<tinyNodeRT::BONE3D>(realHandle);
@@ -341,9 +345,6 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
 
     tinyRT_MESHRD* rtMESHRD = rtComp<tinyNodeRT::MESHRD>(realHandle);
     if (rtMESHRD) rtMESHRD->vkUpdate(curFrame_);
-
-    tinyRT_SCRIPT* rtSCRIPT = rtComp<tinyNodeRT::SCRIPT>(realHandle);
-    if (rtSCRIPT) rtSCRIPT->update(this, realHandle, curDTime_);
 
     glm::mat4 transformMat = parentGlobalTransform * localMat;
     if (transform) transform->global = transformMat;

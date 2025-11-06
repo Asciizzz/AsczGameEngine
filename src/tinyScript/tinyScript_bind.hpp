@@ -793,9 +793,21 @@ static inline int script_setVar(lua_State* L) {
             }
             else if constexpr (std::is_same_v<T, std::string>) val = std::string(lua_tostring(L, 3));
             else if constexpr (std::is_same_v<T, typeHandle>) {
-                LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 3);
-                if (luaHandle) {
-                    val = luaHandle->toTypeHandle();
+                // The handle userdata comes from the calling Lua state (L)
+                // We need to safely extract it without throwing errors
+                if (lua_isuserdata(L, 3)) {
+                    // Try to get it as a LuaHandle by checking metatable
+                    if (lua_getmetatable(L, 3)) {
+                        luaL_getmetatable(L, "Handle");
+                        if (lua_rawequal(L, -1, -2)) {
+                            // Valid Handle userdata, safe to cast
+                            LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L, 3));
+                            if (luaHandle) {
+                                val = luaHandle->toTypeHandle();
+                            }
+                        }
+                        lua_pop(L, 2);  // Pop both metatables
+                    }
                 }
             }
         }, var);
