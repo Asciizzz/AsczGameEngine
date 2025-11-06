@@ -391,10 +391,6 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     pushNode(L_, nodeHandle);
     lua_setglobal(L_, "NODE");
     
-    // Push NODEHANDLE as a LuaHandle (for passing to functions like SCENE:addScene())
-    pushLuaHandle(L_, LuaHandle("node", nodeHandle));
-    lua_setglobal(L_, "NODEHANDLE");
-    
     // Push FS (filesystem registry accessor) as a FS userdata object
     pushFS(L_);
     lua_setglobal(L_, "FS");

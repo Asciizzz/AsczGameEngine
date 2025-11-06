@@ -26,7 +26,6 @@ VARS         -- Table containing all script variables (defined in vars() functio
 DTIME        -- Delta time since last frame (float, in seconds)
 SCENE        -- Scene object (Scene userdata)
 NODE         -- Current node object (Node userdata)
-NODEHANDLE   -- Handle to current node (Handle userdata with type "node")
 FS           -- Filesystem registry accessor (FS userdata)
 ```
 
@@ -227,8 +226,9 @@ if targetNode then
     end
 end
 
--- Can also use NODEHANDLE for current node
-local currentNode = SCENE:node(NODEHANDLE)
+-- Can also use NODE:handle() to get own handle
+-- NODE is literall NODE, I don't think you need to call this
+local currentNode = SCENE:node(NODE:handle())
 ```
 
 ---
@@ -250,7 +250,7 @@ local sceneRes = Handle("scene", 5, 0)
 SCENE:addScene(sceneRes)
 
 -- Load scene and attach to current node
-SCENE:addScene(sceneRes, NODEHANDLE)
+SCENE:addScene(sceneRes, NODE:handle())
 
 -- Load scene and attach to specific node
 local parentHandle = Handle("node", 10, 0)
@@ -1024,7 +1024,7 @@ end
    end
    
    -- Also works with ~= (not equal)
-   if targetHandle ~= NODEHANDLE then
+   if targetHandle ~= NODE:handle() then
        -- Different nodes
    end
    ```

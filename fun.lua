@@ -5,7 +5,7 @@ VARS = {
 
 function update()
 
-    local node = SCENE:addScene(VARS.sceneHandle, NODEHANDLE)
+    local node = SCENE:addScene(VARS.sceneHandle, NODE:handle())
     if node then
         local t3D = node:transform3D()
         if t3D then

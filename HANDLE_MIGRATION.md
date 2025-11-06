@@ -208,7 +208,6 @@ The following global variables are automatically set in every script's `update()
 | Variable | Type | Description |
 |----------|------|-------------|
 | `NODE` | Node object | Current node as a Node userdata (for calling methods like `NODE:transform3D()`) |
-| `NODEHANDLE` | `Handle("node", ...)` | Current node as a handle (for passing to functions like `SCENE:addScene()`) |
 | `SCENE` | Scene object | Current scene object |
 | `FS` | FS object | Filesystem registry accessor |
 | `VARS` | table | Script's runtime variables |

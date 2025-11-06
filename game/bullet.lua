@@ -32,7 +32,7 @@ function update()
     
     -- Auto-delete after lifetime expires
     if VARS.age >= VARS.lifetime then
-        SCENE:delete(NODEHANDLE)
+        SCENE:delete(NODE:handle())
         return
     end
     
@@ -50,7 +50,7 @@ function update()
 
     -- if it goes passed -20, -20 - 20, 20 delete it
     if pos.x < -20 or pos.x > 20 or pos.z < -20 or pos.z > 20 then
-        SCENE:delete(NODEHANDLE)
+        SCENE:delete(NODE:handle())
         return
     end
 
@@ -84,7 +84,7 @@ function update()
                             end
                             
                             -- Delete bullet after hitting an enemy
-                            SCENE:delete(NODEHANDLE)
+                            SCENE:delete(NODE:handle())
                             return
                         end
                     end
