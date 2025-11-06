@@ -1337,7 +1337,8 @@ static inline int lua_quat_lookAt(lua_State* L) {
     lua_pop(L, 3);
     
     // Create look-at quaternion
-    glm::quat result = glm::quatLookAt(glm::normalize(forward), glm::normalize(up));
+    // Negate forward because glm::quatLookAt assumes +Z is forward, but most engines use -Z
+    glm::quat result = glm::quatLookAt(-glm::normalize(forward), glm::normalize(up));
     
     // Return result
     lua_newtable(L);
