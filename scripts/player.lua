@@ -1,42 +1,28 @@
--- Character Controller with Enemy Detection (Updated for Unified Handle System)
--- This script demonstrates the new hierarchy features:
---   - NODE:children() - Get all child nodes
---   - NODE:parent() - Get parent node
---   - NODEHANDLE global - Current node's handle
---
--- Nodes:
---   rootNode: Movement and rotation
---   animeNode: Animation playback
---   enemiesNode: Parent of all enemy nodes (loop through children!)
--- 
--- Drag node handles from scene hierarchy into the fields below
 
-function vars()
-    return {
-        -- Node references using unified Handle system
-        -- Use Handle("node", index, version) to create node handles
-        rootNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
-        animeNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
-        enemiesNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
+VARS = {
+    -- Node references using unified Handle system
+    -- Use Handle("node", index, version) to create node handles
+    rootNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF),   -- Root node for movement
+    animeNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF),  -- Animation node
+    enemiesNode = Handle("node", 0xFFFFFFFF, 0xFFFFFFFF), -- Parent node containing all enemies
 
-        -- Stats
-        isPlayer = true,
-        vel = 2.0,
-        hp = 100.0,
-        maxHp = 100.0,
-        isDead = false,
-        
-        -- Combat
-        attackRange = 1.0,  -- Distance at which player can hit enemies
-        attackDamage = 10.0,
+    -- Stats
+    isPlayer = true,
+    vel = 2.0,
+    hp = 100.0,
+    maxHp = 100.0,
+    isDead = false,
+    
+    -- Combat
+    attackRange = 1.0,  -- Distance at which player can hit enemies
+    attackDamage = 10.0,
 
-        -- Animation names (configure for your model)
-        idleAnim = "Idle_Loop",
-        walkAnim = "Walk_Loop",
-        runAnim = "Sprint_Loop",
-        deathAnim = "Death01"  -- Death animation (non-looping)
-    }
-end
+    -- Animation names (configure for your model)
+    idleAnim = "Idle_Loop",
+    walkAnim = "Walk_Loop",
+    runAnim = "Sprint_Loop",
+    deathAnim = "Death01"  -- Death animation (non-looping)
+}
 
 function update()
     -- Get node references

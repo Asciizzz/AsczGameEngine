@@ -2,10 +2,9 @@
 -- Attach this to a node that should teleport when another node gets too close
 -- Perfect for tag games, chase scenarios, or infinite running demos!
 
-function vars()
-    return {
-        -- The chaser node (e.g., the follower trying to catch this node)
-        chaserNode = Handle("node"),
+VARS = {
+    -- The chaser node (e.g., the follower trying to catch this node)
+    chaserNode = Handle("node"),
         
         -- Collision settings
         collisionRadius = 2.0,  -- Distance threshold for collision detection
@@ -26,14 +25,11 @@ function vars()
         -- Visual feedback (optional)
         showDebugInfo = true,
         
-        -- Internal state
-        lastCollisionTime = 0.0,
-        totalCollisions = 0,
-        currentTime = 0.0
-    }
-end
-
--- Generate a random float between min and max
+    -- Internal state
+    lastCollisionTime = 0.0,
+    totalCollisions = 0,
+    currentTime = 0.0
+}-- Generate a random float between min and max
 function randomFloat(min, max)
     return min + (max - min) * math.random()
 end

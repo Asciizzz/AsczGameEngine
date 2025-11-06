@@ -9,10 +9,9 @@
 -- z (damping) - Bounciness (< 1 = bouncy, 1 = critical, > 1 = smooth)
 -- r (response) - Initial reaction (negative = delayed, 0 = neutral, positive = overshoot)
 
-function vars()
-    return {
-        -- Target to follow
-        targetNode = Handle("node"),
+VARS = {
+    -- Target to follow
+    targetNode = Handle("node"),
         
         -- Animation node (optional - if set, will play walk/run/idle animations)
         animeNode = Handle("node"),
@@ -53,12 +52,9 @@ function vars()
         lastZ = 0.0,
         lastR = 0.0,
         
-        -- Initialization flag
-        initialized = false
-    }
-end
-
--- Update k1, k2, k3 constants from f, z, r
+    -- Initialization flag
+    initialized = false
+}-- Update k1, k2, k3 constants from f, z, r
 function updateConstants()
     local pi = 3.14159265359
     

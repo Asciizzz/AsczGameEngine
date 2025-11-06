@@ -154,19 +154,9 @@ void tinyScript::cacheDefaultVars() {
     
     if (!valid()) return;
 
-    lua_getglobal(L_, "vars");
+    lua_getglobal(L_, "VARS");
 
-    if (!lua_isfunction(L_, -1)) {
-        lua_pop(L_, 1);
-        return;
-    }
-
-    if (lua_pcall(L_, 0, 1, 0) != LUA_OK) {
-        lua_pop(L_, 1);
-        return;
-    }
-    
-    // Check if return value is a table
+    // Check if 'VARS' is a table (VARS = {})
     if (!lua_istable(L_, -1)) {
         lua_pop(L_, 1);
         return;
