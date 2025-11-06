@@ -253,6 +253,31 @@ static inline int scene_addScene(lua_State* L) {
     return 0; // Returns void, no return value
 }
 
+static inline int scene_delete(lua_State* L) {
+    tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
+    if (!scenePtr || !*scenePtr)
+        return luaL_error(L, "Invalid scene");
+    
+    // Argument 2: node handle to delete
+    LuaHandle* nodeHandle = getLuaHandleFromUserdata(L, 2);
+    if (!nodeHandle || nodeHandle->type != "node") {
+        // Silently fail - don't halt the script
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    
+    // Argument 3: recursive flag (optional, default true)
+    bool recursive = true;
+    if (lua_gettop(L) >= 3 && lua_isboolean(L, 3)) {
+        recursive = lua_toboolean(L, 3);
+    }
+    
+    // Call removeNode and return success
+    bool success = (*scenePtr)->removeNode(nodeHandle->handle, recursive);
+    lua_pushboolean(L, success);
+    return 1;
+}
+
 // ========================================
 // INPUT SYSTEM
 // ========================================
@@ -1467,6 +1492,7 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_BEGIN_METATABLE("Scene");
     LUA_REG_METHOD(scene_node, "node");
     LUA_REG_METHOD(scene_addScene, "addScene");
+    LUA_REG_METHOD(scene_delete, "delete");
     LUA_END_METATABLE("Scene");
     
     // Handle metatable (unified handle system)
