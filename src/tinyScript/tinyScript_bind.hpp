@@ -131,14 +131,8 @@ static inline int lua_handleEqual(lua_State* L) {
     
     LuaHandle* h1 = getLuaHandleFromUserdata(L, 1);
     LuaHandle* h2 = getLuaHandleFromUserdata(L, 2);
-    
-    if (!h1 || !h2) {
-        lua_pushboolean(L, false);
-        return 1;
-    }
-    
-    // Handles are equal if both type and handle match
-    lua_pushboolean(L, h1->type == h2->type && h1->handle == h2->handle);
+
+    lua_pushboolean(L, h1 && h2 && h1->type == h2->type && h1->handle == h2->handle);
     return 1;
 }
 
