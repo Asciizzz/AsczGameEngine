@@ -36,21 +36,39 @@ namespace std {
 
 #include <typeindex>
 struct typeHandle {
+    typeHandle() noexcept = default;
+
     tinyHandle handle = tinyHandle();
     std::type_index typeIndex = std::type_index(typeid(void));
 
-    typeHandle() noexcept = default;
+    constexpr bool operator==(const typeHandle& other) const noexcept {
+        return handle == other.handle && typeIndex == other.typeIndex;
+    }
+    constexpr bool operator!=(const typeHandle& other) const noexcept {
+        return !(*this == other);
+    }
 
     bool valid() const noexcept { return handle.valid(); }
 
     template<typename T>
     bool isType() const noexcept { return valid() && typeIndex == std::type_index(typeid(T)); }
 
+    bool sameType(const typeHandle& other) const noexcept {
+        return typeIndex == other.typeIndex;
+    }
+
     template<typename T>
     static typeHandle make(tinyHandle h) noexcept {
         typeHandle th;
         th.handle = h;
         th.typeIndex = std::type_index(typeid(T));
+        return th;
+    }
+
+    static typeHandle make(tinyHandle h, const std::type_index& tIndex) noexcept {
+        typeHandle th;
+        th.handle = h;
+        th.typeIndex = tIndex;
         return th;
     }
 };

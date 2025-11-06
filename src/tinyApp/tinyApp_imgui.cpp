@@ -1261,9 +1261,9 @@ void tinyApp::renderSceneNodeInspector() {
                                         // Accept file handles (from file browser)
                                         else if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_HANDLE")) {
                                             tinyHandle draggedFileNode = *(const tinyHandle*)payload->Data;
-                                            // Extract the typeHandle (actual resource handle) from the file node
                                             typeHandle resourceHandle = fs.fTypeHandle(draggedFileNode);
-                                            val = typeHandle::make<void>(resourceHandle.handle);  // File handle (type void)
+
+                                            if (val.sameType(resourceHandle)) val = resourceHandle;
                                         }
                                         ImGui::EndDragDropTarget();
                                     }
