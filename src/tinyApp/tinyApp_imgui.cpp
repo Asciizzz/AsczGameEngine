@@ -2797,7 +2797,6 @@ void tinyApp::renderAnimationEditorWindow() {
     // Check if we have a valid component node selected
     if (!selectedCompNode.valid()) {
         ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No component node selected");
-        ImGui::Text("Select a node with Animation or Script component");
         return;
     }
 
