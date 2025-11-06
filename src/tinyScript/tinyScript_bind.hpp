@@ -405,6 +405,52 @@ static inline int transform3d_setRot(lua_State* L) {
     return 0;
 }
 
+static inline int transform3d_getQuat(lua_State* L) {
+    tinyHandle* handle = getTransform3DHandle(L, 1);
+    if (!handle) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    if (comps.trfm3D) {
+        glm::vec3 pos, scale, skew;
+        glm::quat rot;
+        glm::vec4 persp;
+        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        
+        // Return quaternion as table {x, y, z, w}
+        lua_newtable(L);
+        lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
+        lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
+        lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
+        lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+        return 1;
+    }
+    return 0;
+}
+
+static inline int transform3d_setQuat(lua_State* L) {
+    tinyHandle* handle = getTransform3DHandle(L, 1);
+    if (!handle || !lua_istable(L, 2)) return 0;
+    
+    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z"); lua_getfield(L, 2, "w");
+    glm::quat quat(
+        static_cast<float>(lua_tonumber(L, -1)), // w
+        static_cast<float>(lua_tonumber(L, -4)), // x
+        static_cast<float>(lua_tonumber(L, -3)), // y
+        static_cast<float>(lua_tonumber(L, -2))  // z
+    );
+    lua_pop(L, 4);
+    
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    if (comps.trfm3D) {
+        glm::vec3 pos, scale, skew;
+        glm::quat rot;
+        glm::vec4 persp;
+        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(quat) * glm::scale(glm::mat4(1.0f), scale);
+    }
+    return 0;
+}
+
 static inline int transform3d_getScl(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
@@ -1141,6 +1187,166 @@ static inline int staticscript_call(lua_State* L) {
 // ========================================
 // UTILITY FUNCTIONS
 // ========================================
+// ========== Quaternion Utility Functions ==========
+
+// quat_slerp(q1, q2, t) - Spherical linear interpolation between two quaternions
+static inline int lua_quat_slerp(lua_State* L) {
+    if (!lua_istable(L, 1) || !lua_istable(L, 2) || !lua_isnumber(L, 3)) {
+        return luaL_error(L, "quat_slerp requires (quat1, quat2, t)");
+    }
+    
+    // Read first quaternion
+    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z"); lua_getfield(L, 1, "w");
+    glm::quat q1(
+        static_cast<float>(lua_tonumber(L, -1)), // w
+        static_cast<float>(lua_tonumber(L, -4)), // x
+        static_cast<float>(lua_tonumber(L, -3)), // y
+        static_cast<float>(lua_tonumber(L, -2))  // z
+    );
+    lua_pop(L, 4);
+    
+    // Read second quaternion
+    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z"); lua_getfield(L, 2, "w");
+    glm::quat q2(
+        static_cast<float>(lua_tonumber(L, -1)), // w
+        static_cast<float>(lua_tonumber(L, -4)), // x
+        static_cast<float>(lua_tonumber(L, -3)), // y
+        static_cast<float>(lua_tonumber(L, -2))  // z
+    );
+    lua_pop(L, 4);
+    
+    float t = static_cast<float>(lua_tonumber(L, 3));
+    
+    // Perform slerp
+    glm::quat result = glm::slerp(q1, q2, t);
+    
+    // Return result
+    lua_newtable(L);
+    lua_pushnumber(L, result.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, result.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, result.z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, result.w); lua_setfield(L, -2, "w");
+    return 1;
+}
+
+// quat_fromAxisAngle(axis, angle) - Create quaternion from axis-angle representation
+static inline int lua_quat_fromAxisAngle(lua_State* L) {
+    if (!lua_istable(L, 1) || !lua_isnumber(L, 2)) {
+        return luaL_error(L, "quat_fromAxisAngle requires (axis_vec3, angle_radians)");
+    }
+    
+    // Read axis
+    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z");
+    glm::vec3 axis(
+        static_cast<float>(lua_tonumber(L, -3)),
+        static_cast<float>(lua_tonumber(L, -2)),
+        static_cast<float>(lua_tonumber(L, -1))
+    );
+    lua_pop(L, 3);
+    
+    float angle = static_cast<float>(lua_tonumber(L, 2));
+    
+    // Create quaternion from axis-angle
+    glm::quat result = glm::angleAxis(angle, glm::normalize(axis));
+    
+    // Return result
+    lua_newtable(L);
+    lua_pushnumber(L, result.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, result.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, result.z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, result.w); lua_setfield(L, -2, "w");
+    return 1;
+}
+
+// quat_fromEuler(euler) - Create quaternion from Euler angles (vec3)
+static inline int lua_quat_fromEuler(lua_State* L) {
+    if (!lua_istable(L, 1)) {
+        return luaL_error(L, "quat_fromEuler requires (euler_vec3)");
+    }
+    
+    // Read euler angles
+    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z");
+    glm::vec3 euler(
+        static_cast<float>(lua_tonumber(L, -3)),
+        static_cast<float>(lua_tonumber(L, -2)),
+        static_cast<float>(lua_tonumber(L, -1))
+    );
+    lua_pop(L, 3);
+    
+    // Create quaternion from euler
+    glm::quat result = glm::quat(euler);
+    
+    // Return result
+    lua_newtable(L);
+    lua_pushnumber(L, result.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, result.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, result.z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, result.w); lua_setfield(L, -2, "w");
+    return 1;
+}
+
+// quat_toEuler(quat) - Convert quaternion to Euler angles (returns vec3)
+static inline int lua_quat_toEuler(lua_State* L) {
+    if (!lua_istable(L, 1)) {
+        return luaL_error(L, "quat_toEuler requires (quat)");
+    }
+    
+    // Read quaternion
+    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z"); lua_getfield(L, 1, "w");
+    glm::quat q(
+        static_cast<float>(lua_tonumber(L, -1)), // w
+        static_cast<float>(lua_tonumber(L, -4)), // x
+        static_cast<float>(lua_tonumber(L, -3)), // y
+        static_cast<float>(lua_tonumber(L, -2))  // z
+    );
+    lua_pop(L, 4);
+    
+    // Convert to euler
+    glm::vec3 euler = glm::eulerAngles(q);
+    
+    // Return result
+    lua_newtable(L);
+    lua_pushnumber(L, euler.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, euler.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, euler.z); lua_setfield(L, -2, "z");
+    return 1;
+}
+
+// quat_lookAt(forward, up) - Create a quaternion that looks in the forward direction
+static inline int lua_quat_lookAt(lua_State* L) {
+    if (!lua_istable(L, 1) || !lua_istable(L, 2)) {
+        return luaL_error(L, "quat_lookAt requires (forward_vec3, up_vec3)");
+    }
+    
+    // Read forward vector
+    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z");
+    glm::vec3 forward(
+        static_cast<float>(lua_tonumber(L, -3)),
+        static_cast<float>(lua_tonumber(L, -2)),
+        static_cast<float>(lua_tonumber(L, -1))
+    );
+    lua_pop(L, 3);
+    
+    // Read up vector
+    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
+    glm::vec3 up(
+        static_cast<float>(lua_tonumber(L, -3)),
+        static_cast<float>(lua_tonumber(L, -2)),
+        static_cast<float>(lua_tonumber(L, -1))
+    );
+    lua_pop(L, 3);
+    
+    // Create look-at quaternion
+    glm::quat result = glm::quatLookAt(glm::normalize(forward), glm::normalize(up));
+    
+    // Return result
+    lua_newtable(L);
+    lua_pushnumber(L, result.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, result.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, result.z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, result.w); lua_setfield(L, -2, "w");
+    return 1;
+}
 
 static inline int lua_print(lua_State* L) {
     lua_getglobal(L, "__rtScript");
@@ -1193,6 +1399,8 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(transform3d_setPos, "setPos");
     LUA_REG_METHOD(transform3d_getRot, "getRot");
     LUA_REG_METHOD(transform3d_setRot, "setRot");
+    LUA_REG_METHOD(transform3d_getQuat, "getQuat");
+    LUA_REG_METHOD(transform3d_setQuat, "setQuat");
     LUA_REG_METHOD(transform3d_getScl, "getScl");
     LUA_REG_METHOD(transform3d_setScl, "setScl");
     LUA_END_METATABLE("Transform3D");
@@ -1295,6 +1503,13 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_GLOBAL(lua_kState, "kState");
     LUA_REG_GLOBAL(lua_Handle, "Handle");
     LUA_REG_GLOBAL(lua_print, "print");
+    
+    // Quaternion Utility Functions
+    LUA_REG_GLOBAL(lua_quat_slerp, "quat_slerp");
+    LUA_REG_GLOBAL(lua_quat_fromAxisAngle, "quat_fromAxisAngle");
+    LUA_REG_GLOBAL(lua_quat_fromEuler, "quat_fromEuler");
+    LUA_REG_GLOBAL(lua_quat_toEuler, "quat_toEuler");
+    LUA_REG_GLOBAL(lua_quat_lookAt, "quat_lookAt");
 }
 
 // Clean up macros (prevent pollution)

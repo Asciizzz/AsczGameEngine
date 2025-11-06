@@ -1209,8 +1209,14 @@ void tinyApp::renderSceneNodeInspector() {
                                 else if constexpr (std::is_same_v<T, bool>) {
                                     ImGui::Checkbox("##value", &val);
                                 }
+                                else if constexpr (std::is_same_v<T, glm::vec2>) {
+                                    ImGui::DragFloat2("##value", &val.x, 0.01f);
+                                }
                                 else if constexpr (std::is_same_v<T, glm::vec3>) {
                                     ImGui::DragFloat3("##value", &val.x, 0.01f);
+                                }
+                                else if constexpr (std::is_same_v<T, glm::vec4>) {
+                                    ImGui::DragFloat4("##value", &val.x, 0.01f);
                                 }
                                 else if constexpr (std::is_same_v<T, std::string>) {
                                     // For strings, use a text input
