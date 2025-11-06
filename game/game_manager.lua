@@ -125,9 +125,9 @@ function update()
                     -- Delete all remaining enemies
                     local enemyContainer = SCENE:node(VARS.enemyContainerNode)
                     if enemyContainer then
-                        local enemyChildren = enemyContainer:childrenHandles()
+                        local enemyChildren = enemyContainer:children()
                         for _, enemyNode in ipairs(enemyChildren) do
-                            if enemyNode then SCENE:delete(enemyNode) end
+                            if enemyNode then enemyNode:delete() end
                         end
                     end
                     return

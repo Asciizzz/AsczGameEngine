@@ -885,6 +885,45 @@ static inline int node_childrenHandles(lua_State* L) {
     return 1;
 }
 
+// node:delete([recursive]) - Delete this node
+static inline int node_delete(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    
+    // Argument 2: recursive flag (optional, default true)
+    bool recursive = true;
+    if (lua_gettop(L) >= 2 && lua_isboolean(L, 2)) {
+        recursive = lua_toboolean(L, 2);
+    }
+    
+    // Get scene and call removeNode
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    
+    bool success = scene->removeNode(*handle, recursive);
+    lua_pushboolean(L, success);
+    return 1;
+}
+
+// node:handle() - Get the handle of this node as a LuaHandle
+static inline int node_handle(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Return the node's handle as a LuaHandle
+    pushLuaHandle(L, LuaHandle("node", *handle));
+    return 1;
+}
+
 // ========================================
 // FS (FILESYSTEM REGISTRY) OBJECT
 // ========================================
@@ -1485,6 +1524,8 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(node_children, "children");
     LUA_REG_METHOD(node_parentHandle, "parentHandle");
     LUA_REG_METHOD(node_childrenHandles, "childrenHandles");
+    LUA_REG_METHOD(node_delete, "delete");
+    LUA_REG_METHOD(node_handle, "handle");
     lua_setfield(L, -2, "__index");
     lua_pushcfunction(L, [](lua_State* L) -> int {
         tinyHandle* h = getNodeHandleFromUserdata(L, 1);

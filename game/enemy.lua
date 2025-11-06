@@ -38,8 +38,8 @@ function update()
     if VARS.hp <= 0 and not VARS.isDead then
         VARS.isDead = true
         print("Enemy died!")
-        -- Delete self
-        SCENE:delete(NODEHANDLE)
+        -- Delete self using new node:delete() method
+        NODE:delete()
         return
     end
     
