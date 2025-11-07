@@ -6,6 +6,24 @@
 using namespace tinyRT;
 
 // ============================================================
+// HELPER UTILITIES
+// ============================================================
+
+// Generate unique name by appending suffix if name already exists in container
+template<typename ContainerType>
+std::string generateUniqueName(const std::string& baseName, const ContainerType& existingNames, const std::string& defaultName = "Item") {
+    std::string name = baseName.empty() ? defaultName : baseName;
+    std::string uniqueName = name;
+    int suffix = 1;
+    
+    while (existingNames.find(uniqueName) != existingNames.end()) {
+        uniqueName = name + "_" + std::to_string(suffix++);
+    }
+    
+    return uniqueName;
+}
+
+// ============================================================
 // SAMPLER IMPLEMENTATION
 // ============================================================
 
@@ -295,17 +313,11 @@ void Anime3D::Pose::applyToScene(Scene* scene) const {
 // ============================================================
 
 tinyHandle Anime3D::StateMachine::addState(State&& state) {
-    std::string baseName = state.name.empty() ? "State" : state.name;
-    std::string uniqueName = baseName;
-    int suffix = 1;
-
-    while (nameToHandle_.find(uniqueName) != nameToHandle_.end()) {
-        uniqueName = baseName + "_" + std::to_string(suffix++);
-    }
-    state.name = uniqueName;
+    state.name = generateUniqueName(state.name, nameToHandle_, "State");
+    std::string stateName = state.name; // Cache before move
 
     tinyHandle handle = states_.add(std::move(state));
-    nameToHandle_[uniqueName] = handle;
+    nameToHandle_[stateName] = handle;
 
     return handle;
 }
@@ -520,8 +532,12 @@ void Anime3D::StateMachine::evaluateTransitions() {
 
 Anime3D::Layer& Anime3D::Controller::addLayer(const std::string& name) {
     Layer layer;
-    layer.name = name.empty() ? ("Layer_" + std::to_string(layers_.size())) : name;
+    layer.name = generateUniqueName(name, layerNameToIndex_, "Layer");
+    
+    size_t newIndex = layers_.size();
     layers_.push_back(std::move(layer));
+    layerNameToIndex_[layers_.back().name] = newIndex;
+    
     return layers_.back();
 }
 
@@ -531,11 +547,20 @@ void Anime3D::Controller::removeLayer(const std::string& name) {
             [&name](const Layer& layer) { return layer.name == name; }),
         layers_.end()
     );
+    rebuildLayerNameMap();
 }
 
 void Anime3D::Controller::removeLayer(size_t index) {
     if (index < layers_.size()) {
         layers_.erase(layers_.begin() + index);
+        rebuildLayerNameMap();
+    }
+}
+
+void Anime3D::Controller::rebuildLayerNameMap() {
+    layerNameToIndex_.clear();
+    for (size_t i = 0; i < layers_.size(); ++i) {
+        layerNameToIndex_[layers_[i].name] = i;
     }
 }
 
@@ -668,14 +693,7 @@ Anime3D::Pose Anime3D::Controller::blendLayers(const std::vector<Pose>& layerPos
 tinyHandle Anime3D::addClip(Clip&& clip) {
     if (!clip.valid()) return tinyHandle();
 
-    std::string baseName = clip.name.empty() ? "Clip" : clip.name;
-    std::string uniqueName = baseName;
-    int suffix = 1;
-
-    while (clipNameToHandle_.find(uniqueName) != clipNameToHandle_.end()) {
-        uniqueName = baseName + "_" + std::to_string(suffix++);
-    }
-    clip.name = uniqueName;
+    clip.name = generateUniqueName(clip.name, clipNameToHandle_, "Clip");
 
     // Cache duration
     for (const auto& sampler : clip.samplers) {
@@ -684,7 +702,7 @@ tinyHandle Anime3D::addClip(Clip&& clip) {
     }
 
     tinyHandle handle = clips_.add(std::move(clip));
-    clipNameToHandle_[uniqueName] = handle;
+    clipNameToHandle_[clips_.get(handle)->name] = handle;
 
     return handle;
 }

@@ -256,11 +256,18 @@ struct Anime3D {
         
         size_t layerCount() const { return layers_.size(); }
         
+        // Get layer name->index map for iteration/discovery
+        const UnorderedMap<std::string, size_t>& layerNameMap() const { return layerNameToIndex_; }
+        
     private:
         std::vector<Layer> layers_;
+        UnorderedMap<std::string, size_t> layerNameToIndex_;
         
         Pose evaluateFinal(Anime3D* animData, float deltaTime);
         Pose blendLayers(const std::vector<Pose>& layerPoses);
+        
+        // Helper to rebuild name map after structural changes
+        void rebuildLayerNameMap();
     };
 
     // ============================================================
