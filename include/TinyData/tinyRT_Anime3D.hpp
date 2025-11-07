@@ -14,6 +14,13 @@ namespace tinyRT {
 
 struct Scene; // Forward declaration
 
+// Hash function for tinyHandle (for use in UnorderedMap)
+struct tinyHandleHash {
+    size_t operator()(const tinyHandle& handle) const {
+        return std::hash<uint64_t>()(handle.value);
+    }
+};
+
 struct Anime3D {
     Anime3D() noexcept = default;
 
@@ -117,7 +124,6 @@ struct Anime3D {
     // ============================================================
 
     struct State {
-        std::string name;
         tinyHandle clipHandle;
         float speed = 1.0f;
         bool loop = true;
@@ -125,8 +131,8 @@ struct Anime3D {
     };
 
     struct Transition {
-        tinyHandle fromState;
-        tinyHandle toState;
+        tinyHandle fromState;  // Now refers to clip handle
+        tinyHandle toState;    // Now refers to clip handle
         float duration = 0.3f;
 
         enum class Type {
@@ -136,57 +142,50 @@ struct Anime3D {
         } type = Type::Smooth;
 
         std::function<bool()> condition = nullptr;
-        
+
         bool exitTime = false;
         float exitTimeNormalized = 1.0f;
     };
 
     class StateMachine {
     public:
-        tinyHandle addState(const std::string& name, const tinyHandle& clipHandle);
-        tinyHandle addState(State&& state);
-        void removeState(const tinyHandle& handle);
+        State* addState(const tinyHandle& clipHandle);
+        void removeState(const tinyHandle& clipHandle);
         void addTransition(Transition&& transition);
         
-        void setCurrentState(const tinyHandle& stateHandle, bool resetTime = true);
+        void setCurrentState(const tinyHandle& clipHandle, bool resetTime = true);
         tinyHandle currentState() const { return currentState_; }
         
-        State* getState(const tinyHandle& handle);
-        const State* getState(const tinyHandle& handle) const;
+        State* getState(const tinyHandle& clipHandle);
+        const State* getState(const tinyHandle& clipHandle) const;
         
-        State* getState(const std::string& name);
-        const State* getState(const std::string& name) const;
-        
-        tinyHandle getStateHandle(const std::string& name) const;
-        
-        // Direct state iteration (name -> handle map)
-        const UnorderedMap<std::string, tinyHandle>& stateNameMap() const { return nameToHandle_; }
+        // Get all states (clipHandle -> State mapping)
+        const UnorderedMap<tinyHandle, State, tinyHandleHash>& states() const { return states_; }
         
         // Evaluate current state/transition and return pose
         Pose evaluate(Anime3D* animData, float deltaTime);
-        
+
         // Check and trigger transitions
         void evaluateTransitions();
-        
+
         // Playback control
         bool isPlaying() const { return isPlaying_; }
         void setPlaying(bool playing) { isPlaying_ = playing; }
-        
+
         float currentTime() const { return currentTime_; }
         void setCurrentTime(float time) { currentTime_ = time; }
-        
+
         bool isTransitioning() const { return activeTransition_ != nullptr; }
-        
+
     private:
-        tinyPool<State> states_;
-        UnorderedMap<std::string, tinyHandle> nameToHandle_;
+        UnorderedMap<tinyHandle, State, tinyHandleHash> states_;  // clipHandle -> State
         std::vector<Transition> transitions_;
-        
-        tinyHandle currentState_;
+
+        tinyHandle currentState_;  // Current clip handle
         tinyHandle nextState_;
         float currentTime_ = 0.0f;
         bool isPlaying_ = false;
-        
+
         float transitionProgress_ = 0.0f;
         Transition* activeTransition_ = nullptr;
     };

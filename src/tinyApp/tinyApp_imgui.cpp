@@ -1074,7 +1074,7 @@ void tinyApp::renderSceneNodeInspector() {
                 }
 
                 // Check if this animation is selected
-                bool isSelected = (selectedAnimationHandle == handle);
+                bool isSelected = (selectedClipHandle == handle);
                 
                 // Highlight selected animation
                 if (isSelected) {
@@ -1083,7 +1083,7 @@ void tinyApp::renderSceneNodeInspector() {
 
                 // Selectable animation
                 if (ImGui::Selectable(name.c_str(), isSelected)) {
-                    selectedAnimationHandle = handle;
+                    selectedClipHandle = handle;
                     selectedCompNode = selectedSceneNodeHandle;
                     compMode = CompMode::Animation;
                     showAnimationEditor = true;
@@ -1152,7 +1152,7 @@ void tinyApp::renderSceneNodeInspector() {
                     selectedCompNode = selectedSceneNodeHandle;
                     compMode = CompMode::Script;
                     // Clear animation handles when switching to script mode
-                    selectedAnimationHandle = tinyHandle();
+                    selectedClipHandle = tinyHandle();
                     selectedChannelIndex = -1;
                     showAnimationEditor = true;  // Reusing animation window for debug
                 }
@@ -2840,16 +2840,16 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
     }
 
     // Get the selected animation
-    if (!selectedAnimationHandle.valid()) {
+    if (!selectedClipHandle.valid()) {
         ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No animation selected");
         ImGui::Text("Select an animation from the Animation component");
         return;
     }
 
-    const tinyRT_ANIM3D::Clip* currentAnime = animComp->get(selectedAnimationHandle);
+    const tinyRT_ANIM3D::Clip* currentAnime = animComp->get(selectedClipHandle);
     if (!currentAnime) {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid animation selection");
-        selectedAnimationHandle = tinyHandle();
+        selectedClipHandle = tinyHandle();
         return;
     }
 
@@ -3151,7 +3151,7 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
     tinyRT_ANIM3D* animComp = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedCompNode);
     if (!animComp) {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No animation component found");
-        selectedAnimationHandle = tinyHandle();
+        selectedClipHandle = tinyHandle();
         return;
     }
 
@@ -3192,14 +3192,14 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
             continue;
         }
 
-        bool isSelected = (selectedAnimationHandle == handle);
+        bool isSelected = (selectedClipHandle == handle);
         
         if (isSelected) {
             ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.6f, 0.8f, 0.8f));
         }
 
         if (ImGui::Selectable(name.c_str(), isSelected)) {
-            selectedAnimationHandle = handle;
+            selectedClipHandle = handle;
         }
 
         if (isSelected) {
@@ -3305,9 +3305,10 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
             ImGui::Text("Current State:");
             ImGui::SameLine();
             if (stateMachine.currentState().valid()) {
-                auto* currentState = stateMachine.getState(stateMachine.currentState());
-                if (currentState) {
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", currentState->name.c_str());
+                tinyHandle currentStateHandle = stateMachine.currentState();
+                auto* clip = animComp->getClip(currentStateHandle);
+                if (clip) {
+                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", clip->name.c_str());
                 } else {
                     ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
                 }
@@ -3327,17 +3328,17 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
 
             ImGui::Spacing();
             ImGui::Separator();
-            ImGui::Text("States (%zu)", stateMachine.stateNameMap().size());
+            ImGui::Text("States (%zu)", stateMachine.states().size());
             ImGui::Separator();
 
             // State management buttons
-            if (ImGui::Button("Add State") && selectedAnimationHandle.valid()) {
-                auto* clip = animComp->getClip(selectedAnimationHandle);
+            if (ImGui::Button("Add State") && selectedClipHandle.valid()) {
+                auto* clip = animComp->getClip(selectedClipHandle);
                 if (clip) {
-                    tinyHandle newStateHandle = stateMachine.addState(clip->name, selectedAnimationHandle);
+                    stateMachine.addState(selectedClipHandle);
                     // Set as current if no current state
                     if (!stateMachine.currentState().valid()) {
-                        stateMachine.setCurrentState(newStateHandle);
+                        stateMachine.setCurrentState(selectedClipHandle);
                     }
                 }
             }
@@ -3353,9 +3354,9 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
                 // Find state handle by index
                 int idx = 0;
                 tinyHandle stateToRemove;
-                for (auto it = stateMachine.stateNameMap().begin(); it != stateMachine.stateNameMap().end(); ++it) {
+                for (auto it = stateMachine.states().begin(); it != stateMachine.states().end(); ++it) {
                     if (idx == selectedStateIndex) {
-                        stateToRemove = it->second;
+                        stateToRemove = it->first;  // clipHandle is the key
                         break;
                     }
                     idx++;
@@ -3373,21 +3374,18 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
             ImGui::BeginChild("StatesList", ImVec2(0, 200), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
             int stateIdx = 0;
-            for (auto it = stateMachine.stateNameMap().begin(); it != stateMachine.stateNameMap().end(); ++it) {
-                const tinyHandle& stateHandle = it->second;
+            for (auto it = stateMachine.states().begin(); it != stateMachine.states().end(); ++it) {
+                const tinyHandle& clipHandle = it->first;  // clipHandle is the key
+                const tinyRT::Anime3D::State& state = it->second;
                 
                 ImGui::PushID(stateIdx);
 
-                // Get the state
-                tinyRT::Anime3D::State* state = stateMachine.getState(stateHandle);
-                if (!state) {
-                    ImGui::PopID();
-                    stateIdx++;
-                    continue;
-                }
+                // Get the clip name to display
+                auto* clip = animComp->getClip(clipHandle);
+                const char* clipName = clip ? clip->name.c_str() : "<Unknown>";
 
                 bool isStateSelected = (selectedStateIndex == stateIdx);
-                bool isCurrent = (stateMachine.currentState() == stateHandle);
+                bool isCurrent = (stateMachine.currentState() == clipHandle);
 
                 if (isCurrent) {
                     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
@@ -3401,13 +3399,13 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
 
                 char stateLabel[256];
                 snprintf(stateLabel, sizeof(stateLabel), "%s (Speed: %.2f, Loop: %s)",
-                         state->name.c_str(), state->speed, state->loop ? "Yes" : "No");
+                         clipName, state.speed, state.loop ? "Yes" : "No");
 
                 if (ImGui::Selectable(stateLabel, isStateSelected || isCurrent)) {
                     selectedStateIndex = stateIdx;
                     // Set as current state on double-click
                     if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-                        stateMachine.setCurrentState(stateHandle);
+                        stateMachine.setCurrentState(clipHandle);
                         stateMachine.setPlaying(true);
                     }
                 }
@@ -3424,7 +3422,7 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
             ImGui::PopStyleVar();
 
             // State editor (if selected)
-            if (selectedStateIndex >= 0 && selectedStateIndex < static_cast<int>(stateMachine.stateNameMap().size())) {
+            if (selectedStateIndex >= 0 && selectedStateIndex < static_cast<int>(stateMachine.states().size())) {
                 ImGui::Spacing();
                 ImGui::Separator();
                 ImGui::Text("State Editor");
@@ -3432,12 +3430,16 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
 
                 // Find the selected state
                 int idx = 0;
-                for (auto it = stateMachine.stateNameMap().begin(); it != stateMachine.stateNameMap().end(); ++it) {
+                for (auto it = stateMachine.states().begin(); it != stateMachine.states().end(); ++it) {
                     if (idx == selectedStateIndex) {
-                        const tinyHandle& stateHandle = it->second;
-                        tinyRT::Anime3D::State* state = stateMachine.getState(stateHandle);
+                        const tinyHandle& clipHandle = it->first;
+                        tinyRT::Anime3D::State* state = stateMachine.getState(clipHandle);
                         if (state) {
-                            ImGui::Text("Name: %s", state->name.c_str());
+                            // Get clip name to display
+                            auto* clip = animComp->getClip(clipHandle);
+                            const char* clipName = clip ? clip->name.c_str() : "<Unknown>";
+                            
+                            ImGui::Text("Clip: %s", clipName);
                             
                             ImGui::Text("Speed:");
                             ImGui::SameLine();
@@ -3449,7 +3451,7 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
                             ImGui::Checkbox("##StateLoop", &state->loop);
 
                             if (ImGui::Button("Set as Current State")) {
-                                stateMachine.setCurrentState(stateHandle);
+                                stateMachine.setCurrentState(clipHandle);
                             }
                         }
 

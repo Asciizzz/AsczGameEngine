@@ -312,92 +312,63 @@ void Anime3D::Pose::applyToScene(Scene* scene) const {
 // STATE MACHINE IMPLEMENTATION
 // ============================================================
 
-tinyHandle Anime3D::StateMachine::addState(State&& state) {
-    state.name = generateUniqueName(state.name, nameToHandle_, "State");
-    std::string stateName = state.name; // Cache before move
+Anime3D::State* Anime3D::StateMachine::addState(const tinyHandle& clipHandle) {
+    if (!clipHandle.valid()) return nullptr;
+    
+    // State is identified by clipHandle - prevent duplicates
+    auto it = states_.find(clipHandle);
+    if (it != states_.end()) return &it->second;
 
-    tinyHandle handle = states_.add(std::move(state));
-    nameToHandle_[stateName] = handle;
-
-    return handle;
-}
-
-tinyHandle Anime3D::StateMachine::addState(const std::string& name, const tinyHandle& clipHandle) {
     State state;
-    state.name = name;
     state.clipHandle = clipHandle;
-    return addState(std::move(state));
+    states_[clipHandle] = state;
+
+    return &states_[clipHandle];
 }
 
-void Anime3D::StateMachine::removeState(const tinyHandle& handle) {
-    // Remove from name map
-    for (auto it = nameToHandle_.begin(); it != nameToHandle_.end(); ) {
-        if (it->second == handle) {
-            it = nameToHandle_.erase(it);
-        } else {
-            ++it;
-        }
-    }
+void Anime3D::StateMachine::removeState(const tinyHandle& clipHandle) {
+    states_.erase(clipHandle);
     
     // Remove transitions involving this state
     transitions_.erase(
         std::remove_if(transitions_.begin(), transitions_.end(),
-            [&handle](const Transition& t) {
-                return t.fromState == handle || t.toState == handle;
+            [&clipHandle](const Transition& t) {
+                return t.fromState == clipHandle || t.toState == clipHandle;
             }),
         transitions_.end()
     );
     
     // Clear current state if it's being removed
-    if (currentState_ == handle) {
+    if (currentState_ == clipHandle) {
         currentState_ = tinyHandle();
         currentTime_ = 0.0f;
         activeTransition_ = nullptr;
     }
-    
-    // Remove from pool
-    states_.remove(handle);
 }
 
 void Anime3D::StateMachine::addTransition(Transition&& transition) {
     transitions_.push_back(std::move(transition));
 }
 
-void Anime3D::StateMachine::setCurrentState(const tinyHandle& stateHandle, bool resetTime) {
-    const State* state = states_.get(stateHandle);
-    if (!state) return;
+void Anime3D::StateMachine::setCurrentState(const tinyHandle& clipHandle, bool resetTime) {
+    auto it = states_.find(clipHandle);
+    if (it == states_.end()) return;
 
-    currentState_ = stateHandle;
+    currentState_ = clipHandle;
     if (resetTime) {
-        currentTime_ = state->timeOffset;
+        currentTime_ = it->second.timeOffset;
     }
     activeTransition_ = nullptr;
 }
 
-Anime3D::State* Anime3D::StateMachine::getState(const tinyHandle& handle) {
-    return states_.get(handle);
+Anime3D::State* Anime3D::StateMachine::getState(const tinyHandle& clipHandle) {
+    auto it = states_.find(clipHandle);
+    return (it != states_.end()) ? &it->second : nullptr;
 }
 
-const Anime3D::State* Anime3D::StateMachine::getState(const tinyHandle& handle) const {
-    return states_.get(handle);
-}
-
-Anime3D::State* Anime3D::StateMachine::getState(const std::string& name) {
-    auto it = nameToHandle_.find(name);
-    if (it != nameToHandle_.end()) {
-        return states_.get(it->second);
-    }
-    return nullptr;
-}
-
-const Anime3D::State* Anime3D::StateMachine::getState(const std::string& name) const {
-    return const_cast<StateMachine*>(this)->getState(name);
-}
-
-tinyHandle Anime3D::StateMachine::getStateHandle(const std::string& name) const {
-    auto it = nameToHandle_.find(name);
-    if (it == nameToHandle_.end()) return tinyHandle();
-    return it->second;
+const Anime3D::State* Anime3D::StateMachine::getState(const tinyHandle& clipHandle) const {
+    auto it = states_.find(clipHandle);
+    return (it != states_.end()) ? &it->second : nullptr;
 }
 
 Anime3D::Pose Anime3D::StateMachine::evaluate(Anime3D* animData, float deltaTime) {
@@ -408,16 +379,19 @@ Anime3D::Pose Anime3D::StateMachine::evaluate(Anime3D* animData, float deltaTime
         transitionProgress_ += deltaTime;
         float t = glm::clamp(transitionProgress_ / activeTransition_->duration, 0.0f, 1.0f);
 
-        const State* fromState = states_.get(activeTransition_->fromState);
-        const State* toState = states_.get(activeTransition_->toState);
+        auto fromIt = states_.find(activeTransition_->fromState);
+        auto toIt = states_.find(activeTransition_->toState);
 
-        if (!fromState || !toState) {
+        if (fromIt == states_.end() || toIt == states_.end()) {
             activeTransition_ = nullptr;
             return Pose();
         }
 
-        const Clip* fromClip = animData->getClip(fromState->clipHandle);
-        const Clip* toClip = animData->getClip(toState->clipHandle);
+        const State& fromState = fromIt->second;
+        const State& toState = toIt->second;
+
+        const Clip* fromClip = animData->getClip(fromState.clipHandle);
+        const Clip* toClip = animData->getClip(toState.clipHandle);
 
         if (!fromClip || !toClip) {
             activeTransition_ = nullptr;
@@ -431,13 +405,13 @@ Anime3D::Pose Anime3D::StateMachine::evaluate(Anime3D* animData, float deltaTime
                 // Continue advancing both animations
                 fromPose = fromClip->evaluatePose(currentTime_);
                 
-                State* mutableToState = states_.get(activeTransition_->toState);
-                float toTime = mutableToState->timeOffset;
-                toTime += deltaTime * toState->speed;
-                if (toClip->duration > 0.0f && toState->loop) {
+                State& mutableToState = toIt->second;
+                float toTime = mutableToState.timeOffset;
+                toTime += deltaTime * toState.speed;
+                if (toClip->duration > 0.0f && toState.loop) {
                     toTime = fmod(toTime, toClip->duration);
                 }
-                mutableToState->timeOffset = toTime;
+                mutableToState.timeOffset = toTime;
                 
                 toPose = toClip->evaluatePose(toTime);
                 break;
@@ -446,7 +420,7 @@ Anime3D::Pose Anime3D::StateMachine::evaluate(Anime3D* animData, float deltaTime
             case Transition::Type::Frozen: {
                 // Hold source pose, blend to target
                 fromPose = fromClip->evaluatePose(currentTime_);
-                toPose = toClip->evaluatePose(toState->timeOffset);
+                toPose = toClip->evaluatePose(toState.timeOffset);
                 break;
             }
 
@@ -465,7 +439,10 @@ Anime3D::Pose Anime3D::StateMachine::evaluate(Anime3D* animData, float deltaTime
         // Complete transition
         if (t >= 1.0f) {
             currentState_ = activeTransition_->toState;
-            currentTime_ = states_.get(currentState_)->timeOffset;
+            auto completedIt = states_.find(currentState_);
+            if (completedIt != states_.end()) {
+                currentTime_ = completedIt->second.timeOffset;
+            }
             activeTransition_ = nullptr;
         }
 
@@ -473,17 +450,19 @@ Anime3D::Pose Anime3D::StateMachine::evaluate(Anime3D* animData, float deltaTime
     }
 
     // Normal state playback
-    const State* state = states_.get(currentState_);
-    if (!state) return Pose();
+    auto stateIt = states_.find(currentState_);
+    if (stateIt == states_.end()) return Pose();
+    
+    const State& state = stateIt->second;
 
-    const Clip* clip = animData->getClip(state->clipHandle);
+    const Clip* clip = animData->getClip(state.clipHandle);
     if (!clip || !clip->valid()) return Pose();
 
     // Update time
-    currentTime_ += deltaTime * state->speed;
+    currentTime_ += deltaTime * state.speed;
 
     if (clip->duration > 0.0f) {
-        if (state->loop) {
+        if (state.loop) {
             currentTime_ = fmod(currentTime_, clip->duration);
             if (currentTime_ < 0.0f) currentTime_ += clip->duration;
         } else {
@@ -497,8 +476,10 @@ Anime3D::Pose Anime3D::StateMachine::evaluate(Anime3D* animData, float deltaTime
 void Anime3D::StateMachine::evaluateTransitions() {
     if (activeTransition_) return; // Already transitioning
 
-    const State* currentState = states_.get(currentState_);
-    if (!currentState) return;
+    auto currentIt = states_.find(currentState_);
+    if (currentIt == states_.end()) return;
+    
+    const State& currentState = currentIt->second;
 
     for (auto& transition : transitions_) {
         if (transition.fromState != currentState_) continue;
@@ -506,7 +487,7 @@ void Anime3D::StateMachine::evaluateTransitions() {
         bool shouldTransition = false;
 
         // Check exit time
-        if (transition.exitTime && currentState) {
+        if (transition.exitTime) {
             const Clip* clip = nullptr; // Would need access to animData here
             // This is a simplification - in real use, you'd pass clip duration
             shouldTransition = true;
