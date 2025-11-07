@@ -192,7 +192,7 @@ function update()
         end
     end
     
-    -- ========== ANIMATION (Anime Node) ==========
+    -- ========== ANIMATION (Clip Node) ==========
     if VARS.animeNode:valid() then
         local anime = SCENE:node(VARS.animeNode)
         if anime then

@@ -995,11 +995,6 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
     // If model has no animations, return
     if (model.animations.empty()) return;
 
-    // tinyNodeRT animeNode;
-    // animeNode.name = "Anime";
-    // tinyNodeRT::ANIM3D* animeComp = animeNode.add<tinyNodeRT::ANIM3D>();
-    // animeComp->pHandle = tinyHandle(0);
-
     tNode animeNode("Anime");
     animeNode.ANIM3D_animeIndx = 0; // First animation
 
@@ -1007,7 +1002,7 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
 
     for (size_t animIndex = 0; animIndex < model.animations.size(); ++animIndex) {
         const tinygltf::Animation& gltfAnim = model.animations[animIndex];
-        tinyRT_ANIM3D::Anime anime;
+        tinyRT_ANIM3D::Clip anime;
 
         anime.name = tinyLoader::sanitizeAsciiz(gltfAnim.name, "animation", animIndex);
 

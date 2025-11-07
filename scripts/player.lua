@@ -154,7 +154,7 @@ function update()
         end
     end
     
-    -- ========== ANIMATION (Anime Node) ==========
+    -- ========== ANIMATION (Clip Node) ==========
     if anime then
         local anim3d = anime:anim3D()
         if anim3d then

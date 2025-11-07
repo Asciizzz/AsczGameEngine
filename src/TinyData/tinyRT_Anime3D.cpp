@@ -98,7 +98,7 @@ void Anime3D::play(const std::string& name, bool restart) {
 }
 
 void Anime3D::play(const tinyHandle& handle, bool restart) {
-    const Anime* anim = animePool.get(handle);
+    const Clip* anim = animePool.get(handle);
     if (!anim || !anim->valid()) return;
     
     playing = true;
@@ -108,9 +108,10 @@ void Anime3D::play(const tinyHandle& handle, bool restart) {
 }
 
 
+using AnimeTarget = Anime3D::Channel::Target;
+
 glm::mat4 getTransform(const tinySceneRT* scene, const Anime3D::Channel& channel) {
     if (scene == nullptr) return glm::mat4(1.0f);
-    using AnimeTarget = Anime3D::Channel::Target;
 
     // Return transform component of node
     if (channel.target == AnimeTarget::Node) {
@@ -125,18 +126,17 @@ glm::mat4 getTransform(const tinySceneRT* scene, const Anime3D::Channel& channel
     return glm::mat4(1.0f);
 }
 
-
-void Anime3D::writeTransform(Scene* scene, const Channel& channel, const glm::mat4& transform) {
+void writeTransform(Scene* scene, const Anime3D::Channel& channel, const glm::mat4& transform) {
     if (scene == nullptr) return;
 
     // Write transform component of node
-    if (channel.target == Channel::Target::Node) {
+    if (channel.target == AnimeTarget::Node) {
         tinyNodeRT::TRFM3D* nodeTransform = scene->rtComp<tinyNodeRT::TRFM3D>(channel.node);
         if (nodeTransform) {
             nodeTransform->set(transform);
         }
     // Write transform component of bone
-    } else if (channel.target == Channel::Target::Bone) {
+    } else if (channel.target == AnimeTarget::Bone) {
         tinyRT_SKEL3D* skeletonRT = scene->rtComp<tinyNodeRT::SKEL3D>(channel.node);
         if (skeletonRT && skeletonRT->boneValid(channel.index)) {
             skeletonRT->setLocalPose(channel.index, transform);
@@ -192,7 +192,7 @@ glm::mat4 recomposeTransform(
 void Anime3D::apply(Scene* scene, const tinyHandle& animeHandle) {
     if (scene == nullptr) return;
 
-    const Anime* anime = animePool.get(animeHandle);
+    const Clip* anime = animePool.get(animeHandle);
     if (!anime || !anime->valid()) return;
 
     // Apply animation at the current time without updating time
@@ -299,7 +299,7 @@ void Anime3D::update(Scene* scene, float deltaTime) {
     if (scene == nullptr) return;
 
     // Update the current animation if playing
-    const Anime* anime = animePool.get(currentHandle);
+    const Clip* anime = animePool.get(currentHandle);
     if (playing && anime && anime->valid()) {
         float duration = anime->duration;
 

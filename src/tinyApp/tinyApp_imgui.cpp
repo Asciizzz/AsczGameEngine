@@ -2847,7 +2847,7 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
         return;
     }
 
-    const tinyRT_ANIM3D::Anime* currentAnime = animComp->get(selectedAnimationHandle);
+    const tinyRT_ANIM3D::Clip* currentAnime = animComp->get(selectedAnimationHandle);
     if (!currentAnime) {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid animation selection");
         selectedAnimationHandle = tinyHandle();
