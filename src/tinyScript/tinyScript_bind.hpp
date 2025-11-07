@@ -684,7 +684,7 @@ static inline int anim3d_resume(lua_State* L) {
     return 0;
 }
 
-static inline int node_anim3D(lua_State* L) {
+static inline int node_anime3D(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
     
@@ -1518,7 +1518,7 @@ static inline void registerNodeBindings(lua_State* L) {
     // Node metatable
     LUA_BEGIN_METATABLE("Node");
     LUA_REG_METHOD(node_transform3D, "transform3D");
-    LUA_REG_METHOD(node_anim3D, "anim3D");
+    LUA_REG_METHOD(node_anime3D, "anime3D");
     LUA_REG_METHOD(node_script, "script");
     LUA_REG_METHOD(node_parent, "parent");
     LUA_REG_METHOD(node_children, "children");

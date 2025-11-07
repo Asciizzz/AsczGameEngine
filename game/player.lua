@@ -194,9 +194,9 @@ function update()
     
     -- ========== ANIMATION (Clip Node) ==========
     if VARS.animeNode:valid() then
-        local anime = SCENE:node(VARS.animeNode)
-        if anime then
-            local anim3d = anime:anim3D()
+        local animeNode = SCENE:node(VARS.animeNode)
+        if animeNode then
+            local anim3d = animeNode:anime3D()
             if anim3d then
                 -- Get animation handles
                 local idleHandle = anim3d:get(VARS.idleAnim)
