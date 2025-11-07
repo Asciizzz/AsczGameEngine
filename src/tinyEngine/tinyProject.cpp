@@ -228,9 +228,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
             *newAnimeComp = model.animations[ogNode.ANIM3D_animeIndx];
 
-            // TODO: Remap animation channels for new Controller/StateMachine API
-            // Need to update for new Clip system
-            /*
             for (auto& anime : newAnimeComp->MAL()) {
                 auto* toAnime = newAnimeComp->get(anime.second);
                 if (!toAnime) continue; // Should not happen
@@ -240,7 +237,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
                     channel.node = nodeHandles[channel.node.index];
                 }
             }
-            */
         }
     }
 

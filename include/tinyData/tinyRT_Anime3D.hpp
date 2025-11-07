@@ -4,7 +4,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <string>
-#include <functional>
 
 #include ".ext/Templates.hpp"
 
@@ -13,13 +12,6 @@
 namespace tinyRT {
 
 struct Scene; // Forward declaration
-
-// Hash function for tinyHandle (for use in UnorderedMap)
-struct tinyHandleHash {
-    size_t operator()(const tinyHandle& handle) const {
-        return std::hash<uint64_t>()(handle.value);
-    }
-};
 
 struct Anime3D {
     Anime3D() noexcept = default;
@@ -30,51 +22,6 @@ struct Anime3D {
 
     Anime3D(Anime3D&&) noexcept = default;
     Anime3D& operator=(Anime3D&&) noexcept = default;
-
-    // ============================================================
-    // POSE REPRESENTATION (Intermediate Animation State)
-    // ============================================================
-
-    struct Pose {
-        // Generic target identifier (matches Channel system)
-        struct TargetID {
-            tinyHandle node; uint32_t index = 0;
-            enum class Type { Node, Bone, Morph } type = Type::Node;
-
-            bool operator==(const TargetID& other) const {
-                return node == other.node && index == other.index && type == other.type;
-            }
-            bool operator!=(const TargetID& other) const {
-                return !(*this == other);
-            }
-        };
-
-        struct TargetIDHash {
-            size_t operator()(const TargetID& id) const {
-                return std::hash<uint64_t>()((uint64_t)id.node.value ^ ((uint64_t)id.index << 32) ^ (uint64_t)id.type);
-            }
-        };
-
-        struct Transform {
-            glm::vec3 translation = glm::vec3(0.0f);
-            glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-            glm::vec3 scale = glm::vec3(1.0f);
-            float morphWeight = 0.0f;
-        };
-
-        UnorderedMap<TargetID, Transform, TargetIDHash> transforms;
-
-        // Blend two poses linearly
-        static Pose blend(const Pose& a, const Pose& b, float t);
-        // Additive blending (result = base + (additive - reference) * weight)
-        static Pose blendAdditive(const Pose& base, const Pose& additive, const Pose& reference, float weight);
-
-        void applyToScene(Scene* scene) const;
-    };
-
-    // ============================================================
-    // CORE ANIMATION DATA STRUCTURES
-    // ============================================================
 
     struct Sampler {
         std::vector<float> times;
@@ -87,6 +34,7 @@ struct Anime3D {
 
         glm::vec4 firstKeyframe() const;
         glm::vec4 lastKeyframe() const;
+
         glm::vec4 evaluate(float time) const;
     };
 
@@ -94,17 +42,18 @@ struct Anime3D {
         uint32_t sampler = 0;
 
         enum class Path {
-            T, R, S, W  // Translation, Rotation, Scale, Weight (morph)
+            T, R, S, W
         } path = Path::T;
 
         enum class Target {
-            Node,   // Scene node transform
-            Bone,   // Skeleton bone
-            Morph   // Mesh morph target
+            Node,
+            Bone,
+            Morph
         } target = Target::Node;
 
-        tinyHandle node;      // Target node in scene
-        uint32_t index = 0;   // Bone/morph index
+        // Will be remapped upon scene import
+        tinyHandle node;
+        uint32_t index = 0;
     };
 
     struct Clip {
@@ -112,190 +61,115 @@ struct Anime3D {
         std::vector<Sampler> samplers;
         std::vector<Channel> channels;
         float duration = 0.0f;
-        
         bool valid() const { return !channels.empty() && !samplers.empty(); }
-        
-        // Evaluate clip at specific time and return a Pose
-        Pose evaluatePose(float time) const;
     };
 
-    // ============================================================
-    // STATE MACHINE (Animation State & Transitions)
-    // ============================================================
+    tinyHandle add(Clip&& clip) {
+        if (!clip.valid()) return tinyHandle();
 
-    struct State {
-        tinyHandle clipHandle;
-        float speed = 1.0f;
-        bool loop = true;
-        float timeOffset = 0.0f;
-    };
+        std::string baseName = clip.name.empty() ? "Clip" : clip.name;
+        std::string uniqueName = baseName;
+        int suffix = 1;
 
-    struct Transition {
-        tinyHandle fromState;  // Now refers to clip handle
-        tinyHandle toState;    // Now refers to clip handle
-        float duration = 0.3f;
+        // Ensure unique name
+        while (nameToHandle.find(uniqueName) != nameToHandle.end()) {
+            uniqueName = baseName + "_" + std::to_string(suffix++);
+        }
+        clip.name = uniqueName;
 
-        enum class Type {
-            Smooth,       // Crossfade blend
-            Frozen,       // Hold source pose
-            Synchronized  // Match normalized time
-        } type = Type::Smooth;
+        // Cache duration
+        for (const auto& sampler : clip.samplers) {
+            if (sampler.times.empty()) continue;
+            clip.duration = std::max(clip.duration, sampler.times.back());
+        }
 
-        std::function<bool()> condition = nullptr;
+        nameToHandle[uniqueName] = clips.add(std::move(clip));
 
-        bool exitTime = false;
-        float exitTimeNormalized = 1.0f;
-    };
+        return nameToHandle[uniqueName];
+    }
 
-    class StateMachine {
-    public:
-        State* addState(const tinyHandle& clipHandle);
-        void removeState(const tinyHandle& clipHandle);
-        void addTransition(Transition&& transition);
-        
-        void setCurrentState(const tinyHandle& clipHandle, bool resetTime = true);
-        tinyHandle currentState() const { return currentState_; }
-        
-        State* getState(const tinyHandle& clipHandle);
-        const State* getState(const tinyHandle& clipHandle) const;
-        
-        // Get all states (clipHandle -> State mapping)
-        const UnorderedMap<tinyHandle, State, tinyHandleHash>& states() const { return states_; }
-        
-        // Evaluate current state/transition and return pose
-        Pose evaluate(Anime3D* animData, float deltaTime);
-
-        // Check and trigger transitions
-        void evaluateTransitions();
-
-        // Playback control
-        bool isPlaying() const { return isPlaying_; }
-        void setPlaying(bool playing) { isPlaying_ = playing; }
-
-        float currentTime() const { return currentTime_; }
-        void setCurrentTime(float time) { currentTime_ = time; }
-
-        bool isTransitioning() const { return activeTransition_ != nullptr; }
-
-    private:
-        UnorderedMap<tinyHandle, State, tinyHandleHash> states_;  // clipHandle -> State
-        std::vector<Transition> transitions_;
-
-        tinyHandle currentState_;  // Current clip handle
-        tinyHandle nextState_;
-        float currentTime_ = 0.0f;
-        bool isPlaying_ = false;
-
-        float transitionProgress_ = 0.0f;
-        Transition* activeTransition_ = nullptr;
-    };
-
-    // ============================================================
-    // LAYER SYSTEM (Multi-Animation Blending)
-    // ============================================================
-
-    struct Layer {
-        std::string name;
-        float weight = 1.0f;
-        
-        enum class BlendMode {
-            Override,  // Replace lower layers
-            Additive   // Add to lower layers
-        } blendMode = BlendMode::Override;
-
-        // Mask: which targets this layer affects
-        struct TargetMask {
-            UnorderedSet<Pose::TargetID, Pose::TargetIDHash> includedTargets;
-            bool invertMask = false;
-            
-            bool affects(const Pose::TargetID& target) const {
-                if (includedTargets.empty()) return true; // No mask = affect all
-                bool isIncluded = includedTargets.count(target) > 0;
-                return invertMask ? !isIncluded : isIncluded;
-            }
-        } mask;
-
-        StateMachine stateMachine;
-        Pose referencePose; // For additive blending
-    };
-
-    // ============================================================
-    // CONTROLLER (Main Animation System)
-    // ============================================================
-
-    class Controller {
-    public:
-        Controller() = default;
-
-        Layer& addLayer(const std::string& name = "");
-        void removeLayer(const std::string& name);
-        void removeLayer(size_t index);
-        
-        void setLayerWeight(const std::string& name, float weight);
-        float getLayerWeight(const std::string& name) const;
-        
-        Layer* getLayer(const std::string& name);
-        const Layer* getLayer(const std::string& name) const;
-        
-        Layer* getLayer(size_t index);
-        const Layer* getLayer(size_t index) const;
-        
-        StateMachine* getStateMachine(const std::string& layerName = "Base");
-        const StateMachine* getStateMachine(const std::string& layerName = "Base") const;
-        
-        // Main update
-        void update(Anime3D* animData, Scene* scene, float deltaTime);
-        
-        // Manual pose application
-        void applyPose(Scene* scene, const Pose& pose);
-        
-        // Direct layer access
-        std::vector<Layer>& layers() { return layers_; }
-        const std::vector<Layer>& layers() const { return layers_; }
-        
-        size_t layerCount() const { return layers_.size(); }
-        
-        // Get layer name->index map for iteration/discovery
-        const UnorderedMap<std::string, size_t>& layerNameMap() const { return layerNameToIndex_; }
-        
-    private:
-        std::vector<Layer> layers_;
-        UnorderedMap<std::string, size_t> layerNameToIndex_;
-        
-        Pose evaluateFinal(Anime3D* animData, float deltaTime);
-        Pose blendLayers(const std::vector<Pose>& layerPoses);
-        
-        // Helper to rebuild name map after structural changes
-        void rebuildLayerNameMap();
-    };
-
-    // ============================================================
-    // ACCESSORS & MANAGEMENT
-    // ============================================================
-
-    tinyHandle addClip(Clip&& clip);
+    bool isPlaying() const { return playing; }
+    void play(const std::string& name, bool restart = true);
+    void play(const tinyHandle& handle, bool restart = true);
+    void pause() { playing = false; }
+    void resume() { playing = true; }
+    void stop() { time = 0.0f; playing = false; }
     
-    Clip* getClip(const tinyHandle& handle);
-    const Clip* getClip(const tinyHandle& handle) const;
-    
-    Clip* getClip(const std::string& name);
-    const Clip* getClip(const std::string& name) const;
-    
-    tinyHandle getClipHandle(const std::string& name) const;
-    
-    float clipDuration(const tinyHandle& handle) const;
-    float clipDuration(const std::string& name) const;
-    
-    const std::deque<Clip>& allClips() const { return clips_.view(); }
-    const UnorderedMap<std::string, tinyHandle>& clipNameMap() const { return clipNameToHandle_; }
+    // Set current animation without starting playback
+    void setCurrent(const tinyHandle& handle, bool resetTime = true) {
+        const Clip* clip = clips.get(handle);
+        if (!clip || !clip->valid()) return;
+        currentHandle = handle;
+        if (resetTime) time = 0.0f;
+    }
 
-    Controller& controller() { return controller_; }
-    const Controller& controller() const { return controller_; }
+    void setTime(float newTime) { time = newTime; }
+    float getTime() const { return time; }
+
+    void setSpeed(float newSpeed) { speed = newSpeed; }
+    float getSpeed() const { return speed; }
+
+    void setLoop(bool shouldLoop) { loop = shouldLoop; }
+    bool getLoop() const { return loop; }
+
+    float duration(tinyHandle handle) const {
+        const Clip* clip = clips.get(handle);
+        return clip ? clip->duration : 0.0f;
+    }
+    float duration(const std::string& name) const {
+        auto it = nameToHandle.find(name);
+        if (it == nameToHandle.end()) return 0.0f;
+        return duration(it->second);
+    }
+    
+    // Apply animation at current time to the scene (for manual scrubbing)
+    void apply(Scene* scene, const tinyHandle& animeHandle);
+    
+    void update(Scene* scene, float deltaTime);
+
+    Clip* current() { return clips.get(currentHandle); }
+    const Clip* current() const { return clips.get(currentHandle); }
+
+    tinyHandle curHandle() const { return currentHandle; }
+
+    Clip* get(const tinyHandle& handle) { return clips.get(handle); }
+    const Clip* get(const tinyHandle& handle) const { return clips.get(handle); }
+
+    Clip* get(const std::string& name) {
+        auto it = nameToHandle.find(name);
+        if (it != nameToHandle.end()) {
+            return clips.get(it->second);
+        }
+        return nullptr;
+    }
+    const Clip* get(const std::string& name) const {
+        return const_cast<Anime3D*>(this)->get(name);
+    }
+
+    tinyHandle getHandle(const std::string& name) const {
+        auto it = nameToHandle.find(name);
+        if (it == nameToHandle.end()) return tinyHandle();
+        return it->second;
+    }
+
+    const std::deque<Clip>& all() const {
+        return clips.view();
+    }
+
+    // Retrieve the list
+    const UnorderedMap<std::string, tinyHandle>& MAL() const {
+        return nameToHandle;
+    }
 
 private:
-    tinyPool<Clip> clips_;
-    UnorderedMap<std::string, tinyHandle> clipNameToHandle_;
-    Controller controller_;
+    tinyPool<Clip> clips;
+    UnorderedMap<std::string, tinyHandle> nameToHandle;
+    tinyHandle currentHandle;
+
+    bool playing = false;
+    bool loop = true;
+    float time = 0.0f;
+    float speed = 1.0f;
 };
 
 } // namespace tinyRT

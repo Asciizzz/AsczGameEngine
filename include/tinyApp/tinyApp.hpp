@@ -139,7 +139,7 @@ private:
     // Component Window State (shared between Animation/Script debug)
     enum class CompMode { Animation, Script } compMode = CompMode::Animation;
     tinyHandle selectedCompNode;        // Persistent node with Animation/Script component (stays highlighted)
-    tinyHandle selectedClipHandle; // Currently selected animation in the component list
+    tinyHandle selectedAnimationHandle; // Currently selected animation in the component list
     int selectedChannelIndex = -1;      // Currently selected channel in the timeline
     
     // Script Editor State

@@ -140,9 +140,9 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/tinyExt
     ${CMAKE_SOURCE_DIR}/include/tinyData
     ${CMAKE_SOURCE_DIR}/include/tinyScript
-    ${CMAKE_SOURCE_DIR}/include/tinyEngine
     ${CMAKE_SOURCE_DIR}/include/tinySystem
-    ${CMAKE_SOURCE_DIR}/include/tinyApp        
+    ${CMAKE_SOURCE_DIR}/include/tinyEngine
+    ${CMAKE_SOURCE_DIR}/include/tinyApp 
 )
 
 

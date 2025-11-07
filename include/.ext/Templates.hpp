@@ -20,12 +20,8 @@ SharedPtr<T> MakeShared(Args&&... args) {
 
 #include <map>
 #include <unordered_map>
-#include <unordered_set>
 template<typename K, typename V> using OrderedMap = std::map<K, V>;
-template<typename K, typename V, typename Hash = std::hash<K>, typename KeyEqual = std::equal_to<K>> 
-using UnorderedMap = std::unordered_map<K, V, Hash, KeyEqual>;
-template<typename K, typename Hash = std::hash<K>, typename KeyEqual = std::equal_to<K>>
-using UnorderedSet = std::unordered_set<K, Hash, KeyEqual>;
+template<typename K, typename V> using UnorderedMap = std::unordered_map<K, V>;
 
 
 #include <variant>

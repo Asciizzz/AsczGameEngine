@@ -538,21 +538,15 @@ static inline tinyHandle* getAnim3DHandle(lua_State* L, int index) {
     return static_cast<tinyHandle*>(luaL_checkudata(L, index, "Anim3D"));
 }
 
-// ============================================================
-// ANIMATION 3D BINDINGS - Controller/StateMachine API
-// ============================================================
-
-// -------------------- CLIP MANAGEMENT --------------------
-
-static inline int anim3d_getClip(lua_State* L) {
+static inline int anim3d_get(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle || !lua_isstring(L, 2)) { lua_pushnil(L); return 1; }
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.anim3D) {
-        tinyHandle clipHandle = comps.anim3D->getClipHandle(lua_tostring(L, 2));
-        if (clipHandle.valid()) {
-            pushLuaHandle(L, LuaHandle("clip", clipHandle));
+        tinyHandle animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
+        if (animHandle.valid()) {
+            pushLuaHandle(L, LuaHandle("animation", animHandle));
             return 1;
         }
     }
@@ -560,405 +554,133 @@ static inline int anim3d_getClip(lua_State* L) {
     return 1;
 }
 
-static inline int anim3d_getClipDuration(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) { lua_pushnumber(L, 0.0f); return 1; }
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    lua_pushnumber(L, comps.anim3D ? comps.anim3D->clipDuration(lua_tostring(L, 2)) : 0.0f);
-    return 1;
-}
-
-// -------------------- LAYER MANAGEMENT --------------------
-
-static inline int anim3d_addLayer(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle) return 0;
-    
-    const char* layerName = lua_isstring(L, 2) ? lua_tostring(L, 2) : "";
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        comps.anim3D->controller().addLayer(layerName);
-    }
-    return 0;
-}
-
-static inline int anim3d_removeLayer(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) return 0;
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        comps.anim3D->controller().removeLayer(lua_tostring(L, 2));
-    }
-    return 0;
-}
-
-static inline int anim3d_setLayerWeight(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2) || !lua_isnumber(L, 3)) return 0;
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        comps.anim3D->controller().setLayerWeight(lua_tostring(L, 2), static_cast<float>(lua_tonumber(L, 3)));
-    }
-    return 0;
-}
-
-static inline int anim3d_getLayerWeight(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) { lua_pushnumber(L, 0.0f); return 1; }
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    lua_pushnumber(L, comps.anim3D ? comps.anim3D->controller().getLayerWeight(lua_tostring(L, 2)) : 0.0f);
-    return 1;
-}
-
-static inline int anim3d_getLayerCount(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle) { lua_pushinteger(L, 0); return 1; }
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    lua_pushinteger(L, comps.anim3D ? comps.anim3D->controller().layerCount() : 0);
-    return 1;
-}
-
-// -------------------- STATE MANAGEMENT --------------------
-
-static inline int anim3d_addState(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) return 0;
-    
-    const char* clipName = lua_tostring(L, 2);
-    const char* layerName = lua_isstring(L, 3) ? lua_tostring(L, 3) : "Layer_0";
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            tinyHandle clipHandle = comps.anim3D->getClipHandle(clipName);
-            if (clipHandle.valid()) {
-                layer->stateMachine.addState(clipHandle);
-            }
-        }
-    }
-    return 0;
-}
-
-static inline int anim3d_removeState(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) return 0;
-    
-    const char* clipName = lua_tostring(L, 2);
-    const char* layerName = lua_isstring(L, 3) ? lua_tostring(L, 3) : "Layer_0";
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            tinyHandle clipHandle = comps.anim3D->getClipHandle(clipName);
-            if (clipHandle.valid()) {
-                layer->stateMachine.removeState(clipHandle);
-            }
-        }
-    }
-    return 0;
-}
-
-static inline int anim3d_setState(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) return 0;
-    
-    const char* clipName = lua_tostring(L, 2);
-    const char* layerName = lua_isstring(L, 3) ? lua_tostring(L, 3) : "Layer_0";
-    bool resetTime = lua_isboolean(L, 4) ? lua_toboolean(L, 4) : true;
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            tinyHandle clipHandle = comps.anim3D->getClipHandle(clipName);
-            if (clipHandle.valid()) {
-                layer->stateMachine.setCurrentState(clipHandle, resetTime);
-            }
-        }
-    }
-    return 0;
-}
-
-static inline int anim3d_getCurrentState(lua_State* L) {
+static inline int anim3d_current(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
     
-    const char* layerName = lua_isstring(L, 2) ? lua_tostring(L, 2) : "Layer_0";
-    
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            tinyHandle currentState = layer->stateMachine.currentState();
-            if (currentState.valid()) {
-                // currentState is the clipHandle, get the clip name
-                auto* clip = comps.anim3D->getClip(currentState);
-                if (clip) {
-                    lua_pushstring(L, clip->name.c_str());
-                    return 1;
-                }
-            }
+        tinyHandle animHandle = comps.anim3D->curHandle();
+        if (animHandle.valid()) {
+            pushLuaHandle(L, LuaHandle("animation", animHandle));
+            return 1;
         }
     }
     lua_pushnil(L);
     return 1;
 }
 
-// -------------------- STATE PROPERTIES --------------------
-
-static inline int anim3d_setStateSpeed(lua_State* L) {
+static inline int anim3d_play(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2) || !lua_isnumber(L, 3)) return 0;
+    if (!handle) return 0;
     
-    const char* clipName = lua_tostring(L, 2);
-    float speed = static_cast<float>(lua_tonumber(L, 3));
-    const char* layerName = lua_isstring(L, 4) ? lua_tostring(L, 4) : "Layer_0";
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            tinyHandle clipHandle = comps.anim3D->getClipHandle(clipName);
-            if (clipHandle.valid()) {
-                auto* state = layer->stateMachine.getState(clipHandle);
-                if (state) {
-                    state->speed = speed;
-                }
-            }
+    tinyHandle animHandle;
+    if (lua_isstring(L, 2)) {
+        auto comps = getSceneFromLua(L)->nComp(*handle);
+        if (!comps.anim3D) return 0;
+        animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
+    } else {
+        LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
+        if (!luaHandle) return 0;
+        // Accept animation handles
+        if (luaHandle->type != "animation") {
+            return luaL_error(L, "anim3d:play() expects animation handle, got '%s'", luaHandle->type.c_str());
         }
+        animHandle = luaHandle->handle;
     }
+    
+    bool restart = lua_isboolean(L, 3) ? lua_toboolean(L, 3) : true;
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    if (comps.anim3D) comps.anim3D->play(animHandle, restart);
     return 0;
 }
 
-static inline int anim3d_setStateLoop(lua_State* L) {
+static inline int anim3d_setSpeed(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2) || !lua_isboolean(L, 3)) return 0;
-    
-    const char* clipName = lua_tostring(L, 2);
-    bool loop = lua_toboolean(L, 3);
-    const char* layerName = lua_isstring(L, 4) ? lua_tostring(L, 4) : "Layer_0";
-    
+    if (!handle || !lua_isnumber(L, 2)) return 0;
     auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            tinyHandle clipHandle = comps.anim3D->getClipHandle(clipName);
-            if (clipHandle.valid()) {
-                auto* state = layer->stateMachine.getState(clipHandle);
-                if (state) {
-                    state->loop = loop;
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-static inline int anim3d_getStateSpeed(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) { lua_pushnumber(L, 1.0f); return 1; }
-    
-    const char* clipName = lua_tostring(L, 2);
-    const char* layerName = lua_isstring(L, 3) ? lua_tostring(L, 3) : "Layer_0";
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            tinyHandle clipHandle = comps.anim3D->getClipHandle(clipName);
-            if (clipHandle.valid()) {
-                auto* state = layer->stateMachine.getState(clipHandle);
-                if (state) {
-                    lua_pushnumber(L, state->speed);
-                    return 1;
-                }
-            }
-        }
-    }
-    lua_pushnumber(L, 1.0f);
-    return 1;
-}
-
-static inline int anim3d_isStateLoop(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) { lua_pushboolean(L, true); return 1; }
-    
-    const char* clipName = lua_tostring(L, 2);
-    const char* layerName = lua_isstring(L, 3) ? lua_tostring(L, 3) : "Layer_0";
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            tinyHandle clipHandle = comps.anim3D->getClipHandle(clipName);
-            if (clipHandle.valid()) {
-                auto* state = layer->stateMachine.getState(clipHandle);
-                if (state) {
-                    lua_pushboolean(L, state->loop);
-                    return 1;
-                }
-            }
-        }
-    }
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// -------------------- PLAYBACK CONTROL --------------------
-
-static inline int anim3d_setPlaying(lua_State* L) {
-    tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isboolean(L, 2)) return 0;
-    
-    bool playing = lua_toboolean(L, 2);
-    const char* layerName = lua_isstring(L, 3) ? lua_tostring(L, 3) : "Layer_0";
-    
-    auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            layer->stateMachine.setPlaying(playing);
-        }
-    }
+    if (comps.anim3D) comps.anim3D->setSpeed(static_cast<float>(lua_tonumber(L, 2)));
     return 0;
 }
 
 static inline int anim3d_isPlaying(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) { lua_pushboolean(L, false); return 1; }
-    
-    const char* layerName = lua_isstring(L, 2) ? lua_tostring(L, 2) : "Layer_0";
-    
     auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            lua_pushboolean(L, layer->stateMachine.isPlaying());
-            return 1;
-        }
-    }
-    lua_pushboolean(L, false);
+    lua_pushboolean(L, comps.anim3D && comps.anim3D->isPlaying());
     return 1;
 }
 
 static inline int anim3d_getTime(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) { lua_pushnumber(L, 0.0f); return 1; }
-    
-    const char* layerName = lua_isstring(L, 2) ? lua_tostring(L, 2) : "Layer_0";
-    
     auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            lua_pushnumber(L, layer->stateMachine.currentTime());
-            return 1;
-        }
-    }
-    lua_pushnumber(L, 0.0f);
+    lua_pushnumber(L, comps.anim3D ? comps.anim3D->getTime() : 0.0f);
     return 1;
 }
 
 static inline int anim3d_setTime(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle || !lua_isnumber(L, 2)) return 0;
-    
-    float time = static_cast<float>(lua_tonumber(L, 2));
-    const char* layerName = lua_isstring(L, 3) ? lua_tostring(L, 3) : "Layer_0";
-    
     auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            layer->stateMachine.setCurrentTime(time);
-        }
-    }
+    if (comps.anim3D) comps.anim3D->setTime(static_cast<float>(lua_tonumber(L, 2)));
     return 0;
 }
 
-// -------------------- CONVENIENCE FUNCTIONS --------------------
-
-// Simple play function - creates default layer and state if needed
-static inline int anim3d_play(lua_State* L) {
+static inline int anim3d_getDuration(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) return 0;
-    
-    const char* clipName = lua_tostring(L, 2);
-    bool loop = lua_isboolean(L, 3) ? lua_toboolean(L, 3) : true;
-    float speed = lua_isnumber(L, 4) ? static_cast<float>(lua_tonumber(L, 4)) : 1.0f;
+    if (!handle) { lua_pushnumber(L, 0.0f); return 1; }
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto& controller = comps.anim3D->controller();
-        
-        // Ensure we have at least one layer
-        if (controller.layerCount() == 0) {
-            controller.addLayer("Layer_0");
+    if (!comps.anim3D) { lua_pushnumber(L, 0.0f); return 1; }
+    
+    tinyHandle animHandle;
+    
+    // Check if second argument is provided
+    if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
+        LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
+        if (luaHandle && luaHandle->type == "animation") {
+            animHandle = luaHandle->handle;
+        } else {
+            animHandle = comps.anim3D->curHandle();
         }
-        
-        auto* layer = controller.getLayer(0);
-        if (layer) {
-            // Get or create state for this clip
-            tinyHandle clipHandle = comps.anim3D->getClipHandle(clipName);
-            if (clipHandle.valid()) {
-                auto* state = layer->stateMachine.getState(clipHandle);
-                if (!state) {
-                    // Create new state
-                    layer->stateMachine.addState(clipHandle);
-                    state = layer->stateMachine.getState(clipHandle);
-                }
-                
-                if (state) {
-                    state->loop = loop;
-                    state->speed = speed;
-                    
-                    layer->stateMachine.setCurrentState(clipHandle, true);
-                    layer->stateMachine.setPlaying(true);
-                }
-            }
-        }
+    } else {
+        animHandle = comps.anim3D->curHandle();
     }
+    
+    lua_pushnumber(L, comps.anim3D->duration(animHandle));
+    return 1;
+}
+
+static inline int anim3d_setLoop(lua_State* L) {
+    tinyHandle* handle = getAnim3DHandle(L, 1);
+    if (!handle || !lua_isboolean(L, 2)) return 0;
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    if (comps.anim3D) comps.anim3D->setLoop(lua_toboolean(L, 2));
     return 0;
 }
 
-// Pause/Resume
+static inline int anim3d_isLoop(lua_State* L) {
+    tinyHandle* handle = getAnim3DHandle(L, 1);
+    if (!handle) { lua_pushboolean(L, true); return 1; }
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    lua_pushboolean(L, comps.anim3D ? comps.anim3D->getLoop() : true);
+    return 1;
+}
+
 static inline int anim3d_pause(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) return 0;
-    
-    const char* layerName = lua_isstring(L, 2) ? lua_tostring(L, 2) : "Layer_0";
-    
     auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            layer->stateMachine.setPlaying(false);
-        }
-    }
+    if (comps.anim3D) comps.anim3D->pause();
     return 0;
 }
 
 static inline int anim3d_resume(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) return 0;
-    
-    const char* layerName = lua_isstring(L, 2) ? lua_tostring(L, 2) : "Layer_0";
-    
     auto comps = getSceneFromLua(L)->nComp(*handle);
-    if (comps.anim3D) {
-        auto* layer = comps.anim3D->controller().getLayer(layerName);
-        if (layer) {
-            layer->stateMachine.setPlaying(true);
-        }
-    }
+    if (comps.anim3D) comps.anim3D->resume();
     return 0;
 }
 
@@ -1761,34 +1483,18 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(transform3d_setScl, "setScl");
     LUA_END_METATABLE("Transform3D");
     
-    // Anim3D metatable - Controller/StateMachine API
+    // Anim3D metatable
     LUA_BEGIN_METATABLE("Anim3D");
-    // Clip management
-    LUA_REG_METHOD(anim3d_getClip, "getClip");
-    LUA_REG_METHOD(anim3d_getClipDuration, "getClipDuration");
-    // Layer management
-    LUA_REG_METHOD(anim3d_addLayer, "addLayer");
-    LUA_REG_METHOD(anim3d_removeLayer, "removeLayer");
-    LUA_REG_METHOD(anim3d_setLayerWeight, "setLayerWeight");
-    LUA_REG_METHOD(anim3d_getLayerWeight, "getLayerWeight");
-    LUA_REG_METHOD(anim3d_getLayerCount, "getLayerCount");
-    // State management
-    LUA_REG_METHOD(anim3d_addState, "addState");
-    LUA_REG_METHOD(anim3d_removeState, "removeState");
-    LUA_REG_METHOD(anim3d_setState, "setState");
-    LUA_REG_METHOD(anim3d_getCurrentState, "getCurrentState");
-    // State properties
-    LUA_REG_METHOD(anim3d_setStateSpeed, "setStateSpeed");
-    LUA_REG_METHOD(anim3d_setStateLoop, "setStateLoop");
-    LUA_REG_METHOD(anim3d_getStateSpeed, "getStateSpeed");
-    LUA_REG_METHOD(anim3d_isStateLoop, "isStateLoop");
-    // Playback control
-    LUA_REG_METHOD(anim3d_setPlaying, "setPlaying");
+    LUA_REG_METHOD(anim3d_get, "get");
+    LUA_REG_METHOD(anim3d_current, "current");
+    LUA_REG_METHOD(anim3d_play, "play");
+    LUA_REG_METHOD(anim3d_setSpeed, "setSpeed");
     LUA_REG_METHOD(anim3d_isPlaying, "isPlaying");
     LUA_REG_METHOD(anim3d_getTime, "getTime");
     LUA_REG_METHOD(anim3d_setTime, "setTime");
-    // Convenience functions
-    LUA_REG_METHOD(anim3d_play, "play");
+    LUA_REG_METHOD(anim3d_getDuration, "getDuration");
+    LUA_REG_METHOD(anim3d_setLoop, "setLoop");
+    LUA_REG_METHOD(anim3d_isLoop, "isLoop");
     LUA_REG_METHOD(anim3d_pause, "pause");
     LUA_REG_METHOD(anim3d_resume, "resume");
     LUA_END_METATABLE("Anim3D");

@@ -1063,7 +1063,7 @@ void tinyApp::renderSceneNodeInspector() {
             ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f);
             ImGui::BeginChild("AnimationList", ImVec2(0, 200), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
-            for (const auto& [name, handle] : compPtr->clipNameMap()) {
+            for (const auto& [name, handle] : compPtr->MAL()) {
                 // Convert search buffer to lowercase for case-insensitive search
                 std::string searchStr = std::string(searchBuffer);
                 std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
@@ -1074,7 +1074,7 @@ void tinyApp::renderSceneNodeInspector() {
                 }
 
                 // Check if this animation is selected
-                bool isSelected = (selectedClipHandle == handle);
+                bool isSelected = (selectedAnimationHandle == handle);
                 
                 // Highlight selected animation
                 if (isSelected) {
@@ -1083,10 +1083,13 @@ void tinyApp::renderSceneNodeInspector() {
 
                 // Selectable animation
                 if (ImGui::Selectable(name.c_str(), isSelected)) {
-                    selectedClipHandle = handle;
+                    selectedAnimationHandle = handle;
                     selectedCompNode = selectedSceneNodeHandle;
                     compMode = CompMode::Animation;
                     showAnimationEditor = true;
+                    
+                    // Set as current animation without auto-playing (user can press Play button)
+                    compPtr->setCurrent(handle, false);
                 }
 
                 if (isSelected) {
@@ -1152,7 +1155,7 @@ void tinyApp::renderSceneNodeInspector() {
                     selectedCompNode = selectedSceneNodeHandle;
                     compMode = CompMode::Script;
                     // Clear animation handles when switching to script mode
-                    selectedClipHandle = tinyHandle();
+                    selectedAnimationHandle = tinyHandle();
                     selectedChannelIndex = -1;
                     showAnimationEditor = true;  // Reusing animation window for debug
                 }
@@ -2830,8 +2833,6 @@ void tinyApp::renderAnimationEditorWindow() {
     }
 }
 
-// OLD ANIMATION EDITOR - COMMENTED OUT FOR NEW CONTROLLER/STATE MACHINE UI
-/*
 void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* animNode) {
     tinyRT_ANIM3D* animComp = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedCompNode);
     if (!animComp) {
@@ -2840,16 +2841,16 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
     }
 
     // Get the selected animation
-    if (!selectedClipHandle.valid()) {
+    if (!selectedAnimationHandle.valid()) {
         ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No animation selected");
         ImGui::Text("Select an animation from the Animation component");
         return;
     }
 
-    const tinyRT_ANIM3D::Clip* currentAnime = animComp->get(selectedClipHandle);
+    const tinyRT_ANIM3D::Clip* currentAnime = animComp->get(selectedAnimationHandle);
     if (!currentAnime) {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid animation selection");
-        selectedClipHandle = tinyHandle();
+        selectedAnimationHandle = tinyHandle();
         return;
     }
 
@@ -3143,333 +3144,6 @@ void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* 
     }
     
     ImGui::EndChild();
-}
-*/
-
-// NEW ANIMATION EDITOR FOR CONTROLLER/STATE MACHINE SYSTEM
-void tinyApp::renderAnimationEditor(tinySceneRT* activeScene, const tinyNodeRT* animNode) {
-    tinyRT_ANIM3D* animComp = activeScene->rtComp<tinyNodeRT::ANIM3D>(selectedCompNode);
-    if (!animComp) {
-        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No animation component found");
-        selectedClipHandle = tinyHandle();
-        return;
-    }
-
-    // ===== HEADER =====
-    ImGui::Text("Animation Controller: %s", animNode->name.c_str());
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    // ===== CLIP LIBRARY SECTION =====
-    ImGui::Text("Clip Library");
-    ImGui::Separator();
-
-    const auto& clipMap = animComp->clipNameMap();
-    
-    if (clipMap.empty()) {
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No animation clips loaded");
-        return;
-    }
-
-    // Search bar for clips
-    static char searchBuffer[256] = "";
-    ImGui::SetNextItemWidth(-1);
-    ImGui::InputTextWithHint("##ClipSearch", "Search clips...", searchBuffer, IM_ARRAYSIZE(searchBuffer));
-    
-    ImGui::Spacing();
-
-    // Scrollable clip list
-    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f);
-    ImGui::BeginChild("ClipList", ImVec2(0, 200), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-
-    for (const auto& [name, handle] : clipMap) {
-        // Filter by search
-        std::string searchStr = std::string(searchBuffer);
-        std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
-        std::string nameLower = name;
-        std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
-        if (!searchStr.empty() && nameLower.find(searchStr) == std::string::npos) {
-            continue;
-        }
-
-        bool isSelected = (selectedClipHandle == handle);
-        
-        if (isSelected) {
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.6f, 0.8f, 0.8f));
-        }
-
-        if (ImGui::Selectable(name.c_str(), isSelected)) {
-            selectedClipHandle = handle;
-        }
-
-        if (isSelected) {
-            ImGui::PopStyleColor();
-        }
-    }
-
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    // ===== CONTROLLER SECTION =====
-    ImGui::Text("Controller");
-    ImGui::Separator();
-
-    auto& controller = animComp->controller();
-
-    // Display layer count
-    ImGui::Text("Layers: %zu", controller.layers().size());
-    
-    ImGui::Spacing();
-
-    // Layer management buttons
-    if (ImGui::Button("Add Layer")) {
-        controller.addLayer();
-    }
-    
-    ImGui::SameLine();
-    
-    static int selectedLayerIndex = 0;
-    if (ImGui::Button("Remove Selected Layer") && selectedLayerIndex >= 0 && selectedLayerIndex < static_cast<int>(controller.layers().size())) {
-        controller.removeLayer(selectedLayerIndex);
-        if (selectedLayerIndex >= static_cast<int>(controller.layers().size())) {
-            selectedLayerIndex = static_cast<int>(controller.layers().size()) - 1;
-        }
-    }
-
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    // ===== LAYERS SECTION =====
-    if (controller.layers().empty()) {
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No layers. Add a layer to get started.");
-        return;
-    }
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f);
-    ImGui::BeginChild("LayersList", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-
-    for (size_t layerIdx = 0; layerIdx < controller.layers().size(); ++layerIdx) {
-        auto& layer = controller.layers()[layerIdx];
-        
-        ImGui::PushID(static_cast<int>(layerIdx));
-
-        bool isLayerSelected = (selectedLayerIndex == static_cast<int>(layerIdx));
-        
-        // Layer header
-        ImGuiTreeNodeFlags headerFlags = ImGuiTreeNodeFlags_DefaultOpen;
-        if (isLayerSelected) {
-            headerFlags |= ImGuiTreeNodeFlags_Selected;
-        }
-
-        char layerLabel[128];
-        snprintf(layerLabel, sizeof(layerLabel), "Layer %zu (Weight: %.2f)", layerIdx, layer.weight);
-        
-        bool nodeOpen = ImGui::TreeNodeEx(layerLabel, headerFlags);
-
-        if (ImGui::IsItemClicked()) {
-            selectedLayerIndex = static_cast<int>(layerIdx);
-        }
-
-        if (nodeOpen) {
-            ImGui::Indent();
-
-            // Layer weight slider
-            ImGui::Text("Weight:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(150);
-            ImGui::SliderFloat("##LayerWeight", &layer.weight, 0.0f, 1.0f, "%.3f");
-
-            // Blend mode
-            ImGui::Text("Blend Mode:");
-            ImGui::SameLine();
-            const char* blendModes[] = { "Override", "Additive" };
-            int currentBlendMode = static_cast<int>(layer.blendMode);
-            ImGui::SetNextItemWidth(150);
-            if (ImGui::Combo("##BlendMode", &currentBlendMode, blendModes, IM_ARRAYSIZE(blendModes))) {
-                layer.blendMode = static_cast<tinyRT::Anime3D::Layer::BlendMode>(currentBlendMode);
-            }
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Text("State Machine");
-            ImGui::Separator();
-
-            auto& stateMachine = layer.stateMachine;
-
-            // Current state display
-            ImGui::Text("Current State:");
-            ImGui::SameLine();
-            if (stateMachine.currentState().valid()) {
-                tinyHandle currentStateHandle = stateMachine.currentState();
-                auto* clip = animComp->getClip(currentStateHandle);
-                if (clip) {
-                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s", clip->name.c_str());
-                } else {
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid");
-                }
-            } else {
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "None");
-            }
-
-            // Playback state
-            ImGui::Text("Playing:");
-            ImGui::SameLine();
-            bool isPlaying = stateMachine.isPlaying();
-            if (ImGui::Checkbox("##Playing", &isPlaying)) {
-                stateMachine.setPlaying(isPlaying);
-            }
-
-            ImGui::Text("Time: %.3f", stateMachine.currentTime());
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Text("States (%zu)", stateMachine.states().size());
-            ImGui::Separator();
-
-            // State management buttons
-            if (ImGui::Button("Add State") && selectedClipHandle.valid()) {
-                auto* clip = animComp->getClip(selectedClipHandle);
-                if (clip) {
-                    stateMachine.addState(selectedClipHandle);
-                    // Set as current if no current state
-                    if (!stateMachine.currentState().valid()) {
-                        stateMachine.setCurrentState(selectedClipHandle);
-                    }
-                }
-            }
-
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Select a clip from the library above first");
-            }
-
-            ImGui::SameLine();
-
-            static int selectedStateIndex = 0;
-            if (ImGui::Button("Remove Selected State") && selectedStateIndex >= 0) {
-                // Find state handle by index
-                int idx = 0;
-                tinyHandle stateToRemove;
-                for (auto it = stateMachine.states().begin(); it != stateMachine.states().end(); ++it) {
-                    if (idx == selectedStateIndex) {
-                        stateToRemove = it->first;  // clipHandle is the key
-                        break;
-                    }
-                    idx++;
-                }
-                if (stateToRemove.valid()) {
-                    stateMachine.removeState(stateToRemove);
-                    selectedStateIndex = std::max(0, selectedStateIndex - 1);
-                }
-            }
-
-            ImGui::Spacing();
-
-            // States list
-            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f);
-            ImGui::BeginChild("StatesList", ImVec2(0, 200), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-
-            int stateIdx = 0;
-            for (auto it = stateMachine.states().begin(); it != stateMachine.states().end(); ++it) {
-                const tinyHandle& clipHandle = it->first;  // clipHandle is the key
-                const tinyRT::Anime3D::State& state = it->second;
-                
-                ImGui::PushID(stateIdx);
-
-                // Get the clip name to display
-                auto* clip = animComp->getClip(clipHandle);
-                const char* clipName = clip ? clip->name.c_str() : "<Unknown>";
-
-                bool isStateSelected = (selectedStateIndex == stateIdx);
-                bool isCurrent = (stateMachine.currentState() == clipHandle);
-
-                if (isCurrent) {
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
-                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.7f, 0.3f, 0.9f));
-                    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.1f, 0.5f, 0.1f, 1.0f));
-                } else if (isStateSelected) {
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.4f, 0.6f, 0.8f, 0.8f));
-                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.5f, 0.7f, 0.9f, 0.9f));
-                    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.3f, 0.5f, 0.7f, 1.0f));
-                }
-
-                char stateLabel[256];
-                snprintf(stateLabel, sizeof(stateLabel), "%s (Speed: %.2f, Loop: %s)",
-                         clipName, state.speed, state.loop ? "Yes" : "No");
-
-                if (ImGui::Selectable(stateLabel, isStateSelected || isCurrent)) {
-                    selectedStateIndex = stateIdx;
-                    // Set as current state on double-click
-                    if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-                        stateMachine.setCurrentState(clipHandle);
-                        stateMachine.setPlaying(true);
-                    }
-                }
-
-                if (isCurrent || isStateSelected) {
-                    ImGui::PopStyleColor(3);
-                }
-
-                ImGui::PopID();
-                stateIdx++;
-            }
-
-            ImGui::EndChild();
-            ImGui::PopStyleVar();
-
-            // State editor (if selected)
-            if (selectedStateIndex >= 0 && selectedStateIndex < static_cast<int>(stateMachine.states().size())) {
-                ImGui::Spacing();
-                ImGui::Separator();
-                ImGui::Text("State Editor");
-                ImGui::Separator();
-
-                // Find the selected state
-                int idx = 0;
-                for (auto it = stateMachine.states().begin(); it != stateMachine.states().end(); ++it) {
-                    if (idx == selectedStateIndex) {
-                        const tinyHandle& clipHandle = it->first;
-                        tinyRT::Anime3D::State* state = stateMachine.getState(clipHandle);
-                        if (state) {
-                            // Get clip name to display
-                            auto* clip = animComp->getClip(clipHandle);
-                            const char* clipName = clip ? clip->name.c_str() : "<Unknown>";
-                            
-                            ImGui::Text("Clip: %s", clipName);
-                            
-                            ImGui::Text("Speed:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(150);
-                            ImGui::DragFloat("##StateSpeed", &state->speed, 0.01f, 0.0f, 5.0f, "%.2fx");
-
-                            ImGui::Text("Loop:");
-                            ImGui::SameLine();
-                            ImGui::Checkbox("##StateLoop", &state->loop);
-
-                            if (ImGui::Button("Set as Current State")) {
-                                stateMachine.setCurrentState(clipHandle);
-                            }
-                        }
-
-                        break;
-                    }
-                    idx++;
-                }
-            }
-
-            ImGui::Unindent();
-            ImGui::TreePop();
-        }
-
-        ImGui::PopID();
-    }
-
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
 }
 
 void tinyApp::renderScriptDebug(tinySceneRT* activeScene, const tinyNodeRT* scriptNode) {
