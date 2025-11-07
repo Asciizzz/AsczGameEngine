@@ -1163,7 +1163,7 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
             anime.channels.push_back(std::move(channel));
         }
 
-        tinyAnim.add(std::move(anime));
+        tinyAnim.addClip(std::move(anime));
     }
     tinyModel.animations.push_back(std::move(tinyAnim));
 

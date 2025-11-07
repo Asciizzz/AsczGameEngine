@@ -270,14 +270,14 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
         if (const auto* fromAnimeRT = from->rtComp<tinyNodeRT::ANIM3D>(fromHandle)) {
             auto* toAnimeRT = writeComp<tinyNodeRT::ANIM3D>(toHandle);
             
-
             *toAnimeRT = *fromAnimeRT;
 
-            for (auto& anime : toAnimeRT->MAL()) {
-                auto* toAnime = toAnimeRT->get(anime.second);
-
-                // Remap each channel
-                for (auto& channel : toAnime->channels) {
+            // Remap animation channel node handles in all clips
+            for (auto& clip : toAnimeRT->allClips()) {
+                auto* mutableClip = const_cast<tinyRT::Anime3D::Clip*>(&clip);
+                
+                for (auto& channel : mutableClip->channels) {
+                    // Remap the node handle to the new scene's node handles
                     if (toHandleMap.find(channel.node.index) != toHandleMap.end()) {
                         channel.node = toHandleMap[channel.node.index];
                     }
@@ -341,7 +341,7 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     if (rtSKELE3D) { rtSKELE3D->update(0); rtSKELE3D->vkUpdate(curFrame_); }
 
     tinyRT_ANIM3D* rtANIM3D = rtComp<tinyNodeRT::ANIM3D>(realHandle);
-    if (rtANIM3D) rtANIM3D->update(this, curDTime_);
+    if (rtANIM3D) rtANIM3D->controller().update(rtANIM3D, this, curDTime_);
 
     tinyRT_MESHRD* rtMESHRD = rtComp<tinyNodeRT::MESHRD>(realHandle);
     if (rtMESHRD) rtMESHRD->vkUpdate(curFrame_);

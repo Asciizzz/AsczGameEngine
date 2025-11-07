@@ -1,12 +1,19 @@
 #include "tinyData/tinyRT_Anime3D.hpp"
 #include "tinyData/tinyRT_Scene.hpp"
+#include "tinyData/tinyRT_Skeleton3D.hpp"
+#include "tinyData/tinyRT_MeshRender3D.hpp"
 
 using namespace tinyRT;
+
+// ============================================================
+// SAMPLER IMPLEMENTATION
+// ============================================================
 
 glm::vec4 Anime3D::Sampler::firstKeyframe() const {
     if (values.empty()) return glm::vec4(0.0f);
     return (interp == Interp::CubicSpline && values.size() >= 3) ? values[1] : values[0];
 }
+
 glm::vec4 Anime3D::Sampler::lastKeyframe() const {
     if (values.empty()) return glm::vec4(0.0f);
     return (interp == Interp::CubicSpline && values.size() >= 3) ? values[values.size() - 2] : values.back();
@@ -18,29 +25,24 @@ glm::vec4 Anime3D::Sampler::evaluate(float time) const {
     const float tMin = times.front();
     const float tMax = times.back();
 
-    // Clamp time within the keyframe range
     if (time <= tMin) return firstKeyframe();
     if (time >= tMax) return lastKeyframe();
 
-    // Find the appropriate keyframe interval using binary search
+    // Binary search for keyframe interval
     size_t left = 0;
     size_t right = times.size() - 1;
     while (left < right - 1) {
         size_t mid = left + (right - left) / 2;
-
         if (time < times[mid]) right = mid;
-        else                   left = mid;
+        else left = mid;
     }
     size_t index = left;
 
-    // Linear interpolation between keyframes
     float t0 = times[index];
     float t1 = times[index + 1];
-
-    // Prevent division by zero
     float dt = std::max(t1 - t0, 1e-6f);
-
     const float f = (time - t0) / dt;
+
     switch (interp) {
         case Interp::Linear: {
             const glm::vec4& v0 = values[index];
@@ -53,25 +55,19 @@ glm::vec4 Anime3D::Sampler::evaluate(float time) const {
         }
 
         case Interp::CubicSpline: {
-            // Each keyframe: [inTangent, value, outTangent]
-
             const size_t indx0 = index * 3;
             const size_t indx1 = (index + 1) * 3;
 
-            if (indx1 + 1 >= values.size()) return values[indx0 + 1]; // Fallback
+            if (indx1 + 2 >= values.size()) return values[indx0 + 1];
 
-            const glm::vec4& in0  = values[indx0];
             const glm::vec4& v0   = values[indx0 + 1];
             const glm::vec4& out0 = values[indx0 + 2];
-
             const glm::vec4& in1  = values[indx1];
             const glm::vec4& v1   = values[indx1 + 1];
-            const glm::vec4& out1 = values[indx1 + 2];
 
             float f2 = f * f;
             float f3 = f2 * f;
 
-            // Hermite basis functions
             float h00 = 2.0f * f3 - 3.0f * f2 + 1.0f;
             float h10 = f3 - 2.0f * f2 + f;
             float h01 = -2.0f * f3 + 3.0f * f2;
@@ -88,159 +84,63 @@ glm::vec4 Anime3D::Sampler::evaluate(float time) const {
     }
 }
 
+// ============================================================
+// CLIP IMPLEMENTATION
+// ============================================================
 
+Anime3D::Pose Anime3D::Clip::evaluatePose(float time) const {
+    Pose pose;
 
-void Anime3D::play(const std::string& name, bool restart) {
-    auto it = nameToHandle.find(name);
-    if (it != nameToHandle.end()) {
-        play(it->second, restart);
-    }
-}
+    for (const auto& channel : channels) {
+        if (channel.sampler >= samplers.size()) continue;
+        
+        const auto& sampler = samplers[channel.sampler];
 
-void Anime3D::play(const tinyHandle& handle, bool restart) {
-    const Clip* anim = clips.get(handle);
-    if (!anim || !anim->valid()) return;
-    
-    playing = true;
-    currentHandle = handle;
+        // Create target ID
+        Pose::TargetID targetID;
+        targetID.node = channel.node;
+        targetID.index = channel.index;
 
-    if (restart) time = 0.0f;
-}
+        if (channel.target == Channel::Target::Node)
+            targetID.type = Pose::TargetID::Type::Node;
+        else if (channel.target == Channel::Target::Bone)
+            targetID.type = Pose::TargetID::Type::Bone;
+        else if (channel.target == Channel::Target::Morph)
+            targetID.type = Pose::TargetID::Type::Morph;
 
+        Pose::Transform& transform = pose.transforms[targetID];
 
-using AnimeTarget = Anime3D::Channel::Target;
-
-glm::mat4 getTransform(const tinySceneRT* scene, const Anime3D::Channel& channel) {
-    if (scene == nullptr) return glm::mat4(1.0f);
-
-    // Return transform component of node
-    if (channel.target == AnimeTarget::Node) {
-        const tinyNodeRT::TRFM3D* nodeTransform = scene->rtComp<tinyNodeRT::TRFM3D>(channel.node);
-        return nodeTransform ? nodeTransform->local : glm::mat4(1.0f);
-    // Return transform component of bone
-    } else if (channel.target == AnimeTarget::Bone) {
-        const tinyRT_SKEL3D* skeletonRT = scene->rtComp<tinyNodeRT::SKEL3D>(channel.node);
-        return skeletonRT->localPose(channel.index);
-    }
-
-    return glm::mat4(1.0f);
-}
-
-void writeTransform(Scene* scene, const Anime3D::Channel& channel, const glm::mat4& transform) {
-    if (scene == nullptr) return;
-
-    // Write transform component of node
-    if (channel.target == AnimeTarget::Node) {
-        tinyNodeRT::TRFM3D* nodeTransform = scene->rtComp<tinyNodeRT::TRFM3D>(channel.node);
-        if (nodeTransform) {
-            nodeTransform->set(transform);
-        }
-    // Write transform component of bone
-    } else if (channel.target == AnimeTarget::Bone) {
-        tinyRT_SKEL3D* skeletonRT = scene->rtComp<tinyNodeRT::SKEL3D>(channel.node);
-        if (skeletonRT && skeletonRT->boneValid(channel.index)) {
-            skeletonRT->setLocalPose(channel.index, transform);
-        }
-    }
-}
-
-
-glm::mat4 recomposeTransform(
-    const glm::mat4& original,
-    const glm::vec3* newTranslation = nullptr,
-    const glm::quat* newRotation = nullptr,
-    const glm::vec3* newScale = nullptr
-) {
-    // Extract existing components
-    glm::vec3 translation = glm::vec3(original[3]);
-
-    // Extract scale from column lengths
-    glm::vec3 scale;
-    scale.x = glm::length(glm::vec3(original[0]));
-    scale.y = glm::length(glm::vec3(original[1]));
-    scale.z = glm::length(glm::vec3(original[2]));
-
-    // To extract rotation correctly, build a rotation-only matrix by removing scale
-    glm::mat3 rotMat;
-    if (scale.x > 1e-6f && scale.y > 1e-6f && scale.z > 1e-6f) {
-        rotMat[0] = glm::vec3(original[0]) / scale.x;
-        rotMat[1] = glm::vec3(original[1]) / scale.y;
-        rotMat[2] = glm::vec3(original[2]) / scale.z;
-    } else {
-        // fallback: if scale nearly zero, just use the matrix's upper-left 3x3
-        rotMat[0] = glm::vec3(original[0]);
-        rotMat[1] = glm::vec3(original[1]);
-        rotMat[2] = glm::vec3(original[2]);
-    }
-
-    glm::quat rotation = glm::quat_cast(rotMat);
-    // Apply replacements if provided
-    if (newTranslation) translation = *newTranslation;
-    if (newRotation)    rotation = *newRotation;
-    if (newScale)       scale = *newScale;
-
-    // Ensure quaternion normalized
-    rotation = glm::normalize(rotation);
-
-    // Recompose transform: T * R * S (R from quat to mat4)
-    return glm::translate(glm::mat4(1.0f), translation) *
-           glm::mat4_cast(rotation) *
-           glm::scale(glm::mat4(1.0f), scale);
-}
-
-
-void Anime3D::apply(Scene* scene, const tinyHandle& animeHandle) {
-    if (scene == nullptr) return;
-
-    const Clip* clip = clips.get(animeHandle);
-    if (!clip || !clip->valid()) return;
-
-    // Apply animation at the current time without updating time
-    for (const auto& channel : clip->channels) {
-        const auto& sampler = clip->samplers[channel.sampler];
-
-        glm::mat4 transform = getTransform(scene, channel);
-
-        // Evaluate value (for T and S we can use sampler.evaluate).
-        // Rotation needs special handling (slerp).
         switch (channel.path) {
             case Channel::Path::T: { // Translation
                 glm::vec4 v = sampler.evaluate(time);
-                glm::vec3 t(v.x, v.y, v.z);
-                transform = recomposeTransform(transform, &t, nullptr, nullptr);
+                transform.translation = glm::vec3(v.x, v.y, v.z);
                 break;
             }
 
             case Channel::Path::S: { // Scale
                 glm::vec4 v = sampler.evaluate(time);
-                glm::vec3 s(v.x, v.y, v.z);
-                transform = recomposeTransform(transform, nullptr, nullptr, &s);
+                transform.scale = glm::vec3(v.x, v.y, v.z);
                 break;
             }
 
-            case Channel::Path::R: { // Rotation (special: slerp)
-                // Handle edge cases quickly
+            case Channel::Path::R: { // Rotation (quaternion slerp)
                 if (sampler.times.empty() || sampler.values.empty()) break;
 
-                // Clamp
                 float tMin = sampler.times.front();
                 float tMax = sampler.times.back();
+
                 if (time <= tMin) {
                     glm::vec4 v = sampler.firstKeyframe();
-                    glm::quat q(v.w, v.x, v.y, v.z);
-                    q = glm::normalize(q);
-                    transform = recomposeTransform(transform, nullptr, &q, nullptr);
+                    transform.rotation = glm::normalize(glm::quat(v.w, v.x, v.y, v.z));
                     break;
                 }
                 if (time >= tMax) {
                     glm::vec4 v = sampler.lastKeyframe();
-                    glm::quat q(v.w, v.x, v.y, v.z);
-                    q = glm::normalize(q);
-                    transform = recomposeTransform(transform, nullptr, &q, nullptr);
+                    transform.rotation = glm::normalize(glm::quat(v.w, v.x, v.y, v.z));
                     break;
                 }
 
-                // Binary search interval
+                // Binary search
                 size_t left = 0;
                 size_t right = sampler.times.size() - 1;
                 while (left < right - 1) {
@@ -249,6 +149,7 @@ void Anime3D::apply(Scene* scene, const tinyHandle& animeHandle) {
                     else left = mid;
                 }
                 size_t index = left;
+
                 float t0 = sampler.times[index];
                 float t1 = sampler.times[index + 1];
                 float dt = std::max(t1 - t0, 1e-6f);
@@ -257,74 +158,570 @@ void Anime3D::apply(Scene* scene, const tinyHandle& animeHandle) {
                 const glm::vec4& vv0 = sampler.values[index];
                 const glm::vec4& vv1 = sampler.values[index + 1];
 
-                glm::quat q0 = glm::quat(vv0.w, vv0.x, vv0.y, vv0.z);
-                glm::quat q1 = glm::quat(vv1.w, vv1.x, vv1.y, vv1.z);
+                glm::quat q0 = glm::normalize(glm::quat(vv0.w, vv0.x, vv0.y, vv0.z));
+                glm::quat q1 = glm::normalize(glm::quat(vv1.w, vv1.x, vv1.y, vv1.z));
 
-                q0 = glm::normalize(q0);
-                q1 = glm::normalize(q1);
-
-                glm::quat out;
                 if (sampler.interp == Sampler::Interp::Step) {
-                    out = q0;
+                    transform.rotation = q0;
                 } else {
-                    out = glm::slerp(q0, q1, f);
-                    out = glm::normalize(out);
+                    transform.rotation = glm::normalize(glm::slerp(q0, q1, f));
                 }
-
-                transform = recomposeTransform(transform, nullptr, &out, nullptr);
                 break;
             }
 
-            case Channel::Path::W: { // Morph weights
-                if (channel.target != Channel::Target::Morph) break;
-                
+            case Channel::Path::W: { // Morph weight
                 glm::vec4 v = sampler.evaluate(time);
-                float weight = v.x;
-                weight = glm::clamp(weight, 0.0f, 1.0f);
-                
-                tinyRT_MESHRD* meshRT = scene->rtComp<tinyNodeRT::MESHRD>(channel.node);
-                if (meshRT) {
-                    meshRT->setMrphWeight(channel.index, weight);
-                }
-                
-                continue;
+                transform.morphWeight = glm::clamp(v.x, 0.0f, 1.0f);
+                break;
             }
         }
+    }
 
-        writeTransform(scene, channel, transform);
+    return pose;
+}
+
+// ============================================================
+// POSE IMPLEMENTATION
+// ============================================================
+
+Anime3D::Pose Anime3D::Pose::blend(const Pose& a, const Pose& b, float t) {
+    Pose result;
+    t = glm::clamp(t, 0.0f, 1.0f);
+
+    // Blend all targets from both poses
+    auto blendTarget = [&](const TargetID& targetID, const Transform* ta, const Transform* tb) {
+        Transform& resultTransform = result.transforms[targetID];
+
+        if (ta && tb) {
+            // Both poses have this target
+            resultTransform.translation = glm::mix(ta->translation, tb->translation, t);
+            resultTransform.rotation = glm::normalize(glm::slerp(ta->rotation, tb->rotation, t));
+            resultTransform.scale = glm::mix(ta->scale, tb->scale, t);
+            resultTransform.morphWeight = glm::mix(ta->morphWeight, tb->morphWeight, t);
+        } else if (ta) {
+            // Only pose A has this target
+            resultTransform = *ta;
+        } else if (tb) {
+            // Only pose B has this target
+            resultTransform = *tb;
+        }
+    };
+
+    // Process all targets from pose A
+    for (const auto& [targetID, transform] : a.transforms) {
+        auto itB = b.transforms.find(targetID);
+        blendTarget(targetID, &transform, itB != b.transforms.end() ? &itB->second : nullptr);
+    }
+
+    // Process targets only in pose B
+    for (const auto& [targetID, transform] : b.transforms) {
+        if (a.transforms.find(targetID) == a.transforms.end()) {
+            blendTarget(targetID, nullptr, &transform);
+        }
+    }
+
+    return result;
+}
+
+Anime3D::Pose Anime3D::Pose::blendAdditive(const Pose& base, const Pose& additive, const Pose& reference, float weight) {
+    Pose result = base;
+    weight = glm::clamp(weight, 0.0f, 1.0f);
+
+    if (weight <= 0.0f) return result;
+
+    for (const auto& [targetID, additiveTransform] : additive.transforms) {
+        auto itRef = reference.transforms.find(targetID);
+        if (itRef == reference.transforms.end()) continue;
+
+        const Transform& refTransform = itRef->second;
+
+        // Compute delta
+        glm::vec3 deltaT = additiveTransform.translation - refTransform.translation;
+        glm::quat deltaR = additiveTransform.rotation * glm::inverse(refTransform.rotation);
+        glm::vec3 deltaS = additiveTransform.scale / refTransform.scale;
+        float deltaW = additiveTransform.morphWeight - refTransform.morphWeight;
+
+        // Apply delta to base
+        Transform& resultTransform = result.transforms[targetID];
+        resultTransform.translation += deltaT * weight;
+        resultTransform.rotation = glm::normalize(resultTransform.rotation * glm::slerp(glm::quat(1, 0, 0, 0), deltaR, weight));
+        resultTransform.scale *= glm::mix(glm::vec3(1.0f), deltaS, weight);
+        resultTransform.morphWeight += deltaW * weight;
+    }
+
+    return result;
+}
+
+void Anime3D::Pose::applyToScene(Scene* scene) const {
+    if (!scene) return;
+
+    for (const auto& [targetID, transform] : transforms) {
+        switch (targetID.type) {
+            case TargetID::Type::Node: {
+                tinyNodeRT::TRFM3D* nodeTransform = scene->rtComp<tinyNodeRT::TRFM3D>(targetID.node);
+                if (nodeTransform) {
+                    glm::mat4 mat = glm::translate(glm::mat4(1.0f), transform.translation) *
+                                    glm::mat4_cast(transform.rotation) *
+                                    glm::scale(glm::mat4(1.0f), transform.scale);
+                    nodeTransform->set(mat);
+                }
+                break;
+            }
+
+            case TargetID::Type::Bone: {
+                tinyRT_SKEL3D* skeleton = scene->rtComp<tinyNodeRT::SKEL3D>(targetID.node);
+                if (skeleton && skeleton->boneValid(targetID.index)) {
+                    glm::mat4 mat = glm::translate(glm::mat4(1.0f), transform.translation) *
+                                    glm::mat4_cast(transform.rotation) *
+                                    glm::scale(glm::mat4(1.0f), transform.scale);
+                    skeleton->setLocalPose(targetID.index, mat);
+                }
+                break;
+            }
+
+            case TargetID::Type::Morph: {
+                tinyRT_MESHRD* mesh = scene->rtComp<tinyNodeRT::MESHRD>(targetID.node);
+                if (mesh) {
+                    mesh->setMrphWeight(targetID.index, transform.morphWeight);
+                }
+                break;
+            }
+        }
     }
 }
 
-void Anime3D::update(Scene* scene, float deltaTime) {
-    if (scene == nullptr) return;
+// ============================================================
+// STATE MACHINE IMPLEMENTATION
+// ============================================================
 
-    // Update the current animation if playing
-    const Clip* clip = clips.get(currentHandle);
-    if (playing && clip && clip->valid()) {
-        float duration = clip->duration;
+tinyHandle Anime3D::StateMachine::addState(State&& state) {
+    std::string baseName = state.name.empty() ? "State" : state.name;
+    std::string uniqueName = baseName;
+    int suffix = 1;
 
-        // Update time
-        time += deltaTime * speed;
-        if (duration <= 0.0f) {
-            // Zero-length animation: clamp to start
-            time = 0.0f;
-        } else if (loop) {
-            time = fmod(time, duration);
-            if (time < 0.0f) time += duration; // handle negative deltaTime safely
+    while (nameToHandle_.find(uniqueName) != nameToHandle_.end()) {
+        uniqueName = baseName + "_" + std::to_string(suffix++);
+    }
+    state.name = uniqueName;
+
+    tinyHandle handle = states_.add(std::move(state));
+    nameToHandle_[uniqueName] = handle;
+
+    return handle;
+}
+
+tinyHandle Anime3D::StateMachine::addState(const std::string& name, const tinyHandle& clipHandle) {
+    State state;
+    state.name = name;
+    state.clipHandle = clipHandle;
+    return addState(std::move(state));
+}
+
+void Anime3D::StateMachine::removeState(const tinyHandle& handle) {
+    // Remove from name map
+    for (auto it = nameToHandle_.begin(); it != nameToHandle_.end(); ) {
+        if (it->second == handle) {
+            it = nameToHandle_.erase(it);
         } else {
-            // Clamp and stop if not looping
-            if (speed >= 0.0f && time >= duration) {
-                time = duration;
-                playing = false;
-            } else if (speed < 0.0f && time <= 0.0f) {
-                time = 0.0f;
-                playing = false;
+            ++it;
+        }
+    }
+    
+    // Remove transitions involving this state
+    transitions_.erase(
+        std::remove_if(transitions_.begin(), transitions_.end(),
+            [&handle](const Transition& t) {
+                return t.fromState == handle || t.toState == handle;
+            }),
+        transitions_.end()
+    );
+    
+    // Clear current state if it's being removed
+    if (currentState_ == handle) {
+        currentState_ = tinyHandle();
+        currentTime_ = 0.0f;
+        activeTransition_ = nullptr;
+    }
+    
+    // Remove from pool
+    states_.remove(handle);
+}
+
+void Anime3D::StateMachine::addTransition(Transition&& transition) {
+    transitions_.push_back(std::move(transition));
+}
+
+void Anime3D::StateMachine::setCurrentState(const tinyHandle& stateHandle, bool resetTime) {
+    const State* state = states_.get(stateHandle);
+    if (!state) return;
+
+    currentState_ = stateHandle;
+    if (resetTime) {
+        currentTime_ = state->timeOffset;
+    }
+    activeTransition_ = nullptr;
+}
+
+Anime3D::State* Anime3D::StateMachine::getState(const tinyHandle& handle) {
+    return states_.get(handle);
+}
+
+const Anime3D::State* Anime3D::StateMachine::getState(const tinyHandle& handle) const {
+    return states_.get(handle);
+}
+
+Anime3D::State* Anime3D::StateMachine::getState(const std::string& name) {
+    auto it = nameToHandle_.find(name);
+    if (it != nameToHandle_.end()) {
+        return states_.get(it->second);
+    }
+    return nullptr;
+}
+
+const Anime3D::State* Anime3D::StateMachine::getState(const std::string& name) const {
+    return const_cast<StateMachine*>(this)->getState(name);
+}
+
+tinyHandle Anime3D::StateMachine::getStateHandle(const std::string& name) const {
+    auto it = nameToHandle_.find(name);
+    if (it == nameToHandle_.end()) return tinyHandle();
+    return it->second;
+}
+
+Anime3D::Pose Anime3D::StateMachine::evaluate(Anime3D* animData, float deltaTime) {
+    if (!animData || !isPlaying_) return Pose();
+
+    // Handle transitions
+    if (activeTransition_) {
+        transitionProgress_ += deltaTime;
+        float t = glm::clamp(transitionProgress_ / activeTransition_->duration, 0.0f, 1.0f);
+
+        const State* fromState = states_.get(activeTransition_->fromState);
+        const State* toState = states_.get(activeTransition_->toState);
+
+        if (!fromState || !toState) {
+            activeTransition_ = nullptr;
+            return Pose();
+        }
+
+        const Clip* fromClip = animData->getClip(fromState->clipHandle);
+        const Clip* toClip = animData->getClip(toState->clipHandle);
+
+        if (!fromClip || !toClip) {
+            activeTransition_ = nullptr;
+            return Pose();
+        }
+
+        Pose fromPose, toPose;
+
+        switch (activeTransition_->type) {
+            case Transition::Type::Smooth: {
+                // Continue advancing both animations
+                fromPose = fromClip->evaluatePose(currentTime_);
+                
+                State* mutableToState = states_.get(activeTransition_->toState);
+                float toTime = mutableToState->timeOffset;
+                toTime += deltaTime * toState->speed;
+                if (toClip->duration > 0.0f && toState->loop) {
+                    toTime = fmod(toTime, toClip->duration);
+                }
+                mutableToState->timeOffset = toTime;
+                
+                toPose = toClip->evaluatePose(toTime);
+                break;
+            }
+
+            case Transition::Type::Frozen: {
+                // Hold source pose, blend to target
+                fromPose = fromClip->evaluatePose(currentTime_);
+                toPose = toClip->evaluatePose(toState->timeOffset);
+                break;
+            }
+
+            case Transition::Type::Synchronized: {
+                // Match normalized time
+                float normalizedTime = fromClip->duration > 0.0f ? (currentTime_ / fromClip->duration) : 0.0f;
+                float toTime = normalizedTime * toClip->duration;
+                fromPose = fromClip->evaluatePose(currentTime_);
+                toPose = toClip->evaluatePose(toTime);
+                break;
+            }
+        }
+
+        Pose blended = Pose::blend(fromPose, toPose, t);
+
+        // Complete transition
+        if (t >= 1.0f) {
+            currentState_ = activeTransition_->toState;
+            currentTime_ = states_.get(currentState_)->timeOffset;
+            activeTransition_ = nullptr;
+        }
+
+        return blended;
+    }
+
+    // Normal state playback
+    const State* state = states_.get(currentState_);
+    if (!state) return Pose();
+
+    const Clip* clip = animData->getClip(state->clipHandle);
+    if (!clip || !clip->valid()) return Pose();
+
+    // Update time
+    currentTime_ += deltaTime * state->speed;
+
+    if (clip->duration > 0.0f) {
+        if (state->loop) {
+            currentTime_ = fmod(currentTime_, clip->duration);
+            if (currentTime_ < 0.0f) currentTime_ += clip->duration;
+        } else {
+            currentTime_ = glm::clamp(currentTime_, 0.0f, clip->duration);
+        }
+    }
+
+    return clip->evaluatePose(currentTime_);
+}
+
+void Anime3D::StateMachine::evaluateTransitions() {
+    if (activeTransition_) return; // Already transitioning
+
+    const State* currentState = states_.get(currentState_);
+    if (!currentState) return;
+
+    for (auto& transition : transitions_) {
+        if (transition.fromState != currentState_) continue;
+
+        bool shouldTransition = false;
+
+        // Check exit time
+        if (transition.exitTime && currentState) {
+            const Clip* clip = nullptr; // Would need access to animData here
+            // This is a simplification - in real use, you'd pass clip duration
+            shouldTransition = true;
+        }
+
+        // Check condition
+        if (transition.condition && transition.condition()) {
+            shouldTransition = true;
+        }
+
+        if (shouldTransition) {
+            activeTransition_ = &transition;
+            transitionProgress_ = 0.0f;
+            nextState_ = transition.toState;
+            break;
+        }
+    }
+}
+
+// ============================================================
+// LAYER & CONTROLLER IMPLEMENTATION
+// ============================================================
+
+Anime3D::Layer& Anime3D::Controller::addLayer(const std::string& name) {
+    Layer layer;
+    layer.name = name.empty() ? ("Layer_" + std::to_string(layers_.size())) : name;
+    layers_.push_back(std::move(layer));
+    return layers_.back();
+}
+
+void Anime3D::Controller::removeLayer(const std::string& name) {
+    layers_.erase(
+        std::remove_if(layers_.begin(), layers_.end(),
+            [&name](const Layer& layer) { return layer.name == name; }),
+        layers_.end()
+    );
+}
+
+void Anime3D::Controller::removeLayer(size_t index) {
+    if (index < layers_.size()) {
+        layers_.erase(layers_.begin() + index);
+    }
+}
+
+void Anime3D::Controller::setLayerWeight(const std::string& name, float weight) {
+    for (auto& layer : layers_) {
+        if (layer.name == name) {
+            layer.weight = glm::clamp(weight, 0.0f, 1.0f);
+            return;
+        }
+    }
+}
+
+float Anime3D::Controller::getLayerWeight(const std::string& name) const {
+    for (const auto& layer : layers_) {
+        if (layer.name == name) {
+            return layer.weight;
+        }
+    }
+    return 0.0f;
+}
+
+Anime3D::Layer* Anime3D::Controller::getLayer(const std::string& name) {
+    for (auto& layer : layers_) {
+        if (layer.name == name) {
+            return &layer;
+        }
+    }
+    return nullptr;
+}
+
+const Anime3D::Layer* Anime3D::Controller::getLayer(const std::string& name) const {
+    return const_cast<Controller*>(this)->getLayer(name);
+}
+
+Anime3D::Layer* Anime3D::Controller::getLayer(size_t index) {
+    return (index < layers_.size()) ? &layers_[index] : nullptr;
+}
+
+const Anime3D::Layer* Anime3D::Controller::getLayer(size_t index) const {
+    return (index < layers_.size()) ? &layers_[index] : nullptr;
+}
+
+Anime3D::StateMachine* Anime3D::Controller::getStateMachine(const std::string& layerName) {
+    Layer* layer = getLayer(layerName);
+    return layer ? &layer->stateMachine : nullptr;
+}
+
+const Anime3D::StateMachine* Anime3D::Controller::getStateMachine(const std::string& layerName) const {
+    return const_cast<Controller*>(this)->getStateMachine(layerName);
+}
+
+void Anime3D::Controller::update(Anime3D* animData, Scene* scene, float deltaTime) {
+    if (!animData || !scene) return;
+
+    Pose finalPose = evaluateFinal(animData, deltaTime);
+    finalPose.applyToScene(scene);
+}
+
+void Anime3D::Controller::applyPose(Scene* scene, const Pose& pose) {
+    if (!scene) return;
+    pose.applyToScene(scene);
+}
+
+Anime3D::Pose Anime3D::Controller::evaluateFinal(Anime3D* animData, float deltaTime) {
+    if (layers_.empty()) return Pose();
+
+    std::vector<Pose> layerPoses;
+    layerPoses.reserve(layers_.size());
+
+    for (auto& layer : layers_) {
+        if (layer.weight <= 0.0f) continue;
+        
+        Pose pose = layer.stateMachine.evaluate(animData, deltaTime);
+        layerPoses.push_back(std::move(pose));
+    }
+
+    return blendLayers(layerPoses);
+}
+
+Anime3D::Pose Anime3D::Controller::blendLayers(const std::vector<Pose>& layerPoses) {
+    if (layerPoses.empty()) return Pose();
+    if (layerPoses.size() == 1) return layerPoses[0];
+
+    Pose result;
+
+    for (size_t i = 0; i < layerPoses.size() && i < layers_.size(); ++i) {
+        const Layer& layer = layers_[i];
+        const Pose& layerPose = layerPoses[i];
+
+        if (layer.weight <= 0.0f) continue;
+
+        if (i == 0) {
+            // First layer (base)
+            for (const auto& [targetID, transform] : layerPose.transforms) {
+                if (layer.mask.affects(targetID)) {
+                    result.transforms[targetID] = transform;
+                }
+            }
+        } else {
+            // Subsequent layers
+            if (layer.blendMode == Layer::BlendMode::Override) {
+                for (const auto& [targetID, transform] : layerPose.transforms) {
+                    if (layer.mask.affects(targetID)) {
+                        auto it = result.transforms.find(targetID);
+                        if (it != result.transforms.end()) {
+                            // Blend with weight
+                            Pose tempA, tempB;
+                            tempA.transforms[targetID] = it->second;
+                            tempB.transforms[targetID] = transform;
+                            Pose blended = Pose::blend(tempA, tempB, layer.weight);
+                            result.transforms[targetID] = blended.transforms[targetID];
+                        } else {
+                            result.transforms[targetID] = transform;
+                        }
+                    }
+                }
+            } else { // Additive
+                result = Pose::blendAdditive(result, layerPose, layer.referencePose, layer.weight);
             }
         }
     }
 
-    // Always apply the current animation at the current time (even if paused)
-    if (clip && clip->valid()) {
-        apply(scene, currentHandle);
+    return result;
+}
+
+// ============================================================
+// CLIP MANAGEMENT IMPLEMENTATION
+// ============================================================
+
+tinyHandle Anime3D::addClip(Clip&& clip) {
+    if (!clip.valid()) return tinyHandle();
+
+    std::string baseName = clip.name.empty() ? "Clip" : clip.name;
+    std::string uniqueName = baseName;
+    int suffix = 1;
+
+    while (clipNameToHandle_.find(uniqueName) != clipNameToHandle_.end()) {
+        uniqueName = baseName + "_" + std::to_string(suffix++);
     }
+    clip.name = uniqueName;
+
+    // Cache duration
+    for (const auto& sampler : clip.samplers) {
+        if (sampler.times.empty()) continue;
+        clip.duration = std::max(clip.duration, sampler.times.back());
+    }
+
+    tinyHandle handle = clips_.add(std::move(clip));
+    clipNameToHandle_[uniqueName] = handle;
+
+    return handle;
+}
+
+Anime3D::Clip* Anime3D::getClip(const tinyHandle& handle) {
+    return clips_.get(handle);
+}
+
+const Anime3D::Clip* Anime3D::getClip(const tinyHandle& handle) const {
+    return clips_.get(handle);
+}
+
+Anime3D::Clip* Anime3D::getClip(const std::string& name) {
+    auto it = clipNameToHandle_.find(name);
+    if (it != clipNameToHandle_.end()) {
+        return clips_.get(it->second);
+    }
+    return nullptr;
+}
+
+const Anime3D::Clip* Anime3D::getClip(const std::string& name) const {
+    return const_cast<Anime3D*>(this)->getClip(name);
+}
+
+tinyHandle Anime3D::getClipHandle(const std::string& name) const {
+    auto it = clipNameToHandle_.find(name);
+    if (it == clipNameToHandle_.end()) return tinyHandle();
+    return it->second;
+}
+
+float Anime3D::clipDuration(const tinyHandle& handle) const {
+    const Clip* clip = clips_.get(handle);
+    return clip ? clip->duration : 0.0f;
+}
+
+float Anime3D::clipDuration(const std::string& name) const {
+    auto it = clipNameToHandle_.find(name);
+    if (it == clipNameToHandle_.end()) return 0.0f;
+    return clipDuration(it->second);
 }

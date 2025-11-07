@@ -538,6 +538,12 @@ static inline tinyHandle* getAnim3DHandle(lua_State* L, int index) {
     return static_cast<tinyHandle*>(luaL_checkudata(L, index, "Anim3D"));
 }
 
+// ============================================================
+// ANIMATION 3D BINDINGS - DISABLED PENDING NEW API MIGRATION
+// ============================================================
+// TODO: Reimplement these bindings for the new Controller/StateMachine API
+
+/*
 static inline int anim3d_get(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle || !lua_isstring(L, 2)) { lua_pushnil(L); return 1; }
@@ -683,6 +689,7 @@ static inline int anim3d_resume(lua_State* L) {
     if (comps.anim3D) comps.anim3D->resume();
     return 0;
 }
+*/
 
 static inline int node_anim3D(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
@@ -1483,7 +1490,9 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(transform3d_setScl, "setScl");
     LUA_END_METATABLE("Transform3D");
     
-    // Anim3D metatable
+    // Anim3D metatable - DISABLED PENDING NEW API MIGRATION
+    // TODO: Reimplement bindings for Controller/StateMachine/Layer system
+    /*
     LUA_BEGIN_METATABLE("Anim3D");
     LUA_REG_METHOD(anim3d_get, "get");
     LUA_REG_METHOD(anim3d_current, "current");
@@ -1498,6 +1507,7 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(anim3d_pause, "pause");
     LUA_REG_METHOD(anim3d_resume, "resume");
     LUA_END_METATABLE("Anim3D");
+    */
     
     // Script metatable
     LUA_BEGIN_METATABLE("Script");
