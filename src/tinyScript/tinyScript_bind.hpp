@@ -36,7 +36,8 @@ static inline glm::mat4 composeMatrix(const glm::vec3& pos, const glm::quat& rot
 }
 
 static inline tinyHandle* getNodeHandleFromUserdata(lua_State* L, int index) {
-    void* ud = luaL_checkudata(L, index, "Node");
+    // Use testudata instead of checkudata to avoid throwing errors
+    void* ud = luaL_testudata(L, index, "Node");
     return ud ? static_cast<tinyHandle*>(ud) : nullptr;
 }
 
@@ -56,6 +57,202 @@ static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
     *ud = scene;
     luaL_getmetatable(L, "Scene");
     lua_setmetatable(L, -2);
+}
+
+// ========================================
+// VECTOR TYPES (Vec2, Vec3, Vec4, Quat)
+// ========================================
+
+// Push Vec2 as userdata
+static inline void pushVec2(lua_State* L, const glm::vec2& vec) {
+    glm::vec2* ud = static_cast<glm::vec2*>(lua_newuserdata(L, sizeof(glm::vec2)));
+    *ud = vec;
+    luaL_getmetatable(L, "Vec2");
+    lua_setmetatable(L, -2);
+}
+
+// Push Vec3 as userdata
+static inline void pushVec3(lua_State* L, const glm::vec3& vec) {
+    glm::vec3* ud = static_cast<glm::vec3*>(lua_newuserdata(L, sizeof(glm::vec3)));
+    *ud = vec;
+    luaL_getmetatable(L, "Vec3");
+    lua_setmetatable(L, -2);
+}
+
+// Push Vec4 as userdata
+static inline void pushVec4(lua_State* L, const glm::vec4& vec) {
+    glm::vec4* ud = static_cast<glm::vec4*>(lua_newuserdata(L, sizeof(glm::vec4)));
+    *ud = vec;
+    luaL_getmetatable(L, "Vec4");
+    lua_setmetatable(L, -2);
+}
+
+// Get Vec2 from userdata
+static inline glm::vec2* getVec2(lua_State* L, int index) {
+    return static_cast<glm::vec2*>(luaL_checkudata(L, index, "Vec2"));
+}
+
+// Get Vec3 from userdata
+static inline glm::vec3* getVec3(lua_State* L, int index) {
+    return static_cast<glm::vec3*>(luaL_checkudata(L, index, "Vec3"));
+}
+
+// Get Vec4 from userdata
+static inline glm::vec4* getVec4(lua_State* L, int index) {
+    return static_cast<glm::vec4*>(luaL_checkudata(L, index, "Vec4"));
+}
+
+// Vec2 constructor: Vec2(x, y)
+static inline int lua_Vec2(lua_State* L) {
+    float x = luaL_optnumber(L, 1, 0.0f);
+    float y = luaL_optnumber(L, 2, 0.0f);
+    pushVec2(L, glm::vec2(x, y));
+    return 1;
+}
+
+// Vec3 constructor: Vec3(x, y, z)
+static inline int lua_Vec3(lua_State* L) {
+    float x = luaL_optnumber(L, 1, 0.0f);
+    float y = luaL_optnumber(L, 2, 0.0f);
+    float z = luaL_optnumber(L, 3, 0.0f);
+    pushVec3(L, glm::vec3(x, y, z));
+    return 1;
+}
+
+// Vec4 constructor: Vec4(x, y, z, w)
+static inline int lua_Vec4(lua_State* L) {
+    float x = luaL_optnumber(L, 1, 0.0f);
+    float y = luaL_optnumber(L, 2, 0.0f);
+    float z = luaL_optnumber(L, 3, 0.0f);
+    float w = luaL_optnumber(L, 4, 0.0f);
+    pushVec4(L, glm::vec4(x, y, z, w));
+    return 1;
+}
+
+// Vec2 __index metamethod (for accessing .x, .y)
+static inline int vec2_index(lua_State* L) {
+    glm::vec2* v = getVec2(L, 1);
+    if (!v) return 0;
+    
+    const char* key = lua_tostring(L, 2);
+    if (!key) return 0;
+    
+    if (strcmp(key, "x") == 0) { lua_pushnumber(L, v->x); return 1; }
+    if (strcmp(key, "y") == 0) { lua_pushnumber(L, v->y); return 1; }
+    
+    return 0;
+}
+
+// Vec2 __newindex metamethod (for setting .x, .y)
+static inline int vec2_newindex(lua_State* L) {
+    glm::vec2* v = getVec2(L, 1);
+    if (!v) return 0;
+    
+    const char* key = lua_tostring(L, 2);
+    if (!key || !lua_isnumber(L, 3)) return 0;
+    
+    float value = static_cast<float>(lua_tonumber(L, 3));
+    
+    if (strcmp(key, "x") == 0) { v->x = value; return 0; }
+    if (strcmp(key, "y") == 0) { v->y = value; return 0; }
+    
+    return 0;
+}
+
+// Vec2 __tostring metamethod
+static inline int vec2_tostring(lua_State* L) {
+    glm::vec2* v = getVec2(L, 1);
+    if (!v) return 0;
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "Vec2(%.3f, %.3f)", v->x, v->y);
+    lua_pushstring(L, buffer);
+    return 1;
+}
+
+// Vec3 __index metamethod (for accessing .x, .y, .z)
+static inline int vec3_index(lua_State* L) {
+    glm::vec3* v = getVec3(L, 1);
+    if (!v) return 0;
+    
+    const char* key = lua_tostring(L, 2);
+    if (!key) return 0;
+    
+    if (strcmp(key, "x") == 0) { lua_pushnumber(L, v->x); return 1; }
+    if (strcmp(key, "y") == 0) { lua_pushnumber(L, v->y); return 1; }
+    if (strcmp(key, "z") == 0) { lua_pushnumber(L, v->z); return 1; }
+    
+    return 0;
+}
+
+// Vec3 __newindex metamethod (for setting .x, .y, .z)
+static inline int vec3_newindex(lua_State* L) {
+    glm::vec3* v = getVec3(L, 1);
+    if (!v) return 0;
+    
+    const char* key = lua_tostring(L, 2);
+    if (!key || !lua_isnumber(L, 3)) return 0;
+    
+    float value = static_cast<float>(lua_tonumber(L, 3));
+    
+    if (strcmp(key, "x") == 0) { v->x = value; return 0; }
+    if (strcmp(key, "y") == 0) { v->y = value; return 0; }
+    if (strcmp(key, "z") == 0) { v->z = value; return 0; }
+    
+    return 0;
+}
+
+// Vec3 __tostring metamethod
+static inline int vec3_tostring(lua_State* L) {
+    glm::vec3* v = getVec3(L, 1);
+    if (!v) return 0;
+    char buffer[96];
+    snprintf(buffer, sizeof(buffer), "Vec3(%.3f, %.3f, %.3f)", v->x, v->y, v->z);
+    lua_pushstring(L, buffer);
+    return 1;
+}
+
+// Vec4 __index metamethod (for accessing .x, .y, .z, .w)
+static inline int vec4_index(lua_State* L) {
+    glm::vec4* v = getVec4(L, 1);
+    if (!v) return 0;
+    
+    const char* key = lua_tostring(L, 2);
+    if (!key) return 0;
+    
+    if (strcmp(key, "x") == 0) { lua_pushnumber(L, v->x); return 1; }
+    if (strcmp(key, "y") == 0) { lua_pushnumber(L, v->y); return 1; }
+    if (strcmp(key, "z") == 0) { lua_pushnumber(L, v->z); return 1; }
+    if (strcmp(key, "w") == 0) { lua_pushnumber(L, v->w); return 1; }
+    
+    return 0;
+}
+
+// Vec4 __newindex metamethod (for setting .x, .y, .z, .w)
+static inline int vec4_newindex(lua_State* L) {
+    glm::vec4* v = getVec4(L, 1);
+    if (!v) return 0;
+    
+    const char* key = lua_tostring(L, 2);
+    if (!key || !lua_isnumber(L, 3)) return 0;
+    
+    float value = static_cast<float>(lua_tonumber(L, 3));
+    
+    if (strcmp(key, "x") == 0) { v->x = value; return 0; }
+    if (strcmp(key, "y") == 0) { v->y = value; return 0; }
+    if (strcmp(key, "z") == 0) { v->z = value; return 0; }
+    if (strcmp(key, "w") == 0) { v->w = value; return 0; }
+    
+    return 0;
+}
+
+// Vec4 __tostring metamethod
+static inline int vec4_tostring(lua_State* L) {
+    glm::vec4* v = getVec4(L, 1);
+    if (!v) return 0;
+    char buffer[128];
+    snprintf(buffer, sizeof(buffer), "Vec4(%.3f, %.3f, %.3f, %.3f)", v->x, v->y, v->z, v->w);
+    lua_pushstring(L, buffer);
+    return 1;
 }
 
 // ========================================
@@ -366,17 +563,13 @@ static inline tinyHandle* getTransform3DHandle(lua_State* L, int index) {
 static inline int transform3d_getPos(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
-    
+
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        
-        lua_newtable(L);
-        lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
-        lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
-        lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+        pushVec3(L, pos);
         return 1;
     }
     return 0;
@@ -384,18 +577,17 @@ static inline int transform3d_getPos(lua_State* L) {
 
 static inline int transform3d_setPos(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
-    if (!handle || !lua_istable(L, 2)) return 0;
+    if (!handle) return 0;
     
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
-    glm::vec3 newPos(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
-    lua_pop(L, 3);
+    glm::vec3* newPos = getVec3(L, 2);
+    if (!newPos) return luaL_error(L, "setPos expects Vec3");
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        comps.trfm3D->local = composeMatrix(newPos, rot, scale);
+        comps.trfm3D->local = composeMatrix(*newPos, rot, scale);
     }
     return 0;
 }
@@ -411,10 +603,7 @@ static inline int transform3d_getRot(lua_State* L) {
         decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
         
         glm::vec3 euler = glm::eulerAngles(rot);
-        lua_newtable(L);
-        lua_pushnumber(L, euler.x); lua_setfield(L, -2, "x");
-        lua_pushnumber(L, euler.y); lua_setfield(L, -2, "y");
-        lua_pushnumber(L, euler.z); lua_setfield(L, -2, "z");
+        pushVec3(L, euler);
         return 1;
     }
     return 0;
@@ -422,18 +611,17 @@ static inline int transform3d_getRot(lua_State* L) {
 
 static inline int transform3d_setRot(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
-    if (!handle || !lua_istable(L, 2)) return 0;
+    if (!handle) return 0;
     
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
-    glm::vec3 euler(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
-    lua_pop(L, 3);
+    glm::vec3* euler = getVec3(L, 2);
+    if (!euler) return luaL_error(L, "setRot expects Vec3");
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        glm::quat newRot = glm::quat(euler);
+        glm::quat newRot = glm::quat(*euler);
         comps.trfm3D->local = composeMatrix(pos, newRot, scale);
     }
     return 0;
@@ -448,13 +636,7 @@ static inline int transform3d_getQuat(lua_State* L) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        
-        // Return quaternion as table {x, y, z, w}
-        lua_newtable(L);
-        lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
-        lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
-        lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
-        lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+        pushVec4(L, glm::vec4(rot.x, rot.y, rot.z, rot.w));
         return 1;
     }
     return 0;
@@ -462,22 +644,17 @@ static inline int transform3d_getQuat(lua_State* L) {
 
 static inline int transform3d_setQuat(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
-    if (!handle || !lua_istable(L, 2)) return 0;
+    if (!handle) return 0;
     
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z"); lua_getfield(L, 2, "w");
-    glm::quat quat(
-        static_cast<float>(lua_tonumber(L, -1)), // w
-        static_cast<float>(lua_tonumber(L, -4)), // x
-        static_cast<float>(lua_tonumber(L, -3)), // y
-        static_cast<float>(lua_tonumber(L, -2))  // z
-    );
-    lua_pop(L, 4);
+    glm::vec4* quatVec = getVec4(L, 2);
+    if (!quatVec) return luaL_error(L, "setQuat expects Vec4");
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        glm::quat quat(quatVec->w, quatVec->x, quatVec->y, quatVec->z);
         comps.trfm3D->local = composeMatrix(pos, quat, scale);
     }
     return 0;
@@ -492,11 +669,7 @@ static inline int transform3d_getScl(lua_State* L) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        
-        lua_newtable(L);
-        lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
-        lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
-        lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+        pushVec3(L, scale);
         return 1;
     }
     return 0;
@@ -504,18 +677,17 @@ static inline int transform3d_getScl(lua_State* L) {
 
 static inline int transform3d_setScl(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
-    if (!handle || !lua_istable(L, 2)) return 0;
+    if (!handle) return 0;
     
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
-    glm::vec3 newScale(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
-    lua_pop(L, 3);
+    glm::vec3* newScale = getVec3(L, 2);
+    if (!newScale) return luaL_error(L, "setScl expects Vec3");
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        comps.trfm3D->local = composeMatrix(pos, rot, newScale);
+        comps.trfm3D->local = composeMatrix(pos, rot, *newScale);
     }
     return 0;
 }
@@ -524,7 +696,10 @@ static inline int node_transform3D(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    tinyRT::Scene* scene = getSceneFromLua(L);
+    if (!scene) { lua_pushnil(L); return 1; }
+    
+    auto comps = scene->nComp(*handle);
     if (!comps.trfm3D) { lua_pushnil(L); return 1; }
     
     tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
@@ -569,27 +744,23 @@ static inline int bone_getLocalPos(lua_State* L) {
     glm::quat rot;
     decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
     
-    lua_newtable(L);
-    lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+    pushVec3(L, pos);
     return 1;
 }
 
 static inline int bone_setLocalPos(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
-    if (!bone || !lua_istable(L, 2)) return 0;
+    if (!bone) return 0;
     
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
-    glm::vec3 newPos(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
-    lua_pop(L, 3);
+    glm::vec3* newPos = getVec3(L, 2);
+    if (!newPos) return luaL_error(L, "setLocalPos expects Vec3");
     
     auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
     if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
-        comps.skel3D->setLocalPose(bone->boneIndex, composeMatrix(newPos, rot, scale));
+        comps.skel3D->setLocalPose(bone->boneIndex, composeMatrix(*newPos, rot, scale));
     }
     return 0;
 }
@@ -606,27 +777,23 @@ static inline int bone_getLocalRot(lua_State* L) {
     decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
     
     glm::vec3 euler = glm::eulerAngles(rot);
-    lua_newtable(L);
-    lua_pushnumber(L, euler.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, euler.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, euler.z); lua_setfield(L, -2, "z");
+    pushVec3(L, euler);
     return 1;
 }
 
 static inline int bone_setLocalRot(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
-    if (!bone || !lua_istable(L, 2)) return 0;
+    if (!bone) return 0;
     
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
-    glm::vec3 euler(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
-    lua_pop(L, 3);
+    glm::vec3* euler = getVec3(L, 2);
+    if (!euler) return luaL_error(L, "setLocalRot expects Vec3");
     
     auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
     if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
-        glm::quat newRot = glm::quat(euler);
+        glm::quat newRot = glm::quat(*euler);
         comps.skel3D->setLocalPose(bone->boneIndex, composeMatrix(pos, newRot, scale));
     }
     return 0;
@@ -643,32 +810,23 @@ static inline int bone_getLocalQuat(lua_State* L) {
     glm::quat rot;
     decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
     
-    lua_newtable(L);
-    lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
-    lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+    pushVec4(L, glm::vec4(rot.x, rot.y, rot.z, rot.w));
     return 1;
 }
 
 static inline int bone_setLocalQuat(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
-    if (!bone || !lua_istable(L, 2)) return 0;
+    if (!bone) return 0;
     
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z"); lua_getfield(L, 2, "w");
-    glm::quat quat(
-        static_cast<float>(lua_tonumber(L, -1)), // w
-        static_cast<float>(lua_tonumber(L, -4)), // x
-        static_cast<float>(lua_tonumber(L, -3)), // y
-        static_cast<float>(lua_tonumber(L, -2))  // z
-    );
-    lua_pop(L, 4);
+    glm::vec4* quatVec = getVec4(L, 2);
+    if (!quatVec) return luaL_error(L, "setLocalQuat expects Vec4");
     
     auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
     if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+        glm::quat quat(quatVec->w, quatVec->x, quatVec->y, quatVec->z);
         comps.skel3D->setLocalPose(bone->boneIndex, composeMatrix(pos, quat, scale));
     }
     return 0;
@@ -685,27 +843,23 @@ static inline int bone_getLocalScl(lua_State* L) {
     glm::quat rot;
     decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
     
-    lua_newtable(L);
-    lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+    pushVec3(L, scale);
     return 1;
 }
 
 static inline int bone_setLocalScl(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
-    if (!bone || !lua_istable(L, 2)) return 0;
+    if (!bone) return 0;
     
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
-    glm::vec3 newScale(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
-    lua_pop(L, 3);
+    glm::vec3* newScale = getVec3(L, 2);
+    if (!newScale) return luaL_error(L, "setLocalScl expects Vec3");
     
     auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
     if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
-        comps.skel3D->localPose(bone->boneIndex) = composeMatrix(pos, rot, newScale);
+        comps.skel3D->localPose(bone->boneIndex) = composeMatrix(pos, rot, *newScale);
     }
     return 0;
 }
@@ -725,25 +879,15 @@ static inline int bone_localPose(lua_State* L) {
     lua_newtable(L);
     
     // Position
-    lua_newtable(L);
-    lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+    pushVec3(L, pos);
     lua_setfield(L, -2, "pos");
     
-    // Rotation (as quaternion)
-    lua_newtable(L);
-    lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
-    lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+    // Rotation (as quaternion Vec4)
+    pushVec4(L, glm::vec4(rot.x, rot.y, rot.z, rot.w));
     lua_setfield(L, -2, "rot");
     
     // Scale
-    lua_newtable(L);
-    lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+    pushVec3(L, scale);
     lua_setfield(L, -2, "scl");
     
     return 1;
@@ -762,10 +906,7 @@ static inline int bone_getBindPos(lua_State* L) {
     glm::quat rot;
     decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
     
-    lua_newtable(L);
-    lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+    pushVec3(L, pos);
     return 1;
 }
 
@@ -781,10 +922,7 @@ static inline int bone_getBindRot(lua_State* L) {
     decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
     
     glm::vec3 euler = glm::eulerAngles(rot);
-    lua_newtable(L);
-    lua_pushnumber(L, euler.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, euler.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, euler.z); lua_setfield(L, -2, "z");
+    pushVec3(L, euler);
     return 1;
 }
 
@@ -799,11 +937,7 @@ static inline int bone_getBindQuat(lua_State* L) {
     glm::quat rot;
     decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
     
-    lua_newtable(L);
-    lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
-    lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+    pushVec4(L, glm::vec4(rot.x, rot.y, rot.z, rot.w));
     return 1;
 }
 
@@ -818,10 +952,7 @@ static inline int bone_getBindScl(lua_State* L) {
     glm::quat rot;
     decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
     
-    lua_newtable(L);
-    lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+    pushVec3(L, scale);
     return 1;
 }
 
@@ -840,25 +971,15 @@ static inline int bone_bindPose(lua_State* L) {
     lua_newtable(L);
     
     // Position
-    lua_newtable(L);
-    lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+    pushVec3(L, pos);
     lua_setfield(L, -2, "pos");
     
-    // Rotation (as quaternion)
-    lua_newtable(L);
-    lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
-    lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+    // Rotation (as quaternion Vec4)
+    pushVec4(L, glm::vec4(rot.x, rot.y, rot.z, rot.w));
     lua_setfield(L, -2, "rot");
     
     // Scale
-    lua_newtable(L);
-    lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+    pushVec3(L, scale);
     lua_setfield(L, -2, "scl");
     
     return 1;
@@ -1258,24 +1379,9 @@ static inline int script_getVar(lua_State* L) {
             if constexpr (std::is_same_v<T, float>) lua_pushnumber(L, val);
             else if constexpr (std::is_same_v<T, int>) lua_pushinteger(L, val);
             else if constexpr (std::is_same_v<T, bool>) lua_pushboolean(L, val);
-            else if constexpr (std::is_same_v<T, glm::vec2>) {
-                lua_newtable(L);
-                lua_pushnumber(L, val.x); lua_setfield(L, -2, "x");
-                lua_pushnumber(L, val.y); lua_setfield(L, -2, "y");
-            }
-            else if constexpr (std::is_same_v<T, glm::vec3>) {
-                lua_newtable(L);
-                lua_pushnumber(L, val.x); lua_setfield(L, -2, "x");
-                lua_pushnumber(L, val.y); lua_setfield(L, -2, "y");
-                lua_pushnumber(L, val.z); lua_setfield(L, -2, "z");
-            }
-            else if constexpr (std::is_same_v<T, glm::vec4>) {
-                lua_newtable(L);
-                lua_pushnumber(L, val.x); lua_setfield(L, -2, "x");
-                lua_pushnumber(L, val.y); lua_setfield(L, -2, "y");
-                lua_pushnumber(L, val.z); lua_setfield(L, -2, "z");
-                lua_pushnumber(L, val.w); lua_setfield(L, -2, "w");
-            }
+            else if constexpr (std::is_same_v<T, glm::vec2>) pushVec2(L, val);
+            else if constexpr (std::is_same_v<T, glm::vec3>) pushVec3(L, val);
+            else if constexpr (std::is_same_v<T, glm::vec4>) pushVec4(L, val);
             else if constexpr (std::is_same_v<T, std::string>) lua_pushstring(L, val.c_str());
             else if constexpr (std::is_same_v<T, typeHandle>) {
                 // Convert typeHandle back to LuaHandle
@@ -1303,30 +1409,21 @@ static inline int script_setVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, int>) val = static_cast<int>(lua_tointeger(L, 3));
             else if constexpr (std::is_same_v<T, bool>) val = static_cast<bool>(lua_toboolean(L, 3));
             else if constexpr (std::is_same_v<T, glm::vec2>) {
-                if (lua_istable(L, 3)) {
-                    lua_getfield(L, 3, "x"); lua_getfield(L, 3, "y");
-                    val.x = static_cast<float>(lua_tonumber(L, -2));
-                    val.y = static_cast<float>(lua_tonumber(L, -1));
-                    lua_pop(L, 2);
+                if (lua_isuserdata(L, 3)) {
+                    glm::vec2* vec = getVec2(L, 3);
+                    if (vec) val = *vec;
                 }
             }
             else if constexpr (std::is_same_v<T, glm::vec3>) {
-                if (lua_istable(L, 3)) {
-                    lua_getfield(L, 3, "x"); lua_getfield(L, 3, "y"); lua_getfield(L, 3, "z");
-                    val.x = static_cast<float>(lua_tonumber(L, -3));
-                    val.y = static_cast<float>(lua_tonumber(L, -2));
-                    val.z = static_cast<float>(lua_tonumber(L, -1));
-                    lua_pop(L, 3);
+                if (lua_isuserdata(L, 3)) {
+                    glm::vec3* vec = getVec3(L, 3);
+                    if (vec) val = *vec;
                 }
             }
             else if constexpr (std::is_same_v<T, glm::vec4>) {
-                if (lua_istable(L, 3)) {
-                    lua_getfield(L, 3, "x"); lua_getfield(L, 3, "y"); lua_getfield(L, 3, "z"); lua_getfield(L, 3, "w");
-                    val.x = static_cast<float>(lua_tonumber(L, -4));
-                    val.y = static_cast<float>(lua_tonumber(L, -3));
-                    val.z = static_cast<float>(lua_tonumber(L, -2));
-                    val.w = static_cast<float>(lua_tonumber(L, -1));
-                    lua_pop(L, 4);
+                if (lua_isuserdata(L, 3)) {
+                    glm::vec4* vec = getVec4(L, 3);
+                    if (vec) val = *vec;
                 }
             }
             else if constexpr (std::is_same_v<T, std::string>) val = std::string(lua_tostring(L, 3));
@@ -1614,7 +1711,7 @@ static inline int staticscript_call(lua_State* L) {
         } else if (lua_isstring(L, i)) {
             lua_pushstring(scriptL, lua_tostring(L, i));
         } else if (lua_istable(L, i)) {
-            // Transfer table generically (supports vec3 and other tables)
+            // Transfer table generically (supports generic tables/arrays)
             lua_newtable(scriptL);
             lua_pushnil(L);  // First key for iteration
             while (lua_next(L, i) != 0) {
@@ -1654,25 +1751,59 @@ static inline int staticscript_call(lua_State* L) {
                 lua_pop(L, 1);  // Pop value from L, keep key for next iteration
             }
         } else if (lua_isuserdata(L, i)) {
-            // Check if it's a Handle userdata by checking metatable
+            // Check userdata type by metatable
+            bool handled = false;
             if (lua_getmetatable(L, i)) {
-                luaL_getmetatable(L, "Handle");
-                bool isHandle = lua_rawequal(L, -1, -2);
-                lua_pop(L, 2); // Pop both metatables
-                
-                if (isHandle) {
-                    // Transfer handles - CORRECTLY copy the full LuaHandle struct
-                    LuaHandle* sourceHandle = static_cast<LuaHandle*>(lua_touserdata(L, i));
-                    if (sourceHandle) {
-                        // Create new LuaHandle userdata in target state with correct size
-                        pushLuaHandle(scriptL, *sourceHandle);
-                    } else {
-                        lua_pushnil(scriptL);
-                    }
+                // Try Vec2
+                luaL_getmetatable(L, "Vec2");
+                if (lua_rawequal(L, -1, -2)) {
+                    lua_pop(L, 2);
+                    glm::vec2* vec = getVec2(L, i);
+                    if (vec) pushVec2(scriptL, *vec);
+                    else lua_pushnil(scriptL);
+                    handled = true;
                 } else {
-                    lua_pushnil(scriptL);
+                    lua_pop(L, 1);
+                    
+                    // Try Vec3
+                    luaL_getmetatable(L, "Vec3");
+                    if (lua_rawequal(L, -1, -2)) {
+                        lua_pop(L, 2);
+                        glm::vec3* vec = getVec3(L, i);
+                        if (vec) pushVec3(scriptL, *vec);
+                        else lua_pushnil(scriptL);
+                        handled = true;
+                    } else {
+                        lua_pop(L, 1);
+                        
+                        // Try Vec4
+                        luaL_getmetatable(L, "Vec4");
+                        if (lua_rawequal(L, -1, -2)) {
+                            lua_pop(L, 2);
+                            glm::vec4* vec = getVec4(L, i);
+                            if (vec) pushVec4(scriptL, *vec);
+                            else lua_pushnil(scriptL);
+                            handled = true;
+                        } else {
+                            lua_pop(L, 1);
+                            
+                            // Try Handle (Quat is now Vec4, so no separate check needed)
+                            luaL_getmetatable(L, "Handle");
+                            if (lua_rawequal(L, -1, -2)) {
+                                lua_pop(L, 2);
+                                LuaHandle* sourceHandle = static_cast<LuaHandle*>(lua_touserdata(L, i));
+                                if (sourceHandle) pushLuaHandle(scriptL, *sourceHandle);
+                                else lua_pushnil(scriptL);
+                                handled = true;
+                            } else {
+                                lua_pop(L, 2); // Pop both metatables
+                            }
+                        }
+                    }
                 }
-            } else {
+            }
+            
+            if (!handled) {
                 lua_pushnil(scriptL);
             }
         } else {
@@ -1767,25 +1898,71 @@ static inline int staticscript_call(lua_State* L) {
                 lua_pop(scriptL, 1);  // Pop value from scriptL, keep key for next iteration
             }
         } else if (lua_isuserdata(scriptL, absIndex)) {
-            // Check if it's a Handle userdata by checking metatable
+            // Check userdata type by metatable
+            bool handled = false;
             if (lua_getmetatable(scriptL, absIndex)) {
-                luaL_getmetatable(scriptL, "Handle");
-                bool isHandle = lua_rawequal(scriptL, -1, -2);
-                lua_pop(scriptL, 2); // Pop both metatables
-                
-                if (isHandle) {
-                    // Transfer handles back - CORRECTLY copy the full LuaHandle struct
-                    LuaHandle* sourceHandle = static_cast<LuaHandle*>(lua_touserdata(scriptL, absIndex));
-                    if (sourceHandle) {
-                        // Create new LuaHandle userdata in calling state with correct size
-                        pushLuaHandle(L, *sourceHandle);
-                    } else {
-                        lua_pushnil(L);
-                    }
+                // Try Vec2
+                luaL_getmetatable(scriptL, "Vec2");
+                if (lua_rawequal(scriptL, -1, -2)) {
+                    lua_pop(scriptL, 2);
+                    glm::vec2* vec = static_cast<glm::vec2*>(lua_touserdata(scriptL, absIndex));
+                    if (vec) pushVec2(L, *vec);
+                    else lua_pushnil(L);
+                    handled = true;
                 } else {
-                    lua_pushnil(L);
+                    lua_pop(scriptL, 1);
+                    
+                    // Try Vec3
+                    luaL_getmetatable(scriptL, "Vec3");
+                    if (lua_rawequal(scriptL, -1, -2)) {
+                        lua_pop(scriptL, 2);
+                        glm::vec3* vec = static_cast<glm::vec3*>(lua_touserdata(scriptL, absIndex));
+                        if (vec) pushVec3(L, *vec);
+                        else lua_pushnil(L);
+                        handled = true;
+                    } else {
+                        lua_pop(scriptL, 1);
+                        
+                        // Try Vec4
+                        luaL_getmetatable(scriptL, "Vec4");
+                        if (lua_rawequal(scriptL, -1, -2)) {
+                            lua_pop(scriptL, 2);
+                            glm::vec4* vec = static_cast<glm::vec4*>(lua_touserdata(scriptL, absIndex));
+                            if (vec) pushVec4(L, *vec);
+                            else lua_pushnil(L);
+                            handled = true;
+                        } else {
+                            lua_pop(scriptL, 1);
+                            
+                            // Try Quat
+                            luaL_getmetatable(scriptL, "Quat");
+                            if (lua_rawequal(scriptL, -1, -2)) {
+                                lua_pop(scriptL, 2);
+                                glm::vec4* vec = static_cast<glm::vec4*>(lua_touserdata(scriptL, absIndex));
+                                if (vec) pushVec4(L, *vec);
+                                else lua_pushnil(L);
+                                handled = true;
+                            } else {
+                                lua_pop(scriptL, 1);
+                                
+                                // Try Handle (Quat is now Vec4, no separate check needed)
+                                luaL_getmetatable(scriptL, "Handle");
+                                if (lua_rawequal(scriptL, -1, -2)) {
+                                    lua_pop(scriptL, 2);
+                                    LuaHandle* sourceHandle = static_cast<LuaHandle*>(lua_touserdata(scriptL, absIndex));
+                                    if (sourceHandle) pushLuaHandle(L, *sourceHandle);
+                                    else lua_pushnil(L);
+                                    handled = true;
+                                } else {
+                                    lua_pop(scriptL, 2); // Pop both metatables
+                                }
+                            }
+                        }
+                    }
                 }
-            } else {
+            }
+            
+            if (!handled) {
                 lua_pushnil(L);
             }
         } else {
@@ -1806,161 +1983,80 @@ static inline int staticscript_call(lua_State* L) {
 
 // quat_slerp(q1, q2, t) - Spherical linear interpolation between two quaternions
 static inline int lua_quat_slerp(lua_State* L) {
-    if (!lua_istable(L, 1) || !lua_istable(L, 2) || !lua_isnumber(L, 3)) {
-        return luaL_error(L, "quat_slerp requires (quat1, quat2, t)");
+    glm::vec4* q1 = getVec4(L, 1);
+    glm::vec4* q2 = getVec4(L, 2);
+    if (!q1 || !q2 || !lua_isnumber(L, 3)) {
+        return luaL_error(L, "quat_slerp requires (Vec4, Vec4, number)");
     }
-    
-    // Read first quaternion
-    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z"); lua_getfield(L, 1, "w");
-    glm::quat q1(
-        static_cast<float>(lua_tonumber(L, -1)), // w
-        static_cast<float>(lua_tonumber(L, -4)), // x
-        static_cast<float>(lua_tonumber(L, -3)), // y
-        static_cast<float>(lua_tonumber(L, -2))  // z
-    );
-    lua_pop(L, 4);
-    
-    // Read second quaternion
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z"); lua_getfield(L, 2, "w");
-    glm::quat q2(
-        static_cast<float>(lua_tonumber(L, -1)), // w
-        static_cast<float>(lua_tonumber(L, -4)), // x
-        static_cast<float>(lua_tonumber(L, -3)), // y
-        static_cast<float>(lua_tonumber(L, -2))  // z
-    );
-    lua_pop(L, 4);
     
     float t = static_cast<float>(lua_tonumber(L, 3));
     
-    // Perform slerp
-    glm::quat result = glm::slerp(q1, q2, t);
+    // Convert Vec4 to quat (x,y,z,w -> w,x,y,z)
+    glm::quat quat1(q1->w, q1->x, q1->y, q1->z);
+    glm::quat quat2(q2->w, q2->x, q2->y, q2->z);
     
-    // Return result
-    lua_newtable(L);
-    lua_pushnumber(L, result.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, result.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, result.z); lua_setfield(L, -2, "z");
-    lua_pushnumber(L, result.w); lua_setfield(L, -2, "w");
+    // Perform slerp
+    glm::quat result = glm::slerp(quat1, quat2, t);
+    pushVec4(L, glm::vec4(result.x, result.y, result.z, result.w));
     return 1;
 }
 
 // quat_fromAxisAngle(axis, angle) - Create quaternion from axis-angle representation
 static inline int lua_quat_fromAxisAngle(lua_State* L) {
-    if (!lua_istable(L, 1) || !lua_isnumber(L, 2)) {
-        return luaL_error(L, "quat_fromAxisAngle requires (axis_vec3, angle_radians)");
+    glm::vec3* axis = getVec3(L, 1);
+    if (!axis || !lua_isnumber(L, 2)) {
+        return luaL_error(L, "quat_fromAxisAngle requires (Vec3, number)");
     }
-    
-    // Read axis
-    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z");
-    glm::vec3 axis(
-        static_cast<float>(lua_tonumber(L, -3)),
-        static_cast<float>(lua_tonumber(L, -2)),
-        static_cast<float>(lua_tonumber(L, -1))
-    );
-    lua_pop(L, 3);
     
     float angle = static_cast<float>(lua_tonumber(L, 2));
     
     // Create quaternion from axis-angle
-    glm::quat result = glm::angleAxis(angle, glm::normalize(axis));
-    
-    // Return result
-    lua_newtable(L);
-    lua_pushnumber(L, result.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, result.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, result.z); lua_setfield(L, -2, "z");
-    lua_pushnumber(L, result.w); lua_setfield(L, -2, "w");
+    glm::quat result = glm::angleAxis(angle, glm::normalize(*axis));
+    pushVec4(L, glm::vec4(result.x, result.y, result.z, result.w));
     return 1;
 }
 
 // quat_fromEuler(euler) - Create quaternion from Euler angles (vec3)
 static inline int lua_quat_fromEuler(lua_State* L) {
-    if (!lua_istable(L, 1)) {
-        return luaL_error(L, "quat_fromEuler requires (euler_vec3)");
+    glm::vec3* euler = getVec3(L, 1);
+    if (!euler) {
+        return luaL_error(L, "quat_fromEuler requires (Vec3)");
     }
     
-    // Read euler angles
-    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z");
-    glm::vec3 euler(
-        static_cast<float>(lua_tonumber(L, -3)),
-        static_cast<float>(lua_tonumber(L, -2)),
-        static_cast<float>(lua_tonumber(L, -1))
-    );
-    lua_pop(L, 3);
-    
     // Create quaternion from euler
-    glm::quat result = glm::quat(euler);
-    
-    // Return result
-    lua_newtable(L);
-    lua_pushnumber(L, result.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, result.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, result.z); lua_setfield(L, -2, "z");
-    lua_pushnumber(L, result.w); lua_setfield(L, -2, "w");
+    glm::quat result = glm::quat(*euler);
+    pushVec4(L, glm::vec4(result.x, result.y, result.z, result.w));
     return 1;
 }
 
 // quat_toEuler(quat) - Convert quaternion to Euler angles (returns vec3)
 static inline int lua_quat_toEuler(lua_State* L) {
-    if (!lua_istable(L, 1)) {
-        return luaL_error(L, "quat_toEuler requires (quat)");
+    glm::vec4* q = getVec4(L, 1);
+    if (!q) {
+        return luaL_error(L, "quat_toEuler requires (Vec4)");
     }
     
-    // Read quaternion
-    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z"); lua_getfield(L, 1, "w");
-    glm::quat q(
-        static_cast<float>(lua_tonumber(L, -1)), // w
-        static_cast<float>(lua_tonumber(L, -4)), // x
-        static_cast<float>(lua_tonumber(L, -3)), // y
-        static_cast<float>(lua_tonumber(L, -2))  // z
-    );
-    lua_pop(L, 4);
+    // Convert Vec4 to quat
+    glm::quat quat(q->w, q->x, q->y, q->z);
     
     // Convert to euler
-    glm::vec3 euler = glm::eulerAngles(q);
-    
-    // Return result
-    lua_newtable(L);
-    lua_pushnumber(L, euler.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, euler.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, euler.z); lua_setfield(L, -2, "z");
+    glm::vec3 euler = glm::eulerAngles(quat);
+    pushVec3(L, euler);
     return 1;
 }
 
 // quat_lookAt(forward, up) - Create a quaternion that looks in the forward direction
 static inline int lua_quat_lookAt(lua_State* L) {
-    if (!lua_istable(L, 1) || !lua_istable(L, 2)) {
-        return luaL_error(L, "quat_lookAt requires (forward_vec3, up_vec3)");
+    glm::vec3* forward = getVec3(L, 1);
+    glm::vec3* up = getVec3(L, 2);
+    if (!forward || !up) {
+        return luaL_error(L, "quat_lookAt requires (Vec3, Vec3)");
     }
-    
-    // Read forward vector
-    lua_getfield(L, 1, "x"); lua_getfield(L, 1, "y"); lua_getfield(L, 1, "z");
-    glm::vec3 forward(
-        static_cast<float>(lua_tonumber(L, -3)),
-        static_cast<float>(lua_tonumber(L, -2)),
-        static_cast<float>(lua_tonumber(L, -1))
-    );
-    lua_pop(L, 3);
-    
-    // Read up vector
-    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
-    glm::vec3 up(
-        static_cast<float>(lua_tonumber(L, -3)),
-        static_cast<float>(lua_tonumber(L, -2)),
-        static_cast<float>(lua_tonumber(L, -1))
-    );
-    lua_pop(L, 3);
     
     // Create look-at quaternion
     // Negate forward because glm::quatLookAt assumes +Z is forward, but most engines use -Z
-    glm::quat result = glm::quatLookAt(-glm::normalize(forward), glm::normalize(up));
-    
-    // Return result
-    lua_newtable(L);
-    lua_pushnumber(L, result.x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, result.y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, result.z); lua_setfield(L, -2, "z");
-    lua_pushnumber(L, result.w); lua_setfield(L, -2, "w");
+    glm::quat result = glm::quatLookAt(-glm::normalize(*forward), glm::normalize(*up));
+    pushVec4(L, glm::vec4(result.x, result.y, result.z, result.w));
     return 1;
 }
 
@@ -2009,6 +2105,41 @@ static inline int lua_print(lua_State* L) {
     lua_pop(L, 1)
 
 static inline void registerNodeBindings(lua_State* L) {
+    // Vec2 metatable
+    luaL_newmetatable(L, "Vec2");
+    lua_pushcfunction(L, vec2_index);
+    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, vec2_newindex);
+    lua_setfield(L, -2, "__newindex");
+    lua_pushcfunction(L, vec2_tostring);
+    lua_setfield(L, -2, "__tostring");
+    lua_pop(L, 1);
+    
+    // Vec3 metatable
+    luaL_newmetatable(L, "Vec3");
+    lua_pushcfunction(L, vec3_index);
+    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, vec3_newindex);
+    lua_setfield(L, -2, "__newindex");
+    lua_pushcfunction(L, vec3_tostring);
+    lua_setfield(L, -2, "__tostring");
+    lua_pop(L, 1);
+    
+    // Vec4 metatable
+    luaL_newmetatable(L, "Vec4");
+    lua_pushcfunction(L, vec4_index);
+    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, vec4_newindex);
+    lua_setfield(L, -2, "__newindex");
+    lua_pushcfunction(L, vec4_tostring);
+    lua_setfield(L, -2, "__tostring");
+    lua_pop(L, 1);
+    
+    // Register vector constructors as global functions
+    LUA_REG_GLOBAL(lua_Vec2, "Vec2");
+    LUA_REG_GLOBAL(lua_Vec3, "Vec3");
+    LUA_REG_GLOBAL(lua_Vec4, "Vec4");
+    
     // Transform3D metatable
     LUA_BEGIN_METATABLE("Transform3D");
     LUA_REG_METHOD(transform3d_getPos, "getPos");

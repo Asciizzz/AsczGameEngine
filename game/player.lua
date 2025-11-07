@@ -34,7 +34,7 @@ VARS = {
     
     -- Smooth rotation parameters (quaternion-based)
     rotationSpeed = 8.0,    -- How fast to rotate (higher = faster, smoother with quaternions)
-    currentQuat = { x = 0, y = 0, z = 0, w = 1 }, -- Current rotation quaternion
+    currentQuat = Vec4(0, 0, 0, 1),  -- Current rotation quaternion
 }
 
 function quat_forward(quat)
@@ -177,8 +177,8 @@ function update()
         
         if dirLength > 0.01 then
             -- Create forward and up vectors for lookAt
-            local forward = { x = dirX / dirLength, y = 0, z = dirZ / dirLength }
-            local up = { x = 0, y = 1, z = 0 }
+            local forward = Vec3(dirX / dirLength, 0, dirZ / dirLength)
+            local up = Vec3(0, 1, 0)
             
             -- Create target quaternion using lookAt
             local targetQuat = quat_lookAt(forward, up)

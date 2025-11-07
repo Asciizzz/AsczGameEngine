@@ -180,58 +180,50 @@ void tinyScript::cacheDefaultVars() {
                 defaultVars_[key] = static_cast<bool>(lua_toboolean(L_, -1));
             } else if (lua_isstring(L_, -1)) {
                 defaultVars_[key] = std::string(lua_tostring(L_, -1));
-            } else if (lua_istable(L_, -1)) {
-                // Check if it's a vector (table with x, y, z, w components)
-                lua_getfield(L_, -1, "x");
-                lua_getfield(L_, -2, "y");
-                lua_getfield(L_, -3, "z");
-                lua_getfield(L_, -4, "w");
-                
-                bool hasX = lua_isnumber(L_, -4);
-                bool hasY = lua_isnumber(L_, -3);
-                bool hasZ = lua_isnumber(L_, -2);
-                bool hasW = lua_isnumber(L_, -1);
-                
-                if (hasX && hasY && hasZ && hasW) {
-                    // vec4
-                    glm::vec4 vec;
-                    vec.w = static_cast<float>(lua_tonumber(L_, -1));
-                    vec.z = static_cast<float>(lua_tonumber(L_, -2));
-                    vec.y = static_cast<float>(lua_tonumber(L_, -3));
-                    vec.x = static_cast<float>(lua_tonumber(L_, -4));
-                    defaultVars_[key] = vec;
-                } else if (hasX && hasY && hasZ) {
-                    // vec3
-                    glm::vec3 vec;
-                    vec.z = static_cast<float>(lua_tonumber(L_, -2));
-                    vec.y = static_cast<float>(lua_tonumber(L_, -3));
-                    vec.x = static_cast<float>(lua_tonumber(L_, -4));
-                    defaultVars_[key] = vec;
-                } else if (hasX && hasY) {
-                    // vec2
-                    glm::vec2 vec;
-                    vec.y = static_cast<float>(lua_tonumber(L_, -3));
-                    vec.x = static_cast<float>(lua_tonumber(L_, -4));
-                    defaultVars_[key] = vec;
-                }
-                
-                lua_pop(L_, 4);  // Pop x, y, z, w
             } else if (lua_isuserdata(L_, -1)) {
-                // Check if it has the Handle metatable
+                // Check metatable to determine userdata type
                 if (lua_getmetatable(L_, -1)) {
-                    luaL_getmetatable(L_, "Handle");
+                    // Check for Vec2
+                    luaL_getmetatable(L_, "Vec2");
                     if (lua_rawequal(L_, -1, -2)) {
-                        // It's a valid Handle userdata
                         lua_pop(L_, 2); // Pop both metatables
-                        
-                        LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L_, -1));
-                        if (luaHandle) {
-                            // Convert LuaHandle to typeHandle (even if invalid)
-                            // This allows handles to be stored and set later
-                            defaultVars_[key] = luaHandle->toTypeHandle();
-                        }
+                        glm::vec2* vec = static_cast<glm::vec2*>(lua_touserdata(L_, -1));
+                        if (vec) defaultVars_[key] = *vec;
                     } else {
-                        lua_pop(L_, 2); // Pop both metatables
+                        lua_pop(L_, 1); // Pop Vec2 metatable
+                        
+                        // Check for Vec3
+                        luaL_getmetatable(L_, "Vec3");
+                        if (lua_rawequal(L_, -1, -2)) {
+                            lua_pop(L_, 2); // Pop both metatables
+                            glm::vec3* vec = static_cast<glm::vec3*>(lua_touserdata(L_, -1));
+                            if (vec) defaultVars_[key] = *vec;
+                        } else {
+                            lua_pop(L_, 1); // Pop Vec3 metatable
+                            
+                            // Check for Vec4
+                            luaL_getmetatable(L_, "Vec4");
+                            if (lua_rawequal(L_, -1, -2)) {
+                                lua_pop(L_, 2); // Pop both metatables
+                                glm::vec4* vec = static_cast<glm::vec4*>(lua_touserdata(L_, -1));
+                                if (vec) defaultVars_[key] = *vec;
+                            } else {
+                                lua_pop(L_, 1); // Pop Vec4 metatable
+                                
+                                // Check for Handle
+                                luaL_getmetatable(L_, "Handle");
+                                if (lua_rawequal(L_, -1, -2)) {
+                                    lua_pop(L_, 2); // Pop both metatables
+                                    LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L_, -1));
+                                    if (luaHandle) {
+                                        // Convert LuaHandle to typeHandle
+                                        defaultVars_[key] = luaHandle->toTypeHandle();
+                                    }
+                                } else {
+                                    lua_pop(L_, 2); // Pop both metatables
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -331,33 +323,15 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                 lua_setfield(L_, -2, key.c_str());
             }
             else if constexpr (std::is_same_v<T, glm::vec2>) {
-                lua_newtable(L_);
-                lua_pushnumber(L_, val.x);
-                lua_setfield(L_, -2, "x");
-                lua_pushnumber(L_, val.y);
-                lua_setfield(L_, -2, "y");
+                pushVec2(L_, val);
                 lua_setfield(L_, -2, key.c_str());
             }
             else if constexpr (std::is_same_v<T, glm::vec3>) {
-                lua_newtable(L_);
-                lua_pushnumber(L_, val.x);
-                lua_setfield(L_, -2, "x");
-                lua_pushnumber(L_, val.y);
-                lua_setfield(L_, -2, "y");
-                lua_pushnumber(L_, val.z);
-                lua_setfield(L_, -2, "z");
+                pushVec3(L_, val);
                 lua_setfield(L_, -2, key.c_str());
             }
             else if constexpr (std::is_same_v<T, glm::vec4>) {
-                lua_newtable(L_);
-                lua_pushnumber(L_, val.x);
-                lua_setfield(L_, -2, "x");
-                lua_pushnumber(L_, val.y);
-                lua_setfield(L_, -2, "y");
-                lua_pushnumber(L_, val.z);
-                lua_setfield(L_, -2, "z");
-                lua_pushnumber(L_, val.w);
-                lua_setfield(L_, -2, "w");
+                pushVec4(L_, val);
                 lua_setfield(L_, -2, key.c_str());
             }
             else if constexpr (std::is_same_v<T, std::string>) {
@@ -379,13 +353,13 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     lua_pushnumber(L_, dTime);
     lua_setglobal(L_, "DTIME");
     
+    // Push __scene as light userdata
+    lua_pushlightuserdata(L_, scene);
+    lua_setglobal(L_, "__scene");
+    
     // Push SCENE as a Scene userdata object
     pushScene(L_, static_cast<tinyRT::Scene*>(scene));
     lua_setglobal(L_, "SCENE");
-    
-    // Keep legacy __scene for compatibility
-    lua_pushlightuserdata(L_, scene);
-    lua_setglobal(L_, "__scene");
     
     // Push NODE as a Node userdata object (for calling methods like NODE:transform3D())
     pushNode(L_, nodeHandle);
@@ -423,48 +397,45 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                     }
                 }
                 else if constexpr (std::is_same_v<T, glm::vec2>) {
-                    if (lua_istable(L_, -1)) {
-                        lua_getfield(L_, -1, "x");
-                        if (lua_isnumber(L_, -1)) val.x = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
-                        
-                        lua_getfield(L_, -1, "y");
-                        if (lua_isnumber(L_, -1)) val.y = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
+                    if (lua_isuserdata(L_, -1)) {
+                        if (lua_getmetatable(L_, -1)) {
+                            luaL_getmetatable(L_, "Vec2");
+                            if (lua_rawequal(L_, -1, -2)) {
+                                lua_pop(L_, 2); // Pop both metatables
+                                glm::vec2* vec = static_cast<glm::vec2*>(lua_touserdata(L_, -1));
+                                if (vec) val = *vec;
+                            } else {
+                                lua_pop(L_, 2); // Pop both metatables
+                            }
+                        }
                     }
                 }
                 else if constexpr (std::is_same_v<T, glm::vec3>) {
-                    if (lua_istable(L_, -1)) {
-                        lua_getfield(L_, -1, "x");
-                        if (lua_isnumber(L_, -1)) val.x = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
-                        
-                        lua_getfield(L_, -1, "y");
-                        if (lua_isnumber(L_, -1)) val.y = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
-                        
-                        lua_getfield(L_, -1, "z");
-                        if (lua_isnumber(L_, -1)) val.z = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
+                    if (lua_isuserdata(L_, -1)) {
+                        if (lua_getmetatable(L_, -1)) {
+                            luaL_getmetatable(L_, "Vec3");
+                            if (lua_rawequal(L_, -1, -2)) {
+                                lua_pop(L_, 2); // Pop both metatables
+                                glm::vec3* vec = static_cast<glm::vec3*>(lua_touserdata(L_, -1));
+                                if (vec) val = *vec;
+                            } else {
+                                lua_pop(L_, 2); // Pop both metatables
+                            }
+                        }
                     }
                 }
                 else if constexpr (std::is_same_v<T, glm::vec4>) {
-                    if (lua_istable(L_, -1)) {
-                        lua_getfield(L_, -1, "x");
-                        if (lua_isnumber(L_, -1)) val.x = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
-                        
-                        lua_getfield(L_, -1, "y");
-                        if (lua_isnumber(L_, -1)) val.y = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
-                        
-                        lua_getfield(L_, -1, "z");
-                        if (lua_isnumber(L_, -1)) val.z = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
-                        
-                        lua_getfield(L_, -1, "w");
-                        if (lua_isnumber(L_, -1)) val.w = static_cast<float>(lua_tonumber(L_, -1));
-                        lua_pop(L_, 1);
+                    if (lua_isuserdata(L_, -1)) {
+                        if (lua_getmetatable(L_, -1)) {
+                            luaL_getmetatable(L_, "Vec4");
+                            if (lua_rawequal(L_, -1, -2)) {
+                                lua_pop(L_, 2); // Pop both metatables
+                                glm::vec4* vec = static_cast<glm::vec4*>(lua_touserdata(L_, -1));
+                                if (vec) val = *vec;
+                            } else {
+                                lua_pop(L_, 2); // Pop both metatables
+                            }
+                        }
                     }
                 }
                 else if constexpr (std::is_same_v<T, std::string>) {
