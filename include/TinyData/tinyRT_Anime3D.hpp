@@ -83,7 +83,7 @@ struct Anime3D {
             clip.duration = std::max(clip.duration, sampler.times.back());
         }
 
-        nameToHandle[uniqueName] = animePool.add(std::move(clip));
+        nameToHandle[uniqueName] = clips.add(std::move(clip));
 
         return nameToHandle[uniqueName];
     }
@@ -97,8 +97,8 @@ struct Anime3D {
     
     // Set current animation without starting playback
     void setCurrent(const tinyHandle& handle, bool resetTime = true) {
-        const Clip* anim = animePool.get(handle);
-        if (!anim || !anim->valid()) return;
+        const Clip* clip = clips.get(handle);
+        if (!clip || !clip->valid()) return;
         currentHandle = handle;
         if (resetTime) time = 0.0f;
     }
@@ -113,8 +113,8 @@ struct Anime3D {
     bool getLoop() const { return loop; }
 
     float duration(tinyHandle handle) const {
-        const Clip* anim = animePool.get(handle);
-        return anim ? anim->duration : 0.0f;
+        const Clip* clip = clips.get(handle);
+        return clip ? clip->duration : 0.0f;
     }
     float duration(const std::string& name) const {
         auto it = nameToHandle.find(name);
@@ -127,18 +127,18 @@ struct Anime3D {
     
     void update(Scene* scene, float deltaTime);
 
-    Clip* current() { return animePool.get(currentHandle); }
-    const Clip* current() const { return animePool.get(currentHandle); }
+    Clip* current() { return clips.get(currentHandle); }
+    const Clip* current() const { return clips.get(currentHandle); }
 
     tinyHandle curHandle() const { return currentHandle; }
 
-    Clip* get(const tinyHandle& handle) { return animePool.get(handle); }
-    const Clip* get(const tinyHandle& handle) const { return animePool.get(handle); }
+    Clip* get(const tinyHandle& handle) { return clips.get(handle); }
+    const Clip* get(const tinyHandle& handle) const { return clips.get(handle); }
 
     Clip* get(const std::string& name) {
         auto it = nameToHandle.find(name);
         if (it != nameToHandle.end()) {
-            return animePool.get(it->second);
+            return clips.get(it->second);
         }
         return nullptr;
     }
@@ -153,7 +153,7 @@ struct Anime3D {
     }
 
     const std::deque<Clip>& all() const {
-        return animePool.view();
+        return clips.view();
     }
 
     // Retrieve the list
@@ -162,7 +162,7 @@ struct Anime3D {
     }
 
 private:
-    tinyPool<Clip> animePool;
+    tinyPool<Clip> clips;
     UnorderedMap<std::string, tinyHandle> nameToHandle;
     tinyHandle currentHandle;
 

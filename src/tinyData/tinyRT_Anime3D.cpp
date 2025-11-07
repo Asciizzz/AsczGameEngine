@@ -98,7 +98,7 @@ void Anime3D::play(const std::string& name, bool restart) {
 }
 
 void Anime3D::play(const tinyHandle& handle, bool restart) {
-    const Clip* anim = animePool.get(handle);
+    const Clip* anim = clips.get(handle);
     if (!anim || !anim->valid()) return;
     
     playing = true;
@@ -192,12 +192,12 @@ glm::mat4 recomposeTransform(
 void Anime3D::apply(Scene* scene, const tinyHandle& animeHandle) {
     if (scene == nullptr) return;
 
-    const Clip* anime = animePool.get(animeHandle);
-    if (!anime || !anime->valid()) return;
+    const Clip* clip = clips.get(animeHandle);
+    if (!clip || !clip->valid()) return;
 
     // Apply animation at the current time without updating time
-    for (const auto& channel : anime->channels) {
-        const auto& sampler = anime->samplers[channel.sampler];
+    for (const auto& channel : clip->channels) {
+        const auto& sampler = clip->samplers[channel.sampler];
 
         glm::mat4 transform = getTransform(scene, channel);
 
@@ -299,9 +299,9 @@ void Anime3D::update(Scene* scene, float deltaTime) {
     if (scene == nullptr) return;
 
     // Update the current animation if playing
-    const Clip* anime = animePool.get(currentHandle);
-    if (playing && anime && anime->valid()) {
-        float duration = anime->duration;
+    const Clip* clip = clips.get(currentHandle);
+    if (playing && clip && clip->valid()) {
+        float duration = clip->duration;
 
         // Update time
         time += deltaTime * speed;
@@ -324,7 +324,7 @@ void Anime3D::update(Scene* scene, float deltaTime) {
     }
 
     // Always apply the current animation at the current time (even if paused)
-    if (anime && anime->valid()) {
+    if (clip && clip->valid()) {
         apply(scene, currentHandle);
     }
 }
