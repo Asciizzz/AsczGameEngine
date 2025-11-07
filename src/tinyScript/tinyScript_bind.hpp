@@ -23,20 +23,17 @@ static inline tinyRT::Scene* getSceneFromLua(lua_State* L) {
     return static_cast<tinyRT::Scene*>(ptr);
 }
 
-// Helper to decompose a mat4 into pos, rot (quat), scale
 static inline void decomposeMatrix(const glm::mat4& mat, glm::vec3& pos, glm::quat& rot, glm::vec3& scale) {
     glm::vec3 skew;
     glm::vec4 persp;
     glm::decompose(mat, scale, rot, pos, skew, persp);
 }
 
-// Helper to compose a mat4 from pos, rot (quat), scale
 static inline glm::mat4 composeMatrix(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& scale) {
     return glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot) * glm::scale(glm::mat4(1.0f), scale);
 }
 
 static inline tinyHandle* getNodeHandleFromUserdata(lua_State* L, int index) {
-    // Use testudata instead of checkudata to avoid throwing errors
     void* ud = luaL_testudata(L, index, "Node");
     return ud ? static_cast<tinyHandle*>(ud) : nullptr;
 }
@@ -60,10 +57,9 @@ static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
 }
 
 // ========================================
-// VECTOR TYPES (Vec2, Vec3, Vec4, Quat)
+// VECTOR TYPES
 // ========================================
 
-// Push Vec2 as userdata
 static inline void pushVec2(lua_State* L, const glm::vec2& vec) {
     glm::vec2* ud = static_cast<glm::vec2*>(lua_newuserdata(L, sizeof(glm::vec2)));
     *ud = vec;
@@ -71,7 +67,6 @@ static inline void pushVec2(lua_State* L, const glm::vec2& vec) {
     lua_setmetatable(L, -2);
 }
 
-// Push Vec3 as userdata
 static inline void pushVec3(lua_State* L, const glm::vec3& vec) {
     glm::vec3* ud = static_cast<glm::vec3*>(lua_newuserdata(L, sizeof(glm::vec3)));
     *ud = vec;
@@ -79,7 +74,6 @@ static inline void pushVec3(lua_State* L, const glm::vec3& vec) {
     lua_setmetatable(L, -2);
 }
 
-// Push Vec4 as userdata
 static inline void pushVec4(lua_State* L, const glm::vec4& vec) {
     glm::vec4* ud = static_cast<glm::vec4*>(lua_newuserdata(L, sizeof(glm::vec4)));
     *ud = vec;
@@ -87,22 +81,18 @@ static inline void pushVec4(lua_State* L, const glm::vec4& vec) {
     lua_setmetatable(L, -2);
 }
 
-// Get Vec2 from userdata
 static inline glm::vec2* getVec2(lua_State* L, int index) {
     return static_cast<glm::vec2*>(luaL_checkudata(L, index, "Vec2"));
 }
 
-// Get Vec3 from userdata
 static inline glm::vec3* getVec3(lua_State* L, int index) {
     return static_cast<glm::vec3*>(luaL_checkudata(L, index, "Vec3"));
 }
 
-// Get Vec4 from userdata
 static inline glm::vec4* getVec4(lua_State* L, int index) {
     return static_cast<glm::vec4*>(luaL_checkudata(L, index, "Vec4"));
 }
 
-// Vec2 constructor: Vec2(x, y)
 static inline int lua_Vec2(lua_State* L) {
     float x = luaL_optnumber(L, 1, 0.0f);
     float y = luaL_optnumber(L, 2, 0.0f);
@@ -110,7 +100,6 @@ static inline int lua_Vec2(lua_State* L) {
     return 1;
 }
 
-// Vec3 constructor: Vec3(x, y, z)
 static inline int lua_Vec3(lua_State* L) {
     float x = luaL_optnumber(L, 1, 0.0f);
     float y = luaL_optnumber(L, 2, 0.0f);
@@ -119,7 +108,6 @@ static inline int lua_Vec3(lua_State* L) {
     return 1;
 }
 
-// Vec4 constructor: Vec4(x, y, z, w)
 static inline int lua_Vec4(lua_State* L) {
     float x = luaL_optnumber(L, 1, 0.0f);
     float y = luaL_optnumber(L, 2, 0.0f);
@@ -129,7 +117,6 @@ static inline int lua_Vec4(lua_State* L) {
     return 1;
 }
 
-// Vec2 __index metamethod (for accessing .x, .y)
 static inline int vec2_index(lua_State* L) {
     glm::vec2* v = getVec2(L, 1);
     if (!v) return 0;
@@ -143,7 +130,6 @@ static inline int vec2_index(lua_State* L) {
     return 0;
 }
 
-// Vec2 __newindex metamethod (for setting .x, .y)
 static inline int vec2_newindex(lua_State* L) {
     glm::vec2* v = getVec2(L, 1);
     if (!v) return 0;
@@ -158,8 +144,6 @@ static inline int vec2_newindex(lua_State* L) {
     
     return 0;
 }
-
-// Vec2 __tostring metamethod
 static inline int vec2_tostring(lua_State* L) {
     glm::vec2* v = getVec2(L, 1);
     if (!v) return 0;
@@ -169,7 +153,6 @@ static inline int vec2_tostring(lua_State* L) {
     return 1;
 }
 
-// Vec3 __index metamethod (for accessing .x, .y, .z)
 static inline int vec3_index(lua_State* L) {
     glm::vec3* v = getVec3(L, 1);
     if (!v) return 0;
@@ -184,7 +167,6 @@ static inline int vec3_index(lua_State* L) {
     return 0;
 }
 
-// Vec3 __newindex metamethod (for setting .x, .y, .z)
 static inline int vec3_newindex(lua_State* L) {
     glm::vec3* v = getVec3(L, 1);
     if (!v) return 0;
@@ -201,7 +183,6 @@ static inline int vec3_newindex(lua_State* L) {
     return 0;
 }
 
-// Vec3 __tostring metamethod
 static inline int vec3_tostring(lua_State* L) {
     glm::vec3* v = getVec3(L, 1);
     if (!v) return 0;
@@ -211,7 +192,6 @@ static inline int vec3_tostring(lua_State* L) {
     return 1;
 }
 
-// Vec4 __index metamethod (for accessing .x, .y, .z, .w)
 static inline int vec4_index(lua_State* L) {
     glm::vec4* v = getVec4(L, 1);
     if (!v) return 0;
@@ -227,7 +207,6 @@ static inline int vec4_index(lua_State* L) {
     return 0;
 }
 
-// Vec4 __newindex metamethod (for setting .x, .y, .z, .w)
 static inline int vec4_newindex(lua_State* L) {
     glm::vec4* v = getVec4(L, 1);
     if (!v) return 0;
@@ -245,7 +224,6 @@ static inline int vec4_newindex(lua_State* L) {
     return 0;
 }
 
-// Vec4 __tostring metamethod
 static inline int vec4_tostring(lua_State* L) {
     glm::vec4* v = getVec4(L, 1);
     if (!v) return 0;
@@ -256,7 +234,7 @@ static inline int vec4_tostring(lua_State* L) {
 }
 
 // ========================================
-// UNIFIED HANDLE SYSTEM
+// HANDLE SYSTEM
 // ========================================
 
 // LuaHandle - Unified handle structure with type information
