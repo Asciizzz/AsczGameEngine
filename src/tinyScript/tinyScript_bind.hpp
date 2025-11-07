@@ -23,6 +23,18 @@ static inline tinyRT::Scene* getSceneFromLua(lua_State* L) {
     return static_cast<tinyRT::Scene*>(ptr);
 }
 
+// Helper to decompose a mat4 into pos, rot (quat), scale
+static inline void decomposeMatrix(const glm::mat4& mat, glm::vec3& pos, glm::quat& rot, glm::vec3& scale) {
+    glm::vec3 skew;
+    glm::vec4 persp;
+    glm::decompose(mat, scale, rot, pos, skew, persp);
+}
+
+// Helper to compose a mat4 from pos, rot (quat), scale
+static inline glm::mat4 composeMatrix(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& scale) {
+    return glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot) * glm::scale(glm::mat4(1.0f), scale);
+}
+
 static inline tinyHandle* getNodeHandleFromUserdata(lua_State* L, int index) {
     void* ud = luaL_checkudata(L, index, "Node");
     return ud ? static_cast<tinyHandle*>(ud) : nullptr;
@@ -357,10 +369,9 @@ static inline int transform3d_getPos(lua_State* L) {
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
-        glm::vec3 pos, scale, skew;
+        glm::vec3 pos, scale;
         glm::quat rot;
-        glm::vec4 persp;
-        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
         
         lua_newtable(L);
         lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
@@ -381,11 +392,10 @@ static inline int transform3d_setPos(lua_State* L) {
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
-        glm::vec3 pos, scale, skew;
+        glm::vec3 pos, scale;
         glm::quat rot;
-        glm::vec4 persp;
-        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
-        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), newPos) * glm::mat4_cast(rot) * glm::scale(glm::mat4(1.0f), scale);
+        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        comps.trfm3D->local = composeMatrix(newPos, rot, scale);
     }
     return 0;
 }
@@ -396,10 +406,9 @@ static inline int transform3d_getRot(lua_State* L) {
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
-        glm::vec3 pos, scale, skew;
+        glm::vec3 pos, scale;
         glm::quat rot;
-        glm::vec4 persp;
-        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
         
         glm::vec3 euler = glm::eulerAngles(rot);
         lua_newtable(L);
@@ -421,12 +430,11 @@ static inline int transform3d_setRot(lua_State* L) {
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
-        glm::vec3 pos, scale, skew;
+        glm::vec3 pos, scale;
         glm::quat rot;
-        glm::vec4 persp;
-        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
         glm::quat newRot = glm::quat(euler);
-        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(newRot) * glm::scale(glm::mat4(1.0f), scale);
+        comps.trfm3D->local = composeMatrix(pos, newRot, scale);
     }
     return 0;
 }
@@ -437,10 +445,9 @@ static inline int transform3d_getQuat(lua_State* L) {
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
-        glm::vec3 pos, scale, skew;
+        glm::vec3 pos, scale;
         glm::quat rot;
-        glm::vec4 persp;
-        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
         
         // Return quaternion as table {x, y, z, w}
         lua_newtable(L);
@@ -468,11 +475,10 @@ static inline int transform3d_setQuat(lua_State* L) {
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
-        glm::vec3 pos, scale, skew;
+        glm::vec3 pos, scale;
         glm::quat rot;
-        glm::vec4 persp;
-        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
-        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(quat) * glm::scale(glm::mat4(1.0f), scale);
+        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        comps.trfm3D->local = composeMatrix(pos, quat, scale);
     }
     return 0;
 }
@@ -483,10 +489,9 @@ static inline int transform3d_getScl(lua_State* L) {
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
-        glm::vec3 pos, scale, skew;
+        glm::vec3 pos, scale;
         glm::quat rot;
-        glm::vec4 persp;
-        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
+        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
         
         lua_newtable(L);
         lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
@@ -507,11 +512,10 @@ static inline int transform3d_setScl(lua_State* L) {
     
     auto comps = getSceneFromLua(L)->nComp(*handle);
     if (comps.trfm3D) {
-        glm::vec3 pos, scale, skew;
+        glm::vec3 pos, scale;
         glm::quat rot;
-        glm::vec4 persp;
-        glm::decompose(comps.trfm3D->local, scale, rot, pos, skew, persp);
-        comps.trfm3D->local = glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot) * glm::scale(glm::mat4(1.0f), newScale);
+        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        comps.trfm3D->local = composeMatrix(pos, rot, newScale);
     }
     return 0;
 }
@@ -526,6 +530,540 @@ static inline int node_transform3D(lua_State* L) {
     tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
     *ud = *handle;
     luaL_getmetatable(L, "Transform3D");
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+// ========================================
+// COMPONENT: SKELETON3D & BONE
+// ========================================
+
+// Bone userdata structure - stores node handle + bone index
+struct LuaBone {
+    tinyHandle nodeHandle;
+    uint32_t boneIndex;
+};
+
+static inline LuaBone* getBoneFromUserdata(lua_State* L, int index) {
+    return static_cast<LuaBone*>(luaL_checkudata(L, index, "Bone"));
+}
+
+static inline void pushBone(lua_State* L, tinyHandle nodeHandle, uint32_t boneIndex) {
+    LuaBone* ud = static_cast<LuaBone*>(lua_newuserdata(L, sizeof(LuaBone)));
+    ud->nodeHandle = nodeHandle;
+    ud->boneIndex = boneIndex;
+    luaL_getmetatable(L, "Bone");
+    lua_setmetatable(L, -2);
+}
+
+// ===== Bone Local Pose Methods =====
+
+static inline int bone_getLocalPos(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+    
+    lua_newtable(L);
+    lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+    return 1;
+}
+
+static inline int bone_setLocalPos(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone || !lua_istable(L, 2)) return 0;
+    
+    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
+    glm::vec3 newPos(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
+    lua_pop(L, 3);
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
+        glm::vec3 pos, scale;
+        glm::quat rot;
+        decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+        comps.skel3D->setLocalPose(bone->boneIndex, composeMatrix(newPos, rot, scale));
+    }
+    return 0;
+}
+
+static inline int bone_getLocalRot(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+    
+    glm::vec3 euler = glm::eulerAngles(rot);
+    lua_newtable(L);
+    lua_pushnumber(L, euler.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, euler.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, euler.z); lua_setfield(L, -2, "z");
+    return 1;
+}
+
+static inline int bone_setLocalRot(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone || !lua_istable(L, 2)) return 0;
+    
+    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
+    glm::vec3 euler(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
+    lua_pop(L, 3);
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
+        glm::vec3 pos, scale;
+        glm::quat rot;
+        decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+        glm::quat newRot = glm::quat(euler);
+        comps.skel3D->setLocalPose(bone->boneIndex, composeMatrix(pos, newRot, scale));
+    }
+    return 0;
+}
+
+static inline int bone_getLocalQuat(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+    
+    lua_newtable(L);
+    lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+    return 1;
+}
+
+static inline int bone_setLocalQuat(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone || !lua_istable(L, 2)) return 0;
+    
+    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z"); lua_getfield(L, 2, "w");
+    glm::quat quat(
+        static_cast<float>(lua_tonumber(L, -1)), // w
+        static_cast<float>(lua_tonumber(L, -4)), // x
+        static_cast<float>(lua_tonumber(L, -3)), // y
+        static_cast<float>(lua_tonumber(L, -2))  // z
+    );
+    lua_pop(L, 4);
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
+        glm::vec3 pos, scale;
+        glm::quat rot;
+        decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+        comps.skel3D->setLocalPose(bone->boneIndex, composeMatrix(pos, quat, scale));
+    }
+    return 0;
+}
+
+static inline int bone_getLocalScl(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+    
+    lua_newtable(L);
+    lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+    return 1;
+}
+
+static inline int bone_setLocalScl(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone || !lua_istable(L, 2)) return 0;
+    
+    lua_getfield(L, 2, "x"); lua_getfield(L, 2, "y"); lua_getfield(L, 2, "z");
+    glm::vec3 newScale(lua_tonumber(L, -3), lua_tonumber(L, -2), lua_tonumber(L, -1));
+    lua_pop(L, 3);
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
+        glm::vec3 pos, scale;
+        glm::quat rot;
+        decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+        comps.skel3D->localPose(bone->boneIndex) = composeMatrix(pos, rot, newScale);
+    }
+    return 0;
+}
+
+// Get full local pose matrix
+static inline int bone_localPose(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->localPose(bone->boneIndex), pos, rot, scale);
+    
+    lua_newtable(L);
+    
+    // Position
+    lua_newtable(L);
+    lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+    lua_setfield(L, -2, "pos");
+    
+    // Rotation (as quaternion)
+    lua_newtable(L);
+    lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+    lua_setfield(L, -2, "rot");
+    
+    // Scale
+    lua_newtable(L);
+    lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+    lua_setfield(L, -2, "scl");
+    
+    return 1;
+}
+
+// ===== Bone Bind Pose Methods (Read-only) =====
+
+static inline int bone_getBindPos(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
+    
+    lua_newtable(L);
+    lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+    return 1;
+}
+
+static inline int bone_getBindRot(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
+    
+    glm::vec3 euler = glm::eulerAngles(rot);
+    lua_newtable(L);
+    lua_pushnumber(L, euler.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, euler.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, euler.z); lua_setfield(L, -2, "z");
+    return 1;
+}
+
+static inline int bone_getBindQuat(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
+    
+    lua_newtable(L);
+    lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+    return 1;
+}
+
+static inline int bone_getBindScl(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
+    
+    lua_newtable(L);
+    lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+    return 1;
+}
+
+// Get full bind pose
+static inline int bone_bindPose(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(comps.skel3D->bindPose(bone->boneIndex), pos, rot, scale);
+    
+    lua_newtable(L);
+    
+    // Position
+    lua_newtable(L);
+    lua_pushnumber(L, pos.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, pos.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, pos.z); lua_setfield(L, -2, "z");
+    lua_setfield(L, -2, "pos");
+    
+    // Rotation (as quaternion)
+    lua_newtable(L);
+    lua_pushnumber(L, rot.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, rot.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, rot.z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, rot.w); lua_setfield(L, -2, "w");
+    lua_setfield(L, -2, "rot");
+    
+    // Scale
+    lua_newtable(L);
+    lua_pushnumber(L, scale.x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, scale.y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, scale.z); lua_setfield(L, -2, "z");
+    lua_setfield(L, -2, "scl");
+    
+    return 1;
+}
+
+// ===== Bone Hierarchy Methods =====
+
+static inline int bone_parent(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) { lua_pushnil(L); return 1; }
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    const tinySkeleton* skeleton = comps.skel3D->rSkeleton();
+    if (!skeleton || bone->boneIndex >= skeleton->bones.size()) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    int parentIndex = skeleton->bones[bone->boneIndex].parent;
+    if (parentIndex < 0) {
+        lua_pushnil(L); // Root bone has no parent
+        return 1;
+    }
+    
+    pushBone(L, bone->nodeHandle, static_cast<uint32_t>(parentIndex));
+    return 1;
+}
+
+static inline int bone_parentIndex(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) { lua_pushnil(L); return 1; }
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    const tinySkeleton* skeleton = comps.skel3D->rSkeleton();
+    if (!skeleton || bone->boneIndex >= skeleton->bones.size()) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    int parentIndex = skeleton->bones[bone->boneIndex].parent;
+    if (parentIndex < 0) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    lua_pushinteger(L, parentIndex);
+    return 1;
+}
+
+static inline int bone_children(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) { lua_newtable(L); return 1; }
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
+        lua_newtable(L);
+        return 1;
+    }
+    
+    const tinySkeleton* skeleton = comps.skel3D->rSkeleton();
+    if (!skeleton || bone->boneIndex >= skeleton->bones.size()) {
+        lua_newtable(L);
+        return 1;
+    }
+    
+    const std::vector<int>& children = skeleton->bones[bone->boneIndex].children;
+    
+    lua_newtable(L);
+    for (size_t i = 0; i < children.size(); ++i) {
+        pushBone(L, bone->nodeHandle, static_cast<uint32_t>(children[i]));
+        lua_rawseti(L, -2, static_cast<int>(i + 1));
+    }
+    
+    return 1;
+}
+
+static inline int bone_childrenIndices(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) { lua_newtable(L); return 1; }
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
+        lua_newtable(L);
+        return 1;
+    }
+    
+    const tinySkeleton* skeleton = comps.skel3D->rSkeleton();
+    if (!skeleton || bone->boneIndex >= skeleton->bones.size()) {
+        lua_newtable(L);
+        return 1;
+    }
+    
+    const std::vector<int>& children = skeleton->bones[bone->boneIndex].children;
+    
+    lua_newtable(L);
+    for (size_t i = 0; i < children.size(); ++i) {
+        lua_pushinteger(L, children[i]);
+        lua_rawseti(L, -2, static_cast<int>(i + 1));
+    }
+    
+    return 1;
+}
+
+// Get bone index
+static inline int bone_index(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) { lua_pushnil(L); return 1; }
+    
+    lua_pushinteger(L, bone->boneIndex);
+    return 1;
+}
+
+// Get bone name
+static inline int bone_name(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) { lua_pushnil(L); return 1; }
+    
+    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    const tinySkeleton* skeleton = comps.skel3D->rSkeleton();
+    if (!skeleton || bone->boneIndex >= skeleton->bones.size()) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    lua_pushstring(L, skeleton->bones[bone->boneIndex].name.c_str());
+    return 1;
+}
+
+// ===== Skeleton3D Component Methods =====
+
+// Skeleton3D userdata structure - stores node handle
+static inline tinyHandle* getSkeleton3DHandle(lua_State* L, int index) {
+    return static_cast<tinyHandle*>(luaL_checkudata(L, index, "Skeleton3D"));
+}
+
+// skeleton:bone(index) - Get bone by index
+static inline int skeleton3d_bone(lua_State* L) {
+    tinyHandle* handle = getSkeleton3DHandle(L, 1);
+    if (!handle) { lua_pushnil(L); return 1; }
+    
+    uint32_t boneIndex = static_cast<uint32_t>(luaL_checkinteger(L, 2));
+    
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    if (!comps.skel3D || !comps.skel3D->boneValid(boneIndex)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    pushBone(L, *handle, boneIndex);
+    return 1;
+}
+
+// skeleton:boneCount() - Get total bone count
+static inline int skeleton3d_boneCount(lua_State* L) {
+    tinyHandle* handle = getSkeleton3DHandle(L, 1);
+    if (!handle) { lua_pushinteger(L, 0); return 1; }
+    
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    if (!comps.skel3D) {
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+    
+    lua_pushinteger(L, comps.skel3D->boneCount());
+    return 1;
+}
+
+// skeleton:refreshAll() - Reset all bones to bind pose
+static inline int skeleton3d_refreshAll(lua_State* L) {
+    tinyHandle* handle = getSkeleton3DHandle(L, 1);
+    if (!handle) return 0;
+    
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    if (comps.skel3D) {
+        comps.skel3D->refreshAll();
+    }
+    return 0;
+}
+
+// NODE:skeleton3D() - Get skeleton component
+static inline int node_skeleton3D(lua_State* L) {
+    tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
+    if (!handle) { lua_pushnil(L); return 1; }
+    
+    auto comps = getSceneFromLua(L)->nComp(*handle);
+    if (!comps.skel3D) { lua_pushnil(L); return 1; }
+    
+    tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
+    *ud = *handle;
+    luaL_getmetatable(L, "Skeleton3D");
     lua_setmetatable(L, -2);
     return 1;
 }
@@ -1483,6 +2021,66 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(transform3d_setScl, "setScl");
     LUA_END_METATABLE("Transform3D");
     
+    // Skeleton3D metatable
+    LUA_BEGIN_METATABLE("Skeleton3D");
+    LUA_REG_METHOD(skeleton3d_bone, "bone");
+    LUA_REG_METHOD(skeleton3d_boneCount, "boneCount");
+    LUA_REG_METHOD(skeleton3d_refreshAll, "refreshAll");
+    LUA_END_METATABLE("Skeleton3D");
+    
+    // Bone metatable
+    luaL_newmetatable(L, "Bone");
+    lua_newtable(L); // __index table for methods
+    // Local pose (modifiable)
+    LUA_REG_METHOD(bone_getLocalPos, "getLocalPos");
+    LUA_REG_METHOD(bone_setLocalPos, "setLocalPos");
+    LUA_REG_METHOD(bone_getLocalRot, "getLocalRot");
+    LUA_REG_METHOD(bone_setLocalRot, "setLocalRot");
+    LUA_REG_METHOD(bone_getLocalQuat, "getLocalQuat");
+    LUA_REG_METHOD(bone_setLocalQuat, "setLocalQuat");
+    LUA_REG_METHOD(bone_getLocalScl, "getLocalScl");
+    LUA_REG_METHOD(bone_setLocalScl, "setLocalScl");
+    LUA_REG_METHOD(bone_localPose, "localPose");
+    // Bind pose (read-only)
+    LUA_REG_METHOD(bone_getBindPos, "getBindPos");
+    LUA_REG_METHOD(bone_getBindRot, "getBindRot");
+    LUA_REG_METHOD(bone_getBindQuat, "getBindQuat");
+    LUA_REG_METHOD(bone_getBindScl, "getBindScl");
+    LUA_REG_METHOD(bone_bindPose, "bindPose");
+    // Hierarchy
+    LUA_REG_METHOD(bone_parent, "parent");
+    LUA_REG_METHOD(bone_parentIndex, "parentIndex");
+    LUA_REG_METHOD(bone_children, "children");
+    LUA_REG_METHOD(bone_childrenIndices, "childrenIndices");
+    // Info
+    LUA_REG_METHOD(bone_index, "index");
+    LUA_REG_METHOD(bone_name, "name");
+    lua_setfield(L, -2, "__index");
+    // __tostring for debugging
+    lua_pushcfunction(L, [](lua_State* L) -> int {
+        LuaBone* b = getBoneFromUserdata(L, 1);
+        if (!b) {
+            lua_pushstring(L, "Bone(invalid)");
+            return 1;
+        }
+        
+        auto comps = getSceneFromLua(L)->nComp(b->nodeHandle);
+        if (!comps.skel3D || !comps.skel3D->boneValid(b->boneIndex)) {
+            lua_pushfstring(L, "Bone(%d, invalid)", b->boneIndex);
+            return 1;
+        }
+        
+        const tinySkeleton* skeleton = comps.skel3D->rSkeleton();
+        if (skeleton && b->boneIndex < skeleton->bones.size()) {
+            lua_pushfstring(L, "Bone(%d, \"%s\")", b->boneIndex, skeleton->bones[b->boneIndex].name.c_str());
+        } else {
+            lua_pushfstring(L, "Bone(%d)", b->boneIndex);
+        }
+        return 1;
+    });
+    lua_setfield(L, -2, "__tostring");
+    lua_pop(L, 1);
+    
     // Anim3D metatable
     LUA_BEGIN_METATABLE("Anim3D");
     LUA_REG_METHOD(anim3d_get, "get");
@@ -1518,6 +2116,7 @@ static inline void registerNodeBindings(lua_State* L) {
     // Node metatable
     LUA_BEGIN_METATABLE("Node");
     LUA_REG_METHOD(node_transform3D, "transform3D");
+    LUA_REG_METHOD(node_skeleton3D, "skeleton3D");
     LUA_REG_METHOD(node_anime3D, "anime3D");
     LUA_REG_METHOD(node_script, "script");
     LUA_REG_METHOD(node_parent, "parent");

@@ -35,9 +35,10 @@
 
 * Idk man it genuinely hurts my brain reasoning with glTF's “lossy abstraction boundary”.
 
-##### [?] Scripting (priority: High):
+##### [Implemented] Scripting (priority: High):
 
-* Yo chat, should I use Lua, or write my own language? Top comment wins.
+* **[FINISHED]** Integrated Lua scripting for gameplay logic and entity behavior.
+* **[In Progress]** Adding functionalities
 
 ##### [?] Ray Tracing (priority: low):
 
