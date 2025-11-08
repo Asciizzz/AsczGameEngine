@@ -48,12 +48,6 @@ function update()
     pos.z = pos.z + VARS.dirZ * VARS.speed * DTIME
     myT3d:setPos(pos)
 
-    -- if it goes passed -20, -20 - 20, 20 delete it
-    if pos.x < -20 or pos.x > 20 or pos.z < -20 or pos.z > 20 then
-        SCENE:delete(NODE:handle())
-        return
-    end
-
     -- ========== COLLISION WITH ENEMIES ==========
     if VARS.enemyContainerNode:valid() then
         local enemyContainer = SCENE:node(VARS.enemyContainerNode)
@@ -63,7 +57,9 @@ function update()
                 -- enemyNode is already a Node object, no need to call SCENE:node()
                 if enemyNode then
                     local enemyT3d = enemyNode:transform3D()
-                    if enemyT3d then
+                    local enemyScript = enemyNode:script()
+
+                    if enemyT3d and enemyScript then
                         local enemyPos = enemyT3d:getPos()
                         local myPos = myT3d:getPos()
                         
@@ -75,13 +71,9 @@ function update()
                         
                         if distanceSq <= collisionRadiusSq then
                             -- Collision detected
-                            local enemyScript = enemyNode:script()
-                            if enemyScript then
-                                -- Apply damage to enemy
-                                local currentHp = enemyScript:getVar("hp") or 0
-                                currentHp = currentHp - VARS.damage
-                                enemyScript:setVar("hp", currentHp)
-                            end
+                            local currentHp = enemyScript:getVar("hp") or 0
+                            currentHp = currentHp - VARS.damage
+                            enemyScript:setVar("hp", currentHp)
                             
                             -- Delete bullet after hitting an enemy
                             SCENE:delete(NODE:handle())

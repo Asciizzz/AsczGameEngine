@@ -117,6 +117,7 @@ function update()
                 local bulletT3d = bulletNode:transform3D()
                 if bulletT3d then
                     local myPos = myT3d:getPos()
+                    myPos.y = myPos.y + 1.0  -- Adjust bullet spawn height
                     bulletT3d:setPos(myPos)
                 end
                 
