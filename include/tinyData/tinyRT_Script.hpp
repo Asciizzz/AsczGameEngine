@@ -51,6 +51,10 @@ struct Script {
     tinyVarsMap& vMap() { return vars_; }
     const tinyVarsMap& vMap() const { return vars_; }
     
+    // Local variables (private to this script, not accessible via getVar/setVar)
+    tinyVarsMap& lMap() { return locals_; }
+    const tinyVarsMap& lMap() const { return locals_; }
+    
     // Get the sorted order of variable names (sorted by type, then alphabetically)
     const std::vector<std::string>& vOrder() const {
         const tinyScript* script = rScript();
@@ -80,7 +84,8 @@ private:
     const tinyPool<tinyScript>* scriptPool_ = nullptr;
     uint32_t cachedVersion_ = 0;
 
-    tinyVarsMap vars_;
+    tinyVarsMap vars_;    // Public variables (accessible via getVar/setVar)
+    tinyVarsMap locals_;  // Private variables (only accessible within the script)
     tinyDebug debug_{128};  // Runtime debug logs (128 lines max for real-time values)
 };
 

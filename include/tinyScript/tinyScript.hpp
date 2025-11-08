@@ -75,19 +75,27 @@ struct tinyScript {
 
     // For making copies
     const tinyVarsMap& defaultVars() const { return defaultVars_; }
+    const tinyVarsMap& defaultLocals() const { return defaultLocals_; }
     const std::vector<std::string>& varsOrder() const { return varsOrder_; }
 
     void initVars(tinyVarsMap& outVars) const;
+    void initLocals(tinyVarsMap& outLocals) const;
 
 private:
     uint32_t version_ = 0;
     lua_State* L_ = nullptr;
     bool compiled_ = false;
 
-    tinyVarsMap defaultVars_;
+    tinyVarsMap defaultVars_;    // Default VARS from script
+    tinyVarsMap defaultLocals_;  // Default LOCALS from script
     std::vector<std::string> varsOrder_;  // Ordered list of var names (sorted by type)
     tinyDebug debug_{16};  // Compilation/static debug logs (16 lines max)
-    
-    void cacheDefaultVars();
     void closeLua();
+
+    void cacheDefaultVars();
+    void cacheDefaultLocals();
+
+    void cacheDefaultTable(const char* tableName, tinyVarsMap& outMap);  // Shared implementation
+
+    void initTable(tinyVarsMap& outTable, const tinyVarsMap& defaultTable) const;
 };

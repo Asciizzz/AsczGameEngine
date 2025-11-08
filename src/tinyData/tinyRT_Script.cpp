@@ -12,6 +12,7 @@ void Script::init(const tinyPool<tinyScript>* scriptPool) {
 
 void Script::assign(tinyHandle scriptHandle) {
     vars_.clear();
+    locals_.clear();
     cachedVersion_ = 0;
     scriptHandle_ = scriptHandle;
 
@@ -20,6 +21,7 @@ void Script::assign(tinyHandle scriptHandle) {
 
     cachedVersion_ = script->version();
     script->initVars(vars_);
+    script->initLocals(locals_);
 }
 
 bool Script::valid() const {
@@ -37,6 +39,7 @@ void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
     if (script->version() != cachedVersion_) {
         cachedVersion_ = script->version();
         script->initVars(vars_); // Smart init
+        script->initLocals(locals_);
     } else {
         script->update(this, scene, nodeHandle, dTime, &debug_);
     }
