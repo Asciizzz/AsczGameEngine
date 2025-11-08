@@ -303,7 +303,116 @@ void tinyScript::cacheDefaultLocals() {
     cacheDefaultTable("LOCALS", defaultLocals_);
 }
 
+// ==================== Lua Sync Helpers ====================
 
+namespace {
+    // Helper to read a value from Lua stack to a C++ type
+    template<typename T>
+    bool readLuaValue(lua_State* L, int idx, T& out);
+
+    // Specializations for basic types
+    template<>
+    bool readLuaValue<float>(lua_State* L, int idx, float& out) {
+        if (lua_isnumber(L, idx)) {
+            out = static_cast<float>(lua_tonumber(L, idx));
+            return true;
+        }
+        return false;
+    }
+
+    template<>
+    bool readLuaValue<int>(lua_State* L, int idx, int& out) {
+        if (lua_isinteger(L, idx)) {
+            out = static_cast<int>(lua_tointeger(L, idx));
+            return true;
+        }
+        return false;
+    }
+
+    template<>
+    bool readLuaValue<bool>(lua_State* L, int idx, bool& out) {
+        if (lua_isboolean(L, idx)) {
+            out = lua_toboolean(L, idx);
+            return true;
+        }
+        return false;
+    }
+
+    template<>
+    bool readLuaValue<std::string>(lua_State* L, int idx, std::string& out) {
+        if (lua_isstring(L, idx)) {
+            out = lua_tostring(L, idx);
+            return true;
+        }
+        return false;
+    }
+
+    // Helper for vector types
+    template<typename VecT>
+    bool readVec(lua_State* L, int idx, const char* mtName, VecT& out) {
+        if (lua_isuserdata(L, idx) && lua_getmetatable(L, idx)) {
+            luaL_getmetatable(L, mtName);
+            bool eq = lua_rawequal(L, -1, -2);
+            lua_pop(L, 2);
+            if (eq) {
+                if (auto* vec = static_cast<VecT*>(lua_touserdata(L, idx))) {
+                    out = *vec;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    template<>
+    bool readLuaValue<glm::vec2>(lua_State* L, int idx, glm::vec2& out) {
+        return readVec(L, idx, "Vec2", out);
+    }
+
+    template<>
+    bool readLuaValue<glm::vec3>(lua_State* L, int idx, glm::vec3& out) {
+        return readVec(L, idx, "Vec3", out);
+    }
+
+    template<>
+    bool readLuaValue<glm::vec4>(lua_State* L, int idx, glm::vec4& out) {
+        return readVec(L, idx, "Vec4", out);
+    }
+
+    template<>
+    bool readLuaValue<typeHandle>(lua_State* L, int idx, typeHandle& out) {
+        if (lua_isuserdata(L, idx) && lua_getmetatable(L, idx)) {
+            luaL_getmetatable(L, "Handle");
+            bool eq = lua_rawequal(L, -1, -2);
+            lua_pop(L, 2);
+            if (eq) {
+                if (auto* h = static_cast<LuaHandle*>(lua_touserdata(L, idx)); h && h->valid()) {
+                    out = h->toTypeHandle();
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Helper to pull a map from Lua global table
+    void pullMapFromLua(lua_State* L, const char* globalName, tinyVarsMap& vars) {
+        lua_getglobal(L, globalName);
+        if (!lua_istable(L, -1)) {
+            lua_pop(L, 1);
+            return;
+        }
+
+        for (auto& [key, value] : vars) {
+            lua_getfield(L, -1, key.c_str());
+            std::visit([&](auto& val) {
+                readLuaValue(L, -1, val);
+            }, value);
+            lua_pop(L, 1);  // Pop field value
+        }
+        lua_pop(L, 1);  // Pop table
+    }
+}
 
 void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime, tinyDebug* runtimeDebug) const {
     if (!valid()) return;
@@ -313,13 +422,13 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     lua_setglobal(L_, "__rtScript");
     
     // Get vars and locals from rtScript
-    tinyRT::Script* rt = static_cast<tinyRT::Script*>(rtScript);
-    tinyVarsMap& vars = rt->vMap();
-    tinyVarsMap& locals = rt->lMap();
+    auto* rt = static_cast<tinyRT::Script*>(rtScript);
+    auto& vars = rt->vMap();
+    auto& locals = rt->lMap();
 
     // Helper lambda to push variables into a Lua table
-    auto pushVarsToTable = [&](const tinyVarsMap& varsMap) {
-        for (const auto& [key, value] : varsMap) {
+    auto pushToTable = [&](const tinyVarsMap& tableMap) {
+        for (const auto& [key, value] : tableMap) {
             std::visit([&](auto&& val) {
                 using T = std::decay_t<decltype(val)>;
                 
@@ -352,7 +461,6 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                     lua_setfield(L_, -2, key.c_str());
                 }
                 else if constexpr (std::is_same_v<T, typeHandle>) {
-                    // Convert typeHandle to LuaHandle and push
                     pushLuaHandle(L_, LuaHandle::fromTypeHandle(val));
                     lua_setfield(L_, -2, key.c_str());
                 }
@@ -360,209 +468,22 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
         }
     };
 
-    // ========== Push runtime variables into Lua global table "VARS" ==========
-    lua_newtable(L_);  // Create VARS table
-    pushVarsToTable(vars);
-    lua_setglobal(L_, "VARS");  // Set as global "VARS" table
+    // Push VARS and LOCALS tables to Lua
+    lua_newtable(L_); pushToTable(vars);   lua_setglobal(L_, "VARS");
+    lua_newtable(L_); pushToTable(locals); lua_setglobal(L_, "LOCALS");
 
-    // ========== Push local variables into Lua global table "LOCALS" ==========
-    lua_newtable(L_);  // Create LOCALS table
-    pushVarsToTable(locals);
-    lua_setglobal(L_, "LOCALS");  // Set as global "LOCALS" table
+    // Push other globals
+    lua_pushnumber(L_, dTime); lua_setglobal(L_, "DTIME");
+    lua_pushlightuserdata(L_, scene); lua_setglobal(L_, "__scene");
 
-    // ========== Push context information ==========
-    // Push DTIME
-    lua_pushnumber(L_, dTime);
-    lua_setglobal(L_, "DTIME");
-    
-    // Push __scene as light userdata
-    lua_pushlightuserdata(L_, scene);
-    lua_setglobal(L_, "__scene");
-    
-    // Push SCENE as a Scene userdata object
-    pushScene(L_, static_cast<tinyRT::Scene*>(scene));
-    lua_setglobal(L_, "SCENE");
-    
-    // Push NODE as a Node userdata object (for calling methods like NODE:transform3D())
-    pushNode(L_, nodeHandle);
-    lua_setglobal(L_, "NODE");
-    
-    // Push FS (filesystem registry accessor) as a FS userdata object
-    pushFS(L_);
-    lua_setglobal(L_, "FS");
+    pushScene(L_, static_cast<tinyRT::Scene*>(scene)); lua_setglobal(L_, "SCENE");
+    pushNode(L_, nodeHandle); lua_setglobal(L_, "NODE");
+    pushFS(L_); lua_setglobal(L_, "FS");
 
-    // ========== Call the update function ==========
+    // Call update function
     call("update", nullptr, runtimeDebug);
 
-    // ========== Pull variables back from Lua ==========
-    lua_getglobal(L_, "VARS");
-    if (lua_istable(L_, -1)) {
-        for (auto& [key, value] : vars) {
-            lua_getfield(L_, -1, key.c_str());
-            
-            std::visit([&](auto&& val) {
-                using T = std::decay_t<decltype(val)>;
-                
-                if constexpr (std::is_same_v<T, float>) {
-                    if (lua_isnumber(L_, -1)) {
-                        val = static_cast<float>(lua_tonumber(L_, -1));
-                    }
-                }
-                else if constexpr (std::is_same_v<T, int>) {
-                    if (lua_isinteger(L_, -1)) {
-                        val = static_cast<int>(lua_tointeger(L_, -1));
-                    }
-                }
-                else if constexpr (std::is_same_v<T, bool>) {
-                    if (lua_isboolean(L_, -1)) {
-                        val = lua_toboolean(L_, -1);
-                    }
-                }
-                else if constexpr (std::is_same_v<T, glm::vec2>) {
-                    if (lua_isuserdata(L_, -1)) {
-                        if (lua_getmetatable(L_, -1)) {
-                            luaL_getmetatable(L_, "Vec2");
-                            if (lua_rawequal(L_, -1, -2)) {
-                                lua_pop(L_, 2); // Pop both metatables
-                                glm::vec2* vec = static_cast<glm::vec2*>(lua_touserdata(L_, -1));
-                                if (vec) val = *vec;
-                            } else {
-                                lua_pop(L_, 2); // Pop both metatables
-                            }
-                        }
-                    }
-                }
-                else if constexpr (std::is_same_v<T, glm::vec3>) {
-                    if (lua_isuserdata(L_, -1)) {
-                        if (lua_getmetatable(L_, -1)) {
-                            luaL_getmetatable(L_, "Vec3");
-                            if (lua_rawequal(L_, -1, -2)) {
-                                lua_pop(L_, 2); // Pop both metatables
-                                glm::vec3* vec = static_cast<glm::vec3*>(lua_touserdata(L_, -1));
-                                if (vec) val = *vec;
-                            } else {
-                                lua_pop(L_, 2); // Pop both metatables
-                            }
-                        }
-                    }
-                }
-                else if constexpr (std::is_same_v<T, glm::vec4>) {
-                    if (lua_isuserdata(L_, -1)) {
-                        if (lua_getmetatable(L_, -1)) {
-                            luaL_getmetatable(L_, "Vec4");
-                            if (lua_rawequal(L_, -1, -2)) {
-                                lua_pop(L_, 2); // Pop both metatables
-                                glm::vec4* vec = static_cast<glm::vec4*>(lua_touserdata(L_, -1));
-                                if (vec) val = *vec;
-                            } else {
-                                lua_pop(L_, 2); // Pop both metatables
-                            }
-                        }
-                    }
-                }
-                else if constexpr (std::is_same_v<T, std::string>) {
-                    if (lua_isstring(L_, -1)) {
-                        val = lua_tostring(L_, -1);
-                    }
-                }
-                else if constexpr (std::is_same_v<T, typeHandle>) {
-                    // Pull back handle from full userdata
-                    if (lua_isuserdata(L_, -1)) {
-                        // Check if it has the Handle metatable
-                        if (lua_getmetatable(L_, -1)) {
-                            luaL_getmetatable(L_, "Handle");
-                            if (lua_rawequal(L_, -1, -2)) {
-                                // It's a valid Handle userdata
-                                lua_pop(L_, 2); // Pop both metatables
-                                
-                                LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L_, -1));
-                                if (luaHandle && luaHandle->valid()) {
-                                    val = luaHandle->toTypeHandle();
-                                }
-                            } else {
-                                lua_pop(L_, 2); // Pop both metatables
-                            }
-                        }
-                    }
-                }
-            }, value);
-            
-            lua_pop(L_, 1);  // Pop the field value
-        }
-    }
-    lua_pop(L_, 1);  // Pop VARS table
-
-    // ========== Pull local variables back from Lua ==========
-    lua_getglobal(L_, "LOCALS");
-    if (lua_istable(L_, -1)) {
-        for (auto& [key, value] : locals) {
-            lua_getfield(L_, -1, key.c_str());
-            
-            std::visit([&](auto&& val) {
-                using T = std::decay_t<decltype(val)>;
-                
-                // Basic types
-                if constexpr (std::is_same_v<T, float>) { if (lua_isnumber(L_, -1)) val = static_cast<float>(lua_tonumber(L_, -1)); } else
-                if constexpr (std::is_same_v<T, int>) { if (lua_isinteger(L_, -1)) val = static_cast<int>(lua_tointeger(L_, -1)); } else
-                if constexpr (std::is_same_v<T, bool>) { if (lua_isboolean(L_, -1)) val = lua_toboolean(L_, -1); } else
-                if constexpr (std::is_same_v<T, std::string>) { if (lua_isstring(L_, -1)) val = lua_tostring(L_, -1); } else
-                // Vector types
-                if constexpr (std::is_same_v<T, glm::vec2>) {
-                    if (lua_isuserdata(L_, -1) && lua_getmetatable(L_, -1)) {
-                        luaL_getmetatable(L_, "Vec2");
-                        bool equal = lua_rawequal(L_, -1, -2);
-                        lua_pop(L_, 2);
-                        if (equal) {
-                            glm::vec2* vec = static_cast<glm::vec2*>(lua_touserdata(L_, -1));
-                            if (vec) val = *vec;
-                        }
-                    }
-                } else if constexpr (std::is_same_v<T, glm::vec3>) {
-                    if (lua_isuserdata(L_, -1) && lua_getmetatable(L_, -1)) {
-                        luaL_getmetatable(L_, "Vec3");
-                        bool equal = lua_rawequal(L_, -1, -2);
-                        lua_pop(L_, 2);
-                        if (equal) {
-                            glm::vec3* vec = static_cast<glm::vec3*>(lua_touserdata(L_, -1));
-                            if (vec) val = *vec;
-                        }
-                    }
-                } else if constexpr (std::is_same_v<T, glm::vec4>) {
-                    if (lua_isuserdata(L_, -1) && lua_getmetatable(L_, -1)) {
-                        luaL_getmetatable(L_, "Vec4");
-                        bool equal = lua_rawequal(L_, -1, -2);
-                        lua_pop(L_, 2);
-                        if (equal) {
-                            glm::vec4* vec = static_cast<glm::vec4*>(lua_touserdata(L_, -1));
-                            if (vec) val = *vec;
-                        }
-                    }
-                }
-                // Handle type
-                else if constexpr (std::is_same_v<T, typeHandle>) {
-                    // Pull back handle from full userdata
-                    if (lua_isuserdata(L_, -1)) {
-                        // Check if it has the Handle metatable
-                        if (lua_getmetatable(L_, -1)) {
-                            luaL_getmetatable(L_, "Handle");
-                            if (lua_rawequal(L_, -1, -2)) {
-                                // It's a valid Handle userdata
-                                lua_pop(L_, 2); // Pop both metatables
-                                
-                                LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L_, -1));
-                                if (luaHandle && luaHandle->valid()) {
-                                    val = luaHandle->toTypeHandle();
-                                }
-                            } else {
-                                lua_pop(L_, 2); // Pop both metatables
-                            }
-                        }
-                    }
-                }
-            }, value);
-            
-            lua_pop(L_, 1);  // Pop the field value
-        }
-    }
-    lua_pop(L_, 1);  // Pop LOCALS table
+    // Pull values back from Lua using helper
+    pullMapFromLua(L_, "VARS", vars);
+    pullMapFromLua(L_, "LOCALS", locals);
 }

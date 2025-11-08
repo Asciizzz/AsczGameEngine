@@ -34,6 +34,9 @@ VARS = {
     
     -- Smooth rotation parameters (quaternion-based)
     rotationSpeed = 8.0,    -- How fast to rotate (higher = faster, smoother with quaternions)
+}
+
+LOCALS = {
     currentQuat = Vec4(0, 0, 0, 1),  -- Current rotation quaternion
 }
 
@@ -119,7 +122,7 @@ function update()
                 
                 -- Get player forward direction from quaternion
                 -- Calculate forward vector from quaternion (0, 0, 1) rotated by quat
-                local forward = quat_forward(VARS.currentQuat)
+                local forward = quat_forward(LOCALS.currentQuat)
                 
                 -- Set bullet variables via script
                 local bulletScript = bulletNode:script()
@@ -185,10 +188,10 @@ function update()
             
             -- Spherical linear interpolation (slerp) for smooth rotation
             local t = math.min(1.0, VARS.rotationSpeed * DTIME)
-            VARS.currentQuat = quat_slerp(VARS.currentQuat, targetQuat, t)
+            LOCALS.currentQuat = quat_slerp(LOCALS.currentQuat, targetQuat, t)
             
             -- Apply the interpolated rotation
-            myT3d:setQuat(VARS.currentQuat)
+            myT3d:setQuat(LOCALS.currentQuat)
         end
     end
     
