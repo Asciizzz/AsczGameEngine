@@ -89,6 +89,7 @@ public:
         for (const auto& tIndex : typeOrder_) {
             registry_.clear(tIndex);
         }
+        dataToFile_.clear();
     }
 
 // ---------- Basic access ----------
@@ -98,6 +99,30 @@ public:
     // Case sensitivity control
     [[nodiscard]] bool caseSensitive() const noexcept { return caseSensitive_; }
     void setCaseSensitive(bool caseSensitive) noexcept { caseSensitive_ = caseSensitive; }
+
+// ---------- Bidirectional mapping: Data ↔ File ----------
+
+    // Get the file handle that contains specific registry data
+    [[nodiscard]] tinyHandle getFileHandle(const typeHandle& dataHandle) const noexcept {
+        auto it = dataToFile_.find(dataHandle);
+        return (it != dataToFile_.end()) ? it->second : tinyHandle();
+    }
+
+    // Template overload for convenience
+    template<typename T>
+    [[nodiscard]] tinyHandle getFileHandle(tinyHandle dataHandle) const noexcept {
+        return getFileHandle(typeHandle::make<T>(dataHandle));
+    }
+
+    // Check if specific registry data has an associated file
+    [[nodiscard]] bool hasFileMapping(const typeHandle& dataHandle) const noexcept {
+        return dataToFile_.find(dataHandle) != dataToFile_.end();
+    }
+
+    template<typename T>
+    [[nodiscard]] bool hasFileMapping(tinyHandle dataHandle) const noexcept {
+        return hasFileMapping(typeHandle::make<T>(dataHandle));
+    }
 
     // Set root display name (full on-disk path etc.)
     void setRootPath(const std::string& rootPath) noexcept {
@@ -413,6 +438,9 @@ private:
     tinyHandle rootHandle_;
     bool caseSensitive_{false};
 
+    // Bidirectional mapping: typeHandle -> file node handle
+    std::unordered_map<typeHandle, tinyHandle> dataToFile_;
+
     // Removal queue: maps type_index -> vector of RmQueueEntry
     std::unordered_map<std::type_index, std::vector<RmQueueEntry>> rmQueues_;
 
@@ -581,6 +609,9 @@ private:
         tinyHandle h = fnodes_.add(std::move(child));
         parent->addChild(h, resolvedName);
 
+        // Establish bidirectional mapping: data → file
+        dataToFile_[child.tHandle] = h;
+
         return h;
     }
 
@@ -606,6 +637,11 @@ private:
     void fRemoveTrue(tinyHandle nodeHandle, typeHandle dataHandle) noexcept {
         Node* node = fnodes_.get(nodeHandle);
         if (!node) return;
+
+        // Remove bidirectional mapping
+        if (dataHandle.valid()) {
+            dataToFile_.erase(dataHandle);
+        }
 
         registry_.tRemove(dataHandle);
 

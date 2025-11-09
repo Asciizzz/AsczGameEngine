@@ -73,3 +73,15 @@ struct typeHandle {
         return th;
     }
 };
+
+namespace std {
+    template<> struct hash<typeHandle> {
+        size_t operator()(const typeHandle& th) const noexcept {
+            // Combine hash of handle and type_index
+            size_t h1 = std::hash<tinyHandle>()(th.handle);
+            size_t h2 = std::hash<std::type_index>()(th.typeIndex);
+            // Simple hash combination using XOR and bit rotation
+            return h1 ^ (h2 << 1);
+        }
+    };
+};
