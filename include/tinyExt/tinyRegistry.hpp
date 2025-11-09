@@ -35,16 +35,16 @@ class tinyRegistry { // For raw resource data
     std::unordered_map<std::type_index, std::unique_ptr<IPool>> pools;
 
     template<typename T>
-    PoolWrapper<T>* getWrapper() noexcept {
+    TINY_FORCE_INLINE PoolWrapper<T>* getWrapper() noexcept {
         auto it = pools.find(std::type_index(typeid(T)));
-        if (it == pools.end()) return nullptr;
+        if (TINY_UNLIKELY(it == pools.end())) return nullptr;
         return static_cast<PoolWrapper<T>*>(it->second.get());
     }
 
     template<typename T>
-    const PoolWrapper<T>* getWrapper() const noexcept {
+    TINY_FORCE_INLINE const PoolWrapper<T>* getWrapper() const noexcept {
         auto it = pools.find(std::type_index(typeid(T)));
-        if (it == pools.end()) return nullptr;
+        if (TINY_UNLIKELY(it == pools.end())) return nullptr;
         return static_cast<const PoolWrapper<T>*>(it->second.get());
     }
 
@@ -188,32 +188,33 @@ public:
 
 // ------------------- Data Access ------------------
 
+    // Hot path: force inline for type-based access
     template<typename T>
-    [[nodiscard]] T* get(const tinyHandle& handle) noexcept {
+    [[nodiscard]] TINY_FORCE_INLINE T* get(const tinyHandle& handle) noexcept {
         auto* wrapper = getWrapper<T>();
-        return wrapper ? wrapper->pool.get(handle) : nullptr;
+        return TINY_LIKELY(wrapper) ? wrapper->pool.get(handle) : nullptr;
     }
     template<typename T>
-    [[nodiscard]] const T* get(const tinyHandle& handle) const noexcept {
+    [[nodiscard]] TINY_FORCE_INLINE const T* get(const tinyHandle& handle) const noexcept {
         return const_cast<tinyRegistry*>(this)->get<T>(handle);
     }
 
-    [[nodiscard]] void* get(const typeHandle& th) noexcept {
-        if (!th.valid()) return nullptr;
+    [[nodiscard]] TINY_FORCE_INLINE void* get(const typeHandle& th) noexcept {
+        if (TINY_UNLIKELY(!th.valid())) return nullptr;
 
         auto it = pools.find(th.typeIndex);
-        return (it != pools.end()) ? it->second->get(th.handle) : nullptr;
+        return TINY_LIKELY(it != pools.end()) ? it->second->get(th.handle) : nullptr;
     }
-    [[nodiscard]] const void* get(const typeHandle& th) const noexcept {
+    [[nodiscard]] TINY_FORCE_INLINE const void* get(const typeHandle& th) const noexcept {
         return const_cast<tinyRegistry*>(this)->get(th);
     }
 
     template<typename T>
-    [[nodiscard]] T* get(const typeHandle& th) noexcept {
-        return th.isType<T>() ? static_cast<T*>(get(th)) : nullptr;
+    [[nodiscard]] TINY_FORCE_INLINE T* get(const typeHandle& th) noexcept {
+        return TINY_LIKELY(th.isType<T>()) ? static_cast<T*>(get(th)) : nullptr;
     }
     template<typename T>
-    [[nodiscard]] const T* get(const typeHandle& th) const noexcept {
+    [[nodiscard]] TINY_FORCE_INLINE const T* get(const typeHandle& th) const noexcept {
         return const_cast<tinyRegistry*>(this)->get<T>(th);
     }
 
