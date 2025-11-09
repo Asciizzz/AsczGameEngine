@@ -13,10 +13,7 @@ union tinyHandle {
     uint64_t value;
 
     constexpr tinyHandle() noexcept : value(UINT64_MAX) {}
-    tinyHandle(uint32_t index, uint32_t version = 0) noexcept {
-        this->index = index;
-        this->version = version;
-    }
+    tinyHandle(uint32_t index, uint32_t version = 0) noexcept : index(index), version(version) {}
 
     // Value operators
     constexpr bool operator==(const tinyHandle& other) const noexcept { return value == other.value; }
