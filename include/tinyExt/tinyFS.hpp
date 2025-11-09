@@ -4,6 +4,7 @@
 
 #include <string>
 #include <sstream>
+#include <unordered_map>
 
 #include <functional>
 #include <algorithm>
@@ -17,7 +18,8 @@ public:
     struct Node {
         std::string name;                     // segment name (relative)
         tinyHandle parent;                    // parent node handle
-        std::vector<tinyHandle> children;     // child node handles
+        std::vector<tinyHandle> children;     // child node handles (ordered)
+        std::unordered_map<std::string, tinyHandle> childMap_; // O(1) name lookup
         typeHandle tHandle;                   // metadata / registry handle if file
 
         enum class Type { Folder, File, Other } type = Type::Folder;
@@ -27,37 +29,45 @@ public:
             bool deletable = true;
         } cfg;
 
-        std::type_index typeIndex() const noexcept { return tHandle.typeIndex; }
+        [[nodiscard]] std::type_index typeIndex() const noexcept { return tHandle.typeIndex; }
 
-        bool hidden() const noexcept { return cfg.hidden; }
-        bool deletable() const noexcept { return cfg.deletable; }
+        [[nodiscard]] bool hidden() const noexcept { return cfg.hidden; }
+        [[nodiscard]] bool deletable() const noexcept { return cfg.deletable; }
 
         template<typename T>
-        bool isType() const noexcept { return tHandle.isType<T>(); }
-        bool isFile() const noexcept { return type == Type::File; }
-        bool isFolder() const noexcept { return type == Type::Folder; }
+        [[nodiscard]] bool isType() const noexcept { return tHandle.isType<T>(); }
+        [[nodiscard]] bool isFile() const noexcept { return type == Type::File; }
+        [[nodiscard]] bool isFolder() const noexcept { return type == Type::Folder; }
 
-        bool hasData() const noexcept { return tHandle.valid(); }
+        [[nodiscard]] bool hasData() const noexcept { return tHandle.valid(); }
 
-        bool hasChild(tinyHandle childHandle) const noexcept {
+        [[nodiscard]] bool hasChild(tinyHandle childHandle) const noexcept {
             return std::find(children.begin(), children.end(), childHandle) != children.end();
         }
+        
+        // O(1) child lookup by name
+        [[nodiscard]] tinyHandle findChild(const std::string& childName) const noexcept {
+            auto it = childMap_.find(childName);
+            return (it != childMap_.end()) ? it->second : tinyHandle();
+        }
 
-        int childIndex(tinyHandle childHandle) const noexcept {
+        [[nodiscard]] int childIndex(tinyHandle childHandle) const noexcept {
             auto it = std::find(children.begin(), children.end(), childHandle);
             return (it != children.end()) ? static_cast<int>(std::distance(children.begin(), it)) : -1;
         }
 
-        int addChild(tinyHandle childHandle) { // Push back may throw
+        int addChild(tinyHandle childHandle, const std::string& childName) { // Push back may throw
             if (hasChild(childHandle)) return -1;
             children.push_back(childHandle);
+            childMap_[childName] = childHandle;
             return static_cast<int>(children.size()) - 1;
         }
 
-        bool removeChild(tinyHandle childHandle) noexcept {
+        bool removeChild(tinyHandle childHandle, const std::string& childName) noexcept {
             int index = childIndex(childHandle);
             if (index != -1) {
                 children.erase(children.begin() + index);
+                childMap_.erase(childName);
                 return true;
             }
             return false;
@@ -83,10 +93,10 @@ public:
 
 // ---------- Basic access ----------
 
-    tinyHandle rootHandle() const noexcept { return rootHandle_; }
+    [[nodiscard]] tinyHandle rootHandle() const noexcept { return rootHandle_; }
 
     // Case sensitivity control
-    bool caseSensitive() const noexcept { return caseSensitive_; }
+    [[nodiscard]] bool caseSensitive() const noexcept { return caseSensitive_; }
     void setCaseSensitive(bool caseSensitive) noexcept { caseSensitive_ = caseSensitive; }
 
     // Set root display name (full on-disk path etc.)
@@ -98,22 +108,22 @@ public:
 // ---------- Creation ----------
 
 // Folder creation (non-template overload)
-    tinyHandle addFolder(tinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
+    [[nodiscard]] tinyHandle addFolder(tinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
         return addFNodeImpl(parentHandle, name, cfg);
     }
-    tinyHandle addFolder(const std::string& name, Node::CFG cfg = {}) {
+    [[nodiscard]] tinyHandle addFolder(const std::string& name, Node::CFG cfg = {}) {
         return addFolder(rootHandle_, name, cfg);
     }
 
     // File creation (templated, pass pointer to data)
     template<typename T>
-    tinyHandle addFile(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg = {}) {
-        return addFNodeImpl<T>(parentHandle, name, std::forward<T>(data), cfg);
+    [[nodiscard]] tinyHandle addFile(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg = {}) {
+        return addFNodeImpl(parentHandle, name, std::forward<T>(data), cfg);
     }
 
     template<typename T>
-    tinyHandle addFile(const std::string& name, T&& data, Node::CFG cfg = {}) {
-        return addFile<T>(rootHandle_, name, std::forward<T>(data), cfg);
+    [[nodiscard]] tinyHandle addFile(const std::string& name, T&& data, Node::CFG cfg = {}) {
+        return addFile(rootHandle_, name, std::forward<T>(data), cfg);
     }
 
 // -------------------- Special Type Handlers --------------------
@@ -190,32 +200,32 @@ public:
         }
     };
 
-    TypeInfo* typeInfo(std::type_index typeIndx) noexcept {
+    [[nodiscard]] TypeInfo* typeInfo(std::type_index typeIndx) noexcept {
         return ensureTypeInfo(typeIndx);
     }
 
     template<typename T>
-    TypeInfo* typeInfo() noexcept {
+    [[nodiscard]] TypeInfo* typeInfo() noexcept {
         return ensureTypeInfo(std::type_index(typeid(T)));
     }
 
-    TypeExt typeExt(std::type_index typeIndx) const noexcept {
+    [[nodiscard]] TypeExt typeExt(std::type_index typeIndx) const noexcept {
         auto it = typeInfos_.find(typeIndx);
         return (it != typeInfos_.end()) ? it->second.typeExt : TypeExt();
     }
 
     template<typename T>
-    TypeExt typeExt() const noexcept {
+    [[nodiscard]] TypeExt typeExt() const noexcept {
         return typeExt(std::type_index(typeid(T)));
     }
 
-    bool safeDelete(std::type_index typeIndex) const noexcept {
+    [[nodiscard]] bool safeDelete(std::type_index typeIndex) const noexcept {
         auto it = typeInfos_.find(typeIndex);
         return (it != typeInfos_.end()) ? it->second.safeDelete : false;
     }
 
     template<typename T>
-    bool safeDelete() const noexcept {
+    [[nodiscard]] bool safeDelete() const noexcept {
         return safeDelete(std::type_index(typeid(T)));
     }
 
@@ -234,15 +244,22 @@ public:
         if (isDescendant(nodeHandle, parentHandle)) return false;
 
         Node* newParent = fnodes_.get(parentHandle);
-        if (newParent) newParent->addChild(nodeHandle);
-        else return false;
-
-        // remove from old parent children vector
+        if (!newParent) return false;
+        
+        // Check for name conflicts in the new parent (excluding this node)
+        // We pass nodeHandle to exclude it from conflict checking
+        std::string resolvedName = resolveRepeatName(parentHandle, node->name, nodeHandle);
+        
+        // Remove from old parent children vector
         Node* oldParent = fnodes_.get(node->parent);
-        if (oldParent) oldParent->removeChild(nodeHandle);
+        if (oldParent) oldParent->removeChild(nodeHandle, node->name);
 
-        node->name = resolveRepeatName(parentHandle, node->name);
+        // Update node's name and parent
+        node->name = resolvedName;
         node->parent = parentHandle;
+        
+        // Add to new parent
+        newParent->addChild(nodeHandle, resolvedName);
 
         return true;
     }
@@ -269,7 +286,7 @@ public:
 // ------------------- Node Inspection -------------------
 
     template<typename T>
-    T* fData(tinyHandle fileHandle) noexcept {
+    [[nodiscard]] T* fData(tinyHandle fileHandle) noexcept {
         Node* node = fnodes_.get(fileHandle);
         if (!node || !node->hasData()) return nullptr;
 
@@ -277,36 +294,36 @@ public:
     }
 
     template<typename T>
-    const T* fData(tinyHandle fileHandle) const noexcept {
+    [[nodiscard]] const T* fData(tinyHandle fileHandle) const noexcept {
         return const_cast<tinyFS*>(this)->fData<T>(fileHandle);
     }
 
-    typeHandle fTypeHandle(tinyHandle fileHandle) const noexcept {
+    [[nodiscard]] typeHandle fTypeHandle(tinyHandle fileHandle) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
         return node ? node->tHandle : typeHandle();
     }
 
     template<typename T>
-    bool fIsType(tinyHandle fileHandle) const {
+    [[nodiscard]] bool fIsType(tinyHandle fileHandle) const {
         const Node* node = fnodes_.get(fileHandle);
         return node ? node->isType<T>() : false;
     }
 
 // -------------------- Node access (highly limited) --------------------
 
-    const Node* fNode(tinyHandle fileHandle) const noexcept {
+    [[nodiscard]] const Node* fNode(tinyHandle fileHandle) const noexcept {
         return fnodes_.get(fileHandle);
     }
 
-    const tinyPool<Node>& fNodes() const noexcept { return fnodes_; }
+    [[nodiscard]] const tinyPool<Node>& fNodes() const noexcept { return fnodes_; }
 
 // -------------------- Registry data management -------------------
     
-    tinyRegistry& registry() noexcept { return registry_; }
-    const tinyRegistry& registry() const noexcept { return registry_; }
+    [[nodiscard]] tinyRegistry& registry() noexcept { return registry_; }
+    [[nodiscard]] const tinyRegistry& registry() const noexcept { return registry_; }
 
-    void* rGet(typeHandle th) noexcept { return registry_.get(th); }
-    const void* rGet(typeHandle th) const noexcept { return registry_.get(th); }
+    [[nodiscard]] void* rGet(typeHandle th) noexcept { return registry_.get(th); }
+    [[nodiscard]] const void* rGet(typeHandle th) const noexcept { return registry_.get(th); }
 
     template<typename T>
     T* rGet(typeHandle th) noexcept { return registry_.get<T>(th); }
@@ -454,29 +471,83 @@ private:
 
         return false;
     }
+    
+    // Check for name conflict, excluding a specific handle (useful for moves)
+    bool hasRepeatNameExcept(tinyHandle parentHandle, const std::string& name, tinyHandle excludeHandle) const noexcept {
+        if (!fnodes_.valid(parentHandle)) return false;
 
-    std::string resolveRepeatName(tinyHandle parentHandle, const std::string& baseName) const noexcept {
+        const Node* parent = fnodes_.get(parentHandle);
+        if (!parent) return false;
+
+        for (const tinyHandle& childHandle : parent->children) {
+            if (childHandle == excludeHandle) continue; // Skip the node being moved
+            
+            const Node* child = fnodes_.get(childHandle);
+            if (!child) continue;
+
+            if (namesEqual(child->name, name)) return true;
+        }
+
+        return false;
+    }
+
+    std::string resolveRepeatName(tinyHandle parentHandle, const std::string& baseName, 
+                                   tinyHandle excludeHandle = tinyHandle()) const noexcept {
         if (!fnodes_.valid(parentHandle)) return baseName;
 
         // Check if parent has children with the same name
         const Node* parent = fnodes_.get(parentHandle);
         if (!parent) return baseName;
 
-        std::string resolvedName = baseName;
-        size_t maxNumberedIndex = 0;
+        // Fast path: if no conflict (excluding the specified handle), return immediately
+        if (excludeHandle.valid()) {
+            if (!hasRepeatNameExcept(parentHandle, baseName, excludeHandle)) {
+                return baseName;
+            }
+        } else {
+            if (!hasRepeatName(parentHandle, baseName)) {
+                return baseName;
+            }
+        }
 
+        // Find the highest numbered suffix
+        size_t maxNumberedIndex = 0;
+        
         for (const tinyHandle& childHandle : parent->children) {
+            if (childHandle == excludeHandle) continue; // Skip excluded handle
+            
             const Node* child = fnodes_.get(childHandle);
             if (!child) continue;
 
             // Check if name matches baseName exactly
-            if (namesEqual(child->name, resolvedName)) {
-                maxNumberedIndex += 1;
-                resolvedName = baseName + " (" + std::to_string(maxNumberedIndex) + ")";
+            if (namesEqual(child->name, baseName)) {
+                maxNumberedIndex = std::max(maxNumberedIndex, size_t(1));
+            }
+            // Check for numbered variants: "baseName (n)"
+            else if (child->name.size() > baseName.size() + 3) { // " (n)" is at least 4 chars
+                // Check if it starts with baseName
+                if (child->name.compare(0, baseName.size(), baseName) == 0) {
+                    // Check if followed by " (number)"
+                    size_t pos = baseName.size();
+                    if (child->name[pos] == ' ' && child->name[pos + 1] == '(') {
+                        size_t endPos = child->name.find(')', pos + 2);
+                        if (endPos != std::string::npos && endPos == child->name.size() - 1) {
+                            // Extract number
+                            std::string numStr = child->name.substr(pos + 2, endPos - pos - 2);
+                            try {
+                                size_t num = std::stoull(numStr);
+                                maxNumberedIndex = std::max(maxNumberedIndex, num);
+                            } catch (...) {
+                                // Invalid number, ignore
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        return resolvedName;
+        // Return the next available name
+        return baseName + " (" + std::to_string(maxNumberedIndex + 1) + ")";
     }
 
     bool isDescendant(tinyHandle possibleAncestor, tinyHandle possibleDescendant) const noexcept {
@@ -498,15 +569,17 @@ private:
         Node* parent = fnodes_.get(parentHandle);
         if (!parent || parent->isFile()) return tinyHandle(); // Invalid or parent is a file
 
+        std::string resolvedName = resolveRepeatName(parentHandle, name);
+        
         Node child;
-        child.name = resolveRepeatName(parentHandle, name);
+        child.name = resolvedName;
         child.parent = parentHandle;
         child.cfg = cfg;
         child.type = Node::Type::File;
         child.tHandle = registry_.add(std::forward<T>(data));
 
         tinyHandle h = fnodes_.add(std::move(child));
-        parent->addChild(h);
+        parent->addChild(h, resolvedName);
 
         return h;
     }
@@ -516,13 +589,15 @@ private:
         Node* parent = fnodes_.get(parentHandle);
         if (!parent || parent->isFile()) return tinyHandle(); // Invalid or parent is a file
 
+        std::string resolvedName = resolveRepeatName(parentHandle, name);
+        
         Node folder;
-        folder.name = resolveRepeatName(parentHandle, name);
+        folder.name = resolvedName;
         folder.parent = parentHandle;
         folder.cfg = cfg;
 
         tinyHandle h = fnodes_.add(std::move(folder));
-        parent->addChild(h);
+        parent->addChild(h, resolvedName);
 
         return h;
     }
@@ -535,7 +610,7 @@ private:
         registry_.tRemove(dataHandle);
 
         Node* parent = fnodes_.get(node->parent);
-        if (parent) parent->removeChild(nodeHandle);
+        if (parent) parent->removeChild(nodeHandle, node->name);
 
         fnodes_.remove(nodeHandle);
     }

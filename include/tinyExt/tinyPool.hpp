@@ -37,9 +37,18 @@ struct tinyPool {
     tinyPool() noexcept = default;
 
     void alloc(uint32_t size) {
+        if (size == 0) return;
+        
+        uint32_t startIndex = static_cast<uint32_t>(items_.size());
+        
+        // Reserve space to avoid reallocations
+        items_.reserve(items_.size() + size);
+        states_.reserve(states_.size() + size);
+        freeList_.reserve(freeList_.size() + size);
+        
         // Push in reverse so that lower indices are used first
         for (uint32_t i = 0; i < size; ++i) {
-            uint32_t index = static_cast<uint32_t>(items_.size());
+            uint32_t index = startIndex + i;
             items_.emplace_back();
             states_.emplace_back();
             states_[index].occupied = false;
@@ -48,8 +57,12 @@ struct tinyPool {
         }
     }
 
-    uint32_t count() const noexcept {
-        return items_.size() - freeList_.size();
+    [[nodiscard]] uint32_t count() const noexcept {
+        return static_cast<uint32_t>(items_.size() - freeList_.size());
+    }
+    
+    [[nodiscard]] uint32_t capacity() const noexcept {
+        return static_cast<uint32_t>(items_.size());
     }
 
     void clear() noexcept {
@@ -59,18 +72,18 @@ struct tinyPool {
         pendingRms_.clear();
     }
 
-    bool valid(tinyHandle handle) const noexcept {
+    [[nodiscard]] bool valid(tinyHandle handle) const noexcept {
         return  isOccupied(handle.index) &&
                 states_[handle.index].version == handle.version;
     }
 
-    bool isOccupied(uint32_t index) const noexcept {
+    [[nodiscard]] bool isOccupied(uint32_t index) const noexcept {
         return index < items_.size() && states_[index].occupied;
     }
 
 
     template<typename U>
-    tinyHandle add(U&& item) {
+    [[nodiscard]] tinyHandle add(U&& item) {
         uint32_t index;
 
         // Reuse a slot from freeList_ if available
@@ -98,22 +111,22 @@ struct tinyPool {
 
     // ---- Getters (return true type, no raw ptr deduction) ----
 
-    Type* get(const tinyHandle& handle) noexcept {
+    [[nodiscard]] Type* get(const tinyHandle& handle) noexcept {
         return valid(handle) ? &items_[handle.index] : nullptr;
     }
 
-    const Type* get(const tinyHandle& handle) const noexcept {
+    [[nodiscard]] const Type* get(const tinyHandle& handle) const noexcept {
         return const_cast<tinyPool<Type>*>(this)->get(handle);
     }
 
     // Get handle by index (useful for accessing items_ by their position)
-    tinyHandle getHandle(uint32_t index) const noexcept {
+    [[nodiscard]] tinyHandle getHandle(uint32_t index) const noexcept {
         return isOccupied(index) ? tinyHandle(index, states_[index].version) : tinyHandle();
     }
 
     // Reference is better since this is never null
-    std::deque<Type>& view() noexcept { return items_; }
-    const std::deque<Type>& view() const noexcept { return items_; }
+    [[nodiscard]] std::deque<Type>& view() noexcept { return items_; }
+    [[nodiscard]] const std::deque<Type>& view() const noexcept { return items_; }
 
     // ---- CRITICAL: Aware removal ----
 
@@ -139,7 +152,7 @@ struct tinyPool {
         if (valid(handle)) pendingRms_.push_back(handle);
     }
 
-    const std::vector<tinyHandle>& pendingRms() const noexcept {
+    [[nodiscard]] const std::vector<tinyHandle>& pendingRms() const noexcept {
         return pendingRms_;
     }
 
@@ -153,7 +166,7 @@ struct tinyPool {
         pendingRms_.clear();
     }
 
-    bool hasPendingRms() const {
+    [[nodiscard]] bool hasPendingRms() const noexcept {
         return !pendingRms_.empty();
     }
 

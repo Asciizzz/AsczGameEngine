@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+
 union tinyHandle {
     struct {
         uint32_t index;
@@ -21,8 +22,8 @@ union tinyHandle {
     constexpr bool operator==(const tinyHandle& other) const noexcept { return value == other.value; }
     constexpr bool operator!=(const tinyHandle& other) const noexcept { return value != other.value; }
 
-    constexpr bool valid() const noexcept { return value != UINT64_MAX && index != UINT32_MAX; }
-    constexpr bool invalid() const noexcept { return !valid(); }
+    [[nodiscard]] constexpr bool valid() const noexcept { return value != UINT64_MAX && index != UINT32_MAX; }
+    [[nodiscard]] constexpr bool invalid() const noexcept { return !valid(); }
     constexpr void invalidate() noexcept { value = UINT64_MAX; }
 };
 
@@ -48,24 +49,24 @@ struct typeHandle {
         return !(*this == other);
     }
 
-    bool valid() const noexcept { return handle.valid(); }
+    [[nodiscard]] bool valid() const noexcept { return handle.valid(); }
 
     template<typename T>
-    bool isType() const noexcept { return valid() && typeIndex == std::type_index(typeid(T)); }
+    [[nodiscard]] bool isType() const noexcept { return typeIndex == std::type_index(typeid(T)); }
 
-    bool sameType(const typeHandle& other) const noexcept {
+    [[nodiscard]] bool sameType(const typeHandle& other) const noexcept {
         return typeIndex == other.typeIndex;
     }
 
     template<typename T>
-    static typeHandle make(tinyHandle h) noexcept {
+    [[nodiscard]] static typeHandle make(tinyHandle h) noexcept {
         typeHandle th;
         th.handle = h;
         th.typeIndex = std::type_index(typeid(T));
         return th;
     }
 
-    static typeHandle make(tinyHandle h, const std::type_index& tIndex) noexcept {
+    [[nodiscard]] static typeHandle make(tinyHandle h, const std::type_index& tIndex) noexcept {
         typeHandle th;
         th.handle = h;
         th.typeIndex = tIndex;

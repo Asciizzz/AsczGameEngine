@@ -75,13 +75,19 @@ public:
     tinyRegistry& operator=(tinyRegistry&&) noexcept = default;
 
     template<typename T>
-    typeHandle add(T&& data) {
+    [[nodiscard]] typeHandle add(T&& data) {
         return typeHandle::make<T>(ensurePool<T>().pool.add(std::forward<T>(data)));
     }
 
     template<typename T>
-    tinyPool<T>& make() {
+    [[nodiscard]] tinyPool<T>& make() {
         return ensurePool<T>().pool;
+    }
+    
+    // Pre-allocate space for a specific type (performance optimization)
+    template<typename T>
+    void reserve(uint32_t capacity) {
+        ensurePool<T>().pool.alloc(capacity);
     }
 
     void tRemove(const typeHandle& th) noexcept {
@@ -163,7 +169,7 @@ public:
         }
     }
 
-    bool hasPendingRms() const noexcept { 
+    [[nodiscard]] bool hasPendingRms() const noexcept { 
         for (const auto& [typeIndx, poolPtr] : pools) {
             if (poolPtr->hasPendingRms()) return true;
         }
@@ -183,35 +189,35 @@ public:
 // ------------------- Data Access ------------------
 
     template<typename T>
-    T* get(const tinyHandle& handle) noexcept {
+    [[nodiscard]] T* get(const tinyHandle& handle) noexcept {
         auto* wrapper = getWrapper<T>();
         return wrapper ? wrapper->pool.get(handle) : nullptr;
     }
     template<typename T>
-    const T* get(const tinyHandle& handle) const noexcept {
+    [[nodiscard]] const T* get(const tinyHandle& handle) const noexcept {
         return const_cast<tinyRegistry*>(this)->get<T>(handle);
     }
 
-    void* get(const typeHandle& th) noexcept {
+    [[nodiscard]] void* get(const typeHandle& th) noexcept {
         if (!th.valid()) return nullptr;
 
         auto it = pools.find(th.typeIndex);
         return (it != pools.end()) ? it->second->get(th.handle) : nullptr;
     }
-    const void* get(const typeHandle& th) const noexcept {
+    [[nodiscard]] const void* get(const typeHandle& th) const noexcept {
         return const_cast<tinyRegistry*>(this)->get(th);
     }
 
     template<typename T>
-    T* get(const typeHandle& th) noexcept {
+    [[nodiscard]] T* get(const typeHandle& th) noexcept {
         return th.isType<T>() ? static_cast<T*>(get(th)) : nullptr;
     }
     template<typename T>
-    const T* get(const typeHandle& th) const noexcept {
+    [[nodiscard]] const T* get(const typeHandle& th) const noexcept {
         return const_cast<tinyRegistry*>(this)->get<T>(th);
     }
 
-    bool has(const typeHandle& th) const noexcept {
+    [[nodiscard]] bool has(const typeHandle& th) const noexcept {
         if (!th.valid()) return false;
 
         auto it = pools.find(th.typeIndex);
@@ -220,16 +226,16 @@ public:
         return it->second->get(th.handle) != nullptr;
     }
     template<typename T>
-    bool has(const tinyHandle& handle) const noexcept {
+    [[nodiscard]] bool has(const tinyHandle& handle) const noexcept {
         return has(typeHandle::make<T>(handle));
     }
 
     template<typename T>
-    tinyPool<T>& view() {
+    [[nodiscard]] tinyPool<T>& view() {
         return ensurePool<T>().pool;
     }
     template<typename T>
-    const tinyPool<T>& view() const {
+    [[nodiscard]] const tinyPool<T>& view() const {
         const auto* wrapper = getWrapper<T>();
 
         // Cannot retrieve non-existing pool in const context
@@ -242,24 +248,24 @@ public:
     }
 
     template<typename T>
-    uint32_t capacity() const noexcept {
+    [[nodiscard]] uint32_t capacity() const noexcept {
         auto* wrapper = getWrapper<T>();
-        return wrapper ? wrapper->pool.capacity : 0;
+        return wrapper ? wrapper->pool.capacity() : 0;
     }
 
     template<typename T>
-    uint32_t count() const noexcept {
+    [[nodiscard]] uint32_t count() const noexcept {
         auto* wrapper = getWrapper<T>();
         return wrapper ? wrapper->pool.count() : 0;
     }
 
     template<typename T>
-    static std::type_index typeIndex() {
+    [[nodiscard]] static std::type_index typeIndex() {
         return std::type_index(typeid(T));
     }
 
     template<typename T>
-    static size_t typeHash() { // Legacy compatibility
+    [[nodiscard]] static size_t typeHash() { // Legacy compatibility
         return std::type_index(typeid(T)).hash_code();
     }
 };
