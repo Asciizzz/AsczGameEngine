@@ -34,7 +34,9 @@ namespace std {
 
 #include <typeindex>
 struct typeHandle {
-    typeHandle() noexcept = default;
+    typeHandle() noexcept = default; 
+    // Would've loved to create a template constructor here, but type_index cannot be deduced
+    typeHandle(const tinyHandle& h, const std::type_index& tIndex) noexcept : handle(h), typeIndex(tIndex) {}
 
     tinyHandle handle = tinyHandle();
     std::type_index typeIndex = std::type_index(typeid(void));
