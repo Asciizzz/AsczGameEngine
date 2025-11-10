@@ -198,6 +198,7 @@ void tinyApp::renderSceneHierarchy(tinyHandle nodeHandle) {
     
     // Drag target
     config.dragTarget = [this, nodeHandle]() {
+        // Accept scene node reparenting
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
             tinyHandle draggedHandle = *(tinyHandle*)payload->Data;
             tinySceneRT* scene = getActiveScene();
@@ -207,6 +208,20 @@ void tinyApp::renderSceneHierarchy(tinyHandle nodeHandle) {
             }
             return true;
         }
+        
+        // Accept file drops (for instantiating scenes)
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
+            tinyHandle fileHandle = *(tinyHandle*)payload->Data;
+            const tinyFS::Node* fNode = project->fs().fNode(fileHandle);
+            if (fNode && fNode->tHandle.isType<tinySceneRT>()) {
+                tinyHandle sceneRegistryHandle = fNode->tHandle.handle;
+                project->addSceneInstance(sceneRegistryHandle, getActiveSceneHandle(), nodeHandle);
+                expandNode(nodeHandle); // Expand to show new child
+                clearHeld();
+                return true;
+            }
+        }
+        
         return false;
     };
     
@@ -663,114 +678,101 @@ void tinyApp::renderSceneNodeInspector() {
         ImGui::Spacing();
     };
     
-    // Render Transform component (always present, no delete button)
+    // ========== TRANSFORM COMPONENT ==========
     if (selectedNode->has<tinyNodeRT::TRFM3D>()) {
-        renderComponent("Transform", ImVec4(0.2f, 0.2f, 0.15f, 0.8f), ImVec4(0.4f, 0.4f, 0.3f, 0.6f), true, [&]() {
-            {
+        if (imguiWrapper->componentHeader("Transform")) {
+            imguiWrapper->componentBody([&]() {
                 tinyNodeRT::TRFM3D* compPtr = activeScene->rtComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle);
-
                 glm::mat4 local = compPtr->local;
 
-                // Extract translation, rotation, and scale from the matrix
+                // Extract transform data
                 glm::vec3 translation, rotation, scale;
                 glm::quat rotationQuat;
                 glm::vec3 skew;
                 glm::vec4 perspective;
                 
-                // Check if decomposition is valid
-                if (ImGui::Button("Reset Transform")) {
+                // Reset button
+                if (imguiWrapper->button("Reset Transform", tinyImGui::ButtonStyle::Warning)) {
                     compPtr->reset();
                 }
 
+                // Validate decomposition
                 bool validDecomposition = glm::decompose(local, scale, rotationQuat, translation, skew, perspective);
                 if (!validDecomposition) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: Invalid transform matrix detected!");
+                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid transform matrix!");
                     return;
                 }
                 
-                // Validate extracted values for NaN/infinity
+                // Validate values
                 auto validVec3 = [](const glm::vec3& v) {
                     return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
                 };
                 
                 if (!validVec3(translation) || !validVec3(scale)) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Warning: NaN/Infinite values detected!");
-                    if (ImGui::Button("Reset Transform")) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "NaN/Infinite values detected!");
+                    if (imguiWrapper->button("Reset", tinyImGui::ButtonStyle::Danger)) {
                         compPtr->reset();
                     }
                     return;
                 }
                 
-                // Clamp scale to prevent zero/negative values
+                // Clamp scale
                 const float MIN_SCALE = 0.001f;
                 scale.x = std::max(MIN_SCALE, std::abs(scale.x));
                 scale.y = std::max(MIN_SCALE, std::abs(scale.y));
                 scale.z = std::max(MIN_SCALE, std::abs(scale.z));
                 
-                // Convert quaternion to Euler angles (in degrees)
+                // Convert to Euler angles
                 rotation = glm::degrees(glm::eulerAngles(rotationQuat));
-                
-                // Normalize angles to [-180, 180] range
                 auto normalizeAngle = [](float angle) {
                     while (angle > 180.0f) angle -= 360.0f;
                     while (angle < -180.0f) angle += 360.0f;
                     return angle;
                 };
-                
                 rotation.x = normalizeAngle(rotation.x);
                 rotation.y = normalizeAngle(rotation.y);
                 rotation.z = normalizeAngle(rotation.z);
                 
-                // Store original values to detect changes
+                // Store original values
                 glm::vec3 originalTranslation = translation;
                 glm::vec3 originalRotation = rotation;
                 glm::vec3 originalScale = scale;
                 
-                ImGui::Spacing();
+                imguiWrapper->separator();
                 
-                // Translation controls
+                // Position
                 ImGui::Text("Position");
                 ImGui::DragFloat3("##Position", &translation.x, 0.01f, -1000.0f, 1000.0f, "%.3f");
                 ImGui::SameLine();
-                if (ImGui::Button("To Cam")) {
+                if (imguiWrapper->button("To Cam", tinyImGui::ButtonStyle::Primary)) {
                     translation = project->camera()->pos;
                 }
                 
-                // Rotation controls
+                // Rotation
                 ImGui::Text("Rotation (degrees)");
                 ImGui::DragFloat3("##Rotation", &rotation.x, 0.5f, -180.0f, 180.0f, "%.1f°");
                 
-                // Scale controls
+                // Scale
                 ImGui::Text("Scale");
                 ImGui::DragFloat3("##Scale", &scale.x, 0.01f, MIN_SCALE, 10.0f, "%.3f");
                 ImGui::SameLine();
-                if (ImGui::Button("Uniform")) {
+                if (imguiWrapper->button("Uniform")) {
                     float avgScale = (scale.x + scale.y + scale.z) / 3.0f;
                     scale = glm::vec3(avgScale);
                 }
                 
-                // Apply changes if any values changed (copy->modify->reapply pattern)
+                // Apply changes
                 if (translation != originalTranslation || rotation != originalRotation || scale != originalScale) {
                     if (validVec3(translation) && validVec3(scale)) {
-                        // Convert back to quaternion and reconstruct matrix
                         glm::quat newRotQuat = glm::quat(glm::radians(rotation));
-                        
-                        // Create transform matrix: T * R * S
                         glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), translation);
                         glm::mat4 rotateMat = glm::mat4_cast(newRotQuat);
                         glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
-
                         compPtr->set(translateMat * rotateMat * scaleMat);
                     }
                 }
-                
-                ImGui::Spacing();
-            }
-        },
-        [&]() { activeScene->removeComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle); });
-    } else {
-        renderComponent("Transform", ImVec4(0.05f, 0.05f, 0.05f, 0.3f), ImVec4(0.15f, 0.15f, 0.15f, 0.3f), false, [&]() {},
-        [&]() { activeScene->writeComp<tinyNodeRT::TRFM3D>(selectedSceneNodeHandle); });
+            });
+        }
     }
     
     // Mesh Renderer Component - Always show
