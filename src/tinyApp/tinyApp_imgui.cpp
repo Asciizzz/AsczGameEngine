@@ -48,6 +48,11 @@ void tinyApp::setupImGuiWindows(const tinyChrono& fpsManager, const tinyCamera& 
     imguiWrapper->addWindow("Script Editor", [this]() {
         renderScriptEditorWindow();
     });
+    
+    // Theme Editor Window
+    imguiWrapper->addWindow("Theme Editor", [this]() {
+        renderThemeEditorWindow();
+    }, &showThemeEditor);
 }
 
 // ===========================================================================================
@@ -360,10 +365,10 @@ void tinyApp::renderDebugPanel(const tinyChrono& fpsManager, const tinyCamera& c
     ImGui::Text("Delta Time: %.4f s", deltaTime);
     
     imguiWrapper->separator("Camera");
-    ImGui::Text("Position: %.2f, %.2f, %.2f", camera.pos.x, camera.pos.y, camera.pos.z);
-    ImGui::Text("Forward: %.2f, %.2f, %.2f", camera.forward.x, camera.forward.y, camera.forward.z);
+    ImGui::Text("Pos: %.2f, %.2f, %.2f", camera.pos.x, camera.pos.y, camera.pos.z);
+    ImGui::Text("Fwd: %.2f, %.2f, %.2f", camera.forward.x, camera.forward.y, camera.forward.z);
     ImGui::Text("Mouse Focus: %s", mouseFocus ? "Yes" : "No");
-    
+
     imguiWrapper->separator("Selection");
     if (selectedHandle.valid()) {
         if (selectedHandle.isScene()) {
@@ -384,9 +389,9 @@ void tinyApp::renderDebugPanel(const tinyChrono& fpsManager, const tinyCamera& c
         ImGui::TextDisabled("Nothing selected");
     }
     
-    imguiWrapper->separator("Demo");
-    if (imguiWrapper->button("Show ImGui Demo", tinyImGui::ButtonStyle::Primary)) {
-        showDemoWindow = !showDemoWindow;
+    imguiWrapper->separator("Theme");
+    if (imguiWrapper->button("Edit Theme", tinyImGui::ButtonStyle::Primary)) {
+        showThemeEditor = !showThemeEditor;
     }
 }
 
@@ -468,6 +473,128 @@ void tinyApp::renderComponentEditorWindow() {
     // This window shows either animation timeline or script debug
     // For now, delegate to existing methods
     renderAnimationEditorWindow();
+}
+
+// ===========================================================================================
+// THEME EDITOR WINDOW
+// ===========================================================================================
+
+void tinyApp::renderThemeEditorWindow() {
+    ImGui::Text("Theme Editor");
+    imguiWrapper->separator();
+    
+    auto& theme = imguiWrapper->getTheme();
+    
+    imguiWrapper->beginScrollArea("ThemeEditor");
+    
+    // Window Colors
+    if (ImGui::CollapsingHeader("Window & Background", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::ColorEdit4("Window Background", (float*)&theme.windowBg);
+        ImGui::ColorEdit4("Child Background", (float*)&theme.childBg);
+        ImGui::ColorEdit4("Border", (float*)&theme.border);
+        ImGui::ColorEdit4("Component Background", (float*)&theme.componentBg);
+        ImGui::ColorEdit4("Component Border", (float*)&theme.componentBorder);
+    }
+    
+    // Title Bar
+    if (ImGui::CollapsingHeader("Title Bar")) {
+        ImGui::ColorEdit4("Title Background", (float*)&theme.titleBg);
+        ImGui::ColorEdit4("Title Active", (float*)&theme.titleBgActive);
+        ImGui::ColorEdit4("Title Collapsed", (float*)&theme.titleBgCollapsed);
+    }
+    
+    // Text Colors
+    if (ImGui::CollapsingHeader("Text")) {
+        ImGui::ColorEdit4("Text", (float*)&theme.text);
+        ImGui::ColorEdit4("Text Disabled", (float*)&theme.textDisabled);
+    }
+    
+    // Button Styles
+    if (ImGui::CollapsingHeader("Buttons - Default")) {
+        ImGui::ColorEdit4("Button", (float*)&theme.button);
+        ImGui::ColorEdit4("Button Hovered", (float*)&theme.buttonHovered);
+        ImGui::ColorEdit4("Button Active", (float*)&theme.buttonActive);
+    }
+    
+    if (ImGui::CollapsingHeader("Buttons - Primary")) {
+        ImGui::ColorEdit4("Primary", (float*)&theme.buttonPrimary);
+        ImGui::ColorEdit4("Primary Hovered", (float*)&theme.buttonPrimaryHovered);
+        ImGui::ColorEdit4("Primary Active", (float*)&theme.buttonPrimaryActive);
+    }
+    
+    if (ImGui::CollapsingHeader("Buttons - Success")) {
+        ImGui::ColorEdit4("Success", (float*)&theme.buttonSuccess);
+        ImGui::ColorEdit4("Success Hovered", (float*)&theme.buttonSuccessHovered);
+        ImGui::ColorEdit4("Success Active", (float*)&theme.buttonSuccessActive);
+    }
+    
+    if (ImGui::CollapsingHeader("Buttons - Danger")) {
+        ImGui::ColorEdit4("Danger", (float*)&theme.buttonDanger);
+        ImGui::ColorEdit4("Danger Hovered", (float*)&theme.buttonDangerHovered);
+        ImGui::ColorEdit4("Danger Active", (float*)&theme.buttonDangerActive);
+    }
+    
+    if (ImGui::CollapsingHeader("Buttons - Warning")) {
+        ImGui::ColorEdit4("Warning", (float*)&theme.buttonWarning);
+        ImGui::ColorEdit4("Warning Hovered", (float*)&theme.buttonWarningHovered);
+        ImGui::ColorEdit4("Warning Active", (float*)&theme.buttonWarningActive);
+    }
+    
+    // Headers & Highlights
+    if (ImGui::CollapsingHeader("Headers & Selection")) {
+        ImGui::ColorEdit4("Header", (float*)&theme.header);
+        ImGui::ColorEdit4("Header Hovered", (float*)&theme.headerHovered);
+        ImGui::ColorEdit4("Header Active", (float*)&theme.headerActive);
+        ImGui::ColorEdit4("Selected", (float*)&theme.selected);
+        ImGui::ColorEdit4("Drag Drop Highlight", (float*)&theme.dragDrop);
+    }
+    
+    // Scrollbar
+    if (ImGui::CollapsingHeader("Scrollbar")) {
+        ImGui::ColorEdit4("Scrollbar Background", (float*)&theme.scrollbarBg);
+        ImGui::ColorEdit4("Scrollbar Grab", (float*)&theme.scrollbarGrab);
+        ImGui::ColorEdit4("Scrollbar Grab Hovered", (float*)&theme.scrollbarGrabHovered);
+        ImGui::ColorEdit4("Scrollbar Grab Active", (float*)&theme.scrollbarGrabActive);
+        ImGui::DragFloat("Scrollbar Size", &theme.scrollbarSize, 0.1f, 4.0f, 20.0f);
+        ImGui::DragFloat("Scrollbar Rounding", &theme.scrollbarRounding, 0.1f, 0.0f, 12.0f);
+    }
+    
+    // Frame/Input
+    if (ImGui::CollapsingHeader("Input Fields")) {
+        ImGui::ColorEdit4("Frame Background", (float*)&theme.frameBg);
+        ImGui::ColorEdit4("Frame Hovered", (float*)&theme.frameBgHovered);
+        ImGui::ColorEdit4("Frame Active", (float*)&theme.frameBgActive);
+        ImGui::DragFloat("Frame Rounding", &theme.frameRounding, 0.1f, 0.0f, 12.0f);
+    }
+    
+    // Rounding
+    if (ImGui::CollapsingHeader("Rounding & Shape")) {
+        ImGui::DragFloat("Window Rounding", &theme.windowRounding, 0.1f, 0.0f, 12.0f);
+        ImGui::DragFloat("Child Rounding", &theme.childRounding, 0.1f, 0.0f, 12.0f);
+        ImGui::DragFloat("Button Rounding", &theme.buttonRounding, 0.1f, 0.0f, 12.0f);
+    }
+    
+    imguiWrapper->endScrollArea();
+    
+    imguiWrapper->separator();
+    
+    // Action buttons
+    if (imguiWrapper->button("Apply Theme", tinyImGui::ButtonStyle::Success)) {
+        imguiWrapper->applyTheme();
+    }
+    
+    ImGui::SameLine();
+    
+    if (imguiWrapper->button("Reset to Default", tinyImGui::ButtonStyle::Warning)) {
+        theme = tinyImGui::Theme();
+        imguiWrapper->applyTheme();
+    }
+    
+    ImGui::SameLine();
+    
+    if (imguiWrapper->button("Close", tinyImGui::ButtonStyle::Default)) {
+        showThemeEditor = false;
+    }
 }
 
 // ===========================================================================================

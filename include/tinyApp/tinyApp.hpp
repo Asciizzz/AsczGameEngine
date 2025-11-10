@@ -122,6 +122,7 @@ private:
     // ImGui UI state
     bool showDebugWindow = true;
     bool showDemoWindow = false;
+    bool showThemeEditor = false;
     bool showEditorSettingsWindow = false;
     bool showInspectorWindow = true;
     bool showAnimationEditor = true;
@@ -225,6 +226,7 @@ private:
     void renderDebugPanel(const tinyChrono& fpsManager, const tinyCamera& camera, bool mouseFocus, float deltaTime);
     void renderEditorSettingsWindow();
     void renderComponentEditorWindow();
+    void renderThemeEditorWindow();
     
     // Legacy methods (to be removed after refactor)
     void renderNodeTreeImGui(tinyHandle nodeHandle = tinyHandle(), int depth = 0);
