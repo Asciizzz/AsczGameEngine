@@ -207,7 +207,7 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
     tinyHandle thisHandle = tinyHandle();
 
-    for (uint32_t i = 0; i < from_items.size(); ++i) {
+    for (auto& [i, toHandle] : toHandleMap) {
         tinyHandle fromHandle = from->nodeHandle(i);
 
         const tinyNodeRT* fromNode = from->node(fromHandle);
