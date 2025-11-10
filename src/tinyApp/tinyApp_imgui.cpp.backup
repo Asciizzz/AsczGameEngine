@@ -154,21 +154,18 @@ void tinyApp::renderSceneHierarchy(tinyHandle nodeHandle) {
     };
     
     // Context menu
-    config.contextMenu = [this, nodeHandle]() {
-        tinySceneRT* scene = getActiveScene();
-        if (!scene) return;
-        
-        const tinyNodeRT* node = scene->node(nodeHandle);
-        bool isRoot = (nodeHandle == scene->rootHandle());
+    config.contextMenu = [this, activeScene, nodeHandle]() {
+        const tinyNodeRT* node = activeScene->node(nodeHandle);
+        bool isRoot = (nodeHandle == activeScene->rootHandle());
         
         if (ImGui::MenuItem("Create Child Node")) {
-            tinyHandle childHandle = scene->addNode("NewNode", nodeHandle);
+            tinyHandle childHandle = activeScene->createNode("NewNode", nodeHandle);
             expandNode(nodeHandle);
         }
         
         if (!isRoot) {
             if (ImGui::MenuItem("Delete Node")) {
-                scene->removeNode(nodeHandle);
+                activeScene->deleteNode(nodeHandle);
                 clearSelection();
             }
             
@@ -197,14 +194,11 @@ void tinyApp::renderSceneHierarchy(tinyHandle nodeHandle) {
     };
     
     // Drag target
-    config.dragTarget = [this, nodeHandle]() {
+    config.dragTarget = [this, activeScene, nodeHandle]() {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
             tinyHandle draggedHandle = *(tinyHandle*)payload->Data;
-            tinySceneRT* scene = getActiveScene();
-            if (scene) {
-                scene->reparentNode(draggedHandle, nodeHandle);
-                clearHeld();
-            }
+            activeScene->reparentNode(draggedHandle, nodeHandle);
+            clearHeld();
             return true;
         }
         return false;
@@ -282,13 +276,13 @@ void tinyApp::renderFileExplorer(tinyHandle nodeHandle) {
         };
         
         // Context menu for folders
-        config.contextMenu = [this, nodeHandle, node]() {
+        config.contextMenu = [this, &fs, nodeHandle]() {
             if (ImGui::MenuItem("Load Model...")) {
-                fileDialog.open(std::filesystem::path(".") / node->name, nodeHandle);
+                fileDialog.open(fs.getRealPath(nodeHandle), nodeHandle);
             }
             
             if (ImGui::MenuItem("Load Script...")) {
-                loadScriptDialog.open(std::filesystem::path(".") / node->name, nodeHandle);
+                loadScriptDialog.open(fs.getRealPath(nodeHandle), nodeHandle);
             }
             
             imguiWrapper->separator();
@@ -332,136 +326,228 @@ void tinyApp::renderDebugPanel(const tinyChrono& fpsManager, const tinyCamera& c
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFPSUpdate);
     
     if (elapsed.count() >= 1000) {
-        displayFPS = fpsManager.currentFPS;
-        displayFrameTime = fpsManager.frameTimeMs;
-        displayAvgFPS = fpsManager.getAverageFPS();
-        lastFPSUpdate = now;
-    }
-    
-    ImGui::Text("Performance");
-    imguiWrapper->separator();
-    ImGui::Text("FPS: %.1f (%.2f ms)", displayFPS, displayFrameTime);
-    ImGui::Text("Avg FPS: %.1f", displayAvgFPS);
-    ImGui::Text("Delta Time: %.4f s", deltaTime);
-    
-    imguiWrapper->separator("Camera");
-    ImGui::Text("Position: %.2f, %.2f, %.2f", camera.pos.x, camera.pos.y, camera.pos.z);
-    ImGui::Text("Forward: %.2f, %.2f, %.2f", camera.forward.x, camera.forward.y, camera.forward.z);
-    ImGui::Text("Mouse Focus: %s", mouseFocus ? "Yes" : "No");
-    
-    imguiWrapper->separator("Selection");
-    if (selectedHandle.valid()) {
-        if (selectedHandle.isScene()) {
-            tinySceneRT* scene = getActiveScene();
-            if (scene) {
-                const tinyNodeRT* node = scene->node(selectedHandle.handle);
-                if (node) {
-                    ImGui::Text("Selected Node: %s", node->name.c_str());
-                }
+        // Static variable to store splitter position (persists between frames)
+        static float splitterPos = 0.5f; // Start with 50% for hierarchy, 50% for file explorer
+        
+        // Get full available space
+        float totalHeight = ImGui::GetContentRegionAvail().y;
+        
+        // Calculate section heights based on splitter position
+        float hierarchyHeight = totalHeight * splitterPos;
+        float explorerHeight = totalHeight * (1.0f - splitterPos);
+        
+        // =============================================================================
+        // HIERARCHY SECTION (TOP)
+        // =============================================================================
+        
+        // Active Scene Name Header
+        tinySceneRT* activeScene = getActiveScene();
+        if (activeScene) {
+            ImGui::Text("%s", activeScene->name.c_str());
+            
+            // Show full scene info on hover
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::Text("Scene: %s", activeScene->name.c_str());
+                ImGui::Text("Total Nodes: %u", activeScene->nodeCount());
+                ImGui::EndTooltip();
             }
         } else {
-            const tinyFS::Node* fNode = project->fs().fNode(selectedHandle.handle);
-            if (fNode) {
-                ImGui::Text("Selected File: %s", fNode->name.c_str());
-            }
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "No Active Scene");
         }
-    } else {
-        ImGui::TextDisabled("Nothing selected");
-    }
-    
-    imguiWrapper->separator("Demo");
-    if (imguiWrapper->button("Show ImGui Demo", tinyImGui::ButtonStyle::Primary)) {
-        showDemoWindow = !showDemoWindow;
-    }
-}
+        
+        ImGui::Separator();
+        
+        // Hierarchy Tree with background
+        // Apply thin scrollbar styling to match component inspector
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
+        
+        ImGui::BeginChild("Hierarchy", ImVec2(0, hierarchyHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
-// ===========================================================================================
-// EDITOR SETTINGS WINDOW  
-// ===========================================================================================
+        // Clear held node when mouse is released and no dragging is happening
+        if (heldHandle.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            clearHeld();
+        }
+        
+        if (activeScene && activeScene->nodeCount() > 0) {
+            renderNodeTreeImGui();
+        } else {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No active scene");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Drag scenes here to create instances");
+        }
+        ImGui::EndChild();
+        
+        // Pop the scrollbar styling
+        ImGui::PopStyleColor(4); // ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
+        ImGui::PopStyleVar(2); // ScrollbarSize, ScrollbarRounding
+        
+        // =============================================================================
+        // HORIZONTAL SPLITTER
+        // =============================================================================
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 0.4f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.7f, 0.7f, 0.8f));
+        
+        ImGui::Button("##HorizontalSplitter", ImVec2(-1, 4));
+        
+        if (ImGui::IsItemActive()) {
+            float mouseDelta = ImGui::GetIO().MouseDelta.y;
+            splitterPos += mouseDelta / totalHeight;
+            splitterPos = std::max(0.2f, std::min(0.8f, splitterPos)); // Clamp between 20% and 80%
+        }
+        
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        }
+        
+        ImGui::PopStyleColor(3);
+        
+        // =============================================================================
+        // FILE EXPLORER SECTION
+        // =============================================================================
+        
+        ImGui::Text("File Explorer");
+        ImGui::Separator();
+        
+        // File Explorer with background
+        // Apply thin scrollbar styling to match component inspector
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 8.0f); // Thinner scrollbar
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 4.0f); // Rounded scrollbar
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.1f, 0.1f, 0.1f, 0.5f)); // Darker background
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.4f, 0.4f, 0.4f, 0.8f)); // Visible grab
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f)); // Hover state
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f)); // Active state
+        
+        ImGui::BeginChild("FileExplorer", ImVec2(0, explorerHeight - 30), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
-void tinyApp::renderEditorSettingsWindow() {
-    ImGui::Text("Editor Settings");
-    imguiWrapper->separator();
+        renderFileExplorerImGui();
+        
+        // Render the dialogs once per frame, outside the file explorer tree
+        renderFileDialog();
+        renderLoadScriptDialog();
+
+        ImGui::EndChild();
+        
+        // Pop the scrollbar styling
+        ImGui::PopStyleColor(4); // ScrollbarBg, ScrollbarGrab, ScrollbarGrabHovered, ScrollbarGrabActive
+        ImGui::PopStyleVar(2); // ScrollbarSize, ScrollbarRounding
+        
+    });  // End Editor window
     
-    auto& theme = imguiWrapper->getTheme();
-    
-    if (ImGui::CollapsingHeader("Theme Colors", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::ColorEdit4("Window Background", (float*)&theme.windowBg);
-        ImGui::ColorEdit4("Child Background", (float*)&theme.childBg);
-        ImGui::ColorEdit4("Border", (float*)&theme.border);
+    // Debug Panel Window (smaller, optional)
+    imguiWrapper->addWindow("Debug Panel", [this, &fpsManager, &camera, mouseFocus, deltaTime]() {
+        // FPS and Performance (update display only every second)
+        static auto lastFPSUpdate = std::chrono::steady_clock::now();
+        static float displayFPS = 0.0f;
+        static float displayFrameTime = 0.0f;
+        static float displayAvgFPS = 0.0f;
         
-        imguiWrapper->separator();
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFPSUpdate);
         
-        ImGui::ColorEdit4("Button Default", (float*)&theme.button);
-        ImGui::ColorEdit4("Button Primary", (float*)&theme.buttonPrimary);
-        ImGui::ColorEdit4("Button Success", (float*)&theme.buttonSuccess);
-        ImGui::ColorEdit4("Button Danger", (float*)&theme.buttonDanger);
-        ImGui::ColorEdit4("Button Warning", (float*)&theme.buttonWarning);
-        
-        if (imguiWrapper->button("Apply Theme", tinyImGui::ButtonStyle::Success)) {
-            imguiWrapper->applyTheme();
+        if (elapsed.count() >= 1000) { // Update every 1000ms (1 second)
+            displayFPS = fpsManager.currentFPS;
+            displayFrameTime = fpsManager.frameTimeMs;
+            displayAvgFPS = fpsManager.getAverageFPS();
+            lastFPSUpdate = now;
         }
         
-        ImGui::SameLine();
+        ImGui::Text("Performance");
+        ImGui::Separator();
+        ImGui::Text("FPS: %.1f (%.2f ms)", displayFPS, displayFrameTime);
+        ImGui::Text("Avg FPS: %.1f", displayAvgFPS);
+        ImGui::Text("Delta Time: %.4f s", deltaTime);
         
-        if (imguiWrapper->button("Reset to Default", tinyImGui::ButtonStyle::Warning)) {
-            theme = tinyImGui::Theme(); // Reset to defaults
-            imguiWrapper->applyTheme();
-        }
-    }
-    
-    if (ImGui::CollapsingHeader("UI Layout")) {
-        ImGui::DragFloat("Scrollbar Size", &theme.scrollbarSize, 0.1f, 4.0f, 20.0f);
-        ImGui::DragFloat("Frame Rounding", &theme.frameRounding, 0.1f, 0.0f, 12.0f);
-        ImGui::DragFloat("Window Rounding", &theme.windowRounding, 0.1f, 0.0f, 12.0f);
+        ImGui::Spacing();
         
-        if (imguiWrapper->button("Apply", tinyImGui::ButtonStyle::Primary)) {
-            imguiWrapper->applyTheme();
-        }
-    }
+        // Camera Information
+        ImGui::Text("Camera");
+        ImGui::Separator();
+        ImGui::Text("Pos (%.2f, %.2f, %.2f)", camera.pos.x, camera.pos.y, camera.pos.z);
+        ImGui::Text("Fw (%.2f, %.2f, %.2f)", camera.forward.x, camera.forward.y, camera.forward.z);
+        ImGui::Text("Rg (%.2f, %.2f, %.2f)", camera.right.x, camera.right.y, camera.right.z);
+        ImGui::Text("Up (%.2f, %.2f, %.2f)", camera.up.x, camera.up.y, camera.up.z);
+        ImGui::Text("Yaw: %.2f° | Pitch: %.2f°", 
+                   camera.getYaw(true) * 57.2958f, // Convert radians to degrees
+                   camera.getPitch(true) * 57.2958f);
+
+        ImGui::Spacing();
+        
+        // Window controls
+        ImGui::Text("Windows");
+        ImGui::Separator();
+        ImGui::Checkbox("Show Inspector", &showInspectorWindow);
+        ImGui::Checkbox("Show Editor Settings", &showEditorSettingsWindow);
+    });
     
-    if (ImGui::CollapsingHeader("Font Settings")) {
+    // Inspector Window
+    imguiWrapper->addWindow("Inspector", [this]() {
+        renderInspectorWindow();
+    });
+    
+    // Editor Settings Window
+    imguiWrapper->addWindow("Editor Settings", [this]() {
+        ImGui::Text("UI & Display");
+        ImGui::Separator();
+        
+        // Font scaling for better readability
         static float fontScale = 1.0f;
         ImGui::Text("Font Scale");
         if (ImGui::SliderFloat("##FontScale", &fontScale, 0.5f, 3.0f, "%.1fx")) {
             ImGui::GetIO().FontGlobalScale = fontScale;
         }
+
+        ImGui::Spacing();
         
+        // Quick preset buttons
         ImGui::Text("Presets:");
-        if (imguiWrapper->button("Small", tinyImGui::ButtonStyle::Default, ImVec2(60, 0))) {
+        if (ImGui::Button("Small##FontPreset")) {
             fontScale = 0.8f;
             ImGui::GetIO().FontGlobalScale = fontScale;
         }
         ImGui::SameLine();
-        if (imguiWrapper->button("Normal", tinyImGui::ButtonStyle::Default, ImVec2(60, 0))) {
+        if (ImGui::Button("Normal##FontPreset")) {
             fontScale = 1.0f;
             ImGui::GetIO().FontGlobalScale = fontScale;
         }
         ImGui::SameLine();
-        if (imguiWrapper->button("Large", tinyImGui::ButtonStyle::Default, ImVec2(60, 0))) {
+        if (ImGui::Button("Large##FontPreset")) {
             fontScale = 1.5f;
             ImGui::GetIO().FontGlobalScale = fontScale;
         }
-    }
+        ImGui::SameLine();
+        if (ImGui::Button("XL##FontPreset")) {
+            fontScale = 2.0f;
+            ImGui::GetIO().FontGlobalScale = fontScale;
+        }
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        
+        // Future settings placeholder
+        ImGui::TextDisabled("More settings will be added here...");
+        ImGui::TextDisabled("• Theme selection");
+        ImGui::TextDisabled("• Window layout presets"); 
+        ImGui::TextDisabled("• Performance options");
+        ImGui::TextDisabled("• Keybind customization");
+    }, &showEditorSettingsWindow);
+
+    // Animation Editor Window
+    imguiWrapper->addWindow("Editor", [this]() {
+        renderAnimationEditorWindow();
+    });
+
+    // Script Editor Window
+    imguiWrapper->addWindow("Script Editor", [this]() {
+        renderScriptEditorWindow();
+    });
 }
-
-// ===========================================================================================
-// COMPONENT EDITOR WINDOW (Animation/Script)
-// ===========================================================================================
-
-void tinyApp::renderComponentEditorWindow() {
-    // This window shows either animation timeline or script debug
-    // For now, delegate to existing methods
-    renderAnimationEditorWindow();
-}
-
-// ===========================================================================================
-// LEGACY METHODS - TO BE REFACTORED
-// ===========================================================================================
-
-// ===========================================================================================
-// INSPECTOR WINDOW (Component Editor)
-// ===========================================================================================
 
 void tinyApp::renderInspectorWindow() {
     // Unified Inspector Window: Show details for whatever is currently selected

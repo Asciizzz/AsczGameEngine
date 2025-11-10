@@ -218,7 +218,15 @@ private:
         return heldHandle.isFile() ? heldHandle.handle : tinyHandle();
     }
     
-    // ImGui rendering methods (moved from tinyProject)
+    // ImGui rendering methods - NEW CLEAN SYSTEM
+    void renderHierarchyWindow();
+    void renderSceneHierarchy(tinyHandle nodeHandle);
+    void renderFileExplorer(tinyHandle nodeHandle);
+    void renderDebugPanel(const tinyChrono& fpsManager, const tinyCamera& camera, bool mouseFocus, float deltaTime);
+    void renderEditorSettingsWindow();
+    void renderComponentEditorWindow();
+    
+    // Legacy methods (to be removed after refactor)
     void renderNodeTreeImGui(tinyHandle nodeHandle = tinyHandle(), int depth = 0);
     void renderFileExplorerImGui(tinyHandle nodeHandle = tinyHandle(), int depth = 0);
     void renderFileDialog();
