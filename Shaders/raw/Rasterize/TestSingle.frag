@@ -21,7 +21,7 @@ void main() {
     vec3 lightDir = normalize(vec3(-0.2, 0.1, -0.1));
 
     float nDot = dot(fragWorldNrml, lightDir);
-    float intensity = 0.5 + clamp(nDot, 0.0, 1.0) * 0.5;
+    float intensity = 0.8 + clamp(nDot, 0.0, 1.0) * 0.2;
 
     vec4 baseColor = uMaterial.baseColor;
 
