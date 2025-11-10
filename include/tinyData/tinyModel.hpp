@@ -57,13 +57,28 @@ struct tinyModel {
         glm::vec4 baseColor = glm::vec4(1.0f); // Default white
     };
 
+    struct Mesh {
+        tinyMesh mesh;
+        std::string name;
+    };
+
+    struct Skeleton {
+        tinySkeleton skeleton;
+        std::string name;
+    };
+
+    struct Texture {
+        tinyTexture texture;
+        std::string name;
+    };
+
     std::string name;
 
     // All local space
-    std::vector<tinyMesh> meshes;
+    std::vector<Mesh> meshes;
     std::vector<Material> materials;
-    std::vector<tinyTexture> textures;
-    std::vector<tinySkeleton> skeletons;
+    std::vector<Texture> textures;
+    std::vector<Skeleton> skeletons;
     std::vector<tinyRT_ANIM3D> animations;
 
     std::vector<Node> nodes;

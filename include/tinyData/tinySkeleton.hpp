@@ -27,22 +27,13 @@ struct tinySkeleton {
     tinySkeleton(tinySkeleton&&) noexcept = default;
     tinySkeleton& operator=(tinySkeleton&&) noexcept = default;
 
-    std::string name;
     std::vector<tinyBone> bones;
 
     void clear() { 
-        name.clear();
-        bones.clear(); 
+        bones.clear();
     }
     uint32_t insert(const tinyBone& bone) {
         bones.push_back(bone);
         return static_cast<uint32_t>(bones.size() - 1);
     }
-
-    uint32_t useCount() const noexcept { return useCount_; }
-    uint32_t incrementUse() noexcept { return ++useCount_; }
-    uint32_t decrementUse() noexcept { return useCount_ > 0 ? --useCount_ : 0; }
-
-private:
-    uint32_t useCount_ = 0;
 };

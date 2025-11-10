@@ -8,7 +8,6 @@
 
 struct tinyTexture {
     tinyTexture() noexcept = default; // Allow copy and move semantics
-    std::string name;
 
     enum class WrapMode {
         Repeat,
@@ -205,8 +204,6 @@ struct tinyTextureVk {
 
 // -----------------------------------------
 
-    const std::string& name() const noexcept { return texture_.name; }
-
     tinyTexture& cpu() noexcept { return texture_; }
     const tinyTexture& cpu() const noexcept { return texture_; }
     const tinyVk::TextureVk& gpu() const noexcept { return textureVk_; }
@@ -226,11 +223,8 @@ struct tinyTextureVk {
     uint32_t decrementUse() noexcept { return useCount_ > 0 ? --useCount_ : 0; }
 
     static tinyTextureVk aPixel(const tinyVk::Device* deviceVk, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255, uint8_t a = 255) {
-        tinyTexture defaultTex = tinyTexture::aPixel(r, g, b, a);
-        defaultTex.name = "Default";
-
         tinyTextureVk textureVk;
-        textureVk.createFrom(std::move(defaultTex), deviceVk);
+        textureVk.createFrom(tinyTexture::aPixel(r, g, b, a), deviceVk);
         return textureVk;
     }
 

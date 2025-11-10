@@ -29,7 +29,7 @@ struct Skeleton3D {
 // -----------------------------------------
 
     static void vkWrite(const tinyVk::Device* device, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, uint32_t boneCount);
-    VkDescriptorSet descSet() const noexcept { return descSet_; }
+    VkDescriptorSet descSet() const noexcept { return pValid() ? descSet_.get() : VK_NULL_HANDLE; }
     uint32_t dynamicOffset(uint32_t curFrame) const noexcept {
         return sizeof(glm::mat4) * boneCount() * curFrame;
     }

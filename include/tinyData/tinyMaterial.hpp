@@ -23,7 +23,6 @@ struct tinyMaterialVk {
         Count = 4
     };
 
-    std::string name;
     tinyMaterialVk() noexcept {
         textures_.fill(nullptr);
     }
@@ -96,8 +95,7 @@ struct tinyMaterialVk {
 
     // Require move semantics to invalidate to avoid instant decrement
     tinyMaterialVk(tinyMaterialVk&& other) noexcept
-    :   name(std::move(other.name)),
-        descSet_(std::move(other.descSet_)),
+    :   descSet_(std::move(other.descSet_)),
         defTex0_(other.defTex0_),
         defTex1_(other.defTex1_),
         textures_(other.textures_),
@@ -116,7 +114,6 @@ struct tinyMaterialVk {
                 if (tex) tex->decrementUse();
             }
 
-            name = std::move(other.name);
             descSet_ = std::move(other.descSet_);
             deviceVk_ = other.deviceVk_;
             defTex0_ = other.defTex0_;

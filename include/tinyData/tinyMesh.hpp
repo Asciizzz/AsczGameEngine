@@ -21,7 +21,6 @@ struct tinyMorphTarget {
 
 // Uniform mesh structure that holds raw data only
 struct tinyMesh {
-    std::string name; // Mesh name from glTF
     tinyMesh() noexcept = default;
 
     struct Part {

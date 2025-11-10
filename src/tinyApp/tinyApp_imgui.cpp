@@ -582,7 +582,6 @@ void tinyApp::renderSceneNodeInspector() {
             
             if (meshHandle.valid() && meshVk) {
                 const tinyMesh& cpuMesh = meshVk->cpu();
-                meshDisplayText = cpuMesh.name;
                 meshButtonColor = ImVec4(0.2f, 0.4f, 0.2f, 1.0f);   // Green for valid
                 meshHoveredColor = ImVec4(0.3f, 0.5f, 0.3f, 1.0f);
                 meshActiveColor = ImVec4(0.1f, 0.3f, 0.1f, 1.0f);
@@ -843,7 +842,7 @@ void tinyApp::renderSceneNodeInspector() {
             const tinySkeleton* skeleton = rtSkeleComp->rSkeleton();
             if (skeleton) {
                 ImGui::SameLine();
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "%s (%zu bones)", skeleton->name.c_str(), skeleton->bones.size());
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "(%zu bones)", skeleton->bones.size());
             } else {
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid skeleton resource");
@@ -1467,13 +1466,13 @@ void tinyApp::renderFileSystemInspector() {
                 if (const tinyTextureVk* albedoTex = materialVk->texture(MTexSlot::Albedo)) {
                     const tinyTexture& textureCPU = albedoTex->cpu();
 
-                    ImGui::Text("Albedo Texture: %s (%dx%d, %d channels)", textureCPU.name.c_str(), textureCPU.width(), textureCPU.height(), textureCPU.channels());
+                    ImGui::Text("Albedo Texture [%dx%d, %d channels]", textureCPU.width(), textureCPU.height(), textureCPU.channels());
                 }
 
                 if (const tinyTextureVk* normalTex = materialVk->texture(MTexSlot::Normal)) {
                     const tinyTexture& textureCPU = normalTex->cpu();
 
-                    ImGui::Text("Normal Texture: %s (%dx%d, %d channels)", textureCPU.name.c_str(), textureCPU.width(), textureCPU.height(), textureCPU.channels());
+                    ImGui::Text("Normal Texture [%dx%d, %d channels]", textureCPU.width(), textureCPU.height(), textureCPU.channels());
                 }
             }
 
@@ -1549,25 +1548,7 @@ bool tinyApp::renderHandleField(const char* fieldId, tinyHandle& handle, const c
     const tinyFS& fs = project->fs();
     
     if (handle.valid()) {
-        // Get the actual name based on target type
-        if (strcmp(targetType, "Mesh") == 0) {
-            const tinyMesh* mesh = fs.rGet<tinyMesh>(handle);
-            displayText = mesh ? mesh->name : "Unknown Mesh";
-        } else if (strcmp(targetType, "Skeleton") == 0) {
-            const tinySkeleton* skeleton = fs.rGet<tinySkeleton>(handle);
-            displayText = skeleton ? skeleton->name : "Unknown Skeleton";
-        } else if (strcmp(targetType, "SkeletonNode") == 0) {
-            tinySceneRT* activeScene = getActiveScene();
-            if (activeScene) {
-                const tinyNodeRT* node = activeScene->node(handle);
-                displayText = node ? node->name : "Unknown Node";
-            } else {
-                displayText = "No Node";
-            }
-        } else {
-            displayText = "Unknown Resource";
-        }
-        
+        displayText = "RHandle(" + std::to_string(handle.index) + ", " + std::to_string(handle.version) + ")";
         buttonColor = ImVec4(0.2f, 0.4f, 0.2f, 1.0f);   // Green tint for valid handle
         hoveredColor = ImVec4(0.3f, 0.5f, 0.3f, 1.0f);
         activeColor = ImVec4(0.1f, 0.3f, 0.1f, 1.0f);

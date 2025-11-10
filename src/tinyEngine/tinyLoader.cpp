@@ -258,14 +258,7 @@ bool readAccessorFromMap(const tinygltf::Model& model,
 }
 
 
-
-
-
-// ============================================================================
-// ===================== tinyLoader Implementation ===========================
-// ============================================================================
-
-std::string tinyLoader::sanitizeAsciiz(const std::string& originalName, const std::string& key, size_t fallbackIndex) {
+std::string sanitizeAsciiz(const std::string& originalName, const std::string& key, size_t fallbackIndex) {
     if (originalName.empty()) {
         return key + "_" + std::to_string(fallbackIndex);
     }
@@ -374,14 +367,12 @@ tinyModel tinyLoader::loadModel(const std::string& filePath, bool forceStatic) {
 
 // New implemetation
 
-void loadTextures(std::vector<tinyTexture>& textures, tinygltf::Model& model) {
+void loadTextures(std::vector<tinyModel::Texture>& textures, tinygltf::Model& model) {
     textures.clear();
     textures.reserve(model.textures.size());
 
     for (const auto& gltfTexture : model.textures) {
         tinyTexture texture;
-
-        texture.name = gltfTexture.name;
 
         // Load image data
         if (gltfTexture.source >= 0 && gltfTexture.source < static_cast<int>(model.images.size())) {
@@ -414,24 +405,23 @@ void loadTextures(std::vector<tinyTexture>& textures, tinygltf::Model& model) {
                     break;
             }
         }
-        
-        textures.push_back(std::move(texture));
+
+        tinyModel::Texture texEntry;
+        texEntry.name = sanitizeAsciiz(gltfTexture.name, "texture", textures.size());
+        texEntry.texture = std::move(texture);
+
+        textures.push_back(std::move(texEntry));
     }
 }
 
-void loadMaterials(std::vector<tinyModel::Material>& materials, tinygltf::Model& model, const std::vector<tinyTexture>& textures) {
-    using Material = tinyModel::Material;
-
+void loadMaterials(std::vector<tinyModel::Material>& materials, tinygltf::Model& model, const std::vector<tinyModel::Texture>& textures) {
     materials.clear();
     materials.reserve(model.materials.size());
+
     for (size_t matIndex = 0; matIndex < model.materials.size(); matIndex++) {
         const auto& gltfMaterial = model.materials[matIndex];
-        Material material;
-
-        // Set material name from glTF
-        material.name = gltfMaterial.name.empty() ? 
-            tinyLoader::sanitizeAsciiz("Material", "material", matIndex) : 
-            tinyLoader::sanitizeAsciiz(gltfMaterial.name, "material", matIndex);
+        tinyModel::Material material;
+        material.name = sanitizeAsciiz(gltfMaterial.name, "material", matIndex);
 
         // Extract base color factor (default is white if not specified)
         const auto& baseColorFactor = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
@@ -547,8 +537,6 @@ void loadMesh(tinyMesh& mesh,
               const tinygltf::Model& gltfModel,
               const tinygltf::Mesh& gltfMesh,
               const std::vector<tinygltf::Primitive>& primitives,
-              std::vector<tinyModel::Material>& materials,
-              std::vector<tinyTexture>& textures,
               bool hasRigging)
 {
     std::vector<PrimitiveData> allPrimitiveDatas;
@@ -731,7 +719,7 @@ void loadMesh(tinyMesh& mesh,
                 name = "MorphTarget_" + std::to_string(tgtIdx);
             }
             
-            name = tinyLoader::sanitizeAsciiz(name, "morph", tgtIdx);
+            name = sanitizeAsciiz(name, "morph", tgtIdx);
 
             // ---- add to mesh ---------------------------------------------------------
             tinyMorphTarget mt;
@@ -742,22 +730,17 @@ void loadMesh(tinyMesh& mesh,
     }
 }
 
-void loadMeshes(std::vector<tinyMesh>& meshes, std::vector<tinyModel::Material>& materials, 
-                std::vector<tinyTexture>& textures, tinygltf::Model& gltfModel, bool forceStatic) {
+void loadMeshes(std::vector<tinyModel::Mesh>& meshes, tinygltf::Model& gltfModel, bool forceStatic) {
     meshes.clear();
 
     for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
-        tinyMesh tinyMesh;
+        tinyModel::Mesh meshEntry;
+        meshEntry.name = sanitizeAsciiz(gltfMesh.name, "mesh", meshIndex);
 
-        // Set mesh name from glTF
-        tinyMesh.name = gltfMesh.name.empty() ? 
-            tinyLoader::sanitizeAsciiz("Mesh", "mesh", meshIndex) : 
-            tinyLoader::sanitizeAsciiz(gltfMesh.name, "mesh", meshIndex);
+        loadMesh(meshEntry.mesh, gltfModel, gltfMesh, gltfMesh.primitives, !forceStatic);
 
-        loadMesh(tinyMesh, gltfModel, gltfMesh, gltfMesh.primitives, materials, textures, !forceStatic);
-
-        meshes.push_back(std::move(tinyMesh));
+        meshes.push_back(std::move(meshEntry));
     }
 }
 
@@ -768,9 +751,6 @@ void loadSkeleton(tinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
     if (skin.joints.empty()) return;
 
     skeleton.clear();
-    
-    // Set skeleton name from skin name, or create a default name
-    skeleton.name = !skin.name.empty() ? skin.name : ("Skeleton_" + std::to_string(skeletonIndex));
 
     // Create the node-to-bone mapping
     for (int i = 0; i < skin.joints.size(); ++i) {
@@ -801,7 +781,7 @@ void loadSkeleton(tinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
 
         tinyBone bone;
         std::string originalName = node.name.empty() ? "" : node.name;
-        bone.name = tinyLoader::sanitizeAsciiz(originalName, "Bone", i);
+        bone.name = sanitizeAsciiz(originalName, "Bone", i);
         bone.bindInverse = skeletonInverseBindMatrices[i];
         bone.bindPose = makeLocalFromNode(node);
 
@@ -827,17 +807,18 @@ void loadSkeleton(tinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
     }
 }
 
-void loadSkeletons(std::vector<tinySkeleton>& skeletons, UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex, tinygltf::Model& model) {
+void loadSkeletons(std::vector<tinyModel::Skeleton>& skeletons, UnorderedMap<int, std::pair<int, int>>& gltfNodeToSkeletonAndBoneIndex, tinygltf::Model& model) {
     skeletons.clear();
     gltfNodeToSkeletonAndBoneIndex.clear();
 
     for (size_t skinIndex = 0; skinIndex < model.skins.size(); ++skinIndex) {
+        tinyModel::Skeleton skeletonEntry;
+    
         const tinygltf::Skin& skin = model.skins[skinIndex];
+        loadSkeleton(skeletonEntry.skeleton, gltfNodeToSkeletonAndBoneIndex, skinIndex, model, skin);
+        skeletonEntry.name = sanitizeAsciiz(skin.name, "skeleton", skinIndex);
 
-        tinySkeleton skeleton;
-        loadSkeleton(skeleton, gltfNodeToSkeletonAndBoneIndex, skinIndex, model, skin);
-
-        skeletons.push_back(std::move(skeleton));
+        skeletons.push_back(std::move(skeletonEntry));
     }
 }
 
@@ -870,7 +851,7 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
         skeletonToModelNodeIndex.clear();
         for (size_t skeleIndx = 0; skeleIndx < tinyModel.skeletons.size(); ++skeleIndx) {
             // We only need this skeleton for the name
-            const tinySkeleton& skeleton = tinyModel.skeletons[skeleIndx];
+            const tinyModel::Skeleton& skeleton = tinyModel.skeletons[skeleIndx];
 
             tNode skeleNode(skeleton.name);
             skeleNode.SKEL3D_skeleIndx = skeleIndx;
@@ -1004,7 +985,7 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
         const tinygltf::Animation& gltfAnim = model.animations[animIndex];
         tinyRT_ANIM3D::Clip anime;
 
-        anime.name = tinyLoader::sanitizeAsciiz(gltfAnim.name, "animation", animIndex);
+        anime.name = sanitizeAsciiz(gltfAnim.name, "animation", animIndex);
 
         // Process channels and samplers here...
 
@@ -1209,7 +1190,7 @@ tinyModel tinyLoader::loadModelFromGLTF(const std::string& filePath, bool forceS
     if (!forceStatic) loadSkeletons(result.skeletons, gltfNodeToSkeletonAndBoneIndex, model);
 
     bool hasRigging = !forceStatic && !result.skeletons.empty();
-    loadMeshes(result.meshes, result.materials, result.textures, model, !hasRigging);
+    loadMeshes(result.meshes, model, !hasRigging);
 
     std::vector<int> gltfNodeToModelNode;
     UnorderedMap<int, int> skeletonToModelNodeIndex;
@@ -1296,17 +1277,20 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
                 }
             }
 
-            tinyTexture texture = loadTexture(texturePath);
-            if (texture.valid()) {
+            
+            tinyModel::Texture texEntry;
+
+            texEntry.texture = loadTexture(texturePath);
+            if (texEntry.texture.valid()) {
                 // Extract just the filename for the texture name
                 std::string textureName = objMat.diffuse_texname;
                 size_t lastSlash = textureName.find_last_of("/\\");
                 if (lastSlash != std::string::npos) {
                     textureName = textureName.substr(lastSlash + 1);
                 }
-                texture.name = sanitizeAsciiz(textureName, "texture", result.textures.size());
+                texEntry.name = sanitizeAsciiz(textureName, "texture", result.textures.size());
 
-                result.textures.push_back(std::move(texture));
+                result.textures.push_back(std::move(texEntry));
                 material.albIndx = static_cast<int>(result.textures.size() - 1);
             }
         }
@@ -1333,13 +1317,6 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
     
     for (const auto& [materialId, faceIndices] : materialToFaces) {
         tinyMesh mesh;
-        
-        // Create mesh name based on material
-        if (materialId >= 0 && materialId < static_cast<int>(objMaterials.size())) {
-            mesh.name = sanitizeAsciiz(objMaterials[materialId].name, "mesh", result.meshes.size());
-        } else {
-            mesh.name = "Mesh_" + std::to_string(result.meshes.size());
-        }
 
         std::vector<tinyVertex::Static> vertices;
         std::vector<uint32_t> indices;
@@ -1449,7 +1426,11 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         mPart.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
         mesh.addPart(mPart);
 
-        result.meshes.push_back(std::move(mesh));
+        tinyModel::Mesh meshEntry;
+        meshEntry.mesh = std::move(mesh);
+        meshEntry.name = materialId >= 0 ? result.materials[materialId].name : "Mesh";
+
+        result.meshes.push_back(std::move(meshEntry));
     }
 
     // Create scene hierarchy: Root node + one child node per mesh
