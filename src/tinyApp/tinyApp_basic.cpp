@@ -57,12 +57,6 @@ void tinyApp::initComponents() {
     );
 
     project = MakeUnique<tinyProject>(deviceVk.get());
-    
-    // Initialize the active scene handle (moved from tinyProject for better separation)
-    activeSceneHandle = project->initialSceneHandle;
-
-    // Initialize selected handle to root scene node (already done in tinyProject constructor)
-    // project->selectSceneNode(project->getRootNodeHandle());
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->camera()->setAspectRatio(aspectRatio);
@@ -115,7 +109,7 @@ void tinyApp::initComponents() {
 
     // Initialize ImGui - do this after renderer is fully set up
     imguiWrapper = MakeUnique<tinyImGui>();
-    
+
     // ImGui now creates its own render pass using swapchain and depth info
     bool imguiInitSuccess = imguiWrapper->init(
         windowManager->window,
@@ -124,14 +118,6 @@ void tinyApp::initComponents() {
         renderer->getSwapChain(),
         renderer->getDepthManager()
     );
-    
-    if (imguiInitSuccess) {
-        renderer->setupImGuiRenderTargets(imguiWrapper.get());
-
-        setupImGuiWindows(*fpsManager, *project->camera(), true, 0.0f);
-    } else {
-        std::cerr << "Failed to initialize ImGui!" << std::endl;
-    }
 
     windowManager->maximizeWindow();
     checkWindowResize();
@@ -283,8 +269,10 @@ void tinyApp::mainLoop() {
 
         uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
 
-        getActiveScene()->setFStart({ currentFrameIndex, dTime });
-        getActiveScene()->update();
+        tinySceneRT* activeScene = project->fs().rGet<tinySceneRT>(project->initialSceneHandle);
+
+        activeScene->setFStart({ currentFrameIndex, dTime });
+        activeScene->update();
 
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {
@@ -293,16 +281,14 @@ void tinyApp::mainLoop() {
             rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
 
             rendererRef.drawScene(
-                project.get(),
-                getActiveScene(),
+                project.get(), activeScene,
                 PIPELINE_INSTANCE(pipelineManager.get(), "TestRigged"),
-                PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic"),
-                getSelectedSceneNode()
+                PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic")
             );
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex, imguiWrapper.get());
-            rendererRef.processPendingRemovals(project.get(), getActiveScene());
+            rendererRef.processPendingRemovals(project.get(), activeScene);
         }
 
         // Clean window title - FPS info now in ImGui

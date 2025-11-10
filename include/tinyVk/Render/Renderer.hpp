@@ -62,7 +62,7 @@ public:
 
     void drawSky(const tinyProject* project, const PipelineRaster* skyPipeline) const;
 
-    void drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, tinyHandle selectedNodeHandle = tinyHandle()) const;
+    void drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const;
 
     // Safe resource deletion with Vulkan synchronization
     void processPendingRemovals(tinyProject* project, tinySceneRT* activeScene);

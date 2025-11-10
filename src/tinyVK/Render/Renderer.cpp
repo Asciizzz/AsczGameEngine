@@ -257,7 +257,7 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
 }
 
 
-void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic, tinyHandle selectedNodeHandle) const {
+void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
     if (!activeScene) return;
 
     const tinySharedRes& sharedRes = activeScene->sharedRes();
@@ -331,9 +331,6 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
             rPipeline->bindSets(currentCmd, 4, &mrphWsSet, 1, &mrphWsOffset, 1);
         }
 
-        // Check if this node is the selected node for highlighting
-        bool isSelectedNode = selectedNodeHandle.valid() && (nodeHandle == selectedNodeHandle);
-        
         for (size_t i = 0; i < parts.size(); ++i) {
             uint32_t indxCount = parts[i].indxCount;
             if (indxCount == 0) continue;
@@ -348,7 +345,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 
             // Offset 0: global transform
             // Offset 64: other properties (1)
-            glm::uvec4 props1 = glm::uvec4(boneCount, mr3DComp->mrphCount(), rMesh->vrtxCount(), isSelectedNode ? 1 : 0);
+            glm::uvec4 props1 = glm::uvec4(boneCount, mr3DComp->mrphCount(), rMesh->vrtxCount(), 0);
 
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transformMat);
             rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
