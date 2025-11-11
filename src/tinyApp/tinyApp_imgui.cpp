@@ -72,26 +72,19 @@ template<typename FuncType>
 using CFunc = const Func<FuncType>;
 
 static void RenderGenericNodeHierarchy(
-    tinyHandle nodeHandle,
-    CFunc<bool(tinyHandle)>& isSelected,
-    CFunc<void(tinyHandle)>& setSelected,
-    CFunc<bool(tinyHandle)>& isDragged,
-    CFunc<void(tinyHandle)>& setDragged,
-    CFunc<bool(tinyHandle)>& isExpanded,
-    CFunc<void(tinyHandle, bool)>& setExpanded,
+    tinyHandle nodeHandle, int depth,
+    // Lambdas for node state management
     CFunc<const char*(tinyHandle)>& getName,
-    CFunc<bool(tinyHandle)>& hasChildren,
-    CFunc<std::vector<tinyHandle>(tinyHandle)>& getChildren,
+    CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected,
+    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void(tinyHandle)>& setDragged,
+    CFunc<bool(tinyHandle)>& isExpanded,  CFunc<void(tinyHandle, bool)>& setExpanded,
+    CFunc<bool(tinyHandle)>& hasChildren, CFunc<std::vector<tinyHandle>(tinyHandle)>& getChildren,
     CFunc<void(tinyHandle)>& renderDragSource,
     CFunc<void(tinyHandle)>& renderDropTarget,
     CFunc<void(tinyHandle)>& renderContextMenu,
-    CFunc<ImVec4(tinyHandle)>& getNormalColor,
-    CFunc<ImVec4(tinyHandle)>& getDraggedColor,
-    CFunc<ImVec4(tinyHandle)>& getNormalHoveredColor,
-    CFunc<ImVec4(tinyHandle)>& getDraggedHoveredColor,
-    CFunc<void()>& clearDragState,
-    CFunc<void(tinyHandle)>& clearOtherSelection,
-    int depth = 0
+    CFunc<ImVec4(tinyHandle)>& getNormalColor,        CFunc<ImVec4(tinyHandle)>& getDraggedColor,
+    CFunc<ImVec4(tinyHandle)>& getNormalHoveredColor, CFunc<ImVec4(tinyHandle)>& getDraggedHoveredColor,
+    CFunc<void()>& clearDragState,                    CFunc<void(tinyHandle)>& clearOtherSelection
 ) {
     if (!nodeHandle.valid()) return;
 
@@ -133,10 +126,11 @@ static void RenderGenericNodeHierarchy(
     if (nodeOpen && hasChild) {
         for (const auto& child : getChildren(nodeHandle)) {
             RenderGenericNodeHierarchy(
-                child, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
-                getName, hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+                child, depth + 1,
+                getName, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+                hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
                 getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
-                clearDragState, clearOtherSelection, depth + 1
+                clearDragState, clearOtherSelection
             );
         }
         ImGui::TreePop();
@@ -149,8 +143,8 @@ static void RenderGenericNodeHierarchy(
 // HIERARCHY WINDOW - Scene & File Trees
 // ============================================================================
 
-static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, tinyHandle nodeHandle, int depth = 0) {
-    if (!scene || !nodeHandle.valid()) return;
+static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
+    if (!scene) return;
 
     tinyFS& fs = project->fs();
     
@@ -243,7 +237,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
                 ImGui::Text("Node: %s", node->name.c_str());
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Add Child")) scene->addNode("NewNode", h);
+                if (ImGui::MenuItem("Add Child")) scene->addNode("New Node", h);
 
                 ImGui::Separator();
                 if (ImGui::MenuItem("Delete"))    scene->removeNode(h); // Already have safeguard
@@ -276,19 +270,17 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
     auto clearOtherSelection    = [](tinyHandle) { HierarchyState::selectedFileNode = tinyHandle(); };
 
     RenderGenericNodeHierarchy(
-        nodeHandle, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
-        getName, hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+        scene->rootHandle(), 0,
+        getName, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+        hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
-        clearDragState, clearOtherSelection, depth
+        clearDragState, clearOtherSelection
     );
 }
 
-static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle, int depth = 0) {
+static void RenderFileNodeHierarchy(tinyProject* project) {
     tinyFS& fs = project->fs();
 
-    const tinyFS::Node* node = fs.fNode(fileHandle);
-    if (!node) return;
-    
     // Define lambdas for file-specific logic
     auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedFileNode == h; };
     auto setSelected = [](tinyHandle h) { HierarchyState::selectedFileNode = h; };
@@ -406,10 +398,11 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
     auto clearOtherSelection = [](tinyHandle) { HierarchyState::selectedSceneNode = tinyHandle(); };
 
     RenderGenericNodeHierarchy(
-        fileHandle, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
-        getName, hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+        fs.rootHandle(), 0,
+        getName, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+        hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
-        clearDragState, clearOtherSelection, depth
+        clearDragState, clearOtherSelection
     );
 }
 
@@ -504,7 +497,7 @@ void tinyApp::renderUI() {
             ImGui::Text("Scene Hierarchy");
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("SceneHierarchy", ImVec2(0, topHeight), true);
-            RenderSceneNodeHierarchy(project.get(), activeScene, activeScene->rootHandle());
+            RenderSceneNodeHierarchy(project.get(), activeScene);
             ImGui::EndChild();
             ImGui::PopStyleColor();
             
@@ -531,7 +524,7 @@ void tinyApp::renderUI() {
             ImGui::Text("File System");
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("FileHierarchy", ImVec2(0, bottomHeight), true);
-            RenderFileNodeHierarchy(project.get(), project->fs().rootHandle());
+            RenderFileNodeHierarchy(project.get());
             ImGui::EndChild();
             ImGui::PopStyleColor();
         }
