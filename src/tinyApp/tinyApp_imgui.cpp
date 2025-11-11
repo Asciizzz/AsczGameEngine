@@ -106,54 +106,47 @@ static void RenderGenericNodeHierarchy(
     bool selected = isSelected(nodeHandle);
     bool dragged = isDragged(nodeHandle);
 
-    // Tree node flags
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
     if (!hasChild) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
     if (selected) flags |= ImGuiTreeNodeFlags_Selected;
 
-    // Colors
     ImVec4 headerColor = dragged ? getDraggedColor(nodeHandle) : getNormalColor(nodeHandle);
     ImVec4 headerHoveredColor = dragged ? getDraggedHoveredColor(nodeHandle) : getNormalHoveredColor(nodeHandle);
 
     ImGui::PushStyleColor(ImGuiCol_Header, headerColor);
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, headerHoveredColor);
 
-    // Expansion
     bool forceOpen = isExpanded(nodeHandle);
     if (forceOpen) ImGui::SetNextItemOpen(true);
 
     bool nodeOpen = ImGui::TreeNodeEx(getName(nodeHandle), flags);
-
-    // Track expansion
-    if (hasChild && ImGui::IsItemToggledOpen()) {
-        setExpanded(nodeHandle, nodeOpen);
-    }
+    if (hasChild && ImGui::IsItemToggledOpen()) setExpanded(nodeHandle, nodeOpen);
 
     ImGui::PopStyleColor(2);
 
-    // Selection
     if (ImGui::IsItemClicked()) {
         setSelected(nodeHandle);
         clearOtherSelection(nodeHandle);
     }
 
-    // Drag source
     renderDragSource(nodeHandle);
-
-    // Drop target
     renderDropTarget(nodeHandle);
-
-    // Context menu
     renderContextMenu(nodeHandle);
 
-    // Clear drag on release
-    if (dragged && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-        clearDragState();
-    }
+    if (dragged && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) clearDragState();
 
-    // Render children
     if (nodeOpen && hasChild) {
-        for (const auto& child : getChildren(nodeHandle)) {
+        std::vector<tinyHandle> children = getChildren(nodeHandle);
+
+        // Sort by having children first, then alphabetically (works for both scene and file nodes)
+        std::sort(children.begin(), children.end(), [&](tinyHandle a, tinyHandle b) {
+            bool aHasChildren = hasChildren(a);
+            bool bHasChildren = hasChildren(b);
+            if (aHasChildren != bHasChildren) return aHasChildren > bHasChildren;
+            return std::string(getName(a)) < std::string(getName(b));
+        });
+
+        for (const auto& child : children) {
             RenderGenericNodeHierarchy(
                 child, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
                 getName, hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
@@ -233,12 +226,10 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
                     tinyHandle sceneRegistryHandle = data->dataTypeHandle.handle;
                     tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle.valid() ? 
                         HierarchyState::activeSceneHandle : project->mainSceneHandle;
-                    
-                    // Safety: don't drop scene into itself
+
                     if (sceneRegistryHandle != activeSceneHandle) {
-                        // Instantiate scene at this node
                         project->addSceneInstance(sceneRegistryHandle, activeSceneHandle, h);
-                        HierarchyState::setExpanded(h, true, true); // Auto-expand
+                        HierarchyState::setExpanded(h, true, true);
                     }
                 }
                 HierarchyState::draggedFileNode = tinyHandle();

@@ -27,7 +27,7 @@ void Exec::Init(IUIBackend* backend, void* windowHandle) {
     io.ConfigWindowsMoveFromTitleBarOnly = true;
     
     // Apply default theme
-    SetTheme(s_theme);
+    ApplyTheme();
 
     // Initialize backend
     if (s_backend) {
@@ -67,28 +67,16 @@ void Exec::Render() {
     if (!s_initialized || !s_backend) return;
     
     ImGui::Render();
-    
-    // Clamp window positions to viewport bounds
-    ImGuiIO& io = ImGui::GetIO();
-    ImVec2 viewportSize = io.DisplaySize;
-    ImGuiContext* context = ImGui::GetCurrentContext();
-    for (int i = 0; i < context->Windows.Size; ++i) {
-        ImGuiWindow* window = context->Windows[i];
-        // Clamp left and top
-        if (window->Pos.x < 0) window->Pos.x = 0;
-        if (window->Pos.y < 0) window->Pos.y = 0;
-        // Clamp right and bottom
-        if (window->Pos.x + window->Size.x > viewportSize.x) window->Pos.x = viewportSize.x - window->Size.x;
-        if (window->Pos.y + window->Size.y > viewportSize.y) window->Pos.y = viewportSize.y - window->Size.y;
-    }
-    
     s_backend->renderDrawData(ImGui::GetDrawData());
 }
 
 void Exec::SetTheme(const Theme& theme) {
     s_theme = theme;
+}
 
+void Exec::ApplyTheme() {
     ImGuiStyle& style = ImGui::GetStyle();
+    const Theme& theme = s_theme;
 
     // Colors
     style.Colors[ImGuiCol_Text] = theme.text;

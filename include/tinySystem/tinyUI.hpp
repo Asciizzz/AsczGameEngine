@@ -140,6 +140,7 @@ public:
     static void Render();
 
     static void SetTheme(const Theme& theme);
+    static void ApplyTheme();
     static Theme& GetTheme();
 
     // ========================================
