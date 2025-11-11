@@ -456,7 +456,7 @@ void tinyApp::renderUI() {
     float dTime = fpsRef.deltaTime;
 
     // ===== DEBUG PANEL WINDOW =====
-    if (tinyUI::Exec::Begin("Debug Panel", nullptr, 0)) {
+    if (tinyUI::Exec::Begin("Debug Panel")) {
         // FPS Info (once every printInterval)
         frameTime += dTime;
         if (frameTime >= printInterval) {
@@ -466,7 +466,7 @@ void tinyApp::renderUI() {
 
         ImGui::Text("FPS: %.1f", currentFps);
         ImGui::Separator();
-        
+
         ImGui::Text("Camera");
         ImGui::Text("Pos: (%.2f, %.2f, %.2f)", camRef.pos.x, camRef.pos.y, camRef.pos.z);
         ImGui::Text("Fwd: (%.2f, %.2f, %.2f)", camRef.forward.x, camRef.forward.y, camRef.forward.z);

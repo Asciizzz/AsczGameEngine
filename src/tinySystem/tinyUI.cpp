@@ -126,6 +126,8 @@ Theme& Exec::GetTheme() {
 
 bool Exec::Begin(const char* name, bool* p_open, int flags) {
     bool result = ImGui::Begin(name, p_open, flags);
+
+    // Clamp window to viewport bounds
     if (result) {
         ImVec2 pos = ImGui::GetWindowPos();
         ImVec2 size = ImGui::GetWindowSize();
@@ -133,17 +135,16 @@ bool Exec::Begin(const char* name, bool* p_open, int flags) {
         ImVec2 vp_min = vp->Pos;
         ImVec2 vp_max = ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y);
 
-        // Clamp position so window stays within viewport
         pos.x = std::max(vp_min.x, std::min(pos.x, vp_max.x - size.x));
         pos.y = std::max(vp_min.y, std::min(pos.y, vp_max.y - size.y));
 
-        // Clamp size so window doesn't exceed viewport bounds
         size.x = std::min(size.x, vp_max.x - pos.x);
         size.y = std::min(size.y, vp_max.y - pos.y);
 
         ImGui::SetWindowPos(pos);
         ImGui::SetWindowSize(size);
     }
+
     return result;
 }
 
