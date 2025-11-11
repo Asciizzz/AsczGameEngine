@@ -322,13 +322,12 @@ void tinyApp::renderUI() {
         ImGui::Text("FPS: %.1f", currentFps);
         ImGui::Separator();
         
-        // Camera info - Display only (not editable)
-        if (ImGui::CollapsingHeader("Camera")) {
-            ImGui::Text("Position: (%.2f, %.2f, %.2f)", camRef.pos.x, camRef.pos.y, camRef.pos.z);
-            ImGui::Text("Forward: (%.2f, %.2f, %.2f)", camRef.forward.x, camRef.forward.y, camRef.forward.z);
-            ImGui::Text("Right: (%.2f, %.2f, %.2f)", camRef.right.x, camRef.right.y, camRef.right.z);
-            ImGui::Text("Up: (%.2f, %.2f, %.2f)", camRef.up.x, camRef.up.y, camRef.up.z);
-        }
+        ImGui::Text("Camera");
+        ImGui::Text("Pos: (%.2f, %.2f, %.2f)", camRef.pos.x, camRef.pos.y, camRef.pos.z);
+        ImGui::Text("Fwd: (%.2f, %.2f, %.2f)", camRef.forward.x, camRef.forward.y, camRef.forward.z);
+        ImGui::Text("Rg:  (%.2f, %.2f, %.2f)", camRef.right.x, camRef.right.y, camRef.right.z);
+        ImGui::Text("Up:  (%.2f, %.2f, %.2f)", camRef.up.x, camRef.up.y, camRef.up.z);
+
         tinyUI::Exec::End();
     }
 
