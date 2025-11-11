@@ -15,6 +15,7 @@
 
 using namespace tinyVk;
 
+// Hierarchy state tracking
 namespace HierarchyState {
     static tinyHandle activeSceneHandle;
     static float splitterPos = 0.5f;
@@ -46,20 +47,39 @@ namespace HierarchyState {
 }
 
 // ============================================================================
-// DRAG-DROP PAYLOAD SYSTEM - Using typeHandle for proper type identification
+// UI INITIALIZATION
 // ============================================================================
 
-namespace DragDropPayloads {
-    struct SceneNode {
-        tinyHandle nodeHandle;
-        char nodeName[64];
-    };
+void tinyApp::initUI() {
+    uiBackend = new tinyUI::UIBackend_Vulkan();
+
+    tinyUI::VulkanBackendData vkData;
+    vkData.instance = instanceVk->instance;
+    vkData.physicalDevice = deviceVk->pDevice;
+    vkData.device = deviceVk->device;
+    vkData.queueFamily = deviceVk->queueFamilyIndices.graphicsFamily.value();
+    vkData.queue = deviceVk->graphicsQueue;
+    vkData.renderPass = renderer->getOffscreenRenderPass();  // Use offscreen for UI overlay
+    vkData.minImageCount = 2;
+    vkData.imageCount = renderer->getSwapChainImageCount();
+    vkData.msaaSamples = VK_SAMPLE_COUNT_1_BIT;
     
-    struct FileNode {
-        tinyHandle fileHandle;
-        char fileName[64];
-    };
+    uiBackend->setVulkanData(vkData);
+    tinyUI::Exec::Init(uiBackend, windowManager->window);
+
+// ===== Misc =====
+
+    // Set the active scene to main scene by default
+    HierarchyState::activeSceneHandle = project->mainSceneHandle;
+    activeScene = project->scene(HierarchyState::activeSceneHandle);
 }
+
+
+// Payload data
+struct Payload {
+    tinyHandle handle;
+    char name[64];
+};
 
 // ============================================================================
 // GENERALIZED TREE NODE RENDERING - Abstracts common ImGui tree logic
@@ -189,11 +209,11 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
             HierarchyState::draggedSceneNode = h;
 
             if (const tinyNodeRT* node = scene->node(h)) {
-                DragDropPayloads::SceneNode payload;
-                payload.nodeHandle = h;
-                strncpy(payload.nodeName, node->name.c_str(), 63);
-                payload.nodeName[63] = '\0';
-                
+                Payload payload;
+                payload.handle = h;
+                strncpy(payload.name, node->name.c_str(), 63);
+                payload.name[63] = '\0';
+
                 ImGui::SetDragDropPayload("SCENE_NODE", &payload, sizeof(payload));
                 ImGui::Text("Moving: %s", node->name.c_str());
             }
@@ -204,20 +224,20 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
         if (!HierarchyState::draggedSceneNode.valid() && ImGui::BeginDragDropTarget()) {
             // Accept scene node reparenting
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
-                DragDropPayloads::SceneNode* data = (DragDropPayloads::SceneNode*)payload->Data;
-                if (scene->reparentNode(data->nodeHandle, h)) {
+                Payload* data = (Payload*)payload->Data;
+                if (scene->reparentNode(data->handle, h)) {
                     HierarchyState::setExpanded(h, true, true); // Auto-expand parent
-                    HierarchyState::selectedSceneNode = data->nodeHandle; // Keep selection
+                    HierarchyState::selectedSceneNode = data->handle; // Keep selection
                 }
                 HierarchyState::draggedSceneNode = tinyHandle();
             }
             
             // Accept scene file drops (instantiate scene at this node)
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
-                DragDropPayloads::FileNode* data = (DragDropPayloads::FileNode*)payload->Data;
+                Payload* data = (Payload*)payload->Data;
 
                 // Check if this is a scene file
-                typeHandle fTypeHdl = fs.fTypeHandle(data->fileHandle);
+                typeHandle fTypeHdl = fs.fTypeHandle(data->handle);
 
                 if (fTypeHdl.isType<tinySceneRT>()) {
                     tinyHandle sceneRegistryHandle = fTypeHdl.handle;
@@ -324,10 +344,10 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                 HierarchyState::draggedFileNode = h;
 
-                DragDropPayloads::FileNode payload;
-                payload.fileHandle = h;
-                strncpy(payload.fileName, node->name.c_str(), 63);
-                payload.fileName[63] = '\0';
+                Payload payload;
+                payload.handle = h;
+                strncpy(payload.name, node->name.c_str(), 63);
+                payload.name[63] = '\0';
 
                 ImGui::SetDragDropPayload("FILE_NODE", &payload, sizeof(payload));
                 ImGui::Text("Dragging: %s", node->name.c_str());
@@ -403,34 +423,6 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
     );
-}
-
-// ============================================================================
-// UI INITIALIZATION
-// ============================================================================
-
-void tinyApp::initUI() {
-    uiBackend = new tinyUI::UIBackend_Vulkan();
-
-    tinyUI::VulkanBackendData vkData;
-    vkData.instance = instanceVk->instance;
-    vkData.physicalDevice = deviceVk->pDevice;
-    vkData.device = deviceVk->device;
-    vkData.queueFamily = deviceVk->queueFamilyIndices.graphicsFamily.value();
-    vkData.queue = deviceVk->graphicsQueue;
-    vkData.renderPass = renderer->getOffscreenRenderPass();  // Use offscreen for UI overlay
-    vkData.minImageCount = 2;
-    vkData.imageCount = renderer->getSwapChainImageCount();
-    vkData.msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-    
-    uiBackend->setVulkanData(vkData);
-    tinyUI::Exec::Init(uiBackend, windowManager->window);
-
-// ===== Misc =====
-
-    // Set the active scene to main scene by default
-    HierarchyState::activeSceneHandle = project->mainSceneHandle;
-    activeScene = project->scene(HierarchyState::activeSceneHandle);
 }
 
 // ============================================================================
