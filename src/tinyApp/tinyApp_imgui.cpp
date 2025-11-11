@@ -254,16 +254,9 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
                 ImGui::Text("Node: %s", node->name.c_str());
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Add Child Node")) {
-                    // Would create new empty node
-                    scene->addNode("NewNode", h);
-                }
-                if (ImGui::MenuItem("Delete") && h != scene->rootHandle()) {
-                    scene->removeNode(h);
-                }
-                if (ImGui::MenuItem("Flatten")) {
-                    scene->flattenNode(h);
-                }
+                if (ImGui::MenuItem("Add Child")) scene->addNode("NewNode", h);
+                if (ImGui::MenuItem("Delete"))    scene->removeNode(h); // Already have safeguard
+                if (ImGui::MenuItem("Flatten"))   scene->flattenNode(h);
             }
             ImGui::EndPopup();
         }
