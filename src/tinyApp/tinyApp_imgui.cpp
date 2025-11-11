@@ -165,7 +165,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 
     tinyFS& fs = project->fs();
 
-    auto getName     = [scene](tinyHandle h) -> std::string {
+    auto getName = [scene](tinyHandle h) -> std::string {
         const tinyNodeRT* node = scene->node(h);
         return node ? node->name : "";
     };
@@ -297,7 +297,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 static void RenderFileNodeHierarchy(tinyProject* project) {
     tinyFS& fs = project->fs();
 
-    auto getName     = [&fs](tinyHandle h) -> std::string {
+    auto getName = [&fs](tinyHandle h) -> std::string {
         const tinyFS::Node* node = fs.fNode(h);
         if (!node) return "";
 
@@ -440,6 +440,17 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
     );
 }
+
+
+
+
+
+
+
+
+
+
+
 
 // ============================================================================
 // MAIN UI RENDERING FUNCTION
