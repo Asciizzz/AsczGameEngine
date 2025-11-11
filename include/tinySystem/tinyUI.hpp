@@ -116,13 +116,13 @@ struct Theme {
     float scrollbarSize = 8.0f;
     float scrollbarRounding = 0.0f;
     float frameRounding = 0.0f;
-    float windowRounding = 0.0f;
     float childRounding = 0.0f;
     float buttonRounding = 0.0f;
-};
+    float windowRounding = 0.0f;
+    float windowBorderSize = 1.0f;
 
-// Button style variants
-enum class ButtonStyle { Default, Primary, Success, Danger, Warning };
+    float fontScale = 1.5f;
+};
 
 // ========================================
 // Main Execution Interface
@@ -130,10 +130,6 @@ enum class ButtonStyle { Default, Primary, Success, Danger, Warning };
 
 class Exec {
 public:
-    // ========================================
-    // Lifecycle Management
-    // ========================================
-    
     static void Init(IUIBackend* backend, void* windowHandle = nullptr);
     static void Shutdown();
     static void NewFrame();
@@ -142,10 +138,6 @@ public:
     static void SetTheme(const Theme& theme);
     static void ApplyTheme();
     static Theme& GetTheme();
-
-    // ========================================
-    // Window Management
-    // ========================================
 
     static bool Begin(const char* name, bool* p_open = nullptr, int flags = 0);
     static void End();

@@ -440,7 +440,9 @@ void tinyApp::renderUI() {
 
     // ===== HIERARCHY WINDOW - Scene & File System =====
     static bool showHierarchy = true;
-    if (tinyUI::Exec::Begin("Hierarchy", &showHierarchy)) {
+    if (showHierarchy) {
+        tinyUI::Exec::Begin("Hierarchy", &showHierarchy);
+
         // Get active scene
         tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
 
