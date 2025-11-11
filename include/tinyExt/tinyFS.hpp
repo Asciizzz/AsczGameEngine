@@ -254,6 +254,27 @@ public:
         return safeDelete(std::type_index(typeid(T)));
     }
 
+// -------------------- Rename with conflict resolution --------------------
+
+    void fRename(tinyHandle fileHandle, const std::string& newName) {
+        Node* node = fnodes_.get(fileHandle);
+        if (!node) return;
+
+        tinyHandle parentHandle = node->parent;
+        Node* parentNode = fnodes_.get(parentHandle);
+        if (!parentNode) return;
+
+        // Resolve name conflicts
+        std::string resolvedName = resolveRepeatName(parentHandle, newName, fileHandle);
+
+        // Update parent's child map
+        parentNode->childMap_.erase(node->name);
+        parentNode->childMap_[resolvedName] = fileHandle;
+
+        // Update node's name
+        node->name = resolvedName;
+    }
+
 // -------------------- Move with cycle prevention --------------------
 
     bool fMove(tinyHandle nodeHandle, tinyHandle parentHandle) {
