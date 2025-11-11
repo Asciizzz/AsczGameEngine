@@ -188,6 +188,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
     auto renderDragSource = [scene](tinyHandle h) {
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
             HierarchyState::draggedSceneNode = h;
+
             if (const tinyNodeRT* node = scene->node(h)) {
                 DragDropPayloads::SceneNode payload;
                 payload.nodeHandle = h;
