@@ -18,7 +18,7 @@ tinyApp::tinyApp(const char* title, uint32_t width, uint32_t height)
 
 tinyApp::~tinyApp() {
     vkDeviceWaitIdle(deviceVk->device);
-    tinyUI::UI::Shutdown();
+    tinyUI::Exec::Shutdown();
 }
 
 void tinyApp::run() {
@@ -149,7 +149,7 @@ void tinyApp::initComponents() {
     vkData.msaaSamples = VK_SAMPLE_COUNT_1_BIT;
     
     uiBackend->setVulkanData(vkData);
-    tinyUI::UI::Init(uiBackend, windowManager->window);
+    tinyUI::Exec::Init(uiBackend, windowManager->window);
 
     windowManager->maximizeWindow();
     checkWindowResize();
@@ -302,24 +302,10 @@ void tinyApp::mainLoop() {
 // =================================
 
         // Start new UI frame
-        tinyUI::UI::NewFrame();
+        tinyUI::Exec::NewFrame();
         
-        // ===== DEBUG WINDOW =====
-        if (tinyUI::UI::Begin("Debug Info", nullptr, 0)) {
-            tinyUI::UI::Text("FPS: %.1f", fpsRef.currentFPS);
-            tinyUI::UI::Text("Frame Time: %.3f ms", fpsRef.deltaTime * 1000.0f);
-            tinyUI::UI::Separator();
-            
-            // Camera info
-            if (tinyUI::UI::CollapsingHeader("Camera")) {
-                tinyUI::UI::EditProperty("Position", camRef.pos);
-                tinyUI::UI::EditProperty("Forward", camRef.forward);
-                tinyUI::UI::EditProperty("Right", camRef.right);
-                tinyUI::UI::EditProperty("Up", camRef.up);
-            }
-            
-            tinyUI::UI::End();
-        }
+        // Render all UI windows (implemented in tinyApp_imgui.cpp)
+        renderUI();
         
         project->updateGlobal(rendererRef.getCurrentFrame());
 
@@ -344,7 +330,7 @@ void tinyApp::mainLoop() {
             // Render UI
             VkCommandBuffer currentCmd = rendererRef.getCurrentCommandBuffer();
             uiBackend->setCommandBuffer(currentCmd);
-            tinyUI::UI::Render();
+            tinyUI::Exec::Render();
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex);

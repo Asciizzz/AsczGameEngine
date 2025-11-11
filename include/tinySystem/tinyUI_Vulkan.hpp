@@ -12,7 +12,7 @@
 //
 //   auto* backend = new tinyUI::UIBackend_Vulkan();
 //   backend->setVulkanData(vkData);
-//   tinyUI::UI::Init(backend, window);
+//   tinyUI::Exec::Init(backend, window);
 // ============================================================================
 
 #include "tinyUI.hpp"

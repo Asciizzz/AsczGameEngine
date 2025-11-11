@@ -4,15 +4,15 @@
 namespace tinyUI {
 
 // Static member initialization
-IUIBackend* UI::s_backend = nullptr;
-UI::Theme UI::s_theme;
-bool UI::s_initialized = false;
+IUIBackend* Exec::s_backend = nullptr;
+Theme Exec::s_theme;
+bool Exec::s_initialized = false;
 
 // ============================================================================
 // Lifecycle Management
 // ============================================================================
 
-void UI::Init(IUIBackend* backend, void* windowHandle) {
+void Exec::Init(IUIBackend* backend, void* windowHandle) {
     if (s_initialized) {
         return;
     }
@@ -41,7 +41,7 @@ void UI::Init(IUIBackend* backend, void* windowHandle) {
     s_initialized = true;
 }
 
-void UI::Shutdown() {
+void Exec::Shutdown() {
     if (!s_initialized) {
         return;
     }
@@ -56,7 +56,7 @@ void UI::Shutdown() {
     s_initialized = false;
 }
 
-void UI::NewFrame() {
+void Exec::NewFrame() {
     if (!s_initialized || !s_backend) {
         return;
     }
@@ -65,7 +65,7 @@ void UI::NewFrame() {
     ImGui::NewFrame();
 }
 
-void UI::Render() {
+void Exec::Render() {
     if (!s_initialized || !s_backend) {
         return;
     }
@@ -78,7 +78,7 @@ void UI::Render() {
 // Theme System
 // ============================================================================
 
-void UI::Theme::Apply() const {
+void Theme::Apply() const {
     ImGuiStyle& style = ImGui::GetStyle();
     
     // Colors
@@ -119,12 +119,12 @@ void UI::Theme::Apply() const {
     style.WindowBorderSize = 1.0f;
 }
 
-void UI::SetTheme(const Theme& theme) {
+void Exec::SetTheme(const Theme& theme) {
     s_theme = theme;
     s_theme.Apply();
 }
 
-UI::Theme& UI::GetTheme() {
+Theme& Exec::GetTheme() {
     return s_theme;
 }
 
@@ -132,11 +132,11 @@ UI::Theme& UI::GetTheme() {
 // Window Management
 // ============================================================================
 
-bool UI::Begin(const char* name, bool* p_open, int flags) {
+bool Exec::Begin(const char* name, bool* p_open, int flags) {
     return ImGui::Begin(name, p_open, flags);
 }
 
-void UI::End() {
+void Exec::End() {
     ImGui::End();
 }
 
@@ -144,7 +144,7 @@ void UI::End() {
 // Style Helpers
 // ============================================================================
 
-void UI::PushButtonStyle(ButtonStyle style) {
+void Exec::PushButtonStyle(ButtonStyle style) {
     switch (style) {
         case ButtonStyle::Primary:
             ImGui::PushStyleColor(ImGuiCol_Button, s_theme.buttonPrimary);
@@ -175,7 +175,7 @@ void UI::PushButtonStyle(ButtonStyle style) {
     }
 }
 
-void UI::PopButtonStyle() {
+void Exec::PopButtonStyle() {
     ImGui::PopStyleColor(3);
 }
 
@@ -183,32 +183,32 @@ void UI::PopButtonStyle() {
 // Common Widgets
 // ============================================================================
 
-bool UI::Button(const char* label, const ImVec2& size) {
+bool Exec::Button(const char* label, const ImVec2& size) {
     return ImGui::Button(label, size);
 }
 
-bool UI::StyledButton(const char* label, ButtonStyle style, const ImVec2& size) {
+bool Exec::StyledButton(const char* label, ButtonStyle style, const ImVec2& size) {
     PushButtonStyle(style);
     bool result = ImGui::Button(label, size);
     PopButtonStyle();
     return result;
 }
 
-void UI::Text(const char* fmt, ...) {
+void Exec::Text(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     ImGui::TextV(fmt, args);
     va_end(args);
 }
 
-void UI::TextColored(const ImVec4& color, const char* fmt, ...) {
+void Exec::TextColored(const ImVec4& color, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     ImGui::TextColoredV(color, fmt, args);
     va_end(args);
 }
 
-void UI::Separator(const char* label) {
+void Exec::Separator(const char* label) {
     if (label) {
         ImGui::SeparatorText(label);
     } else {
@@ -216,51 +216,51 @@ void UI::Separator(const char* label) {
     }
 }
 
-void UI::SameLine() {
+void Exec::SameLine() {
     ImGui::SameLine();
 }
 
-void UI::Spacing() {
+void Exec::Spacing() {
     ImGui::Spacing();
 }
 
-bool UI::TreeNode(const char* label) {
+bool Exec::TreeNode(const char* label) {
     return ImGui::TreeNode(label);
 }
 
-void UI::TreePop() {
+void Exec::TreePop() {
     ImGui::TreePop();
 }
 
-bool UI::CollapsingHeader(const char* label, int flags) {
+bool Exec::CollapsingHeader(const char* label, int flags) {
     return ImGui::CollapsingHeader(label, flags);
 }
 
-bool UI::InputText(const char* label, char* buf, size_t bufSize, int flags) {
+bool Exec::InputText(const char* label, char* buf, size_t bufSize, int flags) {
     return ImGui::InputText(label, buf, bufSize, flags);
 }
 
-bool UI::InputFloat(const char* label, float* v, float step, float step_fast) {
+bool Exec::InputFloat(const char* label, float* v, float step, float step_fast) {
     return ImGui::InputFloat(label, v, step, step_fast);
 }
 
-bool UI::InputInt(const char* label, int* v, int step, int step_fast) {
+bool Exec::InputInt(const char* label, int* v, int step, int step_fast) {
     return ImGui::InputInt(label, v, step, step_fast);
 }
 
-bool UI::DragFloat(const char* label, float* v, float speed, float min, float max) {
+bool Exec::DragFloat(const char* label, float* v, float speed, float min, float max) {
     return ImGui::DragFloat(label, v, speed, min, max);
 }
 
-bool UI::DragFloat3(const char* label, float v[3], float speed) {
+bool Exec::DragFloat3(const char* label, float v[3], float speed) {
     return ImGui::DragFloat3(label, v, speed);
 }
 
-bool UI::Checkbox(const char* label, bool* v) {
+bool Exec::Checkbox(const char* label, bool* v) {
     return ImGui::Checkbox(label, v);
 }
 
-void UI::ShowDemoWindow(bool* p_open) {
+void Exec::ShowDemoWindow(bool* p_open) {
     ImGui::ShowDemoWindow(p_open);
 }
 

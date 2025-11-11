@@ -52,7 +52,85 @@ struct IUIBackend {
 // LAYER 2: Core UI System (Renderer-Agnostic)
 // ============================================================================
 
-class UI {
+// ========================================
+// Theme System
+// ========================================
+
+struct Theme {
+    // Window colors
+    ImVec4 windowBg = ImVec4(0.00f, 0.00f, 0.00f, 0.65f);
+    ImVec4 childBg = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    ImVec4 border = ImVec4(0.30f, 0.30f, 0.30f, 0.50f);
+    
+    // Title bar
+    ImVec4 titleBg = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    ImVec4 titleBgActive = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+    ImVec4 titleBgCollapsed = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+    
+    // Text
+    ImVec4 text = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
+    ImVec4 textDisabled = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    
+    // Buttons - default
+    ImVec4 button = ImVec4(0.30f, 0.50f, 0.80f, 1.00f);
+    ImVec4 buttonHovered = ImVec4(0.40f, 0.60f, 0.90f, 1.00f);
+    ImVec4 buttonActive = ImVec4(0.50f, 0.70f, 1.00f, 1.00f);
+    
+    // Buttons - primary
+    ImVec4 buttonPrimary = ImVec4(0.30f, 0.50f, 0.80f, 1.00f);
+    ImVec4 buttonPrimaryHovered = ImVec4(0.40f, 0.60f, 0.90f, 1.00f);
+    ImVec4 buttonPrimaryActive = ImVec4(0.50f, 0.70f, 1.00f, 1.00f);
+    
+    // Buttons - success
+    ImVec4 buttonSuccess = ImVec4(0.30f, 0.70f, 0.40f, 1.00f);
+    ImVec4 buttonSuccessHovered = ImVec4(0.40f, 0.80f, 0.50f, 1.00f);
+    ImVec4 buttonSuccessActive = ImVec4(0.50f, 0.90f, 0.60f, 1.00f);
+    
+    // Buttons - danger
+    ImVec4 buttonDanger = ImVec4(0.80f, 0.30f, 0.30f, 1.00f);
+    ImVec4 buttonDangerHovered = ImVec4(0.90f, 0.40f, 0.40f, 1.00f);
+    ImVec4 buttonDangerActive = ImVec4(1.00f, 0.50f, 0.50f, 1.00f);
+    
+    // Buttons - warning
+    ImVec4 buttonWarning = ImVec4(0.90f, 0.70f, 0.30f, 1.00f);
+    ImVec4 buttonWarningHovered = ImVec4(1.00f, 0.80f, 0.40f, 1.00f);
+    ImVec4 buttonWarningActive = ImVec4(1.00f, 0.90f, 0.50f, 1.00f);
+    
+    // Headers & Tree nodes
+    ImVec4 header = ImVec4(0.25f, 0.25f, 0.30f, 1.00f);
+    ImVec4 headerHovered = ImVec4(0.35f, 0.35f, 0.40f, 1.00f);
+    ImVec4 headerActive = ImVec4(0.45f, 0.45f, 0.50f, 1.00f);
+    
+    // Scrollbar
+    ImVec4 scrollbarBg = ImVec4(0.10f, 0.10f, 0.10f, 0.50f);
+    ImVec4 scrollbarGrab = ImVec4(0.40f, 0.40f, 0.40f, 0.80f);
+    ImVec4 scrollbarGrabHovered = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    ImVec4 scrollbarGrabActive = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+    
+    // Frame/Input fields
+    ImVec4 frameBg = ImVec4(0.16f, 0.16f, 0.18f, 1.00f);
+    ImVec4 frameBgHovered = ImVec4(0.20f, 0.20f, 0.22f, 1.00f);
+    ImVec4 frameBgActive = ImVec4(0.24f, 0.24f, 0.26f, 1.00f);
+    
+    // Sizes & Rounding
+    float scrollbarSize = 8.0f;
+    float scrollbarRounding = 0.0f;
+    float frameRounding = 0.0f;
+    float windowRounding = 0.0f;
+    float childRounding = 0.0f;
+    float buttonRounding = 0.0f;
+    
+    void Apply() const;
+};
+
+// Button style variants
+enum class ButtonStyle { Default, Primary, Success, Danger, Warning };
+
+// ========================================
+// Main Execution Interface
+// ========================================
+
+class Exec {
 public:
     // ========================================
     // Lifecycle Management
@@ -62,77 +140,6 @@ public:
     static void Shutdown();
     static void NewFrame();
     static void Render();
-    
-    // ========================================
-    // Theme System
-    // ========================================
-    
-    struct Theme {
-        // Window colors
-        ImVec4 windowBg = ImVec4(0.00f, 0.00f, 0.00f, 0.65f);
-        ImVec4 childBg = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
-        ImVec4 border = ImVec4(0.30f, 0.30f, 0.30f, 0.50f);
-        
-        // Title bar
-        ImVec4 titleBg = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
-        ImVec4 titleBgActive = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
-        ImVec4 titleBgCollapsed = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
-        
-        // Text
-        ImVec4 text = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
-        ImVec4 textDisabled = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-        
-        // Buttons - default
-        ImVec4 button = ImVec4(0.30f, 0.50f, 0.80f, 1.00f);
-        ImVec4 buttonHovered = ImVec4(0.40f, 0.60f, 0.90f, 1.00f);
-        ImVec4 buttonActive = ImVec4(0.50f, 0.70f, 1.00f, 1.00f);
-        
-        // Buttons - primary
-        ImVec4 buttonPrimary = ImVec4(0.30f, 0.50f, 0.80f, 1.00f);
-        ImVec4 buttonPrimaryHovered = ImVec4(0.40f, 0.60f, 0.90f, 1.00f);
-        ImVec4 buttonPrimaryActive = ImVec4(0.50f, 0.70f, 1.00f, 1.00f);
-        
-        // Buttons - success
-        ImVec4 buttonSuccess = ImVec4(0.30f, 0.70f, 0.40f, 1.00f);
-        ImVec4 buttonSuccessHovered = ImVec4(0.40f, 0.80f, 0.50f, 1.00f);
-        ImVec4 buttonSuccessActive = ImVec4(0.50f, 0.90f, 0.60f, 1.00f);
-        
-        // Buttons - danger
-        ImVec4 buttonDanger = ImVec4(0.80f, 0.30f, 0.30f, 1.00f);
-        ImVec4 buttonDangerHovered = ImVec4(0.90f, 0.40f, 0.40f, 1.00f);
-        ImVec4 buttonDangerActive = ImVec4(1.00f, 0.50f, 0.50f, 1.00f);
-        
-        // Buttons - warning
-        ImVec4 buttonWarning = ImVec4(0.90f, 0.70f, 0.30f, 1.00f);
-        ImVec4 buttonWarningHovered = ImVec4(1.00f, 0.80f, 0.40f, 1.00f);
-        ImVec4 buttonWarningActive = ImVec4(1.00f, 0.90f, 0.50f, 1.00f);
-        
-        // Headers & Tree nodes
-        ImVec4 header = ImVec4(0.25f, 0.25f, 0.30f, 1.00f);
-        ImVec4 headerHovered = ImVec4(0.35f, 0.35f, 0.40f, 1.00f);
-        ImVec4 headerActive = ImVec4(0.45f, 0.45f, 0.50f, 1.00f);
-        
-        // Scrollbar
-        ImVec4 scrollbarBg = ImVec4(0.10f, 0.10f, 0.10f, 0.50f);
-        ImVec4 scrollbarGrab = ImVec4(0.40f, 0.40f, 0.40f, 0.80f);
-        ImVec4 scrollbarGrabHovered = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-        ImVec4 scrollbarGrabActive = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-        
-        // Frame/Input fields
-        ImVec4 frameBg = ImVec4(0.16f, 0.16f, 0.18f, 1.00f);
-        ImVec4 frameBgHovered = ImVec4(0.20f, 0.20f, 0.22f, 1.00f);
-        ImVec4 frameBgActive = ImVec4(0.24f, 0.24f, 0.26f, 1.00f);
-        
-        // Sizes & Rounding
-        float scrollbarSize = 8.0f;
-        float scrollbarRounding = 0.0f;
-        float frameRounding = 0.0f;
-        float windowRounding = 0.0f;
-        float childRounding = 0.0f;
-        float buttonRounding = 0.0f;
-        
-        void Apply() const;
-    };
     
     static void SetTheme(const Theme& theme);
     static Theme& GetTheme();
@@ -154,8 +161,6 @@ public:
     // ========================================
     // Common Widgets
     // ========================================
-    
-    enum class ButtonStyle { Default, Primary, Success, Danger, Warning };
     
     static bool Button(const char* label, const ImVec2& size = ImVec2(0, 0));
     static bool StyledButton(const char* label, ButtonStyle style, const ImVec2& size = ImVec2(0, 0));
@@ -194,19 +199,19 @@ private:
 
 // Integer
 template<>
-inline void UI::EditProperty<int>(const char* label, int& value) {
+inline void Exec::EditProperty<int>(const char* label, int& value) {
     ImGui::DragInt(label, &value);
 }
 
 // Float
 template<>
-inline void UI::EditProperty<float>(const char* label, float& value) {
+inline void Exec::EditProperty<float>(const char* label, float& value) {
     ImGui::DragFloat(label, &value, 0.1f);
 }
 
 // Double
 template<>
-inline void UI::EditProperty<double>(const char* label, double& value) {
+inline void Exec::EditProperty<double>(const char* label, double& value) {
     float temp = static_cast<float>(value);
     if (ImGui::DragFloat(label, &temp, 0.1f)) {
         value = static_cast<double>(temp);
@@ -215,13 +220,13 @@ inline void UI::EditProperty<double>(const char* label, double& value) {
 
 // Bool
 template<>
-inline void UI::EditProperty<bool>(const char* label, bool& value) {
+inline void Exec::EditProperty<bool>(const char* label, bool& value) {
     ImGui::Checkbox(label, &value);
 }
 
 // String
 template<>
-inline void UI::EditProperty<std::string>(const char* label, std::string& value) {
+inline void Exec::EditProperty<std::string>(const char* label, std::string& value) {
     char buffer[256];
     strncpy(buffer, value.c_str(), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
@@ -233,17 +238,17 @@ inline void UI::EditProperty<std::string>(const char* label, std::string& value)
 
 // GLM Vectors
 template<>
-inline void UI::EditProperty<glm::vec2>(const char* label, glm::vec2& value) {
+inline void Exec::EditProperty<glm::vec2>(const char* label, glm::vec2& value) {
     ImGui::DragFloat2(label, glm::value_ptr(value), 0.1f);
 }
 
 template<>
-inline void UI::EditProperty<glm::vec3>(const char* label, glm::vec3& value) {
+inline void Exec::EditProperty<glm::vec3>(const char* label, glm::vec3& value) {
     ImGui::DragFloat3(label, glm::value_ptr(value), 0.1f);
 }
 
 template<>
-inline void UI::EditProperty<glm::vec4>(const char* label, glm::vec4& value) {
+inline void Exec::EditProperty<glm::vec4>(const char* label, glm::vec4& value) {
     ImGui::DragFloat4(label, glm::value_ptr(value), 0.1f);
 }
 

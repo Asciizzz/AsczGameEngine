@@ -65,4 +65,7 @@ private:
     void mainLoop();
 
     bool checkWindowResize();
+    
+    // UI rendering - implemented in tinyApp_imgui.cpp
+    void renderUI();
 };
