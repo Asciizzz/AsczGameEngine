@@ -1,5 +1,6 @@
 #include "tinyApp/tinyApp.hpp"
 
+#include "tinyEngine/TinyLoader.hpp"
 #include <iostream>
 
 #ifdef NDEBUG // Remember to set this to false
@@ -49,6 +50,11 @@ void tinyApp::initComponents() {
     );
 
     project = MakeUnique<tinyProject>(deviceVk.get());
+
+    // Adding some test files
+
+    tinyModel testModel = tinyLoader::loadModel("game/Test/Animation.glb");
+    project->addModel(testModel);
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->camera()->setAspectRatio(aspectRatio);
