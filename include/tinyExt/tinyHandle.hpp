@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <typeindex>
 #include <functional>
+
+// -------------------- tinyHandle --------------------
 
 union tinyHandle {
     struct {
@@ -9,13 +12,11 @@ union tinyHandle {
         uint32_t version;
     };
 
-    // Full pack representation
     uint64_t value;
 
     constexpr tinyHandle() noexcept : value(UINT64_MAX) {}
-    tinyHandle(uint32_t index, uint32_t version = 0) noexcept : index(index), version(version) {}
+    constexpr tinyHandle(uint32_t index, uint32_t version = 0) noexcept : index(index), version(version) {}
 
-    // Value operators
     constexpr bool operator==(const tinyHandle& other) const noexcept { return value == other.value; }
     constexpr bool operator!=(const tinyHandle& other) const noexcept { return value != other.value; }
 
@@ -30,17 +31,57 @@ namespace std {
             return std::hash<uint64_t>()(h.value);
         }
     };
-};
+}
 
-#include <typeindex>
+// -------------------- typeHandle --------------------
+
 struct typeHandle {
-    typeHandle() noexcept = default; 
-    // Would've loved to create a template constructor here, but type_index cannot be deduced
-    typeHandle(const tinyHandle& h, const std::type_index& tIndex) noexcept : handle(h), typeIndex(tIndex) {}
+    // Raw data union for combined or split representation
+    union {
+        struct {
+            tinyHandle handle;
+            uint64_t typeHash;  // hash of std::type_index(typeid(T))
+        };
+        struct {
+            uint64_t hashLow;
+            uint64_t hashHigh;
+        };
+    };
 
-    tinyHandle handle = tinyHandle();
     std::type_index typeIndex = std::type_index(typeid(void));
 
+    // Constructors
+    typeHandle() noexcept
+        : handle(), typeHash(0), typeIndex(typeid(void)) {}
+
+    typeHandle(tinyHandle h, const std::type_index& tIndex) noexcept
+        : handle(h), typeIndex(tIndex) {
+        typeHash = std::hash<std::type_index>()(tIndex);
+    }
+
+    // Factories
+    template<typename T>
+    [[nodiscard]] static typeHandle make(tinyHandle h) noexcept {
+        typeHandle th;
+        th.handle = h;
+        th.typeIndex = std::type_index(typeid(T));
+        th.typeHash = std::hash<std::type_index>()(th.typeIndex);
+        return th;
+    }
+
+    [[nodiscard]] static typeHandle make(tinyHandle h, const std::type_index& tIndex) noexcept {
+        typeHandle th(h, tIndex);
+        return th;
+    }
+
+    // Hash getter (combined)
+    [[nodiscard]] uint64_t hash() const noexcept {
+        uint64_t h1 = std::hash<uint64_t>()(handle.value);
+        uint64_t h2 = typeHash;
+        return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2)); // std::hash_combine-style
+    }
+
+    // Comparisons
     constexpr bool operator==(const typeHandle& other) const noexcept {
         return handle == other.handle && typeIndex == other.typeIndex;
     }
@@ -56,31 +97,13 @@ struct typeHandle {
     [[nodiscard]] bool sameType(const typeHandle& other) const noexcept {
         return typeIndex == other.typeIndex;
     }
-
-    template<typename T>
-    [[nodiscard]] static typeHandle make(tinyHandle h) noexcept {
-        typeHandle th;
-        th.handle = h;
-        th.typeIndex = std::type_index(typeid(T));
-        return th;
-    }
-
-    [[nodiscard]] static typeHandle make(tinyHandle h, const std::type_index& tIndex) noexcept {
-        typeHandle th;
-        th.handle = h;
-        th.typeIndex = tIndex;
-        return th;
-    }
 };
 
+// Hash specialization
 namespace std {
     template<> struct hash<typeHandle> {
         size_t operator()(const typeHandle& th) const noexcept {
-            // Combine hash of handle and type_index
-            size_t h1 = std::hash<tinyHandle>()(th.handle);
-            size_t h2 = std::hash<std::type_index>()(th.typeIndex);
-            // Simple hash combination using XOR and bit rotation
-            return h1 ^ (h2 << 1);
+            return static_cast<size_t>(th.hash());
         }
     };
-};
+}

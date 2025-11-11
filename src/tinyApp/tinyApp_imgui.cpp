@@ -240,8 +240,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
                 if (fTypeHdl.isType<tinySceneRT>()) {
                     tinyHandle sceneRegistryHandle = fTypeHdl.handle;
 
-                    tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle.valid() ? 
-                        HierarchyState::activeSceneHandle : project->mainSceneHandle;
+                    tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
 
                     if (sceneRegistryHandle != activeSceneHandle) {
                         project->addSceneInstance(sceneRegistryHandle, activeSceneHandle, h);
