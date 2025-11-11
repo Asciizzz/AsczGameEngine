@@ -110,7 +110,7 @@ void tinyApp::initComponents() {
         .withDepthTest(true, VK_COMPARE_OP_LESS)
         .withDepthWrite(true)
         .withBlending(BlendMode::None);
-    
+
     pipelineRigged = MakeUnique<PipelineRaster>(device, riggedCfg);
 
     // ===== Pipeline 3: Static Mesh =====
@@ -141,21 +141,7 @@ void tinyApp::initComponents() {
     renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
 
     // ===== Initialize UI System =====
-    uiBackend = new tinyUI::UIBackend_Vulkan();
-    
-    tinyUI::VulkanBackendData vkData;
-    vkData.instance = instanceVk->instance;
-    vkData.physicalDevice = deviceVk->pDevice;
-    vkData.device = deviceVk->device;
-    vkData.queueFamily = deviceVk->queueFamilyIndices.graphicsFamily.value();
-    vkData.queue = deviceVk->graphicsQueue;
-    vkData.renderPass = renderer->getOffscreenRenderPass();  // Use offscreen for UI overlay
-    vkData.minImageCount = 2;
-    vkData.imageCount = renderer->getSwapChainImageCount();
-    vkData.msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-    
-    uiBackend->setVulkanData(vkData);
-    tinyUI::Exec::Init(uiBackend, windowManager->window);
+    initUI();
 
     windowManager->maximizeWindow();
     checkWindowResize();
