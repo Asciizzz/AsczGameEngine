@@ -286,6 +286,7 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
     auto getName = [project](tinyHandle h) -> const char* {
         const tinyFS& fs = project->fs();
         const tinyFS::Node* node = fs.fNode(h);
+        return "A";
         return node ? node->name.c_str() : "";
     };
     auto hasChildren = [project](tinyHandle h) -> bool {
