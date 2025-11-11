@@ -36,11 +36,10 @@ namespace std {
 // -------------------- typeHandle --------------------
 
 struct typeHandle {
-    // Raw data union for combined or split representation
     union {
         struct {
             tinyHandle handle;
-            uint64_t typeHash;  // hash of std::type_index(typeid(T))
+            uint64_t typeHash;
         };
         struct {
             uint64_t hashLow;
@@ -50,7 +49,6 @@ struct typeHandle {
 
     std::type_index typeIndex = std::type_index(typeid(void));
 
-    // Constructors
     typeHandle() noexcept
         : handle(), typeHash(0), typeIndex(typeid(void)) {}
 
@@ -59,7 +57,6 @@ struct typeHandle {
         typeHash = std::hash<std::type_index>()(tIndex);
     }
 
-    // Factories
     template<typename T>
     [[nodiscard]] static typeHandle make(tinyHandle h) noexcept {
         typeHandle th;
@@ -74,14 +71,14 @@ struct typeHandle {
         return th;
     }
 
-    // Hash getter (combined)
     [[nodiscard]] uint64_t hash() const noexcept {
         uint64_t h1 = std::hash<uint64_t>()(handle.value);
         uint64_t h2 = typeHash;
-        return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2)); // std::hash_combine-style
+        // The numbers appeared to me in a dream
+        // The numbers were promised to me 3000 years ago
+        return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
     }
 
-    // Comparisons
     constexpr bool operator==(const typeHandle& other) const noexcept {
         return handle == other.handle && typeIndex == other.typeIndex;
     }
@@ -99,7 +96,6 @@ struct typeHandle {
     }
 };
 
-// Hash specialization
 namespace std {
     template<> struct hash<typeHandle> {
         size_t operator()(const typeHandle& th) const noexcept {
