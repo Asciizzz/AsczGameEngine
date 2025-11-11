@@ -119,8 +119,6 @@ struct Theme {
     float windowRounding = 0.0f;
     float childRounding = 0.0f;
     float buttonRounding = 0.0f;
-    
-    void Apply() const;
 };
 
 // Button style variants
@@ -140,125 +138,21 @@ public:
     static void Shutdown();
     static void NewFrame();
     static void Render();
-    
+
     static void SetTheme(const Theme& theme);
     static Theme& GetTheme();
-    
+
     // ========================================
     // Window Management
     // ========================================
-    
+
     static bool Begin(const char* name, bool* p_open = nullptr, int flags = 0);
     static void End();
-    
-    // ========================================
-    // Templated Property Editors (The Magic!)
-    // ========================================
-    
-    template<typename T>
-    static void EditProperty(const char* label, T& value);
-    
-    // ========================================
-    // Common Widgets
-    // ========================================
-    
-    static bool Button(const char* label, const ImVec2& size = ImVec2(0, 0));
-    static bool StyledButton(const char* label, ButtonStyle style, const ImVec2& size = ImVec2(0, 0));
-    static void Text(const char* fmt, ...);
-    static void TextColored(const ImVec4& color, const char* fmt, ...);
-    static void Separator(const char* label = nullptr);
-    static void SameLine();
-    static void Spacing();
-    
-    static bool TreeNode(const char* label);
-    static void TreePop();
-    
-    static bool CollapsingHeader(const char* label, int flags = 0);
-    static bool InputText(const char* label, char* buf, size_t bufSize, int flags = 0);
-    static bool InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f);
-    static bool InputInt(const char* label, int* v, int step = 1, int step_fast = 100);
-    static bool DragFloat(const char* label, float* v, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-    static bool DragFloat3(const char* label, float v[3], float speed = 1.0f);
-    static bool Checkbox(const char* label, bool* v);
-    
-    static void ShowDemoWindow(bool* p_open = nullptr);
-    
+
 private:
     static IUIBackend* s_backend;
     static Theme s_theme;
     static bool s_initialized;
-    
-    // Style stack helpers
-    static void PushButtonStyle(ButtonStyle style);
-    static void PopButtonStyle();
 };
-
-// ============================================================================
-// TEMPLATE IMPLEMENTATIONS - Edit Property Specializations
-// ============================================================================
-
-// Integer
-template<>
-inline void Exec::EditProperty<int>(const char* label, int& value) {
-    ImGui::DragInt(label, &value);
-}
-
-// Float
-template<>
-inline void Exec::EditProperty<float>(const char* label, float& value) {
-    ImGui::DragFloat(label, &value, 0.1f);
-}
-
-// Double
-template<>
-inline void Exec::EditProperty<double>(const char* label, double& value) {
-    float temp = static_cast<float>(value);
-    if (ImGui::DragFloat(label, &temp, 0.1f)) {
-        value = static_cast<double>(temp);
-    }
-}
-
-// Bool
-template<>
-inline void Exec::EditProperty<bool>(const char* label, bool& value) {
-    ImGui::Checkbox(label, &value);
-}
-
-// String
-template<>
-inline void Exec::EditProperty<std::string>(const char* label, std::string& value) {
-    char buffer[256];
-    strncpy(buffer, value.c_str(), sizeof(buffer) - 1);
-    buffer[sizeof(buffer) - 1] = '\0';
-    
-    if (ImGui::InputText(label, buffer, sizeof(buffer))) {
-        value = buffer;
-    }
-}
-
-// GLM Vectors
-template<>
-inline void Exec::EditProperty<glm::vec2>(const char* label, glm::vec2& value) {
-    ImGui::DragFloat2(label, glm::value_ptr(value), 0.1f);
-}
-
-template<>
-inline void Exec::EditProperty<glm::vec3>(const char* label, glm::vec3& value) {
-    ImGui::DragFloat3(label, glm::value_ptr(value), 0.1f);
-}
-
-template<>
-inline void Exec::EditProperty<glm::vec4>(const char* label, glm::vec4& value) {
-    ImGui::DragFloat4(label, glm::value_ptr(value), 0.1f);
-}
-
-// Color pickers for vec3/vec4
-inline void ColorPicker3(const char* label, glm::vec3& value) {
-    ImGui::ColorEdit3(label, glm::value_ptr(value));
-}
-
-inline void ColorPicker4(const char* label, glm::vec4& value) {
-    ImGui::ColorEdit4(label, glm::value_ptr(value));
-}
 
 } // namespace tinyUI
