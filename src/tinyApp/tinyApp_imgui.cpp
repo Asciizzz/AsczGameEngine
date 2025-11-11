@@ -94,7 +94,7 @@ using CFunc = const Func<FuncType>;
 static void RenderGenericNodeHierarchy(
     tinyHandle nodeHandle, int depth,
     // Lambdas for node state management
-    CFunc<const char*(tinyHandle)>& getName,
+    CFunc<std::string(tinyHandle)>& getName,
     CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected, CFunc<void(tinyHandle)>& clearOtherSelection,
     CFunc<bool(tinyHandle)>& isDragged,   CFunc<void(tinyHandle)>& setDragged,  CFunc<void()>&           clearDragState,
     CFunc<bool(tinyHandle)>& isExpanded,  CFunc<void(tinyHandle, bool)>& setExpanded,
@@ -124,7 +124,7 @@ static void RenderGenericNodeHierarchy(
     bool forceOpen = isExpanded(nodeHandle);
     if (forceOpen) ImGui::SetNextItemOpen(true);
 
-    bool nodeOpen = ImGui::TreeNodeEx(getName(nodeHandle), flags);
+    bool nodeOpen = ImGui::TreeNodeEx(getName(nodeHandle).c_str(), flags);
     if (hasChild && ImGui::IsItemToggledOpen()) setExpanded(nodeHandle, nodeOpen);
 
     ImGui::PopStyleColor(2);
@@ -165,9 +165,9 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 
     tinyFS& fs = project->fs();
 
-    auto getName     = [scene](tinyHandle h) -> const char* {
+    auto getName     = [scene](tinyHandle h) -> std::string {
         const tinyNodeRT* node = scene->node(h);
-        return node ? node->name.c_str() : "";
+        return node ? node->name : "";
     };
 
     auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedSceneNode == h; };
@@ -300,9 +300,14 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 static void RenderFileNodeHierarchy(tinyProject* project) {
     tinyFS& fs = project->fs();
 
-    auto getName     = [&fs](tinyHandle h) -> const char* {
+    auto getName     = [&fs](tinyHandle h) -> std::string {
         const tinyFS::Node* node = fs.fNode(h);
-        return node ? node->name.c_str() : "";
+        if (!node) return "";
+
+        if (node->isFolder()) return std::string(node->name);
+
+        tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+        return node->name + "." + typeExt.ext;
     };
 
     auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedFileNode == h; };
