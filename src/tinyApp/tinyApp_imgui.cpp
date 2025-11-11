@@ -243,7 +243,11 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
 
                 if (ImGui::MenuItem("Add Child")) scene->addNode("NewNode", h);
                 if (ImGui::MenuItem("Delete"))    scene->removeNode(h); // Already have safeguard
-                if (ImGui::MenuItem("Flatten"))   scene->flattenNode(h);
+                            if (ImGui::MenuItem("Flatten"))   scene->flattenNode(h);
+            ImGui::Separator();
+            if (ImGui::MenuItem("Properties")) {
+                // TODO: open properties window
+            }
             }
             ImGui::EndPopup();
         }
@@ -318,7 +322,34 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
         }
     };
     auto renderDropTarget = [](tinyHandle) {};  // No drop target for files
-    auto renderContextMenu = [](tinyHandle) {};  // No context menu for files
+    auto renderContextMenu = [project](tinyHandle h) {
+        if (ImGui::BeginPopupContextItem()) {
+            const tinyFS& fs = project->fs();
+            const tinyFS::Node* node = fs.fNode(h);
+            if (node) {
+                ImGui::Text("File: %s", node->name.c_str());
+                ImGui::Separator();
+                typeHandle dataType = fs.fTypeHandle(h);
+                if (dataType.valid()) {
+                    if (dataType.isType<tinySceneRT>()) {
+                        ImGui::Text("Type: Scene");
+                        if (ImGui::MenuItem("Load as Active")) {
+                            HierarchyState::activeSceneHandle = dataType.handle;
+                        }
+                    } else {
+                        ImGui::Text("Type: Other");
+                    }
+                } else {
+                    ImGui::Text("Type: Folder");
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Properties")) {
+                    // TODO: open properties window
+                }
+            }
+            ImGui::EndPopup();
+        }
+    };
     auto getNormalColor = [project](tinyHandle h) {
         const tinyFS& fs = project->fs();
         const tinyFS::Node* node = fs.fNode(h);
@@ -369,6 +400,7 @@ void tinyApp::initUI() {
 
     // Set the active scene to main scene by default
     HierarchyState::activeSceneHandle = project->mainSceneHandle;
+    activeScene = project->scene(HierarchyState::activeSceneHandle);
 }
 
 // ============================================================================
@@ -465,4 +497,15 @@ void tinyApp::renderUI() {
         }
         tinyUI::Exec::End();
     }
+}
+
+
+void tinyApp::updateActiveScene() {
+    activeScene = project->scene(HierarchyState::activeSceneHandle);
+
+    activeScene->setFStart({
+        renderer->getCurrentFrame(),
+        fpsManager->deltaTime
+    });
+    activeScene->update();
 }

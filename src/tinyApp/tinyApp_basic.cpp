@@ -295,17 +295,10 @@ void tinyApp::mainLoop() {
 
         // Start new UI frame
         tinyUI::Exec::NewFrame();
-        
-        // Render all UI windows (implemented in tinyApp_imgui.cpp)
         renderUI();
-        
+
+        updateActiveScene();
         project->updateGlobal(rendererRef.getCurrentFrame());
-
-        uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
-
-        tinySceneRT* activeScene = project->scene();
-        activeScene->setFStart({ currentFrameIndex, dTime });
-        activeScene->update();
 
         uint32_t imageIndex = rendererRef.beginFrame();
         if (imageIndex != UINT32_MAX) {

@@ -52,6 +52,8 @@ private:
 
     UniquePtr<tinyProject> project; // New gigachad system
 
+    tinySceneRT* activeScene = nullptr;
+
     // UI backend
     tinyUI::UIBackend_Vulkan* uiBackend = nullptr;
 
@@ -62,7 +64,10 @@ private:
 
     // Functions that actually do things
     void initComponents();
+
     void mainLoop();
+
+    void updateActiveScene();
 
     bool checkWindowResize();
     
