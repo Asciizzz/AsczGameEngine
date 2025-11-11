@@ -49,16 +49,13 @@ struct typeHandle {
 
     std::type_index typeIndex = std::type_index(typeid(void));
 
-    typeHandle() noexcept
-        : handle(), typeHash(0), typeIndex(typeid(void)) {}
-
-    typeHandle(tinyHandle h, const std::type_index& tIndex) noexcept
-        : handle(h), typeIndex(tIndex) {
+    typeHandle() noexcept : handle(), typeHash(0), typeIndex(typeid(void)) {}
+    typeHandle(tinyHandle h, const std::type_index& tIndex) noexcept : handle(h), typeIndex(tIndex) {
         typeHash = std::hash<std::type_index>()(tIndex);
     }
 
     template<typename T>
-    [[nodiscard]] static typeHandle make(tinyHandle h) noexcept {
+    [[nodiscard]] static typeHandle make(tinyHandle h = tinyHandle()) noexcept {
         typeHandle th;
         th.handle = h;
         th.typeIndex = std::type_index(typeid(T));
@@ -66,9 +63,8 @@ struct typeHandle {
         return th;
     }
 
-    [[nodiscard]] static typeHandle make(tinyHandle h, const std::type_index& tIndex) noexcept {
-        typeHandle th(h, tIndex);
-        return th;
+    [[nodiscard]] static typeHandle make(const std::type_index& tIndex, tinyHandle h = tinyHandle()) noexcept {
+        return typeHandle(h, tIndex);
     }
 
     [[nodiscard]] uint64_t hash() const noexcept {

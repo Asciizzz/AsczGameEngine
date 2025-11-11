@@ -718,5 +718,6 @@ private:
             return false;
         }
     }
-
 };
+
+using tinyNodeFS = tinyFS::Node;
