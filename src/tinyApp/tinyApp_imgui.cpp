@@ -219,7 +219,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
         }
     };
     auto renderDropTarget = [project, &fs, scene](tinyHandle h) {
-        if (!HierarchyState::draggedSceneNode.valid() && ImGui::BeginDragDropTarget()) {
+        if (ImGui::BeginDragDropTarget()) {
             // Accept scene node reparenting
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
                 Payload* data = (Payload*)payload->Data;
@@ -229,7 +229,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
                 }
                 HierarchyState::draggedSceneNode = tinyHandle();
             }
-            
+
             // Accept scene file drops (instantiate scene at this node)
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
                 Payload* data = (Payload*)payload->Data;
@@ -363,7 +363,23 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             }
         }
     };
-    auto renderDropTarget  = [](tinyHandle) {};  // No drop target for files
+    auto renderDropTarget  = [&fs](tinyHandle h) {
+        // Perform move operation within the file system
+
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
+                Payload* data = (Payload*)payload->Data;
+
+                // Move the dragged node into this folder
+                if (fs.fMove(data->handle, h)) {
+                    HierarchyState::setExpanded(h, false, true); // Auto-expand target
+                    HierarchyState::selectedFileNode = data->handle; // Keep selection
+                }
+                HierarchyState::draggedFileNode = tinyHandle();
+            }
+            ImGui::EndDragDropTarget();
+        }
+    };
     auto renderContextMenu = [&fs](tinyHandle h) {
         if (ImGui::BeginPopupContextItem()) {
             if (const tinyFS::Node* node = fs.fNode(h)) {
