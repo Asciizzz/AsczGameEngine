@@ -86,7 +86,7 @@ file(GLOB_RECURSE SRC_FILES
 
     src/tinySystem/tinyChrono.cpp
     src/tinySystem/tinyWindow.cpp
-    src/tinySystem/tinyImGui.cpp
+    src/tinySystem/tinyUI.cpp
 
     src/tinyApp/tinyApp_basic.cpp
     src/tinyApp/tinyApp_imgui.cpp
