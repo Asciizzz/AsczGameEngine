@@ -202,7 +202,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
                 payload.nodeHandle = h;
                 strncpy(payload.nodeName, node->name.c_str(), 63);
                 payload.nodeName[63] = '\0';
-
+                
                 ImGui::SetDragDropPayload("SCENE_NODE", &payload, sizeof(payload));
                 ImGui::Text("Moving: %s", node->name.c_str());
             }
@@ -214,9 +214,12 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
             // Accept scene node reparenting
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
                 DragDropPayloads::SceneNodePayload* data = (DragDropPayloads::SceneNodePayload*)payload->Data;
-                if (scene->reparentNode(data->nodeHandle, h)) {
-                    HierarchyState::setExpanded(h, true, true); // Auto-expand parent
-                    HierarchyState::selectedSceneNode = data->nodeHandle; // Keep selection
+                if (data->nodeHandle != h) {
+                    // Attempt reparenting
+                    if (scene->reparentNode(data->nodeHandle, h)) {
+                        HierarchyState::setExpanded(h, true, true); // Auto-expand parent
+                        HierarchyState::selectedSceneNode = data->nodeHandle; // Keep selection
+                    }
                 }
                 HierarchyState::draggedSceneNode = tinyHandle();
             }
@@ -228,8 +231,10 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
                 // Check if this is a scene file
                 if (data->dataTypeHandle.isType<tinySceneRT>()) {
                     tinyHandle sceneRegistryHandle = data->dataTypeHandle.handle;
-                    tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
-
+                    tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle.valid() ? 
+                        HierarchyState::activeSceneHandle : project->mainSceneHandle;
+                    
+                    // Safety: don't drop scene into itself
                     if (sceneRegistryHandle != activeSceneHandle) {
                         // Instantiate scene at this node
                         project->addSceneInstance(sceneRegistryHandle, activeSceneHandle, h);
@@ -286,7 +291,6 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
     auto getName = [project](tinyHandle h) -> const char* {
         const tinyFS& fs = project->fs();
         const tinyFS::Node* node = fs.fNode(h);
-        return "A";
         return node ? node->name.c_str() : "";
     };
     auto hasChildren = [project](tinyHandle h) -> bool {
