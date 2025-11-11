@@ -1,6 +1,7 @@
 // tinyApp_imgui.cpp - UI Implementation & Testing
 #include "tinyApp/tinyApp.hpp"
 #include "tinyEngine/tinyLoader.hpp"
+#include "tinySystem/tinyUI.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -467,6 +468,7 @@ void tinyApp::renderUI() {
     float dTime = fpsRef.deltaTime;
 
     // ===== DEBUG PANEL WINDOW =====
+    static bool showThemeEditor = false;
     if (tinyUI::Exec::Begin("Debug Panel")) {
         // FPS Info (once every printInterval)
         frameTime += dTime;
@@ -477,22 +479,23 @@ void tinyApp::renderUI() {
 
         ImGui::Text("FPS: %.1f", currentFps);
         ImGui::Separator();
-
+        
         ImGui::Text("Camera");
         ImGui::Text("Pos: (%.2f, %.2f, %.2f)", camRef.pos.x, camRef.pos.y, camRef.pos.z);
         ImGui::Text("Fwd: (%.2f, %.2f, %.2f)", camRef.forward.x, camRef.forward.y, camRef.forward.z);
         ImGui::Text("Rg:  (%.2f, %.2f, %.2f)", camRef.right.x, camRef.right.y, camRef.right.z);
         ImGui::Text("Up:  (%.2f, %.2f, %.2f)", camRef.up.x, camRef.up.y, camRef.up.z);
 
+        ImGui::Separator();
+        if (ImGui::Button("Theme Editor")) {
+            showThemeEditor = !showThemeEditor;
+        }
+
         tinyUI::Exec::End();
     }
-
+    
     // ===== HIERARCHY WINDOW - Scene & File System =====
-    static bool showHierarchy = true;
-    if (showHierarchy) {
-        tinyUI::Exec::Begin("Hierarchy", &showHierarchy, ImGuiWindowFlags_NoScrollbar);
-
-        // Get active scene
+    if (tinyUI::Exec::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
         tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
 
         if (!activeScene) {
@@ -547,6 +550,54 @@ void tinyApp::renderUI() {
             ImGui::PopStyleColor();
         }
         tinyUI::Exec::End();
+    }
+
+    // ===== THEME EDITOR WINDOW =====
+    if (showThemeEditor) {
+        if (tinyUI::Exec::Begin("Theme Editor", &showThemeEditor)) {
+            tinyUI::Theme& theme = tinyUI::Exec::GetTheme();
+
+            if (ImGui::CollapsingHeader("Colors")) {
+                ImGui::ColorEdit4("Text", &theme.text.x);
+                ImGui::ColorEdit4("Text Disabled", &theme.textDisabled.x);
+                ImGui::ColorEdit4("Window Background", &theme.windowBg.x);
+                ImGui::ColorEdit4("Child Background", &theme.childBg.x);
+                ImGui::ColorEdit4("Border", &theme.border.x);
+                ImGui::ColorEdit4("Title Background", &theme.titleBg.x);
+                ImGui::ColorEdit4("Title Background Active", &theme.titleBgActive.x);
+                ImGui::ColorEdit4("Title Background Collapsed", &theme.titleBgCollapsed.x);
+                ImGui::ColorEdit4("Button", &theme.button.x);
+                ImGui::ColorEdit4("Button Hovered", &theme.buttonHovered.x);
+                ImGui::ColorEdit4("Button Active", &theme.buttonActive.x);
+                ImGui::ColorEdit4("Header", &theme.header.x);
+                ImGui::ColorEdit4("Header Hovered", &theme.headerHovered.x);
+                ImGui::ColorEdit4("Header Active", &theme.headerActive.x);
+                ImGui::ColorEdit4("Frame Background", &theme.frameBg.x);
+                ImGui::ColorEdit4("Frame Background Hovered", &theme.frameBgHovered.x);
+                ImGui::ColorEdit4("Frame Background Active", &theme.frameBgActive.x);
+                ImGui::ColorEdit4("Scrollbar Background", &theme.scrollbarBg.x);
+                ImGui::ColorEdit4("Scrollbar Grab", &theme.scrollbarGrab.x);
+                ImGui::ColorEdit4("Scrollbar Grab Hovered", &theme.scrollbarGrabHovered.x);
+                ImGui::ColorEdit4("Scrollbar Grab Active", &theme.scrollbarGrabActive.x);
+            }
+
+            if (ImGui::CollapsingHeader("Sizes & Rounding")) {
+                ImGui::DragFloat("Scrollbar Size", &theme.scrollbarSize, 0.01f, 0.0f, 20.0f);
+                ImGui::DragFloat("Scrollbar Rounding", &theme.scrollbarRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Frame Rounding", &theme.frameRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Child Rounding", &theme.childRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Button Rounding", &theme.buttonRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Window Rounding", &theme.windowRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Window Border Size", &theme.windowBorderSize, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat("Font Scale", &theme.fontScale, 0.01f, 0.5f, 2.0f);
+            }
+
+            if (ImGui::Button("Apply")) {
+                tinyUI::Exec::ApplyTheme();
+            }
+
+            tinyUI::Exec::End();
+        }
     }
 }
 
