@@ -172,11 +172,11 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 
     auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedSceneNode == h; };
     auto setSelected = [](tinyHandle h) { HierarchyState::selectedSceneNode = h; };
-    auto clearOtherSelection    = [](tinyHandle) { HierarchyState::selectedFileNode = tinyHandle(); };
+    auto clearOtherSelection = [](tinyHandle) { HierarchyState::selectedFileNode = tinyHandle(); };
 
     auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedSceneNode == h; };
     auto setDragged  = [](tinyHandle h) { HierarchyState::draggedSceneNode = h; };
-    auto clearDragState  = []() { HierarchyState::draggedSceneNode = tinyHandle(); };
+    auto clearDragState = []() { HierarchyState::draggedSceneNode = tinyHandle(); };
 
     auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(h, true); };
     auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, true, expanded); };
@@ -261,20 +261,18 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
                 ImGui::Separator();
 
                 if (ImGui::MenuItem("Add Child")) scene->addNode("New Node", h);
-
-                ImGui::Separator();
-                if (ImGui::MenuItem("Delete"))    scene->removeNode(h); // Already have safeguard
-                if (ImGui::MenuItem("Flatten"))   scene->flattenNode(h);
-
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Clear")) {
-                    // Get a copy of children to avoid modifying while iterating
-                    std::vector<tinyHandle> children = node->childrenHandles;
-                    for (const auto& childHandle : children) scene->removeNode(childHandle);
+                bool canDelete = h != scene->rootHandle();
+                if (ImGui::MenuItem("Delete", nullptr, false, canDelete))  scene->removeNode(h);
+                if (ImGui::MenuItem("Flatten", nullptr, false, canDelete)) scene->flattenNode(h);
+                ImGui::Separator();
+
+                if (ImGui::MenuItem("Clear", nullptr, false, !node->childrenHandles.empty())) {
+                    for (const auto& childHandle : node->childrenHandles) scene->removeNode(childHandle);
                 }
-
                 ImGui::Separator();
+
                 if (ImGui::MenuItem("Properties")) {
                     // TODO: open properties window
                 }
