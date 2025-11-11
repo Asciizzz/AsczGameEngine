@@ -15,9 +15,6 @@ Renderer::Renderer (Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window, 
     depthImage = MakeUnique<DepthImage>(deviceVk->device);
     depthImage->create(deviceVk->pDevice, swapchain->getExtent());
 
-    postProcess = MakeUnique<PostProcess>(deviceVk, swapchain.get(), depthImage.get());
-    postProcess->initialize();  // PostProcess now manages its own render pass
-
     createRenderTargets();
 
     createCommandBuffers();
@@ -75,10 +72,6 @@ void Renderer::createSyncObjects() {
     }
 }
 
-void Renderer::recreateRenderPasses() {
-    createRenderTargets();
-}
-
 void Renderer::createRenderTargets() {
     VkDevice device = deviceVk->device;
     VkExtent2D extent = swapchain->getExtent();
@@ -134,12 +127,6 @@ VkRenderPass Renderer::getMainRenderPass() const {
     return mainRenderPass ? mainRenderPass->get() : VK_NULL_HANDLE;
 }
 
-VkRenderPass Renderer::getOffscreenRenderPass() const {
-    return postProcess ? postProcess->getOffscreenRenderPass() : VK_NULL_HANDLE;
-}
-
-
-
 VkFramebuffer Renderer::getFrameBuffer(uint32_t imageIndex) const {
     return (imageIndex < framebuffers.size() && framebuffers[imageIndex]) ? 
            framebuffers[imageIndex]->get() : VK_NULL_HANDLE;
@@ -170,10 +157,7 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     swapchain->createImageViews();
     
     // Recreate render targets
-    recreateRenderPasses();  // This calls createRenderTargets() now
-    
-    // Use PostProcess's existing recreate method - it will preserve effects internally
-    postProcess->recreate();
+    createRenderTargets();
 }
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
@@ -211,11 +195,7 @@ uint32_t Renderer::beginFrame() {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    // Start rendering to PostProcess's offscreen target
-    currentRenderTarget = postProcess->getOffscreenRenderTarget(currentFrame);
-    if (!currentRenderTarget) {
-        throw std::runtime_error("PostProcess offscreen render target not found!");
-    }
+    currentRenderTarget = &swapchainRenderTargets[imageIndex];
 
     // Begin render pass using RenderTarget wrapper
     currentRenderTarget->beginRenderPass(currentCmd);
@@ -356,37 +336,6 @@ void Renderer::endFrame(uint32_t imageIndex) {
         vkCmdEndRenderPass(currentCmd);
     }
 
-    postProcess->executeEffects(currentCmd, currentFrame);
-    postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
-
-    // // Render ImGui if provided (before ending command buffer)
-    // if (imguiWrapper) {
-    //     // Transition swapchain image from present to color attachment
-    //     VkImageMemoryBarrier toColorAttachment{};
-    //     toColorAttachment.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    //     toColorAttachment.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    //     toColorAttachment.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    //     toColorAttachment.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    //     toColorAttachment.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    //     toColorAttachment.image = swapchain->getImage(imageIndex);
-    //     toColorAttachment.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    //     toColorAttachment.subresourceRange.baseMipLevel = 0;
-    //     toColorAttachment.subresourceRange.levelCount = 1;
-    //     toColorAttachment.subresourceRange.baseArrayLayer = 0;
-    //     toColorAttachment.subresourceRange.layerCount = 1;
-    //     toColorAttachment.srcAccessMask = 0;
-    //     toColorAttachment.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    //     vkCmdPipelineBarrier(currentCmd,
-    //                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-    //                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    //                         0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
-
-    //     // Use tinyImGui's own render target
-    //     VkFramebuffer framebuffer = getFrameBuffer(imageIndex);
-    //     imguiWrapper->renderToTarget(imageIndex, currentCmd, framebuffer);
-    // }
-
     if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
@@ -467,18 +416,4 @@ void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeS
 
     // Scene still uses its own flushing mechanism (not tinyFS)
     activeScene->rtFlushAllRms();
-}
-
-void Renderer::addPostProcessEffect(const std::string& name, const std::string& computeShaderPath) {
-    // Delegate to PostProcess - it now handles its own effect storage
-    if (postProcess) {
-        postProcess->addEffect(name, computeShaderPath);
-    }
-}
-
-void Renderer::loadPostProcessEffectsFromJson(const std::string& configPath) {
-    // Delegate to PostProcess to load effects from JSON
-    if (postProcess) {
-        postProcess->loadEffectsFromJson(configPath);
-    }
 }

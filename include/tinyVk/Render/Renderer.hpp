@@ -9,10 +9,10 @@
 #include "tinyVk/System/CmdBuffer.hpp"
 #include "tinyVk/Render/Swapchain.hpp"
 #include "tinyVk/Pipeline/Pipeline_raster.hpp"
-#include "tinyVk/Render/PostProcess.hpp"
 #include "tinyVk/Render/DepthImage.hpp"
 #include "tinyVk/Render/RenderPass.hpp"
 #include "tinyVk/Render/RenderTarget.hpp"
+#include "tinyVk/Render/FrameBuffer.hpp"
 
 #include "tinyEngine/tinyProject.hpp"
 
@@ -25,8 +25,6 @@ public:
 
     Renderer(const Renderer&) = delete;
     Renderer& operator=(const Renderer&) = delete;
-
-    void recreateRenderPasses();
 
     void handleWindowResize(SDL_Window* window);
 
@@ -44,7 +42,6 @@ public:
     
     // Legacy render pass getters (for backward compatibility)
     VkRenderPass getMainRenderPass() const;
-    VkRenderPass getOffscreenRenderPass() const;  // Delegates to PostProcess
     
     // Swapchain getters for external access
     Swapchain* getSwapChain() const { return swapchain.get(); }
@@ -53,9 +50,6 @@ public:
     
     // DepthImage getter for external access
     DepthImage* getDepthManager() const { return depthImage.get(); }
-    
-    // PostProcess getter for external access
-    PostProcess* getPostProcess() const { return postProcess.get(); }
 
     void drawSky(const tinyProject* project, const PipelineRaster* skyPipeline) const;
 
@@ -66,10 +60,6 @@ public:
 
     // Get swapchain framebuffer for external ImGui rendering
     VkFramebuffer getFrameBuffer(uint32_t imageIndex) const;
-
-    // Post-processing methods
-    void addPostProcessEffect(const std::string& name, const std::string& computeShaderPath);
-    void loadPostProcessEffectsFromJson(const std::string& configPath);
 
     bool isResizeNeeded() const { return framebufferResized; }
     void setResizeHandled() { framebufferResized = false; }
@@ -90,8 +80,6 @@ private:
     UniquePtr<RenderPass> mainRenderPass;
     UniquePtrVec<FrameBuffer> framebuffers;
 
-    UniquePtr<PostProcess> postProcess;
-
     // Command recording
     CmdBuffer cmdBuffers;
 
@@ -110,10 +98,6 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void createRenderTargets();
-
-
-
-private:
 };
 
 }

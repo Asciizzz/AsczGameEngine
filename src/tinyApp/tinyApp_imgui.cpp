@@ -59,7 +59,7 @@ void tinyApp::initUI() {
     vkData.device = deviceVk->device;
     vkData.queueFamily = deviceVk->queueFamilyIndices.graphicsFamily.value();
     vkData.queue = deviceVk->graphicsQueue;
-    vkData.renderPass = renderer->getOffscreenRenderPass();  // Use offscreen for UI overlay
+    vkData.renderPass = renderer->getMainRenderPass();
     vkData.minImageCount = 2;
     vkData.imageCount = renderer->getSwapChainImageCount();
     vkData.msaaSamples = VK_SAMPLE_COUNT_1_BIT;

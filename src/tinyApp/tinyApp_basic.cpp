@@ -62,7 +62,7 @@ void tinyApp::initComponents() {
 // PLAYGROUND FROM HERE
 
     const tinySharedRes& sharedRes = project->sharedRes();
-    VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
+    VkRenderPass renderPass = renderer->getMainRenderPass();
 
     // Get vertex layouts
     auto vstaticLayout = tinyVertex::Static::layout();
@@ -75,7 +75,7 @@ void tinyApp::initComponents() {
 
     // ===== Pipeline 1: Sky =====
     RasterCfg skyCfg;
-    skyCfg.renderPass = offscreenRenderPass;
+    skyCfg.renderPass = renderPass;
     skyCfg.setLayouts = { project->descSLayout_Global() };
     skyCfg.withShaders("Shaders/bin/Sky/sky.vert.spv", "Shaders/bin/Sky/sky.frag.spv")
         .withCulling(CullMode::None)
@@ -88,8 +88,8 @@ void tinyApp::initComponents() {
 
     // ===== Pipeline 2: Rigged Mesh =====
     RasterCfg riggedCfg;
-    riggedCfg.renderPass = offscreenRenderPass;
-    riggedCfg.setLayouts = { 
+    riggedCfg.renderPass = renderPass;
+    riggedCfg.setLayouts = {
         project->descSLayout_Global(),
         sharedRes.matDescLayout(),
         sharedRes.skinDescLayout(),
@@ -115,7 +115,7 @@ void tinyApp::initComponents() {
 
     // ===== Pipeline 3: Static Mesh =====
     RasterCfg staticCfg;
-    staticCfg.renderPass = offscreenRenderPass;
+    staticCfg.renderPass = renderPass;
     staticCfg.setLayouts = { 
         project->descSLayout_Global(),
         sharedRes.matDescLayout()
@@ -136,9 +136,6 @@ void tinyApp::initComponents() {
         .withBlending(BlendMode::None);
     
     pipelineStatic = MakeUnique<PipelineRaster>(device, staticCfg);
-
-    // Load post-process effects from JSON configuration
-    renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
 
     // ===== Initialize UI System =====
     initUI();
@@ -162,12 +159,12 @@ bool tinyApp::checkWindowResize() {
     renderer->handleWindowResize(windowManager->window);
 
     // Recreate all three pipelines with offscreen render pass for post-processing
-    VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
-    
+    VkRenderPass renderPass = renderer->getMainRenderPass();
+
     // Update render pass for all pipeline configs
-    pipelineSky->cfg.renderPass = offscreenRenderPass;
-    pipelineRigged->cfg.renderPass = offscreenRenderPass;
-    pipelineStatic->cfg.renderPass = offscreenRenderPass;
+    pipelineSky->cfg.renderPass = renderPass;
+    pipelineRigged->cfg.renderPass = renderPass;
+    pipelineStatic->cfg.renderPass = renderPass;
     
     // Recreate pipelines
     pipelineSky->recreate();
@@ -175,7 +172,7 @@ bool tinyApp::checkWindowResize() {
     pipelineStatic->recreate();
     
     // Update UI render pass
-    uiBackend->updateRenderPass(offscreenRenderPass);
+    uiBackend->updateRenderPass(renderPass);
     uiBackend->rebuildIfNeeded();
 
     return true;

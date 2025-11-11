@@ -108,7 +108,6 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyVk/Render/Swapchain.cpp
     src/tinyVk/Render/RenderPass.cpp
     src/tinyVk/Render/RenderTarget.cpp
-    src/tinyVk/Render/PostProcess.cpp
     src/tinyVk/Render/Renderer.cpp
 
     main.cpp
