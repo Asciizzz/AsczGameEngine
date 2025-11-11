@@ -96,14 +96,12 @@ static void RenderGenericNodeHierarchy(
     // Lambdas for node state management
     CFunc<const char*(tinyHandle)>& getName,
     CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected, CFunc<void(tinyHandle)>& clearOtherSelection,
-    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void(tinyHandle)>& setDragged,  CFunc<void()>& clearDragState,
+    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void(tinyHandle)>& setDragged,  CFunc<void()>&           clearDragState,
     CFunc<bool(tinyHandle)>& isExpanded,  CFunc<void(tinyHandle, bool)>& setExpanded,
     CFunc<bool(tinyHandle)>& hasChildren, CFunc<std::vector<tinyHandle>(tinyHandle)>& getChildren,
-    CFunc<void(tinyHandle)>& renderDragSource,
-    CFunc<void(tinyHandle)>& renderDropTarget,
-    CFunc<void(tinyHandle)>& renderContextMenu,
+    CFunc<void(tinyHandle)>& renderDragSource, CFunc<void(tinyHandle)>& renderDropTarget, CFunc<void(tinyHandle)>& renderContextMenu,
     CFunc<ImVec4(tinyHandle)>& getNormalColor,        CFunc<ImVec4(tinyHandle)>& getDraggedColor,
-    CFunc<ImVec4(tinyHandle)>& getNormalHoveredColor, CFunc<ImVec4(tinyHandle)>& getDraggedHoveredColor                 
+    CFunc<ImVec4(tinyHandle)>& getNormalHoveredColor, CFunc<ImVec4(tinyHandle)>& getDraggedHoveredColor
 ) {
     if (!nodeHandle.valid()) return;
 
