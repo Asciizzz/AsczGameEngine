@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <functional>
 
 using namespace tinyVk;
 
@@ -66,137 +67,214 @@ namespace DragDropPayloads {
 }
 
 // ============================================================================
+// GENERALIZED TREE NODE RENDERING - Abstracts common ImGui tree logic
+// ============================================================================
+
+static void RenderGenericNodeHierarchy(
+    tinyHandle nodeHandle,
+    const std::function<bool(tinyHandle)>& isSelected,
+    const std::function<void(tinyHandle)>& setSelected,
+    const std::function<bool(tinyHandle)>& isDragged,
+    const std::function<void(tinyHandle)>& setDragged,
+    const std::function<bool(tinyHandle)>& isExpanded,
+    const std::function<void(tinyHandle, bool)>& setExpanded,
+    const std::function<const char*(tinyHandle)>& getName,
+    const std::function<bool(tinyHandle)>& hasChildren,
+    const std::function<std::vector<tinyHandle>(tinyHandle)>& getChildren,
+    const std::function<void(tinyHandle)>& renderDragSource,
+    const std::function<void(tinyHandle)>& renderDropTarget,
+    const std::function<void(tinyHandle)>& renderContextMenu,
+    const std::function<ImVec4(tinyHandle)>& getNormalColor,
+    const std::function<ImVec4(tinyHandle)>& getDraggedColor,
+    const std::function<ImVec4(tinyHandle)>& getNormalHoveredColor,
+    const std::function<ImVec4(tinyHandle)>& getDraggedHoveredColor,
+    const std::function<void()>& clearDragState,
+    const std::function<void(tinyHandle)>& clearOtherSelection,
+    int depth = 0
+) {
+    if (!nodeHandle.valid()) return;
+
+    ImGui::PushID(static_cast<int>(nodeHandle.index));
+
+    bool hasChild = hasChildren(nodeHandle);
+    bool selected = isSelected(nodeHandle);
+    bool dragged = isDragged(nodeHandle);
+
+    // Tree node flags
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    if (!hasChild) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    if (selected) flags |= ImGuiTreeNodeFlags_Selected;
+
+    // Colors
+    ImVec4 headerColor = dragged ? getDraggedColor(nodeHandle) : getNormalColor(nodeHandle);
+    ImVec4 headerHoveredColor = dragged ? getDraggedHoveredColor(nodeHandle) : getNormalHoveredColor(nodeHandle);
+
+    ImGui::PushStyleColor(ImGuiCol_Header, headerColor);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, headerHoveredColor);
+
+    // Expansion
+    bool forceOpen = isExpanded(nodeHandle);
+    if (forceOpen) ImGui::SetNextItemOpen(true);
+
+    bool nodeOpen = ImGui::TreeNodeEx(getName(nodeHandle), flags);
+
+    // Track expansion
+    if (hasChild && ImGui::IsItemToggledOpen()) {
+        setExpanded(nodeHandle, nodeOpen);
+    }
+
+    ImGui::PopStyleColor(2);
+
+    // Selection
+    if (ImGui::IsItemClicked()) {
+        setSelected(nodeHandle);
+        clearOtherSelection(nodeHandle);
+    }
+
+    // Drag source
+    renderDragSource(nodeHandle);
+
+    // Drop target
+    renderDropTarget(nodeHandle);
+
+    // Context menu
+    renderContextMenu(nodeHandle);
+
+    // Clear drag on release
+    if (dragged && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+        clearDragState();
+    }
+
+    // Render children
+    if (nodeOpen && hasChild) {
+        for (const auto& child : getChildren(nodeHandle)) {
+            RenderGenericNodeHierarchy(
+                child, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+                getName, hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+                getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
+                clearDragState, clearOtherSelection, depth + 1
+            );
+        }
+        ImGui::TreePop();
+    }
+
+    ImGui::PopID();
+}
+
+// ============================================================================
 // HIERARCHY WINDOW - Scene & File Trees
 // ============================================================================
 
 static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, tinyHandle nodeHandle, int depth = 0) {
     if (!scene || !nodeHandle.valid()) return;
     
-    const tinyNodeRT* node = scene->node(nodeHandle);
-    if (!node) return;
-    
-    ImGui::PushID(static_cast<int>(nodeHandle.index));
-    
-    bool hasChildren = !node->childrenHandles.empty();
-    bool isSelected = (HierarchyState::selectedSceneNode == nodeHandle);
-    bool isDragged = (HierarchyState::draggedSceneNode == nodeHandle);
-    
-    // Tree node flags
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    if (!hasChildren) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-    if (isSelected) flags |= ImGuiTreeNodeFlags_Selected;
-    
-    // Highlight if being dragged
-    if (isDragged) {
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8f, 0.6f, 0.2f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.9f, 0.7f, 0.3f, 0.9f));
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.26f, 0.59f, 0.98f, 0.4f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.26f, 0.59f, 0.98f, 0.6f));
-    }
-    
-    // Check if should be expanded
-    bool forceOpen = HierarchyState::isExpanded(nodeHandle, true);
-    if (forceOpen) ImGui::SetNextItemOpen(true);
-    
-    bool nodeOpen = ImGui::TreeNodeEx(node->name.c_str(), flags);
-    
-    // Track expansion state
-    if (hasChildren && ImGui::IsItemToggledOpen()) {
-        HierarchyState::setExpanded(nodeHandle, true, nodeOpen);
-    }
-    
-    ImGui::PopStyleColor(2);
-    
-    // Selection on click
-    if (ImGui::IsItemClicked()) {
-        HierarchyState::selectedSceneNode = nodeHandle;
-        HierarchyState::selectedFileNode = tinyHandle(); // Clear file selection
-    }
-    
-    // Drag source
-    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-        HierarchyState::draggedSceneNode = nodeHandle;
-        DragDropPayloads::SceneNodePayload payload;
-        payload.nodeHandle = nodeHandle;
-        strncpy(payload.nodeName, node->name.c_str(), 63);
-        payload.nodeName[63] = '\0';
-        
-        ImGui::SetDragDropPayload("SCENE_NODE", &payload, sizeof(payload));
-        ImGui::Text("Moving: %s", node->name.c_str());
-        ImGui::EndDragDropSource();
-    }
-    
-    // Drop target - reparent scene nodes or instantiate scenes
-    if (!isDragged && ImGui::BeginDragDropTarget()) {
-        // Accept scene node reparenting
-        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
-            DragDropPayloads::SceneNodePayload* data = (DragDropPayloads::SceneNodePayload*)payload->Data;
-            if (data->nodeHandle != nodeHandle) {
-                // Attempt reparenting
-                if (scene->reparentNode(data->nodeHandle, nodeHandle)) {
-                    HierarchyState::setExpanded(nodeHandle, true, true); // Auto-expand parent
-                    HierarchyState::selectedSceneNode = data->nodeHandle; // Keep selection
-                }
-            }
-            HierarchyState::draggedSceneNode = tinyHandle();
-        }
-        
-        // Accept scene file drops (instantiate scene at this node)
-        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
-            DragDropPayloads::FileNodePayload* data = (DragDropPayloads::FileNodePayload*)payload->Data;
-            
-            // Check if this is a scene file
-            if (data->dataTypeHandle.isType<tinySceneRT>()) {
-                tinyHandle sceneRegistryHandle = data->dataTypeHandle.handle;
-                tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle.valid() ? 
-                    HierarchyState::activeSceneHandle : project->mainSceneHandle;
+    // Define lambdas for scene-specific logic
+    auto isSelected = [](tinyHandle h) { return HierarchyState::selectedSceneNode == h; };
+    auto setSelected = [](tinyHandle h) { HierarchyState::selectedSceneNode = h; };
+    auto isDragged = [](tinyHandle h) { return HierarchyState::draggedSceneNode == h; };
+    auto setDragged = [](tinyHandle h) { HierarchyState::draggedSceneNode = h; };
+    auto isExpanded = [](tinyHandle h) { return HierarchyState::isExpanded(h, true); };
+    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, true, expanded); };
+    auto getName = [scene](tinyHandle h) -> const char* {
+        const tinyNodeRT* node = scene->node(h);
+        return node ? node->name.c_str() : "";
+    };
+    auto hasChildren = [scene](tinyHandle h) -> bool {
+        const tinyNodeRT* node = scene->node(h);
+        return node && !node->childrenHandles.empty();
+    };
+    auto getChildren = [scene](tinyHandle h) -> std::vector<tinyHandle> {
+        const tinyNodeRT* node = scene->node(h);
+        return node ? node->childrenHandles : std::vector<tinyHandle>();
+    };
+    auto renderDragSource = [scene](tinyHandle h) {
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            HierarchyState::draggedSceneNode = h;
+            const tinyNodeRT* node = scene->node(h);
+            if (node) {
+                DragDropPayloads::SceneNodePayload payload;
+                payload.nodeHandle = h;
+                strncpy(payload.nodeName, node->name.c_str(), 63);
+                payload.nodeName[63] = '\0';
                 
-                // Safety: don't drop scene into itself
-                if (sceneRegistryHandle != activeSceneHandle) {
-                    // Instantiate scene at this node
-                    project->addSceneInstance(sceneRegistryHandle, activeSceneHandle, nodeHandle);
-                    HierarchyState::setExpanded(nodeHandle, true, true); // Auto-expand
+                ImGui::SetDragDropPayload("SCENE_NODE", &payload, sizeof(payload));
+                ImGui::Text("Moving: %s", node->name.c_str());
+            }
+            ImGui::EndDragDropSource();
+        }
+    };
+    auto renderDropTarget = [project, scene](tinyHandle h) {
+        if (!HierarchyState::draggedSceneNode.valid() && ImGui::BeginDragDropTarget()) {
+            // Accept scene node reparenting
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
+                DragDropPayloads::SceneNodePayload* data = (DragDropPayloads::SceneNodePayload*)payload->Data;
+                if (data->nodeHandle != h) {
+                    // Attempt reparenting
+                    if (scene->reparentNode(data->nodeHandle, h)) {
+                        HierarchyState::setExpanded(h, true, true); // Auto-expand parent
+                        HierarchyState::selectedSceneNode = data->nodeHandle; // Keep selection
+                    }
+                }
+                HierarchyState::draggedSceneNode = tinyHandle();
+            }
+            
+            // Accept scene file drops (instantiate scene at this node)
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
+                DragDropPayloads::FileNodePayload* data = (DragDropPayloads::FileNodePayload*)payload->Data;
+                
+                // Check if this is a scene file
+                if (data->dataTypeHandle.isType<tinySceneRT>()) {
+                    tinyHandle sceneRegistryHandle = data->dataTypeHandle.handle;
+                    tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle.valid() ? 
+                        HierarchyState::activeSceneHandle : project->mainSceneHandle;
+                    
+                    // Safety: don't drop scene into itself
+                    if (sceneRegistryHandle != activeSceneHandle) {
+                        // Instantiate scene at this node
+                        project->addSceneInstance(sceneRegistryHandle, activeSceneHandle, h);
+                        HierarchyState::setExpanded(h, true, true); // Auto-expand
+                    }
+                }
+                HierarchyState::draggedFileNode = tinyHandle();
+            }
+            
+            ImGui::EndDragDropTarget();
+        }
+    };
+    auto renderContextMenu = [scene](tinyHandle h) {
+        if (ImGui::BeginPopupContextItem()) {
+            const tinyNodeRT* node = scene->node(h);
+            if (node) {
+                ImGui::Text("Node: %s", node->name.c_str());
+                ImGui::Separator();
+
+                if (ImGui::MenuItem("Add Child Node")) {
+                    // Would create new empty node
+                    scene->addNode("NewNode", h);
+                }
+                if (ImGui::MenuItem("Delete") && h != scene->rootHandle()) {
+                    scene->removeNode(h);
+                }
+                if (ImGui::MenuItem("Flatten")) {
+                    scene->flattenNode(h);
                 }
             }
-            HierarchyState::draggedFileNode = tinyHandle();
+            ImGui::EndPopup();
         }
-        
-        ImGui::EndDragDropTarget();
-    }
-    
-    // Clear drag state on mouse release
-    if (HierarchyState::draggedSceneNode.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-        HierarchyState::draggedSceneNode = tinyHandle();
-    }
-    
-    // Context menu
-    if (ImGui::BeginPopupContextItem()) {
-        ImGui::Text("Node: %s", node->name.c_str());
-        ImGui::Separator();
+    };
+    auto getNormalColor = [](tinyHandle) { return ImVec4(0.26f, 0.59f, 0.98f, 0.4f); };
+    auto getDraggedColor = [](tinyHandle) { return ImVec4(0.8f, 0.6f, 0.2f, 0.8f); };
+    auto getNormalHoveredColor = [](tinyHandle) { return ImVec4(0.26f, 0.59f, 0.98f, 0.6f); };
+    auto getDraggedHoveredColor = [](tinyHandle) { return ImVec4(0.9f, 0.7f, 0.3f, 0.9f); };
+    auto clearDragState = []() { HierarchyState::draggedSceneNode = tinyHandle(); };
+    auto clearOtherSelection = [](tinyHandle) { HierarchyState::selectedFileNode = tinyHandle(); };
 
-        if (ImGui::MenuItem("Add Child Node")) {
-            // Would create new empty node
-            scene->addNode("NewNode", nodeHandle);
-        }
-        if (ImGui::MenuItem("Delete") && nodeHandle != scene->rootHandle()) {
-            scene->removeNode(nodeHandle);
-        }
-        if (ImGui::MenuItem("Flatten")) {
-            scene->flattenNode(nodeHandle);
-        }
-        ImGui::EndPopup();
-    }
-    
-    // Render children
-    if (nodeOpen && hasChildren) {
-        for (const auto& childHandle : node->childrenHandles) {
-            RenderSceneNodeHierarchy(project, scene, childHandle, depth + 1);
-        }
-        ImGui::TreePop();
-    }
-    
-    ImGui::PopID();
+    RenderGenericNodeHierarchy(
+        nodeHandle, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+        getName, hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+        getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
+        clearDragState, clearOtherSelection, depth
+    );
 }
 
 static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle, int depth = 0) {
@@ -204,96 +282,80 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
     const tinyFS::Node* node = fs.fNode(fileHandle);
     if (!node) return;
     
-    ImGui::PushID(static_cast<int>(fileHandle.index));
-    
-    bool isFolder = node->isFolder();
-    bool hasChildren = !node->children.empty();
-    bool isSelected = (HierarchyState::selectedFileNode == fileHandle);
-    bool isDragged = (HierarchyState::draggedFileNode == fileHandle);
-    
-    if (isFolder) {
-        // Folder rendering
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-        if (!hasChildren) flags |= ImGuiTreeNodeFlags_Leaf;
-        if (isSelected) flags |= ImGuiTreeNodeFlags_Selected;
-        
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.35f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.4f, 0.45f, 0.9f));
-        
-        bool forceOpen = HierarchyState::isExpanded(fileHandle, false);
-        if (forceOpen) ImGui::SetNextItemOpen(true);
-        
-        bool nodeOpen = ImGui::TreeNodeEx(node->name.c_str(), flags);
-        
-        if (hasChildren && ImGui::IsItemToggledOpen()) {
-            HierarchyState::setExpanded(fileHandle, false, nodeOpen);
-        }
-        
-        ImGui::PopStyleColor(2);
-        
-        if (ImGui::IsItemClicked()) {
-            HierarchyState::selectedFileNode = fileHandle;
-            HierarchyState::selectedSceneNode = tinyHandle();
-        }
-        
-        if (nodeOpen && hasChildren) {
-            for (const auto& childHandle : node->children) {
-                RenderFileNodeHierarchy(project, childHandle, depth + 1);
-            }
-            ImGui::TreePop();
-        }
-    } else {
-        // File rendering
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-        if (isSelected) flags |= ImGuiTreeNodeFlags_Selected;
-        
-        if (isDragged) {
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8f, 0.6f, 0.2f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.9f, 0.7f, 0.3f, 0.9f));
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.5f, 0.3f, 0.6f));
-            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.6f, 0.4f, 0.8f));
-        }
-        
-        ImGui::TreeNodeEx(node->name.c_str(), flags);
-        
-        ImGui::PopStyleColor(2);
-        
-        if (ImGui::IsItemClicked()) {
-            HierarchyState::selectedFileNode = fileHandle;
-            HierarchyState::selectedSceneNode = tinyHandle();
-        }
-        
-        // Drag source for files
-        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-            HierarchyState::draggedFileNode = fileHandle;
-            
-            DragDropPayloads::FileNodePayload payload;
-            payload.fileHandle = fileHandle;
-            payload.dataTypeHandle = fs.fTypeHandle(fileHandle); // Get typeHandle from file
-            strncpy(payload.fileName, node->name.c_str(), 63);
-            payload.fileName[63] = '\0';
-            
-            ImGui::SetDragDropPayload("FILE_NODE", &payload, sizeof(payload));
-            ImGui::Text("Dragging: %s", node->name.c_str());
-            
-            // Show type info if has data
-            if (payload.dataTypeHandle.valid()) {
-                if (payload.dataTypeHandle.isType<tinySceneRT>()) {
-                    ImGui::Text("[Scene]");
+    // Define lambdas for file-specific logic
+    auto isSelected = [](tinyHandle h) { return HierarchyState::selectedFileNode == h; };
+    auto setSelected = [](tinyHandle h) { HierarchyState::selectedFileNode = h; };
+    auto isDragged = [](tinyHandle h) { return HierarchyState::draggedFileNode == h; };
+    auto setDragged = [](tinyHandle h) { HierarchyState::draggedFileNode = h; };
+    auto isExpanded = [](tinyHandle h) { return HierarchyState::isExpanded(h, false); };
+    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, false, expanded); };
+    auto getName = [project](tinyHandle h) -> const char* {
+        const tinyFS& fs = project->fs();
+        const tinyFS::Node* node = fs.fNode(h);
+        return node ? node->name.c_str() : "";
+    };
+    auto hasChildren = [project](tinyHandle h) -> bool {
+        const tinyFS& fs = project->fs();
+        const tinyFS::Node* node = fs.fNode(h);
+        return node && node->isFolder() && !node->children.empty();
+    };
+    auto getChildren = [project](tinyHandle h) -> std::vector<tinyHandle> {
+        const tinyFS& fs = project->fs();
+        const tinyFS::Node* node = fs.fNode(h);
+        return node && node->isFolder() ? node->children : std::vector<tinyHandle>();
+    };
+    auto renderDragSource = [project](tinyHandle h) {
+        const tinyFS& fs = project->fs();
+        const tinyFS::Node* node = fs.fNode(h);
+        if (node && !node->isFolder()) {  // Only files can be dragged
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                HierarchyState::draggedFileNode = h;
+                
+                DragDropPayloads::FileNodePayload payload;
+                payload.fileHandle = h;
+                payload.dataTypeHandle = fs.fTypeHandle(h); // Get typeHandle from file
+                strncpy(payload.fileName, node->name.c_str(), 63);
+                payload.fileName[63] = '\0';
+                
+                ImGui::SetDragDropPayload("FILE_NODE", &payload, sizeof(payload));
+                ImGui::Text("Dragging: %s", node->name.c_str());
+                
+                // Show type info if has data
+                if (payload.dataTypeHandle.valid()) {
+                    if (payload.dataTypeHandle.isType<tinySceneRT>()) {
+                        ImGui::Text("[Scene]");
+                    }
                 }
+                
+                ImGui::EndDragDropSource();
             }
-            
-            ImGui::EndDragDropSource();
         }
-        
-        // Clear drag state on release
-        if (HierarchyState::draggedFileNode.valid() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            HierarchyState::draggedFileNode = tinyHandle();
-        }
-    }
-    
-    ImGui::PopID();
+    };
+    auto renderDropTarget = [](tinyHandle) {};  // No drop target for files
+    auto renderContextMenu = [](tinyHandle) {};  // No context menu for files
+    auto getNormalColor = [project](tinyHandle h) {
+        const tinyFS& fs = project->fs();
+        const tinyFS::Node* node = fs.fNode(h);
+        if (node && node->isFolder()) return ImVec4(0.3f, 0.3f, 0.35f, 0.8f);
+        else return ImVec4(0.2f, 0.5f, 0.3f, 0.6f);
+    };
+    auto getDraggedColor = [](tinyHandle) { return ImVec4(0.8f, 0.6f, 0.2f, 0.8f); };
+    auto getNormalHoveredColor = [project](tinyHandle h) {
+        const tinyFS& fs = project->fs();
+        const tinyFS::Node* node = fs.fNode(h);
+        if (node && node->isFolder()) return ImVec4(0.4f, 0.4f, 0.45f, 0.9f);
+        else return ImVec4(0.3f, 0.6f, 0.4f, 0.8f);
+    };
+    auto getDraggedHoveredColor = [](tinyHandle) { return ImVec4(0.9f, 0.7f, 0.3f, 0.9f); };
+    auto clearDragState = []() { HierarchyState::draggedFileNode = tinyHandle(); };
+    auto clearOtherSelection = [](tinyHandle) { HierarchyState::selectedSceneNode = tinyHandle(); };
+
+    RenderGenericNodeHierarchy(
+        fileHandle, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+        getName, hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+        getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
+        clearDragState, clearOtherSelection, depth
+    );
 }
 
 // ============================================================================
