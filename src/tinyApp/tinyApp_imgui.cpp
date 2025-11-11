@@ -75,16 +75,15 @@ static void RenderGenericNodeHierarchy(
     tinyHandle nodeHandle, int depth,
     // Lambdas for node state management
     CFunc<const char*(tinyHandle)>& getName,
-    CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected,
-    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void(tinyHandle)>& setDragged,
+    CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected, CFunc<void(tinyHandle)>& clearOtherSelection,
+    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void(tinyHandle)>& setDragged,  CFunc<void()>& clearDragState,
     CFunc<bool(tinyHandle)>& isExpanded,  CFunc<void(tinyHandle, bool)>& setExpanded,
     CFunc<bool(tinyHandle)>& hasChildren, CFunc<std::vector<tinyHandle>(tinyHandle)>& getChildren,
     CFunc<void(tinyHandle)>& renderDragSource,
     CFunc<void(tinyHandle)>& renderDropTarget,
     CFunc<void(tinyHandle)>& renderContextMenu,
     CFunc<ImVec4(tinyHandle)>& getNormalColor,        CFunc<ImVec4(tinyHandle)>& getDraggedColor,
-    CFunc<ImVec4(tinyHandle)>& getNormalHoveredColor, CFunc<ImVec4(tinyHandle)>& getDraggedHoveredColor,
-    CFunc<void()>& clearDragState,                    CFunc<void(tinyHandle)>& clearOtherSelection
+    CFunc<ImVec4(tinyHandle)>& getNormalHoveredColor, CFunc<ImVec4(tinyHandle)>& getDraggedHoveredColor                 
 ) {
     if (!nodeHandle.valid()) return;
 
@@ -127,10 +126,10 @@ static void RenderGenericNodeHierarchy(
         for (const auto& child : getChildren(nodeHandle)) {
             RenderGenericNodeHierarchy(
                 child, depth + 1,
-                getName, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+                getName, isSelected, setSelected, clearOtherSelection,
+                isDragged, setDragged, clearDragState, isExpanded, setExpanded,
                 hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
-                getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
-                clearDragState, clearOtherSelection
+                getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
             );
         }
         ImGui::TreePop();
@@ -147,18 +146,23 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
     if (!scene) return;
 
     tinyFS& fs = project->fs();
-    
-    // Define lambdas for scene-specific logic
-    auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedSceneNode == h; };
-    auto setSelected = [](tinyHandle h) { HierarchyState::selectedSceneNode = h; };
-    auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedSceneNode == h; };
-    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedSceneNode = h; };
-    auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(h, true); };
-    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, true, expanded); };
+
     auto getName     = [scene](tinyHandle h) -> const char* {
         const tinyNodeRT* node = scene->node(h);
         return node ? node->name.c_str() : "";
     };
+
+    auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedSceneNode == h; };
+    auto setSelected = [](tinyHandle h) { HierarchyState::selectedSceneNode = h; };
+    auto clearOtherSelection    = [](tinyHandle) { HierarchyState::selectedFileNode = tinyHandle(); };
+
+    auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedSceneNode == h; };
+    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedSceneNode = h; };
+    auto clearDragState  = []() { HierarchyState::draggedSceneNode = tinyHandle(); };
+
+    auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(h, true); };
+    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, true, expanded); };
+
     auto hasChildren = [scene](tinyHandle h) -> bool {
         const tinyNodeRT* node = scene->node(h);
         return node && !node->childrenHandles.empty();
@@ -179,6 +183,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
         }
         return std::vector<tinyHandle>();
     };
+
     auto renderDragSource = [scene](tinyHandle h) {
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
             HierarchyState::draggedSceneNode = h;
@@ -245,13 +250,10 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 
                 ImGui::Separator();
 
-                // Get a copy of children to avoid modifying while iterating
-                std::vector<tinyHandle> children = node->childrenHandles;
-                if (ImGui::MenuItem("Clear Children")) {
+                if (ImGui::MenuItem("Clear")) {
+                    // Get a copy of children to avoid modifying while iterating
+                    std::vector<tinyHandle> children = node->childrenHandles;
                     for (const auto& childHandle : children) scene->removeNode(childHandle);
-                }
-                if (ImGui::MenuItem("Flatten Children")) {
-                    for (const auto& childHandle : children) scene->flattenNode(childHandle);
                 }
 
                 ImGui::Separator();
@@ -262,50 +264,50 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
             ImGui::EndPopup();
         }
     };
+
     auto getNormalColor  = [](tinyHandle) { return ImVec4(0.26f, 0.59f, 0.98f, 0.4f); };
     auto getDraggedColor = [](tinyHandle) { return ImVec4(0.8f, 0.6f, 0.2f, 0.8f); };
     auto getNormalHoveredColor  = [](tinyHandle) { return ImVec4(0.26f, 0.59f, 0.98f, 0.6f); };
     auto getDraggedHoveredColor = [](tinyHandle) { return ImVec4(0.9f, 0.7f, 0.3f, 0.9f); };
-    auto clearDragState  = []() { HierarchyState::draggedSceneNode = tinyHandle(); };
-    auto clearOtherSelection    = [](tinyHandle) { HierarchyState::selectedFileNode = tinyHandle(); };
 
     RenderGenericNodeHierarchy(
         scene->rootHandle(), 0,
-        getName, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+        getName, isSelected, setSelected, clearOtherSelection,
+        isDragged, setDragged, clearDragState, isExpanded, setExpanded,
         hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
-        getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
-        clearDragState, clearOtherSelection
+        getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
     );
 }
 
 static void RenderFileNodeHierarchy(tinyProject* project) {
     tinyFS& fs = project->fs();
 
-    // Define lambdas for file-specific logic
-    auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedFileNode == h; };
-    auto setSelected = [](tinyHandle h) { HierarchyState::selectedFileNode = h; };
-    auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedFileNode == h; };
-    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedFileNode = h; };
-    auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(h, false); };
-    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, false, expanded); };
     auto getName     = [&fs](tinyHandle h) -> const char* {
         const tinyFS::Node* node = fs.fNode(h);
         return node ? node->name.c_str() : "";
     };
+
+    auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedFileNode == h; };
+    auto setSelected = [](tinyHandle h) { HierarchyState::selectedFileNode = h; };
+    auto clearOtherSelection = [](tinyHandle) { HierarchyState::selectedSceneNode = tinyHandle(); };
+
+    auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedFileNode == h; };
+    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedFileNode = h; };
+    auto clearDragState = []() { HierarchyState::draggedFileNode = tinyHandle(); };
+
+    auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(h, false); };
+    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, false, expanded); };
+
     auto hasChildren = [&fs](tinyHandle h) -> bool {
         const tinyFS::Node* node = fs.fNode(h);
         return node && node->isFolder() && !node->children.empty();
     };
     auto getChildren = [&fs](tinyHandle h) -> std::vector<tinyHandle> {
-        // const tinyFS::Node* node = fs.fNode(h);
-        // // return node && node->isFolder() ? node->children : std::vector<tinyHandle>();
-
         if (const tinyFS::Node* node = fs.fNode(h)) {
             std::vector<tinyHandle> children = node->children;
 
             // Sort by folder first, then extension type then name (both alphabetically)
             std::sort(children.begin(), children.end(), [&fs](tinyHandle a, tinyHandle b) {
-                // return fs.fTypeExt(a) < fs.fTypeExt(b);
                 tinyFS::TypeExt typeA = fs.fTypeExt(a);
                 tinyFS::TypeExt typeB = fs.fTypeExt(b);
 
@@ -316,6 +318,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         }
         return std::vector<tinyHandle>();
     };
+
     auto renderDragSource = [&fs](tinyHandle h) {
         if (const tinyFS::Node* node = fs.fNode(h)) {
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
@@ -370,8 +373,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             ImGui::EndPopup();
         }
     };
-    auto getNormalColor = [project](tinyHandle h) {
-        const tinyFS& fs = project->fs();
+    auto getNormalColor = [&fs](tinyHandle h) {
         const tinyFS::Node* node = fs.fNode(h);
         if (node && node->isFolder()) return ImVec4(0.3f, 0.3f, 0.35f, 0.8f);
 
@@ -382,8 +384,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         return ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 0.8f);
     };
     auto getDraggedColor = [](tinyHandle) { return ImVec4(0.8f, 0.6f, 0.2f, 0.8f); };
-    auto getNormalHoveredColor = [project](tinyHandle h) {
-        const tinyFS& fs = project->fs();
+    auto getNormalHoveredColor = [&fs](tinyHandle h) {
         const tinyFS::Node* node = fs.fNode(h);
         if (node && node->isFolder()) return ImVec4(0.4f, 0.4f, 0.45f, 0.9f);
 
@@ -394,15 +395,13 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         return ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 0.9f);
     };
     auto getDraggedHoveredColor = [](tinyHandle) { return ImVec4(0.9f, 0.7f, 0.3f, 0.9f); };
-    auto clearDragState = []() { HierarchyState::draggedFileNode = tinyHandle(); };
-    auto clearOtherSelection = [](tinyHandle) { HierarchyState::selectedSceneNode = tinyHandle(); };
 
     RenderGenericNodeHierarchy(
         fs.rootHandle(), 0,
-        getName, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
+        getName, isSelected, setSelected, clearOtherSelection,
+        isDragged, setDragged, clearDragState, isExpanded, setExpanded,
         hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
-        getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor,
-        clearDragState, clearOtherSelection
+        getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
     );
 }
 
