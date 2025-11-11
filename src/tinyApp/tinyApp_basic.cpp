@@ -17,13 +17,6 @@ tinyApp::tinyApp(const char* title, uint32_t width, uint32_t height)
 }
 
 tinyApp::~tinyApp() {
-    if (imguiWrapper) {
-        imguiWrapper->cleanup();
-    }
-    cleanup();
-}
-
-void tinyApp::cleanup() {
     // No clean up needed for now
 }
 
@@ -107,18 +100,6 @@ void tinyApp::initComponents() {
     // Load post-process effects from JSON configuration
     renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
 
-    // Initialize ImGui - do this after renderer is fully set up
-    imguiWrapper = MakeUnique<tinyImGui>();
-
-    // ImGui now creates its own render pass using swapchain and depth info
-    bool imguiInitSuccess = imguiWrapper->init(
-        windowManager->window,
-        instanceVk->instance,
-        deviceVk.get(),
-        renderer->getSwapChain(),
-        renderer->getDepthManager()
-    );
-
     windowManager->maximizeWindow();
     checkWindowResize();
 }
@@ -136,13 +117,6 @@ bool tinyApp::checkWindowResize() {
 
     // Handle window resize in renderer (now handles depth resources internally)
     renderer->handleWindowResize(windowManager->window);
-
-    // Update ImGui render pass after renderer recreates render passes  
-    if (imguiWrapper) {
-        imguiWrapper->updateRenderPass(renderer->getSwapChain(), renderer->getDepthManager());
-        // Set up ImGui render targets with updated framebuffers
-        renderer->setupImGuiRenderTargets(imguiWrapper.get());
-    }
 
     // Recreate all pipelines with offscreen render pass for post-processing
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
@@ -170,10 +144,9 @@ void tinyApp::mainLoop() {
         // Handle SDL events for both window manager and ImGui
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            // Let ImGui process the event first
-            imguiWrapper->processEvent(&event);
-            
-            // Then handle our own events
+            // // Let ImGui process the event first
+            // imguiWrapper->processEvent(&event);
+
             switch (event.type) {
                 case SDL_QUIT:
                     winManager.shouldCloseFlag = true;
@@ -264,7 +237,7 @@ void tinyApp::mainLoop() {
 
 // =================================
 
-        imguiWrapper->newFrame();
+        // imguiWrapper->newFrame();
         project->updateGlobal(rendererRef.getCurrentFrame());
 
         uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
@@ -287,7 +260,7 @@ void tinyApp::mainLoop() {
             );
 
             // End frame with ImGui rendering integrated
-            rendererRef.endFrame(imageIndex, imguiWrapper.get());
+            rendererRef.endFrame(imageIndex);
             rendererRef.processPendingRemovals(project.get(), activeScene);
         }
 

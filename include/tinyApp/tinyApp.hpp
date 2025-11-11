@@ -113,11 +113,6 @@ private:
     // Functions that actually do things
     void initComponents();
     void mainLoop();
-    void cleanup();
 
     bool checkWindowResize();
-
-// Everything below is hell reincarnate
-
-    UniquePtr<tinyImGui> imguiWrapper; // ImGui integration
 };

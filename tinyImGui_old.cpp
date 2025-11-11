@@ -14,10 +14,8 @@ bool tinyImGui::init(SDL_Window* window, VkInstance instance, const tinyVk::Devi
     }
 
     this->deviceVk = deviceVk;
-    
-    // Create our own render pass for ImGui overlay  
+
     createRenderPass(swapchain, depthImage);
-    // Note: render targets will be created later when we have access to framebuffers
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();

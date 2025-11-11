@@ -131,20 +131,6 @@ void Renderer::createRenderTargets() {
     }
 }
 
-void Renderer::setupImGuiRenderTargets(tinyImGui* imguiWrapper) {
-    if (!imguiWrapper) return;
-    
-    // Convert framebuffers to vector of VkFramebuffer handles
-    std::vector<VkFramebuffer> framebufferHandles;
-    for (const auto& fb : framebuffers) {
-        framebufferHandles.push_back(fb->get());
-    }
-    
-    imguiWrapper->updateRenderTargets(swapchain.get(), depthImage.get(), framebufferHandles);
-}
-
-
-
 VkRenderPass Renderer::getMainRenderPass() const {
     return mainRenderPass ? mainRenderPass->get() : VK_NULL_HANDLE;
 }
@@ -358,7 +344,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 
 
 // End frame: finalize command buffer, submit, and present
-void Renderer::endFrame(uint32_t imageIndex, tinyImGui* imguiWrapper) {
+void Renderer::endFrame(uint32_t imageIndex) {
     if (imageIndex == UINT32_MAX) return;
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
@@ -374,33 +360,33 @@ void Renderer::endFrame(uint32_t imageIndex, tinyImGui* imguiWrapper) {
     postProcess->executeEffects(currentCmd, currentFrame);
     postProcess->executeFinalBlit(currentCmd, currentFrame, imageIndex);
 
-    // Render ImGui if provided (before ending command buffer)
-    if (imguiWrapper) {
-        // Transition swapchain image from present to color attachment
-        VkImageMemoryBarrier toColorAttachment{};
-        toColorAttachment.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        toColorAttachment.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        toColorAttachment.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        toColorAttachment.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        toColorAttachment.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        toColorAttachment.image = swapchain->getImage(imageIndex);
-        toColorAttachment.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        toColorAttachment.subresourceRange.baseMipLevel = 0;
-        toColorAttachment.subresourceRange.levelCount = 1;
-        toColorAttachment.subresourceRange.baseArrayLayer = 0;
-        toColorAttachment.subresourceRange.layerCount = 1;
-        toColorAttachment.srcAccessMask = 0;
-        toColorAttachment.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    // // Render ImGui if provided (before ending command buffer)
+    // if (imguiWrapper) {
+    //     // Transition swapchain image from present to color attachment
+    //     VkImageMemoryBarrier toColorAttachment{};
+    //     toColorAttachment.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    //     toColorAttachment.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    //     toColorAttachment.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    //     toColorAttachment.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //     toColorAttachment.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    //     toColorAttachment.image = swapchain->getImage(imageIndex);
+    //     toColorAttachment.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    //     toColorAttachment.subresourceRange.baseMipLevel = 0;
+    //     toColorAttachment.subresourceRange.levelCount = 1;
+    //     toColorAttachment.subresourceRange.baseArrayLayer = 0;
+    //     toColorAttachment.subresourceRange.layerCount = 1;
+    //     toColorAttachment.srcAccessMask = 0;
+    //     toColorAttachment.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-        vkCmdPipelineBarrier(currentCmd,
-                            VK_PIPELINE_STAGE_TRANSFER_BIT,
-                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                            0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
+    //     vkCmdPipelineBarrier(currentCmd,
+    //                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+    //                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    //                         0, 0, nullptr, 0, nullptr, 1, &toColorAttachment);
 
-        // Use tinyImGui's own render target
-        VkFramebuffer framebuffer = getFrameBuffer(imageIndex);
-        imguiWrapper->renderToTarget(imageIndex, currentCmd, framebuffer);
-    }
+    //     // Use tinyImGui's own render target
+    //     VkFramebuffer framebuffer = getFrameBuffer(imageIndex);
+    //     imguiWrapper->renderToTarget(imageIndex, currentCmd, framebuffer);
+    // }
 
     if (vkEndCommandBuffer(currentCmd) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
