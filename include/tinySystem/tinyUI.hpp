@@ -121,7 +121,7 @@ struct Theme {
     float windowRounding = 0.0f;
     float windowBorderSize = 1.0f;
 
-    float fontScale = 1.5f;
+    float fontScale = 1.4f;
 };
 
 // ========================================

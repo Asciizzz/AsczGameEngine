@@ -236,18 +236,31 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
     };
     auto renderContextMenu = [scene](tinyHandle h) {
         if (ImGui::BeginPopupContextItem()) {
-            const tinyNodeRT* node = scene->node(h);
-            if (node) {
+            if (const tinyNodeRT* node = scene->node(h)) {
                 ImGui::Text("Node: %s", node->name.c_str());
                 ImGui::Separator();
 
                 if (ImGui::MenuItem("Add Child")) scene->addNode("NewNode", h);
+
+                ImGui::Separator();
                 if (ImGui::MenuItem("Delete"))    scene->removeNode(h); // Already have safeguard
-                            if (ImGui::MenuItem("Flatten"))   scene->flattenNode(h);
-            ImGui::Separator();
-            if (ImGui::MenuItem("Properties")) {
-                // TODO: open properties window
-            }
+                if (ImGui::MenuItem("Flatten"))   scene->flattenNode(h);
+
+                ImGui::Separator();
+
+                // Get a copy of children to avoid modifying while iterating
+                std::vector<tinyHandle> children = node->childrenHandles;
+                if (ImGui::MenuItem("Clear Children")) {
+                    for (const auto& childHandle : children) scene->removeNode(childHandle);
+                }
+                if (ImGui::MenuItem("Flatten Children")) {
+                    for (const auto& childHandle : children) scene->flattenNode(childHandle);
+                }
+
+                ImGui::Separator();
+                if (ImGui::MenuItem("Properties")) {
+                    // TODO: open properties window
+                }
             }
             ImGui::EndPopup();
         }
@@ -441,7 +454,7 @@ void tinyApp::renderUI() {
     // ===== HIERARCHY WINDOW - Scene & File System =====
     static bool showHierarchy = true;
     if (showHierarchy) {
-        tinyUI::Exec::Begin("Hierarchy", &showHierarchy);
+        tinyUI::Exec::Begin("Hierarchy", &showHierarchy, ImGuiWindowFlags_NoScrollbar);
 
         // Get active scene
         tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
@@ -453,13 +466,15 @@ void tinyApp::renderUI() {
             ImGui::Text("Active Scene: [Handle: %u.%u]", activeSceneHandle.index, activeSceneHandle.version);
             ImGui::Separator();
 
+            float fontScale = tinyUI::Exec::GetTheme().fontScale;
+
             // Get available height for split view
             float availHeight = ImGui::GetContentRegionAvail().y;
             float splitterHeight = 4.0f;
             
-            float topHeight = availHeight * HierarchyState::splitterPos - splitterHeight * 0.5f;
-            float bottomHeight = availHeight * (1.0f - HierarchyState::splitterPos) - splitterHeight * 0.5f;
-            
+            float topHeight = availHeight * HierarchyState::splitterPos - splitterHeight;
+            float bottomHeight = availHeight * (1.0f - HierarchyState::splitterPos) - splitterHeight;
+
             // ===== TOP: SCENE HIERARCHY =====
             ImGui::Text("Scene Hierarchy");
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
