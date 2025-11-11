@@ -50,12 +50,12 @@ namespace HierarchyState {
 // ============================================================================
 
 namespace DragDropPayloads {
-    struct SceneNodePayload {
+    struct SceneNode {
         tinyHandle nodeHandle;
         char nodeName[64];
     };
     
-    struct FileNodePayload {
+    struct FileNode {
         tinyHandle fileHandle;
         char fileName[64];
     };
@@ -189,7 +189,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
             HierarchyState::draggedSceneNode = h;
             if (const tinyNodeRT* node = scene->node(h)) {
-                DragDropPayloads::SceneNodePayload payload;
+                DragDropPayloads::SceneNode payload;
                 payload.nodeHandle = h;
                 strncpy(payload.nodeName, node->name.c_str(), 63);
                 payload.nodeName[63] = '\0';
@@ -204,7 +204,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
         if (!HierarchyState::draggedSceneNode.valid() && ImGui::BeginDragDropTarget()) {
             // Accept scene node reparenting
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
-                DragDropPayloads::SceneNodePayload* data = (DragDropPayloads::SceneNodePayload*)payload->Data;
+                DragDropPayloads::SceneNode* data = (DragDropPayloads::SceneNode*)payload->Data;
                 if (scene->reparentNode(data->nodeHandle, h)) {
                     HierarchyState::setExpanded(h, true, true); // Auto-expand parent
                     HierarchyState::selectedSceneNode = data->nodeHandle; // Keep selection
@@ -214,7 +214,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
             
             // Accept scene file drops (instantiate scene at this node)
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
-                DragDropPayloads::FileNodePayload* data = (DragDropPayloads::FileNodePayload*)payload->Data;
+                DragDropPayloads::FileNode* data = (DragDropPayloads::FileNode*)payload->Data;
 
                 // Check if this is a scene file
                 typeHandle fTypeHdl = fs.fTypeHandle(data->fileHandle);
@@ -328,7 +328,7 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                 HierarchyState::draggedFileNode = h;
 
-                DragDropPayloads::FileNodePayload payload;
+                DragDropPayloads::FileNode payload;
                 payload.fileHandle = h;
                 strncpy(payload.fileName, node->name.c_str(), 63);
                 payload.fileName[63] = '\0';
