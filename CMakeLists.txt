@@ -102,7 +102,6 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyVk/Pipeline/Pipeline_core.cpp
     src/tinyVk/Pipeline/Pipeline_raster.cpp
     src/tinyVk/Pipeline/Pipeline_compute.cpp
-    src/tinyVk/Pipeline/Pipeline_manager.cpp
 
     src/tinyVk/Render/FrameBuffer.cpp
     src/tinyVk/Render/DepthImage.cpp

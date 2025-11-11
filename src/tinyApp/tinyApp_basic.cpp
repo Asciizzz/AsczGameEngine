@@ -27,7 +27,6 @@ void tinyApp::run() {
 }
 
 void tinyApp::initComponents() {
-
     windowManager = MakeUnique<tinyWindow>(appTitle, appWidth, appHeight);
     fpsManager = MakeUnique<tinyChrono>();
 
@@ -37,7 +36,6 @@ void tinyApp::initComponents() {
 
     deviceVk = MakeUnique<Device>(instanceVk->instance, instanceVk->surface);
 
-    // So we dont have to write these things over and over again
     VkDevice device = deviceVk->device;
     VkPhysicalDevice pDevice = deviceVk->pDevice;
 
@@ -56,27 +54,10 @@ void tinyApp::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    pipelineManager = MakeUnique<PipelineManager>();
-    pipelineManager->loadPipelinesFromJson("Config/pipelines.json");
-
-    // Initialize all pipelines with the manager using named layouts
-
     const tinySharedRes& sharedRes = project->sharedRes();
+    VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
 
-    UnorderedMap<std::string, VkDescriptorSetLayout> namedLayouts = {
-        {"global", project->descSLayout_Global()},
-        {"material", sharedRes.matDescLayout()},
-        {"skin", sharedRes.skinDescLayout()},
-        {"morph_ds", sharedRes.mrphDsDescLayout()},
-        {"morph_ws", sharedRes.mrphWsDescLayout()}
-    };
-    
-    // Create named vertex inputs
-    UnorderedMap<std::string, VertexInputVk> VertexInputVks;
-    
-    // None - no vertex input (for fullscreen quads, etc.)
-    VertexInputVks["None"] = VertexInputVk();
-
+    // Get vertex layouts
     auto vstaticLayout = tinyVertex::Static::layout();
     auto vstaticBind = vstaticLayout.bindingDesc();
     auto vstaticAttrs = vstaticLayout.attributeDescs();
@@ -85,17 +66,69 @@ void tinyApp::initComponents() {
     auto vriggedBind = vriggedLayout.bindingDesc();
     auto vriggedAttrs = vriggedLayout.attributeDescs();
 
-    VertexInputVks["TestRigged"] = VertexInputVk()
-        .setBindings({ vriggedBind })
-        .setAttributes({ vriggedAttrs });
+    // ===== Pipeline 1: Sky =====
+    RasterCfg skyCfg;
+    skyCfg.renderPass = offscreenRenderPass;
+    skyCfg.setLayouts = { project->descSLayout_Global() };
+    skyCfg.withShaders("Shaders/bin/Sky/sky.vert.spv", "Shaders/bin/Sky/sky.frag.spv")
+        .withCulling(CullMode::None)
+        .withDepthTest(false, VK_COMPARE_OP_LESS)
+        .withDepthWrite(false)
+        .withBlending(BlendMode::None);
+    // No vertex input needed for sky (fullscreen quad)
+    
+    pipelineSky = MakeUnique<PipelineRaster>(device, skyCfg);
 
-    VertexInputVks["TestStatic"] = VertexInputVk()
-        .setBindings({ vstaticBind })
-        .setAttributes({ vstaticAttrs });
+    // ===== Pipeline 2: Rigged Mesh =====
+    RasterCfg riggedCfg;
+    riggedCfg.renderPass = offscreenRenderPass;
+    riggedCfg.setLayouts = { 
+        project->descSLayout_Global(),
+        sharedRes.matDescLayout(),
+        sharedRes.skinDescLayout(),
+        sharedRes.mrphDsDescLayout(),
+        sharedRes.mrphWsDescLayout()
+    };
+    
+    // Push constants for rigged mesh (80 bytes)
+    VkPushConstantRange riggedPushConstant{};
+    riggedPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    riggedPushConstant.offset = 0;
+    riggedPushConstant.size = 80;
+    riggedCfg.pushConstantRanges = { riggedPushConstant };
+    
+    riggedCfg.withShaders("Shaders/bin/Rasterize/TestRigged.vert.spv", "Shaders/bin/Rasterize/TestSingle.frag.spv")
+        .withVertexInput({ vriggedBind }, { vriggedAttrs })
+        .withCulling(CullMode::Back)
+        .withDepthTest(true, VK_COMPARE_OP_LESS)
+        .withDepthWrite(true)
+        .withBlending(BlendMode::None);
+    
+    pipelineRigged = MakeUnique<PipelineRaster>(device, riggedCfg);
 
-    // Use offscreen render pass for pipeline creation
-    VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
-    PIPELINE_INIT(pipelineManager.get(), device, offscreenRenderPass, namedLayouts, VertexInputVks);
+    // ===== Pipeline 3: Static Mesh =====
+    RasterCfg staticCfg;
+    staticCfg.renderPass = offscreenRenderPass;
+    staticCfg.setLayouts = { 
+        project->descSLayout_Global(),
+        sharedRes.matDescLayout()
+    };
+    
+    // Push constants for static mesh (80 bytes)
+    VkPushConstantRange staticPushConstant{};
+    staticPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    staticPushConstant.offset = 0;
+    staticPushConstant.size = 80;
+    staticCfg.pushConstantRanges = { staticPushConstant };
+    
+    staticCfg.withShaders("Shaders/bin/Rasterize/TestStatic.vert.spv", "Shaders/bin/Rasterize/TestSingle.frag.spv")
+        .withVertexInput({ vstaticBind }, { vstaticAttrs })
+        .withCulling(CullMode::Back)
+        .withDepthTest(true, VK_COMPARE_OP_LESS)
+        .withDepthWrite(true)
+        .withBlending(BlendMode::None);
+    
+    pipelineStatic = MakeUnique<PipelineRaster>(device, staticCfg);
 
     // Load post-process effects from JSON configuration
     renderer->loadPostProcessEffectsFromJson("Config/postprocess.json");
@@ -118,9 +151,18 @@ bool tinyApp::checkWindowResize() {
     // Handle window resize in renderer (now handles depth resources internally)
     renderer->handleWindowResize(windowManager->window);
 
-    // Recreate all pipelines with offscreen render pass for post-processing
+    // Recreate all three pipelines with offscreen render pass for post-processing
     VkRenderPass offscreenRenderPass = renderer->getOffscreenRenderPass();
-    pipelineManager->recreateAllPipelines(offscreenRenderPass);
+    
+    // Update render pass for all pipeline configs
+    pipelineSky->cfg.renderPass = offscreenRenderPass;
+    pipelineRigged->cfg.renderPass = offscreenRenderPass;
+    pipelineStatic->cfg.renderPass = offscreenRenderPass;
+    
+    // Recreate pipelines
+    pipelineSky->recreate();
+    pipelineRigged->recreate();
+    pipelineStatic->recreate();
 
     return true;
 }
@@ -250,12 +292,12 @@ void tinyApp::mainLoop() {
         if (imageIndex != UINT32_MAX) {
             // Update global UBO buffer from frame index
 
-            rendererRef.drawSky(project.get(), PIPELINE_INSTANCE(pipelineManager.get(), "Sky"));
+            rendererRef.drawSky(project.get(), pipelineSky.get());
 
             rendererRef.drawScene(
                 project.get(), activeScene,
-                PIPELINE_INSTANCE(pipelineManager.get(), "TestRigged"),
-                PIPELINE_INSTANCE(pipelineManager.get(), "TestStatic")
+                pipelineRigged.get(),
+                pipelineStatic.get()
             );
 
             // End frame with ImGui rendering integrated

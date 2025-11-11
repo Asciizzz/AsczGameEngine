@@ -8,7 +8,7 @@
 
 #include "tinyVk/System/CmdBuffer.hpp"
 #include "tinyVk/Render/Swapchain.hpp"
-#include "tinyVk/Pipeline/Pipeline_include.hpp"
+#include "tinyVk/Pipeline/Pipeline_raster.hpp"
 #include "tinyVk/Render/PostProcess.hpp"
 #include "tinyVk/Render/DepthImage.hpp"
 #include "tinyVk/Render/RenderPass.hpp"

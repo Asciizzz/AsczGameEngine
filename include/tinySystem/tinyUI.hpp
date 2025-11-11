@@ -15,9 +15,6 @@
 #include <SDL2/SDL.h>
 #include <functional>
 
-// class tinyImGui {
-// };
-
-namespace tinyImGui {
+namespace tinyUI {
 
 };
