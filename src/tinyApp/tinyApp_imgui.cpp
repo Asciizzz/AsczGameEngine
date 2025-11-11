@@ -56,8 +56,7 @@ namespace DragDropPayloads {
     };
     
     struct FileNodePayload {
-        tinyHandle fileHandle;       // File node handle (fnodes_ pool)
-        typeHandle dataTypeHandle;   // Registry data handle (if has data)
+        tinyHandle fileHandle;
         char fileName[64];
     };
 }
@@ -132,17 +131,7 @@ static void RenderGenericNodeHierarchy(
     if (dragged && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) clearDragState();
 
     if (nodeOpen && hasChild) {
-        std::vector<tinyHandle> children = getChildren(nodeHandle);
-
-        // Sort by having children first, then alphabetically (works for both scene and file nodes)
-        std::sort(children.begin(), children.end(), [&](tinyHandle a, tinyHandle b) {
-            bool aHasChildren = hasChildren(a);
-            bool bHasChildren = hasChildren(b);
-            if (aHasChildren != bHasChildren) return aHasChildren > bHasChildren;
-            return std::string(getName(a)) < std::string(getName(b));
-        });
-
-        for (const auto& child : children) {
+        for (const auto& child : getChildren(nodeHandle)) {
             RenderGenericNodeHierarchy(
                 child, isSelected, setSelected, isDragged, setDragged, isExpanded, setExpanded,
                 getName, hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
@@ -162,6 +151,8 @@ static void RenderGenericNodeHierarchy(
 
 static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, tinyHandle nodeHandle, int depth = 0) {
     if (!scene || !nodeHandle.valid()) return;
+
+    tinyFS& fs = project->fs();
     
     // Define lambdas for scene-specific logic
     auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedSceneNode == h; };
@@ -179,8 +170,20 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
         return node && !node->childrenHandles.empty();
     };
     auto getChildren = [scene](tinyHandle h) -> std::vector<tinyHandle> {
-        const tinyNodeRT* node = scene->node(h);
-        return node ? node->childrenHandles : std::vector<tinyHandle>();
+        if (const tinyNodeRT* node = scene->node(h)) {
+            // Sort children by presence of children then alphabetically
+            std::vector<tinyHandle> children = node->childrenHandles;
+            std::sort(children.begin(), children.end(), [scene](tinyHandle a, tinyHandle b) {
+                const tinyNodeRT* nodeA = scene->node(a);
+                const tinyNodeRT* nodeB = scene->node(b);
+                bool aHasChildren = nodeA && !nodeA->childrenHandles.empty();
+                bool bHasChildren = nodeB && !nodeB->childrenHandles.empty();
+                if (aHasChildren != bHasChildren) return aHasChildren > bHasChildren;
+                return nodeA->name < nodeB->name;
+            });
+            return children;
+        }
+        return std::vector<tinyHandle>();
     };
     auto renderDragSource = [scene](tinyHandle h) {
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
@@ -197,7 +200,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
             ImGui::EndDragDropSource();
         }
     };
-    auto renderDropTarget = [project, scene](tinyHandle h) {
+    auto renderDropTarget = [project, &fs, scene](tinyHandle h) {
         if (!HierarchyState::draggedSceneNode.valid() && ImGui::BeginDragDropTarget()) {
             // Accept scene node reparenting
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
@@ -214,8 +217,11 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
                 DragDropPayloads::FileNodePayload* data = (DragDropPayloads::FileNodePayload*)payload->Data;
 
                 // Check if this is a scene file
-                if (data->dataTypeHandle.isType<tinySceneRT>()) {
-                    tinyHandle sceneRegistryHandle = data->dataTypeHandle.handle;
+                typeHandle fTypeHdl = fs.fTypeHandle(data->fileHandle);
+
+                if (fTypeHdl.isType<tinySceneRT>()) {
+                    tinyHandle sceneRegistryHandle = fTypeHdl.handle;
+
                     tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle.valid() ? 
                         HierarchyState::activeSceneHandle : project->mainSceneHandle;
 
@@ -298,31 +304,44 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
         return node && node->isFolder() && !node->children.empty();
     };
     auto getChildren = [&fs](tinyHandle h) -> std::vector<tinyHandle> {
-        const tinyFS::Node* node = fs.fNode(h);
-        return node && node->isFolder() ? node->children : std::vector<tinyHandle>();
+        // const tinyFS::Node* node = fs.fNode(h);
+        // // return node && node->isFolder() ? node->children : std::vector<tinyHandle>();
+
+        if (const tinyFS::Node* node = fs.fNode(h)) {
+            std::vector<tinyHandle> children = node->children;
+
+            // Sort by folder first, then extension type then name (both alphabetically)
+            std::sort(children.begin(), children.end(), [&fs](tinyHandle a, tinyHandle b) {
+                // return fs.fTypeExt(a) < fs.fTypeExt(b);
+                tinyFS::TypeExt typeA = fs.fTypeExt(a);
+                tinyFS::TypeExt typeB = fs.fTypeExt(b);
+
+                if (typeA.ext != typeB.ext) return typeA.ext < typeB.ext;
+                return fs.fNode(a)->name < fs.fNode(b)->name;
+            });
+            return children;
+        }
+        return std::vector<tinyHandle>();
     };
     auto renderDragSource = [&fs](tinyHandle h) {
-        const tinyFS::Node* node = fs.fNode(h);
-        if (node && !node->isFolder()) {  // Only files can be dragged
+        if (const tinyFS::Node* node = fs.fNode(h)) {
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                 HierarchyState::draggedFileNode = h;
-                
+
                 DragDropPayloads::FileNodePayload payload;
                 payload.fileHandle = h;
-                payload.dataTypeHandle = fs.fTypeHandle(h); // Get typeHandle from file
                 strncpy(payload.fileName, node->name.c_str(), 63);
                 payload.fileName[63] = '\0';
-                
+
                 ImGui::SetDragDropPayload("FILE_NODE", &payload, sizeof(payload));
                 ImGui::Text("Dragging: %s", node->name.c_str());
-                
+
                 // Show type info if has data
-                if (payload.dataTypeHandle.valid()) {
-                    if (payload.dataTypeHandle.isType<tinySceneRT>()) {
-                        ImGui::Text("[Scene]");
-                    }
-                }
-                
+                tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 1.0f),
+                                   "Type: %s", typeExt.c_str());
+
                 ImGui::EndDragDropSource();
             }
         }
@@ -346,6 +365,7 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
 
                 // Folder methods
                 if (node->isFolder()) {
+                    if (ImGui::MenuItem("Add Folder")) fs.addFolder(h, "New Folder");
 
                     ImGui::Separator();
                     if (ImGui::MenuItem("Flatten", nullptr, nullptr, deletable)) fs.fRemove(h, false);
@@ -361,14 +381,24 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
         const tinyFS& fs = project->fs();
         const tinyFS::Node* node = fs.fNode(h);
         if (node && node->isFolder()) return ImVec4(0.3f, 0.3f, 0.35f, 0.8f);
-        else return ImVec4(0.2f, 0.5f, 0.3f, 0.6f);
+
+        tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+        typeExt.color[0] *= 0.2f;
+        typeExt.color[1] *= 0.2f;
+        typeExt.color[2] *= 0.2f;
+        return ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 0.8f);
     };
     auto getDraggedColor = [](tinyHandle) { return ImVec4(0.8f, 0.6f, 0.2f, 0.8f); };
     auto getNormalHoveredColor = [project](tinyHandle h) {
         const tinyFS& fs = project->fs();
         const tinyFS::Node* node = fs.fNode(h);
         if (node && node->isFolder()) return ImVec4(0.4f, 0.4f, 0.45f, 0.9f);
-        else return ImVec4(0.3f, 0.6f, 0.4f, 0.8f);
+
+        tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+        typeExt.color[0] *= 0.5f;
+        typeExt.color[1] *= 0.5f;
+        typeExt.color[2] *= 0.5f;
+        return ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 0.9f);
     };
     auto getDraggedHoveredColor = [](tinyHandle) { return ImVec4(0.9f, 0.7f, 0.3f, 0.9f); };
     auto clearDragState = []() { HierarchyState::draggedFileNode = tinyHandle(); };

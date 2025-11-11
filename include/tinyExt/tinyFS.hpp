@@ -133,21 +133,21 @@ public:
 // ---------- Creation ----------
 
 // Folder creation (non-template overload)
-    [[nodiscard]] tinyHandle addFolder(tinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
+    tinyHandle addFolder(tinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
         return addFNodeImpl(parentHandle, name, cfg);
     }
-    [[nodiscard]] tinyHandle addFolder(const std::string& name, Node::CFG cfg = {}) {
+    tinyHandle addFolder(const std::string& name, Node::CFG cfg = {}) {
         return addFolder(rootHandle_, name, cfg);
     }
 
     // File creation (templated, pass pointer to data)
     template<typename T>
-    [[nodiscard]] tinyHandle addFile(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg = {}) {
+    tinyHandle addFile(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg = {}) {
         return addFNodeImpl(parentHandle, name, std::forward<T>(data), cfg);
     }
 
     template<typename T>
-    [[nodiscard]] tinyHandle addFile(const std::string& name, T&& data, Node::CFG cfg = {}) {
+    tinyHandle addFile(const std::string& name, T&& data, Node::CFG cfg = {}) {
         return addFile(rootHandle_, name, std::forward<T>(data), cfg);
     }
 
@@ -347,6 +347,21 @@ public:
     [[nodiscard]] typeHandle fTypeHandle(tinyHandle fileHandle) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
         return node ? node->tHandle : typeHandle();
+    }
+
+    [[nodiscard]] const TypeInfo* fTypeInfo(tinyHandle fileHandle) const noexcept {
+        const Node* node = fnodes_.get(fileHandle);
+        if (!node) return nullptr;
+
+        auto it = typeInfos_.find(node->tHandle.typeIndex);
+        return (it != typeInfos_.end()) ? &it->second : nullptr;
+    }
+
+    [[nodiscard]] TypeExt fTypeExt(tinyHandle fileHandle) const noexcept {
+        const Node* node = fnodes_.get(fileHandle);
+        if (!node) return TypeExt();
+
+        return typeExt(node->tHandle.typeIndex);
     }
 
     template<typename T>
