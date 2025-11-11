@@ -268,7 +268,8 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene, t
 }
 
 static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle, int depth = 0) {
-    const tinyFS& fs = project->fs();
+    tinyFS& fs = project->fs();
+
     const tinyFS::Node* node = fs.fNode(fileHandle);
     if (!node) return;
     
@@ -279,23 +280,19 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
     auto setDragged = [](tinyHandle h) { HierarchyState::draggedFileNode = h; };
     auto isExpanded = [](tinyHandle h) { return HierarchyState::isExpanded(h, false); };
     auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, false, expanded); };
-    auto getName = [project](tinyHandle h) -> const char* {
-        const tinyFS& fs = project->fs();
+    auto getName = [&fs](tinyHandle h) -> const char* {
         const tinyFS::Node* node = fs.fNode(h);
         return node ? node->name.c_str() : "";
     };
-    auto hasChildren = [project](tinyHandle h) -> bool {
-        const tinyFS& fs = project->fs();
+    auto hasChildren = [&fs](tinyHandle h) -> bool {
         const tinyFS::Node* node = fs.fNode(h);
         return node && node->isFolder() && !node->children.empty();
     };
-    auto getChildren = [project](tinyHandle h) -> std::vector<tinyHandle> {
-        const tinyFS& fs = project->fs();
+    auto getChildren = [&fs](tinyHandle h) -> std::vector<tinyHandle> {
         const tinyFS::Node* node = fs.fNode(h);
         return node && node->isFolder() ? node->children : std::vector<tinyHandle>();
     };
-    auto renderDragSource = [project](tinyHandle h) {
-        const tinyFS& fs = project->fs();
+    auto renderDragSource = [&fs](tinyHandle h) {
         const tinyFS::Node* node = fs.fNode(h);
         if (node && !node->isFolder()) {  // Only files can be dragged
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
@@ -322,30 +319,33 @@ static void RenderFileNodeHierarchy(tinyProject* project, tinyHandle fileHandle,
         }
     };
     auto renderDropTarget = [](tinyHandle) {};  // No drop target for files
-    auto renderContextMenu = [project](tinyHandle h) {
+    auto renderContextMenu = [&fs](tinyHandle h) {
         if (ImGui::BeginPopupContextItem()) {
-            const tinyFS& fs = project->fs();
-            const tinyFS::Node* node = fs.fNode(h);
-            if (node) {
-                ImGui::Text("File: %s", node->name.c_str());
+            if (const tinyFS::Node* node = fs.fNode(h)) {
+                bool deletable = node->deletable();
+                const char* name = node->name.c_str();
+
+                ImGui::Text("%s", name);
+
+                // Special types methods
                 ImGui::Separator();
+
                 typeHandle dataType = fs.fTypeHandle(h);
-                if (dataType.valid()) {
-                    if (dataType.isType<tinySceneRT>()) {
-                        ImGui::Text("Type: Scene");
-                        if (ImGui::MenuItem("Load as Active")) {
-                            HierarchyState::activeSceneHandle = dataType.handle;
-                        }
-                    } else {
-                        ImGui::Text("Type: Other");
+                if (dataType.isType<tinySceneRT>()) {
+                    if (ImGui::MenuItem("Make Active Scene")) {
+                        HierarchyState::activeSceneHandle = dataType.handle;
                     }
-                } else {
-                    ImGui::Text("Type: Folder");
                 }
-                ImGui::Separator();
-                if (ImGui::MenuItem("Properties")) {
-                    // TODO: open properties window
+
+                // Folder methods
+                if (node->isFolder()) {
+
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Flatten", nullptr, nullptr, deletable)) fs.fRemove(h, false);
                 }
+
+                // Delete methods
+                if (ImGui::MenuItem("Delete", nullptr, nullptr, deletable)) fs.fRemove(h);
             }
             ImGui::EndPopup();
         }
@@ -442,10 +442,8 @@ void tinyApp::renderUI() {
     static bool showHierarchy = true;
     if (tinyUI::Exec::Begin("Hierarchy", &showHierarchy)) {
         // Get active scene
-        tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle.valid() ? 
-            HierarchyState::activeSceneHandle : project->mainSceneHandle;
-        tinySceneRT* activeScene = project->scene(activeSceneHandle);
-        
+        tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
+
         if (!activeScene) {
             ImGui::Text("No active scene");
         } else {
