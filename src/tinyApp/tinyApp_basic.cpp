@@ -242,8 +242,7 @@ void tinyApp::mainLoop() {
 
         uint32_t currentFrameIndex = rendererRef.getCurrentFrame();
 
-        tinySceneRT* activeScene = project->fs().rGet<tinySceneRT>(project->initialSceneHandle);
-
+        tinySceneRT* activeScene = project->scene();
         activeScene->setFStart({ currentFrameIndex, dTime });
         activeScene->update();
 

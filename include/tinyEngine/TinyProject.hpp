@@ -48,7 +48,12 @@ public:
     tinyCamera* camera() const { return camera_.get(); }
     tinyGlobal* global() const { return global_.get(); }
 
-    tinyHandle initialSceneHandle;
+    tinyHandle mainSceneHandle;
+
+    tinySceneRT* scene(tinyHandle sceneHandle = tinyHandle()) {
+        sceneHandle = sceneHandle.valid() ? sceneHandle : mainSceneHandle;
+        return fs_->rGet<tinySceneRT>(sceneHandle);
+    }
 
 private:
     const tinyVk::Device* deviceVk_;
