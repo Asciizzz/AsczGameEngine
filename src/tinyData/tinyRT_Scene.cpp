@@ -70,6 +70,8 @@ bool Scene::removeNode(tinyHandle nodeHandle, bool recursive) {
     removeComp<tinyNodeRT::SCRIPT>(nodeHandle);
     nodes_.remove(nodeHandle);
 
+    isClean_ = false;
+
     return true;
 }
 
@@ -115,6 +117,8 @@ bool Scene::reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle) {
     newParent->addChild(nodeHandle);
 
     nodeToMove->setParent(newParentHandle);
+
+    isClean_ = false;
     return true;
 }
 
@@ -130,14 +134,6 @@ bool Scene::renameNode(tinyHandle nodeHandle, const std::string& newName) {
 
 const tinyNodeRT* Scene::node(tinyHandle nodeHandle) const {
     return nodes_.get(nodeHandle);
-}
-
-bool Scene::nodeValid(tinyHandle nodeHandle) const {
-    return nodes_.valid(nodeHandle);
-}
-
-bool Scene::nodeOccupied(uint32_t index) const {
-    return nodes_.isOccupied(index);
 }
 
 tinyHandle Scene::nodeHandle(uint32_t index) const {
@@ -181,6 +177,36 @@ bool Scene::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>
 
 
 
+void Scene::cleanse() {
+    tinyPool<tinyNodeRT> cleanedPool;
+
+    // Recursively add to a new pool (Depth-First Search)
+    std::function<void(tinyHandle, tinyHandle)> recurse = [&](tinyHandle ogHandle, tinyHandle parent) {
+        const tinyNodeRT* ogNode = nodes_.get(ogHandle);
+        if (!ogNode) return;
+
+        tinyNodeRT node = *ogNode; // Copy original node
+        node.childrenHandles.clear(); // Clear children, will be re-added
+
+        tinyHandle handle = cleanedPool.add(std::move(node));
+
+        if (tinyNodeRT* newParent = cleanedPool.get(parent)) {
+            newParent->addChild(handle);
+        }
+
+        std::vector<tinyHandle> ogChildren = ogNode->childrenHandles;
+
+        for (const tinyHandle& childHandle : ogChildren) {
+            recurse(childHandle, handle);
+        }
+    };
+
+    recurse(rootHandle_, tinyHandle());
+
+    nodes_.clear();
+    nodes_ = std::move(cleanedPool);
+    isClean_ = true;
+}
 
 tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
     const Scene* from = sharedRes_.fsGet<Scene>(fromHandle);
@@ -269,7 +295,6 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
         if (const auto* fromAnimeRT = from->rtComp<tinyNodeRT::ANIM3D>(fromHandle)) {
             auto* toAnimeRT = writeComp<tinyNodeRT::ANIM3D>(toHandle);
-            
 
             *toAnimeRT = *fromAnimeRT;
 

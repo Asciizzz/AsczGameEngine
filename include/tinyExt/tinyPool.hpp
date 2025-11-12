@@ -128,7 +128,7 @@ struct tinyPool {
 
 
     template<typename U>
-    [[nodiscard]] tinyHandle add(U&& item) {
+    tinyHandle add(U&& item) {
         uint32_t index;
 
         // Hot path: reuse slot (more common than grow)

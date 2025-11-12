@@ -81,8 +81,6 @@ public:
     bool renameNode(tinyHandle nodeHandle, const std::string& newName);
 
     const tinyNodeRT* node(tinyHandle nodeHandle) const;
-    bool nodeValid(tinyHandle nodeHandle) const;
-    bool nodeOccupied(uint32_t index) const;
     tinyHandle nodeHandle(uint32_t index) const;
     uint32_t nodeCount() const;
 
@@ -91,9 +89,22 @@ public:
     bool setNodeParent(tinyHandle nodeHandle, tinyHandle newParentHandle);
     bool setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>& newChildren);
 
+    // ------------------ Scene methods ------------------
+
+    /* cleanse() explanation:
+    Sort all nodes in a DFS manner starting from root node
+    Ensuring scene instantiation (addScene) becomes easier and cleaner
+    */
+
+    bool isClean() const { return isClean_; }
+    void cleanse();
+
     tinyHandle addScene(tinyHandle fromHandle, tinyHandle parentHandle = tinyHandle());
 
     // --------- Runtime registry access (public) ---------
+
+    tinyRegistry& rtRegistry() noexcept { return rtRegistry_; }
+    const tinyRegistry& rtRegistry() const noexcept { return rtRegistry_; }
 
     template<typename T>
     T* rtGet(const tinyHandle& handle) {
@@ -246,6 +257,8 @@ public:
     void update();
 
 private:
+    bool isClean_ = false;
+
     FStart fStart_;
 
     tinySharedRes sharedRes_; // Shared resources and requirements
