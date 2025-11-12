@@ -456,6 +456,15 @@ public:
         return false;
     }
 
+// ---- Some helpful utilities and function that make this class act like an actual filesystem manager ----
+
+    static std::string ext(const std::string& filename) noexcept {
+        size_t pos = filename.find_last_of('.');
+
+        if (pos == std::string::npos || pos == filename.size() - 1) return "";
+        return filename.substr(pos + 1);
+    }
+
 private:
     tinyPool<Node> fnodes_;
     tinyRegistry registry_;

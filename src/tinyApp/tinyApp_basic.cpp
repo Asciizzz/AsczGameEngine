@@ -51,22 +51,6 @@ void tinyApp::initComponents() {
 
     project = MakeUnique<tinyProject>(deviceVk.get());
 
-    // Adding some test files
-
-    auto addModels = [&](const std::vector<std::string>& paths) {
-        for (const auto& path : paths) {
-            tinyModel model = tinyLoader::loadModel(path);
-            project->addModel(model);
-        }
-    };
-
-    addModels({
-        "game/Test/Animation.glb",
-        "game/Pearto/Pearto.obj",
-        "C:\\Users\\Asciiz\\Downloads\\ResourcesForMyGame\\SketchFat\\krixi_arena_of_valor.glb",
-        "C:\\Users\\Asciiz\\Downloads\\ResourcesForMyGame\\SketchFat\\violet_dimension_breaker_arena_of_valor.glb"
-    });
-
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->camera()->setAspectRatio(aspectRatio);
 
@@ -222,6 +206,16 @@ void tinyApp::mainLoop() {
                         } else if (event.window.event == SDL_WINDOWEVENT_CLOSE) {
                             winManager.shouldCloseFlag = true;
                         }
+                    }
+                    break;
+
+                case SDL_DROPFILE:
+                    {
+                        char* droppedFile = event.drop.file;
+                        std::string ext = tinyFS::ext(droppedFile);
+
+                        tinyModel model = tinyLoader::loadModel(droppedFile);
+                        project->addModel(model);
                     }
                     break;
             }
