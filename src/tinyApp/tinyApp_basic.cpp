@@ -2,6 +2,10 @@
 
 #include "tinyEngine/TinyLoader.hpp"
 #include <iostream>
+#include <stdexcept>
+
+#include <fstream>
+#include <sstream>
 
 #ifdef NDEBUG // Remember to set this to false
 const bool enableValidationLayers = true;
@@ -216,6 +220,21 @@ void tinyApp::mainLoop() {
                     if (ext == "glb" || ext == "gltf" || ext == "obj" || ext == "fbx") {
                         tinyModel model = tinyLoader::loadModel(droppedFile);
                         project->addModel(model);
+                    }
+
+                    if (ext == "lua") {
+                        // Get the entire contents of the file
+                        // std::string fileContents;
+                        tinyScript script;
+
+                        std::ifstream fileStream(droppedFile);
+                        if (fileStream) {
+                            std::ostringstream ss;
+                            ss << fileStream.rdbuf();
+                            script.code = ss.str();
+                        }
+
+                        project->fs().addFile(droppedFile, std::move(script));
                     }
                 } break;
             }
