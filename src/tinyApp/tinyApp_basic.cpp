@@ -53,8 +53,13 @@ void tinyApp::initComponents() {
 
     // Adding some test files
 
-    tinyModel testModel = tinyLoader::loadModel("game/Test/Animation.glb");
-    project->addModel(testModel);
+    auto addModel = [&](const char* path) {
+        tinyModel model = tinyLoader::loadModel(path);
+        project->addModel(model);
+    };
+
+    addModel("game/Test/Animation.glb");
+    addModel("game/Pearto/Pearto.obj");
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->camera()->setAspectRatio(aspectRatio);
