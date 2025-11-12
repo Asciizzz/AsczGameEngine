@@ -216,6 +216,7 @@ void tinyApp::mainLoop() {
                 case SDL_DROPFILE: {
                     char* droppedFile = event.drop.file;
                     std::string ext = tinyFS::ext(droppedFile);
+                    std::string name = tinyFS::name(droppedFile);
 
                     if (ext == "glb" || ext == "gltf" || ext == "obj" || ext == "fbx") {
                         tinyModel model = tinyLoader::loadModel(droppedFile);
@@ -234,7 +235,7 @@ void tinyApp::mainLoop() {
                             script.code = ss.str();
                         }
 
-                        project->fs().addFile(droppedFile, std::move(script));
+                        project->fs().addFile(name, std::move(script));
                     }
                 } break;
             }

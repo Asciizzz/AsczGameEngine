@@ -458,11 +458,24 @@ public:
 
 // ---- Some helpful utilities and function that make this class act like an actual filesystem manager ----
 
+    static std::string name(const std::string& filepath) noexcept {
+        size_t pos = filepath.find_last_of("/\\");
+        if (pos == std::string::npos) return filepath;
+        return filepath.substr(pos + 1);
+    }
+
     static std::string ext(const std::string& filename) noexcept {
         size_t pos = filename.find_last_of('.');
 
         if (pos == std::string::npos || pos == filename.size() - 1) return "";
         return filename.substr(pos + 1);
+    }
+
+    static std::string nameDotExt(const std::string& filename) noexcept {
+        size_t pos = filename.find_last_of('.');
+
+        if (pos == std::string::npos) return filename;
+        return filename.substr(0, pos);
     }
 
 private:
