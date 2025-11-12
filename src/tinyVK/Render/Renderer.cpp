@@ -235,7 +235,8 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 
     tinyHandle curSkeleNodeHandle;
 
-    const auto& mapMESHR = activeScene->mapRTRFM3D<tinyNodeRT::MESHRD>();
+    const auto& mapMESHR = activeScene->mapCache<tinyNodeRT::MESHRD>();
+
     for (const auto& [nodeHandle, mr3dHandle] : mapMESHR) {
         const tinyNodeRT* rtNode = activeScene->node(nodeHandle);
 
@@ -415,5 +416,5 @@ void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeS
     fs.execRemoveAll();
 
     // Scene still uses its own flushing mechanism (not tinyFS)
-    activeScene->rtFlushAllRms();
+    activeScene->rtTFlushAllRms<tinyRT_SKEL3D>();
 }

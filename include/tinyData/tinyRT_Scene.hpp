@@ -103,7 +103,7 @@ public:
     bool isClean() const { return isClean_; }
     void cleanse();
 
-    tinyHandle addScene(tinyHandle fromHandle, tinyHandle parentHandle = tinyHandle());
+    bool addScene(tinyHandle fromHandle, tinyHandle parentHandle = tinyHandle());
 
     // --------- Runtime registry access (public) ---------
 
@@ -116,25 +116,6 @@ public:
     }
 
     template<typename T>
-    const T* rtGet(const tinyHandle& handle) const {
-        return rtRegistry_.get<T>(handle);
-    }
-
-    void* rtGet(const typeHandle& th) {
-        return rtRegistry_.get(th);
-    }
-
-    template<typename T>
-    T* rtGet(const typeHandle& th) {
-        return rtRegistry_.get<T>(th);
-    }
-
-    template<typename T>
-    const T* rtGet(const typeHandle& th) const {
-        return rtRegistry_.get<T>(th);
-    }
-
-    template<typename T>
     bool rtTHasPendingRms() const {
         return rtRegistry_.tHasPendingRms<T>();
     }
@@ -144,14 +125,11 @@ public:
         rtRegistry_.tFlushAllRms<T>();
     }
 
-    void rtFlushAllRms() {
-        rtRegistry_.flushAllRms();
-    }
-
 
     // -------- Component management --------- 
 
     struct NComp {
+        tinyHandle handle = tinyHandle();
         tinyNodeRT::TRFM3D* trfm3D = nullptr;
         tinyNodeRT::BONE3D* bone3D = nullptr;
         tinyRT_MESHRD* meshRD = nullptr;
@@ -165,7 +143,7 @@ public:
         if (!node) return NComp();
 
         NComp comps;
-
+        comps.handle = nodeHandle;
         comps.trfm3D = rtComp<tinyNodeRT::TRFM3D>(nodeHandle);
         comps.bone3D = rtComp<tinyNodeRT::BONE3D>(nodeHandle);
         comps.meshRD = rtComp<tinyNodeRT::MESHRD>(nodeHandle);
@@ -205,12 +183,10 @@ public:
         removeComp<T>(nodeHandle);
         T* compPtr = node->add<T>();
 
-        addMap3D<T>(nodeHandle);
-
-        IF_TYPE_EQ(T, tinyNodeRT::SKEL3D) return addSKEL3D_RT(compPtr); else
-        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) return addANIM3D_RT(compPtr); else
-        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) return addMESHRD_RT(compPtr); else
-        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) return addSCRIPT_RT(compPtr); else
+        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) return addMESHRD_RT(nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::SKEL3D) return addSKEL3D_RT(nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) return addANIM3D_RT(nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) return addSCRIPT_RT(nodeHandle); else
         return compPtr;
     }
 
@@ -231,7 +207,7 @@ public:
     // --------- Specific component's data access ---------
 
     template<typename T>
-    const UnorderedMap<tinyHandle, tinyHandle>& mapRTRFM3D() const {
+    const UnorderedMap<tinyHandle, tinyHandle>& mapCache() const {
         IF_TYPE_EQ(T, tinyNodeRT::MESHRD) return mapMESHRD_; else
         IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) return mapANIM3D_; else
         {
@@ -263,10 +239,6 @@ private:
 
     // ---------- Internal helpers ---------
 
-    tinyNodeRT* nodeRef(tinyHandle nodeHandle) {
-        return nodes_.get(nodeHandle);
-    }
-
     template<typename T>
     T* nodeComp(tinyHandle nodeHandle) {
         tinyNodeRT* node = nodes_.get(nodeHandle);
@@ -280,13 +252,8 @@ private:
 
     // Cache of specific nodes_ for easy access
 
-    tinyPool<tinyHandle> withMESHRD_;
     UnorderedMap<tinyHandle, tinyHandle> mapMESHRD_;
-
-    tinyPool<tinyHandle> withANIM3D_;
     UnorderedMap<tinyHandle, tinyHandle> mapANIM3D_;
-
-    tinyPool<tinyHandle> withSCRIPT_;
     UnorderedMap<tinyHandle, tinyHandle> mapSCRIPT_;
 
     // -------- General update ---------
@@ -296,55 +263,31 @@ private:
     // ---------- Runtime component management ----------
 
     template<typename T>
-    void addMap3D(tinyHandle nodeHandle) {
-        auto& mapInsert = [this](auto& map, auto& pool, tinyHandle handle) {
-            map[handle] = pool.add(handle);
+    void addMap3D(tinyHandle nodeHandle, tinyHandle rtHandle) {
+        auto& mapInsert = [this](auto& map, tinyHandle nodeH, tinyHandle rtH) {
+            map[nodeH] = rtH;
         };
 
-        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) mapInsert(mapMESHRD_, withMESHRD_, nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) mapInsert(mapANIM3D_, withANIM3D_, nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) mapInsert(mapSCRIPT_, withSCRIPT_, nodeHandle);
+        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) mapInsert(mapMESHRD_, nodeHandle, rtHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) mapInsert(mapANIM3D_, nodeHandle, rtHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) mapInsert(mapSCRIPT_, nodeHandle, rtHandle);
     }
 
     template<typename T>
     void rmMap3D(tinyHandle nodeHandle) {
-        auto rmFromMapAndPool = [this](auto& map, auto& pool, tinyHandle handle) {
+        auto rmMap = [this](auto& map, tinyHandle handle) {
             auto it = map.find(handle);
-            if (it == map.end()) return;
-
-            pool.remove(it->second);
-            map.erase(it);
+            if (it != map.end()) {
+                map.erase(it);
+            }
         };
 
-        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) rmFromMapAndPool(mapMESHRD_, withMESHRD_, nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) rmFromMapAndPool(mapANIM3D_, withANIM3D_, nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) rmFromMapAndPool(mapSCRIPT_, withSCRIPT_, nodeHandle);
+        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) rmMap(mapMESHRD_, nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) rmMap(mapANIM3D_, nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) rmMap(mapSCRIPT_, nodeHandle);
     }
 
-    tinyRT_SKEL3D* addSKEL3D_RT(tinyNodeRT::SKEL3D* compPtr) {
-        tinyRT_SKEL3D rtSKEL3D;
-        rtSKEL3D.init(
-            sharedRes_.deviceVk,
-            &sharedRes_.fsView<tinySkeleton>(),
-            sharedRes_.skinDescPool(),
-            sharedRes_.skinDescLayout(),
-            sharedRes_.maxFramesInFlight
-        );
-
-        compPtr->pHandle = rtAdd<tinyRT_SKEL3D>(std::move(rtSKEL3D));
-
-        return rtGet<tinyRT_SKEL3D>(compPtr->pHandle);
-    }
-
-    tinyRT_ANIM3D* addANIM3D_RT(tinyNodeRT::ANIM3D* compPtr) {
-        tinyRT_ANIM3D rtAnime;
-
-        compPtr->pHandle = rtAdd<tinyRT_ANIM3D>(std::move(rtAnime));
-
-        return rtGet<tinyRT_ANIM3D>(compPtr->pHandle);
-    }
-
-    tinyRT_MESHRD* addMESHRD_RT(tinyNodeRT::MESHRD* compPtr) {
+    tinyRT_MESHRD* addMESHRD_RT(tinyHandle nodeHandle) {
         tinyRT_MESHRD rtMeshRT;
         rtMeshRT.init(
             sharedRes_.deviceVk,
@@ -354,30 +297,54 @@ private:
             sharedRes_.maxFramesInFlight
         );
 
+        tinyNodeRT::MESHRD* compPtr = nodeComp<tinyNodeRT::MESHRD>(nodeHandle);
         compPtr->pHandle = rtAdd<tinyRT_MESHRD>(std::move(rtMeshRT));
+
+        addMap3D<tinyNodeRT::MESHRD>(nodeHandle, compPtr->pHandle);
 
         return rtGet<tinyRT_MESHRD>(compPtr->pHandle);
     }
 
-    tinyRT_SCRIPT* addSCRIPT_RT(tinyNodeRT::SCRIPT* compPtr) {
+    tinyRT_SKEL3D* addSKEL3D_RT(tinyHandle nodeHandle) {
+        tinyRT_SKEL3D rtSKEL3D;
+        rtSKEL3D.init(
+            sharedRes_.deviceVk,
+            &sharedRes_.fsView<tinySkeleton>(),
+            sharedRes_.skinDescPool(),
+            sharedRes_.skinDescLayout(),
+            sharedRes_.maxFramesInFlight
+        );
+
+        tinyNodeRT::SKEL3D* compPtr = nodeComp<tinyNodeRT::SKEL3D>(nodeHandle);
+        compPtr->pHandle = rtAdd<tinyRT_SKEL3D>(std::move(rtSKEL3D));
+
+        return rtGet<tinyRT_SKEL3D>(compPtr->pHandle);
+    }
+
+    tinyRT_ANIM3D* addANIM3D_RT(tinyHandle nodeHandle) {
+        tinyRT_ANIM3D rtAnime;
+
+        tinyNodeRT::ANIM3D* compPtr = nodeComp<tinyNodeRT::ANIM3D>(nodeHandle);
+        compPtr->pHandle = rtAdd<tinyRT_ANIM3D>(std::move(rtAnime));
+
+        addMap3D<tinyNodeRT::ANIM3D>(nodeHandle, compPtr->pHandle);
+
+        return rtGet<tinyRT_ANIM3D>(compPtr->pHandle);
+    }
+
+    tinyRT_SCRIPT* addSCRIPT_RT(tinyHandle nodeHandle) {
         tinyRT_SCRIPT rtScript;
         rtScript.init(&sharedRes_.fsView<tinyScript>());
 
+        tinyNodeRT::SCRIPT* compPtr = nodeComp<tinyNodeRT::SCRIPT>(nodeHandle);
         compPtr->pHandle = rtAdd<tinyRT_SCRIPT>(std::move(rtScript));
+
+        addMap3D<tinyNodeRT::SCRIPT>(nodeHandle, compPtr->pHandle);
 
         return rtGet<tinyRT_SCRIPT>(compPtr->pHandle);
     }
 
     // ---------- Runtime registry access (private) ----------
-
-    // Access node by index, only for internal use
-    tinyNodeRT* fromIndex(uint32_t index) {
-        return nodes_.get(nodeHandle(index));
-    }
-
-    const tinyNodeRT*  fromIndex(uint32_t index) const {
-        return nodes_.get(nodeHandle(index));
-    }
 
     template<typename T>
     tinyHandle rtAdd(T&& data) {
