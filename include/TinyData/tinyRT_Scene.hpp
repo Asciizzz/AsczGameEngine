@@ -116,13 +116,31 @@ public:
     }
 
     template<typename T>
-    bool rtTHasPendingRms() const {
+    bool rtHasPendingRms() const {
         return rtRegistry_.tHasPendingRms<T>();
     }
 
     template<typename T>
-    void rtTFlushAllRms() {
+    void rtFlushAllRms() {
         rtRegistry_.tFlushAllRms<T>();
+    }
+
+    // Specific check
+    bool rtHasPendingVulkanRms() const {
+        return 
+            rtHasPendingRms<tinyRT_SKEL3D>() ||
+            rtHasPendingRms<tinyRT_MESHRD>();
+    }
+    void rtFlushAllVulkanRms() {
+        rtFlushAllRms<tinyRT_SKEL3D>();
+        rtFlushAllRms<tinyRT_MESHRD>();
+    }
+
+    bool rtHasPendingAudioRms() const {
+        return false; // Audio in development
+    }
+    void rtFlushAllAudioRms() {
+        // Audio in development
     }
 
 
