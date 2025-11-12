@@ -44,9 +44,9 @@ function update()
         if t3d then
             local rot = t3d:getRot()
             
-            rot.x = rot.x + VARS.angVelX * DTIME
-            rot.y = rot.y + VARS.angVelY * DTIME
-            rot.z = rot.z + VARS.angVelZ * DTIME
+            rot.x = rot.x + VARS.angVelX * DELTATIME
+            rot.y = rot.y + VARS.angVelY * DELTATIME
+            rot.z = rot.z + VARS.angVelZ * DELTATIME
             
             t3d:setRot(rot)
             

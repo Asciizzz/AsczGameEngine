@@ -60,7 +60,7 @@ struct tinyScript {
 
     bool compile();
 
-    void update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime, tinyDebug* runtimeDebug = nullptr) const;
+    void update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime, tinyDebug* runtimeDebug = nullptr) const;
     bool call(const char* functionName, lua_State* runtimeL = nullptr, tinyDebug* runtimeDebug = nullptr) const;
     
     // Get internal Lua state for advanced operations (use with caution!)

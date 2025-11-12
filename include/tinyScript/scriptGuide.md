@@ -23,7 +23,7 @@ Available in every script during execution:
 
 ```
 VARS         -- Table containing all script variables (defined in vars() function)
-DTIME        -- Delta time since last frame (float, in seconds)
+DELTATIME        -- Delta time since last frame (float, in seconds)
 SCENE        -- Scene object (Scene userdata)
 NODE         -- Current node object (Node userdata)
 FS           -- Filesystem registry accessor (FS userdata)
@@ -847,7 +847,7 @@ end
 -- Called every frame
 function update()
     -- Access variables through VARS table
-    VARS.myFloat = VARS.myFloat + DTIME
+    VARS.myFloat = VARS.myFloat + DELTATIME
     
     -- Use global objects
     local t3d = NODE:transform3D()
@@ -936,13 +936,13 @@ function update()
         local targetYaw = rot.y + angle
         
         -- Rotate towards movement direction
-        rot.y = rot.y + (targetYaw - rot.y) * VARS.rotSpeed * DTIME
+        rot.y = rot.y + (targetYaw - rot.y) * VARS.rotSpeed * DELTATIME
         t3d:setRot(rot)
         
         -- Move forward
         local speed = isRunning and VARS.moveSpeed * 2.0 or VARS.moveSpeed
-        pos.x = pos.x + math.sin(rot.y) * speed * DTIME
-        pos.z = pos.z + math.cos(rot.y) * speed * DTIME
+        pos.x = pos.x + math.sin(rot.y) * speed * DELTATIME
+        pos.z = pos.z + math.cos(rot.y) * speed * DELTATIME
         t3d:setPos(pos)
         
         -- Play appropriate animation
@@ -998,7 +998,7 @@ end
 
 3. **Use delta time for frame-rate independent movement:**
    ```lua
-   pos.x = pos.x + velocity * DTIME
+   pos.x = pos.x + velocity * DELTATIME
    ```
 
 4. **Store animation handles in vars() for efficiency:**
@@ -1046,7 +1046,7 @@ Use `print()` liberally to debug your scripts:
 ```lua
 print("Position:", pos.x, pos.y, pos.z)
 print("Animation playing:", anim:isPlaying())
-print("Delta time:", dTime)
+print("Delta time:", deltaTime)
 ```
 
 All print output appears in the engine's debug log window.

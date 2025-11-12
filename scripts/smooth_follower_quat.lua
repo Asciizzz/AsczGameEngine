@@ -136,13 +136,13 @@ function update()
                 -- Update position using second order dynamics
                 if VARS.followPosition then
                     VARS.posY.x, VARS.posYd.x, VARS.posXp.x = updateAxis(
-                        VARS.posY.x, VARS.posYd.x, targetPos.x, VARS.posXp.x, DTIME
+                        VARS.posY.x, VARS.posYd.x, targetPos.x, VARS.posXp.x, DELTATIME
                     )
                     VARS.posY.y, VARS.posYd.y, VARS.posXp.y = updateAxis(
-                        VARS.posY.y, VARS.posYd.y, targetPos.y, VARS.posXp.y, DTIME
+                        VARS.posY.y, VARS.posYd.y, targetPos.y, VARS.posXp.y, DELTATIME
                     )
                     VARS.posY.z, VARS.posYd.z, VARS.posXp.z = updateAxis(
-                        VARS.posY.z, VARS.posYd.z, targetPos.z, VARS.posXp.z, DTIME
+                        VARS.posY.z, VARS.posYd.z, targetPos.z, VARS.posXp.z, DELTATIME
                     )
                     
                     myT3d:setPos(VARS.posY)
@@ -176,7 +176,7 @@ function update()
                         local targetQuat = quat_lookAt(forward, up)
                         
                         -- Spherical linear interpolation (slerp) for smooth rotation
-                        local t = math.min(1.0, VARS.rotationSpeed * DTIME)
+                        local t = math.min(1.0, VARS.rotationSpeed * DELTATIME)
                         VARS.currentQuat = quat_slerp(VARS.currentQuat, targetQuat, t)
                         
                         -- Apply the interpolated rotation

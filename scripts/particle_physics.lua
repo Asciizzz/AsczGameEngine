@@ -40,7 +40,7 @@ function update()
     end
     
     -- Calculate substep time
-    local substepDt = DTIME / VARS.substeps
+    local substepDt = DELTATIME / VARS.substeps
     
     -- Run multiple substeps for stability
     for step = 1, VARS.substeps do
@@ -291,8 +291,8 @@ function update()
     
     -- Apply frame-rate independent damping once per frame
     -- Convert per-frame damping to per-second damping for frame-rate independence
-    local dampingFactor = math.pow(VARS.damping, DTIME * 60.0)
-    local angularDampingFactor = math.pow(0.98, DTIME * 60.0) -- Slightly more damping for angular
+    local dampingFactor = math.pow(VARS.damping, DELTATIME * 60.0)
+    local angularDampingFactor = math.pow(0.98, DELTATIME * 60.0) -- Slightly more damping for angular
     
     for i = 1, #particles do
         local particle = particles[i]

@@ -80,7 +80,7 @@ function update()
         -- ========== ATTACK PLAYER ==========
         -- Update attack cooldown
         if VARS.attackCooldown > 0 then
-            VARS.attackCooldown = VARS.attackCooldown - DTIME
+            VARS.attackCooldown = VARS.attackCooldown - DELTATIME
         end
         
         -- Deal damage if cooldown is ready
@@ -104,8 +104,8 @@ function update()
             dirZ = dirZ / distanceToPlayer
             
             -- Move towards player
-            myPos.x = myPos.x + dirX * VARS.moveSpeed * DTIME
-            myPos.z = myPos.z + dirZ * VARS.moveSpeed * DTIME
+            myPos.x = myPos.x + dirX * VARS.moveSpeed * DELTATIME
+            myPos.z = myPos.z + dirZ * VARS.moveSpeed * DELTATIME
             myT3d:setPos(myPos)
             
             -- ========== SMOOTH ROTATION TOWARDS PLAYER ==========
@@ -117,7 +117,7 @@ function update()
             local targetQuat = quat_lookAt(forward, up)
             
             -- Spherical linear interpolation (slerp) for smooth rotation
-            local t = math.min(1.0, VARS.rotationSpeed * DTIME)
+            local t = math.min(1.0, VARS.rotationSpeed * DELTATIME)
             VARS.currentQuat = quat_slerp(VARS.currentQuat, targetQuat, t)
             
             -- Apply the interpolated rotation

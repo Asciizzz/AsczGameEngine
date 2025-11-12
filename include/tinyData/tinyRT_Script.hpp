@@ -23,7 +23,7 @@ struct Script {
 
     void assign(tinyHandle scriptHandle);
 
-    void update(Scene* scene, tinyHandle nodeHandle, float dTime);
+    void update(Scene* scene, tinyHandle nodeHandle, float deltaTime);
 
     tinyHandle scriptHandle() const { return scriptHandle_; }
     const tinyScript* rScript() const {

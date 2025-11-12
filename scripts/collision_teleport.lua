@@ -80,7 +80,7 @@ function generateRandomPosition(chaserPos, currentY)
 end
 
 function update()
-    VARS.currentTime = VARS.currentTime + DTIME
+    VARS.currentTime = VARS.currentTime + DELTATIME
     
     local myT3d = NODE:transform3D()
     if not myT3d then

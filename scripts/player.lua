@@ -101,12 +101,12 @@ function update()
                             -- If within attack range, deal damage
                             if distance <= VARS.attackRange then
                                 -- Deal damage over time to player (enemies hurt the player)
-                                VARS.hp = VARS.hp - VARS.attackDamage * DTIME
+                                VARS.hp = VARS.hp - VARS.attackDamage * DELTATIME
                                 
                                 -- Optional: Visual feedback - make enemy flash or scale
                                 local scale = enemyT3D:getScl()
                                 -- Pulse effect: slightly scale up when near player
-                                local pulse = 1.0 + 0.1 * math.sin(DTIME * 10.0)
+                                local pulse = 1.0 + 0.1 * math.sin(DELTATIME * 10.0)
                                 enemyT3D:setScl({x = pulse, y = pulse, z = pulse})
                             end
                         end
@@ -144,8 +144,8 @@ function update()
             end
             
             -- Apply movement
-            pos.x = pos.x + moveDir.x * moveSpeed * DTIME
-            pos.z = pos.z + moveDir.z * moveSpeed * DTIME
+            pos.x = pos.x + moveDir.x * moveSpeed * DELTATIME
+            pos.z = pos.z + moveDir.z * moveSpeed * DELTATIME
             rootT3D:setPos(pos)
             
             -- Apply rotation (face movement direction)

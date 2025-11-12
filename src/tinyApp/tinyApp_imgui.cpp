@@ -488,13 +488,13 @@ void tinyApp::renderUI() {
     static const float printInterval = 1.0f; // Print fps every second
     static float currentFps = 0.0f;
 
-    float dTime = fpsRef.deltaTime;
+    float deltaTime = fpsRef.deltaTime;
 
     // ===== DEBUG PANEL WINDOW =====
     static bool showThemeEditor = false;
     if (tinyUI::Exec::Begin("Debug Panel")) {
         // FPS Info (once every printInterval)
-        frameTime += dTime;
+        frameTime += deltaTime;
         if (frameTime >= printInterval) {
             currentFps = fpsRef.currentFPS;
             frameTime = 0.0f;

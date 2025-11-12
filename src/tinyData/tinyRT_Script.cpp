@@ -31,7 +31,7 @@ bool Script::valid() const {
     return script->version() == cachedVersion_;
 }
 
-void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
+void Script::update(Scene* scene, tinyHandle nodeHandle, float deltaTime) {
     const tinyScript* script = rScript();
     if (!script) return;
 
@@ -41,6 +41,6 @@ void Script::update(Scene* scene, tinyHandle nodeHandle, float dTime) {
         script->initVars(vars_); // Smart init
         script->initLocals(locals_);
     } else {
-        script->update(this, scene, nodeHandle, dTime, &debug_);
+        script->update(this, scene, nodeHandle, deltaTime, &debug_);
     }
 }

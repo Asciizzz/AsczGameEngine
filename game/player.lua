@@ -100,7 +100,7 @@ function update()
     -- ========== SHOOTING ==========
     -- Update cooldown
     if VARS.shotCooldown > 0 then
-        VARS.shotCooldown = VARS.shotCooldown - DTIME
+        VARS.shotCooldown = VARS.shotCooldown - DELTATIME
     end
     
     -- Check for shoot input
@@ -169,8 +169,8 @@ function update()
         end
         
         -- Apply movement
-        pos.x = pos.x + moveDir.x * moveSpeed * DTIME
-        pos.z = pos.z + moveDir.z * moveSpeed * DTIME
+        pos.x = pos.x + moveDir.x * moveSpeed * DELTATIME
+        pos.z = pos.z + moveDir.z * moveSpeed * DELTATIME
         myT3d:setPos(pos)
         
         -- ========== SMOOTH QUATERNION ROTATION ==========
@@ -188,7 +188,7 @@ function update()
             local targetQuat = quat_lookAt(forward, up)
             
             -- Spherical linear interpolation (slerp) for smooth rotation
-            local t = math.min(1.0, VARS.rotationSpeed * DTIME)
+            local t = math.min(1.0, VARS.rotationSpeed * DELTATIME)
             LOCALS.currentQuat = quat_slerp(LOCALS.currentQuat, targetQuat, t)
             
             -- Apply the interpolated rotation

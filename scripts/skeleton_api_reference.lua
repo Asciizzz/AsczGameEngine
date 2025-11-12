@@ -87,13 +87,13 @@ end
 
 -- Rotate bone smoothly
 local rot = bone:getLocalRot()
-rot.y = rot.y + DTIME * 1.0
+rot.y = rot.y + DELTATIME * 1.0
 bone:setLocalRot(rot)
 
 -- Quaternion interpolation
 local current = bone:getLocalQuat()
 local target = {x=0, y=1, z=0, w=0}
-local result = quat_slerp(current, target, DTIME * 0.5)
+local result = quat_slerp(current, target, DELTATIME * 0.5)
 bone:setLocalQuat(result)
 
 -- Reset bone to bind pose

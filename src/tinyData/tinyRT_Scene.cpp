@@ -366,7 +366,7 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     if (!node) return;
 
     uint32_t curFrame_ = fStart_.frame;
-    float curDTime_ = fStart_.dTime;
+    float curDTime_ = fStart_.deltaTime;
 
     NWrap comps = nWrap(nodeHandle);
 

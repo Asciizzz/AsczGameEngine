@@ -10,7 +10,7 @@ VARS = {
 
 function update()
     -- Accumulate time
-    VARS.time = VARS.time + DTIME
+    VARS.time = VARS.time + DELTATIME
     
     local skeleton = NODE:skeleton3D()
     

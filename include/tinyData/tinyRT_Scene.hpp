@@ -220,7 +220,7 @@ public:
 
     struct FStart {
         uint32_t frame;
-        float dTime;
+        float deltaTime;
     };
 
     void setFStart(const FStart& fs) { fStart_ = fs; }

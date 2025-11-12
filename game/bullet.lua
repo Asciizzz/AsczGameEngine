@@ -28,7 +28,7 @@ function update()
     end
 
     -- Update age
-    VARS.age = VARS.age + DTIME
+    VARS.age = VARS.age + DELTATIME
     
     -- Auto-delete after lifetime expires
     if VARS.age >= VARS.lifetime then
@@ -44,8 +44,8 @@ function update()
     
     -- ========== MOVEMENT ==========
     local pos = myT3d:getPos()
-    pos.x = pos.x + VARS.dirX * VARS.speed * DTIME
-    pos.z = pos.z + VARS.dirZ * VARS.speed * DTIME
+    pos.x = pos.x + VARS.dirX * VARS.speed * DELTATIME
+    pos.z = pos.z + VARS.dirZ * VARS.speed * DELTATIME
     myT3d:setPos(pos)
 
     -- ========== COLLISION WITH ENEMIES ==========

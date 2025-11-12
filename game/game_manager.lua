@@ -137,7 +137,7 @@ function update()
     end
     
     -- Update spawn timer
-    VARS.spawnTimer = VARS.spawnTimer + DTIME
+    VARS.spawnTimer = VARS.spawnTimer + DELTATIME
     
     -- Spawn enemy when timer is ready
     if VARS.spawnTimer >= VARS.spawnRate then

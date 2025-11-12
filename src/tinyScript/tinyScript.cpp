@@ -414,7 +414,7 @@ namespace {
     }
 }
 
-void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float dTime, tinyDebug* runtimeDebug) const {
+void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime, tinyDebug* runtimeDebug) const {
     if (!valid()) return;
     
     // Store rtScript pointer in Lua globals for print() function
@@ -473,7 +473,7 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     lua_newtable(L_); pushToTable(locals); lua_setglobal(L_, "LOCALS");
 
     // Push other globals
-    lua_pushnumber(L_, dTime); lua_setglobal(L_, "DTIME");
+    lua_pushnumber(L_, deltaTime); lua_setglobal(L_, "DELTATIME");
     lua_pushlightuserdata(L_, scene); lua_setglobal(L_, "__scene");
 
     pushScene(L_, static_cast<tinyRT::Scene*>(scene)); lua_setglobal(L_, "SCENE");

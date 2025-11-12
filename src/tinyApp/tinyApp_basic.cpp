@@ -209,19 +209,19 @@ void tinyApp::mainLoop() {
                     }
                     break;
 
-                case SDL_DROPFILE:
-                    {
-                        char* droppedFile = event.drop.file;
-                        std::string ext = tinyFS::ext(droppedFile);
+                case SDL_DROPFILE: {
+                    char* droppedFile = event.drop.file;
+                    std::string ext = tinyFS::ext(droppedFile);
 
+                    if (ext == "glb" || ext == "gltf" || ext == "obj" || ext == "fbx") {
                         tinyModel model = tinyLoader::loadModel(droppedFile);
                         project->addModel(model);
                     }
-                    break;
+                } break;
             }
         }
 
-        float dTime = fpsRef.deltaTime;
+        float deltaTime = fpsRef.deltaTime;
 
         static float cam_dist = 1.5f;
         static glm::vec3 camPos = camRef.pos;
@@ -236,7 +236,7 @@ void tinyApp::mainLoop() {
         static bool mouseFocus = true;
         // Hold esc for 1 second to quit, otherwise toggle mouse focus
         if (k_state[SDL_SCANCODE_ESCAPE]) {
-            escHoldTime += dTime;
+            escHoldTime += deltaTime;
             if (escHoldTime >= 1.0f) winManager.shouldCloseFlag = true;
 
             if (!mouseFocusPressed) {
@@ -284,7 +284,7 @@ void tinyApp::mainLoop() {
         // Camera movement controls
         bool fast = k_state[SDL_SCANCODE_LSHIFT] && !k_state[SDL_SCANCODE_LCTRL];
         bool slow = k_state[SDL_SCANCODE_LCTRL] && !k_state[SDL_SCANCODE_LSHIFT];
-        float p_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * dTime;
+        float p_speed = (fast ? 26.0f : (slow ? 0.5f : 8.0f)) * deltaTime;
 
         if (k_state[SDL_SCANCODE_W]) camPos += camRef.forward * p_speed;
         if (k_state[SDL_SCANCODE_S]) camPos -= camRef.forward * p_speed;
