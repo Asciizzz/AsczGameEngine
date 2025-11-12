@@ -28,8 +28,8 @@ struct tinyModel {
         glm::mat4 TRFM3D = glm::mat4(1.0f);
 
         // Mesh render3D
-        int MESHR_meshIndx = -1;
-        int MESHR_skeleNodeIndx = -1;
+        int MESHRD_meshIndx = -1;
+        int MESHRD_skeleNodeIndx = -1;
 
         // Bone attach3D
         int BONE3D_skeleNodeIndx = -1;
@@ -41,7 +41,7 @@ struct tinyModel {
         // Anime3D
         int ANIM3D_animeIndx = -1;
 
-        bool hasMESHR() const { return MESHR_meshIndx >= 0; }
+        bool hasMESHR() const { return MESHRD_meshIndx >= 0; }
         bool hasBONE3D() const { return BONE3D_skeleNodeIndx >= 0 && BONE3D_boneIndx >= 0; }
         bool hasSKEL3D() const { return SKEL3D_skeleIndx >= 0; }
         bool hasANIM3D() const { return ANIM3D_animeIndx >= 0; }

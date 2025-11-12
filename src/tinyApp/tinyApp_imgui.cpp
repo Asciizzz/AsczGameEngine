@@ -75,6 +75,15 @@ void tinyApp::initUI() {
     activeScene = project->scene(HierarchyState::activeSceneHandle);
 }
 
+// ===========================================================================
+// UTILITIES
+// ===========================================================================
+
+static bool renderMenuItemToggle(const char* labelPending, const char* labelFinished, bool finished) {
+    const char* label = finished ? labelFinished : labelPending;
+    return ImGui::MenuItem(label, nullptr, finished, !finished);
+}
+
 
 // Payload data
 struct Payload {
@@ -380,6 +389,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             ImGui::EndDragDropTarget();
         }
     };
+
     auto renderContextMenu = [&fs](tinyHandle h) {
         if (ImGui::BeginPopupContextItem()) {
             if (const tinyFS::Node* node = fs.fNode(h)) {
@@ -392,19 +402,25 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                 ImGui::Separator();
 
                 typeHandle dataType = fs.fTypeHandle(h);
-                if (dataType.isType<tinySceneRT>() && ImGui::MenuItem("Make Active Scene")) {
-                    HierarchyState::activeSceneHandle = dataType.handle;
+                if (dataType.isType<tinySceneRT>()) {
+                    tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
+
+                    if (renderMenuItemToggle("Make Active", "Active", HierarchyState::activeSceneHandle == dataType.handle)) {
+                        HierarchyState::activeSceneHandle = dataType.handle;
+                    }
+
+                    if (renderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
+                        scene->cleanse();
+                    }
                 }
 
                 // Folder methods
                 if (node->isFolder()) {
                     if (ImGui::MenuItem("Add Folder")) fs.addFolder(h, "New Folder");
-
-                    ImGui::Separator();
-                    if (ImGui::MenuItem("Flatten", nullptr, nullptr, deletable)) fs.fRemove(h, false);
                 }
 
                 // Delete methods
+                ImGui::Separator();
                 if (ImGui::MenuItem("Delete", nullptr, nullptr, deletable)) fs.fRemove(h);
             }
             ImGui::EndPopup();

@@ -386,33 +386,21 @@ public:
     [[nodiscard]] void* rGet(typeHandle th) noexcept { return registry_.get(th); }
     [[nodiscard]] const void* rGet(typeHandle th) const noexcept { return registry_.get(th); }
 
-    template<typename T>
-    T* rGet(typeHandle th) noexcept { return registry_.get<T>(th); }
-    template<typename T>
-    const T* rGet(typeHandle th) const noexcept { return registry_.get<T>(th); }
+    template<typename T> T* rGet(typeHandle th) noexcept { return registry_.get<T>(th); }
+    template<typename T> const T* rGet(typeHandle th) const noexcept { return registry_.get<T>(th); }
 
-    template<typename T>
-    T* rGet(tinyHandle h) noexcept { return registry_.get<T>(h); }
-    template<typename T>
-    const T* rGet(tinyHandle h) const noexcept { return registry_.get<T>(h); }
+    template<typename T> T* rGet(tinyHandle h) noexcept { return registry_.get<T>(h); }
+    template<typename T> const T* rGet(tinyHandle h) const noexcept { return registry_.get<T>(h); }
 
     template<typename T>
     bool rHas(const tinyHandle& handle) const noexcept { return registry_.has<T>(handle); }
     bool rHas(const typeHandle& th) const noexcept { return registry_.has(th); }
 
-    template<typename T>
-    typeHandle rAdd(T&& val) {
-        return registry_.add<T>(std::forward<T>(val));
-    }
+    template<typename T> typeHandle rAdd(T&& val) { return registry_.add<T>(std::forward<T>(val)); }
 
     template<typename T>
-    void rRemove(const tinyHandle& handle) noexcept {
-        rRemove(typeHandle<T>(handle));
-    }
-
-    void rRemove(const typeHandle& th) noexcept {
-        if (registry_.has(th)) registry_.tRemove(th);
-    }
+    void rRemove(const tinyHandle& handle) noexcept { rRemove(typeHandle<T>(handle)); }
+    void rRemove(const typeHandle& th) noexcept { if (registry_.has(th)) registry_.tRemove(th); }
 
 // -------------------- FS-level Removal Queue (for deletion order control) --------------------
 
@@ -645,8 +633,11 @@ private:
         tinyHandle h = fnodes_.add(std::move(child));
         parent->addChild(h, resolvedName);
 
-        // Establish bidirectional mapping: data → file
+        // Establish bidirectional mapping: data -> file
         dataToFile_[child.tHandle] = h;
+
+        // Ensure data's type info exists
+        ensureTypeInfo(child.tHandle.typeIndex);
 
         return h;
     }

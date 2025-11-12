@@ -177,10 +177,60 @@ bool Scene::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>
 
 
 
+
+void Scene::remapComponents(const UnorderedMap<tinyHandle, tinyHandle>& ogToNewMap) {
+    // For each original to new handle mapping, remap components
+    for (const auto& [ogHandle, newHandle] : ogToNewMap) {
+        // Remap MESHRD
+        if (rtComp<tinyNodeRT::MESHRD>(ogHandle)) {
+            tinyRT_MESHRD* newMeshRD = writeComp<tinyNodeRT::MESHRD>(newHandle);
+            const tinyRT_MESHRD* ogMeshRD = rtComp<tinyNodeRT::MESHRD>(ogHandle);
+
+            newMeshRD->setMesh(ogMeshRD->meshHandle());
+
+            tinyHandle ogSkeleNodeHandle = ogMeshRD->skeleNodeHandle();
+            if (ogToNewMap.find(ogSkeleNodeHandle) != ogToNewMap.end()) {
+                newMeshRD->setSkeleNode(ogToNewMap.at(ogSkeleNodeHandle));
+            }
+        }
+
+        // Remap SKEL3D
+        if (rtComp<tinyNodeRT::SKEL3D>(ogHandle)) {
+            tinyRT_SKEL3D* newSkeleRT = writeComp<tinyNodeRT::SKEL3D>(newHandle);
+            const tinyRT_SKEL3D* ogSkeleRT = rtComp<tinyNodeRT::SKEL3D>(ogHandle);
+
+            newSkeleRT->copy(ogSkeleRT);
+        }
+
+        // Remap ANIM3D
+        if (rtComp<tinyNodeRT::ANIM3D>(ogHandle)) {
+            tinyRT_ANIM3D* newAnimeRT = writeComp<tinyNodeRT::ANIM3D>(newHandle);
+            const tinyRT_ANIM3D* ogAnimeRT = rtComp<tinyNodeRT::ANIM3D>(ogHandle);
+
+            *newAnimeRT = *ogAnimeRT;
+        }
+
+        // Remap SCRIPT
+        if (rtComp<tinyNodeRT::SCRIPT>(ogHandle)) {
+            tinyRT_SCRIPT* newScriptRT = writeComp<tinyNodeRT::SCRIPT>(newHandle);
+            const tinyRT_SCRIPT* ogScriptRT = rtComp<tinyNodeRT::SCRIPT>(ogHandle);
+
+            *newScriptRT = *ogScriptRT;
+        }
+    }
+}
+
+
+
+
 void Scene::cleanse() {
     tinyPool<tinyNodeRT> cleanedPool;
+    UnorderedMap<tinyHandle, tinyHandle> ogToNewMap;
 
-    // Recursively add to a new pool (Depth-First Search)
+    /* First pass:
+    + Recursively add to a new pool (Depth-First Search)
+    + Establish parent-child relationships in the new pool
+    */
     std::function<void(tinyHandle, tinyHandle)> recurse = [&](tinyHandle ogHandle, tinyHandle parent) {
         const tinyNodeRT* ogNode = nodes_.get(ogHandle);
         if (!ogNode) return;
@@ -189,6 +239,7 @@ void Scene::cleanse() {
         node.childrenHandles.clear(); // Clear children, will be re-added
 
         tinyHandle handle = cleanedPool.add(std::move(node));
+        ogToNewMap[ogHandle] = handle;
 
         if (tinyNodeRT* newParent = cleanedPool.get(parent)) {
             newParent->addChild(handle);
@@ -200,6 +251,10 @@ void Scene::cleanse() {
             recurse(childHandle, handle);
         }
     };
+
+    /* Second pass: Remapping of components
+
+    */
 
     recurse(rootHandle_, tinyHandle());
 
@@ -218,7 +273,6 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
     // First pass: Add all nodes_ from 'from' scene as raw nodes_
 
-    // std::vector<tinyHandle> toHandles;
     UnorderedMap<uint32_t, tinyHandle> toHandleMap;
 
     const auto& from_items = from->nodes_.view();

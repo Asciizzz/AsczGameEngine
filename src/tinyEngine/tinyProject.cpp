@@ -200,12 +200,12 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         if (ogNode.hasMESHR()) {
             auto* newMeshRender = scene.writeComp<tinyNodeRT::MESHRD>(nodeHandle);
 
-            if (validIndex(ogNode.MESHR_meshIndx, glbMeshRHandle)) {
-                newMeshRender->setMesh(glbMeshRHandle[ogNode.MESHR_meshIndx]);
+            if (validIndex(ogNode.MESHRD_meshIndx, glbMeshRHandle)) {
+                newMeshRender->setMesh(glbMeshRHandle[ogNode.MESHRD_meshIndx]);
             }
 
-            if (validIndex(ogNode.MESHR_skeleNodeIndx, nodeHandles)) {
-                newMeshRender->setSkeleNode(nodeHandles[ogNode.MESHR_skeleNodeIndx]);
+            if (validIndex(ogNode.MESHRD_skeleNodeIndx, nodeHandles)) {
+                newMeshRender->setSkeleNode(nodeHandles[ogNode.MESHRD_skeleNodeIndx]);
             }
         }
 

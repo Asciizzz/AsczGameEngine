@@ -49,6 +49,10 @@ private:
     template<typename T>
     static constexpr bool no_resolver = std::is_same_v<T, RTResolver_t<T>>;
 
+    #define IF_NO_RESOLVER(T) if constexpr (no_resolver<T>)
+    #define IF_HAS_RESOLVER(T) if constexpr (!no_resolver<T>)
+    #define IF_TYPE_EQ(A, B) if constexpr (type_eq<A, B>)
+
 public:
     std::string name;
 
@@ -203,8 +207,11 @@ public:
 
         addMap3D<T>(nodeHandle);
 
-        if constexpr (no_resolver<T>) return compPtr;
-        else return addRT<T, RTResolver_t<T>>(compPtr);
+        IF_TYPE_EQ(T, tinyNodeRT::SKEL3D) return addSKEL3D_RT(compPtr); else
+        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) return addANIM3D_RT(compPtr); else
+        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) return addMESHRD_RT(compPtr); else
+        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) return addSCRIPT_RT(compPtr); else
+        return compPtr;
     }
 
     template<typename T>
@@ -214,9 +221,7 @@ public:
 
         T* compPtr = node->get<T>();
 
-        if constexpr (!no_resolver<T>) {
-            rtRemove<RTResolver_t<T>>(compPtr->pHandle);
-        }
+        IF_HAS_RESOLVER(T) rtRemove<RTResolver_t<T>>(compPtr->pHandle);
 
         rmMap3D<T>(nodeHandle);
 
@@ -227,22 +232,11 @@ public:
 
     template<typename T>
     const UnorderedMap<tinyHandle, tinyHandle>& mapRTRFM3D() const {
-        if constexpr (type_eq<T, tinyNodeRT::MESHRD>)      return mapMESHR_;
-        else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) return mapANIM3D_;
-        else {
+        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) return mapMESHRD_; else
+        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) return mapANIM3D_; else
+        {
             static UnorderedMap<tinyHandle, tinyHandle> emptyMap;
             return emptyMap; // Empty map for unsupported types
-        }
-    }
-
-    template<typename T>
-    const tinyPool<tinyHandle>& poolRTRFM3D() const {
-        if constexpr (type_eq<T, tinyNodeRT::MESHRD>)      return withMESHR_;
-        else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) return withANIM3D_;
-        else if constexpr (type_eq<T, tinyNodeRT::SCRIPT>)  return withSCRIPT_;
-        else {
-            static tinyPool<tinyHandle> emptyPool;
-            return emptyPool; // Empty pool for unsupported types
         }
     }
 
@@ -286,8 +280,8 @@ private:
 
     // Cache of specific nodes_ for easy access
 
-    tinyPool<tinyHandle> withMESHR_;
-    UnorderedMap<tinyHandle, tinyHandle> mapMESHR_;
+    tinyPool<tinyHandle> withMESHRD_;
+    UnorderedMap<tinyHandle, tinyHandle> mapMESHRD_;
 
     tinyPool<tinyHandle> withANIM3D_;
     UnorderedMap<tinyHandle, tinyHandle> mapANIM3D_;
@@ -299,6 +293,10 @@ private:
 
     void updateRecursive(tinyHandle nodeHandle = tinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
+    // ---------- Remapping helpers ----------
+
+    void remapComponents(const UnorderedMap<tinyHandle, tinyHandle>& ogToNewMap);
+
     // ---------- Runtime component management ----------
 
     template<typename T>
@@ -307,47 +305,30 @@ private:
             map[handle] = pool.add(handle);
         };
 
-        if constexpr (type_eq<T, tinyNodeRT::MESHRD>)  {
-            mapInsert(mapMESHR_, withMESHR_, nodeHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
-            mapInsert(mapANIM3D_, withANIM3D_, nodeHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::SCRIPT>) {
-            mapInsert(mapSCRIPT_, withSCRIPT_, nodeHandle);
-        }
+        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) mapInsert(mapMESHRD_, withMESHRD_, nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) mapInsert(mapANIM3D_, withANIM3D_, nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) mapInsert(mapSCRIPT_, withSCRIPT_, nodeHandle);
     }
 
     template<typename T>
     void rmMap3D(tinyHandle nodeHandle) {
-        // Helpful helper function to remove from map and pool
         auto rmFromMapAndPool = [this](auto& map, auto& pool, tinyHandle handle) {
             auto it = map.find(handle);
-            if (it != map.end()) {
-                pool.remove(it->second);
-                map.erase(it);
-            }
+            if (it == map.end()) return;
+
+            pool.remove(it->second);
+            map.erase(it);
         };
 
-        if constexpr (type_eq<T, tinyNodeRT::MESHRD>) {
-            rmFromMapAndPool(mapMESHR_, withMESHR_, nodeHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) {
-            rmFromMapAndPool(mapANIM3D_, withANIM3D_, nodeHandle);
-        } else if constexpr (type_eq<T, tinyNodeRT::SCRIPT>) {
-            rmFromMapAndPool(mapSCRIPT_, withSCRIPT_, nodeHandle);
-        }
+        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) rmFromMapAndPool(mapMESHRD_, withMESHRD_, nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) rmFromMapAndPool(mapANIM3D_, withANIM3D_, nodeHandle); else
+        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) rmFromMapAndPool(mapSCRIPT_, withSCRIPT_, nodeHandle);
     }
 
     // Generic runtime component creation dispatcher
     template<typename CompT, typename RT>
     RT* addRT(CompT* compPtr) {
-        if constexpr (type_eq<CompT, tinyNodeRT::SKEL3D>) {
-            return addSKEL3D_RT(compPtr);
-        } else if constexpr (type_eq<CompT, tinyNodeRT::ANIM3D>) {
-            return addANIM3D_RT(compPtr);
-        } else if constexpr (type_eq<CompT, tinyNodeRT::MESHRD>) {
-            return addMESHR_RT(compPtr);
-        } else if constexpr (type_eq<CompT, tinyNodeRT::SCRIPT>) {
-            return addSCRIPT_RT(compPtr);
-        }
+        
         return nullptr;
     }
 
@@ -374,7 +355,7 @@ private:
         return rtGet<tinyRT_ANIM3D>(compPtr->pHandle);
     }
 
-    tinyRT_MESHRD* addMESHR_RT(tinyNodeRT::MESHRD* compPtr) {
+    tinyRT_MESHRD* addMESHRD_RT(tinyNodeRT::MESHRD* compPtr) {
         tinyRT_MESHRD rtMeshRT;
         rtMeshRT.init(
             sharedRes_.deviceVk,
@@ -405,7 +386,7 @@ private:
         return nodes_.get(nodeHandle(index));
     }
 
-    const tinyNodeRT* fromIndex(uint32_t index) const {
+    const tinyNodeRT*  fromIndex(uint32_t index) const {
         return nodes_.get(nodeHandle(index));
     }
 

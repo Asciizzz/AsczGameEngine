@@ -940,12 +940,12 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
         nModel.TRFM3D = matrix;
 
         if (nGltf.mesh >= 0) {
-            nModel.MESHR_meshIndx = nGltf.mesh;
+            nModel.MESHRD_meshIndx = nGltf.mesh;
 
             int skeletonIndex = nGltf.skin;
             auto it = skeletonToModelNodeIndex.find(skeletonIndex);
             if (it != skeletonToModelNodeIndex.end()) {
-                nModel.MESHR_skeleNodeIndx = it->second;
+                nModel.MESHRD_skeleNodeIndx = it->second;
             }
 
             // Check if the parent of this node is a joint
@@ -1446,7 +1446,7 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
     // Child nodes for each mesh (representing each material group)
     for (size_t meshIndex = 0; meshIndex < result.meshes.size(); meshIndex++) {
         tNode meshNode(result.meshes[meshIndex].name);
-        meshNode.MESHR_meshIndx = static_cast<int>(meshIndex);
+        meshNode.MESHRD_meshIndx = static_cast<int>(meshIndex);
 
         result.nodes.push_back(std::move(meshNode));
         int nodeIndex = static_cast<int>(result.nodes.size() - 1);
