@@ -128,7 +128,7 @@ public:
 
     // -------- Component management --------- 
 
-    struct NComp {
+    struct NWrap {
         tinyHandle handle = tinyHandle();
         tinyNodeRT::TRFM3D* trfm3D = nullptr;
         tinyNodeRT::BONE3D* bone3D = nullptr;
@@ -138,11 +138,11 @@ public:
         tinyRT_SCRIPT* script = nullptr;
     };
 
-    NComp nComp(tinyHandle nodeHandle) {
+    NWrap nWrap(tinyHandle nodeHandle) {
         tinyNodeRT* node = nodes_.get(nodeHandle);
-        if (!node) return NComp();
+        if (!node) return NWrap();
 
-        NComp comps;
+        NWrap comps;
         comps.handle = nodeHandle;
         comps.trfm3D = rtComp<tinyNodeRT::TRFM3D>(nodeHandle);
         comps.bone3D = rtComp<tinyNodeRT::BONE3D>(nodeHandle);
@@ -154,8 +154,8 @@ public:
         return comps;
     }
 
-    const NComp nComp(tinyHandle nodeHandle) const {
-        return const_cast<Scene*>(this)->nComp(nodeHandle);
+    const NWrap nWrap(tinyHandle nodeHandle) const {
+        return const_cast<Scene*>(this)->nWrap(nodeHandle);
     }
 
     // Retrieve runtime-resolved component pointer (return runtime component instead of node identity component)

@@ -368,7 +368,7 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     uint32_t curFrame_ = fStart_.frame;
     float curDTime_ = fStart_.dTime;
 
-    NComp comps = nComp(nodeHandle);
+    NWrap comps = nWrap(nodeHandle);
 
     // Script must be updated first before everything else
     if (comps.script) comps.script->update(this, nodeHandle, curDTime_);

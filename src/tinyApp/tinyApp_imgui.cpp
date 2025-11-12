@@ -282,9 +282,17 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
                 }
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Properties")) {
-                    // TODO: open properties window
+                // Special functions
+                tinySceneRT::NWrap nWrap = scene->nWrap(h);
+
+                if (nWrap.anim3D) {
+                    for (auto& anime : nWrap.anim3D->MAL()) {
+                        if (ImGui::MenuItem(anime.first.c_str())) {
+                            nWrap.anim3D->play(anime.first, true);
+                        }
+                    }
                 }
+
             }
             ImGui::EndPopup();
         }

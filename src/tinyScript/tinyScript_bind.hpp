@@ -542,7 +542,7 @@ static inline int transform3d_getPos(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
 
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -560,7 +560,7 @@ static inline int transform3d_setPos(lua_State* L) {
     glm::vec3* newPos = getVec3(L, 2);
     if (!newPos) return luaL_error(L, "setPos expects Vec3");
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -574,7 +574,7 @@ static inline int transform3d_getRot(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -594,7 +594,7 @@ static inline int transform3d_setRot(lua_State* L) {
     glm::vec3* euler = getVec3(L, 2);
     if (!euler) return luaL_error(L, "setRot expects Vec3");
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -609,7 +609,7 @@ static inline int transform3d_getQuat(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -627,7 +627,7 @@ static inline int transform3d_setQuat(lua_State* L) {
     glm::vec4* quatVec = getVec4(L, 2);
     if (!quatVec) return luaL_error(L, "setQuat expects Vec4");
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -642,7 +642,7 @@ static inline int transform3d_getScl(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -660,7 +660,7 @@ static inline int transform3d_setScl(lua_State* L) {
     glm::vec3* newScale = getVec3(L, 2);
     if (!newScale) return luaL_error(L, "setScl expects Vec3");
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -677,7 +677,7 @@ static inline int node_transform3D(lua_State* L) {
     tinyRT::Scene* scene = getSceneFromLua(L);
     if (!scene) { lua_pushnil(L); return 1; }
     
-    auto comps = scene->nComp(*handle);
+    auto comps = scene->nWrap(*handle);
     if (!comps.trfm3D) { lua_pushnil(L); return 1; }
     
     tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
@@ -715,7 +715,7 @@ static inline int bone_getLocalPos(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -733,7 +733,7 @@ static inline int bone_setLocalPos(lua_State* L) {
     glm::vec3* newPos = getVec3(L, 2);
     if (!newPos) return luaL_error(L, "setLocalPos expects Vec3");
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -747,7 +747,7 @@ static inline int bone_getLocalRot(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -766,7 +766,7 @@ static inline int bone_setLocalRot(lua_State* L) {
     glm::vec3* euler = getVec3(L, 2);
     if (!euler) return luaL_error(L, "setLocalRot expects Vec3");
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -781,7 +781,7 @@ static inline int bone_getLocalQuat(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -799,7 +799,7 @@ static inline int bone_setLocalQuat(lua_State* L) {
     glm::vec4* quatVec = getVec4(L, 2);
     if (!quatVec) return luaL_error(L, "setLocalQuat expects Vec4");
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -814,7 +814,7 @@ static inline int bone_getLocalScl(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -832,7 +832,7 @@ static inline int bone_setLocalScl(lua_State* L) {
     glm::vec3* newScale = getVec3(L, 2);
     if (!newScale) return luaL_error(L, "setLocalScl expects Vec3");
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (comps.skel3D && comps.skel3D->boneValid(bone->boneIndex)) {
         glm::vec3 pos, scale;
         glm::quat rot;
@@ -847,7 +847,7 @@ static inline int bone_localPose(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -877,7 +877,7 @@ static inline int bone_getBindPos(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -892,7 +892,7 @@ static inline int bone_getBindRot(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -908,7 +908,7 @@ static inline int bone_getBindQuat(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -923,7 +923,7 @@ static inline int bone_getBindScl(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -939,7 +939,7 @@ static inline int bone_bindPose(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) return 0;
     
     glm::vec3 pos, scale;
@@ -969,7 +969,7 @@ static inline int bone_parent(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
         lua_pushnil(L);
         return 1;
@@ -995,7 +995,7 @@ static inline int bone_parentIndex(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
         lua_pushnil(L);
         return 1;
@@ -1021,7 +1021,7 @@ static inline int bone_children(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) { lua_newtable(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
         lua_newtable(L);
         return 1;
@@ -1048,7 +1048,7 @@ static inline int bone_childrenIndices(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) { lua_newtable(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
         lua_newtable(L);
         return 1;
@@ -1085,7 +1085,7 @@ static inline int bone_name(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(bone->nodeHandle);
+    auto comps = getSceneFromLua(L)->nWrap(bone->nodeHandle);
     if (!comps.skel3D || !comps.skel3D->boneValid(bone->boneIndex)) {
         lua_pushnil(L);
         return 1;
@@ -1115,7 +1115,7 @@ static inline int skeleton3d_bone(lua_State* L) {
     
     uint32_t boneIndex = static_cast<uint32_t>(luaL_checkinteger(L, 2));
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (!comps.skel3D || !comps.skel3D->boneValid(boneIndex)) {
         lua_pushnil(L);
         return 1;
@@ -1130,7 +1130,7 @@ static inline int skeleton3d_boneCount(lua_State* L) {
     tinyHandle* handle = getSkeleton3DHandle(L, 1);
     if (!handle) { lua_pushinteger(L, 0); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (!comps.skel3D) {
         lua_pushinteger(L, 0);
         return 1;
@@ -1145,7 +1145,7 @@ static inline int skeleton3d_refreshAll(lua_State* L) {
     tinyHandle* handle = getSkeleton3DHandle(L, 1);
     if (!handle) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.skel3D) {
         comps.skel3D->refreshAll();
     }
@@ -1157,7 +1157,7 @@ static inline int node_skeleton3D(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (!comps.skel3D) { lua_pushnil(L); return 1; }
     
     tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
@@ -1179,7 +1179,7 @@ static inline int anim3d_get(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle || !lua_isstring(L, 2)) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
         if (animHandle.valid()) {
@@ -1195,7 +1195,7 @@ static inline int anim3d_current(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->curHandle();
         if (animHandle.valid()) {
@@ -1213,7 +1213,7 @@ static inline int anim3d_play(lua_State* L) {
     
     tinyHandle animHandle;
     if (lua_isstring(L, 2)) {
-        auto comps = getSceneFromLua(L)->nComp(*handle);
+        auto comps = getSceneFromLua(L)->nWrap(*handle);
         if (!comps.anim3D) return 0;
         animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
     } else {
@@ -1227,7 +1227,7 @@ static inline int anim3d_play(lua_State* L) {
     }
     
     bool restart = lua_isboolean(L, 3) ? lua_toboolean(L, 3) : true;
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.anim3D) comps.anim3D->play(animHandle, restart);
     return 0;
 }
@@ -1235,7 +1235,7 @@ static inline int anim3d_play(lua_State* L) {
 static inline int anim3d_setSpeed(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle || !lua_isnumber(L, 2)) return 0;
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.anim3D) comps.anim3D->setSpeed(static_cast<float>(lua_tonumber(L, 2)));
     return 0;
 }
@@ -1243,7 +1243,7 @@ static inline int anim3d_setSpeed(lua_State* L) {
 static inline int anim3d_isPlaying(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) { lua_pushboolean(L, false); return 1; }
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     lua_pushboolean(L, comps.anim3D && comps.anim3D->isPlaying());
     return 1;
 }
@@ -1251,7 +1251,7 @@ static inline int anim3d_isPlaying(lua_State* L) {
 static inline int anim3d_getTime(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) { lua_pushnumber(L, 0.0f); return 1; }
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     lua_pushnumber(L, comps.anim3D ? comps.anim3D->getTime() : 0.0f);
     return 1;
 }
@@ -1259,7 +1259,7 @@ static inline int anim3d_getTime(lua_State* L) {
 static inline int anim3d_setTime(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle || !lua_isnumber(L, 2)) return 0;
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.anim3D) comps.anim3D->setTime(static_cast<float>(lua_tonumber(L, 2)));
     return 0;
 }
@@ -1268,7 +1268,7 @@ static inline int anim3d_getDuration(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) { lua_pushnumber(L, 0.0f); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (!comps.anim3D) { lua_pushnumber(L, 0.0f); return 1; }
     
     tinyHandle animHandle;
@@ -1292,7 +1292,7 @@ static inline int anim3d_getDuration(lua_State* L) {
 static inline int anim3d_setLoop(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle || !lua_isboolean(L, 2)) return 0;
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.anim3D) comps.anim3D->setLoop(lua_toboolean(L, 2));
     return 0;
 }
@@ -1300,7 +1300,7 @@ static inline int anim3d_setLoop(lua_State* L) {
 static inline int anim3d_isLoop(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) { lua_pushboolean(L, true); return 1; }
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     lua_pushboolean(L, comps.anim3D ? comps.anim3D->getLoop() : true);
     return 1;
 }
@@ -1308,7 +1308,7 @@ static inline int anim3d_isLoop(lua_State* L) {
 static inline int anim3d_pause(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) return 0;
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.anim3D) comps.anim3D->pause();
     return 0;
 }
@@ -1316,7 +1316,7 @@ static inline int anim3d_pause(lua_State* L) {
 static inline int anim3d_resume(lua_State* L) {
     tinyHandle* handle = getAnim3DHandle(L, 1);
     if (!handle) return 0;
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (comps.anim3D) comps.anim3D->resume();
     return 0;
 }
@@ -1325,7 +1325,7 @@ static inline int node_anime3D(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (!comps.anim3D) { lua_pushnil(L); return 1; }
     
     tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
@@ -1347,7 +1347,7 @@ static inline int script_getVar(lua_State* L) {
     tinyHandle* handle = getScriptHandle(L, 1);
     if (!handle || !lua_isstring(L, 2)) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     const char* varName = lua_tostring(L, 2);
     
     if (comps.script && comps.script->vHas(varName)) {
@@ -1376,7 +1376,7 @@ static inline int script_setVar(lua_State* L) {
     tinyHandle* handle = getScriptHandle(L, 1);
     if (!handle || !lua_isstring(L, 2)) return 0;
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     const char* varName = lua_tostring(L, 2);
     
     if (comps.script && comps.script->vHas(varName)) {
@@ -1432,7 +1432,7 @@ static inline int node_script(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
     
-    auto comps = getSceneFromLua(L)->nComp(*handle);
+    auto comps = getSceneFromLua(L)->nWrap(*handle);
     if (!comps.script) { lua_pushnil(L); return 1; }
     
     tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
@@ -2173,7 +2173,7 @@ static inline void registerNodeBindings(lua_State* L) {
             return 1;
         }
         
-        auto comps = getSceneFromLua(L)->nComp(b->nodeHandle);
+        auto comps = getSceneFromLua(L)->nWrap(b->nodeHandle);
         if (!comps.skel3D || !comps.skel3D->boneValid(b->boneIndex)) {
             lua_pushfstring(L, "Bone(%d, invalid)", b->boneIndex);
             return 1;
