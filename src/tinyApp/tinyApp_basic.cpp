@@ -53,13 +53,19 @@ void tinyApp::initComponents() {
 
     // Adding some test files
 
-    auto addModel = [&](const char* path) {
-        tinyModel model = tinyLoader::loadModel(path);
-        project->addModel(model);
+    auto addModels = [&](const std::vector<std::string>& paths) {
+        for (const auto& path : paths) {
+            tinyModel model = tinyLoader::loadModel(path);
+            project->addModel(model);
+        }
     };
 
-    addModel("game/Test/Animation.glb");
-    addModel("game/Pearto/Pearto.obj");
+    addModels({
+        "game/Test/Animation.glb",
+        "game/Pearto/Pearto.obj",
+        "C:\\Users\\Asciiz\\Downloads\\ResourcesForMyGame\\SketchFat\\krixi_arena_of_valor.glb",
+        "C:\\Users\\Asciiz\\Downloads\\ResourcesForMyGame\\SketchFat\\violet_dimension_breaker_arena_of_valor.glb"
+    });
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->camera()->setAspectRatio(aspectRatio);

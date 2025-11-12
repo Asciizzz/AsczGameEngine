@@ -57,8 +57,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     if (!model.textures.empty()) {
         tinyHandle fnTexFolder = fs_->addFolder(fnModelFolder, "Textures");
 
-        printf("Importing %zu textures...\n", model.textures.size());
-
         for (auto& mTexture : model.textures) {
             tinyTextureVk textureVk;
             textureVk.createFrom(std::move(mTexture.texture), deviceVk_);
