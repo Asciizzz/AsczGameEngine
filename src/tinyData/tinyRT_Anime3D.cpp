@@ -306,11 +306,10 @@ void Anime3D::update(Scene* scene, float deltaTime) {
         // Update time
         time += deltaTime * speed;
         if (duration <= 0.0f) {
-            // Zero-length animation: clamp to start
             time = 0.0f;
         } else if (loop) {
             time = fmod(time, duration);
-            if (time < 0.0f) time += duration; // handle negative deltaTime safely
+            if (time < 0.0f) time += duration;
         } else {
             // Clamp and stop if not looping
             if (speed >= 0.0f && time >= duration) {
@@ -323,7 +322,6 @@ void Anime3D::update(Scene* scene, float deltaTime) {
         }
     }
 
-    // Always apply the current animation at the current time (even if paused)
     if (clip && clip->valid()) {
         apply(scene, currentHandle);
     }
