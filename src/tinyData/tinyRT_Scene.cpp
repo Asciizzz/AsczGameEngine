@@ -177,52 +177,6 @@ bool Scene::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>
 
 
 
-
-void Scene::remapComponents(const UnorderedMap<tinyHandle, tinyHandle>& ogToNewMap) {
-    // For each original to new handle mapping, remap components
-    for (const auto& [ogHandle, newHandle] : ogToNewMap) {
-        // Remap MESHRD
-        if (rtComp<tinyNodeRT::MESHRD>(ogHandle)) {
-            tinyRT_MESHRD* newMeshRD = writeComp<tinyNodeRT::MESHRD>(newHandle);
-            const tinyRT_MESHRD* ogMeshRD = rtComp<tinyNodeRT::MESHRD>(ogHandle);
-
-            newMeshRD->setMesh(ogMeshRD->meshHandle());
-
-            tinyHandle ogSkeleNodeHandle = ogMeshRD->skeleNodeHandle();
-            if (ogToNewMap.find(ogSkeleNodeHandle) != ogToNewMap.end()) {
-                newMeshRD->setSkeleNode(ogToNewMap.at(ogSkeleNodeHandle));
-            }
-        }
-
-        // Remap SKEL3D
-        if (rtComp<tinyNodeRT::SKEL3D>(ogHandle)) {
-            tinyRT_SKEL3D* newSkeleRT = writeComp<tinyNodeRT::SKEL3D>(newHandle);
-            const tinyRT_SKEL3D* ogSkeleRT = rtComp<tinyNodeRT::SKEL3D>(ogHandle);
-
-            newSkeleRT->copy(ogSkeleRT);
-        }
-
-        // Remap ANIM3D
-        if (rtComp<tinyNodeRT::ANIM3D>(ogHandle)) {
-            tinyRT_ANIM3D* newAnimeRT = writeComp<tinyNodeRT::ANIM3D>(newHandle);
-            const tinyRT_ANIM3D* ogAnimeRT = rtComp<tinyNodeRT::ANIM3D>(ogHandle);
-
-            *newAnimeRT = *ogAnimeRT;
-        }
-
-        // Remap SCRIPT
-        if (rtComp<tinyNodeRT::SCRIPT>(ogHandle)) {
-            tinyRT_SCRIPT* newScriptRT = writeComp<tinyNodeRT::SCRIPT>(newHandle);
-            const tinyRT_SCRIPT* ogScriptRT = rtComp<tinyNodeRT::SCRIPT>(ogHandle);
-
-            *newScriptRT = *ogScriptRT;
-        }
-    }
-}
-
-
-
-
 void Scene::cleanse() {
     tinyPool<tinyNodeRT> cleanedPool;
     UnorderedMap<tinyHandle, tinyHandle> ogToNewMap;
@@ -252,11 +206,38 @@ void Scene::cleanse() {
         }
     };
 
-    /* Second pass: Remapping of components
-
-    */
-
     recurse(rootHandle_, tinyHandle());
+
+    /* Second pass: Remapping of components */
+
+    for (const auto& [ogHandle, newHandle] : ogToNewMap) {
+        tinyNodeRT* newNode = cleanedPool.get(newHandle);
+
+        if (tinyRT_MESHRD* rtMESHRD = rtComp<tinyNodeRT::MESHRD>(newHandle)) {
+            rtMESHRD->setSkeleNode(ogToNewMap[rtMESHRD->skeleNodeHandle()]);
+        }
+
+        if (tinyRT_ANIM3D* rtANIM3D = rtComp<tinyNodeRT::ANIM3D>(newHandle)) {
+            for (auto& anime : rtANIM3D->MAL()) {
+                auto* toAnime = rtANIM3D->get(anime.second);
+
+                for (auto& channel : toAnime->channels) {
+                    if (ogToNewMap.find(channel.node) != ogToNewMap.end()) channel.node = ogToNewMap[channel.node];
+                }
+            }
+        }
+
+        if (tinyRT_SCRIPT* rtSCRIPT = rtComp<tinyNodeRT::SCRIPT>(newHandle)) {
+            for (auto& [key, value] : rtSCRIPT->vMap()) {
+                if (!std::holds_alternative<typeHandle>(value)) continue;
+
+                typeHandle& th = std::get<typeHandle>(value);
+                if (!th.isType<tinyNodeRT>()) continue;
+
+                if (ogToNewMap.find(th.handle) != ogToNewMap.end()) th.handle = ogToNewMap[th.handle];
+            }
+        }
+    }
 
     nodes_.clear();
     nodes_ = std::move(cleanedPool);
@@ -268,50 +249,43 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
     if (!from || from->nodes_.count() == 0) return tinyHandle();
 
-    // Default to root node if no parent specified
     if (!parentHandle.valid()) parentHandle = rootHandle();
 
-    // First pass: Add all nodes_ from 'from' scene as raw nodes_
+    // First pass: Add all nodes_ from 'from' scene as raw nodes_ recursively
+    UnorderedMap<tinyHandle, tinyHandle> from_to_map;
 
-    UnorderedMap<uint32_t, tinyHandle> toHandleMap;
+    std::function<void(tinyHandle, tinyHandle)> recurseAdd = [&](tinyHandle fromHandle, tinyHandle toParentHandle) {
+        const tinyNodeRT* fromNode = from->nodes_.get(fromHandle);
+        if (!fromNode) return;
 
-    const auto& from_items = from->nodes_.view();
-    for (uint32_t i = 0; i < from_items.size(); ++i) {
-        const tinyNodeRT* fromNode = from->fromIndex(i);
-        if (!fromNode) continue;
+        tinyHandle toNodeHandle = addNodeRaw(fromNode->name);
+        from_to_map[fromHandle] = toNodeHandle;
 
-        toHandleMap[i] = addNodeRaw(fromNode->name);
-    }
+        // Establish parent-child relationships
+        tinyNodeRT* toNode = nodes_.get(toNodeHandle);
+        toNode->setParent(toParentHandle);
+
+        if (tinyNodeRT* toParentNode = nodes_.get(toParentHandle)) {
+            toParentNode->addChild(toNodeHandle);
+        }
+
+        for (const tinyHandle& fromChildHandle : fromNode->childrenHandles) {
+            recurseAdd(fromChildHandle, toNodeHandle);
+        }
+    };
+
+    recurseAdd(from->rootHandle(), parentHandle);
 
     // Second pass: Construct nodes_ with proper remapped components
 
     tinyHandle thisHandle = tinyHandle();
 
-    for (auto& [i, toHandle] : toHandleMap) {
-        tinyHandle fromHandle = from->nodeHandle(i);
-
+    for (auto& [fromHandle, toHandle] : from_to_map) {
         const tinyNodeRT* fromNode = from->node(fromHandle);
         if (!fromNode) continue;
 
-        tinyHandle toHandle = toHandleMap[i];
-
         tinyNodeRT* toNode = nodes_.get(toHandle);
         if (!toNode) continue; // Should not happen
-
-        // Establish parent-child relationships
-        tinyHandle fromParentHandle = fromNode->parentHandle;
-
-        tinyHandle toParentHandle;
-        if (fromParentHandle.valid()) {
-            toParentHandle = toHandleMap[fromParentHandle.index];
-        } else {
-            toParentHandle = parentHandle;
-            thisHandle = toHandle; // This is the root node (which is also the added scene's root)
-        }
-
-        toNode->setParent(toParentHandle);
-        tinyNodeRT* parentNode = nodes_.get(toParentHandle);
-        if (parentNode) parentNode->addChild(toHandle);
 
         // Resolve components
 
@@ -327,16 +301,16 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
             toMeshRender->setMesh(fromMeshRender->meshHandle());
 
             tinyHandle skeleNodeHandle = fromMeshRender->skeleNodeHandle();
-            if (toHandleMap.find(skeleNodeHandle.index) != toHandleMap.end()) {
-                toMeshRender->setSkeleNode(toHandleMap[skeleNodeHandle.index]);
+            if (from_to_map.find(skeleNodeHandle) != from_to_map.end()) {
+                toMeshRender->setSkeleNode(from_to_map[skeleNodeHandle]);
             }
         }
 
         if (const auto* fromBoneAttach = fromNode->get<tinyNodeRT::BONE3D>()) {
             auto* toBoneAttach = writeComp<tinyNodeRT::BONE3D>(toHandle);
 
-            if (toHandleMap.find(fromBoneAttach->skeleNodeHandle.index) != toHandleMap.end()) {
-                toBoneAttach->skeleNodeHandle = toHandleMap[fromBoneAttach->skeleNodeHandle.index];
+            if (from_to_map.find(fromBoneAttach->skeleNodeHandle) != from_to_map.end()) {
+                toBoneAttach->skeleNodeHandle = from_to_map[fromBoneAttach->skeleNodeHandle];
             }
 
             toBoneAttach->boneIndex = fromBoneAttach->boneIndex;
@@ -357,8 +331,8 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
                 // Remap each channel
                 for (auto& channel : toAnime->channels) {
-                    if (toHandleMap.find(channel.node.index) != toHandleMap.end()) {
-                        channel.node = toHandleMap[channel.node.index];
+                    if (from_to_map.find(channel.node) != from_to_map.end()) {
+                        channel.node = from_to_map[channel.node];
                     }
                 }
             }
@@ -366,22 +340,24 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
         if (const auto* fromScriptRT = from->rtComp<tinyNodeRT::SCRIPT>(fromHandle)) {
             auto* toScriptRT = writeComp<tinyNodeRT::SCRIPT>(toHandle);
-
             *toScriptRT = *fromScriptRT; // Allow copy
 
             // Remap node handles in script variables
-            for (auto& [key, value] : toScriptRT->vMap()) {
-                if (std::holds_alternative<typeHandle>(value)) {
+            auto remapHandlesInScriptMap = [&](auto& map) {
+                for (auto& [key, value] : map) {
+                    if (!std::holds_alternative<typeHandle>(value)) continue;
+
                     typeHandle& th = std::get<typeHandle>(value);
-                    
-                    // Only remap if it's a node handle (type int)
-                    if (th.isType<tinyNodeRT>() && th.handle.valid()) {
-                        if (toHandleMap.find(th.handle.index) != toHandleMap.end()) {
-                            th.handle = toHandleMap[th.handle.index];
-                        }
+                    if (!th.isType<tinyNodeRT>()) continue;
+
+                    if (from_to_map.find(th.handle) != from_to_map.end()) {
+                        th.handle = from_to_map[th.handle];
                     }
                 }
-            }
+            };
+
+            remapHandlesInScriptMap(toScriptRT->vMap());
+            remapHandlesInScriptMap(toScriptRT->lMap());
         }
     }
 

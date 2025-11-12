@@ -293,10 +293,6 @@ private:
 
     void updateRecursive(tinyHandle nodeHandle = tinyHandle(), const glm::mat4& parentGlobalTransform = glm::mat4(1.0f));
 
-    // ---------- Remapping helpers ----------
-
-    void remapComponents(const UnorderedMap<tinyHandle, tinyHandle>& ogToNewMap);
-
     // ---------- Runtime component management ----------
 
     template<typename T>
@@ -323,13 +319,6 @@ private:
         IF_TYPE_EQ(T, tinyNodeRT::MESHRD) rmFromMapAndPool(mapMESHRD_, withMESHRD_, nodeHandle); else
         IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) rmFromMapAndPool(mapANIM3D_, withANIM3D_, nodeHandle); else
         IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) rmFromMapAndPool(mapSCRIPT_, withSCRIPT_, nodeHandle);
-    }
-
-    // Generic runtime component creation dispatcher
-    template<typename CompT, typename RT>
-    RT* addRT(CompT* compPtr) {
-        
-        return nullptr;
     }
 
     tinyRT_SKEL3D* addSKEL3D_RT(tinyNodeRT::SKEL3D* compPtr) {
