@@ -285,12 +285,16 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
                 // Special functions
                 tinySceneRT::NWrap nWrap = scene->nWrap(h);
 
-                if (nWrap.anim3D) {
-                    for (auto& anime : nWrap.anim3D->MAL()) {
+                if (tinyRT_ANIM3D* anim3D = nWrap.anim3D) {
+                    for (auto& anime : anim3D->MAL()) {
                         if (ImGui::MenuItem(anime.first.c_str())) {
-                            nWrap.anim3D->play(anime.first, true);
+                            anim3D->play(anime.first, true);
                         }
                     }
+                }
+
+                if (tinyRT_SCRIPT* script = nWrap.script) {
+                    // Do nothing
                 }
             }
             ImGui::EndPopup();
@@ -404,11 +408,11 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                 const char* name = node->name.c_str();
 
                 ImGui::Text("%s", name);
-
-                // Special types methods
                 ImGui::Separator();
 
+                // Special types methods
                 typeHandle dataType = fs.fTypeHandle(h);
+
                 if (dataType.isType<tinySceneRT>()) {
                     tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
 
@@ -418,6 +422,15 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
 
                     if (renderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
                         scene->cleanse();
+                    }
+                }
+
+                
+                if (dataType.isType<tinyScript>()) {
+                    tinyScript* script = fs.rGet<tinyScript>(dataType.handle);
+
+                    if (ImGui::MenuItem("Compile")) {
+                        script->compile();
                     }
                 }
 

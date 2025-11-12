@@ -224,8 +224,6 @@ void tinyApp::mainLoop() {
                     }
 
                     if (ext == "lua") {
-                        // Get the entire contents of the file
-                        // std::string fileContents;
                         tinyScript script;
 
                         std::ifstream fileStream(droppedFile);
