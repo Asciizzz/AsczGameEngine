@@ -199,8 +199,9 @@ void Scene::cleanse() {
         const tinyNodeRT* oldNode = nodes_.get(oldHandle);
         if (!oldNode) return;
 
-        tinyNodeRT node = *oldNode; // Copy original node
-        node.childrenHandles.clear(); // Clear children, will be re-added
+        tinyNodeRT node = *oldNode;      // Copy original node
+        node.setParent(newParentHandle); // Set new parent
+        node.childrenHandles.clear();    // Clear children
 
         tinyHandle newHandle = cleaned.add(std::move(node));
         old_new_map[oldHandle] = newHandle;
@@ -213,43 +214,7 @@ void Scene::cleanse() {
         }
     };
 
-    // Print the old hierarchy (linearly and check for children - parent relationships)
-    std::cout << "Old hierarchy: " << std::endl;
-    for (int i = 0; i < nodes_.count(); ++i) {
-        tinyHandle handle = nodes_.getHandle(i);
-        tinyNodeRT* node = nodes_.get(handle);
-        if (node) {
-            std::cout << "Node " << i << ": " << node->name << " | Parent: " << node->parentHandle.index;
-
-            if (node->childrenHandles.empty()) {
-                std::cout << std::endl;
-                continue;
-            }
-
-            std::cout << " | Children: ";
-            for (const tinyHandle& child : node->childrenHandles) {
-                std::cout << child.index << " ";
-            }
-            std::cout << std::endl;
-        }
-    }
-
     recurse(rootHandle_, tinyHandle());
-    std::cout << "===============================" << std::endl;
-
-    // Print the new hierarchy (linearly and check for children - parent relationships)
-    std::cout << "New hierarchy: " << std::endl;
-    for (int i = 0; i < cleaned.count(); ++i) {
-        tinyHandle handle = cleaned.getHandle(i);
-        tinyNodeRT* node = cleaned.get(handle);
-        if (node) {
-            std::cout << "Node " << i << ": " << node->name << " | Parent: " << node->parentHandle.index << " | Children: ";
-            for (const tinyHandle& child : node->childrenHandles) {
-                std::cout << child.index << " ";
-            }
-            std::cout << std::endl;
-        }
-    }
 
     /* Second pass: Remapping of EXISTING components */
     for (const auto& [oldHandle, newHandle] : old_new_map) {
