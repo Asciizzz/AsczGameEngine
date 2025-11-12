@@ -292,7 +292,6 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
                         }
                     }
                 }
-
             }
             ImGui::EndPopup();
         }
