@@ -585,15 +585,33 @@ static void RenderTrfm3D(tinyProject* project, tinyNodeRT::TRFM3D* trfm3D) {
         trfm3D->local = t * r * s;
     };
 
-    glm::vec3 eulerAngles = glm::eulerAngles(rotation) * (180.0f / 3.14159265f);
+    static glm::quat initialRotation;
+    static bool isDraggingRotation = false;
+    static glm::vec3 displayEuler;
+
+    if (!isDraggingRotation) {
+        displayEuler = glm::eulerAngles(rotation) * (180.0f / 3.14159265f);
+    }
 
     if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) {
         recompose();
     }
-    if (ImGui::DragFloat3("Rotation", &eulerAngles.x, 0.5f)) {
-        rotation = glm::quat(glm::radians(eulerAngles));
+
+    if (ImGui::DragFloat3("Rotation", &displayEuler.x, 0.5f)) {
+        if (!isDraggingRotation) {
+            initialRotation = rotation;
+            isDraggingRotation = true;
+        }
+        glm::vec3 initialEuler = glm::eulerAngles(initialRotation) * (180.0f / 3.14159265f);
+        glm::vec3 delta = displayEuler - initialEuler;
+        rotation = initialRotation * glm::quat(glm::radians(delta));
         recompose();
     }
+
+    if (!ImGui::IsItemActive()) {
+        isDraggingRotation = false;
+    }
+
     if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
         recompose();
     }
