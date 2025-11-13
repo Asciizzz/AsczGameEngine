@@ -3136,21 +3136,19 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 		{
 			Identifier id;
 
-			// Custom identifiers for our engine
-			if (std::string(k) == "VARS")
-				id.mDeclaration = "Runtime script variables";
-			else if (std::string(k) == "DELTATIME")
-				id.mDeclaration = "Delta time";
-			else if (std::string(k) == "NODE")
-				id.mDeclaration = "Current node";
-			else if (std::string(k) == "SCENE")
-				id.mDeclaration = "Current scene";
-			else if (std::string(k) == "FS")
-				id.mDeclaration = "File system access";
-			else if (std::string(k) == "print")
-				id.mDeclaration = "Outputs text to the console";
-			else
-				id.mDeclaration = "Built-in function";
+			#define SET_IF_ELSE(key, decl) if (std::string(k) == key) id.mDeclaration = decl; else
+
+			SET_IF_ELSE("VARS", "Runtime script variables")
+			SET_IF_ELSE("DELTATIME", "Time since last frame (seconds)")
+			SET_IF_ELSE("NODE", "Current node")
+			SET_IF_ELSE("SCENE", "Current scene")
+			SET_IF_ELSE("FS", "File system access")
+			SET_IF_ELSE("print", "Outputs text to the console")
+			SET_IF_ELSE("table", "Table library")
+			SET_IF_ELSE("string", "String library")
+			SET_IF_ELSE("math", "Math library")
+			SET_IF_ELSE("sqrt", "Square root function")
+			id.mDeclaration = "Built-in function";
 
 			langDef.mIdentifiers.insert(std::make_pair(std::string(k), id));
 		}
