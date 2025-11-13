@@ -90,15 +90,12 @@ using CFunc = const Func<FX>;
 #define IMVEC4_COLOR(ext) ImVec4(ext.color[0], ext.color[1], ext.color[2], 1.0f)
 
 
-#define END_DRAG_AND_RETURN() { ImGui::EndDragDropSource(); return; }
 
 static bool RenderMenuItemToggle(const char* labelPending, const char* labelFinished, bool finished) {
     const char* label = finished ? labelFinished : labelPending;
     return ImGui::MenuItem(label, nullptr, finished, !finished);
 }
 
-
-// Payload data
 struct Payload {
 
     template<typename T>
@@ -127,15 +124,36 @@ static void RenderDragField(
     CFunc<const char*()>& labelActive,
     const char* labelInactive,
     CFunc<ImVec4()>& activeColor,
+    ImVec4 inactiveColor,
     CFunc<bool()>& activeCondition,
-    CFunc<void()>& dragMethod
+    CFunc<void()>& dragMethod,
+    CFunc<void()>& tooltipMethod
 ) {
-    const char* label = activeCondition() ? labelActive() : labelInactive;
-    ImVec4 color = activeColor();
+    bool active = activeCondition();
+    const char* label = active ? labelActive() : labelInactive;
+    ImVec4 borderColor = active ? activeColor() : inactiveColor;
 
-    ImGui::PushStyleColor(ImGuiCol_Text, color);
-    ImGui::Text("%s", label);
-    ImGui::PopStyleColor();
+    ImGui::PushStyleColor(ImGuiCol_Border, borderColor);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 4)); // Adjust padding
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0)); // transparent background
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0)); // transparent hover
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0)); // transparent active
+
+    if (!active) {
+        ImGui::PushStyleColor(ImGuiCol_Text, inactiveColor);
+    }
+
+    ImGui::Button(label, ImVec2(-1, 0)); // full width, auto height
+
+    if (!active) {
+        ImGui::PopStyleColor();
+    }
+
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(2);
+
+    if (M_HOVERED(ImGuiMouseButton_Left)) tooltipMethod();
 
     dragMethod();
 }
@@ -283,9 +301,9 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                     }
                 // Data and stuff
                 } else if (data->isType<tinyNodeFS>()) {
-                    tinyHandle fileHandle = data->handle();
+                    tinyHandle fHandle = data->handle();
 
-                    typeHandle fTypeHdl = fs.fTypeHandle(fileHandle);
+                    typeHandle fTypeHdl = fs.fTypeHandle(fHandle);
                     tinyHandle handle = fTypeHdl.handle;
 
                     tinySceneRT::NWrap wrap = scene->Wrap(h);
@@ -567,8 +585,8 @@ static void RenderFileInspector(tinyProject* project) {
     typeHandle selectedNode = HierarchyState::selectedNode;
     if (!selectedNode.isType<tinyNodeFS>()) return;
 
-    tinyHandle fileHandle = selectedNode.handle;
-    const tinyFS::Node* node = fs.fNode(fileHandle);
+    tinyHandle fHandle = selectedNode.handle;
+    const tinyFS::Node* node = fs.fNode(fHandle);
     if (!node) {
         ImGui::Text("Invalid file.");
         return;
@@ -576,7 +594,7 @@ static void RenderFileInspector(tinyProject* project) {
 
     ImGui::Text("%s", node->name.c_str());
 
-    tinyFS::TypeExt typeExt = fs.fTypeExt(fileHandle);
+    tinyFS::TypeExt typeExt = fs.fTypeExt(fHandle);
     if (!typeExt.ext.empty()) {
         ImGui::SameLine();
         ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
@@ -638,16 +656,18 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     tinyHandle meshHandle = meshRD->meshHandle();
     const auto* meshVk = fs.rGet<tinyMeshVk>(meshHandle);
 
-    auto activeColor = [&]() {
-        if (meshVk) return IMVEC4_COLOR(fs.typeExt<tinyMeshVk>());
-        return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
-    };
     auto labelActive = [&fs, meshHandle]() {
         // return "Mesh Assigned";
         tinyHandle fHandle = fs.dataToFileHandle(MAKE_TH(tinyMeshVk, meshHandle));
         return fs.fName(fHandle).c_str();
     };
     const char* labelInactive = "No Mesh Assigned";
+
+    auto activeColor = [&]() {
+        if (meshVk) return IMVEC4_COLOR(fs.typeExt<tinyMeshVk>());
+        return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+    };
+    ImVec4 inactiveColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
 
     auto activeCondition = [meshVk]() {
         return meshVk != nullptr;
@@ -656,39 +676,60 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     auto dragMethod = [&fs, meshRD]() {
         // Check for typeHandle<tinyNodeFS> drag payload
         if (ImGui::BeginDragDropTarget()) {
-            const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE");
-            if (!payload) {
-                ImGui::EndDragDropTarget();
-                return;
-            }
+            // const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE");
+            // if (!payload) {
+            //     ImGui::EndDragDropTarget();
+            //     return;
+            // }
 
-            Payload* data = (Payload*)payload->Data;
-            if (!data->isType<tinyNodeFS>()) {
-                ImGui::EndDragDropTarget();
-                return;
-            }
+            // Payload* data = (Payload*)payload->Data;
+            // if (!data->isType<tinyNodeFS>()) {
+            //     ImGui::EndDragDropTarget();
+            //     return;
+            // }
 
-            // Check for data type
-            typeHandle tHdl = data->tHandle;
-            if (!tHdl.isType<tinyMeshVk>()) {
-                ImGui::EndDragDropTarget();
-                return;
-            }
+            // // Check for data type
+            // typeHandle tHdl = data->tHandle;
+            // if (!tHdl.isType<tinyMeshVk>()) {
+            //     ImGui::EndDragDropTarget();
+            //     return;
+            // }
 
-            tinyHandle meshHandle = tHdl.handle;
-            if (!fs.rGet<tinyMeshVk>(meshHandle)) {
-                ImGui::EndDragDropTarget();
-                return;
-            }
+            // tinyHandle meshHandle = tHdl.handle;
+            // if (!fs.rGet<tinyMeshVk>(meshHandle)) {
+            //     ImGui::EndDragDropTarget();
+            //     return;
+            // }
             
-            // Assign mesh
-            meshRD->setMesh(meshHandle);
+            // // Assign mesh
+            // meshRD->setMesh(meshHandle);
 
-            ImGui::EndDragDropTarget();
+            // printf("Assigned mesh: %s\n", fs.fName(fs.dataToFileHandle(tHdl)).c_str());
+
+            // ImGui::EndDragDropTarget();
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                Payload* data = (Payload*)payload->Data;
+
+                if (!data->isType<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
+                tinyHandle fHandle = data->handle();
+
+                typeHandle fTypeHdl = fs.fTypeHandle(fHandle);
+                if (!fTypeHdl.isType<tinyMeshVk>()) { ImGui::EndDragDropTarget(); return; }
+
+                meshRD->setMesh(fTypeHdl.handle);
+
+                ImGui::EndDragDropTarget();
+            }
         }
     };
 
-    RenderDragField(labelActive, labelInactive, activeColor, activeCondition, dragMethod);
+    auto tooltipMethod = [&fs, meshHandle]() {
+        ImGui::BeginTooltip();
+        ImGui::Text("Mesh Assignment");
+        ImGui::EndTooltip();
+    };
+
+    RenderDragField(labelActive, labelInactive, activeColor, inactiveColor, activeCondition, dragMethod, tooltipMethod);
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {
