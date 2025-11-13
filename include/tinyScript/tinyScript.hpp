@@ -37,11 +37,8 @@ private:
     std::vector<Entry> logs_;
 };
 
-// typeHandle is used for script variables:
-// - type void: Handle to file/resource (global, never remapped)
-// - type int: Handle to scene node (needs remapping on scene load)
 using tinyVar = std::variant<float, int, bool, glm::vec2, glm::vec3, glm::vec4, std::string, typeHandle>;
-using tinyVarsMap = std::map<std::string, tinyVar>; // Using ordered map for consistent display order
+using tinyVarsMap = std::unordered_map<std::string, tinyVar>;
 
 // Static script definition - shared across all instances
 struct tinyScript {

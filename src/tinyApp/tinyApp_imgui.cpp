@@ -748,73 +748,114 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
     ImGui::Separator();
 
-    tinyVarsMap& vMap = script->vMap();
+    ImVec4 varColor = ImVec4(0.2f, 0.5f, 0.8f, 0.2f);
+    ImGui::PushStyleColor(ImGuiCol_Header, varColor);
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.6f, 0.9f, 0.6f));
 
-    for (auto& [name, value] : vMap) {
-        std::visit([&](auto&& val) {
-            using T = std::decay_t<decltype(val)>;
-            if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(name.c_str(), &val, 0.1f); else
-            if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(  name.c_str(), &val);       else
-            if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox( name.c_str(), &val);       else
-            if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
-            if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
-            if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
-            if constexpr (std::is_same_v<T, std::string>) {
-                static std::map<std::string, std::string> buffers;
-                if (buffers.find(name) == buffers.end()) {
-                    buffers[name] = val;
-                }
-                char buf[256];
-                strcpy(buf, buffers[name].c_str());
-                if (ImGui::InputText(name.c_str(), buf, sizeof(buf))) {
-                    buffers[name] = buf;
-                    val = buf;
-                }
-            } else if constexpr (std::is_same_v<T, typeHandle>) {
-                ImGui::PushID(name.c_str());
-                static std::string labelBuffer;
-                RenderDragField(
-                    [&]() {
-                        std::string handle = "[" + std::to_string(val.handle.index) + ", " + std::to_string(val.handle.version) + "]";
+    if (ImGui::CollapsingHeader("Variables", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, varColor);
 
-                        std::string displayName = "Unknown " + handle;
+        ImGui::BeginChild("VariablesContent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY, 0);
 
-                        if (val.isType<tinyNodeRT>())  displayName = "Node " + handle; else
-                        if (val.isType<tinySceneRT>()) displayName = "Scene " + handle; else
-                        if (val.isType<tinyScript>())  displayName = "Script " + handle; else
-                        if (val.isType<tinyMeshVk>())  displayName = "Mesh " + handle;
+        tinyVarsMap& vMap = script->vMap();
+        std::vector<std::pair<std::string, tinyVarsMap::mapped_type>> sortedItems(vMap.begin(), vMap.end());
+        std::sort(sortedItems.begin(), sortedItems.end(), [](const auto& a, const auto& b) {
+            auto getOrder = [](const auto& v) -> int {
+                using T = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<T, bool>) return 0;
+                if constexpr (std::is_same_v<T, int>) return 1;
+                if constexpr (std::is_same_v<T, float>) return 2;
+                if constexpr (std::is_same_v<T, glm::vec2>) return 3;
+                if constexpr (std::is_same_v<T, glm::vec3>) return 4;
+                if constexpr (std::is_same_v<T, glm::vec4>) return 5;
+                if constexpr (std::is_same_v<T, std::string>) return 6;
+                if constexpr (std::is_same_v<T, typeHandle>) return 7;
+                return 8;
+            };
+            int orderA = std::visit(getOrder, a.second);
+            int orderB = std::visit(getOrder, b.second);
+            if (orderA != orderB) return orderA < orderB;
+            return a.first < b.first;
+        });
+        for (auto& [name, value] : sortedItems) {
+            auto& realValue = vMap[name];
 
-                        labelBuffer = displayName;
-                        return labelBuffer.c_str();
-                    },
-                    "No Value Assigned",
-                    [&]() {
-                        return ImVec4(0.6f, 0.4f, 0.9f, 1.0f);
-                    },
-                    ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
-                    [&]() { return val.valid(); },
-                    [&fs, &val]() {
-                        if (ImGui::BeginDragDropTarget()) {
-                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
-                                Payload* data = (Payload*)payload->Data;
-
-                                if (val.sameType(data->tHandle)) val = data->tHandle;
-
-                                ImGui::EndDragDropTarget();
-                            }
-                        }
-                    },
-                    []() { /* Do nothing for now */ },
-                    [name]() {
-                        ImGui::BeginTooltip();
-                        ImGui::Text("%s", name.c_str());
-                        ImGui::EndTooltip();
+            std::visit([&](auto&& val) {
+                using T = std::decay_t<decltype(val)>;
+                if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(name.c_str(), &val, 0.1f); else
+                if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(  name.c_str(), &val);       else
+                if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox( name.c_str(), &val);       else
+                if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
+                if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
+                if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
+                if constexpr (std::is_same_v<T, std::string>) {
+                    static std::map<std::string, std::string> buffers;
+                    if (buffers.find(name) == buffers.end()) {
+                        buffers[name] = val;
                     }
-                );
-                ImGui::PopID();
-            }
-        }, value);
+                    char buf[256];
+                    strcpy(buf, buffers[name].c_str());
+                    if (ImGui::InputText(name.c_str(), buf, sizeof(buf))) {
+                        buffers[name] = buf;
+                        val = buf;
+                    }
+                } else if constexpr (std::is_same_v<T, typeHandle>) {
+                    ImGui::PushID(name.c_str());
+                    static std::string labelBuffer;
+
+                    std::string type = "Unknown";
+                    if (val.isType<tinyNodeRT>())  type = "Node"; else
+                    if (val.isType<tinySceneRT>()) type = "Scene"; else
+                    if (val.isType<tinyScript>())  type = "Script"; else
+                    if (val.isType<tinyMeshVk>())  type = "Mesh";
+
+                    RenderDragField(
+                        [&]() {
+                            std::string info = " [" + type + ", " + std::to_string(val.handle.index) + ", " + std::to_string(val.handle.version) + "]";
+
+                            labelBuffer = name + info;
+                            return labelBuffer.c_str();
+                        },
+                        name.c_str(),
+                        [&]() {
+                            return ImVec4(0.6f, 0.4f, 0.9f, 1.0f);
+                        },
+                        ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
+                        [&]() { return val.valid(); },
+                        [&fs, &val]() {
+                            if (ImGui::BeginDragDropTarget()) {
+                                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                                    Payload* data = (Payload*)payload->Data;
+
+                                    // Scene node
+                                    if (data->isType<tinyNodeRT>()) {
+                                        if (val.sameType(data->tHandle)) val = data->tHandle;
+                                    }
+                                    // File need a bit more checking
+                                    else if (data->tHandle.isType<tinyNodeFS>()) {
+                                        typeHandle fTypeHdl = fs.fTypeHandle(data->handle());
+                                        if (val.sameType(fTypeHdl)) val = fTypeHdl;
+                                    }
+
+                                    ImGui::EndDragDropTarget();
+                                }
+                            }
+                        },
+                        []() { /* Do nothing for now */ },
+                        [name]() {
+                            ImGui::BeginTooltip();
+                            ImGui::Text("%s", name.c_str());
+                            ImGui::EndTooltip();
+                        }
+                    );
+                    ImGui::PopID();
+                }
+            }, realValue);
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
     }
+    ImGui::PopStyleColor(2);
 }
 
 struct CompInfo {
