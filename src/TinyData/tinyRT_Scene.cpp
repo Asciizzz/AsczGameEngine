@@ -262,12 +262,10 @@ void Scene::cleanse() {
 
 bool Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
     const Scene* from = sharedRes_.fsGet<Scene>(fromHandle);
-
     if (!from || from->nodes_.count() == 0) return false;
 
-    if (!parentHandle.valid()) parentHandle = rootHandle();
+    parentHandle = parentHandle.valid() ? parentHandle : rootHandle();
 
-    // First pass: Add all nodes_ from 'from' scene as raw nodes_ recursively
     UnorderedMap<tinyHandle, tinyHandle> from_to_map;
 
     std::function<void(tinyHandle, tinyHandle)> recurseAdd = [&](tinyHandle fromHandle, tinyHandle toParentHandle) {
@@ -277,7 +275,6 @@ bool Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
         tinyHandle toNodeHandle = addNodeRaw(fromNode->name);
         from_to_map[fromHandle] = toNodeHandle;
 
-        // Establish parent-child relationships
         tinyNodeRT* toNode = nodes_.get(toNodeHandle);
         toNode->setParent(toParentHandle);
 

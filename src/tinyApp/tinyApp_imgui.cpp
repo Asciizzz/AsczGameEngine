@@ -266,14 +266,18 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                     tinyHandle fileHandle = data->handle();
 
                     typeHandle fTypeHdl = fs.fTypeHandle(fileHandle);
+                    tinyHandle handle = fTypeHdl.handle;
+
+                    tinySceneRT::NWrap wrap = scene->Wrap(h);
 
                     // Scene instantiation
                     if (fTypeHdl.isType<tinySceneRT>()) {
-                        if (HierarchyState::activeSceneHandle != fTypeHdl.handle) {
-                            scene->addScene(fTypeHdl.handle, h);
+                        if (HierarchyState::activeSceneHandle != handle) {
+                            scene->addScene(handle, h);
                         }
-                    } else if (fTypeHdl.isType<tinyScript>()) {
-                        // Do nothing
+                    } else if (fTypeHdl.isType<tinyScript>()) { 
+                        auto* scriptComp = scene->writeComp<tinyNodeRT::SCRIPT>(h);
+                        scriptComp->assign(handle);
                     }
                 }
 
