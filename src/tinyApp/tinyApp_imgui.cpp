@@ -695,28 +695,58 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     tinyRT_SCRIPT* script = wrap.script;
     if (!script) return;
 
-    // Display the var map
+    tinyHandle handle = wrap.handle;
+    tinyHandle scriptHandle = script->scriptHandle();
+    const tinyScript* scriptPtr = fs.rGet<tinyScript>(scriptHandle);
 
-    // script->vMap;
+    // Render the drag field for the script file
+    RenderDragField(
+        [&fs, scriptHandle]() { return fs.fName(scriptHandle); },
+        "No Script Assigned",
+        [&]() { return ImVec4(0.4f, 0.6f, 0.9f, 1.0f); },
+        ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
+        [&]() { return scriptPtr != nullptr; },
+        [&fs, script]() {
+            if (ImGui::BeginDragDropTarget()) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                    Payload* data = (Payload*)payload->Data;
+                    if (!data->isType<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
+                    
+                    tinyHandle fHandle = data->handle();
+                    typeHandle fTypeHdl = fs.fTypeHandle(fHandle);
+                    if (!fTypeHdl.isType<tinyScript>()) { ImGui::EndDragDropTarget(); return; }
+
+                    script->assign(fTypeHdl.handle);
+                    ImGui::EndDragDropTarget();
+                }
+            }
+        },
+        []() { /* Do nothing for now */ },
+        [&fs, scriptHandle]() {
+            ImGui::BeginTooltip();
+
+            const char* fullPath = fs.fName(scriptHandle, true, true);
+            fullPath = fullPath ? fullPath : "<Invalid Script>";
+
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
+            ImGui::SameLine(); ImGui::Text("%s", fullPath);
+
+            ImGui::EndTooltip();
+        }
+    );
 
     tinyVarsMap& vMap = script->vMap();
 
     for (auto& [varName, varValue] : vMap) {
         std::visit([&](auto&& value) {
             using T = std::decay_t<decltype(value)>;
-            if constexpr (std::is_same_v<T, float>) {
-                ImGui::DragFloat(varName.c_str(), &value, 0.1f);
-            } else if constexpr (std::is_same_v<T, int>) {
-                ImGui::DragInt(varName.c_str(), &value);
-            } else if constexpr (std::is_same_v<T, bool>) {
-                ImGui::Checkbox(varName.c_str(), &value);
-            } else if constexpr (std::is_same_v<T, glm::vec2>) {
-                ImGui::DragFloat2(varName.c_str(), &value.x, 0.1f);
-            } else if constexpr (std::is_same_v<T, glm::vec3>) {
-                ImGui::DragFloat3(varName.c_str(), &value.x, 0.1f);
-            } else if constexpr (std::is_same_v<T, glm::vec4>) {
-                ImGui::DragFloat4(varName.c_str(), &value.x, 0.1f);
-            } else if constexpr (std::is_same_v<T, std::string>) {
+            if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(varName.c_str(), &value, 0.1f); else
+            if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(varName.c_str(), &value);         else
+            if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox(varName.c_str(), &value);        else
+            if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(varName.c_str(), &value.x, 0.1f); else
+            if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(varName.c_str(), &value.x, 0.1f); else
+            if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(varName.c_str(), &value.x, 0.1f); else
+            if constexpr (std::is_same_v<T, std::string>) {
                 static std::map<std::string, std::string> buffers;
                 if (buffers.find(varName) == buffers.end()) {
                     buffers[varName] = value;
@@ -729,6 +759,14 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                 }
             } else if constexpr (std::is_same_v<T, typeHandle>) {
                 ImGui::Text("%s: [typeHandle]", varName.c_str());
+
+                // Use the drag field
+                // RenderDragField(
+                //     [&fs, value]() { // Print the handle
+
+                        
+                //     }
+                // );
             }
         }, varValue);
     }
@@ -821,6 +859,13 @@ static void RenderSceneNodeInspector(tinyProject* project) {
         [&]() { RenderBONE3D(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::BONE3D>(handle); },
         [&scene, handle]() { scene->removeComp<tinyNodeRT::BONE3D>(handle); }
+    });
+    components.push_back({
+        "Script",
+        wrap.script != nullptr,
+        [&]() { RenderSCRIPT(fs, scene, wrap); },
+        [&scene, handle]() { scene->writeComp<tinyNodeRT::SCRIPT>(handle); },
+        [&scene, handle]() { scene->removeComp<tinyNodeRT::SCRIPT>(handle); }
     });
 
     // Sort: active first
