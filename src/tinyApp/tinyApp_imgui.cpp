@@ -125,7 +125,6 @@ using CFunc = const Func<FX>;
 
 static void RenderGenericNodeHierarchy(
     tinyHandle nodeHandle, int depth,
-    // Lambdas for node state management
     CFunc<std::string(tinyHandle)>& getName,
     CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected,
     CFunc<bool(tinyHandle)>& isDragged,   CFunc<void()>& clearDrag,
@@ -360,6 +359,8 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
     );
 }
 
+#define IMVEC4_COLOR(ext) ImVec4(ext.color[0], ext.color[1], ext.color[2], 1.0f)
+
 static void RenderFileNodeHierarchy(tinyProject* project) {
     tinyFS& fs = project->fs();
 
@@ -419,8 +420,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                 // Show type info if has data
                 tinyFS::TypeExt typeExt = fs.fTypeExt(h);
                 ImGui::Separator();
-                ImGui::TextColored(ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 1.0f),
-                                   "Type: %s", typeExt.c_str());
+                ImGui::TextColored(IMVEC4_COLOR(typeExt), "Type: %s", typeExt.c_str());
 
                 ImGui::EndDragDropSource();
             }
@@ -498,8 +498,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                 ImGui::Text("Folder (%zu items)", node->children.size());
             } else {
                 tinyFS::TypeExt typeExt = fs.fTypeExt(h);
-                ImGui::TextColored(ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 1.0f),
-                                   "Type: %s", typeExt.c_str());
+                ImGui::TextColored(IMVEC4_COLOR(typeExt), "Type: %s", typeExt.c_str());
             }
 
             ImGui::EndTooltip();
@@ -537,14 +536,65 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
     );
 }
 
+// ============================================================================
+// INSPECTOR WINDOW
+// ============================================================================
+
+// File inspector
+
+static void RenderFileInspector(tinyProject* project) {
+    tinyFS& fs = project->fs();
+
+    typeHandle selectedNode = HierarchyState::selectedNode;
+    if (!selectedNode.isType<tinyNodeFS>()) return;
+
+    tinyHandle fileHandle = selectedNode.handle;
+    const tinyFS::Node* node = fs.fNode(fileHandle);
+    if (!node) {
+        ImGui::Text("Invalid file.");
+        return;
+    }
+
+    ImGui::Text("%s", node->name.c_str());
+
+    tinyFS::TypeExt typeExt = fs.fTypeExt(fileHandle);
+    if (!typeExt.ext.empty()) {
+        ImGui::SameLine();
+        ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
+    }
+    ImGui::Separator();
+
+    // Additional info can be added here
+}
+
+// Scene node inspector
+
+static void RenderSceneNodeInspector(tinyProject* project) {
+    tinySceneRT* scene = project->scene(HierarchyState::activeSceneHandle);
+    if (!scene) return;
+
+    typeHandle selectedNode = HierarchyState::selectedNode;
+    if (!selectedNode.isType<tinyNodeRT>()) return;
+
+    tinyHandle handle = selectedNode.handle;
+
+    const tinyNodeRT* node = scene->node(handle);
+    if (!node) {
+        ImGui::Text("Invalid node.");
+        return;
+    }
+
+    tinySceneRT::NWrap wrap = scene->Wrap(handle);
+
+    // Additional components can be added here
+}
 
 
 
-
-
-
-
-
+static void RenderInspector(tinyProject* project) {
+    RenderFileInspector(project);
+    RenderSceneNodeInspector(project);
+}
 
 
 
@@ -697,6 +747,8 @@ void tinyApp::renderUI() {
 
 
     if (tinyUI::Exec::Begin("Inspector", nullptr, ImGuiWindowFlags_NoCollapse)) {
+
+        RenderInspector(project.get());
 
         tinyUI::Exec::End();
     }
