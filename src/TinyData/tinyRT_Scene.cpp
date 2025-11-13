@@ -296,11 +296,6 @@ bool Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
     for (auto& [fromHandle, toHandle] : from_to_map) {
         CNWrap fromWrap = from->CWrap(fromHandle);
 
-        tinyNodeRT* toNode = nodes_.get(toHandle);
-        if (!toNode) continue; // Should not happen
-
-        // Resolve components
-
         if (fromWrap.trfm3D) {
             auto* toTransform = writeComp<tinyNodeRT::TRFM3D>(toHandle);
             *toTransform = *fromWrap.trfm3D;
