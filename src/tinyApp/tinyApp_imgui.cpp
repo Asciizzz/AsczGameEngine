@@ -22,28 +22,23 @@ namespace HierarchyState {
     static float splitterPos = 0.5f;
     
     // Expanded nodes tracking
-    static std::unordered_set<uint64_t> expandedSceneNodes;
-    static std::unordered_set<uint64_t> expandedFileNodes;
+    static std::unordered_set<uint64_t> expandedNodes;
     
     // Selection tracking
-    static tinyHandle selectedSceneNode;
-    static tinyHandle selectedFileNode;
+    static typeHandle selectedNode;
     
     // Drag state
-    static tinyHandle draggedSceneNode;
-    static tinyHandle draggedFileNode;
+    static typeHandle draggedNode;
 
     // Note: tinyHandle is hashed by default
 
-    static bool isExpanded(tinyHandle h, bool isScene) {
-        auto& set = isScene ? expandedSceneNodes : expandedFileNodes;
-        return set.find(h.value) != set.end();
+    static bool isExpanded(typeHandle th) {
+        return expandedNodes.find(th.hash()) != expandedNodes.end();
     }
 
-    static void setExpanded(tinyHandle h, bool isScene, bool expanded) {
-        auto& set = isScene ? expandedSceneNodes : expandedFileNodes;
-        if (expanded) set.insert(h.value);
-        else          set.erase(h.value);
+    static void setExpanded(typeHandle th, bool expanded) {
+        if (expanded) expandedNodes.insert(th.hash());
+        else          expandedNodes.erase(th.hash());
     }
 }
 
@@ -87,7 +82,26 @@ static bool renderMenuItemToggle(const char* labelPending, const char* labelFini
 
 // Payload data
 struct Payload {
-    tinyHandle handle;
+
+    template<typename T>
+    static Payload make(tinyHandle h, std::string name) {
+        Payload payload;
+        payload.tHandle = typeHandle::make<T>(h);
+        strncpy(payload.name, name.c_str(), 63);
+        payload.name[63] = '\0';
+        return payload;
+    }
+
+    template<typename T>
+    bool isType() const {
+        return tHandle.isType<T>();
+    }
+
+    tinyHandle handle() const {
+        return tHandle.handle;
+    }
+
+    typeHandle tHandle;
     char name[64];
 };
 
@@ -105,7 +119,7 @@ static void RenderGenericNodeHierarchy(
     tinyHandle nodeHandle, int depth,
     // Lambdas for node state management
     CFunc<std::string(tinyHandle)>& getName,
-    CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected, CFunc<void(tinyHandle)>& clearOtherSelection,
+    CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected,
     CFunc<bool(tinyHandle)>& isDragged,   CFunc<void(tinyHandle)>& setDragged,  CFunc<void()>&           clearDragState,
     CFunc<bool(tinyHandle)>& isExpanded,  CFunc<void(tinyHandle, bool)>& setExpanded,
     CFunc<bool(tinyHandle)>& hasChildren, CFunc<std::vector<tinyHandle>(tinyHandle)>& getChildren,
@@ -141,7 +155,6 @@ static void RenderGenericNodeHierarchy(
 
     if (ImGui::IsItemClicked()) {
         setSelected(nodeHandle);
-        clearOtherSelection(nodeHandle);
     }
 
     renderDragSource(nodeHandle);
@@ -154,7 +167,7 @@ static void RenderGenericNodeHierarchy(
         for (const auto& child : getChildren(nodeHandle)) {
             RenderGenericNodeHierarchy(
                 child, depth + 1,
-                getName, isSelected, setSelected, clearOtherSelection,
+                getName, isSelected, setSelected,
                 isDragged, setDragged, clearDragState, isExpanded, setExpanded,
                 hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
                 getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
@@ -170,6 +183,9 @@ static void RenderGenericNodeHierarchy(
 // HIERARCHY WINDOW - Scene & File Trees
 // ============================================================================
 
+#define MAKE_TH(T, h) typeHandle::make<T>(h)
+#define MAKE_TH_DEF(T) typeHandle::make<T>()
+
 static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
     if (!scene) return;
 
@@ -180,16 +196,15 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
         return node ? node->name : "";
     };
 
-    auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedSceneNode == h; };
-    auto setSelected = [](tinyHandle h) { HierarchyState::selectedSceneNode = h; };
-    auto clearOtherSelection = [](tinyHandle) { HierarchyState::selectedFileNode = tinyHandle(); };
+    auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedNode == MAKE_TH(tinyNodeRT, h); };
+    auto setSelected = [](tinyHandle h) { HierarchyState::selectedNode = MAKE_TH(tinyNodeRT, h); };
 
-    auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedSceneNode == h; };
-    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedSceneNode = h; };
-    auto clearDragState = []() { HierarchyState::draggedSceneNode = tinyHandle(); };
+    auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedNode == MAKE_TH(tinyNodeRT, h); };
+    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedNode = MAKE_TH(tinyNodeRT, h); };
+    auto clearDragState = []() { HierarchyState::draggedNode = MAKE_TH_DEF(tinyNodeRT); };
 
-    auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(h, true); };
-    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, true, expanded); };
+    auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(MAKE_TH(tinyNodeRT, h)); };
+    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(MAKE_TH(tinyNodeRT, h), expanded); };
 
     auto hasChildren = [scene](tinyHandle h) -> bool {
         const tinyNodeRT* node = scene->node(h);
@@ -214,15 +229,12 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 
     auto renderDragSource = [scene](tinyHandle h) {
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-            HierarchyState::draggedSceneNode = h;
+            HierarchyState::draggedNode = MAKE_TH(tinyNodeRT, h);
 
             if (const tinyNodeRT* node = scene->node(h)) {
-                Payload payload;
-                payload.handle = h;
-                strncpy(payload.name, node->name.c_str(), 63);
-                payload.name[63] = '\0';
+                Payload payload = Payload::make<tinyNodeRT>(h, node->name);
 
-                ImGui::SetDragDropPayload("SCENE_NODE", &payload, sizeof(payload));
+                ImGui::SetDragDropPayload("DRAG_NODE", &payload, sizeof(payload));
                 ImGui::Text("Moving: %s", node->name.c_str());
             }
             ImGui::EndDragDropSource();
@@ -231,33 +243,32 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
     auto renderDropTarget = [project, &fs, scene](tinyHandle h) {
         if (ImGui::BeginDragDropTarget()) {
             // Accept scene node reparenting
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SCENE_NODE")) {
-                Payload* data = (Payload*)payload->Data;
-                if (scene->reparentNode(data->handle, h)) {
-                    HierarchyState::setExpanded(h, true, true); // Auto-expand parent
-                    HierarchyState::selectedSceneNode = data->handle; // Keep selection
-                }
-                HierarchyState::draggedSceneNode = tinyHandle();
-            }
-
-            // Accept scene file drops (instantiate scene at this node)
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
                 Payload* data = (Payload*)payload->Data;
 
-                // Check if this is a scene file
-                typeHandle fTypeHdl = fs.fTypeHandle(data->handle);
+                if (data->isType<tinyNodeRT>()) {
+                    tinyHandle nodeHandle = data->handle();
 
-                if (fTypeHdl.isType<tinySceneRT>()) {
-                    tinyHandle sceneRegistryHandle = fTypeHdl.handle;
+                    if (scene->reparentNode(nodeHandle, h)) {
+                        HierarchyState::setExpanded(MAKE_TH(tinyNodeRT, h), true); // Auto-expand parent
+                        HierarchyState::selectedNode = MAKE_TH(tinyNodeRT, nodeHandle); // Keep selection
+                    }
+                } else if (data->isType<tinyNodeFS>()) {
+                    tinyHandle fileHandle = data->handle();
 
-                    tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
+                    typeHandle fTypeHdl = fs.fTypeHandle(fileHandle);
 
-                    if (sceneRegistryHandle != activeSceneHandle) {
+                    if (fTypeHdl.isType<tinySceneRT>()) {
+                        tinyHandle sceneRegistryHandle = fTypeHdl.handle;
+
+                        tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
+
                         project->addSceneInstance(sceneRegistryHandle, activeSceneHandle, h);
-                        HierarchyState::setExpanded(h, true, true);
+                        HierarchyState::setExpanded(MAKE_TH(tinyNodeRT, h), true);
                     }
                 }
-                HierarchyState::draggedFileNode = tinyHandle();
+
+                HierarchyState::draggedNode = typeHandle();
             }
             
             ImGui::EndDragDropTarget();
@@ -308,7 +319,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 
     RenderGenericNodeHierarchy(
         scene->rootHandle(), 0,
-        getName, isSelected, setSelected, clearOtherSelection,
+        getName, isSelected, setSelected,
         isDragged, setDragged, clearDragState, isExpanded, setExpanded,
         hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
@@ -328,16 +339,15 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         return node->name + "." + typeExt.ext;
     };
 
-    auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedFileNode == h; };
-    auto setSelected = [](tinyHandle h) { HierarchyState::selectedFileNode = h; };
-    auto clearOtherSelection = [](tinyHandle) { HierarchyState::selectedSceneNode = tinyHandle(); };
+    auto isSelected  = [](tinyHandle h) { return HierarchyState::selectedNode == MAKE_TH(tinyNodeFS, h); };
+    auto setSelected = [](tinyHandle h) { HierarchyState::selectedNode = MAKE_TH(tinyNodeFS, h); };
 
-    auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedFileNode == h; };
-    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedFileNode = h; };
-    auto clearDragState = []() { HierarchyState::draggedFileNode = tinyHandle(); };
+    auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedNode == MAKE_TH(tinyNodeFS, h); };
+    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedNode = MAKE_TH(tinyNodeFS, h); };
+    auto clearDragState = []() { HierarchyState::draggedNode = typeHandle(); };
 
-    auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(h, false); };
-    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(h, false, expanded); };
+    auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(MAKE_TH(tinyNodeFS, h)); };
+    auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(MAKE_TH(tinyNodeFS, h), expanded); };
 
     auto hasChildren = [&fs](tinyHandle h) -> bool {
         const tinyFS::Node* node = fs.fNode(h);
@@ -363,14 +373,14 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
     auto renderDragSource = [&fs](tinyHandle h) {
         if (const tinyFS::Node* node = fs.fNode(h)) {
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                HierarchyState::draggedFileNode = h;
+                HierarchyState::draggedNode = MAKE_TH(tinyNodeFS, h);
 
                 Payload payload;
-                payload.handle = h;
+                payload.tHandle = MAKE_TH(tinyNodeFS, h);
                 strncpy(payload.name, node->name.c_str(), 63);
                 payload.name[63] = '\0';
 
-                ImGui::SetDragDropPayload("FILE_NODE", &payload, sizeof(payload));
+                ImGui::SetDragDropPayload("DRAG_NODE", &payload, sizeof(payload));
                 ImGui::Text("Dragging: %s", node->name.c_str());
 
                 // Show type info if has data
@@ -387,15 +397,16 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         // Perform move operation within the file system
 
         if (ImGui::BeginDragDropTarget()) {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("FILE_NODE")) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
                 Payload* data = (Payload*)payload->Data;
 
                 // Move the dragged node into this folder
-                if (fs.fMove(data->handle, h)) {
-                    HierarchyState::setExpanded(h, false, true); // Auto-expand target
-                    HierarchyState::selectedFileNode = data->handle; // Keep selection
+                if (data->isType<tinyNodeFS>() && fs.fMove(data->handle(), h)) {
+                    HierarchyState::setExpanded(MAKE_TH(tinyNodeFS, h), true); // Auto-expand parent
+                    HierarchyState::selectedNode = MAKE_TH(tinyNodeFS, data->handle()); // Keep selection
                 }
-                HierarchyState::draggedFileNode = tinyHandle();
+
+                HierarchyState::draggedNode = typeHandle();
             }
             ImGui::EndDragDropTarget();
         }
@@ -471,7 +482,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
 
     RenderGenericNodeHierarchy(
         fs.rootHandle(), 0,
-        getName, isSelected, setSelected, clearOtherSelection,
+        getName, isSelected, setSelected,
         isDragged, setDragged, clearDragState, isExpanded, setExpanded,
         hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
