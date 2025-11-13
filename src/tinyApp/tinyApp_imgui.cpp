@@ -299,9 +299,10 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                 bool canDelete = h != scene->rootHandle();
                 if (ImGui::MenuItem("Delete", nullptr, false, canDelete))  scene->removeNode(h);
                 if (ImGui::MenuItem("Flatten", nullptr, false, canDelete)) scene->flattenNode(h);
-                
+
                 if (ImGui::MenuItem("Clear", nullptr, false, !node->childrenHandles.empty())) {
-                    for (const auto& childHandle : node->childrenHandles) scene->removeNode(childHandle);
+                    std::vector<tinyHandle> children = node->childrenHandles; // Avoid invalidation
+                    for (const auto& childHandle : children) scene->removeNode(childHandle);
                 }
 
                 tinySceneRT::NWrap Wrap = scene->Wrap(h);
