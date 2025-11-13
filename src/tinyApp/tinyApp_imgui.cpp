@@ -37,6 +37,42 @@ namespace HierarchyState {
     }
 }
 
+// Code editor state
+namespace CodeEditor {
+    static TextEditor editor;
+    static tinyHandle currentScriptHandle;
+
+    static void Init(TextEditor::LanguageDefinition langDef = TextEditor::LanguageDefinition::Lua()) {
+        editor.SetLanguageDefinition(langDef);
+        // Set custom palette with transparent background and bluish theme
+        TextEditor::Palette palette = TextEditor::GetDarkPalette();
+        palette[(int)TextEditor::PaletteIndex::Background] = IM_COL32(0, 0, 0, 0); // Transparent background
+        palette[(int)TextEditor::PaletteIndex::CurrentLineFill] = IM_COL32(40, 50, 60, 128); // Semi-transparent current line
+        palette[(int)TextEditor::PaletteIndex::Selection] = IM_COL32(60, 80, 100, 128); // Bluish selection
+        palette[(int)TextEditor::PaletteIndex::Keyword] = IM_COL32(200, 100, 100, 255); // Reddish keywords
+        palette[(int)TextEditor::PaletteIndex::String] = IM_COL32(150, 200, 100, 255); // Greenish strings
+        palette[(int)TextEditor::PaletteIndex::Number] = IM_COL32(200, 150, 100, 255); // Orangish numbers
+        palette[(int)TextEditor::PaletteIndex::Comment] = IM_COL32(100, 150, 150, 155); // Teal comments
+        editor.SetPalette(palette);
+    }
+
+    static void Render(const char* title) {
+        editor.Render(title, ImVec2(-1, -1), false);
+    }
+
+    static void SetText(const std::string& text) {
+        editor.SetText(text);
+    }
+
+    static std::string GetText() {
+        return editor.GetText();
+    }
+
+    static bool IsTextChanged() {
+        return editor.IsTextChanged();
+    }
+}
+
 // ============================================================================
 // UI INITIALIZATION
 // ============================================================================
@@ -63,6 +99,9 @@ void tinyApp::initUI() {
     // Set the active scene to main scene by default
     HierarchyState::sceneHandle = project->mainSceneHandle;
     activeScene = project->scene(HierarchyState::sceneHandle);
+
+    // Init code editor
+    CodeEditor::Init();
 }
 
 // ===========================================================================
@@ -556,23 +595,19 @@ static void RenderFileInspector(tinyProject* project) {
         tinyScript* script = fs.rGet<tinyScript>(typeHdl.handle);
 
         if (ImGui::CollapsingHeader("Code")) {
-            static TextEditor editor;
-            static bool initialized = false;
-            static tinyHandle currentScriptHandle;
-            if (!initialized) {
-                editor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
-                initialized = true;
+            if (script && !script->code.empty() && typeHdl.handle != CodeEditor::currentScriptHandle) {
+                CodeEditor::currentScriptHandle = typeHdl.handle;
+                CodeEditor::SetText(script->code);
             }
-            if (script && !script->code.empty() && currentScriptHandle != typeHdl.handle) {
-                editor.SetText(script->code);
-                currentScriptHandle = typeHdl.handle;
-            }
+
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("CodeEditor", ImVec2(0, 300), true);
-            editor.Render("Lua Code");
-            if (editor.IsTextChanged() && script) {
-                script->code = editor.GetText();
+            CodeEditor::Render(node->name.c_str());
+            if (CodeEditor::IsTextChanged() && script) {
+                script->code = CodeEditor::GetText();
             }
             ImGui::EndChild();
+            ImGui::PopStyleColor();
         }
     }
 }
