@@ -127,7 +127,8 @@ static void RenderDragField(
     ImVec4 inactiveColor,
     CFunc<bool()>& activeCondition,
     CFunc<void()>& dragMethod,
-    CFunc<void()>& tooltipMethod
+    CFunc<void()>& clickMethod,
+    CFunc<void()>& hoverMethod
 ) {
     bool active = activeCondition();
     const char* label = active ? labelActive() : labelInactive;
@@ -144,7 +145,9 @@ static void RenderDragField(
         ImGui::PushStyleColor(ImGuiCol_Text, inactiveColor);
     }
 
-    ImGui::Button(label, ImVec2(-1, 0)); // full width, auto height
+    if (ImGui::Button(label, ImVec2(-1, 0))) {
+        clickMethod();
+    }
 
     if (!active) {
         ImGui::PopStyleColor();
@@ -153,7 +156,7 @@ static void RenderDragField(
     ImGui::PopStyleColor(4);
     ImGui::PopStyleVar(2);
 
-    if (M_HOVERED(ImGuiMouseButton_Left)) tooltipMethod();
+    if (M_HOVERED(ImGuiMouseButton_Left)) hoverMethod();
 
     dragMethod();
 }
@@ -723,13 +726,19 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         }
     };
 
-    auto tooltipMethod = [&fs, meshHandle]() {
+    auto hoverMethod = [&fs, meshHandle]() {
         ImGui::BeginTooltip();
         ImGui::Text("Mesh Assignment");
         ImGui::EndTooltip();
     };
 
-    RenderDragField(labelActive, labelInactive, activeColor, inactiveColor, activeCondition, dragMethod, tooltipMethod);
+    auto clickMethod = [meshRD]() {
+        // Do nothing for now
+    };
+
+    ImGui::Text("Mesh:");
+    ImGui::SameLine();
+    RenderDragField(labelActive, labelInactive, activeColor, inactiveColor, activeCondition, dragMethod, clickMethod, hoverMethod);
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {
