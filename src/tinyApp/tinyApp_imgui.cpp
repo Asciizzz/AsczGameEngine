@@ -681,14 +681,13 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
 template<typename Comp>
 static void RenderCOMPONENT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap, const std::string& compName) {
-    ImGui::BeginGroup();
-
-    if constexpr (type_eq<Comp, tinyNodeRT::TRFM3D>) RenderTRFM3D(fs, scene, wrap); else
-    if constexpr (type_eq<Comp, tinyNodeRT::MESHRD>) RenderMESHRD(fs, scene, wrap); else
-    if constexpr (type_eq<Comp, tinyNodeRT::BONE3D>) RenderBONE3D(fs, scene, wrap);
-
-    ImGui::EndGroup();
-    ImGui::Separator();
+    if (ImGui::CollapsingHeader(compName.c_str())) {
+        ImGui::Indent();
+        if constexpr (type_eq<Comp, tinyNodeRT::TRFM3D>) RenderTRFM3D(fs, scene, wrap); else
+        if constexpr (type_eq<Comp, tinyNodeRT::MESHRD>) RenderMESHRD(fs, scene, wrap); else
+        if constexpr (type_eq<Comp, tinyNodeRT::BONE3D>) RenderBONE3D(fs, scene, wrap);
+        ImGui::Unindent();
+    }
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {
