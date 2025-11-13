@@ -97,9 +97,9 @@ struct Theme {
     ImVec4 buttonWarningActive = ImVec4(1.00f, 0.90f, 0.50f, 1.00f);
     
     // Headers & Tree nodes
-    ImVec4 header = ImVec4(0.25f, 0.25f, 0.30f, 1.00f);
-    ImVec4 headerHovered = ImVec4(0.35f, 0.35f, 0.40f, 1.00f);
-    ImVec4 headerActive = ImVec4(0.45f, 0.45f, 0.50f, 1.00f);
+    ImVec4 header = ImVec4(0.25f, 0.25f, 0.30f, 0.55f);
+    ImVec4 headerHovered = ImVec4(0.35f, 0.35f, 0.40f, 0.55f);
+    ImVec4 headerActive = ImVec4(0.45f, 0.45f, 0.50f, 0.55f);
     
     // Scrollbar
     ImVec4 scrollbarBg = ImVec4(0.10f, 0.10f, 0.10f, 0.50f);

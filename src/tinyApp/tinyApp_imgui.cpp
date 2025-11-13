@@ -681,27 +681,30 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
 struct CompInfo {
     std::string name;
-    std::function<void()> renderFunc;
     bool active;
+    std::function<void()> renderFunc;
     std::function<void()> addFunc;
     std::function<void()> removeFunc;
 };
 
 static void RenderCOMP(const CompInfo& comp) {
     bool open = ImGui::CollapsingHeader(comp.name.c_str());
-    ImGui::SameLine();
-    if (comp.active) {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f)); // red
-        if (ImGui::Button(("Remove##" + comp.name).c_str())) {
-            comp.removeFunc();
+
+    if (ImGui::BeginPopupContextItem(comp.name.c_str())) {
+        if (!comp.active) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f)); // green
+            if (ImGui::MenuItem("Add")) {
+                comp.addFunc();
+            }
+            ImGui::PopStyleColor();
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f)); // red
+            if (ImGui::MenuItem("Remove")) {
+                comp.removeFunc();
+            }
+            ImGui::PopStyleColor();
         }
-        ImGui::PopStyleColor();
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.8f, 0.2f, 1.0f)); // green
-        if (ImGui::Button(("Add##" + comp.name).c_str())) {
-            comp.addFunc();
-        }
-        ImGui::PopStyleColor();
+        ImGui::EndPopup();
     }
 
     if (open && comp.active) {
@@ -737,22 +740,22 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     std::vector<CompInfo> components;
     components.push_back({
         "Transform 3D",
-        [&]() { RenderTRFM3D(fs, scene, wrap); },
         wrap.trfm3D != nullptr,
+        [&]() { RenderTRFM3D(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::TRFM3D>(handle); },
         [&scene, handle]() { scene->removeComp<tinyNodeRT::TRFM3D>(handle); }
     });
     components.push_back({
         "Mesh Renderer 3D",
-        [&]() { RenderMESHRD(fs, scene, wrap); },
         wrap.meshRD != nullptr,
+        [&]() { RenderMESHRD(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::MESHRD>(handle); },
         [&scene, handle]() { scene->removeComp<tinyNodeRT::MESHRD>(handle); }
     });
     components.push_back({
         "Bone 3D",
-        [&]() { RenderBONE3D(fs, scene, wrap); },
         wrap.bone3D != nullptr,
+        [&]() { RenderBONE3D(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::BONE3D>(handle); },
         [&scene, handle]() { scene->removeComp<tinyNodeRT::BONE3D>(handle); }
     });
@@ -764,7 +767,7 @@ static void RenderSceneNodeInspector(tinyProject* project) {
 
     // Render components
     for (const auto& comp : components) {
-        RenderCOMP(comp.name, comp.renderFunc, comp.active, comp.addFunc, comp.removeFunc);
+        RenderCOMP(comp);
     }
 }
 
