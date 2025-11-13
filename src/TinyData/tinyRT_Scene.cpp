@@ -36,6 +36,7 @@ tinyHandle Scene::addNode(const std::string& nodeName, tinyHandle parentHandle) 
     parentNode = nodes_.get(parentHandle); // Re-fetch in case of invalidation
     parentNode->addChild(newNodeHandle);
 
+    isClean_ = false;
     return newNodeHandle;
 }
 
@@ -71,7 +72,6 @@ bool Scene::removeNode(tinyHandle nodeHandle, bool recursive) {
     nodes_.remove(nodeHandle);
 
     isClean_ = false;
-
     return true;
 }
 

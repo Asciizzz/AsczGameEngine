@@ -19,6 +19,10 @@ using namespace tinyVk;
 // Hierarchy state tracking
 namespace HierarchyState {
     static tinyHandle activeSceneHandle;
+    static bool isActiveScene(tinyHandle h) {
+        return activeSceneHandle == h;
+    }
+
     static float splitterPos = 0.5f;
     
     // Expanded nodes tracking
@@ -189,7 +193,9 @@ static void RenderGenericNodeHierarchy(
 #define MAKE_TH(T, h) typeHandle::make<T>(h)
 #define MAKE_TH_DEF(T) typeHandle::make<T>()
 
-static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
+static void RenderSceneNodeHierarchy(tinyProject* project) {
+    if (!project) return;
+    tinySceneRT* scene = project->scene(HierarchyState::activeSceneHandle);
     if (!scene) return;
 
     tinyFS& fs = project->fs();
@@ -242,12 +248,12 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
             ImGui::EndDragDropSource();
         }
     };
-    auto renderDropTarget = [project, &fs, scene](tinyHandle h) {
+    auto renderDropTarget = [&fs, scene](tinyHandle h) {
         if (ImGui::BeginDragDropTarget()) {
-            // Accept scene node reparenting
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
                 Payload* data = (Payload*)payload->Data;
 
+                // Scene node reparenting
                 if (data->isType<tinyNodeRT>()) {
                     tinyHandle nodeHandle = data->handle();
 
@@ -255,18 +261,19 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
                         HierarchyState::setExpanded(MAKE_TH(tinyNodeRT, h), true); // Auto-expand parent
                         HierarchyState::selectedNode = MAKE_TH(tinyNodeRT, nodeHandle); // Keep selection
                     }
+                // Data and stuff
                 } else if (data->isType<tinyNodeFS>()) {
                     tinyHandle fileHandle = data->handle();
 
                     typeHandle fTypeHdl = fs.fTypeHandle(fileHandle);
 
+                    // Scene instantiation
                     if (fTypeHdl.isType<tinySceneRT>()) {
-                        tinyHandle sceneRegistryHandle = fTypeHdl.handle;
-
-                        tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
-
-                        project->addSceneInstance(sceneRegistryHandle, activeSceneHandle, h);
-                        HierarchyState::setExpanded(MAKE_TH(tinyNodeRT, h), true);
+                        if (HierarchyState::activeSceneHandle != fTypeHdl.handle) {
+                            scene->addScene(fTypeHdl.handle, h);
+                        }
+                    } else if (fTypeHdl.isType<tinyScript>()) {
+                        // Do nothing
                     }
                 }
 
@@ -395,8 +402,6 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         }
     };
     auto renderDropTarget  = [&fs](tinyHandle h) {
-        // Perform move operation within the file system
-
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
                 Payload* data = (Payload*)payload->Data;
@@ -428,7 +433,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                 if (dataType.isType<tinySceneRT>()) {
                     tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
 
-                    if (renderMenuItemToggle("Make Active", "Active", HierarchyState::activeSceneHandle == dataType.handle)) {
+                    if (renderMenuItemToggle("Make Active", "Active", HierarchyState::isActiveScene(dataType.handle))) {
                         HierarchyState::activeSceneHandle = dataType.handle;
                     }
 
@@ -566,7 +571,7 @@ void tinyApp::renderUI() {
             ImGui::Text("Scene Hierarchy");
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("SceneHierarchy", ImVec2(0, topHeight), true);
-            RenderSceneNodeHierarchy(project.get(), activeScene);
+            RenderSceneNodeHierarchy(project.get());
             ImGui::EndChild();
             ImGui::PopStyleColor();
             
