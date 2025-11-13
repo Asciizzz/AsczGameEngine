@@ -844,6 +844,8 @@ void loadNodes(tinyModel& tinyModel, std::vector<int>& gltfNodeToModelNode, Unor
         tNode skeletonRootNode("LSkeletons");
         int skeletonRootModelIndex = pushNode(std::move(skeletonRootNode));
 
+        skeletonRootNode.TRFM3D = glm::mat4(0.0f);
+
         nodes[0].addChild(skeletonRootModelIndex);
         nodes[skeletonRootModelIndex].setParent(0);
 
@@ -977,6 +979,7 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
     if (model.animations.empty()) return;
 
     tNode animeNode("Anime");
+    animeNode.TRFM3D = glm::mat4(0.0f); // Non-renderable
     animeNode.ANIM3D_animeIndx = 0; // First animation
 
     tinyRT_ANIM3D tinyAnim;

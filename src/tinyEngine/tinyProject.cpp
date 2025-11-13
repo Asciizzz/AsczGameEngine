@@ -194,8 +194,10 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         scene.setNodeParent(nodeHandle, parentHandle);
         scene.setNodeChildren(nodeHandle, childrenHandles);
 
-        auto* newTransform = scene.writeComp<tinyNodeRT::TRFM3D>(nodeHandle);
-        newTransform->init(ogNode.TRFM3D);
+        if (ogNode.hasTRFM3D()) {
+            auto* newTransform = scene.writeComp<tinyNodeRT::TRFM3D>(nodeHandle);
+            newTransform->init(ogNode.TRFM3D);
+        }
 
         if (ogNode.hasMESHR()) {
             auto* newMeshRender = scene.writeComp<tinyNodeRT::MESHRD>(nodeHandle);

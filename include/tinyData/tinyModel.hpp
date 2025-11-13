@@ -41,6 +41,7 @@ struct tinyModel {
         // Anime3D
         int ANIM3D_animeIndx = -1;
 
+        bool hasTRFM3D() const { return TRFM3D != glm::mat4(0.0f); }
         bool hasMESHR() const { return MESHRD_meshIndx >= 0; }
         bool hasBONE3D() const { return BONE3D_skeleNodeIndx >= 0 && BONE3D_boneIndx >= 0; }
         bool hasSKEL3D() const { return SKEL3D_skeleIndx >= 0; }
