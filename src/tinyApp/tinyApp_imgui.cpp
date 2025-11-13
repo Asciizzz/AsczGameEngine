@@ -18,9 +18,9 @@ using namespace tinyVk;
 
 // Hierarchy state tracking
 namespace HierarchyState {
-    static tinyHandle activeSceneHandle;
+    static tinyHandle sceneHandle;
     static bool isActiveScene(tinyHandle h) {
-        return activeSceneHandle == h;
+        return sceneHandle == h;
     }
 
     static float splitterPos = 0.5f;
@@ -70,8 +70,8 @@ void tinyApp::initUI() {
 // ===== Misc =====
 
     // Set the active scene to main scene by default
-    HierarchyState::activeSceneHandle = project->mainSceneHandle;
-    activeScene = project->scene(HierarchyState::activeSceneHandle);
+    HierarchyState::sceneHandle = project->mainSceneHandle;
+    activeScene = project->scene(HierarchyState::sceneHandle);
 }
 
 // ===========================================================================
@@ -256,7 +256,7 @@ static void RenderGenericNodeHierarchy(
 
 static void RenderSceneNodeHierarchy(tinyProject* project) {
     if (!project) return;
-    tinySceneRT* scene = project->scene(HierarchyState::activeSceneHandle);
+    tinySceneRT* scene = project->scene(HierarchyState::sceneHandle);
     if (!scene) return;
 
     tinyFS& fs = project->fs();
@@ -313,7 +313,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                         tinyHandle handle = fTypeHdl.handle;
                         tinySceneRT::NWrap wrap = scene->Wrap(h);
                         if (fTypeHdl.isType<tinySceneRT>()) {
-                            if (HierarchyState::activeSceneHandle != handle) {
+                            if (HierarchyState::sceneHandle != handle) {
                                 scene->addScene(handle, h);
                             }
                         } else if (fTypeHdl.isType<tinyScript>()) { 
@@ -464,7 +464,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                     if (dataType.isType<tinySceneRT>()) {
                         tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
                         if (RenderMenuItemToggle("Make Active", "Active", HierarchyState::isActiveScene(dataType.handle))) {
-                            HierarchyState::activeSceneHandle = dataType.handle;
+                            HierarchyState::sceneHandle = dataType.handle;
                         }
                         if (RenderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
                             scene->cleanse();
@@ -697,6 +697,8 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
     tinyHandle handle = wrap.handle;
     tinyHandle scriptHandle = script->scriptHandle();
+    tinyHandle scriptFHandle = fs.dataToFileHandle(MAKE_TH(tinyScript, scriptHandle));
+    
     const tinyScript* scriptPtr = fs.rGet<tinyScript>(scriptHandle);
 
     // Render the drag field for the script file
@@ -722,10 +724,10 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
             }
         },
         []() { /* Do nothing for now */ },
-        [&fs, scriptHandle]() {
+        [&fs, scriptFHandle]() {
             ImGui::BeginTooltip();
 
-            const char* fullPath = fs.fName(scriptHandle, true, true);
+            const char* fullPath = fs.fName(scriptFHandle, true, true);
             fullPath = fullPath ? fullPath : "<Invalid Script>";
 
             ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
@@ -735,40 +737,72 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         }
     );
 
+    ImGui::Separator();
+
     tinyVarsMap& vMap = script->vMap();
 
-    for (auto& [varName, varValue] : vMap) {
-        std::visit([&](auto&& value) {
-            using T = std::decay_t<decltype(value)>;
-            if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(varName.c_str(), &value, 0.1f); else
-            if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(varName.c_str(), &value);         else
-            if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox(varName.c_str(), &value);        else
-            if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(varName.c_str(), &value.x, 0.1f); else
-            if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(varName.c_str(), &value.x, 0.1f); else
-            if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(varName.c_str(), &value.x, 0.1f); else
+    for (auto& [name, value] : vMap) {
+        std::visit([&](auto&& val) {
+            using T = std::decay_t<decltype(val)>;
+            if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(name.c_str(), &val, 0.1f); else
+            if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(name.c_str(), &val);         else
+            if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox(name.c_str(), &val);        else
+            if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
+            if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
+            if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
             if constexpr (std::is_same_v<T, std::string>) {
                 static std::map<std::string, std::string> buffers;
-                if (buffers.find(varName) == buffers.end()) {
-                    buffers[varName] = value;
+                if (buffers.find(name) == buffers.end()) {
+                    buffers[name] = val;
                 }
                 char buf[256];
-                strcpy(buf, buffers[varName].c_str());
-                if (ImGui::InputText(varName.c_str(), buf, sizeof(buf))) {
-                    buffers[varName] = buf;
-                    value = buf;
+                strcpy(buf, buffers[name].c_str());
+                if (ImGui::InputText(name.c_str(), buf, sizeof(buf))) {
+                    buffers[name] = buf;
+                    val = buf;
                 }
             } else if constexpr (std::is_same_v<T, typeHandle>) {
-                ImGui::Text("%s: [typeHandle]", varName.c_str());
+                ImGui::PushID(name.c_str());
+                RenderDragField(
+                    [&]() {
+                        std::string handle = "[" + std::to_string(val.handle.index) + ", " + std::to_string(val.handle.version) + "]";
 
-                // Use the drag field
-                // RenderDragField(
-                //     [&fs, value]() { // Print the handle
+                        std::string displayName;
 
-                        
-                //     }
-                // );
+                        if (val.isType<tinyNodeRT>())  displayName = "Node " + handle; else
+                        if (val.isType<tinySceneRT>()) displayName = "Scene " + handle; else
+                        if (val.isType<tinyScript>())  displayName = "Script " + handle; else
+                        if (val.isType<tinyMeshVk>())  displayName = "Mesh " + handle;
+
+                        return displayName.c_str();
+                    },
+                    "No Value Assigned",
+                    [&]() {
+                        return ImVec4(0.6f, 0.4f, 0.9f, 1.0f);
+                    },
+                    ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
+                    [&]() { return val.valid(); },
+                    [&fs, &val]() {
+                        if (ImGui::BeginDragDropTarget()) {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                                Payload* data = (Payload*)payload->Data;
+
+                                if (val.sameType(data->tHandle)) val = data->tHandle;
+
+                                ImGui::EndDragDropTarget();
+                            }
+                        }
+                    },
+                    []() { /* Do nothing for now */ },
+                    [name]() {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("%s", name.c_str());
+                        ImGui::EndTooltip();
+                    }
+                );
+                ImGui::PopID();
             }
-        }, varValue);
+        }, value);
     }
 }
 
@@ -816,7 +850,7 @@ static void RenderCOMP(const CompInfo& comp) {
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {
-    tinySceneRT* scene = project->scene(HierarchyState::activeSceneHandle);
+    tinySceneRT* scene = project->scene(HierarchyState::sceneHandle);
     if (!scene) return;
 
     typeHandle selectedNode = HierarchyState::selectedNode;
@@ -981,9 +1015,9 @@ void tinyApp::renderUI() {
 
     // ===== HIERARCHY WINDOW - Scene & File System =====
     if (tinyUI::Exec::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
-        tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
-
-        tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, activeSceneHandle));
+        
+        tinyHandle sceneHandle = HierarchyState::sceneHandle;
+        tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, sceneHandle));
         const char* sceneName = fs.fName(sceneFHandle);
 
         if (!activeScene) {
@@ -999,7 +1033,7 @@ void tinyApp::renderUI() {
             float bottomHeight = availHeight * (1.0f - HierarchyState::splitterPos) - splitterHeight;
 
             // ===== TOP: SCENE HIERARCHY =====
-            ImGui::Text("%s [HDL %u.%u]", sceneName, activeSceneHandle.index, activeSceneHandle.version);
+            ImGui::Text("%s [HDL %u.%u]", sceneName, sceneHandle.index, sceneHandle.version);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("SceneHierarchy", ImVec2(0, topHeight), true);
             RenderSceneNodeHierarchy(project.get());
@@ -1047,7 +1081,7 @@ void tinyApp::renderUI() {
 
 
 void tinyApp::updateActiveScene() {
-    activeScene = project->scene(HierarchyState::activeSceneHandle);
+    activeScene = project->scene(HierarchyState::sceneHandle);
 
     activeScene->setFStart({
         renderer->getCurrentFrame(),
