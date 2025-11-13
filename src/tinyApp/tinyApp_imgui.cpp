@@ -52,7 +52,7 @@ namespace CodeEditor {
         palette[(int)TextEditor::PaletteIndex::Keyword] = IM_COL32(200, 100, 100, 255); // Reddish keywords
         palette[(int)TextEditor::PaletteIndex::String] = IM_COL32(150, 200, 100, 255); // Greenish strings
         palette[(int)TextEditor::PaletteIndex::Number] = IM_COL32(200, 150, 100, 255); // Orangish numbers
-        palette[(int)TextEditor::PaletteIndex::Comment] = IM_COL32(100, 150, 150, 155); // Teal comments
+        palette[(int)TextEditor::PaletteIndex::Comment] = IM_COL32(80, 80, 80, 155); // Grayish comments
         editor.SetPalette(palette);
     }
 
