@@ -558,15 +558,20 @@ static void RenderFileInspector(tinyProject* project) {
         if (ImGui::CollapsingHeader("Code")) {
             static TextEditor editor;
             static bool initialized = false;
+            static tinyHandle currentScriptHandle;
             if (!initialized) {
                 editor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
                 initialized = true;
             }
-            if (script && !script->code.empty()) {
+            if (script && !script->code.empty() && currentScriptHandle != typeHdl.handle) {
                 editor.SetText(script->code);
+                currentScriptHandle = typeHdl.handle;
             }
             ImGui::BeginChild("CodeEditor", ImVec2(0, 300), true);
             editor.Render("Lua Code");
+            if (editor.IsTextChanged() && script) {
+                script->code = editor.GetText();
+            }
             ImGui::EndChild();
         }
     }
