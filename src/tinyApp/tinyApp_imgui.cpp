@@ -153,7 +153,7 @@ static void RenderGenericNodeHierarchy(
 
     ImGui::PopStyleColor(2);
 
-    if (ImGui::IsItemClicked()) {
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
         setSelected(nodeHandle);
     }
 
@@ -201,7 +201,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
 
     auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedNode == MAKE_TH(tinyNodeRT, h); };
     auto setDragged  = [](tinyHandle h) { HierarchyState::draggedNode = MAKE_TH(tinyNodeRT, h); };
-    auto clearDragState = []() { HierarchyState::draggedNode = MAKE_TH_DEF(tinyNodeRT); };
+    auto clearDragState = []() { HierarchyState::draggedNode = typeHandle(); };
 
     auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(MAKE_TH(tinyNodeRT, h)); };
     auto setExpanded = [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(MAKE_TH(tinyNodeRT, h), expanded); };
