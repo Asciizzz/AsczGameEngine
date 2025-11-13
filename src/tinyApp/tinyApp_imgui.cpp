@@ -745,8 +745,8 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         std::visit([&](auto&& val) {
             using T = std::decay_t<decltype(val)>;
             if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(name.c_str(), &val, 0.1f); else
-            if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(name.c_str(), &val);         else
-            if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox(name.c_str(), &val);        else
+            if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(  name.c_str(), &val);       else
+            if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox( name.c_str(), &val);       else
             if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
             if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
             if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
@@ -763,18 +763,20 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                 }
             } else if constexpr (std::is_same_v<T, typeHandle>) {
                 ImGui::PushID(name.c_str());
+                static std::string labelBuffer;
                 RenderDragField(
                     [&]() {
                         std::string handle = "[" + std::to_string(val.handle.index) + ", " + std::to_string(val.handle.version) + "]";
 
-                        std::string displayName;
+                        std::string displayName = "Unknown " + handle;
 
                         if (val.isType<tinyNodeRT>())  displayName = "Node " + handle; else
                         if (val.isType<tinySceneRT>()) displayName = "Scene " + handle; else
                         if (val.isType<tinyScript>())  displayName = "Script " + handle; else
                         if (val.isType<tinyMeshVk>())  displayName = "Mesh " + handle;
 
-                        return displayName.c_str();
+                        labelBuffer = displayName;
+                        return labelBuffer.c_str();
                     },
                     "No Value Assigned",
                     [&]() {
@@ -865,7 +867,10 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     }
     
     ImGui::Text("%s", node->name.c_str());
-    ImGui::Separator();
+    // ImGui::Separator();
+
+    ImGui::SameLine();
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.9f, 1.0f), "[HDL: %zu, %zu]", handle.index, handle.version);
 
     tinySceneRT::NWrap wrap = scene->Wrap(handle);
 
