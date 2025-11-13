@@ -128,7 +128,7 @@ static void RenderGenericNodeHierarchy(
     // Lambdas for node state management
     CFunc<std::string(tinyHandle)>& getName,
     CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected,
-    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void()>&           clearDrag,
+    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void()>& clearDrag,
     CFunc<bool(tinyHandle)>& isExpanded,  CFunc<void(tinyHandle, bool)>& setExpanded,
     CFunc<bool(tinyHandle)>& hasChildren, CFunc<std::vector<tinyHandle>(tinyHandle)>& getChildren,
     CFunc<void(tinyHandle)>& renderDragSource,  CFunc<void(tinyHandle)>& renderDropTarget,
