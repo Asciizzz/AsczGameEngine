@@ -691,6 +691,49 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     if (!bone3D) return;
 }
 
+static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+    tinyRT_SCRIPT* script = wrap.script;
+    if (!script) return;
+
+    // Display the var map
+
+    // script->vMap;
+
+    tinyVarsMap& vMap = script->vMap();
+
+    for (auto& [varName, varValue] : vMap) {
+        std::visit([&](auto&& value) {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, float>) {
+                ImGui::DragFloat(varName.c_str(), &value, 0.1f);
+            } else if constexpr (std::is_same_v<T, int>) {
+                ImGui::DragInt(varName.c_str(), &value);
+            } else if constexpr (std::is_same_v<T, bool>) {
+                ImGui::Checkbox(varName.c_str(), &value);
+            } else if constexpr (std::is_same_v<T, glm::vec2>) {
+                ImGui::DragFloat2(varName.c_str(), &value.x, 0.1f);
+            } else if constexpr (std::is_same_v<T, glm::vec3>) {
+                ImGui::DragFloat3(varName.c_str(), &value.x, 0.1f);
+            } else if constexpr (std::is_same_v<T, glm::vec4>) {
+                ImGui::DragFloat4(varName.c_str(), &value.x, 0.1f);
+            } else if constexpr (std::is_same_v<T, std::string>) {
+                static std::map<std::string, std::string> buffers;
+                if (buffers.find(varName) == buffers.end()) {
+                    buffers[varName] = value;
+                }
+                char buf[256];
+                strcpy(buf, buffers[varName].c_str());
+                if (ImGui::InputText(varName.c_str(), buf, sizeof(buf))) {
+                    buffers[varName] = buf;
+                    value = buf;
+                }
+            } else if constexpr (std::is_same_v<T, typeHandle>) {
+                ImGui::Text("%s: [typeHandle]", varName.c_str());
+            }
+        }, varValue);
+    }
+}
+
 struct CompInfo {
     std::string name;
     bool active;
