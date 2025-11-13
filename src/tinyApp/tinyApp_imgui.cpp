@@ -78,7 +78,21 @@ void tinyApp::initUI() {
 // UTILITIES
 // ===========================================================================
 
-static bool renderMenuItemToggle(const char* labelPending, const char* labelFinished, bool finished) {
+template<typename FX>
+using Func = std::function<FX>;
+
+template<typename FX>
+using CFunc = const Func<FX>;
+
+#define M_CLICKED(M_state) ImGui::IsItemHovered() && ImGui::IsMouseReleased(M_state) && !ImGui::IsMouseDragging(M_state)
+#define M_HOVERED(M_state) ImGui::IsItemHovered() && !ImGui::IsMouseDragging(M_state)
+
+#define IMVEC4_COLOR(ext) ImVec4(ext.color[0], ext.color[1], ext.color[2], 1.0f)
+
+
+#define END_DRAG_AND_RETURN() { ImGui::EndDragDropSource(); return; }
+
+static bool RenderMenuItemToggle(const char* labelPending, const char* labelFinished, bool finished) {
     const char* label = finished ? labelFinished : labelPending;
     return ImGui::MenuItem(label, nullptr, finished, !finished);
 }
@@ -109,19 +123,26 @@ struct Payload {
     char name[64];
 };
 
+static void RenderDragField(
+    CFunc<const char*()>& labelActive,
+    const char* labelInactive,
+    CFunc<ImVec4()>& activeColor,
+    CFunc<bool()>& activeCondition,
+    CFunc<void()>& dragMethod
+) {
+    const char* label = activeCondition() ? labelActive() : labelInactive;
+    ImVec4 color = activeColor();
+
+    ImGui::PushStyleColor(ImGuiCol_Text, color);
+    ImGui::Text("%s", label);
+    ImGui::PopStyleColor();
+
+    dragMethod();
+}
+
 // ============================================================================
 // GENERALIZED TREE NODE RENDERING - Abstracts common ImGui tree logic
 // ============================================================================
-
-template<typename FX>
-using Func = std::function<FX>;
-
-template<typename FX>
-using CFunc = const Func<FX>;
-
-
-#define M_CLICKED(M_state) ImGui::IsItemHovered() && ImGui::IsMouseReleased(M_state) && !ImGui::IsMouseDragging(M_state)
-#define M_HOVERED(M_state) ImGui::IsItemHovered() && !ImGui::IsMouseDragging(M_state)
 
 static void RenderGenericNodeHierarchy(
     tinyHandle nodeHandle, int depth,
@@ -359,8 +380,6 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
     );
 }
 
-#define IMVEC4_COLOR(ext) ImVec4(ext.color[0], ext.color[1], ext.color[2], 1.0f)
-
 static void RenderFileNodeHierarchy(tinyProject* project) {
     tinyFS& fs = project->fs();
 
@@ -458,11 +477,11 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                 if (dataType.isType<tinySceneRT>()) {
                     tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
 
-                    if (renderMenuItemToggle("Make Active", "Active", HierarchyState::isActiveScene(dataType.handle))) {
+                    if (RenderMenuItemToggle("Make Active", "Active", HierarchyState::isActiveScene(dataType.handle))) {
                         HierarchyState::activeSceneHandle = dataType.handle;
                     }
 
-                    if (renderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
+                    if (RenderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
                         scene->cleanse();
                     }
                 }
@@ -563,13 +582,12 @@ static void RenderFileInspector(tinyProject* project) {
         ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
     }
     ImGui::Separator();
-
-    // Additional info can be added here
 }
 
 // Scene node inspector
 
-static void RenderTrfm3D(tinyProject* project, tinyNodeRT::TRFM3D* trfm3D) {
+static void RenderTRFM3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+    tinyRT_TRFM3D* trfm3D = wrap.trfm3D;
     if (!trfm3D) return;
 
     glm::vec3 translation, scale, skew;
@@ -593,11 +611,11 @@ static void RenderTrfm3D(tinyProject* project, tinyNodeRT::TRFM3D* trfm3D) {
         displayEuler = glm::eulerAngles(rotation) * (180.0f / 3.14159265f);
     }
 
-    if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) {
-        recompose();
-    }
+    if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) recompose();
+    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
 
     if (ImGui::DragFloat3("Rotation", &displayEuler.x, 0.5f)) {
+        // Euler angle is a b*tch
         if (!isDraggingRotation) {
             initialRotation = rotation;
             isDraggingRotation = true;
@@ -611,10 +629,66 @@ static void RenderTrfm3D(tinyProject* project, tinyNodeRT::TRFM3D* trfm3D) {
     if (!ImGui::IsItemActive()) {
         isDraggingRotation = false;
     }
+}
 
-    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
-        recompose();
-    }
+static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+    tinyRT_MESHRD* meshRD = wrap.meshRD;
+    if (!meshRD) return;
+
+    tinyHandle meshHandle = meshRD->meshHandle();
+    const auto* meshVk = fs.rGet<tinyMeshVk>(meshHandle);
+
+    auto activeColor = [&]() {
+        if (meshVk) return IMVEC4_COLOR(fs.typeExt<tinyMeshVk>());
+        return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+    };
+    auto labelActive = [&fs, meshHandle]() {
+        // return "Mesh Assigned";
+        tinyHandle fHandle = fs.dataToFileHandle(MAKE_TH(tinyMeshVk, meshHandle));
+        return fs.fName(fHandle).c_str();
+    };
+    const char* labelInactive = "No Mesh Assigned";
+
+    auto activeCondition = [meshVk]() {
+        return meshVk != nullptr;
+    };
+
+    auto dragMethod = [&fs, meshRD]() {
+        // Check for typeHandle<tinyNodeFS> drag payload
+        if (ImGui::BeginDragDropTarget()) {
+            const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE");
+            if (!payload) {
+                ImGui::EndDragDropTarget();
+                return;
+            }
+
+            Payload* data = (Payload*)payload->Data;
+            if (!data->isType<tinyNodeFS>()) {
+                ImGui::EndDragDropTarget();
+                return;
+            }
+
+            // Check for data type
+            typeHandle tHdl = data->tHandle;
+            if (!tHdl.isType<tinyMeshVk>()) {
+                ImGui::EndDragDropTarget();
+                return;
+            }
+
+            tinyHandle meshHandle = tHdl.handle;
+            if (!fs.rGet<tinyMeshVk>(meshHandle)) {
+                ImGui::EndDragDropTarget();
+                return;
+            }
+            
+            // Assign mesh
+            meshRD->setMesh(meshHandle);
+
+            ImGui::EndDragDropTarget();
+        }
+    };
+
+    RenderDragField(labelActive, labelInactive, activeColor, activeCondition, dragMethod);
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {
@@ -637,8 +711,11 @@ static void RenderSceneNodeInspector(tinyProject* project) {
 
     tinySceneRT::NWrap wrap = scene->Wrap(handle);
 
+    const tinyFS& fs = project->fs();
+
     // Additional components can be added here
-    RenderTrfm3D(project, wrap.trfm3D);
+    RenderTRFM3D(fs, scene, wrap); ImGui::Separator();
+    RenderMESHRD(fs, scene, wrap); ImGui::Separator();
 }
 
 

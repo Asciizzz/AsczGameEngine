@@ -103,25 +103,15 @@ public:
 // ---------- Bidirectional mapping: Data ↔ File ----------
 
     // Get the file handle that contains specific registry data
-    [[nodiscard]] tinyHandle getFileHandle(const typeHandle& dataHandle) const noexcept {
+    [[nodiscard]] tinyHandle dataToFileHandle(const typeHandle& dataHandle) const noexcept {
         auto it = dataToFile_.find(dataHandle);
         return (it != dataToFile_.end()) ? it->second : tinyHandle();
     }
 
     // Template overload for convenience
     template<typename T>
-    [[nodiscard]] tinyHandle getFileHandle(tinyHandle dataHandle) const noexcept {
-        return getFileHandle(typeHandle::make<T>(dataHandle));
-    }
-
-    // Check if specific registry data has an associated file
-    [[nodiscard]] bool hasFileMapping(const typeHandle& dataHandle) const noexcept {
-        return dataToFile_.find(dataHandle) != dataToFile_.end();
-    }
-
-    template<typename T>
-    [[nodiscard]] bool hasFileMapping(tinyHandle dataHandle) const noexcept {
-        return hasFileMapping(typeHandle::make<T>(dataHandle));
+    [[nodiscard]] tinyHandle dataToFileHandle(tinyHandle dataHandle) const noexcept {
+        return dataToFileHandle(typeHandle::make<T>(dataHandle));
     }
 
     // Set root display name (full on-disk path etc.)
@@ -254,7 +244,7 @@ public:
         return safeDelete(std::type_index(typeid(T)));
     }
 
-// -------------------- Rename with conflict resolution --------------------
+// -------------------- Name Resolution --------------------
 
     void fRename(tinyHandle fileHandle, const std::string& newName) {
         Node* node = fnodes_.get(fileHandle);
@@ -275,6 +265,11 @@ public:
         node->name = resolvedName;
     }
 
+    std::string fName(tinyHandle fileHandle) const noexcept {
+        const Node* node = fnodes_.get(fileHandle);
+        return node ? node->name : std::string();
+    }
+
 // -------------------- Move with cycle prevention --------------------
 
     bool fMove(tinyHandle nodeHandle, tinyHandle parentHandle) {
@@ -286,16 +281,14 @@ public:
 
         if (node->parent == parentHandle) return true; // already there
 
+        Node* newParent = fnodes_.get(parentHandle);
+        if (!newParent || newParent->isFile()) return false;
+
         // Avoid parent being a descendant of node
         if (isDescendant(nodeHandle, parentHandle)) return false;
 
-        Node* newParent = fnodes_.get(parentHandle);
-        if (!newParent) return false;
-        
-        // Check for name conflicts in the new parent (excluding this node)
-        // We pass nodeHandle to exclude it from conflict checking
         std::string resolvedName = resolveRepeatName(parentHandle, node->name, nodeHandle);
-        
+
         // Remove from old parent children vector
         Node* oldParent = fnodes_.get(node->parent);
         if (oldParent) oldParent->removeChild(nodeHandle, node->name);
@@ -303,7 +296,7 @@ public:
         // Update node's name and parent
         node->name = resolvedName;
         node->parent = parentHandle;
-        
+
         // Add to new parent
         newParent->addChild(nodeHandle, resolvedName);
 

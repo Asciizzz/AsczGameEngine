@@ -151,3 +151,7 @@ private:
 } // namespace tinyRT
 
 using tinyNodeRT = tinyRT::Node;
+
+// Aliases for component that can directly exist in Node instead of through pHandle
+using tinyRT_TRFM3D = tinyNodeRT::Transform3D;
+using tinyRT_BONE3D = tinyNodeRT::BoneAttach3D;
