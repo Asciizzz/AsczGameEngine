@@ -85,7 +85,6 @@ public:
     bool renameNode(tinyHandle nodeHandle, const std::string& newName);
 
     const tinyNodeRT* node(tinyHandle nodeHandle) const;
-    tinyHandle nodeHandle(uint32_t index) const;
     uint32_t nodeCount() const;
 
     tinyHandle nodeParent(tinyHandle nodeHandle) const;
@@ -156,7 +155,17 @@ public:
         tinyRT_SCRIPT* script = nullptr;
     };
 
-    NWrap nWrap(tinyHandle nodeHandle) {
+    struct CNWrap {
+        tinyHandle handle = tinyHandle();
+        const tinyNodeRT::TRFM3D* trfm3D = nullptr;
+        const tinyNodeRT::BONE3D* bone3D = nullptr;
+        const tinyRT_MESHRD* meshRD = nullptr;
+        const tinyRT_SKEL3D* skel3D = nullptr;
+        const tinyRT_ANIM3D* anim3D = nullptr;
+        const tinyRT_SCRIPT* script = nullptr;
+    };
+
+    NWrap Wrap(tinyHandle nodeHandle) {
         tinyNodeRT* node = nodes_.get(nodeHandle);
         if (!node) return NWrap();
 
@@ -172,8 +181,20 @@ public:
         return comps;
     }
 
-    const NWrap nWrap(tinyHandle nodeHandle) const {
-        return const_cast<Scene*>(this)->nWrap(nodeHandle);
+    CNWrap CWrap(tinyHandle nodeHandle) const {
+        const tinyNodeRT* node = nodes_.get(nodeHandle);
+        if (!node) return CNWrap();
+
+        CNWrap comps;
+        comps.handle = nodeHandle;
+        comps.trfm3D = rtComp<tinyNodeRT::TRFM3D>(nodeHandle);
+        comps.bone3D = rtComp<tinyNodeRT::BONE3D>(nodeHandle);
+        comps.meshRD = rtComp<tinyNodeRT::MESHRD>(nodeHandle);
+        comps.skel3D = rtComp<tinyNodeRT::SKEL3D>(nodeHandle);
+        comps.anim3D = rtComp<tinyNodeRT::ANIM3D>(nodeHandle);
+        comps.script = rtComp<tinyNodeRT::SCRIPT>(nodeHandle);
+
+        return comps;
     }
 
     // Retrieve runtime-resolved component pointer (return runtime component instead of node identity component)

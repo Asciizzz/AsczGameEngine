@@ -303,9 +303,9 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                 ImGui::Separator();
 
                 // Special functions
-                tinySceneRT::NWrap nWrap = scene->nWrap(h);
+                tinySceneRT::NWrap Wrap = scene->Wrap(h);
 
-                if (tinyRT_ANIM3D* anim3D = nWrap.anim3D) {
+                if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
                     for (auto& anime : anim3D->MAL()) {
                         if (ImGui::MenuItem(anime.first.c_str())) {
                             anim3D->play(anime.first, true);
@@ -313,7 +313,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                     }
                 }
 
-                if (tinyRT_SCRIPT* script = nWrap.script) {
+                if (tinyRT_SCRIPT* script = Wrap.script) {
                     // Do nothing
                 }
             }

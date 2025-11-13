@@ -128,10 +128,6 @@ const tinyNodeRT* Scene::node(tinyHandle nodeHandle) const {
     return nodes_.get(nodeHandle);
 }
 
-tinyHandle Scene::nodeHandle(uint32_t index) const {
-    return nodes_.getHandle(index);
-}
-
 uint32_t Scene::nodeCount() const {
     return nodes_.count();
 }
@@ -298,43 +294,42 @@ bool Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
     // Second pass: Construct nodes_ with proper remapped components
     for (auto& [fromHandle, toHandle] : from_to_map) {
-        const tinyNodeRT* fromNode = from->node(fromHandle);
-        if (!fromNode) continue; // Should not happen
+        CNWrap fromWrap = from->CWrap(fromHandle);
 
         tinyNodeRT* toNode = nodes_.get(toHandle);
         if (!toNode) continue; // Should not happen
 
         // Resolve components
 
-        if (const auto* fromTransform = fromNode->get<tinyNodeRT::TRFM3D>()) {
+        if (fromWrap.trfm3D) {
             auto* toTransform = writeComp<tinyNodeRT::TRFM3D>(toHandle);
-            *toTransform = *fromTransform;
+            *toTransform = *fromWrap.trfm3D;
         }
 
-        if (const auto* fromMeshRender = from->rtComp<tinyNodeRT::MESHRD>(fromHandle)) {
+        if (fromWrap.meshRD) {
             auto* toMeshRender = writeComp<tinyNodeRT::MESHRD>(toHandle);
 
-            toMeshRender->setMesh(fromMeshRender->meshHandle());
+            toMeshRender->setMesh(fromWrap.meshRD->meshHandle());
 
-            tinyHandle skeleNodeHandle = fromMeshRender->skeleNodeHandle();
+            tinyHandle skeleNodeHandle = fromWrap.meshRD->skeleNodeHandle();
             toMeshRender->setSkeleNode(handleFromMap(from_to_map, skeleNodeHandle));
         }
 
-        if (const auto* fromBoneAttach = fromNode->get<tinyNodeRT::BONE3D>()) {
+        if (fromWrap.bone3D) {
             auto* toBoneAttach = writeComp<tinyNodeRT::BONE3D>(toHandle);
 
-            toBoneAttach->skeleNodeHandle = handleFromMap(from_to_map, fromBoneAttach->skeleNodeHandle);
-            toBoneAttach->boneIndex = fromBoneAttach->boneIndex;
+            toBoneAttach->skeleNodeHandle = handleFromMap(from_to_map, fromWrap.bone3D->skeleNodeHandle);
+            toBoneAttach->boneIndex = fromWrap.bone3D->boneIndex;
         }
 
-        if (const auto* fromSkeleRT = from->rtComp<tinyNodeRT::SKEL3D>(fromHandle)) {
+        if (fromWrap.skel3D) {
             auto* toSkeleRT = writeComp<tinyNodeRT::SKEL3D>(toHandle);
-            toSkeleRT->copy(fromSkeleRT);
+            toSkeleRT->copy(fromWrap.skel3D);
         }
 
-        if (const auto* fromAnimeRT = from->rtComp<tinyNodeRT::ANIM3D>(fromHandle)) {
+        if (fromWrap.anim3D) {
             auto* toAnimeRT = writeComp<tinyNodeRT::ANIM3D>(toHandle);
-            *toAnimeRT = *fromAnimeRT;
+            *toAnimeRT = *fromWrap.anim3D; // Allow copy
 
             for (auto& anime : toAnimeRT->MAL()) {
                 auto* toAnime = toAnimeRT->get(anime.second);
@@ -345,9 +340,9 @@ bool Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
             }
         }
 
-        if (const auto* fromScriptRT = from->rtComp<tinyNodeRT::SCRIPT>(fromHandle)) {
+        if (fromWrap.script) {
             auto* toScriptRT = writeComp<tinyNodeRT::SCRIPT>(toHandle);
-            *toScriptRT = *fromScriptRT; // Allow copy
+            *toScriptRT = *fromWrap.script; // Allow copy
 
             remapHandlesInScriptMap(from_to_map, toScriptRT->vMap());
             remapHandlesInScriptMap(from_to_map, toScriptRT->lMap());
@@ -368,7 +363,7 @@ void Scene::updateRecursive(tinyHandle nodeHandle, const glm::mat4& parentGlobal
     uint32_t curFrame_ = fStart_.frame;
     float curDTime_ = fStart_.deltaTime;
 
-    NWrap comps = nWrap(nodeHandle);
+    NWrap comps = Wrap(nodeHandle);
 
     // Script must be updated first before everything else
     if (comps.script) comps.script->update(this, nodeHandle, curDTime_);
