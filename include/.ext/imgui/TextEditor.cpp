@@ -3108,7 +3108,10 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 	if (!inited)
 	{
 		static const char* const keywords[] = {
-			"and", "break", "do", "", "else", "elseif", "end", "false", "for", "function", "if", "in", "", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"
+			"and", "break", "do", "", "else", "elseif", "end", "false", "for", "function", "if", "in", "", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while",
+
+			// Custom keywords for our engine
+			"Vec2", "Vec3", "Vec4", "Handle"
 		};
 
 		for (auto& k : keywords)
@@ -3124,12 +3127,31 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 			"pow", "frexp", "ldexp", "log10", "pi", "huge", "maxinteger", "mininteger", "loadlib", "searchpath", "seeall", "preload", "cpath", "path", "searchers", "loaded", "module", "require", "clock",
 			"date", "difftime", "execute", "exit", "getenv", "remove", "rename", "setlocale", "time", "tmpname", "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len", "lower", "match", "rep",
 			"reverse", "sub", "upper", "pack", "packsize", "unpack", "concat", "maxn", "insert", "pack", "unpack", "remove", "move", "sort", "offset", "codepoint", "char", "len", "codes", "charpattern",
-			"coroutine", "table", "io", "os", "string", "utf8", "bit32", "math", "debug", "package"
+			"coroutine", "table", "io", "os", "string", "utf8", "bit32", "math", "debug", "package",
+
+			// Custom identifiers for our engine
+			"VARS", "DELTATIME", "NODE", "SCENE", "FS"
 		};
 		for (auto& k : identifiers)
 		{
 			Identifier id;
-			id.mDeclaration = "Built-in function";
+
+			// Custom identifiers for our engine
+			if (std::string(k) == "VARS")
+				id.mDeclaration = "Global script variables table";
+			else if (std::string(k) == "DELTATIME")
+				id.mDeclaration = "Delta time";
+			else if (std::string(k) == "NODE")
+				id.mDeclaration = "Current node";
+			else if (std::string(k) == "SCENE")
+				id.mDeclaration = "Current scene";
+			else if (std::string(k) == "FS")
+				id.mDeclaration = "File system access";
+			else if (std::string(k) == "print")
+				id.mDeclaration = "Outputs text to the console";
+			else
+				id.mDeclaration = "Built-in function";
+
 			langDef.mIdentifiers.insert(std::make_pair(std::string(k), id));
 		}
 
