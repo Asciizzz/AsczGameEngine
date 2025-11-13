@@ -14,19 +14,13 @@ using namespace tinyVk;
 // Hierarchy state tracking
 namespace HierarchyState {
     static tinyHandle sceneHandle;
-    static bool isActiveScene(tinyHandle h) {
-        return sceneHandle == h;
-    }
+    static bool isActiveScene(tinyHandle h) { return sceneHandle == h; }
 
     static float splitterPos = 0.5f;
-    
-    // Expanded nodes tracking
+
     static std::unordered_set<uint64_t> expandedNodes;
-    
-    // Selection tracking
+
     static typeHandle selectedNode;
-    
-    // Drag state
     static typeHandle draggedNode;
 
     // Note: tinyHandle is hashed by default
