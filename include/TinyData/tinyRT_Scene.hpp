@@ -49,10 +49,6 @@ private:
     template<typename T>
     static constexpr bool no_resolver = std::is_same_v<T, RTResolver_t<T>>;
 
-    #define IF_NO_RESOLVER(T) if constexpr (no_resolver<T>)
-    #define IF_HAS_RESOLVER(T) if constexpr (!no_resolver<T>)
-    #define IF_TYPE_EQ(A, B) if constexpr (type_eq<A, B>)
-
 public:
     Scene() noexcept = default;
 
@@ -221,10 +217,10 @@ public:
         removeComp<T>(nodeHandle);
         T* compPtr = node->add<T>();
 
-        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) return addMESHRD_RT(nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::SKEL3D) return addSKEL3D_RT(nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) return addANIM3D_RT(nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) return addSCRIPT_RT(nodeHandle); else
+        if constexpr (type_eq<T, tinyNodeRT::MESHRD>) return addMESHRD_RT(nodeHandle); else
+        if constexpr (type_eq<T, tinyNodeRT::SKEL3D>) return addSKEL3D_RT(nodeHandle); else
+        if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) return addANIM3D_RT(nodeHandle); else
+        if constexpr (type_eq<T, tinyNodeRT::SCRIPT>) return addSCRIPT_RT(nodeHandle); else
         return compPtr;
     }
 
@@ -235,7 +231,9 @@ public:
 
         T* compPtr = node->get<T>();
 
-        IF_HAS_RESOLVER(T) rtRemove<RTResolver_t<T>>(compPtr->pHandle);
+        // Has special runtime resolver
+        if constexpr (!no_resolver<T>)
+            rtRemove<RTResolver_t<T>>(compPtr->pHandle);
 
         rmMap3D<T>(nodeHandle);
 
@@ -246,8 +244,8 @@ public:
 
     template<typename T>
     const UnorderedMap<tinyHandle, tinyHandle>& mapCache() const {
-        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) return mapMESHRD_; else
-        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) return mapANIM3D_; else
+        if constexpr (type_eq<T, tinyNodeRT::MESHRD>) return mapMESHRD_; else
+        if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) return mapANIM3D_; else
         {
             static UnorderedMap<tinyHandle, tinyHandle> emptyMap;
             return emptyMap; // Empty map for unsupported types
@@ -306,9 +304,9 @@ private:
             map[nodeH] = rtH;
         };
 
-        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) mapInsert(mapMESHRD_, nodeHandle, rtHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) mapInsert(mapANIM3D_, nodeHandle, rtHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) mapInsert(mapSCRIPT_, nodeHandle, rtHandle);
+        if constexpr (type_eq<T, tinyNodeRT::MESHRD>) mapInsert(mapMESHRD_, nodeHandle, rtHandle); else
+        if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) mapInsert(mapANIM3D_, nodeHandle, rtHandle); else
+        if constexpr (type_eq<T, tinyNodeRT::SCRIPT>) mapInsert(mapSCRIPT_, nodeHandle, rtHandle);
     }
 
     template<typename T>
@@ -320,9 +318,9 @@ private:
             }
         };
 
-        IF_TYPE_EQ(T, tinyNodeRT::MESHRD) rmMap(mapMESHRD_, nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::ANIM3D) rmMap(mapANIM3D_, nodeHandle); else
-        IF_TYPE_EQ(T, tinyNodeRT::SCRIPT) rmMap(mapSCRIPT_, nodeHandle);
+        if constexpr (type_eq<T, tinyNodeRT::MESHRD>) rmMap(mapMESHRD_, nodeHandle); else
+        if constexpr (type_eq<T, tinyNodeRT::ANIM3D>) rmMap(mapANIM3D_, nodeHandle); else
+        if constexpr (type_eq<T, tinyNodeRT::SCRIPT>) rmMap(mapSCRIPT_, nodeHandle);
     }
 
     tinyRT_MESHRD* addMESHRD_RT(tinyHandle nodeHandle) {

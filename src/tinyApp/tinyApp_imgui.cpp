@@ -679,18 +679,15 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 }
 
 
-template<typename T1, typename T2>
-using IF_TYPE_EQ = std::enable_if_t<std::is_same<T1, T2>::value, bool>;
-
 template<typename Comp>
 static void RenderCOMPONENT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap, const std::string& compName) {
-    ImGui::BeginChild(compName.c_str(), ImVec2(0, 0), true);
+    ImGui::BeginGroup();
 
-    IF_TYPE_EQ(Comp, tinyRT_TRFM3D) RenderTRFM3D(fs, scene, wrap); else
-    IF_TYPE_EQ(Comp, tinyRT_MESHRD) RenderMESHRD(fs, scene, wrap); else
-    IF_TYPE_EQ(Comp, tinyRT_BONE3D) RenderBONE3D(fs, scene, wrap);
+    if constexpr (type_eq<Comp, tinyNodeRT::TRFM3D>) RenderTRFM3D(fs, scene, wrap); else
+    if constexpr (type_eq<Comp, tinyNodeRT::MESHRD>) RenderMESHRD(fs, scene, wrap); else
+    if constexpr (type_eq<Comp, tinyNodeRT::BONE3D>) RenderBONE3D(fs, scene, wrap);
 
-    ImGui::EndChild();
+    ImGui::EndGroup();
     ImGui::Separator();
 }
 
@@ -720,8 +717,8 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     // RenderTRFM3D(fs, scene, wrap); ImGui::Separator();
     // RenderMESHRD(fs, scene, wrap); ImGui::Separator();
 
-    RenderCOMPONENT<tinyRT_TRFM3D>(fs, scene, wrap, "Transform 3D");
-    RenderCOMPONENT<tinyRT_MESHRD>(fs, scene, wrap, "Mesh Renderer 3D");
+    RenderCOMPONENT<tinyNodeRT::TRFM3D>(fs, scene, wrap, "Transform 3D");
+    RenderCOMPONENT<tinyNodeRT::MESHRD>(fs, scene, wrap, "Mesh Renderer 3D");
 }
 
 
