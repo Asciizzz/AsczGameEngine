@@ -546,6 +546,14 @@ static void RenderFileInspector(tinyProject* project) {
 
 // Scene node inspector
 
+
+
+struct CompInfo {
+    std::string name;
+    std::function<void()> renderFunc;
+    bool active;
+};
+
 static void RenderTRFM3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
     tinyRT_TRFM3D* trfm3D = wrap.trfm3D;
     if (!trfm3D) return;
@@ -679,13 +687,10 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 }
 
 
-template<typename Comp>
-static void RenderCOMPONENT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap, const std::string& compName) {
+static void RenderCOMPONENT(const std::string& compName, std::function<void()> renderFunc) {
     if (ImGui::CollapsingHeader(compName.c_str())) {
         ImGui::Indent();
-        if constexpr (type_eq<Comp, tinyNodeRT::TRFM3D>) RenderTRFM3D(fs, scene, wrap); else
-        if constexpr (type_eq<Comp, tinyNodeRT::MESHRD>) RenderMESHRD(fs, scene, wrap); else
-        if constexpr (type_eq<Comp, tinyNodeRT::BONE3D>) RenderBONE3D(fs, scene, wrap);
+        renderFunc();
         ImGui::Unindent();
     }
 }
@@ -712,12 +717,21 @@ static void RenderSceneNodeInspector(tinyProject* project) {
 
     const tinyFS& fs = project->fs();
 
-    // Additional components can be added here
-    // RenderTRFM3D(fs, scene, wrap); ImGui::Separator();
-    // RenderMESHRD(fs, scene, wrap); ImGui::Separator();
+    // Collect components
+    std::vector<CompInfo> components;
+    components.push_back({"Transform 3D", [&]() { RenderTRFM3D(fs, scene, wrap); }, wrap.trfm3D != nullptr});
+    components.push_back({"Mesh Renderer 3D", [&]() { RenderMESHRD(fs, scene, wrap); }, wrap.meshRD != nullptr});
+    components.push_back({"Bone 3D", [&]() { RenderBONE3D(fs, scene, wrap); }, wrap.bone3D != nullptr});
 
-    RenderCOMPONENT<tinyNodeRT::TRFM3D>(fs, scene, wrap, "Transform 3D");
-    RenderCOMPONENT<tinyNodeRT::MESHRD>(fs, scene, wrap, "Mesh Renderer 3D");
+    // Sort: active first
+    std::sort(components.begin(), components.end(), [](const CompInfo& a, const CompInfo& b) {
+        return a.active > b.active;
+    });
+
+    // Render components
+    for (const auto& comp : components) {
+        RenderCOMPONENT(comp.name, comp.renderFunc);
+    }
 }
 
 
