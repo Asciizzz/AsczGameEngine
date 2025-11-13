@@ -54,9 +54,7 @@ private:
     #define IF_TYPE_EQ(A, B) if constexpr (type_eq<A, B>)
 
 public:
-    std::string name;
-
-    Scene(const std::string& sceneName = "New Scene") : name(sceneName) {}
+    Scene() noexcept = default;
 
     Scene(const Scene&) = delete;
     Scene& operator=(const Scene&) = delete;

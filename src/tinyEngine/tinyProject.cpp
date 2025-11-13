@@ -152,7 +152,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     if (model.nodes.empty()) return tinyHandle();
 
     // Create scene with nodes - preserve hierarchy but remap resource references
-    tinySceneRT scene(model.name);
+    tinySceneRT scene;
     scene.setSharedRes(sharedRes_);
 
     // First pass: Insert empty nodes and store their handles
@@ -246,7 +246,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     }
 
     // Add scene to registry
-    tinyHandle fnHandle = fs_->addFile(fnModelFolder, scene.name, std::move(scene));
+    tinyHandle fnHandle = fs_->addFile(fnModelFolder, model.name, std::move(scene));
     return fs_->fTypeHandle(fnHandle).handle; // Return the scene's registry handle
 }
 
@@ -402,7 +402,7 @@ void tinyProject::vkCreateDefault() {
 
 // CRITICAL: Main Scene must be created last after all resources are ready
 
-    tinySceneRT mainScene("Main Scene");
+    tinySceneRT mainScene;
     mainScene.addRoot("Root");
     mainScene.setSharedRes(sharedRes_);
 

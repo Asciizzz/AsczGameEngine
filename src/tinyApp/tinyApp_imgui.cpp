@@ -605,7 +605,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     const auto* meshVk = fs.rGet<tinyMeshVk>(meshHandle);
 
     RenderDragField(
-        [&fs, meshFHandle]() { return fs.fName(meshFHandle).c_str(); },
+        [&fs, meshFHandle]() { return fs.fName(meshFHandle); },
         "No Mesh Assigned",
         [&]() { if (meshVk) return IMVEC4_COLOR(fs.typeExt<tinyMeshVk>()); return ImVec4(0.5f, 0.5f, 0.5f, 1.0f); },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
@@ -627,10 +627,10 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         [&fs, meshFHandle]() {
             ImGui::BeginTooltip();
 
-            const char* fullPath = fs.fName(meshFHandle, true, true).c_str();
+            const char* fullPath = fs.fName(meshFHandle, true, true);
             fullPath = fullPath ? fullPath : "<Invalid Mesh>";
 
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS] ");
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
             ImGui::SameLine(); ImGui::Text("%s", fullPath);
 
             ImGui::EndTooltip();
@@ -665,7 +665,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
             const char* fullPath = scene->nodeName(rtSkeleHandle, true);
             fullPath = fullPath ? fullPath : "<Invalid Node>";
 
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[Scene] ");
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[Scene]");
             ImGui::SameLine(); ImGui::Text("%s", fullPath);
 
             ImGui::EndTooltip();
@@ -677,6 +677,8 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     tinyRT_BONE3D* bone3D = wrap.bone3D;
     if (!bone3D) return;
 }
+
+static void RenderCOMPONENT
 
 static void RenderSceneNodeInspector(tinyProject* project) {
     tinySceneRT* scene = project->scene(HierarchyState::activeSceneHandle);
@@ -727,6 +729,8 @@ void tinyApp::renderUI() {
     static float currentFps = 0.0f;
 
     float deltaTime = fpsRef.deltaTime;
+
+    tinyFS& fs = project->fs();
 
     // ===== DEBUG PANEL WINDOW =====
     static bool showThemeEditor = false;
@@ -807,13 +811,12 @@ void tinyApp::renderUI() {
     if (tinyUI::Exec::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
         tinyHandle activeSceneHandle = HierarchyState::activeSceneHandle;
 
+        tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, activeSceneHandle));
+        const char* sceneName = fs.fName(sceneFHandle);
+
         if (!activeScene) {
             ImGui::Text("No active scene");
         } else {
-            // Header with scene selector
-            ImGui::Text("Active Scene: [Handle: %u.%u]", activeSceneHandle.index, activeSceneHandle.version);
-            ImGui::Separator();
-
             float fontScale = tinyUI::Exec::GetTheme().fontScale;
 
             // Get available height for split view
@@ -824,7 +827,7 @@ void tinyApp::renderUI() {
             float bottomHeight = availHeight * (1.0f - HierarchyState::splitterPos) - splitterHeight;
 
             // ===== TOP: SCENE HIERARCHY =====
-            ImGui::Text("Scene Hierarchy");
+            ImGui::Text("%s [HDL %u.%u]", sceneName, activeSceneHandle.index, activeSceneHandle.version);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("SceneHierarchy", ImVec2(0, topHeight), true);
             RenderSceneNodeHierarchy(project.get());
