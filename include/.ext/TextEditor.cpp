@@ -3108,7 +3108,10 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 	if (!inited)
 	{
 		static const char* const keywords[] = {
-			"and", "break", "do", "", "else", "elseif", "end", "false", "for", "function", "if", "in", "", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"
+			"and", "break", "do", "", "else", "elseif", "end", "false", "for", "function", "if", "in", "", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while",
+
+			// Custom keywords for our engine
+			"DeltaTime", "Vec2", "Vec3", "Vec4", "Handle"
 		};
 
 		for (auto& k : keywords)
