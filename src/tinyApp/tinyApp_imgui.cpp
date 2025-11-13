@@ -569,6 +569,36 @@ static void RenderFileInspector(tinyProject* project) {
 
 // Scene node inspector
 
+static void RenderTrfm3D(tinyProject* project, tinyNodeRT::TRFM3D* trfm3D) {
+    if (!trfm3D) return;
+
+    glm::vec3 translation, scale, skew;
+    glm::quat rotation;
+    glm::vec4 perspective;
+    glm::decompose(trfm3D->local, scale, rotation, translation, skew, perspective);
+
+    // Helper to recompose after editing
+    auto recompose = [&]() {
+        glm::mat4 t = glm::translate(glm::mat4(1.0f), translation);
+        glm::mat4 r = glm::mat4_cast(rotation);
+        glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
+        trfm3D->local = t * r * s;
+    };
+
+    glm::vec3 eulerAngles = glm::eulerAngles(rotation) * (180.0f / 3.14159265f);
+
+    if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) {
+        recompose();
+    }
+    if (ImGui::DragFloat3("Rotation", &eulerAngles.x, 0.5f)) {
+        rotation = glm::quat(glm::radians(eulerAngles));
+        recompose();
+    }
+    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
+        recompose();
+    }
+}
+
 static void RenderSceneNodeInspector(tinyProject* project) {
     tinySceneRT* scene = project->scene(HierarchyState::activeSceneHandle);
     if (!scene) return;
@@ -583,10 +613,14 @@ static void RenderSceneNodeInspector(tinyProject* project) {
         ImGui::Text("Invalid node.");
         return;
     }
+    
+    ImGui::Text("%s", node->name.c_str());
+    ImGui::Separator();
 
     tinySceneRT::NWrap wrap = scene->Wrap(handle);
 
     // Additional components can be added here
+    RenderTrfm3D(project, wrap.trfm3D);
 }
 
 
