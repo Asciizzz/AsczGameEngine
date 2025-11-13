@@ -69,27 +69,25 @@ function update()
     -- If dead, play death animation and don't process movement or combat
     if VARS.isDead then
         -- Play death animation (non-looping)
-        if VARS.animeNode:valid() then
-            local anime = SCENE:node(VARS.animeNode)
-            if anime then
-                local anim3d = anime:anim3D()
-                if anim3d then
-                    local deathHandle = anim3d:get(VARS.deathAnim)
-                    local curHandle = anim3d:current()
+        local animeNode = SCENE:node(VARS.animeNode)
+        if animeNode then
+            local anim3d = animeNode:anime3D()
+            if anim3d then
+                local deathHandle = anim3d:get(VARS.deathAnim)
+                local curHandle = anim3d:current()
+                
+                -- Only play death animation once
+                if curHandle ~= deathHandle then
+                    anim3d:setLoop(false)  -- Death animation doesn't loop
+                    anim3d:play(deathHandle, true)
+                else
+                    -- Check if death animation has finished
+                    local animTime = anim3d:getTime()
+                    local animDuration = anim3d:getDuration()
                     
-                    -- Only play death animation once
-                    if curHandle ~= deathHandle then
-                        anim3d:setLoop(false)  -- Death animation doesn't loop
-                        anim3d:play(deathHandle, true)
-                    else
-                        -- Check if death animation has finished
-                        local animTime = anim3d:getTime()
-                        local animDuration = anim3d:getDuration()
-                        
-                        if animTime >= animDuration - 0.01 then
-                            -- Death animation finished, pause at last frame
-                            anim3d:pause()
-                        end
+                    if animTime >= animDuration - 0.01 then
+                        -- Death animation finished, pause at last frame
+                        anim3d:pause()
                     end
                 end
             end

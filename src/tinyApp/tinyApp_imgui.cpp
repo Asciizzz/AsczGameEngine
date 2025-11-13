@@ -827,7 +827,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
             if (orderA != orderB) return orderA < orderB;
             return a.first < b.first;
         });
-        for (auto& [name, value] : vMap) {
+        for (auto& [name, value] : sortedItems) {
             auto& realValue = vMap[name];
 
             std::visit([&](auto&& val) {
@@ -900,7 +900,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                     );
                     ImGui::PopID();
                 }
-            }, value);
+            }, realValue);
         }
         ImGui::EndChild();
         ImGui::PopStyleColor();
