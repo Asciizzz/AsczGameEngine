@@ -580,7 +580,6 @@ static void RenderTRFM3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     }
 
     if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) recompose();
-    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
 
     if (ImGui::DragFloat3("Rotation", &displayEuler.x, 0.5f)) {
         // Euler angle is a b*tch
@@ -597,6 +596,12 @@ static void RenderTRFM3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     if (!ImGui::IsItemActive()) {
         isDraggingRotation = false;
     }
+
+    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+    if (ImGui::Button("Reset", ImVec2(-1, 0))) trfm3D->local = glm::mat4(1.0f);
+    ImGui::PopStyleColor();
 }
 
 static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
