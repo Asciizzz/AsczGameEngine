@@ -687,23 +687,31 @@ struct CompInfo {
     std::function<void()> removeFunc;
 };
 
+const static ImVec4 compAddColor = ImVec4(0.2f, 0.8f, 0.2f, 1.0f); // green
+const static ImVec4 compRemoveColor = ImVec4(0.8f, 0.2f, 0.2f, 1.0f); // red
+
 static void RenderCOMP(const CompInfo& comp) {
-    bool open = ImGui::CollapsingHeader(comp.name.c_str());
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
+    if (!comp.active) {
+        flags |= ImGuiTreeNodeFlags_Leaf;
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 0.8f)); // darker background
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.15f, 0.15f, 0.15f, 0.9f)); // darker hover
+    } else {
+        flags |= ImGuiTreeNodeFlags_DefaultOpen;
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.5f, 0.8f, 0.4f)); // normal background
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.6f, 0.9f, 0.6f)); // normal hover
+    }
+
+    bool open = ImGui::CollapsingHeader(comp.name.c_str(), flags);
+    ImGui::PopStyleColor(2);
 
     if (ImGui::BeginPopupContextItem(comp.name.c_str())) {
-        if (!comp.active) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f)); // green
-            if (ImGui::MenuItem("Add")) {
-                comp.addFunc();
-            }
-            ImGui::PopStyleColor();
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f)); // red
-            if (ImGui::MenuItem("Remove")) {
-                comp.removeFunc();
-            }
-            ImGui::PopStyleColor();
-        }
+        ImGui::PushStyleColor(ImGuiCol_Text, comp.active ? compRemoveColor : compAddColor);
+
+        if (!comp.active) { if (ImGui::MenuItem("Add"))    comp.addFunc();    }
+        else              { if (ImGui::MenuItem("Remove")) comp.removeFunc(); }
+
+        ImGui::PopStyleColor();
         ImGui::EndPopup();
     }
 
