@@ -1,13 +1,14 @@
 // tinyApp_imgui.cpp - UI Implementation & Testing
 #include "tinyApp/tinyApp.hpp"
 #include "tinySystem/tinyUI.hpp"
-#include ".ext/TextEditor.h"
+
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
 #include <imgui.h>
+#include <TextEditor.h>
 #include <algorithm>
 
 using namespace tinyVk;
@@ -718,7 +719,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     tinyHandle handle = wrap.handle;
     tinyHandle scriptHandle = script->scriptHandle();
     tinyHandle scriptFHandle = fs.dataToFileHandle(MAKE_TH(tinyScript, scriptHandle));
-    
+
     const tinyScript* scriptPtr = fs.rGet<tinyScript>(scriptHandle);
 
     // Render the drag field for the script file
