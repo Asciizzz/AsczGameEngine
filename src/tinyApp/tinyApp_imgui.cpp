@@ -1,6 +1,7 @@
 // tinyApp_imgui.cpp - UI Implementation & Testing
 #include "tinyApp/tinyApp.hpp"
 #include "tinySystem/tinyUI.hpp"
+#include ".ext/TextEditor.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -539,6 +540,8 @@ static void RenderFileInspector(tinyProject* project) {
         return;
     }
 
+    typeHandle typeHdl = fs.fTypeHandle(fHandle);
+
     ImGui::Text("%s", node->name.c_str());
 
     tinyFS::TypeExt typeExt = fs.fTypeExt(fHandle);
@@ -547,6 +550,25 @@ static void RenderFileInspector(tinyProject* project) {
         ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
     }
     ImGui::Separator();
+
+    if (typeHdl.isType<tinyScript>()) {
+        tinyScript* script = fs.rGet<tinyScript>(typeHdl.handle);
+
+        if (ImGui::CollapsingHeader("Code")) {
+            static TextEditor editor;
+            static bool initialized = false;
+            if (!initialized) {
+                editor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
+                initialized = true;
+            }
+            if (script && !script->code.empty()) {
+                editor.SetText(script->code);
+            }
+            ImGui::BeginChild("CodeEditor", ImVec2(0, 300), true);
+            editor.Render("Lua Code");
+            ImGui::EndChild();
+        }
+    }
 }
 
 // Scene node inspector

@@ -43,8 +43,7 @@ void tinyScript::closeLua() {
 }
 
 tinyScript::tinyScript(tinyScript&& other) noexcept
-    : name(std::move(other.name))
-    , code(std::move(other.code))
+    : code(std::move(other.code))
     , version_(other.version_)
     , L_(other.L_)
     , compiled_(other.compiled_)
@@ -58,7 +57,6 @@ tinyScript::tinyScript(tinyScript&& other) noexcept
 tinyScript& tinyScript::operator=(tinyScript&& other) noexcept {
     if (this != &other) {
         if (L_) lua_close(L_);
-        name = std::move(other.name);
         code = std::move(other.code);
         version_ = other.version_;
         L_ = other.L_;

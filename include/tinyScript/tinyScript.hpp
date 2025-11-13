@@ -42,11 +42,9 @@ using tinyVarsMap = std::unordered_map<std::string, tinyVar>;
 
 // Static script definition - shared across all instances
 struct tinyScript {
-    std::string name;
     std::string code;
 
     tinyScript() = default;
-    tinyScript(const std::string& scriptName) : name(scriptName) {}
     ~tinyScript();
     
     tinyScript(const tinyScript&) = delete;

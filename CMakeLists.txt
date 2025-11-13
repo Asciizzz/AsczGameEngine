@@ -49,6 +49,7 @@ file(GLOB_RECURSE SRC_FILES
     include/.ext/imgui/imgui_widgets.cpp
     include/.ext/imgui/backends/imgui_impl_sdl2.cpp
     include/.ext/imgui/backends/imgui_impl_vulkan.cpp
+    include/.ext/TextEditor.cpp
 
     # Lua source files (excluding lua.c and luac.c which contain main functions)
     include/.ext/luacpp/lapi.c
