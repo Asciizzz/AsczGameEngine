@@ -459,7 +459,15 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                     bool deletable = node->deletable();
                     const char* name = node->name.c_str();
                     ImGui::Text("%s", name);
+
+                    if (!node->isFolder()) { // Write colored extension
+                        ImGui::SameLine();
+                        tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+                        ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.ext.c_str());
+                    }
+
                     ImGui::Separator();
+
                     typeHandle dataType = fs.fTypeHandle(h);
                     if (dataType.isType<tinySceneRT>()) {
                         tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
@@ -489,12 +497,13 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             if (const tinyFS::Node* node = fs.fNode(h)) {
                 ImGui::BeginTooltip();
                 ImGui::Text("%s", node->name.c_str());
-                ImGui::Separator();
                 if (node->isFolder()) {
+                    ImGui::Separator();
                     ImGui::Text("Folder (%zu items)", node->children.size());
                 } else {
                     tinyFS::TypeExt typeExt = fs.fTypeExt(h);
-                    ImGui::TextColored(IMVEC4_COLOR(typeExt), "Type: %s", typeExt.c_str());
+                    ImGui::SameLine();
+                    ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
                 }
                 ImGui::EndTooltip();
             }
