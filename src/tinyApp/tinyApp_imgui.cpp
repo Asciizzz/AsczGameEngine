@@ -115,6 +115,9 @@ using Func = std::function<FuncType>;
 template<typename FuncType>
 using CFunc = const Func<FuncType>;
 
+
+#define M_CLICKED(M_state) ImGui::IsItemHovered() && ImGui::IsMouseReleased(M_state) && !ImGui::IsMouseDragging(M_state)
+
 static void RenderGenericNodeHierarchy(
     tinyHandle nodeHandle, int depth,
     // Lambdas for node state management
@@ -153,7 +156,7 @@ static void RenderGenericNodeHierarchy(
 
     ImGui::PopStyleColor(2);
 
-    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+    if (M_CLICKED(ImGuiMouseButton_Left)) {
         setSelected(nodeHandle);
     }
 
