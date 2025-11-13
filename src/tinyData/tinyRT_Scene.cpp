@@ -128,9 +128,32 @@ const tinyNodeRT* Scene::node(tinyHandle nodeHandle) const {
     return nodes_.get(nodeHandle);
 }
 
-const char* Scene::nodeName(tinyHandle nodeHandle) const {
+const char* Scene::nodeName(tinyHandle nodeHandle, bool fullPath) const {
     const tinyNodeRT* node = nodes_.get(nodeHandle);
-    return node ? node->name.c_str() : nullptr;
+    if (!node) return nullptr;
+
+    if (!fullPath) return node->name.c_str();
+
+    // Create a recursive function to build the full path
+    std::vector<std::string> pathComponents;
+    std::function<void(tinyHandle)> buildPath = [&](tinyHandle handle) {
+        const tinyNodeRT* currentNode = nodes_.get(handle);
+        if (!currentNode) return;
+
+        if (currentNode->parentHandle.valid()) {
+            buildPath(currentNode->parentHandle);
+        }
+        pathComponents.push_back(currentNode->name);
+    };
+
+    buildPath(nodeHandle);
+    static thread_local std::string fullPathStr;
+    fullPathStr.clear();
+    for (size_t i = 0; i < pathComponents.size(); ++i) {
+        fullPathStr += pathComponents[i];
+        if (i < pathComponents.size() - 1) fullPathStr += "/";
+    }
+    return fullPathStr.c_str();
 }
 
 uint32_t Scene::nodeCount() const {

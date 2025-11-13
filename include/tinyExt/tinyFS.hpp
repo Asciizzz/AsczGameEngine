@@ -265,9 +265,37 @@ public:
         node->name = resolvedName;
     }
 
-    std::string fName(tinyHandle fileHandle) const noexcept {
+    std::string fName(tinyHandle fileHandle, bool fullPath = false, bool shortRoot = false) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
-        return node ? node->name : std::string();
+        if (!node) return std::string();
+
+        if (!fullPath) return node->name;
+
+        // Collect path components from current to root
+        std::vector<std::string> pathComponents;
+        tinyHandle currentHandle = fileHandle;
+        while (currentHandle.valid()) {
+            const Node* currentNode = fnodes_.get(currentHandle);
+            if (!currentNode) break;
+
+            if (currentHandle == rootHandle_ && shortRoot) {
+                pathComponents.push_back(".root");
+                break;
+            }
+            pathComponents.push_back(currentNode->name);
+            currentHandle = currentNode->parent;
+        }
+
+        // Reverse to get root to current order
+        std::reverse(pathComponents.begin(), pathComponents.end());
+
+        // Join with "/"
+        std::string fullName;
+        for (size_t i = 0; i < pathComponents.size(); ++i) {
+            if (i > 0) fullName += "/";
+            fullName += pathComponents[i];
+        }
+        return fullName;
     }
 
 // -------------------- Move with cycle prevention --------------------

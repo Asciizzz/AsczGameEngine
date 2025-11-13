@@ -597,13 +597,15 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
     tinyHandle meshHandle = meshRD->meshHandle();
 
+    tinyHandle meshFHandle = fs.dataToFileHandle(MAKE_TH(tinyMeshVk, meshHandle));
+
     tinyHandle rtSkeleHandle = meshRD->skeleNodeHandle();
     tinySceneRT::CNWrap skeleCWrap = scene->CWrap(rtSkeleHandle);
 
     const auto* meshVk = fs.rGet<tinyMeshVk>(meshHandle);
 
     RenderDragField(
-        [&fs, meshHandle]() { tinyHandle fHandle = fs.dataToFileHandle(MAKE_TH(tinyMeshVk, meshHandle)); return fs.fName(fHandle).c_str(); },
+        [&fs, meshFHandle]() { return fs.fName(meshFHandle).c_str(); },
         "No Mesh Assigned",
         [&]() { if (meshVk) return IMVEC4_COLOR(fs.typeExt<tinyMeshVk>()); return ImVec4(0.5f, 0.5f, 0.5f, 1.0f); },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
@@ -622,18 +624,22 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
             }
         },
         []() { /* Do nothing for now */ },
-        [&fs, meshHandle]() {
+        [&fs, meshFHandle]() {
             ImGui::BeginTooltip();
-            ImGui::Text("Mesh Assignment");
+
+            const char* fullPath = fs.fName(meshFHandle, true, true).c_str();
+            fullPath = fullPath ? fullPath : "<Invalid Mesh>";
+
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS] ");
+            ImGui::SameLine(); ImGui::Text("%s", fullPath);
+
             ImGui::EndTooltip();
         }
     );
 
     RenderDragField(
         [scene, skeleCWrap]() {
-            if (skeleCWrap.skel3D) {
-                return scene->nodeName(skeleCWrap.handle);
-            }
+            if (skeleCWrap.skel3D) return scene->nodeName(skeleCWrap.handle);
             return "Invalid Skeleton Node";
         },
         "No Skeleton Node Assigned",
@@ -656,9 +662,12 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         []() { /* Do nothing for now */ },
         [scene, rtSkeleHandle]() {
             ImGui::BeginTooltip();
-            ImGui::Text("Skeleton Node Assignment");
-            ImGui::Separator();
-            ImGui::TextColored(ImVec4(0.8f, 0.6f, 0.6f, 1.0f), "[!] Node, not Skeleton!");
+            const char* fullPath = scene->nodeName(rtSkeleHandle, true);
+            fullPath = fullPath ? fullPath : "<Invalid Node>";
+
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[Scene] ");
+            ImGui::SameLine(); ImGui::Text("%s", fullPath);
+
             ImGui::EndTooltip();
         }
     );
