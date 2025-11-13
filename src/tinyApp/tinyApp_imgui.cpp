@@ -1,6 +1,5 @@
 // tinyApp_imgui.cpp - UI Implementation & Testing
 #include "tinyApp/tinyApp.hpp"
-#include "tinyEngine/tinyLoader.hpp"
 #include "tinySystem/tinyUI.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -9,10 +8,6 @@
 
 #include <imgui.h>
 #include <algorithm>
-#include <filesystem>
-#include <vector>
-#include <string>
-#include <functional>
 
 using namespace tinyVk;
 
