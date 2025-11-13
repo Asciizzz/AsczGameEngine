@@ -46,13 +46,13 @@ namespace CodeEditor {
         editor.SetLanguageDefinition(langDef);
         // Set custom palette with transparent background and bluish theme
         TextEditor::Palette palette = TextEditor::GetDarkPalette();
-        palette[(int)TextEditor::PaletteIndex::Background] = IM_COL32(0, 0, 0, 0); // Transparent background
-        palette[(int)TextEditor::PaletteIndex::CurrentLineFill] = IM_COL32(40, 50, 60, 128); // Semi-transparent current line
-        palette[(int)TextEditor::PaletteIndex::Selection] = IM_COL32(60, 80, 100, 128); // Bluish selection
-        palette[(int)TextEditor::PaletteIndex::Keyword] = IM_COL32(240, 70, 70, 255); // Reddish keywords
-        palette[(int)TextEditor::PaletteIndex::String] = IM_COL32(150, 200, 100, 255); // Greenish strings
-        palette[(int)TextEditor::PaletteIndex::Number] = IM_COL32(200, 150, 100, 255); // Orangish numbers
-        palette[(int)TextEditor::PaletteIndex::Comment] = IM_COL32(80, 80, 80, 155); // Grayish comments
+        palette[(int)TextEditor::PaletteIndex::Background] = IM_COL32(0, 0, 0, 0);
+        palette[(int)TextEditor::PaletteIndex::CurrentLineFill] = IM_COL32(50, 50, 50, 20);
+        palette[(int)TextEditor::PaletteIndex::Selection] = IM_COL32(60, 80, 100, 128);
+        palette[(int)TextEditor::PaletteIndex::Keyword] = IM_COL32(240, 70, 70, 255);
+        palette[(int)TextEditor::PaletteIndex::String] = IM_COL32(150, 200, 100, 255);
+        palette[(int)TextEditor::PaletteIndex::Number] = IM_COL32(200, 150, 100, 255);
+        palette[(int)TextEditor::PaletteIndex::Comment] = IM_COL32(80, 80, 80, 155);
         editor.SetPalette(palette);
     }
 
