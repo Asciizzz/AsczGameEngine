@@ -394,7 +394,14 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             return node->name + "." + typeExt.ext;
         },
         [](tinyHandle h) { return HierarchyState::selectedNode == MAKE_TH(tinyNodeFS, h); },
-        [](tinyHandle h) { HierarchyState::selectedNode = MAKE_TH(tinyNodeFS, h); },
+        [&fs](tinyHandle h) {
+            // Do not select if is folder
+            if (const tinyFS::Node* node = fs.fNode(h)) {
+                if (node->isFolder()) return;
+            }
+
+            HierarchyState::selectedNode = MAKE_TH(tinyNodeFS, h);
+        },
         [](tinyHandle h) { return HierarchyState::draggedNode == MAKE_TH(tinyNodeFS, h); },
         []() { HierarchyState::draggedNode = typeHandle(); },
         [](tinyHandle h) { return HierarchyState::isExpanded(MAKE_TH(tinyNodeFS, h)); },
