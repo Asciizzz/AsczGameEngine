@@ -657,59 +657,48 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     if (!meshRD) return;
 
     tinyHandle meshHandle = meshRD->meshHandle();
+
+    tinyHandle rtSkeleHandle = meshRD->skeleNodeHandle();
+    tinySceneRT::CNWrap skeleCWrap = scene->CWrap(rtSkeleHandle);
+
     const auto* meshVk = fs.rGet<tinyMeshVk>(meshHandle);
 
-    auto labelActive = [&fs, meshHandle]() {
-        // return "Mesh Assigned";
+    auto labelActive1 = [&fs, meshHandle]() {
         tinyHandle fHandle = fs.dataToFileHandle(MAKE_TH(tinyMeshVk, meshHandle));
         return fs.fName(fHandle).c_str();
     };
-    const char* labelInactive = "No Mesh Assigned";
+    const char* labelInactive1 = "No Mesh Assigned";
 
-    auto activeColor = [&]() {
+    auto labelActive2 = [scene, skeleCWrap]() {
+        if (skeleCWrap.skel3D) {
+            return scene->nodeName(skeleCWrap.handle);
+        }
+        return "Invalid Skeleton Node";
+    };
+    const char* labelInactive2 = "No Skeleton Node Assigned";
+
+    auto activeColor1 = [&]() {
         if (meshVk) return IMVEC4_COLOR(fs.typeExt<tinyMeshVk>());
         return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
     };
+
+    auto activeColor2 = [&]() {
+        if (skeleCWrap.skel3D) return ImVec4(0.8f, 0.6f, 0.6f, 1.0f);
+        return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+    };
+
     ImVec4 inactiveColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
 
-    auto activeCondition = [meshVk]() {
+    auto activeCondition1 = [meshVk]() {
         return meshVk != nullptr;
     };
 
-    auto dragMethod = [&fs, meshRD]() {
-        // Check for typeHandle<tinyNodeFS> drag payload
+    auto activeCondition2 = [skeleCWrap]() {
+        return skeleCWrap.skel3D != nullptr;
+    };
+
+    auto dragMethod1 = [&fs, meshRD]() {
         if (ImGui::BeginDragDropTarget()) {
-            // const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE");
-            // if (!payload) {
-            //     ImGui::EndDragDropTarget();
-            //     return;
-            // }
-
-            // Payload* data = (Payload*)payload->Data;
-            // if (!data->isType<tinyNodeFS>()) {
-            //     ImGui::EndDragDropTarget();
-            //     return;
-            // }
-
-            // // Check for data type
-            // typeHandle tHdl = data->tHandle;
-            // if (!tHdl.isType<tinyMeshVk>()) {
-            //     ImGui::EndDragDropTarget();
-            //     return;
-            // }
-
-            // tinyHandle meshHandle = tHdl.handle;
-            // if (!fs.rGet<tinyMeshVk>(meshHandle)) {
-            //     ImGui::EndDragDropTarget();
-            //     return;
-            // }
-            
-            // // Assign mesh
-            // meshRD->setMesh(meshHandle);
-
-            // printf("Assigned mesh: %s\n", fs.fName(fs.dataToFileHandle(tHdl)).c_str());
-
-            // ImGui::EndDragDropTarget();
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
                 Payload* data = (Payload*)payload->Data;
 
@@ -726,19 +715,49 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         }
     };
 
-    auto hoverMethod = [&fs, meshHandle]() {
+    auto dragMethod2 = [&fs, scene, meshRD]() {
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                Payload* data = (Payload*)payload->Data;
+
+                if (!data->isType<tinyNodeRT>()) { ImGui::EndDragDropTarget(); return; }
+                tinyHandle nodeHandle = data->handle();
+
+                tinySceneRT::CNWrap cWrap = scene->CWrap(nodeHandle);
+                if (!cWrap.skel3D) { ImGui::EndDragDropTarget(); return; }
+
+                meshRD->setSkeleNode(nodeHandle);
+
+                ImGui::EndDragDropTarget();
+            }
+        }
+    };
+    
+    auto clickMethod = []() {
+        // Do nothing for now
+    };
+
+    auto hoverMethod1 = [&fs, meshHandle]() {
         ImGui::BeginTooltip();
         ImGui::Text("Mesh Assignment");
         ImGui::EndTooltip();
     };
 
-    auto clickMethod = [meshRD]() {
-        // Do nothing for now
+    auto hoverMethod2 = [scene, rtSkeleHandle]() {
+        ImGui::BeginTooltip();
+        ImGui::Text("Skeleton Node Assignment");
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0.8f, 0.6f, 0.6f, 1.0f), "[!] Node, not Skeleton!");
+        ImGui::EndTooltip();
     };
 
-    ImGui::Text("Mesh:");
-    ImGui::SameLine();
-    RenderDragField(labelActive, labelInactive, activeColor, inactiveColor, activeCondition, dragMethod, clickMethod, hoverMethod);
+    RenderDragField(labelActive1, labelInactive1, activeColor1, inactiveColor, activeCondition1, dragMethod1, clickMethod, hoverMethod1);
+    RenderDragField(labelActive2, labelInactive2, activeColor2, inactiveColor, activeCondition2, dragMethod2, clickMethod, hoverMethod2);
+}
+
+static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+    tinyRT_BONE3D* bone3D = wrap.bone3D;
+    if (!bone3D) return;
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {

@@ -85,6 +85,7 @@ public:
     bool renameNode(tinyHandle nodeHandle, const std::string& newName);
 
     const tinyNodeRT* node(tinyHandle nodeHandle) const;
+    const char* nodeName(tinyHandle nodeHandle) const;
     uint32_t nodeCount() const;
 
     tinyHandle nodeParent(tinyHandle nodeHandle) const;

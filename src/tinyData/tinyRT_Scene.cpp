@@ -128,6 +128,11 @@ const tinyNodeRT* Scene::node(tinyHandle nodeHandle) const {
     return nodes_.get(nodeHandle);
 }
 
+const char* Scene::nodeName(tinyHandle nodeHandle) const {
+    const tinyNodeRT* node = nodes_.get(nodeHandle);
+    return node ? node->name.c_str() : nullptr;
+}
+
 uint32_t Scene::nodeCount() const {
     return nodes_.count();
 }
