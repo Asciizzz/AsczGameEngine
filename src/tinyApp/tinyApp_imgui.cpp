@@ -109,11 +109,11 @@ struct Payload {
 // GENERALIZED TREE NODE RENDERING - Abstracts common ImGui tree logic
 // ============================================================================
 
-template<typename FuncType>
-using Func = std::function<FuncType>;
+template<typename FX>
+using Func = std::function<FX>;
 
-template<typename FuncType>
-using CFunc = const Func<FuncType>;
+template<typename FX>
+using CFunc = const Func<FX>;
 
 
 #define M_CLICKED(M_state) ImGui::IsItemHovered() && ImGui::IsMouseReleased(M_state) && !ImGui::IsMouseDragging(M_state)
@@ -123,7 +123,7 @@ static void RenderGenericNodeHierarchy(
     // Lambdas for node state management
     CFunc<std::string(tinyHandle)>& getName,
     CFunc<bool(tinyHandle)>& isSelected,  CFunc<void(tinyHandle)>& setSelected,
-    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void(tinyHandle)>& setDragged,  CFunc<void()>&           clearDragState,
+    CFunc<bool(tinyHandle)>& isDragged,   CFunc<void()>&           clearDragState,
     CFunc<bool(tinyHandle)>& isExpanded,  CFunc<void(tinyHandle, bool)>& setExpanded,
     CFunc<bool(tinyHandle)>& hasChildren, CFunc<std::vector<tinyHandle>(tinyHandle)>& getChildren,
     CFunc<void(tinyHandle)>& renderDragSource, CFunc<void(tinyHandle)>& renderDropTarget, CFunc<void(tinyHandle)>& renderContextMenu,
@@ -171,7 +171,7 @@ static void RenderGenericNodeHierarchy(
             RenderGenericNodeHierarchy(
                 child, depth + 1,
                 getName, isSelected, setSelected,
-                isDragged, setDragged, clearDragState, isExpanded, setExpanded,
+                isDragged, clearDragState, isExpanded, setExpanded,
                 hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
                 getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
             );
@@ -203,7 +203,6 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
     auto setSelected = [](tinyHandle h) { HierarchyState::selectedNode = MAKE_TH(tinyNodeRT, h); };
 
     auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedNode == MAKE_TH(tinyNodeRT, h); };
-    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedNode = MAKE_TH(tinyNodeRT, h); };
     auto clearDragState = []() { HierarchyState::draggedNode = typeHandle(); };
 
     auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(MAKE_TH(tinyNodeRT, h)); };
@@ -323,7 +322,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project, tinySceneRT* scene) {
     RenderGenericNodeHierarchy(
         scene->rootHandle(), 0,
         getName, isSelected, setSelected,
-        isDragged, setDragged, clearDragState, isExpanded, setExpanded,
+        isDragged, clearDragState, isExpanded, setExpanded,
         hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
     );
@@ -346,7 +345,6 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
     auto setSelected = [](tinyHandle h) { HierarchyState::selectedNode = MAKE_TH(tinyNodeFS, h); };
 
     auto isDragged   = [](tinyHandle h) { return HierarchyState::draggedNode == MAKE_TH(tinyNodeFS, h); };
-    auto setDragged  = [](tinyHandle h) { HierarchyState::draggedNode = MAKE_TH(tinyNodeFS, h); };
     auto clearDragState = []() { HierarchyState::draggedNode = typeHandle(); };
 
     auto isExpanded  = [](tinyHandle h) { return HierarchyState::isExpanded(MAKE_TH(tinyNodeFS, h)); };
@@ -486,7 +484,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
     RenderGenericNodeHierarchy(
         fs.rootHandle(), 0,
         getName, isSelected, setSelected,
-        isDragged, setDragged, clearDragState, isExpanded, setExpanded,
+        isDragged, clearDragState, isExpanded, setExpanded,
         hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
     );
