@@ -3138,7 +3138,7 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 
 			// Custom identifiers for our engine
 			if (std::string(k) == "VARS")
-				id.mDeclaration = "Global script variables table";
+				id.mDeclaration = "Runtime script variables";
 			else if (std::string(k) == "DELTATIME")
 				id.mDeclaration = "Delta time";
 			else if (std::string(k) == "NODE")

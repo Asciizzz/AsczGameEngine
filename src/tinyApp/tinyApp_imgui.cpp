@@ -47,7 +47,7 @@ namespace CodeEditor {
         // Set custom palette with transparent background and bluish theme
         TextEditor::Palette palette = TextEditor::GetDarkPalette();
         palette[(int)TextEditor::PaletteIndex::Background] = IM_COL32(0, 0, 0, 0);
-        palette[(int)TextEditor::PaletteIndex::CurrentLineFill] = IM_COL32(50, 50, 50, 20);
+        palette[(int)TextEditor::PaletteIndex::CurrentLineFill] = IM_COL32(50, 50, 50, 10);
         palette[(int)TextEditor::PaletteIndex::Selection] = IM_COL32(60, 80, 100, 128);
         palette[(int)TextEditor::PaletteIndex::Keyword] = IM_COL32(240, 70, 70, 255);
         palette[(int)TextEditor::PaletteIndex::String] = IM_COL32(150, 200, 100, 255);
