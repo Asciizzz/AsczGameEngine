@@ -121,6 +121,7 @@ using CFunc = const Func<FX>;
 
 
 #define M_CLICKED(M_state) ImGui::IsItemHovered() && ImGui::IsMouseReleased(M_state) && !ImGui::IsMouseDragging(M_state)
+#define M_HOVERED(M_state) ImGui::IsItemHovered() && !ImGui::IsMouseDragging(M_state)
 
 static void RenderGenericNodeHierarchy(
     tinyHandle nodeHandle, int depth,
@@ -130,7 +131,8 @@ static void RenderGenericNodeHierarchy(
     CFunc<bool(tinyHandle)>& isDragged,   CFunc<void()>&           clearDragState,
     CFunc<bool(tinyHandle)>& isExpanded,  CFunc<void(tinyHandle, bool)>& setExpanded,
     CFunc<bool(tinyHandle)>& hasChildren, CFunc<std::vector<tinyHandle>(tinyHandle)>& getChildren,
-    CFunc<void(tinyHandle)>& renderDragSource, CFunc<void(tinyHandle)>& renderDropTarget, CFunc<void(tinyHandle)>& renderContextMenu,
+    CFunc<void(tinyHandle)>& renderDragSource,  CFunc<void(tinyHandle)>& renderDropTarget,
+    CFunc<void(tinyHandle)>& renderContextMenu, CFunc<void(tinyHandle)>& renderTooltip,
     CFunc<ImVec4(tinyHandle)>& getNormalColor,        CFunc<ImVec4(tinyHandle)>& getDraggedColor,
     CFunc<ImVec4(tinyHandle)>& getNormalHoveredColor, CFunc<ImVec4(tinyHandle)>& getDraggedHoveredColor
 ) {
@@ -160,9 +162,8 @@ static void RenderGenericNodeHierarchy(
 
     ImGui::PopStyleColor(2);
 
-    if (M_CLICKED(ImGuiMouseButton_Left)) {
-        setSelected(nodeHandle);
-    }
+    if (M_CLICKED(ImGuiMouseButton_Left)) setSelected(nodeHandle);
+    if (M_HOVERED(ImGuiMouseButton_Left)) renderTooltip(nodeHandle);
 
     renderDragSource(nodeHandle);
     renderDropTarget(nodeHandle);
@@ -174,9 +175,8 @@ static void RenderGenericNodeHierarchy(
         for (const auto& child : getChildren(nodeHandle)) {
             RenderGenericNodeHierarchy(
                 child, depth + 1,
-                getName, isSelected, setSelected,
-                isDragged, clearDragState, isExpanded, setExpanded,
-                hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+                getName, isSelected, setSelected, isDragged, clearDragState, isExpanded, setExpanded,
+                hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu, renderTooltip,
                 getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
             );
         }
@@ -299,17 +299,16 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                 bool canDelete = h != scene->rootHandle();
                 if (ImGui::MenuItem("Delete", nullptr, false, canDelete))  scene->removeNode(h);
                 if (ImGui::MenuItem("Flatten", nullptr, false, canDelete)) scene->flattenNode(h);
-                ImGui::Separator();
-
+                
                 if (ImGui::MenuItem("Clear", nullptr, false, !node->childrenHandles.empty())) {
                     for (const auto& childHandle : node->childrenHandles) scene->removeNode(childHandle);
                 }
-                ImGui::Separator();
 
-                // Special functions
                 tinySceneRT::NWrap Wrap = scene->Wrap(h);
 
                 if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
+                    ImGui::Separator();
+
                     for (auto& anime : anim3D->MAL()) {
                         if (ImGui::MenuItem(anime.first.c_str())) {
                             anim3D->play(anime.first, true);
@@ -324,6 +323,28 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
             ImGui::EndPopup();
         }
     };
+    auto renderTooltip = [scene](tinyHandle h) {
+        if (const tinyNodeRT* node = scene->node(h)) {
+            ImGui::BeginTooltip();
+            ImGui::Text("%s", node->name.c_str());
+            ImGui::Separator();
+
+            tinySceneRT::NWrap wrap = scene->Wrap(h);
+            std::string compList = "";
+
+            if (wrap.trfm3D) compList += "[TRFM3D] ";
+            if (wrap.meshRD) compList += "[MESHRD] ";
+            if (wrap.bone3D) compList += "[BONE3D] ";
+            if (wrap.skel3D) compList += "[SKEL3D] ";
+            if (wrap.anim3D) compList += "[ANIM3D] ";
+            if (wrap.script) compList += "[SCRIPT] ";
+
+            if (compList.empty()) compList = "[None]";
+
+            ImGui::Text("%s", compList.c_str());
+            ImGui::EndTooltip();
+        }
+    };
 
     auto getNormalColor  = [](tinyHandle) { return ImVec4(0.26f, 0.59f, 0.98f, 0.4f); };
     auto getDraggedColor = [](tinyHandle) { return ImVec4(0.8f, 0.6f, 0.2f, 0.8f); };
@@ -332,9 +353,8 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
 
     RenderGenericNodeHierarchy(
         scene->rootHandle(), 0,
-        getName, isSelected, setSelected,
-        isDragged, clearDragState, isExpanded, setExpanded,
-        hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+        getName, isSelected, setSelected, isDragged, clearDragState, isExpanded, setExpanded,
+        hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu, renderTooltip,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
     );
 }
@@ -467,6 +487,24 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             ImGui::EndPopup();
         }
     };
+    auto renderTooltip = [&fs](tinyHandle h) {
+        if (const tinyFS::Node* node = fs.fNode(h)) {
+            ImGui::BeginTooltip();
+            ImGui::Text("%s", node->name.c_str());
+            ImGui::Separator();
+
+            if (node->isFolder()) {
+                ImGui::Text("Folder (%zu items)", node->children.size());
+            } else {
+                tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+                ImGui::TextColored(ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 1.0f),
+                                   "Type: %s", typeExt.c_str());
+            }
+
+            ImGui::EndTooltip();
+        }
+    };
+
     auto getNormalColor = [&fs](tinyHandle h) {
         const tinyFS::Node* node = fs.fNode(h);
         if (node && node->isFolder()) return ImVec4(0.3f, 0.3f, 0.35f, 0.8f);
@@ -492,9 +530,8 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
 
     RenderGenericNodeHierarchy(
         fs.rootHandle(), 0,
-        getName, isSelected, setSelected,
-        isDragged, clearDragState, isExpanded, setExpanded,
-        hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu,
+        getName, isSelected, setSelected, isDragged, clearDragState, isExpanded, setExpanded,
+        hasChildren, getChildren, renderDragSource, renderDropTarget, renderContextMenu, renderTooltip,
         getNormalColor, getDraggedColor, getNormalHoveredColor, getDraggedHoveredColor
     );
 }
