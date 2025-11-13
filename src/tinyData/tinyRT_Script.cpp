@@ -33,7 +33,15 @@ bool Script::valid() const {
 
 void Script::update(Scene* scene, tinyHandle nodeHandle, float deltaTime) {
     const tinyScript* script = rScript();
-    if (!script) return;
+    if (!script) {
+
+        if (vars_.size() > 0 || locals_.size() > 0) {
+            vars_.clear();
+            locals_.clear();
+        }
+
+        return;
+    }
 
     // Check for version change (hot reload detected)
     if (script->version() != cachedVersion_) {

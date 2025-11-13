@@ -154,6 +154,8 @@ void tinyScript::initTable(tinyVarsMap& outTable, const tinyVarsMap& defaultTabl
         return;
     }
 
+    printf("Initializing table with %zu default entries\n", defaultTable.size());
+
     tinyVarsMap newVars;
 
     for (const auto& [key, defaultValue] : defaultTable) {

@@ -336,12 +336,7 @@ public:
         Node* node = fnodes_.get(handle);
         if (!node || !node->deletable()) return false;
 
-        // Public interface - use the node's parent as the rescue parent
         tinyHandle rescueParent = node->parent;
-        if (!fnodes_.valid(rescueParent)) {
-            rescueParent = rootHandle_;
-        }
-
         return fRemoveRecursive(handle, rescueParent, recursive);
     }
 

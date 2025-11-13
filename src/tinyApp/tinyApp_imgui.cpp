@@ -510,9 +510,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                     }
                     if (dataType.isType<tinyScript>()) {
                         tinyScript* script = fs.rGet<tinyScript>(dataType.handle);
-                        if (ImGui::MenuItem("Compile")) {
-                            script->compile();
-                        }
+                        if (ImGui::MenuItem("Compile")) script->compile();
                     }
                     if (node->isFolder()) {
                         if (ImGui::MenuItem("Add Folder")) fs.addFolder(h, "New Folder");
@@ -829,7 +827,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
             if (orderA != orderB) return orderA < orderB;
             return a.first < b.first;
         });
-        for (auto& [name, value] : sortedItems) {
+        for (auto& [name, value] : vMap) {
             auto& realValue = vMap[name];
 
             std::visit([&](auto&& val) {
@@ -902,7 +900,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                     );
                     ImGui::PopID();
                 }
-            }, realValue);
+            }, value);
         }
         ImGui::EndChild();
         ImGui::PopStyleColor();
