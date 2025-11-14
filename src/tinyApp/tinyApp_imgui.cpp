@@ -786,13 +786,14 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
     tinyRT_BONE3D* bone3D = wrap.bone3D;
     if (!bone3D) return;
+
+    tinyHandle skeleNodeHandle = bone3D->skeleNodeHandle;
 }
 
 static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
     tinyRT_SCRIPT* script = wrap.script;
     if (!script) return;
 
-    tinyHandle handle = wrap.handle;
     tinyHandle scriptHandle = script->scriptHandle();
     tinyHandle scriptFHandle = fs.dataToFileHandle(MAKE_TH(tinyScript, scriptHandle));
 
@@ -1072,6 +1073,7 @@ static void RenderFileInspector(tinyProject* project) {
 
     typeHandle typeHdl = fs.fTypeHandle(fHandle);
 
+    ImGui::BeginGroup();
     ImGui::Text("%s", node->name.c_str());
 
     tinyFS::TypeExt typeExt = fs.fTypeExt(fHandle);
@@ -1079,6 +1081,19 @@ static void RenderFileInspector(tinyProject* project) {
         ImGui::SameLine();
         ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.c_str());
     }
+    ImGui::EndGroup();
+
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+
+        // ".root" + path + ".ext"
+        ImGui::Text("%s", fs.fName(fHandle, true, ".root")); ImGui::SameLine();
+        tinyFS::TypeExt typeExt = fs.fTypeExt(fHandle); 
+        ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.c_str());
+
+        ImGui::EndTooltip();
+    }
+
     ImGui::Separator();
 
     if (typeHdl.isType<tinyScript>()) {
@@ -1132,12 +1147,14 @@ static void RenderScriptEditor(tinyProject* project) {
         // Code editor
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
         ImGui::BeginChild("CodeEditor", ImVec2(0, split.rSize(0)), true);
+        
+        tinyDebug& debug = script->debug();
 
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Script: %s", node->name.c_str());
         ImGui::SameLine();
         if (script->valid()) {
             ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "[Compiled v%u]", script->version());
-        } else if (script->debug().empty()) {
+        } else if (debug.empty()) {
             ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "[Not Compiled]");
         } else {
             ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "[Compilation Error]");
@@ -1161,8 +1178,6 @@ static void RenderScriptEditor(tinyProject* project) {
         // Debug console
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
         ImGui::BeginChild("DebugTerminal", ImVec2(0, split.rSize(1)), true);
-
-        tinyDebug& debug = script->debug();
 
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Debug Console");
         ImGui::SameLine();

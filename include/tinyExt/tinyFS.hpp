@@ -251,16 +251,21 @@ public:
 
         if (filePathCache_.find(fileHandle) == filePathCache_.end()) return nullptr;
 
-        std::vector<std::string> path = filePathCache_.at(fileHandle);
-        if (rootAlias && !path.empty()) path[0] = rootAlias;
+        std::vector<tinyHandle> path = filePathCache_.at(fileHandle);
 
         static thread_local std::string fullPathStr;
-        std::ostringstream oss;
+        fullPathStr.clear();
         for (size_t i = 0; i < path.size(); ++i) {
-            oss << path[i];
-            if (i + 1 < path.size()) oss << "/";
+            const Node* pNode = fnodes_.get(path[i]);
+            if (!pNode) continue;
+
+            if (i == 0 && rootAlias) fullPathStr += rootAlias;
+            else                     fullPathStr += pNode->name;
+
+            if (i < path.size() - 1) {
+                fullPathStr += '/';
+            }
         }
-        fullPathStr = oss.str();
         return fullPathStr.c_str();
     }
 
@@ -293,6 +298,9 @@ public:
 
         // Add to new parent
         newParent->addChild(nodeHandle, resolvedName);
+
+        // Recache full path
+        cacheFilePath(nodeHandle);
 
         return true;
     }
@@ -466,7 +474,7 @@ private:
     std::unordered_map<typeHandle, tinyHandle> dataToFile_;
 
     // Cache file's full path
-    std::unordered_map<tinyHandle, std::vector<std::string>> filePathCache_;
+    std::unordered_map<tinyHandle, std::vector<tinyHandle>> filePathCache_;
 
     // Removal queue: maps type_index -> vector of RmQueueEntry
     std::unordered_map<std::type_index, std::vector<RmQueueEntry>> rmQueues_;
@@ -577,24 +585,24 @@ private:
         return baseName + " (" + std::to_string(maxNumberedIndex + 1) + ")";
     }
 
-    void cacheFullPath(tinyHandle fileHandle) noexcept {
+    void cacheFilePath(tinyHandle fileHandle) noexcept {
         const Node* node = fnodes_.get(fileHandle);
         if (!node) return;
 
-        std::vector<std::string> pathComponents;
+        std::vector<tinyHandle> path;
 
         tinyHandle currentHandle = fileHandle;
         while (currentHandle.valid()) {
             const Node* currentNode = fnodes_.get(currentHandle);
             if (!currentNode) break;
 
-            pathComponents.push_back(currentNode->name);
+            path.push_back(currentHandle);
             currentHandle = currentNode->parent;
         }
 
-        std::reverse(pathComponents.begin(), pathComponents.end());
+        std::reverse(path.begin(), path.end());
 
-        filePathCache_[fileHandle] = std::move(pathComponents);
+        filePathCache_[fileHandle] = std::move(path);
     }
 
     bool isDescendant(tinyHandle possibleAncestor, tinyHandle possibleDescendant) const noexcept {
@@ -629,7 +637,7 @@ private:
         parent->addChild(h, resolvedName);
 
         dataToFile_[child.tHandle] = h;
-        cacheFullPath(h);
+        cacheFilePath(h);
 
         ensureTypeInfo(child.tHandle.typeIndex);
 
