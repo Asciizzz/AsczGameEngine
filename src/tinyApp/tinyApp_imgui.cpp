@@ -127,7 +127,8 @@ using CFunc = const Func<FX>;
 #define M_CLICKED(M_state) ImGui::IsItemHovered() && ImGui::IsMouseReleased(M_state) && !ImGui::IsMouseDragging(M_state)
 #define M_HOVERED(M_state) ImGui::IsItemHovered() && !ImGui::IsMouseDragging(M_state)
 
-#define IMVEC4_COLOR(ext) ImVec4(ext.color[0], ext.color[1], ext.color[2], 1.0f)
+#define IMVEC4_EXT_COLOR(ext) ImVec4(ext.color[0], ext.color[1], ext.color[2], 1.0f)
+#define IMVEC4_COLOR3(col, a) ImVec4(col[0], col[1], col[2], a)
 
 
 
@@ -252,6 +253,8 @@ struct Splitter {
     }
 
     void render(size_t index) {
+        if (index >= positions.size()) return;
+
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.5f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
@@ -547,7 +550,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                     ImGui::Text("Dragging: %s", node->name.c_str());
                     tinyFS::TypeExt typeExt = fs.fTypeExt(h);
                     ImGui::Separator();
-                    ImGui::TextColored(IMVEC4_COLOR(typeExt), "Type: %s", typeExt.c_str());
+                    ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), "Type: %s", typeExt.c_str());
                     ImGui::EndDragDropSource();
                 }
             }
@@ -575,7 +578,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                     if (!node->isFolder()) { // Write colored extension
                         ImGui::SameLine();
                         tinyFS::TypeExt typeExt = fs.fTypeExt(h);
-                        ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.ext.c_str());
+                        ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.ext.c_str());
                     }
 
                     ImGui::Separator();
@@ -613,7 +616,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                 } else {
                     tinyFS::TypeExt typeExt = fs.fTypeExt(h);
                     ImGui::SameLine();
-                    ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
+                    ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.c_str());
                 }
                 ImGui::EndTooltip();
             }
@@ -625,7 +628,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             typeExt.color[0] *= 0.2f;
             typeExt.color[1] *= 0.2f;
             typeExt.color[2] *= 0.2f;
-            return ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 0.8f);
+            return IMVEC4_COLOR3(typeExt.color, 0.8f);
         },
         [](tinyHandle) { return ImVec4(0.8f, 0.6f, 0.2f, 0.8f); },
         [&fs](tinyHandle h) {
@@ -635,7 +638,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             typeExt.color[0] *= 0.5f;
             typeExt.color[1] *= 0.5f;
             typeExt.color[2] *= 0.5f;
-            return ImVec4(typeExt.color[0], typeExt.color[1], typeExt.color[2], 0.9f);
+            return IMVEC4_COLOR3(typeExt.color, 0.9f);
         },
         [](tinyHandle) { return ImVec4(0.9f, 0.7f, 0.3f, 0.9f); }
     );
@@ -714,7 +717,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     RenderDragField(
         [&fs, meshFHandle]() { return fs.fName(meshFHandle); },
         "No Mesh Assigned",
-        [&]() { if (meshVk) return IMVEC4_COLOR(fs.typeExt<tinyMeshVk>()); return ImVec4(0.5f, 0.5f, 0.5f, 1.0f); },
+        [&]() { if (meshVk) return IMVEC4_EXT_COLOR(fs.typeExt<tinyMeshVk>()); return ImVec4(0.5f, 0.5f, 0.5f, 1.0f); },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
         [meshVk]() { return meshVk != nullptr; },
         [&fs, meshRD]() {
@@ -1074,7 +1077,7 @@ static void RenderFileInspector(tinyProject* project) {
     tinyFS::TypeExt typeExt = fs.fTypeExt(fHandle);
     if (!typeExt.ext.empty()) {
         ImGui::SameLine();
-        ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
+        ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.c_str());
     }
     ImGui::Separator();
 
@@ -1121,30 +1124,51 @@ static void RenderScriptEditor(tinyProject* project) {
             CodeEditor::SetText(script->code);
         }
 
-        static Splitter splitter;
-        splitter.init(1);
-        splitter.directionSize = ImGui::GetContentRegionAvail().y;
-        splitter.calcRegionSizes();
+        static Splitter split;
+        split.init(1);
+        split.directionSize = ImGui::GetContentRegionAvail().y;
+        split.calcRegionSizes();
 
         // Code editor
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImGui::BeginChild("CodeEditor", ImVec2(0, splitter.rSize(0)), true);
+        ImGui::BeginChild("CodeEditor", ImVec2(0, split.rSize(0)), true);
 
-        CodeEditor::Render(node->name.c_str());
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Script: %s", node->name.c_str());
+        ImGui::SameLine();
+        if (script->valid()) {
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "[Compiled v%u]", script->version());
+        } else if (script->debug().empty()) {
+            ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "[Not Compiled]");
+        } else {
+            ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "[Compilation Error]");
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("Compile")) script->compile();
+
+        ImGui::Separator();
+
         if (CodeEditor::IsTextChanged() && script) {
             script->code = CodeEditor::GetText();
         }
+        CodeEditor::Render(node->name.c_str());
 
         ImGui::EndChild();
         ImGui::PopStyleColor();
 
-        splitter.render(0);
+        split.render(0);
 
         // Debug console
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImGui::BeginChild("DebugTerminal", ImVec2(0, splitter.rSize(1)), true);
+        ImGui::BeginChild("DebugTerminal", ImVec2(0, split.rSize(1)), true);
 
         tinyDebug& debug = script->debug();
+
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Debug Console");
+        ImGui::SameLine();
+        if (ImGui::Button("Clear")) debug.clear();
+        ImGui::Separator();
+
         for (const auto& line : debug.logs()) {
             ImGui::TextColored(ImVec4(line.color[0], line.color[1], line.color[2], 1.0f), "%s", line.c_str());
         }
@@ -1255,29 +1279,33 @@ void tinyApp::renderUI() {
         if (!activeScene) {
             ImGui::Text("No active scene");
         } else {
-            static Splitter splitter;
-            splitter.init(1);
-            splitter.directionSize = ImGui::GetContentRegionAvail().y;
-            splitter.calcRegionSizes();
+            static Splitter split;
+            split.init(1);
+            split.directionSize = ImGui::GetContentRegionAvail().y;
+            split.calcRegionSizes();
 
             // ===== TOP: SCENE HIERARCHY =====
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
-            ImGui::BeginChild("SceneHierarchy", ImVec2(0, splitter.rSize(0)), true);
+            ImGui::BeginChild("SceneHierarchy", ImVec2(0, split.rSize(0)), true);
+            
             ImGui::Text("%s [HDL %u.%u]", sceneName, sceneHandle.index, sceneHandle.version);
             ImGui::Separator();
             RenderSceneNodeHierarchy(project.get());
+
             ImGui::EndChild();
             ImGui::PopStyleColor();
             
             // ===== HORIZONTAL SPLITTER =====
-            splitter.render(0);
+            split.render(0);
             
             // ===== BOTTOM: FILE SYSTEM HIERARCHY =====
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
-            ImGui::BeginChild("FileHierarchy", ImVec2(0, splitter.rSize(1)), true);
+            ImGui::BeginChild("FileHierarchy", ImVec2(0, split.rSize(1)), true);
+            
             ImGui::Text("File System");
             ImGui::Separator();
             RenderFileNodeHierarchy(project.get());
+
             ImGui::EndChild();
             ImGui::PopStyleColor();
         }
