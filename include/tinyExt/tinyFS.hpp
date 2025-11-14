@@ -689,10 +689,8 @@ private:
         Node* node = fnodes_.get(nodeHandle);
         if (!node) return;
 
-        // Remove bidirectional mapping
-        if (dataHandle.valid()) {
-            dataToFile_.erase(dataHandle);
-        }
+        if (dataToFile_.find(dataHandle) != dataToFile_.end()) dataToFile_.erase(dataHandle);
+        if (filePathCache_.find(nodeHandle) != filePathCache_.end()) filePathCache_.erase(nodeHandle);
 
         registry_.tRemove(dataHandle);
 
