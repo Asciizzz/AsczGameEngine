@@ -1172,9 +1172,11 @@ static void RenderInspector(tinyProject* project) {
 // EDITOR WINDOWS RENDERING
 // ============================================================================
 
-static void RenderScriptEditor(tinyFS& fs) {
+static void RenderScriptEditor() {
     typeHandle selected = Editor::selected;
     if (!selected.isType<tinyNodeFS>()) return;
+
+    tinyFS& fs = projRef->fs();
 
     tinyHandle fHandle = selected.handle;
 
@@ -1392,7 +1394,7 @@ void tinyApp::renderUI() {
     }
 
     if (UIRef->Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
-        RenderScriptEditor(fs);
+        RenderScriptEditor();
         UIRef->End();
     }
 }
