@@ -78,9 +78,35 @@ namespace CodeEditor {
 static tinyUI::Instance* UIRef = nullptr;
 
 namespace Texture {
+    enum class Fit { None, Stretch, Fill, FillX, FillY };
+    enum class Place : uint8_t {
+        Center = 0,
+        Top    = 1 << 0,
+        Bottom = 1 << 1,
+        Left   = 1 << 2,
+        Right  = 1 << 3
+    };
+
+    struct Style {
+        ImVec2 divSize = ImVec2(64, 64);
+        ImVec2 imgSize = ImVec2(64, 64);
+        Fit fill = Fit::None;
+        Place place = Place::Center;
+    };
+
     static UnorderedMap<uint64_t, ImTextureID> textureCache;
 
-    static void Render(tinyTextureVk* texture) {
+    static ImVec2 FillAuto(ImVec2 divSize, float aspectRatio) {
+        ImVec2 imgSize = divSize;
+        if (aspectRatio >= 1.0f) {
+            imgSize.y = divSize.x / aspectRatio;
+        } else {
+            imgSize.x = divSize.y * aspectRatio;
+        }
+        return imgSize;
+    }
+
+    static void Render(tinyTextureVk* texture, Style style = Style()) {
         uint64_t cacheKey = (uint64_t)texture->view();
 
         ImTextureID texId;
@@ -96,19 +122,33 @@ namespace Texture {
             texId = it->second; 
         }
 
-        ImVec2 contentSize = ImGui::GetContentRegionAvail();
         float aspectRatio = texture->aspectRatio();
+        ImVec2& imgSize = style.imgSize;
 
-        ImVec2 imageSize;
-        if (aspectRatio > contentSize.x / contentSize.y) {
-            imageSize.x = contentSize.x;
-            imageSize.y = contentSize.x / aspectRatio;
-        } else {
-            imageSize.y = contentSize.y;
-            imageSize.x = contentSize.y * aspectRatio;
+        switch (style.fill) {
+            case Fit::None:
+                break;
+
+            case Fit::Stretch:
+                imgSize = style.divSize;
+                break;
+            case Fit::FillX: {
+                imgSize.x = style.divSize.x;
+                imgSize.y = style.divSize.x / aspectRatio;
+                break;
+            }
+            case Fit::FillY: {
+                imgSize.y = style.divSize.y;
+                imgSize.x = style.divSize.y * aspectRatio;
+                break;
+            }
+            case Fit::Fill: {
+                imgSize = FillAuto(style.divSize, aspectRatio);
+                break;
+            }
         }
 
-        ImGui::Image(texId, imageSize);
+        ImGui::Image(texId, imgSize);
     }
 }
 
@@ -1157,9 +1197,17 @@ static void RenderFileInspector(tinyProject* project) {
         ImGui::Text("Size: %ux%u", texture->width(), texture->height());
         ImGui::Text("Channels: %u", texture->channels());
 
-        if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
-            Editor::selected = selectedNode;
-        }
+        ImVec2 divSize = ImGui::GetContentRegionAvail();
+
+        float aspectRatio = texture->aspectRatio();
+        ImVec2 imgSize = Texture::FillAuto(divSize, aspectRatio);
+
+        imgSize.x *= 0.9f;
+        imgSize.y *= 0.9f;
+
+        Texture::Render(texture, {
+            divSize, imgSize
+        });
     }
 }
 
@@ -1245,34 +1293,6 @@ static void RenderScriptEditor(tinyFS& fs) {
     ImGui::EndChild();
     ImGui::PopStyleColor();
 }
-
-
-static void RenderTextureEditor(tinyFS& fs) {
-    typeHandle selected = Editor::selected;
-    if (!selected.isType<tinyNodeFS>()) return;
-
-    tinyHandle fHandle = selected.handle;
-
-    const tinyFS::Node* node = fs.fNode(fHandle);
-    if (!node) return;
-
-    typeHandle typeHdl = fs.fTypeHandle(fHandle);
-    if (!typeHdl.isType<tinyTextureVk>()) return;
-
-    tinyTextureVk* texture = fs.rGet<tinyTextureVk>(typeHdl.handle);
-    if (!texture) return;
-
-    // Display texture info
-    ImGui::Text("Texture: %s", node->name.c_str());
-    ImGui::Text("Size: %ux%u (%u channels)", texture->width(), texture->height(), texture->channels());
-    ImGui::Separator();
-
-    // RenderTextureDisplay(texture);
-
-    Texture::Render(texture);
-}
-
-
 
 
 
@@ -1416,7 +1436,6 @@ void tinyApp::renderUI() {
 
     if (UIRef->Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
         RenderScriptEditor(fs);
-        RenderTextureEditor(fs);
         UIRef->End();
     }
 }
