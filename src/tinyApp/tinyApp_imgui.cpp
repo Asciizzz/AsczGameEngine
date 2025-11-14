@@ -457,10 +457,8 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             if (const tinyFS::Node* node = fs.fNode(h)) {
                 if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                     HierarchyState::draggedNode = MAKE_TH(tinyNodeFS, h);
-                    Payload payload;
-                    payload.tHandle = MAKE_TH(tinyNodeFS, h);
-                    strncpy(payload.name, node->name.c_str(), 63);
-                    payload.name[63] = '\0';
+                    Payload payload = Payload::make<tinyNodeFS>(h, node->name);
+
                     ImGui::SetDragDropPayload("DRAG_NODE", &payload, sizeof(payload));
                     ImGui::Text("Dragging: %s", node->name.c_str());
                     tinyFS::TypeExt typeExt = fs.fTypeExt(h);
@@ -508,11 +506,11 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                             scene->cleanse();
                         }
                     }
-                    if (dataType.isType<tinyScript>()) {
+                    else if (dataType.isType<tinyScript>()) {
                         tinyScript* script = fs.rGet<tinyScript>(dataType.handle);
                         if (ImGui::MenuItem("Compile")) script->compile();
                     }
-                    if (node->isFolder()) {
+                    else if (node->isFolder()) {
                         if (ImGui::MenuItem("Add Folder")) fs.addFolder(h, "New Folder");
                     }
                     ImGui::Separator();
@@ -699,7 +697,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         [&fs, meshFHandle]() {
             ImGui::BeginTooltip();
 
-            const char* fullPath = fs.fName(meshFHandle, true, true);
+            const char* fullPath = fs.fName(meshFHandle, true, ".root");
             fullPath = fullPath ? fullPath : "<Invalid Mesh>";
 
             ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
@@ -786,7 +784,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         [&fs, scriptFHandle]() {
             ImGui::BeginTooltip();
 
-            const char* fullPath = fs.fName(scriptFHandle, true, true);
+            const char* fullPath = fs.fName(scriptFHandle, true, ".root");
             fullPath = fullPath ? fullPath : "<Invalid Script>";
 
             ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");

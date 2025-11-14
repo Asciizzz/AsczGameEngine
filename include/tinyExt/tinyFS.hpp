@@ -265,36 +265,25 @@ public:
         node->name = resolvedName;
     }
 
-    const char* fName(tinyHandle fileHandle, bool fullPath = false, bool shortRoot = false) const noexcept {
+    const char* fName(tinyHandle fileHandle, bool fullPath = false, const char* rootAlias = nullptr) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
         if (!node) return nullptr;
 
         if (!fullPath) return node->name.c_str();
 
-        std::vector<std::string> pathComponents;
+        if (filePathCache_.find(fileHandle) == filePathCache_.end()) return nullptr;
 
-        tinyHandle currentHandle = fileHandle;
-        while (currentHandle.valid()) {
-            const Node* currentNode = fnodes_.get(currentHandle);
-            if (!currentNode) break;
+        std::vector<std::string> path = filePathCache_.at(fileHandle);
+        if (rootAlias && !path.empty()) path[0] = rootAlias;
 
-            if (currentHandle == rootHandle_ && shortRoot) {
-                pathComponents.push_back(".root");
-                break;
-            }
-            pathComponents.push_back(currentNode->name);
-            currentHandle = currentNode->parent;
+        static thread_local std::string fullPathStr;
+        std::ostringstream oss;
+        for (size_t i = 0; i < path.size(); ++i) {
+            oss << path[i];
+            if (i + 1 < path.size()) oss << "/";
         }
-
-        std::reverse(pathComponents.begin(), pathComponents.end());
-
-        std::string fullName;
-        for (size_t i = 0; i < pathComponents.size(); ++i) {
-            if (i > 0) fullName += "/";
-            fullName += pathComponents[i];
-        }
-
-        return fullName.c_str();
+        fullPathStr = oss.str();
+        return fullPathStr.c_str();
     }
 
 // -------------------- Move with cycle prevention --------------------
@@ -502,6 +491,9 @@ private:
     // Bidirectional mapping: typeHandle -> file node handle
     std::unordered_map<typeHandle, tinyHandle> dataToFile_;
 
+    // Cache file's full path
+    std::unordered_map<tinyHandle, std::vector<std::string>> filePathCache_;
+
     // Removal queue: maps type_index -> vector of RmQueueEntry
     std::unordered_map<std::type_index, std::vector<RmQueueEntry>> rmQueues_;
 
@@ -639,6 +631,26 @@ private:
         return baseName + " (" + std::to_string(maxNumberedIndex + 1) + ")";
     }
 
+    void cacheFullPath(tinyHandle fileHandle) noexcept {
+        const Node* node = fnodes_.get(fileHandle);
+        if (!node) return;
+
+        std::vector<std::string> pathComponents;
+
+        tinyHandle currentHandle = fileHandle;
+        while (currentHandle.valid()) {
+            const Node* currentNode = fnodes_.get(currentHandle);
+            if (!currentNode) break;
+
+            pathComponents.push_back(currentNode->name);
+            currentHandle = currentNode->parent;
+        }
+
+        std::reverse(pathComponents.begin(), pathComponents.end());
+
+        filePathCache_[fileHandle] = std::move(pathComponents);
+    }
+
     bool isDescendant(tinyHandle possibleAncestor, tinyHandle possibleDescendant) const noexcept {
         if (!fnodes_.valid(possibleAncestor) || !fnodes_.valid(possibleDescendant))
             return true; // For safety, treat invalid handles as descendants
@@ -670,8 +682,8 @@ private:
         tinyHandle h = fnodes_.add(std::move(child));
         parent->addChild(h, resolvedName);
 
-        // Establish bidirectional mapping: data -> file
         dataToFile_[child.tHandle] = h;
+        cacheFullPath(h);
 
         // Ensure data's type info exists
         ensureTypeInfo(child.tHandle.typeIndex);
