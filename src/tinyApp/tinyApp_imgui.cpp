@@ -77,6 +77,41 @@ namespace CodeEditor {
 
 static tinyUI::Instance* UIRef = nullptr;
 
+namespace Texture {
+    static UnorderedMap<uint64_t, ImTextureID> textureCache;
+
+    static void Render(tinyTextureVk* texture) {
+        uint64_t cacheKey = (uint64_t)texture->view();
+
+        ImTextureID texId;
+
+        auto it = textureCache.find(cacheKey);
+        if (it == textureCache.end()) {
+            texId = (ImTextureID)ImGui_ImplVulkan_AddTexture(
+                texture->sampler(), texture->view(),
+                ImageLayout::ShaderReadOnlyOptimal
+            );
+            textureCache[cacheKey] = texId;
+        } else {
+            texId = it->second; 
+        }
+
+        ImVec2 contentSize = ImGui::GetContentRegionAvail();
+        float aspectRatio = texture->aspectRatio();
+
+        ImVec2 imageSize;
+        if (aspectRatio > contentSize.x / contentSize.y) {
+            imageSize.x = contentSize.x;
+            imageSize.y = contentSize.x / aspectRatio;
+        } else {
+            imageSize.y = contentSize.y;
+            imageSize.x = contentSize.y * aspectRatio;
+        }
+
+        ImGui::Image(texId, imageSize);
+    }
+}
+
 // ============================================================================
 // UI INITIALIZATION
 // ============================================================================
@@ -1213,8 +1248,6 @@ static void RenderScriptEditor(tinyFS& fs) {
 
 
 static void RenderTextureEditor(tinyFS& fs) {
-    static std::unordered_map<uint64_t, ImTextureID> textureCache;
-
     typeHandle selected = Editor::selected;
     if (!selected.isType<tinyNodeFS>()) return;
 
@@ -1229,45 +1262,14 @@ static void RenderTextureEditor(tinyFS& fs) {
     tinyTextureVk* texture = fs.rGet<tinyTextureVk>(typeHdl.handle);
     if (!texture) return;
 
-    // Cache texture ID to avoid recreating descriptor sets every frame
-    uint64_t cacheKey = fHandle.value;
-    ImTextureID texId;
-    auto it = textureCache.find(cacheKey);
-    if (it == textureCache.end()) {
-        texId = (ImTextureID)ImGui_ImplVulkan_AddTexture(texture->sampler(), texture->view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        textureCache[cacheKey] = texId;
-    } else {
-        texId = it->second;
-    }
-
     // Display texture info
     ImGui::Text("Texture: %s", node->name.c_str());
     ImGui::Text("Size: %ux%u (%u channels)", texture->width(), texture->height(), texture->channels());
     ImGui::Separator();
 
-    // Calculate display size
-    ImVec2 contentSize = ImGui::GetContentRegionAvail();
-    float aspectRatio = static_cast<float>(texture->width()) / static_cast<float>(texture->height());
+    // RenderTextureDisplay(texture);
 
-    ImVec2 imageSize;
-    if (aspectRatio > contentSize.x / contentSize.y) {
-        // Image is wider relative to content
-        imageSize.x = contentSize.x;
-        imageSize.y = contentSize.x / aspectRatio;
-    } else {
-        // Image is taller relative to content
-        imageSize.y = contentSize.y;
-        imageSize.x = contentSize.y * aspectRatio;
-    }
-
-    // Center the image
-    ImVec2 cursorPos = ImGui::GetCursorPos();
-    float offsetX = (contentSize.x - imageSize.x) * 0.5f;
-    float offsetY = (contentSize.y - imageSize.y) * 0.5f;
-    ImGui::SetCursorPos(ImVec2(cursorPos.x + offsetX, cursorPos.y + offsetY));
-
-    // Display the image
-    ImGui::Image(texId, imageSize);
+    Texture::Render(texture);
 }
 
 

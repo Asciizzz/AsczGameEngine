@@ -39,6 +39,9 @@ struct tinyTexture {
 
     uint32_t width() const noexcept { return width_; }
     uint32_t height() const noexcept { return height_; }
+    float aspectRatio() const noexcept {
+        return (height_ == 0) ? 0.0f : static_cast<float>(width_) / static_cast<float>(height_);
+    }
     uint32_t channels() const noexcept { return channels_; }
 
     const std::vector<uint8_t>& data() const noexcept { return data_; }
@@ -214,6 +217,7 @@ struct tinyTextureVk {
 
     uint32_t width() const noexcept { return texture_.width(); }
     uint32_t height() const noexcept { return texture_.height(); }
+    float aspectRatio() const noexcept { return texture_.aspectRatio(); }
     uint32_t channels() const noexcept { return texture_.channels(); }
 
     VkImageView view() const noexcept { return textureVk_.getView(); }
