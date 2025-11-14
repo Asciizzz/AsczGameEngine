@@ -1018,29 +1018,25 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     // Collect components
     std::vector<CompInfo> components;
     components.push_back({
-        "Transform 3D",
-        wrap.trfm3D != nullptr,
+        "Transform 3D", wrap.trfm3D != nullptr,
         [&]() { RenderTRFM3D(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::TRFM3D>(handle); },
         [&scene, handle]() { scene->removeComp<tinyNodeRT::TRFM3D>(handle); }
     });
     components.push_back({
-        "Mesh Renderer 3D",
-        wrap.meshRD != nullptr,
+        "Mesh Renderer 3D", wrap.meshRD != nullptr,
         [&]() { RenderMESHRD(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::MESHRD>(handle); },
         [&scene, handle]() { scene->removeComp<tinyNodeRT::MESHRD>(handle); }
     });
     components.push_back({
-        "Bone 3D",
-        wrap.bone3D != nullptr,
+        "Bone 3D", wrap.bone3D != nullptr,
         [&]() { RenderBONE3D(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::BONE3D>(handle); },
         [&scene, handle]() { scene->removeComp<tinyNodeRT::BONE3D>(handle); }
     });
     components.push_back({
-        "Script",
-        wrap.script != nullptr,
+        "Runtime Script", wrap.script != nullptr,
         [&]() { RenderSCRIPT(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::SCRIPT>(handle); },
         [&scene, handle]() { scene->removeComp<tinyNodeRT::SCRIPT>(handle); }
