@@ -78,35 +78,10 @@ namespace CodeEditor {
 static tinyUI::Instance* UIRef = nullptr;
 
 namespace Texture {
-    enum class Fit { None, Stretch, Fill, FillX, FillY };
-    enum class Place : uint8_t {
-        Center = 0,
-        Top    = 1 << 0,
-        Bottom = 1 << 1,
-        Left   = 1 << 2,
-        Right  = 1 << 3
-    };
-
-    struct Style {
-        ImVec2 divSize = ImVec2(64, 64);
-        ImVec2 imgSize = ImVec2(64, 64);
-        Fit fill = Fit::None;
-        Place place = Place::Center;
-    };
 
     static UnorderedMap<uint64_t, ImTextureID> textureCache;
 
-    static ImVec2 FillAuto(ImVec2 divSize, float aspectRatio) {
-        ImVec2 imgSize = divSize;
-        if (aspectRatio >= 1.0f) {
-            imgSize.y = divSize.x / aspectRatio;
-        } else {
-            imgSize.x = divSize.y * aspectRatio;
-        }
-        return imgSize;
-    }
-
-    static void Render(tinyTextureVk* texture, Style style = Style()) {
+    static void Render(tinyTextureVk* texture) {
         uint64_t cacheKey = (uint64_t)texture->view();
 
         ImTextureID texId;
@@ -122,30 +97,19 @@ namespace Texture {
             texId = it->second; 
         }
 
-        float aspectRatio = texture->aspectRatio();
-        ImVec2& imgSize = style.imgSize;
 
-        switch (style.fill) {
-            case Fit::None:
-                break;
+        ImVec2 imgSize;
+        float imgRatio = texture->aspectRatio();
+        
+        ImVec2 availSize = ImGui::GetContentRegionAvail();
+        float availRatio = availSize.x / availSize.y;
 
-            case Fit::Stretch:
-                imgSize = style.divSize;
-                break;
-            case Fit::FillX: {
-                imgSize.x = style.divSize.x;
-                imgSize.y = style.divSize.x / aspectRatio;
-                break;
-            }
-            case Fit::FillY: {
-                imgSize.y = style.divSize.y;
-                imgSize.x = style.divSize.y * aspectRatio;
-                break;
-            }
-            case Fit::Fill: {
-                imgSize = FillAuto(style.divSize, aspectRatio);
-                break;
-            }
+        if (availRatio < imgRatio) {
+            imgSize.x = availSize.x;
+            imgSize.y = availSize.x / imgRatio;
+        } else {
+            imgSize.y = availSize.y;
+            imgSize.x = availSize.y * imgRatio;
         }
 
         ImGui::Image(texId, imgSize);
@@ -1194,20 +1158,7 @@ static void RenderFileInspector(tinyProject* project) {
     } else if (typeHdl.isType<tinyTextureVk>()) {
         tinyTextureVk* texture = fs.rGet<tinyTextureVk>(typeHdl.handle);
 
-        ImGui::Text("Size: %ux%u", texture->width(), texture->height());
-        ImGui::Text("Channels: %u", texture->channels());
-
-        ImVec2 divSize = ImGui::GetContentRegionAvail();
-
-        float aspectRatio = texture->aspectRatio();
-        ImVec2 imgSize = Texture::FillAuto(divSize, aspectRatio);
-
-        imgSize.x *= 0.9f;
-        imgSize.y *= 0.9f;
-
-        Texture::Render(texture, {
-            divSize, imgSize
-        });
+        Texture::Render(texture);
     }
 }
 
