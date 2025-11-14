@@ -215,7 +215,7 @@ template<
     typename LabelActiveFunc,
     typename ActiveColorFunc,
     typename ActiveConditionFunc,
-    typename DragMethodFunc,
+    typename DropMethodFunc,
     typename ClickMethodFunc,
     typename HoverMethodFunc
 >
@@ -225,7 +225,7 @@ static void RenderDragField(
     ActiveColorFunc&& activeColor,
     ImVec4 inactiveColor,
     ActiveConditionFunc&& activeCondition,
-    DragMethodFunc&& dragMethod,
+    DropMethodFunc&& dropMethod,
     ClickMethodFunc&& clickMethod,
     HoverMethodFunc&& hoverMethod
 ) {
@@ -257,7 +257,7 @@ static void RenderDragField(
 
     if (M_HOVERED) hoverMethod();
 
-    dragMethod();
+    dropMethod();
 }
 
 
@@ -837,6 +837,42 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     tinyHandle skeleNodeHandle = bone3D->skeleNodeHandle;
 }
 
+static void RenderSKEL3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+    tinyRT_SKEL3D* skel3D = wrap.skel3D;
+    if (!skel3D) return;
+
+    RenderDragField(
+        [scene, wrap]() { return scene->nodeName(wrap.handle); },
+        "Skeleton Component",
+        []() { return ImVec4(0.8f, 0.6f, 0.6f, 1.0f); },
+        ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
+        []() { return true; },
+        []() { /* Do nothing for now */ },
+        []() { /* Do nothing for now */ },
+        [&]() {
+            ImGui::BeginTooltip();
+
+            if (skel3D->hasSkeleton()) {
+                tinyHandle skeleHandle = skel3D->skeleHandle();
+
+                tinyHandle fHandle = fs.dataToFileHandle(MAKE_TH(tinySkeleton, skeleHandle));
+                const char* fullPath = fs.fName(fHandle, true, ".root");
+                fullPath = fullPath ? fullPath : "<Invalid Skeleton>";
+
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
+                ImGui::SameLine(); ImGui::Text("%s", fullPath);
+            }
+
+            ImGui::EndTooltip();
+        }
+    );
+
+    // For the time being just open the editor
+    if (ImGui::Button("Open Runtime Skeleton Editor", ImVec2(-1, 0))) {
+        Editor::selected = typeHandle::make<tinyNodeRT::SKEL3D>(wrap.handle);
+    }
+}
+
 static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
     tinyRT_SCRIPT* script = wrap.script;
     if (!script) return;
@@ -1083,6 +1119,12 @@ static void RenderSceneNodeInspector(tinyProject* project) {
         [&scene, handle]() { scene->removeComp<tinyNodeRT::BONE3D>(handle); }
     });
     components.push_back({
+        "Skeleton 3D", wrap.skel3D != nullptr,
+        [&]() { RenderSKEL3D(fs, scene, wrap); },
+        [&scene, handle]() { scene->writeComp<tinyNodeRT::SKEL3D>(handle); },
+        [&scene, handle]() { scene->removeComp<tinyNodeRT::SKEL3D>(handle); }
+    });
+    components.push_back({
         "Runtime Script", wrap.script != nullptr,
         [&]() { RenderSCRIPT(fs, scene, wrap); },
         [&scene, handle]() { scene->writeComp<tinyNodeRT::SCRIPT>(handle); },
@@ -1246,8 +1288,7 @@ static void RenderScriptEditor() {
     ImGui::PopStyleColor();
 }
 
-
-static void RenderSkeleNodeEditor(tinyFS& fs) {
+static void RenderSkeleNodeEditor() {
     typeHandle selected = Editor::selected;
     if (!selected.isType<tinyNodeRT::SKEL3D>()) return;
     
@@ -1263,7 +1304,136 @@ static void RenderSkeleNodeEditor(tinyFS& fs) {
     const tinySkeleton* skeleton = skel3D->rSkeleton();
     if (!skeleton) return;
 
-    // Render the skeleton hierarchy here
+    // Static variables for bone selection
+    static int selectedBoneIndex = -1;
+    static tinyHandle lastSkeletonHandle;
+
+    // Reset selection if skeleton changed
+    if (lastSkeletonHandle != nHandle) {
+        selectedBoneIndex = -1;
+        lastSkeletonHandle = nHandle;
+    }
+
+    static Splitter split; // Vertical splitter (trying out something new!)
+    split.init(1);
+    split.horizontal = false;
+    split.directionSize = ImGui::GetContentRegionAvail().x;
+    split.calcRegionSizes();
+
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+    ImGui::BeginChild("BoneHierarchy", ImVec2(split.rSize(0), 0), true);
+
+    std::function<void(int)> renderBoneTree = [&](int boneIndex) {
+        if (boneIndex < 0 || boneIndex >= static_cast<int>(skeleton->bones.size())) return;
+
+        const tinyBone& bone = skeleton->bones[boneIndex];
+
+        ImGui::PushID(boneIndex);
+
+        bool hasChildren = !bone.children.empty();
+        bool isSelected = (selectedBoneIndex == boneIndex);
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        if (!hasChildren) {
+            flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        }
+        if (isSelected) {
+            flags |= ImGuiTreeNodeFlags_Selected;
+        }
+
+        std::string boneLabel = std::to_string(boneIndex) + ": " + bone.name;
+        bool nodeOpen = ImGui::TreeNodeEx(boneLabel.c_str(), flags);
+
+        // Handle selection
+        if (ImGui::IsItemClicked()) {
+            selectedBoneIndex = boneIndex;
+        }
+
+        if (nodeOpen && hasChildren) {
+            for (int childIndex : bone.children) {
+                renderBoneTree(childIndex);
+            }
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    };
+
+    for (int i = 0; i < static_cast<int>(skeleton->bones.size()); ++i) {
+        if (skeleton->bones[i].parent == -1) {
+            renderBoneTree(i);
+        }
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+
+    ImGui::SameLine();
+
+    split.render(0);
+
+    ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+    ImGui::BeginChild("BoneTransformEditor", ImVec2(split.rSize(1), 0), true);
+
+    if (selectedBoneIndex >= 0 && selectedBoneIndex < static_cast<int>(skeleton->bones.size())) {
+        ImGui::Separator();
+        const tinyBone& selectedBone = skeleton->bones[selectedBoneIndex];
+        ImGui::Text("Selected Bone: %d - %s", selectedBoneIndex, selectedBone.name.c_str());
+
+        glm::mat4 boneLocal = skel3D->localPose(selectedBoneIndex);
+
+        glm::vec3 translation, scale, skew;
+        glm::quat rotation;
+        glm::vec4 perspective;
+        glm::decompose(boneLocal, scale, rotation, translation, skew, perspective);
+
+        // Helper to recompose after editing
+        auto recompose = [&]() {
+            glm::mat4 t = glm::translate(glm::mat4(1.0f), translation);
+            glm::mat4 r = glm::mat4_cast(rotation);
+            glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
+            skel3D->setLocalPose(selectedBoneIndex, t * r * s);
+        };
+
+        static glm::quat initialRotation;
+        static bool isDraggingRotation = false;
+        static glm::vec3 displayEuler;
+
+        if (!isDraggingRotation) {
+            displayEuler = glm::eulerAngles(rotation) * (180.0f / 3.14159265f);
+        }
+
+        if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) recompose();
+
+        if (ImGui::DragFloat3("Rotation", &displayEuler.x, 0.5f)) {
+            // Euler angle is a b*tch
+            if (!isDraggingRotation) {
+                initialRotation = rotation;
+                isDraggingRotation = true;
+            }
+            glm::vec3 initialEuler = glm::eulerAngles(initialRotation) * (180.0f / 3.14159265f);
+            glm::vec3 delta = displayEuler - initialEuler;
+            rotation = initialRotation * glm::quat(glm::radians(delta));
+            recompose();
+        }
+
+        if (!ImGui::IsItemActive()) {
+            isDraggingRotation = false;
+        }
+
+        if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+        if (ImGui::Button("Reset", ImVec2(-1, 0))) {
+            skel3D->refresh(selectedBoneIndex);
+        }
+        ImGui::PopStyleColor();
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
 }
 
 
@@ -1407,6 +1577,7 @@ void tinyApp::renderUI() {
 
     if (UIRef->Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
         RenderScriptEditor();
+        RenderSkeleNodeEditor();
         UIRef->End();
     }
 }
