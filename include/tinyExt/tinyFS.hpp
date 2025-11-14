@@ -100,29 +100,24 @@ public:
     [[nodiscard]] bool caseSensitive() const noexcept { return caseSensitive_; }
     void setCaseSensitive(bool caseSensitive) noexcept { caseSensitive_ = caseSensitive; }
 
-// ---------- Bidirectional mapping: Data ↔ File ----------
+// ---------- Some useful getters ----------
 
-    // Get the file handle that contains specific registry data
     [[nodiscard]] tinyHandle dataToFileHandle(const typeHandle& dataHandle) const noexcept {
         auto it = dataToFile_.find(dataHandle);
         return (it != dataToFile_.end()) ? it->second : tinyHandle();
     }
 
-    // Template overload for convenience
     template<typename T>
     [[nodiscard]] tinyHandle dataToFileHandle(tinyHandle dataHandle) const noexcept {
         return dataToFileHandle(typeHandle::make<T>(dataHandle));
     }
 
-    // Set root display name (full on-disk path etc.)
     void setRootPath(const std::string& rootPath) noexcept {
-        Node* root = fnodes_.get(rootHandle_);
-        if (root) root->name = rootPath;
+        if (Node* root = fnodes_.get(rootHandle_)) root->name = rootPath;
     }
 
 // ---------- Creation ----------
 
-// Folder creation (non-template overload)
     tinyHandle addFolder(tinyHandle parentHandle, const std::string& name, Node::CFG cfg = {}) {
         return addFNodeImpl(parentHandle, name, cfg);
     }
@@ -130,7 +125,6 @@ public:
         return addFolder(rootHandle_, name, cfg);
     }
 
-    // File creation (templated, pass pointer to data)
     template<typename T>
     tinyHandle addFile(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg = {}) {
         return addFNodeImpl(parentHandle, name, std::forward<T>(data), cfg);
@@ -144,18 +138,14 @@ public:
 // -------------------- Special Type Handlers --------------------
 
     struct TypeExt {
-        // Identification
         std::string ext;
         float color[3];
 
-        // Assume folder, max priority
         TypeExt(const std::string& ext = "", float r = 1.0f, float g = 1.0f, float b = 1.0f)
         : ext(ext) { color[0] = r; color[1] = g; color[2] = b; }
 
         bool operator<(const TypeExt& other) const noexcept { return ext < other.ext; }
         bool operator>(const TypeExt& other) const noexcept { return other < *this; }
-
-        // Compare for equality
         bool operator==(const TypeExt& other) const noexcept {
             return 
                 ext == other.ext &&
@@ -204,25 +194,13 @@ public:
         const char* c_str() const noexcept { return typeExt.c_str(); }
 
         template<typename T>
-        void setRmRule(std::function<bool(const T&)> ruleFn) {
-            rmRule = std::make_unique<RmRule<T>>(std::move(ruleFn));
-        }
-
+        void setRmRule(std::function<bool(const T&)> ruleFn) { rmRule = std::make_unique<RmRule<T>>(std::move(ruleFn)); }
         void clearRmRule() noexcept { rmRule.reset(); }
-
-        bool checkRmRule(const void* dataPtr) const noexcept {
-            return rmRule ? rmRule->check(dataPtr) : true;
-        }
+        bool checkRmRule(const void* dataPtr) const noexcept { return rmRule ? rmRule->check(dataPtr) : true; }
     };
 
-    [[nodiscard]] TypeInfo* typeInfo(std::type_index typeIndx) noexcept {
-        return ensureTypeInfo(typeIndx);
-    }
-
-    template<typename T>
-    [[nodiscard]] TypeInfo* typeInfo() noexcept {
-        return ensureTypeInfo(std::type_index(typeid(T)));
-    }
+    [[nodiscard]] TypeInfo* typeInfo(std::type_index typeIndx) noexcept { return ensureTypeInfo(typeIndx); }
+    template<typename T> [[nodiscard]] TypeInfo* typeInfo() noexcept { return ensureTypeInfo(std::type_index(typeid(T))); }
 
     [[nodiscard]] TypeExt typeExt(std::type_index typeIndx) const noexcept {
         auto it = typeInfos_.find(typeIndx);
@@ -418,10 +396,6 @@ public:
     };
 
     // Execute removal for a specific type - processes all queued removals for that type
-    template<typename T>
-    void execRemove() noexcept {
-        execRemove(std::type_index(typeid(T)));
-    }
 
     void execRemove(std::type_index typeIndx) noexcept {
         auto it = rmQueues_.find(typeIndx);
@@ -441,8 +415,13 @@ public:
         queue.clear();
     }
 
-    void execRemoveAll() noexcept {
-        for (const auto& typeIndx : typeOrder_) execRemove(typeIndx);
+    template<typename T> void execRemove() noexcept { execRemove(std::type_index(typeid(T))); }
+
+    void execRemoveAll() noexcept { for (const auto& typeIndx : typeOrder_) execRemove(typeIndx); }
+
+    bool hasRmQueue(std::type_index typeIndx) const noexcept {
+        auto it = rmQueues_.find(typeIndx);
+        return it != rmQueues_.end() && !it->second.empty();
     }
 
     template<typename T>
@@ -450,35 +429,27 @@ public:
         return hasRmQueue(std::type_index(typeid(T)));
     }
 
-    bool hasRmQueue(std::type_index typeIndx) const noexcept {
-        auto it = rmQueues_.find(typeIndx);
-        return it != rmQueues_.end() && !it->second.empty();
-    }
-
-    // Check if there are any pending removals at all
     bool hasAnyRmQueue() const noexcept {
-        for (const auto& [typeIndx, queue] : rmQueues_) {
-            if (!queue.empty()) return true;
-        }
+        for (const auto& [typeIndx, queue] : rmQueues_) if (!queue.empty()) return true;
         return false;
     }
 
 // ---- Some helpful utilities and function that make this class act like an actual filesystem manager ----
 
-    static std::string name(const std::string& filepath) noexcept {
+    static std::string pName(const std::string& filepath) noexcept {
         size_t pos = filepath.find_last_of("/\\");
         if (pos == std::string::npos) return filepath;
         return filepath.substr(pos + 1);
     }
 
-    static std::string ext(const std::string& filename) noexcept {
+    static std::string pExt(const std::string& filename) noexcept {
         size_t pos = filename.find_last_of('.');
 
         if (pos == std::string::npos || pos == filename.size() - 1) return "";
         return filename.substr(pos + 1);
     }
 
-    static std::string nameDotExt(const std::string& filename) noexcept {
+    static std::string pNameDotExt(const std::string& filename) noexcept {
         size_t pos = filename.find_last_of('.');
 
         if (pos == std::string::npos) return filename;
@@ -502,6 +473,9 @@ private:
 
 // -------------------- TypeInfo management --------------------
 
+    std::unordered_map<std::type_index, TypeInfo> typeInfos_;
+    std::vector<std::type_index> typeOrder_; // For priority-based operations
+
     TypeInfo* ensureTypeInfo(std::type_index typeIndx) {
         auto it = typeInfos_.find(typeIndx);
         if (it != typeInfos_.end()) return &it->second;
@@ -523,16 +497,12 @@ private:
         return &typeInfos_[typeIndx];
     }
 
-    std::unordered_map<std::type_index, TypeInfo> typeInfos_;
-    std::vector<std::type_index> typeOrder_; // For priority-based operations
-
 // -------------------- Internal helpers --------------------
 
     bool namesEqual(const std::string& a, const std::string& b) const noexcept {
         if (caseSensitive_) {
             return a == b;
         } else {
-            // Case-insensitive comparison
             if (a.size() != b.size()) return false;
             return std::equal(a.begin(), a.end(), b.begin(), [](char c1, char c2) {
                 return std::tolower(c1) == std::tolower(c2);
