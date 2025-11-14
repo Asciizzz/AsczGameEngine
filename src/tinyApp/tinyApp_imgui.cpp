@@ -104,6 +104,16 @@ void tinyApp::initUI() {
     CodeEditor::Init();
 }
 
+void tinyApp::updateActiveScene() {
+    activeScene = project->scene(HierarchyState::sceneHandle);
+
+    activeScene->setFStart({
+        renderer->getCurrentFrame(),
+        fpsManager->deltaTime
+    });
+    activeScene->update();
+}
+
 // ===========================================================================
 // UTILITIES
 // ===========================================================================
@@ -561,55 +571,8 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
 // INSPECTOR WINDOW
 // ============================================================================
 
-// File inspector
-
-static void RenderFileInspector(tinyProject* project) {
-    tinyFS& fs = project->fs();
-
-    typeHandle selectedNode = HierarchyState::selectedNode;
-    if (!selectedNode.isType<tinyNodeFS>()) return;
-
-    tinyHandle fHandle = selectedNode.handle;
-    const tinyFS::Node* node = fs.fNode(fHandle);
-    if (!node) {
-        ImGui::Text("Invalid file.");
-        return;
-    }
-
-    typeHandle typeHdl = fs.fTypeHandle(fHandle);
-
-    ImGui::Text("%s", node->name.c_str());
-
-    tinyFS::TypeExt typeExt = fs.fTypeExt(fHandle);
-    if (!typeExt.ext.empty()) {
-        ImGui::SameLine();
-        ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
-    }
-    ImGui::Separator();
-
-    if (typeHdl.isType<tinyScript>()) {
-        tinyScript* script = fs.rGet<tinyScript>(typeHdl.handle);
-
-        if (ImGui::CollapsingHeader("Code")) {
-            if (script && !script->code.empty() && typeHdl.handle != CodeEditor::currentScriptHandle) {
-                CodeEditor::currentScriptHandle = typeHdl.handle;
-                CodeEditor::SetText(script->code);
-            }
-
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
-            ImGui::BeginChild("CodeEditor", ImVec2(0, 300), true);
-            CodeEditor::Render(node->name.c_str());
-            if (CodeEditor::IsTextChanged() && script) {
-                script->code = CodeEditor::GetText();
-            }
-            ImGui::EndChild();
-            ImGui::PopStyleColor();
-        }
-    }
-}
 
 // Scene node inspector
-
 
 static void RenderTRFM3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
     tinyRT_TRFM3D* trfm3D = wrap.trfm3D;
@@ -1016,13 +979,122 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     }
 }
 
+// File inspector
+static void RenderFileInspector(tinyProject* project) {
+    tinyFS& fs = project->fs();
 
+    typeHandle selectedNode = HierarchyState::selectedNode;
+    if (!selectedNode.isType<tinyNodeFS>()) return;
 
-static void RenderInspector(tinyProject* project) {
-    RenderFileInspector(project);
-    RenderSceneNodeInspector(project);
+    tinyHandle fHandle = selectedNode.handle;
+    const tinyFS::Node* node = fs.fNode(fHandle);
+    if (!node) {
+        ImGui::Text("Invalid file.");
+        return;
+    }
+
+    typeHandle typeHdl = fs.fTypeHandle(fHandle);
+
+    ImGui::Text("%s", node->name.c_str());
+
+    tinyFS::TypeExt typeExt = fs.fTypeExt(fHandle);
+    if (!typeExt.ext.empty()) {
+        ImGui::SameLine();
+        ImGui::TextColored(IMVEC4_COLOR(typeExt), ".%s", typeExt.c_str());
+    }
+    ImGui::Separator();
+
+    if (typeHdl.isType<tinyScript>()) {
+        tinyScript* script = fs.rGet<tinyScript>(typeHdl.handle);
+
+        // Log the version, and compilation status
+        if (script->valid())
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "Compiled [%u.0]", script->version());
+        else if (script->debug().empty())
+            ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "Not Compiled ");
+        else
+            ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "Compilation Error ");
+    }
 }
 
+static void RenderInspector(tinyProject* project) {
+    RenderSceneNodeInspector(project);
+    RenderFileInspector(project);
+}
+
+
+// ============================================================================
+// EDITOR WINDOWS RENDERING
+// ============================================================================
+
+static void RenderScriptEditor(tinyProject* project) {
+    tinyFS& fs = project->fs();
+
+    typeHandle selectedNode = HierarchyState::selectedNode;
+    if (!selectedNode.isType<tinyNodeFS>()) return;
+
+    tinyHandle fHandle = selectedNode.handle;
+    const tinyFS::Node* node = fs.fNode(fHandle);
+    if (!node) return;
+
+    typeHandle typeHdl = fs.fTypeHandle(fHandle);
+
+    if (typeHdl.isType<tinyScript>()) {
+        tinyScript* script = fs.rGet<tinyScript>(typeHdl.handle);
+
+        if (script && !script->code.empty() && typeHdl.handle != CodeEditor::currentScriptHandle) {
+            CodeEditor::currentScriptHandle = typeHdl.handle;
+            CodeEditor::SetText(script->code);
+        }
+
+        static float scriptSplitterPos = 0.7f; // Default: 70% for code, 30% for debug
+        float availHeight = ImGui::GetContentRegionAvail().y;
+        float splitterHeight = 4.0f;
+        
+        float codeHeight = availHeight * scriptSplitterPos - splitterHeight / 2.0f;
+        float debugHeight = availHeight * (1.0f - scriptSplitterPos) - splitterHeight / 2.0f;
+
+        // Code editor
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
+        ImGui::BeginChild("CodeEditor", ImVec2(0, codeHeight), true);
+        CodeEditor::Render(node->name.c_str());
+        if (CodeEditor::IsTextChanged() && script) {
+            script->code = CodeEditor::GetText();
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+
+        // Horizontal splitter
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.5f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+
+        ImGui::Button("##ScriptSplitter", ImVec2(-1, splitterHeight));
+
+        if (ImGui::IsItemActive()) {
+            float delta = ImGui::GetIO().MouseDelta.y;
+            scriptSplitterPos += delta / availHeight;
+            scriptSplitterPos = std::clamp(scriptSplitterPos, 0.1f, 0.9f);
+        }
+        
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        }
+        
+        ImGui::PopStyleColor(3);
+
+        // Debug console
+        ImGui::BeginChild("DebugTerminal", ImVec2(0, debugHeight), true);
+
+        tinyDebug& debug = script->debug();
+
+        for (const auto& line : debug.logs()) {
+            ImGui::TextColored(ImVec4(line.color[0], line.color[1], line.color[2], 1.0f), "%s", line.c_str());
+        }
+
+        ImGui::EndChild();
+    }
+}
 
 
 // ============================================================================
@@ -1118,7 +1190,6 @@ void tinyApp::renderUI() {
 
     // ===== HIERARCHY WINDOW - Scene & File System =====
     if (tinyUI::Exec::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
-        
         tinyHandle sceneHandle = HierarchyState::sceneHandle;
         tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, sceneHandle));
         const char* sceneName = fs.fName(sceneFHandle);
@@ -1126,9 +1197,6 @@ void tinyApp::renderUI() {
         if (!activeScene) {
             ImGui::Text("No active scene");
         } else {
-            float fontScale = tinyUI::Exec::GetTheme().fontScale;
-
-            // Get available height for split view
             float availHeight = ImGui::GetContentRegionAvail().y;
             float splitterHeight = 4.0f;
             
@@ -1173,22 +1241,14 @@ void tinyApp::renderUI() {
         tinyUI::Exec::End();
     }
 
-
     if (tinyUI::Exec::Begin("Inspector", nullptr, ImGuiWindowFlags_NoCollapse)) {
-
         RenderInspector(project.get());
+        tinyUI::Exec::End();
+    }
 
+    if (tinyUI::Exec::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
+        RenderScriptEditor(project.get());
         tinyUI::Exec::End();
     }
 }
 
-
-void tinyApp::updateActiveScene() {
-    activeScene = project->scene(HierarchyState::sceneHandle);
-
-    activeScene->setFStart({
-        renderer->getCurrentFrame(),
-        fpsManager->deltaTime
-    });
-    activeScene->update();
-}

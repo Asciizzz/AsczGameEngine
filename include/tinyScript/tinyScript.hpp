@@ -20,6 +20,7 @@ public:
     struct Entry {
         std::string str;
         float color[3] = {1.0f, 1.0f, 1.0f};
+        const char* c_str() const { return str.c_str(); }
     };
 
     explicit tinyDebug(size_t maxLogs = 16) : maxLogs_(maxLogs) {}
