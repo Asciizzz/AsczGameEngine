@@ -1049,7 +1049,7 @@ static void RenderScriptEditor(tinyProject* project) {
 
         static float scriptSplitterPos = 0.7f; // Default: 70% for code, 30% for debug
         float availHeight = ImGui::GetContentRegionAvail().y;
-        float splitterHeight = 4.0f;
+        float splitterHeight = ImGui::GetFrameHeight();
         
         float codeHeight = availHeight * scriptSplitterPos - splitterHeight / 2.0f;
         float debugHeight = availHeight * (1.0f - scriptSplitterPos) - splitterHeight / 2.0f;
@@ -1198,7 +1198,7 @@ void tinyApp::renderUI() {
             ImGui::Text("No active scene");
         } else {
             float availHeight = ImGui::GetContentRegionAvail().y;
-            float splitterHeight = 4.0f;
+            float splitterHeight = ImGui::GetFrameHeight();
             
             float topHeight = availHeight * HierarchyState::splitterPos - splitterHeight;
             float bottomHeight = availHeight * (1.0f - HierarchyState::splitterPos) - splitterHeight;
