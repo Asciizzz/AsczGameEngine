@@ -253,9 +253,9 @@ struct Splitter {
     }
 
     float rSize(size_t index) const {
-        if (index >= regionSizes.size()) return 0.0f;
-        // With splitter height offset to avoid overfill
-        return regionSizes[index] * directionSize - splitterSize * UIRef->theme().fontScale;
+        if (index >= regionSizes.size()) return 0.01f;
+        float size = regionSizes[index] * directionSize - splitterSize * UIRef->theme().fontScale;
+        return size > 0.0f ? size : 0.01f;
     }
 
     void render(size_t index) {
