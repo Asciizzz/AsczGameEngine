@@ -1,11 +1,6 @@
 #include "tinyApp/tinyApp.hpp"
 
 #include "tinyEngine/TinyLoader.hpp"
-#include <iostream>
-#include <stdexcept>
-
-#include <fstream>
-#include <sstream>
 
 #ifdef NDEBUG // Remember to set this to false
 const bool enableValidationLayers = true;
@@ -226,16 +221,18 @@ void tinyApp::mainLoop() {
 
                     if (ext == "lua") {
                         tinyScript script;
-
-                        std::ifstream fileStream(droppedFile);
-                        if (fileStream) {
-                            std::ostringstream ss;
-                            ss << fileStream.rdbuf();
-                            script.code = ss.str();
-                        }
+                        script.code = tinyText::readFrom(droppedFile);
 
                         project->fs().addFile(name, std::move(script));
                     }
+
+                    if (ext == "txt") {
+                        tinyText text;
+                        text.str = tinyText::readFrom(droppedFile);
+
+                        project->fs().addFile(name, std::move(text));
+                    }
+
                 } break;
             }
         }

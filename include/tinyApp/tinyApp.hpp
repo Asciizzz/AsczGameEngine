@@ -24,6 +24,9 @@
 #include <vector>
 #include <filesystem>
 
+#include <fstream>
+#include <sstream>
+
 class tinyApp {
 public:
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;

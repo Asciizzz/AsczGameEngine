@@ -310,6 +310,11 @@ void tinyProject::setupFS() {
 
     tinyFS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
     dataBuffer->priority = UINT8_MAX - 2; // Delete before desc sets
+
+    // ------------------ Other useful files ------------------
+    tinyFS::TypeInfo* atxt = fs_->typeInfo<tinyText>();
+    atxt->typeExt = tinyFS::TypeExt("txt", 0.6f, 0.6f, 0.6f);
+    atxt->safeDelete = true;
 }
 
 
