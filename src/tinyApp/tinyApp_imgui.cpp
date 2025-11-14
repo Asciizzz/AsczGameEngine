@@ -125,7 +125,7 @@ template<typename FX>
 using CFunc = const Func<FX>;
 
 #define M_CLICKED(M_state) ImGui::IsItemHovered() && ImGui::IsMouseReleased(M_state) && !ImGui::IsMouseDragging(M_state)
-#define M_HOVERED(M_state) ImGui::IsItemHovered() && !ImGui::IsMouseDragging(M_state)
+#define M_HOVERED ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left) && !ImGui::IsMouseDragging(ImGuiMouseButton_Right)
 
 #define IMVEC4_EXT_COLOR(ext) ImVec4(ext.color[0], ext.color[1], ext.color[2], 1.0f)
 #define IMVEC4_COLOR3(col, a) ImVec4(col[0], col[1], col[2], a)
@@ -205,7 +205,7 @@ static void RenderDragField(
     ImGui::PopStyleColor(4);
     ImGui::PopStyleVar(2);
 
-    if (M_HOVERED(ImGuiMouseButton_Left)) hoverMethod();
+    if (M_HOVERED) hoverMethod();
 
     dragMethod();
 }
@@ -341,7 +341,7 @@ static void RenderGenericNodeHierarchy(
     ImGui::PopStyleColor(2);
 
     if (M_CLICKED(ImGuiMouseButton_Left)) setSelectedFunc(nodeHandle);
-    if (M_HOVERED(ImGuiMouseButton_Left)) renderTooltipFunc(nodeHandle);
+    if (M_HOVERED) renderTooltipFunc(nodeHandle);
 
     renderDragSourceFunc(nodeHandle);
     renderDropTargetFunc(nodeHandle);
@@ -1083,7 +1083,7 @@ static void RenderFileInspector(tinyProject* project) {
     }
     ImGui::EndGroup();
 
-    if (ImGui::IsItemHovered()) {
+    if (M_HOVERED) {
         ImGui::BeginTooltip();
 
         // ".root" + path + ".ext"
