@@ -76,6 +76,8 @@ namespace CodeEditor {
 }
 
 static tinyUI::Instance* UIRef = nullptr;
+static tinySceneRT* sceneRef = nullptr;
+static tinyProject* projRef = nullptr;
 
 namespace Texture {
 
@@ -140,25 +142,26 @@ void tinyApp::initUI() {
     UIInstance->Init(UIBackend, windowManager->window);
 
     UIRef = UIInstance;
+    projRef = project.get();
 
 // ===== Misc =====
 
     // Set the active scene to main scene by default
     Hierarchy::sceneHandle = project->mainSceneHandle;
-    activeScene = project->scene(Hierarchy::sceneHandle);
 
     // Init code editor
     CodeEditor::Init();
 }
 
 void tinyApp::updateActiveScene() {
-    activeScene = project->scene(Hierarchy::sceneHandle);
+    curScene = project->scene(Hierarchy::sceneHandle);
+    sceneRef = curScene;
 
-    activeScene->setFStart({
+    curScene->setFStart({
         renderer->getCurrentFrame(),
         fpsManager->deltaTime
     });
-    activeScene->update();
+    curScene->update();
 }
 
 // ===========================================================================
@@ -418,12 +421,9 @@ static void RenderGenericNodeHierarchy(
 #define MAKE_TH(T, h) typeHandle::make<T>(h)
 #define MAKE_TH_DEF(T) typeHandle::make<T>()
 
-static void RenderSceneNodeHierarchy(tinyProject* project) {
-    if (!project) return;
-    tinySceneRT* scene = project->scene(Hierarchy::sceneHandle);
-    if (!scene) return;
-
-    tinyFS& fs = project->fs();
+static void RenderSceneNodeHierarchy() {
+    tinySceneRT* scene = sceneRef;
+    tinyFS& fs = projRef->fs();
 
     RenderGenericNodeHierarchy(
         scene->rootHandle(), 0,
@@ -545,8 +545,8 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
     );
 }
 
-static void RenderFileNodeHierarchy(tinyProject* project) {
-    tinyFS& fs = project->fs();
+static void RenderFileNodeHierarchy() {
+    tinyFS& fs = projRef->fs();
 
     RenderGenericNodeHierarchy(
         fs.rootHandle(), 0,
@@ -1173,7 +1173,6 @@ static void RenderInspector(tinyProject* project) {
 // ============================================================================
 
 static void RenderScriptEditor(tinyFS& fs) {
-
     typeHandle selected = Editor::selected;
     if (!selected.isType<tinyNodeFS>()) return;
 
@@ -1245,6 +1244,13 @@ static void RenderScriptEditor(tinyFS& fs) {
     ImGui::PopStyleColor();
 }
 
+
+static void RenderSkeleNodeEditor(tinyFS& fs) {
+    typeHandle selected = Editor::selected;
+    if (!selected.isType<tinyNodeRT>()) return;
+
+    tinyHandle nodeHandle = selected.handle;
+}
 
 
 // ============================================================================
@@ -1344,7 +1350,7 @@ void tinyApp::renderUI() {
         tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, sceneHandle));
         const char* sceneName = fs.fName(sceneFHandle);
 
-        if (!activeScene) {
+        if (!curScene) {
             ImGui::Text("No active scene");
         } else {
             static Splitter split;
@@ -1355,10 +1361,10 @@ void tinyApp::renderUI() {
             // ===== TOP: SCENE HIERARCHY =====
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("SceneHierarchy", ImVec2(0, split.rSize(0)), true);
-            
+
             ImGui::Text("%s [HDL %u.%u]", sceneName, sceneHandle.index, sceneHandle.version);
             ImGui::Separator();
-            RenderSceneNodeHierarchy(project.get());
+            RenderSceneNodeHierarchy();
 
             ImGui::EndChild();
             ImGui::PopStyleColor();
@@ -1372,7 +1378,7 @@ void tinyApp::renderUI() {
             
             ImGui::Text("File System");
             ImGui::Separator();
-            RenderFileNodeHierarchy(project.get());
+            RenderFileNodeHierarchy();
 
             ImGui::EndChild();
             ImGui::PopStyleColor();

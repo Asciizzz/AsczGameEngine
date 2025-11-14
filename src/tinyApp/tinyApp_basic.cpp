@@ -333,7 +333,7 @@ void tinyApp::mainLoop() {
             rendererRef.drawSky(project.get(), pipelineSky.get());
 
             rendererRef.drawScene(
-                project.get(), activeScene,
+                project.get(), curScene,
                 pipelineRigged.get(),
                 pipelineStatic.get()
             );
@@ -346,7 +346,7 @@ void tinyApp::mainLoop() {
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex);
-            rendererRef.processPendingRemovals(project.get(), activeScene);
+            rendererRef.processPendingRemovals(project.get(), curScene);
         }
 
         // Clean window title - FPS info now in ImGui
