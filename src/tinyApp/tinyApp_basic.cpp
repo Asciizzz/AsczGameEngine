@@ -233,6 +233,13 @@ void tinyApp::mainLoop() {
                         project->fs().addFile(name, std::move(text));
                     }
 
+                    if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") {
+                        tinyTexture texture = tinyLoader::loadTexture(droppedFile);
+                        tinyTextureVk texVk = tinyTextureVk(std::move(texture), deviceVk.get());
+
+                        project->fs().addFile(name, std::move(texVk));
+                    }
+
                 } break;
             }
         }

@@ -108,6 +108,10 @@ private:
 
 struct tinyTextureVk {
     tinyTextureVk() noexcept = default;
+    tinyTextureVk(tinyTexture&& texture, const tinyVk::Device* deviceVk = nullptr) noexcept {
+        set(std::forward<tinyTexture>(texture));
+        if (deviceVk) create(deviceVk);
+    }
 
     tinyTextureVk(const tinyTextureVk&) = delete;
     tinyTextureVk& operator=(const tinyTextureVk&) = delete;

@@ -35,7 +35,9 @@ namespace Hierarchy {
     }
 }
 
-static typeHandle editorSelection;
+namespace Editor {
+    static typeHandle selected;
+}
 
 // Code editor state
 namespace CodeEditor {
@@ -1112,7 +1114,7 @@ static void RenderFileInspector(tinyProject* project) {
         // A button to open editor (overrides the editorSelection)
 
         if (ImGui::Button("Open in Script Editor", ImVec2(-1, 0))) {
-            editorSelection = selectedNode;
+            Editor::selected = selectedNode;
         }
     }
 }
@@ -1130,76 +1132,75 @@ static void RenderInspector(tinyProject* project) {
 static void RenderScriptEditor(tinyProject* project) {
     tinyFS& fs = project->fs();
 
-    typeHandle selectedNode = editorSelection;
-    if (!selectedNode.isType<tinyNodeFS>()) return;
+    typeHandle selected = Editor::selected;
+    if (!selected.isType<tinyNodeFS>()) return;
 
-    tinyHandle fHandle = selectedNode.handle;
+    tinyHandle fHandle = selected.handle;
 
     const tinyFS::Node* node = fs.fNode(fHandle);
     if (!node) return;
 
     typeHandle typeHdl = fs.fTypeHandle(fHandle);
+    if (!typeHdl.isType<tinyScript>()) return;
 
-    if (typeHdl.isType<tinyScript>()) {
-        tinyScript* script = fs.rGet<tinyScript>(typeHdl.handle);
+    tinyScript* script = fs.rGet<tinyScript>(typeHdl.handle);
 
-        if (script && !script->code.empty() && typeHdl.handle != CodeEditor::currentScriptHandle) {
-            CodeEditor::currentScriptHandle = typeHdl.handle;
-            CodeEditor::SetText(script->code);
-        }
-
-        static Splitter split;
-        split.init(1);
-        split.directionSize = ImGui::GetContentRegionAvail().y;
-        split.calcRegionSizes();
-
-        // Code editor
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImGui::BeginChild("CodeEditor", ImVec2(0, split.rSize(0)), true);
-        
-        tinyDebug& debug = script->debug();
-
-        ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Script: %s", node->name.c_str());
-        ImGui::SameLine();
-        if (script->valid()) {
-            ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "[Compiled v%u]", script->version());
-        } else if (debug.empty()) {
-            ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "[Not Compiled]");
-        } else {
-            ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "[Compilation Error]");
-        }
-        ImGui::SameLine();
-
-        if (ImGui::Button("Compile")) script->compile();
-
-        ImGui::Separator();
-
-        if (CodeEditor::IsTextChanged() && script) {
-            script->code = CodeEditor::GetText();
-        }
-        CodeEditor::Render(node->name.c_str());
-
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
-
-        split.render(0);
-
-        // Debug console
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImGui::BeginChild("DebugTerminal", ImVec2(0, split.rSize(1)), true);
-
-        ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Debug Console");
-        ImGui::SameLine();
-        if (ImGui::Button("Clear")) debug.clear();
-        ImGui::Separator();
-
-        for (const auto& line : debug.logs()) {
-            ImGui::TextColored(ImVec4(line.color[0], line.color[1], line.color[2], 1.0f), "%s", line.c_str());
-        }
-
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
+    if (script && !script->code.empty() && typeHdl.handle != CodeEditor::currentScriptHandle) {
+        CodeEditor::currentScriptHandle = typeHdl.handle;
+        CodeEditor::SetText(script->code);
     }
+
+    static Splitter split;
+    split.init(1);
+    split.directionSize = ImGui::GetContentRegionAvail().y;
+    split.calcRegionSizes();
+
+    // Code editor
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+    ImGui::BeginChild("CodeEditor", ImVec2(0, split.rSize(0)), true);
+    
+    tinyDebug& debug = script->debug();
+
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Script: %s", node->name.c_str());
+    ImGui::SameLine();
+    if (script->valid()) {
+        ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "[Compiled v%u]", script->version());
+    } else if (debug.empty()) {
+        ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "[Not Compiled]");
+    } else {
+        ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "[Compilation Error]");
+    }
+    ImGui::SameLine();
+
+    if (ImGui::Button("Compile")) script->compile();
+
+    ImGui::Separator();
+
+    if (CodeEditor::IsTextChanged() && script) {
+        script->code = CodeEditor::GetText();
+    }
+    CodeEditor::Render(node->name.c_str());
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+
+    split.render(0);
+
+    // Debug console
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+    ImGui::BeginChild("DebugTerminal", ImVec2(0, split.rSize(1)), true);
+
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Debug Console");
+    ImGui::SameLine();
+    if (ImGui::Button("Clear")) debug.clear();
+    ImGui::Separator();
+
+    for (const auto& line : debug.logs()) {
+        ImGui::TextColored(ImVec4(line.color[0], line.color[1], line.color[2], 1.0f), "%s", line.c_str());
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
 }
 
 // ============================================================================
