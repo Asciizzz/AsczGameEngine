@@ -321,12 +321,15 @@ public:
 
 // -------------------- "Safe" recursive remove --------------------
 
-    bool fRemove(tinyHandle handle, bool recursive = true) noexcept {
+    size_t fRemove(tinyHandle handle, bool recursive = true) noexcept {
         Node* node = fnodes_.get(handle);
-        if (!node || !node->deletable()) return false;
+        if (!node || !node->deletable()) return 0;
 
         tinyHandle rescueParent = node->parent;
-        return fRemoveRecursive(handle, rescueParent, recursive);
+
+        size_t rmCount = 0;
+        fRemoveRecursive(handle, rescueParent, rmCount, recursive);
+        return rmCount;
     }
 
     bool fFlatten(tinyHandle handle) noexcept {
@@ -537,32 +540,15 @@ private:
         }
     }
 
-    bool hasRepeatName(tinyHandle parentHandle, const std::string& name) const noexcept {
+    bool hasRepeatName(tinyHandle parentHandle, const std::string& name, tinyHandle excludeHandle = tinyHandle()) const noexcept {
         if (!fnodes_.valid(parentHandle)) return false;
 
         const Node* parent = fnodes_.get(parentHandle);
         if (!parent) return false;
 
         for (const tinyHandle& childHandle : parent->children) {
-            const Node* child = fnodes_.get(childHandle);
-            if (!child) continue;
+            if (childHandle == excludeHandle) continue; // Skip excluded handle
 
-            if (namesEqual(child->name, name)) return true;
-        }
-
-        return false;
-    }
-    
-    // Check for name conflict, excluding a specific handle (useful for moves)
-    bool hasRepeatNameExcept(tinyHandle parentHandle, const std::string& name, tinyHandle excludeHandle) const noexcept {
-        if (!fnodes_.valid(parentHandle)) return false;
-
-        const Node* parent = fnodes_.get(parentHandle);
-        if (!parent) return false;
-
-        for (const tinyHandle& childHandle : parent->children) {
-            if (childHandle == excludeHandle) continue; // Skip the node being moved
-            
             const Node* child = fnodes_.get(childHandle);
             if (!child) continue;
 
@@ -576,20 +562,10 @@ private:
                                    tinyHandle excludeHandle = tinyHandle()) const noexcept {
         if (!fnodes_.valid(parentHandle)) return baseName;
 
-        // Check if parent has children with the same name
         const Node* parent = fnodes_.get(parentHandle);
         if (!parent) return baseName;
 
-        // Fast path: if no conflict (excluding the specified handle), return immediately
-        if (excludeHandle.valid()) {
-            if (!hasRepeatNameExcept(parentHandle, baseName, excludeHandle)) {
-                return baseName;
-            }
-        } else {
-            if (!hasRepeatName(parentHandle, baseName)) {
-                return baseName;
-            }
-        }
+        if (!hasRepeatName(parentHandle, baseName, excludeHandle)) return baseName;
 
         // Find the highest numbered suffix
         size_t maxNumberedIndex = 0;
@@ -668,7 +644,7 @@ private:
     template<typename T>
     tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, T&& data, Node::CFG cfg) {
         Node* parent = fnodes_.get(parentHandle);
-        if (!parent || parent->isFile()) return tinyHandle(); // Invalid or parent is a file
+        if (!parent || parent->isFile()) return tinyHandle();
 
         std::string resolvedName = resolveRepeatName(parentHandle, name);
         
@@ -685,7 +661,6 @@ private:
         dataToFile_[child.tHandle] = h;
         cacheFullPath(h);
 
-        // Ensure data's type info exists
         ensureTypeInfo(child.tHandle.typeIndex);
 
         return h;
@@ -694,7 +669,7 @@ private:
     // Overload for folder creation
     tinyHandle addFNodeImpl(tinyHandle parentHandle, const std::string& name, Node::CFG cfg) {
         Node* parent = fnodes_.get(parentHandle);
-        if (!parent || parent->isFile()) return tinyHandle(); // Invalid or parent is a file
+        if (!parent || parent->isFile()) return tinyHandle();
 
         std::string resolvedName = resolveRepeatName(parentHandle, name);
         
@@ -728,9 +703,9 @@ private:
     }
 
     // Internal recursive function implementing the new removal logic
-    bool fRemoveRecursive(tinyHandle handle, tinyHandle rescueParent, bool recursive) {
+    void fRemoveRecursive(tinyHandle handle, tinyHandle rescueParent, size_t& rmCount, bool recursive) {
         Node* node = fnodes_.get(handle);
-        if (!node) return false;
+        if (!node) return;
 
         std::vector<tinyHandle> childCopy = node->children;
         for (tinyHandle ch : childCopy) {
@@ -738,13 +713,12 @@ private:
             bool canRemove = child && child->deletable() && recursive;
 
             if (!canRemove) fMove(ch, rescueParent);
-            else fRemoveRecursive(ch, rescueParent, recursive);
+            else fRemoveRecursive(ch, rescueParent, rmCount, recursive);
         }
 
         // Folder or safe type or instant delete
         if (node->isFolder() || safeDelete(node->typeIndex())) {
             fRemoveTrue(handle, node->tHandle);
-            return true;
         // Unsafe type queue for removal
         } else {
             std::type_index typeIndx = node->typeIndex();
@@ -755,8 +729,10 @@ private:
             entry.dataHandle = node->tHandle;
 
             rmQueues_[typeIndx].push_back(entry);
-            return false;
         }
+
+        // Add to removal count
+        rmCount++;
     }
 };
 
