@@ -14,11 +14,9 @@
 using namespace tinyVk;
 
 // Hierarchy state tracking
-namespace HierarchyState {
+namespace Hierarchy {
     static tinyHandle sceneHandle;
     static bool isActiveScene(tinyHandle h) { return sceneHandle == h; }
-
-    static float splitterPos = 0.5f;
 
     static std::unordered_set<uint64_t> expandedNodes;
 
@@ -36,6 +34,8 @@ namespace HierarchyState {
         else          expandedNodes.erase(th.hash());
     }
 }
+
+static typeHandle editorSelection;
 
 // Code editor state
 namespace CodeEditor {
@@ -103,15 +103,15 @@ void tinyApp::initUI() {
 // ===== Misc =====
 
     // Set the active scene to main scene by default
-    HierarchyState::sceneHandle = project->mainSceneHandle;
-    activeScene = project->scene(HierarchyState::sceneHandle);
+    Hierarchy::sceneHandle = project->mainSceneHandle;
+    activeScene = project->scene(Hierarchy::sceneHandle);
 
     // Init code editor
     CodeEditor::Init();
 }
 
 void tinyApp::updateActiveScene() {
-    activeScene = project->scene(HierarchyState::sceneHandle);
+    activeScene = project->scene(Hierarchy::sceneHandle);
 
     activeScene->setFStart({
         renderer->getCurrentFrame(),
@@ -379,7 +379,7 @@ static void RenderGenericNodeHierarchy(
 
 static void RenderSceneNodeHierarchy(tinyProject* project) {
     if (!project) return;
-    tinySceneRT* scene = project->scene(HierarchyState::sceneHandle);
+    tinySceneRT* scene = project->scene(Hierarchy::sceneHandle);
     if (!scene) return;
 
     tinyFS& fs = project->fs();
@@ -387,12 +387,12 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
     RenderGenericNodeHierarchy(
         scene->rootHandle(), 0,
         [scene](tinyHandle h) -> std::string { const tinyNodeRT* node = scene->node(h); return node ? node->name : ""; },
-        [](tinyHandle h) { return HierarchyState::selectedNode == MAKE_TH(tinyNodeRT, h); },
-        [](tinyHandle h) { HierarchyState::selectedNode = MAKE_TH(tinyNodeRT, h); },
-        [](tinyHandle h) { return HierarchyState::draggedNode == MAKE_TH(tinyNodeRT, h); },
-        []() { HierarchyState::draggedNode = typeHandle(); },
-        [](tinyHandle h) { return HierarchyState::isExpanded(MAKE_TH(tinyNodeRT, h)); },
-        [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(MAKE_TH(tinyNodeRT, h), expanded); },
+        [](tinyHandle h) { return Hierarchy::selectedNode == MAKE_TH(tinyNodeRT, h); },
+        [](tinyHandle h) { Hierarchy::selectedNode = MAKE_TH(tinyNodeRT, h); },
+        [](tinyHandle h) { return Hierarchy::draggedNode == MAKE_TH(tinyNodeRT, h); },
+        []() { Hierarchy::draggedNode = typeHandle(); },
+        [](tinyHandle h) { return Hierarchy::isExpanded(MAKE_TH(tinyNodeRT, h)); },
+        [](tinyHandle h, bool expanded) { Hierarchy::setExpanded(MAKE_TH(tinyNodeRT, h), expanded); },
         [scene](tinyHandle h) -> bool { const tinyNodeRT* node = scene->node(h); return node && !node->childrenHandles.empty(); },
         [scene](tinyHandle h) -> std::vector<tinyHandle> {
             if (const tinyNodeRT* node = scene->node(h)) {
@@ -411,7 +411,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
         },
         [scene](tinyHandle h) {
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                HierarchyState::draggedNode = MAKE_TH(tinyNodeRT, h);
+                Hierarchy::draggedNode = MAKE_TH(tinyNodeRT, h);
                 if (const tinyNodeRT* node = scene->node(h)) {
                     Payload payload = Payload::make<tinyNodeRT>(h, node->name);
                     ImGui::SetDragDropPayload("DRAG_NODE", &payload, sizeof(payload));
@@ -427,8 +427,8 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                     if (data->isType<tinyNodeRT>()) {
                         tinyHandle nodeHandle = data->handle();
                         if (scene->reparentNode(nodeHandle, h)) {
-                            HierarchyState::setExpanded(MAKE_TH(tinyNodeRT, h), true);
-                            HierarchyState::selectedNode = MAKE_TH(tinyNodeRT, nodeHandle);
+                            Hierarchy::setExpanded(MAKE_TH(tinyNodeRT, h), true);
+                            Hierarchy::selectedNode = MAKE_TH(tinyNodeRT, nodeHandle);
                         }
                     } else if (data->isType<tinyNodeFS>()) {
                         tinyHandle fHandle = data->handle();
@@ -436,7 +436,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                         tinyHandle handle = fTypeHdl.handle;
                         tinySceneRT::NWrap wrap = scene->Wrap(h);
                         if (fTypeHdl.isType<tinySceneRT>()) {
-                            if (HierarchyState::sceneHandle != handle) {
+                            if (Hierarchy::sceneHandle != handle) {
                                 scene->addScene(handle, h);
                             }
                         } else if (fTypeHdl.isType<tinyScript>()) { 
@@ -444,7 +444,7 @@ static void RenderSceneNodeHierarchy(tinyProject* project) {
                             scriptComp->assign(handle);
                         }
                     }
-                    HierarchyState::draggedNode = typeHandle();
+                    Hierarchy::draggedNode = typeHandle();
                 }
                 ImGui::EndDragDropTarget();
             }
@@ -516,19 +516,19 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
             tinyFS::TypeExt typeExt = fs.fTypeExt(h);
             return node->name + "." + typeExt.ext;
         },
-        [](tinyHandle h) { return HierarchyState::selectedNode == MAKE_TH(tinyNodeFS, h); },
+        [](tinyHandle h) { return Hierarchy::selectedNode == MAKE_TH(tinyNodeFS, h); },
         [&fs](tinyHandle h) {
             // Do not select if is folder
             if (const tinyFS::Node* node = fs.fNode(h)) {
                 if (node->isFolder()) return;
             }
 
-            HierarchyState::selectedNode = MAKE_TH(tinyNodeFS, h);
+            Hierarchy::selectedNode = MAKE_TH(tinyNodeFS, h);
         },
-        [](tinyHandle h) { return HierarchyState::draggedNode == MAKE_TH(tinyNodeFS, h); },
-        []() { HierarchyState::draggedNode = typeHandle(); },
-        [](tinyHandle h) { return HierarchyState::isExpanded(MAKE_TH(tinyNodeFS, h)); },
-        [](tinyHandle h, bool expanded) { HierarchyState::setExpanded(MAKE_TH(tinyNodeFS, h), expanded); },
+        [](tinyHandle h) { return Hierarchy::draggedNode == MAKE_TH(tinyNodeFS, h); },
+        []() { Hierarchy::draggedNode = typeHandle(); },
+        [](tinyHandle h) { return Hierarchy::isExpanded(MAKE_TH(tinyNodeFS, h)); },
+        [](tinyHandle h, bool expanded) { Hierarchy::setExpanded(MAKE_TH(tinyNodeFS, h), expanded); },
         [&fs](tinyHandle h) -> bool {
             const tinyFS::Node* node = fs.fNode(h);
             return node && node->isFolder() && !node->children.empty();
@@ -549,7 +549,7 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
         [&fs](tinyHandle h) {
             if (const tinyFS::Node* node = fs.fNode(h)) {
                 if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-                    HierarchyState::draggedNode = MAKE_TH(tinyNodeFS, h);
+                    Hierarchy::draggedNode = MAKE_TH(tinyNodeFS, h);
                     Payload payload = Payload::make<tinyNodeFS>(h, node->name);
 
                     ImGui::SetDragDropPayload("DRAG_NODE", &payload, sizeof(payload));
@@ -566,10 +566,10 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
                     Payload* data = (Payload*)payload->Data;
                     if (data->isType<tinyNodeFS>() && fs.fMove(data->handle(), h)) {
-                        HierarchyState::setExpanded(MAKE_TH(tinyNodeFS, h), true);
-                        HierarchyState::selectedNode = MAKE_TH(tinyNodeFS, data->handle());
+                        Hierarchy::setExpanded(MAKE_TH(tinyNodeFS, h), true);
+                        Hierarchy::selectedNode = MAKE_TH(tinyNodeFS, data->handle());
                     }
-                    HierarchyState::draggedNode = typeHandle();
+                    Hierarchy::draggedNode = typeHandle();
                 }
                 ImGui::EndDragDropTarget();
             }
@@ -592,8 +592,8 @@ static void RenderFileNodeHierarchy(tinyProject* project) {
                     typeHandle dataType = fs.fTypeHandle(h);
                     if (dataType.isType<tinySceneRT>()) {
                         tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
-                        if (RenderMenuItemToggle("Make Active", "Active", HierarchyState::isActiveScene(dataType.handle))) {
-                            HierarchyState::sceneHandle = dataType.handle;
+                        if (RenderMenuItemToggle("Make Active", "Active", Hierarchy::isActiveScene(dataType.handle))) {
+                            Hierarchy::sceneHandle = dataType.handle;
                         }
                         if (RenderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
                             scene->cleanse();
@@ -997,10 +997,10 @@ static void RenderCOMP(const CompInfo& comp) {
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {
-    tinySceneRT* scene = project->scene(HierarchyState::sceneHandle);
+    tinySceneRT* scene = project->scene(Hierarchy::sceneHandle);
     if (!scene) return;
 
-    typeHandle selectedNode = HierarchyState::selectedNode;
+    typeHandle selectedNode = Hierarchy::selectedNode;
     if (!selectedNode.isType<tinyNodeRT>()) return;
 
     tinyHandle handle = selectedNode.handle;
@@ -1063,7 +1063,7 @@ static void RenderSceneNodeInspector(tinyProject* project) {
 static void RenderFileInspector(tinyProject* project) {
     tinyFS& fs = project->fs();
 
-    typeHandle selectedNode = HierarchyState::selectedNode;
+    typeHandle selectedNode = Hierarchy::selectedNode;
     if (!selectedNode.isType<tinyNodeFS>()) return;
 
     tinyHandle fHandle = selectedNode.handle;
@@ -1108,6 +1108,12 @@ static void RenderFileInspector(tinyProject* project) {
             ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "Not Compiled ");
         else
             ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "Compilation Error ");
+
+        // A button to open editor (overrides the editorSelection)
+
+        if (ImGui::Button("Open in Script Editor", ImVec2(-1, 0))) {
+            editorSelection = selectedNode;
+        }
     }
 }
 
@@ -1124,10 +1130,11 @@ static void RenderInspector(tinyProject* project) {
 static void RenderScriptEditor(tinyProject* project) {
     tinyFS& fs = project->fs();
 
-    typeHandle selectedNode = HierarchyState::selectedNode;
+    typeHandle selectedNode = editorSelection;
     if (!selectedNode.isType<tinyNodeFS>()) return;
 
     tinyHandle fHandle = selectedNode.handle;
+
     const tinyFS::Node* node = fs.fNode(fHandle);
     if (!node) return;
 
@@ -1194,7 +1201,6 @@ static void RenderScriptEditor(tinyProject* project) {
         ImGui::PopStyleColor();
     }
 }
-
 
 // ============================================================================
 // MAIN UI RENDERING FUNCTION
@@ -1289,7 +1295,7 @@ void tinyApp::renderUI() {
 
     // ===== HIERARCHY WINDOW - Scene & File System =====
     if (UIRef->Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
-        tinyHandle sceneHandle = HierarchyState::sceneHandle;
+        tinyHandle sceneHandle = Hierarchy::sceneHandle;
         tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, sceneHandle));
         const char* sceneName = fs.fName(sceneFHandle);
 

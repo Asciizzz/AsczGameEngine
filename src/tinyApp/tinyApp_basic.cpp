@@ -226,7 +226,7 @@ void tinyApp::mainLoop() {
                         project->fs().addFile(name, std::move(script));
                     }
 
-                    if (ext == "txt") {
+                    if (ext == "txt" || ext == "cfg" || ext == "ini" || ext == "log" || ext == "md") {
                         tinyText text;
                         text.str = tinyText::readFrom(droppedFile);
 
