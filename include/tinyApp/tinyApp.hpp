@@ -2,8 +2,9 @@
 
 #include "tinySystem/tinyChrono.hpp"
 #include "tinySystem/tinyWindow.hpp"
-#include "tinySystem/tinyUI.hpp"
-#include "tinySystem/tinyUI_Vulkan.hpp"
+
+#include "tinyUI/tinyUI.hpp"
+#include "tinyUI/tinyUI_Vulkan.hpp"
 
 #include "tinyVk/System/Device.hpp"
 #include "tinyVk/System/Instance.hpp"
@@ -54,8 +55,9 @@ private:
 
     tinySceneRT* activeScene = nullptr;
 
-    // UI backend
-    tinyUI::UIBackend_Vulkan* uiBackend = nullptr;
+    // tinyUI
+    tinyUI::Backend_Vulkan* UIBackend = nullptr;
+    tinyUI::Instance* UIInstance;
 
     // Window metadata
     const char* appTitle;

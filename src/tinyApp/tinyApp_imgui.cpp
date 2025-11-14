@@ -1,6 +1,6 @@
 // tinyApp_imgui.cpp - UI Implementation & Testing
 #include "tinyApp/tinyApp.hpp"
-#include "tinySystem/tinyUI.hpp"
+#include "tinyUI/tinyUI.hpp"
 
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -73,12 +73,14 @@ namespace CodeEditor {
     }
 }
 
+static tinyUI::Instance* UIRef = nullptr;
+
 // ============================================================================
 // UI INITIALIZATION
 // ============================================================================
 
 void tinyApp::initUI() {
-    uiBackend = new tinyUI::UIBackend_Vulkan();
+    UIBackend = new tinyUI::Backend_Vulkan();
 
     tinyUI::VulkanBackendData vkData;
     vkData.instance = instanceVk->instance;
@@ -90,9 +92,13 @@ void tinyApp::initUI() {
     vkData.minImageCount = 2;
     vkData.imageCount = renderer->getSwapChainImageCount();
     vkData.msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-    
-    uiBackend->setVulkanData(vkData);
-    tinyUI::Exec::Init(uiBackend, windowManager->window);
+
+    UIBackend->setVulkanData(vkData);
+
+    UIInstance = new tinyUI::Instance();
+    UIInstance->Init(UIBackend, windowManager->window);
+
+    UIRef = UIInstance;
 
 // ===== Misc =====
 
@@ -249,7 +255,7 @@ struct Splitter {
     float rSize(size_t index) const {
         if (index >= regionSizes.size()) return 0.0f;
         // With splitter height offset to avoid overfill
-        return regionSizes[index] * directionSize - splitterSize * tinyUI::Exec::GetTheme().fontScale;
+        return regionSizes[index] * directionSize - splitterSize * UIRef->theme().fontScale;
     }
 
     void render(size_t index) {
@@ -1208,7 +1214,7 @@ void tinyApp::renderUI() {
 
     // ===== DEBUG PANEL WINDOW =====
     static bool showThemeEditor = false;
-    if (tinyUI::Exec::Begin("Debug Panel")) {
+    if (UIRef->Begin("Debug Panel")) {
         // FPS Info (once every printInterval)
         frameTime += deltaTime;
         if (frameTime >= printInterval) {
@@ -1230,13 +1236,13 @@ void tinyApp::renderUI() {
             showThemeEditor = !showThemeEditor;
         }
 
-        tinyUI::Exec::End();
+        UIRef->End();
     }
 
     // ===== THEME EDITOR WINDOW =====
     if (showThemeEditor) {
-        if (tinyUI::Exec::Begin("Theme Editor", &showThemeEditor)) {
-            tinyUI::Theme& theme = tinyUI::Exec::GetTheme();
+        if (UIRef->Begin("Theme Editor", &showThemeEditor)) {
+            tinyUI::Theme& theme = UIRef->theme();
 
             if (ImGui::CollapsingHeader("Colors")) {
                 ImGui::ColorEdit4("Text", &theme.text.x);
@@ -1274,15 +1280,15 @@ void tinyApp::renderUI() {
             }
 
             if (ImGui::Button("Apply")) {
-                tinyUI::Exec::ApplyTheme();
+                theme.apply();
             }
 
-            tinyUI::Exec::End();
+            UIRef->End();
         }
     }
 
     // ===== HIERARCHY WINDOW - Scene & File System =====
-    if (tinyUI::Exec::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
+    if (UIRef->Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
         tinyHandle sceneHandle = HierarchyState::sceneHandle;
         tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, sceneHandle));
         const char* sceneName = fs.fName(sceneFHandle);
@@ -1320,16 +1326,16 @@ void tinyApp::renderUI() {
             ImGui::EndChild();
             ImGui::PopStyleColor();
         }
-        tinyUI::Exec::End();
+        UIRef->End();
     }
 
-    if (tinyUI::Exec::Begin("Inspector", nullptr, ImGuiWindowFlags_NoCollapse)) {
+    if (UIRef->Begin("Inspector", nullptr, ImGuiWindowFlags_NoCollapse)) {
         RenderInspector(project.get());
-        tinyUI::Exec::End();
+        UIRef->End();
     }
 
-    if (tinyUI::Exec::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
+    if (UIRef->Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
         RenderScriptEditor(project.get());
-        tinyUI::Exec::End();
+        UIRef->End();
     }
 }

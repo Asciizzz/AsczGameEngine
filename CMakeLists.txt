@@ -87,7 +87,7 @@ file(GLOB_RECURSE SRC_FILES
 
     src/tinySystem/tinyChrono.cpp
     src/tinySystem/tinyWindow.cpp
-    src/tinySystem/tinyUI.cpp
+    src/tinyUI/tinyUI.cpp
 
     src/tinyApp/tinyApp_basic.cpp
     src/tinyApp/tinyApp_imgui.cpp
@@ -137,6 +137,7 @@ target_include_directories(AsczGame PRIVATE
 
     ${CMAKE_SOURCE_DIR}/include/tinyVk
     ${CMAKE_SOURCE_DIR}/include/tinyExt
+    ${CMAKE_SOURCE_DIR}/include/tinyUI
     ${CMAKE_SOURCE_DIR}/include/tinyData
     ${CMAKE_SOURCE_DIR}/include/tinyScript
     ${CMAKE_SOURCE_DIR}/include/tinySystem

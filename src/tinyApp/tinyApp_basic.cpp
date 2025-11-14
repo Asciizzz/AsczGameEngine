@@ -23,7 +23,8 @@ tinyApp::tinyApp(const char* title, uint32_t width, uint32_t height)
 
 tinyApp::~tinyApp() {
     vkDeviceWaitIdle(deviceVk->device);
-    tinyUI::Exec::Shutdown();
+
+    UIInstance->Shutdown();
 }
 
 void tinyApp::run() {
@@ -171,8 +172,8 @@ bool tinyApp::checkWindowResize() {
     pipelineStatic->recreate();
     
     // Update UI render pass
-    uiBackend->updateRenderPass(renderPass);
-    uiBackend->rebuildIfNeeded();
+    UIBackend->updateRenderPass(renderPass);
+    UIBackend->rebuildIfNeeded();
 
     return true;
 }
@@ -197,7 +198,7 @@ void tinyApp::mainLoop() {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             // Let UI process the event first
-            uiBackend->processEvent(&event);
+            UIBackend->processEvent(&event);
 
             switch (event.type) {
                 case SDL_QUIT:
@@ -314,7 +315,8 @@ void tinyApp::mainLoop() {
 // =================================
 
         // Start new UI frame
-        tinyUI::Exec::NewFrame();
+        UIInstance->NewFrame();
+
         renderUI();
 
         updateActiveScene();
@@ -334,8 +336,9 @@ void tinyApp::mainLoop() {
 
             // Render UI
             VkCommandBuffer currentCmd = rendererRef.getCurrentCommandBuffer();
-            uiBackend->setCommandBuffer(currentCmd);
-            tinyUI::Exec::Render();
+
+            UIBackend->setCommandBuffer(currentCmd);
+            UIInstance->Render();
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex);

@@ -3,14 +3,14 @@
 // ============================================================================
 // VULKAN BACKEND FOR TINY UI
 // ============================================================================
-// This file provides a Vulkan implementation of IUIBackend.
+// This file provides a Vulkan implementation of IBackend.
 // Include this ONLY in projects that use Vulkan.
 //
 // Usage:
-//   #include "tinySystem/tinyUI.hpp"
-//   #include "tinySystem/tinyUI_Vulkan.hpp"
+//   #include "tinyUI/tinyUI.hpp"
+//   #include "tinyUI/tinyUI_Vulkan.hpp"
 //
-//   auto* backend = new tinyUI::UIBackend_Vulkan();
+//   auto* backend = new tinyUI::Backend_Vulkan();
 //   backend->setVulkanData(vkData);
 //   tinyUI::Exec::Init(backend, window);
 // ============================================================================
@@ -39,11 +39,11 @@ struct VulkanBackendData {
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 };
 
-class UIBackend_Vulkan : public IUIBackend {
+class Backend_Vulkan : public IBackend {
 public:
-    UIBackend_Vulkan() : m_needsRebuild(false), m_descriptorPool(VK_NULL_HANDLE), m_window(nullptr) {}
+    Backend_Vulkan() : m_needsRebuild(false), m_descriptorPool(VK_NULL_HANDLE), m_window(nullptr) {}
     
-    ~UIBackend_Vulkan() override {
+    ~Backend_Vulkan() override {
         cleanup();
     }
     
@@ -59,7 +59,7 @@ public:
         m_window = static_cast<SDL_Window*>(info.windowHandle);
         
         if (m_descriptorPool == VK_NULL_HANDLE) {
-            throw std::runtime_error("UIBackend_Vulkan: Must call setVulkanData() before init()!");
+            throw std::runtime_error("Backend_Vulkan: Must call setVulkanData() before init()!");
         }
         
         // Initialize SDL2 backend
