@@ -1049,13 +1049,14 @@ static void RenderScriptEditor(tinyProject* project) {
 
         static float scriptSplitterPos = 0.7f; // Default: 70% for code, 30% for debug
         float availHeight = ImGui::GetContentRegionAvail().y;
-        float splitterHeight = ImGui::GetFrameHeight();
+        float splitterHeight = 4.0f;
+        float fontScale = tinyUI::Exec::GetTheme().fontScale;
         
-        float codeHeight = availHeight * scriptSplitterPos - splitterHeight / 2.0f;
-        float debugHeight = availHeight * (1.0f - scriptSplitterPos) - splitterHeight / 2.0f;
+        float codeHeight = availHeight * scriptSplitterPos - splitterHeight * fontScale;
+        float debugHeight = availHeight * (1.0f - scriptSplitterPos) - splitterHeight * fontScale;
 
         // Code editor
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
         ImGui::BeginChild("CodeEditor", ImVec2(0, codeHeight), true);
         CodeEditor::Render(node->name.c_str());
         if (CodeEditor::IsTextChanged() && script) {
@@ -1084,6 +1085,7 @@ static void RenderScriptEditor(tinyProject* project) {
         ImGui::PopStyleColor(3);
 
         // Debug console
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
         ImGui::BeginChild("DebugTerminal", ImVec2(0, debugHeight), true);
 
         tinyDebug& debug = script->debug();
@@ -1093,6 +1095,7 @@ static void RenderScriptEditor(tinyProject* project) {
         }
 
         ImGui::EndChild();
+        ImGui::PopStyleColor();
     }
 }
 
@@ -1198,15 +1201,18 @@ void tinyApp::renderUI() {
             ImGui::Text("No active scene");
         } else {
             float availHeight = ImGui::GetContentRegionAvail().y;
-            float splitterHeight = ImGui::GetFrameHeight();
+            float splitterHeight = 4.0f;
+
+            float fontScale = tinyUI::Exec::GetTheme().fontScale;
             
-            float topHeight = availHeight * HierarchyState::splitterPos - splitterHeight;
-            float bottomHeight = availHeight * (1.0f - HierarchyState::splitterPos) - splitterHeight;
+            float topHeight = availHeight * HierarchyState::splitterPos - splitterHeight * fontScale;
+            float bottomHeight = availHeight * (1.0f - HierarchyState::splitterPos) - splitterHeight * fontScale;
 
             // ===== TOP: SCENE HIERARCHY =====
-            ImGui::Text("%s [HDL %u.%u]", sceneName, sceneHandle.index, sceneHandle.version);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("SceneHierarchy", ImVec2(0, topHeight), true);
+            ImGui::Text("%s [HDL %u.%u]", sceneName, sceneHandle.index, sceneHandle.version);
+            ImGui::Separator();
             RenderSceneNodeHierarchy(project.get());
             ImGui::EndChild();
             ImGui::PopStyleColor();
@@ -1231,9 +1237,10 @@ void tinyApp::renderUI() {
             ImGui::PopStyleColor(3);
             
             // ===== BOTTOM: FILE SYSTEM HIERARCHY =====
-            ImGui::Text("File System");
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
             ImGui::BeginChild("FileHierarchy", ImVec2(0, bottomHeight), true);
+            ImGui::Text("File System");
+            ImGui::Separator();
             RenderFileNodeHierarchy(project.get());
             ImGui::EndChild();
             ImGui::PopStyleColor();
