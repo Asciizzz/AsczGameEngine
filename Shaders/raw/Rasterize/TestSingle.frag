@@ -31,7 +31,7 @@ void main() {
     vec4 emisColor = texture(uEmissive, fragTexUV);
 
     // Dont ask questions
-    vec4 color = albColor * baseColor + emisColor;
+    vec4 color = albColor * baseColor;
     color.rgb *= intensity;
 
     if (color.a < 0.5) { discard; }
