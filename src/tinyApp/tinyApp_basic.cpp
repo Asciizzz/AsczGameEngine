@@ -212,7 +212,7 @@ void tinyApp::mainLoop() {
                 case SDL_DROPFILE: {
                     char* droppedFile = event.drop.file;
                     std::string ext = tinyFS::pExt(droppedFile);
-                    std::string name = tinyFS::pName(droppedFile);
+                    std::string name = tinyFS::pName(droppedFile, false); // Without extension
 
                     if (ext == "glb" || ext == "gltf" || ext == "obj" || ext == "fbx") {
                         tinyModel model = tinyLoader::loadModel(droppedFile);

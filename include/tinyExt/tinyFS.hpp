@@ -444,10 +444,18 @@ public:
 
 // ---- Some helpful utilities and function that make this class act like an actual filesystem manager ----
 
-    static std::string pName(const std::string& filepath) noexcept {
+    static std::string pName(const std::string& filepath, bool withExt = true) noexcept {
         size_t pos = filepath.find_last_of("/\\");
-        if (pos == std::string::npos) return filepath;
-        return filepath.substr(pos + 1);
+        std::string filename = (pos != std::string::npos) ? filepath.substr(pos + 1) : filepath;
+        
+        if (!withExt) {
+            size_t dotPos = filename.find_last_of('.');
+            if (dotPos != std::string::npos) {
+                filename = filename.substr(0, dotPos);
+            }
+        }
+        
+        return filename;
     }
 
     static std::string pExt(const std::string& filename) noexcept {
@@ -455,13 +463,6 @@ public:
 
         if (pos == std::string::npos || pos == filename.size() - 1) return "";
         return filename.substr(pos + 1);
-    }
-
-    static std::string pNameDotExt(const std::string& filename) noexcept {
-        size_t pos = filename.find_last_of('.');
-
-        if (pos == std::string::npos) return filename;
-        return filename.substr(0, pos);
     }
 
 private:
