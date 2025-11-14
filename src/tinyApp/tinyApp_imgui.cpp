@@ -1113,7 +1113,16 @@ static void RenderFileInspector(tinyProject* project) {
 
         // A button to open editor (overrides the editorSelection)
 
-        if (ImGui::Button("Open in Script Editor", ImVec2(-1, 0))) {
+        if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
+            Editor::selected = selectedNode;
+        }
+    } else if (typeHdl.isType<tinyTextureVk>()) {
+        tinyTextureVk* texture = fs.rGet<tinyTextureVk>(typeHdl.handle);
+
+        ImGui::Text("Size: %ux%u", texture->width(), texture->height());
+        ImGui::Text("Channels: %u", texture->channels());
+
+        if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
             Editor::selected = selectedNode;
         }
     }
@@ -1129,8 +1138,7 @@ static void RenderInspector(tinyProject* project) {
 // EDITOR WINDOWS RENDERING
 // ============================================================================
 
-static void RenderScriptEditor(tinyProject* project) {
-    tinyFS& fs = project->fs();
+static void RenderScriptEditor(tinyFS& fs) {
 
     typeHandle selected = Editor::selected;
     if (!selected.isType<tinyNodeFS>()) return;
@@ -1202,6 +1210,69 @@ static void RenderScriptEditor(tinyProject* project) {
     ImGui::EndChild();
     ImGui::PopStyleColor();
 }
+
+
+static void RenderTextureEditor(tinyFS& fs) {
+    static std::unordered_map<uint64_t, ImTextureID> textureCache;
+
+    typeHandle selected = Editor::selected;
+    if (!selected.isType<tinyNodeFS>()) return;
+
+    tinyHandle fHandle = selected.handle;
+
+    const tinyFS::Node* node = fs.fNode(fHandle);
+    if (!node) return;
+
+    typeHandle typeHdl = fs.fTypeHandle(fHandle);
+    if (!typeHdl.isType<tinyTextureVk>()) return;
+
+    tinyTextureVk* texture = fs.rGet<tinyTextureVk>(typeHdl.handle);
+    if (!texture) return;
+
+    // Cache texture ID to avoid recreating descriptor sets every frame
+    uint64_t cacheKey = fHandle.value;
+    ImTextureID texId;
+    auto it = textureCache.find(cacheKey);
+    if (it == textureCache.end()) {
+        texId = (ImTextureID)ImGui_ImplVulkan_AddTexture(texture->sampler(), texture->view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        textureCache[cacheKey] = texId;
+    } else {
+        texId = it->second;
+    }
+
+    // Display texture info
+    ImGui::Text("Texture: %s", node->name.c_str());
+    ImGui::Text("Size: %ux%u (%u channels)", texture->width(), texture->height(), texture->channels());
+    ImGui::Separator();
+
+    // Calculate display size
+    ImVec2 contentSize = ImGui::GetContentRegionAvail();
+    float aspectRatio = static_cast<float>(texture->width()) / static_cast<float>(texture->height());
+
+    ImVec2 imageSize;
+    if (aspectRatio > contentSize.x / contentSize.y) {
+        // Image is wider relative to content
+        imageSize.x = contentSize.x;
+        imageSize.y = contentSize.x / aspectRatio;
+    } else {
+        // Image is taller relative to content
+        imageSize.y = contentSize.y;
+        imageSize.x = contentSize.y * aspectRatio;
+    }
+
+    // Center the image
+    ImVec2 cursorPos = ImGui::GetCursorPos();
+    float offsetX = (contentSize.x - imageSize.x) * 0.5f;
+    float offsetY = (contentSize.y - imageSize.y) * 0.5f;
+    ImGui::SetCursorPos(ImVec2(cursorPos.x + offsetX, cursorPos.y + offsetY));
+
+    // Display the image
+    ImGui::Image(texId, imageSize);
+}
+
+
+
+
 
 // ============================================================================
 // MAIN UI RENDERING FUNCTION
@@ -1342,7 +1413,8 @@ void tinyApp::renderUI() {
     }
 
     if (UIRef->Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
-        RenderScriptEditor(project.get());
+        RenderScriptEditor(fs);
+        RenderTextureEditor(fs);
         UIRef->End();
     }
 }

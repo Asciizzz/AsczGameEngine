@@ -60,7 +60,7 @@ struct Theme {
     ImVec4 textDisabled = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     
     // Buttons - default
-    ImVec4 button = ImVec4(0.30f, 0.50f, 0.80f, 1.00f);
+    ImVec4 button = ImVec4(0.20f, 0.40f, 0.80f, 1.00f);
     ImVec4 buttonHovered = ImVec4(0.40f, 0.60f, 0.90f, 1.00f);
     ImVec4 buttonActive = ImVec4(0.50f, 0.70f, 1.00f, 1.00f);
     
