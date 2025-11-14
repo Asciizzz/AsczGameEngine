@@ -26,32 +26,6 @@ struct ShaderStage {
     static constexpr VkShaderStageFlags VertexAndFragment = Vertex | Fragment;
 };
 
-struct FormatAlias {
-    static constexpr VkFormat RGBA8Unorm   = VK_FORMAT_R8G8B8A8_UNORM;
-    static constexpr VkFormat RGBA8Srgb    = VK_FORMAT_R8G8B8A8_SRGB;
-    
-    static constexpr VkFormat BGRA8Unorm   = VK_FORMAT_B8G8R8A8_UNORM;
-    static constexpr VkFormat BGRA8Srgb    = VK_FORMAT_B8G8R8A8_SRGB;
-
-    static constexpr VkFormat R8Unorm      = VK_FORMAT_R8_UNORM;
-    static constexpr VkFormat RG8Unorm     = VK_FORMAT_R8G8_UNORM;
-    static constexpr VkFormat R32Sfloat    = VK_FORMAT_R32_SFLOAT;
-
-    static constexpr VkFormat D32Sfloat    = VK_FORMAT_D32_SFLOAT;
-    static constexpr VkFormat D24UnormS8   = VK_FORMAT_D24_UNORM_S8_UINT;
-
-    static constexpr VkFormat RGBA16Sfloat = VK_FORMAT_R16G16B16A16_SFLOAT;
-    static constexpr VkFormat RGBA32Sfloat = VK_FORMAT_R32G32B32A32_SFLOAT;
-
-    static constexpr VkFormat RGB16Sfloat  = VK_FORMAT_R16G16B16_SFLOAT;
-    static constexpr VkFormat RGB32Sfloat  = VK_FORMAT_R32G32B32_SFLOAT;
-
-    static constexpr VkFormat R16Sfloat    = VK_FORMAT_R16_SFLOAT;
-    static constexpr VkFormat R32Uint      = VK_FORMAT_R32_UINT;
-    static constexpr VkFormat R32Sint      = VK_FORMAT_R32_SINT;
-};
-
-
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;

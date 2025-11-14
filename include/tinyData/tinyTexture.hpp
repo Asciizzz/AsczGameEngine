@@ -136,10 +136,10 @@ struct tinyTextureVk {
 
         VkFormat textureFormat;
         switch (texture_.channels()) {
-            case 1: textureFormat = VK_FORMAT_R8_UNORM; break;
-            case 2: textureFormat = VK_FORMAT_R8G8_UNORM; break;
-            case 3: textureFormat = VK_FORMAT_R8G8B8_UNORM; break;
-            case 4: textureFormat = VK_FORMAT_R8G8B8A8_UNORM; break;
+            case 1: textureFormat = VK_FORMAT_R8_SRGB; break;
+            case 2: textureFormat = VK_FORMAT_R8G8_SRGB; break;
+            case 3: textureFormat = VK_FORMAT_R8G8B8_SRGB; break;
+            case 4: textureFormat = VK_FORMAT_R8G8B8A8_SRGB; break;
             default: return false; // Unsupported channel count
         }
 
