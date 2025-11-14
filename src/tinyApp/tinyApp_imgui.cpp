@@ -209,6 +209,77 @@ static void RenderDragField(
     dragMethod();
 }
 
+
+struct Splitter {
+    float windowHeight = 0.0f;
+    float splitterHeight = 4.0f;
+
+    void init(size_t regionCount) {
+        if (positions.size() == regionCount - 1) return;
+
+        positions.clear();
+        regionHeights.clear();
+
+        if (regionCount < 2) return;
+
+        // Create regionCount - 1 positions and regionCount heights
+        float step = 1.0f / static_cast<float>(regionCount);
+
+        for (size_t i = 0; i < regionCount - 1; ++i) {
+            positions.push_back(step * static_cast<float>(i + 1));
+        }
+
+        for (size_t i = 0; i < regionCount; ++i) {
+            regionHeights.push_back(step);
+        }
+
+        calcRegionHeights();
+    }
+
+    void calcRegionHeights() {
+        for (size_t i = 0; i < regionHeights.size(); ++i) {
+            float lowerBound = (i == 0) ? 0.0f : positions[i - 1];
+            float upperBound = (i == positions.size()) ? 1.0f : positions[i];
+            regionHeights[i] = upperBound - lowerBound;
+        }
+    }
+
+    float rHeight(size_t index) const {
+        if (index >= regionHeights.size()) return 0.0f;
+        // With splitter height offset to avoid overfill
+        return regionHeights[index] * windowHeight - splitterHeight * tinyUI::Exec::GetTheme().fontScale;
+    }
+
+    void render(size_t index) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.5f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+        ImGui::Button(("##Splitter" + std::to_string(index)).c_str(), ImVec2(-1, splitterHeight));
+
+        if (ImGui::IsItemActive()) {
+            float delta = ImGui::GetIO().MouseDelta.y;
+
+            // Do not let splitter break order
+            float lowerLimit = (index == 0) ? 0.0f : positions[index - 1] + 0.05f;
+            float upperLimit = (index == positions.size() - 1) ? 1.0f : positions[index + 1] - 0.05f;
+
+            positions[index] += delta / windowHeight;
+            positions[index] = std::clamp(positions[index], lowerLimit, upperLimit);
+        }
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        }
+
+        ImGui::PopStyleColor(3);
+    }
+
+private:
+    // These values are all relative (0.0 -> 1.0)
+    std::vector<float> positions;     // n
+    std::vector<float> regionHeights; // n + 1
+};
+
 // ============================================================================
 // Node Tree Rendering Abstraction
 // ============================================================================
@@ -1047,17 +1118,22 @@ static void RenderScriptEditor(tinyProject* project) {
             CodeEditor::SetText(script->code);
         }
 
-        static float scriptSplitterPos = 0.7f; // Default: 70% for code, 30% for debug
+        static float splitterPos = 0.7f; // Default: 70% for code, 30% for debug
         float availHeight = ImGui::GetContentRegionAvail().y;
         float splitterHeight = 4.0f;
         float fontScale = tinyUI::Exec::GetTheme().fontScale;
         
-        float codeHeight = availHeight * scriptSplitterPos - splitterHeight * fontScale;
-        float debugHeight = availHeight * (1.0f - scriptSplitterPos) - splitterHeight * fontScale;
+        float codeHeight = availHeight * splitterPos - splitterHeight * fontScale;
+        float debugHeight = availHeight * (1.0f - splitterPos) - splitterHeight * fontScale;
+
+        static Splitter splitter;
+        splitter.init(2);
+        splitter.windowHeight = ImGui::GetContentRegionAvail().y;
+        splitter.calcRegionHeights();
 
         // Code editor
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImGui::BeginChild("CodeEditor", ImVec2(0, codeHeight), true);
+        ImGui::BeginChild("CodeEditor", ImVec2(0, splitter.rHeight(0)), true);
         CodeEditor::Render(node->name.c_str());
         if (CodeEditor::IsTextChanged() && script) {
             script->code = CodeEditor::GetText();
@@ -1065,28 +1141,11 @@ static void RenderScriptEditor(tinyProject* project) {
         ImGui::EndChild();
         ImGui::PopStyleColor();
 
-        // Horizontal splitter
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.5f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-
-        ImGui::Button("##ScriptSplitter", ImVec2(-1, splitterHeight));
-
-        if (ImGui::IsItemActive()) {
-            float delta = ImGui::GetIO().MouseDelta.y;
-            scriptSplitterPos += delta / availHeight;
-            scriptSplitterPos = std::clamp(scriptSplitterPos, 0.1f, 0.9f);
-        }
-        
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-        }
-        
-        ImGui::PopStyleColor(3);
+        splitter.render(0);
 
         // Debug console
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImGui::BeginChild("DebugTerminal", ImVec2(0, debugHeight), true);
+        ImGui::BeginChild("DebugTerminal", ImVec2(0, splitter.rHeight(1)), true);
 
         tinyDebug& debug = script->debug();
 
