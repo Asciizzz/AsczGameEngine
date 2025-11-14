@@ -1249,9 +1249,21 @@ static void RenderScriptEditor() {
 
 static void RenderSkeleNodeEditor(tinyFS& fs) {
     typeHandle selected = Editor::selected;
-    if (!selected.isType<tinyNodeRT>()) return;
+    if (!selected.isType<tinyNodeRT::SKEL3D>()) return;
+    
+    tinySceneRT* scene = sceneRef;
+    const tinyFS& fs = projRef->fs();
 
-    tinyHandle nodeHandle = selected.handle;
+    tinyHandle nHandle = selected.handle;
+
+    tinySceneRT::NWrap wrap = scene->Wrap(nHandle);
+    tinyRT_SKEL3D* skel3D = wrap.skel3D;
+    if (!skel3D) return;
+
+    const tinySkeleton* skeleton = skel3D->rSkeleton();
+    if (!skeleton) return;
+
+    // Render the skeleton hierarchy here
 }
 
 
