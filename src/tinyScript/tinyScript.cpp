@@ -5,6 +5,21 @@
 #include <algorithm>
 #include <typeinfo>
 
+#include <fstream>
+#include <sstream>
+
+// ==================== tinyText Implementation ====================
+
+std::string tinyText::readFrom(const std::string& filePath) noexcept {
+    std::ifstream fileStream(filePath);
+    if (!fileStream) return "";
+
+    // Correct way to read entire file into string
+    std::string content((std::istreambuf_iterator<char>(fileStream)),
+                        (std::istreambuf_iterator<char>()));
+    return content;
+}
+
 // ==================== tinyDebug Implementation ====================
 
 void tinyDebug::log(const std::string& message, float r, float g, float b) {

@@ -3,9 +3,6 @@
 #include <string>
 #include <variant>
 #include <vector>
-#include <fstream>
-#include <sstream>
-#include <filesystem>
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include "tinyExt/tinyHandle.hpp"
@@ -21,15 +18,7 @@ struct tinyText {
     std::string str;
     const char* c_str() const { return str.c_str(); }
 
-    static std::string readFrom(const std::filesystem::path& filePath) {
-        std::ifstream fileStream(filePath);
-        if (!fileStream) return "";
-
-        // Correct way to read entire file into string
-        std::string content((std::istreambuf_iterator<char>(fileStream)),
-                            (std::istreambuf_iterator<char>()));
-        return content;
-    }
+    static std::string readFrom(const std::string& filePath) noexcept;
 };
 
 // Debug logging system with FIFO circular buffer
