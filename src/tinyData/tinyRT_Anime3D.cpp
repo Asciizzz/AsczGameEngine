@@ -1,5 +1,5 @@
-#include "tinyData/tinyRT_Anime3D.hpp"
-#include "tinyData/tinyRT_Scene.hpp"
+#include "tinyRT_Anime3D.hpp"
+#include "tinyRT_Scene.hpp"
 
 using namespace tinyRT;
 

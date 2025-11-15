@@ -2,10 +2,10 @@
 
 #include "tinyFS.hpp"
 
-#include "tinyData/tinyModel.hpp"
-#include "tinyData/tinyRT_Scene.hpp"
+#include "tinyModel.hpp"
+#include "tinyRT_Scene.hpp"
 
-#include "tinyData/tinyCamera.hpp"
+#include "tinyCamera.hpp"
 #include "tinyEngine/tinyGlobal.hpp"
 
 class tinyProject {

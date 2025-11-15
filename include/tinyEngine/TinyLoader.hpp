@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyData/tinyModel.hpp"
+#include "tinyModel.hpp"
 
 class tinyLoader {
 public:

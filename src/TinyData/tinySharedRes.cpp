@@ -1,4 +1,4 @@
-#include "tinyData/tinySharedRes.hpp"
+#include "tinySharedRes.hpp"
 
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"
@@ -34,8 +34,8 @@ VkDescriptorSetLayout tinySharedRes::mrphWsDescLayout() const { return descLayou
 
 // Default resources accessors
 
-#include "tinyData/tinyMaterial.hpp"
-#include "tinyData/tinyTexture.hpp"
+#include "tinyMaterial.hpp"
+#include "tinyTexture.hpp"
 
 const tinyMaterialVk* tinySharedRes::defaultMaterialVk() const {
     return fsRegistry->get<tinyMaterialVk>(hDefaultMaterialVk);

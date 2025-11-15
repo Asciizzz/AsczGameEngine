@@ -2,13 +2,13 @@
 
 #include "tinyFS.hpp"
 
-#include "tinyData/tinyRT_MeshRender3D.hpp"
-#include "tinyData/tinyRT_Skeleton3D.hpp"
-#include "tinyData/tinyRT_Anime3D.hpp"
-#include "tinyData/tinyRT_Script.hpp"
-#include "tinyData/tinyRT_Node.hpp"
+#include "tinyRT_MeshRender3D.hpp"
+#include "tinyRT_Skeleton3D.hpp"
+#include "tinyRT_Anime3D.hpp"
+#include "tinyRT_Script.hpp"
+#include "tinyRT_Node.hpp"
 
-#include "tinyData/tinySharedRes.hpp"
+#include "tinySharedRes.hpp"
 
 namespace tinyRT {
 

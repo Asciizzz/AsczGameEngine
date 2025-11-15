@@ -3,7 +3,7 @@
 #include <array>
 
 #include "tinyPool.hpp"
-#include "tinyData/tinyTexture.hpp"
+#include "tinyTexture.hpp"
 
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"

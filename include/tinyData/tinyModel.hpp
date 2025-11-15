@@ -1,10 +1,10 @@
 #pragma once
 
-#include "tinyData/tinyMesh.hpp"
-#include "tinyData/tinyMaterial.hpp"
-#include "tinyData/tinyTexture.hpp"
-#include "tinyData/tinySkeleton.hpp"
-#include "tinyData/tinyRT_Anime3D.hpp"
+#include "tinyMesh.hpp"
+#include "tinyMaterial.hpp"
+#include "tinyTexture.hpp"
+#include "tinySkeleton.hpp"
+#include "tinyRT_Anime3D.hpp"
 
 // lightweight structure to hold primitive model data
 

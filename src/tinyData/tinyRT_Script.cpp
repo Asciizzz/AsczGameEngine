@@ -1,5 +1,5 @@
-#include "tinyData/tinyRT_Script.hpp"
-#include "tinyData/tinyRT_Scene.hpp"
+#include "tinyRT_Script.hpp"
+#include "tinyRT_Scene.hpp"
 #include <iostream>
 
 using namespace tinyRT;

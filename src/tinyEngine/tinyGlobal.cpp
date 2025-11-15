@@ -1,6 +1,6 @@
 #include "tinyEngine/tinyGlobal.hpp"
 
-#include "tinyData/tinyCamera.hpp"
+#include "tinyCamera.hpp"
 
 #include <stdexcept>
 #include <chrono>

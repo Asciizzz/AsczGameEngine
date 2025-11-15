@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyData/tinyVertex.hpp"
+#include "tinyVertex.hpp"
 #include "tinyHandle.hpp"
 
 #include "tinyVk/Resource/DataBuffer.hpp"

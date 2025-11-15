@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyData/tinyMesh.hpp"
+#include "tinyMesh.hpp"
 #include "tinyRegistry.hpp"
 // #include "tinyVk/Resource/DataBuffer.hpp"
 // #include "tinyVk/Resource/Descriptor.hpp"

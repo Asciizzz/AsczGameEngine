@@ -1,4 +1,4 @@
-#include "tinyData/tinyCamera.hpp"
+#include "tinyCamera.hpp"
 #include <algorithm>
 #include <cmath>
 
