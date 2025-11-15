@@ -75,7 +75,6 @@ namespace CodeEditor {
     }
 }
 
-static tinyUI::Instance* UIRef = nullptr;
 static tinySceneRT* sceneRef = nullptr;
 static tinyProject* projRef = nullptr;
 
@@ -138,10 +137,8 @@ void tinyApp::initUI() {
 
     UIBackend->setVulkanData(vkData);
 
-    UIInstance = new tinyUI::Instance();
-    UIInstance->Init(UIBackend, windowManager->window);
+    tinyUI::Init(UIBackend, windowManager->window);
 
-    UIRef = UIInstance;
     projRef = project.get();
 
 // ===== Misc =====
@@ -293,7 +290,7 @@ struct Splitter {
 
     float rSize(size_t index) const {
         if (index >= regionSizes.size()) return 0.01f;
-        float size = regionSizes[index] * directionSize - splitterSize * UIRef->theme().fontScale;
+        float size = regionSizes[index] * directionSize - splitterSize * tinyUI::Theme.fontScale;
         return size > 0.0f ? size : 0.01f;
     }
 
@@ -1535,7 +1532,7 @@ void tinyApp::renderUI() {
 
     // ===== DEBUG PANEL WINDOW =====
     static bool showThemeEditor = false;
-    if (UIRef->Begin("Debug Panel")) {
+    if (tinyUI::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse)) {
         // FPS Info (once every printInterval)
         frameTime += deltaTime;
         if (frameTime >= printInterval) {
@@ -1557,13 +1554,13 @@ void tinyApp::renderUI() {
             showThemeEditor = !showThemeEditor;
         }
 
-        UIRef->End();
+        tinyUI::End();
     }
 
     // ===== THEME EDITOR WINDOW =====
     if (showThemeEditor) {
-        if (UIRef->Begin("Theme Editor", &showThemeEditor)) {
-            tinyUI::Theme& theme = UIRef->theme();
+        if (tinyUI::Begin("Theme Editor", &showThemeEditor)) {
+            tinyUI::ThemeStruct& theme = tinyUI::Theme;
 
             if (ImGui::CollapsingHeader("Colors")) {
                 ImGui::ColorEdit4("Text", &theme.text.x);
@@ -1604,12 +1601,12 @@ void tinyApp::renderUI() {
                 theme.apply();
             }
 
-            UIRef->End();
+            tinyUI::End();
         }
     }
 
     // ===== HIERARCHY WINDOW - Scene & File System =====
-    if (UIRef->Begin("State", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
+    if (tinyUI::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
         tinyHandle sceneHandle = State::sceneHandle;
         tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, sceneHandle));
         const char* sceneName = fs.fName(sceneFHandle);
@@ -1647,17 +1644,17 @@ void tinyApp::renderUI() {
             ImGui::EndChild();
             ImGui::PopStyleColor();
         }
-        UIRef->End();
+        tinyUI::End();
     }
 
-    if (UIRef->Begin("Inspector", nullptr, ImGuiWindowFlags_NoCollapse)) {
+    if (tinyUI::Begin("Inspector", nullptr, ImGuiWindowFlags_NoCollapse)) {
         RenderInspector(project.get());
-        UIRef->End();
+        tinyUI::End();
     }
 
-    if (UIRef->Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
+    if (tinyUI::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
         RenderScriptEditor();
         RenderSkeleNodeEditor();
-        UIRef->End();
+        tinyUI::End();
     }
 }

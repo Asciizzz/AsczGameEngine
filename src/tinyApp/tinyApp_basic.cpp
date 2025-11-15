@@ -18,8 +18,7 @@ tinyApp::tinyApp(const char* title, uint32_t width, uint32_t height)
 
 tinyApp::~tinyApp() {
     vkDeviceWaitIdle(deviceVk->device);
-
-    UIInstance->Shutdown();
+    tinyUI::Shutdown();
 }
 
 void tinyApp::run() {
@@ -319,8 +318,7 @@ void tinyApp::mainLoop() {
 // =================================
 
         // Start new UI frame
-        UIInstance->NewFrame();
-
+        tinyUI::NewFrame();
         renderUI();
 
         updateActiveScene();
@@ -342,7 +340,7 @@ void tinyApp::mainLoop() {
             VkCommandBuffer currentCmd = rendererRef.getCurrentCommandBuffer();
 
             UIBackend->setCommandBuffer(currentCmd);
-            UIInstance->Render();
+            tinyUI::Render();
 
             // End frame with ImGui rendering integrated
             rendererRef.endFrame(imageIndex);

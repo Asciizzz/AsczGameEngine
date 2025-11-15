@@ -60,7 +60,6 @@ private:
 
     // tinyUI
     tinyUI::Backend_Vulkan* UIBackend = nullptr;
-    tinyUI::Instance* UIInstance;
 
     // Window metadata
     const char* appTitle;

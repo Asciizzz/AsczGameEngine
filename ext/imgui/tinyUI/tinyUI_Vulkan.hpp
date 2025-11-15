@@ -55,7 +55,7 @@ public:
         }
     }
     
-    void init(const BackendInitInfo& info) override {
+    void init(const BackendInit& info) override {
         m_window = static_cast<SDL_Window*>(info.windowHandle);
         
         if (m_descriptorPool == VK_NULL_HANDLE) {
