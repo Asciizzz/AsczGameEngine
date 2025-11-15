@@ -597,7 +597,7 @@ static void RenderSceneNodeHierarchy() {
 
                     // Scene File = instantiate
                     if (thFS.isType<tinySceneRT>() && thFS.handle != State::sceneHandle) {
-                        scene->addScene(thFS.handle, h);  
+                        scene->addScene(thFS.handle, h);
                         State::setExpanded(MAKE_TH(tinyNodeRT, h), true);
                     }
 
@@ -852,8 +852,8 @@ static void RenderTRFM3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
     if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
 
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-    if (ImGui::Button("Reset", ImVec2(-1, 0))) trfm3D->local = glm::mat4(1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
+    if (ImGui::Button("Reset", ImVec2(-1, 0))) trfm3D->local = trfm3D->base;
     ImGui::PopStyleColor();
 }
 
@@ -1535,9 +1535,8 @@ static void RenderSkeleNodeEditor() {
         if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-        if (ImGui::Button("Reset", ImVec2(-1, 0))) {
-            skel3D->refresh(selectedBoneIndex);
-        }
+        if (ImGui::Button("Refresh", ImVec2(-1, 0))) skel3D->refresh(selectedBoneIndex);
+        if (ImGui::Button("Refresh All", ImVec2(-1, 0))) skel3D->refreshAll(selectedBoneIndex);
         ImGui::PopStyleColor();
     }
 

@@ -24,7 +24,7 @@ struct Skeleton3D {
     void copy(const Skeleton3D* other);
 
     void refresh(uint32_t boneIndex, bool reupdate = true);
-    void refreshAll();
+    void refreshAll(uint32_t boneIndex = 0);
 
 // -----------------------------------------
 

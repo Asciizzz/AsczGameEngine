@@ -75,8 +75,8 @@ void Skeleton3D::refresh(uint32_t boneIndex, bool reupdate) {
     localPose_[boneIndex] = rSkeleton()->bones[boneIndex].bindPose;
 }
 
-void Skeleton3D::refreshAll() {
-    for (size_t i = 0; i < rSkeleton()->bones.size(); ++i) {
+void Skeleton3D::refreshAll(uint32_t boneIndex) {
+    for (size_t i = boneIndex; i < rSkeleton()->bones.size(); ++i) {
         localPose_[i] = rSkeleton()->bones[i].bindPose;
     }
     updateFlat();
