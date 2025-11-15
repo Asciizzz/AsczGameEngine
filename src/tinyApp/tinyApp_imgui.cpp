@@ -350,9 +350,15 @@ static void RenderGenericNodeHierarchy(
     if (!nodeHandle.valid()) return;
 
     ImGui::PushID(static_cast<int>(nodeHandle.index));
+    ImVec2 startPos = ImGui::GetCursorScreenPos();
     ImGui::BeginGroup();
     fDiv(nodeHandle, depth);
     ImGui::EndGroup();
+    ImVec2 endPos = ImGui::GetCursorScreenPos();
+    float height = endPos.y - startPos.y;
+    ImGui::SetCursorScreenPos(startPos);
+    ImGui::InvisibleButton("##drag", ImVec2(-1, height));
+    ImGui::SetCursorScreenPos(endPos);
     ImGui::PopID();
     
 
