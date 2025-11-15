@@ -415,16 +415,32 @@ static void RenderSceneNodeHierarchy() {
         // Div
         [scene](tinyHandle h, int depth) {
             const tinyNodeRT* node = scene->node(h);
-            std::string name = node ? node->name : "<Invalid Node>";
-
-            ImVec4 color = Hierarchy::selectedNode == MAKE_TH(tinyNodeRT, h)
-                ? ImVec4(0.4f, 0.4f, 1.0f, 1.0f)
-                : ImVec4(1.0f, 0.6f, 0.6f, 1.0f);
-
-            ImGui::PushStyleColor(ImGuiCol_Button, color);
-            if (ImGui::Button(name.c_str(), ImVec2(-1, 0))) {
+            if (!node) {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "<Invalid>");
+                return;
             }
-            ImGui::PopStyleColor();
+
+            std::string name = node->name;
+
+            // Add the [+] or [-] prefix
+            bool isExpanded = Hierarchy::isExpanded(MAKE_TH(tinyNodeRT, h));
+            ImVec4 color = isExpanded
+                ? ImVec4(0.6f, 0.8f, 1.0f, 1.0f)
+                : ImVec4(1.0f, 0.8f, 0.4f, 1.0f);
+
+            ImGui::TextColored(color, "[]");
+            ImGui::SameLine();
+
+            // Node name in white
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", name.c_str());
+
+            // Children count if > 0
+            size_t childCount = node->childrenHandles.size();
+            if (childCount > 0) {
+                ImGui::SameLine();
+                ImVec4 infoColor = ImVec4(0.6f, 0.8f, 1.0f, 1.0f);
+                ImGui::TextColored(infoColor, "[%zu]", childCount);
+            }
         },
         // Div Open
         [](tinyHandle h) -> bool { return Hierarchy::isExpanded(MAKE_TH(tinyNodeRT, h)); },
