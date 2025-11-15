@@ -673,7 +673,50 @@ static void RenderFileNodeHierarchy() {
             State::selected = th;
         },
         // RClick
-        [](tinyHandle h) { /* Do nothing for now */ },
+        [&fs](tinyHandle h) {
+            const tinyFS::Node* node = fs.fNode(h);
+            if (!node) {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
+                return;
+            }
+
+            bool deletable = node->deletable();
+            const char* name = node->name.c_str();
+            ImGui::Text("%s", name);
+
+            if (!node->isFolder()) { // Write colored extension
+                ImGui::SameLine();
+                tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+                ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.ext.c_str());
+            }
+
+            ImGui::Separator();
+
+            typeHandle dataType = fs.fTypeHandle(h);
+            if (dataType.isType<tinySceneRT>()) {
+                tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
+                if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dataType.handle))) {
+                    State::sceneHandle = dataType.handle;
+                }
+                if (RenderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
+                    scene->cleanse();
+                }
+            }
+            if (dataType.isType<tinyScript>()) {
+                tinyScript* script = fs.rGet<tinyScript>(dataType.handle);
+                if (ImGui::MenuItem("Compile")) {
+                    script->compile();
+                }
+            }
+            if (node->isFolder()) {
+                if (ImGui::MenuItem("Add Folder")) {
+                    fs.addFolder(h, "New Folder");
+                    State::setExpanded(MAKE_TH(tinyNodeFS, h), true);
+                }
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Delete", nullptr, nullptr, deletable)) fs.fRemove(h);
+        },
         // DbClick
         [](tinyHandle h) { /* Do nothing for now */ },
         // Hover
