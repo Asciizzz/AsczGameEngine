@@ -529,7 +529,7 @@ static void RenderSceneNodeHierarchy() {
             }
         },
         // DbClick
-        [](tinyHandle h) { /* Do nothing on double click */ },
+        [](tinyHandle h) { printf("Double clicked!"); },
         // Hover
         [scene](tinyHandle h) {
             if (ImGui::BeginTooltip()) {
