@@ -5,7 +5,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <vulkan/vulkan.h>
 
-#include ".ext/Templates.hpp"
+#include "Templates.hpp"
 
 namespace tinyVertex {
 

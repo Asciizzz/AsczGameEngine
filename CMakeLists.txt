@@ -26,6 +26,52 @@ else()
 endif()
 
 file(GLOB_RECURSE SRC_FILES
+    # ImGui source files
+    ext/imgui/imgui.cpp
+    ext/imgui/imgui_demo.cpp
+    ext/imgui/imgui_draw.cpp
+    ext/imgui/imgui_tables.cpp
+    ext/imgui/imgui_widgets.cpp
+    ext/imgui/backends/imgui_impl_sdl2.cpp
+    ext/imgui/backends/imgui_impl_vulkan.cpp
+    ext/imgui/TextEditor.cpp
+
+    # Lua source files (excluding lua.c and luac.c which contain main functions)
+    ext/luacpp/lapi.c
+    ext/luacpp/lauxlib.c
+    ext/luacpp/lbaselib.c
+    ext/luacpp/lcode.c
+    ext/luacpp/lcorolib.c
+    ext/luacpp/lctype.c
+    ext/luacpp/ldblib.c
+    ext/luacpp/ldebug.c
+    ext/luacpp/ldo.c
+    ext/luacpp/ldump.c
+    ext/luacpp/lfunc.c
+    ext/luacpp/lgc.c
+    ext/luacpp/linit.c
+    ext/luacpp/liolib.c
+    ext/luacpp/llex.c
+    ext/luacpp/lmathlib.c
+    ext/luacpp/lmem.c
+    ext/luacpp/loadlib.c
+    ext/luacpp/lobject.c
+    ext/luacpp/lopcodes.c
+    ext/luacpp/loslib.c
+    ext/luacpp/lparser.c
+    ext/luacpp/lstate.c
+    ext/luacpp/lstring.c
+    ext/luacpp/lstrlib.c
+    ext/luacpp/ltable.c
+    ext/luacpp/ltablib.c
+    ext/luacpp/ltm.c
+    ext/luacpp/lundump.c
+    ext/luacpp/lutf8lib.c
+    ext/luacpp/lvm.c
+    ext/luacpp/lzio.c
+
+    # Engine specific files
+
     src/tinyData/tinyCamera.cpp
 
     src/tinyScript/tinyScript.cpp
@@ -40,50 +86,6 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyEngine/tinyGlobal.cpp
     src/tinyEngine/tinyProject.cpp
     src/tinyEngine/tinyLoader.cpp
-
-    # ImGui source files
-    include/.ext/imgui/imgui.cpp
-    include/.ext/imgui/imgui_demo.cpp
-    include/.ext/imgui/imgui_draw.cpp
-    include/.ext/imgui/imgui_tables.cpp
-    include/.ext/imgui/imgui_widgets.cpp
-    include/.ext/imgui/backends/imgui_impl_sdl2.cpp
-    include/.ext/imgui/backends/imgui_impl_vulkan.cpp
-    include/.ext/imgui/TextEditor.cpp
-
-    # Lua source files (excluding lua.c and luac.c which contain main functions)
-    include/.ext/luacpp/lapi.c
-    include/.ext/luacpp/lauxlib.c
-    include/.ext/luacpp/lbaselib.c
-    include/.ext/luacpp/lcode.c
-    include/.ext/luacpp/lcorolib.c
-    include/.ext/luacpp/lctype.c
-    include/.ext/luacpp/ldblib.c
-    include/.ext/luacpp/ldebug.c
-    include/.ext/luacpp/ldo.c
-    include/.ext/luacpp/ldump.c
-    include/.ext/luacpp/lfunc.c
-    include/.ext/luacpp/lgc.c
-    include/.ext/luacpp/linit.c
-    include/.ext/luacpp/liolib.c
-    include/.ext/luacpp/llex.c
-    include/.ext/luacpp/lmathlib.c
-    include/.ext/luacpp/lmem.c
-    include/.ext/luacpp/loadlib.c
-    include/.ext/luacpp/lobject.c
-    include/.ext/luacpp/lopcodes.c
-    include/.ext/luacpp/loslib.c
-    include/.ext/luacpp/lparser.c
-    include/.ext/luacpp/lstate.c
-    include/.ext/luacpp/lstring.c
-    include/.ext/luacpp/lstrlib.c
-    include/.ext/luacpp/ltable.c
-    include/.ext/luacpp/ltablib.c
-    include/.ext/luacpp/ltm.c
-    include/.ext/luacpp/lundump.c
-    include/.ext/luacpp/lutf8lib.c
-    include/.ext/luacpp/lvm.c
-    include/.ext/luacpp/lzio.c
 
     src/tinySystem/tinyChrono.cpp
     src/tinySystem/tinyWindow.cpp
@@ -126,15 +128,17 @@ set_target_properties(AsczGame PROPERTIES
 
 target_include_directories(AsczGame PRIVATE
     ${SDL2_INCLUDE_DIR}
+
+    ${CMAKE_SOURCE_DIR}/ext
+    ${CMAKE_SOURCE_DIR}/ext/glm
+    ${CMAKE_SOURCE_DIR}/ext/json
+    ${CMAKE_SOURCE_DIR}/ext/tiny3d
+    ${CMAKE_SOURCE_DIR}/ext/Helpers
+    ${CMAKE_SOURCE_DIR}/ext/imgui
+    ${CMAKE_SOURCE_DIR}/ext/luacpp
+    ${CMAKE_SOURCE_DIR}/ext/tinyExt
+
     ${CMAKE_SOURCE_DIR}/include
-
-    ${CMAKE_SOURCE_DIR}/include/.ext/glm
-    ${CMAKE_SOURCE_DIR}/include/.ext/json
-    ${CMAKE_SOURCE_DIR}/include/.ext/tiny3d
-    ${CMAKE_SOURCE_DIR}/include/.ext/Helpers
-    ${CMAKE_SOURCE_DIR}/include/.ext/imgui
-    ${CMAKE_SOURCE_DIR}/include/.ext/luacpp
-
     ${CMAKE_SOURCE_DIR}/include/tinyVk
     ${CMAKE_SOURCE_DIR}/include/tinyExt
     ${CMAKE_SOURCE_DIR}/include/tinyUI

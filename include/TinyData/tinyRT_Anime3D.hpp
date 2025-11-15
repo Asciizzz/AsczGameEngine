@@ -5,7 +5,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <string>
 
-#include ".ext/Templates.hpp"
+#include "Templates.hpp"
 
 #include "tinyExt/tinyPool.hpp"
 

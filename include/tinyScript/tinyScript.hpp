@@ -8,9 +8,9 @@
 #include "tinyExt/tinyHandle.hpp"
 
 extern "C" {
-    #include "lua.h"
-    #include "lualib.h"
-    #include "lauxlib.h"
+    #include "luacpp/lua.h"
+    #include "luacpp/lualib.h"
+    #include "luacpp/lauxlib.h"
 }
 
 // Simple text file structure

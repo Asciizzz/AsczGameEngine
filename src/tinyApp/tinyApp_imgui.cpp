@@ -379,18 +379,27 @@ static void RenderGenericNodeHierarchy(
     ImVec4 headerColor = dragged ? getDraggedColorFunc(nodeHandle) : getNormalColorFunc(nodeHandle);
     ImVec4 headerHoveredColor = dragged ? getDraggedHoveredColorFunc(nodeHandle) : getNormalHoveredColorFunc(nodeHandle);
 
-    ImGui::PushStyleColor(ImGuiCol_Header, headerColor);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, headerHoveredColor);
+    ImGui::PushStyleColor(ImGuiCol_Button, headerColor);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, headerHoveredColor);
 
-    bool forceOpen = isExpandedFunc(nodeHandle);
-    if (forceOpen) ImGui::SetNextItemOpen(true);
+    bool isExpanded = isExpandedFunc(nodeHandle);
+    std::string buttonLabel = getNameFunc(nodeHandle);
+    if (hasChild) {
+        buttonLabel += isExpanded ? " [-]" : " [+]";
+    }
 
-    bool nodeOpen = ImGui::TreeNodeEx(getNameFunc(nodeHandle).c_str(), flags);
-    if (hasChild && ImGui::IsItemToggledOpen()) setExpandedFunc(nodeHandle, nodeOpen);
+    if (ImGui::Button(buttonLabel.c_str())) {
+        if (hasChild) {
+            isExpanded = !isExpanded;
+            setExpandedFunc(nodeHandle, isExpanded);
+        }
+        setSelectedFunc(nodeHandle);  // Select on click
+    }
+
+    bool nodeOpen = isExpanded;
 
     ImGui::PopStyleColor(2);
 
-    if (M_CLICKED(ImGuiMouseButton_Left)) setSelectedFunc(nodeHandle);
     if (M_HOVERED) renderTooltipFunc(nodeHandle);
 
     renderDragSourceFunc(nodeHandle);
@@ -400,6 +409,7 @@ static void RenderGenericNodeHierarchy(
     if (dragged && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) clearDragFunc();
 
     if (nodeOpen && hasChild) {
+        ImGui::Indent();
         for (const auto& child : getChildrenFunc(nodeHandle)) {
             RenderGenericNodeHierarchy(
                 child, depth + 1,
@@ -408,7 +418,7 @@ static void RenderGenericNodeHierarchy(
                 getNormalColorFunc, getDraggedColorFunc, getNormalHoveredColorFunc, getDraggedHoveredColorFunc
             );
         }
-        ImGui::TreePop();
+        ImGui::Unindent();
     }
 
     ImGui::PopID();

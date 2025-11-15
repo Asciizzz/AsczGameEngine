@@ -1,18 +1,18 @@
 #include "tinyEngine/tinyLoader.hpp"
-#include ".ext/Templates.hpp"
+#include "Templates.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include ".ext/tiny3d/stb_image.h"
+#include "tiny3d/stb_image.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include ".ext/tiny3d/tiny_obj_loader.h"
+#include "tiny3d/tiny_obj_loader.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE  
-#include ".ext/tiny3d/tiny_gltf.h"
+#include "tiny3d/tiny_gltf.h"
 
 #include <array>
 #include <algorithm>
